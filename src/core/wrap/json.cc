@@ -409,11 +409,11 @@ bool json_Parser::PassThrough(const char **out_str)
 
 void json_Parser::PushLogFilter()
 {
-    RG::PushLogFilter([this](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-        char ctx_buf[1024];
-        Fmt(ctx_buf, "%1%2(%3:%4): ", ctx ? ctx : "", st.GetFileName(), st.GetLineNumber(), st.GetLineOffset());
+    RG::PushLogFilter([this](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
+        char ctx[1024];
+        Fmt(ctx, "%1(%2:%3): ", st.GetFileName(), st.GetLineNumber(), st.GetLineOffset());
 
-        func(level, ctx_buf, msg);
+        func(level, ctx, msg);
     });
 }
 

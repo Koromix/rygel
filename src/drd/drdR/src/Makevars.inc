@@ -16,7 +16,7 @@
 PKG_CPPFLAGS += -D_FILE_OFFSET_BITS=64 -D__STDC_FORMAT_MACROS -DLIBDRD_NO_WREN\
 				-Wstrict-overflow=0 -fno-strict-aliasing -I"$(realpath ../../../..)"
 PKG_CFLAGS += -std=gnu99
-PKG_CXXFLAGS += -std=gnu++17
+PKG_CXXFLAGS += -std=gnu++20
 
 all:
 	@mkdir -p ../R

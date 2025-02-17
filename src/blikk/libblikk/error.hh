@@ -82,8 +82,8 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
 
     switch (type) {
         case bk_DiagnosticType::Error:{
-            char ctx_buf[512];
-            Fmt(ctx_buf, "%1(%2:%3): ", filename, line, column + 1);
+            char ctx[512];
+            Fmt(ctx, "%1(%2:%3): ", filename, line, column + 1);
 
             LocalArray<char, 2048> msg_buf;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "%!..+").len;
@@ -91,12 +91,12 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n%1 |%!0  %2%!D..%3%!0", FmtArg(line).Pad(-7), extract, comment).len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n        |  %1%2%!M..^%!0", align, FmtArg(' ').Repeat(align_more)).len;
 
-            Log(LogLevel::Error, ctx_buf, "%1", msg_buf.data);
+            Log(LogLevel::Error, ctx, "%1", msg_buf.data);
         } break;
 
         case bk_DiagnosticType::Hint: {
-            char ctx_buf[512];
-            Fmt(ctx_buf, "    %1(%2:%3): ", filename, line, column + 1);
+            char ctx[512];
+            Fmt(ctx, "    %1(%2:%3): ", filename, line, column + 1);
 
             LocalArray<char, 2048> msg_buf;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "%!..+").len;
@@ -104,7 +104,7 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n    %1 |%!0  %2%!D..%3%!0", FmtArg(line).Pad(-7), extract, comment).len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n            |  %1%2%!D..^%!0", align, FmtArg(' ').Repeat(align_more)).len;
 
-            Log(LogLevel::Info, ctx_buf, "%1", msg_buf.data);
+            Log(LogLevel::Info, ctx, "%1", msg_buf.data);
         } break;
     }
 }
@@ -165,7 +165,7 @@ void bk_ReportRuntimeError(const bk_Program &program, Span<const bk_CallFrame> f
         LogInfo();
     }
 
-    LogError(fmt, args...);
+    Log(LogLevel::Error, "Error: ", fmt, args...);
 }
 
 }

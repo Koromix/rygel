@@ -73,10 +73,10 @@ static void ReportAndClearException(JSContext *ctx)
     const char *filename = report->filename.c_str();
     const char *message = report->message().c_str();
 
-    RG::PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-        char ctx_buf[1024];
-        Fmt(ctx_buf, "%1%2(%3): ", ctx ? ctx : "", filename, report->lineno);
-        func(level, ctx_buf, msg);
+    RG::PushLogFilter([&](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
+        char ctx[1024];
+        Fmt(ctx, "%1(%2): ", filename, report->lineno);
+        func(level, ctx, msg);
     });
     RG_DEFER { RG::PopLogFilter(); };
 

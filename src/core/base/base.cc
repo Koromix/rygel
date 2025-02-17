@@ -1857,23 +1857,6 @@ bool GetDebugFlag(const char *name)
     }
 }
 
-#if defined(RG_DEBUG)
-const char *DebugLogContext(const char *filename, int line)
-{
-    static thread_local LocalArray<char, 1024> buf;
-
-    buf.len = Fmt(buf.data, "[%1:%2] ", filename, line).len;
-
-    if (buf.len > 32) {
-        char *ptr = buf.end() - 32;
-        MemCpy(ptr, "[...", 4);
-        return ptr;
-    } else {
-        return buf.data;
-    }
-}
-#endif
-
 static void RunLogFilter(Size idx, LogLevel level, const char *ctx, const char *msg)
 {
     const std::function<LogFilterFunc> &func = *log_filters[idx];
@@ -7577,16 +7560,16 @@ bool LineReader::Next(Span<char> *out_line)
 
 void LineReader::PushLogFilter()
 {
-    RG::PushLogFilter([this](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-        char ctx_buf[1024];
+    RG::PushLogFilter([this](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
+        char ctx[1024];
 
         if (line_number > 0) {
-            Fmt(ctx_buf, "%1%2(%3): ", ctx ? ctx : "", st->GetFileName(), line_number);
+            Fmt(ctx, "%1(%2): ", st->GetFileName(), line_number);
         } else {
-            Fmt(ctx_buf, "%1%2: ", ctx ? ctx : "", st->GetFileName());
+            Fmt(ctx, "%1: ", st->GetFileName());
         }
 
-        func(level, ctx_buf, msg);
+        func(level, ctx, msg);
     });
 }
 

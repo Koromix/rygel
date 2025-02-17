@@ -34,6 +34,7 @@
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
+#include <source_location>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -4009,24 +4010,60 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
     LogFmt(level, ctx, fmt, fmt_args);
 }
 
-// Shortcut log functions
-#if defined(RG_DEBUG)
-    const char *DebugLogContext(const char *filename, int line);
+struct LogContext {
+    const char *fmt;
+    char str[56] = {};
 
-    #define LogDebug(...) Log(LogLevel::Debug, DebugLogContext(__FILE__, __LINE__) __VA_OPT__(,) __VA_ARGS__)
-    #define LogInfo(...) Log(LogLevel::Info, nullptr __VA_OPT__(,) __VA_ARGS__)
-    #define LogWarning(...) Log(LogLevel::Warning, DebugLogContext(__FILE__, __LINE__) __VA_OPT__(,) __VA_ARGS__)
-    #define LogError(...) Log(LogLevel::Error, DebugLogContext(__FILE__, __LINE__) __VA_OPT__(,) __VA_ARGS__)
-#else
-    template <typename... Args>
-    static inline void LogDebug(Args...) {}
-    template <typename... Args>
-    static inline void LogInfo(Args... args) { Log(LogLevel::Info, nullptr, args...); }
-    template <typename... Args>
-    static inline void LogWarning(Args... args) { Log(LogLevel::Warning, "Warning: ", args...); }
-    template <typename... Args>
-    static inline void LogError(Args... args) { Log(LogLevel::Error, "Error: ", args...); }
-#endif
+    consteval LogContext(const char *fmt, const std::source_location &location = std::source_location::current())
+        : fmt(fmt)
+    {
+        Span<const char> filename = location.file_name();
+        int line = (int)location.line();
+
+        int digits = 1 + (line >= 10) + (line >= 100) + (line >= 1000) +
+                         (line >= 10000) + (line >= 100000) + (line >= 1000000) +
+                         (line >= 10000000) + (line >= 100000000) + (line >= 1000000000);
+
+        // Cut long filenames to make sure is 32 characters long at most
+        Size treshold = 25 - digits;
+        Size offset = 0;
+
+        str[offset++] = '[';
+
+        if (filename.len > treshold) {
+            filename = filename.Take(filename.len - treshold, treshold);
+
+            str[offset++] = '.';
+            str[offset++] = '.';
+            str[offset++] = '.';
+        }
+
+        for (char c: filename) {
+            str[offset++] = c;
+        }
+        str[offset++] = ':';
+
+        offset += digits;
+        for (int i = 0; i < digits; i++) {
+            str[offset - i - 1] = '0' + (line % 10);
+            line /= 10;
+        }
+
+        str[offset++] = ']';
+        str[offset++] = ' ';
+    }
+};
+
+template <typename... Args>
+static inline void LogDebug(LogContext ctx, Args... args) { Log(LogLevel::Debug, ctx.str, ctx.fmt, args...); }
+template <typename... Args>
+static inline void LogInfo() { Log(LogLevel::Info, nullptr); }
+template <typename... Args>
+static inline void LogInfo(const char *fmt, Args... args) { Log(LogLevel::Info, nullptr, fmt, args...); }
+template <typename... Args>
+static inline void LogWarning(LogContext ctx, Args... args) { Log(LogLevel::Warning, ctx.str, ctx.fmt, args...); }
+template <typename... Args>
+static inline void LogError(LogContext ctx, Args... args) { Log(LogLevel::Error, ctx.str, ctx.fmt, args...); }
 
 void SetLogHandler(const std::function<LogFunc> &func, bool vt100);
 void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg);
