@@ -79,28 +79,24 @@ Restart MeesticTray to apply changes made to the file.
 
 ## Linux
 
-Install the Debian package to configure the system daemon (which is necessary to manage access to the HID device) and the GUI application. Both will start automatically but you may need to restart your session to see the system tray icon.
+Follow the [install instructions](#install) to configure the system daemon (which is necessary to manage access to the HID device) and the GUI application. Both should start automatically but you may need to restart your session to see the system tray icon.
 
-```sh
-mkdir -p -m0755 /etc/apt/keyrings
-curl https://download.koromix.dev/debian/koromix-archive-keyring.gpg -o /etc/apt/keyrings/koromix-archive-keyring.gpg
-echo "deb [signed-by=/etc/apt/keyrings/koromix-archive-keyring.gpg] https://download.koromix.dev/debian stable main" > /etc/apt/sources.list.d/koromix.dev-stable.list
-```
-
-Once this is done, refresh the repository cache and install the package:
-
-```sh
-apt update
-apt install meestic
-```
-
-If you are using GNOME, please install an extension such as `Tray Icons: Reloaded` or the MeesticTray tray icon may not be visible.
+> [!IMPORTANT]
+> On **RPM-based distributions** (such as Fedora or openSUSE), the system daemon (which is needed for the GUI to work) is not started by default. Use the following commands to start it now and and after each boot:
+>
+> ```sh
+> # Should not be needed (but is harmless) on Debian-based distributions
+> sudo systemctl enable --now meestic
+> ```
 
 Customize `/etc/meestic.ini` to edit default profiles. Restart the daemon after each change to load the new profiles with:
 
 ```sh
 sudo systemctl restart meestic
 ```
+
+> [!IMPORTANT]
+> If you are using **GNOME**, please install an extension such as `Tray Icons: Reloaded` or the MeesticTray tray icon may not be visible.
 
 ## Example configuration
 
