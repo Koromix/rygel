@@ -318,7 +318,7 @@ function renderDropItem(page, first) {
         return html`<button class=${'icon home' + (active ? ' active' : '')} ?disabled=${!enabled}
                             @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}></button>`;
     } else {
-        let suffix = !goupile.isLocked() ? makeStatusText(status) : '';
+        let suffix = !goupile.isLocked() ? makeStatusText(status, page.progress) : '';
 
         return html`
             <span style="align-self: center; margin: 0 6px;">›</span>
@@ -331,12 +331,12 @@ function renderDropItem(page, first) {
     }
 }
 
-function makeStatusText(status) {
+function makeStatusText(status, details) {
     if (!status.enabled) {
         return profile.develop ? '❌\uFE0E' : '';
     } else if (status.complete) {
         return '✓\uFE0E';
-    } else if (status.filled && page.progress) {
+    } else if (status.filled && details) {
         let progress = Math.floor(100 * status.filled / status.total);
         return html`${progress}%`;
     } else {
@@ -1152,7 +1152,7 @@ function renderPageMenu(page) {
                 return html`
                     <li><a class=${active ? 'active' : ''} href=${url}>
                         <div style="flex: 1;">${child.title}</div>
-                        <span style="font-size: 0.9em;">${makeStatusText(status)}</span>
+                        <span style="font-size: 0.9em;">${makeStatusText(status, child.progress)}</span>
                     </a></li>
                 `;
             })}
