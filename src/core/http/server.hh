@@ -267,6 +267,9 @@ public:
 
     void SetTimeout(int timeout);
 
+    bool HasResponded() const { return response.started; }
+    const char *LastError() const { return last_err; }
+
 private:
     bool Init(http_Socket *socket, int64_t start, struct sockaddr *sa);
 

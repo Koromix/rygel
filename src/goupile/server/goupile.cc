@@ -549,6 +549,16 @@ static void HandleAdminRequest(http_IO *io)
     } else {
         io->SendError(404);
     }
+
+    // Send internal error details to root users for debug
+    if (!io->HasResponded()) {
+        RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
+
+        if (session && session->IsRoot()) {
+            const char *msg = io->LastError();
+            io->SendError(500, msg);
+        }
+    }
 }
 
 static void EncodeUrlSafe(Span<const char> str, const char *passthrough, HeapArray<char> *out_buf)
