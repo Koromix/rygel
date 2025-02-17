@@ -293,7 +293,7 @@ static void HandlePing(http_IO *io, InstanceHolder *instance)
     GetNormalSession(io, instance);
 
     io->AddCachingHeaders(0, nullptr);
-    io->SendText(200, "Pong!");
+    io->SendText(200, "{}", "application/json");
 }
 
 static void HandleFileStatic(http_IO *io, InstanceHolder *instance)
