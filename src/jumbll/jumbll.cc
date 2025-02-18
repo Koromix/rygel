@@ -312,7 +312,7 @@ bool BackupSet::Open(const char *db_filename, bool create)
                     )");
                     if (!success)
                         return false;
-                } // [[fallthrough]];
+                } [[fallthrough]];
 
                 case 8: {
                     bool success = db.RunMany(R"(
