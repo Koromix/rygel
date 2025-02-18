@@ -995,7 +995,7 @@ function computeProgress(mod) {
 // ------------------------------------------------------------------------
 
 async function initSQLite() {
-    let url = BUNDLES['sqlite3worker.js'];
+    let url = BUNDLES['sqlite3-worker1-bundler-friendly.mjs'];
     await sqlite3.init(url);
 }
 
