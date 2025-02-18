@@ -57,6 +57,11 @@ struct SignupInfo {
     Span<const char> text = nullptr;
 };
 
+struct ThreadSequence {
+    const char *tid = nullptr;
+    int64_t sequence = -1;
+};
+
 static bool CheckTag(Span<const char> tag)
 {
     const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_'; };
@@ -899,6 +904,95 @@ void HandleRecordLock(http_IO *io, InstanceHolder *instance)
 void HandleRecordUnlock(http_IO *io, InstanceHolder *instance)
 {
     HandleLock(io, instance, false);
+}
+
+void HandleRecordSequence(http_IO *io, InstanceHolder *instance)
+{
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to migrate thread sequences");
+        io->SendError(403);
+        return;
+    }
+
+    HeapArray<ThreadSequence> threads;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Mebibytes(2), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            ThreadSequence ts = {};
+
+            parser.ParseKey(&ts.tid);
+            parser.ParseInt(&ts.sequence);
+
+            threads.Append(ts);
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    bool success = instance->db->Transaction([&]() {
+        // Temporarily negate sequence numbers
+        if (!instance->db->Run("UPDATE rec_threads SET sequence = -sequence"))
+            return false;
+
+        // Update main sequence values
+        for (const ThreadSequence &ts: threads) {
+            if (!instance->db->Run("UPDATE rec_threads SET sequence = ?2 WHERE tid = ?1", ts.tid, ts.sequence))
+                return false;
+        }
+
+        // Restore original sequence values (where possible)
+        if (!instance->db->Run("UPDATE OR IGNORE rec_threads SET sequence = -sequence WHERE sequence < 0"))
+            return false;
+
+        int64_t counter;
+        {
+            sq_Statement stmt;
+            if (!instance->db->Prepare("SELECT MAX(sequence) FROM rec_threads", &stmt))
+                return false;
+            if (!stmt.GetSingleValue(&counter))
+                return false;
+
+            counter = std::max((int64_t)1, counter + 1);
+        }
+
+        // Renumber conflicts (if any)
+        {
+            sq_Statement stmt;
+            if (!instance->db->Prepare("SELECT sequence FROM rec_threads WHERE sequence < 0", &stmt))
+                return false;
+
+            while (stmt.Step()) {
+                int64_t sequence = sqlite3_column_int64(stmt, 0);
+
+                if (!instance->db->Run("UPDATE rec_threads SET sequence = ?2 WHERE sequence = ?1", sequence, counter))
+                    return false;
+
+                counter++;
+            }
+            if (!stmt.IsValid())
+                return false;
+        }
+
+        return true;
+    });
+    if (!success)
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 }

@@ -781,6 +781,8 @@ static void HandleInstanceRequest(http_IO *io)
         HandleRecordLock(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/records/unlock") && request.method == http_RequestMethod::Post) {
         HandleRecordUnlock(io, instance);
+    } else if (!instance->legacy && TestStr(instance_url, "/api/records/sequence") && request.method == http_RequestMethod::Post) {
+        HandleRecordSequence(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/export/data") && request.method == http_RequestMethod::Get) {
         HandleExportData(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/export/meta") && request.method == http_RequestMethod::Get) {
