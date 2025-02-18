@@ -658,10 +658,7 @@ function renderData() {
                                     let url = col.page.url + `/${row.tid}`;
                                     let highlight = active && route.page.chain.includes(col.page);
 
-                                    if (!status.enabled) {
-                                        return html`<td class="disabled"
-                                                        title=${col.page.title}><a href=${url}>${summary ?? '❌\uFE0E N/A'}</a></td>`;
-                                    } else if (status.complete) {
+                                    if (status.complete) {
                                         return html`<td class=${highlight ? 'complete active' : 'complete'}
                                                         title=${col.page.title}><a href=${url}>${summary ?? '✓\uFE0E Complet'}</a></td>`;
                                     } else if (status.filled) {
