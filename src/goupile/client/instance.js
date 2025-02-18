@@ -978,8 +978,9 @@ function addAutomaticActions(builder, model) {
     if (route.page.store != null) {
         let is_new = (form_entry.anchor < 0);
 
+        let can_continue = route.page.sequence && model.variables.length;
         let can_save = !form_thread.locked &&
-                       (form_state.hasChanged() || route.page.sequence);
+                       (form_state.hasChanged() || can_continue);
         let can_lock = form_thread.saved && route.page.has_lock &&
                        (!form_thread.locked || goupile.hasPermission('data_audit'));
 
