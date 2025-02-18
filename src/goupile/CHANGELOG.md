@@ -1,5 +1,14 @@
 # Goupile changelog
 
+## Goupile 3.9
+
+## Goupile 3.9.0 (2025-02-18)
+
+- Fix incoherent completion status with disabled pages
+- Implement proper per-thread sequential IDs
+- Always show Continue button on sequenced pages
+- Keep legacy record sequence values and HID
+
 ## Goupile 3.8
 
 ### Goupile 3.8.3 (2025-02-17)

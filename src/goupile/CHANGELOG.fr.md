@@ -1,5 +1,14 @@
 # Historique des versions
 
+## Goupile 3.9
+
+## Goupile 3.9.0 (18/02/2025)
+
+- Correction des incohérences de statut avec les pages désactivées
+- Mise en cohérence de l'identifiant séquentiel d'enregistrement
+- Affichage systématique du bouton Continuer sur les pages séquencées
+- Conservation des valeurs de séquence et de HID après migration des anciennes instances
+
 ## Goupile 3.8
 
 ### Goupile 3.8.3 (17/02/2025)
