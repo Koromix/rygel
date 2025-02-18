@@ -432,7 +432,7 @@ async function initProject(project, study) {
 }
 
 async function runRegister() {
-    UI.body(html`
+    UI.main(html`
         <div class="tabbar">
             <a class="active">Enregistrez-vous</a>
         </div>
@@ -479,7 +479,7 @@ async function register(e) {
 }
 
 async function runDashboard() {
-    UI.body(html`
+    UI.main(html`
         <div class="tabbar">
             <a class="active">Tableau de bord</a>
         </div>
@@ -652,7 +652,7 @@ async function runConsent() {
     let project = cache.project;
     let bundle = project.bundle;
 
-    UI.body(html`
+    UI.main(html`
         <div class="tabbar">
             <a class="active">Participer</a>
         </div>
@@ -745,7 +745,7 @@ async function runProject() {
         let [progress, total] = computeProgress(cache.project.root);
         let cls = 'summary ' + (progress == total ? 'done' : 'draft');
 
-        UI.body(html`
+        UI.main(html`
             <div class="tabbar">
                 <a class="active">Participer</a>
             </div>

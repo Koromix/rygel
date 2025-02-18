@@ -204,7 +204,7 @@ function confirm(action, func = null) {
     }
 }
 
-function body(content = null) {
+function main(content = null) {
     if (root_el == null) {
         root_el = document.createElement('div');
         root_el.id = 'root';
@@ -358,7 +358,7 @@ function dialog(options = {}) {
 
         setTimeout(run_func, 0);
 
-        body();
+        main();
     });
 
     dialogs.push(dlg);
@@ -369,7 +369,7 @@ function dialog(options = {}) {
     if (options.can_be_closed)
         p.close = () => dlg.reject();
 
-    body();
+    main();
 
     if (dlg.el.show != null)
         dlg.el.show();
@@ -689,7 +689,7 @@ export {
     insist,
     confirm,
 
-    body,
+    main,
     fullscreen as isFullscreen,
     toggleFullscreen,
 
