@@ -44,6 +44,19 @@ Consult the [migration guide](migration) for more information.
 
 ## Koffi 2
 
+### Koffi 2.10
+
+#### Koffi 2.10.1 (2025-01-24)
+
+- Fix detection of ARM32 in build script in some cases
+- Fix wrong path for ARM32 prebuild
+
+#### Koffi 2.10.0 (2024-12-22)
+
+- Allow [redefinition of opaque types](misc#circular-references) to concrete struct or union
+- Clear out executable stack bit from ELF targets (`-z noexecstack`)
+- Update documentation style
+
 ### Koffi 2.9
 
 #### Koffi 2.9.2 (2024-11-08)
