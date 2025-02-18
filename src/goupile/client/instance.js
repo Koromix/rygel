@@ -1673,6 +1673,12 @@ async function run(push_history = true) {
 
         // Load data rows (if needed)
         if (UI.isPanelActive('data')) {
+            let root = route.page.chain[0];
+            let page0 = root;
+
+            while (page0.children.length)
+                page0 = page0.children[0];
+
             if (data_threads == null) {
                 let threads = await Net.get(`${ENV.urls.instance}api/records/list`);
 
@@ -1685,9 +1691,6 @@ async function run(push_history = true) {
                     for (let store in thread.entries) {
                         let entry = thread.entries[store];
 
-                        if (sequence == null)
-                            sequence = entry.sequence;
-
                         for (let tag of entry.tags)
                             tags.add(tag);
                         if (!thread.locked)
@@ -1698,6 +1701,11 @@ async function run(push_history = true) {
 
                         entry.ctime = new Date(entry.ctime);
                         entry.mtime = new Date(entry.mtime);
+                    }
+
+                    if (page0 != null) {
+                        let entry0 = thread.entries[page0.store.key];
+                        sequence = entry0?.sequence ?? null;
                     }
 
                     if (!thread.locked)
@@ -1720,8 +1728,6 @@ async function run(push_history = true) {
 
             if (data_tags != null)
                 data_rows = data_rows.filter(thread => thread.tags.some(tag => data_tags.has(tag)));
-
-            let root = route.page.chain[0];
 
             for (let page of root.children) {
                 let col = {
