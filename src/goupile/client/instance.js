@@ -345,23 +345,12 @@ function makeStatusText(status, details) {
 }
 
 function computeStatus(page, thread) {
-    if (!isPageEnabled(page, thread)) {
-        let status = {
-            filled: 0,
-            total: 0,
-            complete: false,
-            enabled: false
-        };
-
-        return status;
-    }
-
     if (page.children.length) {
         let status = {
             filled: 0,
             total: 0,
             complete: false,
-            enabled: true
+            enabled: isPageEnabled(page, thread)
         };
 
         for (let child of page.children) {
@@ -380,7 +369,7 @@ function computeStatus(page, thread) {
             filled: 0 + complete,
             total: 1,
             complete: complete,
-            enabled: true
+            enabled: isPageEnabled(page, thread)
         };
 
         return status;
@@ -397,8 +386,12 @@ function isPageEnabled(page, thread) {
             triggerError(err);
         }
     }
+    enabled = !!enabled;
 
-    return !!enabled;
+    if (page.children.length)
+        enabled &&= !page.children.every(child => !isPageEnabled(child, thread));
+
+    return enabled;
 }
 
 async function generateExportKey(e) {
