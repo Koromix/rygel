@@ -1672,16 +1672,11 @@ async function run(push_history = true) {
         // Load data rows (if needed)
         if (UI.isPanelActive('data')) {
             let root = route.page.chain[0];
-            let page0 = root;
-
-            while (page0.children.length)
-                page0 = page0.children[0];
 
             if (data_threads == null) {
                 let threads = await Net.get(`${ENV.urls.instance}api/records/list`);
 
                 data_threads = threads.map(thread => {
-                    let sequence = null;
                     let min_ctime = Number.MAX_SAFE_INTEGER;
                     let max_mtime = 0;
                     let tags = new Set;
@@ -1701,18 +1696,13 @@ async function run(push_history = true) {
                         entry.mtime = new Date(entry.mtime);
                     }
 
-                    if (page0 != null) {
-                        let entry0 = thread.entries[page0.store.key];
-                        sequence = entry0?.sequence ?? null;
-                    }
-
                     if (!thread.locked)
                         tags.add('draft');
 
                     return {
                         tid: thread.tid,
+                        sequence: thread.sequence,
                         locked: thread.locked,
-                        sequence: sequence,
                         ctime: new Date(min_ctime),
                         mtime: new Date(max_mtime),
                         entries: thread.entries,

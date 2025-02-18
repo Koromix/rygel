@@ -590,7 +590,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         }
 
         // Create thread if needed
-        if (!instance->db->Run("INSERT INTO rec_threads (tid) VALUES (?1) ON CONFLICT DO NOTHING", tid))
+        if (!instance->db->Run("INSERT INTO rec_threads (tid, locked) VALUES (?1, 0) ON CONFLICT DO NOTHING", tid))
             return false;
 
         // Update entry and fragment tags

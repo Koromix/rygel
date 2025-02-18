@@ -86,7 +86,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
 
     if (filter.audit_anchor < 0) {
         sql.len += Fmt(sql.TakeAvailable(),
-                       R"(SELECT t.rowid AS t, t.tid, t.locked,
+                       R"(SELECT t.sequence AS t, t.tid, t.locked,
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime,
                                  e.store, e.sequence, e.summary, e.tags AS tags,
                                  IIF(?6 = 1, e.data, NULL) AS data, IIF(?7 = 1, e.meta, NULL) AS meta
@@ -104,13 +104,13 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM ins_claims WHERE userid = ?2)").len;
         }
         if (filter.start_t >= 0) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND t.rowid >= ?4").len;
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.sequence >= ?4").len;
         }
         if (filter.end_t >= 0) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND t.rowid < ?5").len;
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.sequence < ?5").len;
         }
 
-        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store").len;
+        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.sequence, e.store").len;
     } else {
         RG_ASSERT(!filter.use_claims);
 
@@ -129,7 +129,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                                   WHERE f.anchor <= ?3 AND f.previous = rec.anchor
                               ORDER BY anchor
                           )
-                          SELECT t.rowid AS t, t.tid, t.locked,
+                          SELECT t.sequence AS t, t.tid, t.locked,
                                  e.rowid AS e, e.eid, IIF(rec.data IS NULL, 1, 0) AS deleted,
                                  rec.anchor, e.ctime, rec.mtime, e.store, e.sequence,
                                  rec.summary, rec.tags, rec.data, rec.meta
@@ -142,13 +142,13 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
             sql.len += Fmt(sql.TakeAvailable(), " AND rec.data IS NOT NULL").len;
         }
         if (filter.start_t >= 0) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND t.rowid >= ?4").len;
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.sequence >= ?4").len;
         }
         if (filter.end_t >= 0) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND t.rowid < ?5").len;
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.sequence < ?5").len;
         }
 
-        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store, rec.idx DESC").len;
+        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.sequence, e.store, rec.idx DESC").len;
     }
 
     if (!instance->db->Prepare(sql.data, &stmt))
@@ -328,6 +328,8 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
         json.StartObject();
 
         json.Key("tid"); json.String(cursor->tid);
+        json.Key("sequence"); json.Int64(cursor->t);
+        json.Key("hid"); json.Null();
         json.Key("saved"); json.Bool(true);
         json.Key("locked"); json.Bool(cursor->locked);
 
@@ -466,6 +468,8 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
         const RecordInfo *cursor = walker.GetCursor();
 
         json.Key("tid"); json.String(cursor->tid);
+        json.Key("sequence"); json.Int64(cursor->t);
+        json.Key("hid"); json.Null();
         json.Key("saved"); json.Bool(true);
         json.Key("locked"); json.Bool(cursor->locked);
 

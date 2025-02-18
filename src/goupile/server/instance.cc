@@ -25,7 +25,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 121;
+const int InstanceVersion = 122;
 const int LegacyVersion = 60;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
@@ -1905,6 +1905,12 @@ bool MigrateInstance(sq_Database *db, int target)
                     );
                     CREATE UNIQUE INDEX ins_claims_ut ON ins_claims (userid, tid);
 
+                    CREATE TABLE mig_threads (
+                        tid TEXT NOT NULL,
+                        sequence INTEGER NOT NULL,
+                        hid TEXT
+                    );
+
                     INSERT INTO rec_threads (tid, deleted)
                         SELECT root_ulid, deleted FROM rec_entries_BAK WHERE ulid = root_ulid;
                     INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime, store, context, sequence, hid, data)
@@ -1919,6 +1925,10 @@ bool MigrateInstance(sq_Database *db, int target)
                         LEFT JOIN rec_fragments_BAK p ON (p.ulid = f.ulid AND p.version = f.version - 1);
                     INSERT INTO ins_claims (userid, tid)
                         SELECT userid, ulid FROM ins_claims_BAK;
+
+                    INSERT INTO mig_threads (tid, sequence, hid)
+                        SELECT root_ulid, sequence, hid FROM rec_entries_BAK
+                        WHERE ulid = root_ulid AND deleted = 0;
 
                     DROP TABLE rec_fragments_BAK;
                     DROP TABLE rec_entries_BAK;
@@ -2405,9 +2415,190 @@ bool MigrateInstance(sq_Database *db, int target)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 121: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX rec_threads_t;
+                    DROP INDEX rec_entries_ts;
+                    DROP INDEX rec_entries_e;
+                    DROP INDEX rec_entries_ss;
+                    DROP INDEX rec_fragments_t;
+                    DROP INDEX rec_fragments_r;
+                    DROP INDEX rec_tags_t;
+                    DROP INDEX rec_tags_n;
+                    DROP INDEX rec_tags_en;
+                    DROP INDEX seq_constraints_skv;
+
+                    ALTER TABLE rec_threads RENAME TO rec_threads_BAK;
+                    ALTER TABLE rec_entries RENAME TO rec_entries_BAK;
+                    ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
+                    ALTER TABLE rec_tags RENAME TO rec_tags_BAK;
+                    ALTER TABLE seq_constraints RENAME TO seq_constraints_BAK;
+
+                    CREATE TABLE rec_threads (
+                        sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                        tid TEXT NOT NULL,
+                        hid TEXT,
+                        locked NOT NULL
+                    );
+                    CREATE UNIQUE INDEX rec_threads_t ON rec_threads (tid);
+
+                    CREATE TABLE rec_entries (
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid) DEFERRABLE INITIALLY DEFERRED,
+                        eid TEXT NOT NULL,
+                        anchor INTEGER NOT NULL,
+                        ctime INTEGER NOT NULL,
+                        mtime INTEGER NOT NULL,
+                        store TEXT NOT NULL,
+                        sequence INTEGER NOT NULL,
+                        deleted INTEGER CHECK (deleted IN (0, 1)) NOT NULL,
+                        summary TEXT,
+                        data TEXT,
+                        meta TEXT,
+                        tags TEXT
+                    );
+                    CREATE UNIQUE INDEX rec_entries_ts ON rec_entries (tid, store);
+                    CREATE UNIQUE INDEX rec_entries_e ON rec_entries (eid);
+                    CREATE UNIQUE INDEX rec_entries_ss ON rec_entries (store, sequence);
+
+                    CREATE TABLE rec_fragments (
+                        anchor INTEGER PRIMARY KEY AUTOINCREMENT,
+                        previous INTEGER REFERENCES rec_fragments (anchor),
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid) DEFERRABLE INITIALLY DEFERRED,
+                        eid TEXT NOT NULL REFERENCES rec_entries (eid) DEFERRABLE INITIALLY DEFERRED,
+                        userid INTEGER NOT NULL,
+                        username TEXT NOT NULL,
+                        mtime INTEGER NOT NULL,
+                        fs INTEGER,
+                        summary TEXT,
+                        data TEXT,
+                        meta TEXT,
+                        tags TEXT,
+                        page TEXT
+                    );
+                    CREATE INDEX rec_fragments_t ON rec_fragments (tid);
+                    CREATE INDEX rec_fragments_r ON rec_fragments (eid);
+
+                    CREATE TABLE rec_tags (
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid) DEFERRABLE INITIALLY DEFERRED,
+                        eid TEXT NOT NULL REFERENCES rec_entries (eid) DEFERRABLE INITIALLY DEFERRED,
+                        name TEXT NOT NULL
+                    );
+                    CREATE INDEX rec_tags_t ON rec_tags (tid);
+                    CREATE INDEX rec_tags_n ON rec_tags (name);
+                    CREATE UNIQUE INDEX rec_tags_en ON rec_tags (eid, name);
+
+                    CREATE TABLE seq_constraints (
+                        eid TEXT NOT NULL REFERENCES rec_entries (eid) DEFERRABLE INITIALLY DEFERRED,
+                        store TEXT NOT NULL,
+                        key TEXT NOT NULL,
+                        mandatory INTEGER CHECK (mandatory IN (0, 1)) NOT NULL,
+                        value TEXT,
+
+                        CHECK ((value IS NOT NULL AND value <> '') OR mandatory = 0)
+                    );
+                    CREATE UNIQUE INDEX seq_constraints_skv ON seq_constraints (store, key, value);
+
+                    INSERT INTO rec_threads (tid, locked)
+                        SELECT tid, locked FROM rec_threads_BAK;
+                    INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime, store, sequence, deleted, data, meta, tags)
+                        SELECT tid, eid, anchor, ctime, mtime, store, sequence, deleted, data, meta, tags FROM rec_entries_BAK;
+                    INSERT INTO rec_fragments (anchor, previous, tid, eid, userid, username, mtime, fs, summary, data, meta, tags, page)
+                        SELECT anchor, previous, tid, eid, userid, username, mtime, fs, summary, data, meta, tags, page FROM rec_fragments_BAK;
+                    INSERT INTO rec_tags (tid, eid, name)
+                        SELECT tid, eid, name FROM rec_tags_BAK;
+                    INSERT INTO seq_constraints (eid, store, key, mandatory, value)
+                        SELECT eid, store, key, mandatory, value FROM seq_constraints_BAK;
+
+                    DROP TABLE rec_threads_BAK;
+                    DROP TABLE rec_entries_BAK;
+                    DROP TABLE rec_fragments_BAK;
+                    DROP TABLE rec_tags_BAK;
+                    DROP TABLE seq_constraints_BAK;
+                )");
+                if (!success)
+                    return false;
+
+                if (!db->Run("UPDATE rec_threads SET sequence = -sequence"))
+                    return false;
+
+                // Migrate old sequence values
+                if (db->TableExists("mig_threads")) {
+                    sq_Statement stmt;
+                    if (!db->Prepare("SELECT tid, sequence, hid FROM mig_threads ORDER BY sequence", &stmt))
+                        return false;
+
+                    while (stmt.Step()) {
+                        const char *tid = (const char *)sqlite3_column_text(stmt, 0);
+                        int64_t sequence = sqlite3_column_int64(stmt, 1);
+                        const char *hid = (const char *)sqlite3_column_text(stmt, 2);
+
+                        if (!db->Run("UPDATE rec_threads SET sequence = ?2, hid = ?3 WHERE tid = ?1", tid, sequence, hid))
+                            return false;
+                    }
+                    if (!stmt.IsValid())
+                        return false;
+                }
+
+                // Try to keep recent entry sequence numbers
+                {
+                    sq_Statement stmt;
+                    if (!db->Prepare(R"(SELECT t.tid, e.sequence
+                                        FROM rec_threads t
+                                        INNER JOIN rec_entries e ON (e.tid = t.tid)
+                                        ORDER BY t.sequence, e.store)", &stmt))
+                        return false;
+
+                    while (stmt.Step()) {
+                        const char *tid = (const char *)sqlite3_column_text(stmt, 0);
+                        int64_t sequence = sqlite3_column_int64(stmt, 1);
+
+                        if (!tid)
+                            continue;
+
+                        if (!db->Run(R"(UPDATE OR IGNORE rec_threads SET sequence = ?2
+                                        WHERE tid = ?1 AND sequence < 0)", tid, sequence))
+                            return false;
+                    }
+                    if (!stmt.IsValid())
+                        return false;
+                }
+
+                int64_t counter;
+                {
+                    sq_Statement stmt;
+                    if (!db->Prepare("SELECT MAX(sequence) FROM rec_threads", &stmt))
+                        return false;
+                    if (!stmt.GetSingleValue(&counter))
+                        return false;
+
+                    counter = std::max((int64_t)1, counter + 1);
+                }
+
+                // Renumber recent records
+                {
+                    sq_Statement stmt;
+                    if (!db->Prepare("SELECT sequence FROM rec_threads WHERE sequence < 0", &stmt))
+                        return false;
+
+                    while (stmt.Step()) {
+                        int64_t sequence = sqlite3_column_int64(stmt, 0);
+
+                        if (!db->Run("UPDATE rec_threads SET sequence = ?2 WHERE sequence = ?1", sequence, counter))
+                            return false;
+
+                        counter++;
+                    }
+                    if (!stmt.IsValid())
+                        return false;
+                }
+
+                if (!db->Run("UPDATE sqlite_sequence SET seq = ?1 WHERE name = 'rec_threads'", counter - 1))
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 121);
+            static_assert(InstanceVersion == 122);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
