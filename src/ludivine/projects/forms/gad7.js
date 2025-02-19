@@ -13,39 +13,39 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let intro = html`
     <p>Ce questionnaire est destiné à repérer l'existence de <b>problèmes révélateur d'un trouble anxieux</b> et d'en mesurer la sévérité.
     <p>Les questions portent sur les problèmes ressentis <u>au cours des deux dernières semaines</u>.
-`;
+`
 
 function run(form, values) {
-    form.block(() => {
+    form.part(() => {
         form.output(html`<p>Au cours des <u>deux dernières semaines</u>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?`)
         q(1, "Un sentiment de nervosité, d’anxiété ou de tension ?")
         q(2, "Une incapacité à arrêter de s’inquiéter ou à contrôler ses inquiétudes ?")
     })
 
-    form.block(() => {
+    form.part(() => {
         form.output(html`<p>Au cours des <u>deux dernières semaines</u>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?`)
         q(3, "Une inquiétude excessive à propos de différentes choses ?")
         q(4, "Des difficultés à se détendre ?")
     })
 
-    form.block(() => {
+    form.part(() => {
         form.output(html`<p>Au cours des <u>deux dernières semaines</u>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?`)
         q(5, "Une agitation telle qu’il est difficile à tenir en place ?")
         q(6, "Une tendance à être facilement contrarié(e) ou irritable ?")
     })
 
-    form.block(() => {
+    form.part(() => {
         form.output(html`<p>Au cours des <u>deux dernières semaines</u>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?`)
         q(7, "Un sentiment de peur comme si quelque chose de terrible risquait de se produire ?")
     })
 
     function q(idx, label) {
-        form.enum("*q" + idx, label, [
+        form.enumButtons("*q" + idx, label, [
             [0, "Jamais"],
             [1, "Plusieurs jours"],
             [2, "Plus de la moitié du temps"],

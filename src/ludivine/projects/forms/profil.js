@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { LocalDate } from '../../../web/core/base.js';
-import { html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { LocalDate } from '../../../web/core/base.js'
+import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let LANGUAGES = [
     ["aa", "Afar"],
@@ -580,34 +580,36 @@ let DEPARTEMENTS = [
 
 let intro = html`
     <p>Donnez-nous quelques informations pour nous aider à mieux vous comprendre
-`;
+`
 
 function run(form, values) {
-    form.block(() => {
-        form.enum("*genre", "Quel est votre genre ?", [
+    form.part(() => {
+        form.enumButtons("*genre", "Quel est votre genre ?", [
             ["F", "Femme"],
             ["H", "Homme"],
             ["A", "Non-binaire"]
         ])
-        form.sameLine(true); form.enum("sexe", "Quel est votre sexe biologique ?", [
+        form.enumButtons("sexe", "Quel est votre sexe biologique ?", [
             ["F", "Féminin"],
             ["H", "Masculin"],
             ["I", "Intersexe"]
         ])
+    })
 
+    form.part(() => {
         form.number("*age", "Quel âge avez-vous ?", {
             min: 18, max: 120,
             suffix: value => value > 1 ? "ans" : "an",
             help: "Indiquez votre âge au moment de votre inscription initiale dans l'application"
         })
-        form.sameLine(true); form.enumDrop("*pays_naissance", "Dans quel pays êtes-vous " + adapt("né", "e") + " ?", PAYS)
+        form.enumButtonsDrop("*pays_naissance", "Dans quel pays êtes-vous " + adapt("né", "e") + " ?", PAYS)
     })
 
-    form.block(() => {
-        form.enumDrop("*pays", "Dans quel pays habitez-vous actuellement ?", PAYS, { value: values.pays_naissance })
-        if (values.pays == "FR") {
-            form.sameLine(true); form.enumDrop("departement", "Dans quel département ?", DEPARTEMENTS)
-        }
+    form.part(() => {
+        form.enumButtonsDrop("*pays", "Dans quel pays habitez-vous actuellement ?", PAYS, { value: values.pays_naissance })
+
+        if (values.pays == "FR")
+            form.enumButtonsDrop("departement", "Dans quel département ?", DEPARTEMENTS)
 
         form.enumRadio("*situation", "Quelle est votre situation familiale ?", [
             ["C", "Célibataire"],
@@ -618,15 +620,19 @@ function run(form, values) {
             ["S", adapt("Séparé", "e")],
             ["V", adapt("Veuf", "e")]
         ])
+    })
 
+    form.part(() => {
         form.number("*grossesses", "Combien de grossesses avez-vous eu ?")
-        form.sameLine(true); form.number("*enfants", "Combien d'enfants avez-vous eu ?")
+        form.number("*enfants", "Combien d'enfants avez-vous eu ?")
+    })
 
+    form.part(() => {
         form.binary("*diplome", "Avez-vous un diplôme scolaire ?", {
             help: "Si ce n'est pas le cas, ce n'est pas un problème ! Cette question nous aide simplement à cerner qui vous êtes."
         })
         if (values.diplome == 1) {
-            form.sameLine(true); form.block(() => {
+            form.sameLine(true); form.part(() => {
                 form.enumRadio("*diplome_max", "Quel est le plus haut diplôme que vous avez obtenu ?", [
                     [1, "Brevet des collèges"],
                     [2, "Baccalauréat"],
@@ -641,43 +647,39 @@ function run(form, values) {
         }
     })
 
-    form.block(() => {
-        form.enumDrop("*langue1", "Quelle est votre langue maternelle ?", LANGUAGES, {
+    form.part(() => {
+        form.enumButtonsDrop("*langue1", "Quelle est votre langue maternelle ?", LANGUAGES, {
             help: "Vous pouvez en indiquer plusieurs, choisissez-en une et un champ supplémentaire s'affichera"
         })
 
-        form.sameLine(true); form.block(() => {
-            let idx = 1;
+        let idx = 1
 
-            do {
-                let first = (idx == 1)
-                idx++
-                form.enumDrop("langue" + idx, first ? "Parlez vous une autre langue (optionnel) ?" : null, LANGUAGES, {
-                    disabled: values.langue1 == null
-                })
-            } while (values["langue" + idx] != null)
-        })
+        do {
+            let first = (idx == 1)
+            idx++
+            form.enumButtonsDrop("langue" + idx, first ? "Parlez vous une autre langue (optionnel) ?" : null, LANGUAGES, {
+                disabled: values.langue1 == null
+            })
+        } while (values["langue" + idx] != null)
     })
 
-    form.block(() => {
-        form.enumDrop("*parents1", "Quelle est la principale langue parlée par vos parents ?", LANGUAGES, {
+    form.part(() => {
+        form.enumButtonsDrop("*parents1", "Quelle est la principale langue parlée par vos parents ?", LANGUAGES, {
             help: "Vous pouvez en indiquer plusieurs, choisissez-en une et un champ supplémentaire s'affichera"
         })
 
-        form.sameLine(true); form.block(() => {
-            let idx = 1;
+        let idx = 1
 
-            do {
-                let first = (idx == 1)
-                idx++
-                form.enumDrop("parents" + idx, first ? "Vos parents parlent-ils une ou plusieurs autres langues (optionnel) ?" : null, LANGUAGES, {
-                    disabled: values.parents1 == null
-                })
-            } while (values["parents" + idx] != null)
-        })
+        do {
+            let first = (idx == 1)
+            idx++
+            form.enumButtonsDrop("parents" + idx, first ? "Vos parents parlent-ils une ou plusieurs autres langues (optionnel) ?" : null, LANGUAGES, {
+                disabled: values.parents1 == null
+            })
+        } while (values["parents" + idx] != null)
     })
 
-    form.block(() => {
+    form.part(() => {
         form.enumRadio("connaissance", "Comment avez-vous pris connaissance de l'étude ?", [
             ["reseaux", "Réseaux sociaux"],
             ["parle", "Bouche-à-oreille"],

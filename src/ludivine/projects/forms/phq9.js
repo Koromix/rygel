@@ -13,11 +13,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let intro = html`
     <p>Au cours des <u>deux dernières semaines</u>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?
-`;
+`
 
 function run(form, values) {
     let choices = [
@@ -27,31 +27,31 @@ function run(form, values) {
         [3, "Presque tous les jours"]
     ]
 
-    form.block(() => {
-        form.enum("*q1", "Peu d’intérêt ou de plaisir à faire les choses", choices)
-        form.enum("*q2", "Être triste, déprimé(e) ou désespéré(e)", choices)
+    form.part(() => {
+        form.enumButtons("*q1", "Peu d’intérêt ou de plaisir à faire les choses", choices)
+        form.enumButtons("*q2", "Être triste, déprimé(e) ou désespéré(e)", choices)
     })
 
-    form.block(() => {
-        form.enum("*q3", "Difficultés à s’endormir ou à rester endormi(e), ou dormir trop", choices)
-        form.enum("*q4", "Se sentir fatigué(e) ou manquer d’énergie", choices)
+    form.part(() => {
+        form.enumButtons("*q3", "Difficultés à s’endormir ou à rester endormi(e), ou dormir trop", choices)
+        form.enumButtons("*q4", "Se sentir fatigué(e) ou manquer d’énergie", choices)
     })
 
-    form.block(() => {
-        form.enum("*q5", "Avoir peu d’appétit ou manger trop", choices)
-        form.enum("*q6", "Avoir une mauvaise opinion de soi-même, ou avoir le sentiment d’être nul(le), ou d’avoir déçu sa famille ou s’être déçu(e) soi-même", choices)
+    form.part(() => {
+        form.enumButtons("*q5", "Avoir peu d’appétit ou manger trop", choices)
+        form.enumButtons("*q6", "Avoir une mauvaise opinion de soi-même, ou avoir le sentiment d’être nul(le), ou d’avoir déçu sa famille ou s’être déçu(e) soi-même", choices)
     })
 
-    form.block(() => {
-        form.enum("*q7", "Avoir du mal à se concentrer, par exemple, pour lire le journal ou regarder la télévision", choices)
-        form.enum("*q8", "Bouger ou parler si lentement que les autres auraient pu le remarquer. Ou au contraire, être si agité(e) que vous avez eu du mal à tenir en place par rapport à d’habitude", choices)
+    form.part(() => {
+        form.enumButtons("*q7", "Avoir du mal à se concentrer, par exemple, pour lire le journal ou regarder la télévision", choices)
+        form.enumButtons("*q8", "Bouger ou parler si lentement que les autres auraient pu le remarquer. Ou au contraire, être si agité(e) que vous avez eu du mal à tenir en place par rapport à d’habitude", choices)
     })
 
-    form.block(() => {
-        form.enum("*q9", "Penser qu’il vaudrait mieux mourir ou envisager de vous faire du mal d’une manière ou d’une autre", choices)
+    form.part(() => {
+        form.enumButtons("*q9", "Penser qu’il vaudrait mieux mourir ou envisager de vous faire du mal d’une manière ou d’une autre", choices)
     })
 
-    form.block(() => {
+    form.part(() => {
         let any = Array.from(Array(9).keys()).reduce((acc, idx) => {
             if (acc)
                 return true

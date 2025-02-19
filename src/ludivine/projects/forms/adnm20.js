@@ -13,15 +13,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let intro = html`
     <p>Voici ci-dessous une <b>liste de possibles évènements de vie stressants</b>.
     <p>Veuillez indiquer les évènements qui vous sont arrivés <u>durant les deux dernières années</u> et qui sont actuellement difficiles pour vous, ou qui ont été un difficiles pour vous ou cours des 6 derniers mois.
-`;
+`
 
 function run(form, values) {
-    form.block(() => {
+    form.part(() => {
         let types = [
             [1, "Divorce / séparation"],
             [2, "Conflits familiaux"],
@@ -54,7 +54,7 @@ function run(form, values) {
             form.multiCheck("*main", "Indiquez ci-dessous quel(s) évènement(s) a(ont) été les plus éprouvants :", choices)
     })
 
-    form.block(() => {
+    form.part(() => {
         form.output(html`
             <p>Les évènements que vous venez d’indiquer peuvent avoir de nombreuses <u>conséquences sur votre bien-être et comportement</u>. Ci-dessous vous trouvez différentes affirmations à propos de réactions que ce type d’évènements peut déclencher. Tout d’abord, merci d’indiquer à quelle fréquence les différentes affirmations s’appliquent à vous (de « Jamais » à « Souvent »).
             <p>Ensuite, merci d’indiquer <u>depuis combien de temps</u> vous avez eu cette consigne. Cela peut être de moins d’un mois (< 1 mois), entre un mois et une demi-année (1-6 mois), ou plus de 6 mois (6 mois à 2 ans). Cela peut ne pas être très simple à indiquer, mais essayez de donner une estimation approximative de la durée de la réaction.
@@ -64,53 +64,53 @@ function run(form, values) {
         q(2, "Je pense à la situation stressante de manière répétée")
     })
 
-    form.block(() => {
+    form.part(() => {
         q(3, "J’essaie d’éviter de parler de la situation stressante chaque fois que cela est possible")
         q(4, "Je pense à la situation stressante beaucoup et cela est un poids pour moi")
     })
 
-    form.block(() => {
+    form.part(() => {
         q(5, "Je fais rarement les activités qui me plaisaient avant")
         q(6, "Si je pense à la situation stressante, je ressens un réel état d’anxiété")
     })
 
-    form.block(() => {
+    form.part(() => {
         q(7, "J’évite certaines choses qui peuvent me rappeler la situation stressante")
         q(8, "Je suis nerveux.se et agité·e depuis la situation stressante")
     })
 
-    form.block(() => {
+    form.part(() => {
         q(9, "Depuis la situation stressante, je me mets en colère bien plus rapidement qu'auparavant, même pour de petites choses")
         q(10, "Depuis la situation stressante, je trouve difficile de me concentrer sur certaines choses")
     })
 
-    form.block(() => {
+    form.part(() => {
         q(11, "J’essaie de rejeter la situation stressante de ma mémoire")
         q(12, "J’ai remarqué que je deviens plus irritable à cause de la situation stressante")
     })
 
-    form.block(() => {
+    form.part(() => {
         q(13, "J’ai constamment des souvenirs de la situation stressante et je ne peux rien faire pour les arrêter")
         q(14, "J’essaie de supprimer mes émotions car elles sont un poids pour moi")
     })
 
-    form.block(() => {
+    form.part(() => {
         q(15, "Mes pensées tournent souvent autour de tout ce qui est relié à la situation stressante")
         q(16, "Depuis la situation stressante, j’ai peur de faire certaines choses ou de me retrouver dans certaines situations")
     })
 
-    form.block(() => {
+    form.part(() => {
         q(17, "Depuis la situation stressante, je n’aime pas aller au travail ou faire les tâches quotidiennes nécessaires")
         q(18, "Je me sens découragé·e depuis la situation stressante et j’ai peu d’espoir dans l’avenir.")
     })
 
-    form.block(() => {
+    form.part(() => {
         q(19, "Depuis l’évènement stressant, je ne peux plus dormir correctement")
         q(20, "Dans l’ensemble, la situation cause une détérioration importante de ma vie sociale et professionnelle, de mon temps de loisirs, et des autres domaines importants de fonctionnement")
     })
 
     function q(idx, label) {
-        let intf = form.enum("*q" + idx, label, [
+        let intf = form.enumButtons("*q" + idx, label, [
             [1, "Jamais"],
             [2, "Rarement"],
             [3, "Parfois"],
@@ -118,7 +118,7 @@ function run(form, values) {
         ])
 
         if (intf.value >= 2) {
-            form.enum("f" + idx, "Depuis combien de temps avez-vous eu cette réaction ?", [
+            form.enumButtons("f" + idx, "Depuis combien de temps avez-vous eu cette réaction ?", [
                 [1, "< 1 mois"],
                 [2, "1 à 6 mois"],
                 [3, "6 mois à 2 ans"],

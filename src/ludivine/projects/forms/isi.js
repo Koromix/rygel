@@ -13,15 +13,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let intro = html`
     <p>Ce questionnaire est destiné à <b>évaluer votre sommeil</b> selon deux axes : la qualité de votre sommeil et de vos nuits d'un part, et la satisfaction liée à votre sommeil d'autre part.
     <p>Ces questions portent sur votre <u>sommeil actuel c'est  dire au cours des derniers mois</u> et non avant.
-`;
+`
 
 function run(form, values) {
-    form.block(() => {
+    form.part(() => {
         form.output(html`
             <p>Veuillez estimer la <u>sévérité actuelle (derniers mois)</u> de vos difficultés de sommeil :
         `)
@@ -31,7 +31,7 @@ function run(form, values) {
         q("diff3", "Problèmes de réveil trop tôt le matin :")
     })
 
-    form.block(() => {
+    form.part(() => {
         form.output(html`
             <p>Veuillez estimer la <u>satisfaction actuelle (derniers mois)</u> que vous retirez de votre sommeil :
         `)
@@ -45,7 +45,7 @@ function run(form, values) {
     })
 
     function q(key, title) {
-        form.enum("*" + key, title, [
+        form.enumButtons("*" + key, title, [
             [0, "Aucune"],
             [1, "Légère"],
             [2, "Moyenne"],

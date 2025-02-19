@@ -26,7 +26,7 @@ const DATA_VERSION = 1;
 const UNDO_HISTORY = 50;
 const EVENT_SIZE = 32;
 
-function NetworkModule(db, test) {
+function NetworkModule(db, study, page) {
     let self = this;
 
     // DOM nodes
@@ -86,7 +86,7 @@ function NetworkModule(db, test) {
 
         // Load existing world
         {
-            let payload = await db.pluck('SELECT payload FROM tests WHERE id = ?', test.id);
+            let payload = await db.pluck('SELECT payload FROM tests WHERE study = ? AND key = ?', study.id, page.key);
 
             if (payload != null) {
                 try {
@@ -109,7 +109,7 @@ function NetworkModule(db, test) {
         runner.stop();
     };
 
-    this.render = function() {
+    this.render = function(section) {
         runner.busy();
 
         return html`
@@ -494,7 +494,7 @@ function NetworkModule(db, test) {
             let json = JSON.stringify(data);
 
             db.exec(`UPDATE tests SET status = 'draft', mtime = ?, payload = ?
-                     WHERE id = ?`, mtime, json, test.id);
+                     WHERE study = ? AND key = ?`, mtime, json, study.id, page.key);
         }, 1000);
     }
 

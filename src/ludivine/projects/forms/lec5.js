@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let intro = html`
     <p>Voici une liste de <b>situations difficiles ou stressantes</b> qu‘une personne peut avoir à traverser (vivre). Pour chaque situation, cochez une ou plusieurs cases pour indiquer que :
@@ -26,7 +26,7 @@ let intro = html`
         <li>La situation ne s’applique pas à vous
     </ul>
     <p>Veuillez considérer <u>votre parcours de vie actuel et passé</u> (depuis votre enfance à votre vie adulte) pour répondre à chacun de ces questions.
-`;
+`
 
 function run(form, values) {
     let catastrophes = {
@@ -65,12 +65,12 @@ function run(form, values) {
     for (let start = 0; start < indices.length; start += 2) {
         let end = Math.min(start + 2, indices.length)
 
-        form.block(() => {
+        form.part(() => {
             for (let i = start; i < end; i++) {
-                let idx = indices[i];
+                let idx = indices[i]
 
                 let label = catastrophes[idx]
-                let intf = form.multi("*evt" + idx, idx + ". " + label, choices)
+                let intf = form.multiCheck("*evt" + idx, idx + ". " + label, choices)
 
                 if (intf.value && intf.value.length)
                     evts++
@@ -79,7 +79,7 @@ function run(form, values) {
     }
 
     if (evts) {
-        form.block(() => {
+        form.part(() => {
             form.enumRadio("*evt_index", "Cochez l'évènement qui fût le plus difficile pour vous :", Object.keys(catastrophes).map(idx => {
                 let value = values["evt" + idx]
 

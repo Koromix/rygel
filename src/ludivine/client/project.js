@@ -13,35 +13,37 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import { Util, Log } from '../../web/core/base.js';
+
 function ProjectInfo(project) {
     Object.assign(this, project);
 
     this.summary = null;
 
     this.root = null;
-    this.modules = [];
     this.pages = [];
+    this.tests = [];
 }
 
 function ProjectBuilder(project) {
     let self = this;
 
-    let current_mod = null;
+    let current_page = null;
 
     Object.defineProperties(this, {
         summary: { get: () => project.summary, set: summary => { project.summary = summary; }, enumerable: true }
     });
 
     this.module = function(key, title, func, options = {}) {
-        if (current_mod != null && current_mod.pages.length)
+        if (current_page != null && current_page.tests.length)
             throw new Error('Cannot combine child modules and tests');
 
         if (!key.match(/^[a-z0-9_]+$/))
             throw new Error(`Invalid key '${key}'`);
-        if (current_mod != null && current_mod.modules.some(mod => mod.key == key))
+        if (current_page != null && current_page.modules.some(child => child.key == key))
             throw new Error(`Module key '${key}' is already in use`);
 
-        let prev_mod = current_mod;
+        let prev_page = current_page;
 
         options = Object.assign({
             title: title,
@@ -50,77 +52,84 @@ function ProjectBuilder(project) {
         }, options);
 
         try {
-            current_mod = {
-                key: (prev_mod?.key ?? '') + '/' + key,
+            current_page = {
+                type: 'module',
+
+                key: (current_page?.key ?? '') + '/' + key,
                 title: null,
+                chain: [],
 
                 level: null,
                 help: null,
-
                 modules: [],
-                pages: [],
-
-                chain: []
+                tests: []
             };
 
-            if (prev_mod != null)
-                current_mod.chain.push(...prev_mod.chain);
-            current_mod.chain.push(current_mod);
+            if (prev_page != null)
+                current_page.chain.push(...prev_page.chain);
+            current_page.chain.push(current_page);
 
-            project.modules.push(current_mod);
+            project.pages.push(current_page);
 
             func(options);
 
-            current_mod.title = options.title;
-            current_mod.level = options.level;
-            current_mod.help = options.help;
+            current_page.title = options.title;
+            current_page.level = options.level;
+            current_page.help = options.help;
 
-            for (let mod of current_mod.modules)
-                current_mod.pages.push(...mod.pages);
+            for (let child of current_page.modules)
+                current_page.tests.push(...child.tests);
 
-            if (prev_mod != null) {
-                prev_mod.modules.push(current_mod);
+            if (prev_page != null) {
+                prev_page.modules.push(current_page);
             } else {
                 if (project.root != null)
                     throw new Error('Study must have only one root module');
 
-                project.root = current_mod;
+                project.root = current_page;
             }
         } finally {
-            current_mod = prev_mod;
+            current_page = prev_page;
         }
     };
 
     this.form = function(key, title, form, options = {}) {
-        page(key, title, 'form', { form: form }, options);
+        test(key, title, 'form', { form: form }, options);
     };
 
     this.network = function(key, title, options = {}) {
-        page(key, title, 'network', {}, options);
+        test(key, title, 'network', {}, options);
     };
 
-    function page(key, title, type, obj, options) {
-        if (current_mod == null)
+    function test(key, title, type, obj, options) {
+        if (current_page == null)
             throw new Error('Cannot create test outside module');
-        if (current_mod.modules.length)
+        if (current_page.modules.length)
             throw new Error('Cannot combine child modules and tests');
 
         if (!key.match(/^[a-z0-9_]+$/))
             throw new Error(`Invalid key '${key}'`);
-        if (current_mod.pages.some(page => page.key == key))
+        if (current_page.tests.some(page => page.key == key))
             throw new Error(`Test key '${key}' is already in use`);
 
         let page = {
-            key: current_mod.key + '/' + key,
-            title: title,
-            schedule: options.schedule ?? null,
-
             type: type,
+
+            key: current_page.key + '/' + key,
+            title: title,
+            chain: [],
+
+            schedule: options.schedule ?? null,
             ...obj
         };
 
-        current_mod.pages.push(page);
+        page.chain.push(...current_page.chain);
+        page.chain.push(page);
+
+        current_page.tests.push(page);
+
         project.pages.push(page);
+        project.tests.push(page);
     }
 }
 

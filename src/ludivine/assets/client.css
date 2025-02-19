@@ -324,14 +324,14 @@ main.fullscreen {
     .study { width: 100%; }
 }
 
-.sections {
+.parts {
     --fill: #e9a07f;
     --rounding: 8px;
 
     height: 16px;
     border-radius: 50%;
 }
-.sections > span { display: none; }
+.parts > span { display: none; }
 
 form {
     & :is(label, .label) {
@@ -339,8 +339,10 @@ form {
         flex-direction: column;
         gap: 0.6em;
     }
-    & :is(label, .label) { margin-top: 0.7em; }
+    & label[for] { margin-bottom: 0.6em; }
+    & * + :is(label, .label) { margin-top: 1em; }
     & :is(label, .label) > :is(input, textarea, select, div) { margin: 0 1em; }
+    & label[for] + :is(input, textarea, select, div) { margin: 0 1em; }
     & label > :is(input[type=checkbox], input[type=radio], select) { align-self: start; }
 
     & input {
@@ -430,4 +432,14 @@ form {
     }
     & input[type=checkbox]:hover::before { box-shadow: inset 1em 1em var(--input_color); }
     & input[type=checkbox]:checked::before { box-shadow: inset 1em 1em var(--check_color); }
+
+    & .enum {
+        display: flex;
+        gap: 0.5em;
+        flex-wrap: wrap;
+    }
+    & .enum > button {
+        padding: 0.2em 1.4em 0.35em 1.4em;
+        border-radius: 12px;
+    }
 }

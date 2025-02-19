@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let intro = html`
     <p>Les questions suivantes concernent les <b>personnes de votre environnement qui vous procurent une aide ou un soutien</b>.
@@ -23,30 +23,30 @@ let intro = html`
         <li>Dans un second temps, indiquez quel est votre <u>degré de satisfaction</u> par rapport au soutien obtenu.
     </ol>
     <p>Si pour une question <u>vous n’avez personne, indiquez « 0 »</u>, mais évaluez quand même votre degré de satisfaction.
-`;
+`
 
 function run(form, values) {
-    form.block(() => {
+    form.part(() => {
         q("q1", "Combien de personnes de votre entourage sont réellement disponibles quand vous avez besoin d’aide ?")
     })
 
-    form.block(() => {
+    form.part(() => {
         q("q2", "Sur combien de personnes pouvez-vous réellement compter pour vous aider à vous sentir plus détendu(e) lorsque vous êtes sous pression ou crispé(e) ?")
     })
 
-    form.block(() => {
+    form.part(() => {
         q("q3", "Combien de personnes vous acceptent tel(le) que vous êtes, c’est-à-dire avec vos bons et vos mauvais côtés ?")
     })
 
-    form.block(() => {
+    form.part(() => {
         q("q4", "Sur combien de personnes pouvez-vous réellement compter pour s’occuper de vous quoi qu’il arrive ?")
     })
 
-    form.block(() => {
+    form.part(() => {
         q("q5", "Sur combien de personnes pouvez-vous réellement compter pour vous aider à vous sentir mieux quand il vous arrive de broyer du noir ?")
     })
 
-    form.block(() => {
+    form.part(() => {
         q("q6", "Sur combien de personnes pouvez-vous réellement compter pour vous consoler quand vous êtes bouleversé(e) ?")
     })
 
@@ -60,8 +60,8 @@ function run(form, values) {
             [6, "Très satisfait"]
         ]
 
-        form.enum("*" + key + "a", label, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        form.enum(key + "b", "Quel est votre degré de satisfaction par rapport au soutien obtenu ?", choices)
+        form.enumButtons("*" + key + "a", label, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        form.enumButtons(key + "b", "Quel est votre degré de satisfaction par rapport au soutien obtenu ?", choices)
     }
 }
 

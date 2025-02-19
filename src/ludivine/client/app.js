@@ -24,8 +24,8 @@ import * as UI from './ui.js';
 import { SmallCalendar } from './lib/calendar.js';
 import { PictureCropper } from './lib/picture.js';
 import { PROJECTS } from '../projects/projects.js';
-import { ProjectInfo, ProjectBuilder } from './study/api.js';
-import { FormState, FormModel, FormBuilder } from './study/form.js';
+import { ProjectInfo, ProjectBuilder } from './project.js';
+import { FormModule } from './form/form.js';
 import { NetworkModule } from './network/network.js';
 import { ASSETS } from '../assets/assets.js';
 
@@ -100,7 +100,6 @@ let cache = {
 
     project: null,
     study: null,
-    mod: null,
     page: null,
     section: null,
 
@@ -351,25 +350,15 @@ async function run(push = true) {
             }
 
             if (cache.study != null) {
-                cache.page = cache.project.pages.find(page => page.key == route.path);
-
-                if (cache.page != null) {
-                    let prefix = route.path.substr(0, route.path.lastIndexOf('/'));
-                    cache.mod = cache.project.modules.find(mod => mod.key == prefix);
-                } else {
-                    cache.mod = cache.project.modules.find(mod => mod.key == route.path) ?? cache.project.root;
-                }
-
+                cache.page = cache.project.pages.find(page => page.key == route.path) ?? cache.project.root;
                 cache.section = route.section;
             } else {
-                cache.mod = null;
                 cache.page = null;
                 cache.section = null;
             }
         } else {
             cache.project = null;
             cache.study = null;
-            cache.mod = null;
             cache.page = null;
             cache.section = null;
         }
@@ -394,7 +383,7 @@ async function run(push = true) {
 
     // Update route values
     route.project = cache.project?.key;
-    route.path = cache.page?.key ?? cache.mod?.key;
+    route.path = cache.page?.key;
     route.section = cache.section;
 
     // Update URL
@@ -451,7 +440,7 @@ async function initProject(project, study) {
     await db.transaction(async () => {
         await db.exec('UPDATE tests SET visible = 0 WHERE study = ?', study.id);
 
-        for (let page of project.pages) {
+        for (let page of project.tests) {
             let schedule = page.schedule?.toString?.();
 
             await db.exec(`INSERT INTO tests (study, key, title, visible, status, schedule)
@@ -760,45 +749,29 @@ async function consent(e, project) {
 
 async function runProject() {
     // Sync tests
-    {
-        cache.tests = await db.fetchAll(`SELECT t.id, t.key, t.status, t.payload
-                                         FROM tests t
-                                         INNER JOIN studies s ON (s.id = t.study)
-                                         WHERE s.id = ?`, cache.study.id);
-
-        for (let test of cache.tests) {
-            if (test.payload != null)
-                test.payload = JSON.parse(test.payload);
-        }
-    }
+    cache.tests = await db.fetchAll(`SELECT t.id, t.key, t.status
+                                     FROM tests t
+                                     INNER JOIN studies s ON (s.id = t.study)
+                                     WHERE s.id = ?`, cache.study.id);
 
     // Prepare page data context
-    if (cache.page != null) {
+    if (cache.page.type != 'module') {
         let page = cache.page;
 
         if (ctx?.page != page) {
             let test = cache.tests.find(test => test.key == page.key);
-            let data = test?.payload ?? {};
+
+            ctx = {
+                page: page,
+                mod: null
+            };
 
             switch (page.type) {
-                case 'form': {
-                    ctx = {
-                        page: page,
-                        state: new FormState(data),
-                        model: null,
-                        builder: null
-                    };
-                    ctx.state.changeHandler = run;
-                } break;
-
-                case 'network': {
-                    ctx = {
-                        page: page,
-                        mod: new NetworkModule(db, test)
-                    };
-                    await ctx.mod.start();
-                } break;
+                case 'form': { ctx.mod = new FormModule(db, cache.study, page); } break;
+                case 'network': { ctx.mod = new NetworkModule(db, cache.study, page); } break;
             }
+
+            await ctx.mod.start();
         }
     } else {
         ctx = null;
@@ -824,9 +797,9 @@ async function runProject() {
                     ${progressCircle(progress, total)}
                 </div>
 
-                ${cache.page == null ? renderModule() : null}
-                ${cache.page != null && cache.section == null ? renderStart() : null}
-                ${cache.page != null && cache.section != null ? renderPage() : null}
+                ${cache.page.type == 'module' ? renderModule() : null}
+                ${cache.page.type != 'module' && cache.section == null ? renderStart() : null}
+                ${cache.page.type != 'module' && cache.section != null ? ctx.mod.render(route.section) : null}
             </div>
         `);
     }
@@ -834,12 +807,12 @@ async function runProject() {
 
 function renderModule() {
     let today = LocalDate.today();
-    let mod = cache.mod;
+    let page = cache.page;
 
     return html`
-        ${Util.mapRange(0, cache.mod.chain.length - 1, idx => {
-            let parent = mod.chain[idx];
-            let next = mod.chain[idx + 1];
+        ${Util.mapRange(0, page.chain.length - 1, idx => {
+            let parent = page.chain[idx];
+            let next = page.chain[idx + 1];
 
             return html`
                 <div class="box level" @click=${UI.wrap(e => navigateStudy(parent))}>
@@ -849,9 +822,9 @@ function renderModule() {
             `;
         })}
         <div class="box">
-            <div class="header">${mod.level}</div>
+            <div class="header">${page.level}</div>
             <div class="modules">
-                ${mod.modules.map(child => {
+                ${page.modules.map(child => {
                     let [progress, total] = computeProgress(child);
 
                     let cls = 'module';
@@ -868,12 +841,12 @@ function renderModule() {
 
                         let earliest = null;
 
-                        for (let page of child.pages) {
-                            if (page.status == 'done' || page.schedule == null)
+                        for (let it of child.tests) {
+                            if (it.status == 'done' || it.schedule == null)
                                 continue;
 
-                            if (earliest == null || page.schedule < earliest)
-                                earliest = page.schedule;
+                            if (earliest == null || it.schedule < earliest)
+                                earliest = it.schedule;
                         }
 
                         if (earliest != null) {
@@ -893,45 +866,44 @@ function renderModule() {
                         </div>
                     `;
                 })}
-                ${!mod.modules.length ? mod.pages.map(page => {
-                    let test = cache.tests.find(test => test.key == page.key);
+                ${!page.modules.length ? page.tests.map(child => {
+                    let test = cache.tests.find(test => test.key == child.key);
 
                     let cls = 'module ' + test.status;
                     let status = null;
 
                     if (test.status == 'done') {
                         status = 'Terminé';
-                    } else if (page.schedule != null) {
-                        status = niceDate(page.schedule, true);
+                    } else if (child.schedule != null) {
+                        status = niceDate(child.schedule, true);
 
-                        if (page.schedule <= today)
+                        if (child.schedule <= today)
                             cls += ' draft';
                     } else {
                         status = 'À compléter';
                     }
 
                     return html`
-                        <div class=${cls} @click=${UI.wrap(e => navigateStudy(mod, page))}>
-                            <div class="title">${page.title}</div>
+                        <div class=${cls} @click=${UI.wrap(e => navigateStudy(child))}>
+                            <div class="title">${child.title}</div>
                             <div class="status">${status}</div>
                         </div>
                     `;
                 }) : ''}
             </div>
 
-            ${mod.help ?? ''}
+            ${page.help ?? ''}
         </div>
     `;
 }
 
 function renderStart() {
-    let mod = cache.mod;
     let page = cache.page;
 
     return html`
-        ${Util.mapRange(0, mod.chain.length - 1, idx => {
-            let parent = mod.chain[idx];
-            let next = mod.chain[idx + 1];
+        ${Util.mapRange(0, page.chain.length - 2, idx => {
+            let parent = page.chain[idx];
+            let next = page.chain[idx + 1];
 
             return html`
                 <div class="box level" @click=${UI.wrap(e => navigateStudy(parent))}>
@@ -940,7 +912,7 @@ function renderStart() {
                 </div>
             `;
         })}
-        <div class="box level" @click=${UI.wrap(e => navigateStudy(mod, page))}>
+        <div class="box level" @click=${UI.wrap(e => navigateStudy(page))}>
             Questionnaire - ${page.title}
         </div>
         <div class="start">
@@ -952,104 +924,56 @@ function renderStart() {
                     <p>Si vous êtes prêt, <b>on peut y aller</b> !
                 </div>
             </div>
-            <button type="button" @click=${UI.wrap(e => navigateStudy(mod, page, 0))}>Commencer !</button>
+            <button type="button" @click=${UI.wrap(e => navigateStudy(page, 0))}>Commencer !</button>
         </div>
     `;
 }
 
-function renderPage() {
-    let page = cache.page;
+async function navigateStudy(page, section = null) {
+    while (page.type == 'module' && page.modules.length == 1)
+        page = page.modules[1];
+    if (page.type == 'module' && page.tests.length == 1)
+        page = page.tests[0];
 
-    switch (page.type) {
-        case 'form': return renderForm();
-        case 'network': { return ctx.mod.render(); } break;
-    }
-}
-
-function renderForm() {
-    let mod = cache.mod;
-    let page = cache.page;
-    let section = cache.section;
-
-    // Reset rendered form each time
-    ctx.model = new FormModel;
-    ctx.builder = new FormBuilder(ctx.state, ctx.model);
-
-    page.form.run(ctx.builder, ctx.state.values);
-
-    let widgets = ctx.model.widgets0; 
-    let widget = widgets[section];
-
-    if (widget == null)
-        return '';
-
-    let end = widgets.length - 1;
-
-    return html`
-        <div class="box">${page.form.intro}</div>
-
-        ${progressBar(section, end, 'sections')}
-        <div class="box">${widget?.render?.()}</div>
-
-        <div class="actions">
-            ${section < end ?
-                html`<button @click=${UI.wrap(continueForm)}>Continuer</button>`: ''}
-            ${section == end ?
-                html`<button @click=${UI.wrap(e => saveTest(ctx.state.values))}>Finaliser</button>`: ''}
-        </div>
-    `;
-}
-
-function continueForm() {
-    ctx.builder.triggerErrors();
-    navigateStudy(cache.mod, cache.page, cache.section + 1);
-}
-
-async function navigateStudy(mod, page = null, section = null) {
-    while (mod.modules.length == 1)
-        mod = mod.modules[0];
-    while (page == null && mod.pages.length == 1)
-        page = mod.pages[0];
-
-    route.path = page?.key ?? mod.key;
+    route.path = page.key;
     route.section = (page != null) ? section : null;
 
     await run();
 }
 
-async function saveTest(data) {
-    let mod = cache.mod;
-    let page = cache.page;
-
+async function saveTest(page, data) {
     let mtime = (new Date).valueOf();
     let json = JSON.stringify(data);
 
     await db.exec(`UPDATE tests SET status = 'done', mtime = ?, payload = ?
-                   WHERE study = ? AND key = ?`, mtime, json, study.id, page.key);
+                   WHERE study = ? AND key = ?`, mtime, json, cache.study.id, page.key);
 
-    while (mod != project.root && isComplete(mod, [page]))
-        mod = mod.chain[mod.chain.length - 2];
+    let next = page;
 
-    await navigateStudy(mod);
+    do {
+        next = next.chain[next.chain.length - 2];
+    } while (next != cache.project.root && isComplete(next, [page]));
+
+    await navigateStudy(next);
 }
 
-function isComplete(mod, saved = []) {
-    for (let page of mod.pages) {
-        let test = cache.tests.find(test => test.key == page.key);
+function isComplete(page, saved = []) {
+    for (let child of page.tests) {
+        let test = cache.tests.find(test => test.key == child.key);
 
-        if (test.status != 'done' && !saved.includes(page))
+        if (test.status != 'done' && !saved.includes(child))
             return false;
     }
 
     return true;
 }
 
-function computeProgress(mod) {
-    let progress = mod.pages.reduce((acc, page) => {
-        let test = cache.tests.find(test => test.key == page.key);
+function computeProgress(page) {
+    let progress = page.tests.reduce((acc, child) => {
+        let test = cache.tests.find(test => test.key == child.key);
         return acc + (test.status == 'done');
     }, 0);
-    let total = mod.pages.length;
+    let total = page.tests.length;
 
     return [progress, total];
 }
@@ -1226,5 +1150,8 @@ export {
     run,
 
     isLogged,
-    changePicture
+    changePicture,
+
+    navigateStudy,
+    saveTest
 }
