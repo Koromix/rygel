@@ -155,13 +155,11 @@ main.fullscreen {
 }
 
 .profile { padding: 2em; }
-.profile > .picture {
-    width: 197px;
-    height: 197px;
+.profile > .avatar {
+    width: 192px;
+    height: 192px;
     margin: 0 auto;
-    background: white;
-    border-radius: 50%;
-    border: 5px solid #e9a07f;
+    border-width: 6px;
 }
 
 @media screen and (max-width: 960px) {

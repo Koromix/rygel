@@ -71,7 +71,8 @@ function NetworkWidget(mod, world) {
     let last_link = { quality: DEFAULT_LINK };
 
     this.init = async function() {
-        textures.self = await loadTexture(app.pictureURL());
+        if (app.identity.picture != null)
+            textures.self = await loadTexture(app.identity.picture);
 
         let promises = Object.keys(PERSON_KINDS).map(async kind => {
             let info = PERSON_KINDS[kind];
@@ -979,8 +980,10 @@ function NetworkWidget(mod, world) {
             ctx.arc(0, 0, radius, 0, Math.PI * 2, false);
             ctx.fill();
 
-            ctx.clip();
-            ctx.drawImage(textures.self, 0 - radius, 0 - radius, radius * 2, radius * 2);
+            if (textures.self != null) {
+                ctx.clip();
+                ctx.drawImage(textures.self, 0 - radius, 0 - radius, radius * 2, radius * 2);
+            }
 
             ctx.restore();
         }

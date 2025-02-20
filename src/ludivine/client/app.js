@@ -523,7 +523,7 @@ async function runProfile() {
         <div class="tab">
             <div class="row">
                 <div class="box profile">
-                    <img class="picture" src=${pictureURL()} alt=""/>
+                    <img class="avatar" src=${identity?.picture ?? ASSETS['ui/user']} alt=""/>
 
                     <div class="actions">
                         <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>Modifier mon avatar</button>
@@ -678,11 +678,6 @@ async function changePicture() {
     }
 
     run();
-}
-
-function pictureURL() {
-    let url = identity?.picture ?? ASSETS['ui/user'];
-    return url;
 }
 
 async function openStudy(project) {
@@ -1224,11 +1219,12 @@ async function deleteDatabase() {
 }
 
 export {
+    identity,
+
     start,
 
     run,
 
     isLogged,
-    changePicture,
-    pictureURL
+    changePicture
 }

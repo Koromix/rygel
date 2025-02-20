@@ -64,6 +64,14 @@ p + .actions { margin-top: 2em; }
     font-weight: bold;
 }
 
+.avatar {
+    box-sizing: border-box;
+    background: white;
+    border-radius: 50%;
+    border: 3px solid var(--bar_color);
+}
+.avatar.anonymous { border: none; }
+
 #top { font-size: 1.1em; }
 #top menu {
     gap: 2em;
@@ -74,23 +82,20 @@ p + .actions { margin-top: 2em; }
     text-transform: none;
 }
 #top.border { border-bottom-color: var(--top_background); }
-#top .picture {
+#top .avatar {
     width: 51px;
     height: 51px;
-    background: white;
-    border-radius: 50%;
-    border: 3px solid #e9a07f;
 }
 
 footer { font-size: 1.1em; }
 
 @media screen and (max-width: 960px) {
-    #top .picture {
+    #top .avatar {
         position: fixed;
         top: 14px;
         right: 14px;
-        width: 39px;
-        height: 39px;
+        width: 34px;
+        height: 34px;
     }
 
     footer {
