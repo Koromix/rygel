@@ -88,6 +88,7 @@ let route = {
     section: null
 };
 let route_url = null;
+let poisoned = false;
 
 let db = null;
 let identity = null;
@@ -228,6 +229,18 @@ function decrypt(enc, key) {
     return obj;
 }
 
+async function logout() {
+    await db.close();
+    db = null;
+
+    sessionStorage.removeItem('session');
+
+    window.onbeforeunload = null;
+    window.location.href = ENV.urls.static;
+
+    poisoned = true;
+}
+
 // ------------------------------------------------------------------------
 // Run
 // ------------------------------------------------------------------------
@@ -282,6 +295,9 @@ async function go(url = null, push = true) {
 }
 
 async function run(push = true) {
+    if (poisoned)
+        return;
+
     // Don't run stateful code while dialog is running to avoid concurrency issues
     if (UI.isDialogOpen()) {
         UI.runDialog();
@@ -515,7 +531,8 @@ async function runProfile() {
                     <img class="avatar" src=${identity?.picture ?? ASSETS['ui/user']} alt=""/>
 
                     <div class="actions">
-                        <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>Modifier mon avatar</button>
+                        <button type="button" @click=${UI.wrap(changePicture)}>Modifier mon avatar</button>
+                        <button type="button" class="secondary" @click=${UI.insist(logout)}>Se déconnecter</button>
                     </div>
                 </div>
 
