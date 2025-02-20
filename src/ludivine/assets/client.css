@@ -109,13 +109,7 @@ main.fullscreen {
     background: var(--box_color);
     border-radius: 16px;
 }
-.box > .title {
-    font-size: 1.2em;
-    font-weight: bold;
-    text-transform: uppercase;
-    text-align: center;
-    color: #364b9b;
-}
+
 .help {
     display: flex;
     width: 80%;
@@ -145,6 +139,14 @@ main.fullscreen {
 }
 .box > .help { margin: 1em auto; }
 
+.header {
+    font-size: 1.2em;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-align: center;
+    color: #364b9b;
+}
+
 @media screen and (max-width: 960px) {
     .row {
         flex-direction: column;
@@ -152,13 +154,10 @@ main.fullscreen {
     }
 }
 
-.profile {
-    flex-direction: row;
-    gap: 2em;
-}
+.profile { padding: 2em; }
 .profile > .picture {
-    width: 133px;
-    height: 133px;
+    width: 197px;
+    height: 197px;
     margin: 0 auto;
     background: white;
     border-radius: 50%;
@@ -166,8 +165,7 @@ main.fullscreen {
 }
 
 @media screen and (max-width: 960px) {
-    .profile { flex-direction: column; }
-    .profile > .picture { display: none; }
+    .profile { width: auto; }
 }
 
 .studies {

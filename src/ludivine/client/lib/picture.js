@@ -155,7 +155,7 @@ function PictureCropper(title, size) {
         return html`
             <div class="not_dialog">
                 <div class="box not_column">
-                    <div class="title">Avatar</div>
+                    <div class="header">Avatar</div>
                     <div class="pic_preview" style=${`--size: ${size}px`}>${preview}</div>
 
                     ${Object.keys(notion.colors).map(cat => {
@@ -215,7 +215,7 @@ function PictureCropper(title, size) {
         return html`
             <div class="pic_dialog">
                 <div class="box">
-                    <div class="title">Avatar</div>
+                    <div class="header">Avatar</div>
                     <div class=${is_default ? 'pic_preview' : 'pic_preview interactive'}
                          style=${`--size: ${size}px`}>${preview}</div>
                 </div>

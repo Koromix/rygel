@@ -80,6 +80,9 @@ Object.assign(T, {
 });
 
 let route = {
+    mode: null,
+
+    // study mode
     project: null,
     path: null,
     section: null
@@ -111,6 +114,16 @@ let ctx = null;
 
 async function start() {
     UI.init(run);
+
+    // Handle internal links
+    Util.interceptLocalAnchors((e, href) => {
+        let url = new URL(href, window.location.href);
+
+        let func = UI.wrap(e => go(url));
+        func(e);
+
+        e.preventDefault();
+    });
 
     // Handle back navigation
     window.addEventListener('popstate', e => {
@@ -226,30 +239,43 @@ async function go(url = null, push = true) {
             url = new URL(url, window.location.href);
 
         let parts = url.pathname.slice(1).split('/');
-        let project = PROJECTS.find(project => project.key == parts[0]);
+        let mode = parts.shift();
 
-        if (project != null) {
-            route.project = parts.shift();
+        switch (mode) {
+            case 'profile': { route.mode = 'profile'; } break;
 
-            if (parts.length > 0) {
-                let last = parts.pop();
+            case 'study': {
+                route.mode = 'study';
 
-                route.path = '/' + parts.join('/');
+                let project = PROJECTS.find(project => project.key == parts[0]);
 
-                if (last.startsWith('-')) {
-                    route.section = last.substr(1);
+                if (project != null) {
+                    route.mode = 'study';
+                    route.project = parts.shift();
 
-                    if (route.section == 'edit')
-                        route.section = 0;
+                    if (parts.length > 0) {
+                        let last = parts.pop();
+
+                        route.path = '/' + parts.join('/');
+
+                        if (last.startsWith('-')) {
+                            route.section = last.substr(1);
+
+                            if (route.section == 'edit')
+                                route.section = 0;
+                        } else {
+                            route.path += '/' + last;
+                            route.section = null;
+                        }
+                    }
                 } else {
-                    route.path += '/' + last;
+                    route.project = null;
+                    route.path = null;
                     route.section = null;
                 }
-            }
-        } else {
-            route.project = null;
-            route.path = null;
-            route.section = null;
+            } break;
+
+            default: { route.mode = 'profile'; } break;
         }
     }
 
@@ -304,7 +330,7 @@ async function run(push = true) {
     }
 
     // Sync state with expected route
-    {
+    if (route.mode == 'study') {
         let project = PROJECTS.find(project => project.key == route.project);
 
         if (project != null) {
@@ -349,14 +375,20 @@ async function run(push = true) {
     }
 
     // Run module
-    if (cache.project != null) {
-        if (cache.study != null) {
-            await runProject();
-        } else {
-            await runConsent();
-        }
-    } else {
-        await runDashboard();
+    switch (route.mode) {
+        case 'profile': { await runProfile(); } break;
+
+        case 'study': {
+            if (cache.project != null) {
+                if (cache.study != null) {
+                    await runProject();
+                } else {
+                    await runConsent();
+                }
+            } else {
+                await runDashboard();
+            }
+        } break;
     }
 
     // Update route values
@@ -385,8 +417,10 @@ function makeURL(values = {}) {
 
     values = Object.assign({}, route, values);
 
-    if (route.project != null) {
-        path += route.project;
+    path += route.mode;
+
+    if (route.mode == 'study' && route.project != null) {
+        path += '/' + route.project;
         if (route.path != null)
             path += route.path;
         if (route.section === 0) {
@@ -439,7 +473,7 @@ async function runRegister() {
 
         <div class="tab">
             <div class="box" style="align-items: center;">
-                <div class="title">Enregistrez-vous pour continuer</div>
+                <div class="header">Enregistrez-vous pour continuer</div>
 
                 <form style="text-align: center;" @submit=${UI.wrap(register)}>
                     <input type="text" name="email" style="width: 20em;" placeholder="adresse email" />
@@ -478,25 +512,57 @@ async function register(e) {
     render(html`<p>Consultez l'email qui <b>vous a été envoyé</b> pour continuer !</p>`, form);
 }
 
-async function runDashboard() {
+async function runProfile() {
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Tableau de bord</a>
+            <a href="/profile" class="active">Profil</a>
+            <a href="/study">Tableau de bord</a>
         </div>
 
         <div class="tab">
-            <div class="box profile">
-                <img class="picture" src=${pictureURL()} alt=""/>
-                <div>
-                    <p>Bienvenue sur <b>${ENV.title}</b> !
+            <div class="row">
+                <div class="box profile">
+                    <img class="picture" src=${pictureURL()} alt=""/>
+
+                    <div class="actions">
+                        <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>Modifier mon avatar</button>
+                    </div>
+                </div>
+
+                <div class="box">
+                    <div class="header">Bienvenue sur <b>${ENV.title}</b> !</div>
 
                     <p>Vous pouvez modifier les informations de votre profil saisies précédemment à l’aide du bouton ci-dessous.
                     Par ailleurs, n’oubliez pas que vous pouvez <b>retirer votre consentement</b> à tout moment en vous rendant dans votre profil.
                     <p>N’hésitez pas à <b>faire des pauses</b> et à visiter la page <b>Se Détendre</b>. Vous pourrez reprendre à tout moment.</p>
 
                     <div class="actions">
-                        <button type="button" @click=${UI.wrap(changePicture)}>Modifier mon avatar</button>
+                        <a href="/study">Accéder aux études</a>
                     </div>
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+async function runDashboard() {
+    UI.main(html`
+        <div class="tabbar">
+            <a href="/profile">Profil</a>
+            <a href="/study" class="active">Tableau de bord</a>
+        </div>
+
+        <div class="tab">
+            <div class="box">
+                <div class="columns">
+                    <div style="flex: 4;">
+                        <div class="header">Bienvenue sur <b>${ENV.title}</b> !</div>
+
+                        <p>Vous pouvez modifier les informations de votre profil saisies précédemment à l’aide du bouton ci-dessous.
+                        Par ailleurs, n’oubliez pas que vous pouvez <b>retirer votre consentement</b> à tout moment en vous rendant dans votre profil.
+                        <p>N’hésitez pas à <b>faire des pauses</b> et à visiter la page <b>Se Détendre</b>. Vous pourrez reprendre à tout moment.</p>
+                    </div>
+                    <img src=${ASSETS['pictures/kezako']} style="flex: 1;" alt="" />
                 </div>
             </div>
 
@@ -543,7 +609,7 @@ async function runDashboard() {
 
                 <div class="column">
                     <div class="box">
-                        <div class="title">À venir</div>
+                        <div class="header">À venir</div>
                         ${cache.events.map(evt => {
                             return html`
                                 <div class="event">
@@ -557,7 +623,7 @@ async function runDashboard() {
                     </div>
 
                     <div class="box">
-                        <div class="title">Calendrier</div>
+                        <div class="header">Calendrier</div>
                         ${renderCalendar(cache.events)}
                     </div>
                 </div>
@@ -619,7 +685,9 @@ function pictureURL() {
 }
 
 async function openStudy(project) {
+    route.mode = 'study';
     route.project = project.key;
+
     await run();
 }
 
@@ -659,7 +727,7 @@ async function runConsent() {
 
         <div class="tab">
             <div class="box">
-                <div class="title">Consentement</div>
+                <div class="header">Consentement</div>
                 ${bundle.consent}
             </div>
             <div class="box" style="align-items: center;">
@@ -754,7 +822,7 @@ async function runProject() {
                 <div class=${cls}>
                     <img src=${cache.project.picture} alt="" />
                     <div>
-                        <div class="title">Étude ${cache.project.index} - ${cache.project.title}</div>
+                        <div class="header">Étude ${cache.project.index} - ${cache.project.title}</div>
                         ${cache.project.summary}
                     </div>
                     ${progressCircle(progress, total)}
@@ -785,7 +853,7 @@ function renderModule() {
             `;
         })}
         <div class="box">
-            <div class="title">${mod.level}</div>
+            <div class="header">${mod.level}</div>
             <div class="modules">
                 ${mod.modules.map(child => {
                     let [progress, total] = computeProgress(child);

@@ -226,7 +226,7 @@ function main(content = null) {
                 <menu>
                     <a id="logo" href=${ENV.urls.static}><img src=${ASSETS['main/logo']} alt="Logo Lignes de Vie" /></a>
                     <li><a href=${ENV.urls.static} style="margin-left: 0em;">Accueil</a></li>
-                    <li><a href=${ENV.urls.app} class="active" style="margin-left: 0em;">Participer</a></li>
+                    <li><a href="/study" class="active" style="margin-left: 0em;">Participer</a></li>
                     <li><a href=${ENV.urls.static + '/etudes'} style="margin-left: 0em;">Études</a></li>
                     <li><a href=${ENV.urls.static + '/livres'} style="margin-left: 0em;">Ressources</a></li>
                     <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Détente</a></li>
