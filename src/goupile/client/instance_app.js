@@ -29,12 +29,13 @@ function ApplicationInfo(profile) {
     };
 
     this.tags = [
-        { key: 'incomplete', label: 'Incomplet', color: '#ef6e30' },
-        { key: 'control', label: 'Contrôles', color: '#d9ab46' },
-        { key: 'wait', label: 'En attente', color: '#3b96c8' },
-        { key: 'check', label: 'À vérifier', color: '#44997c' },
-        { key: 'error', label: 'Erreur', color: '#db0a0a' },
-        { key: 'draft', label: 'Brouillon', color: '#d921e8' }
+        { key: 'incomplete', label: 'Incomplet', color: '#ef6e30', filter: true },
+        { key: 'control', label: 'Contrôles', color: '#d9ab46', filter: true },
+        { key: 'wait', label: 'En attente', color: '#3b96c8', filter: true },
+        { key: 'check', label: 'À vérifier', color: '#44997c', filter: true },
+        { key: 'error', label: 'Erreur', color: '#db0a0a', filter: true },
+        { key: 'draft', label: 'Brouillon', color: '#d921e8', filter: false },
+        { key: 'na', label: 'NA/ND/NSP', color: '#aaaaaa', filter: false }
     ];
 }
 

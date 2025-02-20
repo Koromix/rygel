@@ -602,6 +602,9 @@ function renderData() {
                         <label for="ins_tags">Filtrer :</label>
                     </div>
                     ${app.tags.map(tag => {
+                        if (!tag.filter)
+                            return '';
+
                         let id = 'ins_tag_' + tag.key;
 
                         return html`
@@ -722,7 +725,7 @@ async function runExportDialog(e) {
 function toggleTagFilter(tag) {
     if (tag == null) {
         if (data_tags == null) {
-            data_tags = new Set(app.tags.map(tag => tag.key));
+            data_tags = new Set(app.tags.filter(tag => tag.filter).map(tag => tag.key));
         } else {
             data_tags = null;
         }
@@ -1106,9 +1109,12 @@ function addAutomaticTags(variables) {
             intf.options.readonly = true;
         } else if (status.filling == 'check') {
             tags.push('check');
+            intf.errors.length = 0;
         } else if (status.filling == 'wait') {
             tags.push('wait');
+            intf.errors.length = 0;
         } else if (status.filling != null) {
+            tags.push('na');
             intf.errors.length = 0;
         } else if (intf.missing && intf.options.mandatory) {
             if (form_entry.anchor >= 0 || intf.errors.some(err => !err.delay))
