@@ -367,6 +367,7 @@ async function run(push = true) {
                 cache.section = null;
             }
         } else {
+            cache.project = null;
             cache.study = null;
             cache.mod = null;
             cache.page = null;
