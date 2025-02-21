@@ -2,6 +2,14 @@
 
 ## Goupile 3.9
 
+### Goupile 3.9.1
+
+*Sortie le 21/02/2025*
+
+- Correction de la valeur de séquence dans les exports
+
+### Goupile 3.9
+
 *Sortie le 21/02/2025*
 
 - Correction des incohérences de statut avec les pages désactivées

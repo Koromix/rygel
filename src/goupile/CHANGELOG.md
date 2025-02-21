@@ -2,6 +2,14 @@
 
 ## Goupile 3.9
 
+### Goupile 3.9.1
+
+*Released on 2025-02-21*
+
+- Fix sequence value in exports
+
+### Goupile 3.9
+
 *Released on 2025-02-21*
 
 - Fix incoherent completion status with disabled pages
