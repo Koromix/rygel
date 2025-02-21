@@ -2,12 +2,15 @@
 
 ## Goupile 3.9
 
-## Goupile 3.9.0 (2025-02-18)
+*Released on 2025-02-21*
 
 - Fix incoherent completion status with disabled pages
 - Implement proper per-thread sequential IDs
 - Always show Continue button on sequenced pages
+- Add app-global annotation setting
+- Fix various variable tag inconsistencies
 - Keep legacy record sequence values and HID
+- Use simpler version numbers
 
 ## Goupile 3.8
 
