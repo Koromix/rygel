@@ -1887,8 +1887,6 @@ function getFillingStatuses(intf) {
             ['na', goupile.isLocked() ? 'Ce n\'est pas applicable' : 'Non applicable'],
             ['nd', goupile.isLocked() ? 'Je n\'ai pas cette information' : 'Non disponible']
         );
-    } else {
-        statuses.push(['complete', 'Complet']);
     }
 
     return statuses;
