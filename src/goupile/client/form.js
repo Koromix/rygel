@@ -95,8 +95,15 @@ function FormModel() {
     this.renderActions = function() { return self.actions.map(intf => intf.render()); };
 }
 
-function FormBuilder(state, model) {
+function FormBuilder(state, model, options = {}) {
     let self = this;
+
+    options = Object.assign({
+        deploy: true,
+        untoggle: true,
+        wrap: true,
+        annotate: false
+    }, options);
 
     // Workaround for lack of some date inputs (Firefox, Safari)
     let has_input_date = (() => {
@@ -132,12 +139,7 @@ function FormBuilder(state, model) {
         ptr: state.values
     }];
 
-    let options_stack = [{
-        deploy: true,
-        untoggle: true,
-        wrap: true,
-        annotate: false
-    }];
+    let options_stack = [options];
     let widgets_ref = model.widgets0;
 
     let inline_next = false;

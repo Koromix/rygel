@@ -738,8 +738,12 @@ function toggleTagFilter(tag) {
 }
 
 async function renderPage() {
+    let options = {
+        annotate: app.annotate
+    };
+
     let model = new FormModel;
-    let builder = new FormBuilder(form_state, model);
+    let builder = new FormBuilder(form_state, model, options);
     let meta = new MetaModel;
 
     try {

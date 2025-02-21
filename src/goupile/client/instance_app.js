@@ -18,6 +18,7 @@ function ApplicationInfo(profile) {
 
     this.pages = [];
     this.homepage = null;
+    this.annotate = false;
     this.remember = false;
     this.shortcuts = [];
 
@@ -61,6 +62,7 @@ function ApplicationBuilder(app) {
 
     Object.defineProperties(this, {
         homepage: { get: () => app.homepage, set: homepage => { app.homepage = homepage; }, enumerable: true },
+        annotate: { get: () => app.annotate, set: annotate => { app.annotate = annotate; }, enumerable: true },
         remember: { get: () => app.remember, set: remember => { app.remember = remember; }, enumerable: true },
 
         head: { get: () => app.head, set: head => { app.head = head; }, enumerable: true },
