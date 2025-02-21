@@ -1118,8 +1118,12 @@ function addAutomaticTags(variables) {
             tags.push('wait');
             intf.errors.length = 0;
         } else if (status.filling != null) {
-            tags.push('na');
-            intf.errors.length = 0;
+            if (intf.missing) {
+                tags.push('na');
+                intf.errors.length = 0;
+            } else {
+                status.filling = null;
+            }
         } else if (intf.missing && intf.options.mandatory) {
             if (form_entry.anchor >= 0 || intf.errors.some(err => !err.delay))
                 tags.push('incomplete');
