@@ -74,7 +74,7 @@ async function exportRecords(stores, filter = null) {
                 continue;
 
             let row = [
-                thread.tid, findSequence(thread),
+                thread.tid, thread.sequence,
                 ...table.columns.map(column => {
                     let result = column.read(entry.data);
                     if (result == null)
@@ -223,17 +223,6 @@ async function walkThreads(method, func) {
 
         from = json.next;
     } while (from != null);
-}
-
-function findSequence(thread) {
-    for (let store in thread.entries) {
-        let entry = thread.entries[store];
-
-        if (entry.sequence != null)
-            return entry.sequence;
-    }
-
-    return null;
 }
 
 export {

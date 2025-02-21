@@ -685,7 +685,8 @@ void RunExport(http_IO *io, InstanceHolder *instance, bool data, bool meta)
         json.StartObject();
 
         json.Key("tid"); json.String(cursor->tid);
-        json.Key("saved"); json.Bool(true);
+        json.Key("sequence"); json.Int64(cursor->t);
+        json.Key("hid"); json.Null();
 
         json.Key("entries"); json.StartObject();
         do {
