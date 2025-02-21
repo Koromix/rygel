@@ -4012,7 +4012,7 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
     LogFmt(level, ctx, fmt, fmt_args);
 }
 
-#if __has_include(<source_location>)
+#if defined(RG_DEBUG) && __has_include(<source_location>)
     struct LogContext {
         const char *fmt;
         char str[56] = {};
@@ -4068,10 +4068,19 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
     template <typename... Args>
     static inline void LogError(LogContext ctx, Args... args) { Log(LogLevel::Error, ctx.str, ctx.fmt, args...); }
 #else
-    #define LogDebug(...) Log(LogLevel::Debug, "Debug: " __VA_OPT__(,) __VA_ARGS__)
-    #define LogInfo(...) Log(LogLevel::Info, nullptr __VA_OPT__(,) __VA_ARGS__)
-    #define LogWarning(...) Log(LogLevel::Warning, "Warning: " __VA_OPT__(,) __VA_ARGS__)
-    #define LogError(...) Log(LogLevel::Error, "Error: " __VA_OPT__(,) __VA_ARGS__)
+    #if defined(RG_DEBUG)
+        template <typename... Args>
+        static inline void LogDebug(Args... args) { Log(LogLevel::Debug, "Debug: ", args...); }
+    #else
+        template <typename... Args>
+        static inline void LogDebug(Args...) {}
+    #endif
+    template <typename... Args>
+    static inline void LogInfo(Args... args) { Log(LogLevel::Info, nullptr, args...); }
+    template <typename... Args>
+    static inline void LogWarning(Args... args) { Log(LogLevel::Warning, "Warning: ", args...); }
+    template <typename... Args>
+    static inline void LogError(Args... args) { Log(LogLevel::Error, "Error: ", args...); }
 #endif
 
 void SetLogHandler(const std::function<LogFunc> &func, bool vt100);
