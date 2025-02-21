@@ -4068,27 +4068,10 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
     template <typename... Args>
     static inline void LogError(LogContext ctx, Args... args) { Log(LogLevel::Error, ctx.str, ctx.fmt, args...); }
 #else
-    #warning Using slow log context system because <source_location> is missing (old compiler)
-
-    static const char *MakeLogContext(const char *filename, int line)
-    {
-        static thread_local LocalArray<char, 1024> buf;
-
-        buf.len = Fmt(buf.data, "[%1:%2] ", filename, line).len;
-
-        if (buf.len > 32) {
-            char *ptr = buf.end() - 32;
-            MemCpy(ptr, "[...", 4);
-            return ptr;
-        } else {
-            return buf.data;
-        }
-    }
-
-    #define LogDebug(...) Log(LogLevel::Debug, MakeLogContext(__FILE__, __LINE__) __VA_OPT__(,) __VA_ARGS__)
+    #define LogDebug(...) Log(LogLevel::Debug, "Debug: " __VA_OPT__(,) __VA_ARGS__)
     #define LogInfo(...) Log(LogLevel::Info, nullptr __VA_OPT__(,) __VA_ARGS__)
-    #define LogWarning(...) Log(LogLevel::Warning, MakeLogContext(__FILE__, __LINE__) __VA_OPT__(,) __VA_ARGS__)
-    #define LogError(...) Log(LogLevel::Error, MakeLogContext(__FILE__, __LINE__) __VA_OPT__(,) __VA_ARGS__)
+    #define LogWarning(...) Log(LogLevel::Warning, "Warning: " __VA_OPT__(,) __VA_ARGS__)
+    #define LogError(...) Log(LogLevel::Error, "Error: " __VA_OPT__(,) __VA_ARGS__)
 #endif
 
 void SetLogHandler(const std::function<LogFunc> &func, bool vt100);
