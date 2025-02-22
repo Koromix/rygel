@@ -129,7 +129,10 @@ function progressBar(value, total, cls = null) {
         return '';
 
     let ratio = (value / total);
-    let progress = Math.round(ratio * 100);
+    let progress = ratio * 100;
+
+    // Round up unless high for user motivation
+    progress = (progress < 99.5) ? Math.ceil(progress) : Math.floor(progress);
 
     cls = 'bar' + (cls ? ' ' + cls : '');
 
@@ -148,7 +151,10 @@ function progressCircle(value, total, cls = null) {
     }
 
     let ratio = (value / total);
-    let progress = Math.round(ratio * 100);
+    let progress = ratio * 100;
+
+    // Round up unless high for user motivation
+    progress = (progress < 99.5) ? Math.ceil(progress) : Math.floor(progress);
 
     let array = 314.1;
     let offset = array - ratio * array;
