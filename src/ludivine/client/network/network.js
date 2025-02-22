@@ -19,6 +19,7 @@ import { AppRunner } from '../../../web/core/runner.js';
 import * as UI from '../ui.js';
 import { ASSETS } from '../../assets/assets.js';
 import { NetworkWidget } from './widget.js';
+import * as app from '../app.js';
 
 import './network.css';
 
@@ -218,6 +219,12 @@ function NetworkModule(db, study, page) {
             rewind(redo_actions, undo_actions);
 
         self.actions(9, html`
+            <button type="button" class=${UI.isFullscreen ? 'active' : ''} title="Mode plein écran"
+                    @click=${UI.wrap(UI.toggleFullscreen)}>
+                <img src=${ASSETS['ui/fullscreen']} alt="" />
+                <span>${UI.isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}</span>
+            </button>
+            <div style="height: 20px;"></div>
             <button type="button" title="Annuler la dernière modification"
                     ?disabled=${!undo_actions.length}
                     @click=${UI.wrap(e => rewind(undo_actions, redo_actions))}>
@@ -233,10 +240,9 @@ function NetworkModule(db, study, page) {
         `);
 
         self.actions(3, html`
-            <button type="button" class=${UI.isFullscreen ? 'active' : ''} title="Mode plein écran"
-                    @click=${UI.wrap(UI.toggleFullscreen)}>
-                <img src=${ASSETS['ui/fullscreen']} alt="" />
-                <span>${UI.isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}</span>
+            <button type="button" class="confirm" @click=${UI.insist(finalize)}>
+                <img src=${ASSETS['ui/confirm']} alt="" />
+                <span>Finaliser</span>
             </button>
         `);
 
@@ -257,22 +263,9 @@ function NetworkModule(db, study, page) {
         }
     }
 
-    function saveFile() {
+    async function finalize() {
         let data = serialize();
-        let json = JSON.stringify(data, null, 4);
-
-        let blob = new Blob([json]);
-
-        Util.saveFile(blob, 'world.json');
-    }
-
-    async function loadFile() {
-        let file = await Util.loadFile();
-        let json = await file.text();
-
-        let data = JSON.parse(json);
-
-        await load(data);
+        app.finalizeTest(page, data);
     }
 
     this.registerPush = function(array, ref, auto = false) {

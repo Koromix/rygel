@@ -67,31 +67,32 @@ import asset50 from './ui/book.png';
 import asset51 from './ui/calendar.png';
 import asset52 from './ui/child.png';
 import asset53 from './ui/configure.png';
-import asset54 from './ui/copy.png';
-import asset55 from './ui/create.png';
-import asset56 from './ui/dashboard.png';
-import asset57 from './ui/delete.png';
-import asset58 from './ui/dice.webp';
-import asset59 from './ui/fullscreen.png';
-import asset60 from './ui/insert.png';
-import asset61 from './ui/left.webp';
-import asset62 from './ui/link.png';
-import asset63 from './ui/move.png';
-import asset64 from './ui/movie.png';
-import asset65 from './ui/music.png';
-import asset66 from './ui/network.png';
-import asset67 from './ui/new.png';
-import asset68 from './ui/paper.png';
-import asset69 from './ui/people.png';
-import asset70 from './ui/redo.png';
-import asset71 from './ui/right.webp';
-import asset72 from './ui/rotate.png';
-import asset73 from './ui/select.png';
-import asset74 from './ui/track.png';
-import asset75 from './ui/undo.png';
-import asset76 from './ui/unselect.png';
-import asset77 from './ui/user.png';
-import asset78 from './ui/video.png';
+import asset54 from './ui/confirm.png';
+import asset55 from './ui/copy.png';
+import asset56 from './ui/create.png';
+import asset57 from './ui/dashboard.png';
+import asset58 from './ui/delete.png';
+import asset59 from './ui/dice.webp';
+import asset60 from './ui/fullscreen.png';
+import asset61 from './ui/insert.png';
+import asset62 from './ui/left.webp';
+import asset63 from './ui/link.png';
+import asset64 from './ui/move.png';
+import asset65 from './ui/movie.png';
+import asset66 from './ui/music.png';
+import asset67 from './ui/network.png';
+import asset68 from './ui/new.png';
+import asset69 from './ui/paper.png';
+import asset70 from './ui/people.png';
+import asset71 from './ui/redo.png';
+import asset72 from './ui/right.webp';
+import asset73 from './ui/rotate.png';
+import asset74 from './ui/select.png';
+import asset75 from './ui/track.png';
+import asset76 from './ui/undo.png';
+import asset77 from './ui/unselect.png';
+import asset78 from './ui/user.png';
+import asset79 from './ui/video.png';
 
 const ASSETS = {
     'main/footer': asset0,
@@ -148,31 +149,32 @@ const ASSETS = {
     'ui/calendar': asset51,
     'ui/child': asset52,
     'ui/configure': asset53,
-    'ui/copy': asset54,
-    'ui/create': asset55,
-    'ui/dashboard': asset56,
-    'ui/delete': asset57,
-    'ui/dice': asset58,
-    'ui/fullscreen': asset59,
-    'ui/insert': asset60,
-    'ui/left': asset61,
-    'ui/link': asset62,
-    'ui/move': asset63,
-    'ui/movie': asset64,
-    'ui/music': asset65,
-    'ui/network': asset66,
-    'ui/new': asset67,
-    'ui/paper': asset68,
-    'ui/people': asset69,
-    'ui/redo': asset70,
-    'ui/right': asset71,
-    'ui/rotate': asset72,
-    'ui/select': asset73,
-    'ui/track': asset74,
-    'ui/undo': asset75,
-    'ui/unselect': asset76,
-    'ui/user': asset77,
-    'ui/video': asset78,
+    'ui/confirm': asset54,
+    'ui/copy': asset55,
+    'ui/create': asset56,
+    'ui/dashboard': asset57,
+    'ui/delete': asset58,
+    'ui/dice': asset59,
+    'ui/fullscreen': asset60,
+    'ui/insert': asset61,
+    'ui/left': asset62,
+    'ui/link': asset63,
+    'ui/move': asset64,
+    'ui/movie': asset65,
+    'ui/music': asset66,
+    'ui/network': asset67,
+    'ui/new': asset68,
+    'ui/paper': asset69,
+    'ui/people': asset70,
+    'ui/redo': asset71,
+    'ui/right': asset72,
+    'ui/rotate': asset73,
+    'ui/select': asset74,
+    'ui/track': asset75,
+    'ui/undo': asset76,
+    'ui/unselect': asset77,
+    'ui/user': asset78,
+    'ui/video': asset79,
 };
 
 export { ASSETS }
