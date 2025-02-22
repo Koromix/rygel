@@ -27,8 +27,8 @@ const CIRCLE_MARGIN = 1.8 * PERSON_RADIUS;
 const MIN_LINK_WIDTH = 0.003;
 const MAX_LINK_WIDTH = 0.01;
 
-const DEFAULT_QUALITY = 3;
-const DEFAULT_LINK = 2;
+const DEFAULT_QUALITY = 0;
+const DEFAULT_LINK = 0;
 
 const ORIGIN = { x: 0, y: 0 };
 
