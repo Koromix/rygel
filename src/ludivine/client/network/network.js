@@ -219,19 +219,19 @@ function NetworkModule(db, study, page) {
             rewind(redo_actions, undo_actions);
 
         self.actions(9, html`
-            <button type="button" class=${UI.isFullscreen ? 'active' : ''} title="Mode plein écran"
+            <button type="button" class=${UI.isFullscreen ? 'secondary active' : 'secondary'}
                     @click=${UI.wrap(UI.toggleFullscreen)}>
                 <img src=${ASSETS['ui/fullscreen']} alt="" />
                 <span>${UI.isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}</span>
             </button>
             <div style="height: 20px;"></div>
-            <button type="button" title="Annuler la dernière modification"
+            <button type="button" class="secondary" title="Annuler la dernière modification"
                     ?disabled=${!undo_actions.length}
                     @click=${UI.wrap(e => rewind(undo_actions, redo_actions))}>
                 <img src=${ASSETS['ui/undo']} alt="" />
                 <span>Annuler</span>
             </button>
-            <button type="button" title="Rétablir la dernière action annulée"
+            <button type="button" class="secondary" title="Rétablir la dernière action annulée"
                     ?disabled=${!redo_actions.length}
                     @click=${UI.wrap(e => rewind(redo_actions, undo_actions))}>
                 <img src=${ASSETS['ui/redo']} alt="" />
@@ -265,7 +265,7 @@ function NetworkModule(db, study, page) {
 
     async function finalize() {
         let data = serialize();
-        app.finalizeTest(page, data);
+        await app.finalizeTest(page, data);
     }
 
     this.registerPush = function(array, ref, auto = false) {

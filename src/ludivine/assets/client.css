@@ -62,6 +62,7 @@ main.fullscreen {
     & .tab > .summary { display: none; }
 }
 
+button.confirm { --button_color: #2d8261; }
 button.secondary {
     --button_color: #ddd;
     color: black !important;
