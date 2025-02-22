@@ -240,6 +240,15 @@ function FormBuilder(ctx, model) {
                             }
                         });
 
+                        if (e.target.checked) {
+                            let allow_null = (prop[0] == null);
+
+                            values = values.filter(value => {
+                                let is_null = (value == null);
+                                return is_null == allow_null;
+                            });
+                        }
+
                         setValue(key, values);
                     }
                 })}
