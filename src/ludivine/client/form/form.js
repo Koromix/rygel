@@ -19,14 +19,18 @@ import { progressBar } from '../lib/util.js';
 import { FormContext, FormModel, FormBuilder } from './builder.js';
 import * as app from '../app.js';
 import * as UI from '../ui.js';
+import { ASSETS } from '../../assets/assets.js';
 
 function FormModule(db, study, page) {
     let div = null;
 
     let form = page.form;
-    let part_idx = 0;
+    let part_idx = null;
 
     let ctx = null;
+
+    let is_new = false;
+    let has_changed = false;
 
     this.start = async function() {
         div = document.createElement('div');
@@ -46,10 +50,15 @@ function FormModule(db, study, page) {
             }
         }
 
-        if (ctx == null)
+        if (ctx == null) {
             ctx = new FormContext;
+            is_new = true;
+        }
 
-        ctx.changeHandler = run;
+        ctx.changeHandler = () => {
+            has_changed = true;
+            runForm();
+        };
     };
 
     this.stop = function() {
@@ -57,18 +66,56 @@ function FormModule(db, study, page) {
     };
 
     this.render = function(section) {
-        part_idx = parseInt(section, 10);
+        if (section != null) {
+            part_idx = parseInt(section, 10);
+        } else {
+            part_idx = null;
+        }
 
-        run();
+        if (part_idx != null) {
+            runForm();
+        } else {
+            runStart();
+        }
 
         return div;
     };
 
     this.hasUnsavedData = function() {
-        return false;
+        return has_changed;
     };
 
-    function run() {
+    function runStart() {
+        render(html`
+            ${Util.mapRange(0, page.chain.length - 2, idx => {
+                let parent = page.chain[idx];
+                let next = page.chain[idx + 1];
+
+                return html`
+                    <div class="box level" @click=${UI.wrap(e => app.navigateStudy(parent))}>
+                        ${parent.level ?? ''}${parent.level ? ' - ' : ''}
+                        ${next.title}
+                    </div>
+                `;
+            })}
+            <div class="box level" @click=${UI.wrap(e => app.navigateStudy(page))}>
+                Questionnaire - ${page.title}
+            </div>
+            <div class="start">
+                <div class="help">
+                    <img src=${ASSETS['pictures/help1']} alt="" />
+                    <div>
+                        <p>Tout est prêt pour <b>commencer le questionnaire</b> !
+                        <p>Pensez à <b>faire des pauses</b> si vous en ressentez le besoin, ou à faire un tour sur la page Se Détendre.
+                        <p>Si vous êtes prêt, <b>on peut y aller</b> !
+                    </div>
+                </div>
+                <button type="button" @click=${UI.wrap(e => app.navigateStudy(page, 0))}>${is_new ? 'Commencer' : 'Continuer'}</button>
+            </div>
+        `, div);
+    }
+
+    function runForm() {
         let model = new FormModel;
         let builder = new FormBuilder(ctx, model);
 
@@ -97,13 +144,16 @@ function FormModule(db, study, page) {
     }
 
     async function next() {
-        let next = part_idx + 1;
-        await app.navigateStudy(page, next);
+        await app.saveTest(page, ctx.raw);
+        has_changed = false;
+
+        let section = part_idx + 1;
+        await app.navigateStudy(page, section);
     }
 
     async function finalize() {
-        let data = ctx.raw;
-        await app.saveTest(page, data);
+        await app.finalizeTest(page, ctx.raw);
+        has_changed = false;
     }
 }
 

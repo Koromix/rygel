@@ -489,12 +489,8 @@ function NetworkModule(db, study, page) {
         save_timer = setTimeout(() => {
             save_timer = null;
 
-            let mtime = (new Date).valueOf();
             let data = serialize();
-            let json = JSON.stringify(data);
-
-            db.exec(`UPDATE tests SET status = 'draft', mtime = ?, payload = ?
-                     WHERE study = ? AND key = ?`, mtime, json, study.id, page.key);
+            app.saveTest(page, data);
         }, 1000);
     }
 

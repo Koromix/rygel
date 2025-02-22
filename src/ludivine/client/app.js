@@ -131,6 +131,12 @@ async function start() {
         go(window.location.href, false);
     });
 
+    // Prevent loss of data
+    window.onbeforeunload = e => {
+        if (ctx != null && ctx.mod.hasUnsavedData())
+            return 'Les modifications en cours seront perdues si vous continuez, êtes-vous sûr(e) de vouloir continuer ?';
+    };
+
     // Perform mail login
     if (window.location.hash) {
         let hash = window.location.hash.substr(1);
@@ -273,9 +279,6 @@ async function go(url = null, push = true) {
 
                         if (last.startsWith('-')) {
                             route.section = last.substr(1);
-
-                            if (route.section == 'edit')
-                                route.section = 0;
                         } else {
                             route.path += '/' + last;
                             route.section = null;
@@ -430,11 +433,8 @@ function makeURL(values = {}) {
         path += '/' + route.project;
         if (route.path != null)
             path += route.path;
-        if (route.section === 0) {
-            path += '/-edit';
-        } else if (route.section != null) {
+        if (route.section != null)
             path += '/-' + route.section;
-        }
     }
 
     return path;
@@ -816,8 +816,7 @@ async function runProject() {
                 </div>
 
                 ${cache.page.type == 'module' ? renderModule() : null}
-                ${cache.page.type != 'module' && cache.section == null ? renderStart() : null}
-                ${cache.page.type != 'module' && cache.section != null ? ctx.mod.render(route.section) : null}
+                ${cache.page.type != 'module' ? ctx.mod.render(route.section) : null}
             </div>
         `);
     }
@@ -915,38 +914,6 @@ function renderModule() {
     `;
 }
 
-function renderStart() {
-    let page = cache.page;
-
-    return html`
-        ${Util.mapRange(0, page.chain.length - 2, idx => {
-            let parent = page.chain[idx];
-            let next = page.chain[idx + 1];
-
-            return html`
-                <div class="box level" @click=${UI.wrap(e => navigateStudy(parent))}>
-                    ${parent.level ?? ''}${parent.level ? ' - ' : ''}
-                    ${next.title}
-                </div>
-            `;
-        })}
-        <div class="box level" @click=${UI.wrap(e => navigateStudy(page))}>
-            Questionnaire - ${page.title}
-        </div>
-        <div class="start">
-            <div class="help">
-                <img src=${ASSETS['pictures/help1']} alt="" />
-                <div>
-                    <p>Tout est prêt pour <b>commencer le questionnaire</b> !
-                    <p>Pensez à <b>faire des pauses</b> si vous en ressentez le besoin, ou à faire un tour sur la page Se Détendre.
-                    <p>Si vous êtes prêt, <b>on peut y aller</b> !
-                </div>
-            </div>
-            <button type="button" @click=${UI.wrap(e => navigateStudy(page, 0))}>Commencer !</button>
-        </div>
-    `;
-}
-
 async function navigateStudy(page, section = null) {
     while (page.type == 'module' && page.modules.length == 1)
         page = page.modules[1];
@@ -959,12 +926,16 @@ async function navigateStudy(page, section = null) {
     await run();
 }
 
-async function saveTest(page, data) {
+async function saveTest(page, data, status = 'draft') {
     let mtime = (new Date).valueOf();
     let json = JSON.stringify(data);
 
-    await db.exec(`UPDATE tests SET status = 'done', mtime = ?, payload = ?
-                   WHERE study = ? AND key = ?`, mtime, json, cache.study.id, page.key);
+    await db.exec(`UPDATE tests SET status = ?, mtime = ?, payload = ?
+                   WHERE study = ? AND key = ?`, status, mtime, json, cache.study.id, page.key);
+}
+
+async function finalizeTest(page, data) {
+    await saveTest(page, data, 'done');
 
     let next = page;
 
@@ -1171,5 +1142,6 @@ export {
     changePicture,
 
     navigateStudy,
-    saveTest
+    saveTest,
+    finalizeTest
 }
