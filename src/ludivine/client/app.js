@@ -250,7 +250,8 @@ async function go(url = null, push = true) {
         if (!(url instanceof URL))
             url = new URL(url, window.location.href);
 
-        let parts = url.pathname.slice(1).split('/');
+        let path = url.pathname.replace(/\/+$/, '');
+        let parts = path.slice(1).split('/');
         let mode = parts.shift();
 
         switch (mode) {
