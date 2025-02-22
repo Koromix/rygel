@@ -73,7 +73,7 @@ function FormBuilder(ctx, model) {
         let value = getValue(key, 'text', options);
 
         let widget = makeInput(key, label, 'text', () => html`
-            <input type="text" value=${live(value ?? '')} placeholder=${options.placeholder ?? ''}
+            <input type="text" .value=${live(value ?? '')} placeholder=${options.placeholder ?? ''}
                    @input=${e => setValue(key, e.target.value || undefined)} />
         `);
 
@@ -95,7 +95,7 @@ function FormBuilder(ctx, model) {
         let value = getValue(key, 'number', options);
 
         let widget = makeInput(key, label, 'number', () => html`
-            <input type="number" value=${live(value ?? '')} placeholder=${options.placeholder ?? ''}
+            <input type="number" .value=${live(value ?? '')} placeholder=${options.placeholder ?? ''}
                    min=${options.min} max=${options.max} @input=${input} />
         `);
 
@@ -139,13 +139,16 @@ function FormBuilder(ctx, model) {
         let widget = makeInput(key, label, 'enumRadio', () => html`
             <div class="enum">
                 ${props.map(prop => {
+                    let active = (value === prop[0]);
+
                     return html`
-                        <button type="button" class=${value === prop[0] ? 'active' : ''}
+                        <button type="button" class=${active ? 'active' : ''}
                                 @click=${click}>${prop[1]}</button>
                     `;
 
                     function click(e) {
-                        setValue(key, prop[0]);
+                        let value = !active ? prop[0] : null;
+                        setValue(key, value);
                     }
                 })}
             </div>
@@ -160,19 +163,29 @@ function FormBuilder(ctx, model) {
 
         let value = getValue(key, 'enum', options);
 
-        let widget = makeInput(key, label, 'enumButtons', id => props.map(prop => {
-            return html`
-                <label>
-                    <input type="radio" name=${id} ?checked=${live(value === prop[0])}
-                           @clicked=${click} />
-                    <span>${prop[1]}</span>
-               </label>
-            `;
+        let widget = makeInput(key, label, 'enumButtons', id => html`
+            <div>
+                ${props.map(prop => {
+                    let active = (value === prop[0]);
 
-            function click(e) {
-                setValue(key, prop[0]);
-            }
-        }));
+                    return html`
+                        <label id=${id}>
+                            <input type="radio" name=${id} .checked=${live(active)}
+                                   @click=${click} />
+                            <span>${prop[1]}</span>
+                       </label>
+                    `;
+
+                    function click(e) {
+                        if (active)
+                            e.target.checked = false;
+
+                        let value = e.target.checked ? prop[0] : null;
+                        setValue(key, value);
+                    }
+                })}
+            </div>
+        `);
 
         return widget;
     };
@@ -193,17 +206,45 @@ function FormBuilder(ctx, model) {
         props = normalizePropositions(props);
 
         let value = getValue(key, 'multi', options);
+        let values = value;
 
-        let widget = makeInput(key, label, 'multiCheck', () => props.map(prop => {
-            return html`
-                <input type="checkbox" ?checked=${live(value === prop[0])}
-                       @clicked=${click} />
-            `;
+        if (values == null) {
+            values = [];
+        } else if (!Array.isArray(values)) {
+            values = [values];
+            ctx.values[key] = values;
+        }
 
-            function click(e) {
-                setValue(key, prop[0]);
-            }
-        }));
+        let widget = makeInput(key, label, 'multiCheck', id => html`
+            <div>
+                ${props.map(prop => {
+                    let active = values.includes(prop[0]);
+
+                    return html`
+                        <label id=${id}>
+                            <input type="checkbox" .checked=${live(values.includes(prop[0]))}
+                                   @click=${click} />
+                            <span>${prop[1]}</span>
+                        </label>
+                    `;
+
+                    function click(e) {
+                        if (active)
+                            e.target.checked = false;
+
+                        values = props.map(prop => prop[0]).filter(key => {
+                            if (key == prop[0]) {
+                                return e.target.checked;
+                            } else {
+                                return values.includes(key);
+                            }
+                        });
+
+                        setValue(key, values);
+                    }
+                })}
+            </div>
+        `);
 
         return widget;
     };
@@ -216,8 +257,8 @@ function FormBuilder(ctx, model) {
 
         let value = getValue(key, 'number', options);
 
-        let widget = makeInput(key, label, 'slider', () => html`
-            <input type="slider" value=${live(value ?? '')}
+        let widget = makeInput(key, label, 'slider', id => html`
+            <input id=${id} type="slider" .value=${live(value ?? '')}
                    min=${options.min} max=${options.max} @input=${input} />
         `);
 
