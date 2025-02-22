@@ -49,36 +49,15 @@ const PROXIMITY_LEVELS = [
     }
 ];
 
-const QUALITY_LEVELS = [
-    {
-        text: 'Très négative',
-        color: '#b13737',
-        width: 0.008
-    },
-    {
-        text: 'Plutôt négative',
-        color: '#b95b5b',
-        width: 0.005
-    },
-    {
-        text: 'Neutre',
-        color: '#efbe48',
-        width: 0.004
-    },
-    {
-        text: 'Plutôt positive',
-        color: '#50a776',
-        width: 0.005
-    },
-    {
-        text: 'Très positive',
-        color: '#3fa26b',
-        width: 0.008
-    }
-];
+// Keep in sync with quality widget CSS (network.css)
+const QUALITY_COLORS = {
+    start: 0xb13737,
+    middle: 0xefbe48,
+    end: 0x3fa26b
+};
 
 export {
     PROXIMITY_LEVELS,
     PERSON_KINDS,
-    QUALITY_LEVELS
+    QUALITY_COLORS
 }

@@ -17,13 +17,15 @@ import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import { loadTexture } from '../lib/util.js';
 import * as UI from '../ui.js';
-import { PROXIMITY_LEVELS, PERSON_KINDS, QUALITY_LEVELS } from './constants.js';
+import { PROXIMITY_LEVELS, PERSON_KINDS, QUALITY_COLORS } from './constants.js';
 import { ASSETS } from '../../assets/assets.js';
 import * as app from '../app.js';
 
 const PERSON_RADIUS = 0.05;
 const LINK_RADIUS = 0.025;
 const CIRCLE_MARGIN = 1.8 * PERSON_RADIUS;
+const MIN_LINK_WIDTH = 0.003;
+const MAX_LINK_WIDTH = 0.01;
 
 const DEFAULT_QUALITY = 3;
 const DEFAULT_LINK = 2;
@@ -674,12 +676,11 @@ function NetworkWidget(mod, world) {
                         </label>
                         <label>
                             <span>Comment évaluez-vous cette relation ?</span>
-                            <select name="quality">
-                                ${QUALITY_LEVELS.map((level, quality) => {
-                                    let active = (quality == p.quality);
-                                    return html`<option value=${quality} ?selected=${active}>${level.text}</option>`;
-                                })}
-                            </select>
+                            <div class="not_quality">
+                                <span>Très mauvaise</span>
+                                <input name="quality" type="range" min="-5" max="5" value=${p.quality} />
+                                <span>Très bonne</span>
+                            </div>
                         </label>
                     </div>
                 </div>
@@ -744,12 +745,11 @@ function NetworkWidget(mod, world) {
                     <div class="box">
                         <label>
                             <span>Comment évaluez-vous cette relation ?</span>
-                            <select name="quality">
-                                ${QUALITY_LEVELS.map((level, quality) => {
-                                    let active = (link.quality == quality);
-                                    return html`<option value=${quality} ?selected=${active}>${level.text}</option>`;
-                                })}
-                            </select>
+                            <div class="not_quality">
+                                <span>Très mauvaise</span>
+                                <input name="quality" type="range" min="-5" max="5" value=${link.quality} />
+                                <span>Très bonne</span>
+                            </div>
                         </label>
                     </div>
 
@@ -844,7 +844,7 @@ function NetworkWidget(mod, world) {
     function findPerson(at) {
         let idx = persons.findIndex(p => {
             let distance = computeDistance(at, p);
-            let radius = computeRadius(p);
+            let radius = computePersonRadius(p);
 
             return distance <= radius;
         });
@@ -1020,16 +1020,17 @@ function NetworkWidget(mod, world) {
             for (let link of links) {
                 let a = persons.find(p => p.id == link.a);
                 let b = persons.find(p => p.id == link.b);
-                let level = QUALITY_LEVELS[link.quality];
+
+                let [color, width] = computeLinkStyle(link.quality);
 
                 let [from, to] = computeLinkCoordinates(a, b, 0.02);
                 let angle = Math.atan2(from.y - to.y, to.x - from.x);
 
                 // Draw arrows
                 {
-                    ctx.lineWidth = level.width;
-                    ctx.fillStyle = level.color;
-                    ctx.strokeStyle = level.color + 'dd';
+                    ctx.lineWidth = width;
+                    ctx.fillStyle = color;
+                    ctx.strokeStyle = color + 'dd';
 
                     ctx.beginPath();
                     ctx.moveTo(from.x, from.y);
@@ -1049,7 +1050,7 @@ function NetworkWidget(mod, world) {
                     let p = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
                     let radius = Math.min(distance / 10, LINK_RADIUS);
 
-                    ctx.fillStyle = level.color;
+                    ctx.fillStyle = color;
 
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, radius, 0, Math.PI * 2, false);
@@ -1065,8 +1066,8 @@ function NetworkWidget(mod, world) {
             let p = persons[i];
             let info = PERSON_KINDS[p.kind];
 
-            let radius = computeRadius(p);
-            let color = computeColor(p);
+            let radius = computePersonRadius(p);
+            let [color, _] = computeLinkStyle(p.quality);
 
             ctx.fillStyle = color;
 
@@ -1125,7 +1126,7 @@ function NetworkWidget(mod, world) {
                     continue;
 
                 if (i) {
-                    let radius = computeRadius(p);
+                    let radius = computePersonRadius(p);
                     let angle = i ? Math.atan2(-p.y, p.x) : Math.PI / 2;
 
                     let x = p.x + (1.2 * radius + 0.02) * Math.cos(angle);
@@ -1143,10 +1144,10 @@ function NetworkWidget(mod, world) {
         if (active_edit != null && active_edit.type == 'link') {
             ctx.save();
 
-            let level = QUALITY_LEVELS[active_edit.quality];
+            let [color, width] = computeLinkStyle(active_edit.quality);
 
-            ctx.strokeStyle = level.color + '88';
-            ctx.lineWidth = level.width;
+            ctx.strokeStyle = color + '88';
+            ctx.lineWidth = width;
             ctx.setLineDash([0.01, 0.01]);
 
             for (let p of select_persons) {
@@ -1205,11 +1206,19 @@ function NetworkWidget(mod, world) {
         ctx.fill();
     }
 
+    function computePersonRadius(p) {
+        if (p == persons[0])
+            return world.levels[0].radius;
+
+        let level = PROXIMITY_LEVELS[p.proximity];
+        return PERSON_RADIUS * level.size;
+    }
+
     function computeLinkCoordinates(a, b, delta = 0) {
         let angle = Math.atan2(a.y - b.y, b.x - a.x);
 
-        let radius1 = computeRadius(a) + delta;
-        let radius2 = computeRadius(b) + delta;
+        let radius1 = computePersonRadius(a) + delta;
+        let radius2 = computePersonRadius(b) + delta;
 
         let from = {
             x: a.x + radius1 * Math.cos(angle),
@@ -1221,6 +1230,45 @@ function NetworkWidget(mod, world) {
         };
 
         return [from, to];
+    }
+
+    function computeLinkStyle(quality) {
+        if (quality > 0) {
+            let factor = quality / 5;
+            let color = mixColors(QUALITY_COLORS.end, QUALITY_COLORS.middle, factor);
+            let width = MIN_LINK_WIDTH + factor * (MAX_LINK_WIDTH - MIN_LINK_WIDTH);
+
+            color = '#' + color.toString(16).padStart(6, '0');
+
+            return [color, width];
+        } else if (quality < 0) {
+            let factor = -quality / 5;
+            let color = mixColors(QUALITY_COLORS.start, QUALITY_COLORS.middle, factor);
+            let width = MIN_LINK_WIDTH + factor * (MAX_LINK_WIDTH - MIN_LINK_WIDTH);
+
+            color = '#' + color.toString(16).padStart(6, '0');
+
+            return [color, width];
+        } else {
+            let color = '#' + QUALITY_COLORS.middle.toString(16).padStart(6, '0');
+            return [color, MIN_LINK_WIDTH];
+        }
+    }
+
+    function mixColors(color1, color2, factor) {
+        let r1 = (color1 >> 16) & 0xFF;
+        let g1 = (color1 >> 8) & 0xFF;
+        let b1 = (color1 >> 0) & 0xFF;
+        let r2 = (color2 >> 16) & 0xFF;
+        let g2 = (color2 >> 8) & 0xFF;
+        let b2 = (color2 >> 0) & 0xFF;
+
+        let r = r1 * factor + r2 * (1 - factor);
+        let g = g1 * factor + g2 * (1 - factor);
+        let b = b1 * factor + b2 * (1 - factor);
+        let color = (r << 16) | (g << 8) | b;
+
+        return color;
     }
 
     function angleToAlign(angle) {
@@ -1261,19 +1309,6 @@ function NetworkWidget(mod, world) {
 
         let scale = Math.min(canvas.width / 2, canvas.height / 2) * Math.exp(zoom / 10);
         return scale;
-    }
-
-    function computeRadius(p) {
-        if (p == persons[0])
-            return world.levels[0].radius;
-
-        let level = PROXIMITY_LEVELS[p.proximity];
-        return PERSON_RADIUS * level.size;
-    }
-
-    function computeColor(p) {
-        let level = QUALITY_LEVELS[p.quality];
-        return level.color;
     }
 
     function computeDistance(p1, p2) {

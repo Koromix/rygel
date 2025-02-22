@@ -20,7 +20,7 @@
     gap: 12px;
 }
 
-.net_wrapper > canvas {
+.net_canvas {
     width: 100%;
     background: var(--box_color);
     border-radius: 16px;
@@ -78,6 +78,38 @@
     flex-direction: column;
     right: 12px;
     top: 12px;
+}
+
+.not_quality {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+
+    & > span { font-size: 0.8em; }
+
+    & > input {
+        /*  Keep in sync with QUALITY_COLORS in constants.js */
+        --start: #b13737;
+        --middle: #efbe48;
+        --end: #3fa26b;
+
+        flex: 1;
+
+        &::-webkit-slider-runnable-track {
+            appearance: none;
+            -webkit-appearance: none;
+            background: linear-gradient(.25turn, var(--start), var(--middle) 50%, var(--end));
+            height: 6px;
+            border-radius: 4px;
+        } 
+
+        &::-moz-range-track {
+            appearance: none;
+            background: linear-gradient(.25turn, var(--start), var(--middle) 50%, var(--end));
+            height: 6px;
+            border-radius: 4px;
+        }
+    }
 }
 
 @media screen and (max-width: 960px) {
