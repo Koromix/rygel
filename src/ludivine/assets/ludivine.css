@@ -51,6 +51,18 @@ button {
 button:is(.secondary, .small) { font-weight: normal !important; }
 button.secondary:not(.active) > img { filter: invert(100%); }
 
+button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
+@keyframes highlight {
+    0% {
+        filter: contrast(100%);
+        transform: scale(1);
+    }
+    100% {
+        filter: contrast(110%);
+        transform: scale(1.1);
+    }
+}
+
 .reference {
     font-weight: bold;
     color: #364b9b;
