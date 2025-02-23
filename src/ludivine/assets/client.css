@@ -457,6 +457,10 @@ form {
             margin-right: 6px;
         }
     }
+    & .widget > .error {
+        margin-top: 0.5em;
+        color: #ff6600;
+    }
 
     & input {
         padding: 0.4em 0.6em;

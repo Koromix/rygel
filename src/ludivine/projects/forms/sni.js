@@ -21,6 +21,8 @@ let intro = html`
 `
 
 function run(form, values) {
+    let incoherent = "Cette réponse ne semble pas cohérente avec la précédédente, veuillez vérifier"
+
     form.part(() => {
         form.enumRadio("q1", "Lequel des qualificatifs suivants décrit le mieux votre état civil ?", [
             [1, "Actuellement marié(e) et vivant ensemble, ou vivant avec une personne dans une relation de type conjugal"],
@@ -36,7 +38,7 @@ function run(form, values) {
         form.enumButtons("q2a", "Combien de vos enfants voyez-vous ou avez-vous au téléphone au moins une fois toutes les deux semaines ?", [0, 1, 2, 3, 4, 5, 6, [7, "7 ou plus"]], { disabled: !values.q2 })
 
         if (values.q2 != null && values.q2a > values.q2)
-            form.error("q2a", "Réponse incohérente avec la question précédente, veuillez vérifier")
+            form.error("q2a", incoherent);
     })
 
     form.part(() => {
@@ -54,9 +56,9 @@ function run(form, values) {
         ], { disabled: !values.q3 })
 
         if ((values.q3 === 1) && (values.q3a == 2 || values.q3a == 3))
-            form.error("q3a", "Réponse incohérente avec la question précédente, veuillez vérifier")
+            form.error("q3a", incoherent)
         if ((values.q3 === 2) && (values.q3a == 1 || values.q3a == 3))
-            form.error("q3a", "Réponse incohérente avec la question précédente, veuillez vérifier")
+            form.error("q3a", incoherent)
     })
 
     form.part(() => {
@@ -74,9 +76,9 @@ function run(form, values) {
         ], { disabled: !values.q4 })
 
         if ((values.q4 === 1) && (values.q4a == 2 || values.q4a == 3))
-            form.error("q4a", "Réponse incohérente avec la question précédente, veuillez vérifier")
+            form.error("q4a", incoherent)
         if ((values.q4 === 2) && (values.q4a == 1 || values.q4a == 3))
-            form.error("q4a", "Réponse incohérente avec la question précédente, veuillez vérifier")
+            form.error("q4a", incoherent)
     })
 
     form.part(() => {
@@ -86,7 +88,7 @@ function run(form, values) {
         form.enumButtons("q5a", "Combien de ces membres de votre famille voyez-vous ou avez-vous au téléphone au moins une fois toutes les deux semaines ?", [0, 1, 2, 3, 4, 5, 6, [7, "7 ou plus"]], { disabled: !values.q5 })
 
         if (values.q5 != null && values.q5a > values.q5)
-            form.error("q5a", "Réponse incohérente avec la question précédente, veuillez vérifier")
+            form.error("q5a", incoherent)
     })
 
     form.part(() => {
@@ -96,7 +98,7 @@ function run(form, values) {
         form.enumButtons("q6a", "Combien de ces amis voyez-vous ou avec combien parlez-vous au moins une fois toutes les deux semaines ?", [0, 1, 2, 3, 4, 5, 6, [7, "7 ou plus"]], { disabled: !values.q6 })
 
         if (values.q6 != null && values.q6a > values.q6)
-            form.error("q6a", "Réponse incohérente avec la question précédente, veuillez vérifier")
+            form.error("q6a", incoherent)
     })
 
     form.part(() => {
@@ -107,7 +109,7 @@ function run(form, values) {
         })
 
         if (values.q7 != null && values.q7a > values.q7)
-            form.error("q7a", "Réponse incohérente avec la question précédente, veuillez vérifier")
+            form.error("q7a", incoherent)
     })
 
     form.part(() => {

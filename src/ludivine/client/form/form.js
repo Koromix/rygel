@@ -181,11 +181,14 @@ function FormModule(db, study, page) {
                     valid = false;
                 }
             }
+
+            if (notes.error != null)
+                valid = false;
         }
 
         if (!valid) {
             ctx.refresh();
-            throw new Error('Certaines réponses sont manquantes, veuillez les compléter avant de continuer');
+            throw new Error('Certaines réponses sont manquantes ou erronées, veuillez vérifier vos réponses');
         }
     }
 }

@@ -49,6 +49,8 @@ function FormBuilder(ctx, model) {
     let part = [];
     let widgets = model.widgets;
 
+    let refreshing = false;
+
     model.parts.push(part);
 
     this.part = function(func) {
@@ -312,6 +314,17 @@ function FormBuilder(ctx, model) {
         return widget;
     };
 
+    this.error = function(key, msg) {
+        let notes = annotate(ctx.values, key);
+
+        if (notes == null)
+            throw new Error(`Unkwown variable '${key}'`);
+
+        notes.error = msg;
+
+        refresh();
+    };
+
     function makeWidget(type, func) {
         let widget = {
             type: type,
@@ -328,21 +341,25 @@ function FormBuilder(ctx, model) {
         let id = 'input' + (++unique);
 
         let notes = annotate(ctx.values, key);
-        let annotated = notes.hasOwnProperty('skip');
 
         let render = (widget) => {
+            let error = notes.error;
+            let skippable = notes.hasOwnProperty('skip') && (error == null);
+            let annotated = skippable || (error != null);
+
             let cls = 'widget' + (annotated ? ' annotate' : '');
 
             return html`
                 <div class=${cls}>
                     <label for=${id}>${label}</label>
                     ${func(id)}
-                    ${annotated ? html`
+                    ${skippable ? html`
                         <label>
                             <input type="checkbox" ?checked=${!!notes.skip} @click=${skip} />
                             <span>Je ne souhaite pas répondre à cette question</span>
                         </label>
                     ` : ''}
+                    ${error != null ? html`<div class="error">${error}</div>` : ''}
                 </div>
             `;
 
@@ -398,6 +415,13 @@ function FormBuilder(ctx, model) {
         notes.changed = !!notes.changed;
         notes.type = type;
 
+        let value = ctx.values[key];
+
+        // Clear annotations
+        delete notes.error;
+        if (value != null)
+            delete notes.skip;
+
         return ctx.values[key];
     }
 
@@ -407,7 +431,15 @@ function FormBuilder(ctx, model) {
         ctx.values[key] = value;
         notes.changed = true;
 
-        ctx.refresh();
+        refresh();
+    }
+
+    function refresh() {
+        if (refreshing)
+            return;
+
+        refreshing = true;
+        setTimeout(() => ctx.refresh(), 0);
     }
 }
 
