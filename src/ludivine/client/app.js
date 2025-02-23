@@ -979,10 +979,11 @@ async function initSQLite() {
 async function openDatabase(filename, key) {
     let db = await sqlite3.open(filename, 'multipleciphers-opfs');
 
-    await db.exec(`
+    let sql = `
         PRAGMA cipher = 'sqlcipher';
-        PRAGMA key = 'raw:${Hex.toHex(key)}'
-    `);
+        PRAGMA key = "x'${Hex.toHex(key)}'";
+    `;
+    await db.exec(sql);
 
     let version = await db.pluck('PRAGMA user_version');
 
