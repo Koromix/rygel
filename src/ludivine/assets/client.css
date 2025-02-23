@@ -439,7 +439,7 @@ form {
         flex-direction: column;
         gap: 0.6em;
     }
-    & label[for] { margin-bottom: 0.6em; }
+    & label[for]:not(:empty) { margin-bottom: 0.6em; }
     & * + :is(label, .label) { margin-top: 1em; }
     & :is(label, .label) > :is(input, textarea, select, div) { margin: 0 1em; }
     & label[for] + :is(input, textarea, select, div) { margin: 0 1em; }
