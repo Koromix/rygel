@@ -124,7 +124,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 @media (hover: hover) {
     #log > div:hover { filter: opacity(40%); }
 }
-#log > div.error { background: #db0a0a; }
+#log > div.error { background: #ff6600; }
 #log > div.success { background: #2d8261; }
 
 .log_close {
@@ -434,16 +434,29 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 .parts > span { display: none; }
 
 form {
-    & :is(label, .label) {
+    & :is(label, .widget) {
         display: flex;
         flex-direction: column;
         gap: 0.6em;
     }
-    & label[for]:not(:empty) { margin-bottom: 0.6em; }
-    & * + :is(label, .label) { margin-top: 1em; }
-    & :is(label, .label) > :is(input, textarea, select, div) { margin: 0 1em; }
-    & label[for] + :is(input, textarea, select, div) { margin: 0 1em; }
+    & * + :is(label, .widget) { margin-top: 1em; }
+    & :is(label, .widget) > :is(input, textarea, select, div) { margin: 0 1em; }
     & label > :is(input[type=checkbox], input[type=radio], select) { align-self: start; }
+
+    & .widget.annotate {
+        padding: 1em;
+        background: #ff660022;
+        border: 2px dashed #ff6600;
+        border-radius: 12px;
+    }
+    & .widget.annotate > label:first-of-type {
+        display: inline;
+
+        &::before {
+            content: '⚠\FE0E';
+            margin-right: 6px;
+        }
+    }
 
     & input {
         padding: 0.4em 0.6em;

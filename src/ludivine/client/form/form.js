@@ -17,6 +17,7 @@ import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import { progressBar } from '../lib/util.js';
 import { FormContext, FormModel, FormBuilder } from './builder.js';
+import { annotate } from './data.js';
 import * as app from '../app.js';
 import * as UI from '../ui.js';
 import { ASSETS } from '../../assets/assets.js';
@@ -28,6 +29,7 @@ function FormModule(db, study, page) {
     let part_idx = null;
 
     let ctx = null;
+    let model = null;
 
     let is_new = false;
     let has_changed = false;
@@ -116,34 +118,38 @@ function FormModule(db, study, page) {
     }
 
     function runForm() {
-        let model = new FormModel;
+        // Reset model
+        model = new FormModel;
+
         let builder = new FormBuilder(ctx, model);
 
         form.run(builder, ctx.values);
 
         let end = model.parts.length - 1;
-        let idx = Math.min(part_idx, end);
-
-        let part = model.parts[idx];
+        if (part_idx > end)
+            part_idx = end;
+        let part = model.parts[part_idx];
 
         render(html`
             <div class="box">${form.intro}</div>
-            ${progressBar(idx, end, 'parts')}
+            ${progressBar(part_idx, end, 'parts')}
 
             <div class="box">
                 <form>
-                    ${model.parts[idx].map(widget => widget.render())}
+                    ${model.parts[part_idx].map(widget => widget.render())}
                 </form>
             </div>
 
             <div class="actions">
-                ${idx < end ? html`<button @click=${UI.wrap(next)}>Continuer</button>` : ''}
-                ${idx == end ? html`<button @click=${UI.wrap(finalize)}>Finaliser</button>` : ''}
+                ${part_idx < end ? html`<button @click=${UI.wrap(next)}>Continuer</button>` : ''}
+                ${part_idx == end ? html`<button @click=${UI.wrap(finalize)}>Finaliser</button>` : ''}
             </div>
         `, div);
     }
 
     async function next() {
+        validate();
+
         await app.saveTest(page, ctx.raw);
         has_changed = false;
 
@@ -152,8 +158,35 @@ function FormModule(db, study, page) {
     }
 
     async function finalize() {
+        validate();
+
         await app.finalizeTest(page, ctx.raw);
         has_changed = false;
+    }
+
+    function validate() {
+        let part = model.parts[part_idx];
+
+        let valid = true;
+
+        for (let widget of part) {
+            let value = ctx.values[widget.key];
+            let notes = annotate(ctx.values, widget.key);
+
+            if (value != null) {
+                delete notes.skip;
+            } else {
+                if (!notes.skip) {
+                    notes.skip = null;
+                    valid = false;
+                }
+            }
+        }
+
+        if (!valid) {
+            ctx.refresh();
+            throw new Error('Certaines réponses sont manquantes, veuillez les compléter avant de continuer');
+        }
     }
 }
 

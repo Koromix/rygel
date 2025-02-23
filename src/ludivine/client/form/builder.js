@@ -327,12 +327,36 @@ function FormBuilder(ctx, model) {
     function makeInput(key, label, type, func) {
         let id = 'input' + (++unique);
 
-        let render = () => html`
-            <label for=${id}>${label}</label>
-            ${func(id)}
-        `;
+        let notes = annotate(ctx.values, key);
+        let annotated = notes.hasOwnProperty('skip');
 
-        return makeWidget(type, render);
+        let render = (widget) => {
+            let cls = 'widget' + (annotated ? ' annotate' : '');
+
+            return html`
+                <div class=${cls}>
+                    <label for=${id}>${label}</label>
+                    ${func(id)}
+                    ${annotated ? html`
+                        <label>
+                            <input type="checkbox" ?checked=${!!notes.skip} @click=${skip} />
+                            <span>Je ne souhaite pas répondre à cette question</span>
+                        </label>
+                    ` : ''}
+                </div>
+            `;
+
+            function skip(e) {
+                notes.skip = e.target.checked;
+            }
+        };
+
+        let widget = makeWidget(type, render);
+
+        widget.key = key;
+        widget.label = label;
+
+        return widget;
     }
 
     function expandOptions(options, defaults = {}) {
