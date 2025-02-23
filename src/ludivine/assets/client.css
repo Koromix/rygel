@@ -542,4 +542,55 @@ form {
         padding: 0.2em 1.4em 0.35em 1.4em;
         border-radius: 12px;
     }
+
+    & .slider {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+
+        & > span { font-size: 0.8em; }
+        & > input[type=range] { flex: 1; }
+    }
+    & input[type=range] {
+        appearance: none;
+        -webkit-appearance: none;
+
+        margin: 0.4em 0;
+
+        &::-webkit-slider-runnable-track {
+            appearance: none;
+            -webkit-appearance: none;
+            height: 6px;
+            background: white;
+            border-radius: 4px;
+        }
+        &::-moz-range-track {
+            appearance: none;
+            height: 6px;
+            background: white;
+            border-radius: 4px;
+        }
+
+        &::-webkit-slider-thumb {
+            appearance: none;
+            -webkit-appearance: none;
+
+            margin-top: -8px;
+            width: 22px;
+            height: 22px;
+            background-color: #444;
+            border: none;
+            border-radius: 50%;
+        }
+        &::-moz-range-thumb {
+            appearance: none;
+
+            margin-top: -8px;
+            width: 22px;
+            height: 22px;
+            background-color: #444;
+            border: none;
+            border-radius: 50%;
+        }
+    }
 }

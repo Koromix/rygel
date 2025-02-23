@@ -676,7 +676,7 @@ function NetworkWidget(mod, world) {
                         </label>
                         <label>
                             <span>Comment évaluez-vous cette relation ?</span>
-                            <div class="not_quality">
+                            <div class="slider not_quality">
                                 <span>Très mauvaise</span>
                                 <input name="quality" type="range" min="-5" max="5" value=${p.quality} />
                                 <span>Très bonne</span>
@@ -745,7 +745,7 @@ function NetworkWidget(mod, world) {
                     <div class="box">
                         <label>
                             <span>Comment évaluez-vous cette relation ?</span>
-                            <div class="not_quality">
+                            <div class="slider not_quality">
                                 <span>Très mauvaise</span>
                                 <input name="quality" type="range" min="-5" max="5" value=${link.quality} />
                                 <span>Très bonne</span>

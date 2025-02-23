@@ -267,8 +267,12 @@ function FormBuilder(ctx, model) {
         let value = getValue(key, 'number', options);
 
         let widget = makeInput(key, label, 'slider', id => html`
-            <input id=${id} type="slider" .value=${live(value ?? '')}
-                   min=${options.min} max=${options.max} @input=${input} />
+            <div class="slider">
+                ${options.prefix ? html`<span>${options.prefix}</span>` : ''}
+                <input id=${id} type="range" .value=${live(value ?? '')}
+                       min=${options.min} max=${options.max} @input=${input} />
+                ${options.prefix ? html`<span>${options.suffix}</span>` : ''}
+            </div>
         `);
 
         function input(e) {
