@@ -107,9 +107,6 @@ function run(form, values) {
             help: "Cela inclus les réunions de groupe et les services",
             disabled: !values.q7
         })
-
-        if (values.q7 != null && values.q7a > values.q7)
-            form.error("q7a", incoherent)
     })
 
     form.part(() => {
