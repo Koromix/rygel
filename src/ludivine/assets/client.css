@@ -429,6 +429,7 @@ form {
         display: flex;
         flex-direction: column;
         gap: 0.6em;
+        align-items: start;
     }
     & * + :is(label, .widget) { margin-top: 1em; }
     & :is(label, .widget) > :is(input, textarea, select, div) { margin: 0 1em; }
