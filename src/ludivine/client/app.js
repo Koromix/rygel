@@ -34,11 +34,14 @@ import '../assets/client.css';
 const DATABASE_VERSION = 1;
 
 Object.assign(T, {
-    browse_for_image: 'Parcourir',
     cancel: 'Annuler',
-    clear_picture: 'Effacer l\'image',
     confirm: 'Confirmer',
-    confirm_not_reversible: 'Attention, cette action n\'est pas réversible !',
+    confirm_not_reversible: 'Attention, cette action ne peut pas être annulée',
+    error_has_occured: 'Une erreur est survenue',
+    filter: 'Filter',
+
+    browse_for_image: 'Parcourir',
+    clear_picture: 'Effacer l\'image',
     edit: 'Modifier',
     drag_paste_or_browse_image: 'Déposez une image, copier-collez la ou utilisez le bouton « Parcourir » ci-dessous',
     upload_image: 'Choisir une image',
