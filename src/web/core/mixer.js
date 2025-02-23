@@ -114,8 +114,8 @@ const Hex = new function() {
 
     function hexToBytes(hex) {
         let bytes = new Uint8Array(hex.length / 2);
-        for (let i = 0; i < hex.length; i += 2) {
-            let c = parseInt(hex.substr(i, 2), 16);
+        for (let i = 0; i < hex.length; i++) {
+            let c = parseInt(hex.substr(i * 2, 2), 16);
             bytes[i] = c;
         }
         return bytes;
