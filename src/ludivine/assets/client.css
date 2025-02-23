@@ -434,6 +434,7 @@ form {
     & * + :is(label, .widget) { margin-top: 1em; }
     & :is(label, .widget) > :is(input, textarea, select, div) { margin: 0 1em; }
     & label > :is(input[type=checkbox], input[type=radio], select) { align-self: start; }
+    & label:empty { display: none; }
 
     & .widget.annotate {
         padding: 1em;
