@@ -102,13 +102,15 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 
 #log {
     position: fixed;
-    left: calc(50% - 160px);
-    top: calc(2.8em + 12px);
+    left: 50%;
+    top: 8px;
+    width: calc(100vw - 2em);
+    max-width: 600px;
     z-index: 99999;
-    width: 320px;
     user-select: none;
     -webkit-user-select: none;
     font-size: 15px;
+    transform: translateX(-50%);
 }
 
 #log > div {
@@ -116,8 +118,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     padding: 8px;
     background: #373737;
     color: white;
-    border-radius: 4px;
-    box-shadow: 1px 1px #00000033;
+    border-radius: 12px;
     text-align: center;
     cursor: pointer;
 }
@@ -126,16 +127,6 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 }
 #log > div.error { background: #ff6600; }
 #log > div.success { background: #2d8261; }
-
-.log_close {
-    float: right;
-    padding: 0 6px;
-    background: none;
-    border: 0;
-    color: white;
-    font-weight: bold;
-}
-.log_close:hover { background: none !important; }
 
 /* Came from https://loading.io/css/ */
 .log_spin {

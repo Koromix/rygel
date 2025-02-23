@@ -102,15 +102,8 @@ function renderLog() {
                 <div class="log_spin"></div>
                 ${msg}
             </div>`;
-        } else if (entry.type === 'error') {
-            return html`<div class="error" @click=${e => entry.close()}>
-                <button class="log_close">X</button>
-                <b>${T.error_has_occured}</b><br/>
-                ${msg}
-            </div>`;
         } else {
             return html`<div class=${entry.type} @click=${e => entry.close()}>
-                <button class="log_close">X</button>
                 ${msg}
             </div>`;
         }
