@@ -641,7 +641,7 @@ function run(form, values) {
                 [99, "Autre"]
             ])
             if (values.diplome_max == 99)
-                form.text("diplome_prec", "Précisez :")
+                form.text("?diplome_prec", "Précisez :")
         }
     })
 
@@ -655,7 +655,7 @@ function run(form, values) {
         do {
             let first = (idx == 1)
             idx++
-            form.enumDrop("langue" + idx, first ? "Parlez vous une autre langue (optionnel) ?" : null, LANGUAGES, {
+            form.enumDrop("?langue" + idx, first ? "Parlez vous une autre langue (optionnel) ?" : null, LANGUAGES, {
                 disabled: values.langue1 == null
             })
         } while (values["langue" + idx] != null)
@@ -671,7 +671,7 @@ function run(form, values) {
         do {
             let first = (idx == 1)
             idx++
-            form.enumDrop("parents" + idx, first ? "Vos parents parlent-ils une ou plusieurs autres langues (optionnel) ?" : null, LANGUAGES, {
+            form.enumDrop("?parents" + idx, first ? "Vos parents parlent-ils une ou plusieurs autres langues (optionnel) ?" : null, LANGUAGES, {
                 disabled: values.parents1 == null
             })
         } while (values["parents" + idx] != null)
@@ -689,7 +689,7 @@ function run(form, values) {
             ["autre", "Autre"]
         ])
         if (values.connaissance == "autre")
-            form.text("connaissance_prec", "Précisez :")
+            form.text("?connaissance_prec", "Précisez :")
     })
 
     function adapt(label, suffix) {

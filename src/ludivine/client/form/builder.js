@@ -71,10 +71,11 @@ function FormBuilder(ctx, model) {
         options = expandOptions(options, {
             placeholder: null
         });
+        key = expandKey(key, options);
 
         let value = getValue(key, 'text', options);
 
-        let widget = makeInput(key, label, 'text', () => html`
+        let widget = makeInput(key, label, options, 'text', () => html`
             <input type="text" .value=${live(value ?? '')} placeholder=${options.placeholder ?? ''}
                    @input=${e => setValue(key, e.target.value || undefined)} />
         `);
@@ -93,10 +94,11 @@ function FormBuilder(ctx, model) {
             min: null,
             max: null
         });
+        key = expandKey(key, options);
 
         let value = getValue(key, 'number', options);
 
-        let widget = makeInput(key, label, 'number', () => html`
+        let widget = makeInput(key, label, options, 'number', () => html`
             <input type="number" .value=${live(value ?? '')} placeholder=${options.placeholder ?? ''}
                    min=${options.min} max=${options.max} @input=${input} />
         `);
@@ -124,6 +126,7 @@ function FormBuilder(ctx, model) {
         options = expandOptions(options, {
             enum: 'buttons'
         });
+        key = expandKey(key, options);
 
         switch (options.enum) {
             case 'buttons': return self.enumButtons(key, label, options);
@@ -135,11 +138,13 @@ function FormBuilder(ctx, model) {
 
     this.enumButtons = function(key, label, props, options = {}) {
         options = expandOptions(options);
+        key = expandKey(key, options);
+
         props = normalizePropositions(props);
 
         let value = getValue(key, 'enum', options);
 
-        let widget = makeInput(key, label, 'enumRadio', () => html`
+        let widget = makeInput(key, label, options, 'enumRadio', () => html`
             <div class="enum">
                 ${props.map(prop => {
                     let active = (value === prop[0]);
@@ -162,11 +167,13 @@ function FormBuilder(ctx, model) {
 
     this.enumRadio = function(key, label, props, options = {}) {
         options = expandOptions(options);
+        key = expandKey(key, options);
+
         props = normalizePropositions(props);
 
         let value = getValue(key, 'enum', options);
 
-        let widget = makeInput(key, label, 'enumButtons', id => html`
+        let widget = makeInput(key, label, options, 'enumButtons', id => html`
             <div>
                 ${props.map(prop => {
                     let active = (value === prop[0]);
@@ -195,11 +202,13 @@ function FormBuilder(ctx, model) {
 
     this.enumDrop = function(key, label, props, options = {}) {
         options = expandOptions(options);
+        key = expandKey(key, options);
+
         props = normalizePropositions(props);
 
         let value = getValue(key, 'enum', options);
 
-        let widget = makeInput(key, label, 'enumDrop', () => html`
+        let widget = makeInput(key, label, options, 'enumDrop', () => html`
             <select @change=${change}>
                 <option value="" .selected=${live(value == null)}>-- Non renseigné --</option>
                 ${props.map((prop, idx) => {
@@ -232,6 +241,8 @@ function FormBuilder(ctx, model) {
 
     this.multiCheck = function(key, label, props, options = {}) {
         options = expandOptions(options);
+        key = expandKey(key, options);
+
         props = normalizePropositions(props);
 
         let value = getValue(key, 'multi', options);
@@ -244,7 +255,7 @@ function FormBuilder(ctx, model) {
             ctx.values[key] = values;
         }
 
-        let widget = makeInput(key, label, 'multiCheck', id => html`
+        let widget = makeInput(key, label, options, 'multiCheck', id => html`
             <div>
                 ${props.map(prop => {
                     let active = values.includes(prop[0]);
@@ -292,10 +303,11 @@ function FormBuilder(ctx, model) {
             min: 0,
             max: 10
         });
+        key = expandKey(key, options);
 
         let value = getValue(key, 'number', options);
 
-        let widget = makeInput(key, label, 'slider', id => html`
+        let widget = makeInput(key, label, options, 'slider', id => html`
             <div class="slider">
                 ${options.prefix ? html`<span>${options.prefix}</span>` : ''}
                 <input id=${id} type="range" .value=${live(value ?? '')}
@@ -337,7 +349,7 @@ function FormBuilder(ctx, model) {
         return widget;
     }
 
-    function makeInput(key, label, type, func) {
+    function makeInput(key, label, options, type, func) {
         let id = 'input' + (++unique);
 
         let notes = annotate(ctx.values, key);
@@ -370,15 +382,30 @@ function FormBuilder(ctx, model) {
 
         let widget = makeWidget(type, render);
 
-        widget.key = key;
-        widget.label = label;
+        Object.assign(widget, {
+            key: key,
+            label: label,
+            optional: options.optional
+        });
 
         return widget;
     }
 
     function expandOptions(options, defaults = {}) {
-        options = Object.assign({}, defaults, options);
+        options = Object.assign({
+            optional: false
+        }, defaults, options);
+
         return options;
+    }
+
+    function expandKey(key, options) {
+        if (key.startsWith('?')) {
+            key = key.substr(1);
+            options.optional = true;
+        }
+
+        return key;
     }
 
     function normalizePropositions(props) {

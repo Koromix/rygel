@@ -173,13 +173,11 @@ function FormModule(db, study, page) {
             let value = ctx.values[widget.key];
             let notes = annotate(ctx.values, widget.key);
 
-            if (value != null) {
+            if (value != null || widget.optional) {
                 delete notes.skip;
-            } else {
-                if (!notes.skip) {
-                    notes.skip = null;
-                    valid = false;
-                }
+            } else if (!notes.skip) {
+                notes.skip = false;
+                valid = false;
             }
 
             if (notes.error != null)
