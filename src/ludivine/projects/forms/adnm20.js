@@ -47,11 +47,11 @@ function run(form, values) {
             <p>Considérez uniquement les évènements qui eu lieu <u>au cours des deux dernières années</u>.
         `)
 
-        form.multiCheck("*evts", "Indiquez le ou les évènements qui s’appliquent à vous :", types)
+        form.multiCheck("evts", "Indiquez le ou les évènements qui s’appliquent à vous :", types)
 
         let choices = types.filter(type => (values.evts || []).includes(type[0]))
         if (choices.length)
-            form.multiCheck("*main", "Indiquez ci-dessous quel(s) évènement(s) a(ont) été les plus éprouvants :", choices)
+            form.multiCheck("main", "Indiquez ci-dessous quel(s) évènement(s) a(ont) été les plus éprouvants :", choices)
     })
 
     form.part(() => {
@@ -110,7 +110,7 @@ function run(form, values) {
     })
 
     function q(idx, label) {
-        let intf = form.enumButtons("*q" + idx, label, [
+        let intf = form.enumButtons("q" + idx, label, [
             [1, "Jamais"],
             [2, "Rarement"],
             [3, "Parfois"],

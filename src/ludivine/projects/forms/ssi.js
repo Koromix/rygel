@@ -21,12 +21,12 @@ let intro = html`
 
 function run(form, values) {
     form.part(() => {
-        form.enumButtons("*q1", "Comment évaluez-vous votre désir de vivre ?", [
+        form.enumButtons("q1", "Comment évaluez-vous votre désir de vivre ?", [
             [0, "Moyen à fort"],
             [1, "Faible désir"],
             [2, "Nul / aucun désir"]
         ])
-        form.enumButtons("*q2", "Comment évaluez-vous votre désir de mourir ?", [
+        form.enumButtons("q2", "Comment évaluez-vous votre désir de mourir ?", [
             [0, "Nul / aucun désir"],
             [1, "Faible désir"],
             [2, "Moyen à fort"]
@@ -34,12 +34,12 @@ function run(form, values) {
     })
 
     form.part(() => {
-        form.enumRadio("*q3", "Comment situez-vous la balance entre raisons de vivre et raisons mourir", [
+        form.enumRadio("q3", "Comment situez-vous la balance entre raisons de vivre et raisons mourir", [
             [0, "Raisons de vivre plus fortes que celles de mourir"],
             [1, "Elles sont égales"],
             [2, "Raisons de mourir plus fortes que celles de vivre"]
         ])
-        form.enumButtons("*q4", "Avez-vous le désir de poser un geste suicidaire ?", [
+        form.enumButtons("q4", "Avez-vous le désir de poser un geste suicidaire ?", [
             [0, "Nul / aucun désir"],
             [1, "Faible désir"],
             [2, "Moyen à fort"]

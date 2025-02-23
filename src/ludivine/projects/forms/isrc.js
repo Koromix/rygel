@@ -115,7 +115,7 @@ function run(form, values) {
     })
 
     function q(idx, label) {
-        form.enumButtons("*q" + idx, label, [
+        form.enumButtons("q" + idx, label, [
             [0, "Pas vrai"],
             [1, "Un peu ou parfois vrai"],
             [2, "Souvent ou très souvent vrai"]

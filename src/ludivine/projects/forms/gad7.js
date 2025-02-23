@@ -45,7 +45,7 @@ function run(form, values) {
     })
 
     function q(idx, label) {
-        form.enumButtons("*q" + idx, label, [
+        form.enumButtons("q" + idx, label, [
             [0, "Jamais"],
             [1, "Plusieurs jours"],
             [2, "Plus de la moitié du temps"],

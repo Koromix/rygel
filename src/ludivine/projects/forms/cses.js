@@ -43,7 +43,7 @@ function run(form, values) {
     })
 
     function q(idx, label) {
-        form.enumButtons("*q" + idx, label, [
+        form.enumButtons("q" + idx, label, [
             [0, "Pas du tout"],
             [1, "Rarement"],
             [2, "Un petit peu"],

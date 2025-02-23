@@ -60,7 +60,7 @@ function run(form, values) {
             [6, "Très satisfait"]
         ]
 
-        form.enumButtons("*" + key + "a", label, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        form.enumButtons("" + key + "a", label, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         form.enumButtons(key + "b", "Quel est votre degré de satisfaction par rapport au soutien obtenu ?", choices)
     }
 }

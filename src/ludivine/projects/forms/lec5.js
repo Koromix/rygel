@@ -70,7 +70,7 @@ function run(form, values) {
                 let idx = indices[i]
 
                 let label = catastrophes[idx]
-                let intf = form.multiCheck("*evt" + idx, idx + ". " + label, choices)
+                let intf = form.multiCheck("evt" + idx, idx + ". " + label, choices)
 
                 if (intf.value && intf.value.length)
                     evts++
@@ -80,7 +80,7 @@ function run(form, values) {
 
     if (evts) {
         form.part(() => {
-            form.enumRadio("*evt_index", "Cochez l'évènement qui fût le plus difficile pour vous :", Object.keys(catastrophes).map(idx => {
+            form.enumRadio("evt_index", "Cochez l'évènement qui fût le plus difficile pour vous :", Object.keys(catastrophes).map(idx => {
                 let value = values["evt" + idx]
 
                 if (!value || !value.length)

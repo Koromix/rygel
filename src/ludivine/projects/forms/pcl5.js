@@ -31,53 +31,53 @@ function run(form, values) {
     ]
 
     form.part(() => {
-        form.enumButtons("*pcl1", "1. Des souvenirs répétés, pénibles et involontaires de l’expérience stressante ?", choices)
-        form.enumButtons("*pcl2", "2. Des rêves répétés et pénibles de l’expérience stressante ?", choices)
+        form.enumButtons("pcl1", "1. Des souvenirs répétés, pénibles et involontaires de l’expérience stressante ?", choices)
+        form.enumButtons("pcl2", "2. Des rêves répétés et pénibles de l’expérience stressante ?", choices)
     })
 
     form.part(() => {
-        form.enumButtons("*pcl3", "3. Se sentir ou agir soudainement comme si vous viviez à nouveau l’expérience stressante ?", choices)
-        form.enumButtons("*pcl4", "4. Se sentir mal quand quelque chose vous rappelle l’événement ?", choices)
+        form.enumButtons("pcl3", "3. Se sentir ou agir soudainement comme si vous viviez à nouveau l’expérience stressante ?", choices)
+        form.enumButtons("pcl4", "4. Se sentir mal quand quelque chose vous rappelle l’événement ?", choices)
     })
 
     form.part(() => {
-        form.enumButtons("*pcl5", "5. Avoir de fortes réactions physiques lorsque quelque chose vous rappelle l’événement (accélération cardiaque, difficulté respiratoire, sudation) ?", choices)
-        form.enumButtons("*pcl6", "6. Essayer d’éviter les souvenirs, pensées, et sentiments liés à l’événement ?", choices)
+        form.enumButtons("pcl5", "5. Avoir de fortes réactions physiques lorsque quelque chose vous rappelle l’événement (accélération cardiaque, difficulté respiratoire, sudation) ?", choices)
+        form.enumButtons("pcl6", "6. Essayer d’éviter les souvenirs, pensées, et sentiments liés à l’événement ?", choices)
     })
 
     form.part(() => {
-        form.enumButtons("*pcl7", "7. Essayer d’éviter les personnes et les choses qui vous rappellent l’expérience stressante (lieux, personnes, activités, objets) ? ", choices)
-        form.enumButtons("*pcl8", "8. Des difficultés à vous rappeler des parties importantes de l’événement ?", choices)
+        form.enumButtons("pcl7", "7. Essayer d’éviter les personnes et les choses qui vous rappellent l’expérience stressante (lieux, personnes, activités, objets) ? ", choices)
+        form.enumButtons("pcl8", "8. Des difficultés à vous rappeler des parties importantes de l’événement ?", choices)
     })
 
     form.part(() => {
-        form.enumButtons("*pcl9", "9. Des croyances négatives sur vous-même, les autres, le monde (des croyances comme : je suis mauvais, j’ai quelque chose qui cloche, je ne peux avoir confiance en personne, le monde est dangereux) ?", choices)
-        form.enumButtons("*pcl10", "10. Vous blâmer ou blâmer quelqu’un d’autre pour l’événement ou ce qui s’est produit ensuite ?", choices)
+        form.enumButtons("pcl9", "9. Des croyances négatives sur vous-même, les autres, le monde (des croyances comme : je suis mauvais, j’ai quelque chose qui cloche, je ne peux avoir confiance en personne, le monde est dangereux) ?", choices)
+        form.enumButtons("pcl10", "10. Vous blâmer ou blâmer quelqu’un d’autre pour l’événement ou ce qui s’est produit ensuite ?", choices)
     })
 
     form.part(() => {
-        form.enumButtons("*pcl11", "11. Avoir des sentiments négatifs intenses tels que peur, horreur, colère, culpabilité, ou honte ?", choices)      
-        form.enumButtons("*pcl12", "12. Perdre de l’intérêt pour des activités que vous aimiez auparavant ?", choices)  
+        form.enumButtons("pcl11", "11. Avoir des sentiments négatifs intenses tels que peur, horreur, colère, culpabilité, ou honte ?", choices)      
+        form.enumButtons("pcl12", "12. Perdre de l’intérêt pour des activités que vous aimiez auparavant ?", choices)  
     })
 
     form.part(() => {
-        form.enumButtons("*pcl13", "13. Vous sentir distant ou coupé des autres ?", choices)   
-        form.enumButtons("*pcl14", "14. Avoir du mal à éprouver des sentiments positifs (par exemple être incapable de ressentir de la joie ou de l’amour envers vos proches) ?", choices)  
+        form.enumButtons("pcl13", "13. Vous sentir distant ou coupé des autres ?", choices)   
+        form.enumButtons("pcl14", "14. Avoir du mal à éprouver des sentiments positifs (par exemple être incapable de ressentir de la joie ou de l’amour envers vos proches) ?", choices)  
     })
 
     form.part(() => {
-        form.enumButtons("*pcl15", "15. Comportement irritable, explosions de colère, ou agir agressivement ?", choices)  
-        form.enumButtons("*pcl16", "16. Prendre des risques inconsidérés ou encore avoir des conduites qui pourraient vous mettre en danger ?", choices)
+        form.enumButtons("pcl15", "15. Comportement irritable, explosions de colère, ou agir agressivement ?", choices)  
+        form.enumButtons("pcl16", "16. Prendre des risques inconsidérés ou encore avoir des conduites qui pourraient vous mettre en danger ?", choices)
     })
 
     form.part(() => {
-        form.enumButtons("*pcl17", "17. Être en état de « super-alerte », hyper vigilant ou sur vos gardes ?", choices)   
-        form.enumButtons("*pcl18", "18. Sursauter facilement ?", choices)  
+        form.enumButtons("pcl17", "17. Être en état de « super-alerte », hyper vigilant ou sur vos gardes ?", choices)   
+        form.enumButtons("pcl18", "18. Sursauter facilement ?", choices)  
     })
 
     form.part(() => {
-        form.enumButtons("*pcl19", "19. Avoir du mal à vous concentrer ?", choices)  
-        form.enumButtons("*pcl20", "20. Avoir du mal à trouver le sommeil ou à rester endormi ?", choices)  
+        form.enumButtons("pcl19", "19. Avoir du mal à vous concentrer ?", choices)  
+        form.enumButtons("pcl20", "20. Avoir du mal à trouver le sommeil ou à rester endormi ?", choices)  
     })
 }
 

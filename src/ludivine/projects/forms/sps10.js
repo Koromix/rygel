@@ -47,7 +47,7 @@ function run(form, values) {
     })
 
     function q(idx, label) {
-        form.enumButtons("*q" + idx, label, [
+        form.enumButtons("q" + idx, label, [
             [1, "Fortement en désaccord"],
             [2, "En désaccord"],
             [3, "D’accord"],
