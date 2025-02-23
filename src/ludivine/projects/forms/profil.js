@@ -632,18 +632,16 @@ function run(form, values) {
             help: "Si ce n'est pas le cas, ce n'est pas un problème ! Cette question nous aide simplement à cerner qui vous êtes."
         })
         if (values.diplome == 1) {
-            form.sameLine(true); form.part(() => {
-                form.enumRadio("diplome_max", "Quel est le plus haut diplôme que vous avez obtenu ?", [
-                    [1, "Brevet des collèges"],
-                    [2, "Baccalauréat"],
-                    [3, "Licence"],
-                    [4, "Master (maîtrise)"],
-                    [5, "Doctorat"],
-                    [99, "Autre"]
-                ])
-                if (values.diplome_max == 99)
-                    form.text("diplome_prec", "Précisez :")
-            })
+            form.enumRadio("diplome_max", "Quel est le plus haut diplôme que vous avez obtenu ?", [
+                [1, "Brevet des collèges"],
+                [2, "Baccalauréat"],
+                [3, "Licence"],
+                [4, "Master (maîtrise)"],
+                [5, "Doctorat"],
+                [99, "Autre"]
+            ])
+            if (values.diplome_max == 99)
+                form.text("diplome_prec", "Précisez :")
         }
     })
 
