@@ -250,8 +250,11 @@ function main(content = null) {
         render(content, body_el);
 }
 
-async function toggleFullscreen() {
-    fullscreen = !fullscreen;
+async function toggleFullscreen(enable = null) {
+    if (enable == null)
+        enable = !fullscreen;
+
+    fullscreen = enable;
 
     try {
         if (fullscreen) {

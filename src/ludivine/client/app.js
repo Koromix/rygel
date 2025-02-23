@@ -476,6 +476,9 @@ async function initProject(project, study) {
 }
 
 async function runRegister() {
+    if (UI.isFullscreen)
+        UI.toggleFullscreen(false);
+
     UI.main(html`
         <div class="tabbar">
             <a class="active">Enregistrez-vous</a>
@@ -523,6 +526,9 @@ async function register(e) {
 }
 
 async function runProfile() {
+    if (UI.isFullscreen)
+        UI.toggleFullscreen(false);
+
     UI.main(html`
         <div class="tabbar">
             <a href="/profile" class="active">Profil</a>
@@ -557,6 +563,9 @@ async function runProfile() {
 }
 
 async function runDashboard() {
+    if (UI.isFullscreen)
+        UI.toggleFullscreen(false);
+
     UI.main(html`
         <div class="tabbar">
             <a href="/profile">Profil</a>
@@ -723,6 +732,9 @@ function renderCalendar(events) {
 // ------------------------------------------------------------------------
 
 async function runConsent() {
+    if (UI.isFullscreen)
+        UI.toggleFullscreen(false);
+
     let project = cache.project;
     let bundle = project.bundle;
 
@@ -826,6 +838,9 @@ async function runProject() {
 }
 
 function renderModule() {
+    if (UI.isFullscreen)
+        UI.toggleFullscreen(false);
+
     let today = LocalDate.today();
     let page = cache.page;
 
