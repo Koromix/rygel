@@ -306,7 +306,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 .event {
     display: flex;
     background: #f6d4c3;
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 0.5em;
     gap: 0.8em;
     align-items: center;
@@ -384,7 +384,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     align-items: center;
     justify-content: center;
     background: color-mix(in srgb, var(--color), transparent 60%);
-    border-radius: 10px;
+    border-radius: 12px;
     cursor: pointer;
 }
 .module.draft { --color: #d9bf69; }
