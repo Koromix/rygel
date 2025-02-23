@@ -126,6 +126,7 @@ function FormBuilder(ctx, model) {
         switch (options.enum) {
             case 'buttons': return self.enumButtons(key, label, options);
             case 'radio': return self.enumRadio(key, label, options);
+            case 'drop': return self.enumDrop(key, label, options);
             default: throw new Error(`Invalid enum layout '${options.enum}'`);
         }
     };
@@ -186,6 +187,32 @@ function FormBuilder(ctx, model) {
                 })}
             </div>
         `);
+
+        return widget;
+    };
+
+    this.enumDrop = function(key, label, props, options = {}) {
+        options = expandOptions(options);
+        props = normalizePropositions(props);
+
+        let value = getValue(key, 'enum', options);
+
+        let widget = makeInput(key, label, 'enumDrop', () => html`
+            <select @change=${change}>
+                <option value="" .selected=${live(value == null)}>-- Non renseigné --</option>
+                ${props.map((prop, idx) => {
+                    let active = (value === prop[0]);
+                    return html`<option value=${idx} .selected=${live(active)}>${prop[1]}</button>`;
+                })}
+            </select>
+        `);
+
+        function change(e) {
+            let idx = (e.target.value != '') ? parseInt(e.target.value, 10) : -1;
+            let value = props[idx]?.[0];
+
+            setValue(key, value);
+        }
 
         return widget;
     };
