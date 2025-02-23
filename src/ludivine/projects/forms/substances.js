@@ -141,7 +141,7 @@ function run(form, values) {
 
     if (values.drogues !== 0) {
         form.part(() => {
-            form.textArea("drogues_noms", "Quelles drogues consommez-vous ?", { wide: true })
+            // form.textArea("drogues_noms", "Quelles drogues consommez-vous ?", { wide: true })
             form.enumRadio("drogues_likert", "A quelle fréquence ?", [
                 [0, "Jamais"],
                 [1, "De temps en temps"],
