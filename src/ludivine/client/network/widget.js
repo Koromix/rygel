@@ -516,7 +516,7 @@ function NetworkWidget(mod, world) {
                         <div class="box">
                             <label>
                                 <span>Quels les noms des personnes que vous souhaitez ajouter ?</span>
-                                <textarea rows="6" @input=${UI.wrap(e => split_names(e.target.value))}></textarea>
+                                <textarea rows="6" @input=${e => split_names(e.target.value)}></textarea>
                             </label>
                             <div class="widget">
                                 <span>Quel type de relation avez-vous avec ${names.length > 1 ? 'ces personnes' : 'cette personne'} ?</span>
@@ -528,7 +528,7 @@ function NetworkWidget(mod, world) {
                                         return html`
                                             <label>
                                                 <input name="quality" type="radio" value=${kind} ?checked=${active}
-                                                       @click=${UI.wrap(e => { new_kind = e.target.value; render(); })} />
+                                                       @click=${e => { new_kind = e.target.value; render(); }} />
                                                 ${info.text}
                                             </label>
                                         `;
