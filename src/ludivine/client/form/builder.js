@@ -250,6 +250,7 @@ function FormBuilder(ctx, model) {
 
         if (values == null) {
             values = [];
+            ctx.values[key] = null;
         } else if (!Array.isArray(values)) {
             values = [values];
             ctx.values[key] = values;
@@ -288,6 +289,9 @@ function FormBuilder(ctx, model) {
                                 return is_null == allow_null;
                             });
                         }
+
+                        if (!values.length)
+                            values = null;
 
                         setValue(key, values);
                     }
