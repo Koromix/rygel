@@ -17,7 +17,7 @@ import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let intro = html`
     <p>Voici ci-dessous une <b>liste de possibles évènements de vie stressants</b>.
-    <p>Veuillez indiquer les évènements qui vous sont arrivés <u>durant les deux dernières années</u> et qui sont actuellement difficiles pour vous, ou qui ont été un difficiles pour vous ou cours des 6 derniers mois.
+    <p>Veuillez indiquer les évènements qui vous sont arrivés <b>durant les deux dernières années</b> et qui sont actuellement difficiles pour vous, ou qui ont été un difficiles pour vous ou cours des 6 derniers mois.
 `
 
 function run(form, values) {
@@ -44,7 +44,7 @@ function run(form, values) {
         ]
 
         form.output(html`
-            <p>Considérez uniquement les évènements qui eu lieu <u>au cours des deux dernières années</u>.
+            <p>Considérez uniquement les évènements qui eu lieu <b>au cours des deux dernières années</b>.
         `)
 
         form.multiCheck("evts", "Indiquez le ou les évènements qui s’appliquent à vous :", types)
@@ -56,8 +56,8 @@ function run(form, values) {
 
     form.part(() => {
         form.output(html`
-            <p>Les évènements que vous venez d’indiquer peuvent avoir de nombreuses <u>conséquences sur votre bien-être et comportement</u>. Ci-dessous vous trouvez différentes affirmations à propos de réactions que ce type d’évènements peut déclencher. Tout d’abord, merci d’indiquer à quelle fréquence les différentes affirmations s’appliquent à vous (de « Jamais » à « Souvent »).
-            <p>Ensuite, merci d’indiquer <u>depuis combien de temps</u> vous avez eu cette consigne. Cela peut être de moins d’un mois (< 1 mois), entre un mois et une demi-année (1-6 mois), ou plus de 6 mois (6 mois à 2 ans). Cela peut ne pas être très simple à indiquer, mais essayez de donner une estimation approximative de la durée de la réaction.
+            <p>Les évènements que vous venez d’indiquer peuvent avoir de nombreuses <b>conséquences sur votre bien-être et comportement</b>. Ci-dessous vous trouvez différentes affirmations à propos de réactions que ce type d’évènements peut déclencher. Tout d’abord, merci d’indiquer à quelle fréquence les différentes affirmations s’appliquent à vous (de « Jamais » à « Souvent »).
+            <p>Ensuite, merci d’indiquer <b>depuis combien de temps</b> vous avez eu cette consigne. Cela peut être de moins d’un mois (< 1 mois), entre un mois et une demi-année (1-6 mois), ou plus de 6 mois (6 mois à 2 ans). Cela peut ne pas être très simple à indiquer, mais essayez de donner une estimation approximative de la durée de la réaction.
         `)
 
         q(1, "Depuis la situation stressante, je me sens déprimé·e et triste")

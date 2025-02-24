@@ -17,7 +17,7 @@ import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let intro = html`
     <p>Les informations recueuilles sur cette page nous aident et vous aident à identifier <b>le(s) évènement(s) possiblement traumatiques</b> survenus lorsque vous étiez plus jeune.
-    <p>Ces questions concernent donc votre expérience <u>pendant l'enfance et l'adolescence</u>. Essayez de répondre de la manière la plus honnête possible.
+    <p>Ces questions concernent donc votre expérience <b>pendant l'enfance et l'adolescence</b>. Essayez de répondre de la manière la plus honnête possible.
 `
 
 function run(form, values) {

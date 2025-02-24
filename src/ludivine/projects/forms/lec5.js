@@ -25,7 +25,7 @@ let intro = html`
         <li>Vous n'êtes pas sûr(e) que la situation corresponde
         <li>La situation ne s’applique pas à vous
     </ul>
-    <p>Veuillez considérer <u>votre parcours de vie actuel et passé</u> (depuis votre enfance à votre vie adulte) pour répondre à chacun de ces questions.
+    <p>Veuillez considérer <b>votre parcours de vie actuel et passé</b> (depuis votre enfance à votre vie adulte) pour répondre à chacun de ces questions.
 `
 
 function run(form, values) {

@@ -17,8 +17,8 @@ import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let intro = html`
     <p>Ce questionnaire est destiné à rechercher les <b>expériences de dissociation</b> que vous auriez pu ressentir pendant l'événement traumatique, et au cours des quelques heures suivantes.
-    <p>Veuillez répondre aux énoncés suivants en cochant le choix de réponse qui décrit le mieux vos expériences et réactions durant l’événement et immédiatement après. Si une question ne s’applique pas à votre expérience, <u>cochez « Pas du tout vrai »</u>.
-    <p>Considérez uniquement les expériences <u>au cours du dernier mois</u> !
+    <p>Veuillez répondre aux énoncés suivants en cochant le choix de réponse qui décrit le mieux vos expériences et réactions durant l’événement et immédiatement après. Si une question ne s’applique pas à votre expérience, <b>cochez « Pas du tout vrai »</b>.
+    <p>Considérez uniquement les expériences <b>au cours du dernier mois</b> !
 `
 
 function run(form, values) {

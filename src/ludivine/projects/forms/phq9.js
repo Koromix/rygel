@@ -16,7 +16,7 @@
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let intro = html`
-    <p>Au cours des <u>deux dernières semaines</u>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?
+    <p>Au cours des <b>deux dernières semaines</b>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?
 `
 
 function run(form, values) {
