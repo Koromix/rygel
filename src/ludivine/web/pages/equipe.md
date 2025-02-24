@@ -21,7 +21,7 @@
     </div>
     <div>
         <div class="name">Niels MARTIGNENE</div>
-        <img src="{{ ASSET ../assets/team/niels_martignene.jpg }}" alt="" />
+        <img src="{{ ASSET ../assets/team/niels_martignene.webp }}" alt="" />
         <div class="mission">Ingénieur logiciel</div>
     </div>
     <div>

@@ -60,7 +60,7 @@ import asset43 from './resources/video_fenvac.jpg';
 import asset44 from './resources/video_legriguer.jpg';
 import asset45 from './team/female.webp';
 import asset46 from './team/male.webp';
-import asset47 from './team/niels_martignene.jpg';
+import asset47 from './team/niels_martignene.webp';
 import asset48 from './ui/3114.webp';
 import asset49 from './ui/anonymous.png';
 import asset50 from './ui/book.png';
