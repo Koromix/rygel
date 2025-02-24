@@ -24,10 +24,44 @@ namespace RG {
 static smtp_Sender smtp;
 
 static const smtp_MailContent NewUser = {
-    "Connexion à {{ TITLE }}",
-    R"(Connexion à {{ TITLE }} :\n\n{{ URL }})",
-    R"(Connexion à {{ TITLE }} :<br><br><a href="{{ URL }}">Lien de connexion</a>)"
+    "Connexion à {{ TITLE }} !",
+    R"(Bienvenue !
+
+Nous vous remercions de votre intérêt pour les recherches de Lignes de Vie.
+
+Attention, ce **mail est important** ! Il est l’**unique moyen de connexion** à votre espace personnel durant toute la durée des études.
+
+Conservez-le **précieusement, ou même mieux, enregistrez la pièce jointe** sur votre ordinateur/téléphone/tablette. Celle-ci contient une copie du lien nécessaire à la connexion.
+
+Nous vous invitons à utiliser le lien suivant afin de commencer votre aventure Lignes de Vie :
+
+{{ URL }}
+
+Nous utilisons un système de chiffrement end-to-end pour assurer la sécurité et l’anonymat de vos données. Nous ne serons donc **pas en mesure de vous renvoyer un nouveau lien de connexion** en cas de perte de celui-ci.
+
+Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.
+
+L’équipe de Lignes de Vie
+contact@ldv-recherche.fr)",
+    R"(<html><body>
+<p>Bienvenue !</p>
+<p>Nous vous remercions de votre intérêt pour les recherches de Lignes de Vie.</p>
+<p><b>Attention, ce <b>mail est important</b> ! Il est l’unique moyen de connexion à votre espace personnel durant toute la durée des études.</b></p>
+<p><b>Conservez-le précieusement, ou même mieux, enregistrez la pièce jointe sur votre ordinateur/téléphone/tablette. Celle-ci contient une copie du lien nécessaire à la connexion.</b></p>
+<p>Nous vous invitons à cliquer sur le lien suivant afin de commencer votre aventure Lignes de Vie.</p>
+<div align="center"><br>
+    <a style="padding: 0.35em 2em 0.45em 2em; background: #2d8261; border-radius: 30px;
+              font-weight: bold; text-decoration: none !important; color: white;" href="{{ URL }}">Lien de connexion</a>
+<br><br></div>
+<p>Si vous rencontrez des problèmes pour appuyer sur le bouton, copiez-collez le lien suivant dans votre navigateur :</p>
+<p>{{ URL }}</p>
+<p>Nous utilisons un système de chiffrement end-to-end pour assurer la sécurité et l’anonymat de vos données. Nous ne serons donc <b>pas en mesure de vous renvoyer un nouveau lien de connexion</b> en cas de perte de celui-ci.</p>
+<p>Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.</p>
+<p><i>L’équipe de Lignes de Vie</i><br>
+<a href="mailto:contact@ldv-recherche.fr">contact@ldv-recherche.fr</a></p>
+</body></html>)"
 };
+
 static const smtp_MailContent ExistingUser = {
     "Tentative de connexion à {{ TITLE }}",
     R"(Un utilisateur a tenté de se connecter sur votre compte :\n\n{{ EMAIL }})",
