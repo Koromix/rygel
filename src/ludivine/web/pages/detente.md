@@ -32,7 +32,7 @@
             <div>
                 <p>Écrivez <b>librement vos pensées</b>, émotions, ou ressentis, sans vous soucier de la structure ou de la forme.</p>
                 <div class="actions">
-                    <a class="disabled">Écrire dans mon journal</a>
+                    <a class="disabled">Bientôt disponible</a>
                 </div>
             </div>
         </div>
