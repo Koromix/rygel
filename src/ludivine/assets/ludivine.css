@@ -37,8 +37,8 @@ body { font-size: 15px; }
 :is(main, dialog) a:has(> img) { text-decoration: none !important; }
 
 h1 {
-    color: #364b9b;
-    border-bottom: 1px solid #364b9b55;
+    color: var(--top_color);
+    border-bottom: 1px solid color-mix(in srgb, var(--top_color), transparent 60%);
 }
 h1:not(:first-of-type) { margin-top: 2em; }
 
@@ -51,7 +51,7 @@ button {
 
 .reference {
     font-weight: bold;
-    color: #364b9b;
+    color: var(--top_color);
 }
 
 p + .actions { margin-top: 2em; }

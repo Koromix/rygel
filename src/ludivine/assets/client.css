@@ -235,7 +235,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     font-weight: bold;
     text-transform: uppercase;
     text-align: center;
-    color: #364b9b;
+    color: var(--top_color);
 }
 
 @media screen and (max-width: 960px) {
@@ -545,12 +545,22 @@ form {
 
     & .enum {
         display: flex;
-        gap: 0.5em;
+        gap: 1em;
         flex-wrap: wrap;
     }
     & .enum > button {
         padding: 0.2em 1.4em 0.35em 1.4em;
         border-radius: 12px;
+        background: white;
+        color: var(--top_color);
+    }
+    & .enum > button:not(.active):hover {
+        background: var(--bar_color);
+        color: white;
+    }
+    & .enum > button.active {
+        background: var(--bar_color);
+        color: white;
     }
 
     & .slider {
