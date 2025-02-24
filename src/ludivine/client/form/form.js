@@ -145,15 +145,23 @@ function FormModule(db, study, page) {
             </div>
 
             <div class="actions">
-                ${part_idx < end ? html`<button @click=${UI.wrap(next)}>Continuer</button>` : ''}
+                ${part_idx ? html`<button type="button" class="secondary" @click=${UI.wrap(previous)}>Précédent</button>` : ''}
+                ${part_idx < end ? html`<button type="button" @click=${UI.wrap(next)}>Continuer</button>` : ''}
                 ${part_idx == end ? html`
-                    <button class="confirm" @click=${UI.insist(next)}>
+                    <button type="button" class="confirm" @click=${UI.insist(next)}>
                         <img src=${ASSETS['ui/confirm']} alt="" />
                         <span>Finaliser</span>
                     </button>
                 ` : ''}
             </div>
         `, div);
+    }
+
+    async function previous() {
+        validate();
+
+        let section = Math.max(0, part_idx - 1);
+        await app.navigateStudy(page, section);
     }
 
     async function next() {
