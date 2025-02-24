@@ -589,13 +589,13 @@ form {
             appearance: none;
             -webkit-appearance: none;
             height: 6px;
-            background: white;
+            background: var(--input_color);
             border-radius: 4px;
         }
         &::-moz-range-track {
             appearance: none;
             height: 6px;
-            background: white;
+            background: var(--input_color);
             border-radius: 4px;
         }
 
