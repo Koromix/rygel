@@ -61,11 +61,3 @@
     </div>
     <img src="{{ ASSET ../assets/pictures/philosophie.webp }}" style="flex: 1;" alt="" />
 </div>
-
-# Soumettre une étude
-
-Vous souhaitez <b>soumettre une étude</b> au programme Lignes de vie ? Vous pouvez nous contacter en cliquant sur le bouton ci-dessous :
-
-<div class="actions">
-    <a class="disabled">Soumettre une étude</a>
-</div>
