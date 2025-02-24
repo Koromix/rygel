@@ -150,7 +150,7 @@ function FormModule(db, study, page) {
                 ${part_idx == end ? html`
                     <button type="button" class="confirm" @click=${UI.insist(next)}>
                         <img src=${ASSETS['ui/confirm']} alt="" />
-                        <span>Finaliser</span>
+                        <span style="display: inline;">Finaliser</span>
                     </button>
                 ` : ''}
             </div>
