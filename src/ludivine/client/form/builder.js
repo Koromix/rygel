@@ -374,6 +374,10 @@ function FormBuilder(ctx, model) {
                     ${tip ? html`<div class="tip">${tip}</div>` : ''}
                     ${skippable ? html`
                         <label>
+                            <span>Je souhaite apporter un commentaire (non obligatoire) :</span>
+                            <textarea rows="4" @input=${comment}>${notes.comment ?? ''}</textarea>
+                        </label>
+                        <label>
                             <input type="checkbox" ?checked=${!!notes.skip} @click=${skip} />
                             <span>Je ne souhaite pas répondre à cette question</span>
                         </label>
@@ -384,6 +388,10 @@ function FormBuilder(ctx, model) {
 
             function skip(e) {
                 notes.skip = e.target.checked;
+            }
+
+            function comment(e) {
+                notes.comment = e.target.value || null;
             }
         };
 
@@ -400,7 +408,8 @@ function FormBuilder(ctx, model) {
 
     function expandOptions(options, defaults = {}) {
         options = Object.assign({
-            optional: false
+            optional: false,
+            tip: null
         }, defaults, options);
 
         return options;
