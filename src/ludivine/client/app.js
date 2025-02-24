@@ -357,9 +357,6 @@ async function run(push = true) {
 
         if (project != null) {
             if (project.key != cache.project?.key || project == cache.project) {
-                if (typeof project.bundle == 'string')
-                    project.bundle = await import(project.bundle);
-
                 if (cache.study == null) {
                     let study = cache.studies.find(study => study.key == project.key);
 
@@ -444,6 +441,9 @@ function makeURL(values = {}) {
 }
 
 async function initProject(project, study) {
+    if (typeof project.bundle == 'string')
+        project.bundle = await import(project.bundle);
+
     let bundle = project.bundle;
 
     // Init study schema
@@ -613,7 +613,7 @@ async function runDashboard() {
                                         html`<button type="button" class="small" disabled>Prochainement</button>` : ''}
                                     ${study != null && study.progress < study.total ?
                                         html`<button type="button" class="small"
-                                                     @click=${UI.wrap(e => openStudy(project))}>Continuer</button>` : ''}
+                                                     @click=${UI.wrap(e => openStudy(project))}>${study.progress ? 'Reprendre' : 'Commencer'}</button>` : ''}
                                     ${study != null && study.progress == study.total ?
                                         html`<button type="button" class="small" disabled>Résultats</button>` : ''}
                                 </div>
@@ -728,6 +728,10 @@ async function runConsent() {
         UI.toggleFullscreen(false);
 
     let project = cache.project;
+
+    if (typeof project.bundle == 'string')
+        project.bundle = await import(project.bundle);
+
     let bundle = project.bundle;
 
     UI.main(html`
@@ -770,11 +774,18 @@ async function consent(e, project) {
 
     let reuse = elements.reuse.checked;
 
-    await db.fetch1(`INSERT INTO studies (key, start, reuse)
-                     VALUES (?, ?, ?)
-                     ON CONFLICT DO UPDATE SET start = excluded.start,
-                                               reuse = excluded.reuse
-                     RETURNING id, start`, project.key, start, 0 + reuse);
+    let study = await db.fetch1(`INSERT INTO studies (key, start, reuse)
+                                 VALUES (?, ?, ?)
+                                 ON CONFLICT DO UPDATE SET start = excluded.start,
+                                                           reuse = excluded.reuse
+                                 RETURNING id, key, start`,
+                                project.key, start, 0 + reuse);
+
+    await initProject(project, study);
+
+    // Go back to dashboard;
+    route.mode = 'study';
+    route.project = null;
 
     await run();
 }
