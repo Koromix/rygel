@@ -547,11 +547,13 @@ async function runProfile() {
                 </div>
 
                 <div class="box">
-                    <div class="header">Bienvenue sur <b>${ENV.title}</b> !</div>
+                    <div>
+                        <div class="header">Bienvenue sur <b>${ENV.title}</b> !</div>
 
-                    <p>Vous pouvez modifier les informations de votre profil saisies précédemment à l’aide du bouton ci-dessous.
-                    Par ailleurs, n’oubliez pas que vous pouvez <b>retirer votre consentement</b> à tout moment en vous rendant dans votre profil.
-                    <p>N’hésitez pas à <b>faire des pauses</b> et à visiter la page <b>Se Détendre</b>. Vous pourrez reprendre à tout moment.</p>
+                        <p>Vous pouvez modifier les informations de votre profil saisies précédemment à l’aide du bouton ci-dessous.
+                        Par ailleurs, n’oubliez pas que vous pouvez <b>retirer votre consentement</b> à tout moment en vous rendant dans votre profil.
+                        <p>N’hésitez pas à <b>faire des pauses</b> et à visiter la page <b>Se Détendre</b>. Vous pourrez reprendre à tout moment.</p>
+                    </div>
 
                     <div class="actions">
                         <a href="/study">Accéder aux études</a>
