@@ -461,8 +461,8 @@ form {
 
     & input {
         padding: 0.4em 0.6em;
-        background: var(--input_color);
-        border: none;
+        background: white;
+        border: 1px solid var(--input_color);
         border-radius: 8px;
         font: inherit;
         font-size: 0.9em;
@@ -471,7 +471,8 @@ form {
         align-self: stretch;
         padding: 0.4em 0.6em;
         border: none;
-        background: var(--input_color);
+        background: white;
+        border: 1px solid var(--input_color);
         border-radius: 8px;
         font: inherit;
         font-size: 0.9em;
@@ -483,10 +484,11 @@ form {
         -webkit-appearance: none;
         -moz-appearance: none;
         appearance: none;
-        background-color: var(--input_color);
+        background-color: white;
         background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAALCAYAAAB7/H1+AAABUElEQVQoU2NkoBFgpJG5DGCDy8rKZB49erSXmZn5taCgYNiUKVOegcT////PhGbxf0ZGxv8lJSXcT58+nQeUcwKqd502bdoFdAfCXZyWlib35cuXfUCNzzg5OUPnzJnzEs1wsKGrVq3iXLdu3RygnAcvL6/H7NmzT2PzNUpQxMfHK//582fvv3//bktJSUX29va+gRoONBNu6DQmJqZAbm5uL6Chx3AFJUYYp6enq3769GkfUMMVdXX16IaGhncgzUCXsm3YsGEa0IIwDg4On7lz5x7CFz9YIw9ouBYwWPYAXX4a6N04Y2PjbwcPHpwI5MeysbEFLlq0aA+hSMeZKqKjo3WBkbcbaNhRoCufAnEKMAiClixZsoOQoSB5vMkNGKFGX79+3QU0nBsYoeHz5s3bRIyhBA0GKYiLizP7/fu37PLly9cSayhRBpNiGLJaAHQsiAz/sFdjAAAAAElFTkSuQmCC");
         background-repeat: no-repeat;
         background-position: right;
+        border: 1px solid var(--input_color);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -514,7 +516,7 @@ form {
         box-shadow: 0 0 0 1px var(--check_color);
         cursor: pointer;
     }
-    & input[type=radio]:hover { background: var(--input_color);  }
+    & input[type=radio]:hover { background: var(--hover_color);  }
     & input[type=radio]:checked { background: var(--check_color); }
 
     & label:has(> input[type=checkbox]) {
@@ -545,7 +547,7 @@ form {
         height: 8px;
         transition: 120ms transform ease-in-out;
     }
-    & input[type=checkbox]:hover::before { box-shadow: inset 1em 1em var(--input_color); }
+    & input[type=checkbox]:hover::before { box-shadow: inset 1em 1em var(--hover_color); }
     & input[type=checkbox]:checked::before { box-shadow: inset 1em 1em var(--check_color); }
 
     & .enum {
