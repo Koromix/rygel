@@ -32,7 +32,7 @@
         <p>Si vous remplissez ces critères et que vous souhaitez participer, vous pouvez créer votre compte en cliquant sur le bouton ci-dessous et choisir l'étude à laquelle vous souhaitez répondre (actuellement, seule l'étude « Sociotrauma » est disponible).
         <div class="actions">
             <a href="/etudes">Découvrir nos études</a>
-            <a href="http://localhost:8890/">Participer</a>
+            <a href="https://app.ldv-recherche.fr/">Participer</a>
         </div>
     </div>
     <img src="{{ ASSET ../assets/pictures/participer.webp }}" style="flex: 2;" alt="" />
