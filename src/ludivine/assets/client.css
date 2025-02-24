@@ -617,4 +617,15 @@ form {
             border-radius: 50%;
         }
     }
+
+    & .tip {
+        display: flex;
+        font-size: 0.9em;
+        font-style: italic;
+        margin-top: 0.4em;
+    }
+    & .tip::before {
+        content: '☞\FE0E';
+        padding-right: 5px;
+    }
 }

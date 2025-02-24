@@ -358,17 +358,20 @@ function FormBuilder(ctx, model) {
 
         let notes = annotate(ctx.values, key);
 
-        let render = (widget) => {
+        let render = () => {
             let error = notes.error;
             let skippable = notes.hasOwnProperty('skip') && (error == null);
             let annotated = skippable || (error != null);
 
             let cls = 'widget' + (annotated ? ' annotate' : '');
 
+            let tip = options.tip ?? options.help // For compatibility
+
             return html`
                 <div class=${cls}>
                     <label for=${id}>${label}</label>
                     ${func(id)}
+                    ${tip ? html`<div class="tip">${tip}</div>` : ''}
                     ${skippable ? html`
                         <label>
                             <input type="checkbox" ?checked=${!!notes.skip} @click=${skip} />
