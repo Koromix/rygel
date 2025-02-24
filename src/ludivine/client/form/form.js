@@ -131,7 +131,10 @@ function FormModule(db, study, page) {
         let part = model.parts[part_idx];
 
         render(html`
-            <div class="box">${form.intro}</div>
+            <div class="box">
+                <div>${form.intro}</div>
+            </div>
+
             ${progressBar(part_idx, end, 'parts')}
 
             <div class="box">
