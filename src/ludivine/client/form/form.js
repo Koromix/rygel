@@ -145,7 +145,13 @@ function FormModule(db, study, page) {
             </div>
 
             <div class="actions">
-                <button @click=${UI.wrap(next)}>${part_idx < end ? 'Continuer' : 'Finaliser'}</button>
+                ${part_idx < end ? html`<button @click=${UI.wrap(next)}>Continuer</button>` : ''}
+                ${part_idx == end ? html`
+                    <button class="confirm" @click=${UI.insist(next)}>
+                        <img src=${ASSETS['ui/confirm']} alt="" />
+                        <span>Finaliser</span>
+                    </button>
+                ` : ''}
             </div>
         `, div);
     }
