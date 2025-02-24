@@ -335,10 +335,10 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     background: var(--box_color);
     border-radius: 16px;
     gap: 1.5em;
-}
-.summary.draft > .circle { --fill: var(--draft_color); }
-.summary.done > .circle { --fill: var(--done_color); }
-.summary {
+
+    &.draft > .circle { --fill: var(--draft_color); }
+    &.done > .circle { --fill: var(--done_color); }
+
     & > img {
         width: 200px;
         height: 100%;
@@ -351,6 +351,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     & > div {
         flex: 1;
         padding: 1em 0;
+        overflow: hidden;
     }
     & > div > .title {
         margin-bottom: 1em;
@@ -360,6 +361,10 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
         color: #364b9b;
     }
     & > .circle { margin: 20px 20px; }
+}
+
+@media screen and (max-width: 960px) {
+    .summary > div > :not(.header) { display: none; }
 }
 
 .modules {
@@ -380,10 +385,10 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     background: color-mix(in srgb, var(--color), transparent 60%);
     border-radius: 12px;
     cursor: pointer;
-}
-.module.draft { --color: #d9bf69; }
-.module.complete { --color: #eca17f; }
-.module {
+
+    &.draft { --color: #d9bf69; }
+    &.complete { --color: #eca17f; }
+
     & .title {
         font-weight: bold;
         color: #364b9b;
