@@ -135,14 +135,14 @@ function FormModule(db, study, page) {
             ${progressBar(part_idx, end, 'parts')}
 
             <div class="box">
-                <form>
+                <div class="header">Partie ${part_idx + 1}</div>
+                <form @submit=${UI.wrap(next)}>
                     ${model.parts[part_idx].map(widget => widget.render())}
                 </form>
             </div>
 
             <div class="actions">
-                ${part_idx < end ? html`<button @click=${UI.wrap(next)}>Continuer</button>` : ''}
-                ${part_idx == end ? html`<button @click=${UI.wrap(finalize)}>Finaliser</button>` : ''}
+                <button @click=${UI.wrap(next)}>${part_idx < end ? 'Continuer' : 'Finaliser'}</button>
             </div>
         `, div);
     }
@@ -150,18 +150,18 @@ function FormModule(db, study, page) {
     async function next() {
         validate();
 
-        await app.saveTest(page, ctx.raw);
-        has_changed = false;
+        let end = model.parts.length - 1;
 
-        let section = part_idx + 1;
-        await app.navigateStudy(page, section);
-    }
+        if (part_idx < end) {
+            await app.saveTest(page, ctx.raw);
+            has_changed = false;
 
-    async function finalize() {
-        validate();
-
-        await app.finalizeTest(page, ctx.raw);
-        has_changed = false;
+            let section = part_idx + 1;
+            await app.navigateStudy(page, section);
+        } else {
+            await app.finalizeTest(page, ctx.raw);
+            has_changed = false;
+        }
     }
 
     function validate() {
