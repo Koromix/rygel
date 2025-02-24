@@ -14,11 +14,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
+import { PERSON_KINDS } from '../../client/network/constants.js'
 
 let intro = html`
-    <p>Nous venons de vous interroger sur une expérience stressante. Les personnes ayant vécu ce genre d'événement difficile différent considérablement <b>dans leur façon d'en parler aux autres</b>.
-    <p>Nous aimerions savoir <u>ce que vous avez divulgué à la personne dont vous êtes le ou la plus proche</u> et à quelle fréquence.
-    <p>Considérez uniquement la <u>personne dont vous êtes la plus proche</u> pour répondre aux questions !
+    <p>Les personnes ayant vécu le genre d'événement comme celui qui vous a amené ici <b>différent considérablement dans leur façon d'en parler</b> aux autres. Nous aimerions savoir ce que vous avez divulgué à la <b>personne dont vous êtes le ou la plus proche</b> et à quelle fréquence (y compris si vous ne lui avez rien dit).
 `
 
 function run(form, values) {
@@ -40,6 +39,15 @@ function run(form, values) {
     form.part(() => {
         q(7, "Je lui ai parlé de mes pensées et de mes sentiments à propos de mon expérience")
         q(8, "Je lui ai parlé des effets de mon expérience sur ma façon de penser et de me sentir")
+    })
+
+    form.part(() => {
+        let types = Object.keys(PERSON_KINDS).map(kind => [kind, PERSON_KINDS[kind].text])
+
+        form.enumRadio("sphere", "Dans quelle sphère de votre vie se situe la personne à laquelle vous pensez ?", types)
+
+        if (values.pshere == "other")
+            form.text("?sphere_pec", "Précisez (non obligatoire) :")
     })
 
     function q(idx, label) {

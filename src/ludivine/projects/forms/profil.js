@@ -628,9 +628,24 @@ function run(form, values) {
     })
 
     form.part(() => {
+        form.binary("pec1", "Avez-vous, au cours du dernier mois consulté un médecin, pris un traitement médicamenteux ou suivi une psychothérapie en lien avec l’évènement que vous venez de vivre ?")
+
+        form.multiCheck("atcd", "Avant l’évènement, aviez-vous été diagnostiqué par un professionnel de la santé comme souffrant :", [
+            [1, "D’un trouble de l’humeur ?"],
+            [2, "D’un trouble anxieux ?"],
+            [3, "D’un trouble alimentaire ?"],
+            [4, "D’un trouble d'addiction ?"]
+        ])
+
+        if (values.atcd != null)
+            form.binary("pec2", "Avez-vous consulté un médecin, pris un traitement médicamenteux ou suivi une psychothérapie pour un ou plusieurs des troubles cités ci-dessus ?")
+    })
+
+    form.part(() => {
         form.binary("diplome", "Avez-vous un diplôme scolaire ?", {
             help: "Si ce n'est pas le cas, ce n'est pas un problème ! Cette question nous aide simplement à cerner qui vous êtes."
         })
+
         if (values.diplome == 1) {
             form.enumRadio("diplome_max", "Quel est le plus haut diplôme que vous avez obtenu ?", [
                 [1, "Brevet des collèges"],
@@ -652,13 +667,13 @@ function run(form, values) {
 
         let idx = 1
 
-        do {
-            let first = (idx == 1)
-            idx++
-            form.enumDrop("?langue" + idx, first ? "Parlez vous une autre langue (optionnel) ?" : null, LANGUAGES, {
+        while (values["langue" + idx] != null) {
+            let first = (idx++ == 1)
+
+            form.enumDrop("?langue" + idx, first ? "Parlez vous d'autres langues (non obligatoire) ?" : null, LANGUAGES, {
                 disabled: values.langue1 == null
             })
-        } while (values["langue" + idx] != null)
+        }
     })
 
     form.part(() => {
@@ -668,13 +683,13 @@ function run(form, values) {
 
         let idx = 1
 
-        do {
-            let first = (idx == 1)
-            idx++
-            form.enumDrop("?parents" + idx, first ? "Vos parents parlent-ils une ou plusieurs autres langues (optionnel) ?" : null, LANGUAGES, {
+        while (values["parents" + idx] != null) {
+            let first = (idx++ == 1)
+
+            form.enumDrop("?parents" + idx, first ? "Vos parents parlent-ils une ou plusieurs autres langues (non obligatoire) ?" : null, LANGUAGES, {
                 disabled: values.parents1 == null
             })
-        } while (values["parents" + idx] != null)
+        }
     })
 
     form.part(() => {

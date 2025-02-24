@@ -56,7 +56,11 @@ function init(build, start) {
             <div class="help">
                 <img src=${ASSETS['pictures/help1']} alt="" />
                 <div>
-                    <p>Sélectionnez la <b>prochaine étape de l’étude</b> pour commencer à remplir le questionnaire !
+                    <p>La première étape consiste à remplir votre <b>profil puis à faire un bilan initial</b>.
+                    <p>Vous pourrez ensuite continuer <b>selon le calendrier prévu</b>. À tout moment, vous pouvez arrêter l'étude ou la mettre en pause et y revenir plus tard. Vous avez également la possibilité de consulter les pages « Ressources » ou « Se détendre ».
+                    <p>Vous êtes libre de compléter les questionnaires dans l’ordre qui vous convient. Toutefois, nous vous recommandons de <b>suivre l’ordre proposé</b>. Les transitions ont été pensées avec soin par notre équipe de recherche et thérapeutique de Lignes de Vie afin d’accompagner votre cheminement de la manière la plus confortable possible.
+                    <p>Nous vous invitons à <b>répondre à toutes les questions</b>, même si vous n'êtes pas certain de votre réponse. Il n’y a pas de bonne ou de mauvaise réponse, et même incertaines, elles sont importantes. Dans Lignes de Vie, on se donne le droit à l’erreur, à la bêtise, à l’ignorance… Et pour les chercheurs aussi !
+                    <p>Dès lors, si une question <b>ne correspond pas à votre vécu</b> ou si vous souhaitez ajouter un commentaire, validez la page sans y répondre et apposez votre commentaire dans le champ qui apparait.
                 </div>
             </div>
         `;
@@ -79,26 +83,55 @@ function init(build, start) {
 
             let options = { schedule: start };
 
-            build.module('entourage', 'Entourage', () => {
+            build.module('entourage', 'Entourage', mod => {
+                mod.help = html`
+                    <div class="help left">
+                        <img src=${ASSETS['pictures/help1']} alt="" />
+                        <div>
+                            <p>Dans ce module, nous visons à comprendre votre <b>environnement social</b> : À qui parlez-vous de manière régulière ? Qui est là pour vous ? Êtes-vous satisfaits du soutien que vous recevez ?
+                            <p>À la fin de ce module, nous vous demanderons de décrire votre entourage précisément à l'aide d'un <abbr title="Outil permettant de représenter visuellement vos relations sociales">sociogramme</abbr> interactif.
+                        </div>
+                    </div>
+                `;
+
                 build.form('ssq6', 'Soutien social', ssq6, options)
-                build.form('sps10', 'Provisions sociales', sps10, options)
-                build.form('sni', 'Réseau proche', sni, options)
+                build.form('sni', 'Interactions sociales', sni, options)
+                build.form('sps10', 'Disponibilité de votre entourage', sps10, options)
                 build.network('network', 'Sociogramme', options)
             });
 
-            build.module('evenement', 'Évènement', () => {
+            build.module('evenement', 'Évènement', mod => {
+                mod.help = html`
+                    <div class="help left">
+                        <img src=${ASSETS['pictures/help1']} alt="" />
+                        <div>
+                            <p>Dans ce module, nous vous poserons des questions sur l’<b>événement qui vous a conduit à participer à cette étude</b>, ainsi que sur tout autre événement, qu’il soit positif ou négatif, qui fait actuellement partie de votre réalité.
+                            <p>N'hésitez pas à interrompre l'application ou à cliquer sur le <b>bouton « SOS »</b> si cela s’avère nécessaire pour vous. Vous pouvez également arrêter à tout moment et revenir plus tard.
+                        </div>
+                    </div>
+                `
+
                 build.form('lec5', 'Situations stressantes', lec5, options)
                 build.form('isrc', 'Pensées et ressenti', isrc, options)
                 build.form('pdeq', 'Réactions pendant l\'évènement', pdeq, options)
-                build.form('adnm20', 'Évènements de vie', adnm20, options)
+                build.form('adnm20', 'Autres évènements de vie', adnm20, options)
             });
 
             build.module('qualite', 'Qualité de vie', () => {
                 build.form('mhqol', 'Qualité de vie', mhqol, options)
             });
 
-            build.module('divulgation', 'Divulgation', () => {
-                build.form('cses', 'Communication à l\'entourage', cses, options)
+            build.module('divulgation', 'Communication', mod => {
+                mod.help = html`
+                    <div class="help left">
+                        <img src=${ASSETS['pictures/help1']} alt="" />
+                        <div>
+                            <p>Dans ce module, nous allons nous intéresser à la façon dont vous <b>souhaitez – ou non – parler de votre expérience</b> à vos proches, ainsi qu’à leurs réactions (si vous leur en avez parlé).
+                        </div>
+                    </div>
+                `
+
+                build.form('cses', 'Témoignage à l\'entourage', cses, options)
                 build.form('rds', 'Réactions des proches', rds, options)
             });
         });
@@ -119,8 +152,8 @@ function init(build, start) {
 
             build.module('entourage', 'Entourage', () => {
                 build.form('ssq6', 'Soutien social', ssq6, options)
-                build.form('sps10', 'Provisions sociales', sps10, options)
-                build.form('sni', 'Réseau proche', sni, options)
+                build.form('sni', 'Interactions sociales', sni, options)
+                build.form('sps10', 'Disponibilité de votre entourage', sps10, options)
                 build.network('network', 'Sociogramme', options)
             });
 
@@ -165,8 +198,8 @@ function init(build, start) {
 
             build.module('entourage', 'Entourage', () => {
                 build.form('ssq6', 'Soutien social', ssq6, options)
-                build.form('sps10', 'Provisions sociales', sps10, options)
-                build.form('sni', 'Réseau proche', sni, options)
+                build.form('sni', 'Interactions sociales', sni, options)
+                build.form('sps10', 'Disponibilité de votre entourage', sps10, options)
                 build.network('network', 'Sociogramme', options)
             });
 
@@ -209,8 +242,8 @@ function init(build, start) {
 
             build.module('entourage', 'Entourage', () => {
                 build.form('ssq6', 'Soutien social', ssq6, options)
-                build.form('sps10', 'Provisions sociales', sps10, options)
-                build.form('sni', 'Réseau proche', sni, options)
+                build.form('sni', 'Interactions sociales', sni, options)
+                build.form('sps10', 'Disponibilité de votre entourage', sps10, options)
                 build.network('network', 'Sociogramme', options)
             });
 
@@ -252,8 +285,8 @@ function init(build, start) {
 
             build.module('entourage', 'Entourage', () => {
                 build.form('ssq6', 'Soutien social', ssq6, options)
-                build.form('sps10', 'Provisions sociales', sps10, options)
-                build.form('sni', 'Réseau proche', sni, options)
+                build.form('sni', 'Interactions sociales', sni, options)
+                build.form('sps10', 'Disponibilité de votre entourage', sps10, options)
                 build.network('network', 'Sociogramme', options)
             });
 

@@ -17,7 +17,6 @@ import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let intro = html`
     <p>Ce questionnaire nous permet d'évaluer le <b>nombre de personnes que vous voyez ou à qui vous parlez régulièrement</b> : il peut s'agir de votre famille, d'amis, de collègues de travail, de voisins, etc.
-    <p>Veuillez lire attentivement chaque question avant d'y répondre, et répondez aux questions complémentaires le cas échéant lorsqu'elles sont pertinentes.
 `
 
 function run(form, values) {

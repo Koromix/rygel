@@ -16,8 +16,7 @@
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let intro = html`
-    <p>Ce questionnaire est destiné à <b>déterminer la disponibilité du réseau social</b> autour de vous.
-    <p>Évaluez votre <u>niveau d’accord ou de désaccord</u> avec chacun des énoncés. Il n’ y a pas de bonnes ou de mauvaises réponses; lorsque vous y répondrez, essayez de penser aux personnes qui vous entourent.
+    <p>Nous allons maintenant évaluer la <b>disponibilité de votre entourage</b>. Il n’y a pas de bonnes ou de mauvaises réponses. Lorsque vous y répondrez, essayez de penser aux personnes qui vous entourent.
 `
 
 function run(form, values) {

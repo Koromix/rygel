@@ -118,11 +118,11 @@ function run(form, values) {
         ])
 
         if (intf.value >= 2) {
-            form.enumButtons("f" + idx, "Depuis combien de temps avez-vous eu cette réaction ?", [
+            form.enumButtons("f" + idx, "Depuis combien de temps avez-vous eu ce ressenti ?", [
                 [1, "< 1 mois"],
                 [2, "1 à 6 mois"],
                 [3, "6 mois à 2 ans"],
-            ], { help: "Donnez une estimation approximative de la durée de la réaction" })
+            ], { help: "Cela peut ne pas être très simple à indiquer, mais essayez de donner une estimation approximative de la durée de votre ressenti" })
         }
     }
 }

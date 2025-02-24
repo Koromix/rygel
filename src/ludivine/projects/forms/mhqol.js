@@ -16,8 +16,7 @@
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let intro = html`
-    <p>Les questions qui suivent portent sur votre état de santé, <b>telle que vous la ressentez</b>. Ces informations nous permettront de mieux savoir comment vous vous sentez dans votre vie de tous les jours.
-    <p>Veuillez indiquer ci-dessous les affirmations qui décrivent le mieux votre <b>situation AUJOURD'HUI</b> en cochant une case dans chacun des sept sujets.
+    <p>Les questions qui suivent portent sur votre état de santé, telle que vous la <b>ressentez AUJOURD'HUI</b>. Ces informations nous permettront de savoir comment vous vous sentez dans votre vie de tous les jours.
 `
 
 function run(form, values) {

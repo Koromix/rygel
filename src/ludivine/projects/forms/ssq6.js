@@ -14,15 +14,18 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
+import { PERSON_KINDS } from '../../client/network/constants.js'
 
 let intro = html`
-    <p>Les questions suivantes concernent les <b>personnes de votre environnement qui vous procurent une aide ou un soutien</b>.
-    <p>Chaque question est en deux parties :
+    <p>Nous cherchons dans un premier temps à avoir une représentation des <b>personnes de votre environnement</b> qui vous procurent de l’aide ou du soutien.
+    <p>Chaque question comporte 4 étapes :
     <ol>
-        <li>Dans un premier temps, indiquez le <u>nombre de personnes</u> de 1 à 9 sur qui vous pouvez compter pour une aide ou un soutien.
-        <li>Dans un second temps, indiquez quel est votre <u>degré de satisfaction</u> par rapport au soutien obtenu.
+        <li>Indiquez le nombre de personnes (de 0 à 9) sur qui vous pouvez compter
+        <li>Inscrivez le prénom ou le surnom de chaque personne
+        <li>Décrivez le type de relation que vous avez avec chaque personne
+        <li>Indiquez quel est votre degré de satisfaction par rapport au soutien obtenu
     </ol>
-    <p>Si pour une question <u>vous n’avez personne, indiquez « 0 »</u>, mais évaluez quand même votre degré de satisfaction.
+    <p>Si vous ne pensez à personne en particulier pour une question, indiquez « 0 », mais remplissez tout de même l’évaluation de satisfaction.
 `
 
 function run(form, values) {
@@ -60,8 +63,18 @@ function run(form, values) {
             [6, "Très satisfait"]
         ]
 
+        let types = Object.keys(PERSON_KINDS).map(kind => [kind, PERSON_KINDS[kind].text])
+
         form.enumButtons(key + "a", label, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        form.enumButtons(key + "b", "Quel est votre degré de satisfaction par rapport au soutien obtenu ?", choices)
+
+        let count = values[key + "a"]
+
+        for (let i = 0; i < count; i++) {
+            form.text(key + "b" + i, `Quelles sont les initiales de la personne n°${i + 1} ?`)
+            form.enumDrop(key + "c" + i, `Quelle est votre relation avec cette personne ?`, types)
+        }
+
+        form.enumButtons(key + "d", "Quel est votre degré de satisfaction par rapport au soutien obtenu ?", choices)
     }
 }
 
