@@ -31,7 +31,7 @@ import { ASSETS } from '../assets/assets.js';
 
 import '../assets/client.css';
 
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 
 Object.assign(T, {
     cancel: 'Annuler',
@@ -754,6 +754,10 @@ async function runConsent() {
                         <input name="consent" type="checkbox" />
                         <span>J’ai lu et je ne m’oppose pas à participer à l’étude ${project.title}</span>
                     </label>
+                    <label>
+                        <input name="reuse" type="checkbox" />
+                        <span>J’accepte que mes données soient réutilisées dans le cadre d’autres études de ${ENV.title}.</span>
+                    </label>
                     <div class="actions">
                         <button type="submit">Participer</button>
                     </div>
@@ -772,10 +776,13 @@ async function consent(e, project) {
     if (!elements.consent.checked)
         throw new Error('Vous devez confirmé avoir lu et accepté la participation à ' + project.title);
 
-    await db.fetch1(`INSERT INTO studies (key, start)
-                     VALUES (?, ?)
-                     ON CONFLICT DO UPDATE SET start = excluded.start
-                     RETURNING id, start`, project.key, start);
+    let reuse = elements.reuse.checked;
+
+    await db.fetch1(`INSERT INTO studies (key, start, reuse)
+                     VALUES (?, ?, ?)
+                     ON CONFLICT DO UPDATE SET start = excluded.start,
+                                               reuse = excluded.reuse
+                     RETURNING id, start`, project.key, start, 0 + reuse);
 
     await run();
 }
@@ -1053,6 +1060,33 @@ async function openDatabase(filename, key) {
                         timestamp NOT NULL,
                         image BLOB NOT NULL
                     );
+                `);
+            } // fallthrough
+
+            case 1: {
+                await db.exec(`
+                    DROP TABLE events;
+                    DROP TABLE snapshots;
+
+                    PRAGMA foreign_keys = 0;
+
+                    DROP INDEX studies_k;
+                    ALTER TABLE studies RENAME TO studies_BAK;
+
+                    CREATE TABLE studies (
+                        id INTEGER PRIMARY KEY,
+                        key TEXT NOT NULL,
+                        start INTEGER NOT NULL,
+                        reuse INTEGER CHECK (reuse IN (0, 1)) NOT NULL
+                    );
+                    CREATE UNIQUE INDEX studies_k ON studies (key);
+
+                    INSERT INTO studies (id, key, start, reuse)
+                        SELECT id, key, start, 0 FROM studies_BAK;
+
+                    DROP TABLE studies_BAK;
+
+                    PRAGMA foreign_keys = 1;
                 `);
             } // fallthrough
         }
