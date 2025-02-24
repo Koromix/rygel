@@ -325,7 +325,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     --button_color: #d9bf69;
     width: 3em;
     height: 3em;
-    padding: 0.3em;
+    padding: 0 0.1em 0.2em 0.1em;
     border-radius: 6px;
 }
 

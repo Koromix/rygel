@@ -549,10 +549,8 @@ async function runProfile() {
                 <div class="box">
                     <div>
                         <div class="header">Bienvenue sur <b>${ENV.title}</b> !</div>
-
-                        <p>Vous pouvez modifier les informations de votre profil saisies précédemment à l’aide du bouton ci-dessous.
-                        Par ailleurs, n’oubliez pas que vous pouvez <b>retirer votre consentement</b> à tout moment en vous rendant dans votre profil.
-                        <p>N’hésitez pas à <b>faire des pauses</b> et à visiter la page <b>Se Détendre</b>. Vous pourrez reprendre à tout moment.</p>
+                        <p>Utilisez le bouton à gauche pour <b>personnaliser votre avatar</b>, si vous le désirez.
+                        Une fois prêt(e), accéder à votre <b>tableau de bord et aux études</b> à l'aide du bouton ci-dessous.
                     </div>
 
                     <div class="actions">
@@ -576,15 +574,10 @@ async function runDashboard() {
 
         <div class="tab">
             <div class="box">
-                <div class="columns">
-                    <div style="flex: 4;">
-                        <div class="header">Bienvenue sur <b>${ENV.title}</b> !</div>
-
-                        <p>Vous pouvez modifier les informations de votre profil saisies précédemment à l’aide du bouton ci-dessous.
-                        Par ailleurs, n’oubliez pas que vous pouvez <b>retirer votre consentement</b> à tout moment en vous rendant dans votre profil.
-                        <p>N’hésitez pas à <b>faire des pauses</b> et à visiter la page <b>Se Détendre</b>. Vous pourrez reprendre à tout moment.</p>
-                    </div>
-                    <img src=${ASSETS['pictures/kezako']} style="flex: 1;" alt="" />
+                <div>
+                    <div class="header">Bienvenue sur <b>${ENV.title}</b> !</div>
+                    <p>Retrouvez nos études ci-dessous, vous pouvez vous y <b>inscrire ou continuer</b> votre participation le cas échéant.
+                    Une fois inscrit à une étude, nous vous conseillons d'ajouter les <b>échéances à votre agenda</b> à l'aide du bouton dédié afin de revenir sur l'application le moment venu.
                 </div>
             </div>
 
@@ -633,20 +626,17 @@ async function runDashboard() {
                     <div class="box">
                         <div class="header">À venir</div>
                         ${cache.events.map(evt => {
+                            let nice = niceDate(evt.schedule, false).split(' ');
+
                             return html`
                                 <div class="event">
-                                    <div class="date">${niceDate(evt.schedule, false)}</div>
+                                    <div class="date">${nice.map(txt => html`${txt}<br/>`)}</div>
                                     <div class="text">${evt.count} ${evt.count > 1 ? 'modules' : 'module'}</div>
-                                    <button type="button"><img src=${ASSETS['ui/calendar']} alt="Agenda" /></button>
+                                    <button type="button" disabled><img src=${ASSETS['ui/calendar']} alt="Agenda" /></button>
                                 </div>
                             `;
                         })}
                         ${!cache.events.length ? html`<p style="text-align: center;">Aucun évènement à venir</p>` : ''}
-                    </div>
-
-                    <div class="box">
-                        <div class="header">Calendrier</div>
-                        ${renderCalendar(cache.events)}
                     </div>
                 </div>
             </div>
