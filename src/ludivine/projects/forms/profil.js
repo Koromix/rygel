@@ -579,7 +579,7 @@ let DEPARTEMENTS = [
 ]
 
 let intro = html`
-    <p>Donnez-nous quelques informations pour nous aider à mieux vous comprendre
+    <p>Donnez-nous quelques informations pour nous aider à mieux vous comprendre.
 `
 
 function run(form, values) {
