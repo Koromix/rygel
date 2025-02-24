@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
+import { PERSON_KINDS } from '../../client/network/constants.js'
 
 let intro = html`
     <p>Les individus qui ont vécu un ou plusieurs événements stressants souffrent parfois de réactions différentes de celles des autres.
@@ -22,6 +23,38 @@ let intro = html`
 
 function run(form, values) {
     form.part(() => {
+        form.binary("parle", "Avez-vous parlé à une ou plusieurs personnes de l’expérience qui vous a amené ici ?")
+    })
+
+    if (values.parle == 1) {
+        form.part(() => {
+            let keys = Object.keys(PERSON_KINDS)
+
+            form.output(html`De quelle <b>sphère de votre vie</b> les personnes à qui vous en avez parlé font-elles partie ?`)
+
+            for (let key of keys) {
+                let info = PERSON_KINDS[key]
+                let label = `Combien dans la sphère « ${info.text.toLowerCase()} » ?`
+
+                form.number('?' + key, label, { min: 0 })
+            }
+        })
+    }
+
+    form.part(() => {
+        form.binary("negatif", "Avez-vous reçu des réactions négatives après en avoir parlé ?")
+
+        if (values.negatif == 1) {
+            form.slider("impact", "Comment estimez-vous l’impact que ces réactions négatives ont eu sur vous ?", {
+                min: 0, max: 10,
+                prefix: "Aucun impact", suffix: "Impact maximum"
+            })
+        }
+    })
+
+    form.part(() => {
+        form.output(html`Nous souhaiterions maintenant que vous pensiez spécifiquement à la <b>personne dont vous êtes le plus proche et à qui vous avez parlé</b> de l’évènement qui vous a amené ici. Donnez-nous, sur base des énoncés suivants, votre meilleure estimation de sa réaction lorsque vous lui avez parlé cet évènement.`)
+
         q(1, "Il ou elle semblait comprendre ce que j'ai vécu")
         q(2, "Il ou elle a ressenti de la sympathie envers moi pour ce qui s'est passé")
     })
@@ -46,9 +79,35 @@ function run(form, values) {
         q(10, "Je pensais que lui en parler se passerait bien mais ça n'a pas été le cas")
     })
 
-    //form.part(() => {
-        // q(11, "Je pensais que parler avec il ou elle serait terrible, mais en fait cela s'est très bien passé")
-    //})
+    form.part(() => {
+        form.output(html`
+            <p>Suite à l’évènement qui vous a amené ici, décrivez comment <b>avez-vous perçu vos interactions</b> avec le personnel médical, avec le personnel judiciaire et avec le personnel d'aide psychologique.
+        `)
+
+        form.binary("inter1a", "Avez-vous eu des interactions avec un personnel médical en lien avec cet évènement ?")
+        if (values.inter1a == 1) {
+            form.slider("inter1b", "Comment avez-vous perçu vos interactions avec le personnel médical ?", {
+                min: -10, max: 10,
+                prefix: '🙁', suffix: '🙂'
+            })
+        }
+
+        form.binary("inter2a", "Avez-vous eu des interactions avec un personnel judiciaire en lien avec cet évènement ?")
+        if (values.inter2a == 1) {
+            form.slider("inter2b", "Comment avez-vous perçu vos interactions avec le personnel judiciaire ?", {
+                min: -10, max: 10,
+                prefix: '🙁', suffix: '🙂'
+            })
+        }
+
+        form.binary("inter3a", "Avez-vous eu des interactions avec un personnel d'aide psychologique en lien avec cet évènement ?")
+        if (values.inter3a == 1) {
+            form.slider("inter3b", "Comment avez-vous perçu vos interactions avec le personnel d'aide psychologique ?", {
+                min: -10, max: 10,
+                prefix: '🙁', suffix: '🙂'
+            })
+        }
+    })
 
     function q(idx, label) {
         form.enumButtons("q" + idx, label, [
