@@ -634,7 +634,7 @@ async function runDashboard() {
                             return html`
                                 <div class="event">
                                     <div class="date">${niceDate(evt.schedule, false)}</div>
-                                    <div class="text">${evt.count} ${evt.count > 1 ? 'questionnaires' : 'questionnaire'}</div>
+                                    <div class="text">${evt.count} ${evt.count > 1 ? 'modules' : 'module'}</div>
                                     <button type="button"><img src=${ASSETS['ui/calendar']} alt="Agenda" /></button>
                                 </div>
                             `;
@@ -714,7 +714,7 @@ function renderCalendar(events) {
             let period = events.filter(evt => evt.schedule >= start && evt.schedule < end);
 
             let obj = period.reduce((obj, evt) => {
-                let text = evt.count + (evt.count > 1 ? ' questionnaires' : ' questionnaire');
+                let text = evt.count + (evt.count > 1 ? ' modules' : ' module');
                 obj[evt.schedule] = [text];
 
                 return obj;
