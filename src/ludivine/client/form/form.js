@@ -179,6 +179,9 @@ function FormModule(db, study, page) {
         let valid = true;
 
         for (let widget of part) {
+            if (widget.key == null)
+                continue;
+
             let value = ctx.values[widget.key];
             let notes = annotate(ctx.values, widget.key);
 
