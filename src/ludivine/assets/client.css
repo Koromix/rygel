@@ -468,6 +468,7 @@ form {
         font-size: 0.9em;
     }
     & textarea {
+        align-self: stretch;
         padding: 0.4em 0.6em;
         border: none;
         background: var(--input_color);
@@ -568,6 +569,7 @@ form {
     }
 
     & .slider {
+        align-self: stretch;
         display: flex;
         gap: 12px;
         align-items: center;
