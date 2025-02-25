@@ -436,6 +436,7 @@ By default, the first of the following config files will be used:
     WaitForInterrupt(0);
 
     // Wait for events and clients
+    int status = 0;
     {
         HeapArray<struct pollfd> pfds;
 
@@ -445,8 +446,14 @@ By default, the first of the following config files will be used:
         for (;;) {
             if (poll(pfds.ptr, pfds.len, -1) < 0) {
                 if (errno == EINTR) {
-                    if (WaitForResult(0) == WaitForResult::Interrupt) {
+                    WaitForResult ret = WaitForResult(0);
+
+                    if (ret == WaitForResult::Exit) {
                         LogInfo("Exit requested");
+                        break;
+                    } else if (ret == WaitForResult::Interrupt) {
+                        LogInfo("Process interrupted");
+                        status = 1;
                         break;
                     } else {
                         continue;
@@ -495,7 +502,7 @@ By default, the first of the following config files will be used:
         }
     }
 
-    return 0;
+    return status;
 }
 
 #endif

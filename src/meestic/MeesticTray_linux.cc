@@ -713,6 +713,7 @@ Options:
     // From here on, don't quit abruptly
     WaitForInterrupt(0);
 
+    int status = 0;
     while (run) {
         // Open Meestic socket
         meestic_fd = ConnectToUnixSocket(socket_filename, SOCK_STREAM);
@@ -735,9 +736,15 @@ Options:
 
             if (poll(pfds, RG_LEN(pfds), timeout) < 0) {
                 if (errno == EINTR) {
-                    if (WaitForResult(0) == WaitForResult::Interrupt) {
+                    WaitForResult ret = WaitForResult(0);
+
+                    if (ret == WaitForResult::Exit) {
+                        LogInfo("Exit requested");
                         run = false;
-                        break;
+                    } else if (ret == WaitForResult::Interrupt) {
+                        LogInfo("Process interrupted");
+                        status = 1;
+                        run = false;
                     } else {
                         continue;
                     }
@@ -763,7 +770,7 @@ Options:
         }
     }
 
-    return 0;
+    return status;
 }
 
 #undef CALL_SDBUS

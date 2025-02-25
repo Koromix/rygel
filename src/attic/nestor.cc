@@ -871,14 +871,19 @@ Options:
 #endif
 
     // Run until exit signal
+    int status = 0;
     {
         bool run = true;
 
         while (run) {
             WaitForResult ret = WaitForInterrupt();
 
-            if (ret == WaitForResult::Interrupt) {
+            if (ret == WaitForResult::Exit) {
                 LogInfo("Exit requested");
+                run = false;
+            } else if (ret == WaitForResult::Interrupt) {
+                LogInfo("Process interrupted");
+                status = 1;
                 run = false;
             }
         }
@@ -887,7 +892,7 @@ Options:
     LogDebug("Stop HTTP server");
     daemon.Stop();
 
-    return 0;
+    return status;
 }
 
 }

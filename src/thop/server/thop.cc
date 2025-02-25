@@ -589,6 +589,7 @@ Options:
 #endif
 
     // Run periodic tasks until exit
+    int status = 0;
     {
         bool run = true;
         int timeout = 300 * 1000;
@@ -596,8 +597,12 @@ Options:
         while (run) {
             WaitForResult ret = WaitForInterrupt(timeout);
 
-            if (ret == WaitForResult::Interrupt) {
+            if (ret == WaitForResult::Exit) {
                 LogInfo("Exit requested");
+                run = false;
+            } else if (ret == WaitForResult::Interrupt) {
+                LogInfo("Process interrupted");
+                status = 1;
                 run = false;
             }
 
@@ -609,7 +614,7 @@ Options:
     LogDebug("Stop HTTP server");
     daemon.Stop();
 
-    return 0;
+    return status;
 }
 
 }
