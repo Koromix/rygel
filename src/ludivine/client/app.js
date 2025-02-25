@@ -136,6 +136,8 @@ async function start() {
 
     // Prevent loss of data
     window.onbeforeunload = e => {
+        if (UI.isDialogOpen())
+            return 'Validez ou fermez la boîte de dialogue avant de continuer';
         if (ctx != null && ctx.mod.hasUnsavedData())
             return 'Les modifications en cours seront perdues si vous continuez, êtes-vous sûr(e) de vouloir continuer ?';
     };
