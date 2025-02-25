@@ -315,6 +315,7 @@ function FormBuilder(ctx, model) {
             <div class="slider">
                 ${options.prefix ? html`<span>${options.prefix}</span>` : ''}
                 <input id=${id} type="range" .value=${live(value ?? '')}
+                       class=${value == null ? 'missing' : ''}
                        min=${options.min} max=${options.max} @input=${input} />
                 ${options.prefix ? html`<span>${options.suffix}</span>` : ''}
             </div>

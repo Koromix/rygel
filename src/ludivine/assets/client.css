@@ -628,6 +628,9 @@ form {
             border: none;
             border-radius: 50%;
         }
+
+        &.missing::-webkit-slider-thumb { visibility: hidden; }
+        &.missing::-moz-range-thumb { visibility: hidden; }
     }
 
     & .tip {
