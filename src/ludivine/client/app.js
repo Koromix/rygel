@@ -491,23 +491,27 @@ async function runRegister() {
             <div class="box" style="align-items: center;">
                 <div class="header">Enregistrez-vous pour continuer</div>
 
+                <div>
+                    <p>La <b>création d’un compte</b> est essentielle pour participer aux études, elle permet de :
+                    <ul>
+                        <li>Garantir la protection de vos données
+                        <li>Faciliter le suivi de votre progression
+                        <li>Assurer la fiabilité des données recueillies
+                    </ul>
+                </div>
+
                 <form style="text-align: center;" @submit=${UI.wrap(register)}>
                     <input type="text" name="email" style="width: 20em;" placeholder="adresse email" />
                     <div class="actions">
-                        <button type="submit">Enregistrer mon compte</button>
+                        <button type="submit">Créer mon compte</button>
                     </div>
                 </form>
 
                 <div class="help">
                     <img src=${ASSETS['pictures/help1']} alt="" />
                     <div>
-                        <p><b>Créer un compte</b> pour participer à nos études permet de :
-                        <ul>
-                            <li>Garantir la <b>protection de vos données</b>
-                            <li>Faciliter le <b>suivi de votre progression</b>
-                            <li>Assurer la <b>fiabilité des données</b> recueillies
-                        </ul>
-                        <p>Vous n’avez <b>pas encore de compte</b> ? Pas de souci !
+                        <p>Toutes vos données étant chiffrées et sécurisées, <b>conservez précieusement le lien de connexion</b> qui va vous être envoyé par e-mail !
+                        <p>Nous ne serons <b>pas en mesure de recréer le lien de connexion</b> qui existe dans ce mail si vous le perdez !
                     </div>
                 </div>
             </div>
