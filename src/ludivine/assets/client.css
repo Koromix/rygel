@@ -39,7 +39,12 @@ main {
 }
 main.dialog {
     max-width: 800px;
-    justify-content: center;
+    margin-top: 100px;
+    justify-content: start;
+}
+
+@media screen and (max-width: 960px) {
+    main.dialog { margin-top: 0; }
 }
 
 .tab {
