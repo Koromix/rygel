@@ -22,14 +22,6 @@ const PROJECTS = [
         title: 'SocioTrauma',
         picture: ASSETS['pictures/sociotrauma'],
         bundle: BUNDLES['sociotrauma.js']
-    },
-
-    {
-        index: 2,
-        key: 'calypsoT',
-        title: 'CALYPSO',
-        picture: ASSETS['pictures/calypso'],
-        bundle: null
     }
 ];
 

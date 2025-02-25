@@ -341,14 +341,17 @@ async function run(push = true) {
     {
         let start = LocalDate.today().minusMonths(1);
 
-        cache.events = await db.fetchAll(`SELECT schedule, COUNT(id) AS count
-                                          FROM tests
-                                          WHERE schedule >= ? AND status <> 'done'
-                                          GROUP BY schedule, study
-                                          ORDER BY schedule, id`, start.toString());
+        cache.events = await db.fetchAll(`SELECT s.key AS title, t.schedule, COUNT(t.id) AS count
+                                          FROM tests t
+                                          INNER JOIN studies s ON (s.id = t.study)
+                                          WHERE t.schedule >= ? AND t.status <> 'done'
+                                          GROUP BY t.schedule, t.study
+                                          ORDER BY t.schedule, t.id`, start.toString());
 
-        for (let evt of cache.events)
+        for (let evt of cache.events) {
+            evt.title = PROJECTS.find(project => project.key == evt.title).title;
             evt.schedule = LocalDate.parse(evt.schedule);
+        }
     }
 
     // Sync state with expected route
@@ -582,7 +585,7 @@ async function runDashboard() {
             </div>
 
             <div class="row">
-                <div class="studies">
+                <div class="column" style="flex: 1;">
                     ${PROJECTS.map(project => {
                         let study = cache.studies.find(study => study.key == project.key);
                         let cls = 'study';
@@ -602,43 +605,54 @@ async function runDashboard() {
                                 <img src=${project.picture} alt="" />
                                 <div class="info">
                                     <b>Étude n°${project.index}</b><br>
-                                    ${project.title}
+                                    Étude ${project.title}
                                 </div>
-                                <div class=${online ? 'status' : 'status disabled'}>
+                                <div class="progress">
                                     ${study != null ? progressCircle(study.progress, study.total) : ''}
-                                    ${study == null && online ?
-                                        html`<button type="button" class="small"
-                                                     @click=${UI.wrap(e => openStudy(project))}>Participer</button>` : ''}
-                                    ${study == null && !online ?
-                                        html`<button type="button" class="small" disabled>Prochainement</button>` : ''}
-                                    ${study != null && study.progress < study.total ?
-                                        html`<button type="button" class="small"
-                                                     @click=${UI.wrap(e => openStudy(project))}>${study.progress ? 'Reprendre' : 'Commencer'}</button>` : ''}
-                                    ${study != null && study.progress == study.total ?
-                                        html`<button type="button" class="small" disabled>Résultats</button>` : ''}
                                 </div>
+                                ${study == null && online ?
+                                    html`<button type="button"
+                                                 @click=${UI.wrap(e => openStudy(project))}>Participer</button>` : ''}
+                                ${study == null && !online ?
+                                    html`<button type="button" disabled>Prochainement</button>` : ''}
+                                ${study != null && study.progress < study.total ?
+                                    html`<button type="button"
+                                                 @click=${UI.wrap(e => openStudy(project))}>${study.progress ? 'Reprendre' : 'Commencer'}</button>` : ''}
+                                ${study != null && study.progress == study.total ?
+                                    html`<button type="button" disabled>Résultats</button>` : ''}
                             </div>
                         `;
                     })}
+
+                    ${cache.events.length ? html`
+                        <div class="help" style="align-self: end;">
+                            <img src=${ASSETS['pictures/help1']} alt="" />
+                            <div>
+                                <p>Ajoutez les <b>prochaines étapes de l'étude à votre agenda</b> pour revenir le moment venu !
+                            </div>
+                        </div>
+                    ` : ''}
                 </div>
 
-                <div class="column">
+                ${cache.studies.length ? html`
                     <div class="box">
                         <div class="header">À venir</div>
                         ${cache.events.map(evt => {
-                            let nice = niceDate(evt.schedule, false).split(' ');
+                            let nice = niceDate(evt.schedule, true).split(' ');
 
                             return html`
                                 <div class="event">
-                                    <div class="date">${nice.map(txt => html`${txt}<br/>`)}</div>
-                                    <div class="text">${evt.count} ${evt.count > 1 ? 'modules' : 'module'}</div>
+                                    <div class="text">
+                                        <b>${niceDate(evt.schedule, true)}</b><br>
+                                        ${evt.title}
+                                    </div>
                                     <button type="button" disabled><img src=${ASSETS['ui/calendar']} alt="Agenda" /></button>
                                 </div>
                             `;
                         })}
                         ${!cache.events.length ? html`<p style="text-align: center;">Aucun évènement à venir</p>` : ''}
                     </div>
-                </div>
+                ` : ''}
             </div>
         </div>
     `);

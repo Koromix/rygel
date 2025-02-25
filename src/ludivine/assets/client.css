@@ -263,14 +263,13 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 .studies {
     display: flex;
     flex: 1;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 1em;
 }
 .study {
     --color: var(--empty_color);
 
     display: flex;
-    width: calc(50% - 0.5em);
     box-sizing: border-box;
     background: color-mix(in srgb, var(--color), transparent 60%);
     border-radius: 16px;
@@ -288,13 +287,15 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 }
 .study {
     & > img { width: 100px; }
-    & .info { flex: 1; }
-    & .status {
-        flex: 0;
+    & > .progress {
+        flex: 1;
         text-align: center;
     }
 
-    & .circle { --fill: var(--color); }
+    & .circle {
+        --fill: var(--color);
+        flex: 1;
+    }
 }
 
 .event {
@@ -305,21 +306,10 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     gap: 0.8em;
     align-items: center;
 }
-.event > .date {
-    width: 3em;
-    height: 3em;
-    padding: 0.3em;
-    background: #eca17f;
-    border-radius: 6px;
-    font-size: 0.9em;
-    font-weight: bold;
-    color: white;
-    text-align: center;
-}
 .event > .text {
-    flex: 1;
-    font-weight: bold;
-    text-align: center;
+    width: 200px;
+    padding-left: 0.5em;
+    line-height: 1.4;
 }
 .event > button {
     --button_color: #d9bf69;
