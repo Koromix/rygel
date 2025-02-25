@@ -43,7 +43,7 @@ Object.assign(T, {
     browse_for_image: 'Parcourir',
     clear_picture: 'Effacer l\'image',
     edit: 'Modifier',
-    drag_paste_or_browse_image: 'Déposez une image, copier-collez la ou utilisez le bouton « Parcourir » ci-dessous',
+    drag_paste_or_browse_image: 'Déposez une image, copier-collez la ou utilisez le bouton « Parcourir »',
     upload_image: 'Choisir une image',
     zoom: 'Zoom',
 

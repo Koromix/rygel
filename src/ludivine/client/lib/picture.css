@@ -31,7 +31,7 @@
     width: var(--size);
     height: var(--size);
     min-height: var(--size);
-    margin: 0 auto 0.5em auto;
+    margin: 0.5em auto;
     position: relative;
     background: white;
     border: 1px solid #ededf0;
@@ -52,18 +52,11 @@
     justify-content: center;
 }
 
-.not_column {
-    display: flex;
-    margin-right: 1em;
-    flex-direction: column;
-    gap: 0.5em;
-}
-
 .not_tabbar {
     display: flex;
+    max-height: 504px;
     flex-direction: column;
-    justify-content: space-between;
-    gap: 2px;
+    gap: 4px;
 }
 .not_tabbar > a {
     padding: 0.2em 0.8em 0.25em 0.8em;
@@ -86,7 +79,7 @@
     display: flex;
     width: 500px;
     min-height: 280px;
-    max-height: 430px;
+    max-height: 480px;
     padding: 12px;
     background: #faefe9;
     border-top-left-radius: 16px;

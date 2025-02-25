@@ -27,7 +27,7 @@ Object.assign(T, {
     browse_for_image: 'Browse for image',
     cancel: 'Cancel',
     clear_picture: 'Clear picture',
-    drag_paste_or_browse_image: 'Drop an image, paste it or use the \'Browse\' button below',
+    drag_paste_or_browse_image: 'Drop an image, paste it or use the \'Browse\' button',
     edit: 'Edit',
     upload_image: 'Upload image',
     zoom: 'Zoom',
@@ -154,7 +154,7 @@ function PictureCropper(title, size) {
 
         return html`
             <div class="not_dialog">
-                <div class="box not_column">
+                <div class="box" style="gap: 0;">
                     <div class="header">Avatar</div>
                     <div class="pic_preview" style=${`--size: ${size}px`}>${preview}</div>
 
@@ -164,9 +164,9 @@ function PictureCropper(title, size) {
 
                         return html`
                             <label>
+                                <span>Couleur du ${T[cat].toLowerCase()}</span>
                                 <input type="color" value=${notion.colors[cat]}
                                        @change=${UI.wrap(e => switchColor(cat, e.target.value))} />
-                                <span>${T[cat]}</span>
                             </label>
                         `;
                     })}
@@ -218,29 +218,30 @@ function PictureCropper(title, size) {
                     <div class="header">Avatar</div>
                     <div class=${is_default ? 'pic_preview' : 'pic_preview interactive'}
                          style=${`--size: ${size}px`}>${preview}</div>
+                    <div class="pic_legend">${T.drag_paste_or_browse_image}</div>
                 </div>
 
                 <div class="box">
-                    <div class="pic_legend">${T.drag_paste_or_browse_image}</div>
-                    <label>
-                        <span>${T.zoom}</span>
-                        <input type="range" min="-32" max="32"
-                               .value=${live(zoom)} ?disabled=${is_default}
-                               @input=${UI.wrap(e => changeZoom(parseInt(e.target.value, 10) - zoom))} />
-                    </label>
-                    <label>
-                        <span>${T.upload_image}</span> 
-                        <input type="file" name="file" style="display: none;"
-                               accept="image/png, image/jpeg, image/gif, image/webp"
-                               @change=${UI.wrap(e => load(e.target.files[0]))} />
-                        <button type="button" @click=${e => { e.target.parentNode.click(); e.preventDefault(); }}>${T.browse_for_image}</button>
-                    </label>
-                    <label>
-                        <span></span>
-                        <button type="button" class="secondary"
-                                ?disabled=${is_default && init_url == null}
-                                @click=${UI.insist(e => load(null))}>${T.clear_picture}</button>
-                    </label>
+                    <div>
+                        <label>
+                            <span>${T.zoom}</span>
+                            <input type="range" min="-32" max="32"
+                                   .value=${live(zoom)} ?disabled=${is_default}
+                                   @input=${UI.wrap(e => changeZoom(parseInt(e.target.value, 10) - zoom))} />
+                        </label>
+                        <label>
+                            <span>${T.upload_image}</span> 
+                            <input type="file" name="file" style="display: none;"
+                                   accept="image/png, image/jpeg, image/gif, image/webp"
+                                   @change=${UI.wrap(e => load(e.target.files[0]))} />
+                            <button type="button" @click=${e => { e.target.parentNode.click(); e.preventDefault(); }}>${T.browse_for_image}</button>
+                        </label>
+                        <label>
+                            <button type="button" class="secondary"
+                                    ?disabled=${is_default && init_url == null}
+                                    @click=${UI.insist(e => load(null))}>${T.clear_picture}</button>
+                        </label>
+                    </div>
                 </div>
             </div>
         `;
@@ -376,7 +377,7 @@ function PictureCropper(title, size) {
             dt.dropEffect = found ? 'move' : 'none';
         } else if (e.type == 'drop' || e.type == 'paste') {
             if (src != null)
-                loadCustom(src);
+                load(src);
         }
 
         e.preventDefault();
@@ -486,7 +487,7 @@ function PictureCropper(title, size) {
     async function apply() {
         if (current_mode == 'custom' && is_default) {
             if (apply_func != null)
-                await apply_func(init_url, null);
+                await apply_func(null, null);
 
             return;
         }
