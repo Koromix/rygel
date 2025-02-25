@@ -158,8 +158,6 @@ function FormModule(db, study, page) {
     }
 
     async function previous() {
-        validate();
-
         let section = Math.max(0, part_idx - 1);
         await app.navigateStudy(page, section);
     }
@@ -170,7 +168,8 @@ function FormModule(db, study, page) {
         let end = model.parts.length - 1;
 
         if (part_idx < end) {
-            await app.saveTest(page, ctx.raw);
+            if (has_changed)
+                await app.saveTest(page, ctx.raw);
             has_changed = false;
 
             let section = part_idx + 1;
