@@ -370,6 +370,8 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 .modules {
     display: flex;
     justify-content: space-evenly;
+    flex-wrap: wrap;
+    gap: 1em;
 }
 .module {
     --color: white;
