@@ -29,6 +29,7 @@ struct Config {
 
     const char *database_filename = nullptr;
     const char *vault_directory = nullptr;
+    bool sync_full = false;
 
     http_Config http { 8890 };
     const char *require_host = nullptr;

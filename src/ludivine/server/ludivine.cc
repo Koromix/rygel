@@ -298,6 +298,10 @@ Options:
     LogInfo("Init data");
     if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         return 1;
+    if (!db.SetWAL(true))
+        return false;
+    if (!db.SetSynchronousFull(config.sync_full))
+        return false;
     if (!MigrateDatabase(&db))
         return 1;
     if (!MakeDirectory(config.vault_directory, false))
