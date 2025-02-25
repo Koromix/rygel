@@ -96,7 +96,11 @@ static void InitAssets()
     assets_index.data = PatchFile(assets_index, &assets_alloc, [&](Span<const char> expr, StreamWriter *writer) {
         Span<const char> key = TrimStr(expr);
 
-        if (key == "ENV") {
+        if (key == "VERSION") {
+            writer->Write(FelixVersion);
+        } else if (key == "COMPILER") {
+            writer->Write(FelixCompiler);
+        } else if (key == "ENV") {
             json_Writer json(writer);
 
             json.StartObject();
