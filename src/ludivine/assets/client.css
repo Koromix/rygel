@@ -103,7 +103,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 #log {
     position: fixed;
     left: 50%;
-    top: 8px;
+    top: 1em;
     width: calc(100vw - 2em);
     max-width: 600px;
     z-index: 99999;
@@ -118,7 +118,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     padding: 8px;
     background: #373737;
     color: white;
-    border-radius: 12px;
+    border-radius: 20px;
     text-align: center;
     cursor: pointer;
 }
