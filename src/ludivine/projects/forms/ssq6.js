@@ -71,7 +71,11 @@ function run(form, values) {
 
         for (let i = 0; i < count; i++) {
             form.text(key + "b" + i, `Quelles sont les initiales de la personne n°${i + 1} ?`)
-            form.enumDrop(key + "c" + i, `Quelle est votre relation avec cette personne ?`, types)
+
+            let name = values[key + "b" + i] || 'cette personne'
+            let label = `Quelle est votre relation avec ${name} ?`
+
+            form.enumDrop(key + "c" + i, label, types)
         }
 
         form.enumButtons(key + "d", "Quel est votre degré de satisfaction par rapport au soutien obtenu ?", choices)
