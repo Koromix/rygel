@@ -225,8 +225,8 @@ function main(content = null) {
                     <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Détente</a></li>
                     <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
                     <div style="flex: 1;"></div>
-                    <img class=${'avatar' + (app.identity?.picture == null ? ' anonymous' : '')}
-                         src=${app.identity?.picture ?? ASSETS['ui/anonymous']} alt="" />
+                    <a href="/profile"><img class=${'avatar' + (app.identity?.picture == null ? ' anonymous' : '')}
+                                            src=${app.identity?.picture ?? ASSETS['ui/anonymous']} alt="" /></a>
                 </menu>
             </nav>
 
