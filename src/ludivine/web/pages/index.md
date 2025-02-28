@@ -3,7 +3,7 @@
     <div class="intro columns">
         <div style="flex: 3;">
             <p>Vous <b>êtes majeur, vous avez récemment vécu un événement particulièrement difficile</b> et souhaitez contribuer à faire avancer la recherche sur les psychotraumatismes ? Votre engagement est précieux, et nous vous sommes reconnaissants du <b>temps que vous consacrerez à participer</b> aux études.
-            <p>Une fois votre inscription finalisée, vous accéderez à un <b>tableau de bord</b>. Celui-ci vous permettra de répondre à plusieurs questions pour préciser votre situation personnelle et choisir l’une des études actuellement proposées dans Lignes de Vie.
+            <p>Une fois votre inscription finalisée, vous accéderez à notre <b>application Lignes de Vie</b>. Celle-ci vous permettrea de participer aux différentes études actuellement proposées dans Lignes de Vie.
         </div>
         <img src="{{ ASSET ../assets/pictures/dispositif.webp }}" style="flex: 1;" alt="" />
     </div>
