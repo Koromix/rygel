@@ -1,16 +1,17 @@
 <div class="banner">
     <div class="title">Ressources</div>
     <div class="intro">
-        <p>Vous souhaitez vous informer sur le psychotraumatisme et les thématiques associés ? Vous trouverez sur cette page cinq onglets : <b>vidéos, livres, films, musiques, et des recommandations de professionnels</b>.
+        <p>Vous souhaitez vous informer sur le psychotraumatisme et les thématiques associés ?
+        <p>Vous trouverez sur cette page cinq onglets : <b>vidéos, livres, films, musiques, et des recommandations de professionnels</b>.
     </div>
 </div>
 
 <div class="tabbar">
-    <a href="/videos"><img src="{{ ASSET ../assets/ui/video.png }}" alt="Vidéos" /></a>
-    <a href="/livres"><img src="{{ ASSET ../assets/ui/book.png }}" alt="Livres" /></a>
-    <a href="/films"><img src="{{ ASSET ../assets/ui/movie.png }}" alt="Films" /></a>
-    <a href="/musiques"><img src="{{ ASSET ../assets/ui/music.png }}" alt="Musiques" /></a>
-    <a href="/pros" class="active"><img src="{{ ASSET ../assets/ui/paper.png }}" alt="Recos des pros" /></a>
+    <a href="/videos" title="Vidéos"><img src="{{ ASSET ../assets/ui/video.png }}" alt="Vidéos" /></a>
+    <a href="/livres" title="Livres"><img src="{{ ASSET ../assets/ui/book.png }}" alt="Livres" /></a>
+    <a href="/films" title="Films"><img src="{{ ASSET ../assets/ui/movie.png }}" alt="Films" /></a>
+    <a href="/musiques" title="Musiques"><img src="{{ ASSET ../assets/ui/music.png }}" alt="Musiques" /></a>
+    <a href="/pros" class="active" title="Recos des pros"><img src="{{ ASSET ../assets/ui/paper.png }}" alt="Recos des pros" /></a>
 </div>
 
 <div class="tab">
@@ -43,7 +44,7 @@
             </div>
         </div>
     </div>
-    <button id="randomize" onclick="app.randomCard('.cardset')"><img src="{{ ASSET ../assets/ui/dice.webp }}" alt="Choix aléatoire" /></button>
+    <button id="randomize" onclick="app.randomCard('.cardset')"><img src="{{ ASSET ../assets/ui/dice.webp }}" alt="Choix aléatoire" title="Choix aléatoire" /></button>
 </div>
 
 <script>
