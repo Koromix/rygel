@@ -240,7 +240,7 @@ function NetworkModule(db, study, page) {
         `);
 
         self.actions(3, html`
-            <button type="button" class="confirm" @click=${UI.insist(finalize)}>
+            <button type="button" class="confirm" @click=${UI.wrap(finalize)}>
                 <img src=${ASSETS['ui/confirm']} alt="" />
                 <span style="display: inline;">Finaliser</span>
             </button>
