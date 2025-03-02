@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr" class="nojs">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>{{ TITLE }}</title>
+        <meta name="description" content="{{ DESCRIPTION }}">
+        <link rel="icon" href="{{ ASSET favicon.webp }}">
+
+        <meta name="theme-color" content="#3c7778">
+        <link rel="stylesheet" href="{{ ASSET static/ldv.css }}">
+        <link rel="stylesheet" href="{{ ASSET static/staks/game.css }}">
+
+        <script type="text/javascript" src="{{ ASSET static/ldv.js }}"></script>
+
+        <style>
+            body { height: 100%; }
+
+            main {
+                flex: 1;
+                width: 100%;
+                max-width: none;
+                padding: 0;
+                margin: 0;
+            }
+
+            .loading {
+                display: flex;
+                position: relative;
+                height: 100%;
+                flex-direction: column;
+            }
+            .loading > main {
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .loading > main::after {
+                position: absolute;
+                content: ' ';
+                display: block;
+                width: 80px;
+                height: 80px;
+                border-radius: 50%;
+                border: 12px solid #383838;
+                border-color: #383838 transparent #383838 transparent;
+                animation: spin 1.6s ease-in-out infinite;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            #fatal {
+                padding: 1em;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="deploy"></div>
+
+        <nav id="top">
+            <menu>
+                <a id="logo" href="/"><img src="{{ ASSET ../assets/main/logo.webp }}" width="578" height="240" alt="" /></a>
+{{ LINKS }}
+
+                <div style="flex: 1;"></div>
+                <a href="https://app.ldv-recherche.fr/profile"><img class="avatar anonymous" src="{{ ASSET ../assets/ui/anonymous.png }}" /></a>
+            </menu>
+        </nav>
+
+        <main>
+            {{ CONTENT }}
+        </main>
+
+        <footer>
+            <div>Lignes de Vie © 2024</div>
+            <img src="{{ ASSET ../assets/main/footer.webp }}" alt="" width="79" height="64">
+            <div style="font-size: 0.8em;">
+                <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">contact@ldv-recherche.fr</a>
+            </div>
+        </footer>
+    </body>
+</html>
