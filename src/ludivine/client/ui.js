@@ -15,7 +15,7 @@
 
 import { render, html, noChange, directive, Directive } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../web/core/base.js';
-import { deploy, sos } from '../assets/ludivine.js';
+import { sos } from '../assets/ludivine.js';
 import { ASSETS } from '../assets/assets.js';
 import * as app from './app.js';
 
@@ -213,7 +213,7 @@ function main(content = null) {
         render(el, root_el);
     } else {
         render(html`
-            <div id="deploy" @click=${deploy}></div>
+            <div id="deploy"></div>
 
             <nav id="top">
                 <menu>

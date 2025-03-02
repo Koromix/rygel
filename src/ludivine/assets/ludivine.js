@@ -15,8 +15,9 @@
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util } from '../../web/core/base.js';
-import { deploy } from '../../web/flat/static.js';
 import { ASSETS } from './assets.js';
+
+import '../../web/flat/static.js';
 
 window.addEventListener('load', e => {
     initCards();
@@ -276,7 +277,5 @@ export {
     randomCard,
 
     dialog,
-    sos,
-
-    deploy
+    sos
 }
