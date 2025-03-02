@@ -88,6 +88,10 @@ p + .actions { margin-top: 2em; }
 footer { font-size: 1.1em; }
 
 @media screen and (max-width: 960px) {
+    #logo { display: none; }
+
+    #top menu { gap: 0; }
+    #top li > a.active { display: block !important; }
     #top .avatar {
         position: fixed;
         top: 14px;
