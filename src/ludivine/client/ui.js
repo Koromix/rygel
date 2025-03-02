@@ -222,7 +222,7 @@ function main(content = null) {
                     <li><a href="/study" class="active" style="margin-left: 0em;">Participer</a></li>
                     <li><a href=${ENV.urls.static + '/etudes'} style="margin-left: 0em;">Études</a></li>
                     <li><a href=${ENV.urls.static + '/livres'} style="margin-left: 0em;">Ressources</a></li>
-                    <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Détente</a></li>
+                    <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Se détendre</a></li>
                     <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
                     <div style="flex: 1;"></div>
                     <a href="/profile"><img class=${'avatar' + (app.identity?.picture == null ? ' anonymous' : '')}
