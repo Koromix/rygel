@@ -70,7 +70,7 @@ function run(form, values) {
     })
 
     form.part(() => {
-        q(7, "Il ou elle que ma réaction à ces expériences étaient excessives")
+        q(7, "Il ou elle a trouvé que ma réaction à ces expériences étaient excessives")
         q(8, "Il ou elle semblait me blâmer, douter, me juger ou me questionnaire sur cette expérience")
     })
 

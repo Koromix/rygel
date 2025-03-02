@@ -75,7 +75,7 @@ function run(form, values) {
         form.output(passe)
         q(14, "J’avais très peur ?")
         // q(15, "Je voulais que ça s'arrête mais je n'y arrivais pas")
-        q(16, "Je me sens mal parce que ce qui se passait me semblait si horrible ?")
+        q(16, "Je me sentais mal parce que ce qui se passait me semblait si horrible ?")
     })
 
     form.part(() => {

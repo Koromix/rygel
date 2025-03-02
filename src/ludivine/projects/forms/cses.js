@@ -33,7 +33,7 @@ function run(form, values) {
 
     form.part(() => {
         q(5, "Je lui ai parlé des images, des sons et/ou des odeurs liés à mon expérience")
-        q(6, "Je lui ai parlé des détails graphiques de mon expérience")
+        q(6, "Je lui ai parlé des détails visuels de mon expérience")
     })
 
     form.part(() => {

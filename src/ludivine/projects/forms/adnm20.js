@@ -85,7 +85,7 @@ function run(form, values) {
     })
 
     form.part(() => {
-        q(11, "J’essaie de rejeter la situation stressante de ma mémoire")
+        q(11, "J’essaie de sortir la situation stressante de ma mémoire")
         q(12, "J’ai remarqué que je deviens plus irritable à cause de la situation stressante")
     })
 
