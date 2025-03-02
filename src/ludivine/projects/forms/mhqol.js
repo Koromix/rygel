@@ -84,15 +84,9 @@ function run(form, values) {
     })
 
     form.part(() => {
-        form.output(`Sur l'échelle ci-dessous, veuillez indiquer comment vous évaluez votre bien-être psychologique. 0 représente le pire bien-être psychologique imaginable, tandis que 10 représente le meilleur bien-être psychologique imaginable.`)
-
-        form.slider("q8", "", {
-            min: 0,
-            max: 10,
-            prefix: "Pire bien-être psychologique imaginable",
-            suffix: "Meilleur bien-être psychologique imaginable",
-            wide: true,
-            ticks: true
+        form.slider("q8", "Comment vous évaluez votre bien-être psychologique ?", {
+            min: 0, max: 10,
+            prefix: "Pire bien-être psychologique imaginable", suffix: "Meilleur bien-être psychologique imaginable"
         })
     })
 }
