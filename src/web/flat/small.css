@@ -27,7 +27,7 @@
         position: static;
     }
 
-    main { padding-right: 16px !important; }
+    #side ~ main { padding-right: 16px; }
 
     button > span { display: none; }
 }

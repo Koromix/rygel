@@ -22,8 +22,7 @@
 @media print {
     #top { display: none; }
     #side { display: none; }
-
-    main { padding-right: 16px !important; }
+    #side ~ main { padding-right: 16px; }
     footer { display: none; }
 
     h1:not(:first-child) { break-before: page; }
