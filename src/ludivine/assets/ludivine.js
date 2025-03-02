@@ -83,7 +83,7 @@ function initCards() {
                     toggleCard(cards, delta);
 
                 if (key_timer == null) {
-                    let delay = repeat ? 300 : 600;
+                    let delay = repeat ? 200 : 400;
 
                     key_timer = setTimeout(() => {
                         key_timer = null;

@@ -66,11 +66,11 @@
 
     position: absolute;
     max-width: 60%;
-    margin-left: calc(var(--position) * 12%);
+    margin-left: calc(var(--position) * (24 - var(--index) * 2.5) * 1%);
     filter: blur(calc(var(--index) * 2px));
-    transform: scaleY(calc(1 - 0.05 * var(--index)));
+    transform: scaleY(calc(1 - 0.12 * var(--index)));
     z-index: calc(6 - var(--index));
-    transition: all 0.2s ease-in;
+    transition: all 0.15s ease-in;
 
     cursor: pointer;
 }
