@@ -1324,13 +1324,21 @@ Available URL formats: %!..+%4%!0)",
     LogInfo("Output directory: %!..+%1%!0", output_dir);
 
     if (loop) {
-        do {
+        for (;;) {
             if (BuildAll(source_dir, build, output_dir)) {
                 LogInfo("Build successful");
             } else {
                 LogError("Build failed");
             }
-        } while (WaitForInterrupt(1000) != WaitForResult::Interrupt);
+
+            WaitForResult ret = WaitForInterrupt(1000);
+
+            if (ret == WaitForResult::Exit) {
+                break;
+            } else if (ret == WaitForResult::Interrupt) {
+                return 1;
+            }
+        }
     } else {
         if (!BuildAll(source_dir, build, output_dir))
             return 1;
