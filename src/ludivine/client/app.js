@@ -87,7 +87,7 @@ let route = {
 
     // study mode
     project: null,
-    path: null,
+    page: null,
     section: null
 };
 let route_url = null;
@@ -274,24 +274,12 @@ async function go(url = null, push = true) {
                 let project = PROJECTS.find(project => project.key == parts[0]);
 
                 if (project != null) {
-                    route.mode = 'study';
                     route.project = parts.shift();
-
-                    if (parts.length > 0) {
-                        let last = parts.pop();
-
-                        route.path = '/' + parts.join('/');
-
-                        if (last.startsWith('-')) {
-                            route.section = last.substr(1);
-                        } else {
-                            route.path += '/' + last;
-                            route.section = null;
-                        }
-                    }
+                    route.page = '/' + parts.join('/');
+                    route.section = null;
                 } else {
                     route.project = null;
-                    route.path = null;
+                    route.page = null;
                     route.section = null;
                 }
             } break;
@@ -375,8 +363,24 @@ async function run(push = true) {
             }
 
             if (cache.study != null) {
-                cache.page = cache.project.pages.find(page => page.key == route.path) ?? cache.project.root;
-                cache.section = route.section;
+                cache.page = cache.project.pages.find(page => page.key == route.page);
+
+                if (route.page != null && cache.page == null) {
+                    let parts = route.page.split('/');
+                    let section = parts.pop();
+                    let path = parts.join('/');
+
+                    cache.page = cache.project.pages.find(page => page.key == path);
+                    cache.section = (cache.page != null) ? section : null;
+
+                    if (cache.page != null)
+                        cache.section = section;
+                } else {
+                    cache.section = route.section;
+                }
+
+                if (cache.page == null)
+                    cache.page = cache.project.root;
             } else {
                 cache.page = null;
                 cache.section = null;
@@ -408,8 +412,13 @@ async function run(push = true) {
 
     // Update route values
     route.project = cache.project?.key;
-    route.path = cache.page?.key;
-    route.section = cache.section;
+    if (cache.page != null) {
+        route.page = cache.page.key;
+        route.section = cache.section;
+    } else {
+        route.page = null;
+        route.section = null;
+    }
 
     // Update URL
     {
@@ -436,10 +445,10 @@ function makeURL(values = {}) {
 
     if (route.mode == 'study' && route.project != null) {
         path += '/' + route.project;
-        if (route.path != null)
-            path += route.path;
+        if (route.page != null)
+            path += route.page;
         if (route.section != null)
-            path += '/-' + route.section;
+            path += '/' + route.section;
     }
 
     return path;
@@ -861,7 +870,7 @@ async function runProject() {
                 </div>
 
                 ${cache.page.type == 'module' ? renderModule() : null}
-                ${cache.page.type != 'module' ? ctx.mod.render(route.section) : null}
+                ${cache.page.type != 'module' ? ctx.mod.render(cache.section) : null}
             </div>
         `);
     }
@@ -968,7 +977,7 @@ async function navigateStudy(page, section = null) {
     if (page.type == 'module' && page.tests.length == 1)
         page = page.tests[0];
 
-    route.path = page.key;
+    route.page = page.key;
     route.section = (page != null) ? section : null;
 
     await run();
