@@ -220,7 +220,7 @@ function NetworkModule(db, study, page) {
 
         self.actions(9, html`
             <button type="button" class=${UI.isFullscreen ? 'secondary active' : 'secondary'}
-                    @click=${UI.wrap(UI.toggleFullscreen)}>
+                    @click=${UI.wrap(e => UI.toggleFullscreen())}>
                 <img src=${ASSETS['ui/fullscreen']} alt="" />
                 <span>${UI.isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}</span>
             </button>
