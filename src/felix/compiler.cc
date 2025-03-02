@@ -1159,7 +1159,9 @@ public:
                           Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        RG::MakeEmbedCommand(embed_filenames, EmbedMode::Literals, embed_options, dest_filename, alloc, out_cmd);
+
+        EmbedMode mode = (gcc_ver >= 150000) ? EmbedMode::Embed : EmbedMode::Literals;
+        RG::MakeEmbedCommand(embed_filenames, mode, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
