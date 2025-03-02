@@ -117,8 +117,8 @@ function toggleCard(cards, delta) {
 }
 
 function activateCard(cards, active) {
-    let left = -Math.floor((cards.length - 1) / 2);
-    let right = Math.floor(cards.length / 2);
+    let left = -Math.floor(cards.length / 2);
+    let right = Math.floor((cards.length - 1) / 2);
 
     for (let i = -1; i >= left; i--) {
         let idx = offset(active, cards.length, i);
