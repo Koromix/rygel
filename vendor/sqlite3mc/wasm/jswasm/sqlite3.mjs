@@ -4189,7 +4189,6 @@ var _sqlite3_free = Module['_sqlite3_free'] = (a0) => (_sqlite3_free = Module['_
 var _sqlite3_vfs_register = Module['_sqlite3_vfs_register'] = (a0, a1) => (_sqlite3_vfs_register = Module['_sqlite3_vfs_register'] = wasmExports['sqlite3_vfs_register'])(a0, a1);
 var _sqlite3_randomness = Module['_sqlite3_randomness'] = (a0, a1) => (_sqlite3_randomness = Module['_sqlite3_randomness'] = wasmExports['sqlite3_randomness'])(a0, a1);
 var _sqlite3mc_vfs_create = Module['_sqlite3mc_vfs_create'] = (a0, a1) => (_sqlite3mc_vfs_create = Module['_sqlite3mc_vfs_create'] = wasmExports['sqlite3mc_vfs_create'])(a0, a1);
-var _sqlite3_auto_extension = Module['_sqlite3_auto_extension'] = (a0) => (_sqlite3_auto_extension = Module['_sqlite3_auto_extension'] = wasmExports['sqlite3_auto_extension'])(a0);
 var _sqlite3_vfs_unregister = Module['_sqlite3_vfs_unregister'] = (a0) => (_sqlite3_vfs_unregister = Module['_sqlite3_vfs_unregister'] = wasmExports['sqlite3_vfs_unregister'])(a0);
 var _sqlite3_malloc64 = Module['_sqlite3_malloc64'] = (a0) => (_sqlite3_malloc64 = Module['_sqlite3_malloc64'] = wasmExports['sqlite3_malloc64'])(a0);
 var _sqlite3_realloc = Module['_sqlite3_realloc'] = (a0, a1) => (_sqlite3_realloc = Module['_sqlite3_realloc'] = wasmExports['sqlite3_realloc'])(a0, a1);
@@ -4283,6 +4282,7 @@ var _sqlite3_value_numeric_type = Module['_sqlite3_value_numeric_type'] = (a0) =
 var _sqlite3_set_authorizer = Module['_sqlite3_set_authorizer'] = (a0, a1, a2) => (_sqlite3_set_authorizer = Module['_sqlite3_set_authorizer'] = wasmExports['sqlite3_set_authorizer'])(a0, a1, a2);
 var _sqlite3_strglob = Module['_sqlite3_strglob'] = (a0, a1) => (_sqlite3_strglob = Module['_sqlite3_strglob'] = wasmExports['sqlite3_strglob'])(a0, a1);
 var _sqlite3_strlike = Module['_sqlite3_strlike'] = (a0, a1, a2) => (_sqlite3_strlike = Module['_sqlite3_strlike'] = wasmExports['sqlite3_strlike'])(a0, a1, a2);
+var _sqlite3_auto_extension = Module['_sqlite3_auto_extension'] = (a0) => (_sqlite3_auto_extension = Module['_sqlite3_auto_extension'] = wasmExports['sqlite3_auto_extension'])(a0);
 var _sqlite3_cancel_auto_extension = Module['_sqlite3_cancel_auto_extension'] = (a0) => (_sqlite3_cancel_auto_extension = Module['_sqlite3_cancel_auto_extension'] = wasmExports['sqlite3_cancel_auto_extension'])(a0);
 var _sqlite3_reset_auto_extension = Module['_sqlite3_reset_auto_extension'] = () => (_sqlite3_reset_auto_extension = Module['_sqlite3_reset_auto_extension'] = wasmExports['sqlite3_reset_auto_extension'])();
 var _sqlite3_prepare_v3 = Module['_sqlite3_prepare_v3'] = (a0, a1, a2, a3, a4, a5) => (_sqlite3_prepare_v3 = Module['_sqlite3_prepare_v3'] = wasmExports['sqlite3_prepare_v3'])(a0, a1, a2, a3, a4, a5);
