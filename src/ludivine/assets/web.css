@@ -118,7 +118,25 @@
     .tileset { flex-direction: column; }
 }
 
-.team {
+.partners {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 40px;
+}
+.partners > a {
+    width: 40%;
+    min-width: 300px;
+    max-height: 200px;
+    margin: 20px 0;
+}
+.partners > a > img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.providers {
     margin: 0 auto;
     display: flex;
     justify-content: center;
@@ -126,39 +144,24 @@
     font-size: 0.9em;
     flex-wrap: wrap;
 }
-.team + .team { margin-top: 48px; }
-.team > div {
+.providers > div {
     background: #fdfbf8;
     padding: 1em 0.5em;
     display: flex;
     flex-direction: column;
     gap: 20px;
-    width: 210px;
+    width: 180px;
     align-items: center;
     border-radius: 30px;
 }
-.team > div:empty { visibility: hidden }
-.team .name {
+.providers > div:empty { visibility: hidden }
+.providers .name {
     font-weight: bold;
     text-align: center;
 }
-.team img {
-    width: 133px;
-    height: 133px;
-    background: #fef2f2;
-    border-radius: 50%;
-    border: 4px solid #e9a07f;
-}
-.team .mission {
+.providers .mission {
     font-style: italic;
     text-align: center;
     font-size: 0.8em;
 }
-.team .mission + .mission { margin-top: -14px; }
-
-@media screen and (max-width: 960px) {
-    .team {
-        flex-direction: column;
-        align-items: center;
-    }
-}
+.providers .mission + .mission { margin-top: -14px; }

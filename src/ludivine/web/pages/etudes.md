@@ -5,7 +5,7 @@
             <p>Les études menées dans le cadre de Lignes de Vie jouent un rôle essentiel pour mieux comprendre les <b>répercussions des événements potentiellement traumatiques</b> sur la vie quotidienne.
             <p>Elles visent à <b>enrichir les connaissances scientifiques</b> ainsi que les stratégies de prévention et de prise en charge des troubles psychiques post-traumatiques.
         </div>
-        <img src="{{ ASSET ../assets/pictures/cn2r.webp }}" style="flex: 1;" alt="" />
+        <img src="{{ ASSET ../assets/pictures/etudes.webp }}" style="flex: 1;" alt="" />
     </div>
 </div>
 

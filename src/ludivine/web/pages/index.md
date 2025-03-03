@@ -38,26 +38,13 @@
     <img src="{{ ASSET ../assets/pictures/participer.webp }}" style="flex: 2;" alt="" />
 </div>
 
-# Le Centre National de Ressources et de Résilience
-
-<div class="columns">
-    <img src="{{ ASSET ../assets/pictures/cn2r.webp }}" style="flex: 1;" alt="" />
-    <div style="flex: 2;">
-        <p>Le <a href="https://cn2r.fr" target="_blank">Centre national de ressources et de résilience</a> (Cn2r) a <b>pour mission d’améliorer et de diffuser les connaissances sur les psychotraumatismes et la résilience</b>. Il s’adresse au grand public, aux chercheurs et aux professionnels impliqués dans l’accompagnement des personnes confrontées à des événements potentiellement traumatiques.
-        <p>Le Cn2r valorise à la fois les savoirs scientifiques et les connaissances issues du vécu des personnes concernées.
-        <div class="actions">
-            <a href="https://cn2r.fr" target="_blank">Plus d'informations sur cn2r.fr</a>
-        </div>
-    </div>
-</div>
-
 # Philosophie de Lignes de Vie
 
 <div class="columns">
+    <img src="{{ ASSET ../assets/pictures/philosophie.webp }}" style="flex: 1;" alt="" />
     <div style="flex: 2;">
         <p>La philosophie de Lignes de Vie repose sur une approche humaniste et éthique de la science. Elle s’appuie sur une conviction simple mais audacieuse : replacer l’humain au cœur de l’investigation scientifique. Cette démarche valorise une éthique de participation mutuelle, créant un <b>espace de collaboration où chercheurs et patients partenaires</b> unissent leurs savoirs scientifiques et expérientiels pour mettre en œuvre des travaux visant à approfondir la compréhension des psychotraumatismes.
         <p>Dans la lignée de la <b>déclaration d’Helsinki de 2024</b>, nous avons pour ambition de dépasser une vision instrumentalisée des participants pour les considérer comme des partenaires à part entière de la recherche. 
         <p>En adoptant une démarche transversale d’<b>ethics by design et privacy by using</b>, les questions éthiques sont prises en compte dès la conception du programme, plutôt que traitées a posteriori. Nous encourageons une recherche alignée sur les besoins des personnes concernées, transformant les défis éthiques en véritables opportunités d’innovation.
     </div>
-    <img src="{{ ASSET ../assets/pictures/philosophie.webp }}" style="flex: 1;" alt="" />
 </div>
