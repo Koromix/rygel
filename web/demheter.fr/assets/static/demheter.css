@@ -145,14 +145,6 @@ span[title] { border-bottom: 1px dotted #383838; }
     object-fit: contain;
 }
 
-.partner {
-    text-align: center;
-    margin: 1em;
-}
-.partner > a > img {
-    width: 200px;
-}
-
 .tel_3114 {
     display: flex;
     max-width: 600px;
