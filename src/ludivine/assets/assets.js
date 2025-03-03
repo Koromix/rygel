@@ -29,71 +29,72 @@ import asset12 from './partners/cn2r.webp';
 import asset13 from './partners/f2rsmpsy.webp';
 import asset14 from './partners/france_victimes.webp';
 import asset15 from './partners/universite_lille.webp';
-import asset16 from './pictures/dispositif.webp';
-import asset17 from './pictures/ecriture.webp';
-import asset18 from './pictures/etirements.webp';
-import asset19 from './pictures/etudes.webp';
-import asset20 from './pictures/help1.webp';
-import asset21 from './pictures/help2.webp';
-import asset22 from './pictures/kezako.webp';
-import asset23 from './pictures/participer.webp';
-import asset24 from './pictures/philosophie.webp';
-import asset25 from './pictures/respiration.webp';
-import asset26 from './pictures/sociotrauma.webp';
-import asset27 from './pictures/staks.webp';
-import asset28 from './resources/film_bescond.jpg';
-import asset29 from './resources/film_ozon.jpg';
-import asset30 from './resources/film_scherfig.jpg';
-import asset31 from './resources/film_suco.jpg';
-import asset32 from './resources/livre_alloinguillon.jpg';
-import asset33 from './resources/livre_cabrel.jpg';
-import asset34 from './resources/livre_delacourt.jpg';
-import asset35 from './resources/livre_jamoulle.jpg';
-import asset36 from './resources/livre_lambda.jpg';
-import asset37 from './resources/livre_vantran.jpg';
-import asset38 from './resources/musique_blueoctober.jpg';
-import asset39 from './resources/musique_gherbo.jpg';
-import asset40 from './resources/musique_jamesarthur.jpg';
-import asset41 from './resources/musique_ladygaga.jpg';
-import asset42 from './resources/musique_thecranberries.jpg';
-import asset43 from './resources/pro_brillon.jpg';
-import asset44 from './resources/pro_hingrayelhage.jpg';
-import asset45 from './resources/pro_kolk.jpg';
-import asset46 from './resources/video_cn2r.jpg';
-import asset47 from './resources/video_fenvac.jpg';
-import asset48 from './resources/video_legriguer.jpg';
-import asset49 from './ui/3114.webp';
-import asset50 from './ui/anonymous.png';
-import asset51 from './ui/book.png';
-import asset52 from './ui/calendar.png';
-import asset53 from './ui/child.png';
-import asset54 from './ui/configure.png';
-import asset55 from './ui/confirm.png';
-import asset56 from './ui/copy.png';
-import asset57 from './ui/create.png';
-import asset58 from './ui/dashboard.png';
-import asset59 from './ui/delete.png';
-import asset60 from './ui/dice.webp';
-import asset61 from './ui/fullscreen.png';
-import asset62 from './ui/insert.png';
-import asset63 from './ui/left.webp';
-import asset64 from './ui/link.png';
-import asset65 from './ui/move.png';
-import asset66 from './ui/movie.png';
-import asset67 from './ui/music.png';
-import asset68 from './ui/network.png';
-import asset69 from './ui/new.png';
-import asset70 from './ui/paper.png';
-import asset71 from './ui/people.png';
-import asset72 from './ui/redo.png';
-import asset73 from './ui/right.webp';
-import asset74 from './ui/rotate.png';
-import asset75 from './ui/select.png';
-import asset76 from './ui/track.png';
-import asset77 from './ui/undo.png';
-import asset78 from './ui/unselect.png';
-import asset79 from './ui/user.png';
-import asset80 from './ui/video.png';
+import asset16 from './pictures/aurora.webp';
+import asset17 from './pictures/dispositif.webp';
+import asset18 from './pictures/ecriture.webp';
+import asset19 from './pictures/etirements.webp';
+import asset20 from './pictures/etudes.webp';
+import asset21 from './pictures/help1.webp';
+import asset22 from './pictures/help2.webp';
+import asset23 from './pictures/kezako.webp';
+import asset24 from './pictures/participer.webp';
+import asset25 from './pictures/philosophie.webp';
+import asset26 from './pictures/respiration.webp';
+import asset27 from './pictures/sociotrauma.webp';
+import asset28 from './pictures/staks.webp';
+import asset29 from './resources/film_bescond.jpg';
+import asset30 from './resources/film_ozon.jpg';
+import asset31 from './resources/film_scherfig.jpg';
+import asset32 from './resources/film_suco.jpg';
+import asset33 from './resources/livre_alloinguillon.jpg';
+import asset34 from './resources/livre_cabrel.jpg';
+import asset35 from './resources/livre_delacourt.jpg';
+import asset36 from './resources/livre_jamoulle.jpg';
+import asset37 from './resources/livre_lambda.jpg';
+import asset38 from './resources/livre_vantran.jpg';
+import asset39 from './resources/musique_blueoctober.jpg';
+import asset40 from './resources/musique_gherbo.jpg';
+import asset41 from './resources/musique_jamesarthur.jpg';
+import asset42 from './resources/musique_ladygaga.jpg';
+import asset43 from './resources/musique_thecranberries.jpg';
+import asset44 from './resources/pro_brillon.jpg';
+import asset45 from './resources/pro_hingrayelhage.jpg';
+import asset46 from './resources/pro_kolk.jpg';
+import asset47 from './resources/video_cn2r.jpg';
+import asset48 from './resources/video_fenvac.jpg';
+import asset49 from './resources/video_legriguer.jpg';
+import asset50 from './ui/3114.webp';
+import asset51 from './ui/anonymous.png';
+import asset52 from './ui/book.png';
+import asset53 from './ui/calendar.png';
+import asset54 from './ui/child.png';
+import asset55 from './ui/configure.png';
+import asset56 from './ui/confirm.png';
+import asset57 from './ui/copy.png';
+import asset58 from './ui/create.png';
+import asset59 from './ui/dashboard.png';
+import asset60 from './ui/delete.png';
+import asset61 from './ui/dice.webp';
+import asset62 from './ui/fullscreen.png';
+import asset63 from './ui/insert.png';
+import asset64 from './ui/left.webp';
+import asset65 from './ui/link.png';
+import asset66 from './ui/move.png';
+import asset67 from './ui/movie.png';
+import asset68 from './ui/music.png';
+import asset69 from './ui/network.png';
+import asset70 from './ui/new.png';
+import asset71 from './ui/paper.png';
+import asset72 from './ui/people.png';
+import asset73 from './ui/redo.png';
+import asset74 from './ui/right.webp';
+import asset75 from './ui/rotate.png';
+import asset76 from './ui/select.png';
+import asset77 from './ui/track.png';
+import asset78 from './ui/undo.png';
+import asset79 from './ui/unselect.png';
+import asset80 from './ui/user.png';
+import asset81 from './ui/video.png';
 
 const ASSETS = {
     'main/footer': asset0,
@@ -112,71 +113,72 @@ const ASSETS = {
     'partners/f2rsmpsy': asset13,
     'partners/france_victimes': asset14,
     'partners/universite_lille': asset15,
-    'pictures/dispositif': asset16,
-    'pictures/ecriture': asset17,
-    'pictures/etirements': asset18,
-    'pictures/etudes': asset19,
-    'pictures/help1': asset20,
-    'pictures/help2': asset21,
-    'pictures/kezako': asset22,
-    'pictures/participer': asset23,
-    'pictures/philosophie': asset24,
-    'pictures/respiration': asset25,
-    'pictures/sociotrauma': asset26,
-    'pictures/staks': asset27,
-    'resources/film_bescond': asset28,
-    'resources/film_ozon': asset29,
-    'resources/film_scherfig': asset30,
-    'resources/film_suco': asset31,
-    'resources/livre_alloinguillon': asset32,
-    'resources/livre_cabrel': asset33,
-    'resources/livre_delacourt': asset34,
-    'resources/livre_jamoulle': asset35,
-    'resources/livre_lambda': asset36,
-    'resources/livre_vantran': asset37,
-    'resources/musique_blueoctober': asset38,
-    'resources/musique_gherbo': asset39,
-    'resources/musique_jamesarthur': asset40,
-    'resources/musique_ladygaga': asset41,
-    'resources/musique_thecranberries': asset42,
-    'resources/pro_brillon': asset43,
-    'resources/pro_hingrayelhage': asset44,
-    'resources/pro_kolk': asset45,
-    'resources/video_cn2r': asset46,
-    'resources/video_fenvac': asset47,
-    'resources/video_legriguer': asset48,
-    'ui/3114': asset49,
-    'ui/anonymous': asset50,
-    'ui/book': asset51,
-    'ui/calendar': asset52,
-    'ui/child': asset53,
-    'ui/configure': asset54,
-    'ui/confirm': asset55,
-    'ui/copy': asset56,
-    'ui/create': asset57,
-    'ui/dashboard': asset58,
-    'ui/delete': asset59,
-    'ui/dice': asset60,
-    'ui/fullscreen': asset61,
-    'ui/insert': asset62,
-    'ui/left': asset63,
-    'ui/link': asset64,
-    'ui/move': asset65,
-    'ui/movie': asset66,
-    'ui/music': asset67,
-    'ui/network': asset68,
-    'ui/new': asset69,
-    'ui/paper': asset70,
-    'ui/people': asset71,
-    'ui/redo': asset72,
-    'ui/right': asset73,
-    'ui/rotate': asset74,
-    'ui/select': asset75,
-    'ui/track': asset76,
-    'ui/undo': asset77,
-    'ui/unselect': asset78,
-    'ui/user': asset79,
-    'ui/video': asset80,
+    'pictures/aurora': asset16,
+    'pictures/dispositif': asset17,
+    'pictures/ecriture': asset18,
+    'pictures/etirements': asset19,
+    'pictures/etudes': asset20,
+    'pictures/help1': asset21,
+    'pictures/help2': asset22,
+    'pictures/kezako': asset23,
+    'pictures/participer': asset24,
+    'pictures/philosophie': asset25,
+    'pictures/respiration': asset26,
+    'pictures/sociotrauma': asset27,
+    'pictures/staks': asset28,
+    'resources/film_bescond': asset29,
+    'resources/film_ozon': asset30,
+    'resources/film_scherfig': asset31,
+    'resources/film_suco': asset32,
+    'resources/livre_alloinguillon': asset33,
+    'resources/livre_cabrel': asset34,
+    'resources/livre_delacourt': asset35,
+    'resources/livre_jamoulle': asset36,
+    'resources/livre_lambda': asset37,
+    'resources/livre_vantran': asset38,
+    'resources/musique_blueoctober': asset39,
+    'resources/musique_gherbo': asset40,
+    'resources/musique_jamesarthur': asset41,
+    'resources/musique_ladygaga': asset42,
+    'resources/musique_thecranberries': asset43,
+    'resources/pro_brillon': asset44,
+    'resources/pro_hingrayelhage': asset45,
+    'resources/pro_kolk': asset46,
+    'resources/video_cn2r': asset47,
+    'resources/video_fenvac': asset48,
+    'resources/video_legriguer': asset49,
+    'ui/3114': asset50,
+    'ui/anonymous': asset51,
+    'ui/book': asset52,
+    'ui/calendar': asset53,
+    'ui/child': asset54,
+    'ui/configure': asset55,
+    'ui/confirm': asset56,
+    'ui/copy': asset57,
+    'ui/create': asset58,
+    'ui/dashboard': asset59,
+    'ui/delete': asset60,
+    'ui/dice': asset61,
+    'ui/fullscreen': asset62,
+    'ui/insert': asset63,
+    'ui/left': asset64,
+    'ui/link': asset65,
+    'ui/move': asset66,
+    'ui/movie': asset67,
+    'ui/music': asset68,
+    'ui/network': asset69,
+    'ui/new': asset70,
+    'ui/paper': asset71,
+    'ui/people': asset72,
+    'ui/redo': asset73,
+    'ui/right': asset74,
+    'ui/rotate': asset75,
+    'ui/select': asset76,
+    'ui/track': asset77,
+    'ui/undo': asset78,
+    'ui/unselect': asset79,
+    'ui/user': asset80,
+    'ui/video': asset81,
 };
 
 export { ASSETS }

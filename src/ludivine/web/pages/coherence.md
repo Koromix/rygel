@@ -1,5 +1,9 @@
 <div id="exercise"></div>
 
+<div id="attributions">
+    Fond par <a href="https://www.deviantart.com/psiipilehto/" target="_blank">psiipilehto</a>
+</div>
+
 <script>
     const { render, html } = app;
 
@@ -7,13 +11,15 @@
 
     function menu() {
         render(html`
-            <p>Relaxez-vous en alternant des <b>inspirations et des expirations profondes</b> toutes les 5 secondes.</p>
-            <div class="actions" style="flex-direction: column;">
-                <a @click=${e => run(60)}>1 minute</a>
-                <a @click=${e => run(180)}>3 minutes</a>
-                <a @click=${e => run(300)}>5 minutes</a>
+            <div class="dialog">
+                <p>Relaxez-vous en alternant des <b>inspirations et des expirations profondes</b> toutes les 5 secondes.</p>
+                <div class="actions" style="flex-direction: column;">
+                    <a @click=${e => run(60)}>1 minute</a>
+                    <a @click=${e => run(180)}>3 minutes</a>
+                    <a @click=${e => run(300)}>5 minutes</a>
+                </div>
+                <p>Commencez <b>quand vous le souhaitez</b>, et répétez l'exercice si besoin.</p>
             </div>
-            <p>Commencez <b>quand vous le souhaitez</b>, et répétez l'exercice si besoin.</p>
         `, root);
     }
 
@@ -57,9 +63,11 @@
 
     function end() {
         render(html`
-            <p>C'est terminé, mais n'hésitez pas à répéter cet exercice <b>autant de fois que nécessaire</b> !</p>
-            <div class="actions" style="flex-direction: column;">
-                <a @click=${menu}>Recommencer</a>
+            <div class="dialog">
+                <p>C'est terminé, mais n'hésitez pas à répéter cet exercice <b>autant de fois que nécessaire</b> !</p>
+                <div class="actions" style="flex-direction: column;">
+                    <a @click=${menu}>Recommencer</a>
+                </div>
             </div>
         `, root);
     }
@@ -73,7 +81,14 @@
 </script>
 
 <style>
-    main { display: flex; }
+    main {
+        display: flex;
+        margin: 0;
+        max-width: none;
+        background: url('{{ ASSET ../assets/pictures/aurora.webp }}');
+        background-size: cover;
+        position: relative;
+    }
 
     #exercise {
         display: flex;
@@ -82,15 +97,36 @@
         flex: 1;
         margin: 0 1em;
         padding: 1em;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        flex-direction: column;
         position: relative;
     }
     #exercise > p {
         margin-left: 4em;
         margin-right: 4em;
         text-align: center;
+    }
+
+    #attributions {
+        position: absolute;
+        left: 6px;
+        bottom: 4px;
+        font-size: 12px;
+        color: #fff;
+    }
+    #attributions > a {
+        text-decoration: underline;
+        color: inherit;
+    }
+
+    .dialog {
+        display: flex;
+        border-radius: 16px;
+        flex-direction: column;
+        align-items: center;
+        padding: 2em;
+        background: #ffffffbb;
     }
 
     @property --progress {
@@ -101,21 +137,25 @@
 
     #progress {
         position: absolute;
-        left: 4px;
-        top: 4px;
+        left: 50%;
+        top: 2em;
         width: calc(100% - 8px);
         height: 20px;
-        background: linear-gradient(to right, #4e92ff 0 var(--progress), #f8f8f8 var(--progress));
+        transform: translateX(-50%);
+        background: linear-gradient(to right, var(--button_color) 0 var(--progress), #f8f8f8 var(--progress));
         border-radius: 10px;
     }
     #progress.animate { animation: progress var(--duration) linear; }
 
     #bubble {
+        --base: #e9a07f;
+        --expand: #ffaf8b;
+
         display: flex;
         width: 280px;
         height: 280px;
         margin-top: 28px;
-        background: #417ad5;
+        background: var(--base);
         color: white;
         align-items: center;
         justify-content: center;
@@ -138,11 +178,11 @@
     @keyframes bubble {
         0% {
             transform: scale(0.5);
-            background: #417ad5;
+            background: var(--base);
         }
         100% {
             transform: scale(1);
-            background: #4e92ff;
+            background: var(--expand);
         }
     }
     @keyframes text {
