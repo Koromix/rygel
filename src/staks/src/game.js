@@ -666,7 +666,7 @@ function draw() {
     if (show_debug) {
         ctx.save();
 
-        ctx.font = (18 * window.devicePixelRatio) + 'px Open Sans';
+        ctx.font = font(18);
         ctx.fillStyle = 'white';
 
         // FPS counter
@@ -681,7 +681,7 @@ function draw() {
 }
 
 function drawStart() {
-    ctx.font = (32 * window.devicePixelRatio) + 'px Open Sans';
+    ctx.font = font(32);
     ctx.fillStyle = 'white';
 
     let text = runner.isTouch ? `Appuyez sur le bouton pour commencer`
@@ -693,7 +693,7 @@ function drawStart() {
 function drawHelp() {
     ctx.save();
 
-    ctx.font = (14 * window.devicePixelRatio) + 'px Open Sans';
+    ctx.font = font(14);
     ctx.fillStyle = 'white';
 
     let step = 10 * window.devicePixelRatio;
@@ -1461,7 +1461,7 @@ function Game() {
             let y = layout.well.height / 2;
             let text = gameover ? 'GAME OVER' : 'PAUSE';
 
-            ctx.font = 'bold ' + (32 * window.devicePixelRatio) + 'px Open Sans';
+            ctx.font = 'bold ' + font(32);
             ctx.fillStyle = 'white';
             ctx.globalAlpha = 1;
             runner.text(x, y, text, { align: 5 });
@@ -1603,7 +1603,7 @@ function Game() {
         ctx.translate(layout.level.left, layout.level.top + hit_value);
         drawArea(0, 0, layout.level.width, layout.level.height);
 
-        ctx.font = ((runner.isTouch ? 24 : 16) * window.devicePixelRatio) + 'px Open Sans';
+        ctx.font = font(runner.isTouch ? 24 : 16);
         ctx.fillStyle = 'white';
         runner.text(layout.level.width / 2, layout.level.height / 2, level, { align: 5 });
 
@@ -1616,7 +1616,7 @@ function Game() {
         ctx.translate(layout.score.left, layout.score.top + hit_value);
         drawArea(0, 0, layout.score.width, layout.score.height);
 
-        ctx.font = ((runner.isTouch ? 24 : 16) * window.devicePixelRatio) + 'px Open Sans';
+        ctx.font = font(runner.isTouch ? 24 : 16);
         ctx.fillStyle = 'white';
         runner.text(layout.score.width / 2, layout.score.height / 2, score, { align: 5 });
 
@@ -1743,6 +1743,13 @@ function Game() {
 // ------------------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------------------
+
+function font(size) {
+    if (!runner.isTouch)
+        size *= window.devicePixelRatio;
+
+    return size + 'px Open Sans';
+}
 
 function isInsideRect(x, y, rect) {
     let inside = (x >= rect.left &&
