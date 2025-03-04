@@ -92,15 +92,21 @@ function FormBuilder(ctx, model) {
         options = expandOptions(options, {
             placeholder: null,
             min: null,
-            max: null
+            max: null,
+            prefix: null,
+            suffix: null
         });
         key = expandKey(key, options);
 
         let value = getValue(key, 'number', options);
 
         let widget = makeInput(key, label, options, 'number', () => html`
-            <input type="number" .value=${live(value ?? '')} placeholder=${options.placeholder ?? ''}
-                   min=${options.min} max=${options.max} @input=${input} />
+            <div class="number">
+                ${makePrefixOrSuffix(options.prefix, value)}
+                <input type="number" .value=${live(value ?? '')} placeholder=${options.placeholder ?? ''}
+                       min=${options.min} max=${options.max} @input=${input} />
+                ${makePrefixOrSuffix(options.suffix, value)}
+            </div>
         `);
 
         function input(e) {
@@ -305,7 +311,9 @@ function FormBuilder(ctx, model) {
     this.slider = function(key, label, options = {}) {
         options = expandOptions(options, {
             min: 0,
-            max: 10
+            max: 10,
+            prefix: null,
+            suffix: null
         });
         key = expandKey(key, options);
 
@@ -313,11 +321,11 @@ function FormBuilder(ctx, model) {
 
         let widget = makeInput(key, label, options, 'slider', id => html`
             <div class="slider">
-                ${options.prefix ? html`<span>${options.prefix}</span>` : ''}
+                ${makePrefixOrSuffix(options.prefix, value)}
                 <input id=${id} type="range" .value=${live(value ?? '')}
                        class=${value == null ? 'missing' : ''}
                        min=${options.min} max=${options.max} @input=${input} />
-                ${options.prefix ? html`<span>${options.suffix}</span>` : ''}
+                ${makePrefixOrSuffix(options.suffix, value)}
             </div>
         `);
 
@@ -405,6 +413,16 @@ function FormBuilder(ctx, model) {
         });
 
         return widget;
+    }
+
+    function makePrefixOrSuffix(text, value) {
+        if (typeof text == 'function')
+            text = text(value);
+
+        if (!text)
+            return '';
+
+        return html`<span>${text}</span>`;
     }
 
     function expandOptions(options, defaults = {}) {

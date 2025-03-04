@@ -552,6 +552,14 @@ form {
     & input[type=checkbox]:hover::before { box-shadow: inset 1em 1em var(--hover_color); }
     & input[type=checkbox]:checked::before { box-shadow: inset 1em 1em var(--check_color); }
 
+    & .number {
+        display: flex;
+        gap: px;
+        align-items: center;
+
+        & > span { font-size: 0.8em; }
+    }
+
     & .enum {
         display: flex;
         gap: 0.5em;
