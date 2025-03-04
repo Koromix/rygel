@@ -181,8 +181,8 @@ function createEvent(provider, date, title, description = '') {
                 'DTSTAMP:' + now.toISOString().replace(/\.[0-9]{3}/, '').replace(/[\-:\.]/g, ''),
                 'DTSTART;VALUE=DATE:' + formatDate(date, ''),
                 'SUMMARY:' + title,
-                'DESCRIPTION:' + text,
-                'X-ALT-DESC;FMTTYPE=text/html:' + html,
+                'DESCRIPTION:' + text.replace(/\r?\n/g, '\\n'),
+                'X-ALT-DESC;FMTTYPE=text/html:' + html.replace(/\r?\n/g, '\\n'),
                 'END:VEVENT',
                 'END:VCALENDAR'
             ];
