@@ -27,7 +27,7 @@ import * as mhqol from './forms/mhqol.js';
 import * as pcl5 from './forms/pcl5.js';
 import * as pdeq from './forms/pdeq.js';
 import * as phq9 from './forms/phq9.js';
-import * as profil from './forms/profil.js';
+import * as sociodemo from './forms/sociodemo.js';
 import * as ptci from './forms/ptci.js';
 import * as rds from './forms/rds.js';
 import * as sni from './forms/sni.js';
@@ -56,7 +56,7 @@ function init(build, start) {
             <div class="help">
                 <img src=${ASSETS['pictures/help1']} alt="" />
                 <div>
-                    <p>La première étape consiste à remplir votre <b>profil puis à faire un bilan initial</b>.
+                    <p>La première étape consiste à <b>vous présenter puis à faire un bilan initial</b>.
                     <p>Vous pourrez ensuite continuer <b>selon le calendrier prévu</b>. À tout moment, vous pouvez arrêter l'étude ou la mettre en pause et y revenir plus tard. Vous avez également la possibilité de consulter les pages « Ressources » ou « Se détendre ».
                     <p>Vous êtes libre de compléter les questionnaires dans l’ordre qui vous convient. Toutefois, nous vous recommandons de <b>suivre l’ordre proposé</b>. Les transitions ont été pensées avec soin par notre équipe de recherche de Lignes de Vie afin d’accompagner votre cheminement de la manière la plus confortable possible.
                     <p>Nous vous invitons à <b>répondre à toutes les questions</b>, même si vous n'êtes pas certain de votre réponse. Il n’y a pas de bonne ou de mauvaise réponse, et même incertaines, elles sont importantes. Dans Lignes de Vie, on se donne le droit à l’erreur, à la bêtise, à l’ignorance… Et pour les chercheurs aussi !
@@ -65,8 +65,8 @@ function init(build, start) {
             </div>
         `;
 
-        build.module('profil', 'Profil', mod => {
-            build.form('profil', 'Profil', profil);
+        build.module('sociodemo', 'Présentation', mod => {
+            build.form('sociodemo', 'Présentation', sociodemo);
         });
 
         build.module('initial', 'Bilan initial', mod => {
