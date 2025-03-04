@@ -76,7 +76,8 @@ function FormBuilder(ctx, model) {
         let value = getValue(key, 'text', options);
 
         let widget = makeInput(key, label, options, 'text', () => html`
-            <input type="text" .value=${live(value ?? '')} placeholder=${options.placeholder ?? ''}
+            <input type="text" ?disabled=${options.disabled}
+                   .value=${live(value ?? '')} placeholder=${options.placeholder ?? ''}
                    @input=${e => setValue(key, e.target.value || undefined)} />
         `);
 
@@ -103,7 +104,8 @@ function FormBuilder(ctx, model) {
         let widget = makeInput(key, label, options, 'number', () => html`
             <div class="number">
                 ${makePrefixOrSuffix(options.prefix, value)}
-                <input type="number" .value=${live(value ?? '')} placeholder=${options.placeholder ?? ''}
+                <input type="number" ?disabled=${options.disabled}
+                       .value=${live(value ?? '')} placeholder=${options.placeholder ?? ''}
                        min=${options.min} max=${options.max} @input=${input} />
                 ${makePrefixOrSuffix(options.suffix, value)}
             </div>
@@ -156,8 +158,8 @@ function FormBuilder(ctx, model) {
                     let active = (value === prop[0]);
 
                     return html`
-                        <button type="button" class=${active ? 'active' : ''}
-                                @click=${click}>${prop[1]}</button>
+                        <button type="button" ?disabled=${options.disabled}
+                                class=${active ? 'active' : ''} @click=${click}>${prop[1]}</button>
                     `;
 
                     function click(e) {
@@ -186,8 +188,8 @@ function FormBuilder(ctx, model) {
 
                     return html`
                         <label id=${id}>
-                            <input type="radio" name=${id} .checked=${live(active)}
-                                   @click=${click} />
+                            <input type="radio" name=${id} ?disabled=${options.disabled}
+                                   .checked=${live(active)} @click=${click} />
                             <span>${prop[1]}</span>
                        </label>
                     `;
@@ -215,7 +217,7 @@ function FormBuilder(ctx, model) {
         let value = getValue(key, 'enum', options);
 
         let widget = makeInput(key, label, options, 'enumDrop', () => html`
-            <select @change=${change}>
+            <select @change=${change} ?disabled=${options.disabled}>
                 <option value="" .selected=${live(value == null)}>-- Non renseigné --</option>
                 ${props.map((prop, idx) => {
                     let active = (value === prop[0]);
@@ -269,8 +271,8 @@ function FormBuilder(ctx, model) {
 
                     return html`
                         <label id=${id}>
-                            <input type="checkbox" .checked=${live(values.includes(prop[0]))}
-                                   @click=${click} />
+                            <input type="checkbox" ?disabled=${options.disabled}
+                                   .checked=${live(values.includes(prop[0]))} @click=${click} />
                             <span>${prop[1]}</span>
                         </label>
                     `;
@@ -322,8 +324,9 @@ function FormBuilder(ctx, model) {
         let widget = makeInput(key, label, options, 'slider', id => html`
             <div class="slider">
                 ${makePrefixOrSuffix(options.prefix, value)}
-                <input id=${id} type="range" .value=${live(value ?? '')}
+                <input id=${id} type="range" ?disabled=${options.disabled}
                        class=${value == null ? 'missing' : ''}
+                       .value=${live(value ?? '')}
                        min=${options.min} max=${options.max} @input=${input} />
                 ${makePrefixOrSuffix(options.suffix, value)}
             </div>
@@ -409,6 +412,8 @@ function FormBuilder(ctx, model) {
         Object.assign(widget, {
             key: key,
             label: label,
+
+            disabled: options.disabled,
             optional: options.optional
         });
 
@@ -427,6 +432,7 @@ function FormBuilder(ctx, model) {
 
     function expandOptions(options, defaults = {}) {
         options = Object.assign({
+            disabled: false,
             optional: false,
             tip: null
         }, defaults, options);
@@ -476,6 +482,7 @@ function FormBuilder(ctx, model) {
 
         notes.changed = !!notes.changed;
         notes.type = type;
+        notes.disabled = options.disabled;
 
         let value = ctx.values[key];
 

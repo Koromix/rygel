@@ -634,6 +634,7 @@ form {
         background: var(--bar_color);
         color: white;
     }
+    & .enum > button:disabled { color: #ccc; }
 
     & .slider {
         align-self: stretch;
