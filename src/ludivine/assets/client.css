@@ -74,6 +74,7 @@ main.fullscreen {
     border-radius: 8px;
     box-shadow: 2px 2px rgba(136, 136, 136, 0.12);
     z-index: 999999;
+    max-width: 70vw;
 }
 
 button.confirm { --button_color: #2d8261; }
@@ -336,6 +337,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 
 .calendars {
     display: flex;
+    flex-wrap: wrap;
     gap: 24px;
 
     & img {

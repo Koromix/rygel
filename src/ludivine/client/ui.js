@@ -459,17 +459,17 @@ function popup(e, content) {
         if (pos.x > window.innerWidth - el.offsetWidth - 10) {
             pos.x = origin.x - el.offsetWidth;
 
-            if (pos.x < 10) {
-                pos.x = Math.min(origin.x, window.innerWidth - el.offsetWidth - 10);
-                pos.x = Math.max(pos.x, 10);
+            if (pos.x < 24) {
+                pos.x = Math.min(origin.x, window.innerWidth - el.offsetWidth - 24);
+                pos.x = Math.max(pos.x, 24);
             }
         }
-        if (pos.y > window.innerHeight - el.offsetHeight - 10) {
+        if (pos.y > window.innerHeight - el.offsetHeight - 24) {
             pos.y = origin.y - el.offsetHeight;
 
-            if (pos.y < 10) {
-                pos.y = Math.min(origin.y, window.innerHeight - el.offsetHeight - 10);
-                pos.y = Math.max(pos.y, 10);
+            if (pos.y < 24) {
+                pos.y = Math.min(origin.y, window.innerHeight - el.offsetHeight - 24);
+                pos.y = Math.max(pos.y, 24);
             }
         }
     }
