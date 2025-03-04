@@ -21,7 +21,7 @@ import * as sqlite3 from '../../web/core/sqlite3.js';
 import { computeAge, dateToString, niceDate,
          progressBar, progressCircle } from './lib/util.js';
 import * as UI from './ui.js';
-import { SmallCalendar } from './lib/calendar.js';
+import { SmallCalendar, EventProviders, createEvent } from './lib/calendar.js';
 import { PictureCropper } from './lib/picture.js';
 import { PROJECTS } from '../projects/projects.js';
 import { ProjectInfo, ProjectBuilder } from './project.js';
@@ -661,7 +661,7 @@ async function runDashboard() {
                                         <b>${niceDate(evt.schedule, true)}</b><br>
                                         ${evt.title}
                                     </div>
-                                    <button type="button" disabled><img src=${ASSETS['ui/calendar']} alt="Agenda" /></button>
+                                    <button type="button" @click=${UI.wrap(e => addToCalendar(e, evt))}><img src=${ASSETS['ui/calendar']} alt="Agenda" /></button>
                                 </div>
                             `;
                         })}
@@ -671,6 +671,29 @@ async function runDashboard() {
             </div>
         </div>
     `);
+}
+
+function addToCalendar(e, evt) {
+    UI.popup(e, html`
+        <div class="calendars">
+            ${EventProviders.map(provider => html`
+                <a @click=${UI.wrap(e => add(provider))}>
+                    <img src=${ASSETS[provider.icon]} alt=${provider.title} title=${provider.title} />
+                </a>
+            `)}
+        </div>
+    `);
+
+    function add(provider) {
+        let title = ENV.title + ' - ' + evt.title;
+
+        let description = html`
+            Participation à <b>${ENV.title}</b> :
+            <a href="${ENV.urls.app}">Étude ${evt.title}</a>
+        `;
+
+        createEvent(provider.key, evt.schedule, title, description);
+    }
 }
 
 function isLogged() {

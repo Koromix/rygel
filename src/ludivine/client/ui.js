@@ -41,6 +41,8 @@ let fullscreen = false;
 let init_dialogs = false;
 let dialogs = [];
 
+let init_popups = false;
+
 let drag_items = null;
 let drag_src = null;
 let drag_restore = null;
@@ -419,6 +421,73 @@ function isDialogOpen() {
     return !!dialogs.length;
 }
 
+function popup(e, content) {
+    if (!init_popups) {
+        window.addEventListener('keydown', e => {
+            if (e.keyCode == 27)
+                closePopups();
+        });
+
+        document.addEventListener('click', closePopups);
+
+        init_popups = true;
+    }
+
+    let el = document.createElement('div');
+    el.className = 'popup';
+
+    render(content, el);
+    document.body.appendChild(el);
+
+    let pos = { x: null, y: null };
+    {
+        let origin = { x: null, y: null };
+
+        if (e.clientX && e.clientY) {
+            origin.x = e.clientX - 1;
+            origin.y = e.clientY - 1;
+        } else {
+            let rect = e.target.getBoundingClientRect();
+
+            origin.x = (rect.left + rect.right) / 2;
+            origin.y = (rect.top + rect.bottom) / 2;
+        }
+
+        pos.x = origin.x;
+        pos.y = origin.y;
+
+        if (pos.x > window.innerWidth - el.offsetWidth - 10) {
+            pos.x = origin.x - el.offsetWidth;
+
+            if (pos.x < 10) {
+                pos.x = Math.min(origin.x, window.innerWidth - el.offsetWidth - 10);
+                pos.x = Math.max(pos.x, 10);
+            }
+        }
+        if (pos.y > window.innerHeight - el.offsetHeight - 10) {
+            pos.y = origin.y - el.offsetHeight;
+
+            if (pos.y < 10) {
+                pos.y = Math.min(origin.y, window.innerHeight - el.offsetHeight - 10);
+                pos.y = Math.max(pos.y, 10);
+            }
+        }
+    }
+
+    el.style.left = pos.x + 'px';
+    el.style.top = pos.y + 'px';
+
+    // Any interaction closes the popup
+    el.addEventListener('click', () => document.body.removeChild(el), { capture: true });
+}
+
+function closePopups() {
+    let popups = document.body.querySelectorAll('.popup');
+
+    for (let popup of popups)
+        document.body.removeChild(popup);
+}
+
 class SelectDirective extends Directive {
     update(part, [value]) {
         window.requestAnimationFrame(() => { part.element.value = value; });
@@ -694,6 +763,8 @@ export {
     runDialog,
     closeDialog,
     isDialogOpen,
+
+    popup,
 
     selectValue,
     reorderItems,
