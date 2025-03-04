@@ -135,7 +135,7 @@ function NetworkModule(db, study, page) {
         let rect = wrapper.getBoundingClientRect();
         if (!rect.width && !rect.height)
             return;
-        runner.resize(rect.width, rect.height);
+        runner.resize(rect.width, rect.height, window.devicePixelRatio);
     }
 
     async function reset() {

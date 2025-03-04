@@ -303,7 +303,7 @@ function syncSize() {
     let rect = main.getBoundingClientRect();
     if (!rect.width && !rect.height)
         return;
-    runner.resize(rect.width, rect.height);
+    runner.resize(rect.width, rect.height, window.devicePixelRatio);
 }
 
 // ------------------------------------------------------------------------

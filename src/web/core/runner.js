@@ -20,9 +20,10 @@ function AppRunner(canvas) {
 
     let ctx = canvas.getContext('2d');
 
+    let prev_timestamp = 0;
     let prev_width = 0;
     let prev_height = 0;
-    let prev_timestamp = 0;
+    let dpr = 0;
 
     let run = true;
     let idle_timeout = 0;
@@ -165,15 +166,17 @@ function AppRunner(canvas) {
         run = false;
     };
 
-    this.resize = function(width, height) {
+    this.resize = function(width, height, ratio = 1) {
+        dpr = ratio;
+
         if (width != prev_width) {
-            canvas.width = width * window.devicePixelRatio;
+            canvas.width = width * ratio;
             canvas.style.width = width + 'px';
 
             prev_width = width;
         }
         if (height != prev_height) {
-            canvas.height = height * window.devicePixelRatio;
+            canvas.height = height * ratio;
             canvas.style.height = height + 'px';
 
             prev_height = height;
@@ -264,8 +267,8 @@ function AppRunner(canvas) {
 
         let rect = canvas.getBoundingClientRect();
 
-        mouse_state.x = (e.clientX - rect.left) * window.devicePixelRatio;
-        mouse_state.y = (e.clientY - rect.top) * window.devicePixelRatio;
+        mouse_state.x = (e.clientX - rect.left) * dpr;
+        mouse_state.y = (e.clientY - rect.top) * dpr;
 
         if ((e.buttons & 0b001) && !mouse_state.left) {
             mouse_state.left = 1;
@@ -322,8 +325,8 @@ function AppRunner(canvas) {
                 return;
 
             if (touch_digits == 1) {
-                mouse_state.x = (e.touches[0].pageX - rect.left) * window.devicePixelRatio;
-                mouse_state.y = (e.touches[0].pageY - rect.top) * window.devicePixelRatio;
+                mouse_state.x = (e.touches[0].pageX - rect.left) * dpr;
+                mouse_state.y = (e.touches[0].pageY - rect.top) * dpr;
 
                 if (e.type == 'touchstart' && !mouse_state.left)
                     mouse_state.left = 1;
@@ -331,8 +334,8 @@ function AppRunner(canvas) {
                 let p1 = { x: e.touches[0].pageX - rect.left, y: e.touches[0].pageY - rect.top };
                 let p2 = { x: e.touches[1].pageX - rect.left, y: e.touches[1].pageY - rect.top };
 
-                mouse_state.x = (p1.x + p2.x) / 2 * window.devicePixelRatio;
-                mouse_state.y = (p1.y + p2.y) / 2 * window.devicePixelRatio;
+                mouse_state.x = (p1.x + p2.x) / 2 * dpr;
+                mouse_state.y = (p1.y + p2.y) / 2 * dpr;
 
                 let new_distance = computeDistance(p1, p2);
 
@@ -684,6 +687,10 @@ function AppRunner(canvas) {
 
         this.playFull = function(asset, cache = true) {
             return self.playSound(asset, { persist: true, cache: cache });
+        };
+
+        this.playLoop = function(asset, cache = true) {
+            return self.playSound(asset, { loop: true, persist: false, cache: cache });
         };
 
         this.playSound = function(asset, options = {}) {
