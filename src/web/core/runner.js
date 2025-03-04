@@ -179,6 +179,10 @@ function AppRunner(canvas) {
             prev_height = height;
         }
 
+        // Reduce flickering after resize
+        if (handle_draw != null)
+            handle_draw();
+
         self.busy();
     };
 
