@@ -22,6 +22,9 @@
 
 <div class="partners">
      <a href="https://www.france-victimes.fr/" target="_blank"><img src="{{ ASSET ../assets/partners/france_victimes.webp }}" alt="France Victimes" title="France Victimes" /></a>
+</div>
+
+<div class="partners">
      <a href="https://www.univ-lille.fr/" target="_blank"><img src="{{ ASSET ../assets/partners/universite_lille.webp }}" alt="Université de Lille" title="Université de Lille" /></a>
      <a href="https://www.f2rsmpsy.fr/" target="_blank"><img src="{{ ASSET ../assets/partners/f2rsmpsy.webp }}" alt="F2RSM psy HdF" title="F2RSM psy Hauts-de-France" /></a>
 </div>
