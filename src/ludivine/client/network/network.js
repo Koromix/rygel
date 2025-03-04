@@ -211,7 +211,7 @@ function NetworkModule(db, study, page) {
         now = (new Date).valueOf();
 
         // Global shortcuts
-        if (pressed_keys.debug == -1)
+        if (pressed_keys.tab == -1)
             debug = !debug;
         if (pressed_keys.ctrl > 0 && pressed_keys.z == -1)
             rewind(undo_actions, redo_actions);
