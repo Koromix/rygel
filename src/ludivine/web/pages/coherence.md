@@ -136,13 +136,15 @@
     }
 
     #progress {
+        --color: #e9a07f;
+
         position: absolute;
         left: 50%;
         top: 2em;
         width: calc(100% - 8px);
         height: 20px;
         transform: translateX(-50%);
-        background: linear-gradient(to right, var(--button_color) 0 var(--progress), #f8f8f8 var(--progress));
+        background: linear-gradient(to right, var(--color) 0 var(--progress), #f8f8f8 var(--progress));
         border-radius: 10px;
     }
     #progress.animate { animation: progress var(--duration) linear; }
