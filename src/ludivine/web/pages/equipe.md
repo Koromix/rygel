@@ -8,7 +8,7 @@
 <h1>Structure porteuse</h1>
 
 <div class="columns">
-    <img src="{{ ASSET ../assets/partners/cn2r.webp }}" style="flex: 2;" alt="" />
+    <img src="{{ ASSET ../assets/partners/cn2r.webp }}" style="flex: 3;" alt="" />
     <div style="flex: 5;">
         <p>Le <a href="https://cn2r.fr" target="_blank">Centre national de ressources et de résilience</a> (Cn2r) a <b>pour mission d’améliorer et de diffuser les connaissances sur les psychotraumatismes et la résilience</b>. Il s’adresse au grand public, aux chercheurs et aux professionnels impliqués dans l’accompagnement des personnes confrontées à des événements potentiellement traumatiques.
         <p>Le Cn2r valorise à la fois les savoirs scientifiques et les connaissances issues du vécu des personnes concernées.
