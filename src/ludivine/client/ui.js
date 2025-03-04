@@ -422,13 +422,15 @@ function isDialogOpen() {
 }
 
 function popup(e, content) {
+    closePopups();
+
     if (!init_popups) {
         window.addEventListener('keydown', e => {
             if (e.keyCode == 27)
                 closePopups();
         });
 
-        document.addEventListener('click', closePopups);
+        document.addEventListener('click', closePopups, { capture: true });
 
         init_popups = true;
     }
@@ -476,9 +478,6 @@ function popup(e, content) {
 
     el.style.left = pos.x + 'px';
     el.style.top = pos.y + 'px';
-
-    // Any interaction closes the popup
-    el.addEventListener('click', () => document.body.removeChild(el), { capture: true });
 }
 
 function closePopups() {
