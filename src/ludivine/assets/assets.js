@@ -92,15 +92,16 @@ import asset75 from './ui/network.png';
 import asset76 from './ui/new.png';
 import asset77 from './ui/paper.png';
 import asset78 from './ui/people.png';
-import asset79 from './ui/redo.png';
-import asset80 from './ui/right.webp';
-import asset81 from './ui/rotate.png';
-import asset82 from './ui/select.png';
-import asset83 from './ui/track.png';
-import asset84 from './ui/undo.png';
-import asset85 from './ui/unselect.png';
-import asset86 from './ui/user.png';
-import asset87 from './ui/video.png';
+import asset79 from './ui/private.png';
+import asset80 from './ui/redo.png';
+import asset81 from './ui/right.webp';
+import asset82 from './ui/rotate.png';
+import asset83 from './ui/select.png';
+import asset84 from './ui/track.png';
+import asset85 from './ui/undo.png';
+import asset86 from './ui/unselect.png';
+import asset87 from './ui/user.png';
+import asset88 from './ui/video.png';
 
 const ASSETS = {
     'calendars/apple': asset0,
@@ -182,15 +183,16 @@ const ASSETS = {
     'ui/new': asset76,
     'ui/paper': asset77,
     'ui/people': asset78,
-    'ui/redo': asset79,
-    'ui/right': asset80,
-    'ui/rotate': asset81,
-    'ui/select': asset82,
-    'ui/track': asset83,
-    'ui/undo': asset84,
-    'ui/unselect': asset85,
-    'ui/user': asset86,
-    'ui/video': asset87,
+    'ui/private': asset79,
+    'ui/redo': asset80,
+    'ui/right': asset81,
+    'ui/rotate': asset82,
+    'ui/select': asset83,
+    'ui/track': asset84,
+    'ui/undo': asset85,
+    'ui/unselect': asset86,
+    'ui/user': asset87,
+    'ui/video': asset88,
 };
 
 export { ASSETS }

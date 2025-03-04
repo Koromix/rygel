@@ -556,6 +556,10 @@ async function runProfile() {
         <div class="tab">
             <div class="row">
                 <div class="box profile">
+                    <div class="header">
+                        Profil
+                        ${UI.safe('votre profil')}
+                    </div>
                     <img class="avatar" src=${identity?.picture ?? ASSETS['ui/user']} alt=""/>
 
                     <div class="actions">

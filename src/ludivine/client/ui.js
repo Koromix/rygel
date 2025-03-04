@@ -487,6 +487,15 @@ function closePopups() {
         document.body.removeChild(popup);
 }
 
+function safe(type) {
+    let content = html`
+        <p>Les données de ${type} sont privées.
+        <p>Les <b>chercheurs n’y ont pas accès</b> et ces données ne seront pas utilisées dans les différentes études ni même consultables par nos chercheurs.
+    `;
+
+    return html`<div class="safe" @click=${wrap(e => popup(e, content))}></div>`;
+}
+
 class SelectDirective extends Directive {
     update(part, [value]) {
         window.requestAnimationFrame(() => { part.element.value = value; });
@@ -764,6 +773,7 @@ export {
     isDialogOpen,
 
     popup,
+    safe,
 
     selectValue,
     reorderItems,

@@ -69,12 +69,12 @@ main.fullscreen {
 
 .popup {
     position: fixed;
-    padding: 0.5em;
+    padding: 0.6em 1em;
     background: white;
     border-radius: 8px;
     box-shadow: 2px 2px rgba(136, 136, 136, 0.12);
     z-index: 999999;
-    max-width: 70vw;
+    max-width: calc(min(300px, 70vw));
 }
 
 button.confirm { --button_color: #2d8261; }
@@ -255,6 +255,21 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     text-align: center;
     color: var(--top_color);
 }
+.safe {
+    display: inline-block;
+    vertical-align: middle;
+    width: 24px;
+    height: 24px;
+    margin: 0 0.5em;
+    background-color: #89b85a;
+    background-image: url('../assets/ui/private.png');
+    background-position: center;
+    background-size: 16px 16px;
+    background-repeat: no-repeat;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
 
 @media screen and (max-width: 960px) {
     .row {
@@ -263,7 +278,6 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     }
 }
 
-.profile { padding: 2em; }
 .profile > .avatar {
     width: 192px;
     height: 192px;
