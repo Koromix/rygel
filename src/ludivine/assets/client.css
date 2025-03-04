@@ -291,16 +291,16 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     padding: 0.5em 1em;
     gap: 2em;
     align-items: center;
-}
-.study.draft {
-    --color: var(--draft_color);
-    --button_color: var(--draft_color);
-}
-.study.done {
-    --color: var(--done_color);
-    --button_color: var(--done_color);
-}
-.study {
+
+    &.draft {
+        --color: var(--draft_color);
+        --button_color: var(--draft_color);
+    }
+    &.done {
+        --color: var(--done_color);
+        --button_color: var(--done_color);
+    }
+
     & > img { width: 100px; }
     & > .progress {
         flex: 1;
@@ -310,6 +310,25 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     & .circle {
         --fill: var(--color);
         flex: 1;
+    }
+}
+
+@media screen and (max-width: 960px) {
+    .study {
+        padding-top: 1em;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1em;
+
+        & > .progress {
+            flex: 0;
+            margin-left: 1em;
+            margin-right: 1em;
+        }
+        & > button {
+            margin-right: 1em;
+            margin-bottom: 0.5em;
+        }
     }
 }
 
