@@ -69,39 +69,41 @@ import asset52 from './resources/pro_kolk.jpg';
 import asset53 from './resources/video_cn2r.jpg';
 import asset54 from './resources/video_fenvac.jpg';
 import asset55 from './resources/video_legriguer.jpg';
-import asset56 from './ui/3114.webp';
-import asset57 from './ui/anonymous.png';
-import asset58 from './ui/book.png';
-import asset59 from './ui/calendar.png';
-import asset60 from './ui/child.png';
-import asset61 from './ui/configure.png';
-import asset62 from './ui/confirm.png';
-import asset63 from './ui/copy.png';
-import asset64 from './ui/create.png';
-import asset65 from './ui/dashboard.png';
-import asset66 from './ui/delete.png';
-import asset67 from './ui/dice.webp';
-import asset68 from './ui/fullscreen.png';
-import asset69 from './ui/insert.png';
-import asset70 from './ui/left.webp';
-import asset71 from './ui/link.png';
-import asset72 from './ui/move.png';
-import asset73 from './ui/movie.png';
-import asset74 from './ui/music.png';
-import asset75 from './ui/network.png';
-import asset76 from './ui/new.png';
-import asset77 from './ui/paper.png';
-import asset78 from './ui/people.png';
-import asset79 from './ui/private.png';
-import asset80 from './ui/redo.png';
-import asset81 from './ui/right.webp';
-import asset82 from './ui/rotate.png';
-import asset83 from './ui/select.png';
-import asset84 from './ui/track.png';
-import asset85 from './ui/undo.png';
-import asset86 from './ui/unselect.png';
-import asset87 from './ui/user.png';
-import asset88 from './ui/video.png';
+import asset56 from './ui/116006.webp';
+import asset57 from './ui/15.webp';
+import asset58 from './ui/3114.webp';
+import asset59 from './ui/anonymous.png';
+import asset60 from './ui/book.png';
+import asset61 from './ui/calendar.png';
+import asset62 from './ui/child.png';
+import asset63 from './ui/configure.png';
+import asset64 from './ui/confirm.png';
+import asset65 from './ui/copy.png';
+import asset66 from './ui/create.png';
+import asset67 from './ui/dashboard.png';
+import asset68 from './ui/delete.png';
+import asset69 from './ui/dice.webp';
+import asset70 from './ui/fullscreen.png';
+import asset71 from './ui/insert.png';
+import asset72 from './ui/left.webp';
+import asset73 from './ui/link.png';
+import asset74 from './ui/move.png';
+import asset75 from './ui/movie.png';
+import asset76 from './ui/music.png';
+import asset77 from './ui/network.png';
+import asset78 from './ui/new.png';
+import asset79 from './ui/paper.png';
+import asset80 from './ui/people.png';
+import asset81 from './ui/private.png';
+import asset82 from './ui/redo.png';
+import asset83 from './ui/right.webp';
+import asset84 from './ui/rotate.png';
+import asset85 from './ui/select.png';
+import asset86 from './ui/track.png';
+import asset87 from './ui/undo.png';
+import asset88 from './ui/unselect.png';
+import asset89 from './ui/user.png';
+import asset90 from './ui/video.png';
 
 const ASSETS = {
     'calendars/apple': asset0,
@@ -160,39 +162,41 @@ const ASSETS = {
     'resources/video_cn2r': asset53,
     'resources/video_fenvac': asset54,
     'resources/video_legriguer': asset55,
-    'ui/3114': asset56,
-    'ui/anonymous': asset57,
-    'ui/book': asset58,
-    'ui/calendar': asset59,
-    'ui/child': asset60,
-    'ui/configure': asset61,
-    'ui/confirm': asset62,
-    'ui/copy': asset63,
-    'ui/create': asset64,
-    'ui/dashboard': asset65,
-    'ui/delete': asset66,
-    'ui/dice': asset67,
-    'ui/fullscreen': asset68,
-    'ui/insert': asset69,
-    'ui/left': asset70,
-    'ui/link': asset71,
-    'ui/move': asset72,
-    'ui/movie': asset73,
-    'ui/music': asset74,
-    'ui/network': asset75,
-    'ui/new': asset76,
-    'ui/paper': asset77,
-    'ui/people': asset78,
-    'ui/private': asset79,
-    'ui/redo': asset80,
-    'ui/right': asset81,
-    'ui/rotate': asset82,
-    'ui/select': asset83,
-    'ui/track': asset84,
-    'ui/undo': asset85,
-    'ui/unselect': asset86,
-    'ui/user': asset87,
-    'ui/video': asset88,
+    'ui/116006': asset56,
+    'ui/15': asset57,
+    'ui/3114': asset58,
+    'ui/anonymous': asset59,
+    'ui/book': asset60,
+    'ui/calendar': asset61,
+    'ui/child': asset62,
+    'ui/configure': asset63,
+    'ui/confirm': asset64,
+    'ui/copy': asset65,
+    'ui/create': asset66,
+    'ui/dashboard': asset67,
+    'ui/delete': asset68,
+    'ui/dice': asset69,
+    'ui/fullscreen': asset70,
+    'ui/insert': asset71,
+    'ui/left': asset72,
+    'ui/link': asset73,
+    'ui/move': asset74,
+    'ui/movie': asset75,
+    'ui/music': asset76,
+    'ui/network': asset77,
+    'ui/new': asset78,
+    'ui/paper': asset79,
+    'ui/people': asset80,
+    'ui/private': asset81,
+    'ui/redo': asset82,
+    'ui/right': asset83,
+    'ui/rotate': asset84,
+    'ui/select': asset85,
+    'ui/track': asset86,
+    'ui/undo': asset87,
+    'ui/unselect': asset88,
+    'ui/user': asset89,
+    'ui/video': asset90,
 };
 
 export { ASSETS }

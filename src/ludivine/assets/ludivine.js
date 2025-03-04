@@ -164,10 +164,14 @@ function randomCard(cards) {
 function sos(e) {
     dialog(e, 'help', close => html`
         <img src=${ASSETS['ui/3114']} width="348" height="86" alt="">
-        <div>
-            <p>Le <b>3114</b> est le numéro national de prévention de suicide. Consultez le <a href="https://3114.fr/" target="_blank">site du 3114</a> pour plus d'informations sur la prévention du suicide.
-            <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires</b>, ou si vous voulez aider une personne en souffrance, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
-        </div>
+        <p>Le <b>3114</b> est le numéro national de prévention de suicide. Consultez le <a href="https://3114.fr/" target="_blank">site du 3114</a> pour plus d'informations.</p>
+
+        <img src=${ASSETS['ui/116006']} width="292" height="150" alt="">
+        <p>Le <b>116 006</b> est un numéro d’aide aux victimes géré par France Victimes. L'appel est gratuit 7j/7 24h/24. Consultez le <a href="https://www.france-victimes.fr/index.php/categories-inavem/105-actualites/824-116006-un-nouveau-numero-pour-l-aide-aux-victimes-enparlerpouravancer" target="_blank">site de France Victimes</a> pour plus d'informations.</p>
+
+        <img src=${ASSETS['ui/15']} width="237" height="114" alt="">
+        <p>Le <b>15</b> est le numéro du SAMU, disponible 7j/7 24h/24.</p>
+
         <button type="button" class="secondary" @click=${close}>Fermer</button>
     `);
 
