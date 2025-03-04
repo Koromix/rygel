@@ -9,7 +9,7 @@
     </div>
 </div>
 
-# Lignes de Vie kezako ?
+# Lignes de Vie, qu'est-ce que c'est ?
 
 <div class="columns">
     <img src="{{ ASSET ../assets/pictures/kezako.webp }}" style="flex: 1;" alt="" />

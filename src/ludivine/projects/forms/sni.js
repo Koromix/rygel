@@ -119,13 +119,15 @@ function run(form, values) {
     })
 
     form.part(() => {
-        form.enumButtons("q9", "Êtes-vous actuellement employé(e) à temps plein ou à temps partiel ?", [
+        form.enumButtons("q9", "Avez-vous un emploi à temps plein ou à temps partiel ?", [
             [0, "Non"],
             [1, "Oui, en tant qu'indépendant"],
             [2, "Oui, en tant qu'employé(e)"]
         ])
-        form.enumButtons("q9a", "Combien de collaborateurs encadrez-vous ?", [0, 1, 2, 3, 4, 5, 6, [7, "7 ou plus"]], { disabled: !values.q9 })
-        form.enumButtons("q9b", "Avec combien de personnes au travail (autres que celles que vous encadrez) parlez-vous au moins une fois toutes les deux semaines ?", [0, 1, 2, 3, 4, 5, 6, [7, "7 ou plus"]], { disabled: !values.q9 })
+        form.binary("q9a", "Avez-vous une activité d’encadrement (collaborateurs) ?")
+        if (values.q9a == 1)
+            form.enumButtons("q9b", "Combien de collaborateurs encadrez-vous ?", [1, 2, 3, 4, 5, 6, [7, "7 ou plus"]], { disabled: !values.q9 })
+        form.enumButtons("q9c", "Avec combien de personnes au travail (autres que celles que vous encadrez) parlez-vous au moins une fois toutes les deux semaines ?", [0, 1, 2, 3, 4, 5, 6, [7, "7 ou plus"]], { disabled: !values.q9 })
     })
 
     form.part(() => {
@@ -138,7 +140,7 @@ function run(form, values) {
     })
 
     form.part(() => {
-        form.binary("q12", "Appartenez-vous à un groupe dans lequel vous parlez à un ou plusieurs membres du groupe de questions liées au groupe au moins une fois toutes les deux semaines ?", {
+        form.binary("q12", "Faites-vous partie d’un groupe au sein duquel vous échangez avec un ou plusieurs membres sur des sujets liés au groupe au moins une fois toutes les deux semaines ?", {
             help: "Il peut s'agir par exemple de clubs sociaux, de groupes de loisirs, de syndicats, de groupes commerciaux, d'organisations professionnelles, de groupes s'occupant d'enfants comme l'association des parents d'élèves ou les scouts, de groupes s'occupant de travaux d'intérêt général, etc."
         })
     })
