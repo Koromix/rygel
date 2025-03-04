@@ -253,6 +253,15 @@ p + .columns { margin-top: 2em; }
     transform: scale(1.1);
 }
 
+@media screen and (max-width: 960px) {
+    #sos {
+        bottom: 12px;
+        right: 12px;
+        width: 44px;
+        height: 44px;
+    }
+}
+
 #help {
     padding: 1em;
     align-items: center;
