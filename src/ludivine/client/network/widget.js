@@ -952,7 +952,7 @@ function NetworkWidget(mod, world) {
                 ctx.stroke();
             }
 
-            ctx.font = `bold ${20 + state.zoom}px Open Sans`;
+            ctx.font = `bold ${(20 + state.zoom) * window.devicePixelRatio}px Open Sans`;
             ctx.fillStyle = '#77777755';
 
             for (let i = 1; i < PROXIMITY_LEVELS.length; i++) {
@@ -1114,7 +1114,7 @@ function NetworkWidget(mod, world) {
 
         // Name persons
         if (!mod.anonymous) {
-            ctx.font = '12px Open Sans';
+            ctx.font = (12 * window.devicePixelRatio) + 'px Open Sans';
             ctx.fillStyle = '#000000';
 
             for (let i = persons.length - 1; i >= 0; i--) {

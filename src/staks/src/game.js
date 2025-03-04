@@ -289,11 +289,21 @@ async function start(root) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
+    new ResizeObserver(syncSize).observe(main);
+    syncSize();
+
     runner.updateFrequency = rules.UPDATE_FREQUENCY;
     runner.idleTimeout = 5000;
     runner.onUpdate = update;
     runner.onDraw = draw;
     runner.start();
+}
+
+function syncSize() {
+    let rect = main.getBoundingClientRect();
+    if (!rect.width && !rect.height)
+        return;
+    runner.resize(rect.width, rect.height);
 }
 
 // ------------------------------------------------------------------------
@@ -656,7 +666,7 @@ function draw() {
     if (show_debug) {
         ctx.save();
 
-        ctx.font = '18px Open Sans';
+        ctx.font = (18 * window.devicePixelRatio) + 'px Open Sans';
         ctx.fillStyle = 'white';
 
         // FPS counter
@@ -671,7 +681,7 @@ function draw() {
 }
 
 function drawStart() {
-    ctx.font = '32px Open Sans';
+    ctx.font = (32 * window.devicePixelRatio) + 'px Open Sans';
     ctx.fillStyle = 'white';
 
     let text = runner.isTouch ? `Appuyez sur le bouton pour commencer`
@@ -683,8 +693,10 @@ function drawStart() {
 function drawHelp() {
     ctx.save();
 
-    ctx.font = '14px Open Sans';
+    ctx.font = (14 * window.devicePixelRatio) + 'px Open Sans';
     ctx.fillStyle = 'white';
+
+    let step = 10 * window.devicePixelRatio;
 
     let x = layout.help.right;
     let y = layout.help.bottom;
@@ -693,27 +705,27 @@ function drawHelp() {
 
     for (let shortcut of KEYBOARD_SHORTCUTS) {
         if (shortcut != null) {
-            width = Math.max(width, 114 + runner.measure(shortcut[1]).width);
-            height += 10;
+            width = Math.max(width, 24 + 80 * window.devicePixelRatio + runner.measure(shortcut[1]).width);
+            height += step;
         }
 
-        height += 10;
+        height += step;
     }
 
     drawArea(x - width, y - height, width, height);
-    y -= 12;
+    y -= step;
 
     for (let i = KEYBOARD_SHORTCUTS.length - 1; i >= 0; i--) {
         let shortcut = KEYBOARD_SHORTCUTS[i];
 
         if (shortcut != null) {
             runner.text(x - 12, y, shortcut[0], { align: 3 });
-            runner.text(x - 92, y, shortcut[1], { align: 3 });
+            runner.text(x - 12 - 80 * window.devicePixelRatio, y, shortcut[1], { align: 3 });
 
-            y -= 10;
+            y -= step;
         }
 
-        y -= 10;
+        y -= step;
     }
 
     ctx.restore();
@@ -1449,7 +1461,7 @@ function Game() {
             let y = layout.well.height / 2;
             let text = gameover ? 'GAME OVER' : 'PAUSE';
 
-            ctx.font = 'bold 32px Open Sans';
+            ctx.font = 'bold ' + (32 * window.devicePixelRatio) + 'px Open Sans';
             ctx.fillStyle = 'white';
             ctx.globalAlpha = 1;
             runner.text(x, y, text, { align: 5 });
@@ -1591,7 +1603,7 @@ function Game() {
         ctx.translate(layout.level.left, layout.level.top + hit_value);
         drawArea(0, 0, layout.level.width, layout.level.height);
 
-        ctx.font = runner.isTouch ? '24px Open Sans' : '16px Open Sans';
+        ctx.font = ((runner.isTouch ? 24 : 16) * window.devicePixelRatio) + 'px Open Sans';
         ctx.fillStyle = 'white';
         runner.text(layout.level.width / 2, layout.level.height / 2, level, { align: 5 });
 
@@ -1604,7 +1616,7 @@ function Game() {
         ctx.translate(layout.score.left, layout.score.top + hit_value);
         drawArea(0, 0, layout.score.width, layout.score.height);
 
-        ctx.font = runner.isTouch ? '24px Open Sans' : '16px Open Sans';
+        ctx.font = ((runner.isTouch ? 24 : 16) * window.devicePixelRatio) + 'px Open Sans';
         ctx.fillStyle = 'white';
         runner.text(layout.score.width / 2, layout.score.height / 2, score, { align: 5 });
 

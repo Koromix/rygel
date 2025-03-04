@@ -21,15 +21,20 @@
 }
 
 .net_canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
     width: 100%;
     background: var(--box_color);
     border-radius: 16px;
+    z-index: 1;
 }
 
 .net_actions {
     display: flex;
     position: absolute;
     gap: 6px;
+    z-index: 2;
 }
 .net_actions.align1 {
     flex-direction: column;

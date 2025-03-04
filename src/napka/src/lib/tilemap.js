@@ -73,6 +73,9 @@ function TileMap(runner) {
             min_zoom: 1
         }, config);
 
+        // Adapt to HiDPI
+        tiles.tilesize *= window.devicePixelRatio;
+
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
 
@@ -189,7 +192,7 @@ function TileMap(runner) {
 
                     x: item.x,
                     y: item.y,
-                    size: marker.size,
+                    size: marker.size * window.devicePixelRatio,
                     icon: marker.icon,
                     circle: marker.circle,
                     text: marker.text,
@@ -222,7 +225,7 @@ function TileMap(runner) {
 
                     x: center.x,
                     y: center.y,
-                    size: 2 * radius,
+                    size: 2 * radius * window.devicePixelRatio,
                     circle: cluster[0].cluster,
                     text: '' + cluster.length,
 
@@ -532,7 +535,8 @@ function TileMap(runner) {
 
                     // Find appropriate font size
                     do {
-                        ctx.font = (--size) + 'px Open Sans';
+                        size -= window.devicePixelRatio;
+                        ctx.font = size + 'px Open Sans';
                         width = ctx.measureText(element.text).width;
                     } while (width > target);
 
@@ -543,13 +547,13 @@ function TileMap(runner) {
 
             // Draw tooltip
             if (render_tooltip != null) {
-                ctx.font = '12px Open Sans';
+                ctx.font = (12 * window.devicePixelRatio) + 'px Open Sans';
 
                 let target = render_tooltip.target;
 
                 let lines = render_tooltip.text.split('\n');
                 let width = Math.max(...lines.map(line => ctx.measureText(line).width));
-                let height = 16 * lines.length;
+                let height = 16 * window.devicePixelRatio * lines.length;
 
                 let pos = {
                     x: target.x + (target.size / 2) - viewport.x1 + 5,
@@ -564,13 +568,13 @@ function TileMap(runner) {
                     pos.y = viewport.y2 - height - viewport.y1 - 10;
                 }
 
-                ctx.fillStyle = '#ffffffdd';
-                ctx.fillRect(pos.x, pos.y, width + 10, height + 6);
+                ctx.fillStyle = '#ffffffee';
+                ctx.fillRect(pos.x, pos.y, width + 20, height + 12);
 
                 ctx.fillStyle = 'black';
                 for (let i = 0; i < lines.length; i++) {
-                    let y = pos.y + (i + 1) * 16;
-                    ctx.fillText(lines[i], pos.x + 5, y);
+                    let y = pos.y + (i + 1) * (16 * window.devicePixelRatio);
+                    ctx.fillText(lines[i], pos.x + 10, y);
                 }
             }
 

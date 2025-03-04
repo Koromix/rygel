@@ -64,6 +64,7 @@ a:hover { color: var(--color, #0d114a); }
     background: var(--background, white);
     pointer-events: auto;
     cursor: default;
+    z-index: 2;
 }
 #menu.admin {
     --background: black;
@@ -149,8 +150,10 @@ a:hover { color: var(--color, #0d114a); }
 }
 
 #map {
-    height: 100%;
-    width: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 1;
 }
 #map_zoom {
     position: absolute;
@@ -161,6 +164,7 @@ a:hover { color: var(--color, #0d114a); }
     align-items: center;
     gap: 4px;
     font-size: 2em;
+    z-index: 2;
 }
 #map_zoom > button {
     padding: 0 0.4em 0 0.4em;
@@ -169,10 +173,10 @@ a:hover { color: var(--color, #0d114a); }
 }
 .map_box {
     position: absolute;
-    z-index: 1;
     padding: 3px 6px;
     border-radius: 2px;
     font-size: 0.9em;
+    z-index: 2;
 }
 .map_box.attribution {
     right: 10px;

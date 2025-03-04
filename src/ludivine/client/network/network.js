@@ -31,8 +31,9 @@ function NetworkModule(db, study, page) {
     let self = this;
 
     // DOM nodes
-    let action_elements = {};
+    let wrapper = null;
     let canvas = null;
+    let action_elements = {};
 
     // Platform
     let runner = null;
@@ -66,14 +67,21 @@ function NetworkModule(db, study, page) {
     });
 
     this.start = async function() {
+        wrapper = document.createElement('div');
+        wrapper.className = 'net_wrapper';
         canvas = document.createElement('canvas');
         canvas.className = 'net_canvas';
 
         runner = new AppRunner(canvas);
-
         ctx = canvas.getContext('2d');
         mouse_state = runner.mouseState;
         pressed_keys = runner.pressedKeys;
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        new ResizeObserver(syncSize).observe(wrapper);
+        syncSize();
 
         // Don't burn CPU or battery
         runner.idleTimeout = 1000;
@@ -81,9 +89,6 @@ function NetworkModule(db, study, page) {
         runner.onUpdate = update;
         runner.onDraw = draw;
         runner.onContextMenu = () => {};
-
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
 
         // Load existing world
         {
@@ -113,18 +118,25 @@ function NetworkModule(db, study, page) {
     this.render = function(section) {
         runner.busy();
 
-        return html`
-            <div class="net_wrapper">
-                ${Util.mapRange(1, 10, idx => self.actions(idx))}
-                ${canvas}
-            </div>
-        `;
+        render(html`
+            ${canvas}
+            ${Util.mapRange(1, 10, idx => self.actions(idx))}
+        `, wrapper);
+
+        return wrapper;
     };
 
     this.hasUnsavedData = function() {
         let unsafe = (save_timer != null);
         return unsafe;
     };
+
+    function syncSize() {
+        let rect = wrapper.getBoundingClientRect();
+        if (!rect.width && !rect.height)
+            return;
+        runner.resize(rect.width, rect.height);
+    }
 
     async function reset() {
         world = null;
@@ -546,7 +558,7 @@ function NetworkModule(db, study, page) {
         if (tooltip != null) {
             ctx.save();
 
-            ctx.font = '14px Open Sans';
+            ctx.font = (14 * window.devicePixelRatio) + 'px Open Sans';
             ctx.globalAlpha = tooltip.opacity;
 
             let delta = (mouse_state.x < canvas.width - canvas.width / 4) ? 20 : -20;
@@ -570,8 +582,8 @@ function NetworkModule(db, study, page) {
             let text = `FPS : ${(1000 / runner.frameTime).toFixed(0)} (${runner.frameTime.toFixed(1)} ms)` +
                        ` | Update : ${runner.updateTime.toFixed(1)} ms | Draw : ${runner.drawTime.toFixed(1)} ms`;
 
-            ctx.font = '12px Open Sans';
-            runner.text(-10, -10, text, { color: 'red', background: 'white' });
+            ctx.font = (18 * window.devicePixelRatio) + 'px Open Sans';
+            runner.text(canvas.width / 2, 10, text, { align: 8, color: 'red', background: 'white' });
         }
 
         ctx.restore();

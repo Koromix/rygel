@@ -20,8 +20,8 @@ function AppRunner(canvas) {
 
     let ctx = canvas.getContext('2d');
 
-    let prev_canvas_width = 0;
-    let prev_canvas_height = 0;
+    let prev_width = 0;
+    let prev_height = 0;
     let prev_timestamp = 0;
 
     let run = true;
@@ -157,15 +157,29 @@ function AppRunner(canvas) {
         canvas.addEventListener('touchmove', handleTouchEvent);
         canvas.addEventListener('touchend', handleTouchEvent);
 
-        new ResizeObserver(() => self.busy()).observe(canvas);
-        syncSize();
-
         window.requestAnimationFrame(loop);
     };
 
     this.stop = function() {
         // Please make a new canvas, because event handlers remain connected
         run = false;
+    };
+
+    this.resize = function(width, height) {
+        if (width != prev_width) {
+            canvas.width = width * window.devicePixelRatio;
+            canvas.style.width = width + 'px';
+
+            prev_width = width;
+        }
+        if (height != prev_height) {
+            canvas.height = height * window.devicePixelRatio;
+            canvas.style.height = height + 'px';
+
+            prev_height = height;
+        }
+
+        self.busy();
     };
 
     function isTouchDevice() {
@@ -383,8 +397,6 @@ function AppRunner(canvas) {
         if (!run)
             return;
 
-        syncSize();
-
         let delay = timestamp - prev_timestamp;
         prev_timestamp = timestamp;
 
@@ -463,28 +475,6 @@ function AppRunner(canvas) {
         run_next = false;
 
         window.requestAnimationFrame(loop);
-    }
-
-    function syncSize() {
-        let rect = canvas.getBoundingClientRect();
-
-        if (!rect.width && !rect.height)
-            return;
-
-        // Accessing canvas.width or canvas.height (even for reading) seems to trigger
-        // a reset or something, and can cause flicker on Firefox Mobile.
-        if (rect.width != prev_canvas_width) {
-            canvas.width = rect.width * window.devicePixelRatio;
-            prev_canvas_width = rect.width;
-        }
-        if (rect.height != prev_canvas_height) {
-            // Force transient empty height to downsize to minimal CSS layout height
-            if (prev_canvas_height != 0)
-                rect.height = 0;
-
-            canvas.height = rect.height * window.devicePixelRatio;
-            prev_canvas_height = rect.height;
-        }
     }
 
     function measurePerf(times, time) {

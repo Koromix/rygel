@@ -55,6 +55,12 @@ async function start(prov, options = {}) {
     runner = new AppRunner(canvas);
     map = new TileMap(runner);
 
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    new ResizeObserver(syncSize).observe(document.body);
+    syncSize();
+
     // Set up map
     map.init(ENV.map);
     map.onClick = handleClick;
@@ -67,7 +73,6 @@ async function start(prov, options = {}) {
 
     runner.onUpdate = updateMap;
     runner.onDraw = drawMap;
-
     runner.idleTimeout = 1000;
     runner.start();
 
@@ -107,6 +112,13 @@ async function start(prov, options = {}) {
     refreshMap();
 
     document.body.classList.remove('loading');
+}
+
+function syncSize() {
+    let rect = document.body.getBoundingClientRect();
+    if (!rect.width && !rect.height)
+        return;
+    runner.resize(rect.width, rect.height);
 }
 
 function zoom(delta) {
