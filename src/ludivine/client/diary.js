@@ -98,7 +98,7 @@ function DiaryModule(db, id) {
             menuBar: {
                 isVisible: true
             },
-            placeholder: 'Dites ce que vous voulez ici',
+            placeholder: `Écrivez ce que vous voulez, c'est pour vous et nous n'y aurons pas accès !`,
         });
 
         editor.model.document.on('change:data', autoSave);
@@ -120,7 +120,8 @@ function DiaryModule(db, id) {
                 <form @submit=${e => e.preventDefault()}>
                     <label>
                         <span>Titre de l'entrée</span>
-                        <input type="text" name="title" value=${data?.title ?? ''} @input=${autoSave} />
+                        <input type="text" name="title" value=${data?.title ?? ''}
+                               placeholder="Titre libre" @input=${autoSave} />
                     </label>
                     <div class="widget">
                         <label for="editor">Contenu de l'entrée</label>
