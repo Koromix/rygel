@@ -199,8 +199,6 @@ function NetworkModule(db, study, page) {
 
         widget = new NetworkWidget(self, world);
         await widget.init();
-
-        autoSave();
     }
 
     function serialize() {
