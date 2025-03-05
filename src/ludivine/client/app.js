@@ -576,7 +576,7 @@ async function runProfile() {
     if (UI.isFullscreen)
         UI.toggleFullscreen(false);
 
-    let entries = await db.fetchAll('SELECT id, date, title FROM diary');
+    let entries = await db.fetchAll('SELECT id, date, title FROM diary ORDER BY id DESC');
 
     for (let entry of entries)
         entry.date = LocalDate.parse(entry.date);
