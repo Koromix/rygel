@@ -514,7 +514,7 @@ form {
         align-items: start;
     }
     & * + :is(label, .widget) { margin-top: 1em; }
-    & :is(label, .widget) > :is(input, textarea, select, div) { margin: 0 1em !important; }
+    & :is(label, .widget) > :is(input, textarea, select, div) { margin-left: 1em !important; }
     & label:empty { display: none; }
 
     & .widget.annotate {
