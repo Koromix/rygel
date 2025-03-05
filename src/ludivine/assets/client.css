@@ -289,6 +289,25 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     .profile { width: auto; }
 }
 
+.diary {
+    display: flex;
+    background: #f6d4c3;
+    border-radius: 12px;
+    padding: 0.5em;
+    gap: 0.8em;
+    align-items: center;
+
+    & > img {
+        width: 40px;
+        height: 40px;
+    }
+    & > .text {
+        flex: 1;
+        width: 200px;
+        line-height: 1.4;
+    }
+}
+
 .studies {
     display: flex;
     flex: 1;
@@ -353,19 +372,21 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     padding: 0.5em;
     gap: 0.8em;
     align-items: center;
-}
-.event > .text {
-    flex: 1;
-    width: 200px;
-    padding-left: 0.5em;
-    line-height: 1.4;
-}
-.event > button {
-    --button_color: #d9bf69;
-    width: 3em;
-    height: 3em;
-    padding: 0 0.1em 0.2em 0.1em;
-    border-radius: 6px;
+
+    & > .text {
+        flex: 1;
+        width: 200px;
+        padding-left: 0.5em;
+        line-height: 1.4;
+    }
+    & > button {
+        --button_color: #d9bf69;
+
+        width: 3em;
+        height: 3em;
+        padding: 0 0.1em 0.2em 0.1em;
+        border-radius: 6px;
+    }
 }
 
 .calendars {
@@ -493,8 +514,7 @@ form {
         align-items: start;
     }
     & * + :is(label, .widget) { margin-top: 1em; }
-    & :is(label, .widget) > :is(input, textarea, select, div) { margin: 0 1em; }
-    & label > :is(input[type=checkbox], input[type=radio], select) { align-self: start; }
+    & :is(label, .widget) > :is(input, textarea, select, div) { margin: 0 1em !important; }
     & label:empty { display: none; }
 
     & .widget.annotate {
@@ -534,6 +554,7 @@ form {
         font: inherit;
         font-size: 0.9em;
     }
+    & .ck { align-self: stretch; }
     & select {
         padding: 0.4em calc(20px + 0.6em) 0.4em 0.6em;
         border: none;

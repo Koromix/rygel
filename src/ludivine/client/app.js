@@ -23,6 +23,7 @@ import { computeAge, dateToString, niceDate,
 import * as UI from './ui.js';
 import { SmallCalendar, EventProviders, createEvent } from './lib/calendar.js';
 import { PictureCropper } from './lib/picture.js';
+import { DiaryModule } from './diary.js';
 import { PROJECTS } from '../projects/projects.js';
 import { ProjectInfo, ProjectBuilder } from './project.js';
 import { FormModule } from './form/form.js';
@@ -31,7 +32,7 @@ import { ASSETS } from '../assets/assets.js';
 
 import '../assets/client.css';
 
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
 
 Object.assign(T, {
     cancel: 'Annuler',
@@ -88,7 +89,10 @@ let route = {
     // study mode
     project: null,
     page: null,
-    section: null
+    section: null,
+
+    // diary mode
+    entry: null
 };
 let route_url = null;
 let poisoned = false;
@@ -284,6 +288,18 @@ async function go(url = null, push = true) {
                 }
             } break;
 
+            case 'diary': {
+                route.mode = 'diary';
+
+                let entry = parseInt(parts[0], 10);
+
+                if (!Number.isNaN() && entry >= 0) {
+                    route.entry = entry;
+                } else {
+                    route.entry = null;
+                }
+            } break;
+
             default: { route.mode = 'profile'; } break;
         }
     }
@@ -408,6 +424,8 @@ async function run(push = true) {
                 await runDashboard();
             }
         } break;
+
+        case 'diary': { await runDiary(); } break;
     }
 
     // Update route values
@@ -443,12 +461,23 @@ function makeURL(values = {}) {
 
     path += route.mode;
 
-    if (route.mode == 'study' && route.project != null) {
-        path += '/' + route.project;
-        if (route.page != null)
-            path += route.page;
-        if (route.section != null)
-            path += '/' + route.section;
+    switch (route.mode) {
+        case 'profile': {} break;
+
+        case 'study': {
+            if (route.project != null) {
+                path += '/' + route.project;
+                if (route.page != null)
+                    path += route.page;
+                if (route.section != null)
+                    path += '/' + route.section;
+            }
+        } break;
+
+        case 'diary': {
+            if (route.entry != null)
+                path += '/' + route.entry;
+        } break;
     }
 
     return path;
@@ -547,6 +576,11 @@ async function runProfile() {
     if (UI.isFullscreen)
         UI.toggleFullscreen(false);
 
+    let entries = await db.fetchAll('SELECT id, date, title FROM diary');
+
+    for (let entry of entries)
+        entry.date = LocalDate.parse(entry.date);
+
     UI.main(html`
         <div class="tabbar">
             <a href="/profile" class="active">Profil</a>
@@ -568,20 +602,58 @@ async function runProfile() {
                     </div>
                 </div>
 
-                <div class="box">
-                    <div>
-                        <div class="header">Bienvenue sur <b>${ENV.title}</b> !</div>
-                        <p>Utilisez le bouton à gauche pour <b>personnaliser votre avatar</b>, si vous le désirez.
-                        Une fois prêt(e), accéder à votre <b>tableau de bord et aux études</b> à l'aide du bouton ci-dessous.
+                <div class="column">
+                    <div class="box">
+                        <div>
+                            <div class="header">Bienvenue sur <b>${ENV.title}</b> !</div>
+                            <p>Utilisez le bouton à gauche pour <b>personnaliser votre avatar</b>, si vous le désirez.
+                            Une fois prêt(e), accéder à votre <b>tableau de bord et aux études</b> à l'aide du bouton ci-dessous.
+                        </div>
+
+                        <div class="actions">
+                            <a href="/study">Accéder aux études</a>
+                        </div>
                     </div>
 
-                    <div class="actions">
-                        <a href="/study">Accéder aux études</a>
+                    <div class="box">
+                        <div class="header">
+                            Mon journal
+                            ${UI.safe('votre journal')}
+                        </div>
+                        ${entries.map(entry => html`
+                            <div class="diary">
+                                <img src=${ASSETS['ui/diary']} alt="" />
+                                <div class="text">
+                                    <b>${entry.title || html`<i>Entrée sans titre</i>`}</b><br>
+                                    ${niceDate(entry.date, true)}
+                                </div>
+                                <button type="button" @click=${UI.wrap(e => navigateDiary(entry.id))}>Éditer</button>
+                            </div>
+                        `)}
+                        ${!entries.length ? html`
+                            <div class="help right">
+                                <div>
+                                    <p>Utilisez librement votre journal, ces <b>données sont privées</b> et nous ne nous en servirons pas !
+                                    <p>Pour ajouter une première entrée, cliquez sur le bouton d'ajout ci-dessous.
+                                </div>
+                                <img src=${ASSETS['pictures/help2']} alt="" />
+                            </div>
+                        ` : ''}
+                        <div class="actions">
+                            <a href="/diary">Ajouter une entrée</a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     `);
+}
+
+async function navigateDiary(id) {
+    route.mode = 'diary';
+    route.entry = id;
+
+    await run();
 }
 
 async function runDashboard() {
@@ -656,19 +728,15 @@ async function runDashboard() {
                 ${cache.studies.length ? html`
                     <div class="box">
                         <div class="header">À venir</div>
-                        ${cache.events.map(evt => {
-                            let nice = niceDate(evt.schedule, true).split(' ');
-
-                            return html`
-                                <div class="event">
-                                    <div class="text">
-                                        <b>${niceDate(evt.schedule, true)}</b><br>
-                                        ${evt.title}
-                                    </div>
-                                    <button type="button" @click=${UI.wrap(e => addToCalendar(e, evt))}><img src=${ASSETS['ui/calendar']} alt="Agenda" /></button>
+                        ${cache.events.map(evt => html`
+                            <div class="event">
+                                <div class="text">
+                                    <b>${niceDate(evt.schedule, true)}</b><br>
+                                    ${evt.title}
                                 </div>
-                            `;
-                        })}
+                                <button type="button" @click=${UI.wrap(e => addToCalendar(e, evt))}><img src=${ASSETS['ui/calendar']} alt="Agenda" /></button>
+                            </div>
+                        `)}
                         ${!cache.events.length ? html`<p style="text-align: center;">Aucun évènement à venir</p>` : ''}
                     </div>
                 ` : ''}
@@ -1052,6 +1120,35 @@ function computeProgress(page) {
 }
 
 // ------------------------------------------------------------------------
+// Diary
+// ------------------------------------------------------------------------
+
+async function runDiary() {
+    if (UI.isFullscreen)
+        UI.toggleFullscreen(false);
+
+    if (ctx == null || ctx.entry != route.entry) {
+        ctx = {
+            entry: route.entry,
+            mod: new DiaryModule(db, route.entry)
+        };
+
+        await ctx.mod.start();
+    }
+
+    UI.main(html`
+        <div class="tabbar">
+            <a href="/profile">Profil</a>
+            <a href="/diary" class="active">Mon journal</a>
+        </div>
+
+        <div class="tab">
+            ${ctx.mod.render()}
+        </div>
+    `);
+}
+
+// ------------------------------------------------------------------------
 // Database
 // ------------------------------------------------------------------------
 
@@ -1146,6 +1243,17 @@ async function openDatabase(filename, key) {
                     DROP TABLE studies_BAK;
 
                     PRAGMA foreign_keys = 1;
+                `);
+            } // fallthrough
+
+            case 2: {
+                await db.exec(`
+                    CREATE TABLE diary (
+                        id INTEGER PRIMARY KEY,
+                        date TEXT NOT NULL,
+                        title TEXT,
+                        content TEXT NOT NULL
+                    );
                 `);
             } // fallthrough
         }
@@ -1248,6 +1356,7 @@ export {
 
     start,
 
+    go,
     run,
 
     isLogged,
