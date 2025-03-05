@@ -578,7 +578,8 @@ form {
     & label:has(> input[type=radio]) {
         margin-top: 0 !important;
         flex-direction: row;
-        gap: 0.4em;
+        align-items: center;
+        gap: 0.8em;
         cursor: pointer;
     }
     & input[type=radio] {
@@ -586,6 +587,7 @@ form {
         height: 14px;
         margin: 4px 0 0 0;
         padding: 0;
+        flex-shrink: 0;
         appearance: none;
         -webkit-appearance: none;
         border-radius: 50%;
@@ -600,7 +602,8 @@ form {
     & label:has(> input[type=checkbox]) {
         margin-top: 0 !important;
         flex-direction: row;
-        gap: 0.4em;
+        align-items: center;
+        gap: 0.8em;
         cursor: pointer;
     }
     & input[type=checkbox] {
@@ -609,6 +612,7 @@ form {
         height: 16px;
         margin: 4px 0 0 0;
         padding: 0;
+        flex-shrink: 0;
         appearance: none;
         -webkit-appearance: none;
         background-color: white;
