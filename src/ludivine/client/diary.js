@@ -18,8 +18,9 @@ import { Util, Log, LocalDate } from '../../web/core/base.js';
 import * as app from './app.js';
 import * as UI from './ui.js';
 import { ASSETS } from '../assets/assets.js';
-import { ClassicEditor, AutoLink, Bold, Essentials,
-         Italic, Link, Paragraph, Translations } from '../../../vendor/ckeditor5/ckeditor5.bundle.js';
+import { ClassicEditor, AutoLink, Bold, Code, Essentials, FontBackgroundColor,
+         FontColor, FontFamily, FontSize, Highlight, Italic, Link, Paragraph,
+         RemoveFormat, Strikethrough, Subscript, Superscript, Underline, Translations } from '../../../vendor/ckeditor5/ckeditor5.bundle.js';
 
 import '../../../vendor/ckeditor5/ckeditor5.bundle.css';
 
@@ -47,14 +48,40 @@ function DiaryModule(db, id) {
 
         editor = await ClassicEditor.create(div.querySelector('#editor'), {
             toolbar: {
-                items: ['bold', 'italic', '|', 'link'],
+                items: [
+                    'fontSize',
+                    'fontFamily',
+                    'fontColor',
+                    'fontBackgroundColor',
+                    '|',
+                    'bold',
+                    'italic',
+                    'underline',
+                    'strikethrough',
+                    'subscript',
+                    'superscript',
+                    'code',
+                    'removeFormat',
+                    '|',
+                    'link',
+                    'highlight'
+                ],
                 shouldNotGroupWhenFull: false
             },
-            plugins: [AutoLink, Bold, Essentials, Italic, Link, Paragraph],
+            plugins: [AutoLink, Bold, Code, Essentials, FontBackgroundColor, FontColor, FontFamily,
+                      FontSize, Highlight, Italic, Link, Paragraph, RemoveFormat,
+                      Strikethrough, Subscript, Superscript, Underline],
             licenseKey: 'GPL',
             initialData: data?.content ?? '',
             translations: [Translations],
             language: 'fr',
+            fontFamily: {
+                supportAllValues: true
+            },
+            fontSize: {
+                options: [10, 12, 14, 'default', 18, 20, 22],
+                supportAllValues: true
+            },
             link: {
                 addTargetToExternalLinks: true,
                 defaultProtocol: 'https://',
@@ -67,6 +94,9 @@ function DiaryModule(db, id) {
                         }
                     }
                 }
+            },
+            menuBar: {
+                isVisible: true
             },
             placeholder: 'Dites ce que vous voulez ici',
         });
