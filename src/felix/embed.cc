@@ -161,7 +161,8 @@ static bool LoadMetaFile(const char *filename, CompressionType compression_type,
 bool ResolveAssets(Span<const char *const> filenames, int strip_count,
                    CompressionType compression_type, EmbedAssetSet *out_set)
 {
-    RG_DEFER_NC(out_guard, len = out_set->assets.len) { out_set->assets.RemoveFrom(len); };
+    Size prev_len = out_set->assets.len;
+    RG_DEFER_N(out_guard) { out_set->assets.RemoveFrom(prev_len); };
 
     for (const char *filename: filenames) {
         if (filename[0] == '@') {
@@ -174,6 +175,24 @@ bool ResolveAssets(Span<const char *const> filenames, int strip_count,
             asset->compression_type = AdaptCompression(filename, compression_type);
             asset->src_filename = filename;
         }
+    }
+
+    // Deduplicate assets
+    {
+        HashSet<const char *> known_filenames;
+
+        Size j = prev_len;
+        for (Size i = prev_len; i < out_set->assets.len; i++) {
+            const EmbedAsset &asset = out_set->assets[i];
+
+            out_set->assets[j] = out_set->assets[i];
+
+            bool inserted;
+            known_filenames.TrySet(asset.src_filename, &inserted);
+
+            j += inserted;
+        }
+        out_set->assets.len = j;
     }
 
     out_guard.Disable();
