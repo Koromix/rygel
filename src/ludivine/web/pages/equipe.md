@@ -26,6 +26,7 @@
 
 <div class="partners">
      <a href="https://www.univ-lille.fr/" target="_blank"><img src="{{ ASSET ../assets/partners/universite_lille.webp }}" alt="Université de Lille" title="Université de Lille" /></a>
+     <a><img src="{{ ASSET ../assets/partners/interactions1.webp }}" alt="Laboratoire INTERACTIONS" title="Laboratoire INTERACTIONS" /></a>
      <a href="https://www.f2rsmpsy.fr/" target="_blank"><img src="{{ ASSET ../assets/partners/f2rsmpsy.webp }}" alt="F2RSM psy HdF" title="F2RSM psy Hauts-de-France" /></a>
 </div>
 

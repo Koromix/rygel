@@ -125,8 +125,8 @@
     gap: 40px;
 }
 .partners > a {
-    width: 40%;
-    min-width: 300px;
+    width: 30%;
+    min-width: 240px;
     max-height: 200px;
     margin: 20px 0;
 }
