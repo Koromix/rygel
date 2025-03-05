@@ -23,7 +23,7 @@
             <div>
                 <p>Réalisez quelques <b>étirements doux</b> en toute autonomie, pour une sensation de légèreté et de bien-être.</p>
                 <div class="actions">
-                    <a href="https://www.youtube.com/watch?v=QRSPFTgUoLc" target="_blank">Étirements doux</a>
+                    <a class="disabled">Bientôt disponible</a>
                 </div>
             </div>
         </div>
