@@ -18,8 +18,8 @@ import { Util, Log, LocalDate } from '../../web/core/base.js';
 import * as app from './app.js';
 import * as UI from './ui.js';
 import { ASSETS } from '../assets/assets.js';
-import { ClassicEditor, AutoLink, Autosave, Bold,
-         Essentials, Italic, Link, Paragraph, Translations } from '../../../vendor/ckeditor5/ckeditor5.bundle.js';
+import { ClassicEditor, AutoLink, Bold, Essentials,
+         Italic, Link, Paragraph, Translations } from '../../../vendor/ckeditor5/ckeditor5.bundle.js';
 
 import '../../../vendor/ckeditor5/ckeditor5.bundle.css';
 
@@ -30,6 +30,8 @@ function DiaryModule(db, id) {
 
     let div = null;
     let editor = null;
+
+    let save_timer = null;
 
     this.start = async function() {
         div = document.createElement('div');
@@ -48,10 +50,7 @@ function DiaryModule(db, id) {
                 items: ['bold', 'italic', '|', 'link'],
                 shouldNotGroupWhenFull: false
             },
-            plugins: [AutoLink, Autosave, Bold, Essentials, Italic, Link, Paragraph],
-            autosave: {
-                save: save
-            },
+            plugins: [AutoLink, Bold, Essentials, Italic, Link, Paragraph],
             licenseKey: 'GPL',
             initialData: data?.content ?? '',
             translations: [Translations],
@@ -71,10 +70,13 @@ function DiaryModule(db, id) {
             },
             placeholder: 'Dites ce que vous voulez ici',
         });
+
+        editor.model.document.on('change:data', autoSave);
     };
 
     this.stop = function() {
-        // Nothing to do
+        if (editor != null)
+            editor.destroy();
     };
 
     this.render = function(section) {
@@ -88,7 +90,7 @@ function DiaryModule(db, id) {
                 <form @submit=${e => e.preventDefault()}>
                     <label>
                         <span>Titre de l'entrée</span>
-                        <input type="text" name="title" value=${data?.title ?? ''} @change=${save} />
+                        <input type="text" name="title" value=${data?.title ?? ''} @input=${autoSave} />
                     </label>
                     <div class="widget">
                         <label for="editor">Contenu de l'entrée</label>
@@ -109,9 +111,19 @@ function DiaryModule(db, id) {
     };
 
     this.hasUnsavedData = function() {
-        // No need, CKEditor handles this already
-        return false;
+        let unsafe = (save_timer != null);
+        return unsafe;
     };
+
+    function autoSave() {
+        if (save_timer != null)
+            clearTimeout(save_timer);
+
+        save_timer = setTimeout(() => {
+            save_timer = null;
+            save();
+        }, 1000);
+    }
 
     async function save() {
         let form = div.querySelector('form');
