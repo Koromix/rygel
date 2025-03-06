@@ -242,9 +242,66 @@ function FormBuilder(ctx, model) {
         });
 
         switch (options.multi) {
+            case 'buttons': return self.multiButtons(key, label, options);
             case 'check': return self.multiCheck(key, label, options);
             default: throw new Error(`Invalid multi layout '${options.multi}'`);
         }
+    };
+
+    this.multiButtons = function(key, label, props, options = {}) {
+        options = expandOptions(options);
+        key = expandKey(key, options);
+
+        props = normalizePropositions(props);
+
+        let value = getValue(key, 'multi', options);
+        let values = value;
+
+        if (values == null) {
+            values = [];
+            ctx.values[key] = null;
+        } else if (!Array.isArray(values)) {
+            values = [values];
+            ctx.values[key] = values;
+        }
+
+        let widget = makeInput(key, label, options, 'multiButtons', () => html`
+            <div class="enum">
+                ${props.map(prop => {
+                    let active = values.includes(prop[0]);
+
+                    return html`
+                        <button type="button" ?disabled=${options.disabled}
+                                class=${active ? 'active' : ''} @click=${click}>${prop[1]}</button>
+                    `;
+
+                    function click(e) {
+                        values = props.map(prop => prop[0]).filter(key => {
+                            if (key == prop[0])
+                                return !active;
+
+                            return values.includes(key);
+                        });
+
+                        if (!active) {
+                            let allow_null = (prop[0] == null);
+
+                            values = values.filter(value => {
+                                let is_null = (value == null);
+                                return is_null == allow_null;
+                            });
+                        }
+
+                        if (!values.length)
+                            values = null;
+
+                        setValue(key, values);
+                    }
+                })}
+            </div>
+        `);
+
+        return widget;
     };
 
     this.multiCheck = function(key, label, props, options = {}) {
