@@ -1,7 +1,7 @@
 <div class="banner">
     <div class="title">Qui sommes-nous ?</div>
     <div class="intro">
-        <p>Le programme Lignes de Vie est porté par une <b>équipe pluridisciplinaire</b> avec des compétences en neurosciences, en savoir expérientiel, en informatique et développement, en éthique, en communication, en gestion de projets et en journalisme scientifique.
+        <p>Le programme Lignes de Vie est porté par une <b>équipe pluridisciplinaire</b> avec des connaissances en neurosciences, en savoir expérientiel, en informatique et développement, en psychologie et neuropsychologie, en éthique, en communication, en gestion de projets et en journalisme scientifique.
     </div>
 </div>
 

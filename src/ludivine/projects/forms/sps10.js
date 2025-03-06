@@ -15,11 +15,11 @@
 
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
-let intro = html`
-    <p>Nous allons maintenant évaluer la <b>disponibilité de votre entourage</b>. Il n’y a pas de bonnes ou de mauvaises réponses. Lorsque vous y répondrez, essayez de penser aux personnes qui vous entourent.
-`
+function build(form, values) {
+    form.intro = html`
+        <p>Nous allons maintenant évaluer la <b>disponibilité de votre entourage</b>. Il n’y a pas de bonnes ou de mauvaises réponses. Lorsque vous y répondrez, essayez de penser aux personnes qui vous entourent.
+    `
 
-function run(form, values) {
     form.part(() => {
         q(1, "Il y a des personnes sur qui je peux compter pour m’aider en cas de réel besoin matériel")
         q(5, "Il y a des personnes qui prennent plaisir aux mêmes activités sociales que moi")
@@ -55,7 +55,4 @@ function run(form, values) {
     }
 }
 
-export {
-    intro,
-    run
-}
+export default build

@@ -15,20 +15,21 @@
 
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
-let intro = html`
-    <p>Voici une liste de <b>situations difficiles ou stressantes</b> qu‘une personne peut avoir à traverser (vivre). Pour chaque situation, cochez une ou plusieurs cases pour indiquer que :
-    <ul>
-        <li>Vous avez vécu personnellement une telle situation
-        <li>Une autre personne a vécu une telle situation et vous en avez été témoin
-        <li>Vous avez appris qu’un de vos proches a vécu une telle situation
-        <li>Vous avez été exposé(e) à une telle situation dans le cadre de votre travail (ex : secouriste, policier, militaire, autre intervenant de première ligne)
-        <li>Vous n'êtes pas sûr(e) que la situation corresponde
-        <li>La situation ne s’applique pas à vous
-    </ul>
-    <p>Veuillez considérer <b>votre parcours de vie actuel et passé</b> (depuis votre enfance à votre vie adulte) pour répondre à chacun de ces questions.
-`
+function build(form, values) {
+    form.intro = html`
+        <p>Voici une liste de <b>situations potentiellement traumatiques</b> que vous pouvez avoir eu à traverser (vivre) depuis votre enfance.
+        <p>Pour chaque situation, cochez <b>une ou plusieurs cases</b> pour indiquer que :
+        <ul>
+            <li>Vous avez vécu personnellement la situation
+            <li>Une autre personne a vécu la situation et vous en avez été témoin
+            <li>Vous avez appris qu’un de vos proches a vécu la situation
+            <li>Vous avez été exposé(e) à la situation dans le cadre de votre travail (ex : secouriste, policier, militaire, autre intervenant de première ligne)
+            <li>Vous n'êtes pas sûr(e) que la situation corresponde
+            <li>La situation ne s’applique pas à vous
+        </ul>
+        <p><i>Il est tout à fait possible d’avoir vécu une situation type, par exemple, une catastrophe naturelle sous des angles différents. Une fois, j’ai été inondé ; une autre fois j’ai appris qu’un membre de ma famille a été inondé, et finalement par mon travail de sapeur-pompier, je suis intervenu dans une situation d’inondation. Dans ce cas hypothétique, vous aurez coché  Ca m’est arrivé », « Je l’ai appris » et « Dans mon travail ».</i>
+    `
 
-function run(form, values) {
     let catastrophes = {
         1: "Catastrophe naturelle (inondation, ouragan, tornade, tremblement de terre, etc.)",
         2: "Incendie ou explosion",
@@ -68,9 +69,11 @@ function run(form, values) {
         form.part(() => {
             for (let i = start; i < end; i++) {
                 let idx = indices[i]
+                let label = catastrophes[idx] + " :"
 
-                let label = catastrophes[idx]
-                let intf = form.multiCheck("evt" + idx, idx + ". " + label, choices)
+                let intf = form.multiButtons("evt" + idx, label, choices, {
+                    help: "Plusieurs réponses possibles"
+                })
 
                 if (intf.value && intf.value.length)
                     evts++
@@ -80,7 +83,7 @@ function run(form, values) {
 
     if (evts) {
         form.part(() => {
-            form.enumRadio("evt_index", "Cochez l'évènement qui fût le plus difficile pour vous :", Object.keys(catastrophes).map(idx => {
+            form.enumRadio("evt_index", "Cochez l'évènement qui fût le plus difficile pour vous :", Object.keys(catastrophes).map(idx => {
                 let value = values["evt" + idx]
 
                 if (!value || !value.length)
@@ -92,7 +95,4 @@ function run(form, values) {
     }
 }
 
-export {
-    intro,
-    run
-}
+export default build

@@ -15,18 +15,18 @@
 
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
-let intro = html`
-    <p>Ce questionnaire nous permet d'évaluer la <b>présence d'idées suicidaires</b>. En cas d'urgence, n'hésitez surtout pas à <a href="https://3114.fr" target="_blank"><span class="ui_tag" style="background: #db0a0aform.part">demander de l'aide !</span></a>
-`
+function build(form, values) {
+    form.intro = html`
+        <p>Ce questionnaire nous permet d'évaluer la <b>présence d'idées suicidaires</b>. En cas d'urgence, n'hésitez surtout pas à <a href="https://3114.fr" target="_blank"><span class="ui_tag" style="background: #db0a0aform.part">demander de l'aide !</span></a>
+    `
 
-function run(form, values) {
     form.part(() => {
-        form.enumButtons("q1", "Comment évaluez-vous votre désir de vivre ?", [
+        form.enumButtons("q1", "Comment évaluez-vous votre désir de vivre ?", [
             [0, "Moyen à fort"],
             [1, "Faible désir"],
             [2, "Nul / aucun désir"]
         ])
-        form.enumButtons("q2", "Comment évaluez-vous votre désir de mourir ?", [
+        form.enumButtons("q2", "Comment évaluez-vous votre désir de mourir ?", [
             [0, "Nul / aucun désir"],
             [1, "Faible désir"],
             [2, "Moyen à fort"]
@@ -39,7 +39,7 @@ function run(form, values) {
             [1, "Elles sont égales"],
             [2, "Raisons de mourir plus fortes que celles de vivre"]
         ])
-        form.enumButtons("q4", "Avez-vous le désir de poser un geste suicidaire ?", [
+        form.enumButtons("q4", "Avez-vous le désir de poser un geste suicidaire ?", [
             [0, "Nul / aucun désir"],
             [1, "Faible désir"],
             [2, "Moyen à fort"]
@@ -60,12 +60,12 @@ function run(form, values) {
         return
 
     form.part(() => {
-        form.enumRadio("q6", "Comment de temps durent vos désirs ou idéations suicidaires ?", [
+        form.enumRadio("q6", "Comment de temps durent vos désirs ou idéations suicidaires ?", [
             [0, "Bref rapide comme un éclair"],
             [1, "Pendant de plus longues périodes"],
             [2, "Continuellement ou presque continuellement"]
         ])
-        form.enumRadio("q7", "À quelle fréquence surviennent votre désirs ou idéations suicidaires ?", [
+        form.enumRadio("q7", "À quelle fréquence surviennent votre désirs ou idéations suicidaires ?", [
             [0, "Rarement, occasionnellement"],
             [1, "De façon intermittente"],
             [2, "Persistant ou continuellement"]
@@ -86,7 +86,7 @@ function run(form, values) {
     })
 
     form.part(() => {
-        form.enumRadio("q10", "Motifs particuliers qui retiennent de poser un geste (famille, religion, irréversibilité du geste) ?", [
+        form.enumRadio("q10", "Motifs particuliers qui retiennent de poser un geste (famille, religion, irréversibilité du geste) ?", [
             [0, "Il y a au moins un motif qui vous empêche de vous suicider"],
             [1, "Certaines inquiétudes font que vous n'êtes pas certain(e)"],
             [2, "Rien ou presque rien ne vous empêche de vous suicider"]
@@ -128,12 +128,12 @@ function run(form, values) {
     })
 
     form.part(() => {
-        form.enumButtons("q16", "Avez-vous fait des préparations en vue d'un passage à l'acte ?", [
+        form.enumButtons("q16", "Avez-vous fait des préparations en vue d'un passage à l'acte ?", [
             [0, "Non"],
             [1, "Partiellement"],
             [2, "Complètement"]
         ])
-        form.enumRadio("q17", "Avez-vous écrit un message d'adieu ?", [
+        form.enumRadio("q17", "Avez-vous écrit un message d'adieu ?", [
             [0, "Non"],
             [1, "Vous y avez pensé, il est commencé mais pas terminé"],
             [2, "Oui"]
@@ -141,12 +141,12 @@ function run(form, values) {
     })
 
     form.part(() => {
-        form.enumRadio("q18", "Avez-vous fait des préparations finales en prévision de la mort (assurance, testament) ?", [
+        form.enumRadio("q18", "Avez-vous fait des préparations finales en prévision de la mort (assurance, testament) ?", [
             [0, "Non"],
             [1, "Vous y avez pensé, il est commencé mais pas terminé"],
             [2, "Oui"]
         ])
-        form.enumRadio("q19", "Avez-vous partagé votre désir de mourir ?", [
+        form.enumRadio("q19", "Avez-vous partagé votre désir de mourir ?", [
             [0, "Vous avez révélé ouvertement vos intentions"],
             [1, "Vous y avez fait allusion"],
             [2, "Vous avez essayé de dissimuler votre intention, de cacher ce désir ou de mentir"],
@@ -155,7 +155,4 @@ function run(form, values) {
     })
 }
 
-export {
-    intro,
-    run
-}
+export default build

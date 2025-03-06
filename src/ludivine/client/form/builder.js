@@ -46,20 +46,32 @@ function FormModel() {
 function FormBuilder(ctx, model) {
     let self = this;
 
-    let part = [];
+    let intro = '';
+
+    let part = null;
     let widgets = model.widgets;
 
     let refreshing = false;
 
-    model.parts.push(part);
+    Object.defineProperties(this, {
+        intro: { get: () => intro, set: value => { intro = value; }, enumerable: true }
+    });
 
     this.part = function(func) {
-        if (part.length) {
-            part = [];
-            model.parts.push(part);
-        }
+        let prev_part = part;
 
-        func();
+        try {
+            part = {
+                intro: intro,
+                widgets: []
+            };
+
+            model.parts.push(part);
+
+            func();
+        } finally {
+            part = prev_part;
+        }
     };
 
     this.output = function(content) {
@@ -416,7 +428,10 @@ function FormBuilder(ctx, model) {
             render: func
         };
 
-        part.push(widget);
+        if (part == null)
+            self.part(() => {});
+        part.widgets.push(widget);
+
         widgets.push(widget);
 
         return widget;

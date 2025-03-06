@@ -516,7 +516,7 @@ function NetworkWidget(mod, world, picture) {
                             <label>
                                 <span>Quels sont les noms des personnes que vous souhaitez ajouter ?</span>
                                 <textarea rows="4" @input=${e => split_names(e.target.value)}></textarea>
-                                <div class="tip">Utilisez des noms ou des libellés (ex : « Maman », « Pierre », « Mitchouk »), séparez les par des espaces ou des novuelles lignes.</div>
+                                <div class="tip">Utilisez des noms ou des libellés (ex : « Maman », « Pierre », « Mitchouk »), séparez les par des espaces ou des nouvelles lignes.</div>
                             </label>
                             <div class="widget">
                                 <span>Quel type de relation avez-vous avec ${names.length > 1 ? 'ces personnes' : 'cette personne'} ?</span>

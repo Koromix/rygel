@@ -578,18 +578,18 @@ let DEPARTEMENTS = [
     ["976", "Mayotte"]
 ]
 
-let intro = html`
-    <p>Donnez-nous quelques informations pour nous aider à mieux vous comprendre.
-`
+function build(form, values) {
+    form.intro = html`
+        <p>Donnez-nous quelques informations pour nous aider à mieux vous comprendre.
+    `
 
-function run(form, values) {
     form.part(() => {
-        form.enumButtons("genre", "Quel est votre genre ?", [
+        form.enumButtons("genre", "Quel est votre genre ?", [
             ["F", "Femme"],
             ["H", "Homme"],
             ["A", "Non-binaire"]
         ])
-        form.enumButtons("sexe", "Quel est votre sexe biologique ?", [
+        form.enumButtons("sexe", "Quel est votre sexe biologique ?", [
             ["F", "Féminin"],
             ["H", "Masculin"],
             ["I", "Intersexe"]
@@ -597,21 +597,21 @@ function run(form, values) {
     })
 
     form.part(() => {
-        form.number("age", "Quel âge avez-vous ?", {
+        form.number("age", "Quel âge avez-vous ?", {
             min: 18, max: 120,
             suffix: value => value > 1 ? "ans" : "an",
             help: "Indiquez votre âge au moment de votre inscription initiale dans l'application"
         })
-        form.enumDrop("pays_naissance", "Dans quel pays êtes-vous " + adapt("né", "e") + " ?", PAYS)
+        form.enumDrop("pays_naissance", "Dans quel pays êtes-vous " + adapt("né", "e") + " ?", PAYS)
     })
 
     form.part(() => {
-        form.enumDrop("pays", "Dans quel pays habitez-vous actuellement ?", PAYS, { value: values.pays_naissance })
+        form.enumDrop("pays", "Dans quel pays habitez-vous actuellement ?", PAYS, { value: values.pays_naissance })
 
         if (values.pays == "FR")
-            form.enumDrop("departement", "Dans quel département ?", DEPARTEMENTS)
+            form.enumDrop("departement", "Dans quel département ?", DEPARTEMENTS)
 
-        form.enumRadio("situation", "Quelle est votre situation familiale ?", [
+        form.enumRadio("situation", "Quelle est votre situation familiale ?", [
             ["C", "Célibataire"],
             ["M", adapt("Marié", "e")],
             ["L", "En union libre"],
@@ -623,31 +623,32 @@ function run(form, values) {
     })
 
     form.part(() => {
-        form.number("grossesses", "Combien de grossesses avez-vous eu ?")
-        form.number("enfants", "Combien d'enfants avez-vous eu ?")
+        if (values.sexe == "F")
+            form.number("grossesses", "Combien de grossesses avez-vous eu ?")
+        form.number("enfants", "Combien d'enfants avez-vous eu ?")
     })
 
     form.part(() => {
-        form.binary("pec1", "Avez-vous, au cours du dernier mois consulté un médecin, pris un traitement médicamenteux ou suivi une psychothérapie en lien avec l’évènement que vous venez de vivre ?")
+        form.binary("pec1", "Avez-vous, au cours du dernier mois consulté un médecin, pris un traitement médicamenteux ou suivi une psychothérapie en lien avec l’évènement que vous venez de vivre ?")
 
-        form.multiCheck("atcd", "Avant l’évènement, aviez-vous été diagnostiqué par un professionnel de la santé comme souffrant :", [
-            [1, "D’un trouble de l’humeur ?"],
-            [2, "D’un trouble anxieux ?"],
-            [3, "D’un trouble alimentaire ?"],
-            [4, "D’un trouble d'addiction ?"]
+        form.multiCheck("atcd", "Avant l’évènement, aviez-vous été diagnostiqué par un professionnel de la santé comme souffrant :", [
+            [1, "D’un trouble de l’humeur ?"],
+            [2, "D’un trouble anxieux ?"],
+            [3, "D’un trouble alimentaire ?"],
+            [4, "D’un trouble d'addiction ?"]
         ])
 
         if (values.atcd != null)
-            form.binary("pec2", "Avez-vous consulté un médecin, pris un traitement médicamenteux ou suivi une psychothérapie pour un ou plusieurs des troubles cités ci-dessus ?")
+            form.binary("pec2", "Avez-vous consulté un médecin, pris un traitement médicamenteux ou suivi une psychothérapie pour un ou plusieurs des troubles cités ci-dessus ?")
     })
 
     form.part(() => {
-        form.binary("diplome", "Avez-vous un diplôme scolaire ?", {
+        form.binary("diplome", "Avez-vous un diplôme scolaire ?", {
             help: "Si ce n'est pas le cas, ce n'est pas un problème ! Cette question nous aide simplement à cerner qui vous êtes."
         })
 
         if (values.diplome == 1) {
-            form.enumRadio("diplome_max", "Quel est le plus haut diplôme que vous avez obtenu ?", [
+            form.enumRadio("diplome_max", "Quel est le plus haut diplôme que vous avez obtenu ?", [
                 [1, "Brevet des collèges"],
                 [2, "Baccalauréat"],
                 [3, "Licence"],
@@ -656,12 +657,12 @@ function run(form, values) {
                 [99, "Autre"]
             ])
             if (values.diplome_max == 99)
-                form.text("?diplome_prec", "Précisez :")
+                form.text("?diplome_prec", "Précisez :", { help: "Non obligatoire" })
         }
     })
 
     form.part(() => {
-        form.enumDrop("langue1", "Quelle est votre langue maternelle ?", LANGUAGES, {
+        form.enumDrop("langue1", "Quelle est votre langue maternelle ?", LANGUAGES, {
             help: "Vous pouvez en indiquer plusieurs, choisissez-en une et un champ supplémentaire s'affichera"
         })
 
@@ -670,14 +671,15 @@ function run(form, values) {
         while (values["langue" + idx] != null) {
             let first = (idx++ == 1)
 
-            form.enumDrop("?langue" + idx, first ? "Parlez vous d'autres langues (non obligatoire) ?" : null, LANGUAGES, {
-                disabled: values.langue1 == null
+            form.enumDrop("?langue" + idx, first ? "Parlez vous d'autres langues ?" : null, LANGUAGES, {
+                disabled: values.langue1 == null,
+                help: "Non obligatoire"
             })
         }
     })
 
     form.part(() => {
-        form.enumDrop("parents1", "Quelle est la principale langue parlée par vos parents ?", LANGUAGES, {
+        form.enumDrop("parents1", "Quelle est la principale langue parlée par vos parents ?", LANGUAGES, {
             help: "Vous pouvez en indiquer plusieurs, choisissez-en une et un champ supplémentaire s'affichera"
         })
 
@@ -686,16 +688,18 @@ function run(form, values) {
         while (values["parents" + idx] != null) {
             let first = (idx++ == 1)
 
-            form.enumDrop("?parents" + idx, first ? "Vos parents parlent-ils une ou plusieurs autres langues (non obligatoire) ?" : null, LANGUAGES, {
-                disabled: values.parents1 == null
+            form.enumDrop("?parents" + idx, first ? "Vos parents parlent-ils une ou plusieurs autres langues ?" : null, LANGUAGES, {
+                disabled: values.parents1 == null,
+                help: "Non obligatoire"
             })
         }
     })
 
     form.part(() => {
-        form.enumRadio("connaissance", "Comment avez-vous pris connaissance de l'étude ?", [
+        form.enumRadio("connaissance", "Comment avez-vous pris connaissance de l'étude ?", [
             ["reseaux", "Réseaux sociaux"],
             ["parle", "Bouche-à-oreille"],
+            ["fv", "Via France Victimes"],
             ["crp", "Via un centre régional de psychotraumatisme"],
             ["psy", "Par un professionel de santé (médecin, psychologue, etc.)"],
             ["cn2r", "Par le site web du CN2R"],
@@ -704,7 +708,7 @@ function run(form, values) {
             ["autre", "Autre"]
         ])
         if (values.connaissance == "autre")
-            form.text("?connaissance_prec", "Précisez :")
+            form.text("?connaissance_prec", "Précisez :", { help: "Non obligatoire" })
     })
 
     function adapt(label, suffix) {
@@ -718,7 +722,4 @@ function run(form, values) {
     }
 }
 
-export {
-    intro,
-    run
-}
+export default build

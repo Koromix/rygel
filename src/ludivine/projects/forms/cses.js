@@ -16,11 +16,11 @@
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 import { PERSON_KINDS } from '../../client/network/constants.js'
 
-let intro = html`
-    <p>Les personnes ayant vécu le genre d'événement comme celui qui vous a amené ici <b>différent considérablement dans leur façon d'en parler</b> aux autres. Nous aimerions savoir ce que vous avez divulgué à la <b>personne dont vous êtes le ou la plus proche</b> et à quelle fréquence (y compris si vous ne lui avez rien dit).
-`
+function build(form, values) {
+    form.intro = html`
+        <p>Les personnes ayant vécu le genre d'événement comme celui qui vous a amené ici <b>différent considérablement dans leur façon d'en parler</b> aux autres. Nous aimerions savoir ce que vous avez divulgué à la <b>personne dont vous êtes le ou la plus proche</b> et à quelle fréquence (y compris si vous ne lui avez rien dit).
+    `
 
-function run(form, values) {
     form.part(() => {
         q(1, "Je lui ai parlé de mon expérience")
         q(2, "Il y a des aspects de mon expérience que je lui ai volontairement cachés")
@@ -44,10 +44,10 @@ function run(form, values) {
     form.part(() => {
         let types = Object.keys(PERSON_KINDS).map(kind => [kind, PERSON_KINDS[kind].text])
 
-        form.enumRadio("sphere", "Dans quelle sphère de votre vie se situe la personne à laquelle vous pensez ?", types)
+        form.enumRadio("sphere", "Dans quelle sphère de votre vie se situe la personne à laquelle vous pensez ?", types)
 
         if (values.pshere == "other")
-            form.text("?sphere_pec", "Précisez (non obligatoire) :")
+            form.text("?sphere_pec", "Précisez :", { help: "Non obligatoire" })
     })
 
     function q(idx, label) {
@@ -63,7 +63,4 @@ function run(form, values) {
     }
 }
 
-export {
-    intro,
-    run
-}
+export default build

@@ -93,8 +93,8 @@ function ProjectBuilder(project) {
         }
     };
 
-    this.form = function(key, title, form, options = {}) {
-        test(key, title, 'form', { form: form }, options);
+    this.form = function(key, title, build, options = {}) {
+        test(key, title, 'form', { build: build }, options);
     };
 
     this.network = function(key, title, options = {}) {

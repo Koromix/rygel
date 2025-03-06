@@ -15,12 +15,12 @@
 
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
-let intro = html`
-    <p>Nous voulons en savoir plus sur les <b>pensées que vous pourriez avoir suite à une expérience très stressante</b>. Vous trouverez ci-dessous une liste d’énoncés qui peuvent être représentatifs ou non de ces pensées. Veuillez lire attentivement ces énoncés et indiquer votre niveau d’accord ou de désaccord avec chacun d’entre eux.
-    <p>Chaque personne réagit de façon différente à un événement très stressant. Il <b>n’y a pas de bonnes ou de mauvaises réponses</b> à ces énoncés.
-`
+function build(form, values) {
+    form.intro = html`
+        <p>Nous voulons en savoir plus sur les <b>pensées que vous pourriez avoir suite à une expérience très stressante</b>. Vous trouverez ci-dessous une liste d’énoncés qui peuvent être représentatifs ou non de ces pensées. Veuillez lire attentivement ces énoncés et indiquer votre niveau d’accord ou de désaccord avec chacun d’entre eux.
+        <p>Chaque personne réagit de façon différente à un événement très stressant. Il <b>n’y a pas de bonnes ou de mauvaises réponses</b> à ces énoncés.
+    `
 
-function run(form, values) {
     let choices = [
         [1, "Totalement en désaccord"],
         [2, "Fortement en désaccord"],
@@ -122,7 +122,4 @@ function run(form, values) {
     })
 }
 
-export {
-    intro,
-    run
-}
+export default build

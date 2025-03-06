@@ -16,25 +16,27 @@
 import { html } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { ASSETS } from '../assets/assets.js';
 
-import * as adnm20 from './forms/adnm20.js';
-import * as cses from './forms/cses.js';
-import * as ctqsf from './forms/ctqsf.js';
-import * as gad7 from './forms/gad7.js';
-import * as isi from './forms/isi.js';
-import * as isrc from './forms/isrc.js';
-import * as lec5 from './forms/lec5.js';
-import * as mhqol from './forms/mhqol.js';
-import * as pcl5 from './forms/pcl5.js';
-import * as pdeq from './forms/pdeq.js';
-import * as phq9 from './forms/phq9.js';
-import * as sociodemo from './forms/sociodemo.js';
-import * as ptci from './forms/ptci.js';
-import * as rds from './forms/rds.js';
-import * as sni from './forms/sni.js';
-import * as sps10 from './forms/sps10.js';
-import * as ssi from './forms/ssi.js';
-import * as ssq6 from './forms/ssq6.js';
-import * as substances from './forms/substances.js';
+import adnm20 from './forms/adnm20.js';
+import cses from './forms/cses.js';
+import ctqsf from './forms/ctqsf.js';
+import evenement from './forms/evenement.js';
+import gad7 from './forms/gad7.js';
+import isi from './forms/isi.js';
+import isrc from './forms/isrc.js';
+import lec5 from './forms/lec5.js';
+import mhqol from './forms/mhqol.js';
+import pcl5 from './forms/pcl5.js';
+import pdeq from './forms/pdeq.js';
+import phq9 from './forms/phq9.js';
+import positif from './forms/positif.js';
+import sociodemo from './forms/sociodemo.js';
+import ptci from './forms/ptci.js';
+import rds from './forms/rds.js';
+import sni from './forms/sni.js';
+import sps10 from './forms/sps10.js';
+import ssi from './forms/ssi.js';
+import ssq6 from './forms/ssq6.js';
+import substances from './forms/substances.js';
 
 const consent = html`
     <p>Dans cette étude, des questions vous seront posées sur votre <b>situation actuelle, vos relations avec vos proches</b> et la société, ainsi que sur votre bien-être psychologique. Il sera également demandé de fournir quelques informations sur l’évènement difficile que vous avez vécu.
@@ -61,7 +63,7 @@ function init(build, start) {
                 <img src=${ASSETS['pictures/help1']} alt="" />
                 <div>
                     <p>La première étape consiste à <b>vous présenter puis à faire un bilan initial</b>.
-                    <p>Vous pourrez ensuite continuer <b>selon le calendrier prévu</b>. À tout moment, vous pouvez arrêter l'étude ou la mettre en pause et y revenir plus tard. Vous avez également la possibilité de consulter les pages « Ressources » ou « Se détendre ».
+                    <p>Vous pourrez ensuite continuer <b>selon le calendrier prévu</b>. À tout moment, vous pouvez arrêter l'étude ou la mettre en pause et y revenir plus tard. Vous avez également la possibilité de consulter les pages « Ressources » ou « Se détendre ».
                     <p>Vous êtes libre de compléter les questionnaires dans l’ordre qui vous convient. Toutefois, nous vous recommandons de <b>suivre l’ordre proposé</b>. Les transitions ont été pensées avec soin par notre équipe de recherche de Lignes de Vie afin d’accompagner votre cheminement de la manière la plus confortable possible.
                     <p>Nous vous invitons à <b>répondre à toutes les questions</b>, même si vous n'êtes pas certain de votre réponse. Il n’y a pas de bonne ou de mauvaise réponse, et même incertaines, elles sont importantes. Dans Lignes de Vie, on se donne le droit à l’erreur, à la bêtise, à l’ignorance… Et pour les chercheurs aussi !
                     <p>Dès lors, si une question <b>ne correspond pas à votre vécu</b> ou si vous souhaitez ajouter un commentaire, validez la page sans y répondre et apposez votre commentaire dans le champ qui apparait.
@@ -110,15 +112,21 @@ function init(build, start) {
                         <img src=${ASSETS['pictures/help1']} alt="" />
                         <div>
                             <p>Dans ce module, nous vous poserons des questions sur l’<b>événement qui vous a conduit à participer à cette étude</b>, ainsi que sur tout autre événement, qu’il soit positif ou négatif, qui fait actuellement partie de votre réalité.
-                            <p>N'hésitez pas à interrompre l'application ou à cliquer sur le <b>bouton « SOS »</b> si cela s’avère nécessaire pour vous. Vous pouvez également arrêter à tout moment et revenir plus tard.
+                            <p>N'hésitez pas à interrompre l'application ou à cliquer sur le <b>bouton « SOS »</b> si cela s’avère nécessaire pour vous. Vous pouvez également arrêter à tout moment et revenir plus tard.
                         </div>
                     </div>
                 `
 
-                build.form('lec5', 'Situations stressantes', lec5, options)
-                build.form('isrc', 'Pensées et ressenti', isrc, options)
-                build.form('pdeq', 'Réactions pendant l\'évènement', pdeq, options)
-                build.form('adnm20', 'Autres évènements de vie', adnm20, options)
+                build.form('evenement', 'L’évènement qui vous a amené ici', evenement, options)
+                build.form('pensees', 'Pensées et ressentis', (form, values) => {
+                    pdeq(form, values)
+                    isrc(form, values)
+                }, options)
+                build.form('autres', 'Autres évènements de vie', (form, values) => {
+                    adnm20(form, values)
+                    lec5(form, values)
+                    positif(form, values)
+                }, options)
             });
 
             build.module('qualite', 'Qualité de vie', () => {

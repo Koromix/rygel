@@ -717,7 +717,7 @@ async function runDashboard() {
             <div class="box">
                 <div>
                     <div class="header">Bienvenue sur <b>${ENV.title}</b> !</div>
-                    <p>Retrouvez nos études ci-dessous, vous pouvez vous y <b>inscrire ou continuer</b> votre participation le cas échéant.
+                    <p>Vous pouvez vous y <b>inscrire ou continuer</b> votre participation aux études ci-dessous le cas échéant.
                     Une fois inscrit à une étude, nous vous conseillons d'ajouter les <b>échéances à votre agenda</b> à l'aide du bouton dédié afin de revenir sur l'application le moment venu.
                 </div>
             </div>

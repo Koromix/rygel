@@ -28,7 +28,7 @@ function FormModule(app, study, page) {
 
     let div = null;
 
-    let form = page.form;
+    let build = page.build;
     let part_idx = null;
 
     let ctx = null;
@@ -126,7 +126,7 @@ function FormModule(app, study, page) {
 
         let builder = new FormBuilder(ctx, model);
 
-        form.run(builder, ctx.values);
+        build(builder, ctx.values);
 
         let end = model.parts.length - 1;
         if (part_idx > end)
@@ -135,7 +135,7 @@ function FormModule(app, study, page) {
 
         render(html`
             <div class="box">
-                <div>${form.intro}</div>
+                <div>${part.intro}</div>
             </div>
 
             ${progressBar(part_idx, end, 'parts')}
@@ -143,7 +143,7 @@ function FormModule(app, study, page) {
             <div class="box">
                 <div class="header">Partie ${part_idx + 1}</div>
                 <form @submit=${UI.wrap(next)}>
-                    ${model.parts[part_idx].map(widget => widget.render())}
+                    ${part.widgets.map(widget => widget.render())}
                 </form>
             </div>
 
@@ -188,7 +188,7 @@ function FormModule(app, study, page) {
 
         let valid = true;
 
-        for (let widget of part) {
+        for (let widget of part.widgets) {
             if (widget.key == null)
                 continue;
 

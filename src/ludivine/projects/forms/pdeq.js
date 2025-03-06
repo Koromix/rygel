@@ -15,16 +15,31 @@
 
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
-let intro = html`
-    <p>Ce questionnaire est destiné à rechercher les <b>expériences de dissociation</b> que vous auriez pu ressentir pendant l'événement traumatique, et au cours des quelques heures suivantes.
-    <p>Veuillez répondre aux énoncés suivants en cochant le choix de réponse qui décrit le mieux vos expériences et réactions durant l’événement et immédiatement après. Si une question ne s’applique pas à votre expérience, <b>cochez « Pas du tout vrai »</b>.
-    <p>Pour répondre à ces questions, considérez uniquement le <b>moment de l'évènement et les premières heures</b> qui ont suivi !
-`
+function build(form, values) {
+    form.intro = html`
+        <p>Ce questionnaire est destiné à rechercher les <b>expériences de dissociation</b> que vous auriez pu ressentir pendant l'événement traumatique, et au cours des quelques heures suivantes.
+        <p>Veuillez répondre aux énoncés suivants en cochant le choix de réponse qui décrit le mieux vos expériences et réactions durant l’événement et immédiatement après. Si une question ne s’applique pas à votre expérience, <b>cochez « Pas du tout vrai »</b>.
+        <p>Pour répondre à ces questions, considérez uniquement le <b>moment de l'évènement et les premières heures</b> qui ont suivi !
+    `
 
-function run(form, values) {
     form.part(() => {
-        q(1, "Il y a eu des moments où j’ai perdu le fil de ce qui se passait – j’étais complètement déconnecté(e) ou, d’une certaine façon, j’avais l'impression de ne pas faire partie de ce qui se passait.")
-        q(2, "Je me suis senti(e) en « pilote automatique » – je me suis mis(e) à faire des choses que, je l’ai réalisé plus tard, je n’avais pas activement décidé de faire.")
+        form.output(html`
+            <p>Pour les questions suivantes, nous aimerions que vous gardiez en tête l’évènement (ou la situation traumatique) décrite <b>dans la partie « L’évènement qui vous a amené ici »</b>.
+        `)
+
+        form.binary("b1", "Avez-vous, au moment de l’évènement, ressenti un sentiment de peur intense ?")
+        form.binary("b2", "Avez-vous, au moment de l’évènement, ressenti un sentiment d’impuissance ?")
+        form.binary("b3", "Avez-vous, au moment de l’évènement, ressenti un sentiment de terreur ?")
+    })
+
+    form.part(() => {
+        form.output(html`
+            <p>Nous allons maintenant explorer les expériences de dissociation (moments où vous « sentiez détaché de vous-même »).
+            <p>Nous vous invitons à répondre aux énoncés suivants en sélectionnant la réponse qui <b>décrit le mieux vos expériences et réactions durant l’événement</b> et immédiatement après. Si une question ne s’applique pas à votre expérience, cochez  Pas du tout vrai ».
+        `)
+
+        q(1, "Il y a eu des moments où j’ai perdu le fil de ce qui se passait – j’étais complètement déconnecté(e) ou, d’une certaine façon, j’avais l'impression de ne pas faire partie de ce qui se passait :")
+        q(2, "Je me suis senti(e) en « pilote automatique » – je me suis mis(e) à faire des choses que, je l’ai réalisé plus tard, je n’avais pas activement décidé de faire :")
     })
 
     form.part(() => {
@@ -44,7 +59,7 @@ function run(form, values) {
 
     form.part(() => {
         q(9, "J’étais confus(e), j’avais par moment de la difficulté à comprendre ce qui se passait vraiment.")
-        q(10, "J’étais désorienté(e), j’étais par moment incertain(e) de l’endroit où je me trouvai.")
+        q(10, "J’étais désorienté(e), j’étais par moment incertain(e) de l’endroit où je me trouvais.")
     })
 
     function q(idx, label) {
@@ -58,7 +73,4 @@ function run(form, values) {
     }
 }
 
-export {
-    intro,
-    run
-}
+export default build

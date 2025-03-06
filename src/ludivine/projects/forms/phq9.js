@@ -15,11 +15,11 @@
 
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
-let intro = html`
-    <p>Au cours des <b>deux dernières semaines</b>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?
-`
+function build(form, values) {
+    form.intro = html`
+        <p>Au cours des <b>deux dernières semaines</b>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?
+    `
 
-function run(form, values) {
     let choices = [
         [0, "Jamais"],
         [1, "Plusieurs jours"],
@@ -61,7 +61,7 @@ function run(form, values) {
             return false
         }, false)
 
-        form.enumRadio("q10", "Dans quelle mesure ce(s) problème(s) a-t-il (ont-ils) rendu difficile(s) votre travail, vos tâches à la maison ou votre capacité à bien vous entendre avec les autres ?", [
+        form.enumRadio("q10", "Dans quelle mesure ce(s) problème(s) a-t-il (ont-ils) rendu difficile(s) votre travail, vos tâches à la maison ou votre capacité à bien vous entendre avec les autres ?", [
             [1, "Pas du tout difficile(s)"],
             [2, "Plutôt difficile(s)"],
             [3, "Très difficile(s)"],
@@ -70,7 +70,4 @@ function run(form, values) {
     })
 }
 
-export {
-    intro,
-    run
-}
+export default build

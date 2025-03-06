@@ -15,14 +15,14 @@
 
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
-let intro = html`
-    <p>Les informations recueuilles sur cette page nous aident et vous aident à identifier <b>le(s) évènement(s) possiblement traumatiques</b> survenus lorsque vous étiez plus jeune.
-    <p>Ces questions concernent donc votre expérience <b>pendant l'enfance et l'adolescence</b>. Essayez de répondre de la manière la plus honnête possible.
-`
+function build(form, values) {
+    form.intro = html`
+        <p>Les informations recueuilles sur cette page nous aident et vous aident à identifier <b>le(s) évènement(s) possiblement traumatiques</b> survenus lorsque vous étiez plus jeune.
+        <p>Ces questions concernent donc votre expérience <b>pendant l'enfance et l'adolescence</b>. Essayez de répondre de la manière la plus honnête possible.
+    `
 
-function run(form, values) {
     form.part(() => {
-        q(1, "Les membres de ma famille me traitaient de « stupide », « paresseux(se) » ou « laid(e) »")
+        q(1, "Les membres de ma famille me traitaient de « stupide », « paresseux(se) » ou « laid(e) »")
         q(2, "J’ai eu le sentiment que mes parents n’avaient pas désiré ma naissance")
         q(3, "Mes parents me disaient des choses blessantes et/ou insultantes")
         q(4, "Je sentais qu’il y avait un membre de ma famille qui me haïssait")
@@ -76,7 +76,4 @@ function run(form, values) {
     }
 }
 
-export {
-    intro,
-    run
-}
+export default build

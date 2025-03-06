@@ -16,41 +16,41 @@
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 import { PERSON_KINDS } from '../../client/network/constants.js'
 
-let intro = html`
-    <p>Nous cherchons dans un premier temps à avoir une représentation des <b>personnes de votre environnement</b> qui vous procurent de l’aide ou du soutien.
-    <p>Chaque question comporte 4 étapes :
-    <ol>
-        <li>Indiquez le nombre de personnes (de 0 à 9) sur qui vous pouvez compter
-        <li>Inscrivez le prénom ou le surnom de chaque personne
-        <li>Décrivez le type de relation que vous avez avec chaque personne
-        <li>Indiquez quel est votre degré de satisfaction par rapport au soutien obtenu
-    </ol>
-    <p>Si vous ne pensez à personne en particulier pour une question, indiquez « 0 », mais remplissez tout de même l’évaluation de satisfaction.
-`
+function build(form, values) {
+    form.intro = html`
+        <p>Nous cherchons dans un premier temps à avoir une représentation des <b>personnes de votre environnement</b> qui vous procurent de l’aide ou du soutien.
+        <p>Chaque question comporte 4 étapes :
+        <ol>
+            <li>Indiquez le nombre de personnes (de 0 à 9) sur qui vous pouvez compter
+            <li>Inscrivez le prénom ou le surnom de chaque personne
+            <li>Décrivez le type de relation que vous avez avec chaque personne
+            <li>Indiquez quel est votre degré de satisfaction par rapport au soutien obtenu
+        </ol>
+        <p>Si vous ne pensez à personne en particulier pour une question, indiquez « 0 », mais remplissez tout de même l’évaluation de satisfaction.
+    `
 
-function run(form, values) {
     form.part(() => {
-        q("q1", "Combien de personnes de votre entourage sont réellement disponibles quand vous avez besoin d’aide ?")
+        q("q1", "Combien de personnes de votre entourage sont réellement disponibles quand vous avez besoin d’aide ?")
     })
 
     form.part(() => {
-        q("q2", "Sur combien de personnes pouvez-vous réellement compter pour vous aider à vous sentir plus détendu(e) lorsque vous êtes sous pression ou crispé(e) ?")
+        q("q2", "Sur combien de personnes pouvez-vous réellement compter pour vous aider à vous sentir plus détendu(e) lorsque vous êtes sous pression ou crispé(e) ?")
     })
 
     form.part(() => {
-        q("q3", "Combien de personnes vous acceptent tel(le) que vous êtes, c’est-à-dire avec vos bons et vos mauvais côtés ?")
+        q("q3", "Combien de personnes vous acceptent tel(le) que vous êtes, c’est-à-dire avec vos bons et vos mauvais côtés ?")
     })
 
     form.part(() => {
-        q("q4", "Sur combien de personnes pouvez-vous réellement compter pour s’occuper de vous quoi qu’il arrive ?")
+        q("q4", "Sur combien de personnes pouvez-vous réellement compter pour s’occuper de vous quoi qu’il arrive ?")
     })
 
     form.part(() => {
-        q("q5", "Sur combien de personnes pouvez-vous réellement compter pour vous aider à vous sentir mieux quand il vous arrive de broyer du noir ?")
+        q("q5", "Sur combien de personnes pouvez-vous réellement compter pour vous aider à vous sentir mieux quand il vous arrive de broyer du noir ?")
     })
 
     form.part(() => {
-        q("q6", "Sur combien de personnes pouvez-vous réellement compter pour vous consoler quand vous êtes bouleversé(e) ?")
+        q("q6", "Sur combien de personnes pouvez-vous réellement compter pour vous consoler quand vous êtes bouleversé(e) ?")
     })
 
     function q(key, label) {
@@ -78,11 +78,8 @@ function run(form, values) {
             form.enumDrop(key + "c" + i, label, types)
         }
 
-        form.enumButtons(key + "d", "Quel est votre degré de satisfaction par rapport au soutien obtenu ?", choices)
+        form.enumButtons(key + "d", "Quel est votre degré de satisfaction par rapport au soutien obtenu ?", choices)
     }
 }
 
-export {
-    intro,
-    run
-}
+export default build

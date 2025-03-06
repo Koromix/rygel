@@ -15,20 +15,20 @@
 
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
-let intro = html`
-    <p>Ce questionnaire est destiné à <b>évaluer votre sommeil</b> selon deux axes : la qualité de votre sommeil et de vos nuits d'un part, et la satisfaction liée à votre sommeil d'autre part.
-    <p>Ces questions portent sur votre <b>sommeil actuel c'est à dire au cours des derniers mois</b> et non avant.
-`
+function build(form, values) {
+    form.intro = html`
+        <p>Ce questionnaire est destiné à <b>évaluer votre sommeil</b> selon deux axes : la qualité de votre sommeil et de vos nuits d'un part, et la satisfaction liée à votre sommeil d'autre part.
+        <p>Ces questions portent sur votre <b>sommeil actuel c'est à dire au cours des derniers mois</b> et non avant.
+    `
 
-function run(form, values) {
     form.part(() => {
         form.output(html`
             <p>Veuillez estimer la <b>sévérité actuelle (derniers mois)</b> de vos difficultés de sommeil :
         `)
 
-        q("diff1", "Difficultés à s'endormir :")
-        q("diff2", "Difficultés à rester endormi(e) :")
-        q("diff3", "Problèmes de réveil trop tôt le matin :")
+        q("diff1", "Difficultés à s'endormir :")
+        q("diff2", "Difficultés à rester endormi(e) :")
+        q("diff3", "Problèmes de réveil trop tôt le matin :")
     })
 
     form.part(() => {
@@ -38,7 +38,7 @@ function run(form, values) {
 
         q("satisf1", html`Jusqu'à quel point êtes-vous <b>SATISFAIT(E)</b> de votre sommeil actuel ?`)
         q("satisf2", html`Jusqu'à quel point considérez-vous que vos difficultés de sommeil <b>PERTURBENT</b> votre fonctionnement quotidien ?`, {
-            help: "Par exemple fatigue, concentration, mémoire, humeur ?"
+            help: "Par exemple fatigue, concentration, mémoire, humeur ?"
         })
         q("satisf3", html`À quel point considérez-vous que vos difficultés de sommeil sont <b>APPARENTES</b> pour les autres en termes de détérioration de la qualité de votre vie ?`)
         q("satisf4", html`Jusqu’à quel point êtes-vous <b>INQUIET(ÈTE)</b>/préoccupé(e) à propos de vos difficultés de sommeil ?`)
@@ -55,7 +55,4 @@ function run(form, values) {
     }
 }
 
-export {
-    intro,
-    run
-}
+export default build
