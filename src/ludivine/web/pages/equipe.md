@@ -5,7 +5,7 @@
     </div>
 </div>
 
-<h1>Structure porteuse</h1>
+# Structure porteuse
 
 <div class="columns">
     <img src="{{ ASSET ../assets/partners/cn2r.webp }}" style="flex: 3;" alt="" />
@@ -18,7 +18,7 @@
     </div>
 </div>
 
-<h1>Partenaires</h1>
+# Partenaires
 
 <div class="partners">
      <a href="https://www.france-victimes.fr/" target="_blank"><img src="{{ ASSET ../assets/partners/france_victimes.webp }}" alt="France Victimes" title="France Victimes" /></a>
@@ -30,7 +30,7 @@
      <a href="https://www.f2rsmpsy.fr/" target="_blank"><img src="{{ ASSET ../assets/partners/f2rsmpsy.webp }}" alt="F2RSM psy HdF" title="F2RSM psy Hauts-de-France" /></a>
 </div>
 
-<h1>Prestataires</h1>
+# Prestataires
 
 <div class="providers">
     <div>
