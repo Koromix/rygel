@@ -20,8 +20,24 @@ import { ASSETS } from './assets.js';
 import '../../web/flat/static.js';
 
 window.addEventListener('load', e => {
+    initPicture();
     initCards();
 });
+
+function initPicture() {
+    let menu = document.querySelector('#top > menu');
+
+    if (menu != null) {
+        let url = sessionStorage.getItem('picture') || null;
+        let anonymous = (url == null);
+
+        render(html`
+            <div style="flex: 1;"></div>
+            <a href="/profile"><img class=${'avatar' + (url == null ? ' anonymous' : '')}
+                                    src=${url ?? ASSETS['ui/anonymous']} /></a>
+        `, menu);
+    }
+}
 
 function initCards() {
     let cardsets = document.querySelectorAll('.cardset');
@@ -161,53 +177,6 @@ function randomCard(cards) {
     activateCard(cards, next);
 }
 
-function sos(e) {
-    dialog(e, 'help', close => html`
-        <img src=${ASSETS['ui/3114']} width="348" height="86" alt="">
-        <p>Le <b>3114</b> est le numéro national de prévention de suicide. Consultez le <a href="https://3114.fr/" target="_blank">site du 3114</a> pour plus d'informations.</p>
-
-        <img src=${ASSETS['ui/116006']} width="292" height="150" alt="">
-        <p>Le <b>116 006</b> est un numéro d’aide aux victimes géré par France Victimes. L'appel est gratuit 7j/7 24h/24. Consultez le <a href="https://www.france-victimes.fr/index.php/categories-inavem/105-actualites/824-116006-un-nouveau-numero-pour-l-aide-aux-victimes-enparlerpouravancer" target="_blank">site de France Victimes</a> pour plus d'informations.</p>
-
-        <img src=${ASSETS['ui/15']} width="237" height="114" alt="">
-        <p>Le <b>15</b> est le numéro du SAMU, disponible 7j/7 24h/24.</p>
-
-        <button type="button" class="secondary" @click=${close}>Fermer</button>
-    `);
-
-    if (e.target == e.currentTarget)
-        e.preventDefault();
-}
-
-function dialog(e, id, func) {
-    let dlg = document.getElementById(id);
-
-    if (dlg == null) {
-        dlg = document.createElement('dialog');
-        dlg.id = id ?? '';
-    }
-
-    let content = func(close);
-    render(html`<div @click=${stop}>${content}</div>`, dlg);
-
-    if (!dlg.open) {
-        document.body.appendChild(dlg);
-        dlg.show();
-    } else {
-        close();
-    }
-
-    function close() {
-        dlg.close();
-        dlg.parentNode.removeChild(dlg);
-    }
-
-    function stop(e) {
-        if (e.target != e.currentTarget && e.target.tagName == 'A')
-            e.stopPropagation();
-    }
-}
-
 function detectSwipe(el, func) {
     let identifier = null;
     let start = null;
@@ -278,8 +247,5 @@ export {
     render,
     html,
 
-    randomCard,
-
-    dialog,
-    sos
+    randomCard
 }

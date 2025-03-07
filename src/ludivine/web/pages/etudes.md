@@ -21,7 +21,7 @@
         <p>Nous vous invitons à <b>prendre connaissance de la lettre d’information</b> de l’étude SocioTrauma en cliquant sur le lien ci-dessous. Celle-ci répond aux exigences de la recherche sur la personne humaine et a pour objectif de répondre aux questions que vous pourriez vous poser avant de prendre la décision de participer à la recherche.
         <div class="actions">
             <a href="{{ ASSET ../assets/documents/SocioTrauma_Information.pdf }}" download>Télécharger la lettre d'information</a>
-            <a href="https://app.ldv-recherche.fr/study/sociotrauma">Participer à cette étude</a>
+            <a href="/participer/sociotrauma">Participer à cette étude</a>
         </div>
     </div>
 </div>

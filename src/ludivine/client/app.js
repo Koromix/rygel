@@ -28,7 +28,6 @@ import { PROJECTS } from '../projects/projects.js';
 import { ProjectInfo, ProjectBuilder } from './project.js';
 import { FormModule } from './form/form.js';
 import { NetworkModule } from './network/network.js';
-import { sos } from '../assets/ludivine.js';
 import { ASSETS } from '../assets/assets.js';
 
 import '../assets/client.css';
@@ -99,6 +98,7 @@ let route = {
 };
 let route_url = null;
 let poisoned = false;
+let has_run = false;
 
 let session = null;
 let db = null;
@@ -255,7 +255,7 @@ async function logout() {
     sessionStorage.removeItem('session');
 
     window.onbeforeunload = null;
-    window.location.href = ENV.urls.static;
+    window.location.href = '/';
 
     poisoned = true;
 }
@@ -274,9 +274,9 @@ async function go(url = null, push = true) {
         let mode = parts.shift();
 
         switch (mode) {
-            case 'profile': { route.mode = 'profile'; } break;
+            case 'profil': { route.mode = 'profile'; } break;
 
-            case 'study': {
+            case 'participer': {
                 route.mode = 'study';
 
                 let project = PROJECTS.find(project => project.key == parts[0]);
@@ -292,7 +292,7 @@ async function go(url = null, push = true) {
                 }
             } break;
 
-            case 'diary': {
+            case 'journal': {
                 route.mode = 'diary';
 
                 let entry = parseInt(parts[0], 10);
@@ -304,7 +304,16 @@ async function go(url = null, push = true) {
                 }
             } break;
 
-            default: { route.mode = 'profile'; } break;
+            default: {
+                if (has_run) {
+                    window.onbeforeunload = null;
+                    window.location.href = url.href;
+
+                    return;
+                }
+
+                route.mode = 'profile';
+            } break;
         }
     }
 
@@ -314,6 +323,9 @@ async function go(url = null, push = true) {
 async function run(push = true) {
     if (poisoned)
         return;
+
+    // We're running!
+    has_run = true;
 
     // Don't run stateful code while dialog is running to avoid concurrency issues
     if (UI.isDialogOpen()) {
@@ -338,6 +350,8 @@ async function run(push = true) {
 
             await db.exec('INSERT INTO meta (gender) VALUES (NULL)');
         }
+
+        sessionStorage.setItem('picture', identity.picture ?? '');
     }
 
     // List active studies
@@ -463,12 +477,12 @@ function makeURL(values = {}) {
 
     values = Object.assign({}, route, values);
 
-    path += route.mode;
-
     switch (route.mode) {
-        case 'profile': {} break;
+        case 'profile': { path += 'profil'; } break;
 
         case 'study': {
+            path += 'participer';
+
             if (route.project != null) {
                 path += '/' + route.project;
                 if (route.page != null)
@@ -479,6 +493,8 @@ function makeURL(values = {}) {
         } break;
 
         case 'diary': {
+            path += 'journal';
+
             if (route.entry != null)
                 path += '/' + route.entry;
         } break;
@@ -503,16 +519,25 @@ function renderApp(el, fullscreen) {
 
             <nav id="top">
                 <menu>
-                    <a id="logo" href=${ENV.urls.static}><img src=${ASSETS['main/logo']} alt="Logo Lignes de Vie" /></a>
-                    <li><a href=${ENV.urls.static} style="margin-left: 0em;">Accueil</a></li>
-                    <li><a href="/study" class="active" style="margin-left: 0em;">Participer</a></li>
-                    <li><a href=${ENV.urls.static + '/etudes'} style="margin-left: 0em;">Études</a></li>
-                    <li><a href=${ENV.urls.static + '/livres'} style="margin-left: 0em;">Ressources</a></li>
-                    <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Se détendre</a></li>
-                    <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
+                    <a id="logo" href="/"><img src=${ASSETS['main/logo']} alt=${'Logo ' + ENV.title} /></a>
+                    ${ENV.pages.map((page, idx) => {
+                        if (idx > 0 && ENV.pages[idx - 1].title == page.title)
+                            return '';
+
+                        let active = isPageActive(page.url);
+
+                        for (let i = idx + 1; i < ENV.pages.length; i++) {
+                            let next = ENV.pages[i];
+                            if (next.title != page.title)
+                                break;
+                            active ||= isPageActive(next.url);
+                        }
+
+                        return html`<li><a href=${page.url} class=${active ? 'active' : ''} style="margin-left: 0em;">${page.title}</a>`;
+                    })}
                     <div style="flex: 1;"></div>
-                    <a href="/profile"><img class=${'avatar' + (identity?.picture == null ? ' anonymous' : '')}
-                                            src=${identity?.picture ?? ASSETS['ui/anonymous']} alt="" /></a>
+                    <a href="/profil"><img class=${'avatar' + (identity?.picture == null ? ' anonymous' : '')}
+                                           src=${identity?.picture ?? ASSETS['ui/anonymous']} alt="" /></a>
                 </menu>
             </nav>
 
@@ -521,7 +546,7 @@ function renderApp(el, fullscreen) {
             <footer>
                 <div style="text-align: right; line-height: 1.2;">
                     Lignes de Vie © 2024<br>
-                    <a href=${ENV.urls.static + '/mentions'} style="font-size: 0.8em;">Mentions légales</a>
+                    <a href="/mentions" style="font-size: 0.8em;">Mentions légales</a>
                 </div>
                 <img src=${ASSETS['main/footer']} alt="" width="79" height="64">
                 <div style="font-size: 0.8em;">
@@ -532,6 +557,17 @@ function renderApp(el, fullscreen) {
             ${isLogged() ? html`<a id="sos" @click=${UI.wrap(e => sos(event))}></a>` : ''}
         `, root_el);
     }
+}
+
+function isPageActive(url) {
+    let path = window.location.pathname;
+
+    if (path == url)
+        return true;
+    if (path.startsWith(url + '/'))
+        return true;
+
+    return false;
 }
 
 async function initProject(project, study) {
@@ -634,8 +670,8 @@ async function runProfile() {
 
     UI.main(html`
         <div class="tabbar">
-            <a href="/profile" class="active">Profil</a>
-            <a href="/study">Tableau de bord</a>
+            <a href="/profil" class="active">Profil</a>
+            <a href="/participer">Tableau de bord</a>
         </div>
 
         <div class="tab">
@@ -662,7 +698,7 @@ async function runProfile() {
                         </div>
 
                         <div class="actions">
-                            <a href="/study">Accéder aux études</a>
+                            <a href="/participer">Accéder aux études</a>
                         </div>
                     </div>
 
@@ -691,7 +727,7 @@ async function runProfile() {
                             </div>
                         ` : ''}
                         <div class="actions">
-                            <a href="/diary">Ajouter une entrée</a>
+                            <a href="/journal">Ajouter une entrée</a>
                         </div>
                     </div>
                 </div>
@@ -713,8 +749,8 @@ async function runDashboard() {
 
     UI.main(html`
         <div class="tabbar">
-            <a href="/profile">Profil</a>
-            <a href="/study" class="active">Tableau de bord</a>
+            <a href="/profil">Profil</a>
+            <a href="/participer" class="active">Tableau de bord</a>
         </div>
 
         <div class="tab">
@@ -812,7 +848,7 @@ function addToCalendar(e, evt) {
 
         let description = html`
             Participation à <b>${ENV.title}</b> :
-            <a href="${ENV.urls.app}">Étude ${evt.title}</a>
+            <a href=${ENV.url}>Étude ${evt.title}</a>
         `;
 
         createEvent(provider.key, evt.schedule, title, description);
@@ -856,6 +892,7 @@ async function changePicture() {
             await db.exec('UPDATE meta SET picture = ?, avatar = ?', url, settings);
 
             identity.picture = url;
+            sessionStorage.setItem('picture', url ?? '');
         });
     } catch (err) {
         if (err != null)
@@ -1199,8 +1236,8 @@ async function runDiary() {
 
     UI.main(html`
         <div class="tabbar">
-            <a href="/profile">Profil</a>
-            <a href="/diary" class="active">Mon journal</a>
+            <a href="/profil">Profil</a>
+            <a href="/journal" class="active">Mon journal</a>
         </div>
 
         <div class="tab">
@@ -1399,6 +1436,54 @@ async function copyWithProgress(title, src, dest) {
         throw err;
     } finally {
         dialog.close();
+    }
+}
+
+// ------------------------------------------------------------------------
+// SOS
+// ------------------------------------------------------------------------
+
+function sos(e) {
+    let dlg = document.querySelector('#help');
+
+    if (dlg == null) {
+        dlg = document.createElement('dialog');
+        dlg.id = 'help';
+    }
+
+    render(html`
+        <div @click=${stop}>
+            <img src=${ASSETS['ui/3114']} width="348" height="86" alt="">
+            <p>Le <b>3114</b> est le numéro national de prévention de suicide. Consultez le <a href="https://3114.fr/" target="_blank">site du 3114</a> pour plus d'informations.</p>
+
+            <img src=${ASSETS['ui/116006']} width="292" height="150" alt="">
+            <p>Le <b>116 006</b> est un numéro d’aide aux victimes géré par France Victimes. L'appel est gratuit 7j/7 24h/24. Consultez le <a href="https://www.france-victimes.fr/index.php/categories-inavem/105-actualites/824-116006-un-nouveau-numero-pour-l-aide-aux-victimes-enparlerpouravancer" target="_blank">site de France Victimes</a> pour plus d'informations.</p>
+
+            <img src=${ASSETS['ui/15']} width="237" height="114" alt="">
+            <p>Le <b>15</b> est le numéro du SAMU, disponible 7j/7 24h/24.</p>
+
+            <button type="button" class="secondary" @click=${close}>Fermer</button>
+        </div>
+    `, dlg);
+
+    if (!dlg.open) {
+        document.body.appendChild(dlg);
+        dlg.show();
+    } else {
+        close();
+    }
+
+    if (e.target == e.currentTarget)
+        e.preventDefault();
+
+    function close() {
+        dlg.close();
+        dlg.parentNode.removeChild(dlg);
+    }
+
+    function stop(e) {
+        if (e.target != e.currentTarget && e.target.tagName == 'A')
+            e.stopPropagation();
     }
 }
 

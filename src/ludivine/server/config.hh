@@ -22,14 +22,20 @@
 namespace RG {
 
 struct Config {
-    const char *title = nullptr;
+    struct PageInfo {
+        const char *title;
+        const char *url;
+    };
 
-    const char *app_url = nullptr;
-    const char *static_url = nullptr;
+    const char *title = nullptr;
+    const char *url = nullptr;
+
+    HeapArray<PageInfo> pages;
 
     const char *database_filename = nullptr;
     const char *vault_directory = nullptr;
     const char *tmp_directory = nullptr;
+    const char *static_directory = nullptr;
     bool sync_full = false;
 
     http_Config http { 8890 };

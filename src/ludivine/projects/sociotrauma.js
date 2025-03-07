@@ -46,13 +46,13 @@ const consent = html`
     <p>Nous vous invitons à <b>prendre connaissance de la lettre d’information</b> de l’étude SocioTrauma. Celle-ci répond aux exigences de la recherche sur la personne humaine et a pour objectif de répondre aux questions que vous pourriez vous poser avant de prendre la décision de participer à la recherche.
 
     <div class="actions">
-        <a href=${ENV.urls.static + '/static/documents/SocioTrauma_Information.pdf'} download>Télécharger la lettre d'information</a>
+        <a href="/static/documents/SocioTrauma_Information.pdf" download>Télécharger la lettre d'information</a>
     </div>
 `;
 
 function init(build, start) {
     build.summary = html`
-        <p>Retrouvez des <a href=${ENV.urls.static + '/etudes#etude-1-sociotrauma'}>informations sur cette étude</a> sur le site officiel de Ligne de Vie.
+        <p>Retrouvez des <a href="/etudes#etude-1-sociotrauma">informations sur cette étude</a> sur le site officiel de Ligne de Vie.
         <p>Commencez par faire votre bilan initial. Vous pouvez <b>arrêter à tout moment</b> et recommencer plus tard !
     `;
 

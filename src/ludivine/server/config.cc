@@ -26,12 +26,8 @@ bool Config::Validate() const
         LogError("Missing main title");
         valid = false;
     }
-    if (!app_url || !app_url[0]) {
-        LogError("Missing app URL");
-        valid = false;
-    }
-    if (!static_url || !static_url[0]) {
-        LogError("Missing static URL");
+    if (!url || !url[0]) {
+        LogError("Missing public URL");
         valid = false;
     }
 
@@ -59,16 +55,20 @@ bool LoadConfig(StreamReader *st, Config *out_config)
             if (prop.section == "General") {
                 if (prop.key == "Title") {
                     config.title = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "AppURL") {
+                } else if (prop.key == "URL") {
                     Span<const char> url = TrimStrRight(prop.value, '/');
-                    config.app_url = DuplicateString(url, &config.str_alloc).ptr;
-                } else if (prop.key == "StaticURL") {
-                    Span<const char> url = TrimStrRight(prop.value, '/');
-                    config.static_url = DuplicateString(url, &config.str_alloc).ptr;
+                    config.url = DuplicateString(url, &config.str_alloc).ptr;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
                 }
+            } else if (prop.section == "Pages") {
+                Config::PageInfo page = {};
+
+                page.title = DuplicateString(prop.key, &config.str_alloc).ptr;
+                page.url = DuplicateString(prop.value, &config.str_alloc).ptr;
+
+                config.pages.Append(page);
             } else if (prop.section == "Data") {
                 if (prop.key == "DatabaseFile") {
                     config.database_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
@@ -76,6 +76,8 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     config.vault_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                 } else if (prop.key == "TempDirectory") {
                     config.tmp_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                } else if (prop.key == "StaticDirectory") {
+                    config.static_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                 } else if (prop.key == "SynchronousFull") {
                     valid &= ParseBool(prop.value, &config.sync_full);
                 } else {

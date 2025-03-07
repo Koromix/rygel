@@ -105,10 +105,15 @@ static void InitAssets()
 
             json.StartObject();
             json.Key("title"); json.String(config.title);
-            json.Key("urls"); json.StartObject();
-                json.Key("app"); json.String(config.app_url);
-                json.Key("static"); json.String(config.static_url);
-            json.EndObject();
+            json.Key("url"); json.String(config.url);
+            json.Key("pages"); json.StartArray();
+            for (const Config::PageInfo &page: config.pages) {
+                json.StartObject();
+                json.Key("title"); json.String(page.title);
+                json.Key("url"); json.String(page.url);
+                json.EndObject();
+            }
+            json.EndArray();
             json.EndObject();
         } else if (key == "JS") {
             writer->Write(js);
@@ -206,8 +211,36 @@ static void HandleRequest(http_IO *io)
         return;
     }
 
-    // Static asset?
-    if (!StartsWith(request.path, "/api/")) {
+    // External static asset?
+    if (config.static_directory) {
+        const char *filename = nullptr;
+
+        if (TestStr(request.path, "/")) {
+            filename = Fmt(io->Allocator(), "%1/index.html", config.static_directory).ptr;
+        } else {
+            filename = Fmt(io->Allocator(), "%1%2", config.static_directory, request.path).ptr;
+        }
+
+        bool exists = TestFile(filename);
+
+        if (!exists && !strchr(request.path + 1, '/') && !strchr(request.path + 1, '.')) {
+            filename = Fmt(io->Allocator(), "%1.html", filename).ptr;
+            exists = TestFile(filename);
+        }
+
+        if (exists) {
+            // XXX: Set cache rules!
+
+            Span<const char> extension = GetPathExtension(filename);
+            const char *mimetype = GetMimeType(extension);
+
+            io->SendFile(200, filename, mimetype);
+            return;
+        }
+    }
+
+    // Embedded static asset?
+    {
         const char *path = request.path;
         const char *ext = GetPathExtension(path).ptr;
 

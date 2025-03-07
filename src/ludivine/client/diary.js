@@ -184,7 +184,7 @@ function DiaryModule(app, id) {
 
     async function deleteEntry() {
         await db.exec('DELETE FROM diary WHERE id = ?', id);
-        await app.go('/profile');
+        await app.go('/profil');
     }
 }
 
