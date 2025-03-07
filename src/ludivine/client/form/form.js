@@ -18,11 +18,14 @@ import { Util, Log } from '../../../web/core/base.js';
 import { progressBar } from '../lib/util.js';
 import { FormContext, FormModel, FormBuilder } from './builder.js';
 import { annotate } from './data.js';
-import * as app from '../app.js';
 import * as UI from '../ui.js';
 import { ASSETS } from '../../assets/assets.js';
 
-function FormModule(db, study, page) {
+function FormModule(app, study, page) {
+    let self = this;
+
+    let db = app.db;
+
     let div = null;
 
     let form = page.form;

@@ -20,10 +20,10 @@ import { Hex, Base64 } from '../../web/core/mixer.js';
 import * as sqlite3 from '../../web/core/sqlite3.js';
 import { computeAge, dateToString, niceDate,
          progressBar, progressCircle } from './lib/util.js';
+import * as app from './app.js';
 import * as UI from './ui.js';
 import { SmallCalendar, EventProviders, createEvent } from './lib/calendar.js';
 import { PictureCropper } from './lib/picture.js';
-import { DiaryModule } from './diary.js';
 import { PROJECTS } from '../projects/projects.js';
 import { ProjectInfo, ProjectBuilder } from './project.js';
 import { FormModule } from './form/form.js';
@@ -83,6 +83,8 @@ Object.assign(T, {
     }
 });
 
+let DiaryModule = null;
+
 let route = {
     mode: null,
 
@@ -97,9 +99,11 @@ let route = {
 let route_url = null;
 let poisoned = false;
 
+let session = null;
 let db = null;
 let identity = null;
 
+let root_el = null;
 let calendar = null;
 
 let cache = {
@@ -120,7 +124,7 @@ let ctx = null;
 // ------------------------------------------------------------------------
 
 async function start() {
-    UI.init(run);
+    UI.init(run, renderApp);
 
     // Handle internal links
     Util.interceptLocalAnchors((e, href) => {
@@ -167,7 +171,6 @@ async function start() {
     }
 
     // Open existing session (if any)
-    let session;
     try {
         let json = sessionStorage.getItem('session');
         session = JSON.parse(json);
@@ -483,6 +486,50 @@ function makeURL(values = {}) {
     return path;
 }
 
+function renderApp(el, fullscreen) {
+    if (root_el == null) {
+        root_el = document.createElement('div');
+        root_el.id = 'root';
+
+        document.body.appendChild(root_el);
+    }
+
+    if (fullscreen) {
+        render(el, root_el);
+    } else {
+        render(html`
+            <div id="deploy"></div>
+
+            <nav id="top">
+                <menu>
+                    <a id="logo" href=${ENV.urls.static}><img src=${ASSETS['main/logo']} alt="Logo Lignes de Vie" /></a>
+                    <li><a href=${ENV.urls.static} style="margin-left: 0em;">Accueil</a></li>
+                    <li><a href="/study" class="active" style="margin-left: 0em;">Participer</a></li>
+                    <li><a href=${ENV.urls.static + '/etudes'} style="margin-left: 0em;">Études</a></li>
+                    <li><a href=${ENV.urls.static + '/livres'} style="margin-left: 0em;">Ressources</a></li>
+                    <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Se détendre</a></li>
+                    <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
+                    <div style="flex: 1;"></div>
+                    <a href="/profile"><img class=${'avatar' + (identity?.picture == null ? ' anonymous' : '')}
+                                            src=${identity?.picture ?? ASSETS['ui/anonymous']} alt="" /></a>
+                </menu>
+            </nav>
+
+            ${el}
+
+            <footer>
+                <div>Lignes de Vie © 2024</div>
+                <img src=${ASSETS['main/footer']} alt="" width="79" height="64">
+                <div style="font-size: 0.8em;">
+                    <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">contact@ldv-recherche.fr</a>
+                </div>
+            </footer>
+
+            ${isLogged() ? html`<a id="sos" @click=${UI.wrap(e => sos(event))}></a>` : ''}
+        `, root_el);
+    }
+}
+
 async function initProject(project, study) {
     if (typeof project.bundle == 'string')
         project.bundle = await import(project.bundle);
@@ -779,8 +826,7 @@ async function changePicture() {
 
     let cropper = new PictureCropper('Modifier mon avatar', 256);
 
-    let url = BUNDLES['notion.json'];
-    let notion = await Net.get(url);
+    let notion = await Net.get(BUNDLES['notion.json']);
 
     cropper.defaultURL = ASSETS['ui/user'];
     cropper.notionAssets = notion;
@@ -934,8 +980,8 @@ async function runProject() {
             };
 
             switch (page.type) {
-                case 'form': { ctx.mod = new FormModule(db, cache.study, page); } break;
-                case 'network': { ctx.mod = new NetworkModule(db, cache.study, page); } break;
+                case 'form': { ctx.mod = new FormModule(app, cache.study, page); } break;
+                case 'network': { ctx.mod = new NetworkModule(app, cache.study, page); } break;
             }
 
             await ctx.mod.start();
@@ -1124,13 +1170,23 @@ function computeProgress(page) {
 // ------------------------------------------------------------------------
 
 async function runDiary() {
+    if (DiaryModule == null) {
+        let js = await import(BUNDLES['diary.js']);
+
+        let css = await Net.fetch(BUNDLES['diary.css']).then(r => r.text());
+        let style = await (new CSSStyleSheet).replace(css);
+
+        DiaryModule = js.DiaryModule;
+        document.adoptedStyleSheets.push(style);
+    }
+
     if (UI.isFullscreen)
         UI.toggleFullscreen(false);
 
     if (ctx == null || ctx.entry != route.entry) {
         ctx = {
             entry: route.entry,
-            mod: new DiaryModule(db, route.entry)
+            mod: new DiaryModule(app, route.entry)
         };
 
         await ctx.mod.start();
@@ -1264,11 +1320,11 @@ async function openDatabase(filename, key) {
     return db;
 }
 
-async function exportDatabase() {
+async function exportDatabase(filename) {
     let name = (new Date).toLocaleDateString();
 
     let root = await navigator.storage.getDirectory();
-    let handle = await root.getFileHandle(DATABASE_FILENAME);
+    let handle = await root.getFileHandle(filename);
     let src = await handle.getFile();
 
     if (window.showSaveFilePicker != null) {
@@ -1341,18 +1397,9 @@ async function copyWithProgress(title, src, dest) {
     }
 }
 
-async function deleteDatabase() {
-    await db.close();
-
-    let root = await navigator.storage.getDirectory();
-    root.removeEntry(DATABASE_FILENAME);
-
-    window.onbeforeunload = null;
-    window.location.href = window.location.href;
-}
-
 export {
     identity,
+    db,
 
     start,
 

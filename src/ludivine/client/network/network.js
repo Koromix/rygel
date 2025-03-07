@@ -19,7 +19,6 @@ import { AppRunner } from '../../../web/core/runner.js';
 import * as UI from '../ui.js';
 import { ASSETS } from '../../assets/assets.js';
 import { NetworkWidget } from './widget.js';
-import * as app from '../app.js';
 
 import './network.css';
 
@@ -27,8 +26,10 @@ const DATA_VERSION = 1;
 const UNDO_HISTORY = 50;
 const EVENT_SIZE = 32;
 
-function NetworkModule(db, study, page) {
+function NetworkModule(app, study, page) {
     let self = this;
+
+    let db = app.db;
 
     // DOM nodes
     let wrapper = null;
@@ -197,7 +198,7 @@ function NetworkModule(db, study, page) {
         undo_actions = data.undo;
         redo_actions = data.redo;
 
-        widget = new NetworkWidget(self, world);
+        widget = new NetworkWidget(self, world, app.identity.picture);
         await widget.init();
     }
 

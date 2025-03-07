@@ -17,7 +17,6 @@ import { render, html, noChange, directive, Directive } from '../../../vendor/li
 import { Util, Log } from '../../web/core/base.js';
 import { sos } from '../assets/ludivine.js';
 import { ASSETS } from '../assets/assets.js';
-import * as app from './app.js';
 
 if (typeof T == 'undefined')
     T = {};
@@ -31,11 +30,11 @@ Object.assign(T, {
 });
 
 let run_func = () => {};
+let render_func = () => {};
 
 let log_entries = [];
 
-let root_el = null;
-let body_el = null;
+let main_el = null;
 let fullscreen = false;
 
 let init_dialogs = false;
@@ -50,7 +49,7 @@ let drag_restore = null;
 let table_orders = {};
 let table_filters = {};
 
-function init(run) {
+function init(run, render) {
     Log.pushHandler(notifyHandler);
 
     // Detect fullscreen exit
@@ -62,6 +61,7 @@ function init(run) {
     });
 
     run_func = run;
+    render_func = render;
 }
 
 function notifyHandler(action, entry) {
@@ -200,56 +200,22 @@ function confirm(action, func = null) {
 }
 
 function main(content = null) {
-    if (root_el == null) {
-        root_el = document.createElement('div');
-        root_el.id = 'root';
-        body_el = document.createElement('main');
-        body_el.className = 'primary';
-
-        document.body.appendChild(root_el);
+    if (main_el == null) {
+        main_el = document.createElement('main');
+        main_el.className = 'primary';
     }
 
-    let el = dialogs.length ? dialogs[dialogs.length - 1].el : body_el;
-
-    if (fullscreen) {
-        render(el, root_el);
+    if (dialogs.length) {
+        let el = dialogs[dialogs.length - 1].el;
+        render_func(el, fullscreen);
     } else {
-        render(html`
-            <div id="deploy"></div>
+        render_func(main_el, fullscreen);
 
-            <nav id="top">
-                <menu>
-                    <a id="logo" href=${ENV.urls.static}><img src=${ASSETS['main/logo']} alt="Logo Lignes de Vie" /></a>
-                    <li><a href=${ENV.urls.static} style="margin-left: 0em;">Accueil</a></li>
-                    <li><a href="/study" class="active" style="margin-left: 0em;">Participer</a></li>
-                    <li><a href=${ENV.urls.static + '/etudes'} style="margin-left: 0em;">Études</a></li>
-                    <li><a href=${ENV.urls.static + '/livres'} style="margin-left: 0em;">Ressources</a></li>
-                    <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Se détendre</a></li>
-                    <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
-                    <div style="flex: 1;"></div>
-                    <a href="/profile"><img class=${'avatar' + (app.identity?.picture == null ? ' anonymous' : '')}
-                                            src=${app.identity?.picture ?? ASSETS['ui/anonymous']} alt="" /></a>
-                </menu>
-            </nav>
-
-            ${el}
-
-            <footer>
-                <div>Lignes de Vie © 2024</div>
-                <img src=${ASSETS['main/footer']} alt="" width="79" height="64">
-                <div style="font-size: 0.8em;">
-                    <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">contact@ldv-recherche.fr</a>
-                </div>
-            </footer>
-
-            ${app.isLogged() ? html`<a id="sos" @click=${wrap(e => sos(event))}></a>` : ''}
-        `, root_el);
+        main_el.classList.toggle('fullscreen', fullscreen);
     }
-
-    body_el.classList.toggle('fullscreen', fullscreen);
 
     if (content != null)
-        render(content, body_el);
+        render(content, main_el);
 }
 
 async function toggleFullscreen(enable = null) {
@@ -262,7 +228,6 @@ async function toggleFullscreen(enable = null) {
         if (fullscreen) {
             document.body.requestFullscreen();
         } else {
-            render('', root_el);
             document.exitFullscreen();
         }
     } catch (err) {

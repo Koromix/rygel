@@ -19,7 +19,6 @@ import { loadTexture } from '../lib/util.js';
 import * as UI from '../ui.js';
 import { PROXIMITY_LEVELS, PERSON_KINDS, QUALITY_COLORS } from './constants.js';
 import { ASSETS } from '../../assets/assets.js';
-import * as app from '../app.js';
 
 const PERSON_RADIUS = 0.05;
 const LINK_RADIUS = 0.025;
@@ -32,7 +31,7 @@ const DEFAULT_LINK = 0;
 
 const ORIGIN = { x: 0, y: 0 };
 
-function NetworkWidget(mod, world) {
+function NetworkWidget(mod, world, picture) {
     let self = this;
 
     // Data
@@ -73,8 +72,8 @@ function NetworkWidget(mod, world) {
     let last_link = { quality: DEFAULT_LINK };
 
     this.init = async function() {
-        if (app.identity.picture != null)
-            textures.self = await loadTexture(app.identity.picture);
+        if (picture != null)
+            textures.self = await loadTexture(picture);
 
         let promises = Object.keys(PERSON_KINDS).map(async kind => {
             let info = PERSON_KINDS[kind];

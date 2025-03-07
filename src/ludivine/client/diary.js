@@ -15,7 +15,6 @@
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, LocalDate } from '../../web/core/base.js';
-import * as app from './app.js';
 import * as UI from './ui.js';
 import { ASSETS } from '../assets/assets.js';
 import { ClassicEditor, AutoLink, Bold, Code, Essentials, FontBackgroundColor,
@@ -24,8 +23,10 @@ import { ClassicEditor, AutoLink, Bold, Code, Essentials, FontBackgroundColor,
 
 import '../../../vendor/ckeditor5/ckeditor5.bundle.css';
 
-function DiaryModule(db, id) {
+function DiaryModule(app, id) {
     let self = this;
+
+    let db = app.db;
 
     let data = null;
 
