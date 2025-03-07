@@ -244,7 +244,7 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
 
             // Boundary strings
             LocalArray<Span<const char>, RG_LEN(ranges.data) * 2> boundaries;
-            Size total_len = 0;
+            int64_t total_len = 0;
             {
                 const char *mimetype = GetMimeType(GetPathExtension(filename), nullptr);
 
@@ -479,7 +479,7 @@ void HandleFilePut(http_IO *io, InstanceHolder *instance)
                                                                     : CompressionType::None;
 
     // Read and compress request body
-    Size total_len = 0;
+    int64_t total_len = 0;
     char sha256[65];
     {
         StreamWriter writer(fd, "<temp>", 0, compression_type);
