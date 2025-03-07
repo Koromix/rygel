@@ -130,16 +130,16 @@ function FormBuilder(ctx, model) {
         return self.enumButtons(key, label, props, options);
     }
 
-    this.enum = function(key, label, options = {}) {
+    this.enum = function(key, label, props, options = {}) {
         options = expandOptions(options, {
             enum: 'buttons'
         });
         key = expandKey(key, options);
 
         switch (options.enum) {
-            case 'buttons': return self.enumButtons(key, label, options);
-            case 'radio': return self.enumRadio(key, label, options);
-            case 'drop': return self.enumDrop(key, label, options);
+            case 'buttons': return self.enumButtons(key, label, props, options);
+            case 'radio': return self.enumRadio(key, label, props, options);
+            case 'drop': return self.enumDrop(key, label, props, options);
             default: throw new Error(`Invalid enum layout '${options.enum}'`);
         }
     };
@@ -236,14 +236,14 @@ function FormBuilder(ctx, model) {
         return widget;
     };
 
-    this.multi = function(key, label, options = {}) {
+    this.multi = function(key, label, props, options = {}) {
         options = expandOptions(options, {
             multi: 'check'
         });
 
         switch (options.multi) {
-            case 'buttons': return self.multiButtons(key, label, options);
-            case 'check': return self.multiCheck(key, label, options);
+            case 'buttons': return self.multiButtons(key, label, props, options);
+            case 'check': return self.multiCheck(key, label, props, options);
             default: throw new Error(`Invalid multi layout '${options.multi}'`);
         }
     };
