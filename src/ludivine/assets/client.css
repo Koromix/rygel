@@ -507,7 +507,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 .parts > span { display: none; }
 
 form {
-    & :is(label, .widget) {
+    & :is(label:not([for]), .widget) {
         display: flex;
         flex-direction: column;
         gap: 0.6em;
