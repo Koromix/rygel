@@ -1096,6 +1096,7 @@ function renderModule() {
                             cls += ' draft';
                     } else {
                         status = 'À compléter';
+                        cls += ' draft';
                     }
 
                     return html`
