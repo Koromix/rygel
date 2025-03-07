@@ -634,7 +634,7 @@ form {
 
     & .number {
         display: flex;
-        gap: px;
+        gap: 6px;
         align-items: center;
 
         & > span { font-size: 0.8em; }
