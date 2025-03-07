@@ -178,6 +178,10 @@ static void HandleRequest(http_IO *io)
         }
     }
 
+    // CSRF protection
+    if (request.method != http_RequestMethod::Get && !http_PreventCSRF(io))
+        return;
+
     // Send these headers whenever possible
     io->AddHeader("Referrer-Policy", "no-referrer");
     io->AddHeader("Cross-Origin-Opener-Policy", "same-origin");
@@ -187,9 +191,9 @@ static void HandleRequest(http_IO *io)
 
     // API endpoint?
     if (StartsWith(request.path, "/api/")) {
-        if (TestStr(request.path, "/api/register")) {
+        if (TestStr(request.path, "/api/register") && request.method == http_RequestMethod::Post) {
             HandleUserRegister(io);
-        } else if (TestStr(request.path, "/api/login")) {
+        } else if (TestStr(request.path, "/api/login") && request.method == http_RequestMethod::Post) {
             HandleUserLogin(io);
         } else {
             io->SendError(404);
