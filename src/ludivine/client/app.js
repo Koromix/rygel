@@ -353,7 +353,7 @@ async function run(push = true) {
         cache.events = await db.fetchAll(`SELECT s.key AS title, t.schedule, COUNT(t.id) AS count
                                           FROM tests t
                                           INNER JOIN studies s ON (s.id = t.study)
-                                          WHERE t.schedule >= ? AND t.status <> 'done'
+                                          WHERE t.visible = 1 AND t.schedule >= ? AND t.status <> 'done'
                                           GROUP BY t.schedule, t.study
                                           ORDER BY t.schedule, t.id`, start.toString());
 
@@ -965,7 +965,7 @@ async function runProject() {
     cache.tests = await db.fetchAll(`SELECT t.id, t.key, t.status
                                      FROM tests t
                                      INNER JOIN studies s ON (s.id = t.study)
-                                     WHERE s.id = ?`, cache.study.id);
+                                     WHERE s.id = ? AND t.visible = 1`, cache.study.id);
 
     // Prepare page data context
     if (cache.page.type != 'module') {
