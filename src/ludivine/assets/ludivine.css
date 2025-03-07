@@ -40,7 +40,6 @@ h1 {
     color: var(--top_color);
     border-bottom: 1px solid color-mix(in srgb, var(--top_color), transparent 60%);
 }
-h1:not(:first-of-type) { margin-top: 2em; }
 
 span[title] { border-bottom: 1px dotted #383838; }
 
