@@ -518,7 +518,10 @@ function renderApp(el, fullscreen) {
             ${el}
 
             <footer>
-                <div>Lignes de Vie © 2024</div>
+                <div style="text-align: right; line-height: 1.2;">
+                    Lignes de Vie © 2024<br>
+                    <a href=${ENV.urls.static + '/mentions'} style="font-size: 0.8em;">Mentions légales</a>
+                </div>
                 <img src=${ASSETS['main/footer']} alt="" width="79" height="64">
                 <div style="font-size: 0.8em;">
                     <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">contact@ldv-recherche.fr</a>
