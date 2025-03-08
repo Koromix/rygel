@@ -244,7 +244,7 @@ static void HandleRequest(http_IO *io)
         const char *path = request.path;
         const char *ext = GetPathExtension(path).ptr;
 
-        if (!ext[0]) {
+        if (!ext[0] || TestStr(ext, ".html")) {
             path = "/";
         }
 
