@@ -121,9 +121,9 @@ function PictureCropper(title, size) {
 
                 return html`
                     <div class="tabbar">
+                        <a class=${current_mode == 'custom' ? 'active' : ''} @click=${UI.wrap(e => switchMode('custom'))}>Image personnalisée</a>
                         ${notion_assets != null ?
                             html`<a class=${current_mode == 'notion' ? 'active' : ''} @click=${UI.wrap(e => switchMode('notion'))}>Avatar virtuel</a>` : ''}
-                        <a class=${current_mode == 'custom' ? 'active' : ''} @click=${UI.wrap(e => switchMode('custom'))}>Image personnalisée</a>
                     </div>
 
                     <div class="tab">
@@ -271,7 +271,7 @@ function PictureCropper(title, size) {
                 custom_img = null;
 
                 if (current_mode == null)
-                    current_mode = 'notion';
+                    current_mode = 'custom';
             }
 
             is_default = (obj == null);
