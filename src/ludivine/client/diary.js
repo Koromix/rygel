@@ -144,7 +144,7 @@ function DiaryModule(app) {
                 </form>
 
                 <div class="actions">
-                    <button type="button" @click=${UI.wrap(e => app.go('/profil'))}>Retourner au profil</button>
+                    <button type="button" @click=${UI.wrap(exit)}>Retourner au profil</button>
                 </div>
             </div>
         `, div);
@@ -197,6 +197,15 @@ function DiaryModule(app) {
 
         if (entry == route.entry)
             await app.go('/profil');
+    }
+
+    async function exit() {
+        if (save_timer != null) {
+            clearTimeout(save_timer);
+            await save();
+        }
+
+        await app.go('/profil');
     }
 }
 
