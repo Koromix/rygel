@@ -100,6 +100,8 @@ static void InitAssets()
             writer->Write(FelixVersion);
         } else if (key == "COMPILER") {
             writer->Write(FelixCompiler);
+        } else if (key == "TITLE") {
+            writer->Write(config.title);
         } else if (key == "ENV") {
             json_Writer json(writer);
 

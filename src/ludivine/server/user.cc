@@ -27,13 +27,13 @@ static const smtp_MailContent NewUser = {
     "Connexion à {{ TITLE }} !",
     R"(Bienvenue !
 
-Nous vous remercions de votre intérêt pour les recherches de Lignes de Vie.
+Nous vous remercions de votre intérêt pour les recherches de {{ TITLE }}.
 
 Attention, ce **mail est important** ! Il est l’**unique moyen de connexion** à votre espace personnel durant toute la durée des études.
 
 Conservez-le **précieusement, ou même mieux, enregistrez la pièce jointe** sur votre ordinateur/téléphone/tablette. Celle-ci contient une copie du lien nécessaire à la connexion.
 
-Nous vous invitons à utiliser le lien suivant afin de commencer votre aventure Lignes de Vie :
+Nous vous invitons à utiliser le lien suivant afin de commencer votre aventure {{ TITLE }} :
 
 {{ URL }}
 
@@ -41,14 +41,14 @@ Nous utilisons un système de chiffrement end-to-end pour assurer la sécurité 
 
 Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.
 
-L’équipe de Lignes de Vie
+L’équipe de {{ TITLE }}
 contact@ldv-recherche.fr)",
     R"(<html><body>
 <p>Bienvenue !</p>
-<p>Nous vous remercions de votre intérêt pour les recherches de Lignes de Vie.</p>
+<p>Nous vous remercions de votre intérêt pour les recherches de {{ TITLE }}.</p>
 <p><b>Attention, ce <b>mail est important</b> ! Il est l’unique moyen de connexion à votre espace personnel durant toute la durée des études.</b></p>
 <p><b>Conservez-le précieusement, ou même mieux, enregistrez la pièce jointe sur votre ordinateur/téléphone/tablette. Celle-ci contient une copie du lien nécessaire à la connexion.</b></p>
-<p>Nous vous invitons à cliquer sur le lien suivant afin de commencer votre aventure Lignes de Vie.</p>
+<p>Nous vous invitons à cliquer sur le lien suivant afin de commencer votre aventure {{ TITLE }}.</p>
 <div align="center"><br>
     <a style="padding: 0.35em 2em 0.45em 2em; background: #2d8261; border-radius: 30px;
               font-weight: bold; text-decoration: none !important; color: white;" href="{{ URL }}">Lien de connexion</a>
@@ -57,7 +57,7 @@ contact@ldv-recherche.fr)",
 <p>{{ URL }}</p>
 <p>Nous utilisons un système de chiffrement end-to-end pour assurer la sécurité et l’anonymat de vos données. Nous ne serons donc <b>pas en mesure de vous renvoyer un nouveau lien de connexion</b> en cas de perte de celui-ci.</p>
 <p>Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.</p>
-<p><i>L’équipe de Lignes de Vie</i><br>
+<p><i>L’équipe de {{ TITLE }}</i><br>
 <a href="mailto:contact@ldv-recherche.fr">contact@ldv-recherche.fr</a></p>
 </body></html>)"
 };

@@ -551,7 +551,7 @@ function renderApp(el, fullscreen) {
 
             <footer>
                 <div style="text-align: right; line-height: 1.2;">
-                    Lignes de Vie © 2024<br>
+                    ${ENV.title} © 2024<br>
                     <a href="/mentions" style="font-size: 0.8em;">Mentions légales</a>
                 </div>
                 <img src=${ASSETS['main/footer']} alt="" width="79" height="64">
