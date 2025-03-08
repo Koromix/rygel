@@ -1221,9 +1221,6 @@ async function openDatabase(filename, key) {
     let db = await sqlite3.open(filename, 'multipleciphers-opfs');
 
     let sql = `
-        PRAGMA page_size = 4096;
-        PRAGMA cache_size = -8192;
-
         PRAGMA cipher = 'sqlcipher';
         PRAGMA key = "x'${Hex.toHex(key)}'";
     `;
