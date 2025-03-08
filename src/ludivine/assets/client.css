@@ -216,7 +216,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     padding: 1em;
     gap: 1em;
     background: var(--box_color);
-    border-radius: 16px;
+    border-radius: 8px;
 }
 
 .help {
@@ -237,7 +237,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     margin: 75px 0 0 -250px;
     padding: 1em 1em 1em 150px;
     background: white;
-    border-radius: 16px;
+    border-radius: 8px;
 }
 .help.right > div {
     margin: 75px -250px 0 0;
@@ -293,7 +293,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 .diary {
     display: flex;
     background: #f6d4c3;
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 0.5em;
     gap: 0.8em;
     align-items: center;
@@ -321,7 +321,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     display: flex;
     box-sizing: border-box;
     background: color-mix(in srgb, var(--color), transparent 60%);
-    border-radius: 16px;
+    border-radius: 8px;
     padding: 0.5em 1em;
     gap: 2em;
     align-items: center;
@@ -369,7 +369,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 .event {
     display: flex;
     background: #f6d4c3;
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 0.5em;
     gap: 0.8em;
     align-items: center;
@@ -405,7 +405,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     display: flex;
     height: 140px;
     background: var(--box_color);
-    border-radius: 16px;
+    border-radius: 8px;
     gap: 1.5em;
 
     &.draft > .circle { --fill: var(--draft_color); }
@@ -457,7 +457,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     align-items: center;
     justify-content: center;
     background: color-mix(in srgb, var(--color), transparent 60%);
-    border-radius: 12px;
+    border-radius: 8px;
     cursor: pointer;
 
     &.draft { --color: #d9bf69; }
@@ -522,7 +522,7 @@ form {
         padding: 1em;
         background: #ff660022;
         border: 2px dashed #ff6600;
-        border-radius: 12px;
+        border-radius: 8px;
     }
     & .widget.annotate > label:first-of-type {
         display: inline;
@@ -655,7 +655,7 @@ form {
     }
     & .enum > button {
         padding: 0.2em 1.4em 0.35em 1.4em;
-        border-radius: 12px;
+        border-radius: 8px;
         background: white;
         color: var(--top_color);
     }
