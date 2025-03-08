@@ -45,7 +45,7 @@ function build(form, values) {
             form.slider("?q3", "Quantifiez l'effet de ces domains sur votre vie :", {
                 min: 0, max: 10,
                 prefix: "Assez positif", suffix: "Intensément positif",
-                help: "Non obligatoire"
+                help: "Placez le curseur sur la barre avec la souris ou votre doigt (non obligatoire)"
             })
         }
     })

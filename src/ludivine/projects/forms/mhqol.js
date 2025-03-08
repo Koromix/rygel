@@ -88,7 +88,8 @@ function build(form, values) {
     form.part(() => {
         form.slider("q8", "Comment vous évaluez votre bien-être psychologique ?", {
             min: 0, max: 10,
-            prefix: "Pire bien-être psychologique imaginable", suffix: "Meilleur bien-être psychologique imaginable"
+            prefix: "Pire bien-être psychologique imaginable", suffix: "Meilleur bien-être psychologique imaginable",
+            help: "Placez le curseur sur la barre avec la souris ou votre doigt"
         })
     })
 }

@@ -49,7 +49,8 @@ function build(form, values) {
         if (values.negatif == 1) {
             form.slider("impact", "Comment estimez-vous l’impact que ces réactions négatives ont eu sur vous ?", {
                 min: 0, max: 10,
-                prefix: "Aucun impact", suffix: "Impact maximum"
+                prefix: "Aucun impact", suffix: "Impact maximum",
+                help: "Placez le curseur sur la barre avec la souris ou votre doigt"
             })
         }
     })
@@ -90,7 +91,8 @@ function build(form, values) {
         if (values.inter1a == 1) {
             form.slider("inter1b", "Comment avez-vous perçu vos interactions avec le personnel médical ?", {
                 min: -10, max: 10,
-                prefix: '🙁', suffix: '🙂'
+                prefix: "🙁", suffix: "🙂",
+                help: "Placez le curseur sur la barre avec la souris ou votre doigt"
             })
         }
 
@@ -98,7 +100,8 @@ function build(form, values) {
         if (values.inter2a == 1) {
             form.slider("inter2b", "Comment avez-vous perçu vos interactions avec le personnel judiciaire ?", {
                 min: -10, max: 10,
-                prefix: '🙁', suffix: '🙂'
+                prefix: "🙁", suffix: "🙂",
+                help: "Placez le curseur sur la barre avec la souris ou votre doigt"
             })
         }
 
@@ -106,7 +109,8 @@ function build(form, values) {
         if (values.inter3a == 1) {
             form.slider("inter3b", "Comment avez-vous perçu vos interactions avec le personnel d'aide psychologique ?", {
                 min: -10, max: 10,
-                prefix: '🙁', suffix: '🙂'
+                prefix: "🙁", suffix: "🙂",
+                help: "Placez le curseur sur la barre avec la souris ou votre doigt"
             })
         }
     })
