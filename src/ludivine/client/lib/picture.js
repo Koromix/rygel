@@ -153,7 +153,7 @@ function PictureCropper(title, size) {
         drawPreview(size);
 
         return html`
-            <div class="not_dialog">
+            <div class="row">
                 <div class="box" style="gap: 0;">
                     <div class="header">Avatar</div>
                     <div class="pic_preview" style=${`--size: ${size}px`}>${preview}</div>

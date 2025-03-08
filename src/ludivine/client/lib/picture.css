@@ -46,15 +46,10 @@
     filter: opacity(0.75);
 }
 
-.not_dialog {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-}
-
 .not_tabbar {
     display: flex;
     max-height: 504px;
+    margin-left: -1em;
     flex-direction: column;
     gap: 4px;
 }
