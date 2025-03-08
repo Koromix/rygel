@@ -256,6 +256,7 @@ async function logout() {
     db = null;
 
     sessionStorage.removeItem('session');
+    sessionStorage.removeItem('picture');
 
     window.onbeforeunload = null;
     window.location.href = '/';
