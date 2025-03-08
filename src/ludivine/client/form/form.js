@@ -138,11 +138,9 @@ function FormModule(app, study, page) {
         let part = model.parts[part_idx];
 
         render(html`
-            <div class="box">
-                <div>${part.intro}</div>
-            </div>
-
             ${progressBar(part_idx, end, 'parts')}
+
+            ${part.intro}
 
             <div class="box">
                 <div class="header">Partie ${part_idx + 1}</div>

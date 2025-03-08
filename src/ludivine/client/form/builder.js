@@ -67,7 +67,7 @@ function FormBuilder(ctx, model) {
 
         try {
             part = {
-                intro: intro,
+                intro: makeIntro(intro),
                 widgets: []
             };
 
@@ -427,15 +427,44 @@ function FormBuilder(ctx, model) {
         refresh();
     };
 
+    function makeIntro(intro) {
+        if (!intro)
+            return '';
+
+        if (intro_idx % 2) {
+            return html`
+                <div class="box">
+                    <div class="row">
+                        <img style="width: 100px; align-self: center;" src=${ASSETS['pictures/help1']} alt="" />
+                        <div style="margin-left: 1em;">${intro}</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            return html`
+                <div class="box">
+                    <div class="row">
+                        <div style="margin-right: 1em;">${intro}</div>
+                        <img style="width: 100px; align-self: center;" src=${ASSETS['pictures/help2']} alt="" />
+                    </div>
+                </div>
+            `;
+        }
+    }
+
     function makeWidget(type, func) {
         let widget = {
             type: type,
             render: func
         };
 
-        if (part == null)
-            self.part(() => {});
-        part.widgets.push(widget);
+        if (part != null) {
+            part.widgets.push(widget);
+        } else {
+            self.part(() => {
+                part.widgets.push(widget);
+            });
+        }
 
         widgets.push(widget);
 
