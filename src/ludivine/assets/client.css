@@ -249,10 +249,11 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 .box > .help { margin: 1em auto; }
 
 .header {
+    display: flex;
     font-size: 1.2em;
     font-weight: bold;
     text-transform: uppercase;
-    text-align: center;
+    justify-content: center;
     color: var(--top_color);
 }
 .safe {

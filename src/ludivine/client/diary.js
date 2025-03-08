@@ -23,86 +23,92 @@ import { ClassicEditor, AutoLink, Bold, Code, Essentials, FontBackgroundColor,
 
 import '../../../vendor/ckeditor5/ckeditor5.bundle.css';
 
-function DiaryModule(app, id) {
+function DiaryModule(app) {
     let self = this;
 
+    let route = app.route;
     let db = app.db;
 
     let data = null;
 
-    let div = null;
+    let div = document.createElement('div');
     let editor = null;
 
     let save_timer = null;
 
-    this.start = async function() {
-        div = document.createElement('div');
+    this.run = async function() {
+        if (data == null || data.id != route.entry) {
+            data = await db.fetch1('SELECT id, date, title, content FROM diary WHERE id = ?', route.entry);
 
-        // Load existing data
-        data = await db.fetch1('SELECT date, title, content FROM diary WHERE id = ?', id);
+            if (data != null)
+                data.date = LocalDate.parse(data.date);
 
-        if (data != null)
-            data.date = LocalDate.parse(data.date);
+            if (editor != null)
+                editor.destroy();
+            editor = null;
+        }
 
-        // We need the DOM node to create instantiate CKEditor
-        self.render();
+        if (editor == null) {
+            // We need the DOM node to create instantiate CKEditor
+            self.render();
 
-        editor = await ClassicEditor.create(div.querySelector('#editor'), {
-            toolbar: {
-                items: [
-                    'fontSize',
-                    'fontFamily',
-                    'fontColor',
-                    'fontBackgroundColor',
-                    '|',
-                    'bold',
-                    'italic',
-                    'underline',
-                    'strikethrough',
-                    'subscript',
-                    'superscript',
-                    'code',
-                    'removeFormat',
-                    '|',
-                    'link',
-                    'highlight'
-                ],
-                shouldNotGroupWhenFull: false
-            },
-            plugins: [AutoLink, Bold, Code, Essentials, FontBackgroundColor, FontColor, FontFamily,
-                      FontSize, Highlight, Italic, Link, Paragraph, RemoveFormat,
-                      Strikethrough, Subscript, Superscript, Underline],
-            licenseKey: 'GPL',
-            initialData: data?.content ?? '',
-            translations: [Translations],
-            language: 'fr',
-            fontFamily: {
-                supportAllValues: true
-            },
-            fontSize: {
-                options: [10, 12, 14, 'default', 18, 20, 22],
-                supportAllValues: true
-            },
-            link: {
-                addTargetToExternalLinks: true,
-                defaultProtocol: 'https://',
-                decorators: {
-                    toggleDownloadable: {
-                        mode: 'manual',
-                        label: 'Downloadable',
-                        attributes: {
-                            download: 'file'
+            editor = await ClassicEditor.create(div.querySelector('#editor'), {
+                toolbar: {
+                    items: [
+                        'fontSize',
+                        'fontFamily',
+                        'fontColor',
+                        'fontBackgroundColor',
+                        '|',
+                        'bold',
+                        'italic',
+                        'underline',
+                        'strikethrough',
+                        'subscript',
+                        'superscript',
+                        'code',
+                        'removeFormat',
+                        '|',
+                        'link',
+                        'highlight'
+                    ],
+                    shouldNotGroupWhenFull: false
+                },
+                plugins: [AutoLink, Bold, Code, Essentials, FontBackgroundColor, FontColor, FontFamily,
+                          FontSize, Highlight, Italic, Link, Paragraph, RemoveFormat,
+                          Strikethrough, Subscript, Superscript, Underline],
+                licenseKey: 'GPL',
+                initialData: data?.content ?? '',
+                translations: [Translations],
+                language: 'fr',
+                fontFamily: {
+                    supportAllValues: true
+                },
+                fontSize: {
+                    options: [10, 12, 14, 'default', 18, 20, 22],
+                    supportAllValues: true
+                },
+                link: {
+                    addTargetToExternalLinks: true,
+                    defaultProtocol: 'https://',
+                    decorators: {
+                        toggleDownloadable: {
+                            mode: 'manual',
+                            label: 'Downloadable',
+                            attributes: {
+                                download: 'file'
+                            }
                         }
                     }
-                }
-            },
-            menuBar: {
-                isVisible: true
-            },
-            placeholder: `Écrivez ce que vous voulez, c'est pour vous et nous n'y aurons pas accès !`,
-        });
+                },
+                menuBar: {
+                    isVisible: true
+                },
+                placeholder: `Écrivez ce que vous voulez, c'est pour vous et nous n'y aurons pas accès !`,
+            });
 
-        editor.model.document.on('change:data', autoSave);
+            editor.model.document.on('change:data', autoSave);
+        }
     };
 
     this.stop = function() {
@@ -114,7 +120,12 @@ function DiaryModule(app, id) {
         render(html`
             <div class="box">
                 <div class="header">
-                    ${data != null ? `Journal - Entrée du ${data.date.toLocaleString()}` : ''}
+                    ${data != null ? html`
+                        Journal - Entrée du ${data.date.toLocaleString()}
+                        <div style="width: 30px;"></div>
+                        <button type="button" class="small secondary"
+                                @click=${UI.confirm(`Supprimer l'entrée de journal du ${data.date.toLocaleString()}`, deleteEntry)}>Supprimer cette entrée</button>
+                    ` : ''}
                     ${data == null ? `Journal - Nouvelle entrée` : ''}
                 </div>
 
@@ -130,12 +141,9 @@ function DiaryModule(app, id) {
                     </div>
                 </form>
 
-                ${id != null ? html`
-                    <div class="actions">
-                        <button type="button" class="secondary"
-                                @click=${UI.confirm(`Supprimer l'entrée de journal du ${data.date.toLocaleString()}`, deleteEntry)}>Supprimer cette entrée</button>
-                    </div>
-                ` : ''}
+                <div class="actions">
+                    <button type="button" @click=${UI.wrap(e => app.go('/profil'))}>Retourner au profil</button>
+                </div>
             </div>
         `, div);
 
@@ -172,18 +180,18 @@ function DiaryModule(app, id) {
         data.title = elements.title.value;
         data.content = editor.getData();
 
-        id = await db.pluck(`INSERT INTO diary (id, date, title, content)
-                             VALUES (?, ?, ?, ?)
-                             ON CONFLICT DO UPDATE SET title = excluded.title,
-                                                       content = excluded.content
-                             RETURNING id`,
-                            id, data.date.toString(), data.title, data.content);
+        route.entry = await db.pluck(`INSERT INTO diary (id, date, title, content)
+                                      VALUES (?, ?, ?, ?)
+                                      ON CONFLICT DO UPDATE SET title = excluded.title,
+                                                                content = excluded.content
+                                      RETURNING id`,
+                                     route.entry, data.date.toString(), data.title, data.content);
 
-        self.render();
+        await app.run();
     }
 
     async function deleteEntry() {
-        await db.exec('DELETE FROM diary WHERE id = ?', id);
+        await db.exec('DELETE FROM diary WHERE id = ?', route.entry);
         await app.go('/profil');
     }
 }

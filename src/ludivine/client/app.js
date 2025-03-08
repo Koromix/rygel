@@ -150,7 +150,7 @@ async function start() {
     window.onbeforeunload = e => {
         if (UI.isDialogOpen())
             return 'Validez ou fermez la boîte de dialogue avant de continuer';
-        if (ctx != null && ctx.mod.hasUnsavedData())
+        if (ctx != null && ctx.hasUnsavedData())
             return 'Les modifications en cours seront perdues si vous continuez, êtes-vous sûr(e) de vouloir continuer ?';
     };
 
@@ -323,7 +323,7 @@ async function go(url = null, push = true) {
     await run(push);
 }
 
-async function run(push = true) {
+async function run(push = false) {
     if (poisoned)
         return;
 
@@ -1018,17 +1018,12 @@ async function runProject() {
         if (ctx?.page != page) {
             let test = cache.tests.find(test => test.key == page.key);
 
-            ctx = {
-                page: page,
-                mod: null
-            };
-
             switch (page.type) {
-                case 'form': { ctx.mod = new FormModule(app, cache.study, page); } break;
-                case 'network': { ctx.mod = new NetworkModule(app, cache.study, page); } break;
+                case 'form': { ctx = new FormModule(app, cache.study, page); } break;
+                case 'network': { ctx = new NetworkModule(app, cache.study, page); } break;
             }
 
-            await ctx.mod.start();
+            await ctx.start();
         }
     } else {
         ctx = null;
@@ -1055,7 +1050,7 @@ async function runProject() {
                 </div>
 
                 ${cache.page.type == 'module' ? renderModule() : null}
-                ${cache.page.type != 'module' ? ctx.mod.render(cache.section) : null}
+                ${cache.page.type != 'module' ? ctx.render(cache.section) : null}
             </div>
         `);
     }
@@ -1228,23 +1223,18 @@ async function runDiary() {
     if (UI.isFullscreen)
         UI.toggleFullscreen(false);
 
-    if (ctx == null || ctx.entry != route.entry) {
-        ctx = {
-            entry: route.entry,
-            mod: new DiaryModule(app, route.entry)
-        };
-
-        await ctx.mod.start();
-    }
+    if (!(ctx instanceof DiaryModule))
+        ctx = new DiaryModule(app);
+    await ctx.run();
 
     UI.main(html`
         <div class="tabbar">
             <a href="/profil">Profil</a>
-            <a href="/journal" class="active">Mon journal</a>
+            <a href=${makeURL()} class="active">Mon journal</a>
         </div>
 
         <div class="tab">
-            ${ctx.mod.render()}
+            ${ctx.render()}
         </div>
     `);
 }
@@ -1491,6 +1481,7 @@ function sos(e) {
 }
 
 export {
+    route,
     identity,
     db,
 

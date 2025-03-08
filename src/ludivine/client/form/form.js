@@ -37,6 +37,10 @@ function FormModule(app, study, page) {
     let is_new = false;
     let has_changed = false;
 
+    Object.defineProperties(this, {
+        page: { get: () => page, enumerable: true }
+    });
+
     this.start = async function() {
         div = document.createElement('div');
         div.className = 'column';

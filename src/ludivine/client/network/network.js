@@ -62,6 +62,8 @@ function NetworkModule(app, study, page) {
     let anonymous = false;
 
     Object.defineProperties(this, {
+        page: { get: () => page, enumerable: true },
+
         runner: { get: () => runner, enumerable: true },
 
         anonymous: { get: () => anonymous, set: value => { anonymous = value; }, enumerable: true }
