@@ -229,8 +229,6 @@ static void HandleRequest(http_IO *io)
         }
 
         if (exists) {
-            // XXX: Set cache rules!
-
             Span<const char> extension = GetPathExtension(filename);
             const char *mimetype = GetMimeType(extension);
 
