@@ -262,18 +262,21 @@ p + .columns { margin-top: 2em; }
 }
 
 #help {
-    padding: 1em;
+    padding: 0;
     align-items: center;
 
     & > div {
         display: flex;
         max-width: 500px;
-        flex-direction: column;
-        gap: 2em;
+        max-height: calc(100vh - 4.5em);
+        margin: 1em;
         padding: 1.5em 1.5em 1em 1.5em;
+        flex-direction: column;
+        align-items: center;
+        gap: 2em;
         background: white;
         border: 4px solid #bbb;
-        align-items: center;
+        overflow-y: scroll;
     }
     & p { margin: 0; }
 }
