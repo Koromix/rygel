@@ -1021,6 +1021,9 @@ async function runProject() {
         if (ctx?.page != page) {
             let test = cache.tests.find(test => test.key == page.key);
 
+            if (ctx != null)
+                ctx.stop();
+
             switch (page.type) {
                 case 'form': { ctx = new FormModule(app, cache.study, page); } break;
                 case 'network': { ctx = new NetworkModule(app, cache.study, page); } break;
@@ -1029,6 +1032,8 @@ async function runProject() {
             await ctx.start();
         }
     } else {
+        if (ctx != null)
+            ctx.stop();
         ctx = null;
     }
 
@@ -1226,8 +1231,12 @@ async function runDiary() {
     if (UI.isFullscreen)
         UI.toggleFullscreen(false);
 
-    if (!(ctx instanceof DiaryModule))
+    if (!(ctx instanceof DiaryModule)) {
+        if (ctx != null)
+            ctx.stop();
+
         ctx = new DiaryModule(app);
+    }
     await ctx.run();
 
     UI.main(html`
