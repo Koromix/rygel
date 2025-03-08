@@ -28,6 +28,7 @@ import { PROJECTS } from '../projects/projects.js';
 import { ProjectInfo, ProjectBuilder } from './project.js';
 import { FormModule } from './form/form.js';
 import { NetworkModule } from './network/network.js';
+import { sos } from '../assets/ludivine.js';
 import { ASSETS } from '../assets/assets.js';
 
 import '../assets/client.css';

@@ -15,7 +15,6 @@
 
 import { render, html, noChange, directive, Directive } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../web/core/base.js';
-import { sos } from '../assets/ludivine.js';
 import { ASSETS } from '../assets/assets.js';
 
 if (typeof T == 'undefined')
