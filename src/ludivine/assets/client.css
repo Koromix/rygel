@@ -575,6 +575,11 @@ form {
         font-size: 0.9em;
     }
     & :is(input, textarea, select):focus { background-color: white; }
+    & :is(input, textarea, select):disabled {
+        filter: saturate(0) !important;
+        background-color: #ddd !important;
+        border-color: #979797 !important;
+    }
 
     & label:has(> input[type=radio]) {
         margin-top: 0 !important;
@@ -599,6 +604,7 @@ form {
     }
     & input[type=radio]:hover { background: var(--hover_color);  }
     & input[type=radio]:checked { background: var(--check_color); }
+    & label:has(> input[type=radio]:disabled) { color: #979797 !important; }
 
     & label:has(> input[type=checkbox]) {
         margin-top: 0 !important;
@@ -632,6 +638,7 @@ form {
     }
     & input[type=checkbox]:hover::before { box-shadow: inset 1em 1em var(--hover_color); }
     & input[type=checkbox]:checked::before { box-shadow: inset 1em 1em var(--check_color); }
+    & label:has(> input[type=checkbox]:disabled) { color: #979797 !important; }
 
     & .number {
         display: flex;
@@ -660,7 +667,7 @@ form {
         background: var(--bar_color);
         color: white;
     }
-    & .enum > button:disabled { color: #ccc; }
+    & .enum > button:disabled { color: #bbb; }
 
     & .slider {
         align-self: stretch;
