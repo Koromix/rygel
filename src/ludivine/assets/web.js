@@ -33,8 +33,8 @@ function initPicture() {
 
         render(html`
             <div style="flex: 1;"></div>
-            <a href="/profile"><img class=${'avatar' + (url == null ? ' anonymous' : '')}
-                                    src=${url ?? ASSETS['ui/anonymous']} /></a>
+            <a href="/profil"><img class=${'avatar' + (url == null ? ' anonymous' : '')}
+                                   src=${url ?? ASSETS['ui/anonymous']} /></a>
         `, menu);
     }
 }
