@@ -46,51 +46,53 @@
     filter: opacity(0.75);
 }
 
-.not_tabbar {
-    display: flex;
-    max-height: 504px;
-    margin-left: -1em;
-    flex-direction: column;
-    gap: 4px;
-}
-.not_tabbar > a {
-    padding: 0.2em 0.8em 0.25em 0.8em;
-    cursor: pointer;
-    text-decoration: none;
-    text-align: right;
-    background: #f5d0bf;
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
-    color: black !important;
-    text-decoration: none !important;
-}
-.not_tabbar > a.active {
-    background: #e9a07f;
-    color: white !important;
-    cursor: default;
+.not_preview {
+    width: var(--size);
+    height: var(--size);
+    min-height: var(--size);
+    margin: 0.5em;
+    position: relative;
+    background: white;
+    border: 1px solid #ededf0;
+    overflow: hidden;
 }
 
 .not_parts {
     display: flex;
-    width: 500px;
-    min-height: 280px;
-    max-height: 480px;
-    padding: 12px;
-    background: #faefe9;
-    border-top-left-radius: 16px;
-    border-bottom-left-radius: 16px;
-    flex-direction: column;
+    margin-top: -1em;
+    background: var(--box_color) !important;
+    flex-direction: row !important;
     flex-wrap: wrap;
-    justify-content: start;
-    overflow-x: auto;
-    gap: 12px;
+    gap: 12px !important;
+
+    & > svg {
+        box-sizing: border-box;
+        width: 80px;
+        height: 80px;
+        cursor: pointer;
+        background: white;
+        border: 1px solid #eee;
+
+        &.active { background: #eee; }
+    }
 }
-.not_parts > svg {
-    box-sizing: border-box;
-    width: 80px;
-    height: 80px;
-    cursor: pointer;
-    background: white;
-    border: 1px solid #eee;
+
+.not_colors { max-width: 400px; }
+
+.not_palette {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 6px;
+
+    & button {
+        --button_color: white;
+        color: black !important;
+    }
+
+    & div {
+        width: 18px;
+        height: 18px;
+        border: 1px solid #888;
+    }
 }
-.not_parts > svg.active { background: #eee; }

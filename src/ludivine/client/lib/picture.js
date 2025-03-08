@@ -56,11 +56,43 @@ const NOTION_DEFAULTS = {
         accessories: 0
     },
     colors: {
-        face: '#ffe0bd',
-        hair: '#4f1a00',
-        beard: '#4f1a00'
+        face: '#faddbc',
+        hair: '#7b3f00',
+        beard: '#7b3f00'
     }
 };
+
+const NOTION_PALETTES = {
+    face: [
+        '#faddbc',
+        '#e0ba95',
+        '#bf8e68',
+        '#9b643d',
+        '#594439'
+    ],
+    hair: [
+        '#fffacd',
+        '#c19a6b',
+        '#7b3f00',
+        '#2f1e0e',
+        '#000000',
+        '#954535',
+        '#b06500',
+        '#d3d3d3',
+        '#ffffff'
+    ],
+    beard: [
+        '#fffacd',
+        '#c19a6b',
+        '#7b3f00',
+        '#2f1e0e',
+        '#000000',
+        '#954535',
+        '#b06500',
+        '#d3d3d3',
+        '#ffffff'
+    ]
+}
 
 function PictureCropper(title, size) {
     let self = this;
@@ -121,9 +153,9 @@ function PictureCropper(title, size) {
 
                 return html`
                     <div class="tabbar">
-                        <a class=${current_mode == 'custom' ? 'active' : ''} @click=${UI.wrap(e => switchMode('custom'))}>Image personnalisée</a>
                         ${notion_assets != null ?
                             html`<a class=${current_mode == 'notion' ? 'active' : ''} @click=${UI.wrap(e => switchMode('notion'))}>Avatar virtuel</a>` : ''}
+                        <a class=${current_mode == 'custom' ? 'active' : ''} @click=${UI.wrap(e => switchMode('custom'))}>Image personnalisée</a>
                     </div>
 
                     <div class="tab">
@@ -153,26 +185,44 @@ function PictureCropper(title, size) {
         drawPreview(size);
 
         return html`
-            <div class="row">
-                <div class="box" style="gap: 0;">
-                    <div class="header">Avatar</div>
-                    <div class="pic_preview" style=${`--size: ${size}px`}>${preview}</div>
+            <div class="box">
+                <div class="header">Avatar</div>
 
-                    ${Object.keys(notion.colors).map(cat => {
-                        if (cat != 'face' && !notion.parts[cat])
-                            return '';
+                <div class="row" style="justify-content: center; align-items: center;">
+                    <div class="not_preview" style=${`--size: ${size}px`}>${preview}</div>
 
-                        return html`
-                            <label>
-                                <span>Couleur : ${T[cat].toLowerCase()}</span>
-                                <input type="color" value=${notion.colors[cat]}
-                                       @change=${UI.wrap(e => switchColor(cat, e.target.value))} />
-                            </label>
-                        `;
-                    })}
+                    <div class="not_colors">
+                        ${Object.keys(notion.colors).map(cat => {
+                            if (cat != 'face' && !notion.parts[cat])
+                                return '';
+
+                            let palette = NOTION_PALETTES[cat] ?? [];
+
+                            return html`
+                                <div class="widget">
+                                    <label>${T[cat]}</label>
+                                    <div class="not_palette">
+                                        ${palette.map(color => html`
+                                            <button type="button" class=${color == notion.colors[cat] ? 'active' : ''} @click=${UI.wrap(e => switchColor(cat, color))}>
+                                                <div style=${'background: ' + color}></div>
+                                            </button>
+                                        `)}
+                                        <button type="button" class="small" @click=${UI.wrap(e => pickColor(cat))}>Autre couleur</button>
+                                    </div>
+                                </div>
+                            `;
+                        })}
+                    </div>
                 </div>
+            </div>
 
-                <div class="not_parts">
+            <div class="column">
+                <div class="tabbar">
+                    ${Object.keys(notion.parts).map(cat =>
+                        html`<a class=${notion_cat == cat ? 'active' : ''}
+                                @click=${UI.wrap(e => switchCategory(cat))}>${T[cat]}</a>`)}
+                </div>
+                <div class="tab not_parts">
                     ${notion_assets[notion_cat].map((xml, idx) => {
                         let active = (idx == notion.parts[notion_cat]);
                         let fill = active ? '#dddddd' : 'none';
@@ -184,11 +234,6 @@ function PictureCropper(title, size) {
                             </svg>
                         `;
                     })}
-                </div>
-                <div class="not_tabbar">
-                    ${Object.keys(notion.parts).map(cat =>
-                        html`<a class=${notion_cat == cat ? 'active' : ''}
-                                @click=${UI.wrap(e => switchCategory(cat))}>${T[cat]}</a>`)}
                 </div>
             </div>
         `;
@@ -204,6 +249,21 @@ function PictureCropper(title, size) {
         refresh_func();
     }
 
+    function pickColor(cat) {
+        let input = document.createElement('input');
+        let color = notion.colors[cat];
+
+        input.setAttribute('type', 'color');
+        if (color)
+            input.setAttribute('value', color);
+        input.showPicker();
+
+        input.addEventListener('change', e => {
+            if (input.value)
+                switchColor(cat, input.value);
+        });
+    }
+
     function switchColor(cat, color) {
         notion.colors[cat] = color;
         refresh_func();
@@ -213,7 +273,7 @@ function PictureCropper(title, size) {
         drawPreview(size);
 
         return html`
-            <div class="pic_dialog">
+            <div class="row" style="justify-content: center;">
                 <div class="box">
                     <div class="header">Avatar</div>
                     <div class=${is_default ? 'pic_preview' : 'pic_preview interactive'}
@@ -271,7 +331,7 @@ function PictureCropper(title, size) {
                 custom_img = null;
 
                 if (current_mode == null)
-                    current_mode = 'custom';
+                    current_mode = 'notion';
             }
 
             is_default = (obj == null);
