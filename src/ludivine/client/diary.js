@@ -15,7 +15,6 @@
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, LocalDate } from '../../web/core/base.js';
-import * as UI from './ui.js';
 import { ASSETS } from '../assets/assets.js';
 import { ClassicEditor, AutoLink, Bold, Code, Essentials, FontBackgroundColor,
          FontColor, FontFamily, FontSize, Highlight, Italic, Link, Paragraph,
@@ -26,8 +25,9 @@ import '../../../vendor/ckeditor5/ckeditor5.bundle.css';
 function DiaryModule(app) {
     let self = this;
 
-    let route = app.route;
-    let db = app.db;
+    const UI = app.UI;
+    const route = app.route;
+    const db = app.db;
 
     let data = null;
 
@@ -117,6 +117,8 @@ function DiaryModule(app) {
     };
 
     this.render = function(section) {
+        let entry = route.entry;
+
         render(html`
             <div class="box">
                 <div class="header">
@@ -124,7 +126,7 @@ function DiaryModule(app) {
                         Journal - Entrée du ${data.date.toLocaleString()}
                         <div style="width: 30px;"></div>
                         <button type="button" class="small secondary"
-                                @click=${UI.confirm(`Supprimer l'entrée de journal du ${data.date.toLocaleString()}`, deleteEntry)}>Supprimer cette entrée</button>
+                                @click=${UI.confirm(`Supprimer l'entrée de journal du ${data.date.toLocaleString()}`, e => deleteEntry(entry))}>Supprimer cette entrée</button>
                     ` : ''}
                     ${data == null ? `Journal - Nouvelle entrée` : ''}
                 </div>
@@ -190,9 +192,11 @@ function DiaryModule(app) {
         await app.run();
     }
 
-    async function deleteEntry() {
-        await db.exec('DELETE FROM diary WHERE id = ?', route.entry);
-        await app.go('/profil');
+    async function deleteEntry(entry) {
+        await db.exec('DELETE FROM diary WHERE id = ?', entry);
+
+        if (entry == route.entry)
+            await app.go('/profil');
     }
 }
 

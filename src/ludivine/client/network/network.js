@@ -16,7 +16,6 @@
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import { AppRunner } from '../../../web/core/runner.js';
-import * as UI from '../ui.js';
 import { ASSETS } from '../../assets/assets.js';
 import { NetworkWidget } from './widget.js';
 
@@ -29,7 +28,8 @@ const EVENT_SIZE = 32;
 function NetworkModule(app, study, page) {
     let self = this;
 
-    let db = app.db;
+    const UI = app.UI;
+    const db = app.db;
 
     // DOM nodes
     let wrapper = null;
@@ -200,7 +200,7 @@ function NetworkModule(app, study, page) {
         undo_actions = data.undo;
         redo_actions = data.redo;
 
-        widget = new NetworkWidget(self, world, app.identity.picture);
+        widget = new NetworkWidget(app, self, world);
         await widget.init();
     }
 

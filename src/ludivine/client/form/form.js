@@ -18,13 +18,13 @@ import { Util, Log } from '../../../web/core/base.js';
 import { progressBar } from '../lib/util.js';
 import { FormContext, FormModel, FormBuilder } from './builder.js';
 import { annotate } from './data.js';
-import * as UI from '../ui.js';
 import { ASSETS } from '../../assets/assets.js';
 
 function FormModule(app, study, page) {
     let self = this;
 
-    let db = app.db;
+    const UI = app.UI;
+    const db = app.db;
 
     let div = null;
 
