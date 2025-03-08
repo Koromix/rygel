@@ -743,7 +743,7 @@ async function navigateDiary(id) {
     route.mode = 'diary';
     route.entry = id;
 
-    await run();
+    await run(true);
 }
 
 async function runDashboard() {
@@ -902,14 +902,14 @@ async function changePicture() {
             Log.error(err);
     }
 
-    run();
+    await run(true);
 }
 
 async function openStudy(project) {
     route.mode = 'study';
     route.project = project.key;
 
-    await run();
+    await run(true);
 }
 
 function renderCalendar(events) {
@@ -1001,7 +1001,7 @@ async function consent(e, project) {
     route.mode = 'study';
     route.project = null;
 
-    await run();
+    await run(true);
 }
 
 async function runProject() {
@@ -1161,7 +1161,7 @@ async function navigateStudy(page, section = null) {
     route.page = page.key;
     route.section = (page != null) ? section : null;
 
-    await run();
+    await run(true);
 }
 
 async function saveTest(page, data, status = 'draft') {
