@@ -28,4 +28,7 @@ bool InitSMTP(const smtp_Config &config);
 void HandleUserRegister(http_IO *io);
 void HandleUserLogin(http_IO *io);
 
+void HandleUserDownload(http_IO *io);
+void HandleUserUpload(http_IO *io);
+
 }

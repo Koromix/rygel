@@ -195,6 +195,10 @@ static void HandleRequest(http_IO *io)
             HandleUserRegister(io);
         } else if (TestStr(request.path, "/api/login") && request.method == http_RequestMethod::Post) {
             HandleUserLogin(io);
+        } else if (TestStr(request.path, "/api/download") && request.method == http_RequestMethod::Post) {
+            HandleUserDownload(io);
+        } else if (TestStr(request.path, "/api/upload") && request.method == http_RequestMethod::Post) {
+            HandleUserUpload(io);
         } else {
             io->SendError(404);
         }

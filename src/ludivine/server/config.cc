@@ -74,6 +74,8 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     config.database_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                 } else if (prop.key == "VaultDirectory") {
                     config.vault_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                } else if (prop.key == "TempDirectory") {
+                    config.tmp_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                 } else if (prop.key == "SynchronousFull") {
                     valid &= ParseBool(prop.value, &config.sync_full);
                 } else {
@@ -119,6 +121,9 @@ bool LoadConfig(StreamReader *st, Config *out_config)
     }
     if (!config.vault_directory) {
         config.vault_directory = NormalizePath("vaults", root_directory, &config.str_alloc).ptr;
+    }
+    if (!config.tmp_directory) {
+        config.tmp_directory = NormalizePath("tmp", root_directory, &config.str_alloc).ptr;
     }
     if (!config.Validate())
         return false;

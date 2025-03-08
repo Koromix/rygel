@@ -323,4 +323,129 @@ void HandleUserLogin(http_IO *io)
     io->SendText(200, token, "application/json");
 }
 
+static bool IsUUIDValid(Span<const char> uuid)
+{
+    const auto test_char = [](char c) { return IsAsciiDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); };
+
+    if (uuid.len != 36)
+        return false;
+    if (!std::all_of(uuid.ptr + 0, uuid.ptr + 8, test_char) || uuid[8] != '-')
+        return false;
+    if (!std::all_of(uuid.ptr + 9, uuid.ptr + 13, test_char) || uuid[13] != '-')
+        return false;
+    if (!std::all_of(uuid.ptr + 14, uuid.ptr + 18, test_char) || uuid[18] != '-')
+        return false;
+    if (!std::all_of(uuid.ptr + 19, uuid.ptr + 23, test_char) || uuid[23] != '-')
+        return false;
+    if (!std::all_of(uuid.ptr + 24, uuid.ptr + 36, test_char))
+        return false;
+
+    return true;
+}
+
+void HandleUserDownload(http_IO *io)
+{
+    const http_RequestInfo &request = io->Request();
+
+    // Get and check vault ID
+    const char *vid;
+    {
+        vid = request.GetHeaderValue("X-VaultID");
+
+        if (!vid || !IsUUIDValid(vid)) {
+            LogError("Missing or invalid VID");
+
+            io->SendError(422);
+            return;
+        }
+    }
+
+    const char *filename = Fmt(io->Allocator(), "%1%/%2", config.vault_directory, vid).ptr;
+
+    // Check file access and size
+    FileInfo file_info;
+    {
+        StatResult stat = StatFile(filename, &file_info);
+
+        switch (stat) {
+            case StatResult::Success: {} break;
+
+            case StatResult::MissingPath: {
+                io->SendError(404);
+                return;
+            } break;
+
+            case StatResult::AccessDenied:
+            case StatResult::OtherError: return;
+        }
+    }
+
+    // Send the file
+    int fd = OpenFile(filename, (int)OpenFlag::Read);
+    if (fd < 0)
+        return;
+    io->SendFile(200, fd, file_info.size);
+}
+
+void HandleUserUpload(http_IO *io)
+{
+    const http_RequestInfo &request = io->Request();
+
+    // Get and check vault ID
+    const char *vid;
+    {
+        vid = request.GetHeaderValue("X-VaultID");
+
+        if (!vid || !IsUUIDValid(vid)) {
+            LogError("Missing or invalid VID");
+
+            io->SendError(422);
+            return;
+        }
+    }
+
+    const char *filename = Fmt(io->Allocator(), "%1%/%2", config.vault_directory, vid).ptr;
+
+    // Create temporary file
+    int fd = -1;
+    const char *tmp_filename = CreateUniqueFile(config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
+    if (!tmp_filename)
+        return;
+    RG_DEFER {
+        CloseDescriptor(fd);
+        UnlinkFile(tmp_filename);
+    };
+
+    // Read file content
+    {
+        StreamWriter writer(fd, "<temp>");
+        StreamReader reader;
+        if (!io->OpenForRead(Mebibytes(8), &reader))
+            return;
+
+        do {
+            LocalArray<uint8_t, 16384> buf;
+            buf.len = reader.Read(buf.data);
+            if (buf.len < 0)
+                return;
+
+            if (!writer.Write(buf))
+                return;
+        } while (!reader.IsEOF());
+
+        if (!writer.Close())
+            return;
+    }
+
+    // Commit new file
+    {
+        unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
+
+        if (!RenameFile(tmp_filename, filename, flags))
+            return;
+    }
+
+    io->SendText(200, "{}", "application/json");
+}
+
 }
