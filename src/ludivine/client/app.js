@@ -193,6 +193,8 @@ async function start() {
     }
 
     await go(window.location.href, false);
+
+    UI.main();
     document.body.classList.remove('loading');
 }
 
