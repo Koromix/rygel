@@ -109,6 +109,7 @@ function compact(value) {
 
 function annotate(obj, key) {
     let ptr = map.get(obj);
+
     let raw = ptr?.raw?.[key];
 
     if (raw == null)

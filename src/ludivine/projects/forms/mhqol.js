@@ -16,6 +16,8 @@
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 function build(form, values) {
+    form.values = values
+
     form.intro = html`
         <p>Les questions qui suivent portent sur votre état de santé, telle que vous la <b>ressentez AUJOURD'HUI</b>. Ces informations nous permettront de savoir comment vous vous sentez dans votre vie de tous les jours.
     `

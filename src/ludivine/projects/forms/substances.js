@@ -17,6 +17,8 @@ import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 import { ASSETS } from '../../assets/assets.js'
 
 function build(form, values) {
+    form.values = values
+
     form.intro = ''
 
     form.part(() => {

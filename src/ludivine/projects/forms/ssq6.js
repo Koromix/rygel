@@ -17,6 +17,8 @@ import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 import { PERSON_KINDS } from '../../client/network/constants.js'
 
 function build(form, values) {
+    form.values = values
+
     form.intro = html`
         <p>Nous cherchons dans un premier temps à avoir une représentation des <b>personnes de votre environnement</b> qui vous procurent de l’aide ou du soutien.
         <p>Chaque question comporte 4 étapes :

@@ -17,6 +17,8 @@ import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 import { PERSON_KINDS } from '../../client/network/constants.js'
 
 function build(form, values) {
+    form.values = values
+
     form.intro = html`
         <p>Les personnes ayant vécu le genre d'événement comme celui qui vous a amené ici <b>différent considérablement dans leur façon d'en parler</b> aux autres. Nous aimerions savoir ce que vous avez divulgué à la <b>personne dont vous êtes le ou la plus proche</b> et à quelle fréquence (y compris si vous ne lui avez rien dit).
     `

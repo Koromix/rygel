@@ -17,6 +17,8 @@ import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 import { PERSON_KINDS } from '../../client/network/constants.js'
 
 function build(form, values) {
+    form.values = values
+
     form.intro = html`
         <p>Les individus qui ont vécu un ou plusieurs événements stressants souffrent parfois de réactions différentes de celles des autres.
         <p>Donnez-nous, sur base des énoncés suivants, votre meilleure <b>estimation de la réaction de la personne dont vous êtes le plus proche</b> lorsque vous lui avez parlé de votre expérience la plus difficile.

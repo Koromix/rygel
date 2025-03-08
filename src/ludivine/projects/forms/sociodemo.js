@@ -579,6 +579,8 @@ let DEPARTEMENTS = [
 ]
 
 function build(form, values) {
+    form.values = values
+
     form.intro = html`
         <p>Donnez-nous quelques informations pour nous aider à mieux vous comprendre.
     `

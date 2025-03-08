@@ -16,6 +16,8 @@
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 function build(form, values) {
+    form.values = values
+
     form.intro = html`
         <p>Ce questionnaire nous permet d'évaluer la <b>présence d'idées suicidaires</b>. En cas d'urgence, n'hésitez surtout pas à <a href="https://3114.fr" target="_blank"><span class="ui_tag" style="background: #db0a0aform.part">demander de l'aide !</span></a>
     `

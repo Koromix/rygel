@@ -16,6 +16,8 @@
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 function build(form, values) {
+    form.values = values
+
     form.intro = html`
         <p>Voici ci-dessous une <b>liste de possibles évènements de vie stressants</b>.
         <p>Veuillez indiquer les évènements qui vous sont arrivés <b>durant les deux dernières années</b> et qui sont actuellement difficiles pour vous, ou qui ont été un difficiles pour vous ou cours des 6 derniers mois.

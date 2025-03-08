@@ -193,11 +193,13 @@ function FormModule(app, study, page) {
         let valid = true;
 
         for (let widget of part.widgets) {
-            if (widget.key == null)
+            let key = widget.key;
+
+            if (key == null)
                 continue;
 
-            let value = ctx.values[widget.key];
-            let notes = annotate(ctx.values, widget.key);
+            let value = key.obj[key.name];
+            let notes = annotate(key.obj, key.name);
 
             if (value != null || widget.optional || widget.disabled) {
                 delete notes.skip;

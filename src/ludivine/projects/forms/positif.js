@@ -16,9 +16,9 @@
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 function build(form, values) {
-    form.intro = html`
-        <p>Au cours des <b>deux dernières semaines</b>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?
-    `
+    form.values = values
+
+    form.intro = ''
 
     form.part(() => {
         form.binary("q1", html`<b>Depuis l’évènement qui vous a amené ici</b>, avez-vous vécu des évènements particulièrement bons pour vous ? Quelque chose qui vous a fait du bien ?`)

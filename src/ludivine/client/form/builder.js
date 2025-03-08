@@ -16,6 +16,7 @@
 import { render, html, live } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import { wrap, annotate } from './data.js';
+import { ASSETS } from '../../assets/assets.js';
 
 let unique = 0;
 
@@ -46,7 +47,10 @@ function FormModel() {
 function FormBuilder(ctx, model) {
     let self = this;
 
+    let ptr = ctx.values;
+
     let intro = '';
+    let intro_idx = 0;
 
     let part = null;
     let widgets = model.widgets;
@@ -54,7 +58,8 @@ function FormBuilder(ctx, model) {
     let refreshing = false;
 
     Object.defineProperties(this, {
-        intro: { get: () => intro, set: value => { intro = value; }, enumerable: true }
+        values: { get: () => ptr, set: values => { ptr = values; }, enumerable: true },
+        intro: { get: () => intro, set: content => { intro = content; intro_idx++; }, enumerable: true }
     });
 
     this.part = function(func) {
@@ -271,10 +276,10 @@ function FormBuilder(ctx, model) {
 
         if (values == null) {
             values = [];
-            ctx.values[key] = null;
+            values[key] = null;
         } else if (!Array.isArray(values)) {
             values = [values];
-            ctx.values[key] = values;
+            values[key] = values;
         }
 
         let widget = makeInput(key, label, options, 'multiButtons', () => html`
@@ -327,10 +332,10 @@ function FormBuilder(ctx, model) {
 
         if (values == null) {
             values = [];
-            ctx.values[key] = null;
+            values[key] = null;
         } else if (!Array.isArray(values)) {
             values = [values];
-            ctx.values[key] = values;
+            values[key] = values;
         }
 
         let widget = makeInput(key, label, options, 'multiCheck', id => html`
@@ -412,7 +417,7 @@ function FormBuilder(ctx, model) {
     };
 
     this.error = function(key, msg) {
-        let notes = annotate(ctx.values, key);
+        let notes = annotate(ptr, key);
 
         if (notes == null)
             throw new Error(`Unkwown variable '${key}'`);
@@ -440,7 +445,7 @@ function FormBuilder(ctx, model) {
     function makeInput(key, label, options, type, func) {
         let id = 'input' + (++unique);
 
-        let notes = annotate(ctx.values, key);
+        let notes = annotate(key.obj, key.name);
 
         let render = () => {
             let error = notes.error;
@@ -518,6 +523,11 @@ function FormBuilder(ctx, model) {
             options.optional = true;
         }
 
+        key = {
+            obj: ptr,
+            name: key
+        };
+
         return key;
     }
 
@@ -543,33 +553,33 @@ function FormBuilder(ctx, model) {
     }
 
     function getValue(key, type, options) {
-        let notes = annotate(ctx.values, key);
+        let notes = annotate(key.obj, key.name);
 
         if (notes == null) {
-            ctx.values[key] = options.prefill ?? undefined;
-            notes = annotate(ctx.values, key);
+            key.obj[key.name] = options.prefill ?? undefined;
+            notes = annotate(key.obj, key.name);
         } else if (!notes.changed) {
-            ctx.values[key] = options.prefill ?? undefined;
+            key.obj[key.name] = options.prefill ?? undefined;
         }
 
         notes.changed = !!notes.changed;
         notes.type = type;
         notes.disabled = options.disabled;
 
-        let value = ctx.values[key];
+        let value = key.obj[key.name];
 
         // Clear annotations
         delete notes.error;
         if (value != null)
             delete notes.skip;
 
-        return ctx.values[key];
+        return value;
     }
 
     function setValue(key, value) {
-        let notes = annotate(ctx.values, key);
+        let notes = annotate(key.obj, key.name);
 
-        ctx.values[key] = value;
+        key.obj[key.name] = value;
         notes.changed = true;
 
         refresh();

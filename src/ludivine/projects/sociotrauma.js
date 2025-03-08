@@ -119,13 +119,25 @@ function init(build, start) {
 
                 build.form('evenement', 'L’évènement qui vous a amené ici', evenement, options)
                 build.form('pensees', 'Pensées et ressentis', (form, values) => {
-                    pdeq(form, values)
-                    isrc(form, values)
+                    if (values.pdeq == null)
+                        values.pdeq = {}
+                    if (values.isrc == null)
+                        values.isrc = {}
+
+                    pdeq(form, values.pdeq)
+                    isrc(form, values.isrc)
                 }, options)
                 build.form('autres', 'Autres évènements de vie', (form, values) => {
-                    adnm20(form, values)
-                    lec5(form, values)
-                    positif(form, values)
+                    if (values.adnm20 == null)
+                        values.adnm20 = {}
+                    if (values.lec5 == null)
+                        values.lec5 = {}
+                    if (values.positif == null)
+                        values.positif = {}
+
+                    adnm20(form, values.adnm20)
+                    lec5(form, values.lec5)
+                    positif(form, values.positif)
                 }, options)
             });
 

@@ -16,6 +16,8 @@
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 function build(form, values) {
+    form.values = values
+
     form.intro = html`
         <p>Ce questionnaire est destiné à repérer l'existence de <b>problèmes révélateur d'un trouble anxieux</b> et d'en mesurer la sévérité.
         <p>Les questions portent sur les problèmes ressentis <b>au cours des deux dernières semaines</b>.

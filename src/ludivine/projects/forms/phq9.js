@@ -16,6 +16,8 @@
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 function build(form, values) {
+    form.values = values
+
     form.intro = html`
         <p>Au cours des <b>deux dernières semaines</b>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?
     `
