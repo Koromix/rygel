@@ -30,6 +30,9 @@ import { FormModule } from './form/form.js';
 import { NetworkModule } from './network/network.js';
 import { ASSETS } from '../assets/assets.js';
 
+// Needed for menu deploy and other UI stuff
+import '../../web/flat/static.js';
+
 import '../assets/client.css';
 
 const DATABASE_VERSION = 3;
