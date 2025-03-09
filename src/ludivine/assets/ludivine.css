@@ -142,14 +142,14 @@ dialog {
     color: white;
     font-size: 1.1em;
     font-weight: bold;
-    border-radius: 10px;
+    border-radius: 8px;
     z-index: 1;
 }
 .banner > .intro {
     margin: -20px 2em 1em 2em;
     padding: calc(1em + 20px) 1em 1em 1em;
     border-left: 4px solid #e9a07f;
-    border-radius: 0 16px 16px 0;
+    border-radius: 0 8px 8px 0;
     background: #fdfbf8;
 }
 
@@ -191,8 +191,8 @@ p + .columns { margin-top: 2em; }
     cursor: pointer;
     text-decoration: none;
     color: black;
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
 
     & > img {
         width: 24px;
@@ -212,8 +212,8 @@ p + .columns { margin-top: 2em; }
 .tab {
     padding: 1em;
     background: var(--tab_color);
-    border-bottom-left-radius: 16px;
-    border-bottom-right-radius: 16px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
 }
 
 #sos {
