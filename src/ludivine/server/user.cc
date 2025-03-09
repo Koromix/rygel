@@ -17,7 +17,6 @@
 #include "src/core/http/http.hh"
 #include "src/core/request/smtp.hh"
 #include "ludivine.hh"
-#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 
@@ -176,7 +175,6 @@ void HandleUserRegister(http_IO *io)
 
         FillRandomSafe(uid);
         FillRandomSafe(tkey);
-        static_assert(RG_SIZE(tkey) == crypto_secretbox_KEYBYTES);
 
         sq_Statement stmt;
         if (!db.Run(R"(INSERT INTO users (uid, email, registration)
