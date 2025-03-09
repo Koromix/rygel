@@ -30,15 +30,15 @@ static const smtp_MailContent NewUser = {
 
 Nous vous remercions de votre intérêt pour les recherches de {{ TITLE }}.
 
-Attention, ce **mail est important** ! Il est l’**unique moyen de connexion** à votre espace personnel durant toute la durée des études.
+Attention, ce mail est important ! Il est l’unique moyen de connexion à votre espace personnel durant toute la durée des études.
 
-Conservez-le **précieusement, ou même mieux, enregistrez la pièce jointe** sur votre ordinateur/téléphone/tablette. Celle-ci contient les informations nécessaires pour récupérer votre compte si vous perdez ce mail.
+Conservez-le précieusement, ou même mieux, enregistrez la pièce jointe sur votre ordinateur/téléphone/tablette. Celle-ci contient les informations nécessaires pour récupérer votre compte si vous perdez ce mail.
 
 Nous vous invitons à utiliser le lien suivant afin de commencer votre aventure {{ TITLE }} :
 
 {{ URL }}
 
-Nous utilisons un système de chiffrement end-to-end pour assurer la sécurité et l’anonymat de vos données. Nous ne serons donc **pas en mesure de vous renvoyer un nouveau lien de connexion** en cas de perte de celui-ci.
+Nous utilisons un système de chiffrement end-to-end pour assurer la sécurité et l’anonymat de vos données. Nous ne serons donc pas en mesure de vous renvoyer un nouveau lien de connexion en cas de perte de celui-ci.
 
 Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.
 
