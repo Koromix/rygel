@@ -188,10 +188,22 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
 
         if (content.files.len) {
             for (const smtp_AttachedFile &file: content.files) {
+                RG_ASSERT(file.mimetype);
+                RG_ASSERT(file.id || !file.inlined);
+
                 Fmt(&buf, "--%1\r\n", mixed);
                 Fmt(&buf, "Content-Type: %1\r\n", file.mimetype);
                 Fmt(&buf, "Content-Transfer-Encoding: base64\r\n");
-                Fmt(&buf, "Content-Disposition: attachment; filename=\"%1\"\r\n\r\n", file.name);
+                if (file.id) {
+                    Fmt(&buf, "Content-ID: %1\r\n", file.id);
+                }
+                if (file.name) {
+                    const char *disposition = file.inlined ? "inline" : "attachment";
+                    Fmt(&buf, "Content-Disposition: %1; filename=\"%2\"\r\n\r\n", disposition, file.name);
+                } else {
+                    const char *disposition = file.inlined ? "inline" : "attachment";
+                    Fmt(&buf, "Content-Disposition: %1\r\n\r\n", disposition);
+                }
 
                 base64_state state;
                 base64_stream_encode_init(&state, 0);

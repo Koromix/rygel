@@ -35,8 +35,10 @@ struct smtp_Config {
 };
 
 struct smtp_AttachedFile {
-    const char *name = nullptr;
     const char *mimetype = nullptr;
+    const char *id = nullptr;
+    const char *name = nullptr;
+    bool inlined = false;
     Span<const uint8_t> data;
 };
 
