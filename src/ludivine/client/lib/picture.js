@@ -216,13 +216,14 @@ function PictureCropper(title, size) {
                 </div>
             </div>
 
-            <div class="column">
-                <div class="tabbar">
+            <div class="box">
+                <div class="not_categories">
                     ${Object.keys(notion.parts).map(cat =>
-                        html`<a class=${notion_cat == cat ? 'active' : ''}
-                                @click=${UI.wrap(e => switchCategory(cat))}>${T[cat]}</a>`)}
+                        html`<button type="button" class=${'small' + (notion_cat == cat ? ' active' : '')}
+                                     @click=${UI.wrap(e => switchCategory(cat))}>${T[cat]}</button>`)}
                 </div>
-                <div class="tab not_parts">
+
+                <div class="not_parts">
                     ${notion_assets[notion_cat].map((xml, idx) => {
                         let active = (idx == notion.parts[notion_cat]);
                         let fill = active ? '#dddddd' : 'none';
@@ -513,13 +514,14 @@ function PictureCropper(title, size) {
         let ctx = preview.getContext('2d');
 
         ctx.clearRect(0, 0, size, size);
-        draw(ctx, size);
 
-        ctx.fillStyle = '#f2f2f2dd';
+        ctx.fillStyle = 'white';
         ctx.beginPath();
         ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI);
-        ctx.rect(size, 0, -size, size);
         ctx.fill();
+        ctx.clip();
+
+        draw(ctx, size);
     }
 
     async function draw(ctx, size) {
