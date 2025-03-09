@@ -106,6 +106,7 @@ a:has(> img) { text-decoration: none !important; }
     display: block;
     border-bottom: 1px solid #383838;
     text-transform: uppercase;
+    text-wrap: nowrap;
 }
 #top li > a:hover, #top li.active > a {
     margin-bottom: -1px;
