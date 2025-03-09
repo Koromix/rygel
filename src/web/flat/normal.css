@@ -179,7 +179,7 @@ a:has(> img) { text-decoration: none !important; }
 #side a.lv5 { padding-left: 72px; }
 #side a.lv6 { padding-left: 87px; }
 
-#deploy { display: none; }
+:is(#deploy, .deploy) { display: none; }
 
 main {
     flex: 1;

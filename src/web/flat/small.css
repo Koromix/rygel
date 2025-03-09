@@ -81,7 +81,7 @@
     .js #top.active #logo { display: none; }
     .nojs #top:hover #logo { display: none; }
 
-    #deploy {
+    :is(#deploy, .deploy) {
         display: block !important;
         position: fixed;
         width: 42px;

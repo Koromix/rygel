@@ -28,10 +28,8 @@ import { PROJECTS } from '../projects/projects.js';
 import { ProjectInfo, ProjectBuilder } from './project.js';
 import { FormModule } from './form/form.js';
 import { NetworkModule } from './network/network.js';
+import { deploy } from '../../web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';
-
-// Needed for menu deploy and other UI stuff
-import '../../web/flat/static.js';
 
 import '../assets/client.css';
 
@@ -521,7 +519,7 @@ function renderApp(el, fullscreen) {
         render(el, root_el);
     } else {
         render(html`
-            <div id="deploy"></div>
+            <div class="deploy" @click=${deploy}></div>
 
             <nav id="top">
                 <menu>
