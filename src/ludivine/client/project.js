@@ -48,7 +48,8 @@ function ProjectBuilder(project) {
         options = Object.assign({
             title: title,
             level: null,
-            help: null
+            help: null,
+            step: null
         }, options);
 
         try {
@@ -61,6 +62,8 @@ function ProjectBuilder(project) {
 
                 level: null,
                 help: null,
+                progress: null,
+
                 modules: [],
                 tests: []
             };
@@ -76,6 +79,7 @@ function ProjectBuilder(project) {
             current_page.title = options.title;
             current_page.level = options.level;
             current_page.help = options.help;
+            current_page.step = options.step;
 
             for (let child of current_page.modules)
                 current_page.tests.push(...child.tests);

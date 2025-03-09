@@ -67,7 +67,7 @@ function FormBuilder(ctx, model) {
 
         try {
             part = {
-                intro: makeIntro(intro),
+                intro: wrapIntro(intro),
                 widgets: []
             };
 
@@ -427,7 +427,7 @@ function FormBuilder(ctx, model) {
         refresh();
     };
 
-    function makeIntro(intro) {
+    function wrapIntro(intro) {
         if (!intro)
             return '';
 

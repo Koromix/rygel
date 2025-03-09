@@ -52,23 +52,18 @@ const consent = html`
 
 function init(build, start) {
     build.summary = html`
-        <p>Retrouvez des <a href="/etudes#etude-1-sociotrauma">informations sur cette étude</a> sur le site officiel de Ligne de Vie.
+        <p>Retrouvez les <a href="/etudes#etude-1-sociotrauma">informations de cette étude</a> sur le site officiel de Ligne de Vie.
         <p>Commencez par faire votre bilan initial. Vous pouvez <b>arrêter à tout moment</b> et recommencer plus tard !
     `;
 
     build.module('recueil', 'Recueil', mod => {
         mod.level = 'Temporalité';
         mod.help = html`
-            <div class="help">
-                <img src=${ASSETS['pictures/help1']} alt="" />
-                <div>
-                    <p>La première étape consiste à <b>vous présenter puis à faire un bilan initial</b>.
-                    <p>Vous pourrez ensuite continuer <b>selon le calendrier prévu</b>. À tout moment, vous pouvez arrêter l'étude ou la mettre en pause et y revenir plus tard. Vous avez également la possibilité de consulter les pages « Ressources » ou « Se détendre ».
-                    <p>Vous êtes libre de compléter les questionnaires dans l’ordre qui vous convient. Toutefois, nous vous recommandons de <b>suivre l’ordre proposé</b>. Les transitions ont été pensées avec soin par notre équipe de recherche de Lignes de Vie afin d’accompagner votre cheminement de la manière la plus confortable possible.
-                    <p>Nous vous invitons à <b>répondre à toutes les questions</b>, même si vous n'êtes pas certain de votre réponse. Il n’y a pas de bonne ou de mauvaise réponse, et même incertaines, elles sont importantes. Dans Lignes de Vie, on se donne le droit à l’erreur, à la bêtise, à l’ignorance… Et pour les chercheurs aussi !
-                    <p>Dès lors, si une question <b>ne correspond pas à votre vécu</b> ou si vous souhaitez ajouter un commentaire, validez la page sans y répondre et apposez votre commentaire dans le champ qui apparait.
-                </div>
-            </div>
+            <p>La première étape consiste à <b>vous présenter puis à faire un bilan initial</b>.
+            <p>Vous pourrez ensuite continuer <b>selon le calendrier prévu</b>. À tout moment, vous pouvez arrêter l'étude ou la mettre en pause et y revenir plus tard. Vous avez également la possibilité de consulter les pages « Ressources » ou « Se détendre ».
+            <p>Vous êtes libre de compléter les questionnaires dans l’ordre qui vous convient. Toutefois, nous vous recommandons de <b>suivre l’ordre proposé</b>. Les transitions ont été pensées avec soin par notre équipe de recherche de Lignes de Vie afin d’accompagner votre cheminement de la manière la plus confortable possible.
+            <p>Nous vous invitons à <b>répondre à toutes les questions</b>, même si vous n'êtes pas certain de votre réponse. Il n’y a pas de bonne ou de mauvaise réponse, et même incertaines, elles sont importantes. Dans Lignes de Vie, on se donne le droit à l’erreur, à la bêtise, à l’ignorance… Et pour les chercheurs aussi !
+            <p>Dès lors, si une question <b>ne correspond pas à votre vécu</b> ou si vous souhaitez ajouter un commentaire, validez la page sans y répondre et apposez votre commentaire dans le champ qui apparait.
         `;
 
         build.module('sociodemo', 'Présentation', mod => {
@@ -78,26 +73,20 @@ function init(build, start) {
         build.module('initial', 'Bilan initial', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <div class="help right">
-                    <div>
-                        <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
-                        <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
-                    </div>
-                    <img src=${ASSETS['pictures/help2']} alt="" />
-                </div>
+                <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
+                <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
+            `;
+            mod.step = html`
+                <p>Le bilan initial est réalisé <b>dans le mois</b> qui suit l'évènement.
+                <p>Retrouvez les <a href="/etudes#etude-1-sociotrauma">informations de cette étude</a> sur le site officiel de Ligne de Vie.
             `;
 
             let options = { schedule: start };
 
             build.module('entourage', 'Entourage', mod => {
                 mod.help = html`
-                    <div class="help left">
-                        <img src=${ASSETS['pictures/help1']} alt="" />
-                        <div>
-                            <p>Dans ce module, nous visons à comprendre votre <b>environnement social</b> : À qui parlez-vous de manière régulière ? Qui est là pour vous ? Êtes-vous satisfaits du soutien que vous recevez ?
-                            <p>À la fin de ce module, nous vous demanderons de décrire votre entourage précisément à l'aide d'un <abbr title="Outil permettant de représenter visuellement vos relations sociales">sociogramme</abbr> interactif.
-                        </div>
-                    </div>
+                    <p>Dans ce module, nous visons à comprendre votre <b>environnement social</b> : À qui parlez-vous de manière régulière ? Qui est là pour vous ? Êtes-vous satisfaits du soutien que vous recevez ?
+                    <p>À la fin de ce module, nous vous demanderons de décrire votre entourage précisément à l'aide d'un <abbr title="Outil permettant de représenter visuellement vos relations sociales">sociogramme</abbr> interactif.
                 `;
 
                 build.form('ssq6', 'Soutien social', ssq6, options)
@@ -108,13 +97,8 @@ function init(build, start) {
 
             build.module('evenement', 'Évènement', mod => {
                 mod.help = html`
-                    <div class="help left">
-                        <img src=${ASSETS['pictures/help1']} alt="" />
-                        <div>
-                            <p>Dans ce module, nous vous poserons des questions sur l’<b>événement qui vous a conduit à participer à cette étude</b>, ainsi que sur tout autre événement, qu’il soit positif ou négatif, qui fait actuellement partie de votre réalité.
-                            <p>N'hésitez pas à interrompre l'application ou à cliquer sur le <b>bouton « SOS »</b> si cela s’avère nécessaire pour vous. Vous pouvez également arrêter à tout moment et revenir plus tard.
-                        </div>
-                    </div>
+                    <p>Dans ce module, nous vous poserons des questions sur l’<b>événement qui vous a conduit à participer à cette étude</b>, ainsi que sur tout autre événement, qu’il soit positif ou négatif, qui fait actuellement partie de votre réalité.
+                    <p>N'hésitez pas à interrompre l'application ou à cliquer sur le <b>bouton « SOS »</b> si cela s’avère nécessaire pour vous. Vous pouvez également arrêter à tout moment et revenir plus tard.
                 `
 
                 build.form('evenement', 'L’évènement qui vous a amené ici', evenement, options)
@@ -147,12 +131,7 @@ function init(build, start) {
 
             build.module('divulgation', 'Communication', mod => {
                 mod.help = html`
-                    <div class="help left">
-                        <img src=${ASSETS['pictures/help1']} alt="" />
-                        <div>
-                            <p>Dans ce module, nous allons nous intéresser à la façon dont vous <b>souhaitez – ou non – parler de votre expérience</b> à vos proches, ainsi qu’à leurs réactions (si vous leur en avez parlé).
-                        </div>
-                    </div>
+                    <p>Dans ce module, nous allons nous intéresser à la façon dont vous <b>souhaitez – ou non – parler de votre expérience</b> à vos proches, ainsi qu’à leurs réactions (si vous leur en avez parlé).
                 `
 
                 build.form('cses', 'Témoignage à l\'entourage', cses, options)
@@ -163,13 +142,8 @@ function init(build, start) {
         build.module('s6', '6 semaines', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <div class="help right">
-                    <div>
-                        <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
-                        <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
-                    </div>
-                    <img src=${ASSETS['pictures/help2']} alt="" />
-                </div>
+                <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
+                <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
             `;
 
             let options = { schedule: start.plus(6 * 7) };
@@ -209,13 +183,8 @@ function init(build, start) {
         build.module('m3', '3 mois', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <div class="help right">
-                    <div>
-                        <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
-                        <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
-                    </div>
-                    <img src=${ASSETS['pictures/help2']} alt="" />
-                </div>
+                <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
+                <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
             `;
 
             let options = { schedule: start.plusMonths(3) };
@@ -253,13 +222,8 @@ function init(build, start) {
         build.module('m6', '6 mois', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <div class="help right">
-                    <div>
-                        <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
-                        <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
-                    </div>
-                    <img src=${ASSETS['pictures/help2']} alt="" />
-                </div>
+                <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
+                <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
             `;
 
             let options = { schedule: start.plusMonths(6) };
@@ -297,12 +261,7 @@ function init(build, start) {
         build.module('m12', '1 an', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <div class="help right">
-                    <div>
-                        <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
-                    </div>
-                    <img src=${ASSETS['pictures/help2']} alt="" />
-                </div>
+                <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
             `;
 
             let options = { schedule: start.plusMonths(12) };

@@ -792,7 +792,8 @@ async function runDashboard() {
                                     Étude ${project.title}
                                 </div>
                                 <div class="progress">
-                                    ${study != null ? progressCircle(study.progress, study.total) : ''}
+                                    ${study != null && study.progress < study.total ? 'Participation en cours' : ''}
+                                    ${study != null && study.progress == study.total ? 'Participation terminé' : ''}
                                 </div>
                                 ${study == null && online ?
                                     html`<button type="button"
@@ -1039,7 +1040,9 @@ async function runProject() {
 
     // Render tab
     {
-        let [progress, total] = computeProgress(cache.project.root);
+        let step = cache.page.chain.findLast(it => it.type == 'module' && it.step != null);
+
+        let [progress, total] = computeProgress(step ?? cache.project.root);
         let cls = 'summary ' + (progress == total ? 'done' : 'draft');
 
         UI.main(html`
@@ -1051,10 +1054,16 @@ async function runProject() {
                 <div class=${cls}>
                     <img src=${cache.project.picture} alt="" />
                     <div>
-                        <div class="header">Étude ${cache.project.index} - ${cache.project.title}</div>
-                        ${cache.project.summary}
+                        ${step != null ? html`
+                            <div class="header">Étude ${cache.project.index} - ${cache.project.title} - ${step.title}</div>
+                            ${step.step}
+                        ` : ''}
+                        ${step == null ? html`
+                            <div class="header">Étude ${cache.project.index} - ${cache.project.title}</div>
+                            ${cache.project.summary}
+                        ` : ''}
                     </div>
-                    ${progressCircle(progress, total)}
+                    ${step != null ? progressCircle(progress, total) : ''}
                 </div>
 
                 ${cache.page.type == 'module' ? renderModule() : null}
@@ -1155,9 +1164,32 @@ function renderModule() {
                 }) : ''}
             </div>
 
-            ${page.help ?? ''}
+            ${wrapHelp(page)}
         </div>
     `;
+}
+
+function wrapHelp(page) {
+    if (!page.help)
+        return '';
+
+    let left = (page.chain.length % 2 != 0);
+
+    if (left) {
+        return html`
+            <div class="help">
+                <img src=${ASSETS['pictures/help1']} alt="" />
+                <div>${page.help}</div>
+            </div>
+        `;
+    } else {
+        return html`
+            <div class="help right">
+                <div>${page.help}</div>
+                <img src=${ASSETS['pictures/help2']} alt="" />
+            </div>
+        `;
+    }
 }
 
 async function navigateStudy(page, section = null) {

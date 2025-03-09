@@ -338,6 +338,8 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     & > .progress {
         flex: 1;
         text-align: center;
+        font-size: 0.9em;
+        font-style: italic;
     }
 
     & .circle {
@@ -402,7 +404,8 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 
 .summary {
     display: flex;
-    height: 140px;
+    height: 160px;
+    padding-right: 1em;
     background: var(--box_color);
     border-radius: 8px;
     gap: 1.5em;
@@ -411,7 +414,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     &.done > .circle { --fill: var(--done_color); }
 
     & > img {
-        width: 200px;
+        width: 240px;
         height: 100%;
         object-fit: cover;
         object-position: left top;
@@ -431,7 +434,9 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
         text-transform: uppercase;
         color: #364b9b;
     }
-    & > .circle { margin: 20px 20px; }
+    & > .circle {
+        align-self: center;
+    }
 }
 
 @media screen and (max-width: 960px) {
