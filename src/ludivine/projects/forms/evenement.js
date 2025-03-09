@@ -28,17 +28,58 @@ function build(form, values) {
             help: "Exemples : relation abusive, traite humaine, esclavagisme, secte, inceste, situations dans lesquels les secours ont mis plusieurs jours à intervenir, etc."
         })
 
-        if (values.q1 == 1)
-            form.text("?q1a", "Précisez si vous le souhaitez (cela peut être difficile, n’hésitez pas à appuyer sur le bouton SOS si vous en avez besoin, ou rapprochez-vous d’une personne ressource)")
+        if (values.q1 == 1) {
+            form.enumRadio("?q1a", "Précisez si vous le souhaitez (non obligatoire) :", [
+                [1, "Relation abusive"],
+                [2, "Traite humaine"],
+                [3, "Esclavagisme"],
+                [4, "Secte"],
+                [5, "Inceste"],
+                [6, "Situation dans laquelle les secours ont mis plusieurs jours à intervenir"],
+                [99, "Autre"]
+            ], { help: "Cela peut être difficile, n’hésitez pas à appuyer sur le bouton SOS si vous en avez besoin, ou rapprochez-vous d’une personne ressource" })
+
+            if (values.q1a == 99)
+                form.text("?q1b", "Précisez :", { help: "Non obligatoire" })
+        }
     })
 
     form.part(() => {
-        if (values.q1 == 1)
-            console.log('XXX')
+        if (values.q1 == 1) {
+            form.number("q2d", "Quel âge aviez-vous quand la situation a débuté ?", {
+                suffix: value => value > 1 ? "ans" : "an",
+                help: "Répondez au mieux si vous n'êtes plus sûr(e)"
+            })
+
+            form.enumRadio("q2a", "Combien de temps après le début de cette situation vous êtes-vous rendu compte qu’elle était problématique ?", [
+                [1, "Immédiatement"],
+                [2, "Quelques jours / moins d'une semaine"],
+                [3, "Une semaine à un mois"],
+                [4, "Plusieurs mois"],
+                [5, "Plusieurs années"],
+            ])
+
+            if (values.q2a == 4) {
+                form.number("?q2b", "Précisez le nombre de mois :", {
+                    suffix: "mois",
+                    min: 1, max: 11,
+                    help: "Non obligatoire"
+                })
+            } else if (values.q2a == 5) {
+                form.number("?q2c", "Précisez le nombre d'années :", {
+                    suffix: value => value > 1 ? "années" : "année",
+                    min: 1,
+                    help: "Non obligatoire"
+                })
+            }
+
+            form.binary("q2e", "Considérez-vous être à l’abri maintenant ?")
+        }
 
         if (!values.q1) {
             form.number("q3", "Quel âge aviez-vous au moment des faits ?", {
                 suffix: value => value > 1 ? "ans" : "an",
+                help: "Répondez au mieux si vous n'êtes plus sûr(e)"
             })
         }
     })
