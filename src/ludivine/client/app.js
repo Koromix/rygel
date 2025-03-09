@@ -698,7 +698,7 @@ async function runProfile() {
                 <div class="column">
                     <div class="box">
                         <div>
-                            <div class="header">Bienvenue sur <b>${ENV.title}</b> !</div>
+                            <div class="header">Bienvenue sur ${ENV.title} !</div>
                             <p>Utilisez le bouton à gauche pour <b>personnaliser votre avatar</b>, si vous le désirez.
                             Une fois prêt(e), accéder à votre <b>tableau de bord et aux études</b> à l'aide du bouton ci-dessous.
                         </div>
@@ -762,7 +762,7 @@ async function runDashboard() {
         <div class="tab">
             <div class="box">
                 <div>
-                    <div class="header">Bienvenue sur <b>${ENV.title}</b> !</div>
+                    <div class="header">Bienvenue sur ${ENV.title} !</div>
                     <p>Vous pouvez vous y <b>inscrire ou continuer</b> votre participation aux études ci-dessous le cas échéant.
                     Une fois inscrit à une étude, nous vous conseillons d'ajouter les <b>échéances à votre agenda</b> à l'aide du bouton dédié afin de revenir sur l'application le moment venu.
                 </div>
