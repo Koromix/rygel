@@ -22,6 +22,7 @@
 #include "src/core/base/base.hh"
 #include "curl.hh"
 #include "smtp.hh"
+#include "vendor/base64/include/libbase64.h"
 
 namespace RG {
 
@@ -136,44 +137,92 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
         char id[33];
         const char *domain;
         {
-            uint64_t buf2[2];
-            FillRandomSafe(&buf2, RG_SIZE(buf2));
-            Fmt(id, "%1%2", FmtHex(buf2[0]).Pad0(-16), FmtHex(buf2[1]).Pad0(-16));
+            uint64_t rnd[2];
+            FillRandomSafe(&rnd, RG_SIZE(rnd));
+            Fmt(id, "%1%2", FmtHex(rnd[0]).Pad0(-16), FmtHex(rnd[1]).Pad0(-16));
 
             SplitStr(config.from, '@', &domain);
         }
 
         Fmt(&buf, "Message-ID: <%1@%2>\r\n", id, domain);
         Fmt(&buf, "Date: "); FormatRfcDate(GetUnixTime(), &buf); buf.Append("\r\n");
-        Fmt(&buf, "From: %1", config.from); buf.Append("\r\n");
-        Fmt(&buf, "To: %1", to); buf.Append("\r\n");
+        Fmt(&buf, "From: %1\r\n", config.from);
+        Fmt(&buf, "To: %1\r\n", to);
         if (content.subject) {
             Fmt(&buf, "Subject: "); EncodeRfc2047(content.subject, &buf); buf.Append("\r\n");
         }
+        Fmt(&buf, "MIME-version: 1.0\r\n");
+
+        char mixed[32] = {};
+        char alternative[32] = {};
+
+        if (content.files.len) {
+            uint64_t rnd;
+            FillRandomSafe(&rnd, RG_SIZE(rnd));
+            Fmt(mixed, "=_%1", FmtHex(rnd).Pad0(-16));
+
+            Fmt(&buf, "Content-Type: multipart/mixed; boundary=\"%1\";\r\n\r\n", mixed);
+            Fmt(&buf, "--%1\r\n", mixed);
+        }
 
         if (content.text && content.html) {
-            char boundary[17];
-            {
-                uint64_t buf2;
-                FillRandomSafe(&buf2, RG_SIZE(buf2));
-                Fmt(boundary, "%1", FmtHex(buf2).Pad0(-16));
-            }
+            uint64_t rnd;
+            FillRandomSafe(&rnd, RG_SIZE(rnd));
+            Fmt(alternative, "=_%1", FmtHex(rnd).Pad0(-16));
 
-            Fmt(&buf, "Content-Type: multipart/alternative; boundary=\"%1\";\r\n", boundary);
-            Fmt(&buf, "MIME-version: 1.0\r\n\r\n");
-            Fmt(&buf, "--%1\r\nContent-Type: text/plain; charset=UTF-8;\r\n\r\n", boundary);
+            Fmt(&buf, "Content-Type: multipart/alternative; boundary=\"%1\";\r\n\r\n", alternative);
+            Fmt(&buf, "--%1\r\n", alternative);
+            Fmt(&buf, "Content-Type: text/plain; charset=UTF-8;\r\n\r\n");
             Fmt(&buf, "%1\r\n", content.text);
-            Fmt(&buf, "--%1\r\nContent-Type: text/html; charset=UTF-8;\r\n\r\n", boundary);
+            Fmt(&buf, "--%1\r\n", alternative);
+            Fmt(&buf, "Content-Type: text/html; charset=UTF-8;\r\n\r\n");
             Fmt(&buf, "%1\r\n", content.html);
-            Fmt(&buf, "--%1--\r\n", boundary);
+            Fmt(&buf, "--%1--\r\n", alternative);
         } else if (content.html) {
             Fmt(&buf, "Content-Type: text/html; charset=UTF-8;\r\n");
-            Fmt(&buf, "MIME-version: 1.0\r\n\r\n");
             Fmt(&buf, "%1\r\n", content.html);
         } else {
             Fmt(&buf, "Content-Type: text/plain; charset=UTF-8;\r\n");
-            Fmt(&buf, "MIME-version: 1.0\r\n\r\n");
             Fmt(&buf, "%1\r\n", content.text ? content.text : "");
+        }
+
+        if (content.files.len) {
+            for (const smtp_AttachedFile &file: content.files) {
+                Fmt(&buf, "--%1\r\n", mixed);
+                Fmt(&buf, "Content-Type: %1\r\n", file.mimetype);
+                Fmt(&buf, "Content-Transfer-Encoding: base64\r\n");
+                Fmt(&buf, "Content-Disposition: attachment; filename=\"%1\"\r\n\r\n", file.name);
+
+                base64_state state;
+                base64_stream_encode_init(&state, 0);
+
+                for (Size offset = 0; offset < file.data.len; offset += 16384) {
+                    Size end = std::min(offset + 16384, file.data.len);
+                    Span<const uint8_t> view = file.data.Take(offset, end - offset);
+
+                    // More than needed but more is better than not enough
+                    buf.Grow(2 * view.len);
+
+                    size_t len;
+                    base64_stream_encode(&state, (const char *)view.ptr, (size_t)view.len, (char *)buf.end(), &len);
+
+                    buf.len += (Size)len;
+                }
+
+                // Finalize
+                {
+                    buf.Grow(16);
+
+                    size_t len;
+                    base64_stream_encode_final(&state, (char *)buf.end(), &len);
+
+                    buf.len += (Size)len;
+                }
+
+                Fmt(&buf, "\r\n");
+            }
+
+            Fmt(&buf, "--%1--\r\n", mixed);
         }
 
         payload = buf.Leak();

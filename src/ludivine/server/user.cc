@@ -58,13 +58,15 @@ contact@ldv-recherche.fr)",
 <p>Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.</p>
 <p><i>L’équipe de {{ TITLE }}</i><br>
 <a href="mailto:contact@ldv-recherche.fr">contact@ldv-recherche.fr</a></p>
-</body></html>)"
+</body></html>)",
+    {}
 };
 
 static const smtp_MailContent ExistingUser = {
     "Tentative de connexion à {{ TITLE }}",
     R"(Un utilisateur a tenté de se connecter sur votre compte :\n\n{{ EMAIL }})",
-    R"(Un utilisateur a tenté de se connecter sur votre compte :<br><br><b>{{ EMAIL }}</b>)"
+    R"(Un utilisateur a tenté de se connecter sur votre compte :<br><br><b>{{ EMAIL }}</b>)",
+    {}
 };
 
 bool InitSMTP(const smtp_Config &config)

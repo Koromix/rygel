@@ -34,10 +34,17 @@ struct smtp_Config {
     bool Validate() const;
 };
 
+struct smtp_AttachedFile {
+    const char *name = nullptr;
+    const char *mimetype = nullptr;
+    Span<const uint8_t> data;
+};
+
 struct smtp_MailContent {
     const char *subject = nullptr;
     const char *text = nullptr;
     const char *html = nullptr;
+    Span<const smtp_AttachedFile> files;
 };
 
 class smtp_Sender {
