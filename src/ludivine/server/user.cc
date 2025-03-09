@@ -16,6 +16,7 @@
 #include "src/core/base/base.hh"
 #include "src/core/http/http.hh"
 #include "src/core/request/smtp.hh"
+#include "src/core/wrap/qrcode.hh"
 #include "ludivine.hh"
 
 namespace RG {
@@ -24,6 +25,7 @@ static smtp_Sender smtp;
 
 static const smtp_MailContent NewUser = {
     "Connexion à {{ TITLE }} !",
+
     R"(Bienvenue !
 
 Nous vous remercions de votre intérêt pour les recherches de {{ TITLE }}.
@@ -42,6 +44,7 @@ Nous vous sommes très reconnaissants de votre implication dans la recherche sur
 
 L’équipe de {{ TITLE }}
 contact@ldv-recherche.fr)",
+
     R"(<html><body>
 <p>Bienvenue !</p>
 <p>Nous vous remercions de votre intérêt pour les recherches de {{ TITLE }}.</p>
@@ -49,16 +52,21 @@ contact@ldv-recherche.fr)",
 <p><b>Conservez-le précieusement, ou même mieux, enregistrez la pièce jointe sur votre ordinateur/téléphone/tablette. Celle-ci contient une copie du lien nécessaire à la connexion.</b></p>
 <p>Nous vous invitons à cliquer sur le lien suivant afin de commencer votre aventure {{ TITLE }}.</p>
 <div align="center"><br>
-    <a style="padding: 0.35em 2em 0.45em 2em; background: #2d8261; border-radius: 30px;
-              font-weight: bold; text-decoration: none !important; color: white;" href="{{ URL }}">Lien de connexion</a>
+    <a style="padding: 0.35em 2em 0.45em 2em; background: #2d8261; border-radius: 30px; font-size: 1.2em;
+              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase;" href="{{ URL }}">Connexion à {{ TITLE }}</a>
 <br><br></div>
 <p>Si vous rencontrez des problèmes pour appuyer sur le bouton, copiez-collez le lien suivant dans votre navigateur :</p>
 <p>{{ URL }}</p>
+<p>Vous pouvez également utiliser ce QRcode pour vous connecter à l'aide de votre smartphone si vous le souhaitez :</p>
+<div align="center"><br>
+    <img src="cid:qrcode.png" alt="">
+<br><br></div>
 <p>Nous utilisons un système de chiffrement end-to-end pour assurer la sécurité et l’anonymat de vos données. Nous ne serons donc <b>pas en mesure de vous renvoyer un nouveau lien de connexion</b> en cas de perte de celui-ci.</p>
 <p>Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.</p>
 <p><i>L’équipe de {{ TITLE }}</i><br>
 <a href="mailto:contact@ldv-recherche.fr">contact@ldv-recherche.fr</a></p>
 </body></html>)",
+
     {}
 };
 
@@ -122,6 +130,24 @@ static bool SendMail(const char *to, const smtp_MailContent &model,
     content.subject = PatchText(model.subject, to, url, alloc).ptr;
     content.html = PatchText(model.html, to, url, alloc).ptr;
     content.text = PatchText(model.text, to, url, alloc).ptr;
+
+    Span<const uint8_t> png;
+    {
+        HeapArray<uint8_t> buf(alloc);
+
+        StreamWriter st(&buf);
+        if (!qr_EncodeTextToPng(url, 0, &st))
+            return false;
+        st.Close();
+
+        png = buf.Leak();
+    }
+
+    smtp_AttachedFile files[] = {
+        { .mimetype = "image/png", .id = "qrcode.png", .inlined = true, .data = png }
+    };
+
+    content.files = files;
 
     return smtp.Send(to, content);
 }
