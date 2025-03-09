@@ -143,8 +143,13 @@ static bool SendMail(const char *to, const smtp_MailContent &model,
         png = buf.Leak();
     }
 
+    const char *filename = Fmt(alloc, "Recuperation Session %1.txt", config.title).ptr;
+    const char *careful = "Gardez ce fichier en sécurité, ne le divulgez pas ou vos données pourraient être compromises !";
+    Span<char> attachment = Fmt(alloc, "Récupération de la connexion à %1\n\n===\n%2\n%3/%4\n===\n\n%5", config.title, uid, fmt, registration, careful);
+
     smtp_AttachedFile files[] = {
-        { .mimetype = "image/png", .id = "qrcode.png", .inlined = true, .data = png }
+        { .mimetype = "image/png", .id = "qrcode.png", .inlined = true, .data = png },
+        { .mimetype = "text/plain", .name = filename, .data = attachment.As<const uint8_t>() }
     };
 
     content.files = files;
