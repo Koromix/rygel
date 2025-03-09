@@ -124,8 +124,7 @@ function DiaryModule(app) {
                 <div class="header">
                     ${data != null ? html`
                         Journal - Entrée du ${data.date.toLocaleString()}
-                        <div style="width: 30px;"></div>
-                        <button type="button" class="small secondary"
+                        <button type="button" class="small secondary" style="margin-left: 30px;"
                                 @click=${UI.confirm(`Supprimer l'entrée de journal du ${data.date.toLocaleString()}`, e => deleteEntry(entry))}>Supprimer cette entrée</button>
                     ` : ''}
                     ${data == null ? `Journal - Nouvelle entrée` : ''}
