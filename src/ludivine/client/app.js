@@ -550,9 +550,9 @@ function renderApp(el, fullscreen) {
             ${el}
 
             <footer>
-                <div style="text-align: right; line-height: 1.2;">
-                    ${ENV.title} © 2024<br>
-                    <a href="/mentions" style="font-size: 0.8em;">Mentions légales</a>
+                <div style="text-align: right;">
+                    ${ENV.title} © 2024
+                    <a class="legal" href="/mentions">Mentions légales</a>
                 </div>
                 <img src=${ASSETS['main/footer']} alt="" width="79" height="64">
                 <div style="font-size: 0.8em;">

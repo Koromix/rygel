@@ -84,7 +84,14 @@ p + .actions { margin-top: 2em; }
     height: 51px;
 }
 
-footer { font-size: 1.1em; }
+footer {
+    font-size: 1.1em;
+
+    & .legal {
+        display: block;
+        font-size: 0.8em;
+    }
+}
 
 @media screen and (max-width: 960px) {
     #logo { display: none; }
@@ -103,6 +110,8 @@ footer { font-size: 1.1em; }
         padding-left: 1em;
         align-items: start;
         text-align: left;
+
+        & .legal { display: none; }
     }
 }
 
