@@ -126,7 +126,7 @@ function build(form, values) {
             [1, "Oui, en tant qu'indépendant"],
             [2, "Oui, en tant qu'employé(e)"]
         ])
-        form.binary("q9a", "Avez-vous une activité d’encadrement (collaborateurs) ?")
+        form.binary("q9a", "Avez-vous une activité d’encadrement (collaborateurs) ?", { disabled: !values.q9 })
         if (values.q9a == 1)
             form.enumButtons("q9b", "Combien de collaborateurs encadrez-vous ?", [1, 2, 3, 4, 5, 6, [7, "7 ou plus"]], { disabled: !values.q9 })
         form.enumButtons("q9c", "Avec combien de personnes au travail (autres que celles que vous encadrez) parlez-vous au moins une fois toutes les deux semaines ?", [0, 1, 2, 3, 4, 5, 6, [7, "7 ou plus"]], { disabled: !values.q9 })
