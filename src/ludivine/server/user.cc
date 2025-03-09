@@ -32,7 +32,7 @@ Nous vous remercions de votre intérêt pour les recherches de {{ TITLE }}.
 
 Attention, ce **mail est important** ! Il est l’**unique moyen de connexion** à votre espace personnel durant toute la durée des études.
 
-Conservez-le **précieusement, ou même mieux, enregistrez la pièce jointe** sur votre ordinateur/téléphone/tablette. Celle-ci contient une copie du lien nécessaire à la connexion.
+Conservez-le **précieusement, ou même mieux, enregistrez la pièce jointe** sur votre ordinateur/téléphone/tablette. Celle-ci contient les informations nécessaires pour récupérer votre compte si vous perdez ce mail.
 
 Nous vous invitons à utiliser le lien suivant afin de commencer votre aventure {{ TITLE }} :
 
@@ -49,7 +49,7 @@ contact@ldv-recherche.fr)",
 <p>Bienvenue !</p>
 <p>Nous vous remercions de votre intérêt pour les recherches de {{ TITLE }}.</p>
 <p><b>Attention, ce <b>mail est important</b> ! Il est l’unique moyen de connexion à votre espace personnel durant toute la durée des études.</b></p>
-<p><b>Conservez-le précieusement, ou même mieux, enregistrez la pièce jointe sur votre ordinateur/téléphone/tablette. Celle-ci contient une copie du lien nécessaire à la connexion.</b></p>
+<p><b>Conservez-le précieusement, ou même mieux, enregistrez la pièce jointe sur votre ordinateur/téléphone/tablette. Celle-ci contient les informations nécessaires pour récupérer votre compte si vous perdez ce mail.</b></p>
 <p>Nous vous invitons à cliquer sur le lien suivant afin de commencer votre aventure {{ TITLE }}.</p>
 <div align="center"><br>
     <a style="padding: 0.35em 2em 0.45em 2em; background: #2d8261; border-radius: 30px;
