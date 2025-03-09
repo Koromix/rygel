@@ -181,7 +181,7 @@ p + .columns { margin-top: 2em; }
 
 .tabbar {
     display: flex;
-    gap: 0.8em;
+    gap: 0.6em;
     font-size: 1.1em;
 }
 .tabbar > a {
@@ -195,16 +195,20 @@ p + .columns { margin-top: 2em; }
     border-top-right-radius: 16px;
 
     & > img {
-        width: 32px;
-        height: 32px;
+        width: 24px;
+        height: 24px;
         transform: translateY(3px);
+        filter: invert(100%);
     }
+
+    &:is(.active, :hover) {
+        background: var(--bar_color);
+        color: white;
+
+        & > img { filter: none; }
+    }
+    &.active { font-weight: bold; }
 }
-.tabbar > :is(a.active, a:hover) {
-    background: var(--bar_color);
-    color: white;
-}
-.tabbar > a.active { font-weight: bold; }
 .tab {
     padding: 1em;
     background: var(--tab_color);
