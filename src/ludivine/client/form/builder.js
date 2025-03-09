@@ -492,8 +492,9 @@ function FormBuilder(ctx, model) {
                     ${tip ? html`<div class="tip">${tip}</div>` : ''}
                     ${skippable ? html`
                         <label>
-                            <span>Je souhaite apporter un commentaire (non obligatoire) :</span>
+                            <span>Je souhaite apporter un commentaire :</span>
                             <textarea rows="4" @input=${comment}>${notes.comment ?? ''}</textarea>
+                            <div class="tip">Non obligatoire</div>
                         </label>
                         <label>
                             <input type="checkbox" ?checked=${!!notes.skip} @click=${skip} />
