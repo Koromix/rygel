@@ -507,7 +507,7 @@ static bool IsTitleValid(Span<const char> title)
     return true;
 }
 
-void HandleUserNotify(http_IO *io)
+void HandleUserRemind(http_IO *io)
 {
     // Parse input data
     const char *uid = nullptr;

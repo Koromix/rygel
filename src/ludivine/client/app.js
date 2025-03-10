@@ -1092,7 +1092,7 @@ async function syncNotifications() {
         partial: partial
     })));
 
-    await Net.post('/api/notify', {
+    await Net.post('/api/remind', {
         uid: session.uid,
         study: project.index,
         title: project.title,
