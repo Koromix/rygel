@@ -496,6 +496,196 @@ const toSearchAbsoluteSourcesURL = {
   test: 'input.js',
 }
 
+// This case covers a crash when esbuild would generate an invalid source map
+// containing a mapping with an index of a source that's out of bounds of the
+// "sources" array. This happened when generating the namespace exports chunk
+// which in this case is triggered by "export * as it from". For more
+// information, see: https://github.com/evanw/esbuild/issues/4080
+const testCaseNullMappingIssue4080 = {
+  'foo.js': `// foo.js
+here.is.some.code = "foo!";
+//# sourceMappingURL=foo.js.map
+`,
+  'foo.js.map': `{
+  "version": 3,
+  "sources": ["./src/foo.js"],
+  "sourcesContent": ["here\\n  .is\\n  .some\\n  .code\\n  = 'foo!'\\n"],
+  "mappings": ";AAAA,KACG,GACA,KACA,OACC;",
+  "names": []
+}`,
+  'bar.js': `// bar.js
+here.is.some.more.code = "bar!";
+//# sourceMappingURL=bar.js.map
+`,
+  'bar.js.map': `{
+  "version": 3,
+  "sources": ["./src/bar.js"],
+  "sourcesContent": ["here\\n  .is.some.more\\n  .code\\n  = 'bar!'\\n"],
+  "mappings": ";AAAA,KACG,GAAG,KAAK,KACR,OACC;",
+  "names": []
+}`,
+  'core.js': `// core.js
+import "./bar.js";
+
+// lib.js
+var value = "lib!";
+export {
+  value
+};
+//# sourceMappingURL=core.js.map
+`,
+  'core.js.map': `{
+  "version": 3,
+  "sources": ["./src/core.js", "./src/lib.js"],
+  "sourcesContent": ["import './bar.js'\\nexport { value } from './lib.js'\\n", "export const value = 'lib!'\\n"],
+  "mappings": ";AAAA,OAAO;;;ACAA,IAAM,QAAQ;",
+  "names": []
+}`,
+  'entry.js': `import './foo.js'
+export * as it from './core.js'
+`,
+}
+
+const toSearchNullMappingIssue4080 = {
+  'foo!': 'src/foo.js',
+  'bar!': 'src/bar.js',
+  'lib!': 'src/lib.js',
+}
+
+const testCaseNestedFoldersIssue4070 = {
+  'src/main.js': `import { appConfig } from "./app/app.config";
+appConfig("foo");
+//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKIC` +
+    `Aic291cmNlcyI6IFsibWFpbi5qcyJdLAogICJzb3VyY2VzQ29udGVudCI6IFsiaW1wb3J0I` +
+    `HsgYXBwQ29uZmlnIH0gZnJvbSBcIi4vYXBwL2FwcC5jb25maWdcIjtcbmFwcENvbmZpZyhc` +
+    `ImZvb1wiKTsiXSwKICAibWFwcGluZ3MiOiAiQUFBQSxTQUFTLGlCQUFpQjtBQUMxQixVQUF` +
+    `VLEtBQUs7IiwKICAibmFtZXMiOiBbXQp9Cg==`,
+  'src/app/app.config.js': `export const appConfig = (x) => console.log(x, "bar");
+//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKIC` +
+    `Aic291cmNlcyI6IFsiYXBwLmNvbmZpZy5qcyJdLAogICJzb3VyY2VzQ29udGVudCI6IFsiZ` +
+    `Xhwb3J0IGNvbnN0IGFwcENvbmZpZyA9IHggPT4gY29uc29sZS5sb2coeCwgXCJiYXJcIik7` +
+    `Il0sCiAgIm1hcHBpbmdzIjogIkFBQU8sYUFBTSxZQUFZLE9BQUssUUFBUSxJQUFJLEdBQUc` +
+    `sS0FBSzsiLAogICJuYW1lcyI6IFtdCn0K`,
+}
+
+const toSearchNestedFoldersIssue4070 = {
+  'foo': 'src/main.js',
+  'bar': 'src/app/app.config.js',
+}
+
+// This test checks what happens when you use absolute paths in inlined source
+// maps. This is done two ways, first using a "file://" URL and second using
+// an actual absolute path.
+//
+// Only the first way is supposed to be valid, at least according to the formal
+// specification (https://tc39.es/ecma426/) which says that each source is "a
+// string that is a (potentially relative) URL".
+//
+// However, for a long time source maps was poorly-specified. The old source map
+// specification (https://sourcemaps.info/spec.html) only says "sources" is "a
+// list of original sources used by the mappings entry".
+//
+// So it makes sense that software which predates the formal specification of
+// source maps might fill in the sources array with absolute file paths instead
+// of URLs. So we test for that here to make sure esbuild works either way.
+//
+// Windows paths make this complicated. Here are all five possible combinations
+// of absolute paths for the file "folder/file.js":
+//
+// - Unix URL: "file:///folder/file.js"
+// - Unix path: "/folder/file.js"
+// - Windows URL: "file:///C:/folder/file.js"
+// - Windows path v1: "C:/folder/file.js" (not covered here)
+// - Windows path v2: "C:\folder\file.js"
+//
+const rootDir = path.dirname(process.cwd().split(path.sep).slice(0, 2).join(path.sep))
+const pathIssue4075 = path.join(rootDir, 'out', 'src', 'styles')
+const urlIssue4075 = url.pathToFileURL(pathIssue4075)
+const urlIssue4075Encoded = encodeURIComponent(JSON.stringify(urlIssue4075 + '1.scss'))
+const pathIssue4075Encoded = encodeURIComponent(JSON.stringify(pathIssue4075 + '2.scss'))
+const testCaseAbsolutePathIssue4075 = {
+  'entry.css': `
+    @import "./styles1.css";
+    @import "./styles2.css";
+  `,
+  'styles1.css': `/* You can add global styles to this file, and also import other style files */
+* {
+  content: "foo";
+}
+
+/*# sourceMappingURL=data:application/json;charset=utf-8,%7B%22version%22:3,` +
+    `%22sourceRoot%22:%22%22,%22sources%22:%5B${urlIssue4075Encoded}%5D,%22n` +
+    `ames%22:%5B%5D,%22mappings%22:%22AAAA;AACA;EACE,SAAS%22,%22file%22:%22o` +
+    `ut%22,%22sourcesContent%22:%5B%22/*%20You%20can%20add%20global%20styles` +
+    `%20to%20this%20file,%20and%20also%20import%20other%20style%20files%20%2` +
+    `A/%5Cn*%20%7B%5Cn%20%20content:%20%5C%22foo%5C%22%5Cn%7D%5Cn%22%5D%7D */`,
+  'styles2.css': `/* You can add global styles to this file, and also import other style files */
+* {
+  content: "bar";
+}
+
+/*# sourceMappingURL=data:application/json;charset=utf-8,%7B%22version%22:3,` +
+    `%22sourceRoot%22:%22%22,%22sources%22:%5B${pathIssue4075Encoded}%5D,%22` +
+    `names%22:%5B%5D,%22mappings%22:%22AAAA;AACA;EACE,SAAS%22,%22file%22:%22` +
+    `out%22,%22sourcesContent%22:%5B%22/*%20You%20can%20add%20global%20style` +
+    `s%20to%20this%20file,%20and%20also%20import%20other%20style%20files%20%` +
+    `2A/%5Cn*%20%7B%5Cn%20%20content:%20%5C%22bar%5C%22%5Cn%7D%5Cn%22%5D%7D */`,
+}
+
+const toSearchAbsolutePathIssue4075 = {
+  foo: path.relative(path.join(testDir, '(this test)'), pathIssue4075 + '1.scss').replaceAll('\\', '/'),
+  bar: path.relative(path.join(testDir, '(this test)'), pathIssue4075 + '2.scss').replaceAll('\\', '/'),
+}
+
+const testCaseMissingSourcesIssue4104 = {
+  'entry.js': `import { bootstrapApplication } from '@angular/platform-browser';
+import { AppComponent } from './app.js';
+
+bootstrapApplication(AppComponent)
+  .catch((err) => console.error(err));`,
+  'app.component.html': `<div>`,
+  'app.js': `import { __decorate } from "tslib";
+import __NG_CLI_RESOURCE__0 from "./app.component.html";
+import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+let AppComponent = class AppComponent {
+    title = 'ng19-sourcemap-repro';
+    onClick() {
+        debugger;
+    }
+};
+AppComponent = __decorate([
+    Component({
+        selector: 'app-root',
+        imports: [RouterOutlet],
+        template: __NG_CLI_RESOURCE__0,
+    })
+], AppComponent);
+export { AppComponent };
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIj` +
+    `oiYXBwLmNvbXBvbmVudC5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbImFwcC5jb` +
+    `21wb25lbnQudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7QUFBQSxPQUFPLEVBQUUs` +
+    `U0FBUyxFQUFFLE1BQU0sZUFBZSxDQUFDO0FBQzFDLE9BQU8sRUFBRSxZQUFZLEVBQUUsTUF` +
+    `BTSxpQkFBaUIsQ0FBQztBQU94QyxJQUFNLFlBQVksR0FBbEIsTUFBTSxZQUFZO0lBQ3ZCLE` +
+    `tBQUssR0FBRyxzQkFBc0IsQ0FBQztJQUUvQixPQUFPO1FBQ0wsUUFBUSxDQUFDO0lBQ1gsQ` +
+    `0FBQztDQUNGLENBQUE7QUFOWSxZQUFZO0lBTHhCLFNBQVMsQ0FBQztRQUNULFFBQVEsRUFB` +
+    `RSxVQUFVO1FBQ3BCLE9BQU8sRUFBRSxDQUFDLFlBQVksQ0FBQztRQUN2Qiw4QkFBbUM7S0F` +
+    `DcEMsQ0FBQztHQUNXLFlBQVksQ0FNeEIiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgey` +
+    `BDb21wb25lbnQgfSBmcm9tICdAYW5ndWxhci9jb3JlJztcbmltcG9ydCB7IFJvdXRlck91d` +
+    `GxldCB9IGZyb20gJ0Bhbmd1bGFyL3JvdXRlcic7XG5cbkBDb21wb25lbnQoe1xuICBzZWxl` +
+    `Y3RvcjogJ2FwcC1yb290JyxcbiAgaW1wb3J0czogW1JvdXRlck91dGxldF0sXG4gIHRlbXB` +
+    `sYXRlVXJsOiAnLi9hcHAuY29tcG9uZW50Lmh0bWwnLFxufSlcbmV4cG9ydCBjbGFzcyBBcH` +
+    `BDb21wb25lbnQge1xuICB0aXRsZSA9ICduZzE5LXNvdXJjZW1hcC1yZXBybyc7XG5cbiAgb` +
+    `25DbGljaygpIHtcbiAgICBkZWJ1Z2dlcjtcbiAgfVxufVxuIl19`,
+}
+
+const toSearchMissingSourcesIssue4104 = {
+  '@angular/platform-browser': 'entry.js',
+  '@angular/core': 'app.component.ts',
+  'ng19-sourcemap-repro': 'app.component.ts',
+  'app-root': 'app.component.ts',
+}
+
 async function check(kind, testCase, toSearch, { outfile, flags, entryPoints, crlf, followUpFlags = [], checkFirstChunk }) {
   let failed = 0
 
@@ -959,6 +1149,31 @@ async function main() {
           entryPoints: ['entry.js'],
           crlf,
         }),
+        check('issue-4070' + suffix, testCaseNestedFoldersIssue4070, toSearchNestedFoldersIssue4070, {
+          outfile: 'out.js',
+          flags: flags.concat('--bundle'),
+          entryPoints: ['src/main.js'],
+          crlf,
+        }),
+        check('issue-4075' + suffix, testCaseAbsolutePathIssue4075, toSearchAbsolutePathIssue4075, {
+          outfile: 'out.css',
+          flags: flags.concat('--bundle'),
+          entryPoints: ['entry.css'],
+          crlf,
+        }),
+        check('issue-4080' + suffix, testCaseNullMappingIssue4080, toSearchNullMappingIssue4080, {
+          outfile: 'out.js',
+          flags: flags.concat('--bundle', '--format=esm'),
+          entryPoints: ['entry.js'],
+          crlf,
+        }),
+        check('issue-4104' + suffix, testCaseMissingSourcesIssue4104, toSearchMissingSourcesIssue4104, {
+          outfile: 'out.js',
+          flags: flags.concat('--format=esm', '--sourcemap', '--bundle', '--loader:.html=text', '--packages=external'),
+          entryPoints: ['entry.js'],
+          crlf,
+          followUpFlags: ['--packages=external'],
+        }),
 
         // Checks for the "names" field
         checkNames('names' + suffix, testCaseNames, {
@@ -1002,7 +1217,7 @@ async function main() {
           entryPoints: ['entry1.ts', 'entry2.ts'],
           crlf,
           checkFirstChunk: true,
-        })
+        }),
       )
     }
   }
