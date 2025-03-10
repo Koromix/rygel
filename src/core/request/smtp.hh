@@ -39,14 +39,14 @@ struct smtp_AttachedFile {
     const char *id = nullptr;
     const char *name = nullptr;
     bool inlined = false;
-    Span<const uint8_t> data;
+    Span<const uint8_t> data = {};
 };
 
 struct smtp_MailContent {
     const char *subject = nullptr;
     const char *text = nullptr;
     const char *html = nullptr;
-    Span<const smtp_AttachedFile> files;
+    Span<const smtp_AttachedFile> files = {};
 };
 
 class smtp_Sender {
