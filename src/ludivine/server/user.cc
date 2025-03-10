@@ -77,6 +77,11 @@ static const smtp_MailContent ExistingUser = {
     {}
 };
 
+struct NotificationDate {
+    LocalDate date = {};
+    bool partial = false;
+};
+
 bool InitSMTP(const smtp_Config &config)
 {
     return smtp.Init(config);
@@ -509,7 +514,7 @@ void HandleUserNotify(http_IO *io)
     int64_t study = -1;
     const char *title = nullptr;
     LocalDate start = {};
-    HeapArray<LocalDate> dates;
+    HeapArray<NotificationDate> dates;
     int offset = 0;
     {
         StreamReader st;
@@ -541,16 +546,30 @@ void HandleUserNotify(http_IO *io)
             } else if (key == "dates") {
                 parser.ParseArray();
                 while (parser.InArray()) {
-                    const char *str = nullptr;
-                    parser.ParseString(&str);
+                    NotificationDate date = {};
 
-                    if (str) {
-                        LocalDate date = {};
-                        ParseDate(str, &date);
-                        dates.Append(date);
-                    } else {
-                        dates.AppendDefault();
+                    parser.ParseObject();
+                    while (parser.InObject()) {
+                        Span<const char> key = {};
+                        parser.ParseKey(&key);
+
+                        if (key == "date") {
+                            const char *str = nullptr;
+                            parser.ParseString(&str);
+
+                            if (str) {
+                                ParseDate(str, &date.date);
+                            }
+                        } else if (key == "partial") {
+                            parser.ParseBool(&date.partial);
+                        } else if (parser.IsValid()) {
+                            LogError("Unexpected key '%1'", key);
+                            io->SendError(422);
+                            return;
+                        }
                     }
+
+                    dates.Append(date);
                 }
             } else if (key == "offset") {
                 parser.ParseInt(&offset);
@@ -586,7 +605,7 @@ void HandleUserNotify(http_IO *io)
             LogError("Missing or invalid start");
             valid = false;
         }
-        if (std::any_of(dates.begin(), dates.end(), [](const LocalDate &date) { return !date.IsValid(); })) {
+        if (std::any_of(dates.begin(), dates.end(), [](const NotificationDate &date) { return !date.date.IsValid(); })) {
             LogError("Missing or invalid dates");
             valid = false;
         }
@@ -625,15 +644,15 @@ void HandleUserNotify(http_IO *io)
         if (!db.Run("DELETE FROM notifications WHERE user = ?1 AND study = ?2", user, study))
             return false;
 
-        for (const LocalDate &date: dates) {
+        for (const NotificationDate &date: dates) {
             char dates[2][32] = {};
 
             Fmt(dates[0], "%1", start);
-            Fmt(dates[1], "%1", date);
+            Fmt(dates[1], "%1", date.date);
 
-            if (!db.Run(R"(INSERT INTO notifications (user, study, title, start, date, offset)
-                           VALUES (?1, ?2, ?3, ?4, ?5, ?6))",
-                        user, study, title, dates[0], dates[1], offset))
+            if (!db.Run(R"(INSERT INTO notifications (user, study, title, start, date, offset, partial)
+                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
+                        user, study, title, dates[0], dates[1], offset, 0 + date.partial))
                 return false;
         }
 

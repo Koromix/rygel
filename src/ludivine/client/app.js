@@ -33,7 +33,7 @@ import { ASSETS } from '../assets/assets.js';
 
 import '../assets/client.css';
 
-const DATABASE_VERSION = 3;
+const DATABASE_VERSION = 4;
 
 Object.assign(T, {
     cancel: 'Annuler',
@@ -609,32 +609,6 @@ async function initProject(project, study) {
         }
     });
 
-    // Update notifications (best effort, don't wait)
-    {
-        let start = LocalDate.fromJSDate(study.start);
-        let offset = -(new Date).getTimezoneOffset();
-
-        let dates = new Set;
-
-        for (let page of project.tests) {
-            let schedule = page.schedule?.toString?.();
-
-            if (schedule)
-                dates.add(schedule);
-        }
-
-        dates = Array.from(dates);
-
-        Net.post('/api/notify', {
-            uid: session.uid,
-            study: project.index,
-            title: project.title,
-            start: start,
-            dates: dates,
-            offset: offset
-        });
-    }
-
     return project;
 }
 
@@ -1031,10 +1005,13 @@ async function consent(e, project) {
 
 async function runProject() {
     // Sync tests
-    cache.tests = await db.fetchAll(`SELECT t.id, t.key, t.status
+    cache.tests = await db.fetchAll(`SELECT t.id, t.key, t.visible, t.status, t.notify
                                      FROM tests t
                                      INNER JOIN studies s ON (s.id = t.study)
-                                     WHERE s.id = ? AND t.visible = 1`, cache.study.id);
+                                     WHERE s.id = ?`, cache.study.id);
+
+    // Best effort, don't wait
+    syncNotifications();
 
     // Prepare page data context
     if (cache.page.type != 'module') {
@@ -1075,6 +1052,59 @@ async function runProject() {
             </div>
         `);
     }
+}
+
+async function syncNotifications() {
+    let project = cache.project;
+    let study = cache.study;
+    let tests = cache.tests;
+
+    let sync = tests.some(test => test.notify != test.status);
+
+    if (!sync)
+        return;
+
+    // Make copy in case it's refreshed while this runs
+    tests = tests.slice();
+
+    let start = LocalDate.fromJSDate(study.start);
+    let offset = -(new Date).getTimezoneOffset();
+
+    let dates = new Map;
+
+    for (let page of project.tests) {
+        let schedule = page.schedule?.toString?.();
+        let test = tests.find(test => test.key == page.key);
+
+        if (!schedule)
+            continue;
+        if (test.status == 'done')
+            continue;
+
+        let partial = dates.get(schedule) ?? false;
+        if (test.status == 'draft')
+            partial = true;
+        dates.set(schedule, partial);
+    }
+
+    dates = Array.from(Util.map(dates.entries(), ([date, partial]) => ({
+        date: date,
+        partial: partial
+    })));
+
+    await Net.post('/api/notify', {
+        uid: session.uid,
+        study: project.index,
+        title: project.title,
+        start: start,
+        dates: dates,
+        offset: offset
+    });
+
+    await db.transaction(async () => {
+        for (let test of tests)
+            await db.exec('UPDATE tests SET notify = ? WHERE id = ?', test.status, test.id);
+    });
 }
 
 function renderModule() {
@@ -1258,6 +1288,8 @@ async function saveTest(page, data, status = 'draft') {
 
     await db.exec(`UPDATE tests SET status = ?, mtime = ?, payload = ?
                    WHERE study = ? AND key = ?`, status, mtime, json, cache.study.id, page.key);
+
+    await run();
 }
 
 async function finalizeTest(page, data) {
@@ -1437,6 +1469,12 @@ async function openDatabase(filename, key) {
                         title TEXT,
                         content TEXT NOT NULL
                     );
+                `);
+            } // fallthrough
+
+            case 3: {
+                await db.exec(`
+                    ALTER TABLE tests ADD COLUMN notify TEXT;
                 `);
             } // fallthrough
         }
