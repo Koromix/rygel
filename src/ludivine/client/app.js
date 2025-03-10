@@ -789,13 +789,13 @@ async function runDashboard() {
                                 </div>
                                 <div class="progress">
                                     ${study != null && !study.progress ? 'Participation acceptée' : ''}
-                                    ${study != null && study.progress && study.progress < study.total ? 'Participation en cours' : ''}
-                                    ${study != null && study.progress && study.progress == study.total ? 'Participation terminée' : ''}
+                                    ${study?.progress && study.progress < study.total ? 'Participation en cours' : ''}
+                                    ${study?.progress && study.progress == study.total ? 'Participation terminée' : ''}
                                 </div>
                                 <button type="button" @click=${UI.wrap(e => openStudy(project))}>
-                                    ${study != null && !study.progress ? 'Commencer' : ''}
-                                    ${study != null && study.progress && study.progress < study.total ? 'Reprendre' : ''}
-                                    ${study != null && study.progress && study.progress == study.total ? 'Accéder' : ''}
+                                    ${!study?.progress ? 'Commencer' : ''}
+                                    ${study?.progress && study.progress < study.total ? 'Reprendre' : ''}
+                                    ${study?.progress && study.progress == study.total ? 'Accéder' : ''}
                                 </button>
                             </div>
                         `;
