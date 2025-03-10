@@ -53,7 +53,7 @@ contact@ldv-recherche.fr)",
 <p>Nous vous invitons à cliquer sur le lien suivant afin de commencer votre aventure {{ TITLE }}.</p>
 <div align="center"><br>
     <a style="padding: 0.7em 2em; background: #2d8261; border-radius: 30px;
-              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase;" href="{{ URL }}">Connexion à {{ TITLE }}</a>
+              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ URL }}">Connexion à {{ TITLE }}</a>
 <br><br></div>
 <p>Si vous rencontrez des problèmes pour appuyer sur le bouton, copiez-collez le lien suivant dans votre navigateur :</p>
 <p><i>{{ URL }}</i></p>
