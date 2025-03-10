@@ -780,8 +780,6 @@ async function runDashboard() {
                             }
                         }
 
-                        let online = (project.bundle != null);
-
                         return html`
                             <div class=${cls}>
                                 <img src=${project.picture} alt="" />
@@ -790,19 +788,15 @@ async function runDashboard() {
                                     Étude ${project.title}
                                 </div>
                                 <div class="progress">
-                                    ${study != null && study.progress < study.total ? 'Participation en cours' : ''}
-                                    ${study != null && study.progress == study.total ? 'Participation terminé' : ''}
+                                    ${study != null && !study.progress ? 'Participation acceptée' : ''}
+                                    ${study != null && study.progress && study.progress < study.total ? 'Participation en cours' : ''}
+                                    ${study != null && study.progress && study.progress == study.total ? 'Participation terminée' : ''}
                                 </div>
-                                ${study == null && online ?
-                                    html`<button type="button"
-                                                 @click=${UI.wrap(e => openStudy(project))}>Participer</button>` : ''}
-                                ${study == null && !online ?
-                                    html`<button type="button" disabled>Prochainement</button>` : ''}
-                                ${study != null && study.progress < study.total ?
-                                    html`<button type="button"
-                                                 @click=${UI.wrap(e => openStudy(project))}>${study.progress ? 'Reprendre' : 'Commencer'}</button>` : ''}
-                                ${study != null && study.progress == study.total ?
-                                    html`<button type="button" disabled>Résultats</button>` : ''}
+                                <button type="button" @click=${UI.wrap(e => openStudy(project))}>
+                                    ${study != null && !study.progress ? 'Commencer' : ''}
+                                    ${study != null && study.progress && study.progress < study.total ? 'Reprendre' : ''}
+                                    ${study != null && study.progress && study.progress == study.total ? 'Accéder' : ''}
+                                </button>
                             </div>
                         `;
                     })}
@@ -1038,27 +1032,28 @@ async function runProject() {
 
     // Render tab
     {
+        let project = cache.project;
         let step = cache.page.chain.findLast(it => it.type == 'module' && it.step != null);
 
-        let [progress, total] = computeProgress(step ?? cache.project.root);
+        let [progress, total] = computeProgress(step ?? project.root);
         let cls = 'summary ' + (progress == total ? 'done' : 'draft');
 
         UI.main(html`
             <div class="tabbar">
-                <a class="active">Participer</a>
+                <a class="active" @click=${UI.wrap(e => navigateStudy(project.root))}>Participer</a>
             </div>
 
             <div class="tab" style="flex: 1;">
                 <div class=${cls}>
-                    <img src=${cache.project.picture} alt="" />
+                    <img src=${project.picture} alt="" />
                     <div>
                         ${step != null ? html`
-                            <div class="header">Étude ${cache.project.index} - ${cache.project.title} - ${step.title}</div>
+                            <div class="header">Étude ${project.index} - ${project.title} - ${step.title}</div>
                             ${step.step}
                         ` : ''}
                         ${step == null ? html`
-                            <div class="header">Étude ${cache.project.index} - ${cache.project.title}</div>
-                            ${cache.project.summary}
+                            <div class="header">Étude ${project.index} - ${project.title}</div>
+                            ${project.summary}
                         ` : ''}
                     </div>
                     ${step != null ? progressCircle(progress, total) : ''}
