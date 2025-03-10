@@ -213,7 +213,10 @@ async function login(uid, tkey, registration) {
         token: token,
         registration: registration
     });
-    session = decrypt(token, tkey);
+    session = {
+        uid: uid,
+        ...decrypt(token, tkey)
+    };
 
     let json = JSON.stringify(session);
     sessionStorage.setItem('session', json);
@@ -605,6 +608,32 @@ async function initProject(project, study) {
                           study.id, page.key, page.title, schedule);
         }
     });
+
+    // Update notifications (best effort, don't wait)
+    {
+        let start = LocalDate.fromJSDate(study.start);
+        let offset = -(new Date).getTimezoneOffset();
+
+        let dates = new Set;
+
+        for (let page of project.tests) {
+            let schedule = page.schedule?.toString?.();
+
+            if (schedule)
+                dates.add(schedule);
+        }
+
+        dates = Array.from(dates);
+
+        Net.post('/api/notify', {
+            uid: session.uid,
+            study: project.index,
+            title: project.title,
+            start: start,
+            dates: dates,
+            offset: offset
+        });
+    }
 
     return project;
 }

@@ -206,6 +206,8 @@ static void HandleRequest(http_IO *io)
             HandleUserDownload(io);
         } else if (TestStr(request.path, "/api/upload") && request.method == http_RequestMethod::Post) {
             HandleUserUpload(io);
+        } else if (TestStr(request.path, "/api/notify") && request.method == http_RequestMethod::Post) {
+            HandleUserNotify(io);
         } else {
             io->SendError(404);
         }

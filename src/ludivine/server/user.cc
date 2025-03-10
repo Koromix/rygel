@@ -490,4 +490,159 @@ void HandleUserUpload(http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
+static bool IsTitleValid(Span<const char> title)
+{
+    const auto test_char = [](char c) { return strchr("<>&", c) || (uint8_t)c < 32; };
+
+    if (!title.len)
+        return false;
+    if (std::any_of(title.begin(), title.end(), test_char))
+        return false;
+
+    return true;
+}
+
+void HandleUserNotify(http_IO *io)
+{
+    // Parse input data
+    const char *uid = nullptr;
+    int64_t study = -1;
+    const char *title = nullptr;
+    LocalDate start = {};
+    HeapArray<LocalDate> dates;
+    int offset = 0;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "uid") {
+                parser.ParseString(&uid);
+            } else if (key == "study") {
+                parser.ParseInt(&study);
+            } else if (key == "title") {
+                parser.ParseString(&title);
+            } else if (key == "start") {
+                const char *str = nullptr;
+                parser.ParseString(&str);
+
+                if (str) {
+                    start = {};
+                    ParseDate(str, &start);
+                } else {
+                    start = {};
+                }
+            } else if (key == "dates") {
+                parser.ParseArray();
+                while (parser.InArray()) {
+                    const char *str = nullptr;
+                    parser.ParseString(&str);
+
+                    if (str) {
+                        LocalDate date = {};
+                        ParseDate(str, &date);
+                        dates.Append(date);
+                    } else {
+                        dates.AppendDefault();
+                    }
+                }
+            } else if (key == "offset") {
+                parser.ParseInt(&offset);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check missing or invalid values
+    {
+        bool valid = true;
+
+        if (!uid) {
+            LogError("Missing or invalid UID");
+            valid = false;
+        }
+        if (study < 0) {
+            LogError("Missing or invalid study");
+            valid = false;
+        }
+        if (!title || !IsTitleValid(title)) {
+            LogError("Missing or invalid title");
+            valid = false;
+        }
+        if (!start.IsValid()) {
+            LogError("Missing or invalid start");
+            valid = false;
+        }
+        if (std::any_of(dates.begin(), dates.end(), [](const LocalDate &date) { return !date.IsValid(); })) {
+            LogError("Missing or invalid dates");
+            valid = false;
+        }
+        if (offset < -780 || offset >= 960) {
+            LogError("Missing or invalid time offset");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Make sure user exists
+    int64_t user = 0;
+    {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT id FROM users WHERE uid = uuid_blob(?1)", &stmt, uid))
+            return;
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("User '%1' does not exist", uid);
+                io->SendError(404);
+            }
+
+            return;
+        }
+
+        user = sqlite3_column_int64(stmt, 0);
+    }
+
+    // Update study notifications
+    bool success = db.Transaction([&]() {
+        if (!db.Run("DELETE FROM notifications WHERE user = ?1 AND study = ?2", user, study))
+            return false;
+
+        for (const LocalDate &date: dates) {
+            char dates[2][32] = {};
+
+            Fmt(dates[0], "%1", start);
+            Fmt(dates[1], "%1", date);
+
+            if (!db.Run(R"(INSERT INTO notifications (user, study, title, start, date, offset)
+                           VALUES (?1, ?2, ?3, ?4, ?5, ?6))",
+                        user, study, title, dates[0], dates[1], offset))
+                return false;
+        }
+
+        return true;
+    });
+    if (!success)
+        return;
+
+    io->SendText(200, "{}", "application/json");
+}
+
 }

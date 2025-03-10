@@ -31,4 +31,6 @@ void HandleUserLogin(http_IO *io);
 void HandleUserDownload(http_IO *io);
 void HandleUserUpload(http_IO *io);
 
+void HandleUserNotify(http_IO *io);
+
 }
