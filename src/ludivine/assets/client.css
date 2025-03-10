@@ -80,18 +80,12 @@ main.fullscreen {
 button.confirm { --button_color: #2d8261; }
 button.secondary { --button_color: var(--bar_color); }
 button.secondary.active { color: white !important; }
-button.danger {
-    --button_color: #d33410 !important;
-    --color: white;
-    color: var(--color);
-}
 button.insist {
     --button_color: #d33410 !important;
     --color: white;
     color: var(--color) !important;
     transition: --color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
-button.danger.insist { --button_color: #951a0b !important; }
 button.small { font-size: 0.7em; }
 button.small > img {
     width: 12px;

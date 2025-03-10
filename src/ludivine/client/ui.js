@@ -188,7 +188,7 @@ function confirm(action, func = null) {
 
                     <div class="actions">
                         <button type="button" class="secondary" @click=${wrap(close)}>${T.cancel}</button>
-                        <button type="submit" class="danger">${T.confirm}</button>
+                        <button type="submit">${T.confirm}</button>
                     </div>
                 </div>
             `,
