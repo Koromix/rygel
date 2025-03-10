@@ -1033,10 +1033,7 @@ async function runProject() {
     // Render tab
     {
         let project = cache.project;
-        let step = cache.page.chain.findLast(it => it.type == 'module' && it.step != null);
-
-        let [progress, total] = computeProgress(step ?? project.root);
-        let cls = 'summary ' + (progress == total ? 'done' : 'draft');
+        let page = cache.page;
 
         UI.main(html`
             <div class="tabbar">
@@ -1044,23 +1041,8 @@ async function runProject() {
             </div>
 
             <div class="tab" style="flex: 1;">
-                <div class=${cls}>
-                    <img src=${project.picture} alt="" />
-                    <div>
-                        ${step != null ? html`
-                            <div class="header">Étude ${project.index} - ${project.title} - ${step.title}</div>
-                            ${step.step}
-                        ` : ''}
-                        ${step == null ? html`
-                            <div class="header">Étude ${project.index} - ${project.title}</div>
-                            ${project.summary}
-                        ` : ''}
-                    </div>
-                    ${step != null ? progressCircle(progress, total) : ''}
-                </div>
-
-                ${cache.page.type == 'module' ? renderModule() : null}
-                ${cache.page.type != 'module' ? ctx.render(cache.section) : null}
+                ${page.type == 'module' ? renderModule() : null}
+                ${page.type != 'module' ? renderTest() : null}
             </div>
         `);
     }
@@ -1071,9 +1053,27 @@ function renderModule() {
         UI.toggleFullscreen(false);
 
     let today = LocalDate.today();
+
+    let project = cache.project;
     let page = cache.page;
 
+    let step = page.chain.findLast(it => it.type == 'module' && it.step != null);
+    let [progress, total] = computeProgress(step ?? project.root);
+    let cls = 'summary ' + (progress == total ? 'done' : 'draft');
+
     return html`
+        <div class=${cls}>
+            <img src=${project.picture} alt="" />
+            <div>
+                <div class="header">
+                    Étude ${project.title}
+                    ${step != null ? html` - ${step.title}` : ''}
+                </div>
+                ${step != null ? step.step : project.summary}
+            </div>
+            ${step != null ? progressCircle(progress, total) : ''}
+        </div>
+
         ${Util.mapRange(0, page.chain.length - 1, idx => {
             let parent = page.chain[idx];
             let next = page.chain[idx + 1];
@@ -1085,6 +1085,7 @@ function renderModule() {
                 </div>
             `;
         })}
+
         <div class="box">
             <div class="header">${page.level}</div>
             <div class="modules">
@@ -1183,6 +1184,35 @@ function wrapHelp(page) {
             </div>
         `;
     }
+}
+
+function renderTest() {
+    let project = cache.project;
+    let page = cache.page;
+
+    let step = page.chain.findLast(it => it.type == 'module' && it.step != null);
+    let [progress, total] = computeProgress(step ?? project.root);
+    let cls = 'summary ' + (progress == total ? 'done' : 'draft');
+
+    return html`
+        <div class=${cls}>
+            <img src=${project.picture} alt="" />
+            <div>
+                <div class="header">
+                    Étude ${project.title}
+                    ${step != null ? html` - ${step.title}` : ''}
+                </div>
+                <div class="header">${page.title}</div>
+                <div class="actions">
+                    <button type="button" class="secondary"
+                            @click=${UI.wrap(e => navigateStudy(step ?? project.root))}>Retourner au tableau de bord de l'étude</button>
+                </div>
+            </div>
+            ${step != null ? progressCircle(progress, total) : ''}
+        </div>
+
+        ${ctx.render(cache.section)}
+    `;
 }
 
 async function navigateStudy(page, section = null) {

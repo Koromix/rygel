@@ -96,20 +96,6 @@ function FormModule(app, study, page) {
 
     function runStart() {
         render(html`
-            ${Util.mapRange(0, page.chain.length - 2, idx => {
-                let parent = page.chain[idx];
-                let next = page.chain[idx + 1];
-
-                return html`
-                    <div class="box level" @click=${UI.wrap(e => app.navigateStudy(parent))}>
-                        ${parent.level ?? ''}${parent.level ? ' - ' : ''}
-                        ${next.title}
-                    </div>
-                `;
-            })}
-            <div class="box level" @click=${UI.wrap(e => app.navigateStudy(page))}>
-                Questionnaire - ${page.title}
-            </div>
             <div class="start">
                 <div class="help">
                     <img src=${ASSETS['pictures/help1']} alt="" />
