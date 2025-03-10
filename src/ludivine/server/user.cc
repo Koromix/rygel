@@ -109,6 +109,7 @@ static Span<const char> PatchText(Span<const char> text, const char *email, cons
         } else if (key == "EMAIL") {
             writer->Write(email);
         } else if (key == "URL") {
+            RG_ASSERT(url);
             writer->Write(url);
         } else {
             Print(writer, "{{%1}}", expr);
@@ -118,8 +119,7 @@ static Span<const char> PatchText(Span<const char> text, const char *email, cons
     return ret;
 }
 
-static bool SendMail(const char *to, const smtp_MailContent &model,
-                     const char *uid, Span<const uint8_t> tkey, int registration, Allocator *alloc)
+static bool SendNewMail(const char *to, const char *uid, Span<const uint8_t> tkey, int registration, Allocator *alloc)
 {
     smtp_MailContent content;
 
@@ -127,9 +127,9 @@ static bool SendMail(const char *to, const smtp_MailContent &model,
     FmtArg fmt = FmtSpan(tkey, FmtType::BigHex, "").Pad0(-2);
     const char *url = Fmt(alloc, "%1/session#uid=%2&tk=%3&r=%4", config.url, uid, fmt, registration).ptr;
 
-    content.subject = PatchText(model.subject, to, url, alloc).ptr;
-    content.html = PatchText(model.html, to, url, alloc).ptr;
-    content.text = PatchText(model.text, to, url, alloc).ptr;
+    content.subject = PatchText(NewUser.subject, to, url, alloc).ptr;
+    content.html = PatchText(NewUser.html, to, url, alloc).ptr;
+    content.text = PatchText(NewUser.text, to, url, alloc).ptr;
 
     Span<const uint8_t> png;
     {
@@ -153,6 +153,17 @@ static bool SendMail(const char *to, const smtp_MailContent &model,
     };
 
     content.files = files;
+
+    return smtp.Send(to, content);
+}
+
+static bool SendExistingMail(const char *to, Allocator *alloc)
+{
+    smtp_MailContent content;
+
+    content.subject = PatchText(ExistingUser.subject, to, nullptr, alloc).ptr;
+    content.html = PatchText(ExistingUser.html, to, nullptr, alloc).ptr;
+    content.text = PatchText(ExistingUser.text, to, nullptr, alloc).ptr;
 
     return smtp.Send(to, content);
 }
@@ -242,7 +253,7 @@ void HandleUserRegister(http_IO *io)
         registration = sqlite3_column_int(stmt, 2);
 
         if (!valid) {
-            if (!SendMail(email, ExistingUser, uid, {}, 0, io->Allocator()))
+            if (!SendExistingMail(email, io->Allocator()))
                 return;
 
             io->SendText(200, "{}", "application/json");
@@ -252,7 +263,7 @@ void HandleUserRegister(http_IO *io)
         uid = DuplicateString(uid, io->Allocator()).ptr;
     }
 
-    if (!SendMail(email, NewUser, uid, tkey, registration, io->Allocator()))
+    if (!SendNewMail(email, uid, tkey, registration, io->Allocator()))
         return;
 
     io->SendText(200, "{}", "application/json");
