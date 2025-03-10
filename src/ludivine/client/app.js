@@ -1043,7 +1043,7 @@ async function runProject() {
 
         UI.main(html`
             <div class="tabbar">
-                <a class="active" @click=${UI.wrap(e => navigateStudy(project.root))}>Participer</a>
+                <a class="active">Participer</a>
             </div>
 
             <div class="tab" style="flex: 1;">
