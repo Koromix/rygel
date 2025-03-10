@@ -1000,9 +1000,6 @@ function NetworkWidget(app, mod, world) {
             for (let i = 1; i < persons.length; i++) {
                 let p = persons[i];
 
-                if (!p.proximity)
-                    continue;
-
                 let [from, to] = computeLinkCoordinates(persons[0], persons[i]);
 
                 ctx.beginPath();
