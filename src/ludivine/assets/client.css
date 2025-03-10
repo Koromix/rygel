@@ -78,10 +78,7 @@ main.fullscreen {
 }
 
 button.confirm { --button_color: #2d8261; }
-button.secondary {
-    --button_color: #ddd;
-    color: black !important;
-}
+button.secondary { --button_color: var(--bar_color); }
 button.secondary.active { color: white !important; }
 button.danger {
     --button_color: #d33410 !important;
@@ -101,7 +98,6 @@ button.small > img {
     height: 12px;
 }
 button:is(.secondary, .small) { font-weight: normal !important; }
-button.secondary:not(.active) > img { filter: invert(100%); }
 
 button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 @keyframes highlight {
