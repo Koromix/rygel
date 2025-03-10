@@ -20,27 +20,28 @@ function build(form, values) {
     form.values = values
 
     form.intro = html`
-        <p>Les personnes ayant vécu le genre d'événement comme celui qui vous a amené ici <b>différent considérablement dans leur façon d'en parler</b> aux autres. Nous aimerions savoir ce que vous avez divulgué à la <b>personne dont vous êtes le ou la plus proche</b> et à quelle fréquence (y compris si vous ne lui avez rien dit).
+        <p>Les personnes ayant vécu le genre d'événement comme celui qui vous a amené ici <b>différent considérablement dans leur façon d'en parler</b> aux autres.
+        <p>Nous aimerions savoir ce que vous avez divulgué à la <b>personne dont vous êtes le ou la plus proche</b> et à quelle fréquence (y compris si vous ne lui avez rien dit).
     `
 
     form.part(() => {
-        q(1, "Je lui ai parlé de mon expérience")
-        q(2, "Il y a des aspects de mon expérience que je lui ai volontairement cachés")
+        q(1, "Je lui ai parlé de mon expérience :")
+        q(2, "Il y a des aspects de mon expérience que je lui ai volontairement cachés :")
     })
 
     form.part(() => {
-        q(3, "Il y a des aspects de mon expérience que je ne lui dirai pas")
-        q(4, "J'ai l'intention de lui cacher tout ou partie de mon expérience")
+        q(3, "Il y a des aspects de mon expérience que je ne lui dirai pas :")
+        q(4, "J'ai l'intention de lui cacher tout ou partie de mon expérience :")
     })
 
     form.part(() => {
-        q(5, "Je lui ai parlé des images, des sons et/ou des odeurs liés à mon expérience")
-        q(6, "Je lui ai parlé des détails visuels de mon expérience")
+        q(5, "Je lui ai parlé des images, des sons et/ou des odeurs liés à mon expérience :")
+        q(6, "Je lui ai parlé des détails visuels de mon expérience :")
     })
 
     form.part(() => {
-        q(7, "Je lui ai parlé de mes pensées et de mes sentiments à propos de mon expérience")
-        q(8, "Je lui ai parlé des effets de mon expérience sur ma façon de penser et de me sentir")
+        q(7, "Je lui ai parlé de mes pensées et de mes sentiments à propos de mon expérience :")
+        q(8, "Je lui ai parlé des effets de mon expérience sur ma façon de penser et de me sentir :")
     })
 
     form.part(() => {
