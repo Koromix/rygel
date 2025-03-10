@@ -1116,9 +1116,7 @@ function renderModule() {
 
                         if (earliest != null) {
                             status = niceDate(earliest, true);
-
-                            if (earliest <= today)
-                                cls += (earliest <= today) ? ' draft' : ' empty';
+                            cls += (earliest <= today) ? ' draft' : ' disabled';
                         } else {
                             cls += ' draft';
                         }
@@ -1141,9 +1139,7 @@ function renderModule() {
                         status = 'Terminé';
                     } else if (child.schedule != null) {
                         status = niceDate(child.schedule, true);
-
-                        if (child.schedule <= today)
-                            cls += ' draft';
+                        cls += (child.schedule <= today) ? ' draft' : ' disabled';
                     } else {
                         status = 'À compléter';
                         cls += ' draft';

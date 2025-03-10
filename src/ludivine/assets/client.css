@@ -455,19 +455,23 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 
     &.draft { --color: #d9bf69; }
     &.complete { --color: #eca17f; }
+    &.disabled {
+        filter: saturate(10%) brightness(80%);
+        cursor: not-allowed;
+    }
 
-    & .title {
+    & > .title {
         font-weight: bold;
         color: #364b9b;
         text-align: center;
     }
-    & .status {
+    & > .status {
         min-width: 70%;
         font-size: 0.9em;
         text-align: center;
     }
+    &.draft > .status { font-weight: bold; }
 }
-.module.draft > .status { font-weight: bold; }
 
 .level {
     font-size: 1.1em;

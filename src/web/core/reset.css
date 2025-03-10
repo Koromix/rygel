@@ -39,4 +39,3 @@ p + p { margin-top: 1em; }
     pointer-events: none !important;
     user-select: none !important;
 }
-.disabled { opacity: 0.5 !important; }
