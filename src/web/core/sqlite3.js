@@ -185,7 +185,7 @@ function DatabaseWrapper(promiser, db) {
 
     this.close = async function() {
         try {
-            await promiser('close', { dbId: db });
+            await promiser({ type: 'close', dbId: db });
         } catch (msg) {
             throw msg.result;
         }
