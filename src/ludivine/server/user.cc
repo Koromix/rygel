@@ -370,9 +370,10 @@ void HandleUserLogin(http_IO *io)
     io->SendText(200, token, "application/json");
 }
 
+// Enforces lower-case UUIDs
 static bool IsUUIDValid(Span<const char> uuid)
 {
-    const auto test_char = [](char c) { return IsAsciiDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); };
+    const auto test_char = [](char c) { return IsAsciiDigit(c) || (c >= 'a' && c <= 'f'); };
 
     if (uuid.len != 36)
         return false;
@@ -397,7 +398,7 @@ void HandleUserDownload(http_IO *io)
     // Get and check vault ID
     const char *vid;
     {
-        vid = request.GetHeaderValue("X-VaultID");
+        vid = request.GetHeaderValue("X-Vault-ID");
 
         if (!vid || !IsUUIDValid(vid)) {
             LogError("Missing or invalid VID");
@@ -407,31 +408,32 @@ void HandleUserDownload(http_IO *io)
         }
     }
 
-    const char *filename = Fmt(io->Allocator(), "%1%/%2", config.vault_directory, vid).ptr;
-
-    // Check file access and size
-    FileInfo file_info;
+    // Get vault generation
+    int64_t generation;
     {
-        StatResult stat = StatFile(filename, &file_info);
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT generation FROM vaults WHERE vid = uuid_blob(?1)", &stmt, vid))
+            return;
 
-        switch (stat) {
-            case StatResult::Success: {} break;
-
-            case StatResult::MissingPath: {
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Unknown vault VID");
                 io->SendError(404);
-                return;
-            } break;
+            }
 
-            case StatResult::AccessDenied:
-            case StatResult::OtherError: return;
+            return;
         }
+
+        generation = sqlite3_column_int64(stmt, 0);
     }
 
-    // Send the file
+    const char *filename = Fmt(io->Allocator(), "%1%/%2%/%3.bin", config.vault_directory, vid, generation).ptr;
+
+    // Send it!
     int fd = OpenFile(filename, (int)OpenFlag::Read);
     if (fd < 0)
         return;
-    io->SendFile(200, fd, file_info.size);
+    io->SendFile(200, fd);
 }
 
 void HandleUserUpload(http_IO *io)
@@ -441,7 +443,7 @@ void HandleUserUpload(http_IO *io)
     // Get and check vault ID
     const char *vid;
     {
-        vid = request.GetHeaderValue("X-VaultID");
+        vid = request.GetHeaderValue("X-Vault-ID");
 
         if (!vid || !IsUUIDValid(vid)) {
             LogError("Missing or invalid VID");
@@ -451,19 +453,41 @@ void HandleUserUpload(http_IO *io)
         }
     }
 
-    const char *filename = Fmt(io->Allocator(), "%1%/%2", config.vault_directory, vid).ptr;
+    const char *directory = Fmt(io->Allocator(), "%1%/%2", config.vault_directory, vid).ptr;
 
-    // Create temporary file
-    int fd = -1;
-    const char *tmp_filename = CreateUniqueFile(config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
-    if (!tmp_filename)
+    if (!MakeDirectory(directory, false))
         return;
-    RG_DEFER {
-        CloseDescriptor(fd);
-        UnlinkFile(tmp_filename);
-    };
 
-    // Read file content
+    int64_t generation = 0;
+    int fd = -1;
+    RG_DEFER { CloseDescriptor(fd); };
+
+    // Open new vault generation file
+    for (;;) {
+        {
+            sq_Statement stmt;
+            if (!db.Prepare("SELECT generation FROM vaults WHERE vid = uuid_blob(?1)", &stmt, vid))
+                return;
+
+            if (stmt.Step()) {
+                generation = sqlite3_column_int64(stmt, 0);
+            } else if (stmt.IsValid()) {
+                generation = 0;
+            } else {
+                return;
+            }
+        }
+
+        const char *filename = Fmt(io->Allocator(), "%1%/%2.bin", directory, generation).ptr;
+        OpenResult ret = OpenFile(filename, (int)OpenFlag::Write | (int)OpenFlag::Exclusive, (int)OpenResult::FileExists, &fd);
+
+        if (ret == OpenResult::Success)
+            break;
+        if (ret != OpenResult::FileExists)
+            return;
+    }
+
+    // Upload new file
     {
         StreamWriter writer(fd, "<temp>");
         StreamReader reader;
@@ -484,13 +508,12 @@ void HandleUserUpload(http_IO *io)
             return;
     }
 
-    // Commit new file
-    {
-        unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
-
-        if (!RenameFile(tmp_filename, filename, flags))
-            return;
-    }
+    // Update generation
+    if (!db.Run(R"(INSERT INTO vaults (vid, generation)
+                   VALUES (?1, ?2)
+                   ON CONFLICT DO UPDATE SET generation = IIF(generation = excluded.generation - 1, excluded.generation, generation))",
+                vid, generation + 1))
+        return;
 
     io->SendText(200, "{}", "application/json");
 }
