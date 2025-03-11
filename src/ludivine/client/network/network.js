@@ -16,6 +16,7 @@
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import { AppRunner } from '../../../web/core/runner.js';
+import { deflate, inflate } from '../lib/util.js';
 import { ASSETS } from '../../assets/assets.js';
 import { NetworkWidget } from './widget.js';
 
@@ -99,8 +100,11 @@ function NetworkModule(app, study, page) {
 
             if (payload != null) {
                 try {
-                    let json = JSON.parse(payload);
-                    await load(json);
+                    let buf = await inflate(payload);
+                    let json = (new TextDecoder).decode(buf);
+                    let obj = JSON.parse(json);
+
+                    await load(obj);
                 } catch (err) {
                     Log.error(err);
                     world = null;

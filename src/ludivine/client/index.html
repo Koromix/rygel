@@ -91,22 +91,25 @@
             <div class="fatal"><div>
                 <span style="color: red;">⚠&#xFE0E; <b>Cette application nécessite un navigateur récent et Javascript</b></span><br/><br/>
                 Nous vous recommandons <u>l'un de ces navigateurs</u> :<br/><br/>
-                <b>Mozilla Firefox</b> <span class="browser">(version ≥ 111)</span><br/>
+                <b>Mozilla Firefox</b> <span class="browser">(version ≥ 116)</span><br/>
                 <b>Google Chrome</b> <span class="browser">(version ≥ 108)</span><br/>
                 <b>Microsoft Edge</b> <span class="browser">(version ≥ 108)</span><br/>
                 <b>Apple Safari</b> <span class="browser">(version ≥ 16.4)</span>
             </div></div>
         </noscript>
-        <script nomodule>
-            document.body.innerHTML +=
+        <script>
+            BROWSERS =
                 '<div id="fatal"><div>' +
                     '<span style="color: red;">⚠\uFE0E <b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b></span><br/><br/>' +
                     'Nous vous recommandons <u>l\'un de ces navigateurs</u> :<br/><br/>' + 
-                    '<b>Mozilla Firefox</b> <span class="browser">(version ≥ 111)</span><br/>' +
+                    '<b>Mozilla Firefox</b> <span class="browser">(version ≥ 116)</span><br/>' +
                     '<b>Google Chrome</b> <span class="browser">(version ≥ 108)</span><br/>' +
                     '<b>Microsoft Edge</b> <span class="browser">(version ≥ 108)</span><br/>' +
                     '<b>Apple Safari</b> <span class="browser">(version ≥ 16.4)</span>' +
                 '</div></div>';
+        </script>
+        <script nomodule>
+            document.body.innerHTML += BROWSERS;
         </script>
 
         <script type="module">
@@ -118,6 +121,11 @@
 
             async function run() {
                 try {
+                    if (typeof CompressionStream == 'undefined') {
+                        document.body.innerHTML += BROWSERS;
+                        return;
+                    }
+
                     await start();
                 } catch (err) {
                     console.error(err);

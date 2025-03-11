@@ -170,6 +170,34 @@ function progressCircle(value, total, cls = null) {
     `;
 }
 
+async function deflate(bytes) {
+    if (bytes instanceof ArrayBuffer)
+        bytes = new Uint8Array(bytes);
+
+    let cs = new CompressionStream('deflate');
+
+    let input = new Blob([bytes]);
+    let stream = input.stream().pipeThrough(cs);
+    let output = await new Response(stream).blob();
+    let buf = await output.arrayBuffer();
+
+    return new Uint8Array(buf);
+}
+
+async function inflate(bytes) {
+    if (bytes instanceof ArrayBuffer)
+        bytes = new Uint8Array(bytes);
+
+    let ds = new DecompressionStream('deflate');
+
+    let input = new Blob([bytes]);
+    let stream = input.stream().pipeThrough(ds);
+    let output = await new Response(stream).blob();
+    let buf = await output.arrayBuffer();
+
+    return new Uint8Array(buf);
+}
+
 export {
     computeAge,
     computeAgeMonths,
@@ -180,5 +208,8 @@ export {
     loadTexture,
 
     progressBar,
-    progressCircle
+    progressCircle,
+
+    deflate,
+    inflate
 }

@@ -15,7 +15,7 @@
 
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
-import { progressBar } from '../lib/util.js';
+import { progressBar, deflate, inflate } from '../lib/util.js';
 import { FormContext, FormModel, FormBuilder } from './builder.js';
 import { annotate } from './data.js';
 import { ASSETS } from '../../assets/assets.js';
@@ -51,8 +51,11 @@ function FormModule(app, study, page) {
 
             if (payload != null) {
                 try {
-                    let json = JSON.parse(payload);
-                    ctx = new FormContext(json);
+                    let buf = await inflate(payload);
+                    let json = (new TextDecoder).decode(buf);
+                    let obj = JSON.parse(json);
+
+                    ctx = new FormContext(obj);
                 } catch (err) {
                     console.error(err);
                 }

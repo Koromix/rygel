@@ -19,7 +19,7 @@ import { Util, Log, Net, LocalDate } from '../../web/core/base.js';
 import { Hex, Base64 } from '../../web/core/mixer.js';
 import * as sqlite3 from '../../web/core/sqlite3.js';
 import { computeAge, dateToString, niceDate,
-         progressBar, progressCircle } from './lib/util.js';
+         progressBar, progressCircle, deflate, inflate } from './lib/util.js';
 import * as app from './app.js';
 import * as UI from './ui.js';
 import { SmallCalendar, EventProviders, createEvent } from './lib/calendar.js';
@@ -36,7 +36,7 @@ import '../assets/client.css';
 const CHANNEL_NAME = 'ludivine';
 const LOCK_NAME = 'ludivine';
 
-const DATABASE_VERSION = 4;
+const DATABASE_VERSION = 5;
 
 Object.assign(T, {
     cancel: 'Annuler',
@@ -1361,9 +1361,10 @@ async function navigateStudy(page, section = null) {
 async function saveTest(page, data, status = 'draft') {
     let mtime = (new Date).valueOf();
     let json = JSON.stringify(data);
+    let payload = await deflate(json);
 
     await db.exec(`UPDATE tests SET status = ?, mtime = ?, payload = ?
-                   WHERE study = ? AND key = ?`, status, mtime, json, cache.study.id, page.key);
+                   WHERE study = ? AND key = ?`, status, mtime, payload, cache.study.id, page.key);
 
     await run();
 }
@@ -1555,6 +1556,15 @@ async function openDatabase(filename, key) {
                 await t.exec(`
                     ALTER TABLE tests ADD COLUMN notify TEXT;
                 `);
+            } // fallthrough
+
+            case 4: {
+                let tests = await t.fetchAll('SELECT id, payload FROM tests WHERE payload IS NOT NULL');
+
+                for (let test of tests) {
+                    let compressed = await deflate(test.payload);
+                    await t.exec('UPDATE tests SET payload = ? WHERE id = ?', compressed, test.id);
+                }
             } // fallthrough
         }
 
