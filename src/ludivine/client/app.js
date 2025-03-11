@@ -33,6 +33,8 @@ import { ASSETS } from '../assets/assets.js';
 
 import '../assets/client.css';
 
+const CHANNEL_NAME = 'ludivine';
+
 const DATABASE_VERSION = 4;
 
 Object.assign(T, {
@@ -101,6 +103,7 @@ let route_url = null;
 let poisoned = false;
 let has_run = false;
 
+let channel = null;
 let session = null;
 let db = null;
 let identity = null;
@@ -173,27 +176,61 @@ async function start() {
     }
 
     // Open existing session (if any)
-    try {
-        let json = sessionStorage.getItem('session');
-        session = JSON.parse(json);
-    } catch (err) {
-        console.error(err);
+    if (session == null) {
+        try {
+            let json = sessionStorage.getItem('session');
+            let obj = JSON.parse(json);
+
+            await open(obj);
+        } catch (err) {
+            console.error(err);
+        }
     }
 
-    // Open database
-    if (session?.vid != null && session?.vkey != null) {
-        await initSQLite();
-
-        let filename = 'ludivine/' + session.vid + '.db';
-        let vkey = Hex.toBytes(session.vkey);
-
-        db = await openDatabase(filename, vkey);
-    }
+    // Share session data across tabs
+    initChannel();
 
     await go(window.location.href, false);
 
     UI.main();
     document.body.classList.remove('loading');
+}
+
+function initChannel() {
+    channel = new BroadcastChannel(CHANNEL_NAME);
+
+    channel.addEventListener('message', async e => {
+        switch (e.data.message) {
+            case 'app': {
+                if (session != null)
+                    channel.postMessage({ message: 'session', session: session });
+            } break;
+
+            case 'web': {
+                if (identity != null)
+                    channel.postMessage({ message: 'picture', picture: identity.picture });
+            } break;
+
+            case 'session': {
+                await open(e.data.session);
+                await run();
+            } break;
+
+            case 'picture': {
+                identity.picture = e.data.picture;
+                sessionStorage.setItem('picture', e.data.picture ?? '');
+
+                await run();
+            } break;
+
+            case 'logout': {
+                if (session != null)
+                    logout();
+            } break;
+        }
+    });
+
+    channel.postMessage({ message: 'app' });
 }
 
 async function login(uid, tkey, registration) {
@@ -218,10 +255,48 @@ async function login(uid, tkey, registration) {
         ...decrypt(token, tkey)
     };
 
+    await open(session);
+}
+
+async function open(obj) {
+    if (session?.vid != obj?.vid) {
+        if (db != null)
+            await db.close();
+
+        session = null;
+        db = null;
+        identity = null;
+    }
+
+    if (obj?.vid != null && obj?.vkey != null) {
+        await initSQLite();
+
+        let filename = 'ludivine/' + obj.vid + '.db';
+        let vkey = Hex.toBytes(obj.vkey);
+
+        db = await openDatabase(filename, vkey);
+    }
+
+    session = obj;
+
     let json = JSON.stringify(session);
     sessionStorage.setItem('session', json);
+}
 
-    return session;
+async function logout() {
+    await db.close();
+    db = null;
+
+    session = null;
+    sessionStorage.removeItem('session');
+    sessionStorage.removeItem('picture');
+
+    channel.postMessage({ message: 'logout' });
+
+    window.onbeforeunload = null;
+    window.location.href = '/';
+
+    poisoned = true;
 }
 
 function encrypt(obj, key) {
@@ -252,19 +327,6 @@ function decrypt(enc, key) {
     let obj = JSON.parse(json);
 
     return obj;
-}
-
-async function logout() {
-    await db.close();
-    db = null;
-
-    sessionStorage.removeItem('session');
-    sessionStorage.removeItem('picture');
-
-    window.onbeforeunload = null;
-    window.location.href = '/';
-
-    poisoned = true;
 }
 
 // ------------------------------------------------------------------------
@@ -359,6 +421,7 @@ async function run(push = false) {
         }
 
         sessionStorage.setItem('picture', identity.picture ?? '');
+        channel.postMessage({ message: 'picture', picture: identity.picture });
     }
 
     // List active studies
@@ -894,7 +957,9 @@ async function changePicture() {
             await db.exec('UPDATE meta SET picture = ?, avatar = ?', url, settings);
 
             identity.picture = url;
-            sessionStorage.setItem('picture', url ?? '');
+
+            sessionStorage.setItem('picture', identity.picture ?? '');
+            channel.postMessage({ message: 'picture', picture: url });
         });
     } catch (err) {
         if (err != null)

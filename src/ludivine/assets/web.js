@@ -19,23 +19,49 @@ import { ASSETS } from './assets.js';
 
 import '../../web/flat/static.js';
 
+const CHANNEL_NAME = 'ludivine';
+
 window.addEventListener('load', e => {
     initPicture();
     initCards();
 });
 
 function initPicture() {
-    let menu = document.querySelector('#top > menu');
+    update();
 
-    if (menu != null) {
-        let url = sessionStorage.getItem('picture') || null;
-        let anonymous = (url == null);
+    if (typeof BroadcastChannel != 'undefined') {
+        let channel = new BroadcastChannel(CHANNEL_NAME);
 
-        render(html`
-            <div style="flex: 1;"></div>
-            <a href="/profil"><img class=${'avatar' + (url == null ? ' anonymous' : '')}
-                                   src=${url ?? ASSETS['ui/anonymous']} /></a>
-        `, menu);
+        channel.addEventListener('message', async e => {
+            switch (e.data.message) {
+                case 'picture': {
+                    sessionStorage.setItem('picture', e.data.picture ?? '');
+                    update();
+                } break;
+
+                case 'logout': {
+                    sessionStorage.deleteItem('picture', e.data.picture ?? '');
+                    update();
+                } break;
+            }
+        });
+
+        channel.postMessage({ message: 'web' });
+    }
+
+    function update() {
+        let menu = document.querySelector('#top > menu');
+
+        if (menu != null) {
+            let url = sessionStorage.getItem('picture') || null;
+            let anonymous = (url == null);
+
+            render(html`
+                <div style="flex: 1;"></div>
+                <a href="/profil"><img class=${'avatar' + (url == null ? ' anonymous' : '')}
+                                       src=${url ?? ASSETS['ui/anonymous']} /></a>
+            `, menu);
+        }
     }
 }
 
