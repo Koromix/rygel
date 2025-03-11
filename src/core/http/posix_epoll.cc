@@ -169,6 +169,18 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
     response.started = true;
 
+    if (len < 0) {
+        struct stat sb;
+        if (fstat(fd, &sb) < 0) {
+            LogError("Cannot get file size: %1", strerror(errno));
+
+            request.keepalive = false;
+            return;
+        }
+
+        len = (int64_t)sb.st_size;
+    }
+
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
 
     if (!daemon->WriteSocket(socket, intro.As<uint8_t>())) {

@@ -263,7 +263,7 @@ public:
                    CompressionType src_encoding = CompressionType::None);
     void SendError(int status, const char *msg = nullptr);
     void SendFile(int status, const char *filename, const char *mimetype = nullptr);
-    void SendFile(int status, int fd, int64_t len);
+    void SendFile(int status, int fd, int64_t len = -1);
 
     void SetTimeout(int timeout);
 

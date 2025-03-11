@@ -743,6 +743,24 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     RG_ASSERT(!socket->finalize);
     socket->finalize = [=]() { _close(fd); };
 
+    if (len < 0) {
+        HANDLE h = (HANDLE)_get_osfhandle(fd);
+
+        BY_HANDLE_FILE_INFORMATION attr;
+        if (!GetFileInformationByHandle(h, &attr)) {
+            LogError("Cannot get file size: %1", GetWin32ErrorString());
+
+            request.keepalive = false;
+
+            socket->op = PendingOperation::Done;
+            PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
+
+            return;
+        }
+
+        len = (int64_t)(((uint64_t)attr.nFileSizeHigh << 32) | attr.nFileSizeLow);
+    }
+
     // Send intro and file in one go
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
     TRANSMIT_FILE_BUFFERS tbuf = { (void *)intro.ptr, (DWORD)intro.len, nullptr, 0 };
