@@ -77,7 +77,7 @@ static const smtp_MailContent ExistingUser = {
     {}
 };
 
-struct NotificationDate {
+struct EventInfo {
     LocalDate date = {};
     bool partial = false;
 };
@@ -514,7 +514,7 @@ void HandleUserRemind(http_IO *io)
     int64_t study = -1;
     const char *title = nullptr;
     LocalDate start = {};
-    HeapArray<NotificationDate> dates;
+    HeapArray<EventInfo> events;
     int offset = 0;
     {
         StreamReader st;
@@ -543,10 +543,10 @@ void HandleUserRemind(http_IO *io)
                 } else {
                     start = {};
                 }
-            } else if (key == "dates") {
+            } else if (key == "events") {
                 parser.ParseArray();
                 while (parser.InArray()) {
-                    NotificationDate date = {};
+                    EventInfo evt = {};
 
                     parser.ParseObject();
                     while (parser.InObject()) {
@@ -558,10 +558,10 @@ void HandleUserRemind(http_IO *io)
                             parser.ParseString(&str);
 
                             if (str) {
-                                ParseDate(str, &date.date);
+                                ParseDate(str, &evt.date);
                             }
                         } else if (key == "partial") {
-                            parser.ParseBool(&date.partial);
+                            parser.ParseBool(&evt.partial);
                         } else if (parser.IsValid()) {
                             LogError("Unexpected key '%1'", key);
                             io->SendError(422);
@@ -569,7 +569,7 @@ void HandleUserRemind(http_IO *io)
                         }
                     }
 
-                    dates.Append(date);
+                    events.Append(evt);
                 }
             } else if (key == "offset") {
                 parser.ParseInt(&offset);
@@ -605,8 +605,8 @@ void HandleUserRemind(http_IO *io)
             LogError("Missing or invalid start");
             valid = false;
         }
-        if (std::any_of(dates.begin(), dates.end(), [](const NotificationDate &date) { return !date.date.IsValid(); })) {
-            LogError("Missing or invalid dates");
+        if (std::any_of(events.begin(), events.end(), [](const EventInfo &evt) { return !evt.date.IsValid(); })) {
+            LogError("Missing or invalid events");
             valid = false;
         }
         if (offset < -780 || offset >= 960) {
@@ -639,20 +639,20 @@ void HandleUserRemind(http_IO *io)
         user = sqlite3_column_int64(stmt, 0);
     }
 
-    // Update study notifications
+    // Update study events
     bool success = db.Transaction([&]() {
-        if (!db.Run("DELETE FROM notifications WHERE user = ?1 AND study = ?2", user, study))
+        if (!db.Run("DELETE FROM events WHERE user = ?1 AND study = ?2", user, study))
             return false;
 
-        for (const NotificationDate &date: dates) {
+        for (const EventInfo &evt: events) {
             char dates[2][32] = {};
 
             Fmt(dates[0], "%1", start);
-            Fmt(dates[1], "%1", date.date);
+            Fmt(dates[1], "%1", evt.date);
 
-            if (!db.Run(R"(INSERT INTO notifications (user, study, title, start, date, offset, partial)
+            if (!db.Run(R"(INSERT INTO events (user, study, title, start, date, offset, partial)
                            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
-                        user, study, title, dates[0], dates[1], offset, 0 + date.partial))
+                        user, study, title, dates[0], dates[1], offset, 0 + evt.partial))
                 return false;
         }
 

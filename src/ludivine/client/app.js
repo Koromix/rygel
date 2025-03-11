@@ -1146,7 +1146,7 @@ async function syncNotifications() {
     let start = LocalDate.fromJSDate(study.start);
     let offset = -(new Date).getTimezoneOffset();
 
-    let dates = new Map;
+    let events = new Map;
 
     for (let page of project.tests) {
         let schedule = page.schedule?.toString?.();
@@ -1157,13 +1157,13 @@ async function syncNotifications() {
         if (test.status == 'done')
             continue;
 
-        let partial = dates.get(schedule) ?? false;
+        let partial = events.get(schedule) ?? false;
         if (test.status == 'draft')
             partial = true;
-        dates.set(schedule, partial);
+        events.set(schedule, partial);
     }
 
-    dates = Array.from(Util.map(dates.entries(), ([date, partial]) => ({
+    events = Array.from(Util.map(events.entries(), ([date, partial]) => ({
         date: date,
         partial: partial
     })));
@@ -1173,7 +1173,7 @@ async function syncNotifications() {
         study: project.index,
         title: project.title,
         start: start,
-        dates: dates,
+        events: events,
         offset: offset
     });
 
