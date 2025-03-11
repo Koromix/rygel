@@ -305,36 +305,36 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     gap: 1em;
 }
 .study {
-    --color: var(--empty_color);
+    --background: var(--empty_color);
 
     display: flex;
-    box-sizing: border-box;
-    background: color-mix(in srgb, var(--color), transparent 60%);
+    min-height: 6em;
+    padding: 0.7em 1em;
+    background: color-mix(in srgb, var(--background), transparent 60%);
     border-radius: 8px;
-    padding: 0.5em 1em;
     gap: 2em;
     align-items: center;
 
     &.draft {
-        --color: var(--draft_color);
-        --button_color: var(--draft_color);
+        --background: var(--draft_color);
+        --button_color: var(--background);
     }
     &.done {
-        --color: var(--done_color);
-        --button_color: var(--done_color);
+        --background: var(--done_color);
+        --button_color: var(--background);
     }
 
     & > img { width: 100px; }
+    & > .description {
+        flex: 1;
+        font-size: 0.9em;
+        font-style: italic;
+    }
     & > .progress {
         flex: 1;
         text-align: center;
         font-size: 0.9em;
         font-style: italic;
-    }
-
-    & .circle {
-        --fill: var(--color);
-        flex: 1;
     }
 }
 

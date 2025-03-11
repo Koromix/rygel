@@ -18,6 +18,7 @@ import { Util, Log } from '../../web/core/base.js';
 function ProjectInfo(project) {
     Object.assign(this, project);
 
+    this.description = null;
     this.summary = null;
 
     this.root = null;
@@ -31,6 +32,7 @@ function ProjectBuilder(project) {
     let current_page = null;
 
     Object.defineProperties(this, {
+        description: { get: () => project.description, set: description => { project.description = description; }, enumerable: true },
         summary: { get: () => project.summary, set: summary => { project.summary = summary; }, enumerable: true }
     });
 

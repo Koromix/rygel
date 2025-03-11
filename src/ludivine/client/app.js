@@ -850,15 +850,22 @@ async function runDashboard() {
                         return html`
                             <div class=${cls}>
                                 <img src=${project.picture} alt="" />
-                                <div class="info">
+                                <div class="title">
                                     <b>Étude n°${project.index}</b><br>
                                     Étude ${project.title}
                                 </div>
-                                <div class="progress">
-                                    ${study != null && !study.progress ? 'Participation acceptée' : ''}
-                                    ${study?.progress && study.progress < study.total ? 'Participation en cours' : ''}
-                                    ${study?.progress && study.progress == study.total ? 'Participation terminée' : ''}
-                                </div>
+                                ${study == null ? html`
+                                    <div class="description">
+                                        ${project.description}
+                                    </div>
+                                ` : ''}
+                                ${study != null ? html`
+                                    <div class="progress">
+                                        ${study != null && !study.progress ? 'Participation acceptée' : ''}
+                                        ${study?.progress && study.progress < study.total ? 'Participation en cours' : ''}
+                                        ${study?.progress && study.progress == study.total ? 'Participation terminée' : ''}
+                                    </div>
+                                ` : ''}
                                 <button type="button" @click=${UI.wrap(e => openStudy(project))}>
                                     ${!study?.progress ? 'Commencer' : ''}
                                     ${study?.progress && study.progress < study.total ? 'Reprendre' : ''}
