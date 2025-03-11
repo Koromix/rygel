@@ -149,6 +149,10 @@ function FormModule(app, study, page) {
     }
 
     async function previous() {
+        if (has_changed)
+            await app.saveTest(page, ctx.raw);
+        has_changed = false;
+
         let section = Math.max(0, part_idx - 1);
         await app.navigateStudy(page, section);
     }
