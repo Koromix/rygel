@@ -43,9 +43,14 @@ async function init(worker) {
     });
 }
 
-async function open(filename, vfs = 'opfs') {
+async function open(filename, options = {}) {
     if (promiser == null)
         throw new Error('Call init() first');
+
+    options = Object.assign({
+        vfs: 'opfs',
+        lock: 'sqlite3'
+    }, options);
 
     if (filename == null)
         filename = ':memory:';
@@ -53,7 +58,7 @@ async function open(filename, vfs = 'opfs') {
         if (!hasPersistence())
             throw new Error('This browser does not support persistent SQLite3 databases');
 
-        filename = `file:${filename}?vfs=${vfs}`;
+        filename = `file:${filename}?vfs=${options.vfs}`;
     }
 
     try {
@@ -62,7 +67,7 @@ async function open(filename, vfs = 'opfs') {
         throw msg.result;
     }
 
-    let db = new DatabaseWrapper(promiser, id);
+    let db = new DatabaseWrapper(promiser, id, options.lock);
     return db;
 }
 
@@ -87,9 +92,59 @@ function hasPersistence() {
     return true;
 }
 
-function DatabaseWrapper(promiser, db) {
+function DatabaseWrapper(promiser, db, lock) {
     let self = this;
 
+    this.transaction = locked(async function(func) {
+        try {
+            let t = new TransactionWrapper(promiser, db);
+
+            await t.exec('BEGIN');
+            await func(t);
+            await t.exec('COMMIT');
+        } catch (err) {
+            await self.exec('ROLLBACK');
+            throw err;
+        }
+    });
+
+    this.exec = locked(async function(sql, ...args) {
+        let t = new TransactionWrapper(promiser, db);
+        return t.exec(sql, ...args);
+    });
+
+    this.fetch1 = locked(async function(sql, ...args) {
+        let t = new TransactionWrapper(promiser, db);
+        return t.fetch1(sql, ...args);
+    });
+
+    this.fetchAll = locked(async function(sql, ...args) {
+        let t = new TransactionWrapper(promiser, db);
+        return t.fetchAll(sql, ...args);
+    });
+
+    this.pluck = locked(async function(sql, ...args) {
+        let t = new TransactionWrapper(promiser, db);
+        return t.pluck(sql, ...args);
+    });
+
+    this.close = locked(async function() {
+        try {
+            await promiser({ type: 'close', dbId: db });
+        } catch (msg) {
+            throw msg.result;
+        }
+    });
+
+    function locked(func) {
+        return async (...args) => {
+            let ret = await navigator.locks.request(lock, () => func(...args));
+            return ret;
+        };
+    }
+}
+
+function TransactionWrapper(promiser, db) {
     this.exec = async function(sql, ...args) {
         try {
             await promiser({ type: 'exec', dbId: db, args: {
@@ -98,17 +153,6 @@ function DatabaseWrapper(promiser, db) {
             }});
         } catch (msg) {
             throw msg.result;
-        }
-    };
-
-    this.transaction = async function(func) {
-        try {
-            await self.exec('BEGIN');
-            await func(self);
-            await self.exec('COMMIT');
-        } catch (err) {
-            await self.exec('ROLLBACK');
-            throw err;
         }
     };
 
@@ -181,14 +225,6 @@ function DatabaseWrapper(promiser, db) {
         });
 
         return result;
-    };
-
-    this.close = async function() {
-        try {
-            await promiser({ type: 'close', dbId: db });
-        } catch (msg) {
-            throw msg.result;
-        }
     };
 }
 

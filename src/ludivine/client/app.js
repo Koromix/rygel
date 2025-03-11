@@ -34,6 +34,7 @@ import { ASSETS } from '../assets/assets.js';
 import '../assets/client.css';
 
 const CHANNEL_NAME = 'ludivine';
+const LOCK_NAME = 'ludivine';
 
 const DATABASE_VERSION = 4;
 
@@ -657,18 +658,18 @@ async function initProject(project, study) {
     }
 
     // Update study tests
-    await db.transaction(async () => {
-        await db.exec('UPDATE tests SET visible = 0 WHERE study = ?', study.id);
+    await db.transaction(async t => {
+        await t.exec('UPDATE tests SET visible = 0 WHERE study = ?', study.id);
 
         for (let page of project.tests) {
             let schedule = page.schedule?.toString?.();
 
-            await db.exec(`INSERT INTO tests (study, key, title, visible, status, schedule)
-                           VALUES (?, ?, ?, 1, 'empty', ?)
-                           ON CONFLICT DO UPDATE SET title = excluded.title,
-                                                     visible = excluded.visible,
-                                                     schedule = excluded.schedule`,
-                          study.id, page.key, page.title, schedule);
+            await t.exec(`INSERT INTO tests (study, key, title, visible, status, schedule)
+                          VALUES (?, ?, ?, 1, 'empty', ?)
+                          ON CONFLICT DO UPDATE SET title = excluded.title,
+                                                    visible = excluded.visible,
+                                                    schedule = excluded.schedule`,
+                         study.id, page.key, page.title, schedule);
         }
     });
 
@@ -1166,9 +1167,9 @@ async function syncNotifications() {
         offset: offset
     });
 
-    await db.transaction(async () => {
+    await db.transaction(async t => {
         for (let test of tests)
-            await db.exec('UPDATE tests SET notify = ? WHERE id = ?', test.status, test.id);
+            await t.exec('UPDATE tests SET notify = ? WHERE id = ?', test.status, test.id);
     });
 }
 
@@ -1438,7 +1439,10 @@ async function initSQLite() {
 }
 
 async function openDatabase(filename, key) {
-    let db = await sqlite3.open(filename, 'multipleciphers-opfs');
+    let db = await sqlite3.open(filename, {
+        vfs: 'multipleciphers-opfs',
+        lock: LOCK_NAME
+    });
 
     let sql = `
         PRAGMA cipher = 'sqlcipher';
@@ -1453,10 +1457,10 @@ async function openDatabase(filename, key) {
     if (version > DATABASE_VERSION)
         throw new Error('Database model is too recent');
 
-    await db.transaction(async () => {
+    await db.transaction(async t => {
         switch (version) {
             case 0: {
-                await db.exec(`
+                await t.exec(`
                     CREATE TABLE meta (
                         gender TEXT,
                         picture TEXT,
@@ -1500,7 +1504,7 @@ async function openDatabase(filename, key) {
             } // fallthrough
 
             case 1: {
-                await db.exec(`
+                await t.exec(`
                     DROP TABLE events;
                     DROP TABLE snapshots;
 
@@ -1527,7 +1531,7 @@ async function openDatabase(filename, key) {
             } // fallthrough
 
             case 2: {
-                await db.exec(`
+                await t.exec(`
                     CREATE TABLE diary (
                         id INTEGER PRIMARY KEY,
                         date TEXT NOT NULL,
@@ -1538,13 +1542,13 @@ async function openDatabase(filename, key) {
             } // fallthrough
 
             case 3: {
-                await db.exec(`
+                await t.exec(`
                     ALTER TABLE tests ADD COLUMN notify TEXT;
                 `);
             } // fallthrough
         }
 
-        await db.exec('PRAGMA user_version = ' + DATABASE_VERSION);
+        await t.exec('PRAGMA user_version = ' + DATABASE_VERSION);
     });
 
     return db;
