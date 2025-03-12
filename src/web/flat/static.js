@@ -99,10 +99,13 @@ function initSide() {
         if (ignore_scroll)
             return;
 
+        let style = window.getComputedStyle(document.documentElement);
+        let treshold = parseFloat(style.getPropertyValue('scroll-padding-top')) + 10;
+
         let idx;
         for (idx = 0; idx < items.length; idx++) {
             let rect = items[idx][1].getBoundingClientRect();
-            if (rect.top >= 50)
+            if (rect.top >= treshold)
                 break;
         }
         if (idx)
