@@ -18,21 +18,11 @@ The same can be done when declaring a function with a C-like prototype string, w
 - `_Inout_` for dual input/output parameters
 
 > [!TIP]
-> The Windows API provides many functions that take a pointer to an empty struct for output, except that the first member of the struct (often named `cbSize`) must be set to the size of the struct before calling the function. An example of such a function is `GetLastInputInfo()`. This
+> The Win32 API provides many functions that take a pointer to an empty struct for output, except that the first member of the struct (often named `cbSize`) must be set to the size of the struct before calling the function. An example of such a function is `GetLastInputInfo()`.
 >
 > In order to use these functions in Koffi, you must define the parameter as `_Inout_`: the value must be copied in (to provide `cbSize` to the function) and then the filled struct must be copied out to JS.
 >
-> ```js
-> const LASTINPUTINFO = koffi.struct('LASTINPUTINFO', {
->     cbSize: 'uint',
->     dwTime: 'uint32'
-> });
->
-> const GetLastInputInfo = user32.func('bool __stdcall GetLastInputInfo(_Inout_ LASTINPUTINFO *plii)');
->
-> let info = { cbSize: koffi.sizeof(LASTINPUTINFO) };
-> let success = GetLastInputInfo(info);
-> ```
+> Look at the [Win32 example](#win32-struct-example) below for more information.
 
 ## Primitive value
 
@@ -90,7 +80,9 @@ for (let hwnd = null;;) {
 }
 ```
 
-## Struct example
+## Struct examples
+
+### POSIX struct example
 
 This example calls the POSIX function `gettimeofday()`, and uses the prototype-like syntax.
 
@@ -116,6 +108,28 @@ let tv = {};
 gettimeofday(tv, null);
 
 console.log(tv);
+```
+
+### Win32 struct example
+
+Many Win32 functions that use struct outputs require you to set a size member (often named `cbSize`) beforehand. These functions won't work with `_Out_` because the size value must be copied from JS to C, use `_Inout_` in this case.
+
+```js
+// ES6 syntax: import koffi from 'koffi';
+const koffi = require('koffi');
+
+const user32 = koffi.load('user32.dll');
+
+const LASTINPUTINFO = koffi.struct('LASTINPUTINFO', {
+    cbSize: 'uint',
+    dwTime: 'uint32'
+});
+const GetLastInputInfo = user32.func('bool __stdcall GetLastInputInfo(_Inout_ LASTINPUTINFO *plii)');
+
+let info = { cbSize: koffi.sizeof(LASTINPUTINFO) };
+let success = GetLastInputInfo(info);
+
+console.log(success, info);
 ```
 
 ## Opaque type example
