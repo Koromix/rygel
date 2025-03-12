@@ -17,6 +17,23 @@ The same can be done when declaring a function with a C-like prototype string, w
 - `_Out_` for output parameters
 - `_Inout_` for dual input/output parameters
 
+> [!TIP]
+> The Windows API provides many functions that take a pointer to an empty struct for output, except that the first member of the struct (often named `cbSize`) must be set to the size of the struct before calling the function. An example of such a function is `GetLastInputInfo()`. This
+>
+> In order to use these functions in Koffi, you must define the parameter as `_Inout_`: the value must be copied in (to provide `cbSize` to the function) and then the filled struct must be copied out to JS.
+>
+> ```js
+> const LASTINPUTINFO = koffi.struct('LASTINPUTINFO', {
+>     cbSize: 'uint',
+>     dwTime: 'uint32'
+> });
+>
+> const GetLastInputInfo = user32.func('bool __stdcall GetLastInputInfo(_Inout_ LASTINPUTINFO *plii)');
+>
+> let info = { cbSize: koffi.sizeof(LASTINPUTINFO) };
+> let success = GetLastInputInfo(info);
+> ```
+
 ## Primitive value
 
 This Windows example enumerate all Chrome windows along with their PID and their title. The `GetWindowThreadProcessId()` function illustrates how to get a primitive value from an output argument.
