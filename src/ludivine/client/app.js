@@ -1031,7 +1031,9 @@ async function runConsent() {
 
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Participer</a>
+            <a href="/profil">Profil</a>
+            <a href="/participer">Tableau de bord</a>
+            <a class="active">${project.title}</a>
         </div>
 
         <div class="tab">
@@ -1125,7 +1127,9 @@ async function runProject() {
 
         UI.main(html`
             <div class="tabbar">
-                <a class="active">Participer</a>
+                <a href="/profil">Profil</a>
+                <a href="/participer">Tableau de bord</a>
+                <a class="active">${project.title}</a>
             </div>
 
             <div class="tab" style="flex: 1;">
@@ -1438,6 +1442,7 @@ async function runDiary() {
     UI.main(html`
         <div class="tabbar">
             <a href="/profil">Profil</a>
+            <a href="/participer">Tableau de bord</a>
             <a href=${makeURL()} class="active">Mon journal</a>
         </div>
 
