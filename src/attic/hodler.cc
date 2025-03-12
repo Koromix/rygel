@@ -561,9 +561,7 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
                 int level = cmark_node_get_heading_level(node);
                 cmark_node *child = cmark_node_first_child(node);
 
-                if (level < 3 && cmark_node_get_type(child) == CMARK_NODE_TEXT) {
-                    PageSection sec = {};
-
+                if (cmark_node_get_type(child) == CMARK_NODE_TEXT) {
                     const char *literal = cmark_node_get_literal(child);
                     RG_ASSERT(literal);
 
@@ -579,18 +577,24 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
                         toc = DuplicateString(title, alloc);
                     }
 
-                    sec.level = level;
-                    sec.title = toc.ptr;
-                    sec.id = TextToID(title, '-', alloc);
+                    const char *id = TextToID(title, '-', alloc);
 
-                    page->sections.Append(sec);
+                    if (level < 3) {
+                        PageSection sec = {};
+
+                        sec.level = level;
+                        sec.title = toc.ptr;
+                        sec.id = id;
+
+                        page->sections.Append(sec);
+                    }
 
                     cmark_node *frag = cmark_node_new(CMARK_NODE_HTML_INLINE);
-                    if (strchr(sec.id, '-')) {
+                    if (strchr(id, '-')) {
                         const char *old_id = TextToID(title, '_', alloc);
-                        cmark_node_set_literal(frag, Fmt(alloc, "<a id=\"%1\"></a><a id=\"%2\"></a>", sec.id, old_id).ptr);
+                        cmark_node_set_literal(frag, Fmt(alloc, "<a id=\"%1\"></a><a id=\"%2\"></a>", id, old_id).ptr);
                     } else {
-                        cmark_node_set_literal(frag, Fmt(alloc, "<a id=\"%1\"></a>", sec.id).ptr);
+                        cmark_node_set_literal(frag, Fmt(alloc, "<a id=\"%1\"></a>", id).ptr);
                     }
                     cmark_node_prepend_child(node, frag);
                 }
