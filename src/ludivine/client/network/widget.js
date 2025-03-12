@@ -547,7 +547,9 @@ function NetworkWidget(app, mod, world) {
 
                 function split_names(text) {
                     text = text.trim().replace(/ *-+ */g, '-');
-                    names = text.split(/[, \n]/);
+
+                    names = text.split(/[, \n]+/);
+                    names = names.filter(name => name.length);
 
                     render();
                 }
@@ -696,12 +698,17 @@ function NetworkWidget(app, mod, world) {
             `,
 
             submit: (elements) => {
+                let name = elements.name.value.trim();
+
+                if (!name)
+                    throw new Error('Le libellé ne peut pas être vide');
+
                 mod.registerChange([p, subject]);
 
                 p.kind = elements.kind.value;
                 p.quality = parseInt(elements.quality.value, 10);
 
-                subject.name = elements.name.value.trim();
+                subject.name = name;
                 subject.last_kind = p.kind;
                 subject.last_quality = p.quality;
             }
