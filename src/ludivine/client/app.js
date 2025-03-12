@@ -276,12 +276,12 @@ async function open(obj) {
     }
 
     if (obj?.vid != null && obj?.vkey != null) {
+        await downloadVault(obj.vid);
+
         await initSQLite();
 
-        let filename = 'ludivine/' + obj.vid + '.db';
         let vkey = Hex.toBytes(obj.vkey);
-
-        db = await openDatabase(filename, vkey);
+        db = await openDatabase(obj.vid, vkey);
     }
 
     session = obj;
@@ -1456,13 +1456,15 @@ async function initSQLite() {
     await sqlite3.init(url);
 }
 
-async function openDatabase(filename, key) {
+async function openDatabase(vid, key) {
+    let filename = 'ludivine/' + vid + '.db';
+
     let db = await sqlite3.open(filename, {
         vfs: 'multipleciphers-opfs',
         lock: DATA_LOCK
     });
 
-    db.changeHandler = uploadVault;
+    db.changeHandler = () => uploadVault(vid);
 
     let sql = `
         PRAGMA cipher = 'sqlcipher';
@@ -1587,23 +1589,30 @@ async function openDatabase(filename, key) {
 // Sync
 // ------------------------------------------------------------------------
 
-async function uploadVault() {
-    let vid = session.vid;
+async function downloadVault(vid) {
     let filename = 'ludivine/' + vid + '.db';
 
-    let handle = null;
-    {
-        handle = await navigator.storage.getDirectory();
+    let root = await navigator.storage.getDirectory();
+    let handle = await findFile(root, filename);
 
-        let parts = filename.split('/');
-        let basename = parts.pop();
+    let response = await Net.fetch('/api/download', {
+        headers: {
+            'X-Vault-Id': vid
+        }
+    });
+    let blob = await response.blob();
 
-        for (let part of parts)
-            handle = await handle.getDirectoryHandle(part);
+    let writable = await handle.createWritable();
 
-        handle = await handle.getFileHandle(basename);
-    }
+    await writable.write(blob);
+    await writable.close();
+}
 
+async function uploadVault(vid) {
+    let filename = 'ludivine/' + vid + '.db';
+
+    let root = await navigator.storage.getDirectory();
+    let handle = await findFile(root, filename);
     let src = await handle.getFile();
     let body = await src.arrayBuffer();
 
@@ -1632,6 +1641,19 @@ async function uploadVault() {
 
         return p;
     });
+}
+
+async function findFile(root, filename, create = false) {
+    let handle = root;
+
+    let parts = filename.split('/');
+    let basename = parts.pop();
+
+    for (let part of parts)
+        handle = await handle.getDirectoryHandle(part);
+    handle = await handle.getFileHandle(basename, { create: create });
+
+    return handle;
 }
 
 // ------------------------------------------------------------------------
