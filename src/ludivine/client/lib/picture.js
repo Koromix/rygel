@@ -591,7 +591,7 @@ function PictureCropper(title, size) {
 
         render(svg`
             <g id="picture">
-                ${Object.keys(notion.parts).map(cat => {
+                ${Object.keys(notion_assets).map(cat => {
                     let idx = notion.parts[cat];
                     let xml = notion_assets[cat][idx];
 
