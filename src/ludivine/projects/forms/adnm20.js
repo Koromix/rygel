@@ -42,13 +42,13 @@ function build(form, values) {
             [15, "Agression"],
             [16, "Fin d’une activité de loisir importante"],
             [17, "Confinement suite à une épidémie"],
-            [18, "Tout autre évènement de vie stressant"]
+            [99, "Tout autre évènement de vie stressant"]
         ]
 
         form.multiCheck("evts", "Indiquez le ou les évènements qui s’appliquent à vous :", types)
 
         if (values.evts?.includes?.(99))
-            form.text("?evts_prec", "Précisez :", { help: "Non obligatoire" })
+            form.text("?evts_prec", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
 
         let choices = types.filter(type => values.evts?.includes?.(type[0]))
 

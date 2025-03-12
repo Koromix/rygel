@@ -604,7 +604,7 @@ function build(form, values) {
             suffix: value => value > 1 ? "ans" : "an",
             help: "Indiquez votre âge au moment de votre inscription initiale dans l'application"
         })
-        form.enumDrop("pays_naissance", "Dans quel pays êtes-vous " + adapt("né", "e") + " ?", PAYS)
+        form.enumDrop("pays_naissance", "Dans quel pays êtes-vous " + adapt("né", "née") + " ?", PAYS)
     })
 
     form.part(() => {
@@ -615,12 +615,12 @@ function build(form, values) {
 
         form.enumRadio("situation", "Quelle est votre situation familiale ?", [
             ["C", "Célibataire"],
-            ["M", adapt("Marié", "e")],
+            ["M", adapt("Marié", "Mariée")],
             ["L", "En union libre"],
-            ["P", adapt("Pacsé", "e")],
-            ["D", adapt("Divorcé", "e")],
-            ["S", adapt("Séparé", "e")],
-            ["V", adapt("Veuf", "e")]
+            ["P", adapt("Pacsé", "Pacsée")],
+            ["D", adapt("Divorcé", "Divorcée")],
+            ["S", adapt("Séparé", "Séparée")],
+            ["V", adapt("Veuf", "Veuve")]
         ])
     })
 
@@ -631,7 +631,7 @@ function build(form, values) {
     })
 
     form.part(() => {
-        form.binary("pec1", "Avez-vous, au cours du dernier mois consulté un médecin, pris un traitement médicamenteux ou suivi une psychothérapie en lien avec l’évènement que vous venez de vivre ?")
+        form.binary("pec1", "Avez-vous, au cours du dernier mois consulté un médecin, pris un traitement médicamenteux ou suivi une psychothérapie en lien avec l’évènement que vous venez de vivre et qui vous a amené à participer à cette étude ?")
 
         form.multiCheck("atcd", "Avant l’évènement, aviez-vous été diagnostiqué par un professionnel de la santé comme souffrant :", [
             [1, "D’un trouble de l’humeur ?"],
@@ -659,7 +659,7 @@ function build(form, values) {
                 [99, "Autre"]
             ])
             if (values.diplome_max == 99)
-                form.text("?diplome_prec", "Précisez :", { help: "Non obligatoire" })
+                form.text("?diplome_prec", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
         }
     })
 
@@ -710,16 +710,16 @@ function build(form, values) {
             ["autre", "Autre"]
         ])
         if (values.connaissance == "autre")
-            form.text("?connaissance_prec", "Précisez :", { help: "Non obligatoire" })
+            form.text("?connaissance_prec", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
     })
 
-    function adapt(label, suffix) {
-        if (values.genre == 'F') {
-            return label + suffix
-        } else if (values.genre == 'H') {
-            return label
+    function adapt(h, f) {
+        if (values.genre == 'H') {
+            return h
+        } else if (values.genre == 'F') {
+            return f
         } else {
-            return label + `(${suffix})`
+            return h + '/' + f
         }
     }
 }

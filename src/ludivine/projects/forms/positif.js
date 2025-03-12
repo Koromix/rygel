@@ -35,14 +35,17 @@ function build(form, values) {
             [9, "Argent / Finances"],
             [10, "Santé"],
             [11, "Logement / Habitat"],
-            [12, "Autre (Précisez si vous le souhaitez)"]
+            [99, "Autre"]
         ], {
             disabled: values.q1 != 1,
             help: "Plusieurs réponses possibles"
         })
 
+        if (values.q2?.includes?.(99))
+            form.text("?q2_prec", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
+
         if (values.q2 != null) {
-            form.slider("?q3", "Quantifiez l'effet de ces domains sur votre vie :", {
+            form.slider("?q3", "À quel point avez-vous ressenti les évènements vécus dans ce domaine de vie comme positifs ?", {
                 min: 0, max: 10,
                 prefix: "Assez positif", suffix: "Intensément positif",
                 help: "Placez le curseur sur la barre avec la souris ou votre doigt (non obligatoire)"

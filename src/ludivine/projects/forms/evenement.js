@@ -29,7 +29,7 @@ function build(form, values) {
         })
 
         if (values.q1 == 1) {
-            form.enumRadio("?q1a", "Précisez si vous le souhaitez (non obligatoire) :", [
+            form.enumRadio("?q1a", "De quel évènement s'agit-il ?", [
                 [1, "Relation abusive"],
                 [2, "Traite humaine"],
                 [3, "Esclavagisme"],
@@ -37,10 +37,10 @@ function build(form, values) {
                 [5, "Inceste"],
                 [6, "Situation dans laquelle les secours ont mis plusieurs jours à intervenir"],
                 [99, "Autre"]
-            ], { help: "Cela peut être difficile, n’hésitez pas à appuyer sur le bouton SOS si vous en avez besoin, ou rapprochez-vous d’une personne ressource" })
+            ], { help: "Non obligatoire. Cela peut être difficile, n’hésitez pas à appuyer sur le bouton SOS si vous en avez besoin, ou rapprochez-vous d’une personne ressource" })
 
             if (values.q1a == 99)
-                form.text("?q1b", "Précisez :", { help: "Non obligatoire" })
+                form.text("?q1b", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
         }
     })
 
@@ -89,12 +89,12 @@ function build(form, values) {
             [1, "Cela m’est arrivé directement"],
             [2, "J’en ai été témoin"],
             [3, "J’ai appris qu’un membre de la famille ou un ami proche l’a vécu"],
-            [4, "J’y ai été́ exposé à plusieurs reprises dans le cadre de mon travail (par exemple, ambulancier, police, militaire, ou autre premier répondant)"],
+            [4, "J’y ai été exposé à plusieurs reprises dans le cadre de mon travail (par exemple, ambulancier, police, militaire, ou autre premier répondant)"],
             [99, "Autre"]
         ])
 
         if (values.q4 == 99)
-            form.text("?q4a", "Précisez :", { help: "Non obligatoire" })
+            form.text("?q4a", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
     })
 
     form.part(() => {
@@ -146,7 +146,7 @@ function build(form, values) {
         ], { help: "Plusieurs réponses possibles" })
 
         if (values.q12a?.includes?.(99))
-            form.text("?q12b", "Précisez :", { help: "Non obligatoire" })
+            form.text("?q12b", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
     })
 
     form.part(() => {
@@ -171,7 +171,7 @@ function build(form, values) {
                 ], { help: "Plusieurs réponses possibles" })
 
                 if (values.q15a?.includes?.(99))
-                    form.text("?q15b", "Précisez :", { help: "Non obligatoire" })
+                    form.text("?q15b", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
             }
         }
     })

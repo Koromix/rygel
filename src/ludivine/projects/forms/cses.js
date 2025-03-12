@@ -50,7 +50,7 @@ function build(form, values) {
         form.enumRadio("sphere", "Dans quelle sphère de votre vie se situe la personne à laquelle vous pensez ?", types)
 
         if (values.pshere == "other")
-            form.text("?sphere_pec", "Précisez :", { help: "Non obligatoire" })
+            form.text("?sphere_prec", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
     })
 
     function q(idx, label) {

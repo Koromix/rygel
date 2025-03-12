@@ -29,7 +29,7 @@ function build(form, values) {
             <li>Vous n'êtes pas sûr(e) que la situation corresponde
             <li>La situation ne s’applique pas à vous
         </ul>
-        <p><i>Il est tout à fait possible d’avoir vécu une situation type, par exemple, une catastrophe naturelle sous des angles différents. Une fois, j’ai été inondé ; une autre fois j’ai appris qu’un membre de ma famille a été inondé, et finalement par mon travail de sapeur-pompier, je suis intervenu dans une situation d’inondation. Dans ce cas hypothétique, vous aurez coché  Ca m’est arrivé », « Je l’ai appris » et « Dans mon travail ».</i>
+        <p><i>Il est tout à fait possible d’avoir vécu une situation type, par exemple, une catastrophe naturelle sous des angles différents. Une fois, j’ai été inondé ; une autre fois j’ai appris qu’un membre de ma famille a été inondé, et finalement par mon travail de sapeur-pompier, je suis intervenu dans une situation d’inondation. Dans ce cas hypothétique, vous aurez coché  Ça m'est arrivé », « Je l’ai appris » et « Dans mon travail ».</i>
     `
 
     let catastrophes = {
