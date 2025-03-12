@@ -204,7 +204,7 @@ static void HandleRequest(http_IO *io)
             HandleUserLogin(io);
         } else if (TestStr(request.path, "/api/download") && request.method == http_RequestMethod::Get) {
             HandleUserDownload(io);
-        } else if (TestStr(request.path, "/api/upload") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(request.path, "/api/upload") && request.method == http_RequestMethod::Put) {
             HandleUserUpload(io);
         } else if (TestStr(request.path, "/api/remind") && request.method == http_RequestMethod::Post) {
             HandleUserRemind(io);

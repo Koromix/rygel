@@ -398,7 +398,7 @@ void HandleUserDownload(http_IO *io)
     // Get and check vault ID
     const char *vid;
     {
-        vid = request.GetHeaderValue("X-Vault-ID");
+        vid = request.GetHeaderValue("X-Vault-Id");
 
         if (!vid || !IsUUIDValid(vid)) {
             LogError("Missing or invalid VID");
@@ -443,7 +443,7 @@ void HandleUserUpload(http_IO *io)
     // Get and check vault ID
     const char *vid;
     {
-        vid = request.GetHeaderValue("X-Vault-ID");
+        vid = request.GetHeaderValue("X-Vault-Id");
 
         if (!vid || !IsUUIDValid(vid)) {
             LogError("Missing or invalid VID");
@@ -510,7 +510,7 @@ void HandleUserUpload(http_IO *io)
 
     // Update generation
     if (!db.Run(R"(INSERT INTO vaults (vid, generation)
-                   VALUES (?1, ?2)
+                   VALUES (uuid_blob(?1), ?2)
                    ON CONFLICT DO UPDATE SET generation = IIF(generation = excluded.generation - 1, excluded.generation, generation))",
                 vid, generation + 1))
         return;
