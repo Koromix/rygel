@@ -470,9 +470,9 @@ void HandleUserUpload(http_IO *io)
                 return;
 
             if (stmt.Step()) {
-                generation = sqlite3_column_int64(stmt, 0);
+                generation = sqlite3_column_int64(stmt, 0) + 1;
             } else if (stmt.IsValid()) {
-                generation = 0;
+                generation = 1;
             } else {
                 return;
             }
@@ -512,7 +512,7 @@ void HandleUserUpload(http_IO *io)
     if (!db.Run(R"(INSERT INTO vaults (vid, generation)
                    VALUES (uuid_blob(?1), ?2)
                    ON CONFLICT DO UPDATE SET generation = IIF(generation = excluded.generation - 1, excluded.generation, generation))",
-                vid, generation + 1))
+                vid, generation))
         return;
 
     io->SendText(200, "{}", "application/json");
