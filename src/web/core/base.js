@@ -720,10 +720,10 @@ const Net = new function() {
             options.headers['X-Requested-With'] = 'XMLHTTPRequest';
 
         for (;;) {
-            let timer;
-            let response;
+            let timer = null;
+            let response = null;
 
-            if (typeof AbortController !== 'undefined' && options.timeout != null) {
+            if (typeof AbortController !== 'undefined' && options.signal == null && options.timeout != null) {
                 let controller = new AbortController;
                 options.signal = controller.signal;
 

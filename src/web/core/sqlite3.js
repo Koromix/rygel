@@ -95,37 +95,68 @@ function hasPersistence() {
 function DatabaseWrapper(promiser, db, lock) {
     let self = this;
 
+    let change_handler = () => {};
+
+    let has_changed = false;
+    let change_timer = null;
+
+    Object.defineProperties(this, {
+        changeHandler: { get: () => change_handler, set: handler => { change_handler = handler; }, enumerable: true }
+    });
+
     this.transaction = locked(async function(func) {
+        let prev_changed = has_changed;
+
         try {
             let t = new TransactionWrapper(promiser, db);
 
             await t.exec('BEGIN');
             await func(t);
             await t.exec('COMMIT');
+
+            handleChanges(t);
         } catch (err) {
             await self.exec('ROLLBACK');
+            has_changed = prev_changed;
+
             throw err;
         }
     });
 
     this.exec = locked(async function(sql, ...args) {
         let t = new TransactionWrapper(promiser, db);
-        return t.exec(sql, ...args);
+        let ret = await t.exec(sql, ...args);
+
+        handleChanges(t);
+
+        return ret;
     });
 
     this.fetch1 = locked(async function(sql, ...args) {
         let t = new TransactionWrapper(promiser, db);
-        return t.fetch1(sql, ...args);
+        let ret = await t.fetch1(sql, ...args);
+
+        handleChanges(t);
+
+        return ret;
     });
 
     this.fetchAll = locked(async function(sql, ...args) {
         let t = new TransactionWrapper(promiser, db);
-        return t.fetchAll(sql, ...args);
+        let ret = await t.fetchAll(sql, ...args);
+
+        handleChanges(t);
+
+        return ret;
     });
 
     this.pluck = locked(async function(sql, ...args) {
         let t = new TransactionWrapper(promiser, db);
-        return t.pluck(sql, ...args);
+        let ret = await t.pluck(sql, ...args);
+
+        handleChanges(t);
+
+        return ret;
     });
 
     this.close = locked(async function() {
@@ -142,15 +173,46 @@ function DatabaseWrapper(promiser, db, lock) {
             return ret;
         };
     }
+
+    function handleChanges(t) {
+        has_changed ||= (t.changeCount > 0);
+
+        if (!has_changed)
+            return;
+        if (change_timer != null)
+            return;
+
+        change_timer = setTimeout(async () => {
+            await navigator.locks.request(lock, async () => {
+                try {
+                    await change_handler();
+                    has_changed = false;
+                } finally {
+                    change_timer = null;
+                }
+            });
+        }, 200);
+    }
 }
 
 function TransactionWrapper(promiser, db) {
+    let self = this;
+
+    let changes = 0;
+
+    Object.defineProperties(this, {
+        changeCount: { get: () => changes, enumerable: true }
+    });
+
     this.exec = async function(sql, ...args) {
         try {
-            await promiser({ type: 'exec', dbId: db, args: {
+            let ret = await promiser({ type: 'exec', dbId: db, args: {
                 sql: sql,
-                bind: args
+                bind: args,
+                countChanges: true
             }});
+
+            handleResult(ret);
         } catch (msg) {
             throw msg.result;
         }
@@ -161,6 +223,7 @@ function TransactionWrapper(promiser, db) {
             let p = promiser({ type: 'exec', dbId: db, args: {
                 sql: sql,
                 bind: args,
+                countChanges: true,
                 rowMode: 'object',
                 callback: msg => {
                     if (msg.rowNumber != null) {
@@ -173,6 +236,7 @@ function TransactionWrapper(promiser, db) {
                 }
             }});
 
+            p.then(handleResult);
             p.catch(msg => reject(msg.result));
         });
 
@@ -186,6 +250,7 @@ function TransactionWrapper(promiser, db) {
             let p = promiser({ type: 'exec', dbId: db, args: {
                 sql: sql,
                 bind: args,
+                countChanges: true,
                 rowMode: 'object',
                 callback: msg => {
                     if (msg.rowNumber == null) {
@@ -198,6 +263,7 @@ function TransactionWrapper(promiser, db) {
                 }
             }});
 
+            p.then(handleResult);
             p.catch(msg => reject(msg.result));
         });
 
@@ -209,6 +275,7 @@ function TransactionWrapper(promiser, db) {
             let p = promiser({ type: 'exec', dbId: id, args: {
                 sql: sql,
                 bind: args,
+                countChanges: true,
                 rowMode: 'array',
                 callback: msg => {
                     if (msg.rowNumber != null) {
@@ -221,11 +288,16 @@ function TransactionWrapper(promiser, db) {
                 }
             }});
 
+            p.then(handleResult);
             p.catch(msg => reject(msg.result));
         });
 
         return result;
     };
+
+    function handleResult(ret) {
+        changes += ret.result.changeCount;
+    }
 }
 
 export {

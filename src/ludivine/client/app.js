@@ -34,7 +34,9 @@ import { ASSETS } from '../assets/assets.js';
 import '../assets/client.css';
 
 const CHANNEL_NAME = 'ludivine';
-const LOCK_NAME = 'ludivine';
+
+const DATA_LOCK = 'data';
+const SYNC_LOCK = 'sync';
 
 const DATABASE_VERSION = 5;
 
@@ -109,6 +111,8 @@ let session = null;
 let db = null;
 let identity = null;
 
+let upload_controller = null;
+
 let root_el = null;
 let calendar = null;
 
@@ -150,6 +154,8 @@ async function start() {
 
     // Prevent loss of data
     window.onbeforeunload = e => {
+        if (upload_controller != null)
+            return 'Synchronisation en cours, veuillez patienter';
         if (UI.isDialogOpen())
             return 'Validez ou fermez la boîte de dialogue avant de continuer';
         if (ctx != null && ctx.hasUnsavedData())
@@ -1453,8 +1459,10 @@ async function initSQLite() {
 async function openDatabase(filename, key) {
     let db = await sqlite3.open(filename, {
         vfs: 'multipleciphers-opfs',
-        lock: LOCK_NAME
+        lock: DATA_LOCK
     });
+
+    db.changeHandler = uploadVault;
 
     let sql = `
         PRAGMA cipher = 'sqlcipher';
@@ -1650,6 +1658,57 @@ async function copyWithProgress(title, src, dest) {
     } finally {
         dialog.close();
     }
+}
+
+// ------------------------------------------------------------------------
+// Sync
+// ------------------------------------------------------------------------
+
+async function uploadVault() {
+    let vid = session.vid;
+    let filename = 'ludivine/' + vid + '.db';
+
+    let handle = null;
+    {
+        handle = await navigator.storage.getDirectory();
+
+        let parts = filename.split('/');
+        let basename = parts.pop();
+
+        for (let part of parts)
+            handle = await handle.getDirectoryHandle(part);
+
+        handle = await handle.getFileHandle(basename);
+    }
+
+    let src = await handle.getFile();
+    let body = await src.arrayBuffer();
+
+    if (upload_controller != null)
+        upload_controller.abort();
+    upload_controller = null;
+
+    navigator.locks.request(SYNC_LOCK, () => {
+        let controller = new AbortController;
+
+        upload_controller = controller;
+
+        let p = Net.fetch('/api/upload', {
+            method: 'PUT',
+            headers: {
+                'X-Vault-Id': vid
+            },
+            body: body,
+            signal: controller.signal
+        });
+
+        p.finally(() => {
+            if (upload_controller == controller)
+                upload_controller = null;
+        });
+
+        return p;
+    });
 }
 
 // ------------------------------------------------------------------------
