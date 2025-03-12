@@ -1347,7 +1347,7 @@ function renderTest() {
                 <div class="header">${page.title}</div>
                 <div class="actions">
                     <button type="button" class="secondary"
-                            @click=${UI.wrap(e => navigateStudy(parent))}>Retourner au tableau de bord de l'étude</button>
+                            @click=${UI.wrap(e => navigateStudy(parent))}>Retourner au menu</button>
                 </div>
             </div>
             ${step != null ? progressCircle(progress, total) : ''}
