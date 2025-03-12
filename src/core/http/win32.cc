@@ -736,7 +736,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
     RG_ASSERT(socket);
     RG_ASSERT(!response.started);
-    RG_ASSERT(len >= 0);
 
     response.started = true;
 
