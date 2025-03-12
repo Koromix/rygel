@@ -154,11 +154,18 @@ function build(form, values) {
                 <p>Veuillez fournir les <b>informations suivantes pour chacun de ces groupes</b> : le nom ou le type de groupe et le nombre total de membres de ce groupe avec lesquels vous parlez au moins une fois toutes les deux semaines.
             `)
 
-            let end = ([1, 2, 3, 4, 5].findLast(i => values["q12_" + i + "a"]) ?? 0) + 1
+            let end = ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].findLast(i => values["q12_" + i + "a"]) ?? 0) + 1
 
             for (let i = 1; i <= end; i++) {
-                form.text("q12_" + i + "a", i < 2 ? "Nom/type de groupe" : null)
-                form.enumButtons("q12_" + i + "b", i < 2 ? "Nombre de membres avec lesquels vous parlez au moins une fois toutes les deux semaines" : null, [0, 1, 2, 3, 4, 5, 6, [7, "7 ou plus"]])
+                let last = (i == end)
+
+                form.text("q12_" + i + "a", `Nom ou type du groupe n°${i} :`, {
+                    placeholder: "Laissez vide pour terminer la liste",
+                    optional: last
+                })
+                form.enumButtons("q12_" + i + "b", `Nombre de membres avec lesquels vous parlez au moins une fois toutes les deux semaines :`, [0, 1, 2, 3, 4, 5, 6, [7, "7 ou plus"]], {
+                    disabled: last
+                })
             }
         })
     }
