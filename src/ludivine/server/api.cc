@@ -82,11 +82,6 @@ struct EventInfo {
     bool partial = false;
 };
 
-bool InitSMTP(const smtp_Config &config)
-{
-    return smtp.Init(config);
-}
-
 static bool IsEmailValid(const char *email)
 {
     const auto test_char = [](char c) { return strchr("<>& ", c) || (uint8_t)c < 32; };
@@ -102,6 +97,32 @@ static bool IsEmailValid(const char *email)
         return false;
 
     return true;
+}
+
+// Enforces lower-case UUIDs
+static bool IsUUIDValid(Span<const char> uuid)
+{
+    const auto test_char = [](char c) { return IsAsciiDigit(c) || (c >= 'a' && c <= 'f'); };
+
+    if (uuid.len != 36)
+        return false;
+    if (!std::all_of(uuid.ptr + 0, uuid.ptr + 8, test_char) || uuid[8] != '-')
+        return false;
+    if (!std::all_of(uuid.ptr + 9, uuid.ptr + 13, test_char) || uuid[13] != '-')
+        return false;
+    if (!std::all_of(uuid.ptr + 14, uuid.ptr + 18, test_char) || uuid[18] != '-')
+        return false;
+    if (!std::all_of(uuid.ptr + 19, uuid.ptr + 23, test_char) || uuid[23] != '-')
+        return false;
+    if (!std::all_of(uuid.ptr + 24, uuid.ptr + 36, test_char))
+        return false;
+
+    return true;
+}
+
+bool InitSMTP(const smtp_Config &config)
+{
+    return smtp.Init(config);
 }
 
 static Span<const char> PatchText(Span<const char> text, const char *email, const char *url, Allocator *alloc)
@@ -279,6 +300,8 @@ void HandleLogin(http_IO *io)
     // Parse input data
     const char *uid = nullptr;
     const char *token = nullptr;
+    const char *vid = nullptr;
+    const char *rid = nullptr;
     int registration = 0;
     {
         StreamReader st;
@@ -295,6 +318,10 @@ void HandleLogin(http_IO *io)
                 parser.ParseString(&uid);
             } else if (key == "token") {
                 parser.PassThrough(&token);
+            } else if (key == "vid") {
+                parser.ParseString(&vid);
+            } else if (key == "rid") {
+                parser.ParseString(&rid);
             } else if (key == "registration") {
                 parser.ParseInt(&registration);
             } else if (parser.IsValid()) {
@@ -313,12 +340,20 @@ void HandleLogin(http_IO *io)
     {
         bool valid = true;
 
-        if (!uid) {
+        if (!uid || !IsUUIDValid(uid)) {
             LogError("Missing or invalid UID");
             valid = false;
         }
         if (!token) {
             LogError("Missing or invalid initial token");
+            valid = false;
+        }
+        if (!vid || !IsUUIDValid(vid)) {
+            LogError("Missing or invalid initial VID");
+            valid = false;
+        }
+        if (!rid || !IsUUIDValid(rid)) {
+            LogError("Missing or invalid initial RID");
             valid = false;
         }
         if (registration <= 0) {
@@ -362,33 +397,23 @@ void HandleLogin(http_IO *io)
             token = (const char *)sqlite3_column_text(stmt, 1);
             token = DuplicateString(token, io->Allocator()).ptr;
         } else {
-            if (!db.Run("UPDATE users SET token = ?2 WHERE id = ?1", id, token))
+            bool success = db.Transaction([&]() {
+                if (!db.Run("UPDATE users SET token = ?2 WHERE id = ?1", id, token))
+                    return false;
+
+                if (!db.Run("INSERT INTO vaults (vid, generation) VALUES (?1, 0)", vid))
+                    return false;
+                if (!db.Run("INSERT INTO sets (rid) VALUES (?1)", rid))
+                    return false;
+
+                return true;
+            });
+            if (!success)
                 return;
         }
     }
 
     io->SendText(200, token, "application/json");
-}
-
-// Enforces lower-case UUIDs
-static bool IsUUIDValid(Span<const char> uuid)
-{
-    const auto test_char = [](char c) { return IsAsciiDigit(c) || (c >= 'a' && c <= 'f'); };
-
-    if (uuid.len != 36)
-        return false;
-    if (!std::all_of(uuid.ptr + 0, uuid.ptr + 8, test_char) || uuid[8] != '-')
-        return false;
-    if (!std::all_of(uuid.ptr + 9, uuid.ptr + 13, test_char) || uuid[13] != '-')
-        return false;
-    if (!std::all_of(uuid.ptr + 14, uuid.ptr + 18, test_char) || uuid[18] != '-')
-        return false;
-    if (!std::all_of(uuid.ptr + 19, uuid.ptr + 23, test_char) || uuid[23] != '-')
-        return false;
-    if (!std::all_of(uuid.ptr + 24, uuid.ptr + 36, test_char))
-        return false;
-
-    return true;
 }
 
 void HandleDownload(http_IO *io)
@@ -469,13 +494,15 @@ void HandleUpload(http_IO *io)
             if (!db.Prepare("SELECT generation FROM vaults WHERE vid = uuid_blob(?1)", &stmt, vid))
                 return;
 
-            if (stmt.Step()) {
-                generation = sqlite3_column_int64(stmt, 0) + 1;
-            } else if (stmt.IsValid()) {
-                generation = 1;
-            } else {
+            if (!stmt.Step()) {
+                if (stmt.IsValid()) {
+                    LogError("Unknown vault VID");
+                    io->SendError(404);
+                }
                 return;
             }
+
+            generation = sqlite3_column_int64(stmt, 0) + 1;
         }
 
         const char *filename = Fmt(io->Allocator(), "%1%/%2.bin", directory, generation).ptr;
@@ -509,10 +536,8 @@ void HandleUpload(http_IO *io)
     }
 
     // Update generation
-    if (!db.Run(R"(INSERT INTO vaults (vid, generation)
-                   VALUES (uuid_blob(?1), ?2)
-                   ON CONFLICT DO UPDATE SET generation = IIF(generation = excluded.generation - 1, excluded.generation, generation))",
-                vid, generation))
+    if (!db.Run("UPDATE vaults SET generation = ?3 WHERE vid = ?1 AND generation = ?2",
+                vid, generation - 1, generation))
         return;
 
     io->SendText(200, "{}", "application/json");

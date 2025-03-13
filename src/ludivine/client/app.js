@@ -255,6 +255,8 @@ async function login(uid, tkey, registration) {
     token = await Net.post('/api/login', {
         uid: uid,
         token: token,
+        vid: session.vid,
+        rid: session.rid,
         registration: registration
     });
     session = {
