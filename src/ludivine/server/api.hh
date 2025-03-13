@@ -25,12 +25,12 @@ struct smtp_MailContent;
 
 bool InitSMTP(const smtp_Config &config);
 
-void HandleUserRegister(http_IO *io);
-void HandleUserLogin(http_IO *io);
+void HandleRegister(http_IO *io);
+void HandleLogin(http_IO *io);
 
-void HandleUserDownload(http_IO *io);
-void HandleUserUpload(http_IO *io);
+void HandleDownload(http_IO *io);
+void HandleUpload(http_IO *io);
 
-void HandleUserRemind(http_IO *io);
+void HandleRemind(http_IO *io);
 
 }

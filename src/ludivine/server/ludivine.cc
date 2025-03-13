@@ -14,10 +14,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "api.hh"
 #include "config.hh"
 #include "database.hh"
 #include "ludivine.hh"
-#include "user.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
@@ -199,15 +199,15 @@ static void HandleRequest(http_IO *io)
     // API endpoint?
     if (StartsWith(request.path, "/api/")) {
         if (TestStr(request.path, "/api/register") && request.method == http_RequestMethod::Post) {
-            HandleUserRegister(io);
+            HandleRegister(io);
         } else if (TestStr(request.path, "/api/login") && request.method == http_RequestMethod::Post) {
-            HandleUserLogin(io);
+            HandleLogin(io);
         } else if (TestStr(request.path, "/api/download") && request.method == http_RequestMethod::Get) {
-            HandleUserDownload(io);
+            HandleDownload(io);
         } else if (TestStr(request.path, "/api/upload") && request.method == http_RequestMethod::Put) {
-            HandleUserUpload(io);
+            HandleUpload(io);
         } else if (TestStr(request.path, "/api/remind") && request.method == http_RequestMethod::Post) {
-            HandleUserRemind(io);
+            HandleRemind(io);
         } else {
             io->SendError(404);
         }

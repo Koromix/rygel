@@ -173,7 +173,7 @@ static bool SendExistingMail(const char *to, Allocator *alloc)
     return smtp.Send(to, content);
 }
 
-void HandleUserRegister(http_IO *io)
+void HandleRegister(http_IO *io)
 {
     // Parse input data
     const char *email = nullptr;
@@ -274,7 +274,7 @@ void HandleUserRegister(http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleUserLogin(http_IO *io)
+void HandleLogin(http_IO *io)
 {
     // Parse input data
     const char *uid = nullptr;
@@ -391,7 +391,7 @@ static bool IsUUIDValid(Span<const char> uuid)
     return true;
 }
 
-void HandleUserDownload(http_IO *io)
+void HandleDownload(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
 
@@ -436,7 +436,7 @@ void HandleUserDownload(http_IO *io)
     io->SendFile(200, fd);
 }
 
-void HandleUserUpload(http_IO *io)
+void HandleUpload(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
 
@@ -530,7 +530,7 @@ static bool IsTitleValid(Span<const char> title)
     return true;
 }
 
-void HandleUserRemind(http_IO *io)
+void HandleRemind(http_IO *io)
 {
     // Parse input data
     const char *uid = nullptr;
