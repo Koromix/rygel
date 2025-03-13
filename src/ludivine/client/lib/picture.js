@@ -651,17 +651,21 @@ function PictureCropper(title, size) {
             } break;
 
             case 'hair': {
-                let paths = g.querySelectorAll('path');
+                let nodes = g.querySelectorAll('path, line');
 
-                for (let path of paths)
-                    path.setAttribute('fill', notion.colors.hair);
+                for (let node of nodes) {
+                    node.setAttribute('fill', notion.colors.hair);
+                    node.setAttribute('stroke', notion.colors.hair);
+                }
             } break;
 
             case 'beard': {
-                let paths = g.querySelectorAll('path');
+                let nodes = g.querySelectorAll('path, line');
 
-                for (let path of paths)
-                    path.setAttribute('fill', notion.colors.beard);
+                for (let node of nodes) {
+                    node.setAttribute('fill', notion.colors.beard);
+                    node.setAttribute('stroke', notion.colors.beard);
+                }
             } break;
         }
 
