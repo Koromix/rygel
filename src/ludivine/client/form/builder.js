@@ -226,7 +226,9 @@ function FormBuilder(ctx, model) {
     };
 
     this.enumDrop = function(key, label, props, options = {}) {
-        options = expandOptions(options);
+        options = expandOptions(options, {
+            placeholder: '-- Non renseigné --'
+        });
         key = expandKey(key, options);
 
         props = normalizePropositions(props);
@@ -235,7 +237,7 @@ function FormBuilder(ctx, model) {
 
         let widget = makeInput(key, label, options, 'enumDrop', () => html`
             <select @change=${change} ?disabled=${options.disabled}>
-                <option value="" .selected=${live(value == null)}>-- Non renseigné --</option>
+                <option value="" .selected=${live(value == null)}>${options.placeholder}</option>
                 ${props.map((prop, idx) => {
                     let active = (value === prop[0]);
                     return html`<option value=${idx} .selected=${live(active)}>${prop[1]}</button>`;
@@ -538,11 +540,16 @@ function FormBuilder(ctx, model) {
     }
 
     function expandOptions(options, defaults = {}) {
-        options = Object.assign({
+        defaults = Object.assign({
             disabled: false,
             optional: false,
             tip: null
-        }, defaults, options);
+        }, defaults);
+
+        for (let key in defaults) {
+            if (options[key] == null)
+                options[key] = defaults[key];
+        }
 
         return options;
     }
