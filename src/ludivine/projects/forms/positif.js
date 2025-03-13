@@ -21,35 +21,51 @@ function build(form, values) {
     form.intro = ''
 
     form.part(() => {
+        let domaines = [
+            [1, "Personnel", "évènements liés à votre vie personnelle"],
+            [2, "Travail", "évènements liés à votre travail"],
+            [3, "Éducation", "évènements liés au plan éducatif"],
+            [4, "Famille", "évènements en lien avec votre famille"],
+            [5, "Vie amoureuse", "évènements survenus dans votre vie amoureuse"],
+            [6, "Autres relations sociales", "évènements liés à vos autres relations sociales"],
+            [7, "En lien avec un animal de compagnie", "évènements en lien avec votre animal de compagnie"],
+            [8, "Loisirs", "évènements liés à vos loisirs"],
+            [9, "Argent / Finances", "évènements en lien avec l'argent et les finances"],
+            [10, "Santé", "évènements en lien avec votre santé"],
+            [11, "Logement / Habitat", "évènements relatifs à votre logement / habitat"],
+            [99, "Autre", "autres évènements survenus"]
+        ]
+
         form.binary("q1", html`<b>Depuis l’évènement qui vous a amené ici</b>, avez-vous vécu des évènements particulièrement bons pour vous ? Quelque chose qui vous a fait du bien ?`)
 
-        form.multiCheck("q2", "Si oui, dans quel(s) domaine(s) de votre vie ces événements se sont-ils produits ?", [
-            [1, "Personnel"],
-            [2, "Travail"],
-            [3, "Éducation"],
-            [4, "Famille"],
-            [5, "Vie amoureuse"],
-            [6, "Autres relations sociales"],
-            [7, "En lien avec un animal de compagnie"],
-            [8, "Loisirs"],
-            [9, "Argent / Finances"],
-            [10, "Santé"],
-            [11, "Logement / Habitat"],
-            [99, "Autre"]
-        ], {
-            disabled: values.q1 != 1,
-            help: "Plusieurs réponses possibles"
-        })
+        // Domaines
+        {
+            let props = domaines.map(domaine => [domaine[0], domaine[1]])
+
+            form.multiCheck("q2", "Si oui, dans quel(s) domaine(s) de votre vie ces événements se sont-ils produits ?", props, {
+                disabled: values.q1 != 1,
+                help: "Plusieurs réponses possibles"
+            })
+        }
 
         if (values.q2?.includes?.(99))
             form.text("?q2_prec", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
 
-        if (values.q2 != null) {
-            form.slider("?q3", "À quel point avez-vous ressenti les évènements vécus dans ce domaine de vie comme positifs ?", {
-                min: 0, max: 10,
-                prefix: "Assez positif", suffix: "Intensément positif",
-                help: "Placez le curseur sur la barre avec la souris ou votre doigt (non obligatoire)"
-            })
+        // Effet sur la vie
+        {
+            let q2 = values.q2 ?? []
+            let props = domaines.filter(domaine => q2.includes(domaine[0])).map(domaine => [domaine[0], domaine[2]])
+
+            for (let prop of props) {
+                let key = "?q3_" + prop[0]
+                let label = `À quel point avez-vous ressenti les ${prop[1]} comme positifs ?`
+
+                form.slider(key, label, {
+                    min: 0, max: 10,
+                    prefix: "Assez positif", suffix: "Intensément positif",
+                    help: "Placez le curseur sur la barre avec la souris ou votre doigt (non obligatoire)"
+                })
+            }
         }
     })
 }
