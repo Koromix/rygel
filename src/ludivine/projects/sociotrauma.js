@@ -97,7 +97,7 @@ function init(build, start) {
 
             build.module('evenement', 'Évènement', mod => {
                 mod.help = html`
-                    <p>Dans ce module, nous vous poserons des questions sur l’<b>événement qui vous a conduit à participer à cette étude</b>, ainsi que sur tout autre événement, qu’il soit positif ou négatif, qui fait actuellement partie de votre réalité.
+                    <p>Dans ce module, nous vous poserons des questions sur l’<b>événement qui vous a conduit à participer à cette étude</b>, ainsi que sur <b>tout autre événement, qu’il soit positif ou négatif</b>, qui fait actuellement partie de votre réalité.
                     <p>N'hésitez pas à interrompre l'application ou à cliquer sur le <b>bouton « SOS »</b> si cela s’avère nécessaire pour vous. Vous pouvez également arrêter à tout moment et revenir plus tard.
                 `
 
