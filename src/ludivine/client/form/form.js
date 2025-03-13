@@ -98,6 +98,8 @@ function FormModule(app, study, page) {
     };
 
     function runStart() {
+        let parent = page.chain[page.chain.length - 2];
+
         render(html`
             <div class="start">
                 <div class="help">
@@ -108,7 +110,10 @@ function FormModule(app, study, page) {
                         <p>Si vous êtes prêt, <b>on peut y aller</b> !
                     </div>
                 </div>
-                <button type="button" @click=${UI.wrap(e => app.navigateStudy(page, 0))}>${is_new ? 'Commencer' : 'Continuer'}</button>
+                <div class="actions">
+                    <button type="button" class="secondary" @click=${UI.wrap(e => app.navigateStudy(parent))}>Précédent</button>
+                    <button type="button" @click=${UI.wrap(e => app.navigateStudy(page, 0))}>${is_new ? 'Commencer' : 'Continuer'}</button>
+                </div>
             </div>
         `, div);
     }
@@ -139,7 +144,7 @@ function FormModule(app, study, page) {
             </div>
 
             <div class="actions">
-                ${part_idx ? html`<button type="button" class="secondary" @click=${UI.wrap(previous)}>Précédent</button>` : ''}
+                <button type="button" class="secondary" @click=${UI.wrap(previous)}>Précédent</button>
                 ${part_idx < end ? html`<button type="button" @click=${UI.wrap(next)}>Continuer</button>` : ''}
                 ${part_idx == end ? html`
                     <button type="button" class="confirm" @click=${UI.wrap(next)}>
@@ -156,7 +161,9 @@ function FormModule(app, study, page) {
             await app.saveTest(page, ctx.raw);
         has_changed = false;
 
-        let section = Math.max(0, part_idx - 1);
+        let section = part_idx - 1;
+        if (section < 0)
+            section = null;
         await app.navigateStudy(page, section);
     }
 
