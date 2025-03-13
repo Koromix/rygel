@@ -633,7 +633,7 @@ function build(form, values) {
     form.part(() => {
         form.binary("pec1", "Avez-vous, au cours du dernier mois consulté un médecin, pris un traitement médicamenteux ou suivi une psychothérapie en lien avec l’évènement que vous venez de vivre et qui vous a amené à participer à cette étude ?")
 
-        form.multiCheck("atcd", "Avant l’évènement, aviez-vous été diagnostiqué par un professionnel de la santé comme souffrant :", [
+        form.multiCheck("?atcd", "Avant l’évènement, aviez-vous été diagnostiqué par un professionnel de la santé comme souffrant :", [
             [1, "D’un trouble de l’humeur ?"],
             [2, "D’un trouble anxieux ?"],
             [3, "D’un trouble alimentaire ?"],
