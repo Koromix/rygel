@@ -401,9 +401,9 @@ void HandleLogin(http_IO *io)
                 if (!db.Run("UPDATE users SET token = ?2 WHERE id = ?1", id, token))
                     return false;
 
-                if (!db.Run("INSERT INTO vaults (vid, generation) VALUES (?1, 0)", vid))
+                if (!db.Run("INSERT INTO vaults (vid, generation) VALUES (uuid_blob(?1), 0)", vid))
                     return false;
-                if (!db.Run("INSERT INTO sets (rid) VALUES (?1)", rid))
+                if (!db.Run("INSERT INTO sets (rid) VALUES (uuid_blob(?1))", rid))
                     return false;
 
                 return true;
@@ -487,9 +487,6 @@ void HandleUpload(http_IO *io)
 
     const char *directory = Fmt(io->Allocator(), "%1%/%2", config.vault_directory, vid).ptr;
 
-    if (!MakeDirectory(directory, false))
-        return;
-
     int64_t generation = 0;
     int fd = -1;
     RG_DEFER { CloseDescriptor(fd); };
@@ -511,6 +508,9 @@ void HandleUpload(http_IO *io)
 
             generation = sqlite3_column_int64(stmt, 0) + 1;
         }
+
+        if (!MakeDirectory(directory, false))
+            return;
 
         const char *filename = Fmt(io->Allocator(), "%1%/%2.bin", directory, generation).ptr;
         OpenResult ret = OpenFile(filename, (int)OpenFlag::Write | (int)OpenFlag::Exclusive, (int)OpenResult::FileExists, &fd);
@@ -543,7 +543,7 @@ void HandleUpload(http_IO *io)
     }
 
     // Update generation
-    if (!db.Run("UPDATE vaults SET generation = ?3 WHERE vid = ?1 AND generation = ?2",
+    if (!db.Run("UPDATE vaults SET generation = ?3 WHERE vid = uuid_blob(?1) AND generation = ?2",
                 vid, generation - 1, generation))
         return;
 
