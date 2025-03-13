@@ -675,7 +675,7 @@ function build(form, values) {
 
             form.enumDrop("?langue" + idx, first ? "Parlez vous d'autres langues ?" : null, LANGUAGES, {
                 disabled: values.langue1 == null,
-                help: "Non obligatoire"
+                placeholder: first ? "Non" : "-- Fin de liste --"
             })
         }
     })
@@ -692,7 +692,7 @@ function build(form, values) {
 
             form.enumDrop("?parents" + idx, first ? "Vos parents parlent-ils une ou plusieurs autres langues ?" : null, LANGUAGES, {
                 disabled: values.parents1 == null,
-                help: "Non obligatoire"
+                placeholder: first ? "Non" : "-- Fin de liste --"
             })
         }
     })
