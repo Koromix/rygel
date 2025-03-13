@@ -450,6 +450,13 @@ void HandleDownload(http_IO *io)
         }
 
         generation = sqlite3_column_int64(stmt, 0);
+
+        if (!generation) {
+            LogError("Empty vault");
+            io->SendError(404);
+
+            return;
+        }
     }
 
     const char *filename = Fmt(io->Allocator(), "%1%/%2%/%3.bin", config.vault_directory, vid, generation).ptr;

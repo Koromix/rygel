@@ -15,7 +15,7 @@
 
 import { render, html, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
 import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
-import { Util, Log, Net, LocalDate } from '../../web/core/base.js';
+import { Util, Log, Net, HttpError, LocalDate } from '../../web/core/base.js';
 import { Hex, Base64 } from '../../web/core/mixer.js';
 import * as sqlite3 from '../../web/core/sqlite3.js';
 import { computeAge, dateToString, niceDate,
@@ -1599,16 +1599,25 @@ async function openDatabase(vid, key) {
 async function downloadVault(vid) {
     let filename = 'ludivine/' + vid + '.db';
 
-    let root = await navigator.storage.getDirectory();
-    let handle = await findFile(root, filename);
-
     let response = await Net.fetch('/api/download', {
         headers: {
             'X-Vault-Id': vid
         }
     });
+
+    if (!response.ok) {
+        // First time, it's ok!
+        if (response.status == 404)
+            return;
+
+        let msg = await Net.readError(response);
+        throw new HttpError(response.status, msg);
+    }
+
     let blob = await response.blob();
 
+    let root = await navigator.storage.getDirectory();
+    let handle = await findFile(root, filename, { create: true });
     let writable = await handle.createWritable();
 
     await writable.write(blob);

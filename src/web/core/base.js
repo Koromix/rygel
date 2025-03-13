@@ -1563,8 +1563,10 @@ LocalTime.now = function() {
 export {
     Util,
     Log,
+
     Net,
     NetworkError,
+    HttpError,
 
     Mutex,
 
