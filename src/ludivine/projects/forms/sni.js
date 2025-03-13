@@ -151,7 +151,7 @@ function build(form, values) {
         form.part(() => {
             form.output(html`
                 <p>Pensez aux groupes dans lesquels vous parlez à un autre membre du groupe au moins une fois toutes les deux semaines.
-                <p>Veuillez fournir les <b>informations suivantes pour chacun de ces groupes</b> : le nom ou le type de groupe et le nombre total de membres de ce groupe avec lesquels vous parlez au moins une fois toutes les deux semaines.
+                <p>Si vous en avez, nous vous demandons de fournir les <b>informations suivantes pour chacun de ces groupes</b> : le nom ou le type de groupe et le nombre total de membres de ce groupe avec lesquels vous parlez au moins une fois toutes les deux semaines.
             `)
 
             let end = ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].findLast(i => values["q12_" + i + "a"]) ?? 0) + 1
