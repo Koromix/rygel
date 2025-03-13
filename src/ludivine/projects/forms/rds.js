@@ -41,46 +41,46 @@ function build(form, values) {
                 form.number('?' + key, label, { min: 0 })
             }
         })
+
+        form.part(() => {
+            form.binary("negatif", "Avez-vous reçu des réactions négatives après en avoir parlé ?")
+
+            if (values.negatif == 1) {
+                form.slider("impact", "Comment estimez-vous l’impact que ces réactions négatives ont eu sur vous ?", {
+                    min: 0, max: 10,
+                    prefix: "Aucun impact", suffix: "Impact maximum",
+                    help: "Placez le curseur sur la barre avec la souris ou votre doigt"
+                })
+            }
+        })
+
+        form.part(() => {
+            form.output(html`Nous souhaiterions maintenant que vous pensiez spécifiquement à la <b>personne dont vous êtes le plus proche et à qui vous avez parlé</b> de l’évènement qui vous a amené ici. Donnez-nous, sur base des énoncés suivants, votre meilleure estimation de sa réaction lorsque vous lui avez parlé cet évènement.`)
+
+            q(1, "Il ou elle semblait comprendre ce que j'ai vécu :")
+            q(2, "Il ou elle a ressenti de la sympathie envers moi pour ce qui s'est passé :")
+        })
+
+        form.part(() => {
+            q(3, "Il ou elle ne pouvait pas comprendre, n'ayant pas vécu mon expérience :")
+            q(4, "Il ou elle n'a pas compris à quel point il est difficile de poursuivre une vie quotidienne « normale » après ce qui s'est passé :")
+        })
+
+        form.part(() => {
+            q(5, "Ses réactions m'ont été utiles :")
+            q(6, "Il ou elle a trouvé que ma réaction à ces expériences était excessive :")
+        })
+
+        form.part(() => {
+            q(7, "Il ou elle a trouvé que ma réaction à ces expériences étaient excessives :")
+            q(8, "Il ou elle semblait me blâmer, douter, me juger ou me questionner sur cette expérience :")
+        })
+
+        form.part(() => {
+            q(9, "Il ou elle s'est montré(e) très compréhensif(ve) et m'a soutenu(e) lorsque nous en avons parlé :")
+            q(10, "Je pensais que lui en parler se passerait bien mais ça n'a pas été le cas :")
+        })
     }
-
-    form.part(() => {
-        form.binary("negatif", "Avez-vous reçu des réactions négatives après en avoir parlé ?")
-
-        if (values.negatif == 1) {
-            form.slider("impact", "Comment estimez-vous l’impact que ces réactions négatives ont eu sur vous ?", {
-                min: 0, max: 10,
-                prefix: "Aucun impact", suffix: "Impact maximum",
-                help: "Placez le curseur sur la barre avec la souris ou votre doigt"
-            })
-        }
-    })
-
-    form.part(() => {
-        form.output(html`Nous souhaiterions maintenant que vous pensiez spécifiquement à la <b>personne dont vous êtes le plus proche et à qui vous avez parlé</b> de l’évènement qui vous a amené ici. Donnez-nous, sur base des énoncés suivants, votre meilleure estimation de sa réaction lorsque vous lui avez parlé cet évènement.`)
-
-        q(1, "Il ou elle semblait comprendre ce que j'ai vécu :")
-        q(2, "Il ou elle a ressenti de la sympathie envers moi pour ce qui s'est passé :")
-    })
-
-    form.part(() => {
-        q(3, "Il ou elle ne pouvait pas comprendre, n'ayant pas vécu mon expérience :")
-        q(4, "Il ou elle n'a pas compris à quel point il est difficile de poursuivre une vie quotidienne « normale » après ce qui s'est passé :")
-    })
-
-    form.part(() => {
-        q(5, "Ses réactions m'ont été utiles :")
-        q(6, "Il ou elle a trouvé que ma réaction à ces expériences était excessive :")
-    })
-
-    form.part(() => {
-        q(7, "Il ou elle a trouvé que ma réaction à ces expériences étaient excessives :")
-        q(8, "Il ou elle semblait me blâmer, douter, me juger ou me questionner sur cette expérience :")
-    })
-
-    form.part(() => {
-        q(9, "Il ou elle s'est montré(e) très compréhensif(ve) et m'a soutenu(e) lorsque nous en avons parlé :")
-        q(10, "Je pensais que lui en parler se passerait bien mais ça n'a pas été le cas :")
-    })
 
     form.part(() => {
         form.output(html`
