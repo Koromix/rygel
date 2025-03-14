@@ -1618,7 +1618,7 @@ async function downloadVault(vid) {
     let blob = await response.blob();
 
     let root = await navigator.storage.getDirectory();
-    let handle = await findFile(root, filename, { create: true });
+    let handle = await findFile(root, filename, true);
     let writable = await handle.createWritable();
 
     await writable.write(blob);
@@ -1676,7 +1676,7 @@ async function findFile(root, filename, create = false) {
     let basename = parts.pop();
 
     for (let part of parts)
-        handle = await handle.getDirectoryHandle(part);
+        handle = await handle.getDirectoryHandle(part, { create: true });
     handle = await handle.getFileHandle(basename, { create: create });
 
     return handle;
