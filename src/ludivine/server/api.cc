@@ -452,17 +452,20 @@ void HandleDownload(http_IO *io)
         if (!db.Prepare("SELECT generation, previous FROM vaults WHERE vid = uuid_blob(?1)", &stmt, vid))
             return;
 
-        if (!stmt.Step()) {
-            if (stmt.IsValid()) {
-                LogError("Unknown vault VID");
-                io->SendError(404);
-            }
+        if (stmt.Step()) {
+            generation = sqlite3_column_int64(stmt, 0);
+            previous = sqlite3_column_int64(stmt, 1);
+        } else if (stmt.IsValid()) {
+            // XXX: Temporary, revert once beta is over
 
+            if (!db.Run("INSERT INTO vaults (vid, generation) VALUES (uuid_blob(?1), 0)", vid))
+                return;
+
+            generation = 0;
+            previous = 0;
+        } else {
             return;
         }
-
-        generation = sqlite3_column_int64(stmt, 0);
-        previous = sqlite3_column_int64(stmt, 1);
 
         if (!generation) {
             io->SendError(204);
