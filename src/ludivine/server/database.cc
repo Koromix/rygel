@@ -19,10 +19,12 @@
 
 namespace RG {
 
-const int DatabaseVersion = 8;
+const int DatabaseVersion = 9;
 
-bool MigrateDatabase(sq_Database *db)
+bool MigrateDatabase(sq_Database *db, const char *vault_directory)
 {
+    BlockAllocator temp_alloc;
+
     int version;
     if (!db->GetUserVersion(&version))
         return false;
@@ -175,9 +177,72 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 8: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX vaults_v;
+                    ALTER TABLE vaults RENAME TO vaults_BAK;
+
+                    CREATE TABLE vaults (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        vid BLOB NOT NULL,
+                        generation INTEGER NOT NULL,
+                        previous INTEGER
+                    );
+                    CREATE UNIQUE INDEX vaults_v ON vaults (vid);
+
+                    INSERT INTO vaults (id, vid, generation, previous)
+                        SELECT id, vid, generation, IIF(generation > 1, generation - 1, NULL) FROM vaults_BAK;
+
+                    CREATE TABLE generations (
+                        id INTEGER PRIMARY KEY,
+                        vault INTEGER NOT NULL REFERENCES vaults (id) ON DELETE CASCADE,
+                        generation INTEGER NOT NULL,
+                        previous INTEGER,
+                        size INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX generations_vg ON generations (vault, generation);
+
+                    DROP TABLE vaults_BAK;
+                )");
+                if (!success)
+                    return false;
+
+                sq_Statement stmt;
+                if (!db->Prepare("SELECT id, uuid_str(vid), generation FROM vaults", &stmt))
+                    return false;
+
+                while (stmt.Step()) {
+                    int64_t vault = sqlite3_column_int64(stmt, 0);
+                    const char *vid = (const char *)sqlite3_column_text(stmt, 1);
+                    int generation = sqlite3_column_int(stmt, 2);
+
+                    for (int i = 1; i <= generation; i++) {
+                        const char *filename = Fmt(&temp_alloc, "%1%/%2%/%3.bin", vault_directory, vid, i).ptr;
+
+                        FileInfo file_info;
+                        StatResult ret = StatFile(filename, (int)StatFlag::SilentMissing, &file_info);
+
+                        switch (ret) {
+                            case StatResult::Success: {
+                                if (!db->Run("INSERT INTO generations (vault, generation, previous, size) VALUES (?1, ?2, ?3, ?4)",
+                                             vault, i, i > 1 ? sq_Binding(i - 1) : sq_Binding(), file_info.size))
+                                    return false;
+                            } break;
+
+                            case StatResult::MissingPath: {} break;
+
+                            case StatResult::AccessDenied:
+                            case StatResult::OtherError: return false;
+                        }
+                    }
+                }
+                if (!stmt.IsValid())
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 8);
+            static_assert(DatabaseVersion == 9);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",
@@ -198,7 +263,7 @@ bool MigrateDatabase(const Config &config)
 
     if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
         return false;
-    if (!MigrateDatabase(&db))
+    if (!MigrateDatabase(&db, config.vault_directory))
         return false;
     if (!db.Close())
         return false;

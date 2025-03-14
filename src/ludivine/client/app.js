@@ -108,6 +108,7 @@ let has_run = false;
 
 let channel = null;
 let session = null;
+let generation = null;
 let db = null;
 let identity = null;
 
@@ -1607,7 +1608,7 @@ async function downloadVault(vid) {
 
     if (!response.ok) {
         // First time, it's ok!
-        if (response.status == 404)
+        if (response.status == 204)
             return;
 
         let msg = await Net.readError(response);
@@ -1622,6 +1623,9 @@ async function downloadVault(vid) {
 
     await writable.write(blob);
     await writable.close();
+
+    let header = response.headers.get('X-Vault-Generation');
+    generation = parseInt(header, 10) || null;
 }
 
 async function uploadVault(vid) {
@@ -1644,10 +1648,16 @@ async function uploadVault(vid) {
         let p = Net.fetch('/api/upload', {
             method: 'PUT',
             headers: {
-                'X-Vault-Id': vid
+                'X-Vault-Id': vid,
+                'X-Vault-Generation': generation ?? 0
             },
             body: body,
             signal: controller.signal
+        });
+
+        p.then(response => {
+            let header = response.headers.get('X-Vault-Generation');
+            generation = parseInt(header, 10);
         });
 
         p.finally(() => {

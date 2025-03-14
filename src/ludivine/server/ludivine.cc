@@ -349,7 +349,7 @@ Options:
         return false;
     if (!db.SetSynchronousFull(config.sync_full))
         return false;
-    if (!MigrateDatabase(&db))
+    if (!MigrateDatabase(&db, config.vault_directory))
         return 1;
     if (!MakeDirectory(config.vault_directory, false))
         return 1;

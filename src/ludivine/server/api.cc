@@ -416,6 +416,17 @@ void HandleLogin(http_IO *io)
     io->SendText(200, token, "application/json");
 }
 
+static void AddGenerationHeaders(http_IO *io, int64_t generation, int64_t previous)
+{
+    char buf[64];
+
+    Fmt(buf, "%1", generation);
+    io->AddHeader("X-Vault-Generation", buf);
+
+    Fmt(buf, "%1", previous);
+    io->AddHeader("X-Vault-Previous", buf);
+}
+
 void HandleDownload(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
@@ -435,9 +446,10 @@ void HandleDownload(http_IO *io)
 
     // Get vault generation
     int64_t generation;
+    int64_t previous;
     {
         sq_Statement stmt;
-        if (!db.Prepare("SELECT generation FROM vaults WHERE vid = uuid_blob(?1)", &stmt, vid))
+        if (!db.Prepare("SELECT generation, previous FROM vaults WHERE vid = uuid_blob(?1)", &stmt, vid))
             return;
 
         if (!stmt.Step()) {
@@ -450,16 +462,17 @@ void HandleDownload(http_IO *io)
         }
 
         generation = sqlite3_column_int64(stmt, 0);
+        previous = sqlite3_column_int64(stmt, 1);
 
         if (!generation) {
-            LogError("Empty vault");
-            io->SendError(404);
-
+            io->SendError(204);
             return;
         }
     }
 
     const char *filename = Fmt(io->Allocator(), "%1%/%2%/%3.bin", config.vault_directory, vid, generation).ptr;
+
+    AddGenerationHeaders(io, generation, previous);
 
     // Send it!
     int fd = OpenFile(filename, (int)OpenFlag::Read);
@@ -472,14 +485,30 @@ void HandleUpload(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
 
-    // Get and check vault ID
-    const char *vid;
+    const char *vid = nullptr;
+    int64_t previous = -1;
     {
-        vid = request.GetHeaderValue("X-Vault-Id");
+        vid = request.GetHeaderValue("X-Vault-Id");;
+
+        if (const char *str = request.GetHeaderValue("X-Vault-Generation"); str) {
+            ParseInt(str, &previous);
+        }
+    }
+
+    // Check missing or invalid values
+    {
+        bool valid = true;
 
         if (!vid || !IsUUIDValid(vid)) {
             LogError("Missing or invalid VID");
+            valid = false;
+        }
+        if (previous < 0) {
+            LogError("Missing or invalid generation header");
+            valid = false;
+        }
 
+        if (!valid) {
             io->SendError(422);
             return;
         }
@@ -487,28 +516,30 @@ void HandleUpload(http_IO *io)
 
     const char *directory = Fmt(io->Allocator(), "%1%/%2", config.vault_directory, vid).ptr;
 
-    int64_t generation = 0;
+    int64_t vault;
+    int64_t generation;
+    {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT id, generation FROM vaults WHERE vid = uuid_blob(?1)", &stmt, vid))
+            return;
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Unknown vault VID");
+                io->SendError(404);
+            }
+            return;
+        }
+
+        vault = sqlite3_column_int64(stmt, 0);
+        generation = sqlite3_column_int64(stmt, 1) + 1;
+    }
+
     int fd = -1;
     RG_DEFER { CloseDescriptor(fd); };
 
     // Open new vault generation file
     for (;;) {
-        {
-            sq_Statement stmt;
-            if (!db.Prepare("SELECT generation FROM vaults WHERE vid = uuid_blob(?1)", &stmt, vid))
-                return;
-
-            if (!stmt.Step()) {
-                if (stmt.IsValid()) {
-                    LogError("Unknown vault VID");
-                    io->SendError(404);
-                }
-                return;
-            }
-
-            generation = sqlite3_column_int64(stmt, 0) + 1;
-        }
-
         if (!MakeDirectory(directory, false))
             return;
 
@@ -519,9 +550,12 @@ void HandleUpload(http_IO *io)
             break;
         if (ret != OpenResult::FileExists)
             return;
+
+        generation++;
     }
 
     // Upload new file
+    int64_t size;
     {
         StreamWriter writer(fd, "<temp>");
         StreamReader reader;
@@ -538,14 +572,31 @@ void HandleUpload(http_IO *io)
                 return;
         } while (!reader.IsEOF());
 
+        size = writer.GetRawWritten();
+
         if (!writer.Close())
             return;
     }
 
     // Update generation
-    if (!db.Run("UPDATE vaults SET generation = ?3 WHERE vid = uuid_blob(?1) AND generation = ?2",
-                vid, generation - 1, generation))
-        return;
+    {
+        bool success = db.Transaction([&]() {
+            if (!db.Run(R"(INSERT INTO generations (vault, generation, previous, size)
+                           VALUES (?1, ?2, ?3, ?4))",
+                        vault, generation, previous, size))
+                return false;
+            if (!db.Run(R"(UPDATE vaults SET generation = ?3, previous = ?4
+                           WHERE vid = uuid_blob(?1) AND generation = ?2)",
+                        vid, generation - 1, generation, previous))
+                return false;
+
+            return true;
+        });
+        if (!success)
+            return;
+    }
+
+    AddGenerationHeaders(io, generation, previous);
 
     io->SendText(200, "{}", "application/json");
 }
