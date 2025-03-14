@@ -657,18 +657,31 @@ async function initProject(project, study) {
 
     // Update study tests
     await db.transaction(async t => {
-        await t.exec('UPDATE tests SET visible = 0 WHERE study = ?', study.id);
+        let prevs = await t.fetchAll(`SELECT id, key, title, visible, schedule
+                                      FROM tests
+                                      WHERE study = ? AND visible = 1`, study.id);
+        let map = new Map(prevs.map(prev => [prev.key, prev]));
 
         for (let page of project.tests) {
+            let prev = map.get(page.key);
             let schedule = page.schedule?.toString?.();
 
-            await t.exec(`INSERT INTO tests (study, key, title, visible, status, schedule)
-                          VALUES (?, ?, ?, 1, 'empty', ?)
-                          ON CONFLICT DO UPDATE SET title = excluded.title,
-                                                    visible = excluded.visible,
-                                                    schedule = excluded.schedule`,
-                         study.id, page.key, page.title, schedule);
+            let skip = (prev != null && page.title == prev.title && schedule == prev.schedule);
+
+            if (!skip) {
+                await t.exec(`INSERT INTO tests (study, key, title, visible, status, schedule)
+                              VALUES (?, ?, ?, 1, 'empty', ?)
+                              ON CONFLICT DO UPDATE SET title = excluded.title,
+                                                        visible = excluded.visible,
+                                                        schedule = excluded.schedule`,
+                             study.id, page.key, page.title, schedule);
+            }
+
+            map.delete(page.key);
         }
+
+        for (let prev of map.values())
+            await t.exec('UPDATE tests SET visible = 0 WHERE id = ?', prev.id);
     });
 
     return project;
