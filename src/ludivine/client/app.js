@@ -1334,7 +1334,6 @@ function renderTest() {
     let project = cache.project;
     let page = cache.page;
 
-    let parent = page.chain[page.chain.length - 2];
     let step = page.chain.findLast(it => it.type == 'module' && it.step != null);
     let [progress, total] = computeProgress(step ?? project.root);
     let cls = 'summary ' + (progress == total ? 'done' : 'draft');
@@ -1350,7 +1349,7 @@ function renderTest() {
                 <div class="header">${page.title}</div>
                 <div class="actions">
                     <button type="button" class="secondary"
-                            @click=${UI.wrap(e => navigateStudy(parent))}>Retourner au menu</button>
+                            @click=${UI.wrap(e => exitTest(page))}>Retourner au menu</button>
                 </div>
             </div>
             ${step != null ? progressCircle(progress, total) : ''}
@@ -1385,7 +1384,10 @@ async function saveTest(page, data, status = 'draft') {
 
 async function finalizeTest(page, data) {
     await saveTest(page, data, 'done');
+    await exitTest(page);
+}
 
+async function exitTest(page) {
     let next = page;
 
     do {
@@ -1746,5 +1748,6 @@ export {
 
     navigateStudy,
     saveTest,
-    finalizeTest
+    finalizeTest,
+    exitTest
 }

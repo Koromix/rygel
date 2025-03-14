@@ -98,8 +98,6 @@ function FormModule(app, study, page) {
     };
 
     function runStart() {
-        let parent = page.chain[page.chain.length - 2];
-
         render(html`
             <div class="start">
                 <div class="help">
@@ -111,7 +109,7 @@ function FormModule(app, study, page) {
                     </div>
                 </div>
                 <div class="actions">
-                    <button type="button" class="secondary" @click=${UI.wrap(e => app.navigateStudy(parent))}>Précédent</button>
+                    <button type="button" class="secondary" @click=${UI.wrap(e => app.exitTest(page))}>Précédent</button>
                     <button type="button" @click=${UI.wrap(e => app.navigateStudy(page, 0))}>${is_new ? 'Commencer' : 'Continuer'}</button>
                 </div>
             </div>
