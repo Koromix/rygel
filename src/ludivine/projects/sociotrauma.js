@@ -38,25 +38,54 @@ import ssi from './forms/ssi.js';
 import ssq6 from './forms/ssq6.js';
 import substances from './forms/substances.js';
 
-const consent = html`
-    <p>Dans cette étude, des questions vous seront posées sur votre <b>situation actuelle, vos relations avec vos proches</b> et la société, ainsi que sur votre bien-être psychologique. Il sera également demandé de fournir quelques informations sur l’évènement difficile que vous avez vécu.
-    <p>Une étape clé de cette étude consiste à construire un sociogramme, une <b>représentation visuelle des liens sociaux</b> que vous entretenez avec les personnes qui vous entourent. Ce graphique met en lumière la structure de vos relations interpersonnelles.
-    <p>Des consignes détaillées guideront chacune des <b>6 étapes de l’étude</b>, avec des exercices à réaliser à plusieurs reprises. Des rappels par e-mail et/ou notifications via l’application vous aideront à respecter les échéances. Un calendrier est également disponible depuis votre tableau de bord.
-    <p>L’étude se déroule <b>entièrement en ligne</b>, sans contact direct avec les autres participants ou les responsables de l’étude. Toutefois, l’investigatrice principale peut être contactée par e-mail pour toute question: Wivine Blekic, <a href="mailto:sociotrauma@ldv-recherche.fr">sociotrauma@ldv-recherche.fr</a>.
-    <p>Nous vous invitons à <b>prendre connaissance de la lettre d’information</b> de l’étude SocioTrauma. Celle-ci répond aux exigences de la recherche sur la personne humaine et a pour objectif de répondre aux questions que vous pourriez vous poser avant de prendre la décision de participer à la recherche.
+const consent = {
+    text: html`
+        <p>Dans cette étude, des questions vous seront posées sur votre <b>situation actuelle, vos relations avec vos proches</b> et la société, ainsi que sur votre bien-être psychologique. Il sera également demandé de fournir quelques informations sur l’évènement difficile que vous avez vécu.
+        <p>Une étape clé de cette étude consiste à construire un sociogramme, une <b>représentation visuelle des liens sociaux</b> que vous entretenez avec les personnes qui vous entourent. Ce graphique met en lumière la structure de vos relations interpersonnelles.
+        <p>Des consignes détaillées guideront chacune des <b>6 étapes de l’étude</b>, avec des exercices à réaliser à plusieurs reprises. Des rappels par e-mail et/ou notifications via l’application vous aideront à respecter les échéances. Un calendrier est également disponible depuis votre tableau de bord.
+        <p>L’étude se déroule <b>entièrement en ligne</b>, sans contact direct avec les autres participants ou les responsables de l’étude. Toutefois, l’investigatrice principale peut être contactée par e-mail pour toute question: Wivine Blekic, <a href="mailto:sociotrauma@ldv-recherche.fr">sociotrauma@ldv-recherche.fr</a>.
+        <p>Nous vous invitons à <b>prendre connaissance de la lettre d’information avant de participer</b> à l’étude SocioTrauma. Celle-ci répond aux exigences de la recherche sur la personne humaine et a pour objectif de répondre aux questions que vous pourriez vous poser avant de prendre la décision de participer à la recherche.
+    `,
 
-    <div class="actions">
-        <a href="/static/documents/SocioTrauma_Information.pdf" download>Télécharger la lettre d'information</a>
-    </div>
-`;
+    download: '/static/documents/SocioTrauma_Information.pdf',
 
-function init(build, start) {
+    accept: (form, values) => {
+        form.binary("consentement", "J’ai lu et je ne m’oppose pas à participer à l’étude SocioTrauma :");
+
+        form.enumRadio("anciennete", "Je considère avoir vécu un évènement difficile il y a :", [
+            [0, "Il y a quelques jours"],
+            [1, "La semaine dernière"],
+            [2, "Il y a 2 semaines"],
+            [3, "Il y a 3 semaines"],
+            [4, "Il y a 1 mois"],
+            [5, "L’évènement s’est déroulé il y a plus d’un mois"]
+        ]);
+
+        form.binary("reutilisation", "J’accepte que mes données soient réutilisées dans le cadre d’autres études de Lignes de Vie :");
+
+        return (values.consentement == 1);
+    }
+};
+
+function init(build, start, values) {
     build.summary = html`
         <p>Retrouvez les <a href="/etudes#etude-1-sociotrauma">informations de cette étude</a> sur le site officiel de Ligne de Vie.
         <p>Commencez par faire votre bilan initial. Vous pouvez <b>arrêter à tout moment</b> et recommencer plus tard !
     `;
 
     build.module('recueil', 'Recueil', mod => {
+        if (values.anciennete >= 5) {
+            mod.help = html`
+                <p>L'étude SocioTrauma est actuellement limitée aux personnes ayant vécu un événement difficile au cours du dernier mois. Cette restriction est liée à l'objectif spécifique de l'étude, qui examine les changements <b>survenant immédiatement après un événement traumatisant</b> dans les relations sociales et la santé mentale.
+                <p>Si votre expérience remonte à plus d'un mois, <b>nous vous demandons de ne pas participer à cette étude</b>. Cela ne diminue en rien l'importance de votre vécu ou de votre souffrance. C’est tout simplement que le contenu de cette étude ne correspond plus à votre situation actuelle. SocioTrauma est conçue pour capturer les changements qu’une personne réalise dans ses relations à la suite immédiate à un évènement difficile.
+                <p>Nous vous encourageons à consulter les ressources disponibles sur le site du Centre national de ressources et de résilience (CN2R) pour obtenir de l'aide et du soutien. De plus, nous vous invitons à revenir régulièrement sur le site de Lignes de Vie car d’autres études arriveront prochainement. En fonction du profil de participants recherchés, vous pourrez y participer !
+            `;
+
+            return;
+        }
+
+        let first = start.plus(values.anciennete * 7);
+
         mod.level = 'Temporalité';
         mod.help = html`
             <p>La première étape consiste à <b>vous présenter puis à faire un bilan initial</b>.
@@ -146,7 +175,7 @@ function init(build, start) {
                 <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
             `;
 
-            let options = { schedule: start.plus(6 * 7) };
+            let options = { schedule: first.plus(6 * 7) };
 
             build.module('entourage', 'Entourage', () => {
                 build.form('ssq6', 'Soutien social', ssq6, options)
@@ -187,7 +216,7 @@ function init(build, start) {
                 <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
             `;
 
-            let options = { schedule: start.plusMonths(3) };
+            let options = { schedule: first.plusMonths(3) };
 
             build.module('entourage', 'Entourage', () => {
                 build.form('ssq6', 'Soutien social', ssq6, options)
@@ -226,7 +255,7 @@ function init(build, start) {
                 <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
             `;
 
-            let options = { schedule: start.plusMonths(6) };
+            let options = { schedule: first.plusMonths(6) };
 
             build.module('entourage', 'Entourage', () => {
                 build.form('ssq6', 'Soutien social', ssq6, options)
@@ -264,7 +293,7 @@ function init(build, start) {
                 <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
             `;
 
-            let options = { schedule: start.plusMonths(12) };
+            let options = { schedule: first.plusMonths(12) };
 
             build.module('entourage', 'Entourage', () => {
                 build.form('ssq6', 'Soutien social', ssq6, options)

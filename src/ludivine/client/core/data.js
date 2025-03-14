@@ -20,7 +20,7 @@ import * as sqlite3 from '../../../web/core/sqlite3.js';
 const DATA_LOCK = 'data';
 const SYNC_LOCK = 'sync';
 
-const DATABASE_VERSION = 5;
+const DATABASE_VERSION = 6;
 
 let upload_controller = null;
 
@@ -243,6 +243,46 @@ async function openDatabase(vid, key) {
                     let compressed = await deflate(test.payload);
                     await t.exec('UPDATE tests SET payload = ? WHERE id = ?', compressed, test.id);
                 }
+            } // fallthrough
+
+            case 5: {
+                await t.exec(`
+                    DROP INDEX studies_k;
+                    DROP INDEX tests_sk;
+
+                    ALTER TABLE studies RENAME TO studies_BAK;
+                    ALTER TABLE tests RENAME TO tests_BAK;
+
+                    CREATE TABLE studies (
+                        id INTEGER PRIMARY KEY,
+                        key TEXT NOT NULL,
+                        start INTEGER NOT NULL,
+                        data TEXT NOT NULL
+                    );
+                    CREATE UNIQUE INDEX studies_k ON studies (key);
+
+                    CREATE TABLE tests (
+                        id INTEGER PRIMARY KEY,
+                        study INTEGER REFERENCES studies (id) ON DELETE CASCADE,
+                        key TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        visible INTEGER CHECK (visible IN (0, 1)) NOT NULL,
+                        status TEXT CHECK (status IN ('empty', 'draft', 'done')) NOT NULL,
+                        schedule TEXT,
+                        mtime INTEGER,
+                        payload BLOB,
+                        notify TEXT
+                    );
+                    CREATE UNIQUE INDEX tests_sk ON tests (study, key);
+
+                    INSERT INTO studies (id, key, start, data)
+                        SELECT id, key, start, json_object('consentement', 1, 'anciennete', 0, 'reutilisation', reuse) FROM studies_BAK;
+                    INSERT INTO tests (id, study, key, title, visible, status, schedule, mtime, payload, notify)
+                        SELECT id, study, key, title, visible, status, schedule, mtime, payload, notify FROM tests_BAK;
+
+                    DROP TABLE studies_BAK;
+                    DROP TABLE tests_BAK;
+                `);
             } // fallthrough
         }
 

@@ -63,14 +63,15 @@ function NetworkModule(app, study, page) {
     let anonymous = false;
 
     Object.defineProperties(this, {
-        page: { get: () => page, enumerable: true },
-
         runner: { get: () => runner, enumerable: true },
 
         anonymous: { get: () => anonymous, set: value => { anonymous = value; }, enumerable: true }
     });
 
-    this.start = async function() {
+    this.run = async function() {
+        if (runner != null)
+            return;
+
         wrapper = document.createElement('div');
         wrapper.className = 'net_wrapper';
         canvas = document.createElement('canvas');

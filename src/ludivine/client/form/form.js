@@ -16,7 +16,7 @@
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import { progressBar, deflate, inflate } from '../core/misc.js';
-import { FormContext, FormModel, FormBuilder } from './builder.js';
+import { FormState, FormModel, FormBuilder } from './builder.js';
 import { annotate } from './data.js';
 import { ASSETS } from '../../assets/assets.js';
 
@@ -31,17 +31,16 @@ function FormModule(app, study, page) {
     let build = page.build;
     let part_idx = null;
 
-    let ctx = null;
+    let state = null;
     let model = null;
 
     let is_new = false;
     let has_changed = false;
 
-    Object.defineProperties(this, {
-        page: { get: () => page, enumerable: true }
-    });
+    this.run = async function() {
+        if (state != null)
+            return;
 
-    this.start = async function() {
         div = document.createElement('div');
         div.className = 'column';
 
@@ -55,19 +54,19 @@ function FormModule(app, study, page) {
                     let json = (new TextDecoder).decode(buf);
                     let obj = JSON.parse(json);
 
-                    ctx = new FormContext(obj);
+                    state = new FormState(obj);
                 } catch (err) {
                     console.error(err);
                 }
             }
         }
 
-        if (ctx == null) {
-            ctx = new FormContext;
+        if (state == null) {
+            state = new FormState;
             is_new = true;
         }
 
-        ctx.changeHandler = () => {
+        state.changeHandler = () => {
             has_changed = true;
             runForm();
         };
@@ -120,9 +119,9 @@ function FormModule(app, study, page) {
         // Reset model
         model = new FormModel;
 
-        let builder = new FormBuilder(ctx, model);
+        let builder = new FormBuilder(state, model);
 
-        build(builder, ctx.values);
+        build(builder, state.values);
 
         let end = model.parts.length - 1;
         if (part_idx > end)
@@ -156,7 +155,7 @@ function FormModule(app, study, page) {
 
     async function previous() {
         if (has_changed)
-            await app.saveTest(page, ctx.raw);
+            await app.saveTest(page, state.raw);
         has_changed = false;
 
         let section = part_idx - 1;
@@ -172,13 +171,13 @@ function FormModule(app, study, page) {
 
         if (part_idx < end) {
             if (has_changed)
-                await app.saveTest(page, ctx.raw);
+                await app.saveTest(page, state.raw);
             has_changed = false;
 
             let section = part_idx + 1;
             await app.navigateStudy(page, section);
         } else {
-            await app.finalizeTest(page, ctx.raw);
+            await app.finalizeTest(page, state.raw);
             has_changed = false;
         }
     }
@@ -209,7 +208,7 @@ function FormModule(app, study, page) {
         }
 
         if (!valid) {
-            ctx.refresh();
+            state.refresh();
             throw new Error('Certaines réponses sont manquantes ou erronées, veuillez vérifier vos réponses');
         }
     }

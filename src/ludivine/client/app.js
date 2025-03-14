@@ -26,6 +26,7 @@ import * as UI from './core/ui.js';
 import { isSyncing, downloadVault, uploadVault, openDatabase } from './core/data.js';
 import { ProjectInfo, ProjectBuilder } from './core/project.js';
 import { FormModule } from './form/form.js';
+import { FormState, FormModel, FormBuilder } from './form/builder.js';
 import { NetworkModule } from './network/network.js';
 import { deploy } from '../../web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';
@@ -119,7 +120,9 @@ let cache = {
 
     tests: null
 };
+
 let ctx = null;
+let ctx_key = null;
 
 // ------------------------------------------------------------------------
 // Init
@@ -150,7 +153,7 @@ async function start() {
             return 'Synchronisation en cours, veuillez patienter';
         if (UI.isDialogOpen())
             return 'Validez ou fermez la boîte de dialogue avant de continuer';
-        if (ctx != null && ctx.hasUnsavedData())
+        if (ctx?.hasUnsavedData?.())
             return 'Les modifications en cours seront perdues si vous continuez, êtes-vous sûr(e) de vouloir continuer ?';
     };
 
@@ -424,7 +427,7 @@ async function run(push = false) {
     }
 
     // List active studies
-    cache.studies = await db.fetchAll(`SELECT s.id, s.key, s.start,
+    cache.studies = await db.fetchAll(`SELECT s.id, s.key, s.start, s.data,
                                               SUM(IIF(t.status = 'done', 1, 0)) AS progress, COUNT(t.id) AS total
                                        FROM studies s
                                        LEFT JOIN tests t ON (t.study = s.id AND t.visible = 1)
@@ -572,6 +575,22 @@ function makeURL(values = {}) {
     return path;
 }
 
+async function syncContext(key, func = null) {
+    if (ctx_key == key)
+        return;
+
+    if (ctx?.stop != null)
+        await ctx.stop();
+
+    if (func != null) {
+        ctx = func();
+    } else {
+        ctx = null;
+    }
+
+    ctx_key = key;
+}
+
 function renderApp(el, fullscreen) {
     if (root_el == null) {
         root_el = document.createElement('div');
@@ -651,8 +670,9 @@ async function initProject(project, study) {
 
         let builder = new ProjectBuilder(project);
         let start = LocalDate.fromJSDate(study.start);
+        let values = JSON.parse(study.data);
 
-        bundle.init(builder, start);
+        bundle.init(builder, start, values);
     }
 
     // Update study tests
@@ -875,15 +895,17 @@ async function runDashboard() {
                                 ` : ''}
                                 ${study != null ? html`
                                     <div class="progress">
-                                        ${study != null && !study.progress ? 'Participation acceptée' : ''}
-                                        ${study?.progress && study.progress < study.total ? 'Participation en cours' : ''}
-                                        ${study?.progress && study.progress == study.total ? 'Participation terminée' : ''}
+                                        ${study?.total && !study.progress ? 'Participation acceptée' : ''}
+                                        ${study?.total && study.progress && study.progress < study.total ? 'Participation en cours' : ''}
+                                        ${study?.total && study.progress == study.total ? 'Participation terminée' : ''}
                                     </div>
                                 ` : ''}
                                 <button type="button" @click=${UI.wrap(e => openStudy(project))}>
-                                    ${!study?.progress ? 'Commencer' : ''}
-                                    ${study?.progress && study.progress < study.total ? 'Reprendre' : ''}
-                                    ${study?.progress && study.progress == study.total ? 'Accéder' : ''}
+                                    ${study == null ? 'Participer' : ''}
+                                    ${study?.total && !study.progress ? 'Commencer' : ''}
+                                    ${study?.total && study.progress && study.progress < study.total ? 'Reprendre' : ''}
+                                    ${study?.total && study.progress == study.total ? 'Accéder' : ''}
+                                    ${study != null && !study.total ? 'Ouvrir' : ''}
                                 </button>
                             </div>
                         `;
@@ -1012,6 +1034,30 @@ async function runConsent() {
         project.bundle = await import(project.bundle);
 
     let bundle = project.bundle;
+    let consent = bundle.consent;
+
+    await syncContext(project, () => {
+        let state = new FormState;
+
+        let ctx = {
+            downloaded: (consent.download == null),
+            values: state.values,
+
+            state: state,
+            run: runConsent
+        };
+
+        state.changeHandler = runConsent;
+
+        return ctx;
+    });
+
+    let state = ctx.state;
+    let model = new FormModel;
+    let builder = new FormBuilder(state, model, { disabled: !ctx.downloaded });
+
+    let values = state.values;
+    let valid = consent.accept(builder, values);
 
     UI.main(html`
         <div class="tabbar">
@@ -1023,20 +1069,20 @@ async function runConsent() {
         <div class="tab">
             <div class="box">
                 <div class="header">Consentement</div>
-                ${bundle.consent}
+                ${consent.text}
+                ${consent.download != null ? html`
+                    <div class="actions">
+                        <a href=${consent.download} download
+                           @click=${UI.wrap(e => { ctx.downloaded = true; return run(); })}>Télécharger la lettre d'information</a>
+                    </div>
+                ` : ''}
             </div>
             <div class="box" style="align-items: center;">
-                <form @submit=${UI.wrap(e => consent(e, cache.project))}>
-                    <label>
-                        <input name="consent" type="checkbox" />
-                        <span>J’ai lu et je ne m’oppose pas à participer à l’étude ${project.title}</span>
-                    </label>
-                    <label>
-                        <input name="reuse" type="checkbox" />
-                        <span>J’accepte que mes données soient réutilisées dans le cadre d’autres études de ${ENV.title}.</span>
-                    </label>
+                <form @submit=${UI.wrap(e => startStudy(e, cache.project, values, valid))}>
+                    ${model.widgets.map(widget => widget.render())}
+
                     <div class="actions">
-                        <button type="submit">Participer</button>
+                        <button type="submit" ?disabled=${!ctx.downloaded}>Participer</button>
                     </div>
                 </form>
             </div>
@@ -1044,29 +1090,35 @@ async function runConsent() {
     `);
 }
 
-async function consent(e, project) {
+async function startStudy(e, project, values, valid) {
     let start = (new Date).valueOf();
 
-    let form = e.currentTarget;
-    let elements = form.elements;
-
-    if (!elements.consent.checked)
+    for (let key in values) {
+        let value = values[key];
+        if (value == null)
+            throw new Error('Vous devez répondre aux différentes questions pour pouvoir participer');
+    }
+    if (!valid)
         throw new Error('Vous devez confirmé avoir lu et accepté la participation à ' + project.title);
 
-    let reuse = elements.reuse.checked;
+    let data = JSON.stringify(values);
 
-    let study = await db.fetch1(`INSERT INTO studies (key, start, reuse)
+    let study = await db.fetch1(`INSERT INTO studies (key, start, data)
                                  VALUES (?, ?, ?)
-                                 ON CONFLICT DO UPDATE SET start = excluded.start,
-                                                           reuse = excluded.reuse
-                                 RETURNING id, key, start`,
-                                project.key, start, 0 + reuse);
+                                 ON CONFLICT DO UPDATE SET start = excluded.start
+                                 RETURNING id, key, start, data`,
+                                project.key, start, data);
 
-    await initProject(project, study);
+    project = await initProject(project, study);
 
-    // Go back to dashboard;
-    route.mode = 'study';
-    route.project = null;
+    // Go back to dashboard if there are scheduled tests, open study otherwise
+    if (!project.tests.some(test => test.schedule != null)) {
+        route.mode = 'study';
+        route.project = project.key;
+    } else {
+        route.mode = 'study';
+        route.project = null;
+    }
 
     await run(true);
 }
@@ -1081,28 +1133,18 @@ async function runProject() {
     // Best effort, don't wait
     syncNotifications();
 
-    // Prepare page data context
-    if (cache.page.type != 'module') {
+    await syncContext(cache.page, () => {
         let page = cache.page;
+        let test = cache.tests.find(test => test.key == page.key);
 
-        if (ctx?.page != page) {
-            let test = cache.tests.find(test => test.key == page.key);
-
-            if (ctx != null)
-                ctx.stop();
-
-            switch (page.type) {
-                case 'form': { ctx = new FormModule(app, cache.study, page); } break;
-                case 'network': { ctx = new NetworkModule(app, cache.study, page); } break;
-            }
-
-            await ctx.start();
+        switch (page.type) {
+            case 'module': return null;
+            case 'form': return new FormModule(app, cache.study, page);
+            case 'network': return new NetworkModule(app, cache.study, page);
         }
-    } else {
-        if (ctx != null)
-            ctx.stop();
-        ctx = null;
-    }
+    });
+    if (ctx?.run != null)
+        await ctx.run();
 
     // Render tab
     {
@@ -1417,12 +1459,7 @@ async function runDiary() {
     if (UI.isFullscreen)
         UI.toggleFullscreen(false);
 
-    if (!(ctx instanceof DiaryModule)) {
-        if (ctx != null)
-            ctx.stop();
-
-        ctx = new DiaryModule(app);
-    }
+    await syncContext(DiaryModule, () => new DiaryModule(app));
     await ctx.run();
 
     UI.main(html`

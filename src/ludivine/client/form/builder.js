@@ -20,7 +20,7 @@ import { ASSETS } from '../../assets/assets.js';
 
 let unique = 0;
 
-function FormContext(init = {}) {
+function FormState(init = {}) {
     let self = this;
 
     let change_handler = () => {};
@@ -44,10 +44,10 @@ function FormModel() {
     this.widgets = [];
 }
 
-function FormBuilder(ctx, model) {
+function FormBuilder(state, model, base = {}) {
     let self = this;
 
-    let ptr = ctx.values;
+    let ptr = state.values;
 
     let intro = '';
     let intro_idx = 0;
@@ -543,7 +543,7 @@ function FormBuilder(ctx, model) {
             disabled: false,
             optional: false,
             tip: null
-        }, defaults);
+        }, base, defaults);
 
         for (let key in defaults) {
             if (options[key] == null)
@@ -626,12 +626,12 @@ function FormBuilder(ctx, model) {
             return;
 
         refreshing = true;
-        setTimeout(() => ctx.refresh(), 0);
+        setTimeout(() => state.refresh(), 0);
     }
 }
 
 export {
-    FormContext,
+    FormState,
     FormModel,
     FormBuilder
 }
