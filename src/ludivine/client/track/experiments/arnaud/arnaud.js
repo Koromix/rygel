@@ -15,7 +15,7 @@
 
 import { render, html } from '../../../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Net } from '../../../../../web/core/base.js';
-import { loadTexture } from '../../../lib/util.js';
+import { loadTexture } from '../../../core/misc.js';
 import { ASSETS } from './images/images.js';
 
 const BACKGROUND = '#7f7f7f';

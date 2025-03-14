@@ -15,7 +15,7 @@
 
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
-import { loadTexture } from '../lib/util.js';
+import { loadTexture } from '../core/misc.js';
 import { PROXIMITY_LEVELS, PERSON_KINDS, QUALITY_COLORS } from './constants.js';
 import { ASSETS } from '../../assets/assets.js';
 

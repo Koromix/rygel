@@ -15,8 +15,8 @@
 
 import { render, html, svg, live } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
-import * as UI from '../ui.js';
-import { loadImage } from './util.js';
+import { loadImage } from '../core/misc.js';
+import * as UI from '../core/ui.js';
 
 import './picture.css';
 

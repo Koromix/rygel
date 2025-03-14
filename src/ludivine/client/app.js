@@ -18,18 +18,18 @@ import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
 import { Util, Log, Net, HttpError, LocalDate } from '../../web/core/base.js';
 import { Hex, Base64 } from '../../web/core/mixer.js';
 import { computeAge, dateToString, niceDate,
-         progressBar, progressCircle, deflate, inflate } from './lib/util.js';
-import { downloadVault, uploadVault, openDatabase } from './lib/data.js';
-import { SmallCalendar, EventProviders, createEvent } from './lib/calendar.js';
-import * as app from './app.js';
-import * as UI from './ui.js';
-import { PictureCropper } from './lib/picture.js';
+         progressBar, progressCircle, deflate, inflate,
+         EventProviders, createEvent } from './core/misc.js';
+import { PictureCropper } from './util/picture.js';
 import { PROJECTS } from '../projects/projects.js';
-import { ProjectInfo, ProjectBuilder } from './project.js';
+import * as UI from './core/ui.js';
+import { isSyncing, downloadVault, uploadVault, openDatabase } from './core/data.js';
+import { ProjectInfo, ProjectBuilder } from './core/project.js';
 import { FormModule } from './form/form.js';
 import { NetworkModule } from './network/network.js';
 import { deploy } from '../../web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';
+import * as app from './app.js';
 
 import '../assets/client.css';
 
@@ -106,10 +106,7 @@ let session = null;
 let db = null;
 let identity = null;
 
-let upload_controller = null;
-
 let root_el = null;
-let calendar = null;
 
 let cache = {
     studies: null,
@@ -149,7 +146,7 @@ async function start() {
 
     // Prevent loss of data
     window.onbeforeunload = e => {
-        if (upload_controller != null)
+        if (isSyncing())
             return 'Synchronisation en cours, veuillez patienter';
         if (UI.isDialogOpen())
             return 'Validez ou fermez la boîte de dialogue avant de continuer';
@@ -986,27 +983,6 @@ async function openStudy(project) {
     route.project = project.key;
 
     await run(true);
-}
-
-function renderCalendar(events) {
-    if (calendar == null) {
-        calendar = new SmallCalendar;
-
-        calendar.eventFunc = (start, end) => {
-            let period = events.filter(evt => evt.schedule >= start && evt.schedule < end);
-
-            let obj = period.reduce((obj, evt) => {
-                let text = evt.count + (evt.count > 1 ? ' modules' : ' module');
-                obj[evt.schedule] = [text];
-
-                return obj;
-            }, {});
-
-            return obj;
-        };
-    }
-
-    return calendar.render();
 }
 
 // ------------------------------------------------------------------------

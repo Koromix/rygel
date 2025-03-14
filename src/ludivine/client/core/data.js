@@ -22,7 +22,103 @@ const SYNC_LOCK = 'sync';
 
 const DATABASE_VERSION = 5;
 
+let upload_controller = null;
+
 let generations = new Map;
+
+function isSyncing() {
+    let syncing = (upload_controller != null);
+    return syncing;
+}
+
+async function downloadVault(vid) {
+    let filename = 'ludivine/' + vid + '.db';
+
+    let response = await Net.fetch('/api/download', {
+        headers: {
+            'X-Vault-Id': vid
+        }
+    });
+
+    if (!response.ok) {
+        // First time, it's ok!
+        if (response.status == 204)
+            return;
+
+        let msg = await Net.readError(response);
+        throw new HttpError(response.status, msg);
+    }
+
+    let blob = await response.blob();
+
+    let root = await navigator.storage.getDirectory();
+    let handle = await findFile(root, filename, true);
+    let writable = await handle.createWritable();
+
+    await writable.write(blob);
+    await writable.close();
+
+    let header = response.headers.get('X-Vault-Generation');
+    let generation = parseInt(header, 10) || null;
+
+    generations.set(vid, generation);
+}
+
+async function uploadVault(vid) {
+    let filename = 'ludivine/' + vid + '.db';
+
+    let root = await navigator.storage.getDirectory();
+    let handle = await findFile(root, filename);
+    let src = await handle.getFile();
+    let body = await src.arrayBuffer();
+
+    if (upload_controller != null)
+        upload_controller.abort();
+    upload_controller = null;
+
+    navigator.locks.request(SYNC_LOCK, () => {
+        let controller = new AbortController;
+
+        upload_controller = controller;
+
+        let p = Net.fetch('/api/upload', {
+            method: 'PUT',
+            headers: {
+                'X-Vault-Id': vid,
+                'X-Vault-Generation': generations.get(vid) ?? 0
+            },
+            body: body,
+            signal: controller.signal
+        });
+
+        p.then(response => {
+            let header = response.headers.get('X-Vault-Generation');
+            let generation = parseInt(header, 10);
+
+            generations.set(vid, generation);
+        });
+
+        p.finally(() => {
+            if (upload_controller == controller)
+                upload_controller = null;
+        });
+
+        return p;
+    });
+}
+
+async function findFile(root, filename, create = false) {
+    let handle = root;
+
+    let parts = filename.split('/');
+    let basename = parts.pop();
+
+    for (let part of parts)
+        handle = await handle.getDirectoryHandle(part, { create: true });
+    handle = await handle.getFileHandle(basename, { create: create });
+
+    return handle;
+}
 
 async function openDatabase(vid, key) {
     let filename = 'ludivine/' + vid + '.db';
@@ -156,96 +252,8 @@ async function openDatabase(vid, key) {
     return db;
 }
 
-async function downloadVault(vid) {
-    let filename = 'ludivine/' + vid + '.db';
-
-    let response = await Net.fetch('/api/download', {
-        headers: {
-            'X-Vault-Id': vid
-        }
-    });
-
-    if (!response.ok) {
-        // First time, it's ok!
-        if (response.status == 204)
-            return;
-
-        let msg = await Net.readError(response);
-        throw new HttpError(response.status, msg);
-    }
-
-    let blob = await response.blob();
-
-    let root = await navigator.storage.getDirectory();
-    let handle = await findFile(root, filename, true);
-    let writable = await handle.createWritable();
-
-    await writable.write(blob);
-    await writable.close();
-
-    let header = response.headers.get('X-Vault-Generation');
-    let generation = parseInt(header, 10) || null;
-
-    generations.set(vid, generation);
-}
-
-async function uploadVault(vid) {
-    let filename = 'ludivine/' + vid + '.db';
-
-    let root = await navigator.storage.getDirectory();
-    let handle = await findFile(root, filename);
-    let src = await handle.getFile();
-    let body = await src.arrayBuffer();
-
-    if (upload_controller != null)
-        upload_controller.abort();
-    upload_controller = null;
-
-    navigator.locks.request(SYNC_LOCK, () => {
-        let controller = new AbortController;
-
-        upload_controller = controller;
-
-        let p = Net.fetch('/api/upload', {
-            method: 'PUT',
-            headers: {
-                'X-Vault-Id': vid,
-                'X-Vault-Generation': generations.get(vid) ?? 0
-            },
-            body: body,
-            signal: controller.signal
-        });
-
-        p.then(response => {
-            let header = response.headers.get('X-Vault-Generation');
-            let generation = parseInt(header, 10);
-
-            generations.set(vid, generation);
-        });
-
-        p.finally(() => {
-            if (upload_controller == controller)
-                upload_controller = null;
-        });
-
-        return p;
-    });
-}
-
-async function findFile(root, filename, create = false) {
-    let handle = root;
-
-    let parts = filename.split('/');
-    let basename = parts.pop();
-
-    for (let part of parts)
-        handle = await handle.getDirectoryHandle(part, { create: true });
-    handle = await handle.getFileHandle(basename, { create: create });
-
-    return handle;
-}
-
 export {
+    isSyncing,
     downloadVault,
     uploadVault,
 

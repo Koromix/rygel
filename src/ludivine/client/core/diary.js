@@ -13,14 +13,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, LocalDate } from '../../web/core/base.js';
-import { ASSETS } from '../assets/assets.js';
+import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, LocalDate } from '../../../web/core/base.js';
+import { ASSETS } from '../../assets/assets.js';
 import { ClassicEditor, AutoLink, Bold, Code, Essentials, FontBackgroundColor,
          FontColor, FontFamily, FontSize, Highlight, Italic, Link, Paragraph,
-         RemoveFormat, Strikethrough, Subscript, Superscript, Underline, Translations } from '../../../vendor/ckeditor5/ckeditor5.bundle.js';
+         RemoveFormat, Strikethrough, Subscript, Superscript, Underline, Translations } from '../../../../vendor/ckeditor5/ckeditor5.bundle.js';
 
-import '../../../vendor/ckeditor5/ckeditor5.bundle.css';
+import '../../../../vendor/ckeditor5/ckeditor5.bundle.css';
 
 function DiaryModule(app) {
     let self = this;

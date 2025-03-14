@@ -198,6 +198,136 @@ async function inflate(bytes) {
     return new Uint8Array(buf);
 }
 
+const EventProviders = [
+    { key: 'apple', title: 'Apple', icon: 'calendars/apple' },
+    { key: 'google', title: 'Google', icon: 'calendars/google' },
+    { key: 'outlook', title: 'outlook', icon: 'calendars/outlook' },
+    { key: 'office365', title: 'office365', icon: 'calendars/office365' },
+    { key: 'yahoo', title: 'Yahoo', icon: 'calendars/yahoo' },
+    { key: 'ical', title: 'iCalendar', icon: 'calendars/ical' },
+];
+
+function createEvent(provider, date, title, description = '') {
+    let [html, text] = formatDescription(description);
+
+    switch (provider) {
+        case 'ical':
+        case 'apple': {
+            let now = new Date;
+
+            let lines = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'CALSCALE:GREGORIAN',
+                'METHOD:PUBLISH',
+                'BEGIN:VEVENT',
+                'DTSTAMP:' + now.toISOString().replace(/\.[0-9]{3}/, '').replace(/[\-:\.]/g, ''),
+                'DTSTART;VALUE=DATE:' + formatDate(date, ''),
+                'SUMMARY:' + title,
+                'DESCRIPTION:' + text.replace(/\r?\n/g, '\\n'),
+                'X-ALT-DESC;FMTTYPE=text/html:' + html.replace(/\r?\n/g, '\\n'),
+                'END:VEVENT',
+                'END:VCALENDAR'
+            ];
+
+            // Clean up missing values
+            lines = lines.filter(line => !line.endsWith(':'));
+
+            let ical = lines.join('\n');
+            let blob = new Blob([ical], { type: 'text/calendar' });
+
+            Util.saveFile(blob, 'events.ics');
+            return;
+        } break;
+
+        case 'google': {
+            let url = 'https://calendar.google.com/calendar/r/eventedit';
+
+            url += '?' + new URLSearchParams({
+                dates: formatDate(date, '') + '/' + formatDate(date.plus(1), ''),
+                text: title,
+                details: html
+            });
+
+            window.open(url, '_blank');
+            return;
+        } break;
+
+        case 'outlook': {
+            let url = 'https://outlook.live.com/calendar/action/compose';
+
+            url += '?' + new URLSearchParams({
+                rru: 'addevent',
+                startdt: formatDate(date, '-'),
+                enddt: formatDate(date.plus(1), '-'),
+                allday: 'true',
+                subject: title,
+                body: html
+            });
+
+            window.open(url, '_blank');
+            return;
+        } break;
+
+        case 'office365': {
+            let url = 'https://outlook.office.com/calendar/action/compose';
+
+            url += '?' + new URLSearchParams({
+                rru: 'addevent',
+                startdt: formatDate(date, '-'),
+                enddt: formatDate(date.plus(1), '-'),
+                allday: 'true',
+                subject: title,
+                body: html
+            });
+
+            window.open(url, '_blank');
+            return;
+        } break;
+
+        case 'yahoo': {
+            let url = 'https://calendar.yahoo.com/';
+
+            url += '?' + new URLSearchParams({
+                v: 60,
+                ST: formatDate(date, ''),
+                dur: 'allday',
+                TITLE: title,
+                DESC: text
+            });
+
+            window.open(url, '_blank');
+            return;
+        } break;
+    }
+
+    throw new Error(`Invalid calendar provider '${provider}'`);
+}
+
+function formatDate(date, separator) {
+    let str = date.toString();
+    return str.replaceAll('-', separator);
+}
+
+function formatDescription(str) {
+    let div = document.createElement('div');
+
+    render(str, div);
+
+    let html = div.innerHTML;
+    let anchors = div.querySelectorAll('a');
+
+    for (let a of anchors) {
+        if (a.href != null)
+            a.textContent = a.href;
+    }
+
+    let lines = div.textContent.trim().split('\n').map(line => line.trim());
+    let text = lines.join('\n');
+
+    return [html, text];
+}
+
 export {
     computeAge,
     computeAgeMonths,
@@ -211,5 +341,8 @@ export {
     progressCircle,
 
     deflate,
-    inflate
+    inflate,
+
+    EventProviders,
+    createEvent
 }

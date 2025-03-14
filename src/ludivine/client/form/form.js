@@ -15,7 +15,7 @@
 
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
-import { progressBar, deflate, inflate } from '../lib/util.js';
+import { progressBar, deflate, inflate } from '../core/misc.js';
 import { FormContext, FormModel, FormBuilder } from './builder.js';
 import { annotate } from './data.js';
 import { ASSETS } from '../../assets/assets.js';
