@@ -151,7 +151,6 @@ function FormBuilder(ctx, model) {
         options = expandOptions(options, {
             enum: 'buttons'
         });
-        key = expandKey(key, options);
 
         switch (options.enum) {
             case 'buttons': return self.enumButtons(key, label, props, options);
