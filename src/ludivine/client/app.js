@@ -17,12 +17,12 @@ import { render, html, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
 import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
 import { Util, Log, Net, HttpError, LocalDate } from '../../web/core/base.js';
 import { Hex, Base64 } from '../../web/core/mixer.js';
-import * as sqlite3 from '../../web/core/sqlite3.js';
 import { computeAge, dateToString, niceDate,
          progressBar, progressCircle, deflate, inflate } from './lib/util.js';
+import { downloadVault, uploadVault, openDatabase } from './lib/data.js';
+import { SmallCalendar, EventProviders, createEvent } from './lib/calendar.js';
 import * as app from './app.js';
 import * as UI from './ui.js';
-import { SmallCalendar, EventProviders, createEvent } from './lib/calendar.js';
 import { PictureCropper } from './lib/picture.js';
 import { PROJECTS } from '../projects/projects.js';
 import { ProjectInfo, ProjectBuilder } from './project.js';
@@ -34,11 +34,6 @@ import { ASSETS } from '../assets/assets.js';
 import '../assets/client.css';
 
 const CHANNEL_NAME = 'ludivine';
-
-const DATA_LOCK = 'data';
-const SYNC_LOCK = 'sync';
-
-const DATABASE_VERSION = 5;
 
 Object.assign(T, {
     cancel: 'Annuler',
@@ -108,7 +103,6 @@ let has_run = false;
 
 let channel = null;
 let session = null;
-let generation = null;
 let db = null;
 let identity = null;
 
@@ -280,8 +274,6 @@ async function open(obj) {
 
     if (obj?.vid != null && obj?.vkey != null) {
         await downloadVault(obj.vid);
-
-        await initSQLite();
 
         let vkey = Hex.toBytes(obj.vkey);
         db = await openDatabase(obj.vid, vkey);
@@ -1455,233 +1447,6 @@ async function runDiary() {
             ${ctx.render()}
         </div>
     `);
-}
-
-// ------------------------------------------------------------------------
-// Database
-// ------------------------------------------------------------------------
-
-async function initSQLite() {
-    let url = BUNDLES['sqlite3-worker1-bundler-friendly.mjs'];
-    await sqlite3.init(url);
-}
-
-async function openDatabase(vid, key) {
-    let filename = 'ludivine/' + vid + '.db';
-
-    let db = await sqlite3.open(filename, {
-        vfs: 'multipleciphers-opfs',
-        lock: DATA_LOCK
-    });
-
-    db.changeHandler = () => uploadVault(vid);
-
-    let sql = `
-        PRAGMA cipher = 'sqlcipher';
-        PRAGMA key = "x'${Hex.toHex(key)}'";
-    `;
-    await db.exec(sql);
-
-    let version = await db.pluck('PRAGMA user_version');
-
-    if (version == DATABASE_VERSION)
-        return db;
-    if (version > DATABASE_VERSION)
-        throw new Error('Database model is too recent');
-
-    await db.transaction(async t => {
-        switch (version) {
-            case 0: {
-                await t.exec(`
-                    CREATE TABLE meta (
-                        gender TEXT,
-                        picture TEXT,
-                        avatar TEXT
-                    );
-
-                    CREATE TABLE studies (
-                        id INTEGER PRIMARY KEY,
-                        key TEXT NOT NULL,
-                        start INTEGER NOT NULL
-                    );
-                    CREATE UNIQUE INDEX studies_k ON studies (key);
-
-                    CREATE TABLE tests (
-                        id INTEGER PRIMARY KEY,
-                        study INTEGER REFERENCES studies (id) ON DELETE CASCADE,
-                        key TEXT NOT NULL,
-                        title TEXT NOT NULL,
-                        visible INTEGER CHECK (visible IN (0, 1)) NOT NULL,
-                        status TEXT CHECK (status IN ('empty', 'draft', 'done')) NOT NULL,
-                        schedule TEXT,
-                        mtime INTEGER,
-                        payload BLOB
-                    );
-                    CREATE UNIQUE INDEX tests_sk ON tests (study, key);
-
-                    CREATE TABLE events (
-                        test INTEGER NOT NULL REFERENCES tests (id) ON DELETE CASCADE,
-                        sequence INTEGER NOT NULL,
-                        timestamp INTEGER NOT NULL,
-                        type TEXT NOT NULL,
-                        data TEXT
-                    );
-
-                    CREATE TABLE snapshots (
-                        test INTEGER NOT NULL REFERENCES tests (id) ON DELETE CASCADE,
-                        timestamp NOT NULL,
-                        image BLOB NOT NULL
-                    );
-                `);
-            } // fallthrough
-
-            case 1: {
-                await t.exec(`
-                    DROP TABLE events;
-                    DROP TABLE snapshots;
-
-                    PRAGMA foreign_keys = 0;
-
-                    DROP INDEX studies_k;
-                    ALTER TABLE studies RENAME TO studies_BAK;
-
-                    CREATE TABLE studies (
-                        id INTEGER PRIMARY KEY,
-                        key TEXT NOT NULL,
-                        start INTEGER NOT NULL,
-                        reuse INTEGER CHECK (reuse IN (0, 1)) NOT NULL
-                    );
-                    CREATE UNIQUE INDEX studies_k ON studies (key);
-
-                    INSERT INTO studies (id, key, start, reuse)
-                        SELECT id, key, start, 0 FROM studies_BAK;
-
-                    DROP TABLE studies_BAK;
-
-                    PRAGMA foreign_keys = 1;
-                `);
-            } // fallthrough
-
-            case 2: {
-                await t.exec(`
-                    CREATE TABLE diary (
-                        id INTEGER PRIMARY KEY,
-                        date TEXT NOT NULL,
-                        title TEXT,
-                        content TEXT NOT NULL
-                    );
-                `);
-            } // fallthrough
-
-            case 3: {
-                await t.exec(`
-                    ALTER TABLE tests ADD COLUMN notify TEXT;
-                `);
-            } // fallthrough
-
-            case 4: {
-                let tests = await t.fetchAll('SELECT id, payload FROM tests WHERE payload IS NOT NULL');
-
-                for (let test of tests) {
-                    let compressed = await deflate(test.payload);
-                    await t.exec('UPDATE tests SET payload = ? WHERE id = ?', compressed, test.id);
-                }
-            } // fallthrough
-        }
-
-        await t.exec('PRAGMA user_version = ' + DATABASE_VERSION);
-    });
-
-    return db;
-}
-
-// ------------------------------------------------------------------------
-// Sync
-// ------------------------------------------------------------------------
-
-async function downloadVault(vid) {
-    let filename = 'ludivine/' + vid + '.db';
-
-    let response = await Net.fetch('/api/download', {
-        headers: {
-            'X-Vault-Id': vid
-        }
-    });
-
-    if (!response.ok) {
-        // First time, it's ok!
-        if (response.status == 204)
-            return;
-
-        let msg = await Net.readError(response);
-        throw new HttpError(response.status, msg);
-    }
-
-    let blob = await response.blob();
-
-    let root = await navigator.storage.getDirectory();
-    let handle = await findFile(root, filename, true);
-    let writable = await handle.createWritable();
-
-    await writable.write(blob);
-    await writable.close();
-
-    let header = response.headers.get('X-Vault-Generation');
-    generation = parseInt(header, 10) || null;
-}
-
-async function uploadVault(vid) {
-    let filename = 'ludivine/' + vid + '.db';
-
-    let root = await navigator.storage.getDirectory();
-    let handle = await findFile(root, filename);
-    let src = await handle.getFile();
-    let body = await src.arrayBuffer();
-
-    if (upload_controller != null)
-        upload_controller.abort();
-    upload_controller = null;
-
-    navigator.locks.request(SYNC_LOCK, () => {
-        let controller = new AbortController;
-
-        upload_controller = controller;
-
-        let p = Net.fetch('/api/upload', {
-            method: 'PUT',
-            headers: {
-                'X-Vault-Id': vid,
-                'X-Vault-Generation': generation ?? 0
-            },
-            body: body,
-            signal: controller.signal
-        });
-
-        p.then(response => {
-            let header = response.headers.get('X-Vault-Generation');
-            generation = parseInt(header, 10);
-        });
-
-        p.finally(() => {
-            if (upload_controller == controller)
-                upload_controller = null;
-        });
-
-        return p;
-    });
-}
-
-async function findFile(root, filename, create = false) {
-    let handle = root;
-
-    let parts = filename.split('/');
-    let basename = parts.pop();
-
-    for (let part of parts)
-        handle = await handle.getDirectoryHandle(part, { create: true });
-    handle = await handle.getFileHandle(basename, { create: create });
-
-    return handle;
 }
 
 // ------------------------------------------------------------------------
