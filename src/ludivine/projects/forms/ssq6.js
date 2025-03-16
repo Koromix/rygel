@@ -72,7 +72,16 @@ function build(form, values) {
         let count = values[key + "a"]
 
         for (let i = 0; i < count; i++) {
-            form.text(key + "b" + i, `Quelles sont les initiales de la personne n°${i + 1} ?`)
+            let initiales = values[key + "b" + i]
+
+            if (initiales) {
+                initiales = initiales.toUpperCase().replace(/[^A-Z]/g, '')
+                values[key + "b" + i] = initiales
+            }
+
+            form.text(key + "b" + i, `Quelles sont les initiales de la personne n°${i + 1} ?`, {
+                help: "Lettres majuscules uniquement, sans espaces ou autres caractères"
+            })
 
             let name = values[key + "b" + i] || 'cette personne'
             let label = `Quelle est votre relation avec ${name} ?`
