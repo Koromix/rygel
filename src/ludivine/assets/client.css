@@ -404,12 +404,11 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 
     & > img {
         width: 240px;
-        height: 100%;
         object-fit: cover;
         object-position: center top;
         background: #ecdbc3;
-        border-top-left-radius: 16px;
-        border-bottom-left-radius: 16px;
+        border-top-left-radius: 8px;
+        border-bottom-left-radius: 8px;
     }
     & > div {
         flex: 1;
