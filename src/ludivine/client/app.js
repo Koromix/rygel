@@ -180,14 +180,16 @@ async function start() {
 
     // Open existing session (if any)
     if (session == null) {
+        let obj = null;
+
         try {
             let json = sessionStorage.getItem('session');
-            let obj = JSON.parse(json);
-
-            await open(obj);
+            obj = JSON.parse(json);
         } catch (err) {
             console.error(err);
         }
+
+        await open(obj);
     }
 
     // Share session data across tabs
