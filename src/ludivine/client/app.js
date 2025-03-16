@@ -25,6 +25,7 @@ import { PROJECTS } from '../projects/projects.js';
 import * as UI from './core/ui.js';
 import { isSyncing, downloadVault, uploadVault, openDatabase } from './core/sync.js';
 import { ProjectInfo, ProjectBuilder } from './core/project.js';
+import { ConsentModule } from './form/consent.js';
 import { FormModule } from './form/form.js';
 import { FormState, FormModel, FormBuilder } from './form/builder.js';
 import { NetworkModule } from './network/network.js';
@@ -1033,31 +1034,8 @@ async function runConsent() {
     if (typeof project.bundle == 'string')
         project.bundle = await import(project.bundle);
 
-    let bundle = project.bundle;
-    let consent = bundle.consent;
-
-    await syncContext(project, () => {
-        let state = new FormState;
-
-        let ctx = {
-            downloaded: (consent.download == null),
-            values: state.values,
-
-            state: state,
-            run: runConsent
-        };
-
-        state.changeHandler = runConsent;
-
-        return ctx;
-    });
-
-    let state = ctx.state;
-    let model = new FormModel;
-    let builder = new FormBuilder(state, model, { disabled: !ctx.downloaded });
-
-    let values = state.values;
-    let valid = consent.accept(builder, values);
+    await syncContext(project, () => new ConsentModule(app, project));
+    await ctx.run();
 
     UI.main(html`
         <div class="tabbar">
@@ -1067,60 +1045,9 @@ async function runConsent() {
         </div>
 
         <div class="tab">
-            <div class="box">
-                <div class="header">Consentement</div>
-                ${consent.text}
-                ${consent.download != null ? html`
-                    <div class="actions">
-                        <a href=${consent.download} download
-                           @click=${UI.wrap(e => { ctx.downloaded = true; return run(); })}>Télécharger la lettre d'information</a>
-                    </div>
-                ` : ''}
-            </div>
-            <div class="box" style="align-items: center;">
-                <form @submit=${UI.wrap(e => startStudy(e, cache.project, values, valid))}>
-                    ${model.widgets.map(widget => widget.render())}
-
-                    <div class="actions">
-                        <button type="submit" ?disabled=${!ctx.downloaded}>Participer</button>
-                    </div>
-                </form>
-            </div>
+            ${ctx.render()}
         </div>
     `);
-}
-
-async function startStudy(e, project, values, valid) {
-    let start = (new Date).valueOf();
-
-    for (let key in values) {
-        let value = values[key];
-        if (value == null)
-            throw new Error('Vous devez répondre aux différentes questions pour pouvoir participer');
-    }
-    if (!valid)
-        throw new Error('Vous devez confirmé avoir lu et accepté la participation à ' + project.title);
-
-    let data = JSON.stringify(values);
-
-    let study = await db.fetch1(`INSERT INTO studies (key, start, data)
-                                 VALUES (?, ?, ?)
-                                 ON CONFLICT DO UPDATE SET start = excluded.start
-                                 RETURNING id, key, start, data`,
-                                project.key, start, data);
-
-    project = await initProject(project, study);
-
-    // Go back to dashboard if there are scheduled tests, open study otherwise
-    if (!project.tests.some(test => test.schedule != null)) {
-        route.mode = 'study';
-        route.project = project.key;
-    } else {
-        route.mode = 'study';
-        route.project = null;
-    }
-
-    await run(true);
 }
 
 async function runProject() {
@@ -1382,6 +1309,30 @@ function renderTest() {
     `;
 }
 
+async function startStudy(project, values) {
+    let start = (new Date).valueOf();
+    let data = JSON.stringify(values);
+
+    let study = await db.fetch1(`INSERT INTO studies (key, start, data)
+                                 VALUES (?, ?, ?)
+                                 ON CONFLICT DO UPDATE SET start = excluded.start
+                                 RETURNING id, key, start, data`,
+                                project.key, start, data);
+
+    project = await initProject(project, study);
+
+    // Go back to dashboard if there are scheduled tests, open study otherwise
+    if (!project.tests.some(test => test.schedule != null)) {
+        route.mode = 'study';
+        route.project = project.key;
+    } else {
+        route.mode = 'study';
+        route.project = null;
+    }
+
+    await run(true);
+}
+
 async function navigateStudy(page, section = null) {
     while (page.type == 'module' && page.modules.length == 1)
         page = page.modules[1];
@@ -1530,14 +1481,15 @@ export {
     db,
 
     start,
-
     go,
     run,
 
     isLogged,
     changePicture,
 
+    startStudy,
     navigateStudy,
+
     saveTest,
     finalizeTest,
     exitTest
