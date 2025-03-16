@@ -55,8 +55,6 @@ contact@ldv-recherche.fr)",
     <a style="padding: 0.7em 2em; background: #2d8261; border-radius: 30px;
               font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ URL }}">Connexion à {{ TITLE }}</a>
 <br><br></div>
-<p>Si vous rencontrez des problèmes pour appuyer sur le bouton, copiez-collez le lien suivant dans votre navigateur :</p>
-<p><i>{{ URL }}</i></p>
 <p>Vous pouvez également utiliser ce QRcode pour vous connecter à l'aide de votre smartphone si vous le souhaitez :</p>
 <div align="center"><br>
     <img src="cid:qrcode.png" alt="">
