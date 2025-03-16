@@ -220,24 +220,24 @@ function TransactionWrapper(promiser, db) {
 
     this.fetch1 = async function(sql, ...args) {
         let result = await new Promise((resolve, reject) => {
+            let row = null;
+
             let p = promiser({ type: 'exec', dbId: db, args: {
                 sql: sql,
                 bind: args,
                 countChanges: true,
                 rowMode: 'object',
                 callback: msg => {
-                    if (msg.rowNumber != null) {
-                        resolve(msg.row);
-                    } else {
-                        resolve(null);
-                    }
+                    if (msg.rowNumber != null)
+                        row = msg.row;
 
                     return false;
                 }
             }});
 
-            p.then(handleResult);
-            p.catch(msg => reject(msg.result));
+            p.then(handleResult)
+             .then(() => resolve(row))
+             .catch(msg => reject(msg.result));
         });
 
         return result;
@@ -253,18 +253,17 @@ function TransactionWrapper(promiser, db) {
                 countChanges: true,
                 rowMode: 'object',
                 callback: msg => {
-                    if (msg.rowNumber == null) {
-                        resolve(results);
+                    if (msg.rowNumber == null)
                         return false;
-                    }
 
                     results.push(msg.row);
                     return true;
                 }
             }});
 
-            p.then(handleResult);
-            p.catch(msg => reject(msg.result));
+            p.then(handleResult)
+             .then(() => resolve(results))
+             .catch(msg => reject(msg.result));
         });
 
         return results;
@@ -272,24 +271,24 @@ function TransactionWrapper(promiser, db) {
 
     this.pluck = async function(sql, ...args) {
         let result = await new Promise((resolve, reject) => {
+            let value = null;
+
             let p = promiser({ type: 'exec', dbId: id, args: {
                 sql: sql,
                 bind: args,
                 countChanges: true,
                 rowMode: 'array',
                 callback: msg => {
-                    if (msg.rowNumber != null) {
-                        resolve(msg.row[0]);
-                    } else {
-                        resolve(null);
-                    }
+                    if (msg.rowNumber != null)
+                        value = msg.row[0];
 
                     return false;
                 }
             }});
 
-            p.then(handleResult);
-            p.catch(msg => reject(msg.result));
+            p.then(handleResult)
+             .then(() => resolve(value))
+             .catch(msg => reject(msg.result));
         });
 
         return result;
