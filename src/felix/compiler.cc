@@ -1744,7 +1744,7 @@ public:
 
         // Strings literals were limited in length before MSVC 2022
         EmbedMode mode = (cl_ver >= 193000) ? EmbedMode::Literals : EmbedMode::Arrays;
-        RG::MakeEmbedCommand(embed_filenames, use_arrays, embed_options, dest_filename, alloc, out_cmd);
+        RG::MakeEmbedCommand(embed_filenames, mode, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
