@@ -62,14 +62,21 @@ bool Builder::PrepareEsbuild()
 #endif
 
         if (os && arch) {
-            char suffix[64];
-            Fmt(suffix, "%1-%2/bin/esbuild%3", os, arch, RG_EXECUTABLE_EXTENSION);
+            const char *names[] = {
+                "bin/esbuild",
+                "esbuild"
+            };
 
-            const char *binary = NormalizePath(suffix, prefix, &str_alloc).ptr;
+            for (const char *name: names) {
+                char suffix[64];
+                Fmt(suffix, "%1-%2/%3%4", os, arch, name, RG_EXECUTABLE_EXTENSION);
 
-            if (TestFile(binary)) {
-                esbuild_binary = binary;
-                return true;
+                const char *binary = NormalizePath(suffix, prefix, &str_alloc).ptr;
+
+                if (TestFile(binary)) {
+                    esbuild_binary = binary;
+                    return true;
+                }
             }
         }
     }
