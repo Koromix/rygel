@@ -69,7 +69,7 @@ const consent = {
 
 function init(build, start, values) {
     build.summary = html`
-        <p>Retrouvez les <a href="/etudes#etude-1-sociotrauma">informations de cette étude</a> sur le site officiel de Ligne de Vie.
+        <p>Pour rappel, cette étude s’adresse à <b>toute personne majeure (18 ans et plus) estimant avoir été exposée à un évènement potentiellement traumatique</b> au cours du mois précédent et n’étant pas actuellement sous mesure de protection de justice (sous tutelle, curatelle ou toute autre forme de protection judiciaire).
         <p>Commencez par faire votre bilan initial. Vous pouvez <b>arrêter à tout moment</b> et recommencer plus tard !
     `;
 
