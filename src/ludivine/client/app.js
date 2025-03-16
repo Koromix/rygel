@@ -23,7 +23,7 @@ import { computeAge, dateToString, niceDate,
 import { PictureCropper } from './util/picture.js';
 import { PROJECTS } from '../projects/projects.js';
 import * as UI from './core/ui.js';
-import { isSyncing, downloadVault, uploadVault, openDatabase } from './core/data.js';
+import { isSyncing, downloadVault, uploadVault, openDatabase } from './core/sync.js';
 import { ProjectInfo, ProjectBuilder } from './core/project.js';
 import { FormModule } from './form/form.js';
 import { FormState, FormModel, FormBuilder } from './form/builder.js';
