@@ -372,6 +372,8 @@ static void PruneRenders()
     render_map.Trim();
 }
 
+#if !defined(_WIN32)
+
 static void HandleProcessSignal(http_IO *io, int signal)
 {
     RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
@@ -392,6 +394,8 @@ static void HandleProcessSignal(http_IO *io, int signal)
 
     io->SendText(200, "{}", "application/json");
 }
+
+#endif
 
 static void HandleAdminRequest(http_IO *io)
 {
