@@ -20,7 +20,7 @@ function build(form, values) {
 
     form.intro = html`
         <p>Voici ci-dessous une <b>liste de possibles évènements de vie stressants</b>.
-        <p>Veuillez indiquer les évènements qui vous sont arrivés <b>durant les deux dernières années</b> et qui sont actuellement difficiles pour vous, ou qui ont été un difficiles pour vous ou cours des 6 derniers mois.
+        <p>Veuillez indiquer les évènements qui vous sont arrivés <b>durant les deux dernières années</b> et qui sont actuellement difficiles pour vous, ou qui ont été difficiles pour vous au cours des 6 derniers mois.
     `
 
     form.part(() => {
@@ -56,12 +56,12 @@ function build(form, values) {
             form.multiCheck("main", "Indiquez ci-dessous quel(s) évènement(s) a(ont) été les plus éprouvants :", choices)
     })
 
-    form.part(() => {
-        form.output(html`
-            <p>Indiquez, pour les questions qui vont suivre, quels évènements sont <b>actuellement difficiles</b> pour vous, ou qui ont été un difficiles pour vous <b>ou cours des 6 derniers mois</b>.
-            <p>Les évènements que vous indiquez peuvent avoir de nombreuses conséquences sur votre bien-être et comportement. Nous vous demanderons de préciser <b>à quelle fréquence les différentes affirmations s’appliquent</b> à vous (de « Jamais » à « Souvent »).
-        `)
+    form.intro = html`
+        <p>Indiquez, pour les questions qui vont suivre, quels évènements sont <b>actuellement difficiles</b> pour vous, ou qui ont été un difficiles pour vous <b>ou cours des 6 derniers mois</b>.
+        <p>Les évènements que vous indiquez peuvent avoir de nombreuses conséquences sur votre bien-être et comportement. Nous vous demanderons de préciser <b>à quelle fréquence les différentes affirmations s’appliquent</b> à vous (de « Jamais » à « Souvent »).
+    `
 
+    form.part(() => {
         q(1, "Depuis la situation stressante, je me sens déprimé·e et triste :")
         q(2, "Je pense à la situation stressante de manière répétée :")
     })

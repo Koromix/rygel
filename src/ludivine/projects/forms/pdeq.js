@@ -19,27 +19,24 @@ function build(form, values) {
     form.values = values
 
     form.intro = html`
-        <p>Ce questionnaire est destiné à rechercher les <b>expériences de dissociation</b> que vous auriez pu ressentir pendant l'événement traumatique, et au cours des quelques heures suivantes.
-        <p>Veuillez répondre aux énoncés suivants en cochant le choix de réponse qui décrit le mieux vos expériences et réactions durant l’événement et immédiatement après. Si une question ne s’applique pas à votre expérience, <b>cochez « Pas du tout vrai »</b>.
-        <p>Pour répondre à ces questions, considérez uniquement le <b>moment de l'évènement et les premières heures</b> qui ont suivi !
+        <p>Pour les questions suivantes, nous aimerions que vous gardiez en tête l’évènement (ou la situation traumatique) décrit <b>dans la partie « L’évènement qui vous a amené ici »</b>.
+        <p>Ce questionnaire est destiné à rechercher les <b>expériences de dissociation</b> (moments où vous « sentiez détaché(e) de vous-même ») que vous auriez pu ressentir pendant l'événement traumatique, et au cours des quelques heures suivantes.
     `
 
     form.part(() => {
-        form.output(html`
-            <p>Pour les questions suivantes, nous aimerions que vous gardiez en tête l’évènement (ou la situation traumatique) décrite <b>dans la partie « L’évènement qui vous a amené ici »</b>.
-        `)
-
         form.binary("b1", "Avez-vous, au moment de l’évènement, ressenti un sentiment de peur intense ?")
         form.binary("b2", "Avez-vous, au moment de l’évènement, ressenti un sentiment d’impuissance ?")
         form.binary("b3", "Avez-vous, au moment de l’évènement, ressenti un sentiment de terreur ?")
     })
 
-    form.part(() => {
-        form.output(html`
-            <p>Nous allons maintenant explorer les expériences de dissociation (moments où vous « sentiez détaché de vous-même »).
-            <p>Nous vous invitons à répondre aux énoncés suivants en sélectionnant la réponse qui <b>décrit le mieux vos expériences et réactions durant l’événement</b> et immédiatement après. Si une question ne s’applique pas à votre expérience, cochez  Pas du tout vrai ».
-        `)
+    form.intro = html`
+        <p>Pour les questions suivantes, nous aimerions que vous gardiez en tête l’évènement (ou la situation traumatique) décrit <b>dans la partie « L’évènement qui vous a amené ici »</b>.
+        <p>Ce questionnaire est destiné à rechercher les <b>expériences de dissociation</b> (moments où vous « sentiez détaché(e) de vous-même ») que vous auriez pu ressentir pendant l'événement traumatique, et au cours des quelques heures suivantes.
+        <p>Veuillez répondre aux énoncés suivants en cochant le choix de réponse qui décrit le mieux vos <b>expériences et réactions durant l’événement et immédiatement après</b>. Si une question ne s’applique pas à votre expérience, cochez « Pas du tout vrai ».
+        <p>Pour répondre à ces questions, considérez uniquement le moment de l'évènement et les premières heures qui ont suivi !
+    `
 
+    form.part(() => {
         q(1, "Il y a eu des moments où j’ai perdu le fil de ce qui se passait – j’étais complètement déconnecté(e) ou, d’une certaine façon, j’avais l'impression de ne pas faire partie de ce qui se passait :")
         q(2, "Je me suis senti(e) en « pilote automatique » – je me suis mis(e) à faire des choses que, je l’ai réalisé plus tard, je n’avais pas activement décidé de faire :")
     })

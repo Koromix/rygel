@@ -20,8 +20,7 @@ function build(form, values) {
     form.values = values
 
     form.intro = html`
-        <p>Les individus qui ont vécu un ou plusieurs événements stressants souffrent parfois de réactions différentes de celles des autres.
-        <p>Donnez-nous, sur base des énoncés suivants, votre meilleure <b>estimation de la réaction de la personne dont vous êtes le plus proche</b> lorsque vous lui avez parlé de votre expérience la plus difficile.
+        <p>Les individus qui ont vécu un ou plusieurs événements stressants souffrent parfois de réactions différentes de celles des autres. C'est ce qui va nous intéresser dans les questions qui suivent.
     `
 
     form.part(() => {
@@ -38,7 +37,7 @@ function build(form, values) {
                 let info = PERSON_KINDS[key]
                 let label = `Combien dans la sphère « ${info.text.toLowerCase()} » ?`
 
-                form.number('?' + key, label, { min: 0 })
+                form.enumButtons(key, label, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, [10, '10 personnes ou plus'], [99, 'Non applicable']])
             }
         })
 
@@ -54,9 +53,12 @@ function build(form, values) {
             }
         })
 
-        form.part(() => {
-            form.output(html`Nous souhaiterions maintenant que vous pensiez spécifiquement à la <b>personne dont vous êtes le plus proche et à qui vous avez parlé</b> de l’évènement qui vous a amené ici. Donnez-nous, sur base des énoncés suivants, votre meilleure estimation de sa réaction lorsque vous lui avez parlé cet évènement.`)
+        form.intro = html`
+            <p>Les individus qui ont vécu un ou plusieurs événements stressants souffrent parfois de réactions différentes de celles des autres. C'est ce qui va nous intéresser dans les questions qui suivent.
+            <p>Nous souhaiterions maintenant que vous pensiez spécifiquement à la <b>personne dont vous êtes le plus proche et à qui vous avez parlé</b> de l’évènement qui vous a amené ici. Donnez-nous, sur base des énoncés suivants, votre meilleure estimation de sa réaction lorsque vous lui avez parlé cet évènement.
+        `
 
+        form.part(() => {
             q(1, "Il ou elle semblait comprendre ce que j'ai vécu :")
             q(2, "Il ou elle a ressenti de la sympathie envers moi pour ce qui s'est passé :")
         })
@@ -82,11 +84,12 @@ function build(form, values) {
         })
     }
 
-    form.part(() => {
-        form.output(html`
-            <p>Suite à l’évènement qui vous a amené ici, décrivez comment <b>avez-vous perçu vos interactions</b> avec le personnel médical, avec le personnel judiciaire et avec le personnel d'aide psychologique.
-        `)
+    form.intro = html`
+        <p>Les individus qui ont vécu un ou plusieurs événements stressants souffrent parfois de réactions différentes de celles des autres. C'est ce qui va nous intéresser dans les questions qui suivent.
+        <p>Suite à l’évènement qui vous a amené ici, décrivez comment <b>avez-vous perçu vos interactions</b> avec le personnel médical, avec le personnel judiciaire et avec le personnel d'aide psychologique.
+    `
 
+    form.part(() => {
         form.binary("inter1a", "Avez-vous eu des interactions avec un personnel médical en lien avec cet évènement ?")
         if (values.inter1a == 1) {
             form.slider("inter1b", "Comment avez-vous perçu vos interactions avec le personnel médical ?", {

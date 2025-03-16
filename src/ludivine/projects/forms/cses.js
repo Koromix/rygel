@@ -21,7 +21,7 @@ function build(form, values) {
 
     form.intro = html`
         <p>Les personnes ayant vécu le genre d'événement comme celui qui vous a amené ici <b>différent considérablement dans leur façon d'en parler</b> aux autres.
-        <p>Nous aimerions savoir ce que vous avez divulgué à la <b>personne dont vous êtes le ou la plus proche</b> et à quelle fréquence (y compris si vous ne lui avez rien dit).
+        <p>Nous aimerions savoir ce que vous avez divulgué à la <b>personne dont vous êtes le ou la plus proche</b> (y compris si vous ne lui avez rien dit).
     `
 
     form.part(() => {
