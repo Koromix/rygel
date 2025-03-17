@@ -18,6 +18,7 @@
     display: flex;
     flex: 1;
     gap: 12px;
+    min-height: 400px;
 }
 
 .net_canvas {
