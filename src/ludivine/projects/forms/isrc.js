@@ -67,13 +67,11 @@ function build(form, values) {
     `
 
     form.part(() => {
-        form.output(actuel)
         q(17, "Je ne me souviens pas de certaines parties de ce qui s'est passé :")
         q(18, "Je n'arrête pas de penser à ce qui s'est passé :")
     })
 
     form.part(() => {
-        form.output(actuel)
         q(19, "Je ne veux pas penser à ce qui s'est passé :")
         q(20, "Je me sens nerveux(se) :")
     })
