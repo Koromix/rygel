@@ -298,12 +298,6 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     }
 }
 
-.studies {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 1em;
-}
 .study {
     --background: var(--empty_color);
 
@@ -346,7 +340,6 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
         gap: 1em;
 
         & > .progress {
-            flex: 0;
             margin-left: 1em;
             margin-right: 1em;
         }
@@ -486,11 +479,6 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     align-items: center;
     justify-content: space-evenly;
     padding: 1em;
-}
-
-@media screen and (max-width: 960px) {
-    .studies { flex-direction: column; }
-    .study { width: 100%; }
 }
 
 .parts {
