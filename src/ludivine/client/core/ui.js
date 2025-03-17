@@ -261,7 +261,7 @@ function dialog(options = {}) {
 
     if (!init_dialogs) {
         window.addEventListener('keydown', e => {
-            if (e.keyCode == 27 && dialogs.length) {
+            if (e.keyCode == 27 && dialogs.length && current_popup == null) {
                 let dlg = dialogs[dialogs.length - 1];
 
                 if (dlg.can_be_closed)
@@ -429,6 +429,7 @@ function popup(e, content) {
 
     p.finally(() => {
         document.body.removeChild(el);
+        current_popup = null;
     });
 
     // We need it in the DOM for proper size information
