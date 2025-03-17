@@ -787,7 +787,7 @@ async function runProfile() {
     UI.main(html`
         <div class="tabbar">
             <a href="/profil" class="active">Profil</a>
-            <a href="/participer">Tableau de bord</a>
+            <a href="/participer">Études</a>
         </div>
 
         <div class="tab">
@@ -866,7 +866,7 @@ async function runDashboard() {
     UI.main(html`
         <div class="tabbar">
             <a href="/profil">Profil</a>
-            <a href="/participer" class="active">Tableau de bord</a>
+            <a href="/participer" class="active">Études</a>
         </div>
 
         <div class="tab">
@@ -1053,7 +1053,7 @@ async function runConsent() {
     UI.main(html`
         <div class="tabbar">
             <a href="/profil">Profil</a>
-            <a href="/participer">Tableau de bord</a>
+            <a href="/participer">Études</a>
             <a class="active">${project.title}</a>
         </div>
 
@@ -1094,7 +1094,7 @@ async function runProject() {
         UI.main(html`
             <div class="tabbar">
                 <a href="/profil">Profil</a>
-                <a href="/participer">Tableau de bord</a>
+                <a href="/participer">Études</a>
                 <a class="active">${project.title}</a>
             </div>
 
@@ -1177,8 +1177,8 @@ function renderModule() {
             <img src=${project.picture} alt="" />
             <div>
                 <div class="header">
-                    Étude ${project.title}
-                    ${step != null ? html` - ${step.title}` : ''}
+                    ${step == null ? `Étude ${project.title}` : ''}
+                    ${step != null ? step.title : ''}
                 </div>
                 ${step != null ? step.step : project.summary}
             </div>
@@ -1306,8 +1306,8 @@ function renderTest() {
             <img src=${project.picture} alt="" />
             <div>
                 <div class="header">
-                    Étude ${project.title}
-                    ${step != null ? html` - ${step.title}` : ''}
+                    ${step == null ? `Étude ${project.title}` : ''}
+                    ${step != null ? step.title : ''}
                 </div>
                 <div class="header">${page.title}</div>
                 <div class="actions">
@@ -1429,7 +1429,7 @@ async function runDiary() {
     UI.main(html`
         <div class="tabbar">
             <a href="/profil">Profil</a>
-            <a href="/participer">Tableau de bord</a>
+            <a href="/participer">Études</a>
             <a href=${makeURL()} class="active">Mon journal</a>
         </div>
 

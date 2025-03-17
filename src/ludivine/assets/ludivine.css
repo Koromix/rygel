@@ -191,36 +191,45 @@ p + .columns { margin-top: 2em; }
 .tabbar {
     display: flex;
     gap: 0.6em;
-    font-size: 1.1em;
-}
-.tabbar > a {
-    position: relative;
-    padding: 0.4em 1em 0.5em 1em;
-    background: color-mix(in srgb, var(--bar_color), white 50%);
-    cursor: pointer;
-    text-decoration: none;
-    color: black;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
 
-    & > img {
-        width: 24px;
-        height: 24px;
-        transform: translateY(3px);
-        filter: invert(100%);
+    & > a {
+        position: relative;
+        padding: 0.4em 1em 0.5em 1em;
+        background: color-mix(in srgb, var(--bar_color), white 50%);
+        cursor: pointer;
+        font-size: 1.1em;
+        text-decoration: none;
+        color: black;
+        text-align: center;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+
+        & > img {
+            width: 24px;
+            height: 24px;
+            transform: translateY(3px);
+            filter: invert(100%);
+        }
+
+        &:is(.active, :hover) {
+            background: var(--bar_color);
+            color: white;
+
+            & > img { filter: none; }
+        }
+        &.active { font-weight: bold; }
     }
-
-    &:is(.active, :hover) {
-        background: var(--bar_color);
-        color: white;
-
-        & > img { filter: none; }
-    }
-    &.active { font-weight: bold; }
 }
 .tab {
     padding: 1em;
     background: var(--tab_color);
     border-bottom-left-radius: 8px;
     border-bottom-right-radius: 8px;
+}
+
+@media screen and (max-width: 960px) {
+    .tabbar > a {
+        padding: 0.2em 0.7em 0.3em 0.7;
+        font-size: 1em;
+    }
 }
