@@ -51,7 +51,7 @@ async function uploadVault(vid) {
         let prev = generations.get(vid) ?? 0;
         let generation = await callWorker('upload', vid, prev);
 
-        generations.set(generation);
+        generations.set(vid, generation);
     } finally {
         uploads--;
     }
@@ -247,7 +247,8 @@ async function callWorker(type, ...args) {
         worker.postMessage(msg);
     });
 
-    await p;
+    let ret = await p;
+    return ret;
 }
 
 function handleMessage(e) {
