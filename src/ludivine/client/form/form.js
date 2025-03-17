@@ -98,19 +98,16 @@ function FormModule(app, study, page) {
 
     function runStart() {
         render(html`
-            <div class="start">
-                <div class="help">
-                    <img src=${ASSETS['pictures/help1']} alt="" />
-                    <div>
-                        <p>Tout est prêt pour <b>commencer le questionnaire</b> !
-                        <p>Pensez à <b>faire des pauses</b> si vous en ressentez le besoin, ou à faire un tour sur la page Se Détendre.
-                        <p>Si vous êtes prêt, <b>on peut y aller</b> !
-                    </div>
+            <div class="help">
+                <img src=${ASSETS['pictures/help1']} alt="" />
+                <div>
+                    <p>Tout est prêt pour <b>commencer le questionnaire</b> !
+                    <p>Pensez à <b>faire des pauses</b> si vous en ressentez le besoin, ou à faire un tour sur la page Se Détendre.
+                    <p>Si vous êtes prêt, <b>on peut y aller</b> !
                 </div>
-                <div class="actions">
-                    <button type="button" class="secondary" @click=${UI.wrap(e => app.exitTest(page))}>Précédent</button>
-                    <button type="button" @click=${UI.wrap(e => app.navigateStudy(page, 0))}>${is_new ? 'Commencer' : 'Continuer'}</button>
-                </div>
+            </div>
+            <div class="actions">
+                <button type="button" @click=${UI.wrap(e => app.navigateStudy(page, 0))}>${is_new ? 'Commencer' : 'Continuer'}</button>
             </div>
         `, div);
     }

@@ -220,6 +220,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     max-width: 600px;
     gap: 1em;
     align-items: start;
+    align-self: center;
 }
 .help > img {
     width: 200px;
@@ -480,13 +481,6 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     text-align: center;
     color: #364b9b;
     cursor: pointer;
-}
-
-.start {
-    display: flex;
-    align-items: center;
-    justify-content: space-evenly;
-    padding: 1em;
 }
 
 .parts {
