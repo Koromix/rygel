@@ -22,9 +22,20 @@ const SYNC_LOCK = 'sync';
 
 const DATABASE_VERSION = 6;
 
+let worker = null;
+let next_message = 0;
+let msg_handlers = new Map;
+
 let upload_controller = null;
 
 let generations = new Map;
+
+function initSync() {
+    let url = BUNDLES['worker.js'];
+    worker = new Worker(url, { type: 'module' });
+
+    worker.onmessage = handleMessage;
+}
 
 function isSyncing() {
     let syncing = (upload_controller != null);
@@ -32,8 +43,6 @@ function isSyncing() {
 }
 
 async function downloadVault(vid) {
-    let filename = 'ludivine/' + vid + '.db';
-
     let response = await Net.fetch('/api/download', {
         headers: {
             'X-Vault-Id': vid
@@ -49,14 +58,10 @@ async function downloadVault(vid) {
         throw new HttpError(response.status, msg);
     }
 
-    let blob = await response.blob();
+    let filename = 'ludivine/' + vid + '.db';
+    let buf = await response.arrayBuffer();
 
-    let root = await navigator.storage.getDirectory();
-    let handle = await findFile(root, filename, true);
-    let writable = await handle.createWritable();
-
-    await writable.write(blob);
-    await writable.close();
+    await callWorker('replace', filename, buf);
 
     let header = response.headers.get('X-Vault-Generation');
     let generation = parseInt(header, 10) || null;
@@ -292,7 +297,40 @@ async function openDatabase(vid, key) {
     return db;
 }
 
+async function callWorker(type, ...args) {
+    let p = new Promise((resolve, reject) => {
+        let id = ++next_message;
+
+        msg_handlers.set(id, {
+            resolve: resolve,
+            reject: reject
+        });
+
+        let msg = {
+            id: id,
+            type: type,
+            args: args
+        };
+
+        worker.postMessage(msg);
+    });
+
+    await p;
+}
+
+function handleMessage(e) {
+    let msg = e.data;
+    let handler = msg_handlers.get(msg.id);
+
+    switch (msg.type) {
+        case 'success': { handler.resolve(msg.value); } break;
+        case 'error': { handler.reject(msg.value); } break;
+    }
+}
+
 export {
+    initSync,
+
     isSyncing,
     downloadVault,
     uploadVault,

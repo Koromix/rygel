@@ -23,7 +23,7 @@ import { computeAge, dateToString, niceDate,
 import { PictureCropper } from './util/picture.js';
 import { PROJECTS } from '../projects/projects.js';
 import * as UI from './core/ui.js';
-import { isSyncing, downloadVault, uploadVault, openDatabase } from './core/sync.js';
+import { initSync, isSyncing, downloadVault, uploadVault, openDatabase } from './core/sync.js';
 import { ProjectInfo, ProjectBuilder } from './core/project.js';
 import { ConsentModule } from './form/consent.js';
 import { FormModule } from './form/form.js';
@@ -131,6 +131,7 @@ let ctx_key = null;
 
 async function start() {
     UI.init(run, renderApp);
+    initSync();
 
     // Handle internal links
     Util.interceptLocalAnchors((e, href) => {
