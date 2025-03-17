@@ -652,7 +652,7 @@ form {
         color: var(--top_color);
     }
     & .enum > button:not(.active):hover {
-        background: var(--bar_color);
+        background: color-mix(in srgb, var(--bar_color), white 25%);
         color: white;
     }
     & .enum > button.active {
