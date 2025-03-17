@@ -258,6 +258,8 @@ function handleMessage(e) {
         case 'success': { handler.resolve(msg.value); } break;
         case 'error': { handler.reject(msg.value); } break;
     }
+
+    msg_handlers.delete(msg.id);
 }
 
 export {
