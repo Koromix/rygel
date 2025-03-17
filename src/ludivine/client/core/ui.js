@@ -40,6 +40,7 @@ let init_dialogs = false;
 let dialogs = [];
 
 let init_popups = false;
+let current_popup = null;
 
 let drag_items = null;
 let drag_src = null;
@@ -386,15 +387,20 @@ function isDialogOpen() {
 }
 
 function popup(e, content) {
-    closePopups();
+    closePopup();
 
     if (!init_popups) {
         window.addEventListener('keydown', e => {
             if (e.keyCode == 27)
-                closePopups();
+                closePopup();
         });
 
-        document.addEventListener('click', closePopups, { capture: true });
+        document.addEventListener('click', e => {
+            let popup = Util.findParent(e.target, el => el.classList.contains('popup'));
+
+            if (popup == null)
+                closePopup();
+        }, { capture: true });
 
         init_popups = true;
     }
@@ -402,11 +408,35 @@ function popup(e, content) {
     let el = document.createElement('div');
     el.className = 'popup';
 
-    render(content, el);
+    // Prepare popup content
+    let p = new Promise((resolve, reject) => {
+        let popup = {
+            resolve: resolve,
+            reject: reject
+        };
+
+        if (typeof content == 'function')
+            content = content(() => popup.reject());
+
+        render(html`
+            <form @submit=${wrap(e => popup.resolve())}>
+                ${content}
+            </form>
+        `, el);
+
+        current_popup = popup;
+    });
+
+    p.finally(() => {
+        document.body.removeChild(el);
+    });
+
+    // We need it in the DOM for proper size information
     document.body.appendChild(el);
 
-    let pos = { x: null, y: null };
+    // Position properly
     {
+        let pos = { x: null, y: null };
         let origin = { x: null, y: null };
 
         if (e.clientX && e.clientY) {
@@ -438,23 +468,25 @@ function popup(e, content) {
                 pos.y = Math.max(pos.y, 24);
             }
         }
+
+        el.style.left = pos.x + 'px';
+        el.style.top = pos.y + 'px';
     }
 
-    el.style.left = pos.x + 'px';
-    el.style.top = pos.y + 'px';
+    return p;
 }
 
-function closePopups() {
-    let popups = document.body.querySelectorAll('.popup');
-
-    for (let popup of popups)
-        document.body.removeChild(popup);
+function closePopup() {
+    if (current_popup != null)
+        current_popup.reject();
 }
 
 function safe(type) {
     let content = html`
-        <p>Les données de ${type} sont privées.
-        <p>Les <b>chercheurs n’y ont pas accès</b> et ces données ne seront pas utilisées dans les différentes études ni même consultables par nos chercheurs.
+        <div style="width: 320px;">
+            <p>Les données de ${type} sont privées.
+            <p>Les <b>chercheurs n’y ont pas accès</b> et ces données ne seront pas utilisées dans les différentes études ni même consultables par nos chercheurs.
+        </div>
     `;
 
     return html`<div class="safe" @click=${wrap(e => popup(e, content))}></div>`;
@@ -737,6 +769,8 @@ export {
     isDialogOpen,
 
     popup,
+    closePopup,
+
     safe,
 
     selectValue,

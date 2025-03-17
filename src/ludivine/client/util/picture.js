@@ -17,6 +17,7 @@ import { render, html, svg, live } from '../../../../vendor/lit-html/lit-html.bu
 import { Util, Log } from '../../../web/core/base.js';
 import { loadImage } from '../core/misc.js';
 import * as UI from '../core/ui.js';
+import { ColorPicker } from './color.js';
 
 import './picture.css';
 
@@ -207,7 +208,7 @@ function PictureCropper(title, size) {
                                                 <div style=${'background: ' + color}></div>
                                             </button>
                                         `)}
-                                        <button type="button" class="small" @click=${UI.wrap(e => pickColor(cat))}>Autre couleur</button>
+                                        <button type="button" class="small" @click=${UI.wrap(e => pickColor(e, cat))}>Autre couleur</button>
                                     </div>
                                 </div>
                             `;
@@ -250,19 +251,24 @@ function PictureCropper(title, size) {
         refresh_func();
     }
 
-    function pickColor(cat) {
-        let input = document.createElement('input');
-        let color = notion.colors[cat];
+    async function pickColor(e, cat) {
+        let picker = new ColorPicker;
 
-        input.setAttribute('type', 'color');
-        if (color)
-            input.setAttribute('value', color);
-        input.showPicker();
+        picker.changeHandler = color => {
+            notion.colors[cat] = color;
+            refresh_func();
+        };
 
-        input.addEventListener('change', e => {
-            if (input.value)
-                switchColor(cat, input.value);
-        });
+        let prev = notion.colors[cat];
+
+        try {
+            await picker.pick(e, prev);
+        } catch (err) {
+            notion.colors[cat] = prev;
+            refresh_func();
+
+            throw err;
+        }
     }
 
     function switchColor(cat, color) {

@@ -74,12 +74,12 @@ main.fullscreen {
 
 .popup {
     position: fixed;
-    padding: 0.6em 1em;
+    max-width: 90vw;
+    padding: 1em;
     background: white;
     border-radius: 8px;
     box-shadow: 2px 2px rgba(136, 136, 136, 0.12);
     z-index: 999999;
-    max-width: calc(min(300px, 70vw));
 }
 
 button.confirm { --button_color: #2d8261; }
