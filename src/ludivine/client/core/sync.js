@@ -18,17 +18,15 @@ import { Hex } from '../../../web/core/mixer.js';
 import * as sqlite3 from '../../../web/core/sqlite3.js';
 
 const DATA_LOCK = 'data';
-const SYNC_LOCK = 'sync';
 
 const DATABASE_VERSION = 6;
+
+let uploads = 0;
+let generations = new Map;
 
 let worker = null;
 let next_message = 0;
 let msg_handlers = new Map;
-
-let upload_controller = null;
-
-let generations = new Map;
 
 function initSync() {
     let url = BUNDLES['worker.js'];
@@ -38,94 +36,30 @@ function initSync() {
 }
 
 function isSyncing() {
-    let syncing = (upload_controller != null);
+    let syncing = (uploads > 0);
     return syncing;
 }
 
 async function downloadVault(vid) {
-    let response = await Net.fetch('/api/download', {
-        headers: {
-            'X-Vault-Id': vid
-        }
-    });
-
-    if (!response.ok) {
-        // First time, it's ok!
-        if (response.status == 204)
-            return;
-
-        let msg = await Net.readError(response);
-        throw new HttpError(response.status, msg);
-    }
-
-    let filename = 'ludivine/' + vid + '.db';
-    let buf = await response.arrayBuffer();
-
-    await callWorker('replace', filename, buf);
-
-    let header = response.headers.get('X-Vault-Generation');
-    let generation = parseInt(header, 10) || null;
+    let generation = await callWorker('download', vid);
 
     generations.set(vid, generation);
 }
 
 async function uploadVault(vid) {
-    let filename = 'ludivine/' + vid + '.db';
+    try {
+        uploads++;
 
-    let root = await navigator.storage.getDirectory();
-    let handle = await findFile(root, filename);
-    let src = await handle.getFile();
-    let body = await src.arrayBuffer();
+        let prev = generations.get(vid) ?? 0;
+        let generation = await callWorker('upload', vid, prev);
 
-    if (upload_controller != null)
-        upload_controller.abort();
-    upload_controller = null;
-
-    navigator.locks.request(SYNC_LOCK, () => {
-        let controller = new AbortController;
-
-        upload_controller = controller;
-
-        let p = Net.fetch('/api/upload', {
-            method: 'PUT',
-            headers: {
-                'X-Vault-Id': vid,
-                'X-Vault-Generation': generations.get(vid) ?? 0
-            },
-            body: body,
-            signal: controller.signal
-        });
-
-        p.then(response => {
-            let header = response.headers.get('X-Vault-Generation');
-            let generation = parseInt(header, 10);
-
-            generations.set(vid, generation);
-        });
-
-        p.finally(() => {
-            if (upload_controller == controller)
-                upload_controller = null;
-        });
-
-        return p;
-    });
+        generations.set(generation);
+    } finally {
+        uploads--;
+    }
 }
 
-async function findFile(root, filename, create = false) {
-    let handle = root;
-
-    let parts = filename.split('/');
-    let basename = parts.pop();
-
-    for (let part of parts)
-        handle = await handle.getDirectoryHandle(part, { create: true });
-    handle = await handle.getFileHandle(basename, { create: create });
-
-    return handle;
-}
-
-async function openDatabase(vid, key) {
+async function openVault(vid, key) {
     let filename = 'ludivine/' + vid + '.db';
 
     let url = BUNDLES['sqlite3-worker1-bundler-friendly.mjs'];
@@ -332,8 +266,8 @@ export {
     initSync,
 
     isSyncing,
+
     downloadVault,
     uploadVault,
-
-    openDatabase
+    openVault
 }

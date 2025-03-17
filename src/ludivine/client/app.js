@@ -23,7 +23,7 @@ import { computeAge, dateToString, niceDate,
 import { PictureCropper } from './util/picture.js';
 import { PROJECTS } from '../projects/projects.js';
 import * as UI from './core/ui.js';
-import { initSync, isSyncing, downloadVault, uploadVault, openDatabase } from './core/sync.js';
+import { initSync, isSyncing, downloadVault, uploadVault, openVault } from './core/sync.js';
 import { ProjectInfo, ProjectBuilder } from './core/project.js';
 import { ConsentModule } from './form/consent.js';
 import { FormModule } from './form/form.js';
@@ -280,7 +280,7 @@ async function open(obj) {
         await downloadVault(obj.vid);
 
         let vkey = Hex.toBytes(obj.vkey);
-        db = await openDatabase(obj.vid, vkey);
+        db = await openVault(obj.vid, vkey);
     }
 
     session = obj;
