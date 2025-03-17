@@ -44,6 +44,11 @@ main.dialog {
 }
 
 @media screen and (max-width: 960px) {
+    main {
+        padding: 0;
+        & > .tabbar { padding: 0 16px; }
+    }
+
     main.dialog { margin-top: 0; }
 }
 
