@@ -46,14 +46,16 @@ function ColorPicker() {
         sv.className = 'col_sv';
         sv.width = 360;
         sv.height = 360;
-        sv.addEventListener('mousemove', handleSV);
-        sv.addEventListener('touchmove', handleSV, { capture: true });
-
         hue.className = 'col_hue';
         hue.width = 40;
         hue.height = 360;
-        hue.addEventListener('mousemove', handleH);
-        hue.addEventListener('touchmove', handleH, { capture: true });
+
+        sv.addEventListener('click', handleSV);
+        sv.addEventListener('mousemove', handleSV);
+        sv.addEventListener('touchmove', handleSV, { capture: true });
+        hue.addEventListener('click', handleHue);
+        hue.addEventListener('mousemove', handleHue);
+        hue.addEventListener('touchmove', handleHue, { capture: true });
 
         redraw();
 
@@ -180,7 +182,7 @@ function ColorPicker() {
         handleChange();
     }
 
-    function handleH(e) {
+    function handleHue(e) {
         if (e.type == 'mousemove' && !(e.buttons & 1))
             return;
         if (e.type == 'touchmove' && e.touches.length != 1)
