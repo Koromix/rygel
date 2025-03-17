@@ -17,6 +17,8 @@ import { Util, Log , LocalDate } from '../../../web/core/base.js';
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import * as UI from '../core/ui.js';
 
+import './color.css';
+
 function ColorPicker() {
     let self = this;
 
@@ -41,9 +43,12 @@ function ColorPicker() {
         sv = document.createElement('canvas');
         hue = document.createElement('canvas');
 
+        sv.className = 'col_sv';
         sv.width = 360;
         sv.height = 360;
         sv.onmousemove = handleSV;
+
+        hue.className = 'col_hue';
         hue.width = 40;
         hue.height = 360;
         hue.onmousemove = handleH;
@@ -51,7 +56,7 @@ function ColorPicker() {
         redraw();
 
         await UI.popup(e, (close) => html`
-            <div class="row">
+            <div class="col_wrapper">
                 ${sv}
                 ${hue}
             </div>
@@ -160,8 +165,10 @@ function ColorPicker() {
         if (!(e.buttons & 1))
             return;
 
-        s = e.offsetX / sv.width;
-        v = 1 - (e.offsetY / sv.height);
+        let rect = e.currentTarget.getBoundingClientRect();
+
+        s = e.offsetX / rect.width;
+        v = 1 - e.offsetY / rect.height;
 
         redraw();
         handleChange();
@@ -171,7 +178,9 @@ function ColorPicker() {
         if (!(e.buttons & 1))
             return;
 
-        h = (e.offsetY / hue.height) * 360;
+        let rect = e.currentTarget.getBoundingClientRect();
+
+        h = e.offsetY / rect.height * 360;
 
         redraw();
         handleChange();
