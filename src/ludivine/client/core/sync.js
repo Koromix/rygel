@@ -17,8 +17,6 @@ import { Util, Log, Net } from '../../../web/core/base.js';
 import { Hex } from '../../../web/core/mixer.js';
 import * as sqlite3 from '../../../web/core/sqlite3.js';
 
-const DATA_LOCK = 'data';
-
 const DATABASE_VERSION = 6;
 
 let uploads = 0;
@@ -59,7 +57,7 @@ async function uploadVault(vid) {
     }
 }
 
-async function openVault(vid, key) {
+async function openVault(vid, key, lock) {
     let filename = 'ludivine/' + vid + '.db';
 
     let url = BUNDLES['sqlite3-worker1-bundler-friendly.mjs'];
@@ -67,7 +65,7 @@ async function openVault(vid, key) {
 
     let db = await sqlite3.open(filename, {
         vfs: 'multipleciphers-opfs',
-        lock: DATA_LOCK
+        lock: lock
     });
 
     db.changeHandler = () => uploadVault(vid);

@@ -37,6 +37,9 @@ import '../assets/client.css';
 
 const CHANNEL_NAME = 'ludivine';
 
+const DATA_LOCK = 'data';
+const RUN_LOCK = 'run';
+
 Object.assign(T, {
     cancel: 'Annuler',
     confirm: 'Confirmer',
@@ -280,7 +283,7 @@ async function open(obj) {
         await downloadVault(obj.vid);
 
         let vkey = Hex.toBytes(obj.vkey);
-        db = await openVault(obj.vid, vkey);
+        db = await openVault(obj.vid, vkey, DATA_LOCK);
     }
 
     session = obj;
@@ -339,213 +342,220 @@ function decrypt(enc, key) {
 // Run
 // ------------------------------------------------------------------------
 
-async function go(url = null, push = true) {
-    if (url != null) {
-        if (!(url instanceof URL))
-            url = new URL(url, window.location.href);
+function go(url = null, push = true) {
+    if (url == null)
+        return run({}, push);
 
-        let path = url.pathname.replace(/\/+$/, '');
-        let parts = path.slice(1).split('/');
-        let mode = parts.shift();
+    let changes = Object.assign({}, route);
 
-        switch (mode) {
-            case 'profil': { route.mode = 'profile'; } break;
+    if (!(url instanceof URL))
+        url = new URL(url, window.location.href);
 
-            case 'participer': {
-                route.mode = 'study';
+    let path = url.pathname.replace(/\/+$/, '');
+    let parts = path.slice(1).split('/');
+    let mode = parts.shift();
 
-                let project = PROJECTS.find(project => project.key == parts[0]);
+    switch (mode) {
+        case 'profil': { changes.mode = 'profile'; } break;
 
-                if (project != null) {
-                    route.project = parts.shift();
-                    route.page = '/' + parts.join('/');
-                    route.section = null;
-                } else {
-                    route.project = null;
-                    route.page = null;
-                    route.section = null;
-                }
-            } break;
+        case 'participer': {
+            changes.mode = 'study';
 
-            case 'journal': {
-                route.mode = 'diary';
+            let project = PROJECTS.find(project => project.key == parts[0]);
 
-                let entry = parseInt(parts[0], 10);
-
-                if (!Number.isNaN() && entry >= 0) {
-                    route.entry = entry;
-                } else {
-                    route.entry = null;
-                }
-            } break;
-
-            default: {
-                if (has_run) {
-                    window.onbeforeunload = null;
-                    window.location.href = url.href;
-
-                    return;
-                }
-
-                route.mode = 'profile';
-            } break;
-        }
-    }
-
-    await run(push);
-}
-
-async function run(push = false) {
-    if (poisoned)
-        return;
-
-    // We're running!
-    has_run = true;
-
-    // Don't run stateful code while dialog is running to avoid concurrency issues
-    if (UI.isDialogOpen()) {
-        UI.runDialog();
-        return;
-    }
-
-    // Nothing to see
-    if (db == null) {
-        await runRegister();
-        return;
-    }
-
-    // Fetch or create identity
-    if (identity == null) {
-        identity = await db.fetch1('SELECT picture FROM meta');
-
-        if (identity == null) {
-            identity = {
-                picture: null
-            };
-
-            await db.exec('INSERT INTO meta (gender) VALUES (NULL)');
-        }
-
-        sessionStorage.setItem('picture', identity.picture ?? '');
-        channel.postMessage({ message: 'picture', picture: identity.picture });
-    }
-
-    // List active studies
-    cache.studies = await db.fetchAll(`SELECT s.id, s.key, s.start, s.data,
-                                              SUM(IIF(t.status = 'done', 1, 0)) AS progress, COUNT(t.id) AS total
-                                       FROM studies s
-                                       LEFT JOIN tests t ON (t.study = s.id AND t.visible = 1)
-                                       GROUP BY s.id`);
-
-    // List future events
-    {
-        let start = LocalDate.today().minusMonths(1);
-
-        cache.events = await db.fetchAll(`SELECT s.key AS title, t.schedule, COUNT(t.id) AS count
-                                          FROM tests t
-                                          INNER JOIN studies s ON (s.id = t.study)
-                                          WHERE t.visible = 1 AND t.schedule >= ? AND t.status <> 'done'
-                                          GROUP BY t.schedule, t.study
-                                          ORDER BY t.schedule, t.id`, start.toString());
-
-        for (let evt of cache.events) {
-            evt.title = PROJECTS.find(project => project.key == evt.title).title;
-            evt.schedule = LocalDate.parse(evt.schedule);
-        }
-    }
-
-    // Sync state with expected route
-    if (route.mode == 'study') {
-        let project = PROJECTS.find(project => project.key == route.project);
-
-        if (project != null) {
-            if (project.key != cache.project?.key || project == cache.project) {
-                if (cache.study == null) {
-                    let study = cache.studies.find(study => study.key == project.key);
-
-                    if (study != null)
-                        project = await initProject(project, study);
-
-                    cache.study = study;
-                }
-
-                cache.project = project;
-            }
-
-            if (cache.study != null) {
-                cache.page = cache.project.pages.find(page => page.key == route.page);
-
-                if (route.page != null && cache.page == null) {
-                    let parts = route.page.split('/');
-                    let section = parts.pop();
-                    let path = parts.join('/');
-
-                    cache.page = cache.project.pages.find(page => page.key == path);
-                    cache.section = (cache.page != null) ? section : null;
-
-                    if (cache.page != null)
-                        cache.section = section;
-                } else {
-                    cache.section = route.section;
-                }
-
-                if (cache.page == null)
-                    cache.page = cache.project.root;
+            if (project != null) {
+                changes.project = parts.shift();
+                changes.page = '/' + parts.join('/');
+                changes.section = null;
             } else {
-                cache.page = null;
-                cache.section = null;
-            }
-        } else {
-            cache.project = null;
-            cache.study = null;
-            cache.page = null;
-            cache.section = null;
-        }
-    }
-
-    // Run module
-    switch (route.mode) {
-        case 'profile': { await runProfile(); } break;
-
-        case 'study': {
-            if (cache.project != null) {
-                if (cache.study != null) {
-                    await runProject();
-                } else {
-                    await runConsent();
-                }
-            } else {
-                await runDashboard();
+                changes.project = null;
+                changes.page = null;
+                changes.section = null;
             }
         } break;
 
-        case 'diary': { await runDiary(); } break;
-    }
+        case 'journal': {
+            changes.mode = 'diary';
 
-    // Update route values
-    route.project = cache.project?.key;
-    if (cache.page != null) {
-        route.page = cache.page.key;
-        route.section = cache.section;
-    } else {
-        route.page = null;
-        route.section = null;
-    }
+            let entry = parseInt(parts[0], 10);
 
-    // Update URL
-    {
-        let url = makeURL();
+            if (!Number.isNaN() && entry >= 0) {
+                changes.entry = entry;
+            } else {
+                changes.entry = null;
+            }
+        } break;
 
-        if (url != route_url) {
-            if (push) {
-                window.history.pushState(null, null, url);
-            } else if (url != route_url) {
-                window.history.replaceState(null, null, url);
+        default: {
+            if (has_run) {
+                window.onbeforeunload = null;
+                window.location.href = url.href;
+
+                return;
             }
 
-            route_url = url;
-        }
+            changes.mode = 'profile';
+        } break;
     }
+
+    return run(changes, push);
+}
+
+async function run(changes = {}, push = false) {
+    if (poisoned)
+        return;
+
+    await navigator.locks.request(RUN_LOCK, async () => {
+        Object.assign(route, changes);
+
+        // We're running!
+        has_run = true;
+
+        // Don't run stateful code while dialog is running to avoid concurrency issues
+        if (UI.isDialogOpen()) {
+            UI.runDialog();
+            return;
+        }
+
+        // Nothing to see
+        if (db == null) {
+            await runRegister();
+            return;
+        }
+
+        // Fetch or create identity
+        if (identity == null) {
+            identity = await db.fetch1('SELECT picture FROM meta');
+
+            if (identity == null) {
+                identity = {
+                    picture: null
+                };
+
+                await db.exec('INSERT INTO meta (gender) VALUES (NULL)');
+            }
+
+            sessionStorage.setItem('picture', identity.picture ?? '');
+            channel.postMessage({ message: 'picture', picture: identity.picture });
+        }
+
+        // List active studies
+        cache.studies = await db.fetchAll(`SELECT s.id, s.key, s.start, s.data,
+                                                  SUM(IIF(t.status = 'done', 1, 0)) AS progress, COUNT(t.id) AS total
+                                           FROM studies s
+                                           LEFT JOIN tests t ON (t.study = s.id AND t.visible = 1)
+                                           GROUP BY s.id`);
+
+        // List future events
+        {
+            let start = LocalDate.today().minusMonths(1);
+
+            cache.events = await db.fetchAll(`SELECT s.key AS title, t.schedule, COUNT(t.id) AS count
+                                              FROM tests t
+                                              INNER JOIN studies s ON (s.id = t.study)
+                                              WHERE t.visible = 1 AND t.schedule >= ? AND t.status <> 'done'
+                                              GROUP BY t.schedule, t.study
+                                              ORDER BY t.schedule, t.id`, start.toString());
+
+            for (let evt of cache.events) {
+                evt.title = PROJECTS.find(project => project.key == evt.title).title;
+                evt.schedule = LocalDate.parse(evt.schedule);
+            }
+        }
+
+        // Sync state with expected route
+        if (route.mode == 'study') {
+            let project = PROJECTS.find(project => project.key == route.project);
+
+            if (project != null) {
+                if (project.key != cache.project?.key || project == cache.project) {
+                    if (cache.study == null) {
+                        let study = cache.studies.find(study => study.key == project.key);
+
+                        if (study != null)
+                            project = await initProject(project, study);
+
+                        cache.study = study;
+                    }
+
+                    cache.project = project;
+                }
+
+                if (cache.study != null) {
+                    cache.page = cache.project.pages.find(page => page.key == route.page);
+
+                    if (route.page != null && cache.page == null) {
+                        let parts = route.page.split('/');
+                        let section = parts.pop();
+                        let path = parts.join('/');
+
+                        cache.page = cache.project.pages.find(page => page.key == path);
+                        cache.section = (cache.page != null) ? section : null;
+
+                        if (cache.page != null)
+                            cache.section = section;
+                    } else {
+                        cache.section = route.section;
+                    }
+
+                    if (cache.page == null)
+                        cache.page = cache.project.root;
+                } else {
+                    cache.page = null;
+                    cache.section = null;
+                }
+            } else {
+                cache.project = null;
+                cache.study = null;
+                cache.page = null;
+                cache.section = null;
+            }
+        }
+
+        // Run module
+        switch (route.mode) {
+            case 'profile': { await runProfile(); } break;
+
+            case 'study': {
+                if (cache.project != null) {
+                    if (cache.study != null) {
+                        await runProject();
+                    } else {
+                        await runConsent();
+                    }
+                } else {
+                    await runDashboard();
+                }
+            } break;
+
+            case 'diary': { await runDiary(); } break;
+        }
+
+        // Update route values
+        route.project = cache.project?.key;
+        if (cache.page != null) {
+            route.page = cache.page.key;
+            route.section = cache.section;
+        } else {
+            route.page = null;
+            route.section = null;
+        }
+
+        // Update URL
+        {
+            let url = makeURL();
+
+            if (url != route_url) {
+                if (push) {
+                    window.history.pushState(null, null, url);
+                } else if (url != route_url) {
+                    window.history.replaceState(null, null, url);
+                }
+
+                route_url = url;
+            }
+        }
+    });
 }
 
 function makeURL(values = {}) {
@@ -846,7 +856,7 @@ async function navigateDiary(id) {
     route.mode = 'diary';
     route.entry = id;
 
-    await run(true);
+    await go();
 }
 
 async function runDashboard() {
@@ -1014,14 +1024,14 @@ async function changePicture() {
             Log.error(err);
     }
 
-    await run(true);
+    await go();
 }
 
 async function openStudy(project) {
     route.mode = 'study';
     route.project = project.key;
 
-    await run(true);
+    await go();
 }
 
 // ------------------------------------------------------------------------
@@ -1333,7 +1343,7 @@ async function startStudy(project, values) {
         route.project = null;
     }
 
-    await run(true);
+    await go();
 }
 
 async function navigateStudy(page, section = null) {
@@ -1345,7 +1355,7 @@ async function navigateStudy(page, section = null) {
     route.page = page.key;
     route.section = (page != null) ? section : null;
 
-    await run(true);
+    await go();
 }
 
 async function saveTest(page, data, status = 'draft') {
@@ -1356,7 +1366,7 @@ async function saveTest(page, data, status = 'draft') {
     await db.exec(`UPDATE tests SET status = ?, mtime = ?, payload = ?
                    WHERE study = ? AND key = ?`, status, mtime, payload, cache.study.id, page.key);
 
-    await run();
+    await go();
 }
 
 async function finalizeTest(page, data) {
