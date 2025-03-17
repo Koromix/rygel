@@ -519,24 +519,26 @@ function PictureCropper(title, size) {
     function drawPreview(size) {
         let ctx = preview.getContext('2d');
 
-        ctx.clearRect(0, 0, size, size);
+        draw(ctx, size, () => {
+            ctx.clearRect(0, 0, size, size);
 
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.clip();
-
-        draw(ctx, size);
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.clip();
+        });
     }
 
-    async function draw(ctx, size) {
+    async function draw(ctx, size, prepare) {
         switch (current_mode) {
             case 'custom': {
                 if (custom_img == null)
                     return;
 
                 let rect = computeRect(custom_img, zoom, offset);
+
+                prepare();
                 ctx.drawImage(custom_img, rect.x1, rect.y1, rect.x2 - rect.x1, rect.y2 - rect.y1);
             } break;
 
@@ -547,6 +549,7 @@ function PictureCropper(title, size) {
                 let url = 'data:image/svg+xml;base64,' + btoa(xml);
                 let img = await loadImage(url);
 
+                prepare();
                 ctx.drawImage(img, 0, 0, size, size);
             } break;
         }
@@ -562,17 +565,13 @@ function PictureCropper(title, size) {
 
         let blob = await new Promise(async (resolve, reject) => {
             let canvas = makeCanvas(size, size);
+            let ctx = canvas.getContext('2d');
 
-            // Draw clipped picture
-            {
-                let ctx = canvas.getContext('2d');
-
+            await draw(ctx, size, () => {
                 ctx.beginPath();
                 ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI);
                 ctx.clip();
-
-                await draw(ctx, size);
-            }
+            });
 
             canvas.toBlob(resolve, image_format, 1);
         });
