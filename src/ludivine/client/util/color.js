@@ -46,12 +46,14 @@ function ColorPicker() {
         sv.className = 'col_sv';
         sv.width = 360;
         sv.height = 360;
-        sv.onmousemove = handleSV;
+        sv.addEventListener('mousemove', handleSV);
+        sv.addEventListener('touchmove', handleSV, { capture: true });
 
         hue.className = 'col_hue';
         hue.width = 40;
         hue.height = 360;
-        hue.onmousemove = handleH;
+        hue.addEventListener('mousemove', handleH);
+        hue.addEventListener('touchmove', handleH, { capture: true });
 
         redraw();
 
@@ -162,25 +164,32 @@ function ColorPicker() {
     }
 
     function handleSV(e) {
-        if (!(e.buttons & 1))
+        if (e.type == 'mousemove' && !(e.buttons & 1))
+            return;
+        if (e.type == 'touchmove' && e.touches.length != 1)
             return;
 
         let rect = e.currentTarget.getBoundingClientRect();
+        let x = e.clientX ?? e.touches[0].clientX;
+        let y = e.clientY ?? e.touches[0].clientY;
 
-        s = e.offsetX / rect.width;
-        v = 1 - e.offsetY / rect.height;
+        s = Util.clamp((x - rect.left) / rect.width, 0, 1);
+        v = Util.clamp(1 - (y - rect.top) / rect.height, 0, 1);
 
         redraw();
         handleChange();
     }
 
     function handleH(e) {
-        if (!(e.buttons & 1))
+        if (e.type == 'mousemove' && !(e.buttons & 1))
+            return;
+        if (e.type == 'touchmove' && e.touches.length != 1)
             return;
 
         let rect = e.currentTarget.getBoundingClientRect();
+        let y = e.clientY ?? e.touches[0].clientY;
 
-        h = e.offsetY / rect.height * 360;
+        h = Util.clamp((y - rect.top) / rect.height * 360, 0, 360);
 
         redraw();
         handleChange();

@@ -27,8 +27,12 @@
 .col_sv {
     width: 270px;
     height: 270px;
+    cursor: pointer;
+    touch-action: none;
 }
 .col_hue {
     flex: 1;
     height: 270px;
+    cursor: pointer;
+    touch-action: none;
 }
