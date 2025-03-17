@@ -98,7 +98,6 @@ function DatabaseWrapper(promiser, db, lock) {
     let change_handler = () => {};
 
     let has_changed = false;
-    let change_timer = null;
 
     Object.defineProperties(this, {
         changeHandler: { get: () => change_handler, set: handler => { change_handler = handler; }, enumerable: true }
@@ -179,19 +178,9 @@ function DatabaseWrapper(promiser, db, lock) {
 
         if (!has_changed)
             return;
-        if (change_timer != null)
-            return;
 
-        change_timer = setTimeout(async () => {
-            await navigator.locks.request(lock, async () => {
-                try {
-                    await change_handler();
-                    has_changed = false;
-                } finally {
-                    change_timer = null;
-                }
-            });
-        }, 200);
+        change_handler();
+        has_changed = false;
     }
 }
 
