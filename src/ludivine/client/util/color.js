@@ -211,7 +211,7 @@ function ColorPicker() {
 }
 
 function parseRGB(color) {
-    if (!color.match(/^#[0-9a-f]{6}$/))
+    if (!color.match(/^#[0-9a-fA-F]{6}$/))
         throw new Error('Invalid hexadecimal color code');
 
     let r = parseInt(color.substr(1, 2), 16);
