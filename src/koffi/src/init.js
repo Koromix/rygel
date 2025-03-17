@@ -70,7 +70,7 @@ function init(triplet, native) {
 
             try {
                 // Trick so that webpack does not try to do anything with require() call
-                native = (0, eval)('require')(filename);
+                native = eval('require')(filename);
             } catch (err) {
                 if (first_err == null)
                     first_err = err;
