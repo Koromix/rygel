@@ -426,7 +426,10 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 }
 
 @media screen and (max-width: 960px) {
-    .summary > div > :not(.header) { display: none; }
+    .summary {
+        & > img { display: none; }
+        & > div > :not(.header) { display: none; }
+    }
 }
 
 .modules {
