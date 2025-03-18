@@ -113,7 +113,7 @@ function DatabaseWrapper(promiser, db, lock) {
             await func(t);
             await t.exec('COMMIT');
 
-            handleChanges(t);
+            await handleChanges(t);
         } catch (err) {
             await self.exec('ROLLBACK');
             has_changed = prev_changed;
@@ -126,7 +126,7 @@ function DatabaseWrapper(promiser, db, lock) {
         let t = new TransactionWrapper(promiser, db);
         let ret = await t.exec(sql, ...args);
 
-        handleChanges(t);
+        await handleChanges(t);
 
         return ret;
     });
@@ -135,7 +135,7 @@ function DatabaseWrapper(promiser, db, lock) {
         let t = new TransactionWrapper(promiser, db);
         let ret = await t.fetch1(sql, ...args);
 
-        handleChanges(t);
+        await handleChanges(t);
 
         return ret;
     });
@@ -144,7 +144,7 @@ function DatabaseWrapper(promiser, db, lock) {
         let t = new TransactionWrapper(promiser, db);
         let ret = await t.fetchAll(sql, ...args);
 
-        handleChanges(t);
+        await handleChanges(t);
 
         return ret;
     });
@@ -153,7 +153,7 @@ function DatabaseWrapper(promiser, db, lock) {
         let t = new TransactionWrapper(promiser, db);
         let ret = await t.pluck(sql, ...args);
 
-        handleChanges(t);
+        await handleChanges(t);
 
         return ret;
     });
@@ -173,13 +173,13 @@ function DatabaseWrapper(promiser, db, lock) {
         };
     }
 
-    function handleChanges(t) {
+    async function handleChanges(t) {
         has_changed ||= (t.changeCount > 0);
 
         if (!has_changed)
             return;
 
-        change_handler();
+        await change_handler();
         has_changed = false;
     }
 }
