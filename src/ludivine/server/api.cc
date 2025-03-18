@@ -696,7 +696,7 @@ void HandleRemind(http_IO *io)
     {
         bool valid = true;
 
-        if (!uid) {
+        if (!uid || !IsUUIDValid(uid)) {
             LogError("Missing or invalid UID");
             valid = false;
         }
