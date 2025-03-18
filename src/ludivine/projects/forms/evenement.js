@@ -19,7 +19,7 @@ function build(form, values) {
     form.values = values
 
     form.intro = html`
-        <p>Nous allons vous demander de penser à l’évènement que <b>vous considérez comme étant le pire</b>, c'est-à-dire pour ce questionnaire, celui qui vous dérange le plus actuellement.
+        <p>Nous allons vous demander de penser à l’évènement que <b>vous considérez comme étant le pire</b>, c'est-à-dire celui qui vous dérange le plus actuellement.
         <p>Nous allons vous poser une série de questions qui vont nous permettre de comprendre ce qui vous est arrivé. Nous avons conscience que cela <b>peut être difficile</b>, et nous vous sommes reconnaissants de cet effort.
     `
 
