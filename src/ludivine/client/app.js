@@ -405,6 +405,9 @@ async function run(changes = {}, push = false) {
     if (poisoned)
         return;
 
+    // Go back to top app when the context changes
+    let scroll = (changes.mode != null && changes.mode != route.mode);
+
     await navigator.locks.request(RUN_LOCK, async () => {
         Object.assign(route, changes);
 
@@ -556,6 +559,9 @@ async function run(changes = {}, push = false) {
             }
         }
     });
+
+    if (scroll)
+        window.scrollTo(0, 0);
 }
 
 function makeURL(values = {}) {

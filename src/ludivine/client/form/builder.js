@@ -50,7 +50,7 @@ function FormBuilder(state, model, base = {}) {
     let ptr = state.values;
 
     let intro = '';
-    let intro_idx = 0;
+    let intro_idx = -1;
 
     let part = null;
     let widgets = model.widgets;
@@ -67,7 +67,9 @@ function FormBuilder(state, model, base = {}) {
 
         try {
             part = {
-                intro: wrapIntro(intro),
+                intro: intro,
+                introIndex: intro_idx,
+
                 widgets: []
             };
 
@@ -427,31 +429,6 @@ function FormBuilder(state, model, base = {}) {
 
         refresh();
     };
-
-    function wrapIntro(intro) {
-        if (!intro)
-            return '';
-
-        if (intro_idx % 2) {
-            return html`
-                <div class="box">
-                    <div class="row">
-                        <img style="width: 100px; align-self: center;" src=${ASSETS['pictures/help1']} alt="" />
-                        <div style="margin-left: 1em;">${intro}</div>
-                    </div>
-                </div>
-            `;
-        } else {
-            return html`
-                <div class="box">
-                    <div class="row">
-                        <div style="margin-right: 1em;">${intro}</div>
-                        <img style="width: 100px; align-self: center;" src=${ASSETS['pictures/help2']} alt="" />
-                    </div>
-                </div>
-            `;
-        }
-    }
 
     function makeWidget(type, func) {
         let widget = {

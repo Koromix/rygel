@@ -37,6 +37,8 @@ function FormModule(app, study, page) {
     let is_new = false;
     let has_changed = false;
 
+    let rendered_idx = null;
+
     this.run = async function() {
         if (state != null)
             return;
@@ -128,9 +130,11 @@ function FormModule(app, study, page) {
         render(html`
             ${progressBar(part_idx, end, 'parts')}
 
-            ${part.intro}
+            <div id="intro">
+                ${wrapIntro(part.intro, part.introIndex)}
+            </div>
 
-            <div class="box">
+            <div id="part" class="box">
                 <div class="header">Partie ${part_idx + 1}</div>
                 <form @submit=${UI.wrap(next)}>
                     ${part.widgets.map(widget => widget.render())}
@@ -148,6 +152,43 @@ function FormModule(app, study, page) {
                 ` : ''}
             </div>
         `, div);
+
+        if (part_idx != rendered_idx) {
+            let prev_part = model.parts[rendered_idx];
+            let new_intro = (part.introIndex !== prev_part?.introIndex);
+
+            let el = div.querySelector(new_intro ? '#intro' : '#part');
+            el?.scrollIntoView?.();
+
+            rendered_idx = part_idx;
+        }
+    }
+
+    function wrapIntro(intro, idx) {
+        if (!intro)
+            return '';
+
+        let left = (idx % 2 == 0);
+
+        if (left) {
+            return html`
+                <div class="box">
+                    <div class="row">
+                        <img style="width: 100px; align-self: center;" src=${ASSETS['pictures/help1']} alt="" />
+                        <div style="margin-left: 1em;">${intro}</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            return html`
+                <div class="box">
+                    <div class="row">
+                        <div style="margin-right: 1em;">${intro}</div>
+                        <img style="width: 100px; align-self: center;" src=${ASSETS['pictures/help2']} alt="" />
+                    </div>
+                </div>
+            `;
+        }
     }
 
     async function previous() {
