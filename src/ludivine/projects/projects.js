@@ -23,7 +23,7 @@ const PROJECTS = [
         title: 'SocioTrauma',
         description: html`
             <p>L'étude SocioTrauma explore l'impact des événements particulièrement difficiles sur le bien-être psychologique et les relations sociales. À cette fin, plusieurs questionnaires sont proposés à différents moments au cours d’une période d’un an.
-            <p>Retrouvez les <a href="/etudes#etude-1-sociotrauma" target="_blank">informations plus détaillées</a> sur le site officiel de Ligne de Vie !
+            <p>Retrouvez les <a href="/etudes#etude-1-sociotrauma" target="_blank">informations plus détaillées</a> sur le site de Lignes de Vie !
         `,
         picture: ASSETS['pictures/sociotrauma'],
         bundle: BUNDLES['sociotrauma.js']

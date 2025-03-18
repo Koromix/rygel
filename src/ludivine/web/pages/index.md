@@ -16,7 +16,7 @@
     <div style="flex: 3;">
         <p>Lignes de Vie est un <b>programme de recherche participatif</b> en ligne initié par le <a href="https://cn2r.fr/" target="_blank">Centre national de ressources et de résilience</a> (Cn2r). Il permet de mettre en lien des personnes confrontées à des événements potentiellement traumatiques et des chercheurs dans le cadre d’études scientifiques.
         <p>Ces recherches visent à approfondir notre <b>compréhension des psychotraumatismes</b>, à renforcer les solutions existantes, et à développer de nouvelles approches pour mieux répondre aux besoins des personnes concernées.
-        <p>Les études qui sont menées dans le cadre de Ligne de Vie résultent d’une collaboration <b>entre le Cn2r et des équipes de recherche partenaires</b>. Elles ont pour objectif commun de récolter des données à différents moments, dans les semaines, mois et années suivant un événement potentiellement traumatique, afin de <b>mieux comprendre l’évolution de la vie, du bien-être et de la santé</b> des personnes concernées.
+        <p>Les études qui sont menées dans le cadre de Lignes de Vie résultent d’une collaboration <b>entre le Cn2r et des équipes de recherche partenaires</b>. Elles ont pour objectif commun de récolter des données à différents moments, dans les semaines, mois et années suivant un événement potentiellement traumatique, afin de <b>mieux comprendre l’évolution de la vie, du bien-être et de la santé</b> des personnes concernées.
     </div>
 </div>
 

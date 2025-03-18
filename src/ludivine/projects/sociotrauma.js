@@ -123,7 +123,7 @@ function init(build, start, values) {
             `;
             mod.step = html`
                 <p>Le bilan initial est réalisé <b>dans le mois</b> qui suit l'évènement.
-                <p>Retrouvez les <a href="/etudes#etude-1-sociotrauma">informations de cette étude</a> sur le site officiel de Ligne de Vie.
+                <p>Retrouvez les <a href="/etudes#etude-1-sociotrauma">informations de cette étude</a> sur le site de Lignes de Vie.
             `;
 
             let options = { schedule: start };
