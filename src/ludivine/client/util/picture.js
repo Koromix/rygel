@@ -198,6 +198,7 @@ function PictureCropper(title, size) {
                                 return '';
 
                             let palette = NOTION_PALETTES[cat] ?? [];
+                            let other = palette.every(color => color != notion.colors[cat]);
 
                             return html`
                                 <div class="widget">
@@ -208,7 +209,8 @@ function PictureCropper(title, size) {
                                                 <div style=${'background: ' + color}></div>
                                             </button>
                                         `)}
-                                        <button type="button" class="small" @click=${UI.wrap(e => pickColor(e, cat))}>Autre couleur</button>
+                                        <button type="button" class=${'small' + (other ? ' active' : '')}
+                                                @click=${UI.wrap(e => pickColor(e, cat))}>Autre couleur</button>
                                     </div>
                                 </div>
                             `;

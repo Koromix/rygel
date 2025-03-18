@@ -65,6 +65,7 @@
         --button_color: white;
         color: black !important;
     }
+    & button.active { color: white !important; }
 
     & div {
         width: 18px;
