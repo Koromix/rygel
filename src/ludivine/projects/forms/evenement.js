@@ -138,17 +138,21 @@ function build(form, values) {
             [3, "Je ne sais pas"]
         ])
 
-        form.binary("q12", "Connaissiez vous les autres victimes ?")
+        if (values.q11 == 1) {
+            form.binary("q12", "Connaissiez vous les autres victimes ?")
 
-        form.multiCheck("q12a", "Qui sont ces victimes ?", [
-            [1, "Cercle familial"],
-            [2, "Amis"],
-            [3, "Collègues"],
-            [99, "Autre"]
-        ], { help: "Plusieurs réponses possibles" })
+            if (values.q12 == 1) {
+                form.multiCheck("q12a", "Qui sont ces victimes ?", [
+                    [1, "Cercle familial"],
+                    [2, "Amis"],
+                    [3, "Collègues"],
+                    [99, "Autre"]
+                ], { help: "Plusieurs réponses possibles" })
 
-        if (values.q12a?.includes?.(99))
-            form.text("?q12b", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
+                if (values.q12a?.includes?.(99))
+                    form.text("?q12b", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
+            }
+        }
     })
 
     form.part(() => {
