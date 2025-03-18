@@ -24,16 +24,16 @@ import '../../../vendor/opensans/OpenSans.css';
 import './game.css';
 
 const KEYBOARD_SHORTCUTS = [
+    ['← / →', `Déplacement à gauche ou à droite`],
+    ['↑', `Rotation horaire`],
+    ['Ctrl', `Rotation anti-horaire`],
+    ['↓', `Descente rapide`],
+    null,
+    ['Espace', `Verrouillage immédiat`],
+    ['C', `Mettre la pièce en réserve (hold)`],
+    null,
     ['P', 'Mettre en pause'],
     ['F', `Mode plein écran`],
-    null,
-    ['← / →', `Déplacement latéral`],
-    ['↑', `Rotation horaire`],
-    ['Control', `Rotation anti-horaire`],
-    ['↓', `Descente rapide`],
-    ['Espace', `Verrouillage immédiat`],
-    null,
-    ['C', `Mettre la pièce en réserve (hold)`],
     null,
     ['G', `Afficher/cacher le fantôme`],
     ['B', `Modifier le fond d'écran`],
@@ -719,7 +719,10 @@ function drawHelp() {
         let shortcut = KEYBOARD_SHORTCUTS[i];
 
         if (shortcut != null) {
+            ctx.font = 'bold ' + font(14);
             runner.text(x - 12, y, shortcut[0], { align: 3 });
+
+            ctx.font = font(14);
             runner.text(x - 12 - 80 * window.devicePixelRatio, y, shortcut[1], { align: 3 });
 
             y -= step;
