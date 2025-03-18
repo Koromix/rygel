@@ -40,7 +40,7 @@ function ConsentModule(app, project) {
         div = document.createElement('div');
         div.className = 'column';
 
-        downloaded = (consent.downloaded == null);
+        downloaded = (consent.download == null);
         state = new FormState;
         values = state.values;
 
@@ -73,7 +73,7 @@ function ConsentModule(app, project) {
                 ${consent.download != null ? html`
                     <div class="actions">
                         <a href=${consent.download} download
-                           @click=${UI.wrap(e => { downloaded = true; return run(); })}>Télécharger la lettre d'information</a>
+                           @click=${UI.wrap(toggleDownload)}>Télécharger la lettre d'information</a>
                     </div>
                 ` : ''}
             </div>
@@ -87,6 +87,16 @@ function ConsentModule(app, project) {
                 </form>
             </div>
         `, div);
+    }
+
+    function toggleDownload() {
+        if (downloaded)
+            return;
+
+        setTimeout(() => {
+            downloaded = true;
+            runConsent();
+        }, 1000);
     }
 
     async function start(valid, values) {
