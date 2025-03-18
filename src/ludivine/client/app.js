@@ -1332,6 +1332,13 @@ async function startStudy(project, values) {
                                  RETURNING id, key, start, data`,
                                 project.key, start, data);
 
+    await Net.post('/api/publish', {
+        rid: session.rid,
+        study: project.index,
+        key: '/',
+        values: values
+    });
+
     project = await initProject(project, study);
 
     // Go back to dashboard if there are scheduled tests, open study otherwise
