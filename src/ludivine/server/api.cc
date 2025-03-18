@@ -401,7 +401,7 @@ void HandleLogin(http_IO *io)
 
                 if (!db.Run("INSERT INTO vaults (vid, generation) VALUES (uuid_blob(?1), 0)", vid))
                     return false;
-                if (!db.Run("INSERT INTO publications (rid) VALUES (uuid_blob(?1))", rid))
+                if (!db.Run("INSERT INTO participants (rid) VALUES (uuid_blob(?1))", rid))
                     return false;
 
                 return true;
