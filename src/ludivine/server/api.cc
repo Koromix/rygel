@@ -401,7 +401,7 @@ void HandleLogin(http_IO *io)
 
                 if (!db.Run("INSERT INTO vaults (vid, generation) VALUES (uuid_blob(?1), 0)", vid))
                     return false;
-                if (!db.Run("INSERT INTO sets (rid) VALUES (uuid_blob(?1))", rid))
+                if (!db.Run("INSERT INTO publications (rid) VALUES (uuid_blob(?1))", rid))
                     return false;
 
                 return true;
@@ -766,6 +766,95 @@ void HandleRemind(http_IO *io)
         return true;
     });
     if (!success)
+        return;
+
+    io->SendText(200, "{}", "application/json");
+}
+
+void HandlePublish(http_IO *io)
+{
+    // Parse input data
+    const char *rid = nullptr;
+    int64_t study = -1;
+    const char *test = nullptr;
+    Span<const char> values = {};
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Mebibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "rid") {
+                parser.ParseString(&rid);
+            } else if (key == "study") {
+                parser.ParseInt(&study);
+            } else if (key == "key") {
+                parser.ParseString(&test);
+            } else if (key == "values") {
+                parser.PassThrough(&values);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+    }
+
+    // Check missing or invalid values
+    {
+        bool valid = true;
+
+        if (!rid || !IsUUIDValid(rid)) {
+            LogError("Missing or invalid RID");
+            valid = false;
+        }
+        if (study < 0) {
+            LogError("Missing or invalid study");
+            valid = false;
+        }
+        if (!test || test[0] != '/') {
+            LogError("Missing or invalid key");
+            valid = false;
+        }
+        if (!values.len || values[0] != '{') {
+            LogError("Missing or invalid values");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Make sure participant exists
+    int64_t participant = 0;
+    {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT id FROM participants WHERE rid = uuid_blob(?1)", &stmt, rid))
+            return;
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Participant '%1' does not exist", rid);
+                io->SendError(404);
+            }
+
+            return;
+        }
+
+        participant = sqlite3_column_int64(stmt, 0);
+    }
+
+    if (!db.Run(R"(INSERT INTO tests (participant, study, key, json)
+                   VALUES (?1, ?2, ?3, ?4)
+                   ON CONFLICT DO UPDATE SET json = excluded.json)",
+                participant, study, test, values))
         return;
 
     io->SendText(200, "{}", "application/json");

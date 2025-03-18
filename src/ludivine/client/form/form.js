@@ -174,7 +174,10 @@ function FormModule(app, study, page) {
             let section = part_idx + 1;
             await app.navigateStudy(page, section);
         } else {
-            await app.finalizeTest(page, state.raw);
+            let raw = state.raw;
+            let results = state.values;
+
+            await app.finalizeTest(page, raw, results);
             has_changed = false;
         }
     }

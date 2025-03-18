@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 9;
+const int DatabaseVersion = 10;
 
 bool MigrateDatabase(sq_Database *db, const char *vault_directory)
 {
@@ -240,9 +240,36 @@ bool MigrateDatabase(sq_Database *db, const char *vault_directory)
                 }
                 if (!stmt.IsValid())
                     return false;
+            } [[fallthrough]];
+
+            case 9: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE participants (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        rid BLOB NOT NULL
+                    );
+                    CREATE UNIQUE INDEX participants_r ON participants (rid);
+
+                    CREATE TABLE tests (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        participant INTEGER NOT NULL REFERENCES participants (id) ON DELETE CASCADE,
+                        study INTEGER NOT NULL,
+                        key TEXT NOT NULL,
+                        json TEXT NOT NULL
+                    );
+                    CREATE UNIQUE INDEX tests_psk ON tests (participant, study, key);
+
+                    INSERT INTO participants (id, rid)
+                        SELECT id, rid FROM sets;
+
+                    DROP INDEX sets_r;
+                    DROP TABLE sets;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 9);
+            static_assert(DatabaseVersion == 10);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

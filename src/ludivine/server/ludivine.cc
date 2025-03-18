@@ -208,6 +208,8 @@ static void HandleRequest(http_IO *io)
             HandleUpload(io);
         } else if (TestStr(request.path, "/api/remind") && request.method == http_RequestMethod::Post) {
             HandleRemind(io);
+        } else if (TestStr(request.path, "/api/publish") && request.method == http_RequestMethod::Post) {
+            HandlePublish(io);
         } else {
             io->SendError(404);
         }

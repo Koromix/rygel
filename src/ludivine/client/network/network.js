@@ -283,7 +283,17 @@ function NetworkModule(app, study, page) {
 
     async function finalize() {
         let data = serialize();
-        await app.finalizeTest(page, data);
+
+        let results = Object.assign({}, data.world);
+
+        // Anonymize subjects
+        results.subjects = results.subjects.map(subject => {
+            subject = Object.assign({}, subject);
+            delete subject.name;
+            return subject;
+        });
+
+        await app.finalizeTest(page, data, results);
     }
 
     this.registerPush = function(array, ref, auto = false) {

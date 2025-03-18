@@ -1369,8 +1369,18 @@ async function saveTest(page, data, status = 'draft') {
     await go();
 }
 
-async function finalizeTest(page, data) {
+async function finalizeTest(page, data, results) {
+    let project = cache.project;
+
     await saveTest(page, data, 'done');
+
+    await Net.post('/api/publish', {
+        rid: session.rid,
+        study: project.index,
+        key: page.key,
+        values: results
+    });
+
     await exitTest(page);
 }
 
