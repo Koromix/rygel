@@ -73,7 +73,9 @@ function build(form, values) {
                 })
             }
 
-            form.binary("q2e", "Considérez-vous être à l’abri maintenant ?")
+            form.binary("q2e", "Considérez-vous être à l’abri maintenant ?", {
+                help: values.q2e === 0 ? html`N'hésitez pas à utiliser notre <b>bouton « SOS »</b> si vous en sentez le besoin` : ""
+            })
         }
 
         if (!values.q1) {
