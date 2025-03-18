@@ -213,6 +213,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     background: var(--box_color);
     border-radius: 8px;
 }
+.box > .help { margin: 1em auto; }
 
 .help {
     display: flex;
@@ -221,28 +222,58 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     gap: 1em;
     align-items: start;
     align-self: center;
+
+    & > img {
+        width: 200px;
+        aspect-ratio: auto;
+        z-index: 1;
+        transform: translateX(-100px);
+    }
+    & > div {
+        min-height: 100px;
+        margin: 75px 0 0 -250px;
+        padding: 1em 1em 1em 150px;
+        background: white;
+        border-radius: 8px;
+    }
+
+    &.right > div {
+        margin: 75px -250px 0 0;
+        padding: 1em 150px 1em 1em;
+    }
+    &.right > img { transform: translateX(100px); }
 }
-.help > img {
-    width: 200px;
-    aspect-ratio: auto;
-    z-index: 1;
-    transform: translateX(-100px);
+
+@media screen and (max-width: 960px) {
+    .row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .help {
+        & > img { width: 100px; }
+        & > div {
+            min-height: 60px;
+            margin-top: 20px;
+        }
+    }
+    .help:not(.right) {
+        margin-right: 0;
+
+        & > div {
+            margin-left: calc(-150px - 2em);
+            padding-left: 75px;
+        }
+    }
+    .help.right {
+        margin-left: 0;
+
+        & > div {
+            margin-right: calc(-150px - 2em);
+            padding-right: 75px;
+        }
+    }
 }
-.help > div {
-    min-height: 100px;
-    margin: 75px 0 0 -250px;
-    padding: 1em 1em 1em 150px;
-    background: white;
-    border-radius: 8px;
-}
-.help.right > div {
-    margin: 75px -250px 0 0;
-    padding: 1em 150px 1em 1em;
-}
-.help.right > img {
-    transform: translateX(100px);
-}
-.box > .help { margin: 1em auto; }
 
 .header {
     font-size: 1.2em;
@@ -264,14 +295,6 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     background-repeat: no-repeat;
     border-radius: 50%;
     cursor: pointer;
-}
-
-
-@media screen and (max-width: 960px) {
-    .row {
-        flex-direction: column;
-        align-items: stretch;
-    }
 }
 
 .profile > .avatar {
