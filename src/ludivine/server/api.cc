@@ -450,20 +450,16 @@ void HandleDownload(http_IO *io)
         if (!db.Prepare("SELECT generation, previous FROM vaults WHERE vid = uuid_blob(?1)", &stmt, vid))
             return;
 
-        if (stmt.Step()) {
-            generation = sqlite3_column_int64(stmt, 0);
-            previous = sqlite3_column_int64(stmt, 1);
-        } else if (stmt.IsValid()) {
-            // XXX: Temporary, revert once beta is over
-
-            if (!db.Run("INSERT INTO vaults (vid, generation) VALUES (uuid_blob(?1), 0)", vid))
-                return;
-
-            generation = 0;
-            previous = 0;
-        } else {
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Unknown vault VID");
+                io->SendError(404);
+            }
             return;
         }
+
+        generation = sqlite3_column_int64(stmt, 0);
+        previous = sqlite3_column_int64(stmt, 1);
 
         if (!generation) {
             io->SendError(204);
@@ -739,7 +735,6 @@ void HandleRemind(http_IO *io)
                 LogError("User '%1' does not exist", uid);
                 io->SendError(404);
             }
-
             return;
         }
 
@@ -844,7 +839,6 @@ void HandlePublish(http_IO *io)
                 LogError("Participant '%1' does not exist", rid);
                 io->SendError(404);
             }
-
             return;
         }
 
