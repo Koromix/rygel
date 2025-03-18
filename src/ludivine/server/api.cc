@@ -625,7 +625,7 @@ void HandleRemind(http_IO *io)
     int offset = 0;
     {
         StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
+        if (!io->OpenForRead(Kibibytes(4), &st))
             return;
         json_Parser parser(&st, io->Allocator());
 
