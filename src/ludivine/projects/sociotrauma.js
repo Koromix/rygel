@@ -87,13 +87,29 @@ function init(build, start, values) {
         let first = start.plus(values.anciennete * 7);
 
         mod.level = 'Temporalité';
-        mod.help = html`
-            <p>La première étape consiste à <b>vous présenter puis à faire un bilan initial</b>.
-            <p>Vous pourrez ensuite continuer <b>selon le calendrier prévu</b>. À tout moment, vous pouvez arrêter l'étude ou la mettre en pause et y revenir plus tard. Vous avez également la possibilité de consulter les pages « Ressources » ou « Se détendre ».
-            <p>Vous êtes libre de compléter les questionnaires dans l’ordre qui vous convient. Toutefois, nous vous recommandons de <b>suivre l’ordre proposé</b>. Les transitions ont été pensées avec soin par notre équipe de recherche de Lignes de Vie afin d’accompagner votre cheminement de la manière la plus confortable possible.
-            <p>Nous vous invitons à <b>répondre à toutes les questions</b>, même si vous n'êtes pas certain de votre réponse. Il n’y a pas de bonne ou de mauvaise réponse, et même incertaines, elles sont importantes. Dans Lignes de Vie, on se donne le droit à l’erreur, à la bêtise, à l’ignorance… Et pour les chercheurs aussi !
-            <p>Dès lors, si une question <b>ne correspond pas à votre vécu</b> ou si vous souhaitez ajouter un commentaire, validez la page sans y répondre et apposez votre commentaire dans le champ qui apparait.
-        `;
+        mod.help = (progress, total) => {
+            if (progress == total) {
+                return html`
+                    <p><b>Merci d’avoir complété votre bilan initial !</b>
+                    <p>Vous pourrez poursuivre les prochains questionnaires selon le calendrier prévu. Notre objectif est de mieux comprendre l’évolution de votre bien-être psychologique et de vos relations au fil du temps. Pour cela, <b>il est essentiel que chaque participant remplisse les questionnaires aux mêmes périodes</b> : 1 mois, 3 mois, 6 mois et 1 an après l’événement.
+                    <p>Les dates de rappel ont été calculées en fonction de la période que vous avez indiquée lors de votre consentement à l’étude. <b>Nous vous recommandons de les ajouter à votre agenda</b> et de revenir sur le site aux dates prévues pour le suivi. Pas d’inquiétude, vous <b>recevrez également un email de rappel</b> afin de ne rien oublier !
+                    <p>En attendant, vous pouvez :
+                    <ul>
+                        <li>Explorer les pages « Ressources » ou « Se détendre » pour des conseils et outils utiles.
+                        <li>Écrire vos ressentis dans votre journal, accessible depuis votre page « Profil ».
+                    </ul>
+                    <p>Merci pour votre précieuse implication dans notre recherche !
+                `;
+            }
+
+            return html`
+                <p>La première étape consiste à <b>vous présenter puis à faire un bilan initial</b>.
+                <p>Vous pourrez ensuite continuer <b>selon le calendrier prévu</b>. À tout moment, vous pouvez arrêter l'étude ou la mettre en pause et y revenir plus tard. Vous avez également la possibilité de consulter les pages « Ressources » ou « Se détendre ».
+                <p>Vous êtes libre de compléter les questionnaires dans l’ordre qui vous convient. Toutefois, nous vous recommandons de <b>suivre l’ordre proposé</b>. Les transitions ont été pensées avec soin par notre équipe de recherche de Lignes de Vie afin d’accompagner votre cheminement de la manière la plus confortable possible.
+                <p>Nous vous invitons à <b>répondre à toutes les questions</b>, même si vous n'êtes pas certain de votre réponse. Il n’y a pas de bonne ou de mauvaise réponse, et même incertaines, elles sont importantes. Dans Lignes de Vie, on se donne le droit à l’erreur, à la bêtise, à l’ignorance… Et pour les chercheurs aussi !
+                <p>Dès lors, si une question <b>ne correspond pas à votre vécu</b> ou si vous souhaitez ajouter un commentaire, validez la page sans y répondre et apposez votre commentaire dans le champ qui apparait.
+            `;
+        }
 
         build.module('sociodemo', 'Présentation', mod => {
             build.form('sociodemo', 'Présentation', sociodemo);

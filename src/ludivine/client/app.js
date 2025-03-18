@@ -1271,28 +1271,31 @@ function renderModule() {
                 }) : ''}
             </div>
 
-            ${wrapHelp(page)}
+            ${wrapHelp(page, progress, total)}
         </div>
     `;
 }
 
-function wrapHelp(page) {
-    if (!page.help)
-        return '';
-
+function wrapHelp(page, progress, total) {
+    let help = page.help;
     let left = (page.chain.length % 2 != 0);
+
+    if (typeof help == 'function')
+        help = help(progress, total);
+    if (!help)
+        return '';
 
     if (left) {
         return html`
             <div class="help">
                 <img src=${ASSETS['pictures/help1']} alt="" />
-                <div>${page.help}</div>
+                <div>${help}</div>
             </div>
         `;
     } else {
         return html`
             <div class="help right">
-                <div>${page.help}</div>
+                <div>${help}</div>
                 <img src=${ASSETS['pictures/help2']} alt="" />
             </div>
         `;
