@@ -1136,19 +1136,32 @@ async function syncNotifications() {
 
         if (!schedule)
             continue;
-        if (test.status == 'done')
-            continue;
 
-        let partial = events.get(schedule) ?? false;
-        if (test.status == 'draft')
-            partial = true;
-        events.set(schedule, partial);
+        let evt = events.get(schedule);
+
+        if (evt == null) {
+            evt = {
+                empty: 0,
+                draft: 0,
+                done: 0
+            };
+
+            events.set(schedule, evt);
+        }
+
+        evt[test.status]++;
     }
 
-    events = Array.from(Util.map(events.entries(), ([date, partial]) => ({
+    // Simplify events
+    events = Array.from(Util.map(events.entries(), ([date, evt]) => ({
         date: date,
-        partial: partial
+        ...evt
     })));
+    events = events.filter(evt => evt.empty || evt.draft);
+    events = events.map(evt => ({
+        date: evt.date,
+        partial: evt.draft > 0 || evt.done > 0
+    }));
 
     await Net.post('/api/remind', {
         uid: session.uid,
