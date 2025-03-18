@@ -98,7 +98,6 @@ function ConsentModule(app, project) {
         if (!valid)
             throw new Error('Vous devez confirmé avoir lu et accepté la participation à ' + project.title);
 
-        console.log(project, values);
         await app.startStudy(project, values);
     }
 }
