@@ -162,9 +162,9 @@ function NetworkModule(app, study, page) {
         let person0 = {
             id: Util.makeULID(),
 
-            text: 'Sujet',
             subject: subject0.id,
             kind: 'family',
+            quality: 0,
 
             x: 0,
             y: 0,
