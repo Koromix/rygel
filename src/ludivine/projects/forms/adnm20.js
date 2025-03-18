@@ -20,7 +20,7 @@ function build(form, values) {
 
     form.intro = html`
         <p>Voici ci-dessous une <b>liste de possibles évènements de vie stressants</b>.
-        <p>Veuillez indiquer les évènements qui vous sont arrivés <b>durant les deux dernières années</b> et qui sont actuellement difficiles pour vous, ou qui ont été difficiles pour vous au cours des 6 derniers mois.
+        <p>Veuillez indiquer les évènements qui vous sont arrivés <b>durant les deux dernières années</b> et qui sont <b>actuellement difficiles</b> pour vous, ou qui ont été <b>difficiles pour vous au cours des 6 derniers mois</b>.
     `
 
     form.part(() => {
