@@ -879,7 +879,7 @@ async function runDashboard() {
             <div class="box">
                 <div>
                     <div class="header">Bienvenue sur ${ENV.title} !</div>
-                    <p>Vous pouvez vous y <b>inscrire ou continuer</b> votre participation aux études ci-dessous le cas échéant, ou retourner à votre profil pour utiliser votre journal ou modifier votre avatar.
+                    <p>Vous pouvez vous <b>inscrire ou continuer</b> votre participation aux études ci-dessous le cas échéant, ou retourner à votre profil pour utiliser votre journal ou modifier votre avatar.
                 </div>
 
                 <div class="actions">
