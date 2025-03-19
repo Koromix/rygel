@@ -750,6 +750,8 @@ form {
     height: 30px;
     margin-right: 12px;
     box-sizing: border-box;
+    flex-shrink: 0;
+    align-self: center;
     border-radius: 50%;
     font-size: 0.75em;
 }
@@ -784,7 +786,11 @@ form {
 }
 
 @media screen and (max-width: 960px) {
-    #sos { margin-right: 0; }
+    #sos {
+        width: 24px;
+        height: 24px;
+        margin-right: 0;
+    }
 }
 
 #help {

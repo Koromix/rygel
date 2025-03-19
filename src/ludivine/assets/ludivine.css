@@ -230,7 +230,7 @@ p + .columns { margin-top: 2em; }
 @media screen and (max-width: 960px) {
     .tabbar > a {
         padding: 0.2em 0.7em 0.3em 0.7;
-        font-size: 1em;
+        font-size: 0.9em;
     }
     .tab { padding: 1em 0.5em; }
 }

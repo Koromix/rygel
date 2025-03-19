@@ -1481,7 +1481,6 @@ async function runDiary() {
         <div class="tabbar">
             <a href="/profil">Profil</a>
             <a href="/participer">Études</a>
-            ${cache.project != null ? html`<a href=${'/etude/' + cache.project.key}>${cache.project.title}</a>` : ''}
             <a href=${makeURL()} class="active">Mon journal</a>
 
             <div style="flex: 1;"></div>
