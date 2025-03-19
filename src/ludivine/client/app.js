@@ -794,6 +794,7 @@ async function runProfile() {
         <div class="tabbar">
             <a href="/profil" class="active">Profil</a>
             <a href="/participer">Études</a>
+            ${cache.project != null ? html`<a href=${'/etude/' + cache.project.key}>${cache.project.title}</a>` : ''}
         </div>
 
         <div class="tab">
@@ -873,6 +874,7 @@ async function runDashboard() {
         <div class="tabbar">
             <a href="/profil">Profil</a>
             <a href="/participer" class="active">Études</a>
+            ${cache.project != null ? html`<a href=${'/etude/' + cache.project.key}>${cache.project.title}</a>` : ''}
         </div>
 
         <div class="tab">
@@ -1469,6 +1471,7 @@ async function runDiary() {
         <div class="tabbar">
             <a href="/profil">Profil</a>
             <a href="/participer">Études</a>
+            ${cache.project != null ? html`<a href=${'/etude/' + cache.project.key}>${cache.project.title}</a>` : ''}
             <a href=${makeURL()} class="active">Mon journal</a>
         </div>
 
