@@ -3,6 +3,7 @@
     <div class="intro">
         <p>Vous souhaitez vous informer sur le psychotraumatisme et les thématiques associés ?
         <p>Vous trouverez sur cette page cinq onglets : <b>vidéos, livres, films, musiques, et des recommandations de professionnels</b>.
+        <p>N'hésitez pas à parcourir le <a href="https://cn2r.fr" target="_blank">site du Cn2r</a> pour découvrir davantage de ressources.
     </div>
 </div>
 
