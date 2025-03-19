@@ -37,7 +37,9 @@ function build(form, values) {
                 [5, "Inceste"],
                 [6, "Situation dans laquelle les secours ont mis plusieurs jours à intervenir"],
                 [99, "Autre"]
-            ], { help: "Non obligatoire. Cela peut être difficile, n’hésitez pas à appuyer sur le bouton SOS si vous en avez besoin, ou rapprochez-vous d’une personne ressource" })
+            ], {
+                help: html`"Non obligatoire. Cela peut être difficile, n’hésitez pas à appuyer sur le <b>bouton « SOS »</b> si vous en avez besoin, ou rapprochez-vous d’une personne ressource`
+            })
 
             if (values.q1a == 99)
                 form.text("?q1b", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
