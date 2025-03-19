@@ -53,8 +53,7 @@ const NOTION_DEFAULTS = {
         glasses: 0,
         nose: 0,
         mouth: 0,
-        beard: 0,
-        accessories: 0
+        beard: 0
     },
     colors: {
         face: '#faddbc',
