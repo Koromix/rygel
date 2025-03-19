@@ -5888,6 +5888,7 @@ bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags, Span<c
 bool ParseSize(Span<const char> str, int64_t *out_size, unsigned int flags, Span<const char> *out_remaining)
 {
     uint64_t size = 0;
+    uint64_t multiplier = 1;
 
     if (!ParseInt(str, &size, flags & ~(int)ParseFlag::End, &str))
         return false;
@@ -5895,7 +5896,6 @@ bool ParseSize(Span<const char> str, int64_t *out_size, unsigned int flags, Span
         goto overflow;
 
     if (str.len) {
-        uint64_t multiplier = 1;
         int next = 1;
 
         switch (str[0]) {
@@ -5914,12 +5914,17 @@ bool ParseSize(Span<const char> str, int64_t *out_size, unsigned int flags, Span
             return false;
         }
         str = str.Take(next, str.len - next);
-
-        uint64_t total = size * multiplier;
-        if ((size && total / size != multiplier) || total > INT64_MAX) [[unlikely]]
-            goto overflow;
-        size = total;
     }
+
+#if defined(__GNUC__) || defined(__clang__)
+    if (__builtin_mul_overflow(size, multiplier, &size) || size > INT64_MAX) [[unlikely]]
+        goto overflow;
+#else
+    uint64_t total = size * multiplier;
+    if ((size && total / size != multiplier) || total > INT64_MAX) [[unlikely]]
+        goto overflow;
+    size = (int64_t)total;
+#endif
 
     *out_size = (int64_t)size;
     if (out_remaining) {
