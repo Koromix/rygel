@@ -744,14 +744,13 @@ form {
 }
 
 #sos {
-    width: 30px;
-    height: 30px;
-    margin-right: 12px;
+    width: 28px;
+    height: 28px;
     box-sizing: border-box;
     flex-shrink: 0;
     align-self: center;
     border-radius: 50%;
-    font-size: 0.75em;
+    font-size: 0.7em;
 }
 #sos::before {
     content: ' ';
@@ -787,7 +786,6 @@ form {
     #sos {
         width: 24px;
         height: 24px;
-        margin-right: 0;
         font-size: 0.6em;
     }
 }
