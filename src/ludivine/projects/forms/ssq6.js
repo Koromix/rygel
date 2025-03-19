@@ -16,7 +16,7 @@
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 import { PERSON_KINDS } from '../../client/network/constants.js'
 
-function build(form, values) {
+function build(form, values, mask) {
     form.values = values
 
     form.intro = html`
@@ -30,6 +30,8 @@ function build(form, values) {
         </ol>
         <p>Si vous ne pensez à personne en particulier pour une question, indiquez « 0 », mais remplissez tout de même l’évaluation de satisfaction.
     `
+
+    let anonymes = new Map;
 
     form.part(() => {
         q("q1", "Combien de personnes de votre entourage sont réellement disponibles quand vous avez besoin d’aide ?")
@@ -77,6 +79,13 @@ function build(form, values) {
             if (initiales) {
                 initiales = initiales.toUpperCase().replace(/[^A-Z]/g, '')
                 values[key + "b" + i] = initiales
+
+                let anon = anonymes.get(initiales)
+                if (anon == null) {
+                    anon = anonymes.size + 1
+                    anonymes.set(initiales, anon)
+                }
+                mask(key + "b" + i, anon)
             }
 
             form.text(key + "b" + i, `Quelles sont les initiales de la personne n°${i + 1} ?`, {

@@ -120,7 +120,7 @@ function FormModule(app, study, page) {
 
         let builder = new FormBuilder(state, model);
 
-        build(builder, state.values);
+        build(builder, state.values, mask);
 
         let end = model.parts.length - 1;
         if (part_idx > end)
@@ -162,6 +162,17 @@ function FormModule(app, study, page) {
 
             rendered_idx = part_idx;
         }
+    }
+
+    function mask(values, key, mask) {
+        if (typeof values == 'string') {
+            mask = key;
+            key = values;
+            values = state.values;
+        }
+
+        let notes = annotate(values, key);
+        notes.mask = mask;
     }
 
     function wrapIntro(intro, idx) {
@@ -216,11 +227,32 @@ function FormModule(app, study, page) {
             await app.navigateStudy(page, section);
         } else {
             let raw = state.raw;
-            let results = state.values;
+            let results = anonymize(state.raw);
 
             await app.finalizeTest(page, raw, results);
             has_changed = false;
         }
+    }
+
+    function anonymize(raw) {
+        let obj = {};
+
+        for (let key in raw) {
+            let ptr = Object.assign({}, raw[key]);
+
+            if (Util.isPodObject(ptr.$v))
+                ptr.$v = anonymize(ptr.$v);
+
+            if (ptr.hasOwnProperty('$n') && ptr.$n.hasOwnProperty('mask')) {
+                ptr.$n = Object.assign({}, ptr.$n);
+                ptr.$v = ptr.$n.mask;
+                delete ptr.$n.mask;
+            }
+
+            obj[key] = ptr;
+        }
+
+        return obj;
     }
 
     function validate() {
