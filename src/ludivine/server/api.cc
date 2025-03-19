@@ -732,7 +732,7 @@ void HandleRemind(http_IO *io)
 
         if (!stmt.Step()) {
             if (stmt.IsValid()) {
-                LogError("User '%1' does not exist", uid);
+                LogError("Unknown user UID");
                 io->SendError(404);
             }
             return;
@@ -836,7 +836,7 @@ void HandlePublish(http_IO *io)
 
         if (!stmt.Step()) {
             if (stmt.IsValid()) {
-                LogError("Participant '%1' does not exist", rid);
+                LogError("Unknown participant RID");
                 io->SendError(404);
             }
             return;
