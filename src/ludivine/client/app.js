@@ -1380,7 +1380,7 @@ async function startStudy(project, values) {
         route.mode = 'study';
         route.project = project.key;
     } else {
-        route.mode = 'study';
+        route.mode = 'dashboard';
         route.project = null;
     }
 
