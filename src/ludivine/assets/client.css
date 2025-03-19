@@ -714,22 +714,18 @@ form {
             appearance: none;
             -webkit-appearance: none;
 
-            margin-top: -8px;
-            width: 22px;
-            height: 22px;
             background-color: #444;
-            border: none;
+            border: 3px solid #444;
             border-radius: 50%;
+            cursor: pointer;
         }
         &::-moz-range-thumb {
             appearance: none;
 
-            margin-top: -8px;
-            width: 22px;
-            height: 22px;
             background-color: #444;
-            border: none;
+            border: 3px solid #444;
             border-radius: 50%;
+            cursor: pointer;
         }
 
         &.missing::-webkit-slider-thumb { visibility: hidden; }
