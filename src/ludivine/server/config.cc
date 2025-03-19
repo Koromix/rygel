@@ -26,6 +26,10 @@ bool Config::Validate() const
         LogError("Missing main title");
         valid = false;
     }
+    if (!contact || !contact[0]) {
+        LogError("Missing main contact");
+        valid = false;
+    }
     if (!url || !url[0]) {
         LogError("Missing public URL");
         valid = false;
@@ -55,6 +59,8 @@ bool LoadConfig(StreamReader *st, Config *out_config)
             if (prop.section == "General") {
                 if (prop.key == "Title") {
                     config.title = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "Contact") {
+                    config.contact = DuplicateString(prop.value, &config.str_alloc).ptr;
                 } else if (prop.key == "URL") {
                     Span<const char> url = TrimStrRight(prop.value, '/');
                     config.url = DuplicateString(url, &config.str_alloc).ptr;

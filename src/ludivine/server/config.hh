@@ -28,6 +28,7 @@ struct Config {
     };
 
     const char *title = nullptr;
+    const char *contact = nullptr;
     const char *url = nullptr;
 
     HeapArray<PageInfo> pages;

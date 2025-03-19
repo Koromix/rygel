@@ -43,7 +43,7 @@ Nous utilisons un système de chiffrement end-to-end pour assurer la sécurité 
 Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.
 
 L’équipe de {{ TITLE }}
-contact@ldv-recherche.fr)",
+{{ CONTACT }})",
 
     R"(<html><body>
 <p>Bienvenue !</p>
@@ -62,7 +62,7 @@ contact@ldv-recherche.fr)",
 <p>Nous utilisons un système de chiffrement end-to-end pour assurer la sécurité et l’anonymat de vos données. Nous ne serons donc <b>pas en mesure de vous renvoyer un nouveau lien de connexion</b> en cas de perte de celui-ci.</p>
 <p>Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.</p>
 <p><i>L’équipe de {{ TITLE }}</i><br>
-<a href="mailto:contact@ldv-recherche.fr">contact@ldv-recherche.fr</a></p>
+<a href="mailto:{{ CONTACT }}">{{ CONTACT }}</a></p>
 </body></html>)",
 
     {}
@@ -78,21 +78,21 @@ Pour vous reconnecter, nous vous invitons à utiliser le lien de connexion initi
 
 Pour rappel, nous utilisons un système de chiffrement complexe pour assurer la sécurité et l'anonymat de vos données. Nous ne sommes donc pas en mesure de vous renvoyer un nouveau lien de connexion en cas de perte de celui-ci.
 
-Si vous rencontrez un problème, vous pouvez contacter l'équipe de {{ TITLE }} : contact@ldv-recherche.fr
+Si vous rencontrez un problème, vous pouvez contacter l'équipe de {{ TITLE }} : {{ CONTACT }}
 
 Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.
 
 L'équipe de {{ TITLE }}
-contact@ldv-recherche.fr)",
+{{ CONTACT }})",
     R"(<html><body>
 <p>Bonjour,</p>
 <p>Un compte {{ TITLE }} existe déjà avec cette adresse email.</p>
 <p><b>Pour vous reconnecter, nous vous invitons à utiliser le lien de connexion initial reçu par mail lors de la création de votre compte. Vous l’avez peut-être même enregistré sur votre ordinateur/téléphone/tablette.</b></p>
 <p>Pour rappel, nous utilisons un système de chiffrement complexe pour assurer la sécurité et l’anonymat de vos données. Nous ne sommes donc pas en mesure de vous renvoyer un nouveau lien de connexion en cas de perte de celui-ci.
-<p>Si vous rencontrez un problème, vous pouvez contacter l’équipe de {{ TITLE }} : <a href="mailto:contact@ldv-recherche.fr">contact@ldv-recherche.fr</a></p>
+<p>Si vous rencontrez un problème, vous pouvez contacter l’équipe de {{ TITLE }} : <a href="mailto:{{ CONTACT }}">{{ CONTACT }}</a></p>
 <p>Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.</p>
 <p><i>L’équipe de {{ TITLE }}</i><br>
-<a href="mailto:contact@ldv-recherche.fr">contact@ldv-recherche.fr</a></p>
+<a href="mailto:{{ CONTACT }}">{{ CONTACT }}</a></p>
 </body></html>)",
     {}
 };
@@ -152,6 +152,8 @@ static Span<const char> PatchText(Span<const char> text, const char *email, cons
 
         if (key == "TITLE") {
             writer->Write(config.title);
+        } else if (key == "CONTACT") {
+            writer->Write(config.contact);
         } else if (key == "EMAIL") {
             writer->Write(email);
         } else if (key == "URL") {
