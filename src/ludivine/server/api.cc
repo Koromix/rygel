@@ -69,9 +69,31 @@ contact@ldv-recherche.fr)",
 };
 
 static const smtp_MailContent ExistingUser = {
-    "Tentative de connexion à {{ TITLE }}",
-    R"(Un utilisateur a tenté de se connecter sur votre compte :\n\n{{ EMAIL }})",
-    R"(Un utilisateur a tenté de se connecter sur votre compte :<br><br><b>{{ EMAIL }}</b>)",
+    "Nouvelle connexion à {{ TITLE }}",
+    R"(Bonjour,
+
+Un compte {{ TITLE }} existe déjà avec cette adresse email.
+
+Pour vous reconnecter, nous vous invitons à utiliser le lien de connexion initial reçu par mail lors de la création de votre compte. Vous l'avez peut-être même enregistré sur votre ordinateur/téléphone/tablette.
+
+Pour rappel, nous utilisons un système de chiffrement complexe pour assurer la sécurité et l'anonymat de vos données. Nous ne sommes donc pas en mesure de vous renvoyer un nouveau lien de connexion en cas de perte de celui-ci.
+
+Si vous rencontrez un problème, vous pouvez contacter l'équipe de {{ TITLE }} : contact@ldv-recherche.fr
+
+Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.
+
+L'équipe de {{ TITLE }}
+contact@ldv-recherche.fr)",
+    R"(<html><body>
+<p>Bonjour,</p>
+<p>Un compte {{ TITLE }} existe déjà avec cette adresse email.</p>
+<p><b>Pour vous reconnecter, nous vous invitons à utiliser le lien de connexion initial reçu par mail lors de la création de votre compte. Vous l’avez peut-être même enregistré sur votre ordinateur/téléphone/tablette.</b></p>
+<p>Pour rappel, nous utilisons un système de chiffrement complexe pour assurer la sécurité et l’anonymat de vos données. Nous ne sommes donc pas en mesure de vous renvoyer un nouveau lien de connexion en cas de perte de celui-ci.
+<p>Si vous rencontrez un problème, vous pouvez contacter l’équipe de {{ TITLE }} : <a href="mailto:contact@ldv-recherche.fr">contact@ldv-recherche.fr</a></p>
+<p>Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.</p>
+<p><i>L’équipe de {{ TITLE }}</i><br>
+<a href="mailto:contact@ldv-recherche.fr">contact@ldv-recherche.fr</a></p>
+</body></html>)",
     {}
 };
 
