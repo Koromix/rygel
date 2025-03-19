@@ -4097,6 +4097,8 @@ bool RedirectLogToWindowsEvents(const char *name);
 // Progress
 // ------------------------------------------------------------------------
 
+#if !defined(__wasi__)
+
 struct ProgressNode;
 
 struct ProgressInfo {
@@ -4154,6 +4156,8 @@ private:
 
 void SetProgressHandler(const std::function<ProgressFunc> &func);
 void DefaultProgressHandler(Span<const ProgressInfo> bars);
+
+#endif
 
 // ------------------------------------------------------------------------
 // System
@@ -4301,7 +4305,9 @@ struct VolumeInfo {
     int64_t available;
 };
 
+#if !defined(__wasm__)
 bool GetVolumeInfo(const char *dirname, VolumeInfo *out_volume);
+#endif
 
 enum class EnumResult {
     Success,
@@ -4827,7 +4833,9 @@ class StreamReader {
         bool eof = false;
     } source;
 
+#if !defined(__wasm__)
     std::mutex mutex;
+#endif
     StreamDecoder *decoder = nullptr;
 
     int64_t raw_len = -1;
@@ -5032,7 +5040,9 @@ class StreamWriter {
         bool vt100;
     } dest;
 
+#if !defined(__wasm__)
     std::mutex mutex;
+#endif
     StreamEncoder *encoder = nullptr;
 
     int64_t raw_written = 0;

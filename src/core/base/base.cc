@@ -1996,6 +1996,8 @@ bool RedirectLogToWindowsEvents(const char *name)
 // Progress
 // ------------------------------------------------------------------------
 
+#if !defined(__wasi__)
+
 struct ProgressState {
     char text[RG_PROGRESS_TEXT_SIZE];
 
@@ -2256,6 +2258,8 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
 
     frame++;
 }
+
+#endif
 
 // ------------------------------------------------------------------------
 // System
@@ -2887,6 +2891,8 @@ bool SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t, uint3
     return valid;
 }
 
+#if !defined(__wasm__)
+
 bool GetVolumeInfo(const char *dirname, VolumeInfo *out_volume)
 {
     struct statvfs vfs;
@@ -2900,6 +2906,8 @@ bool GetVolumeInfo(const char *dirname, VolumeInfo *out_volume)
 
     return true;
 }
+
+#endif
 
 EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func)
@@ -7321,7 +7329,9 @@ void StreamReader::SetDescriptorOwned(bool owned)
 
 Size StreamReader::Read(Span<uint8_t> out_buf)
 {
+#if !defined(__wasm__)
     std::lock_guard<std::mutex> lock(mutex);
+#endif
 
     if (error) [[unlikely]]
         return -1;
@@ -7736,7 +7746,9 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
 
 bool StreamWriter::Flush()
 {
+#if !defined(__wasm__)
     std::lock_guard<std::mutex> lock(mutex);
+#endif
 
     if (error) [[unlikely]]
         return false;
@@ -7784,7 +7796,9 @@ void StreamWriter::SetDescriptorOwned(bool owned)
 
 bool StreamWriter::Write(Span<const uint8_t> buf)
 {
+#if !defined(__wasm__)
     std::lock_guard<std::mutex> lock(mutex);
+#endif
 
     if (error) [[unlikely]]
         return false;
