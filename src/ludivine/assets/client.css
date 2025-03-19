@@ -746,14 +746,12 @@ form {
 }
 
 #sos {
-    position: fixed;
-    right: 16px;
-    bottom: 16px;
-    width: 52px;
-    height: 52px;
+    width: 30px;
+    height: 30px;
+    margin-right: 12px;
+    box-sizing: border-box;
     border-radius: 50%;
-    font-weight: bold;
-    z-index: 999;
+    font-size: 0.75em;
 }
 #sos::before {
     content: ' ';
@@ -770,7 +768,7 @@ form {
     display: flex;
     position: absolute;
     left: 0;
-    top: 0;
+    top: -1px;
     width: 100%;
     height: 100%;
     background: #e22e22;
@@ -786,12 +784,7 @@ form {
 }
 
 @media screen and (max-width: 960px) {
-    #sos {
-        bottom: 12px;
-        right: 12px;
-        width: 44px;
-        height: 44px;
-    }
+    #sos { margin-right: 0; }
 }
 
 #help {

@@ -661,8 +661,6 @@ function renderApp(el, fullscreen) {
                     <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">contact@ldv-recherche.fr</a>
                 </div>
             </footer>
-
-            ${isLogged() ? html`<a id="sos" @click=${UI.wrap(e => sos(event))}></a>` : ''}
         `, root_el);
     }
 }
@@ -795,6 +793,9 @@ async function runProfile() {
             <a href="/profil" class="active">Profil</a>
             <a href="/participer">Études</a>
             ${cache.project != null ? html`<a href=${'/etude/' + cache.project.key}>${cache.project.title}</a>` : ''}
+
+            <div style="flex: 1;"></div>
+            <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
         </div>
 
         <div class="tab">
@@ -875,6 +876,9 @@ async function runDashboard() {
             <a href="/profil">Profil</a>
             <a href="/participer" class="active">Études</a>
             ${cache.project != null ? html`<a href=${'/etude/' + cache.project.key}>${cache.project.title}</a>` : ''}
+
+            <div style="flex: 1;"></div>
+            <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
         </div>
 
         <div class="tab">
@@ -1063,6 +1067,9 @@ async function runConsent() {
             <a href="/profil">Profil</a>
             <a href="/participer">Études</a>
             <a class="active">${project.title}</a>
+
+            <div style="flex: 1;"></div>
+            <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
         </div>
 
         <div class="tab">
@@ -1104,6 +1111,9 @@ async function runProject() {
                 <a href="/profil">Profil</a>
                 <a href="/participer">Études</a>
                 <a class="active">${project.title}</a>
+
+                <div style="flex: 1;"></div>
+                <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
             </div>
 
             <div class="tab" style="flex: 1;">
@@ -1473,6 +1483,9 @@ async function runDiary() {
             <a href="/participer">Études</a>
             ${cache.project != null ? html`<a href=${'/etude/' + cache.project.key}>${cache.project.title}</a>` : ''}
             <a href=${makeURL()} class="active">Mon journal</a>
+
+            <div style="flex: 1;"></div>
+            <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
         </div>
 
         <div class="tab">
