@@ -445,6 +445,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
         color: #364b9b;
     }
     & > .circle {
+        margin: 0.5em 0;
         align-self: center;
     }
 }
@@ -452,6 +453,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
 @media screen and (max-width: 960px) {
     .summary {
         & > img { display: none; }
+        & > div { align-content: center; }
         & > div > :not(.header) { display: none; }
     }
 }
