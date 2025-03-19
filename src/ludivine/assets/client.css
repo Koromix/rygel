@@ -735,7 +735,6 @@ form {
     }
 
     & .tip {
-        display: flex;
         font-size: 0.9em;
         font-style: italic;
         margin-top: 0.4em;
