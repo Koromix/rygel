@@ -39,6 +39,7 @@ const CHANNEL_NAME = 'ludivine';
 
 const DATA_LOCK = 'data';
 const RUN_LOCK = 'run';
+const REMIND_LOCK = 'remind';
 
 Object.assign(T, {
     cancel: 'Annuler',
@@ -1086,7 +1087,7 @@ async function runProject() {
                                      WHERE s.id = ?`, cache.study.id);
 
     // Best effort, don't wait
-    syncNotifications();
+    syncEvents();
 
     await syncContext(cache.page, () => {
         let page = cache.page;
@@ -1124,69 +1125,71 @@ async function runProject() {
     }
 }
 
-async function syncNotifications() {
+async function syncEvents() {
     let project = cache.project;
     let study = cache.study;
     let tests = cache.tests;
 
-    let sync = tests.some(test => test.notify != test.status);
+    await navigator.locks.request(REMIND_LOCK, async () => {
+        let sync = tests.some(test => test.notify != test.status);
 
-    if (!sync)
-        return;
+        if (!sync)
+            return;
 
-    // Make copy in case it's refreshed while this runs
-    tests = tests.slice();
+        // Make copy in case it's refreshed while this runs
+        tests = tests.slice();
 
-    let start = LocalDate.fromJSDate(study.start);
-    let offset = -(new Date).getTimezoneOffset();
+        let start = LocalDate.fromJSDate(study.start);
+        let offset = -(new Date).getTimezoneOffset();
 
-    let events = new Map;
+        let events = new Map;
 
-    for (let page of project.tests) {
-        let schedule = page.schedule?.toString?.();
-        let test = tests.find(test => test.key == page.key);
+        for (let page of project.tests) {
+            let schedule = page.schedule?.toString?.();
+            let test = tests.find(test => test.key == page.key);
 
-        if (!schedule)
-            continue;
+            if (!schedule)
+                continue;
 
-        let evt = events.get(schedule);
+            let evt = events.get(schedule);
 
-        if (evt == null) {
-            evt = {
-                empty: 0,
-                draft: 0,
-                done: 0
-            };
+            if (evt == null) {
+                evt = {
+                    empty: 0,
+                    draft: 0,
+                    done: 0
+                };
 
-            events.set(schedule, evt);
+                events.set(schedule, evt);
+            }
+
+            evt[test.status]++;
         }
 
-        evt[test.status]++;
-    }
+        // Simplify events
+        events = Array.from(Util.map(events.entries(), ([date, evt]) => ({
+            date: date,
+            ...evt
+        })));
+        events = events.filter(evt => evt.empty || evt.draft);
+        events = events.map(evt => ({
+            date: evt.date,
+            partial: evt.draft > 0 || evt.done > 0
+        }));
 
-    // Simplify events
-    events = Array.from(Util.map(events.entries(), ([date, evt]) => ({
-        date: date,
-        ...evt
-    })));
-    events = events.filter(evt => evt.empty || evt.draft);
-    events = events.map(evt => ({
-        date: evt.date,
-        partial: evt.draft > 0 || evt.done > 0
-    }));
+        await Net.post('/api/remind', {
+            uid: session.uid,
+            study: project.index,
+            title: project.title,
+            start: start,
+            events: events,
+            offset: offset
+        });
 
-    await Net.post('/api/remind', {
-        uid: session.uid,
-        study: project.index,
-        title: project.title,
-        start: start,
-        events: events,
-        offset: offset
-    });
-
-    await db.transaction(async t => {
-        for (let test of tests)
-            await t.exec('UPDATE tests SET notify = ? WHERE id = ?', test.status, test.id);
+        await db.transaction(async t => {
+            for (let test of tests)
+                await t.exec('UPDATE tests SET notify = ? WHERE id = ?', test.status, test.id);
+        });
     });
 }
 
