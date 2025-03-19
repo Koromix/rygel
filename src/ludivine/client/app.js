@@ -562,12 +562,12 @@ async function run(changes = {}, push = false) {
         window.scrollTo(0, 0);
 }
 
-function makeURL(values = {}) {
+function makeURL(changes = {}) {
     let path = '/';
 
-    values = Object.assign({}, route, values);
+    let values = Object.assign({}, route, changes);
 
-    switch (route.mode) {
+    switch (values.mode) {
         case 'profile': { path += 'profil'; } break;
 
         case 'dashboard': { path += 'participer'; } break;
@@ -575,20 +575,20 @@ function makeURL(values = {}) {
         case 'study': {
             path += 'etude';
 
-            if (route.project != null) {
-                path += '/' + route.project;
-                if (route.page != null)
-                    path += route.page;
-                if (route.section != null)
-                    path += '/' + route.section;
+            if (values.project != null) {
+                path += '/' + values.project;
+                if (values.page != null)
+                    path += values.page;
+                if (values.section != null)
+                    path += '/' + values.section;
             }
         } break;
 
         case 'diary': {
             path += 'journal';
 
-            if (route.entry != null)
-                path += '/' + route.entry;
+            if (values.entry != null)
+                path += '/' + values.entry;
         } break;
     }
 
@@ -792,7 +792,7 @@ async function runProfile() {
         <div class="tabbar">
             <a href="/profil" class="active">Profil</a>
             <a href="/participer">Études</a>
-            ${cache.project != null ? html`<a href=${'/etude/' + cache.project.key}>${cache.project.title}</a>` : ''}
+            ${cache.project != null ? html`<a href=${makeURL({ mode: 'study' })}>${cache.project.title}</a>` : ''}
 
             <div style="flex: 1;"></div>
             <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
@@ -875,7 +875,7 @@ async function runDashboard() {
         <div class="tabbar">
             <a href="/profil">Profil</a>
             <a href="/participer" class="active">Études</a>
-            ${cache.project != null ? html`<a href=${'/etude/' + cache.project.key}>${cache.project.title}</a>` : ''}
+            ${cache.project != null ? html`<a href=${makeURL({ mode: 'study' })}>${cache.project.title}</a>` : ''}
 
             <div style="flex: 1;"></div>
             <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
