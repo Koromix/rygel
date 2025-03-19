@@ -358,20 +358,20 @@ function go(url = null, push = true) {
     switch (mode) {
         case 'profil': { changes.mode = 'profile'; } break;
 
-        case 'participer': {
-            changes.mode = 'study';
+        case 'participer': { changes.mode = 'dashboard'; } break;
 
+        case 'etude': {
             let project = PROJECTS.find(project => project.key == parts[0]);
 
-            if (project != null) {
-                changes.project = parts.shift();
-                changes.page = '/' + parts.join('/');
-                changes.section = null;
-            } else {
-                changes.project = null;
-                changes.page = null;
-                changes.section = null;
+            if (project == null) {
+                changes.mode = 'dashboard';
+                break;
             }
+
+            changes.mode = 'study';
+            changes.project = parts.shift();
+            changes.page = '/' + parts.join('/');
+            changes.section = null;
         } break;
 
         case 'journal': {
@@ -519,29 +519,27 @@ async function run(changes = {}, push = false) {
         switch (route.mode) {
             case 'profile': { await runProfile(); } break;
 
+            case 'dashboard': { await runDashboard(); } break;
+
             case 'study': {
-                if (cache.project != null) {
-                    if (cache.study != null) {
-                        await runProject();
-                    } else {
-                        await runConsent();
-                    }
+                if (cache.study != null) {
+                    await runProject();
                 } else {
-                    await runDashboard();
+                    await runConsent();
+                }
+
+                // Update route values
+                route.project = cache.project?.key;
+                if (cache.page != null) {
+                    route.page = cache.page.key;
+                    route.section = cache.section;
+                } else {
+                    route.page = null;
+                    route.section = null;
                 }
             } break;
 
             case 'diary': { await runDiary(); } break;
-        }
-
-        // Update route values
-        route.project = cache.project?.key;
-        if (cache.page != null) {
-            route.page = cache.page.key;
-            route.section = cache.section;
-        } else {
-            route.page = null;
-            route.section = null;
         }
 
         // Update URL
@@ -572,8 +570,10 @@ function makeURL(values = {}) {
     switch (route.mode) {
         case 'profile': { path += 'profil'; } break;
 
+        case 'dashboard': { path += 'participer'; } break;
+
         case 'study': {
-            path += 'participer';
+            path += 'etude';
 
             if (route.project != null) {
                 path += '/' + route.project;
