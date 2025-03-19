@@ -772,7 +772,7 @@ form {
     display: flex;
     position: absolute;
     left: 0;
-    top: -1px;
+    top: 0;
     width: 100%;
     height: 100%;
     background: #e22e22;
@@ -784,7 +784,7 @@ form {
 }
 #sos:hover {
     text-decoration: none;
-    transform: scale(1.1);
+    transform: scale(1.12);
 }
 
 @media screen and (max-width: 960px) {
@@ -792,6 +792,7 @@ form {
         width: 24px;
         height: 24px;
         margin-right: 0;
+        font-size: 0.6em;
     }
 }
 
