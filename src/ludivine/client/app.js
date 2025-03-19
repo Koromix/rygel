@@ -801,7 +801,7 @@ async function runProfile() {
                 <div class="box profile">
                     <div class="header">
                         Profil
-                        ${UI.safe('votre profil')}
+                        ${UI.safe('Votre avatar est privé.')}
                     </div>
                     <img class="avatar" src=${identity?.picture ?? ASSETS['ui/user']} alt=""/>
 
@@ -827,7 +827,7 @@ async function runProfile() {
                     <div class="box">
                         <div class="header">
                             Mon journal
-                            ${UI.safe('votre journal')}
+                            ${UI.safe('Les entrées de votre journal sont privées.')}
                         </div>
                         ${entries.map(entry => html`
                             <div class="diary">

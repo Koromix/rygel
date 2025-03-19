@@ -389,6 +389,9 @@ function isDialogOpen() {
 function popup(e, content) {
     closePopup();
 
+    // Prevent default action such as label click if the trigger is inside a label 
+    e.preventDefault();
+
     if (!init_popups) {
         window.addEventListener('keydown', e => {
             if (e.keyCode == 27)
@@ -482,10 +485,10 @@ function closePopup() {
         current_popup.reject();
 }
 
-function safe(type) {
+function safe(title) {
     let content = html`
         <div style="width: 320px;">
-            <p>Les données de ${type} sont privées.
+            <p>${title}
             <p>Les <b>chercheurs n’y ont pas accès</b> et ces données ne seront pas utilisées dans les différentes études ni même consultables par nos chercheurs.
         </div>
     `;

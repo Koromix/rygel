@@ -515,7 +515,11 @@ function NetworkWidget(app, mod, world) {
                     <div class="tab">
                         <div class="box">
                             <label>
-                                <span>Quels sont les noms des personnes que vous souhaitez ajouter ?</span>
+                                <span>
+                                    Quels sont les noms/libellés des personnes que vous souhaitez ajouter ?
+                                    ${UI.safe('Les noms des personnes sont privées.')}
+                                </span>
+
                                 <textarea rows="4" @input=${e => split_names(e.target.value)}></textarea>
                                 <div class="tip">Ajoutez plusieurs personnes à la fois en séparant les noms/libellés (ex : « Maman », « Pierre », « Mitchouk ») par des espaces, des virgules ou des nouvelles lignes.</div>
                             </label>
