@@ -25,7 +25,7 @@ function build(form, values) {
 
     form.part(() => {
         form.binary("q1", "Est-ce que l’événement qui vous a conduit à participer à cette étude concerne une situation de longue durée ayant impliqué de la violence physique et / ou morale ?", {
-            help: "Exemples : relation abusive, traite humaine, esclavagisme, secte, inceste, situations dans lesquels les secours ont mis plusieurs jours à intervenir, etc."
+            help: "Exemples : relation abusive, traite humaine, esclavagisme, secte, inceste, situations dans lesquels les secours ont mis plusieurs jours à intervenir, etc."
         })
 
         if (values.q1 == 1) {
@@ -38,7 +38,7 @@ function build(form, values) {
                 [6, "Situation dans laquelle les secours ont mis plusieurs jours à intervenir"],
                 [99, "Autre"]
             ], {
-                help: html`"Non obligatoire. Cela peut être difficile, n’hésitez pas à appuyer sur le <b>bouton « SOS »</b> si vous en avez besoin, ou rapprochez-vous d’une personne ressource`
+                help: html`Non obligatoire. Cela peut être difficile, n’hésitez pas à appuyer sur le <b>bouton « SOS »</b> si vous en avez besoin, ou rapprochez-vous d’une personne ressource.`
             })
 
             if (values.q1a == 99)
