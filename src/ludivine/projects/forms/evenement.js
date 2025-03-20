@@ -187,6 +187,24 @@ function build(form, values) {
                 }
             }
         })
+
+        form.part(() => {
+            let singular = (values.q13 == 1)
+
+            form.binary("q17", `Connaissiez-vous ${singular ? "l’agresseur" : "les agresseurs"} ?`)
+
+            if (values.q17 == 1) {
+                form.multiCheck("q17a", `De quel cercle de connaissance ${singular ? "faisait-il" : "faisaient-ils"} partie ?`, [
+                    [1, "Cercle familial"],
+                    [2, "Amis"],
+                    [3, "Collègues"],
+                    [99, "Autre"]
+                ], { help: "Plusieurs réponses possibles" })
+
+                if (values.q17a?.includes?.(99))
+                    form.text("?q17b", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
+            }
+        })
     }
 
     form.part(() => {
