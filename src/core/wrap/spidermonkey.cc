@@ -27,7 +27,11 @@ namespace RG {
 static JSClass GlobalClass = {
     .name = "Global",
     .flags = JSCLASS_GLOBAL_FLAGS,
-    .cOps = &JS::DefaultGlobalClassOps
+    .cOps = &JS::DefaultGlobalClassOps,
+
+    .spec = nullptr,
+    .ext = nullptr,
+    .oOps = nullptr
 };
 
 static bool InitEngine()
