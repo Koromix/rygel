@@ -134,8 +134,6 @@ async function openVault(vid, key, lock) {
                     DROP TABLE events;
                     DROP TABLE snapshots;
 
-                    PRAGMA foreign_keys = 0;
-
                     DROP INDEX studies_k;
                     ALTER TABLE studies RENAME TO studies_BAK;
 
@@ -151,8 +149,6 @@ async function openVault(vid, key, lock) {
                         SELECT id, key, start, 0 FROM studies_BAK;
 
                     DROP TABLE studies_BAK;
-
-                    PRAGMA foreign_keys = 1;
                 `);
             } // fallthrough
 
