@@ -25,6 +25,13 @@ struct DefaultMapEntryGCPolicy {
     return GCPolicy<Key>::traceWeak(trc, key) &&
            GCPolicy<Value>::traceWeak(trc, value);
   }
+  static bool needsSweep(JSTracer* trc, const Key* key, const Value* value) {
+    // This is like a const version of the |traceWeak| method. It has the sense
+    // of the return value reversed and does not mutate keys/values. Used during
+    // incremental sweeping by the WeakCache specializations for maps and sets.
+    return GCPolicy<Key>::needsSweep(trc, key) ||
+           GCPolicy<Value>::needsSweep(trc, value);
+  }
 };
 
 // A GCHashMap is a GC-aware HashMap, meaning that it has additional trace
@@ -62,7 +69,8 @@ class GCHashMap : public js::HashMap<Key, Value, HashPolicy, AllocPolicy> {
  public:
   using EntryGCPolicy = MapEntryGCPolicy;
 
-  explicit GCHashMap(AllocPolicy a = AllocPolicy()) : Base(std::move(a)) {}
+  explicit GCHashMap() : Base(AllocPolicy()) {}
+  explicit GCHashMap(AllocPolicy a) : Base(std::move(a)) {}
   explicit GCHashMap(size_t length) : Base(length) {}
   GCHashMap(AllocPolicy a, size_t length) : Base(std::move(a), length) {}
 
@@ -86,6 +94,16 @@ class GCHashMap : public js::HashMap<Key, Value, HashPolicy, AllocPolicy> {
         e.removeFront();
       }
     }
+  }
+
+  bool needsSweep(JSTracer* trc) const {
+    for (auto r = this->all(); !r.empty(); r.popFront()) {
+      if (MapEntryGCPolicy::needsSweep(trc, &r.front().key(),
+                                       &r.front().value())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // GCHashMap is movable
@@ -264,6 +282,15 @@ class GCHashSet : public js::HashSet<T, HashPolicy, AllocPolicy> {
         e.removeFront();
       }
     }
+  }
+
+  bool needsSweep(JSTracer* trc) const {
+    for (auto r = this->all(); !r.empty(); r.popFront()) {
+      if (GCPolicy<T>::needsSweep(trc, &r.front())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // GCHashSet is movable

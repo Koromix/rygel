@@ -60,7 +60,9 @@
     SUBCATEGORY(JS, JS_Baseline, "JIT (baseline)") \
     SUBCATEGORY(JS, JS_IonMonkey, "JIT (ion)") \
     SUBCATEGORY(JS, JS_Builtin, "Builtin API") \
-    SUBCATEGORY(JS, JS_Wasm, "Wasm") \
+    SUBCATEGORY(JS, JS_WasmIon, "Wasm (ion)") \
+    SUBCATEGORY(JS, JS_WasmBaseline, "Wasm (baseline)") \
+    SUBCATEGORY(JS, JS_WasmOther, "Wasm (other)") \
   END_CATEGORY \
   BEGIN_CATEGORY(GCCC, "GC / CC", "orange") \
     SUBCATEGORY(GCCC, GCCC, "Other") \
@@ -132,6 +134,9 @@
   END_CATEGORY \
   BEGIN_CATEGORY(REMOTE_PROTOCOL, "Remote-Protocol", "grey") \
     SUBCATEGORY(REMOTE_PROTOCOL, REMOTE_PROTOCOL, "Other") \
+  END_CATEGORY \
+  BEGIN_CATEGORY(SANDBOX, "Sandbox", "grey") \
+    SUBCATEGORY(SANDBOX, SANDBOX, "Other") \
   END_CATEGORY
 
 // clang-format on

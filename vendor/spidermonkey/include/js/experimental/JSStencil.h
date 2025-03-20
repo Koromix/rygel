@@ -47,8 +47,6 @@ struct PreallocatedCompilationGCOutput;
 
 namespace JS {
 
-struct CompilationStorage;
-
 using Stencil = js::frontend::CompilationStencil;
 using FrontendContext = js::FrontendContext;
 
@@ -56,7 +54,7 @@ using FrontendContext = js::FrontendContext;
 //
 // Off-thread APIs can allocate this instance off main thread, and pass it back
 // to the main thread, in order to reduce the main thread allocation.
-struct InstantiationStorage {
+struct JS_PUBLIC_API InstantiationStorage {
  private:
   // Owned CompilationGCOutput.
   //

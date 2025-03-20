@@ -191,14 +191,6 @@ class JS_PUBLIC_API RealmCreationOptions {
     return *this;
   }
 
-#ifdef ENABLE_JSON_PARSE_WITH_SOURCE
-  bool getJSONParseWithSource() const { return jsonParseWithSource; }
-  RealmCreationOptions& setJSONParseWithSource(bool flag) {
-    jsonParseWithSource = flag;
-    return *this;
-  }
-#endif
-
   // This flag doesn't affect JS engine behavior.  It is used by Gecko to
   // mark whether content windows and workers are "Secure Context"s. See
   // https://w3c.github.io/webappsec-secure-contexts/
@@ -260,9 +252,6 @@ class JS_PUBLIC_API RealmCreationOptions {
   bool coopAndCoep_ = false;
   bool streams_ = false;
   bool toSource_ = false;
-#ifdef ENABLE_JSON_PARSE_WITH_SOURCE
-  bool jsonParseWithSource = false;
-#endif
 
   bool secureContext_ = false;
   bool freezeBuiltins_ = false;

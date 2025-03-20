@@ -60,7 +60,8 @@ class JS_PUBLIC_API AutoRequireNoGC;
   MACRO(double, double, Float64)                  \
   MACRO(uint8_t, js::uint8_clamped, Uint8Clamped) \
   MACRO(int64_t, int64_t, BigInt64)               \
-  MACRO(uint64_t, uint64_t, BigUint64)
+  MACRO(uint64_t, uint64_t, BigUint64)            \
+  MACRO(uint16_t, js::float16, Float16)
 
 /*
  * JS_New(type)Array:
@@ -708,6 +709,11 @@ template <typename T>
 struct BarrierMethods<T, EnableIfABOVType<T>> {
   static gc::Cell* asGCThingOrNull(T view) {
     return reinterpret_cast<gc::Cell*>(view.asObjectUnbarriered());
+  }
+  static void writeBarriers(T* viewp, T prev, T next) {
+    BarrierMethods<JSObject*>::writeBarriers(viewp->addressOfObject(),
+                                             prev.asObjectUnbarriered(),
+                                             next.asObjectUnbarriered());
   }
   static void postWriteBarrier(T* viewp, T prev, T next) {
     BarrierMethods<JSObject*>::postWriteBarrier(viewp->addressOfObject(),

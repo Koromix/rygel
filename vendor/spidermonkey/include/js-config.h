@@ -66,12 +66,12 @@
 
 /* Experimental WASM features */
 /* #undef ENABLE_WASM_EXCEPTIONS */
-#define ENABLE_WASM_FUNCTION_REFERENCES 1
+/* #undef ENABLE_WASM_FUNCTION_REFERENCES */
 #define ENABLE_WASM_GC 1
 /* #undef ENABLE_WASM_SIMD */
 
 /* MOZILLA JSAPI version number components */
-#define MOZJS_MAJOR_VERSION 124
+#define MOZJS_MAJOR_VERSION 129
 #define MOZJS_MINOR_VERSION 0
 
 #endif /* js_config_h */

@@ -383,6 +383,9 @@ enum JSWhyMagic {
   /** arguments object can't be created because environment is dead. */
   JS_MISSING_ARGUMENTS,
 
+  /** exception value thrown when interrupting irregexp */
+  JS_INTERRUPT_REGEXP,
+
   /** for local use */
   JS_GENERIC_MAGIC,
 
@@ -663,7 +666,20 @@ class alignas(8) Value {
   }
 #endif
 
+  void changeGCThingPayload(js::gc::Cell* cell) {
+    MOZ_ASSERT(js::gc::IsCellPointerValid(cell));
+#ifdef DEBUG
+    assertTraceKindMatches(cell);
+#endif
+    asBits_ = bitsFromTagAndPayload(toTag(), PayloadType(cell));
+    MOZ_ASSERT(toGCThing() == cell);
+  }
+
  private:
+#ifdef DEBUG
+  void assertTraceKindMatches(js::gc::Cell* cell) const;
+#endif
+
   void setObjectNoCheck(JSObject* obj) {
     asBits_ = bitsFromTagAndPayload(JSVAL_TAG_OBJECT, PayloadType(obj));
   }
@@ -1330,6 +1346,10 @@ template <>
 struct BarrierMethods<JS::Value> {
   static gc::Cell* asGCThingOrNull(const JS::Value& v) {
     return v.isGCThing() ? v.toGCThing() : nullptr;
+  }
+  static void writeBarriers(JS::Value* v, const JS::Value& prev,
+                            const JS::Value& next) {
+    JS::HeapValueWriteBarriers(v, prev, next);
   }
   static void postWriteBarrier(JS::Value* v, const JS::Value& prev,
                                const JS::Value& next) {
