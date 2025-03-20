@@ -22,18 +22,18 @@ function build(form, values) {
 
     form.part(() => {
         let domaines = [
-            [1, "Personnel", "évènements liés à votre vie personnelle"],
-            [2, "Travail", "évènements liés à votre travail"],
-            [3, "Éducation", "évènements liés au plan éducatif"],
-            [4, "Famille", "évènements en lien avec votre famille"],
-            [5, "Vie amoureuse", "évènements survenus dans votre vie amoureuse"],
-            [6, "Autres relations sociales", "évènements liés à vos autres relations sociales"],
-            [7, "En lien avec un animal de compagnie", "évènements en lien avec votre animal de compagnie"],
-            [8, "Loisirs", "évènements liés à vos loisirs"],
-            [9, "Argent / Finances", "évènements en lien avec l'argent et les finances"],
-            [10, "Santé", "évènements en lien avec votre santé"],
-            [11, "Logement / Habitat", "évènements relatifs à votre logement / habitat"],
-            [99, "Autre", "autres évènements survenus"]
+            [1, "Personnel", html`évènements liés <b>à votre vie personnelle</b>`],
+            [2, "Travail", html`évènements liés <b>à votre travail</b>`],
+            [3, "Éducation", html`évènements liés <b>au plan éducatif</b>`],
+            [4, "Famille", html`évènements en lien <b>avec votre famille</b>`],
+            [5, "Vie amoureuse", html`évènements survenus <b>dans votre vie amoureuse</b>`],
+            [6, "Autres relations sociales", html`évènements liés à <b>vos autres relations sociales</b>`],
+            [7, "En lien avec un animal de compagnie", html`évènements en lien <b>avec votre animal de compagnie</b>`],
+            [8, "Loisirs", html`évènements liés <b>à vos loisirs</b>`],
+            [9, "Argent / Finances", html`évènements en lien <b>avec l'argent et les finances</b>`],
+            [10, "Santé", html`évènements en lien <b>avec votre santé</b>`],
+            [11, "Logement / Habitat", html`évènements relatifs <b>à votre logement / habitat</b>`],
+            [99, "Autre", html`<b>autres évènements survenus</b>`]
         ]
 
         form.binary("q1", html`<b>Depuis l’évènement qui vous a amené ici</b>, avez-vous vécu des évènements particulièrement bons pour vous ? Quelque chose qui vous a fait du bien ?`)
