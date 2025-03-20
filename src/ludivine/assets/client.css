@@ -335,7 +335,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     padding: 0.7em 1em;
     background: color-mix(in srgb, var(--background), transparent 60%);
     border-radius: 8px;
-    gap: 2em;
+    gap: 3em;
     align-items: center;
 
     &.draft {
@@ -347,16 +347,24 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
         --button_color: var(--background);
     }
 
-    & > img { width: 100px; }
+    & > .title {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1em;
+        font-weight: bold;
+
+        & > img { width: 150px; }
+    }
     & > .description {
         flex: 1;
         font-size: 0.9em;
         font-style: italic;
+        min-width: 280px;
     }
     & > .progress {
         flex: 1;
         text-align: center;
-        font-size: 0.9em;
         font-style: italic;
     }
 }

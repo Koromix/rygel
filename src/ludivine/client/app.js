@@ -906,17 +906,17 @@ async function runDashboard() {
                             } else {
                                 cls += ' draft';
                             }
+                        } else {
+                            cls += ' unsubscribed';
                         }
 
                         return html`
                             <div class=${cls}>
-                                <img src=${project.picture} alt="" />
-                                <div class="title">Étude ${project.title}</div>
-                                ${study == null ? html`
-                                    <div class="description">
-                                        ${project.description}
-                                    </div>
-                                ` : ''}
+                                <div class="title">
+                                    Étude ${project.title}
+                                    <img src=${project.picture} alt="" />
+                                </div>
+                                ${study == null ? html`<div class="description">${project.description}</div>` : ''}
                                 ${study != null ? html`
                                     <div class="progress">
                                         ${study?.total && !study.progress ? 'Participation acceptée' : ''}
