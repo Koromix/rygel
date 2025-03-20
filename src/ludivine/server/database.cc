@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 11;
+const int DatabaseVersion = 12;
 
 bool MigrateDatabase(sq_Database *db, const char *vault_directory)
 {
@@ -297,9 +297,35 @@ bool MigrateDatabase(sq_Database *db, const char *vault_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 11: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE events RENAME TO events_BAK;
+
+                    CREATE TABLE events (
+                        id INTEGER PRIMARY KEY,
+                        user INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                        study INTEGER NOT NULL,
+                        title TEXT NOT NULL,
+                        start TEXT NOT NULL,
+                        date TEXT NOT NULL,
+                        offset INTEGER NOT NULL,
+                        partial INTEGER CHECK (partial IN (0, 1)) NOT NULL
+                    );
+                    CREATE INDEX events_u ON events (user);
+
+                    INSERT INTO events (id, user, study, title, start, date, offset, partial)
+                        SELECT id, user, study, title, start, date, offset, partial FROM events_BAK
+                        WHERE user IN (SELECT id FROM users);
+
+                    DROP TABLE events_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 11);
+            static_assert(DatabaseVersion == 12);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",
