@@ -67,6 +67,8 @@ function build(form, values) {
     `
 
     form.part(() => {
+        form.output(html`<b>Changement de consigne</b> ! Nous vous demandons maintenant de répondre aux énoncés ci-dessous par rapport à comment vous vous sentez <b>MAINTENANT</b>. N’hésitez pas à regarder la consigne détaillée ci-dessus !`)
+
         q(17, "Je ne me souviens pas de certaines parties de ce qui s'est passé :")
         q(18, "Je n'arrête pas de penser à ce qui s'est passé :")
     })
