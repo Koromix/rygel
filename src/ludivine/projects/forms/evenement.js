@@ -169,7 +169,9 @@ function build(form, values) {
 
     if (values.q13 != 0) {
         form.part(() => {
-            form.binary("q14", "Cet évènement impliquait-il des témoins qui ont délibérément laisser agir l’agresseur ?")
+            let singular = (values.q13 == 1)
+
+            form.binary("q14", `Cet évènement impliquait-il des témoins qui ont délibérément laisser agir ${singular ? "l’agresseur" : "les agresseurs"} ?`)
 
             if (values.q14 == 1) {
                 form.binary("q15", "Connaissiez-vous ces témoins ?")
