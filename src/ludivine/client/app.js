@@ -911,10 +911,7 @@ async function runDashboard() {
                         return html`
                             <div class=${cls}>
                                 <img src=${project.picture} alt="" />
-                                <div class="title">
-                                    <b>Étude n°${project.index}</b><br>
-                                    Étude ${project.title}
-                                </div>
+                                <div class="title">Étude ${project.title}</div>
                                 ${study == null ? html`
                                     <div class="description">
                                         ${project.description}

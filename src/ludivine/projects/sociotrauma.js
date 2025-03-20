@@ -40,9 +40,9 @@ import substances from './forms/substances.js';
 
 const consent = {
     text: html`
-        <p>Dans cette étude, des questions vous seront posées sur votre <b>situation actuelle, vos relations avec vos proches</b> et la société, ainsi que sur votre bien-être psychologique. Il sera également demandé de fournir quelques informations sur l’évènement difficile que vous avez vécu.
-        <p>Une étape clé de cette étude consiste à construire un sociogramme, une <b>représentation visuelle des liens sociaux</b> que vous entretenez avec les personnes qui vous entourent. Ce graphique met en lumière la structure de vos relations interpersonnelles.
-        <p>Des consignes détaillées guideront chacune des <b>6 étapes de l’étude</b>, avec des exercices à réaliser à plusieurs reprises. Des rappels par e-mail et/ou notifications via l’application vous aideront à respecter les échéances. Un calendrier est également disponible depuis votre tableau de bord.
+        <p>L'étude socio-trauma vise à étudier comment, à la suite directe d'un évènement difficile et potentiellement traumatique, vos relations à vos proches et votre bien être psychologique évolue. Cela implique que, pour participer, <b>vous devez avoir vécu un évènement que vous considérez comme difficile il y a moins d'un mois</b>.
+        <p>Dans cette étude, nous vous poserons des questions sur votre situation actuelle, vos relations avec vos proches et la société, ainsi que sur votre bien-être psychologique. Il sera également demandé de fournir quelques informations sur l’évènement difficile que vous avez vécu.
+        <p>Des consignes détaillées guideront chacune des 6 étapes de l’étude, avec des exercices à réaliser à plusieurs reprises. Des rappels par e-mail et/ou notifications via l’application vous aideront à respecter les échéances. Un calendrier est également disponible depuis votre tableau de bord.
         <p>L’étude se déroule <b>entièrement en ligne</b>, sans contact direct avec les autres participants ou les responsables de l’étude. Toutefois, l’investigatrice principale peut être contactée par e-mail pour toute question: Wivine Blekic, <a href="mailto:sociotrauma@ldv-recherche.fr">sociotrauma@ldv-recherche.fr</a>.
         <p>Nous vous invitons à <b>prendre connaissance de la lettre d’information avant de participer</b> à l’étude SocioTrauma. Celle-ci répond aux exigences de la recherche sur la personne humaine et a pour objectif de répondre aux questions que vous pourriez vous poser avant de prendre la décision de participer à la recherche.
     `,
