@@ -1256,9 +1256,9 @@ function renderModule() {
                                 earliest = it.schedule;
                         }
 
-                        if (earliest != null) {
+                        if (earliest != null && earliest > today) {
                             status = niceDate(earliest, true);
-                            cls += (earliest <= today) ? ' draft' : ' disabled';
+                            cls += ' disabled';
                         } else {
                             cls += ' draft';
                         }
@@ -1279,9 +1279,9 @@ function renderModule() {
 
                     if (test.status == 'done') {
                         status = 'Terminé';
-                    } else if (child.schedule != null) {
+                    } else if (child.schedule != null && child.schedule > today) {
                         status = niceDate(child.schedule, true);
-                        cls += (child.schedule <= today) ? ' draft' : ' disabled';
+                        cls += ' disabled';
                     } else {
                         status = 'À compléter';
                         cls += ' draft';
