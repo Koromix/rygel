@@ -140,7 +140,7 @@ function build(form, values) {
             [3, "Je ne sais pas"]
         ])
 
-        if (values.q11 == 1) {
+        if (values.q11 == 2) {
             form.binary("q12", "Connaissiez vous les autres victimes ?")
 
             if (values.q12 == 1) {
