@@ -160,29 +160,34 @@ function build(form, values) {
     form.part(() => {
         form.enumButtons("q13", "Cet évènement impliquait-il un ou plusieurs agresseur(s) ?", [
             [1, "Un agresseur"],
-            [2, "Plusieurs agresseurs"]
-        ])
+            [2, "Plusieurs agresseurs"],
+            [0, "Non applicable"]
+        ], {
+            help: "Sélectionnez « Non applicable » si l’évènement n’impliquait pas d’agresseurs"
+        })
     })
 
-    form.part(() => {
-        form.binary("q14", "Cet évènement impliquait-il des témoins qui ont délibérément laisser agir l’agresseur ?")
+    if (values.q13 != 0) {
+        form.part(() => {
+            form.binary("q14", "Cet évènement impliquait-il des témoins qui ont délibérément laisser agir l’agresseur ?")
 
-        if (values.q14 == 1) {
-            form.binary("q15", "Connaissiez-vous ces témoins ?")
+            if (values.q14 == 1) {
+                form.binary("q15", "Connaissiez-vous ces témoins ?")
 
-            if (values.q15 == 1) {
-                form.multiCheck("q15a", "Qui sont ces témoins ?", [
-                    [1, "Cercle familial"],
-                    [2, "Amis"],
-                    [3, "Collègues"],
-                    [99, "Autre"]
-                ], { help: "Plusieurs réponses possibles" })
+                if (values.q15 == 1) {
+                    form.multiCheck("q15a", "Qui sont ces témoins ?", [
+                        [1, "Cercle familial"],
+                        [2, "Amis"],
+                        [3, "Collègues"],
+                        [99, "Autre"]
+                    ], { help: "Plusieurs réponses possibles" })
 
-                if (values.q15a?.includes?.(99))
-                    form.text("?q15b", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
+                    if (values.q15a?.includes?.(99))
+                        form.text("?q15b", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
+                }
             }
-        }
-    })
+        })
+    }
 
     form.part(() => {
         form.binary("q16", "Cet évènement impliquait-il des témoins qui vous ont porté secours ?")
