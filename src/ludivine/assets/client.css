@@ -462,7 +462,7 @@ button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
     .summary {
         & > img { display: none; }
         & > div { align-content: center; }
-        & > div > :not(.header) { display: none; }
+        & > div > :not(:is(.header, .actions)) { display: none; }
     }
 }
 
