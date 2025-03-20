@@ -1194,13 +1194,13 @@ function renderModule() {
     if (UI.isFullscreen)
         UI.toggleFullscreen(false);
 
-    let today = LocalDate.today();
-
     let project = cache.project;
     let page = cache.page;
 
+    let today = LocalDate.today();
+
     let step = page.chain.findLast(it => it.type == 'module' && it.step != null);
-    let [progress, total] = computeProgress(step ?? project.root);
+    let [progress, total] = computeProgress(step ?? project.root, today);
     let cls = 'summary ' + (progress == total ? 'done' : 'draft');
 
     return html`
@@ -1232,12 +1232,12 @@ function renderModule() {
             <div class="header">${page.level}</div>
             <div class="modules">
                 ${page.modules.map(child => {
-                    let [progress, total] = computeProgress(child);
+                    let [progress, total] = computeProgress(child, today);
 
                     let cls = 'module';
                     let status = null;
 
-                    if (progress == total) {
+                    if (total && progress == total) {
                         cls += ' done';
                         status = 'Terminé';
                     } else if (progress) {
@@ -1331,8 +1331,10 @@ function renderTest() {
     let project = cache.project;
     let page = cache.page;
 
+    let today = LocalDate.today();
+
     let step = page.chain.findLast(it => it.type == 'module' && it.step != null);
-    let [progress, total] = computeProgress(step ?? project.root);
+    let [progress, total] = computeProgress(step ?? project.root, today);
     let cls = 'summary ' + (progress == total ? 'done' : 'draft');
 
     return html`
@@ -1426,19 +1428,23 @@ async function finalizeTest(page, data, results) {
 }
 
 async function exitTest(page) {
+    let today = LocalDate.today();
+
     let next = page;
 
     do {
         next = next.chain[next.chain.length - 2];
-    } while (next != cache.project.root && isComplete(next, [page]));
+    } while (next != cache.project.root && isComplete(next, today, [page]));
 
     await navigateStudy(next);
 }
 
-function isComplete(page, saved = []) {
+function isComplete(page, date, saved = []) {
     for (let child of page.tests) {
         let test = cache.tests.find(test => test.key == child.key);
 
+        if (test.schedule != null && test.schedule > date)
+            continue;
         if (test.status != 'done' && !saved.includes(child))
             return false;
     }
@@ -1446,12 +1452,14 @@ function isComplete(page, saved = []) {
     return true;
 }
 
-function computeProgress(page) {
-    let progress = page.tests.reduce((acc, child) => {
+function computeProgress(page, date) {
+    let tests = page.tests.filter(test => test.schedule == null || test.schedule <= date);
+
+    let progress = tests.reduce((acc, child) => {
         let test = cache.tests.find(test => test.key == child.key);
         return acc + (test.status == 'done');
     }, 0);
-    let total = page.tests.length;
+    let total = tests.length;
 
     return [progress, total];
 }
