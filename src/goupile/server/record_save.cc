@@ -544,7 +544,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                                           RETURNING anchor)",
                                           &stmt, prev_anchor > 0 ? sq_Binding(prev_anchor) : sq_Binding(), tid,
                                           fragment.eid, session->userid, session->username, now,
-                                          fragment.fs,fragment.summary, fragment.data,
+                                          fragment.fs, fragment.summary, fragment.data,
                                           fragment.meta, TagsToJson(fragment.tags, io->Allocator())))
                 return false;
             if (!stmt.GetSingleValue(&new_anchor))
