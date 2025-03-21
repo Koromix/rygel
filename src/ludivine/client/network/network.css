@@ -86,7 +86,7 @@
     top: 12px;
 }
 
-.not_quality {
+.net_quality {
     /*  Keep in sync with QUALITY_COLORS in constants.js */
     --start: #b13737;
     --middle: #efbe48;
