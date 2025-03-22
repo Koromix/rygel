@@ -43,6 +43,7 @@ Options:
         %!..+--raw%!0                      Skip snapshot object and report data hash
 
         %!..+--follow_symlinks%!0          Follow symbolic links (instead of storing them as-is)
+        %!..+--preserve_atime%!0           Do not modify atime if possible (Linux-only)
 
     %!..+-j, --threads threads%!0          Change number of threads
                                    %!D..(default: automatic)%!0)", FelixTarget);
@@ -72,6 +73,8 @@ Options:
                 settings.name = opt.current_value;
             } else if (opt.Test("--follow_symlinks")) {
                 settings.follow_symlinks = true;
+            } else if (opt.Test("--preserve_atime")) {
+                settings.preserve_atime = true;
             } else if (opt.Test("--raw")) {
                 settings.raw = true;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {

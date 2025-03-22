@@ -24,6 +24,7 @@ class rk_Disk;
 struct rk_PutSettings {
     const char *name = nullptr;
     bool follow_symlinks = false;
+    bool preserve_atime = false;
     bool raw = false;
 };
 

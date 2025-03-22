@@ -48,6 +48,8 @@ class PutContext {
 
     ProgressHandle *progress;
 
+    bool preserve_atime = false;
+
     std::atomic_int64_t put_size { 0 };
     std::atomic_int64_t put_stored { 0 };
     std::atomic_int64_t put_entries { 0 };
@@ -58,7 +60,7 @@ class PutContext {
     std::atomic_int big_semaphore { FileBigLimit };
 
 public:
-    PutContext(rk_Disk *disk, sq_Database *db, ProgressHandle *progress);
+    PutContext(rk_Disk *disk, sq_Database *db, ProgressHandle *progress, bool preserve_atime);
 
     PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash, int64_t *out_subdirs = nullptr);
     PutResult PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_size = nullptr);
@@ -84,8 +86,8 @@ static void HashBlake3(rk_BlobType type, Span<const uint8_t> buf, const uint8_t 
     blake3_hasher_finalize(&hasher, out_hash->hash, RG_SIZE(out_hash->hash));
 }
 
-PutContext::PutContext(rk_Disk *disk, sq_Database *db, ProgressHandle *progress)
-    : disk(disk), db(db), salt(disk->GetSalt()), progress(progress),
+PutContext::PutContext(rk_Disk *disk, sq_Database *db, ProgressHandle *progress, bool preserve_atime)
+    : disk(disk), db(db), salt(disk->GetSalt()), progress(progress), preserve_atime(preserve_atime),
       dir_tasks(disk->GetAsync()), file_tasks(disk->GetAsync())
 {
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
@@ -199,7 +201,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 #if defined(__linux__)
             EnumResult ret;
             {
-                int fd = open(pending->dirname, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOATIME);
+                int fd = preserve_atime ? open(pending->dirname, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOATIME) : -1;
 
                 if (fd >= 0) {
                     ret = EnumerateDirectory(fd, pending->dirname, nullptr, -1, callback);
@@ -435,7 +437,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
     StreamReader st;
     {
 #if defined(__linux__)
-        int fd = open(src_filename, O_RDONLY | O_CLOEXEC | O_NOATIME);
+        int fd = preserve_atime ? open(src_filename, O_RDONLY | O_CLOEXEC | O_NOATIME) : -1;
 
         if (fd >= 0) {
             st.Open(fd, src_filename);
@@ -604,7 +606,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader));
 
     ProgressHandle progress("Store");
-    PutContext put(disk, db, &progress);
+    PutContext put(disk, db, &progress, settings.preserve_atime);
 
     // Process snapshot entries
     for (const char *filename: filenames) {
