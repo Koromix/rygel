@@ -8,7 +8,7 @@
 
 ### Rekkord 0.36 (2024-03-22)
 
-- Fix staling and deadlock when restoring many files in `rekkord restore`
+- Fix stalling and deadlock when restoring many files in `rekkord restore`
 
 ### Rekkord 0.35 (2024-12-25)
 
