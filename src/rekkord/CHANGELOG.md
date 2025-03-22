@@ -6,6 +6,10 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.36 (2024-03-22)
+
+- Fix staling and deadlock when restoring many files in `rekkord restore`
+
 ### Rekkord 0.35 (2024-12-25)
 
 - Fix error when listing empty directories and snapshots (regression introduced in Rekkord 0.30)
