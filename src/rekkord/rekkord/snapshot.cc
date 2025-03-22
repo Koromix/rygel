@@ -267,7 +267,7 @@ Snapshot names are not unique, if you use a snapshot name, rekkord will use the 
     }
     LogInfo();
 
-    LogInfo("Extracting...");
+    LogInfo("Restoring...");
 
     int64_t now = GetMonotonicTime();
 
