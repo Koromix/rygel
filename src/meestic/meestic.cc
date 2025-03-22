@@ -108,7 +108,7 @@ static int OpenInputDevice(const char *needle, int flags)
         const char *filename = Fmt(&temp_alloc, "/dev/input/%1", basename).ptr;
 
         // Open device
-        int fd = open(filename, O_RDONLY | O_CLOEXEC | flags);
+        int fd = RG_RESTART_EINTR(open(filename, O_RDONLY | O_CLOEXEC | flags), < 0);
         if (fd < 0) {
             LogError("Failed to open '%1': %2", filename, strerror(errno));
             return true;

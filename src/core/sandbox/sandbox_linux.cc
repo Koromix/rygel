@@ -120,7 +120,7 @@ static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
         char buf[512];
         Fmt(buf, "/proc/%1/uid_map", pid);
 
-        uid_fd = open(buf, O_CLOEXEC | O_WRONLY);
+        uid_fd = RG_RESTART_EINTR(open(buf, O_CLOEXEC | O_WRONLY), < 0);
         if (uid_fd < 0) {
             LogError("Failed to open '%1' for writing: %2", buf, strerror(errno));
             return false;
@@ -133,7 +133,7 @@ static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
         char buf[512];
         Fmt(buf, "/proc/%1/gid_map", pid);
 
-        gid_fd = open(buf, O_CLOEXEC | O_WRONLY);
+        gid_fd = RG_RESTART_EINTR(open(buf, O_CLOEXEC | O_WRONLY), < 0);
         if (gid_fd < 0) {
             LogError("Failed to open '%1' for writing: %2", buf, strerror(errno));
             return false;
@@ -391,14 +391,14 @@ bool sb_SandboxBuilder::Apply()
 
             // Do the silly pivot_root dance
             {
-                int old_root_fd = open("/", O_DIRECTORY | O_PATH);
+                int old_root_fd = RG_RESTART_EINTR(open("/", O_DIRECTORY | O_PATH), < 0);
                 if (old_root_fd < 0) {
                     LogError("Failed to open directory '/': %1", strerror(errno));
                     return false;
                 }
                 RG_DEFER { close(old_root_fd); };
 
-                int new_root_fd = open(fs_root, O_DIRECTORY | O_PATH);
+                int new_root_fd = RG_RESTART_EINTR(open(fs_root, O_DIRECTORY | O_PATH), < 0);
                 if (new_root_fd < 0) {
                     LogError("Failed to open directory '%1': %2", fs_root, strerror(errno));
                     return false;
