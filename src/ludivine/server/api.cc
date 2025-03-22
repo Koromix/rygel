@@ -45,7 +45,7 @@ Nous vous sommes très reconnaissants de votre implication dans la recherche sur
 L’équipe de {{ TITLE }}
 {{ CONTACT }})",
 
-    R"(<html><body>
+    R"(<html lang="fr"><body>
 <p>Bienvenue !</p>
 <p>Nous vous remercions de votre intérêt pour les recherches de {{ TITLE }}.</p>
 <p><b>Attention, ce <b>mail est important</b> ! Il est l’unique moyen de connexion à votre espace personnel durant toute la durée des études.</b></p>
@@ -84,7 +84,7 @@ Nous vous sommes très reconnaissants de votre implication dans la recherche sur
 
 L'équipe de {{ TITLE }}
 {{ CONTACT }})",
-    R"(<html><body>
+    R"(<html lang="fr"><body>
 <p>Bonjour,</p>
 <p>Un compte {{ TITLE }} existe déjà avec cette adresse email.</p>
 <p><b>Pour vous reconnecter, nous vous invitons à utiliser le lien de connexion initial reçu par mail lors de la création de votre compte. Vous l’avez peut-être même enregistré sur votre ordinateur/téléphone/tablette.</b></p>
