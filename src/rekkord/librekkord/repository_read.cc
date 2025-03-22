@@ -551,9 +551,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
             // Only process tasks for this Async, a standard Sync would run other tasks (such as other file tasks)
             // which could take a while and could provoke an accumulation of unfinished file tasks with many open
             // file descriptors and the appearence of slow progress.
-            async.SyncSoon();
-
-            if (!async.IsSuccess())
+            if (!async.SyncSoon())
                 return -1;
 
             // Check actual file size
