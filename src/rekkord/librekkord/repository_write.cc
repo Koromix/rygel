@@ -19,6 +19,9 @@
 #include "splitter.hh"
 #include "priv_repository.hh"
 #include "vendor/blake3/c/blake3.h"
+#if defined(__linux__)
+    #include <fcntl.h>
+#endif
 
 namespace RG {
 
@@ -122,8 +125,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         for (Size i = 0; i < pending_directories.count; i++) {
             PendingDirectory *pending = &pending_directories[i];
 
-            EnumResult ret = EnumerateDirectory(pending->dirname, nullptr, -1,
-                                                [&](const char *basename, FileType) {
+            const auto callback = [&](const char *basename, FileType) {
                 const char *filename = Fmt(&temp_alloc, "%1%/%2", pending->dirname, basename).ptr;
 
                 Size basename_len = strlen(basename);
@@ -192,7 +194,22 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 MemCpy(entry->GetName().ptr, basename, basename_len);
 
                 return true;
-            });
+            };
+
+#if defined(__linux__)
+            EnumResult ret;
+            {
+                int fd = open(pending->dirname, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOATIME);
+
+                if (fd >= 0) {
+                    ret = EnumerateDirectory(fd, pending->dirname, nullptr, -1, callback);
+                } else {
+                    ret = EnumerateDirectory(pending->dirname, nullptr, -1, callback);
+                }
+            }
+#else
+            EnumResult ret = EnumerateDirectory(pending->dirname, nullptr, -1, callback);
+#endif
 
             if (ret != EnumResult::Success) {
                 pending->failed = true;
@@ -417,10 +434,22 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
 {
     StreamReader st;
     {
-        OpenResult ret = st.Open(src_filename);
-        if (ret != OpenResult::Success) {
-            bool ignore = (ret == OpenResult::AccessDenied || ret == OpenResult::MissingPath);
-            return ignore ? PutResult::Ignore : PutResult::Error;
+#if defined(__linux__)
+        int fd = open(src_filename, O_RDONLY | O_CLOEXEC | O_NOATIME);
+
+        if (fd >= 0) {
+            st.Open(fd, src_filename);
+            st.SetDescriptorOwned(true);
+        }
+#endif
+
+        if (!st.IsValid()) {
+            OpenResult ret = st.Open(src_filename);
+
+            if (ret != OpenResult::Success) {
+                bool ignore = (ret == OpenResult::AccessDenied || ret == OpenResult::MissingPath);
+                return ignore ? PutResult::Ignore : PutResult::Error;
+            }
         }
     }
 

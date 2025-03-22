@@ -2909,21 +2909,9 @@ bool GetVolumeInfo(const char *dirname, VolumeInfo *out_volume)
 
 #endif
 
-EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
-                              FunctionRef<bool(const char *, FileType)> func)
+static EnumResult ReadDirectory(DIR *dirp, const char *dirname, const char *filter, Size max_files,
+                                FunctionRef<bool(const char *, FileType)> func)
 {
-    DIR *dirp = RG_RESTART_EINTR(opendir(dirname), == nullptr);
-    if (!dirp) {
-        LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
-
-        switch (errno) {
-            case ENOENT: return EnumResult::MissingPath;
-            case EACCES: return EnumResult::AccessDenied;
-            default: return EnumResult::OtherError;
-        }
-    }
-    RG_DEFER { closedir(dirp); };
-
     // Avoid random failure in empty directories
     errno = 0;
 
@@ -2986,21 +2974,9 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
     return EnumResult::Success;
 }
 
-EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
-                              FunctionRef<bool(const char *, const FileInfo &)> func)
+static EnumResult ReadDirectory(DIR *dirp, const char *dirname, const char *filter, Size max_files,
+                                FunctionRef<bool(const char *, const FileInfo &)> func)
 {
-    DIR *dirp = RG_RESTART_EINTR(opendir(dirname), == nullptr);
-    if (!dirp) {
-        LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
-
-        switch (errno) {
-            case ENOENT: return EnumResult::MissingPath;
-            case EACCES: return EnumResult::AccessDenied;
-            default: return EnumResult::OtherError;
-        }
-    }
-    RG_DEFER { closedir(dirp); };
-
     // Avoid random failure in empty directories
     errno = 0;
 
@@ -3034,6 +3010,76 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
     return EnumResult::Success;
 }
+
+EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
+                              FunctionRef<bool(const char *, FileType)> func)
+{
+    DIR *dirp = RG_RESTART_EINTR(opendir(dirname), == nullptr);
+    if (!dirp) {
+        LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
+
+        switch (errno) {
+            case ENOENT: return EnumResult::MissingPath;
+            case EACCES: return EnumResult::AccessDenied;
+            default: return EnumResult::OtherError;
+        }
+    }
+    RG_DEFER { closedir(dirp); };
+
+    return ReadDirectory(dirp, dirname, filter, max_files, func);
+}
+
+EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
+                              FunctionRef<bool(const char *, const FileInfo &)> func)
+{
+    DIR *dirp = RG_RESTART_EINTR(opendir(dirname), == nullptr);
+    if (!dirp) {
+        LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
+
+        switch (errno) {
+            case ENOENT: return EnumResult::MissingPath;
+            case EACCES: return EnumResult::AccessDenied;
+            default: return EnumResult::OtherError;
+        }
+    }
+    RG_DEFER { closedir(dirp); };
+
+    return ReadDirectory(dirp, dirname, filter, max_files, func);
+}
+
+#if !defined(__APPLE__)
+
+EnumResult EnumerateDirectory(int fd, const char *dirname, const char *filter, Size max_files,
+                              FunctionRef<bool(const char *, FileType)> func)
+{
+    DIR *dirp = fdopendir(fd);
+    if (!dirp) {
+        CloseDescriptor(fd);
+
+        LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
+        return EnumResult::OtherError;
+    }
+    RG_DEFER { closedir(dirp); };
+
+    return ReadDirectory(dirp, dirname, filter, max_files, func);
+}
+
+EnumResult EnumerateDirectory(int fd, const char *dirname, const char *filter, Size max_files,
+                              FunctionRef<bool(const char *, const FileInfo &)> func)
+{
+    DIR *dirp = fdopendir(fd);
+    if (!dirp) {
+        CloseDescriptor(fd);
+
+        LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
+        return EnumResult::OtherError;
+    }
+    RG_DEFER { closedir(dirp); };
+
+    return ReadDirectory(dirp, dirname, filter, max_files, func);
+}
+
+#endif
 
 #endif
 

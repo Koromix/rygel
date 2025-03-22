@@ -4324,6 +4324,13 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
 EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, const FileInfo &)> func);
 
+#if !defined(_WIN32) && !defined(__APPLE__)
+EnumResult EnumerateDirectory(int fd, const char *dirname, const char *filter, Size max_files,
+                              FunctionRef<bool(const char *, FileType)> func);
+EnumResult EnumerateDirectory(int fd, const char *dirname, const char *filter, Size max_files,
+                              FunctionRef<bool(const char *, const FileInfo &)> func);
+#endif
+
 bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Size max_files,
                     Allocator *str_alloc, HeapArray<const char *> *out_files);
 bool IsDirectoryEmpty(const char *dirname);
