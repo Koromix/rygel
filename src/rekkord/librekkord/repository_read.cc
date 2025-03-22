@@ -548,9 +548,10 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                 });
             }
 
-            // Don't use Sync because we don't want to finish ASAP, and Sync will run other tasks which
-            // could take a while (such as other file tasks).
-            async.Wait(-1);
+            // Only process tasks for this Async, a standard Sync would run other tasks (such as other file tasks)
+            // which could take a while and could provoke an accumulation of unfinished file tasks with many open
+            // file descriptors and the appearence of slow progress.
+            async.SyncSoon();
 
             if (!async.IsSuccess())
                 return -1;

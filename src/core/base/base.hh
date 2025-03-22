@@ -4773,7 +4773,7 @@ public:
     void Run(int worker, const std::function<bool()> &f);
 
     bool Sync();
-    bool Wait(int timeout);
+    bool SyncSoon();
     bool IsSuccess() const { return success; }
 
     int GetWorkerCount();

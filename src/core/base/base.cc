@@ -6764,10 +6764,9 @@ public:
     void AddTask(Async *async, int worker_idx, const std::function<bool()> &func);
 
     void RunWorker(int worker_idx);
-    void SyncOn(Async *async);
-    bool WaitOn(Async *async, int timeout);
+    void SyncOn(Async *async, bool soon);
 
-    void RunTasks(int worker_idx);
+    void RunTasks(int worker_idx, Async *only);
     void RunTask(Task *task);
 };
 
@@ -6830,13 +6829,14 @@ void Async::Run(int worker, const std::function<bool()> &func)
 
 bool Async::Sync()
 {
-    pool->SyncOn(this);
+    pool->SyncOn(this, false);
     return success;
 }
 
-bool Async::Wait(int timeout)
+bool Async::SyncSoon()
 {
-    return pool->WaitOn(this, timeout);
+    pool->SyncOn(this, true);
+    return success;
 }
 
 int Async::GetWorkerCount()
@@ -6966,7 +6966,7 @@ void AsyncPool::AddTask(Async *async, int worker_idx, const std::function<bool()
         int worker_idx = async_running_worker_idx;
 
         do {
-            RunTasks(worker_idx);
+            RunTasks(worker_idx, nullptr);
         } while (pending_tasks >= RG_ASYNC_MAX_PENDING_TASKS);
     } else if (!prev_pending) {
         std::lock_guard<std::mutex> lock_pool(pool_mutex);
@@ -6985,7 +6985,7 @@ void AsyncPool::RunWorker(int worker_idx)
 
     while (async_count) {
         lock_pool.unlock();
-        RunTasks(worker_idx);
+        RunTasks(worker_idx, nullptr);
         lock_pool.lock();
 
         std::chrono::duration<int, std::milli> duration(RG_ASYNC_MAX_IDLE_TIME); // Thanks C++
@@ -7000,7 +7000,7 @@ void AsyncPool::RunWorker(int worker_idx)
     }
 }
 
-void AsyncPool::SyncOn(Async *async)
+void AsyncPool::SyncOn(Async *async, bool soon)
 {
     RG_DEFER_C(pool = async_running_pool,
                worker_idx = async_running_worker_idx) {
@@ -7012,46 +7012,47 @@ void AsyncPool::SyncOn(Async *async)
     async_running_worker_idx = 0;
 
     while (async->remaining_tasks) {
-        RunTasks(0);
+        RunTasks(0, soon ? async : nullptr);
 
         std::unique_lock<std::mutex> lock_sync(pool_mutex);
         sync_cv.wait(lock_sync, [&]() { return pending_tasks || !async->remaining_tasks; });
     }
 }
 
-bool AsyncPool::WaitOn(Async *async, int timeout)
-{
-    std::unique_lock<std::mutex> lock_sync(pool_mutex);
-
-    if (timeout >= 0) {
-        std::chrono::milliseconds delay(timeout);
-        bool done = sync_cv.wait_for(lock_sync, delay, [&]() { return !async->remaining_tasks; });
-        return done;
-    } else {
-        sync_cv.wait(lock_sync, [&]() { return !async->remaining_tasks; });
-        return true;
-    }
-}
-
-void AsyncPool::RunTasks(int worker_idx)
+void AsyncPool::RunTasks(int worker_idx, Async *only)
 {
     // The '12' factor is pretty arbitrary, don't try to find meaning there
     for (int i = 0; i < workers.len * 12; i++) {
         WorkerData *worker = &workers[worker_idx];
         std::unique_lock<std::mutex> lock_queue(worker->queue_mutex, std::try_to_lock);
 
-        if (lock_queue.owns_lock() && worker->tasks.count) {
-            Task task = std::move(worker->tasks[0]);
+        if (lock_queue.owns_lock()) {
+            Size idx = 0;
 
-            worker->tasks.RemoveFirst();
-            worker->tasks.Trim();
+            if (only) {
+                for (const Task &task: worker->tasks) {
+                    if (task.async == only) {
+                        std::swap(worker->tasks[0], worker->tasks[idx]);
+                        break;
+                    }
+                    idx++;
+                }
+            }
 
-            lock_queue.unlock();
+            if (idx < worker->tasks.count) {
+                Task task = std::move(worker->tasks[0]);
 
-            RunTask(&task);
-        } else {
-            worker_idx = GetRandomInt(0, (int)workers.len);
+                worker->tasks.RemoveFirst();
+                worker->tasks.Trim();
+
+                lock_queue.unlock();
+
+                RunTask(&task);
+                continue;
+            }
         }
+
+        worker_idx = GetRandomInt(0, (int)workers.len);
     }
 }
 
