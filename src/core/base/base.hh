@@ -4774,6 +4774,7 @@ public:
 
     bool Sync();
     bool SyncSoon();
+    bool Wait(int timeout);
     bool IsSuccess() const { return success; }
 
     int GetWorkerCount();
