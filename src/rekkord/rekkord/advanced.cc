@@ -31,11 +31,11 @@ R"(Usage: %!..+%1 change_id [-C filename] [option...]%!0
 
 Options:
 
-    %!..+-C, --config_file filename%!0       Set configuration file
+    %!..+-C, --config_file filename%!0     Set configuration file
 
-    %!..+-R, --repository URL%!0             Set repository URL
-    %!..+-u, --user username%!0              Set repository username
-        %!..+--password password%!0          Set repository password)", FelixTarget);
+    %!..+-R, --repository URL%!0           Set repository URL
+    %!..+-u, --user username%!0            Set repository username
+        %!..+--password password%!0        Set repository password)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
