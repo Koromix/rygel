@@ -6,6 +6,13 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.37 (2024-03-23)
+
+- Add retry logic to handle transient SFTP errors in rekkord
+- Add *--preserve_atime* option to `rekkord save`
+- Fix wrong cache ID used by `rekkord rebuild_cache`
+- Fix minor typos in help and log
+
 ### Rekkord 0.36 (2024-03-22)
 
 - Fix stalling and deadlock when restoring many files in `rekkord restore`
