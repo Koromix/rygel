@@ -595,7 +595,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         }
     }
 
-    sq_Database *db = disk->OpenCache();
+    sq_Database *db = disk->OpenCache(true);
     if (!db)
         return false;
 

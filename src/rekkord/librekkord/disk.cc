@@ -184,8 +184,10 @@ bool rk_Disk::ChangeID()
     return true;
 }
 
-sq_Database *rk_Disk::OpenCache()
+sq_Database *rk_Disk::OpenCache(bool build)
 {
+    RG_ASSERT(mode != rk_DiskMode::Secure);
+
     cache_db.Close();
 
     // Combine repository URL and ID to create secure ID
@@ -282,7 +284,7 @@ sq_Database *rk_Disk::OpenCache()
                 static_assert(CacheVersion == 4);
             }
 
-            if (!version && !RebuildCache())
+            if (build && !version && !RebuildCache())
                 return false;
             if (!cache_db.SetUserVersion(CacheVersion))
                 return false;

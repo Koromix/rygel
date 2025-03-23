@@ -146,7 +146,7 @@ public:
 
     bool ChangeID();
 
-    sq_Database *OpenCache();
+    sq_Database *OpenCache(bool build);
     bool RebuildCache();
 
     bool InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force);

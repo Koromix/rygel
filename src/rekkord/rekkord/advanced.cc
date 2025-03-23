@@ -98,7 +98,9 @@ Options:
 
     %!..+-C, --config_file filename%!0     Set configuration file
 
-    %!..+-R, --repository URL%!0           Set repository URL)", FelixTarget);
+    %!..+-R, --repository URL%!0           Set repository URL
+    %!..+-u, --user username%!0            Set repository username
+        %!..+--password password%!0        Set repository password)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -117,6 +119,10 @@ Options:
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
                 if (!rk_DecodeURL(opt.current_value, &config))
                     return 1;
+            } else if (opt.Test("-u", "--username", OptionType::Value)) {
+                config.username = opt.current_value;
+            } else if (opt.Test("--password", OptionType::Value)) {
+                config.password = opt.current_value;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -126,17 +132,17 @@ Options:
         opt.LogUnusedArguments();
     }
 
-    if (!config.Complete(false))
+    if (!config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
+    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
     if (!disk)
         return 1;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     LogInfo();
 
-    if (!disk->OpenCache())
+    if (!disk->OpenCache(false))
         return 1;
     if (!disk->RebuildCache())
         return 1;
