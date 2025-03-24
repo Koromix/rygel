@@ -527,7 +527,9 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
                 remain.len -= processed;
             } while (remain.len);
 
-            if (!async.Sync())
+            // We don't want to run other file tasks because that could cause us to allocate way
+            // too much heap memory for the fill buffer.
+            if (!async.SyncSoon())
                 return PutResult::Error;
 
             MemMove(buf.ptr, remain.ptr, remain.len);
