@@ -16,7 +16,7 @@
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import { loadTexture } from '../core/misc.js';
-import { PROXIMITY_LEVELS, PERSON_KINDS, QUALITY_COLORS } from './constants.js';
+import { PROXIMITY_LEVELS, PERSON_KINDS, QUALITY_COLORS, USER_GUIDES } from './constants.js';
 import { ASSETS } from '../../assets/assets.js';
 
 const PERSON_RADIUS = 0.05;
@@ -108,13 +108,13 @@ function NetworkWidget(app, mod, world) {
         let insert = (active_tool == 'move' || active_tool == 'rotate');
 
         mod.actions(7, html`
-            <button class=${insert ? 'active' : ''}
+            <button id="net_people" class=${insert ? 'active' : ''}
                     title="Ajouter et déplacer vos relations"
                     @click=${UI.wrap(e => switchTool('move'))}>
                 <img src=${ASSETS['ui/people']} alt="" />
                 <span>Relations</span>
             </button>
-            <button class=${active_tool == 'link' ? 'active' : ''}
+            <button id="net_links" class=${active_tool == 'link' ? 'active' : ''}
                     title="Créer des liens entre les relations"
                     @click=${UI.wrap(e => switchTool('link'))}>
                 <img src=${ASSETS['ui/link']} alt="" />
@@ -124,7 +124,7 @@ function NetworkWidget(app, mod, world) {
 
         mod.actions(1, html`
             ${insert ? html`
-                <button title="Ajouter de nouvelles relations"
+                <button id="net_create" title="Ajouter de nouvelles relations"
                         @click=${UI.wrap(createPersons)}>
                     <img src=${ASSETS['ui/create']} alt="" />
                     <span>Ajouter des personnes</span>
@@ -228,6 +228,8 @@ function NetworkWidget(app, mod, world) {
 
                     for (let p of select_persons)
                         snapPerson(p);
+
+                    mod.showGuide('editPerson', USER_GUIDES.editPerson);
                 }
 
                 active_edit = null;
@@ -312,6 +314,11 @@ function NetworkWidget(app, mod, world) {
                         } else {
                             links.push(link);
                             mod.registerPush(links, link, auto);
+
+                            (async () => {
+                                await mod.showGuide('editLink', USER_GUIDES.editLink)
+                                await mod.showGuide('peopleMode', USER_GUIDES.peopleMode, { highlight: '#net_people' });
+                            })();
                         }
 
                         auto = true;
@@ -560,6 +567,9 @@ function NetworkWidget(app, mod, world) {
             },
 
             submit: (elements) => {
+                if (!names.length)
+                    throw new Error('Vous n\'avez saisi aucun nom');
+
                 for (let i = 0; i < names.length; i++) {
                     let name = names[i];
                     let subject = createSubject(name, new_kind, DEFAULT_QUALITY);
@@ -571,6 +581,17 @@ function NetworkWidget(app, mod, world) {
                 }
             }
         });
+
+        if (world.subjects.length > 1) {
+            let step1 = mod.isGuideNeeded('movePersons');
+
+            if (step1) {
+                await mod.showGuide('movePersons', USER_GUIDES.movePersons);
+            } else {
+                await mod.showGuide('addMore', USER_GUIDES.addMore);
+                await mod.showGuide('createLinks', USER_GUIDES.createLinks, { highlight: '#net_links' });
+            }
+        }
     }
 
     function createSubject(name, kind, quality) {
@@ -717,6 +738,8 @@ function NetworkWidget(app, mod, world) {
                 subject.last_quality = p.quality;
             }
         });
+
+        await mod.showGuide('addMore', USER_GUIDES.addMore);
     }
 
     function deletePersons(targets) {

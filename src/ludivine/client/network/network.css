@@ -98,6 +98,21 @@
     }
 }
 
+.net_wrapper.guide {
+    & > .help {
+        position: absolute;
+        left: 50%;
+        z-index: 9999;
+        transform: translateX(-50%);
+    }
+
+    & canvas { opacity: 0.2; }
+    & > .net_actions > button:not(.highlight) {
+        opacity: 0.2;
+        cursor: default;
+    }
+}
+
 @media screen and (max-width: 960px) {
     .net_actions > button.small { display: none; }
 }

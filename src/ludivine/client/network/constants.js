@@ -13,6 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import { html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+
 const PERSON_KINDS = {
     love: { text: 'Relation amoureuse', icon: 'network/love' },
     family: { text: 'Famille', icon: 'network/family' },
@@ -56,8 +58,19 @@ const QUALITY_COLORS = {
     end: 0x3fa26b
 };
 
+const USER_GUIDES = {
+    addSubjects: html`Bienvenue sur votre sociogramme ! Commencez par ajouter les personnnes de votre entourage sur le sociogramme en cliquant sur le <b>bouton d'ajout en bas à gauche</b> de l'écran.`,
+    movePersons: html`Déplacez les personnes ajoutées dans le <b>cercle de proximité qui correspond le mieux</b>, selon que vous les voyez ou contactez tous les jours ou presque (vie quotidienne), régulièrement ou seulement de temps en temps.`,
+    editPerson: html`Ensuite, <b>cliquez sur les personnes ajoutées</b> pour indiquer comment vous évaluez la relation entre vous et chaque personne.`,
+    addMore: html`Complétez le sociogramme avec <b>des amis, les membres de votre famille, des collègues, des soignants, des animaux</b>, et tout autre personne à laquelle vous pensez. N'hésitez pas !`,
+    createLinks: html`Vous pouvez également indiquer comment les personnes s'entendent à l'aide du mode Liens. Cliquez sur le <b>bouton « Liens »</b> pour relier vos proches entre eux/elles en traçant les liens avec votre souris ou à l'aide de l'écran tactile.`,
+    editLink: html`Cliquez sur le <b>petit cercle au centre de chaque lien</b> pour évaluer la relation entre les personnes concernées.`,
+    peopleMode: html`Utilisez le <b>bouton « Relations »</b> pour quitter le mode Liens et ajouter d'autres personnes.`
+};
+
 export {
     PROXIMITY_LEVELS,
     PERSON_KINDS,
-    QUALITY_COLORS
+    QUALITY_COLORS,
+    USER_GUIDES
 }

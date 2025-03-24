@@ -17,8 +17,9 @@ import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import { AppRunner } from '../../../web/core/runner.js';
 import { deflate, inflate } from '../core/misc.js';
-import { ASSETS } from '../../assets/assets.js';
+import { USER_GUIDES } from './constants.js';
 import { NetworkWidget } from './widget.js';
+import { ASSETS } from '../../assets/assets.js';
 
 import './network.css';
 
@@ -59,6 +60,11 @@ function NetworkModule(app, study, page) {
     let redo_actions = [];
     let save_timer = null;
 
+    // Interactive guidance
+    let known_guides = new Set;
+    let overlay = null;
+    let guide_count = 0;
+
     // Mode flags
     let anonymous = false;
 
@@ -76,6 +82,15 @@ function NetworkModule(app, study, page) {
         wrapper.className = 'net_wrapper';
         canvas = document.createElement('canvas');
         canvas.className = 'net_canvas';
+
+        wrapper.addEventListener('click', e => {
+            if (overlay != null) {
+                let ignore = !!Util.findParent(e.target, el => el.classList.contains('net_actions'));
+
+                if (ignore)
+                    e.stopPropagation();
+            }
+        }, { capture: true });
 
         runner = new AppRunner(canvas);
         ctx = canvas.getContext('2d');
@@ -117,6 +132,8 @@ function NetworkModule(app, study, page) {
         }
 
         runner.start();
+
+        self.showGuide('addSubjects', USER_GUIDES.addSubjects, { highlight: '#net_create' });
     };
 
     this.stop = function() {
@@ -127,6 +144,7 @@ function NetworkModule(app, study, page) {
         runner.busy();
 
         render(html`
+            ${overlay}
             ${canvas}
             ${Util.mapRange(1, 10, idx => self.actions(idx))}
         `, wrapper);
@@ -192,7 +210,8 @@ function NetworkModule(app, study, page) {
                 world: data,
 
                 undo: [],
-                redo: []
+                redo: [],
+                guides: []
             };
         }
 
@@ -204,6 +223,7 @@ function NetworkModule(app, study, page) {
 
         undo_actions = data.undo;
         redo_actions = data.redo;
+        known_guides = new Set(data.guides);
 
         widget = new NetworkWidget(app, self, world);
         await widget.init();
@@ -216,7 +236,8 @@ function NetworkModule(app, study, page) {
             world: world,
 
             undo: undo_actions,
-            redo: redo_actions
+            redo: redo_actions,
+            guides: Array.from(known_guides)
         };
 
         return data;
@@ -529,7 +550,7 @@ function NetworkModule(app, study, page) {
             render(content, el);
 
         return el;
-    }
+    };
 
     this.tooltip = function(text, options = {}) {
         if (!text)
@@ -557,6 +578,72 @@ function NetworkModule(app, study, page) {
             tooltip.opacity = Math.min(1, tooltip.opacity + 0.03);
             runner.busy();
         }
+    };
+
+    this.showGuide = async function(key, text, options = {}) {
+        if (overlay != null)
+            return;
+        if (known_guides.has(key))
+            return;
+
+        let highlight = options.highlight;
+
+        if (typeof highlight == 'string')
+            highlight = wrapper.querySelectorAll(highlight);
+        if (highlight == null)
+            highlight = [];
+
+        for (let el of highlight)
+            el.classList.add('highlight');
+        wrapper.classList.add('guide');
+
+        await new Promise((resolve, reject) => {
+            let left = (guide_count % 2 == 0);
+
+            if (left) {
+                overlay = html`
+                    <div class="help">
+                        <img src=${ASSETS['pictures/help1']} alt="" />
+                        <div>
+                            ${text}
+                            <div class="actions">
+                                <button type="button" class="secondary small" @click=${resolve}>C'est compris</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                overlay = html`
+                    <div class="help right">
+                        <div>
+                            ${text}
+                            <div class="actions">
+                                <button type="button" class="secondary small" @click=${resolve}>C'est compris</button>
+                            </div>
+                        </div>
+                        <img src=${ASSETS['pictures/help2']} alt="" />
+                    </div>
+                `;
+            }
+
+            self.render();
+        });
+
+        guide_count++;
+
+        overlay = null;
+        self.render();
+
+        for (let el of highlight)
+            el.classList.remove('highlight');
+        wrapper.classList.remove('guide');
+
+        known_guides.add(key);
+    };
+
+    this.isGuideNeeded = function(key) {
+        let known = known_guides.has(key);
+        return !known;
     };
 
     function draw() {
@@ -629,6 +716,8 @@ function migrateData(data) {
         data.undo = [];
         data.redo = [];
     }
+    if (data.guides == null)
+        data.guides = [];
     data.version = DATA_VERSION;
 
     return data;
