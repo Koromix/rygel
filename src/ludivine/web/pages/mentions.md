@@ -10,7 +10,7 @@
 
 - Numéro de téléphone : <a href="tel:+33362263925">03.62.26.39.25</a>
 - Adresse e-mail : contact@cn2r.fr
-- Site internet : https://cn2r.fr/
+- Site internet : [cn2r.fr](https://cn2r.fr/)
 
 # Hébergeur du site
 
@@ -22,7 +22,7 @@
 **Contact :**
 
 - Numéro de téléphone : <a href="tel:+33182522062">01.82.52.20.62</a>
-- Site web : https://gplexpert.com/
+- Site web : [gplexpert.com](https://gplexpert.com/)
 
 # Propriété intellectuelle
 
@@ -45,7 +45,7 @@ Conformément au Règlement Général sur la Protection des Données (RGPD) et �
 
 - Droit d'accès, de rectification, de suppression et d'opposition,
 - Droit à la portabilité des données,
-- Droit de déposer une réclamation auprès de la [CNIL](www.cnil.fr).
+- Droit de déposer une réclamation auprès de la [CNIL](https://www.cnil.fr).
 
 La finalité du traitement est de permettre la réalisation des études menées dans le cadre de Lignes de Vie. Chacune de ces études explore un objectif soumis au préalable à l’approbation d'un comité d'éthique ou de protection des personnes. Le traitement des données des études est fondé sur la mission d’intérêt public dont est investi le Promoteur et les équipes de recherche académique impliqués dans LDV.
 
