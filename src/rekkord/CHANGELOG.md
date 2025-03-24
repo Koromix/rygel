@@ -6,6 +6,10 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.39 (2024-03-23)
+
+- Fix excessive memory usage during `rekkord save`
+
 ### Rekkord 0.38 (2024-03-23)
 
 - Use 256 subdirectories for blobs instead of 4096
