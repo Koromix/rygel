@@ -659,7 +659,7 @@ function renderApp(el, fullscreen) {
                 </div>
                 <img src=${ASSETS['main/footer']} alt="" width="79" height="64">
                 <div style="font-size: 0.8em;">
-                    <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">contact@ldv-recherche.fr</a>
+                    <a href=${'mailto:' + ENV.contact} style="font-weight: bold; color: inherit;">${ENV.contact}</a>
                 </div>
             </footer>
         `, root_el);

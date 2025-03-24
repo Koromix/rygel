@@ -107,6 +107,7 @@ static void InitAssets()
 
             json.StartObject();
             json.Key("title"); json.String(config.title);
+            json.Key("contact"); json.String(config.contact);
             json.Key("url"); json.String(config.url);
             json.Key("pages"); json.StartArray();
             for (const Config::PageInfo &page: config.pages) {
