@@ -304,8 +304,9 @@ int fuse_daemonize(int foreground)
 	return 0;
 }
 
-int fuse_main_real(int argc, char *argv[], const struct fuse_operations *op,
-		   size_t op_size, void *user_data)
+int fuse_main_real_versioned(int argc, char *argv[],
+			     const struct fuse_operations *op, size_t op_size,
+			     struct libfuse_version *version, void *user_data)
 {
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 	struct fuse *fuse;
@@ -341,8 +342,11 @@ int fuse_main_real(int argc, char *argv[], const struct fuse_operations *op,
 		goto out1;
 	}
 
-
-	fuse = fuse_new_31(&args, op, op_size, user_data);
+	struct fuse *_fuse_new_31(struct fuse_args *args,
+			       const struct fuse_operations *op, size_t op_size,
+			       struct libfuse_version *version,
+			       void *user_data);
+	fuse = _fuse_new_31(&args, op, op_size, version, user_data);
 	if (fuse == NULL) {
 		res = 3;
 		goto out1;
@@ -394,6 +398,16 @@ out1:
 	return res;
 }
 
+/* Not symboled, as not part of the official API */
+int fuse_main_real_30(int argc, char *argv[], const struct fuse_operations *op,
+		      size_t op_size, void *user_data);
+int fuse_main_real_30(int argc, char *argv[], const struct fuse_operations *op,
+		      size_t op_size, void *user_data)
+{
+	struct libfuse_version version = { 0 };
+	return fuse_main_real_versioned(argc, argv, op, op_size, &version,
+					user_data);
+}
 
 void fuse_apply_conn_info_opts(struct fuse_conn_info_opts *opts,
 			       struct fuse_conn_info *conn)
@@ -410,9 +424,9 @@ void fuse_apply_conn_info_opts(struct fuse_conn_info_opts *opts,
 		conn->max_readahead = opts->max_readahead;
 
 #define LL_ENABLE(cond,cap) \
-	if (cond) conn->want |= (cap)
+	if (cond) conn->want_ext |= (cap)
 #define LL_DISABLE(cond,cap) \
-	if (cond) conn->want &= ~(cap)
+	if (cond) conn->want_ext &= ~(cap)
 
 	LL_ENABLE(opts->splice_read, FUSE_CAP_SPLICE_READ);
 	LL_DISABLE(opts->no_splice_read, FUSE_CAP_SPLICE_READ);

@@ -18,13 +18,15 @@ import time
 import errno
 import sys
 import platform
-from looseversion import LooseVersion
+import re
+from packaging import version
 from tempfile import NamedTemporaryFile
 from contextlib import contextmanager
 from util import (wait_for_mount, umount, cleanup, base_cmdline,
                   safe_sleep, basename, fuse_test_marker, test_printcap,
-                  fuse_proto, powerset)
+                  fuse_proto, fuse_caps, powerset, parse_kernel_version)
 from os.path import join as pjoin
+import logging
 
 pytestmark = fuse_test_marker()
 
@@ -88,29 +90,46 @@ def readdir_inode(dir):
 @pytest.mark.parametrize("options", powerset(options))
 @pytest.mark.parametrize("name", ('hello', 'hello_ll'))
 def test_hello(tmpdir, name, options, cmdline_builder, output_checker):
+    logger = logging.getLogger(__name__)
     mnt_dir = str(tmpdir)
+    logger.debug(f"Mount directory: {mnt_dir}")
+    cmdline = cmdline_builder(mnt_dir, name, options)
+    logger.debug(f"Command line: {' '.join(cmdline)}")
     mount_process = subprocess.Popen(
-        cmdline_builder(mnt_dir, name, options),
+        cmdline,
         stdout=output_checker.fd, stderr=output_checker.fd)
+    logger.debug(f"Mount process PID: {mount_process.pid}")
     try:
+        logger.debug("Waiting for mount...")
         wait_for_mount(mount_process, mnt_dir)
+        logger.debug("Mount completed")
         assert os.listdir(mnt_dir) == [ 'hello' ]
+        logger.debug("Verified 'hello' file exists in mount directory")
         filename = pjoin(mnt_dir, 'hello')
         with open(filename, 'r') as fh:
             assert fh.read() == 'Hello World!\n'
+        logger.debug("Verified contents of 'hello' file")
         with pytest.raises(IOError) as exc_info:
             open(filename, 'r+')
         assert exc_info.value.errno == errno.EACCES
+        logger.debug("Verified EACCES error when trying to open file for writing")
         with pytest.raises(IOError) as exc_info:
             open(filename + 'does-not-exist', 'r+')
         assert exc_info.value.errno == errno.ENOENT
+        logger.debug("Verified ENOENT error for non-existent file")
         if name == 'hello_ll':
+            logger.debug("Testing xattr for hello_ll")
             tst_xattr(mnt_dir)
+            path = os.path.join(mnt_dir, 'hello')
+            tst_xattr(path)
     except:
+        logger.error("Exception occurred during test", exc_info=True)
         cleanup(mount_process, mnt_dir)
         raise
     else:
+        logger.debug("Unmounting...")
         umount(mount_process, mnt_dir)
+        logger.debug("Test completed successfully")
 
 @pytest.mark.parametrize("writeback", (False, True))
 @pytest.mark.parametrize("name", ('passthrough', 'passthrough_plus',
@@ -249,7 +268,7 @@ def test_passthrough_hp(short_tmpdir, cache, output_checker):
             # unlinked testfiles check fails without kernel fix
             # "fuse: fix illegal access to inode with reused nodeid"
             # so opt-in for this test from kernel 5.14
-            if LooseVersion(platform.release()) >= '5.14':
+            if parse_kernel_version(platform.release()) >= version.parse('5.14'):
                 syscall_test_cmd.append('-u')
             subprocess.check_call(syscall_test_cmd)
     except:
@@ -265,6 +284,11 @@ def test_ioctl(tmpdir, output_checker):
     progname = pjoin(basename, 'example', 'ioctl')
     if not os.path.exists(progname):
         pytest.skip('%s not built' % os.path.basename(progname))
+
+    # Check if binary is 32-bit
+    file_output = subprocess.check_output(['file', progname]).decode()
+    if 'ELF 32-bit' in file_output and platform.machine() == 'x86_64':
+        pytest.skip('ioctl test not supported for 32-bit binary on 64-bit system')
     
     mnt_dir = str(tmpdir)
     testfile = pjoin(mnt_dir, 'fioc')
@@ -347,7 +371,7 @@ def test_notify_inval_entry(tmpdir, only_expire, notify, output_checker):
         cmdline.append('--no-notify')
     if only_expire == "expire_entries":
         cmdline.append('--only-expire')
-        if fuse_proto < (7,38):
+        if "FUSE_CAP_EXPIRE_ONLY" not in fuse_caps:
             pytest.skip('only-expire not supported by running kernel')
     mount_process = subprocess.Popen(cmdline, stdout=output_checker.fd,
                                      stderr=output_checker.fd)
@@ -408,6 +432,14 @@ def test_dev_auto_unmount(short_tmpdir, output_checker, intended_user):
 @pytest.mark.skipif(os.getuid() != 0,
                     reason='needs to run as root')
 def test_cuse(output_checker):
+    progname = pjoin(basename, 'example', 'cuse')
+    if not os.path.exists(progname):
+        pytest.skip('%s not built' % os.path.basename(progname))
+
+    # Check if binary is 32-bit
+    file_output = subprocess.check_output(['file', progname]).decode()
+    if 'ELF 32-bit' in file_output and platform.machine() == 'x86_64':
+        pytest.skip('cuse test not supported for 32-bit binary on 64-bit system')
 
     # Valgrind warns about unknown ioctls, that's ok
     output_checker.register_output(r'^==([0-9]+).+unhandled ioctl.+\n'
@@ -855,8 +887,7 @@ def tst_passthrough(src_dir, mnt_dir):
     assert os.stat(src_name) == os.stat(mnt_name)
 
 
-def tst_xattr(mnt_dir):
-    path = os.path.join(mnt_dir, 'hello')
+def tst_xattr(path):
     os.setxattr(path, b'hello_ll_setxattr_name', b'hello_ll_setxattr_value')
     assert os.getxattr(path, b'hello_ll_getxattr_name') == b'hello_ll_getxattr_value'
     os.removexattr(path, b'hello_ll_removexattr_name')

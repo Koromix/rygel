@@ -1,6 +1,6 @@
 #pragma once
 
-#define PACKAGE_VERSION "3.16.2"
+#define PACKAGE_VERSION "3.17.1"
 
 #if defined(__linux__)
     #define HAVE_COPY_FILE_RANGE

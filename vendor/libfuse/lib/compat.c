@@ -15,21 +15,18 @@
     support version symboling
 */
 
-#include "fuse_config.h"
-#include "fuse_i.h"
-#include "fuse_misc.h"
-#include "fuse_opt.h"
-#include "fuse_lowlevel.h"
-#include "mount_util.h"
+#include "libfuse_config.h"
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <stddef.h>
-#include <unistd.h>
-#include <string.h>
-#include <limits.h>
-#include <errno.h>
-#include <sys/param.h>
+#include <stdint.h>
+
+struct fuse_args;
+struct fuse_cmdline_opts;
+struct fuse_cmdline_opts;
+struct fuse_session;
+struct fuse_custom_io;
+struct fuse_operations;
+struct fuse_lowlevel_ops;
 
 /**
  * Compatibility ABI symbol for systems that do not support version symboling
@@ -43,7 +40,7 @@
 #undef fuse_parse_cmdline
 #endif
 int fuse_parse_cmdline_30(struct fuse_args *args,
-                           struct fuse_cmdline_opts *opts);
+			  struct fuse_cmdline_opts *opts);
 int fuse_parse_cmdline(struct fuse_args *args,
 		       struct fuse_cmdline_opts *opts);
 int fuse_parse_cmdline(struct fuse_args *args,
@@ -51,6 +48,39 @@ int fuse_parse_cmdline(struct fuse_args *args,
 {
 	return fuse_parse_cmdline_30(args, opts);
 }
-#endif
 
+int fuse_session_custom_io_30(struct fuse_session *se,
+				const struct fuse_custom_io *io, int fd);
+int fuse_session_custom_io(struct fuse_session *se,
+				const struct fuse_custom_io *io, int fd);
+int fuse_session_custom_io(struct fuse_session *se,
+			const struct fuse_custom_io *io, int fd)
 
+{
+	return fuse_session_custom_io_30(se, io, fd);
+}
+
+#endif /* LIBFUSE_BUILT_WITH_VERSIONED_SYMBOLS */
+
+int fuse_main_real_30(int argc, char *argv[], const struct fuse_operations *op,
+		      size_t op_size, void *user_data);
+int fuse_main_real(int argc, char *argv[], const struct fuse_operations *op,
+		   size_t op_size, void *user_data);
+int fuse_main_real(int argc, char *argv[], const struct fuse_operations *op,
+		   size_t op_size, void *user_data)
+{
+	return fuse_main_real_30(argc, argv, op, op_size, user_data);
+}
+
+struct fuse_session *fuse_session_new_30(struct fuse_args *args,
+					 const struct fuse_lowlevel_ops *op,
+					 size_t op_size, void *userdata);
+struct fuse_session *fuse_session_new(struct fuse_args *args,
+				      const struct fuse_lowlevel_ops *op,
+				      size_t op_size, void *userdata);
+struct fuse_session *fuse_session_new(struct fuse_args *args,
+				      const struct fuse_lowlevel_ops *op,
+				      size_t op_size, void *userdata)
+{
+	return fuse_session_new_30(args, op, op_size, userdata);
+}

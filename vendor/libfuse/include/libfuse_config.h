@@ -1,3 +1,11 @@
 #pragma once
 
+#define FUSE_HOTFIX_VERSION 1
+
+#define FUSE_MAJOR_VERSION 3
+
+#define FUSE_MINOR_VERSION 17
+
+#define FUSE_RC_VERSION 
+
 // #define LIBFUSE_BUILT_WITH_VERSIONED_SYMBOLS 1

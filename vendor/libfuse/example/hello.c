@@ -57,6 +57,11 @@ static void *hello_init(struct fuse_conn_info *conn,
 {
 	(void) conn;
 	cfg->kernel_cache = 1;
+
+	/* Test setting flags the old way */
+	conn->want = FUSE_CAP_ASYNC_READ;
+	conn->want &= ~FUSE_CAP_ASYNC_READ;
+
 	return NULL;
 }
 
@@ -91,9 +96,9 @@ static int hello_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	if (strcmp(path, "/") != 0)
 		return -ENOENT;
 
-	filler(buf, ".", NULL, 0, 0);
-	filler(buf, "..", NULL, 0, 0);
-	filler(buf, options.filename, NULL, 0, 0);
+	filler(buf, ".", NULL, 0, FUSE_FILL_DIR_DEFAULTS);
+	filler(buf, "..", NULL, 0, FUSE_FILL_DIR_DEFAULTS);
+	filler(buf, options.filename, NULL, 0, FUSE_FILL_DIR_DEFAULTS);
 
 	return 0;
 }

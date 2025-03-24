@@ -1,28 +1,39 @@
-project('libfuse3', ['c'], version: '3.16.2',
-        meson_version: '>= 0.51',
+project('libfuse3', ['c'],
+        version: '3.17.1',
+        meson_version: '>= 0.51.0',
         default_options: [
             'buildtype=debugoptimized',
-            'cpp_std=c++11',
+            'c_std=gnu11',
+            'cpp_std=c++17',
             'warning_level=2',
         ])
 
+# Would be better to create the version string
+# from integers, i.e. concatenating strings instead
+# of splitting a string, but 'project' needs to be
+# the first meson.build keyword...
+
+# split version into base and rc
+version_parts = meson.project_version().split('-')
+base_version = version_parts[0]
+
+version_list = base_version.split('.')
+FUSE_MAJOR_VERSION = version_list[0]
+FUSE_MINOR_VERSION = version_list[1]
+FUSE_HOTFIX_VERSION = version_list[2]
+FUSE_RC_VERSION = version_parts.length() > 1 ? version_parts[1] : ''
 
 platform = host_machine.system()
 if platform == 'darwin'
   error('libfuse does not support OS-X.\n' +
-        'Take a look at http://osxfuse.github.io/ instead')
+        'Take a look at http://osxfuse.github.io/ or the more recent\n' +
+        'https://www.fuse-t.org/ instead')
 elif platform == 'cygwin' or platform == 'windows'
   error('libfuse does not support Windows.\n' +
         'Take a look at http://www.secfs.net/winfsp/ instead')       
 endif
 
 cc = meson.get_compiler('c')
-
-#
-# Feature detection, only available at libfuse compilation time,
-# but not for application linking to libfuse.
-#
-private_cfg = configuration_data()
 
 #
 # Feature detection, the resulting config file is installed
@@ -32,6 +43,11 @@ private_cfg = configuration_data()
 #       this config.
 #
 public_cfg = configuration_data()
+
+public_cfg.set('FUSE_MAJOR_VERSION', FUSE_MAJOR_VERSION)
+public_cfg.set('FUSE_MINOR_VERSION', FUSE_MINOR_VERSION)
+public_cfg.set('FUSE_HOTFIX_VERSION', FUSE_HOTFIX_VERSION)
+public_cfg.set('FUSE_RC_VERSION', FUSE_RC_VERSION)
 
 # Default includes when checking for presence of functions and
 # struct members
@@ -46,12 +62,17 @@ include_default = '''
 '''
 args_default = [ '-D_GNU_SOURCE' ]
 
+#
+# Feature detection, only available at libfuse compilation time,
+# but not for application linking to libfuse.
+#
+private_cfg = configuration_data()
 private_cfg.set_quoted('PACKAGE_VERSION', meson.project_version())
 
 # Test for presence of some functions
 test_funcs = [ 'fork', 'fstatat', 'openat', 'readlinkat', 'pipe2',
                'splice', 'vmsplice', 'posix_fallocate', 'fdatasync',
-               'utimensat', 'copy_file_range', 'fallocate' ]
+               'utimensat', 'copy_file_range', 'fallocate', 'close_range' ]
 foreach func : test_funcs
     private_cfg.set('HAVE_' + func.to_upper(),
         cc.has_function(func, prefix: include_default, args: args_default))
@@ -60,6 +81,8 @@ private_cfg.set('HAVE_SETXATTR',
         cc.has_function('setxattr', prefix: '#include <sys/xattr.h>'))
 private_cfg.set('HAVE_ICONV', 
         cc.has_function('iconv', prefix: '#include <iconv.h>'))
+private_cfg.set('HAVE_BACKTRACE',
+        cc.has_function('backtrace', prefix: '#include <execinfo.h>'))
 
 # Test if structs have specific member
 private_cfg.set('HAVE_STRUCT_STAT_ST_ATIM',

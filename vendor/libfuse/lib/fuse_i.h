@@ -8,13 +8,25 @@
 
 #include "fuse.h"
 #include "fuse_lowlevel.h"
+#include "util.h"
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <errno.h>
+
+#define MIN(a, b) \
+({									\
+	typeof(a) _a = (a);						\
+	typeof(b) _b = (b);						\
+	_a < _b ? _a : _b;						\
+})
 
 struct mount_opts;
 
 struct fuse_req {
 	struct fuse_session *se;
 	uint64_t unique;
-	int ctr;
+	_Atomic int ref_cnt;
 	pthread_mutex_t lock;
 	struct fuse_ctx ctx;
 	struct fuse_chan *ch;
@@ -65,6 +77,12 @@ struct fuse_session {
 	struct fuse_notify_req notify_list;
 	size_t bufsize;
 	int error;
+
+	/* This is useful if any kind of ABI incompatibility is found at
+	 * a later version, to 'fix' it at run time.
+	 */
+	struct libfuse_version version;
+	bool buf_reallocable;
 };
 
 struct fuse_chan {
@@ -173,10 +191,14 @@ void cuse_lowlevel_init(fuse_req_t req, fuse_ino_t nodeide, const void *inarg);
 
 int fuse_start_thread(pthread_t *thread_id, void *(*func)(void *), void *arg);
 
-int fuse_session_receive_buf_int(struct fuse_session *se, struct fuse_buf *buf,
-				 struct fuse_chan *ch);
-void fuse_session_process_buf_int(struct fuse_session *se,
-				  const struct fuse_buf *buf, struct fuse_chan *ch);
+void fuse_buf_free(struct fuse_buf *buf);
+
+int fuse_session_receive_buf_internal(struct fuse_session *se,
+				      struct fuse_buf *buf,
+				      struct fuse_chan *ch);
+void fuse_session_process_buf_internal(struct fuse_session *se,
+				       const struct fuse_buf *buf,
+				       struct fuse_chan *ch);
 
 struct fuse *fuse_new_31(struct fuse_args *args, const struct fuse_operations *op,
 		      size_t op_size, void *private_data);
@@ -191,9 +213,46 @@ int fuse_session_loop_mt_312(struct fuse_session *se, struct fuse_loop_config *c
 int fuse_loop_cfg_verify(struct fuse_loop_config *config);
 
 
-#define FUSE_MAX_MAX_PAGES 256
+/*
+ * This can be changed dynamically on recent kernels through the
+ * /proc/sys/fs/fuse/max_pages_limit interface.
+ *
+ * Older kernels will always use the default value.
+ */
+#define FUSE_DEFAULT_MAX_PAGES_LIMIT 256
 #define FUSE_DEFAULT_MAX_PAGES_PER_REQ 32
 
 /* room needed in buffer to accommodate header */
 #define FUSE_BUFFER_HEADER_SIZE 0x1000
 
+/**
+ * Get the wanted capability flags, converting from old format if necessary
+ */
+static inline int convert_to_conn_want_ext(struct fuse_conn_info *conn,
+					   uint64_t want_ext_default,
+					   uint32_t want_default)
+{
+	/*
+	 * Convert want to want_ext if necessary.
+	 * For the high level interface this function might be called
+	 * twice, once from the high level interface and once from the
+	 * low level interface. Both, with different want_ext_default and
+	 * want_default values. In order to suppress a failure for the
+	 * second call, we check if the lower 32 bits of want_ext are
+	 * already set to the value of want.
+	 */
+	if (conn->want != want_default &&
+	    fuse_lower_32_bits(conn->want_ext) != conn->want) {
+		if (conn->want_ext != want_ext_default) {
+			fuse_log(FUSE_LOG_ERR,
+				 "fuse: both 'want' and 'want_ext' are set\n");
+			return -EINVAL;
+		}
+
+		/* high bits from want_ext, low bits from want */
+		conn->want_ext = fuse_higher_32_bits(conn->want_ext) |
+				 conn->want;
+	}
+
+	return 0;
+}

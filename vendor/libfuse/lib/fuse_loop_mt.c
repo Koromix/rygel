@@ -8,11 +8,14 @@
   See the file COPYING.LIB.
 */
 
+#define _GNU_SOURCE
+
 #include "fuse_config.h"
 #include "fuse_lowlevel.h"
 #include "fuse_misc.h"
 #include "fuse_kernel.h"
 #include "fuse_i.h"
+#include "util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -129,12 +132,15 @@ static void *fuse_do_work(void *data)
 	struct fuse_worker *w = (struct fuse_worker *) data;
 	struct fuse_mt *mt = w->mt;
 
+	pthread_setname_np(pthread_self(), "fuse_worker");
+
 	while (!fuse_session_exited(mt->se)) {
 		int isforget = 0;
 		int res;
 
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-		res = fuse_session_receive_buf_int(mt->se, &w->fbuf, w->ch);
+		res = fuse_session_receive_buf_internal(mt->se, &w->fbuf,
+							w->ch);
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 		if (res == -EINTR)
 			continue;
@@ -170,7 +176,7 @@ static void *fuse_do_work(void *data)
 			fuse_loop_start_thread(mt);
 		pthread_mutex_unlock(&mt->lock);
 
-		fuse_session_process_buf_int(mt->se, &w->fbuf, w->ch);
+		fuse_session_process_buf_internal(mt->se, &w->fbuf, w->ch);
 
 		pthread_mutex_lock(&mt->lock);
 		if (!isforget)
@@ -193,7 +199,7 @@ static void *fuse_do_work(void *data)
 			pthread_mutex_unlock(&mt->lock);
 
 			pthread_detach(w->thread_id);
-			free(w->fbuf.mem);
+			fuse_buf_free(&w->fbuf);
 			fuse_chan_put(w->ch);
 			free(w);
 			return NULL;
@@ -220,8 +226,17 @@ int fuse_start_thread(pthread_t *thread_id, void *(*func)(void *), void *arg)
 	 */
 	pthread_attr_init(&attr);
 	stack_size = getenv(ENVNAME_THREAD_STACK);
-	if (stack_size && pthread_attr_setstacksize(&attr, atoi(stack_size)))
-		fuse_log(FUSE_LOG_ERR, "fuse: invalid stack size: %s\n", stack_size);
+	if (stack_size) {
+		long size;
+
+		res = libfuse_strtol(stack_size, &size);
+		if (res)
+			fuse_log(FUSE_LOG_ERR, "fuse: invalid stack size: %s\n",
+				 stack_size);
+		else if (pthread_attr_setstacksize(&attr, size))
+			fuse_log(FUSE_LOG_ERR, "fuse: could not set stack size: %ld\n",
+				 size);
+	}
 
 	/* Disallow signal reception in worker threads */
 	sigemptyset(&newset);
@@ -242,12 +257,11 @@ int fuse_start_thread(pthread_t *thread_id, void *(*func)(void *), void *arg)
 	return 0;
 }
 
-static struct fuse_chan *fuse_clone_chan(struct fuse_mt *mt)
+static int fuse_clone_chan_fd_default(struct fuse_session *se)
 {
 	int res;
 	int clonefd;
 	uint32_t masterfd;
-	struct fuse_chan *newch;
 	const char *devname = "/dev/fuse";
 
 #ifndef O_CLOEXEC
@@ -257,18 +271,40 @@ static struct fuse_chan *fuse_clone_chan(struct fuse_mt *mt)
 	if (clonefd == -1) {
 		fuse_log(FUSE_LOG_ERR, "fuse: failed to open %s: %s\n", devname,
 			strerror(errno));
-		return NULL;
+		return -1;
 	}
+#ifndef O_CLOEXEC
 	fcntl(clonefd, F_SETFD, FD_CLOEXEC);
+#endif
 
-	masterfd = mt->se->fd;
+	masterfd = se->fd;
 	res = ioctl(clonefd, FUSE_DEV_IOC_CLONE, &masterfd);
 	if (res == -1) {
 		fuse_log(FUSE_LOG_ERR, "fuse: failed to clone device fd: %s\n",
 			strerror(errno));
 		close(clonefd);
-		return NULL;
+		return -1;
 	}
+	return clonefd;
+}
+
+static struct fuse_chan *fuse_clone_chan(struct fuse_mt *mt)
+{
+	int clonefd;
+	struct fuse_session *se = mt->se;
+	struct fuse_chan *newch;
+
+	if (se->io != NULL) {
+		if (se->io->clone_fd != NULL)
+			clonefd = se->io->clone_fd(se->fd);
+		else
+			return NULL;
+	} else {
+		clonefd = fuse_clone_chan_fd_default(se);
+	}
+	if (clonefd < 0)
+		return NULL;
+
 	newch = fuse_chan_new(clonefd);
 	if (newch == NULL)
 		close(clonefd);
@@ -319,7 +355,7 @@ static void fuse_join_worker(struct fuse_mt *mt, struct fuse_worker *w)
 	pthread_mutex_lock(&mt->lock);
 	list_del_worker(w);
 	pthread_mutex_unlock(&mt->lock);
-	free(w->fbuf.mem);
+	fuse_buf_free(&w->fbuf);
 	fuse_chan_put(w->ch);
 	free(w);
 }
@@ -419,10 +455,15 @@ int fuse_session_loop_mt_31(struct fuse_session *se, int clone_fd);
 FUSE_SYMVER("fuse_session_loop_mt_31", "fuse_session_loop_mt@FUSE_3.0")
 int fuse_session_loop_mt_31(struct fuse_session *se, int clone_fd)
 {
+	int err;
 	struct fuse_loop_config *config = fuse_loop_cfg_create();
 	if (clone_fd > 0)
 		 fuse_loop_cfg_set_clone_fd(config, clone_fd);
-	return fuse_session_loop_mt_312(se, config);
+	err = fuse_session_loop_mt_312(se, config);
+
+	fuse_loop_cfg_destroy(config);
+
+	return err;
 }
 
 struct fuse_loop_config *fuse_loop_cfg_create(void)

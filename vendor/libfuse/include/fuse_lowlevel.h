@@ -24,6 +24,7 @@
 
 #include "fuse_common.h"
 
+#include <stddef.h>
 #include <utime.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -136,6 +137,7 @@ struct fuse_custom_io {
 	ssize_t (*splice_send)(int fdin, off_t *offin, int fdout,
 				     off_t *offout, size_t len,
 			           unsigned int flags, void *userdata);
+	int (*clone_fd)(int master_fd);
 };
 
 /**
@@ -197,6 +199,9 @@ enum fuse_notify_entry_flags {
  * interrupted, and the reply discarded.  For example if
  * fuse_reply_open() return -ENOENT means, that the release method for
  * this file will not be called.
+ *
+ * This data structure is ABI sensitive, on adding new functions these need to
+ * be appended at the end of the struct
  */
 struct fuse_lowlevel_ops {
 	/**
@@ -298,7 +303,7 @@ struct fuse_lowlevel_ops {
 	 *
 	 * @param req request handle
 	 * @param ino the inode number
-	 * @param fi for future use, currently always NULL
+	 * @param fi file information, or NULL
 	 */
 	void (*getattr) (fuse_req_t req, fuse_ino_t ino,
 			 struct fuse_file_info *fi);
@@ -507,7 +512,7 @@ struct fuse_lowlevel_ops {
 	 *    expected to properly handle the O_APPEND flag and ensure
 	 *    that each write is appending to the end of the file.
 	 * 
-         *  - When writeback caching is enabled, the kernel will
+	 *  - When writeback caching is enabled, the kernel will
 	 *    handle O_APPEND. However, unless all changes to the file
 	 *    come through the kernel this will not work reliably. The
 	 *    filesystem should thus either ignore the O_APPEND flag
@@ -530,6 +535,13 @@ struct fuse_lowlevel_ops {
 	 * `fuse_conn_info.capable`, this is treated as success and
 	 * future calls to open and release will also succeed without being
 	 * sent to the filesystem process.
+	 *
+	 * To get this behavior without providing an opendir handler, you may
+	 * set FUSE_CAP_NO_OPEN_SUPPORT in `fuse_conn_info.want` on supported
+	 * kernels to automatically get the zero message open().
+	 *
+	 * If this callback is not provided and FUSE_CAP_NO_OPEN_SUPPORT is not
+	 * set in `fuse_conn_info.want` then an empty reply will be sent.
 	 *
 	 * Valid replies:
 	 *   fuse_reply_open
@@ -704,6 +716,13 @@ struct fuse_lowlevel_ops {
 	 * process. In addition, the kernel will cache readdir results
 	 * as if opendir returned FOPEN_KEEP_CACHE | FOPEN_CACHE_DIR.
 	 *
+	 * To get this behavior without providing an opendir handler, you may
+	 * set FUSE_CAP_NO_OPENDIR_SUPPORT in `fuse_conn_info.want` on supported
+	 * kernels to automatically get the zero message opendir().
+	 *
+	 * If this callback is not provided and FUSE_CAP_NO_OPENDIR_SUPPORT is
+	 * not set in `fuse_conn_info.want` then an empty reply will be sent.
+	 *
 	 * Valid replies:
 	 *   fuse_reply_open
 	 *   fuse_reply_err
@@ -728,7 +747,7 @@ struct fuse_lowlevel_ops {
 	 * Returning a directory entry from readdir() does not affect
 	 * its lookup count.
 	 *
-         * If off_t is non-zero, then it will correspond to one of the off_t
+	 * If off_t is non-zero, then it will correspond to one of the off_t
 	 * values that was previously returned by readdir() for the same
 	 * directory handle. In this case, readdir() should skip over entries
 	 * coming before the position defined by the off_t value. If entries
@@ -1066,21 +1085,24 @@ struct fuse_lowlevel_ops {
 	/**
 	 * Poll for IO readiness
 	 *
-	 * Note: If ph is non-NULL, the client should notify
-	 * when IO readiness events occur by calling
+	 * The client should immediately respond with fuse_reply_poll(),
+	 * setting revents appropriately according to which events are ready.
+	 *
+	 * Additionally, if ph is non-NULL, the client must retain it and
+	 * notify when all future IO readiness events occur by calling
 	 * fuse_lowlevel_notify_poll() with the specified ph.
 	 *
-	 * Regardless of the number of times poll with a non-NULL ph
-	 * is received, single notification is enough to clear all.
-	 * Notifying more times incurs overhead but doesn't harm
-	 * correctness.
+	 * Regardless of the number of times poll with a non-NULL ph is
+	 * received, a single notify_poll is enough to service all. (Notifying
+	 * more times incurs overhead but doesn't harm correctness.) Any
+	 * additional received handles can be immediately destroyed.
 	 *
 	 * The callee is responsible for destroying ph with
 	 * fuse_pollhandle_destroy() when no longer in use.
 	 *
 	 * If this request is answered with an error code of ENOSYS, this is
 	 * treated as success (with a kernel-defined default poll-mask) and
-	 * future calls to pull() will succeed the same way without being send
+	 * future calls to poll() will succeed the same way without being send
 	 * to the filesystem process.
 	 *
 	 * Valid replies:
@@ -1280,6 +1302,29 @@ struct fuse_lowlevel_ops {
 	 */
 	void (*lseek) (fuse_req_t req, fuse_ino_t ino, off_t off, int whence,
 		       struct fuse_file_info *fi);
+
+
+	/**
+	 * Create a tempfile
+	 * 
+	 * Tempfile means an anonymous file. It can be made into a normal file later
+	 * by using linkat or such.
+	 * 
+	 * If this is answered with an error ENOSYS this is treated by the kernel as 
+	 * a permanent failure and it will disable the feature and not ask again.
+	 *
+	 * Valid replies:
+	 *   fuse_reply_create
+	 *   fuse_reply_err
+	 *
+	 * @param req request handle
+	 * @param parent inode number of the parent directory
+	 * @param mode file type and mode with which to create the new file
+	 * @param fi file information
+	 */
+	void (*tmpfile) (fuse_req_t req, fuse_ino_t parent,
+			mode_t mode, struct fuse_file_info *fi);
+
 };
 
 /**
@@ -1336,7 +1381,8 @@ int fuse_reply_entry(fuse_req_t req, const struct fuse_entry_param *e);
  * Reply with a directory entry and open parameters
  *
  * currently the following members of 'fi' are used:
- *   fh, direct_io, keep_cache
+ *   fh, direct_io, keep_cache, cache_readdir, nonseekable, noflush,
+ *   parallel_direct_writes
  *
  * Possible requests:
  *   create
@@ -1379,10 +1425,26 @@ int fuse_reply_attr(fuse_req_t req, const struct stat *attr,
 int fuse_reply_readlink(fuse_req_t req, const char *link);
 
 /**
+ * Setup passthrough backing file for open reply
+ *
+ * Currently there should be only one backing id per node / backing file.
+ *
+ * Possible requests:
+ *   open, opendir, create
+ *
+ * @param req request handle
+ * @param fd backing file descriptor
+ * @return positive backing id for success, 0 for failure
+ */
+int fuse_passthrough_open(fuse_req_t req, int fd);
+int fuse_passthrough_close(fuse_req_t req, int backing_id);
+
+/**
  * Reply with open parameters
  *
  * currently the following members of 'fi' are used:
- *   fh, direct_io, keep_cache
+ *   fh, direct_io, keep_cache, cache_readdir, nonseekable, noflush,
+ *   parallel_direct_writes,
  *
  * Possible requests:
  *   open, opendir
@@ -1987,6 +2049,12 @@ int fuse_parse_cmdline_312(struct fuse_args *args,
 #endif
 #endif
 
+/* Do not call this directly, use fuse_session_new() instead */
+struct fuse_session *
+fuse_session_new_versioned(struct fuse_args *args,
+			   const struct fuse_lowlevel_ops *op, size_t op_size,
+			   struct libfuse_version *version, void *userdata);
+
 /**
  * Create a low level session.
  *
@@ -2011,13 +2079,33 @@ int fuse_parse_cmdline_312(struct fuse_args *args,
  * @param args argument vector
  * @param op the (low-level) filesystem operations
  * @param op_size sizeof(struct fuse_lowlevel_ops)
+ * @param version the libfuse version a file system server was compiled against
  * @param userdata user data
- *
  * @return the fuse session on success, NULL on failure
  **/
-struct fuse_session *fuse_session_new(struct fuse_args *args,
-				      const struct fuse_lowlevel_ops *op,
-				      size_t op_size, void *userdata);
+static inline struct fuse_session *
+fuse_session_new_fn(struct fuse_args *args, const struct fuse_lowlevel_ops *op,
+		    size_t op_size, void *userdata)
+{
+	struct libfuse_version version = {
+		.major = FUSE_MAJOR_VERSION,
+		.minor = FUSE_MINOR_VERSION,
+		.hotfix = FUSE_HOTFIX_VERSION,
+		.padding = 0
+	};
+
+	return fuse_session_new_versioned(args, op, op_size, &version,
+					  userdata);
+}
+#define fuse_session_new(args, op, op_size, userdata) \
+	fuse_session_new_fn(args, op, op_size, userdata)
+
+/*
+ * This should mostly not be called directly, but instead the
+ * fuse_session_custom_io() should be used.
+ */
+int fuse_session_custom_io_317(struct fuse_session *se,
+			const struct fuse_custom_io *io, size_t op_size, int fd);
 
 /**
  * Set a file descriptor for the session.
@@ -2046,8 +2134,20 @@ struct fuse_session *fuse_session_new(struct fuse_args *args,
  * @return -errno  if failed to allocate memory to store `io`
  *
  **/
-int fuse_session_custom_io(struct fuse_session *se,
-				   const struct fuse_custom_io *io, int fd);
+#if FUSE_MAKE_VERSION(3, 17) <= FUSE_USE_VERSION
+static inline int fuse_session_custom_io(struct fuse_session *se,
+					const struct fuse_custom_io *io, size_t op_size, int fd)
+{
+	return fuse_session_custom_io_317(se, io, op_size, fd);
+}
+#else
+static inline int fuse_session_custom_io(struct fuse_session *se,
+					const struct fuse_custom_io *io, int fd)
+{
+	return fuse_session_custom_io_317(se, io,
+				offsetof(struct fuse_custom_io, clone_fd), fd);
+}
+#endif
 
 /**
  * Mount a FUSE file system.

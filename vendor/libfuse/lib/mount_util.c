@@ -21,7 +21,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <paths.h>
-#if !defined( __NetBSD__) && !defined(__FreeBSD__) && !defined(__DragonFly__)
+#if !defined( __NetBSD__) && !defined(__FreeBSD__) && !defined(__DragonFly__) && !defined(__ANDROID__)
 #include <mntent.h>
 #else
 #define IGNORE_MTAB
@@ -54,7 +54,6 @@ static int mtab_needs_update(const char *mnt)
 	 * Skip mtab update if /etc/mtab:
 	 *
 	 *  - doesn't exist,
-	 *  - is a symlink,
 	 *  - is on a read-only filesystem.
 	 */
 	res = lstat(_PATH_MOUNTED, &stbuf);
@@ -64,9 +63,6 @@ static int mtab_needs_update(const char *mnt)
 	} else {
 		uid_t ruid;
 		int err;
-
-		if (S_ISLNK(stbuf.st_mode))
-			return 0;
 
 		ruid = getuid();
 		if (ruid != 0)
@@ -362,6 +358,11 @@ int fuse_mnt_parse_fuse_fd(const char *mountpoint)
 {
 	int fd = -1;
 	int len = 0;
+
+	if (mountpoint == NULL) {
+		fprintf(stderr, "Invalid null-ptr mount-point!\n");
+		return -1;
+	}
 
 	if (sscanf(mountpoint, "/dev/fd/%u%n", &fd, &len) == 1 &&
 	    len == strlen(mountpoint)) {

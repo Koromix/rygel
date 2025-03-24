@@ -7,9 +7,10 @@
 */
 /* This program does the mounting and unmounting of FUSE filesystems */
 
-#define _GNU_SOURCE /* for clone and strchrnul */
+#define _GNU_SOURCE /* for clone,strchrnul and close_range */
 #include "fuse_config.h"
 #include "mount_util.h"
+#include "util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +25,7 @@
 #include <mntent.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <sys/param.h>
 
 #include "fuse_mount_compat.h"
 
@@ -33,6 +35,10 @@
 #include <sched.h>
 #include <stdbool.h>
 #include <sys/vfs.h>
+
+#ifdef HAVE_CLOSE_RANGE
+#include <linux/close_range.h>
+#endif
 
 #define FUSE_COMMFD_ENV		"_FUSE_COMMFD"
 
@@ -97,6 +103,75 @@ static struct mntent *GETMNTENT(FILE *stream)
 #define GETMNTENT getmntent
 #endif // GETMNTENT_NEEDS_UNESCAPING
 
+/*
+ * Take a ',' separated option string and extract "x-" options
+ */
+static int extract_x_options(const char *original, char **non_x_opts,
+			     char **x_opts)
+{
+	size_t orig_len;
+	const char *opt, *opt_end;
+
+	orig_len = strlen(original) + 1;
+
+	*non_x_opts = calloc(1, orig_len);
+	*x_opts    = calloc(1, orig_len);
+
+	size_t non_x_opts_len = orig_len;
+	size_t x_opts_len = orig_len;
+
+	if (*non_x_opts == NULL || *x_opts == NULL) {
+		fprintf(stderr, "%s: Failed to allocate %zuB.\n",
+			__func__, orig_len);
+		return -ENOMEM;
+	}
+
+	for (opt = original; opt < original + orig_len; opt = opt_end + 1) {
+		char *opt_buf;
+
+		opt_end = strchr(opt, ',');
+		if (opt_end == NULL)
+			opt_end = original + orig_len;
+
+		size_t opt_len = opt_end - opt;
+		size_t opt_len_left = orig_len - (opt - original);
+		size_t buf_len;
+		bool is_x_opts;
+
+		if (strncmp(opt, "x-", MIN(2, opt_len_left)) == 0) {
+			buf_len = x_opts_len;
+			is_x_opts = true;
+			opt_buf = *x_opts;
+		} else {
+			buf_len = non_x_opts_len;
+			is_x_opts = false;
+			opt_buf = *non_x_opts;
+		}
+
+		if (buf_len < orig_len) {
+			strncat(opt_buf, ",", 2);
+			buf_len -= 1;
+		}
+
+		/* omits ',' */
+		if ((ssize_t)(buf_len - opt_len) < 0) {
+			/* This would be a bug */
+			fprintf(stderr, "%s: no buf space left in copy, orig='%s'\n",
+				__func__, original);
+			return -EIO;
+		}
+
+		strncat(opt_buf, opt, opt_end - opt);
+		buf_len -= opt_len;
+
+		if (is_x_opts)
+			x_opts_len = buf_len;
+		else
+			non_x_opts_len = buf_len;
+	}
+
+	return 0;
+}
 
 static const char *get_user_name(void)
 {
@@ -453,11 +528,13 @@ static int unmount_fuse_locked(const char *mnt, int quiet, int lazy)
 
 	drop_privs();
 	res = chdir_to_parent(copy, &last);
-	restore_privs();
-	if (res == -1)
+	if (res == -1) {
+		restore_privs();
 		goto out;
+	}
 
 	res = umount2(last, umount_flags);
+	restore_privs();
 	if (res == -1 && !quiet) {
 		fprintf(stderr, "%s: failed to unmount %s: %s\n",
 			progname, mnt, strerror(errno));
@@ -638,6 +715,8 @@ static struct mount_flags mount_flags[] = {
 	{"strictatime",     MS_STRICTATIME, 1, 1},
 	{"nostrictatime",   MS_STRICTATIME, 0, 1},
 	{"dirsync", MS_DIRSYNC,	    1, 1},
+	{"symfollow",       MS_NOSYMFOLLOW, 0, 1},
+	{"nosymfollow",     MS_NOSYMFOLLOW, 1, 1},
 	{NULL,	    0,		    0, 0}
 };
 
@@ -1061,14 +1140,18 @@ static int check_perm(const char **mntp, struct stat *stbuf, int *mountpoint_fd)
 		0x7366746E /* NTFS3_SUPER_MAGIC */,
 		0x5346414f /* OPENAFS_SUPER_MAGIC */,
 		0x794C7630 /* OVERLAYFS_SUPER_MAGIC */,
+		0xAAD7AAEA /* PANFS_SUPER_MAGIC */,
 		0x52654973 /* REISERFS_SUPER_MAGIC */,
 		0xFE534D42 /* SMB2_SUPER_MAGIC */,
 		0x73717368 /* SQUASHFS_MAGIC */,
 		0x01021994 /* TMPFS_MAGIC */,
 		0x24051905 /* UBIFS_SUPER_MAGIC */,
+#if __SIZEOF_LONG__ > 4
 		0x736675005346544e /* UFSD */,
+#endif
 		0x58465342 /* XFS_SB_MAGIC */,
 		0x2FC12FC1 /* ZFS_SUPER_MAGIC */,
+		0x858458f6 /* RAMFS_MAGIC */,
 	};
 	for (i = 0; i < sizeof(f_type_whitelist)/sizeof(f_type_whitelist[0]); i++) {
 		if (f_type_whitelist[i] == fs_buf.f_type)
@@ -1135,6 +1218,8 @@ static int mount_fuse(const char *mnt, const char *opts, const char **type)
 	char *mnt_opts = NULL;
 	const char *real_mnt = mnt;
 	int mountpoint_fd = -1;
+	char *do_mount_opts = NULL;
+	char *x_opts = NULL;
 
 	fd = open_fuse_device(&dev);
 	if (fd == -1)
@@ -1151,11 +1236,16 @@ static int mount_fuse(const char *mnt, const char *opts, const char **type)
 		}
 	}
 
+	// Extract any options starting with "x-"
+	res= extract_x_options(opts, &do_mount_opts, &x_opts);
+	if (res)
+		goto fail_close_fd;
+
 	res = check_perm(&real_mnt, &stbuf, &mountpoint_fd);
 	restore_privs();
 	if (res != -1)
 		res = do_mount(real_mnt, type, stbuf.st_mode & S_IFMT,
-			       fd, opts, dev, &source, &mnt_opts);
+			       fd, do_mount_opts, dev, &source, &mnt_opts);
 
 	if (mountpoint_fd != -1)
 		close(mountpoint_fd);
@@ -1170,6 +1260,28 @@ static int mount_fuse(const char *mnt, const char *opts, const char **type)
 	}
 
 	if (geteuid() == 0) {
+		if (x_opts && strlen(x_opts) > 0) {
+			/*
+			 * Add back the options starting with "x-" to opts from
+			 * do_mount. +2 for ',' and '\0'
+			 */
+			size_t mnt_opts_len = strlen(mnt_opts);
+			size_t x_mnt_opts_len =  mnt_opts_len+
+						 strlen(x_opts) + 2;
+			char *x_mnt_opts = calloc(1, x_mnt_opts_len);
+
+			if (mnt_opts_len) {
+				strcpy(x_mnt_opts, mnt_opts);
+				strncat(x_mnt_opts, ",", 2);
+			}
+
+			strncat(x_mnt_opts, x_opts,
+				x_mnt_opts_len - mnt_opts_len - 2);
+
+			free(mnt_opts);
+			mnt_opts = x_mnt_opts;
+		}
+
 		res = add_mount(source, mnt, *type, mnt_opts);
 		if (res == -1) {
 			/* Can't clean up mount in a non-racy way */
@@ -1181,6 +1293,8 @@ out_free:
 	free(source);
 	free(mnt_opts);
 	free(dev);
+	free(x_opts);
+	free(do_mount_opts);
 
 	return fd;
 
@@ -1342,6 +1456,65 @@ static void show_version(void)
 	exit(0);
 }
 
+static void close_range_loop(int min_fd, int max_fd, int cfd)
+{
+	for (int fd = min_fd; fd <= max_fd; fd++)
+		if (fd != cfd)
+			close(fd);
+}
+
+/*
+ * Close all inherited fds that are not needed
+ * Ideally these wouldn't come up at all, applications should better
+ * use FD_CLOEXEC / O_CLOEXEC
+ */
+static int close_inherited_fds(int cfd)
+{
+	int rc = -1;
+	int nullfd;
+
+	/* We can't even report an error */
+	if (cfd <= STDERR_FILENO)
+		return -EINVAL;
+
+#ifdef HAVE_CLOSE_RANGE
+	if (cfd < STDERR_FILENO + 2) {
+		close_range_loop(STDERR_FILENO + 1, cfd - 1, cfd);
+	} else {
+		rc = close_range(STDERR_FILENO + 1, cfd - 1, 0);
+		if (rc < 0)
+			goto fallback;
+	}
+
+	/* Close high range */
+	rc = close_range(cfd + 1, ~0U, 0);
+#else
+	goto fallback; /* make use of fallback to avoid compiler warnings */
+#endif
+
+fallback:
+	if (rc < 0) {
+		int max_fd = sysconf(_SC_OPEN_MAX) - 1;
+
+		close_range_loop(STDERR_FILENO + 1, max_fd, cfd);
+	}
+
+	nullfd = open("/dev/null", O_RDWR);
+	if (nullfd < 0) {
+		perror("fusermount: cannot open /dev/null");
+		return -errno;
+	}
+
+	/* Redirect stdin, stdout, stderr to /dev/null */
+	dup2(nullfd, STDIN_FILENO);
+	dup2(nullfd, STDOUT_FILENO);
+	dup2(nullfd, STDERR_FILENO);
+	if (nullfd > STDERR_FILENO)
+		close(nullfd);
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	sigset_t sigset;
@@ -1353,22 +1526,23 @@ int main(int argc, char *argv[])
 	static int unmount = 0;
 	static int lazy = 0;
 	static int quiet = 0;
-	char *commfd;
-	int cfd;
+	char *commfd = NULL;
+	long cfd;
 	const char *opts = "";
 	const char *type = NULL;
 	int setup_auto_unmount_only = 0;
 
 	static const struct option long_opts[] = {
 		{"unmount", no_argument, NULL, 'u'},
-		// Note: auto-unmount deliberately does not have a short version.
-		// It's meant for internal use by mount.c's setup_auto_unmount.
-		{"auto-unmount", no_argument, NULL, 'U'},
 		{"lazy",    no_argument, NULL, 'z'},
 		{"quiet",   no_argument, NULL, 'q'},
 		{"help",    no_argument, NULL, 'h'},
 		{"version", no_argument, NULL, 'V'},
 		{"options", required_argument, NULL, 'o'},
+		// Note: auto-unmount and comm-fd don't have short versions.
+		// They'ne meant for internal use by mount.c
+		{"auto-unmount", no_argument, NULL, 'U'},
+		{"comm-fd", required_argument, NULL, 'c'},
 		{0, 0, 0, 0}};
 
 	progname = strdup(argc > 0 ? argv[0] : "fusermount");
@@ -1399,6 +1573,9 @@ int main(int argc, char *argv[])
 			unmount = 1;
 			auto_unmount = 1;
 			setup_auto_unmount_only = 1;
+			break;
+		case 'c':
+			commfd = optarg;
 			break;
 		case 'z':
 			lazy = 1;
@@ -1446,20 +1623,29 @@ int main(int argc, char *argv[])
 	if (!setup_auto_unmount_only && unmount)
 		goto do_unmount;
 
-	commfd = getenv(FUSE_COMMFD_ENV);
+	if(commfd == NULL)
+		commfd = getenv(FUSE_COMMFD_ENV);
 	if (commfd == NULL) {
 		fprintf(stderr, "%s: old style mounting not supported\n",
 			progname);
 		goto err_out;
 	}
 
-	cfd = atoi(commfd);
+	res = libfuse_strtol(commfd, &cfd);
+	if (res) {
+		fprintf(stderr,
+			"%s: invalid _FUSE_COMMFD: %s\n",
+			progname, commfd);
+		goto err_out;
+
+	}
+
 	{
 		struct stat statbuf;
 		fstat(cfd, &statbuf);
 		if(!S_ISSOCK(statbuf.st_mode)) {
 			fprintf(stderr,
-				"%s: file descriptor %i is not a socket, can't send fuse fd\n",
+				"%s: file descriptor %li is not a socket, can't send fuse fd\n",
 				progname, cfd);
 			goto err_out;
 		}
@@ -1488,8 +1674,13 @@ int main(int argc, char *argv[])
 wait_for_auto_unmount:
 	/* Become a daemon and wait for the parent to exit or die.
 	   ie For the control socket to get closed.
-	   btw We don't want to use daemon() function here because
+	   Btw, we don't want to use daemon() function here because
 	   it forks and messes with the file descriptors. */
+
+	res = close_inherited_fds(cfd);
+	if (res < 0)
+		exit(EXIT_FAILURE);
+
 	setsid();
 	res = chdir("/");
 	if (res == -1) {

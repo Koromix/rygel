@@ -59,6 +59,13 @@ static void *xmp_init(struct fuse_conn_info *conn,
 	(void) conn;
 	cfg->use_ino = 1;
 
+	/* parallel_direct_writes feature depends on direct_io features.
+	   To make parallel_direct_writes valid, need either set cfg->direct_io
+	   in current function (recommended in high level API) or set fi->direct_io
+	   in xmp_create() or xmp_open(). */
+	// cfg->direct_io = 1;
+	   cfg->parallel_direct_writes = 1;
+
 	/* Pick up changes from lower filesystem right away. This is
 	   also necessary for better hardlink support. When the kernel
 	   calls the unlink() handler, it does not know the inode of
@@ -66,9 +73,11 @@ static void *xmp_init(struct fuse_conn_info *conn,
 	   the cache of the associated inode - resulting in an
 	   incorrect st_nlink value being reported for any remaining
 	   hardlinks to this inode. */
-	cfg->entry_timeout = 0;
-	cfg->attr_timeout = 0;
-	cfg->negative_timeout = 0;
+	if (!cfg->auto_cache) {
+		cfg->entry_timeout = 0;
+		cfg->attr_timeout = 0;
+		cfg->negative_timeout = 0;
+	}
 
 	return NULL;
 }
@@ -127,9 +136,14 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
 	while ((de = readdir(dp)) != NULL) {
 		struct stat st;
-		memset(&st, 0, sizeof(st));
-		st.st_ino = de->d_ino;
-		st.st_mode = de->d_type << 12;
+		if (fill_dir_plus) {
+			fstatat(dirfd(dp), de->d_name, &st,
+				AT_SYMLINK_NOFOLLOW);
+		} else {
+			memset(&st, 0, sizeof(st));
+			st.st_ino = de->d_ino;
+			st.st_mode = de->d_type << 12;
+		}
 		if (filler(buf, de->d_name, &st, 0, fill_dir_plus))
 			break;
 	}
@@ -295,6 +309,14 @@ static int xmp_open(const char *path, struct fuse_file_info *fi)
 	res = open(path, fi->flags);
 	if (res == -1)
 		return -errno;
+
+        /* Enable direct_io when open has flags O_DIRECT to enjoy the feature
+        parallel_direct_writes (i.e., to get a shared lock, not exclusive lock,
+        for writes to the same file). */
+	if (fi->flags & O_DIRECT) {
+		fi->direct_io = 1;
+		fi->parallel_direct_writes = 1;
+	}
 
 	fi->fh = res;
 	return 0;
