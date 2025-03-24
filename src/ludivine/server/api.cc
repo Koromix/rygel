@@ -102,12 +102,12 @@ struct EventInfo {
     bool partial = false;
 };
 
-static bool IsEmailValid(const char *email)
+static bool IsMailValid(const char *mail)
 {
     const auto test_char = [](char c) { return strchr("<>& ", c) || (uint8_t)c < 32; };
 
     Span<const char> domain;
-    Span<const char> prefix = SplitStr(email, '@', &domain);
+    Span<const char> prefix = SplitStr(mail, '@', &domain);
 
     if (!prefix.len || !domain.len)
         return false;
@@ -145,7 +145,7 @@ bool InitSMTP(const smtp_Config &config)
     return smtp.Init(config);
 }
 
-static Span<const char> PatchText(Span<const char> text, const char *email, const char *url, Allocator *alloc)
+static Span<const char> PatchText(Span<const char> text, const char *mail, const char *url, Allocator *alloc)
 {
     Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
         Span<const char> key = TrimStr(expr);
@@ -154,8 +154,8 @@ static Span<const char> PatchText(Span<const char> text, const char *email, cons
             writer->Write(config.title);
         } else if (key == "CONTACT") {
             writer->Write(config.contact);
-        } else if (key == "EMAIL") {
-            writer->Write(email);
+        } else if (key == "MAIL") {
+            writer->Write(mail);
         } else if (key == "URL") {
             RG_ASSERT(url);
             writer->Write(url);
@@ -219,7 +219,7 @@ static bool SendExistingMail(const char *to, Allocator *alloc)
 void HandleRegister(http_IO *io)
 {
     // Parse input data
-    const char *email = nullptr;
+    const char *mail = nullptr;
     {
         StreamReader st;
         if (!io->OpenForRead(Kibibytes(1), &st))
@@ -231,8 +231,8 @@ void HandleRegister(http_IO *io)
             Span<const char> key = {};
             parser.ParseKey(&key);
 
-            if (key == "email") {
-                parser.ParseString(&email);
+            if (key == "mail") {
+                parser.ParseString(&mail);
             } else if (parser.IsValid()) {
                 LogError("Unexpected key '%1'", key);
                 io->SendError(422);
@@ -249,8 +249,8 @@ void HandleRegister(http_IO *io)
     {
         bool valid = true;
 
-        if (!email || !IsEmailValid(email)) {
-            LogError("Missing or invalid email");
+        if (!mail || !IsMailValid(mail)) {
+            LogError("Missing or invalid mail address");
             valid = false;
         }
 
@@ -269,10 +269,10 @@ void HandleRegister(http_IO *io)
         FillRandomSafe(tkey);
 
         sq_Statement stmt;
-        if (!db.Run(R"(INSERT INTO users (uid, email, registration)
+        if (!db.Run(R"(INSERT INTO users (uid, mail, registration)
                        VALUES (?1, ?2, 1)
-                       ON CONFLICT (email) DO UPDATE SET registration = registration + IIF(token IS NULL, 1, 0))",
-                    (Span<const uint8_t>)uid, email))
+                       ON CONFLICT (mail) DO UPDATE SET registration = registration + IIF(token IS NULL, 1, 0))",
+                    (Span<const uint8_t>)uid, mail))
             return;
     }
 
@@ -284,8 +284,8 @@ void HandleRegister(http_IO *io)
 
         if (!db.Prepare(R"(SELECT IIF(token IS NULL, 1, 0), uuid_str(uid), registration
                            FROM users
-                           WHERE email = ?1)",
-                        &stmt, email))
+                           WHERE mail = ?1)",
+                        &stmt, mail))
             return;
 
         if (!stmt.Step()) {
@@ -301,7 +301,7 @@ void HandleRegister(http_IO *io)
         registration = sqlite3_column_int(stmt, 2);
 
         if (!valid) {
-            if (!SendExistingMail(email, io->Allocator()))
+            if (!SendExistingMail(mail, io->Allocator()))
                 return;
 
             io->SendText(200, "{}", "application/json");
@@ -311,7 +311,7 @@ void HandleRegister(http_IO *io)
         uid = DuplicateString(uid, io->Allocator()).ptr;
     }
 
-    if (!SendNewMail(email, uid, tkey, registration, io->Allocator()))
+    if (!SendNewMail(mail, uid, tkey, registration, io->Allocator()))
         return;
 
     io->SendText(200, "{}", "application/json");
@@ -410,7 +410,7 @@ void HandleLogin(http_IO *io)
         int count = sqlite3_column_int(stmt, 2);
 
         if (registration != count) {
-            LogError("Please use most recent login email");
+            LogError("Please use most recent login mail");
             io->SendError(409);
             return;
         }

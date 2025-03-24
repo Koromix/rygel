@@ -749,7 +749,7 @@ async function runRegister() {
                 </div>
 
                 <form style="text-align: center;" @submit=${UI.wrap(register)}>
-                    <input type="text" name="email" style="width: 20em;" placeholder="adresse email" />
+                    <input type="text" name="mail" style="width: 20em;" placeholder="adresse email" />
                     <div class="actions">
                         <button type="submit">Créer mon compte</button>
                     </div>
@@ -771,10 +771,12 @@ async function register(e) {
     let form = e.currentTarget;
     let elements = form.elements;
 
-    if (!elements.email.value)
+    let mail = elements.mail.value.trim();
+
+    if (!mail)
         throw new Error('Adresse email manquante');
 
-    await Net.post('/api/register', { email: elements.email.value });
+    await Net.post('/api/register', { mail: mail });
 
     form.innerHTML = '';
     render(html`<p>Consultez l'email qui <b>vous a été envoyé</b> pour continuer !</p>`, form);
