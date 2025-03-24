@@ -98,15 +98,15 @@ button.small > img {
 }
 button:is(.secondary, .small) { font-weight: normal !important; }
 
-button.highlight { animation: highlight 1s ease-in-out infinite alternate; }
+button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 @keyframes highlight {
     0% {
         filter: contrast(100%);
         transform: scale(1);
     }
     100% {
-        filter: contrast(110%);
-        transform: scale(1.1);
+        filter: contrast(120%);
+        transform: scale(1.2);
     }
 }
 
