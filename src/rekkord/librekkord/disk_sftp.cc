@@ -764,9 +764,11 @@ bool SftpDisk::RunSafe(const char *action, FunctionRef<RunResult(ConnectionData 
 
         WaitDelay(delay);
 
-        conn = ReserveConnection();
-        if (!conn)
-            return false;
+        if (!conn) {
+            conn = ReserveConnection();
+            if (!conn)
+                return false;
+        }
     }
 
     LogError("Failed to %1: %2", action, sftp_GetErrorString(conn->sftp));
