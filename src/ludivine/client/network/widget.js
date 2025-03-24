@@ -149,6 +149,9 @@ function NetworkWidget(app, mod, world) {
             ` : ''}
         `);
 
+        // Help user get started!
+        mod.showGuide('addSubjects', USER_GUIDES.addSubjects, { highlight: '#net_create' });
+
         // User is moving around
         if (active_grab != null) {
             if (mouse_state.left > 0) {

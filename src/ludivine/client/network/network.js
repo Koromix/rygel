@@ -131,9 +131,9 @@ function NetworkModule(app, study, page) {
                 await reset();
         }
 
-        runner.start();
+        self.render();
 
-        self.showGuide('addSubjects', USER_GUIDES.addSubjects, { highlight: '#net_create' });
+        runner.start();
     };
 
     this.stop = function() {
