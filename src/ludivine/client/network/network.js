@@ -172,7 +172,7 @@ function NetworkModule(app, study, page) {
         };
 
         await load({
-            subjects: [],
+            subjects: [subject0],
             persons: [person0],
             links: [],
             levels: [
