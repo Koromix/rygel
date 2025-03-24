@@ -216,8 +216,8 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
     {
         Async async(GetAsync());
 
-        for (int i = 0; i < 4096; i++) {
-            const char *path = Fmt(&temp_alloc, "%1/blobs/%2", config.path, FmtHex(i).Pad0(-3)).ptr;
+        for (int i = 0; i < 256; i++) {
+            const char *path = Fmt(&temp_alloc, "%1/blobs/%2", config.path, FmtHex(i).Pad0(-2)).ptr;
 
             async.Run([=, this]() {
                 bool success = RunSafe("init directory", [&](ConnectionData *conn) {

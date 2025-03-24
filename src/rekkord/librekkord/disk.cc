@@ -499,10 +499,10 @@ bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
     return true;
 }
 
-static inline FmtArg GetPrefix3(const rk_Hash &hash)
+static inline FmtArg GetBlobPrefix(const rk_Hash &hash)
 {
-    uint16_t prefix = ((uint16_t)hash.hash[0] << 4) | ((uint16_t)hash.hash[1] >> 4);
-    return FmtHex(prefix).Pad0(-3);
+    uint16_t prefix = hash.hash[0];
+    return FmtHex(prefix).Pad0(-2);
 }
 
 bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob)
@@ -514,7 +514,7 @@ bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uin
     RG_DEFER_N(err_guard) { out_blob->RemoveFrom(prev_len); };
 
     LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(hash), hash).len;
+    path.len = Fmt(path.data, "blobs/%1/%2", GetBlobPrefix(hash), hash).len;
 
     HeapArray<uint8_t> raw;
     if (ReadRaw(path.data, &raw) < 0)
@@ -616,7 +616,7 @@ Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
     RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::Full);
 
     LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(hash), hash).len;
+    path.len = Fmt(path.data, "blobs/%1/%2", GetBlobPrefix(hash), hash).len;
 
     switch (TestFast(path.data)) {
         case StatResult::Success: return 0;
