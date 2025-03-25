@@ -1238,10 +1238,12 @@ function renderModule() {
 
                     let cls = 'module';
                     let status = null;
+                    let img = null;
 
                     if (total && progress == total) {
                         cls += ' done';
                         status = 'Terminé';
+                        img = ASSETS['ui/validate'];
                     } else if (progress) {
                         cls += ' draft';
                         status = progressBar(progress, total);
@@ -1269,6 +1271,7 @@ function renderModule() {
                     return html`
                         <div class=${cls} @click=${UI.wrap(e => navigateStudy(child))}>
                             <div class="title">${child.title}</div>
+                            ${img != null ? html`<img src=${img} alt="" />` : ''}
                             <div class="status">${status}</div>
                         </div>
                     `;
@@ -1278,9 +1281,11 @@ function renderModule() {
 
                     let cls = 'module ' + test.status;
                     let status = null;
+                    let img = null;
 
                     if (test.status == 'done') {
                         status = 'Terminé';
+                        img = ASSETS['ui/validate'];
                     } else if (child.schedule != null && child.schedule > today) {
                         status = niceDate(child.schedule, true);
                         cls += ' disabled';
@@ -1292,6 +1297,7 @@ function renderModule() {
                     return html`
                         <div class=${cls} @click=${UI.wrap(e => navigateStudy(child))}>
                             <div class="title">${child.title}</div>
+                            ${img != null ? html`<img src=${img} alt="" />` : ''}
                             <div class="status">${status}</div>
                         </div>
                     `;

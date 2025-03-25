@@ -106,7 +106,8 @@ import asset89 from './ui/track.png';
 import asset90 from './ui/undo.png';
 import asset91 from './ui/unselect.png';
 import asset92 from './ui/user.png';
-import asset93 from './ui/video.png';
+import asset93 from './ui/validate.png';
+import asset94 from './ui/video.png';
 
 const ASSETS = {
     'calendars/apple': asset0,
@@ -202,7 +203,8 @@ const ASSETS = {
     'ui/undo': asset90,
     'ui/unselect': asset91,
     'ui/user': asset92,
-    'ui/video': asset93,
+    'ui/validate': asset93,
+    'ui/video': asset94,
 };
 
 export { ASSETS }
