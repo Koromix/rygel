@@ -688,6 +688,24 @@ function drawStart() {
                               : `Appuyez sur la touche entrée ⏎\uFE0E pour commencer`;
 
     runner.text(canvas.width / 2, canvas.height / 2, text, { align: 5 });
+
+    if (!runner.isTouch) {
+        ctx.font = 'italic ' + font(18);
+
+        let help = [
+            `Utilisez les flèches gauche et droite du clavier pour déplacer la pièce pendant qu'elle chute`,
+            `Appuyez sur la flèche haut du clavier pour la faire pivoter`,
+            '',
+            `Les autres raccourcis sont indiqués dans le cadre en bas à gauche de la zone de jeu`
+        ];
+
+        for (let i = 0; i < help.length; i++) {
+            let text = help[i];
+            let adjust = 100 + 30 * i;
+
+            runner.text(canvas.width / 2, canvas.height / 2 + adjust, text, { align: 5 });
+        }
+    }
 }
 
 function drawHelp() {
