@@ -693,8 +693,8 @@ function drawStart() {
         ctx.font = 'italic ' + font(18);
 
         let help = [
-            `Utilisez les flèches gauche et droite du clavier pour déplacer la pièce pendant qu'elle chute`,
-            `Appuyez sur la flèche haut du clavier pour la faire pivoter`,
+            `Utilisez les flèches gauche et droite du clavier pour déplacer les pièces pendant qu'elles chutent`,
+            `Appuyez sur la flèche haut du clavier pour les faire pivoter`,
             '',
             `Les autres raccourcis sont indiqués dans le cadre en bas à gauche de la zone de jeu`
         ];
