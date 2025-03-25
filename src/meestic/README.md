@@ -2,10 +2,10 @@
 
 Meestic is a small utility made to control **the lights of MSI Delta 15 laptop keyboards** on Windows and Linux. It provides both a CLI and a system-tray GUI, and can fully replace the official MSI tool (which is not even available for Linux).
 
-<p style="text-align: center;">
+<div class="illustrations">
     <img src="{{ ASSET static/meestic/kde.webp }}" width="266" height="169" alt="KDE screenshot" />
     <img src="{{ ASSET static/meestic/windows.webp }}" width="266" height="169" alt="Windows screenshot" />
-</p>
+</div>
 
 It was made by looking at the HID packets sent by the Windows tool with Wireshark. It is provided "as is", I don't make any guarantee about this tool.
 

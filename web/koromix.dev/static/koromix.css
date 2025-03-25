@@ -29,12 +29,13 @@ html {
     display: flex;
     gap: 2em;
     align-items: center;
+
+    & > img {
+        width: 210px;
+        height: 300px;
+    }
+    & > div { flex: 1; }
 }
-#me > img {
-    width: 210px;
-    height: 300px;
-}
-#me > div { flex: 1; }
 
 #hire {
     display: block;
@@ -46,6 +47,16 @@ html {
     border-radius: 6px;
     font-size: 0.8em;
     color: white;
+}
+
+.illustrations {
+    display: flex;
+    margin: 2em;
+    justify-content: center;
+    gap: 2em;
+    flex-wrap: wrap;
+
+    & img { object-fit: contain; }
 }
 
 @media screen and (max-width: 1300px) {

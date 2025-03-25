@@ -7,9 +7,9 @@ Koffi is a **fast and easy-to-use C to JS FFI module** for [Node.js](https://nod
 * Javascript functions can be used as C callbacks (since 1.2.0)
 * Well-tested code base for popular OS/architecture combinations
 
-<p style="text-align: center; margin: 2em;">
+<div class="illustrations">
     <img src="{{ ASSET static/koffi/logo.webp }}" width="185" height="99" alt=""/>
-</p>
+</div>
 
 You can find more information about Koffi on the official web site: https://koffi.dev/
 
