@@ -169,6 +169,9 @@ function AppRunner(canvas) {
     this.resize = function(width, height, ratio = 1) {
         dpr = ratio;
 
+        width = Math.round(width);
+        height = Math.round(height);
+
         if (width != prev_width) {
             canvas.width = width * ratio;
             canvas.style.width = width + 'px';
