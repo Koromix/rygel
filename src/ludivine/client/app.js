@@ -1523,7 +1523,7 @@ function sos(e) {
 
     render(html`
         <div @click=${stop}>
-            <img src=${ASSETS['ui/3114']} width="348" height="86" alt="">
+            <img src=${ASSETS['ui/3114']} width="232" height="58" alt="">
             <p>Le <b>3114</b> est le numéro national de prévention de suicide. Consultez le <a href="https://3114.fr/" target="_blank">site du 3114</a> pour plus d'informations.</p>
 
             <img src=${ASSETS['ui/116006']} width="292" height="150" alt="">
