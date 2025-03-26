@@ -17,7 +17,6 @@ import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import { AppRunner } from '../../../web/core/runner.js';
 import { deflate, inflate } from '../core/misc.js';
-import { USER_GUIDES } from './constants.js';
 import { NetworkWidget } from './widget.js';
 import { ASSETS } from '../../assets/assets.js';
 
