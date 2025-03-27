@@ -1045,9 +1045,13 @@ Options:
     return 0;
 }
 
-void HandleDemo(http_IO *io)
+void HandleInstanceDemo(http_IO *io)
 {
-    RG_ASSERT(gp_domain.config.demo_mode);
+    if (!gp_domain.config.demo_mode) {
+        LogError("Demo mode is not enabled");
+        io->SendError(403);
+        return;
+    }
 
     char name[17];
     Fmt(name, "%1", FmtRandom(RG_SIZE(name) - 1));
@@ -1120,8 +1124,17 @@ void HandleDemo(http_IO *io)
     stamp->develop = true;
 
     const char *redirect = Fmt(io->Allocator(), "/%1/", name).ptr;
-    io->AddHeader("Location", redirect);
-    io->SendEmpty(302);
+
+    // Export data
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartObject();
+    json.Key("url"); json.String(redirect);
+    json.EndObject();
+
+    json.Finish();
 }
 
 void HandleInstanceCreate(http_IO *io)

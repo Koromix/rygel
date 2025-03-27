@@ -27,6 +27,8 @@
         <script>
             // Version: {{ VERSION }}
             // Compiler: {{ COMPILER }}
+
+            var DEMO = {{ DEMO }};
         </script>
 
         <link rel="stylesheet" href="{{ STATIC_URL }}goupile.css" async/>
@@ -75,6 +77,33 @@
                 color: #999;
                 text-decoration: none;
             }
+
+            #ro_fatal {
+                display: flex;
+                height: 100%;
+                align-items: center;
+                justify-content: center;
+            }
+            #ro_fatal > div {
+                padding: 5px;
+                font-size: 1.4em;
+                text-align: center;
+            }
+
+            body.demo #ro_icon {
+                animation: ro_demo 2s ease-in-out infinite alternate; 
+            }
+
+            @keyframes ro_demo {
+                0% {
+                    filter: contrast(100%);
+                    transform: scale(1);
+                }
+                100% {
+                    filter: contrast(120%);
+                    transform: scale(1.2);
+                }
+            }
         </style>
     </head>
 
@@ -83,5 +112,37 @@
         <img id="ro_icon" src="/favicon.png" alt="" title="" />
         <a id="ro_web" href="https://goupile.org/" target="_blank">Goupile</a>
         <a id="ro_version" href="https://goupile.org/changelog" target="_blank">Version {{ VERSION }}</a>
+
+        <script>
+            if (DEMO)
+                demo();
+
+            async function demo() {
+                document.body.classList.add('demo');
+
+                try {
+                    let response = await fetch('/admin/api/instances/demo', {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHTTPRequest' }
+                    });
+
+                    if (!response.ok) {
+                        let text = (await response.text()).trim();
+                        throw new Error(text);
+                    }
+
+                    let json = await response.json();
+                    let url = json.url;
+
+                    window.location.href = url;
+                } catch (err) {
+                    document.body.innerHTML =
+                        '<div id="ro_fatal"><div>' +
+                            '<span style="color: red;">⚠\uFE0E <b>Une erreur est survenue pendant le chargement</b></span><br/>' +
+                            err.message +
+                        '</div></div>';
+                }
+            }
+        </script>
     </body>
 </html>

@@ -506,6 +506,8 @@ static void HandleAdminRequest(http_IO *io)
         HandleChangeQRcode(io);
     } else if (TestStr(admin_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
         HandleChangeTOTP(io);
+    } else if (TestStr(admin_url, "/api/instances/demo") && request.method == http_RequestMethod::Post) {
+        HandleInstanceDemo(io);
     } else if (TestStr(admin_url, "/api/instances/create") && request.method == http_RequestMethod::Post) {
         HandleInstanceCreate(io);
     } else if (TestStr(admin_url, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
@@ -854,25 +856,23 @@ static void HandleRequest(http_IO *io)
     // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
     // to forbid the instance key.
     if (TestStr(request.path, "/")) {
-        if (gp_domain.config.demo_mode) {
-            HandleDemo(io);
-        } else {
-            const AssetInfo *render = RenderTemplate("/", *assets_root,
+        const AssetInfo *render = RenderTemplate("/", *assets_root,
                                                  [&](Span<const char> expr, StreamWriter *writer) {
-                Span<const char> key = TrimStr(expr);
+            Span<const char> key = TrimStr(expr);
 
-                if (key == "STATIC_URL") {
-                    Print(writer, "/admin/static/%1/", shared_etag);
-                } else if (key == "VERSION") {
-                    writer->Write(FelixVersion);
-                } else if (key == "COMPILER") {
-                    writer->Write(FelixCompiler);
-                } else {
-                    Print(writer, "{{%1}}", expr);
-                }
-            });
-            AttachStatic(io, *render, 0, shared_etag);
-        }
+            if (key == "STATIC_URL") {
+                Print(writer, "/admin/static/%1/", shared_etag);
+            } else if (key == "VERSION") {
+                writer->Write(FelixVersion);
+            } else if (key == "COMPILER") {
+                writer->Write(FelixCompiler);
+            } else if (key == "DEMO") {
+                writer->Write(gp_domain.config.demo_mode ? "true" : "false");
+            } else {
+                Print(writer, "{{%1}}", expr);
+            }
+        });
+        AttachStatic(io, *render, 0, shared_etag);
     } else if (TestStr(request.path, "/favicon.png")) {
         const AssetInfo *asset = assets_map.FindValue("/favicon.png", nullptr);
         RG_ASSERT(asset);
