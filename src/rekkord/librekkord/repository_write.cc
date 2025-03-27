@@ -43,8 +43,8 @@ class PutContext {
     rk_Disk *disk;
     sq_Database *db;
 
-    Span<const uint8_t> salt;
-    uint64_t salt64;
+    uint8_t salt32[32];
+    uint64_t salt8;
 
     ProgressHandle *progress;
 
@@ -87,11 +87,17 @@ static void HashBlake3(rk_BlobType type, Span<const uint8_t> buf, const uint8_t 
 }
 
 PutContext::PutContext(rk_Disk *disk, sq_Database *db, ProgressHandle *progress, bool preserve_atime)
-    : disk(disk), db(db), salt(disk->GetSalt()), progress(progress), preserve_atime(preserve_atime),
+    : disk(disk), db(db), progress(progress), preserve_atime(preserve_atime),
       dir_tasks(disk->GetAsync()), file_tasks(disk->GetAsync())
 {
-    RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
-    MemCpy(&salt64, salt.ptr, RG_SIZE(salt64));
+    disk->MakeSalt(rk_SaltType::BlobHash, salt32);
+
+    // Seed the CDC splitter too
+    {
+        uint8_t buf[RG_SIZE(salt8)];
+        disk->MakeSalt(rk_SaltType::SplitterSeed, buf);
+        MemCpy(&salt8, buf, RG_SIZE(salt8));
+    }
 }
 
 PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash, int64_t *out_subdirs)
@@ -310,7 +316,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                 target.len = (Size)ret;
                             }
 
-                            HashBlake3(rk_BlobType::Link, target, salt.ptr, &entry->hash);
+                            HashBlake3(rk_BlobType::Link, target, salt32, &entry->hash);
 
                             Size written = disk->WriteBlob(entry->hash, rk_BlobType::Link, target);
                             if (written < 0)
@@ -348,7 +354,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             header->size = LittleEndian(pending->size.load());
             header->entries = LittleEndian(pending->entries.load());
 
-            HashBlake3(rk_BlobType::Directory2, pending->blob, salt.ptr, &pending->hash);
+            HashBlake3(rk_BlobType::Directory2, pending->blob, salt32, &pending->hash);
 
             if (pending->parent_idx >= 0) {
                 PendingDirectory *parent = &pending_directories[pending->parent_idx];
@@ -460,7 +466,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
 
     // Split the file
     {
-        rk_Splitter splitter(ChunkAverage, ChunkMin, ChunkMax, salt64);
+        rk_Splitter splitter(ChunkAverage, ChunkMin, ChunkMax, salt8);
 
         bool use_big_buffer = (--big_semaphore >= 0);
         RG_DEFER { big_semaphore++; };
@@ -503,7 +509,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
                         entry.offset = LittleEndian(total);
                         entry.len = LittleEndian((int32_t)chunk.len);
 
-                        HashBlake3(rk_BlobType::Chunk, chunk, salt.ptr, &entry.hash);
+                        HashBlake3(rk_BlobType::Chunk, chunk, salt32, &entry.hash);
 
                         Size written = disk->WriteBlob(entry.hash, rk_BlobType::Chunk, chunk);
                         if (written < 0)
@@ -543,7 +549,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
         int64_t len_64le = LittleEndian(st.GetRawRead());
         file_blob.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
 
-        HashBlake3(rk_BlobType::File, file_blob, salt.ptr, &file_hash);
+        HashBlake3(rk_BlobType::File, file_blob, salt32, &file_hash);
 
         Size written = disk->WriteBlob(file_hash, rk_BlobType::File, file_blob);
         if (written < 0)
@@ -601,8 +607,8 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     if (!db)
         return false;
 
-    Span<const uint8_t> salt = disk->GetSalt();
-    RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
+    uint8_t salt32[BLAKE3_KEY_LEN];
+    disk->MakeSalt(rk_SaltType::BlobHash, salt32);
 
     HeapArray<uint8_t> snapshot_blob;
     snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader));
@@ -715,7 +721,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         header2->size = LittleEndian(total_size);
         header2->entries = LittleEndian(total_entries);
 
-        HashBlake3(rk_BlobType::Snapshot3, snapshot_blob, salt.ptr, &hash);
+        HashBlake3(rk_BlobType::Snapshot3, snapshot_blob, salt32, &hash);
 
         // Write snapshot blob
         {

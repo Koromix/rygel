@@ -90,7 +90,7 @@ static Size CenterSize(Size avg, Size min, Size max)
     return size;
 }
 
-rk_Splitter::rk_Splitter(Size avg, Size min, Size max, uint64_t salt64)
+rk_Splitter::rk_Splitter(Size avg, Size min, Size max, uint64_t salt8)
     : avg(avg), min(min), max(max)
 {
     RG_ASSERT(AverageMin <= avg && avg <= AverageMax);
@@ -109,13 +109,13 @@ rk_Splitter::rk_Splitter(Size avg, Size min, Size max, uint64_t salt64)
     // Init salt
     {
         union {
-            uint64_t salt64;
+            uint64_t salt8;
             uint8_t salt[8];
         } u;
         static_assert(RG_SIZE(salt) == RG_SIZE(u.salt));
-        static_assert(RG_SIZE(u.salt) == RG_SIZE(salt64));
+        static_assert(RG_SIZE(u.salt) == RG_SIZE(salt8));
 
-        u.salt64 = LittleEndian(salt64);
+        u.salt8 = LittleEndian(salt8);
         MemCpy(salt, u.salt, RG_SIZE(salt));
     }
 }

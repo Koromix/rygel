@@ -30,6 +30,7 @@ static_assert(crypto_secretstream_xchacha20poly1305_KEYBYTES == 32);
 static_assert(crypto_secretbox_KEYBYTES == 32);
 static_assert(crypto_secretbox_NONCEBYTES == 24);
 static_assert(crypto_secretbox_MACBYTES == 16);
+static_assert(crypto_kdf_blake2b_KEYBYTES == crypto_box_PUBLICKEYBYTES);
 
 rk_Disk::~rk_Disk()
 {
@@ -165,6 +166,18 @@ static bool IsUserName(Span<const char> username)
     RG_DEFER_N(log_guard) { PopLogFilter(); };
 
     return CheckUserName(username);
+}
+
+void rk_Disk::MakeSalt(rk_SaltType type, Span<uint8_t> out_buf) const
+{
+    RG_ASSERT(mode != rk_DiskMode::Secure);
+    RG_ASSERT(out_buf.len >= 8);
+    RG_ASSERT(out_buf.len <= 32);
+
+    const char *ctx = "REKKORDs"; // Must be 8 bytes
+    uint64_t subkey = (uint64_t)type;
+
+    crypto_kdf_blake2b_derive_from_key(out_buf.ptr, out_buf.len, subkey, ctx, pkey);
 }
 
 bool rk_Disk::ChangeID()

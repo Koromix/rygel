@@ -75,6 +75,11 @@ static const char *const rk_BlobTypeNames[] = {
     "Snapshot3"
 };
 
+enum class rk_SaltType {
+    BlobHash = 0,
+    SplitterSeed = 1
+};
+
 struct rk_UserInfo {
     const char *username;
     rk_DiskMode mode; // WriteOnly or Full
@@ -127,7 +132,6 @@ public:
     void Lock();
 
     const char *GetURL() const { return url; }
-    Span<const uint8_t> GetSalt() const { return pkey; }
     rk_DiskMode GetMode() const { return mode; }
     const char *GetUser() const { return user; }
 
@@ -143,6 +147,8 @@ public:
     }
 
     Async *GetAsync() { return &tasks; }
+
+    void MakeSalt(rk_SaltType type, Span<uint8_t> out_buf) const;
 
     bool ChangeID();
 
