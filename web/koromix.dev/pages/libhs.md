@@ -10,7 +10,7 @@ libhs is a C library to **enumerate and interact with USB HID and USB serial dev
 
 # Build
 
-Just [download libhs.h](https://github.com/Koromix/libraries) from the GitHub repository. This file provides both the interface and the implementation. To instantiate the implementation, `#define HS_IMPLEMENTATION` in *ONE* source file, before including libhs.h.
+Just [download libhs.h](https://codeberg.org/Koromix/libraries) from the Codeberg repository. This file provides both the interface and the implementation. To instantiate the implementation, `#define HS_IMPLEMENTATION` in *ONE* source file, before including libhs.h.
 
 libhs depends on **a few OS-provided libraries** that you need to link:
 
@@ -31,7 +31,7 @@ You can clone the code and report bugs on the [TyTools GitHub repository](https:
 
 # Examples
 
-You can find a few complete [working examples](https://codeberg.org/Koromix/rygel/src/branch/master/src/tytools/libhs/examples) in the GitHub repository.
+You can find a few complete [working examples](https://codeberg.org/Koromix/rygel/src/branch/master/src/tytools/libhs/examples) in the Codeberg repository.
 
 The following code uses libhs to enumerate serial and HID devices:
 

@@ -1,6 +1,6 @@
 # Bugs et demandes
 
-Utilisez notre outil de [suivi de tickets en ligne](https://github.com/Koromix/goupile/issues) pour demander de nouvelles fonctionnalités ou rapporter des bugs.
+Utilisez notre outil de [suivi de tickets en ligne](https://codeberg.org/Koromix/goupile/issues) pour demander de nouvelles fonctionnalités ou rapporter des bugs.
 
 # Code
 

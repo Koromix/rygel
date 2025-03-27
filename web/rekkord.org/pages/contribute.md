@@ -1,6 +1,6 @@
 # Bugs and ideas
 
-Use the official repository for bugs, ideas and features requests: https://github.com/Koromix/rekkord
+Use the official repository for bugs, ideas and features requests: https://codeberg.org/Koromix/rekkord
 
 Please note that the source code is not in this repository, instead it lives in a monorepo: https://codeberg.org/Koromix/rygel/ (in the *src/rekkord* subdirectory).
 
