@@ -156,10 +156,10 @@ You can also use `tycmd reset -b` to start the bootloader. This is the same as p
 
 # Hacking TyTools
 
-Start by cloning the [git repository](https://github.com/Koromix/rygel):
+Start by cloning the [git repository](https://codeberg.org/Koromix/rygel):
 
 ```sh
-git clone https://github.com/Koromix/rygel
+git clone https://codeberg.org/Koromix/rygel
 cd rygel
 ```
 
@@ -172,7 +172,7 @@ Only 64-bit builds are supported, 32-bit builds are not supported anymore.
 If **you don't have Qt, only the libraries and command-line tools** will be compiled. There are two options to enable Qt in TyTools:
 
 - _dynamic Qt build_: Easiest option, you only need to install the pre-built Qt DLLs for your compiler with the [official Qt installer](https://www.qt.io/download-open-source). The binaries need the Qt DLLs to work.
-- _static Qt build_: Harder, but will produce autonomous binaries. Follow the [Qt instructions in the felix README](https://github.com/Koromix/rygel/tree/master/src/felix/README.md#building-qt-apps) to proceed.
+- _static Qt build_: Harder, but will produce autonomous binaries. Follow the [Qt instructions in the felix README](https://codeberg.org/Koromix/rygel/src/branch/master/src/felix/README.md#building-qt-apps) to proceed.
 
 Once Qt is ready, launch _VS2019 x64 Native Tools Command Prompt_, navigate to the project directory and run the following commands:
 
@@ -192,7 +192,7 @@ Install Xcode and the developer command-line tools. The native Clang compiler ca
 If **you don't have Qt, only the libraries and command-line tools** will be compiled. There are two options to enable Qt in TyTools:
 
 - _dynamic Qt build_: Easiest option, you only need to install the pre-built Qt DLLs for your compiler with the [official Qt installer](https://www.qt.io/download-open-source). The binaries need the Qt DLLs to work.
-- _static Qt build_: Harder, but will produce autonomous binaries. Follow the [Qt instructions in the felix README](https://github.com/Koromix/rygel/tree/master/src/felix/README.md#building-qt-apps) to proceed.
+- _static Qt build_: Harder, but will produce autonomous binaries. Follow the [Qt instructions in the felix README](https://codeberg.org/Koromix/rygel/src/branch/master/src/felix/README.md#building-qt-apps) to proceed.
 
 Once Qt is ready, you can build TyTools by executing the following commands in the project directory:
 

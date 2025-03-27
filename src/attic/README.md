@@ -49,7 +49,7 @@ Run `nestor --help` for more information.
 ## Build on Linux and macOS
 
 ```bat
-git clone --depth 1 https://github.com/Koromix/rygel.git
+git clone --depth 1 https://codeberg.org/Koromix/rygel.git
 cd rygel
 
 bootstrap.bat
@@ -61,7 +61,7 @@ The binaries are then available in the `bin/Fast` directory.
 ## Build on Windows
 
 ```sh
-git clone --depth 1 https://github.com/Koromix/rygel.git
+git clone --depth 1 https://codeberg.org/Koromix/rygel.git
 cd rygel
 
 ./bootstrap.sh
@@ -85,7 +85,7 @@ It is mainly useful for automated test systems, **do not install it** on product
 In order to build SeatSH on Windows, clone the repository and run these commands from the root directory:
 
 ```bat
-git clone --depth 1 https://github.com/Koromix/rygel.git
+git clone --depth 1 https://codeberg.org/Koromix/rygel.git
 cd rygel
 
 bootstrap.bat

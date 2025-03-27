@@ -49,7 +49,7 @@ In this case, you can use `require('koffi/indirect')` but you will need to make 
 
 Packaging with electron-builder should work as-is.
 
-Take a look at the full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/electron-builder).
+Take a look at the full [working example in the repository](https://codeberg.org/Koromix/rygel/src/branch/master/src/koffi/examples/electron-builder).
 
 ## Electron Forge
 
@@ -59,13 +59,13 @@ Packaging with Electron Force should work as-is, even when using webpack as conf
 npm init electron-app@latest my-app -- --template=webpack
 ```
 
-Take a look at the full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/electron-forge).
+Take a look at the full [working example in the repository](https://codeberg.org/Koromix/rygel/src/branch/master/src/koffi/examples/electron-forge).
 
 ## NW.js
 
 Packagers such as nw-builder should work as-is.
 
-You can find a full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/nwjs).
+You can find a full [working example in the repository](https://codeberg.org/Koromix/rygel/src/branch/master/src/koffi/examples/nwjs).
 
 ## Node.js and esbuild
 
@@ -75,10 +75,10 @@ You can easily tell esbuild to copy the native files with the copy loader and th
 esbuild index.js --platform=node --bundle --loader:.node=copy --outdir=dist/
 ```
 
-You can find a full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/node-esbuild).
+You can find a full [working example in the repository](https://codeberg.org/Koromix/rygel/src/branch/master/src/koffi/examples/node-esbuild).
 
 ## Node.js and yao-pkg
 
 Use [yao-pkg](https://github.com/yao-pkg/pkg) to make binary packages of your Node.js-based project.
 
-You can find a full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/yao-pkg).
+You can find a full [working example in the repository](https://codeberg.org/Koromix/rygel/src/branch/master/src/koffi/examples/yao-pkg).

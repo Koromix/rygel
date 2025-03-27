@@ -37,7 +37,7 @@ Les prestataires sollicités pour la web-application Lignes de Vie sont :
 
 Le logiciel Ludivine, qui a été développé spécifiquement pour la plateforme Lignes de Vie, est placé sous licence libre [GPL 3](https://www.gnu.org/licenses/#GPL) est peut donc ếtre librement utilisé, copié, étudié et modifié.
 
-Le dépôt git du code est disponible ici : https://github.com/Koromix/ludivine
+Le dépôt git du code est disponible ici : https://codeberg.org/Koromix/ludivine
 
 # Données personnelles
 

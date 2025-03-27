@@ -15,7 +15,7 @@ libhs is a C library to enumerate HID and serial devices and interact with them.
 Build {#build}
 ========
 
-Just [download libhs.h from the GitHub repository](https://github.com/Koromix/libraries). This file provides both the interface and the implementation. To instantiate the implementation, `#define HS_IMPLEMENTATION` in ONE source file, before including libhs.h.
+Just [download libhs.h from the GitHub repository](https://codeberg.org/Koromix/libraries). This file provides both the interface and the implementation. To instantiate the implementation, `#define HS_IMPLEMENTATION` in ONE source file, before including libhs.h.
 
 libhs depends on a few OS-provided libraries that you need to link:
 
@@ -26,11 +26,11 @@ libhs depends on a few OS-provided libraries that you need to link:
 | __OSX (Clang)__         | Link _CoreFoundation_ and _IOKit_
 | __Linux (GCC)__         | Link _libudev_ `-ludev`
 
-This library is developed as [part of the TyTools project](https://github.com/Koromix/tytools) where you can find the original non-amalgamated libhs source code. The amalgamated header file is automatically produced by CMake scripts.
+This library is developed as [part of the TyTools project](https://codeberg.org/Koromix/tytools) where you can find the original non-amalgamated libhs source code. The amalgamated header file is automatically produced by CMake scripts.
 
 Look at [Sean Barrett's excellent stb libraries](https://github.com/nothings/stb) for the reasoning behind this mode of distribution.
 
 In order to use the library you can:
 
-- [look at the examples](https://github.com/Koromix/rygel/tree/master/src/tytools/libhs/examples)
+- [look at the examples](https://codeberg.org/Koromix/rygel/src/branch/master/src/tytools/libhs/examples)
 - [consult the reference documentation](modules.html)

@@ -7,8 +7,8 @@ It is licensed under the [GPL 3 license](https://www.gnu.org/licenses/#GPL). You
 This project is sponsored by NLnet: https://nlnet.nl/project/Goupile/
 
 <div align="center">
-    <a href="https://nlnet.nl/" style="border-bottom-color: transparent;"><img src="https://github.com/Koromix/rygel/blob/master/web/goupile.org/static/nlnet/nlnet.svg" height="60" alt="NLnet Foundation"/></a>&nbsp;&nbsp;&nbsp;
-    <a href="https://nlnet.nl/" style="border-bottom-color: transparent;"><img src="https://github.com/Koromix/rygel/blob/master/web/goupile.org/static/nlnet/ngi0core.svg" height="60" alt="NGI Zero Core"/></a>
+    <a href="https://nlnet.nl/" style="border-bottom-color: transparent;"><img src="https://codeberg.org/Koromix/rygel/raw/branch/master/web/goupile.org/static/nlnet/nlnet.svg" height="60" alt="NLnet Foundation"/></a>&nbsp;&nbsp;&nbsp;
+    <a href="https://nlnet.nl/" style="border-bottom-color: transparent;"><img src="https://codeberg.org/Koromix/rygel/raw/branch/master/web/goupile.org/static/nlnet/ngi0core.svg" height="60" alt="NGI Zero Core"/></a>
     <br><br>
 </div>
 

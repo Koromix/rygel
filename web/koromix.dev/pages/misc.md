@@ -6,7 +6,7 @@ Staks is a simple staker game playable in a browser.
     <a href="https://games.koromix.dev/staks">Play Staks</a>
 </div>
 
-Explore the source code in the [code repository](https://github.com/Koromix/rygel/tree/master/src/staks).
+Explore the source code in the [code repository](https://codeberg.org/Koromix/rygel/src/branch/master/src/staks).
 
 # Nestor
 
@@ -54,7 +54,7 @@ Source = files
 Source = https://koromix.dev/
 ```
 
-You can find out more in the [code repository](https://github.com/Koromix/rygel/tree/master/src/attic#nestor).
+You can find out more in the [code repository](https://codeberg.org/Koromix/rygel/src/branch/master/src/attic#nestor).
 
 # SeatSH
 
@@ -66,7 +66,7 @@ It will transparently forward standard streams (stdin, stdout, stderr) and repor
 
 It is mainly useful for automated test systems, do not install it on production machines because it is a security risk. SeatSH only makes sure that the user connected to the SSH matches the one on the active console session, nothing more.
 
-You can find out more in the [code repository](https://github.com/Koromix/rygel/tree/master/src/attic#seatsh).
+You can find out more in the [code repository](https://codeberg.org/Koromix/rygel/src/branch/master/src/attic#seatsh).
 
 # SaneBB
 
@@ -90,4 +90,4 @@ It can be used in three ways:
 
 The classifier was carefully assembled from the documentation and through retro-engineering of the official classifier (GenRSA), without source code access.
 
-You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/drd).
+You can find out more [in the code repository](https://codeberg.org/Koromix/rygel/src/branch/master/src/drd).

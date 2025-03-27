@@ -12,8 +12,8 @@
 
 **Repository change :**
 
-- This repository does not contain any code anymore because I host [everything in my monorepo](https://github.com/Koromix/rygel)
-- For reasons explained here: https://github.com/Koromix/rygel#mono-repository
+- This repository does not contain any code anymore because I host [everything in my monorepo](https://codeberg.org/Koromix/rygel)
+- For reasons explained here: https://codeberg.org/Koromix/rygel#mono-repository
 
 ## TyTools 0.9.8 (2022-10-02)
 

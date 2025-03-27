@@ -2,7 +2,7 @@
 
 Use the official repository for bugs, ideas and features requests: https://github.com/Koromix/koffi
 
-Please note that the source code is not in this repository, instead it lives in a monorepo: https://github.com/Koromix/rygel/ (in the *src/koffi* subdirectory).
+Please note that the source code is not in this repository, instead it lives in a monorepo: https://codeberg.org/Koromix/rygel/ (in the *src/koffi* subdirectory).
 
 # Build from source
 
@@ -11,7 +11,7 @@ We provide prebuilt binaries, packaged in the NPM archive, so in most cases it s
 Start by cloning the repository with [Git](https://git-scm.com/):
 
 ```sh
-git clone https://github.com/Koromix/rygel
+git clone https://codeberg.org/Koromix/rygel
 cd rygel
 ```
 
@@ -138,4 +138,4 @@ Koffi is programmed in a mix of C++ and assembly code (architecture-specific cod
 
 My personal preference goes to a rather C-like C++ style, with careful use of templates (mainly for containers) and little object-oriented programming. I strongly prefer tagged unions and code locality over inheritance and virtual methods. Exceptions are disabled.
 
-Find more information about code style in the [monorepository README](https://github.com/Koromix/rygel/?tab=readme-ov-file#c-flavor) file.
+Find more information about code style in the [monorepository README](https://codeberg.org/Koromix/rygel/#c-flavor) file.

@@ -8,7 +8,7 @@ libhs is a C library to **enumerate and interact with USB HID and USB serial dev
 - Multiple compilers: MSVC (≥ 2015), GCC and Clang.
 - Driverless: uses native OS-provided interfaces and does not require custom drivers.
 
-You can [download libhs.h](https://github.com/Koromix/libraries) from the GitHub repository.
+You can [download libhs.h](https://codeberg.org/Koromix/libraries) from the Codeberg repository.
 
 # Build
 
@@ -23,7 +23,7 @@ Windows (MinGW-w64) | Link `-luser32 -ladvapi32 -lsetupapi -lhid`
 OSX (Clang)         | Link _CoreFoundation and IOKit_
 Linux (GCC)         | Link `-ludev`
 
-This library is developed as part of the TyTools project where you can find the original [libhs source code](https://github.com/Koromix/rygel/tree/master/src/tytools/libhs). The amalgamated header file is automatically produced by CMake scripts.
+This library is developed as part of the TyTools project where you can find the original [libhs source code](https://codeberg.org/Koromix/rygel/src/branch/master/src/tytools/libhs). The amalgamated header file is automatically produced by CMake scripts.
 
 Look at [Sean Barrett's excellent stb libraries](https://github.com/nothings/stb) for the reasoning behind this mode of distribution.
 

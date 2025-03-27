@@ -2,14 +2,14 @@
 
 Use the official repository for bugs, ideas and features requests: https://github.com/Koromix/rekkord
 
-Please note that the source code is not in this repository, instead it lives in a monorepo: https://github.com/Koromix/rygel/ (in the *src/rekkord* subdirectory).
+Please note that the source code is not in this repository, instead it lives in a monorepo: https://codeberg.org/Koromix/rygel/ (in the *src/rekkord* subdirectory).
 
 # Build from source
 
-Start by cloning the [git repository](https://github.com/Koromix/rygel):
+Start by cloning the [git repository](https://codeberg.org/Koromix/rygel):
 
 ```sh
-git clone https://github.com/Koromix/rygel
+git clone https://codeberg.org/Koromix/rygel
 cd rygel
 ```
 

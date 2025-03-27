@@ -4,7 +4,7 @@ Utilisez notre outil de [suivi de tickets en ligne](https://github.com/Koromix/g
 
 # Code
 
-Le code source est disponible dans [notre dépôt git](https://github.com/Koromix/rygel).
+Le code source est disponible dans [notre dépôt git](https://codeberg.org/Koromix/rygel).
 
 Attention, il s'agit d'un **dépôt unique** (*monorepo*) qui contient plusieurs projets. Le code spécifique de Goupile est disponible dans `src/goupile`, mais il fait référence à plusieurs autres librairies (internes ou externes) dans ce dépôt.
 

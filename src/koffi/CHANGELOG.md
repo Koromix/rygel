@@ -534,7 +534,7 @@ Consult the [migration guide](migration) for more information.
 
 **Other changes:**
 
-- Moved Koffi to a new repository: https://github.com/Koromix/rygel/
+- Moved Koffi to a new repository: https://codeberg.org/Koromix/rygel/
 
 #### Koffi 2.1.3 (2022-10-31)
 

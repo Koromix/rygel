@@ -157,10 +157,10 @@ Be careful, color names and most options are **case-sensitive**.
 
 # Build from source
 
-Start by cloning the [git repository](https://github.com/Koromix/rygel):
+Start by cloning the [git repository](https://codeberg.org/Koromix/rygel):
 
 ```sh
-git clone https://github.com/Koromix/rygel
+git clone https://codeberg.org/Koromix/rygel
 cd rygel
 ```
 
