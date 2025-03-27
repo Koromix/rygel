@@ -518,6 +518,20 @@ static inline FmtArg GetBlobPrefix(const rk_Hash &hash)
     return FmtHex(prefix).Pad0(-2);
 }
 
+static int64_t PadMe(int64_t len)
+{
+    RG_ASSERT(len > 0);
+
+    uint64_t e = 63 - CountLeadingZeros((uint64_t)len);
+    uint64_t s = 63 - CountLeadingZeros(e) + 1;
+    uint64_t mask = (1ull << (e - s)) - 1;
+
+    uint64_t padded = (len + mask) & ~mask;
+    uint64_t padding = padded - len;
+
+    return (int64_t)padding;
+}
+
 bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob)
 {
     RG_ASSERT(url);
@@ -581,8 +595,9 @@ bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uin
     // Read and decrypt blob
     {
         DecodeLZ4 lz4;
+        bool eof = false;
 
-        while (remain.len) {
+        while (!eof && remain.len) {
             Size in_len = std::min(remain.len, BlobSplit + (Size)crypto_secretstream_xchacha20poly1305_ABYTES);
             Size out_len = in_len - crypto_secretstream_xchacha20poly1305_ABYTES;
 
@@ -600,21 +615,19 @@ bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uin
             remain.ptr += cypher.len;
             remain.len -= cypher.len;
 
-            bool eof = !remain.len;
+            eof = (tag == crypto_secretstream_xchacha20poly1305_TAG_FINAL);
+
             bool success = lz4.Flush(eof, [&](Span<const uint8_t> buf) {
                 out_blob->Append(buf);
                 return true;
             });
             if (!success)
                 return false;
+        }
 
-            if (eof) {
-                if (tag != crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
-                    LogError("Truncated blob");
-                    return false;
-                }
-                break;
-            }
+        if (!eof) {
+            LogError("Truncated blob");
+            return false;
         }
     }
 
@@ -672,6 +685,7 @@ Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
         // Encrypt blob data
         {
             bool complete = false;
+            int64_t compressed = 0;
 
             do {
                 Size frag_len = std::min(BlobSplit, blob.len);
@@ -689,10 +703,9 @@ Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                     // This should rarely loop because data should compress to less
                     // than BlobSplit but we ought to be safe ;)
 
-                    Size treshold = complete ? 1 : BlobSplit;
                     Size processed = 0;
 
-                    while (buf.len >= treshold) {
+                    while (buf.len >= BlobSplit) {
                         Size piece_len = std::min(BlobSplit, buf.len);
                         Span<const uint8_t> piece = buf.Take(0, piece_len);
 
@@ -701,9 +714,62 @@ Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                         processed += piece.len;
 
                         uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
-                        unsigned char tag = (complete && !buf.len) ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
                         unsigned long long cypher_len;
-                        crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, piece.ptr, piece.len, nullptr, 0, tag);
+                        crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, piece.ptr, piece.len, nullptr, 0, 0);
+
+                        Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
+
+                        if (!func(final))
+                            return (Size)-1;
+                    }
+
+                    compressed += processed;
+
+                    if (!complete)
+                        return processed;
+
+                    processed += buf.len;
+                    compressed += buf.len;
+
+                    // Reduce size disclosure with Padmé algorithm
+                    // More information here: https://lbarman.ch/blog/padme/
+                    int64_t padding = PadMe((uint64_t)compressed);
+
+                    // Write remaining bytes and start padding
+                    {
+                        LocalArray<uint8_t, BlobSplit> expand;
+
+                        Size pad = (Size)std::min(padding, (int64_t)RG_SIZE(expand.data) - buf.len);
+
+                        MemCpy(expand.data, buf.ptr, buf.len);
+                        MemSet(expand.data + buf.len, 0, pad);
+                        expand.len = buf.len + pad;
+
+                        padding -= pad;
+
+                        uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
+                        unsigned char tag = !padding ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
+                        unsigned long long cypher_len;
+                        crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, expand.data, expand.len, nullptr, 0, tag);
+
+                        Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
+
+                        if (!func(final))
+                            return (Size)-1;
+                    }
+
+                    // Finalize padding
+                    while (padding) {
+                        static const uint8_t padder[BlobSplit] = {};
+
+                        Size pad = (Size)std::min(padding, (int64_t)RG_SIZE(padder));
+
+                        padding -= pad;
+
+                        uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
+                        unsigned char tag = !padding ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
+                        unsigned long long cypher_len;
+                        crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, padder, pad, nullptr, 0, tag);
 
                         Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
 

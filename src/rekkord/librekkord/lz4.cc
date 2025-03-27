@@ -45,11 +45,8 @@ bool DecodeLZ4::Flush(bool complete, FunctionRef<bool(Span<const uint8_t>)> func
 {
     Size treshold = complete ? 1 : in_hint;
 
-    while (in_buf.len >= treshold) {
-        if (done) [[unlikely]] {
-            LogError("Unknown data past end of LZ4 frame");
-            return false;
-        }
+    while (!done && in_buf.len >= treshold) {
+        // Rekkord pads blobs (Padmé), so ignore data past end of LZ4 frame
 
         const uint8_t *next_in = in_buf.ptr;
         uint8_t *next_out = out_buf;
@@ -152,8 +149,9 @@ bool EncodeLZ4::Flush(bool complete, FunctionRef<Size(Span<const uint8_t>)> func
         dynamic_buf.len += (Size)ret;
     }
 
-    for (;;) {
+    while (dynamic_buf.len) {
         Size processed = func(dynamic_buf);
+
         if (processed < 0)
             return false;
         if (!processed)
