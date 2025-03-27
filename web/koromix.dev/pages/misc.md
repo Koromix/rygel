@@ -74,7 +74,7 @@ SaneBB is a **small and fast BBCode parser in Java**, which I made as an alterna
 
 It's a single Java file, the documentation is included at the top of the file.
 
-You can find it here [on Codeberg](https://github.com/Koromix/libraries/raw/branch/master/SaneBB.java).
+You can find it here [on Codeberg](https://codeberg.org/Koromix/libraries/src/branch/master/SaneBB.java).
 
 # DRD
 
