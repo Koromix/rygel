@@ -149,7 +149,7 @@ Options:
         LogInfo("Snapshot hash: %!..+%1%!0", hash);
         LogInfo("Snapshot name: %!..+%1%!0", settings.name);
     }
-    LogInfo("Stored size: %!..+%1%!0", FmtDiskSize(total_size));
+    LogInfo("Source size: %!..+%1%!0", FmtDiskSize(total_size));
     LogInfo("Total written: %!..+%1%!0", FmtDiskSize(total_written));
     LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
 

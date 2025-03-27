@@ -573,7 +573,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
 void PutContext::MakeProgress(int64_t delta)
 {
     int64_t stored = put_stored.fetch_add(delta, std::memory_order_relaxed) + delta;
-    progress->SetFmt("%1 stored", FmtDiskSize(stored));
+    progress->SetFmt("%1 written", FmtDiskSize(stored));
 }
 
 bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *const> filenames,
