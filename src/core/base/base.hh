@@ -4136,7 +4136,7 @@ public:
         char buf[RG_PROGRESS_TEXT_SIZE];
         Fmt(buf, fmt, args...);
 
-        Set(value, min, max, buf);
+        Set(value, min, max, (const char *)buf);
     }
     template<typename... Args>
     void SetFmt(int64_t value, int64_t max, const char *fmt, Args... args) { SetFmt(value, 0, max, fmt, args...); }

@@ -2253,7 +2253,7 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
     if (rows > 1) {
         Print(StdErr, "\r\x1B[%1F\x1B[%2M", rows - 1, rows);
     } else {
-        Print(StdErr, "\r\x1B[%2M", rows);
+        Print(StdErr, "\r\x1B[%1M", rows);
     }
 
     frame++;
