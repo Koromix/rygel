@@ -193,13 +193,27 @@ BEGIN_CASE_REGEX = r'/\*\s*BEGIN_CASE\s*(?P<depends_on>.*?)\s*\*/'
 END_CASE_REGEX = r'/\*\s*END_CASE\s*\*/'
 
 DEPENDENCY_REGEX = r'depends_on:(?P<dependencies>.*)'
+# This can be something like [!]MBEDTLS_xxx
 C_IDENTIFIER_REGEX = r'!?[a-z_][a-z0-9_]*'
+# This is a generic relation operator: ==, !=, >[=], <[=]
 CONDITION_OPERATOR_REGEX = r'[!=]=|[<>]=?'
-# forbid 0ddd which might be accidentally octal or accidentally decimal
-CONDITION_VALUE_REGEX = r'[-+]?(0x[0-9a-f]+|0|[1-9][0-9]*)'
+# This can be (almost) anything as long as:
+# - it starts with a number or a letter or a "("
+# - it contains only
+#       - numbers
+#       - letters
+#       - spaces
+#       - math operators, i.e "+", "-", "*", "/"
+#       - bitwise operators, i.e. "^", "|", "&", "~", "<<", ">>"
+#       - parentheses, i.e. "()"
+CONDITION_VALUE_REGEX = r'[\w|\(][\s\w\(\)\+\-\*\/\^\|\&\~\<\>]*'
 CONDITION_REGEX = r'({})(?:\s*({})\s*({}))?$'.format(C_IDENTIFIER_REGEX,
                                                      CONDITION_OPERATOR_REGEX,
                                                      CONDITION_VALUE_REGEX)
+# Match numerical values that start with a 0 because they can be accidentally
+# octal or accidentally decimal. Hexadecimal values starting with '0x' are
+# valid of course.
+AMBIGUOUS_INTEGER_REGEX = r'\b0[0-9]+'
 TEST_FUNCTION_VALIDATION_REGEX = r'\s*void\s+(?P<func_name>\w+)\s*\('
 FUNCTION_ARG_LIST_END_REGEX = r'.*\)'
 EXIT_LABEL_REGEX = r'^exit:'
@@ -398,6 +412,9 @@ def validate_dependency(dependency):
     :return: input dependency stripped of leading & trailing white spaces.
     """
     dependency = dependency.strip()
+    m = re.search(AMBIGUOUS_INTEGER_REGEX, dependency)
+    if m:
+        raise GeneratorInputError('Ambiguous integer literal: '+ m.group(0))
     if not re.match(CONDITION_REGEX, dependency, re.I):
         raise GeneratorInputError('Invalid dependency %s' % dependency)
     return dependency

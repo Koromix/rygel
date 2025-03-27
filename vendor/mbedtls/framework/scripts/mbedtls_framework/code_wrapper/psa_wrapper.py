@@ -106,7 +106,7 @@ class PSAWrapper(c_wrapper_generator.Base):
         # Temporary, while Mbed TLS does not just rely on the TF-PSA-Crypto
         # build system to build its crypto library. When it does, the first
         # case can just be removed.
-        if os.path.isdir(os.path.join(self.mbedtls_root, 'tf-psa-crypto')):
+        if not build_tree.is_mbedtls_3_6():
             path_list = ['tf-psa-crypto' ] + path_list
             return os.path.join(self.mbedtls_root, *path_list, filename)
 

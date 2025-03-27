@@ -28,9 +28,22 @@ void mbedtls_test_ssl_log_analyzer(void *ctx, int level,
 {
     mbedtls_test_ssl_log_pattern *p = (mbedtls_test_ssl_log_pattern *) ctx;
 
+/* Change 0 to 1 for debugging of test cases that use this function. */
+#if 0
+    const char *q, *basename;
+    /* Extract basename from file */
+    for (q = basename = file; *q != '\0'; q++) {
+        if (*q == '/' || *q == '\\') {
+            basename = q + 1;
+        }
+    }
+    printf("%s:%04d: |%d| %s",
+           basename, line, level, str);
+#else
     (void) level;
     (void) line;
     (void) file;
+#endif
 
     if (NULL != p &&
         NULL != p->pattern &&
@@ -854,6 +867,10 @@ int mbedtls_test_ssl_endpoint_init(
 
     ret = mbedtls_ssl_setup(&(ep->ssl), &(ep->conf));
     TEST_ASSERT(ret == 0);
+
+    if (MBEDTLS_SSL_IS_CLIENT == endpoint_type) {
+        ret = mbedtls_ssl_set_hostname(&(ep->ssl), "localhost");
+    }
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS) && defined(MBEDTLS_SSL_SRV_C)
     if (endpoint_type == MBEDTLS_SSL_IS_SERVER && dtls_context != NULL) {

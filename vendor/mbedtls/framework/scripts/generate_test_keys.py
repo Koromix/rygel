@@ -168,7 +168,7 @@ def collect_keys() -> Tuple[str, str]:
     return ''.join(arrays), '\n'.join(look_up_table)
 
 def main() -> None:
-    default_output_path = guess_project_root() + "/tests/src/test_keys.h"
+    default_output_path = guess_project_root() + "/framework/tests/include/test/test_keys.h"
 
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--output", help="Output file", default=default_output_path)

@@ -5,18 +5,19 @@
 # Copyright The Mbed TLS Contributors
 # SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
-import abc
+import inspect
 import re
 import sys
 from typing import Iterable, Iterator, List, Optional, Tuple
 
 import project_scripts # pylint: disable=unused-import
 import config
+from mbedtls_framework import config_common
 from mbedtls_framework import test_case
 from mbedtls_framework import test_data_generation
 
 
-def single_setting_case(setting: config.Setting, when_on: bool,
+def single_setting_case(setting: config_common.Setting, when_on: bool,
                         dependencies: List[str],
                         note: Optional[str]) -> test_case.TestCase:
     """Construct a test case for a boolean setting.
@@ -64,8 +65,8 @@ SIMPLE_DEPENDENCIES = {
     'MBEDTLS_PSA_ASSUME_EXCLUSIVE_BUFFERS': 'MBEDTLS_PSA_CRYPTO_C',
 }
 
-def dependencies_of_setting(cfg: config.Config,
-                            setting: config.Setting) -> Optional[str]:
+def dependencies_of_setting(cfg: config_common.Config,
+                            setting: config_common.Setting) -> Optional[str]:
     """Return dependencies without which a setting is not meaningful.
 
     The dependencies of a setting express when a setting can be enabled and
@@ -79,7 +80,7 @@ def dependencies_of_setting(cfg: config.Config,
     be negated by prefixing them with '!'. This is the same syntax as a
     depends_on directive in test data.
     """
-    #pylint: disable=too-many-return-statements
+    #pylint: disable=too-many-branches,too-many-return-statements
     name = setting.name
     if name in SIMPLE_DEPENDENCIES:
         return SIMPLE_DEPENDENCIES[name]
@@ -87,7 +88,9 @@ def dependencies_of_setting(cfg: config.Config,
         if name.startswith('MBEDTLS_CIPHER_PADDING_'):
             return 'MBEDTLS_CIPHER_C:MBEDTLS_CIPHER_MODE_CBC'
         if name.startswith('MBEDTLS_PK_PARSE_EC_'):
-            return 'MBEDTLS_PK_C:MBEDTLS_PK_HAVE_ECC_KEYS'
+            return 'MBEDTLS_PK_C:' + test_case.psa_or_3_6_feature_macro(
+                'PSA_KEY_TYPE_ECC_PUBLIC_KEY', test_case.Domain36.USE_PSA)
+
         # For TLS settings, insist on having them once off and once on in
         # a configuration where both client support and server support are
         # enabled. The settings are also meaningful when only one side is
@@ -107,13 +110,16 @@ def dependencies_of_setting(cfg: config.Config,
             super_name = name[:pos.start()] + '_C'
             if cfg.known(super_name):
                 return super_name
-    m = PSA_WANT_KEY_TYPE_KEY_PAIR_RE.match(name)
-    if m and m.group('operation') != 'BASIC':
-        return m.group('prefix') + 'BASIC'
+    if name.startswith('PSA_WANT_'):
+        deps = 'MBEDTLS_PSA_CRYPTO_CLIENT'
+        m = PSA_WANT_KEY_TYPE_KEY_PAIR_RE.match(name)
+        if m and m.group('operation') != 'BASIC':
+            deps += ':' + m.group('prefix') + 'BASIC'
+        return deps
     return None
 
-def conditions_for_setting(cfg: config.Config,
-                           setting: config.Setting
+def conditions_for_setting(cfg: config_common.Config,
+                           setting: config_common.Setting
                            ) -> Iterator[Tuple[List[str], str]]:
     """Enumerate the conditions under which to test the given setting.
 
@@ -142,7 +148,7 @@ def conditions_for_setting(cfg: config.Config,
     yield [], ''
 
 
-def enumerate_boolean_setting_cases(cfg: config.Config
+def enumerate_boolean_setting_cases(cfg: config_common.Config
                                    ) -> Iterable[test_case.TestCase]:
     """Emit test cases for all boolean settings."""
     for name in sorted(cfg.settings.keys()):
@@ -159,17 +165,20 @@ class ConfigTestGenerator(test_data_generation.TestGenerator):
     """Generate test cases for configuration reporting."""
 
     def __init__(self, settings):
-        # Temporarily use different config classes for 3.6. With the config.py moving to
-        # the framework it will be unified.
-        is_3_6 = not isinstance(config.ConfigFile, abc.ABCMeta)
-        # pylint: disable=no-value-for-parameter, no-member
-        self.mbedtls_config = config.ConfigFile() if is_3_6 else config.MbedTLSConfig()
-        self.targets['test_suite_config.mbedtls_boolean'] = \
-            lambda: enumerate_boolean_setting_cases(self.mbedtls_config)
-        self.psa_config = config.ConfigFile('include/psa/crypto_config.h') if is_3_6 else \
-                          config.CryptoConfig()
-        self.targets['test_suite_config.psa_boolean'] = \
-            lambda: enumerate_boolean_setting_cases(self.psa_config)
+        # pylint: disable=no-member
+        config_members = dict(inspect.getmembers(config))
+        if 'MbedTLSConfig' in config_members:
+            self.mbedtls_config = config.MbedTLSConfig()
+            self.targets['test_suite_config.mbedtls_boolean'] = \
+                lambda: enumerate_boolean_setting_cases(self.mbedtls_config)
+        if 'CryptoConfig' in config_members:
+            self.psa_config = config.CryptoConfig()
+            self.targets['test_suite_config.psa_boolean'] = \
+                lambda: enumerate_boolean_setting_cases(self.psa_config)
+        elif 'TFPSACryptoConfig' in config_members:
+            self.psa_config = config.TFPSACryptoConfig()
+            self.targets['test_suite_config.psa_boolean'] = \
+                lambda: enumerate_boolean_setting_cases(self.psa_config)
         super().__init__(settings)
 
 
