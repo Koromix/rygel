@@ -102,6 +102,11 @@ struct ArchiveIntro {
 #define ARCHIVE_VERSION 1
 #define ARCHIVE_SIGNATURE "GOUPILE_BACKUP"
 
+enum class InstanceFlag {
+    DefaultFiles,
+    DemoInstance
+};
+
 static bool CheckInstanceKey(Span<const char> key)
 {
     const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '-'; };
@@ -219,7 +224,7 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 
 static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                            const char *name, int64_t assign_userid, uint32_t permissions,
-                           bool demo, int *out_error)
+                           unsigned int flags, int *out_error)
 {
     BlockAllocator temp_alloc;
 
@@ -299,7 +304,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
         return false;
 
     // Create default files
-    if (demo) {
+    if (flags & (int)InstanceFlag::DefaultFiles) {
         sq_Statement stmt1;
         sq_Statement stmt2;
         if (!db.Prepare(R"(INSERT INTO fs_objects (sha256, mtime, compression, size, blob)
@@ -374,7 +379,11 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
         return false;
 
     bool success = domain->db.Transaction([&]() {
-        if (!domain->db.Run(R"(INSERT INTO dom_instances (instance) VALUES (?1))", instance_key)) {
+        int64_t now = GetUnixTime();
+        sq_Binding demo = (flags & (int)InstanceFlag::DemoInstance) ? sq_Binding(now) : sq_Binding();
+
+        if (!domain->db.Run(R"(INSERT INTO dom_instances (instance, demo)
+                               VALUES (?1, ?2))", instance_key, demo)) {
             // Master does not exist
             if (sqlite3_errcode(domain->db) == SQLITE_CONSTRAINT) {
                 Span<const char> master = SplitStr(instance_key, '/');
@@ -382,6 +391,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                 LogError("Master instance '%1' does not exist", master);
                 *out_error = 404;
             }
+
             return false;
         }
 
@@ -687,10 +697,11 @@ retry_pwd:
 
     // Create default instance
     {
+        unsigned int flags = (int)InstanceFlag::DefaultFiles;
         uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
 
         int dummy;
-        if (demo && !CreateInstance(&domain, demo, demo, 1, permissions, true, &dummy))
+        if (demo && !CreateInstance(&domain, demo, demo, 1, permissions, flags, &dummy))
             return 1;
     }
 
@@ -1045,7 +1056,7 @@ Options:
     return 0;
 }
 
-void HandleInstanceDemo(http_IO *io)
+void HandleDemoCreate(http_IO *io)
 {
     if (!gp_domain.config.demo_mode) {
         LogError("Demo mode is not enabled");
@@ -1086,6 +1097,8 @@ void HandleInstanceDemo(http_IO *io)
 
         // Create instance
         {
+            unsigned int flags = (int)InstanceFlag::DefaultFiles | (int)InstanceFlag::DemoInstance;
+
             uint32_t permissions = (int)UserPermission::BuildCode |
                                    (int)UserPermission::BuildPublish |
                                    (int)UserPermission::DataRead |
@@ -1096,7 +1109,7 @@ void HandleInstanceDemo(http_IO *io)
                                    (int)UserPermission::DataExport;
 
             int error;
-            if (!CreateInstance(&gp_domain, name, name, userid, permissions, true, &error)) {
+            if (!CreateInstance(&gp_domain, name, name, userid, permissions, flags, &error)) {
                 io->SendError(error);
                 return false;
             }
@@ -1137,6 +1150,31 @@ void HandleInstanceDemo(http_IO *io)
     json.Finish();
 }
 
+void PruneDemos()
+{
+    RG_ASSERT(gp_domain.config.demo_mode);
+
+    // Best effort
+    gp_domain.db.Transaction([&] {
+        int64_t treshold = GetUnixTime() - 2 * 86400000;
+
+        if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE demo IS NOT NULL AND demo < ?1", treshold))
+            return false;
+
+        if (sqlite3_changes(gp_domain.db)) {
+            if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE instance NOT IN (SELECT instance FROM dom_instances)"))
+                return false;
+            if (!gp_domain.db.Run("DELETE FROM dom_users WHERE userid NOT IN (SELECT userid FROM dom_permissions)"))
+                return false;
+
+            if (!gp_domain.SyncAll(true))
+                return false;
+        }
+
+        return true;
+    });
+}
+
 void HandleInstanceCreate(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
@@ -1161,7 +1199,7 @@ void HandleInstanceCreate(http_IO *io)
 
     const char *instance_key = nullptr;
     const char *name = nullptr;
-    bool demo = false;
+    bool populate = false;
     {
         StreamReader st;
         if (!io->OpenForRead(Kibibytes(1), &st))
@@ -1177,8 +1215,8 @@ void HandleInstanceCreate(http_IO *io)
                 parser.ParseString(&instance_key);
             } else if (key == "name") {
                 parser.SkipNull() || parser.ParseString(&name);
-            } else if (key == "demo") {
-                parser.ParseBool(&demo);
+            } else if (key == "populate") {
+                parser.ParseBool(&populate);
             } else if (parser.IsValid()) {
                 LogError("Unexpected key '%1'", key);
                 io->SendError(422);
@@ -1251,10 +1289,11 @@ void HandleInstanceCreate(http_IO *io)
                               instance_key))
             return false;
 
+        unsigned int flags = populate ? (int)InstanceFlag::DefaultFiles : 0;
         uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
 
         int error;
-        if (!CreateInstance(&gp_domain, instance_key, name, session->userid, permissions, demo, &error)) {
+        if (!CreateInstance(&gp_domain, instance_key, name, session->userid, permissions, flags, &error)) {
             io->SendError(error);
             return false;
         }

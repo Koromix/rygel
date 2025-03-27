@@ -506,8 +506,8 @@ static void HandleAdminRequest(http_IO *io)
         HandleChangeQRcode(io);
     } else if (TestStr(admin_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
         HandleChangeTOTP(io);
-    } else if (TestStr(admin_url, "/api/instances/demo") && request.method == http_RequestMethod::Post) {
-        HandleInstanceDemo(io);
+    } else if (TestStr(admin_url, "/api/demo/create") && request.method == http_RequestMethod::Post) {
+        HandleDemoCreate(io);
     } else if (TestStr(admin_url, "/api/instances/create") && request.method == http_RequestMethod::Post) {
         HandleInstanceCreate(io);
     } else if (TestStr(admin_url, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
@@ -1105,6 +1105,11 @@ For help about those commands, type: %!..+%1 command --help%!0)",
         LogInfo("Periodic timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
+            if (gp_domain.config.demo_mode) {
+                LogDebug("Prune demos");
+                PruneDemos();
+            }
+
             // In theory, all temporary files are deleted. But if any remain behind (crash, etc.)
             // we need to make sure they get deleted eventually.
             LogDebug("Prune temporary files");

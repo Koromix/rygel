@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DomainVersion = 108;
+const int DomainVersion = 109;
 
 const int MaxInstancesPerDomain = 1024;
 const int64_t FullSnapshotDelay = 86400 * 1000;
@@ -1752,9 +1752,17 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 108: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE dom_instances ADD COLUMN demo INTEGER;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DomainVersion == 108);
+            static_assert(DomainVersion == 109);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

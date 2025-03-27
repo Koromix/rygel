@@ -465,14 +465,14 @@ function runCreateInstanceDialog(e) {
             ]
         });
         d.text('name', 'Nom', { value: d.values.key });
-        d.boolean('demo', 'Paramétrer les pages de démonstration', { value: true, untoggle: false });
+        d.boolean('populate', `Paramétrer les pages d'exemple`, { value: true, untoggle: false });
 
         d.action('Créer', { disabled: !d.isValid() }, async () => {
             try {
                 await Net.post('/admin/api/instances/create', {
                     key: d.values.key,
                     name: d.values.name,
-                    demo: d.values.demo
+                    populate: d.values.populate
                 });
 
                 resolve();
