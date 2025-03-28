@@ -693,7 +693,7 @@ static void HandleInstanceRequest(http_IO *io)
                     json.EndObject();
                     json.Key("title"); json.String(master->title);
                     json.Key("legacy"); json.Bool(master->legacy);
-                    json.Key("demo"); json.Bool(gp_domain.config.demo_mode);
+                    json.Key("demo"); json.Bool(instance->demo);
                     json.Key("version"); json.Int64(fs_version);
                     json.Key("buster"); json.String(instance_etag);
                     json.Key("use_offline"); json.Bool(master->config.use_offline);
@@ -701,7 +701,6 @@ static void HandleInstanceRequest(http_IO *io)
                     if (master->config.auto_key) {
                         json.Key("auto_key"); json.String(master->config.auto_key);
                     }
-                    json.Key("demo"); json.Bool(gp_domain.config.demo_mode);
                     json.EndObject();
                 } else if (key == "HEAD_TAGS") {
                     if (master->config.use_offline) {

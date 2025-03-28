@@ -1094,11 +1094,13 @@ void HandleDemoCreate(http_IO *io)
     RG_DEFER { instance->Unref(); };
 
     RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
-    if (!session)
+    if (!session) [[unlikely]]
         return;
     SessionStamp *stamp = session->GetStamp(instance);
-    if (!stamp)
+    if (!stamp) [[unlikely]] {
+        LogError("Failed to set session mode");
         return;
+    }
     stamp->develop = true;
 
     const char *redirect = Fmt(io->Allocator(), "/%1/", name).ptr;

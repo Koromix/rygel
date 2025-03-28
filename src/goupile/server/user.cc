@@ -114,7 +114,16 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
 
             stamps_map.Set(stamp);
 
-            if (userid > 0) {
+            if (instance->demo) {
+                stamp->authorized = true;
+                stamp->permissions = (int)UserPermission::BuildCode |
+                                     (int)UserPermission::BuildPublish |
+                                     (int)UserPermission::DataRead |
+                                     (int)UserPermission::DataSave |
+                                     (int)UserPermission::DataDelete |
+                                     (int)UserPermission::DataAnnotate |
+                                     (int)UserPermission::DataExport;
+            } else if (userid > 0) {
                 uint32_t permissions;
                 {
                     sq_Statement stmt;
@@ -123,6 +132,7 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
                         return nullptr;
                     sqlite3_bind_int64(stmt, 1, userid);
                     sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+
                     if (!stmt.Step())
                         return nullptr;
 
@@ -150,6 +160,9 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
 
                 stamp->authorized = true;
                 stamp->permissions = permissions;
+            } else if (instance->config.allow_guests) {
+                stamp->authorized = true;
+                stamp->permissions = (int)UserPermission::DataSave;
             }
         }
     }
@@ -367,16 +380,6 @@ RetainPtr<const SessionInfo> GetNormalSession(http_IO *io, InstanceHolder *insta
             int64_t userid = instance->unique + 1;
 
             session = CreateUserSession(SessionType::Auto, userid, instance->key.ptr, nullptr);
-
-            uint32_t permissions = (int)UserPermission::BuildCode |
-                                   (int)UserPermission::BuildPublish |
-                                   (int)UserPermission::DataRead |
-                                   (int)UserPermission::DataSave |
-                                   (int)UserPermission::DataDelete |
-                                   (int)UserPermission::DataAnnotate |
-                                   (int)UserPermission::DataExport;
-            session->AuthorizeInstance(instance, permissions);
-
             sessions.Open(io, session);
         } else if (instance->config.allow_guests) {
             // Create local key
@@ -388,9 +391,6 @@ RetainPtr<const SessionInfo> GetNormalSession(http_IO *io, InstanceHolder *insta
             }
 
             session = CreateUserSession(SessionType::Auto, 0, "Guest", local_key);
-
-            uint32_t permissions = (int)UserPermission::DataSave;
-            session->AuthorizeInstance(instance, permissions);
         }
     }
 

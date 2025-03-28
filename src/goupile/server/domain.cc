@@ -555,7 +555,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
         while (stmt.Step()) {
             Span<const char> instance_key = (const char *)sqlite3_column_text(stmt, 0);
             const char *master_key = (const char *)sqlite3_column_text(stmt, 1);
-            bool demo = sqlite3_column_int64(stmt, 2);
+            bool demo = (sqlite3_column_type(stmt, 2) != SQLITE_NULL);
 
             for (;;) {
                 InstanceHolder *instance = (offset < instances.len) ? instances[offset] : nullptr;
