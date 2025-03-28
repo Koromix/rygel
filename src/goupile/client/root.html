@@ -52,6 +52,7 @@
             }
 
             #ro_admin {
+                display: none;
                 position: absolute;
                 right: 6px;
                 top: 6px;
@@ -117,6 +118,9 @@
             if (DEMO) {
                 document.body.classList.add('demo');
                 setTimeout(demo, 3000);
+            } else {
+                let admin = document.querySelector('#ro_admin');
+                admin.style.display = 'block';
             }
 
             async function demo() {
