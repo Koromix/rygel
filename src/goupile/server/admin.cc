@@ -103,8 +103,8 @@ struct ArchiveIntro {
 #define ARCHIVE_SIGNATURE "GOUPILE_BACKUP"
 
 enum class InstanceFlag {
-    DefaultFiles,
-    DemoInstance
+    DefaultFiles = 1 << 0,
+    DemoInstance = 1 << 1
 };
 
 static bool CheckInstanceKey(Span<const char> key)
