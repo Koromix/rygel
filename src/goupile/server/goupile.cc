@@ -751,12 +751,6 @@ static void HandleInstanceRequest(http_IO *io)
         HandleChangeMode(io, instance);
     } else if (TestStr(instance_url, "/api/change/export_key") && request.method == http_RequestMethod::Post) {
         HandleChangeExportKey(io, instance);
-    } else if (TestStr(instance_url, "/api/auth/challenge") && request.method == http_RequestMethod::Get) {
-        HandleAuthChallenge(io, instance);
-    } else if (TestStr(instance_url, "/api/auth/register") && request.method == http_RequestMethod::Post) {
-        HandleAuthRegister(io, instance);
-    } else if (TestStr(instance_url, "/api/auth/assert") && request.method == http_RequestMethod::Post) {
-        HandleAuthAssert(io, instance);
     } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
         HandleFileStatic(io, instance);
     } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {

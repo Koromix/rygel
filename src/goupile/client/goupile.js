@@ -95,10 +95,7 @@ async function start() {
     if (profile.authorized) {
         url = await syncInstance();
     } else {
-        url = await reAuthenticate();
-
-        if (url == null)
-            url = await runLoginScreen(null, true);
+        url = await runLoginScreen(null, true);
     }
 
     // Run controller now
@@ -540,92 +537,6 @@ async function runConfirmIdentity(e) {
     } else {
         throw new Error('Vous devez vous reconnecter pour continuer');
     }
-}
-
-async function reAuthenticate() {
-    let remember = loadLocal('remember');
-
-    if (!remember)
-        return;
-
-    let json = await Net.get(`${ENV.urls.instance}api/auth/challenge`);
-    let challenge = json.challenge;
-
-    let cred = null;
-
-    try {
-        cred = await navigator.credentials.get({
-            publicKey: {
-                rp: { name: ENV.title },
-                allowCredentials: [],
-                challenge: (new TextEncoder).encode(challenge),
-                userVerification: 'required'
-            }
-        });
-    } catch (err) {
-        console.log(err);
-        return;
-    }
-
-    try {
-        let new_profile = await Net.post(`${ENV.urls.instance}api/auth/assert`, {
-            challenge: challenge,
-            credential_id: cred.id,
-            signature: Base64.toBase64(cred.response.signature)
-        });
-
-        console.log(new_profile);
-
-        updateProfile(new_profile);
-    } catch (err) {
-        console.error(err);
-        return null;
-    }
-
-    let url = await syncInstance();
-    return url;
-}
-
-async function rememberMe() {
-    let remember = loadLocal('remember');
-
-    if (remember)
-        return;
-
-    let json = await Net.get(`${ENV.urls.instance}api/auth/challenge`);
-    let challenge = json.challenge;
-
-    let id = new Int32Array([profile.userid]);
-    let cred = null;
-
-    try {
-        cred = await navigator.credentials.create({
-            publicKey: {
-                rp: { name: ENV.title },
-                user: { id: id, name: profile.username, displayName: profile.username },
-                pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
-                challenge: (new TextEncoder).encode(challenge),
-                authenticatorSelection: {
-                    authenticatorAttachment: 'platform',
-                    residentKey: 'required',
-                    userVerification: 'required'
-                }
-            }
-        });
-    } catch (err) {
-        console.error(err);
-        return;
-    }
-
-    await Net.post(`${ENV.urls.instance}api/auth/register`, {
-        challenge: challenge,
-        credential_id: cred.id,
-        public_key: Base64.toBase64(cred.response.getPublicKey()),
-        algorithm: cred.response.getPublicKeyAlgorithm(),
-        attestation: Base64.toBase64(cred.response.attestationObject)
-    });
-
-    storeLocal('remember', true);
 }
 
 function runChangePasswordDialog(e) { return runChangePassword(e); }
@@ -1172,7 +1083,6 @@ export {
     start,
     syncProfile,
 
-    rememberMe,
     runChangePasswordDialog,
     runResetTOTP,
     runLockDialog,

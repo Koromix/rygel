@@ -115,8 +115,6 @@ public:
     void AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions, const char *lock = nullptr);
 };
 
-RetainPtr<SessionInfo> LoginUserAuto(http_IO *io, int64_t userid);
-
 void InvalidateUserStamps(int64_t userid);
 
 RetainPtr<const SessionInfo> GetNormalSession(http_IO *io, InstanceHolder *instance);
@@ -140,9 +138,5 @@ void HandleChangeMode(http_IO *io, InstanceHolder *instance);
 void HandleChangeExportKey(http_IO *io, InstanceHolder *instance);
 
 RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *instance, const char *username);
-
-void HandleAuthChallenge(http_IO *io, InstanceHolder *instance);
-void HandleAuthRegister(http_IO *io, InstanceHolder *instance);
-void HandleAuthAssert(http_IO *io, InstanceHolder *instance);
 
 }
