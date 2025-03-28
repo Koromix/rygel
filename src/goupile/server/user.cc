@@ -266,7 +266,7 @@ static void WriteProfileJson(http_IO *io, const SessionInfo *session, const Inst
                     json.Key("keys"); json.StartObject();
                     if (instance->config.shared_key) {
                         json.Key("records"); json.String(instance->config.shared_key);
-                    } else {
+                    } else if (session->local_key[0]) {
                         json.Key("records"); json.String(session->local_key);
                     }
                     if (session->type == SessionType::Login) {
@@ -340,7 +340,9 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
 
     session->type = type;
     session->userid = userid;
-    CopyString(local_key, session->local_key);
+    if (local_key) {
+        CopyString(local_key, session->local_key);
+    }
     CopyString(username, MakeSpan((char *)session->username, username_bytes));
 
     return ptr;
@@ -360,21 +362,36 @@ RetainPtr<const SessionInfo> GetNormalSession(http_IO *io, InstanceHolder *insta
 {
     RetainPtr<SessionInfo> session = sessions.Find(io);
 
-    if (!session && instance && instance->config.allow_guests) {
-        // Create local key
-        char local_key[45];
-        {
-            uint8_t buf[32];
-            FillRandomSafe(buf);
-            sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+    if (!session && instance) {
+        if (instance->demo) {
+            int64_t userid = instance->unique + 1;
+
+            session = CreateUserSession(SessionType::Auto, userid, instance->key.ptr, nullptr);
+
+            uint32_t permissions = (int)UserPermission::BuildCode |
+                                   (int)UserPermission::BuildPublish |
+                                   (int)UserPermission::DataRead |
+                                   (int)UserPermission::DataSave |
+                                   (int)UserPermission::DataDelete |
+                                   (int)UserPermission::DataAnnotate |
+                                   (int)UserPermission::DataExport;
+            session->AuthorizeInstance(instance, permissions);
+
+            sessions.Open(io, session);
+        } else if (instance->config.allow_guests) {
+            // Create local key
+            char local_key[45];
+            {
+                uint8_t buf[32];
+                FillRandomSafe(buf);
+                sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+            }
+
+            session = CreateUserSession(SessionType::Auto, 0, "Guest", local_key);
+
+            uint32_t permissions = (int)UserPermission::DataSave;
+            session->AuthorizeInstance(instance, permissions);
         }
-
-        session = CreateUserSession(SessionType::Auto, 0, "Guest", local_key);
-
-        uint32_t permissions = (int)UserPermission::DataSave;
-        session->AuthorizeInstance(instance, permissions);
-
-        // sessions.Open(request, io, session);
     }
 
     return session;
@@ -1527,7 +1544,7 @@ void HandleChangeMode(http_IO *io, InstanceHolder *instance)
         io->SendError(401);
         return;
     }
-    if (!stamp || session->type != SessionType::Login) {
+    if (!stamp || session->userid <= 0) {
         LogError("This account does not have a profile");
         io->SendError(403);
         return;

@@ -36,6 +36,7 @@ public:
     const char *title = nullptr;
 
     bool legacy = false;
+    bool demo = false;
 
     InstanceHolder *master = nullptr;
     HeapArray<InstanceHolder *> slaves;

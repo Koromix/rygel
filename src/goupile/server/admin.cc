@@ -223,7 +223,7 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 #endif
 
 static bool CreateInstance(DomainHolder *domain, const char *instance_key,
-                           const char *name, int64_t assign_userid, uint32_t permissions,
+                           const char *name, int64_t userid, uint32_t permissions,
                            unsigned int flags, int *out_error)
 {
     BlockAllocator temp_alloc;
@@ -395,10 +395,14 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
             return false;
         }
 
-        if (!domain->db.Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
-                               VALUES (?1, ?2, ?3))",
-                            assign_userid, instance_key, permissions))
-            return false;
+        if (userid > 0) {
+            RG_ASSERT(permissions);
+
+            if (!domain->db.Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
+                                   VALUES (?1, ?2, ?3))",
+                                userid, instance_key, permissions))
+                return false;
+        }
 
         return true;
     });
@@ -1067,52 +1071,13 @@ void HandleDemoCreate(http_IO *io)
     char name[17];
     Fmt(name, "%1", FmtRandom(RG_SIZE(name) - 1));
 
-    int64_t userid = -1;
-
     bool success = gp_domain.db.Transaction([&]() {
-        // Create user
-        {
-            char hash[PasswordHashBytes];
-            if (!HashPassword(name, hash))
-                return false;
+        unsigned int flags = (int)InstanceFlag::DefaultProject | (int)InstanceFlag::DemoInstance;
 
-            // Create local key
-            char local_key[45];
-            {
-                uint8_t buf[32];
-                FillRandomSafe(buf);
-                sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
-            }
-
-            // Create user
-            sq_Statement stmt;
-            if (!gp_domain.db.Prepare(R"(INSERT INTO dom_users (username, change_password, root, local_key)
-                                         VALUES (?1, 0, 0, ?2)
-                                         RETURNING userid)",
-                                      &stmt, name, local_key))
-                return false;
-            if (!stmt.GetSingleValue(&userid))
-                return false;
-        }
-
-        // Create instance
-        {
-            unsigned int flags = (int)InstanceFlag::DefaultProject | (int)InstanceFlag::DemoInstance;
-
-            uint32_t permissions = (int)UserPermission::BuildCode |
-                                   (int)UserPermission::BuildPublish |
-                                   (int)UserPermission::DataRead |
-                                   (int)UserPermission::DataSave |
-                                   (int)UserPermission::DataDelete |
-                                   (int)UserPermission::DataAudit |
-                                   (int)UserPermission::DataAnnotate |
-                                   (int)UserPermission::DataExport;
-
-            int error;
-            if (!CreateInstance(&gp_domain, name, name, userid, permissions, flags, &error)) {
-                io->SendError(error);
-                return false;
-            }
+        int error;
+        if (!CreateInstance(&gp_domain, name, name, -1, 0, flags, &error)) {
+            io->SendError(error);
+            return false;
         }
 
         return true;
@@ -1128,7 +1093,7 @@ void HandleDemoCreate(http_IO *io)
         return;
     RG_DEFER { instance->Unref(); };
 
-    RetainPtr<SessionInfo> session = LoginUserAuto(io, userid);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
     if (!session)
         return;
     SessionStamp *stamp = session->GetStamp(instance);
@@ -1160,16 +1125,8 @@ void PruneDemos()
 
         if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE demo IS NOT NULL AND demo < ?1", treshold))
             return false;
-
-        if (sqlite3_changes(gp_domain.db)) {
-            if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE instance NOT IN (SELECT instance FROM dom_instances)"))
-                return false;
-            if (!gp_domain.db.Run("DELETE FROM dom_users WHERE userid NOT IN (SELECT userid FROM dom_permissions)"))
-                return false;
-
-            if (!gp_domain.SyncAll(true))
-                return false;
-        }
+        if (sqlite3_changes(gp_domain.db) && !gp_domain.SyncAll(true))
+            return false;
 
         return true;
     });

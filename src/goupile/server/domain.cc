@@ -523,6 +523,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
         const char *instance_key;
         const char *master_key;
         InstanceHolder *prev_instance;
+        bool demo;
     };
 
     // Delay this so that the SQLite background thread does not run when domain is opened,
@@ -542,18 +543,19 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
         Size offset = 0;
 
         sq_Statement stmt;
-        if (!db.Prepare(R"(WITH RECURSIVE rec (instance, master) AS (
-                               SELECT instance, master FROM dom_instances WHERE master IS NULL
+        if (!db.Prepare(R"(WITH RECURSIVE rec (instance, master, demo) AS (
+                               SELECT instance, master, demo FROM dom_instances WHERE master IS NULL
                                UNION ALL
-                               SELECT i.instance, i.master FROM dom_instances i, rec WHERE i.master = rec.instance
+                               SELECT i.instance, i.master, i.demo FROM dom_instances i, rec WHERE i.master = rec.instance
                                ORDER BY 2 DESC, 1
                            )
-                           SELECT instance, master FROM rec)", &stmt))
+                           SELECT instance, master, demo FROM rec)", &stmt))
             return false;
 
         while (stmt.Step()) {
             Span<const char> instance_key = (const char *)sqlite3_column_text(stmt, 0);
             const char *master_key = (const char *)sqlite3_column_text(stmt, 1);
+            bool demo = sqlite3_column_int64(stmt, 2);
 
             for (;;) {
                 InstanceHolder *instance = (offset < instances.len) ? instances[offset] : nullptr;
@@ -585,6 +587,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
                         start.instance_key = DuplicateString(instance_key, &temp_alloc).ptr;
                         start.master_key = master_key ? DuplicateString(master_key, &temp_alloc).ptr : nullptr;
                         start.prev_instance = instance;
+                        start.demo = demo;
 
                         registry_start.Append(start);
                     } else {
@@ -603,6 +606,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
 
                         start.instance_key = DuplicateString(instance_key, &temp_alloc).ptr;
                         start.master_key = master_key ? DuplicateString(master_key, &temp_alloc).ptr : nullptr;
+                        start.demo = demo;
 
                         registry_start.Append(start);
                     } else if (instance) {
@@ -743,6 +747,8 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
             db_guard.Disable();
             databases.Append(db);
         }
+
+        instance->demo = start.demo;
 
         instance_guard.Disable();
         new_instances.Append(instance);
