@@ -357,6 +357,47 @@ TEST_FUNCTION("base/ParseSize")
 #undef VALID
 }
 
+TEST_FUNCTION("base/ParseDuration")
+{
+    PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+    RG_DEFER { PopLogFilter(); };
+
+#define VALID(Str, Flags, Value, Remain) \
+        do { \
+            int64_t value; \
+            Span<const char> remain; \
+            bool valid = ParseDuration((Str), &value, (Flags), &remain); \
+             \
+            TEST_EX(valid && value == (Value) && remain.len == (Remain), \
+                    "%1: Valid %2 [%3] == %4 %5 [%6]", (Str), (Value), (Remain), valid ? "Valid" : "Invalid", value, remain.len); \
+        } while (false)
+#define INVALID(Str, Flags) \
+        do { \
+            int64_t value; \
+            bool valid = ParseDuration((Str), &value, (Flags)); \
+             \
+            TEST_EX(!valid, "%1: Invalid == %2 %3", (Str), valid ? "Valid" : "Invalid", value); \
+        } while (false)
+
+    VALID("1", RG_DEFAULT_PARSE_FLAGS, 1000, 0);
+    VALID("300", RG_DEFAULT_PARSE_FLAGS, 300000, 0);
+    INVALID("1p", RG_DEFAULT_PARSE_FLAGS);
+
+    VALID("4s", RG_DEFAULT_PARSE_FLAGS, 4000, 0);
+    VALID("4m", RG_DEFAULT_PARSE_FLAGS, 4000 * 60, 0);
+    VALID("4h", RG_DEFAULT_PARSE_FLAGS, 4000 * 3600, 0);
+    VALID("4d", RG_DEFAULT_PARSE_FLAGS, 4000 * 86400, 0);
+    VALID("4w", 0, 4000, 1);
+    INVALID("4w", RG_DEFAULT_PARSE_FLAGS);
+
+    VALID("4d", RG_DEFAULT_PARSE_FLAGS, 4000 * 86400, 0);
+    VALID("4dt", 0, 4000 * 86400, 1);
+    INVALID("4dt", RG_DEFAULT_PARSE_FLAGS);
+
+#undef INVALID
+#undef VALID
+}
+
 TEST_FUNCTION("base/GetRandomInt")
 {
     static const int iterations = 100;
