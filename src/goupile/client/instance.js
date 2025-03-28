@@ -2136,8 +2136,10 @@ async function saveRecord(tid, entry, data, meta) {
     await records.save(tid, entry, ENV.version, meta.constraints, route.page.claim, meta.signup);
 
     if (!profile.userid) {
+        let url = route.page.url + `/${form_thread.tid}`;
+
         window.onbeforeunload = null;
-        window.location.href = window.location.href;
+        window.location.href = url;
     }
 }
 
