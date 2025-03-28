@@ -45,7 +45,8 @@ int RunInit(Span<const char *> arguments)
     const char *write_pwd = nullptr;
     bool random_full_pwd = true;
     bool random_write_pwd = true;
-    const char *key_filename = "master.key";
+    const char *key_filename = nullptr;
+    bool skip_key = false;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -61,8 +62,7 @@ Options:
         %!..+--write_password [pwd]%!0     Set write-only password manually
 
     %!..+-K, --key_file filename%!0        Set explicit master key export file
-                                   %!D..(default: %2)%!0
-        %!..+--skip_key%!0                 Skip master key export)", FelixTarget, key_filename);
+        %!..+--skip_key%!0                 Skip master key export)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -90,7 +90,7 @@ Options:
             } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
                 key_filename = opt.current_value;
             } else if (opt.Test("--skip_key")) {
-                key_filename = nullptr;
+                skip_key = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -103,9 +103,24 @@ Options:
     if (!config.Complete(false))
         return 1;
 
-    if (key_filename && TestFile(key_filename)) {
-        LogError("Master key export file '%1' already exists", key_filename);
-        return 1;
+    if (!skip_key) {
+        if (!key_filename) {
+            key_filename = Prompt("Master key export file: ", "master.key", nullptr, &temp_alloc);
+
+            if (!key_filename)
+                return 1;
+            if (!key_filename[0]) {
+                LogError("Cannot export to empty path");
+                return 1;
+            }
+        }
+
+        if (TestFile(key_filename)) {
+            LogError("Master key export file '%1' already exists", key_filename);
+            return 1;
+        }
+    } else {
+        key_filename = nullptr;
     }
 
     std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
