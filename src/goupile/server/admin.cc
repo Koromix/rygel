@@ -103,7 +103,7 @@ struct ArchiveIntro {
 #define ARCHIVE_SIGNATURE "GOUPILE_BACKUP"
 
 enum class InstanceFlag {
-    DefaultFiles = 1 << 0,
+    DefaultProject = 1 << 0,
     DemoInstance = 1 << 1
 };
 
@@ -304,7 +304,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
         return false;
 
     // Create default files
-    if (flags & (int)InstanceFlag::DefaultFiles) {
+    if (flags & (int)InstanceFlag::DefaultProject) {
         sq_Statement stmt1;
         sq_Statement stmt2;
         if (!db.Prepare(R"(INSERT INTO fs_objects (sha256, mtime, compression, size, blob)
@@ -315,8 +315,8 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
             return false;
 
         for (const AssetInfo &asset: GetEmbedAssets()) {
-            if (StartsWith(asset.name, "src/goupile/server/demo/")) {
-                const char *filename = asset.name + 24;
+            if (StartsWith(asset.name, "src/goupile/server/default/")) {
+                const char *filename = asset.name + 27;
 
                 CompressionType compression_type = CanCompressFile(filename) ? CompressionType::Gzip
                                                                                 : CompressionType::None;
@@ -697,7 +697,7 @@ retry_pwd:
 
     // Create default instance
     {
-        unsigned int flags = (int)InstanceFlag::DefaultFiles;
+        unsigned int flags = (int)InstanceFlag::DefaultProject;
         uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
 
         int dummy;
@@ -1097,7 +1097,7 @@ void HandleDemoCreate(http_IO *io)
 
         // Create instance
         {
-            unsigned int flags = (int)InstanceFlag::DefaultFiles | (int)InstanceFlag::DemoInstance;
+            unsigned int flags = (int)InstanceFlag::DefaultProject | (int)InstanceFlag::DemoInstance;
 
             uint32_t permissions = (int)UserPermission::BuildCode |
                                    (int)UserPermission::BuildPublish |
@@ -1289,7 +1289,7 @@ void HandleInstanceCreate(http_IO *io)
                               instance_key))
             return false;
 
-        unsigned int flags = populate ? (int)InstanceFlag::DefaultFiles : 0;
+        unsigned int flags = populate ? (int)InstanceFlag::DefaultProject : 0;
         uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
 
         int error;
