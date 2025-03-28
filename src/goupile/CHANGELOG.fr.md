@@ -37,7 +37,9 @@
 
 ## Goupile 3.8
 
-### Goupile 3.8.3 (17/02/2025)
+### Goupile 3.8.3
+
+*Sortie le 17/02/2025*
 
 - Correction de l'erreur « page is undefined » lors de la navigation sur certaines pages
 - Suppression de l'heuristique de masquage des colonnes dans l'ancien exportateur
@@ -48,20 +50,26 @@
 - Ajout d'une API pour super-utilisateurs pour quitter le processus goupile
 - Envoi des détails des erreur serveur internes aux utilisateurs root
 
-### Goupile 3.8.2 (29/12/2024)
+### Goupile 3.8.2
+
+*Sortie le 29/12/2024*
 
 - Correction d'une possible boucle infinie après l'échec d'une requête HTTP
 - Retrait de l'action d'oubli lorsque la sauvegarde automatique est utilisée
 - Refus des corps de requête HTTP compressés
 
-### Goupile 3.8.1 (20/12/2024)
+### Goupile 3.8.1
+
+*Sortie le 20/12/2024*
 
 - Retrait du bouton « Enregistrer » si le bouton « Suivant » est affiché
 - Correction d'un bug de concurrence entre la sauvegarde automatique et la confirmation dans les anciennes instances
 - Utilisation de la nouvelle icône de conception (plutôt que code) dans les anciennes instances
 - Mise à jour des exigences relatives à la version du navigateur
 
-### Goupile 3.8.0 (20/12/2024)
+### Goupile 3.8.0
+
+*Sortie le 20/12/2024*
 
 - Suppression du droit utilisateur *New* en faveur de l'option de page `claim`
 - Amélioration de la prise en charge de l'activation dynamique des pages avec `enabled`
@@ -77,42 +85,58 @@
 
 ## Goupile 3.7
 
-### Goupile 3.7.7 (23/11/2024)
+### Goupile 3.7.7
+
+*Sortie le 23/11/2024*
 
 - Correction des instances dupliquées (régression introduite dans Goupile 3.7.3)
 
-### Goupile 3.7.6 (16/11/2024)
+### Goupile 3.7.6
+
+*Sortie le 16/11/2024*
 
 - Activation du mode conception par défaut pour les instances de démonstration
 - Bascule automatique de l'éditeur vers l'onglet formulaire sauf si modifié explicitement
 - Correction d'un crash possible lors d'un changement de mode
 
-### Goupile 3.7.5 (12/11/2024)
+### Goupile 3.7.5
+
+*Sortie le 12/11/2024*
 
 - Correction d'un crash récurrent avec le mode de démonstration
 
-### Goupile 3.7.4 (12/11/2024)
+### Goupile 3.7.4
+
+*Sortie le 12/11/2024*
 
 - Correction d'un timeout HTTP prématuré lors de l'export de données en v2
 
-### Goupile 3.7.3 (12/11/2024)
+### Goupile 3.7.3
+
+*Sortie le 12/11/2024*
 
 - Correction d'un crash après changement de mot de passe et activation TOTP
 - Correction des sous-projets mal rangés dans le panneau d'administration
 - Correction d'erreurs avec des attributs utilisateur email et téléphone vides
 
-### Goupile 3.7.2 (12/11/2024)
+### Goupile 3.7.2
+
+*Sortie le 12/11/2024*
 
 - Ajout du lien manquant vers le panneau d'administration
 - Utilisation de boutons d'export sur les instances v2
 
-### Goupile 3.7.1 (07/11/2024)
+### Goupile 3.7.1
+
+*Sortie le 07/11/2024*
 
 - Ajustement des contraintes par défaut des mots de passe :
   * Modérée pour les utilisateurs normaux et administrateurs
   * Difficile pour les super-administrateurs
 
-### Goupile 3.7.0 (31/10/2024)
+### Goupile 3.7.0
+
+*Sortie le 31/10/2024*
 
 - Modification de l'objet `thread` dans les scripts : `thread['form']` devient `thread.entries['form']`
 - Prise en charge des scripts personnalisés au niveau des catégories
@@ -137,7 +161,9 @@
 
 ## Goupile 3.6
 
-### Goupile 3.6.4 (05/09/2024)
+### Goupile 3.6.4
+
+*Sortie le 05/09/2024*
 
 - Correction des panneaux affichés par défaut lors de l'assemblage et de l'ouverture d'URL
 - Correction d'une boucle infinie pendant l'export des données en v3
@@ -147,22 +173,30 @@
 - Passage au nouveau code de serveur HTTP dans goupile
 - Utilisation de mimalloc sur les systèmes Linux et BSD
 
-### Goupile 3.6.3 (26/07/2024)
+### Goupile 3.6.3
+
+*Sortie le 26/07/2024*
 
 - Correction d'un crash possible lors de l'envoi de mails
 - Mise à disposition de fonctions de fonctions de hachage et CRC32 aux scripts
 - Mise à disposition de fonctions utilitaires aux scripts
 
-### Goupile 3.6.2 (11/07/2024)
+### Goupile 3.6.2
+
+*Sortie le 11/07/2024*
 
 - Correction de bugs de navigation dans goupile (notamment le bouton "Ajouter" qui fonctionne mal)
 
-### Goupile 3.6.1 (10/07/2024)
+### Goupile 3.6.1
+
+*Sortie le 10/07/2024*
 
 - Exposition de l'objet thread dans les scripts pour accéder aux données d'autres pages
 - Retrait de l'affichage des marqueurs obligatoires sur les widgets de calcul
 
-### Goupile 3.6.0 (28/06/2024)
+### Goupile 3.6.0
+
+*Sortie le 28/06/2024*
 
 - Ajout du système de `summary` remplacer les anciens identifiants HID
 - Afficher la liste des données lorsque des utilisateurs normaux se connectent
@@ -177,20 +211,26 @@
 
 ## Goupile 3.5
 
-### Goupile 3.5.3 (20/06/2024)
+### Goupile 3.5.3
+
+*Sortie le 20/06/2024*
 
 - Réintroduction de l'attribut `lock` pour les tokens de connexion
 - Correction de divers bugs de verrouillage côté client
 - Permet aux scripts d'utiliser la directive `until` de lit-html
 
-### Goupile 3.5.2 (20/06/2024)
+### Goupile 3.5.2
+
+*Sortie le 20/06/2024*
 
 - Correction des libellés de widgets non stylisés dans les anciennes instances
 - Correction du téléchargement de esbuild.wasm lorsque le client ne supporte pas Brotli
 - Utilisation du transport `identity` lorsque Content-Encoding est manquant ou vide
 - Publication de paquets Debian pour ARM64
 
-### Goupile 3.5.1 (18/06/2024)
+### Goupile 3.5.1
+
+*Sortie le 18/06/2024*
 
 - Ajout du système pushPath/popPath pour remplacer l'option `path` des widgets
 - Utilisation du code formulaire v2 pour les formulaires en mode de compatibilité
@@ -199,7 +239,9 @@
 - Mise à disposition du widget PeriodPicker pour les instances v2
 - Nettoyage de déclarations de débogage oubliées
 
-### Goupile 3.5.0 (17/06/2024)
+### Goupile 3.5.0
+
+*Sortie le 17/06/2024*
 
 - Prise en charge de l'exécution des projets Goupile créés dans la version 2
 - Assemblage des scripts de formulaire avec esbuild, pour supporter les imports et mieux détecter les erreurs de syntaxe
@@ -208,7 +250,9 @@
 
 ## Goupile 3.4
 
-### Goupile 3.4.0 (22/03/2024)
+### Goupile 3.4.0
+
+*Sortie le 22/03/2024*
 
 - Simplification du menu principal (barre du haut) de Goupile
 - Amélioration des pages récpitulatives avec séparation des niveaux et des tuiles
@@ -220,36 +264,50 @@
 
 ## Goupile 3.3
 
-### Goupile 3.3.6 (08/02/2024)
+### Goupile 3.3.6
+
+*Sortie le 08/02/2024*
 
 - Amélioration de la migration des données depuis les domaines goupile2
 
-### Goupile 3.3.5 (26/01/2024)
+### Goupile 3.3.5
+
+*Sortie le 26/01/2024*
 
 - Réduction des permissions pour les utilisateurs de la démo en ligne
 - Attribution des clés d'export à l'instance maître
 
-### Goupile 3.3.4 (24/01/2024)
+### Goupile 3.3.4
+
+*Sortie le 24/01/2024*
 
 - Ajout d'une option pour désactiver les snapshots SQLite
 - Désactivation les snapshots SQLite dans les domaines de démonstration
 
-### Goupile 3.3.3 (22/01/2024)
+### Goupile 3.3.3
+
+*Sortie le 22/01/2024*
 
 - Ajout d'un avertissement pour les utilisateurs de la démo en ligne
 - Correction pour la propriété HTTP définie à partir de la section Defaults par erreur
 
-### Goupile 3.3.2 (22/01/2024)
+### Goupile 3.3.2
+
+*Sortie le 22/01/2024*
 
 - Ajout du mode démo à Goupile
 - Affichage du nom d'utilisateur dans le dialogue de changement de mot de passe
 
-### Goupile 3.3.1 (22/01/2024)
+### Goupile 3.3.1
+
+*Sortie le 22/01/2024*
 
 - Ajout d'un effet de survol aux tuiles
 - Désactivation du bouton Publier si le script principal ne fonctionne pas
 
-### Goupile 3.3.0 (20/01/2024)
+### Goupile 3.3.0
+
+*Sortie le 20/01/2024*
 
 - Affichage de tuiles de complétion pour les formulaires
 - Affichage des colonnes de premier niveau et des statistiques dans le tableau de données
@@ -265,24 +323,32 @@
 
 ## Goupile 3.2
 
-### Goupile 3.2.3 (17/01/2024)
+### Goupile 3.2.3
+
+*Sortie le 17/01/2024*
 
 - Correction du blocage de l'interface utilisateur en mode développement
 
-### Goupile 3.2.2 (16/01/2024)
+### Goupile 3.2.2
+
+*Sortie le 16/01/2024*
 
 - Correction du support des sections et notes répétées
 - Correction d'une erreur de variable non définie lors de l'export
 - Correction de problèmes mineurs de blocage de l'interface
 
-### Goupile 3.2.1 (16/01/2024)
+### Goupile 3.2.1
+
+*Sortie le 16/01/2024*
 
 - Ajout du code manquant pour la suppression des enregistrements
 - Amélioration de la sélection des colonnes de données visibles
 - Gestion du temps de modification d'enregistrement côté serveur
 - Embarquement de JavaScriptCore dans le serveur
 
-### Goupile 3.2.0 (14/01/2024)
+### Goupile 3.2.0
+
+*Sortie le 14/01/2024*
 
 - Ajustement et ajout d'options pour paramétrer la complexité des mots de passe
 - Correction de l'erreur générique 'NetworkError is not defined'

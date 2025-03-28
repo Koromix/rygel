@@ -1,4 +1,6 @@
-## TyTools 0.9.9 (2023-08-06)
+## TyTools 0.9.9
+
+*Released on 2023-08-06*
 
 **Main changes:**
 
@@ -15,16 +17,22 @@
 - This repository does not contain any code anymore because I host [everything in my monorepo](https://codeberg.org/Koromix/rygel)
 - For reasons explained here: https://codeberg.org/Koromix/rygel#mono-repository
 
-## TyTools 0.9.8 (2022-10-02)
+## TyTools 0.9.8
+
+*Released on 2022-10-02*
 
 - Support Teensy USB Type Serial + MTP (@KurtE)
 - Support infinite log size
 
-## TyTools 0.9.7 (2022-01-23)
+## TyTools 0.9.7
+
+*Released on 2022-01-23*
 
 - Fix upload failure regression introduced in version 0.9.6
 
-## TyTools 0.9.6 (2022-01-17)
+## TyTools 0.9.6
+
+*Released on 2022-01-17*
 
 **Main Fixes:**
 
@@ -36,7 +44,9 @@
 
 - Companion app TyUpdater is renamed to TyUploader
 
-## TyTools 0.9.5 (2021-11-03)
+## TyTools 0.9.5
+
+*Released on 2021-11-03*
 
 **New Features:**
 
@@ -47,7 +57,9 @@
 - Change URL in About dialog
 - Remove leftover debug statement
 
-## TyTools 0.9.4 (2021-10-21)
+## TyTools 0.9.4
+
+*Released on 2021-10-21*
 
 **New Features:**
 
@@ -59,11 +71,15 @@
 - Use bright blue icon for TyCommander and bright green for TyUpdater
 - Fix Qt HighDPI support being set incorrectly
 
-## TyTools 0.9.3 (2020-11-26)
+## TyTools 0.9.3
+
+*Released on 2020-11-26*
 
 - Fix wrong COM port detection with Teensyduino 1.54 on Windows (thanks to @luni64 and @Defragster)
 
-## TyTools 0.9.2 (2020-08-07)
+## TyTools 0.9.2
+
+*Released on 2020-08-07*
 
 **New Features:**
 
@@ -80,7 +96,9 @@
 - Prevous release builds did not actually work on Windows XP, but the code for it was still there...
 - ... now it is official, and it is not possible to build TyTools or libhs with XP support anymore
 
-## TyTools 0.9.1 (2020-06-27)
+## TyTools 0.9.1
+
+*Released on 2020-06-27*
 
 **New Features:**
 
@@ -92,7 +110,9 @@
 - Allow 1984K flash to be used on Teensy 4.0
 - Add VID:PID pairs for dual and triple serial Teensy sketches
 
-## TyTools 0.9.0 (2019-12-02)
+## TyTools 0.9.0
+
+*Released on 2019-12-02*
 
 **New Features:**
 
@@ -107,7 +127,9 @@
 - Fix extra empty lines in serial monitor in some cases
 - Fix JSON format in tycmd list -Ojson (string escaping, array)
 
-## TyTools 0.8.11 (2019-03-31)
+## TyTools 0.8.11
+
+*Released on 2019-03-31*
 
 **New Features:**
 
@@ -123,7 +145,9 @@
 - Use Qt 5.12.2 on Windows
 - Use Qt 5.9.7 on macOS
 
-## TyTools 0.8.10 (2018-09-23)
+## TyTools 0.8.10
+
+*Released on 2018-09-23*
 
 **New Features:**
 
@@ -138,7 +162,9 @@
 
 *Note: This is the mostly the same as 0.8.9 except this time the macOS version works. For Windows and Linux users, nothing has changed (except the version number).*
 
-## TyTools 0.8.8 (2019-08-20)
+## TyTools 0.8.8
+
+*Released on 2019-08-20*
 
 **Main Fixes:**
 
@@ -149,7 +175,9 @@
 
 - Remove artificial Teensy upload delays (makes upload faster)
 
-## TyTools 0.8.7 (2017-06-06)
+## TyTools 0.8.7
+
+*Released on 2017-06-06*
 
 *This project has been renamed to TyTools, along with the tools included in this project.*
 
@@ -202,7 +230,9 @@ UpTy     | TyUpdater
 - Replace all uses of linked lists with dynamic arrays
 - Various small fixes and code improvements
 
-## TyQt 0.8.0 (2016-11-05)
+## TyQt 0.8.0
+
+*Released on 2016-11-05*
 
 **New Features:**
 
@@ -246,7 +276,9 @@ UpTy     | TyUpdater
 - Small tyc command-line changes
 - Various small fixes and code improvements
 
-## TyQt 0.7.6 (2016-07-28)
+## TyQt 0.7.6
+
+*Released on 2016-07-28*
 
 - Fix incorrect exit code with TyQt remote commands
 - (this fixes the error message when uploading from Arduino 1.6.10)
@@ -257,7 +289,9 @@ UpTy     | TyUpdater
 - Use smaller 128x128 icons to waste less memory
 - Build release binaries with Qt 5.6.1-1
 
-## TyQt 0.7.5 (2016-04-29)
+## TyQt 0.7.5
+
+*Released on 2016-04-29*
 
 *The windows version is now built with MSVC 2015 and is relatively smaller.*
 
@@ -305,7 +339,9 @@ UpTy     | TyUpdater
 - Port to MSVC for the Windows packages
 - Diffuse code refactoring
 
-## TyQt 0.7.0 (2016-01-20)
+## TyQt 0.7.0
+
+*Released on 2016-01-20*
 
 **New features:**
 
@@ -349,11 +385,15 @@ UpTy     | TyUpdater
 - Hide harmless spurious I/O errors when uploading
 - Make README.txt/LICENSE.txt notepad-friendly (win32)
 
-## TyQt 0.6.4 (2015-09-23)
+## TyQt 0.6.4
+
+*Released on 2015-09-23*
 
 - Add support for Teensy 3.2
 
-## TyQt 0.6.3 (2015-06-16)
+## TyQt 0.6.3
+
+*Released on 2015-06-16*
 
 **Main changes:**
 
@@ -366,58 +406,80 @@ UpTy     | TyUpdater
 - Apply serial settings in tyc monitor on reconnect
 - Always quit TyQt when the last window is closed
 
-## TyQt 0.6.2  (2015-03-29)
+## TyQt 0.6.2 
+
+*Released on 2015-03-29*
 
 - Working Teensy LC support
 
-## TyQt 0.6.1 (2015-03-26)
+## TyQt 0.6.1
+
+*Released on 2015-03-26*
 
 - Disable Teensy LC support (broken until I can get one)
 - Always assert DTR line on Windows and OS X, to not block on "while (!Serial);"
 - Ignore devices on permission errors, instead of aborting enumeration
 
-## TyQt 0.6.0 (2015-03-18)
+## TyQt 0.6.0
+
+*Released on 2015-03-18*
 
 - Tentative Teensy LC support
 - Clear on reset option for monitor
 - Better autoscrolling behavior in the monitor (keyboard navigation works)
 - Go to bootloader with CLI: tyc reset --bootloader
 
-## TyQt 0.5.7 (2015-03-11)
+## TyQt 0.5.7
+
+*Released on 2015-03-11*
 
 - Use bigger serial buffer to avoid overflows
 - Don't hog the CPU if the Teensy sends a lot of stuff
 - Better autoscroll behavior in the monitor
 
-## TyQt 0.5.6 (2015-03-09)
+## TyQt 0.5.6
+
+*Released on 2015-03-09*
 
 - Easier to use command-line tool
 - Bug fixes and code cleanup
 
-## TyQt 0.5.5 (2015-02-28)
+## TyQt 0.5.5
+
+*Released on 2015-02-28*
 
 - Single-instance mode for TyQt: send commands using tyqt.exe (see tyqt.exe --help)
 - Minimal interface option to hide board list, toolbar and statusbar
 - Bug fixes
 
-## TyQt 0.5.1 (2015-02-20)
+## TyQt 0.5.1
+
+*Released on 2015-02-20*
 
 - Proper packaging: MSI on Windows, Bundle on OS X
 - Better art and icons (well, I try)
 
-## TyQt 0.5.0 (2015-02-10)
+## TyQt 0.5.0
+
+*Released on 2015-02-10*
 
 - Teensy Qt!
 
-## tyc 0.4.0 (2015-02-12)
+## tyc 0.4.0
+
+*Released on 2015-02-12*
 
 - Support Mac OS X
 
-## tyc 0.3.0 (2015-01-12)
+## tyc 0.3.0
+
+*Released on 2015-01-12*
 
 - Add native compilation instructions for Windows
 
-## tyc 0.2.1 (2014-12-21)
+## tyc 0.2.1
+
+*Released on 2014-12-21*
 
 - Dynamic device detection and management
 
