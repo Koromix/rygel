@@ -25,7 +25,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 122;
+const int InstanceVersion = 123;
 const int LegacyVersion = 60;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
@@ -2596,9 +2596,30 @@ bool MigrateInstance(sq_Database *db, int target)
 
                 if (!db->Run("UPDATE sqlite_sequence SET seq = ?1 WHERE name = 'rec_threads'", counter - 1))
                     return false;
+            } [[fallthrough]];
+
+            case 122: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX ins_claims_ut;
+
+                    ALTER TABLE ins_claims RENAME TO ins_claims_BAK;
+
+                    CREATE TABLE ins_claims (
+                        userid INTEGER NOT NULL,
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid) DEFERRABLE INITIALLY DEFERRED
+                    );
+                    CREATE UNIQUE INDEX ins_claims_ut ON ins_claims (userid, tid);
+
+                    INSERT INTO ins_claims (userid, tid)
+                        SELECT userid, tid FROM ins_claims_BAK;
+
+                    DROP TABLE ins_claims_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 122);
+            static_assert(InstanceVersion == 123);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
