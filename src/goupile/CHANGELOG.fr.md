@@ -2,6 +2,21 @@
 
 ## Goupile 3.9
 
+### Goupile 3.9.2
+
+*Sortie le 28/03/2025*
+
+- Conservation de l'enregistrement actif après une sauvegarde en mode invité
+- Correction de la surbrillance incohérente entre le code et l'aperçu des widgets
+- Correction de l'erreur interne avec les enregistrements réclamés
+- Améliorations du mode de démonstration :
+  * Possibilité de réutiliser l'URL aléatoire du projet
+  * Utilisation de JavaScript pour créer l'instance de démo (ce qui évite la création de projets à chaque requête HTTP à la racine)
+  * Les projets démo sont purgés après 2 jours
+- Nettoyage du code d'authentification
+- Correction de la compilation cassée sous Windows
+- Réduction du zoom automatique sur iPhone lors de la saisie
+
 ### Goupile 3.9.1
 
 *Sortie le 21/02/2025*

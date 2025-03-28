@@ -2,6 +2,21 @@
 
 ## Goupile 3.9
 
+### Goupile 3.9.2
+
+*Released on 2025-03-28*
+
+- Keep active record after guest save
+- Fix mismatch code/preview widget highlighting
+- Fix internal server error related to record claims
+- Improve demo mode:
+  * Support reuse if random project URL is saved
+  * Use JS to create demo instance to avoid project creation caused by HTTP probing
+  * Clean up demo instances after two days
+- Clean up authentifcation code
+- Fix broken Windows build
+- Reduce input auto-zoom issues on iPhone
+
 ### Goupile 3.9.1
 
 *Released on 2025-02-21*
