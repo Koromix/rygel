@@ -91,7 +91,7 @@
             }
 
             body.demo #ro_icon {
-                animation: ro_demo 2s ease-in-out infinite alternate; 
+                animation: ro_demo 1.5s ease-in-out infinite alternate; 
             }
 
             @keyframes ro_demo {
@@ -114,12 +114,12 @@
         <a id="ro_version" href="https://goupile.org/changelog" target="_blank">Version {{ VERSION }}</a>
 
         <script>
-            if (DEMO)
-                demo();
+            if (DEMO) {
+                document.body.classList.add('demo');
+                setTimeout(demo, 3000);
+            }
 
             async function demo() {
-                document.body.classList.add('demo');
-
                 try {
                     let response = await fetch('/admin/api/demo/create', {
                         method: 'POST',
