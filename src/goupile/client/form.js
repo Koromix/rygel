@@ -1250,10 +1250,12 @@ function FormBuilder(state, model, options = {}) {
 
         // This helps avoid garbage output when the user types 'page.output(html);'
         if (content != null && content !== html && content !== svg) {
+            let id = makeID(null);
+
             let render = intf => {
                 if (intf.options.wrap) {
                     return html`
-                        <div class="fm_wrap" data-line=${intf.line}>
+                        <div id=${id} class="fm_wrap">
                             ${content}
                         </div>
                     `;
@@ -1262,7 +1264,7 @@ function FormBuilder(state, model, options = {}) {
                 }
             };
 
-            let intf = makeWidget('output', null, null, render, options);
+            let intf = makeWidget('output', id, null, render, options);
             addWidget(intf);
 
             return intf;
@@ -1797,18 +1799,24 @@ instead of:
     }
 
     function makeID(key) {
-        let ids = ptr_ids.get(key.ptr);
+        let id = null;
 
-        if (ids == null) {
-            ids = {};
-            ptr_ids.set(key.ptr, ids);
-        }
+        if (key != null) {
+            let ids = ptr_ids.get(key.ptr);
 
-        let id = ids[key];
+            if (ids == null) {
+                ids = {};
+                ptr_ids.set(key.ptr, ids);
+            }
 
-        if (id == null) {
+            id = ids[key];
+
+            if (id == null) {
+                id = next_id++;
+                ids[key] = id;
+            }
+        } else {
             id = next_id++;
-            ids[key] = id;
         }
 
         return `fm_var_${id}`;
@@ -1827,7 +1835,7 @@ instead of:
             cls += ' compact';
 
         return html`
-            <div class=${makeClasses(intf.options, 'fm_wrap')} data-line=${intf.line}>
+            <div class=${makeClasses(intf.options, 'fm_wrap')}>
                 <div class=${cls}>
                     ${frag}
                     ${errors.length ?
@@ -1908,7 +1916,7 @@ instead of:
 
             label: label,
             options: options,
-            line: Util.locateEvalError(new Error())?.line,
+            location: Util.locateEvalError(new Error()),
 
             errors: [],
 

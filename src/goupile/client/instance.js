@@ -138,7 +138,8 @@ async function runMainScript() {
     let builder = new ApplicationBuilder(new_app);
 
     try {
-        let func = await buildScript(buffer.code, ['app']);
+        let build = await buildScript(buffer.code, ['app']);
+        let func = build.func;
 
         await func({
             app: builder
@@ -747,11 +748,14 @@ async function renderPage() {
     let meta = new MetaModel;
 
     try {
+        let build = null;
         let func = null;
 
         if (route.page.filename != null) {
             let buffer = code_buffers.get(route.page.filename);
-            func = code_builds.get(buffer.sha256);
+
+            build = code_builds.get(buffer.sha256);
+            func = build.func;
         } else {
             func = defaultFormPage;
         }
@@ -773,6 +777,22 @@ async function renderPage() {
 
         render(model.renderWidgets(), page_div);
         page_div.classList.remove('disabled');
+
+        // Map widget code lines for developers
+        if (build?.map != null) {
+            for (let intf of model.widgets) {
+                if (intf.id == null)
+                    continue;
+
+                let el = page_div.querySelector('#' + intf.id);
+                let wrap = (el != null) ? Util.findParent(el, el => el.classList.contains('fm_wrap')) : null;
+
+                if (wrap != null) {
+                    let line = bundler.mapLine(build.map, intf.location.line, intf.location.column);
+                    wrap.dataset.line = line;
+                }
+            }
+        }
 
         if (form_state.justTriggered()) {
             let panel_el = document.querySelector('#ins_page')?.parentNode;
@@ -1253,8 +1273,8 @@ async function handleFileChange(filename) {
     buffer.sha256 = sha256;
 
     try {
-        func = await buildScript(buffer.code, ['app', 'form', 'meta', 'page', 'thread', 'values']);
-        code_builds.set(buffer.sha256, func);
+        let build = await buildScript(buffer.code, ['app', 'form', 'meta', 'page', 'thread', 'values']);
+        code_builds.set(buffer.sha256, build);
 
         triggerError(filename, null);
     } catch (err) {
@@ -1329,7 +1349,7 @@ function syncFormScroll() {
 
         let prev_line;
         for (let i = 0; i < widget_els.length; i++) {
-            let line = parseInt(widget_els[i].dataset.line, 10);
+            let line = getElementLine(widget_els[i]);
 
             if (line >= editor_line) {
                 if (!i) {
@@ -1388,7 +1408,7 @@ function syncFormHighlight(scroll) {
             let highlight_first;
             let highlight_last;
             for (let i = 0;; i++) {
-                let line = parseInt(widget_els[i].dataset.line, 10);
+                let line = getElementLine(widget_els[i]);
 
                 if (line > editor_lines[0]) {
                     if (i > 0)
@@ -1405,7 +1425,7 @@ function syncFormHighlight(scroll) {
                 highlight_last = highlight_first;
 
                 while (highlight_last < widget_els.length) {
-                    let line = parseInt(widget_els[highlight_last].dataset.line, 10);
+                    let line = getElementLine(widget_els[highlight_last]);
                     if (line > editor_lines[1])
                         break;
                     highlight_last++;
@@ -1457,7 +1477,7 @@ function syncEditorScroll() {
             let el = widget_els[i];
 
             let top = el.getBoundingClientRect().top;
-            let line = parseInt(el.dataset.line, 10);
+            let line = getElementLine(el);
 
             if (top >= 0) {
                 if (!i) {
@@ -1482,6 +1502,11 @@ function syncEditorScroll() {
         // two views, this is not serious so just log it.
         console.log(err);
     }
+}
+
+function getElementLine(el) {
+    let line = parseInt(el.dataset.line, 10);
+    return line;
 }
 
 async function runPublishDialog(e) {
@@ -1656,12 +1681,12 @@ async function run(push_history = true) {
         // Fetch and build page code for page panel
         if (route.page.filename != null) {
             let buffer = await fetchCode(route.page.filename);
-            let func = code_builds.get(buffer.sha256);
+            let build = code_builds.get(buffer.sha256);
 
-            if (func == null) {
+            if (build == null) {
                 try {
-                    func = await buildScript(buffer.code, ['app', 'form', 'meta', 'page', 'thread', 'values']);
-                    code_builds.set(buffer.sha256, func);
+                    build = await buildScript(buffer.code, ['app', 'form', 'meta', 'page', 'thread', 'values']);
+                    code_builds.set(buffer.sha256, build);
                 } catch (err) {
                     triggerError(route.page.filename, err);
                 }
@@ -1936,7 +1961,7 @@ async function buildScript(code, variables) {
     try {
         let func = new AsyncFunction(variables, build.code);
 
-        return async api => {
+        build.func = async api => {
             api = Object.assign({}, base, api);
 
             try {
@@ -1949,6 +1974,8 @@ async function buildScript(code, variables) {
     } catch (err) {
         throwRunError(err, build.map);
     }
+
+    return build;
 }
 
 function throwParseError(err) {
