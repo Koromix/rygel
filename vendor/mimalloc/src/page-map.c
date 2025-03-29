@@ -40,7 +40,7 @@ bool _mi_page_map_init(void) {
   }
 
   // Allocate the page map and commit bits
-  mi_page_map_max_address = (void*)(MI_PU(1) << vbits);
+  mi_page_map_max_address = (void*)(vbits >= MI_SIZE_BITS ? (SIZE_MAX - MI_ARENA_SLICE_SIZE + 1) : (MI_PU(1) << vbits));
   const size_t page_map_size = (MI_ZU(1) << (vbits - MI_ARENA_SLICE_SHIFT));
   const bool commit = (page_map_size <= 1*MI_MiB || mi_option_is_enabled(mi_option_pagemap_commit)); // _mi_os_has_overcommit(); // commit on-access on Linux systems?
   const size_t commit_bits = _mi_divide_up(page_map_size, MI_PAGE_MAP_ENTRIES_PER_COMMIT_BIT);
@@ -183,7 +183,7 @@ bool _mi_page_map_init(void) {
 
   // Allocate the page map and commit bits
   mi_assert(MI_MAX_VABITS >= vbits);
-  mi_page_map_max_address = (void*)(MI_PU(1) << vbits);
+  mi_page_map_max_address = (void*)(vbits >= MI_SIZE_BITS ? (SIZE_MAX - MI_ARENA_SLICE_SIZE + 1) : (MI_PU(1) << vbits));
   const size_t page_map_count = (MI_ZU(1) << (vbits - MI_PAGE_MAP_SUB_SHIFT - MI_ARENA_SLICE_SHIFT));
   mi_assert(page_map_count <= MI_PAGE_MAP_COUNT);
   const size_t os_page_size = _mi_os_page_size();
@@ -206,7 +206,7 @@ bool _mi_page_map_init(void) {
   if (!mi_page_map_memid.initially_committed) {
     _mi_os_commit(&_mi_page_map[0], os_page_size, NULL);  // commit first part of the map
   }
-  _mi_page_map[0] = (mi_page_t**)((uint8_t*)_mi_page_map + page_map_size);  // we reserved 2 subs at the end already
+  _mi_page_map[0] = (mi_page_t**)((uint8_t*)_mi_page_map + page_map_size);  // we reserved 2 sub maps at the end already
   if (!mi_page_map_memid.initially_committed) {
     _mi_os_commit(_mi_page_map[0], os_page_size, NULL);   // only first OS page
   }
@@ -296,23 +296,28 @@ void _mi_page_map_register(mi_page_t* page) {
 
 void _mi_page_map_unregister(mi_page_t* page) {
   mi_assert_internal(_mi_page_map != NULL);
+  mi_assert_internal(page != NULL);
+  mi_assert_internal(_mi_is_aligned(page, MI_PAGE_ALIGN));
+  if mi_unlikely(_mi_page_map == NULL) return;
   // get index and count
   size_t slice_count;
   size_t sub_idx;
   const size_t idx = mi_page_map_get_idx(page, &sub_idx, &slice_count);
   // unset the offsets
-  mi_page_map_set_range(page, idx, sub_idx, slice_count);
+  mi_page_map_set_range(NULL, idx, sub_idx, slice_count);
 }
 
 void _mi_page_map_unregister_range(void* start, size_t size) {
+  if mi_unlikely(_mi_page_map == NULL) return;
   const size_t slice_count = _mi_divide_up(size, MI_ARENA_SLICE_SIZE);
   size_t sub_idx;
   const uintptr_t idx = _mi_page_map_index(start, &sub_idx);
   mi_page_map_set_range(NULL, idx, sub_idx, slice_count);  // todo: avoid committing if not already committed?
 }
 
-
+// Return NULL for invalid pointers
 mi_page_t* _mi_safe_ptr_page(const void* p) {
+  if (p==NULL) return NULL;
   if mi_unlikely(p >= mi_page_map_max_address) return NULL;
   size_t sub_idx;
   const size_t idx = _mi_page_map_index(p,&sub_idx);

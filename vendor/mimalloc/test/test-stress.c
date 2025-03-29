@@ -79,6 +79,7 @@ static bool   main_participates = false;       // main thread participates as a 
 #define custom_free(p)        free(p)
 #else
 #include <mimalloc.h>
+#include <mimalloc-stats.h>
 #define custom_calloc(n,s)    mi_calloc(n,s)
 #define custom_realloc(p,s)   mi_realloc(p,s)
 #define custom_free(p)        mi_free(p)
@@ -134,7 +135,7 @@ static void* alloc_items(size_t items, random_t r) {
     else if (chance(10, r) && allow_large_objects) items *= 1000;  // 0.1% huge
     else items *= 100;                                             // 1% large objects;
   }
-  if (items == 40) items++;              // pthreads uses that size for stack increases
+  if (items>=32 && items<=40) items*=2;              // pthreads uses 320b allocations (this shows that more clearly in the stats)
   if (use_one_size > 0) items = (use_one_size / sizeof(uintptr_t));
   if (items==0) items = 1;
   uintptr_t* p = (uintptr_t*)custom_calloc(items,sizeof(uintptr_t));
@@ -261,9 +262,11 @@ static void test_stress(void) {
     #if !defined(NDEBUG) || defined(MI_TSAN)
     if ((n + 1) % 10 == 0) {
       printf("- iterations left: %3d\n", ITER - (n + 1));
-      mi_debug_show_arenas(true);
+      #ifndef USE_STD_MALLOC
+      mi_debug_show_arenas();
+      #endif
       //mi_collect(true);
-      //mi_debug_show_arenas(true);
+      //mi_debug_show_arenas();
     }
     #endif
   }
@@ -298,19 +301,27 @@ static void test_leak(void) {
 }
 #endif
 
+#if defined(USE_STD_MALLOC) && defined(MI_LINK_VERSION)
+#ifdef __cplusplus
+extern "C"
+#endif
+int mi_version(void);
+#endif
+
 int main(int argc, char** argv) {
+  #ifdef MI_LINK_VERSION
+    mi_version();
+  #endif
   #ifdef HEAP_WALK
     mi_option_enable(mi_option_visit_abandoned);
   #endif
   #if !defined(NDEBUG) && !defined(USE_STD_MALLOC)
-    mi_option_set(mi_option_arena_reserve, 32 * 1024 /* in kib = 32MiB */);
-    //mi_option_set(mi_option_purge_delay,10);
+    // mi_option_set(mi_option_arena_reserve, 32 * 1024 /* in kib = 32MiB */);
+    // mi_option_set(mi_option_purge_delay,1);
   #endif
   #if defined(NDEBUG) && !defined(USE_STD_MALLOC)
     // mi_option_set(mi_option_purge_delay,-1);
-  #endif
-  #ifndef USE_STD_MALLOC
-    mi_stats_reset();
+    mi_option_set(mi_option_page_reclaim_on_free, 0);
   #endif
 
   // > mimalloc-test-stress [THREADS] [SCALE] [ITER]
@@ -333,6 +344,11 @@ int main(int argc, char** argv) {
     allow_large_objects = true;
   }
   printf("Using %d threads with a %d%% load-per-thread and %d iterations %s\n", THREADS, SCALE, ITER, (allow_large_objects ? "(allow large objects)" : ""));
+
+  #if !defined(NDEBUG) && !defined(USE_STD_MALLOC)
+  mi_stats_reset();
+  #endif
+
   //mi_reserve_os_memory(1024*1024*1024ULL, false, true);
   //int res = mi_reserve_huge_os_pages(4,1);
   //printf("(reserve huge: %i\n)", res);
@@ -350,11 +366,16 @@ int main(int argc, char** argv) {
 
 #ifndef USE_STD_MALLOC
   #ifndef NDEBUG
-  mi_debug_show_arenas(true);
+  mi_debug_show_arenas();
   mi_collect(true);
+  char* json = mi_stats_get_json(0, NULL);
+  if (json != NULL) {
+    fputs(json,stderr);
+    mi_free(json);
+  }
   #endif
+  mi_stats_print(NULL);  
 #endif
-  mi_stats_print(NULL);
   //bench_end_program();
   return 0;
 }
