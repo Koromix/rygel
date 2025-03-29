@@ -686,11 +686,7 @@ public:
             Fmt(&buf, " -fstack-clash-protection");
         }
         if (features & (int)CompileFeature::SafeStack) {
-            if (architecture == HostArchitecture::x86_64) {
-                Fmt(&buf, " -fsanitize=safe-stack");
-            } else if (architecture == HostArchitecture::ARM64) {
-                Fmt(&buf, " -fsanitize=shadow-call-stack -ffixed-x18");
-            }
+            Fmt(&buf, " -fsanitize=safe-stack");
         }
         if (features & (int)CompileFeature::ZeroInit) {
             Fmt(&buf, " -ftrivial-auto-var-init=zero");
@@ -940,11 +936,7 @@ public:
             Fmt(&buf, " -fsanitize=undefined");
         }
         if (features & (int)CompileFeature::SafeStack) {
-            if (architecture == HostArchitecture::x86_64) {
-                Fmt(&buf, " -fsanitize=safe-stack");
-            } else if (architecture == HostArchitecture::ARM64) {
-                Fmt(&buf, " -fsanitize=shadow-call-stack -ffixed-x18");
-            }
+            Fmt(&buf, " -fsanitize=safe-stack");
         }
         if (features & (int)CompileFeature::CFI) {
             RG_ASSERT(features & (int)CompileFeature::LTO);
