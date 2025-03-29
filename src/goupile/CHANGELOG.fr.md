@@ -2,6 +2,14 @@
 
 ## Goupile 3.9
 
+### Goupile 3.9.3
+
+*Sortie le 30/03/2025*
+
+- Ajout de plusieurs appels système à la sandbox seccomp pour la compatibilité ARM64
+- Correction du crash au démarrage dabns le paquet Debian ARM64
+- Fermeture de l'avertissement démo après un délai
+
 ### Goupile 3.9.2
 
 *Sortie le 28/03/2025*

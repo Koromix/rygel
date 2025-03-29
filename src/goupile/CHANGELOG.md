@@ -2,6 +2,14 @@
 
 ## Goupile 3.9
 
+### Goupile 3.9.3
+
+*Released on 2025-03-30*
+
+- Add several syscalls to seccomp sandbox for ARM64 compatibility
+- Fix startup crash in ARM64 Debian package
+- Close demo warning after small delay
+
 ### Goupile 3.9.2
 
 *Released on 2025-03-28*
