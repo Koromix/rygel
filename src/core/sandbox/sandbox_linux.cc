@@ -498,10 +498,12 @@ bool sb_SandboxBuilder::Apply()
 
             if (!str || TestStrI(str, "Kill")) {
                 default_action = sb_FilterAction::Kill;
-            } else if (TestStrI(str, "Trap")) {
-                default_action = sb_FilterAction::Trap;
+            } else if (TestStrI(str, "Log")) {
+                default_action = sb_FilterAction::Log;
             } else if (TestStrI(str, "Block")) {
                 default_action = sb_FilterAction::Block;
+            } else if (TestStrI(str, "Trap")) {
+                default_action = sb_FilterAction::Trap;
             } else {
                 LogError("Invalid default seccomp action '%1'", str);
                 return false;
@@ -524,6 +526,7 @@ bool sb_SandboxBuilder::Apply()
             uint32_t seccomp_action = UINT32_MAX;
             switch (action) {
                 case sb_FilterAction::Allow: { seccomp_action = SCMP_ACT_ALLOW; } break;
+                case sb_FilterAction::Log: { seccomp_action = SCMP_ACT_LOG; } break;
                 case sb_FilterAction::Block: { seccomp_action = SCMP_ACT_ERRNO(EPERM); } break;
                 case sb_FilterAction::Trap: { seccomp_action = SCMP_ACT_TRAP; } break;
                 case sb_FilterAction::Kill: { seccomp_action = kill_code; } break;

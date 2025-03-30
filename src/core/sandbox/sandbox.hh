@@ -31,6 +31,7 @@ enum class sb_IsolationFlag {
 
 enum class sb_FilterAction {
     Allow,
+    Log,
     Block,
     Trap,
     Kill
