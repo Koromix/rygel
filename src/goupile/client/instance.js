@@ -88,7 +88,7 @@ async function init() {
     initUI();
 
     if (ENV.demo)
-        Log.warning('Mode de démonstration... Attention, les formulaires et les données peuvent disparaître à tout moment !', -1);
+        Log.warning('Mode de démonstration... Attention, les formulaires et les données peuvent disparaître à tout moment !', 6000);
 }
 
 async function initBundler() {
