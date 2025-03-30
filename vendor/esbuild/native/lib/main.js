@@ -351,8 +351,8 @@ function pushCommonFlags(flags, options, keys) {
   if (ignoreAnnotations) flags.push(`--ignore-annotations`);
   if (drop) for (let what of drop) flags.push(`--drop:${validateStringValue(what, "drop")}`);
   if (dropLabels) flags.push(`--drop-labels=${Array.from(dropLabels).map((what) => validateStringValue(what, "dropLabels")).join(",")}`);
-  if (mangleProps) flags.push(`--mangle-props=${mangleProps.source}`);
-  if (reserveProps) flags.push(`--reserve-props=${reserveProps.source}`);
+  if (mangleProps) flags.push(`--mangle-props=${jsRegExpToGoRegExp(mangleProps)}`);
+  if (reserveProps) flags.push(`--reserve-props=${jsRegExpToGoRegExp(reserveProps)}`);
   if (mangleQuoted !== void 0) flags.push(`--mangle-quoted=${mangleQuoted}`);
   if (jsx) flags.push(`--jsx=${jsx}`);
   if (jsxFactory) flags.push(`--jsx-factory=${jsxFactory}`);
@@ -663,8 +663,8 @@ function createChannel(streamIn) {
     if (isFirstPacket) {
       isFirstPacket = false;
       let binaryVersion = String.fromCharCode(...bytes);
-      if (binaryVersion !== "0.25.1") {
-        throw new Error(`Cannot start service: Host version "${"0.25.1"}" does not match binary version ${quote(binaryVersion)}`);
+      if (binaryVersion !== "0.25.2") {
+        throw new Error(`Cannot start service: Host version "${"0.25.2"}" does not match binary version ${quote(binaryVersion)}`);
       }
       return;
     }
@@ -1173,7 +1173,7 @@ var handlePlugins = async (buildKey, sendRequest, sendResponse, refs, streamIn, 
           if (filter == null) throw new Error(`onResolve() call is missing a filter`);
           let id = nextCallbackID++;
           onResolveCallbacks[id] = { name, callback, note: registeredNote };
-          plugin.onResolve.push({ id, filter: filter.source, namespace: namespace || "" });
+          plugin.onResolve.push({ id, filter: jsRegExpToGoRegExp(filter), namespace: namespace || "" });
         },
         onLoad(options, callback) {
           let registeredText = `This error came from the "onLoad" callback registered here:`;
@@ -1185,7 +1185,7 @@ var handlePlugins = async (buildKey, sendRequest, sendResponse, refs, streamIn, 
           if (filter == null) throw new Error(`onLoad() call is missing a filter`);
           let id = nextCallbackID++;
           onLoadCallbacks[id] = { name, callback, note: registeredNote };
-          plugin.onLoad.push({ id, filter: filter.source, namespace: namespace || "" });
+          plugin.onLoad.push({ id, filter: jsRegExpToGoRegExp(filter), namespace: namespace || "" });
         },
         onDispose(callback) {
           onDisposeCallbacks.push(callback);
@@ -1596,6 +1596,11 @@ function convertOutputFiles({ path: path3, contents, hash }) {
     }
   };
 }
+function jsRegExpToGoRegExp(regexp) {
+  let result = regexp.source;
+  if (regexp.flags) result = `(?${regexp.flags})${result}`;
+  return result;
+}
 
 // lib/npm/node-platform.ts
 var fs = require("fs");
@@ -1774,7 +1779,7 @@ for your current platform.`);
         "node_modules",
         ".cache",
         "esbuild",
-        `pnpapi-${pkg.replace("/", "-")}-${"0.25.1"}-${path.basename(subpath)}`
+        `pnpapi-${pkg.replace("/", "-")}-${"0.25.2"}-${path.basename(subpath)}`
       );
       if (!fs.existsSync(binTargetPath)) {
         fs.mkdirSync(path.dirname(binTargetPath), { recursive: true });
@@ -1809,7 +1814,7 @@ if (process.env.ESBUILD_WORKER_THREADS !== "0") {
   }
 }
 var _a;
-var isInternalWorkerThread = ((_a = worker_threads == null ? void 0 : worker_threads.workerData) == null ? void 0 : _a.esbuildVersion) === "0.25.1";
+var isInternalWorkerThread = ((_a = worker_threads == null ? void 0 : worker_threads.workerData) == null ? void 0 : _a.esbuildVersion) === "0.25.2";
 var esbuildCommandAndArgs = () => {
   if ((!ESBUILD_BINARY_PATH || false) && (path2.basename(__filename) !== "main.js" || path2.basename(__dirname) !== "lib")) {
     throw new Error(
@@ -1876,7 +1881,7 @@ var fsAsync = {
     }
   }
 };
-var version = "0.25.1";
+var version = "0.25.2";
 var build = (options) => ensureServiceIsRunning().build(options);
 var context = (buildOptions) => ensureServiceIsRunning().context(buildOptions);
 var transform = (input, options) => ensureServiceIsRunning().transform(input, options);
@@ -1979,7 +1984,7 @@ var stopService;
 var ensureServiceIsRunning = () => {
   if (longLivedService) return longLivedService;
   let [command, args] = esbuildCommandAndArgs();
-  let child = child_process.spawn(command, args.concat(`--service=${"0.25.1"}`, "--ping"), {
+  let child = child_process.spawn(command, args.concat(`--service=${"0.25.2"}`, "--ping"), {
     windowsHide: true,
     stdio: ["pipe", "pipe", "inherit"],
     cwd: defaultWD
@@ -2083,7 +2088,7 @@ var runServiceSync = (callback) => {
     esbuild: node_exports
   });
   callback(service);
-  let stdout = child_process.execFileSync(command, args.concat(`--service=${"0.25.1"}`), {
+  let stdout = child_process.execFileSync(command, args.concat(`--service=${"0.25.2"}`), {
     cwd: defaultWD,
     windowsHide: true,
     input: stdin,
@@ -2103,7 +2108,7 @@ var workerThreadService = null;
 var startWorkerThreadService = (worker_threads2) => {
   let { port1: mainPort, port2: workerPort } = new worker_threads2.MessageChannel();
   let worker = new worker_threads2.Worker(__filename, {
-    workerData: { workerPort, defaultWD, esbuildVersion: "0.25.1" },
+    workerData: { workerPort, defaultWD, esbuildVersion: "0.25.2" },
     transferList: [workerPort],
     // From node's documentation: https://nodejs.org/api/worker_threads.html
     //
