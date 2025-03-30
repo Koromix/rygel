@@ -137,6 +137,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         { "statx", sb_FilterAction::Allow },
         { "access", sb_FilterAction::Allow },
         { "faccessat", sb_FilterAction::Allow },
+        { "faccessat2", sb_FilterAction::Allow },
         { "ioctl/tty", sb_FilterAction ::Allow},
         { "getrandom", sb_FilterAction::Allow },
         { "getpid", sb_FilterAction::Allow },
@@ -165,7 +166,12 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         { "renameat2", sb_FilterAction::Allow },
         { "rmdir", sb_FilterAction::Allow },
         { "chown", sb_FilterAction::Allow },
+        { "fchown", sb_FilterAction::Allow },
+        { "fchownat", sb_FilterAction::Allow },
         { "chmod", sb_FilterAction::Allow },
+        { "fchmod", sb_FilterAction::Allow },
+        { "fchmodat", sb_FilterAction::Allow },
+        { "fchmodat2", sb_FilterAction::Allow },
         { "clone", sb_FilterAction::Allow },
         { "clone3", sb_FilterAction::Allow },
         { "futex", sb_FilterAction::Allow },
@@ -216,6 +222,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         { "shutdown", sb_FilterAction::Allow },
         { "uname", sb_FilterAction::Allow },
         { "utime", sb_FilterAction::Allow },
+        { "utimensat", sb_FilterAction::Allow },
         { "getrusage", sb_FilterAction::Allow }
     });
 #endif
