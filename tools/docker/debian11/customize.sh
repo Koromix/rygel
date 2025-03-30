@@ -17,4 +17,4 @@ echo "deb-src http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-18 main" >> 
 echo "deb http://deb.debian.org/debian bullseye-backports main" >> /etc/apt/sources.list
 
 apt update
-apt install -y clang-13 lld-13 clang-18 lld-18
+apt install -y clang-13 lld-13 clang-18 lld-18 libclang-rt-18-dev:arm64
