@@ -83,16 +83,10 @@ function build(form, values) {
         })
     }
 
-    if (evts) {
+    if (evts > 1) {
         form.part(() => {
-            form.enumRadio("evt_index", "Cochez l'évènement qui fût le plus difficile pour vous :", Object.keys(catastrophes).map(idx => {
-                let value = values["evt" + idx]
-
-                if (!value || !value.length)
-                    return null
-
-                return [idx, catastrophes[idx]]
-            }))
+            let props = indices.filter(idx => values["evt" + idx]?.length > 0).map(idx => [idx, catastrophes[idx]])
+            form.enumRadio("evt_index", "Sélectionnez l'évènement qui a été le plus difficile pour vous :", props)
         })
     }
 }
