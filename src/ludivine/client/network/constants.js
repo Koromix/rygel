@@ -60,8 +60,16 @@ const QUALITY_COLORS = {
 
 const USER_GUIDES = {
     addSubjects: html`Bienvenue sur votre sociogramme ! Commencez par ajouter les personnnes de votre entourage sur le sociogramme en cliquant sur le <b>bouton d'ajout en bas à gauche</b> de l'écran.`,
-    movePersons: html`Déplacez les personnes ajoutées dans le <b>cercle de proximité qui correspond le mieux</b>, selon que vous les voyez ou contactez tous les jours ou presque (vie quotidienne), régulièrement ou seulement de temps en temps.`,
-    editPerson: html`Ensuite, <b>cliquez sur les personnes ajoutées</b> pour indiquer comment vous évaluez la relation entre vous et chaque personne.`,
+    movePersons: html`
+        <p>Classez les personnes ajoutées dans le <b>cercle de proximité qui leur correspond le mieux</b> :
+        <ul>
+            <li><i>Vie quotidienne</i> : celles que vous voyez ou contactez tous les jours ou presque.
+            <li><i>Régulier</i> : celles que vous voyez ou conatcteze fréquemment, mais pas quotidiennement.
+            <li><i>De temps en temps</i> : celles que vous voyez ou contactez occasionnellement.
+        </ul>
+        <p>Déplacez chaque personne <b>dans le cercle approprié</b> en fonction de votre niveau d'interaction avec elle.
+    `,
+    editPerson: html`Une fois les personnes classées dans leur cercle respectif, <b>cliquez sur chaque personne ajoutée pour évaluer la relation que vous entretenez avec elle</b>. Indiquez comment vous percevez cette relation.`,
     addMore: html`Complétez le sociogramme avec <b>des amis, les membres de votre famille, des collègues, des soignants, des animaux</b>, et tout autre personne à laquelle vous pensez. N'hésitez pas !`,
     createLinks: html`Vous pouvez également indiquer comment les personnes s'entendent à l'aide du mode Liens. Cliquez sur le <b>bouton « Liens »</b> pour relier vos proches entre eux/elles en traçant les liens avec votre souris ou à l'aide de l'écran tactile.`,
     editLink: html`Cliquez sur le <b>petit cercle au centre de chaque lien</b> pour évaluer la relation entre les personnes concernées.`,
