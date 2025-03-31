@@ -697,6 +697,14 @@ public:
         }
         if (features & (int)CompileFeature::CFI) {
             RG_ASSERT(features & (int)CompileFeature::LTO);
+
+            if (architecture == HostArchitecture::x86_64) {
+                Fmt(&buf, " -fcf-protection=branch");
+            } else if (architecture == HostArchitecture::ARM64) {
+                Fmt(&buf, " -mbranch-protection=bti+pac-ret");
+            }
+
+            // Fine-grained forward CFI
             Fmt(&buf, " -fsanitize=cfi");
         }
         if (features & (int)CompileFeature::ShuffleCode) {
