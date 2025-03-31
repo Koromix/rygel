@@ -57,58 +57,57 @@ function build(form, values) {
     })
 
     form.intro = html`
-        <p>Indiquez, pour les questions qui vont suivre, quels évènements sont <b>actuellement difficiles</b> pour vous, ou qui ont été un difficiles pour vous <b>ou cours des 6 derniers mois</b>.
-        <p>Les évènements que vous indiquez peuvent avoir de nombreuses conséquences sur votre bien-être et comportement. Nous vous demanderons de préciser <b>à quelle fréquence les différentes affirmations s’appliquent</b> à vous (de « Jamais » à « Souvent »).
+        <p>Merci d'avoir identifié ces évènements. Ils peuvent avoir de nombreuses conséquences sur votre bien-être et comportement. Nous vous demanderons de préciser <b>à quelle fréquence les différentes affirmations s’appliquent</b> à vous (de « Jamais » à « Souvent »).
     `
 
     form.part(() => {
-        q(1, "Depuis la situation stressante, je me sens déprimé·e et triste :")
-        q(2, "Je pense à la situation stressante de manière répétée :")
+        q(1, "Depuis les évènements stressants identifiés, je me sens déprimé·e et triste :")
+        q(2, "Je pense à ces évènements stressants de manière répétée :")
     })
 
     form.part(() => {
-        q(3, "J’essaie d’éviter de parler de la situation stressante chaque fois que cela est possible :")
-        q(4, "Je pense à la situation stressante beaucoup et cela est un poids pour moi :")
+        q(3, "J’essaie d’éviter de parler des évènements stressants identifiés chaque fois que cela est possible :")
+        q(4, "Je pense beaucoup à ces évènements stressants et cela est un poids pour moi :")
     })
 
     form.part(() => {
         q(5, "Je fais rarement les activités qui me plaisaient avant :")
-        q(6, "Si je pense à la situation stressante, je ressens un réel état d’anxiété :")
+        q(6, "Si je pense aux évènements stressants identifiés, je ressens un réel état d’anxiété :")
     })
 
     form.part(() => {
-        q(7, "J’évite certaines choses qui peuvent me rappeler la situation stressante :")
-        q(8, "Je suis nerveux.se et agité·e depuis la situation stressante :")
+        q(7, "J’évite certaines choses qui peuvent me rappeler les évènements stressants identifiés :")
+        q(8, "Je suis nerveux.se et agité·e depuis ces évènements stressants :")
     })
 
     form.part(() => {
-        q(9, "Depuis la situation stressante, je me mets en colère bien plus rapidement qu'auparavant, même pour de petites choses :")
-        q(10, "Depuis la situation stressante, je trouve difficile de me concentrer sur certaines choses :")
+        q(9, "Depuis les évènements stressants identifiés, je me mets en colère bien plus rapidement qu'auparavant, même pour de petites choses :")
+        q(10, "Depuis ces évènements stressants, je trouve difficile de me concentrer sur certaines choses :")
     })
 
     form.part(() => {
-        q(11, "J’essaie de sortir la situation stressante de ma mémoire :")
-        q(12, "J’ai remarqué que je deviens plus irritable à cause de la situation stressante :")
+        q(11, "J’essaie de sortir ces évènements stressants de ma mémoire :")
+        q(12, "J’ai remarqué que je deviens plus irritable à cause de ces évènements stressants :")
     })
 
     form.part(() => {
-        q(13, "J’ai constamment des souvenirs de la situation stressante et je ne peux rien faire pour les arrêter :")
+        q(13, "J’ai constamment des souvenirs de ces évènements stressants et je ne peux rien faire pour les arrêter :")
         q(14, "J’essaie de supprimer mes émotions car elles sont un poids pour moi :")
     })
 
     form.part(() => {
-        q(15, "Mes pensées tournent souvent autour de tout ce qui est relié à la situation stressante :")
-        q(16, "Depuis la situation stressante, j’ai peur de faire certaines choses ou de me retrouver dans certaines situations :")
+        q(15, "Mes pensées tournent souvent autour de tout ce qui est relié aux évènements stressants identifiés :")
+        q(16, "Depuis ces évènements stressants, j’ai peur de faire certaines choses ou de me retrouver dans certaines situations :")
     })
 
     form.part(() => {
-        q(17, "Depuis la situation stressante, je n’aime pas aller au travail ou faire les tâches quotidiennes nécessaires :")
-        q(18, "Je me sens découragé·e depuis la situation stressante et j’ai peu d’espoir dans l’avenir :")
+        q(17, "Depuis ces évènements stressants, je n’aime pas aller au travail ou faire les tâches quotidiennes nécessaires :")
+        q(18, "Je me sens découragé·e depuis ces évènements stressants et j’ai peu d’espoir dans l’avenir :")
     })
 
     form.part(() => {
-        q(19, "Depuis l’évènement stressant, je ne peux plus dormir correctement :")
-        q(20, "Dans l’ensemble, la situation cause une détérioration importante de ma vie sociale et professionnelle, de mon temps de loisirs, et des autres domaines importants de fonctionnement :")
+        q(19, "Depuis ces évènements stressants identifiés, je ne peux plus dormir correctement :")
+        q(20, "Dans l’ensemble, ces évènements stressants causent une détérioration importante de ma vie sociale et professionnelle, de mon temps de loisirs, et des autres domaines importants de fonctionnement :")
     })
 
     function q(idx, label) {
