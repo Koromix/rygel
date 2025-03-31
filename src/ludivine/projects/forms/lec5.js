@@ -83,12 +83,12 @@ function build(form, values) {
         })
     }
 
-    if (evts > 1) {
-        form.part(() => {
-            let props = indices.filter(idx => values["evt" + idx]?.length > 0).map(idx => [idx, catastrophes[idx]])
-            form.enumRadio("evt_index", "Sélectionnez l'évènement qui a été le plus difficile pour vous :", props)
-        })
-    }
+    // if (evts > 1) {
+    //     form.part(() => {
+    //         let props = indices.filter(idx => values["evt" + idx]?.length > 0).map(idx => [idx, catastrophes[idx]])
+    //         form.enumRadio("evt_index", "Sélectionnez l'évènement qui a été le plus difficile pour vous :", props)
+    //     })
+    // }
 }
 
 export default build
