@@ -64,7 +64,7 @@ const USER_GUIDES = {
         <p>Classez les personnes ajoutées dans le <b>cercle de proximité qui leur correspond le mieux</b> :
         <ul>
             <li><i>Vie quotidienne</i> : celles que vous voyez ou contactez tous les jours ou presque.
-            <li><i>Régulier</i> : celles que vous voyez ou conatcteze fréquemment, mais pas quotidiennement.
+            <li><i>Régulier</i> : celles que vous voyez ou contactez fréquemment, mais pas quotidiennement.
             <li><i>De temps en temps</i> : celles que vous voyez ou contactez occasionnellement.
         </ul>
         <p>Déplacez chaque personne <b>dans le cercle approprié</b> en fonction de votre niveau d'interaction avec elle.
