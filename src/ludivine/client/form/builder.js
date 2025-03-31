@@ -502,6 +502,10 @@ function FormBuilder(state, model, base = {}) {
             optional: options.optional
         });
 
+        Object.defineProperties(widget, {
+            value: { get: () => key.obj[key.name], enumerable: true }
+        });
+
         return widget;
     }
 
