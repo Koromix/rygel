@@ -74,6 +74,8 @@ function init(build, start, values) {
     `;
 
     build.module('recueil', 'Recueil', mod => {
+        let anciennete = values.anciennete ?? 0;
+
         if (values.anciennete >= 5) {
             mod.help = html`
                 <p>L'étude SocioTrauma est actuellement limitée aux personnes ayant vécu un événement difficile au cours du dernier mois. Cette restriction est liée à l'objectif spécifique de l'étude, qui examine les changements <b>survenant immédiatement après un événement traumatisant</b> dans les relations sociales et la santé mentale.
@@ -84,7 +86,7 @@ function init(build, start, values) {
             return;
         }
 
-        let first = start.plus(values.anciennete * 7);
+        let first = start.plus(anciennete * 7);
 
         mod.level = 'Temporalité';
         mod.help = (progress, total) => {

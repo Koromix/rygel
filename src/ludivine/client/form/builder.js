@@ -188,6 +188,8 @@ function FormBuilder(state, model, base = {}) {
             </div>
         `);
 
+        widget.props = props;
+
         return widget;
     };
 
@@ -223,6 +225,8 @@ function FormBuilder(state, model, base = {}) {
             </div>
         `);
 
+        widget.props = props;
+
         return widget;
     };
 
@@ -245,6 +249,8 @@ function FormBuilder(state, model, base = {}) {
                 })}
             </select>
         `);
+
+        widget.props = props;
 
         function change(e) {
             let idx = (e.target.value != '') ? parseInt(e.target.value, 10) : -1;
@@ -321,6 +327,8 @@ function FormBuilder(state, model, base = {}) {
             </div>
         `);
 
+        widget.props = props;
+
         return widget;
     };
 
@@ -383,6 +391,8 @@ function FormBuilder(state, model, base = {}) {
                 })}
             </div>
         `);
+
+        widget.props = props;
 
         return widget;
     };

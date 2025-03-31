@@ -76,7 +76,7 @@ function build(form, values, mask) {
         for (let i = 0; i < count; i++) {
             let initiales = values[key + "b" + i]
 
-            if (initiales) {
+            if (typeof initiales == 'string') {
                 initiales = initiales.toUpperCase().replace(/[^A-Z]/g, '')
                 values[key + "b" + i] = initiales
 

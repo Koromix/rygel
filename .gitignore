@@ -1,10 +1,11 @@
 /bin/
 /build/felix/tmp/
-/tmp/
 /felix
 /felix.exe
 /*.sublime-*
 /rygel.*
+
+**/tmp/*
 
 .Rproj.user
 RcppExports.*
