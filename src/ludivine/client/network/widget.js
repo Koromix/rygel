@@ -22,6 +22,7 @@ import { ASSETS } from '../../assets/assets.js';
 const PERSON_RADIUS = 0.05;
 const LINK_RADIUS = 0.025;
 const CIRCLE_MARGIN = 1.8 * PERSON_RADIUS;
+const CIRCLE_HANDLE = 0.015;
 const MIN_LINK_WIDTH = 0.003;
 const MAX_LINK_WIDTH = 0.01;
 
@@ -964,13 +965,13 @@ function NetworkWidget(app, mod, world) {
     }
 
     function findLevel(at) {
-        let distance = computeDistance(ORIGIN, at);
-
         for (let i = 1; i < PROXIMITY_LEVELS.length; i++) {
             let level = world.levels[i];
-            let delta = Math.abs(distance - level.radius);
 
-            if (delta <= 0.02)
+            let handle = { x: level.radius, y: 0 };
+            let distance = computeDistance(handle, at);
+
+            if (distance <= 0.02)
                 return [level, i];
         }
 
@@ -1025,7 +1026,7 @@ function NetworkWidget(app, mod, world) {
             ctx.save();
 
             ctx.fillStyle = '#0000000b';
-            ctx.strokeStyle = '#00000033';
+            ctx.strokeStyle = '#44444433';
             ctx.lineWidth = 0.01;
             ctx.setLineDash([0.02, 0.02]);
 
@@ -1037,6 +1038,17 @@ function NetworkWidget(app, mod, world) {
                 ctx.arc(0, 0, radius, 0, Math.PI * 2, false);
                 ctx.fill();
                 ctx.stroke();
+            }
+
+            ctx.fillStyle = '#aaaaaa';
+
+            for (let i = 1; i < PROXIMITY_LEVELS.length; i++) {
+                let level = PROXIMITY_LEVELS[i];
+                let radius = world.levels[i].radius;
+
+                ctx.beginPath();
+                ctx.arc(radius, 0, CIRCLE_HANDLE, 0, Math.PI * 2, false);
+                ctx.fill();
             }
 
             ctx.font = `bold ${(20 + state.zoom) * window.devicePixelRatio}px Open Sans`;
