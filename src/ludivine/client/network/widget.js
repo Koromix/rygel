@@ -25,6 +25,7 @@ const CIRCLE_MARGIN = 1.8 * PERSON_RADIUS;
 const MIN_LINK_WIDTH = 0.003;
 const MAX_LINK_WIDTH = 0.01;
 
+const DEFAULT_KIND = 'family';
 const DEFAULT_QUALITY = 0;
 const DEFAULT_LINK = 0;
 
@@ -55,7 +56,6 @@ function NetworkWidget(app, mod, world) {
         pos: { x: 0, y: 0 },
         zoom: 0
     };
-    let new_kind = 'family';
     let new_persons = new Map;
 
     // Interactions
@@ -511,79 +511,131 @@ function NetworkWidget(app, mod, world) {
     }
 
     async function createPersons() {
-        let names = [];
+        let text = '';
 
-        await UI.dialog({
-            run: (render, close) => {
-                let disabled = !names.length;
-
-                return html`
-                    <div class="tabbar">
-                        <a class="active">Ajouter des relations</a>
-                    </div>
-
-                    <div class="tab">
-                        <div class="box">
-                            <label>
-                                <span>
-                                    Quels sont les noms/libellés des personnes que vous souhaitez ajouter ?
-                                    ${UI.safe('Les noms des personnes sont privées.')}
-                                </span>
-
-                                <textarea rows="4" @input=${e => split_names(e.target.value)}></textarea>
-                                <div class="tip">Ajoutez plusieurs personnes à la fois en séparant les noms/libellés (ex : « Maman », « Pierre », « Mitchouk ») par des espaces, des virgules ou des nouvelles lignes.</div>
-                            </label>
-                            <div class="widget">
-                                <span>Quel type de relation avez-vous avec ${names.length > 1 ? 'ces personnes' : 'cette personne'} ?</span>
-                                <div>
-                                    ${Object.keys(PERSON_KINDS).map(kind => {
-                                        let info = PERSON_KINDS[kind];
-                                        let active = (kind == new_kind);
-
-                                        return html`
-                                            <label>
-                                                <input name="quality" type="radio" value=${kind} ?checked=${active}
-                                                       @click=${e => { new_kind = e.target.value; render(); }} />
-                                                ${info.text}
-                                            </label>
-                                        `;
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="actions">
-                            <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
-                            <button type="submit" ?disabled=${disabled}>Ajouter</button>
-                        </div>
-                    </div>
-                `;
-
-                function split_names(text) {
+        for (;;) {
+            let names = await UI.dialog({
+                run: (render, close) => {
                     text = text.trim().replace(/ *-+ */g, '-');
 
-                    names = text.split(/[, \n]+/);
-                    names = names.filter(name => name.length);
+                    return html`
+                        <div class="tabbar">
+                            <a class="active">Ajouter des relations</a>
+                        </div>
 
-                    render();
+                        <div class="tab">
+                            <div class="help">
+                                <img src=${ASSETS['pictures/help1']} alt="" />
+                                <div>
+                                    <p>Commencez par saisir les <b>noms ou libellés</b> de toutes les personnes auxquelles vous pensez. Séparez les par des espaces, des virgules ou des nouvelles lignes.
+                                    <p><i>Exemple : « Maman Papa Mitchouk, Apolline »</i>
+                                </div>
+                            </div>
+
+                            <div class="box">
+                                <label>
+                                    <span>
+                                        Quels sont les noms/libellés des personnes que vous souhaitez ajouter ?
+                                        ${UI.safe('Les noms des personnes sont privées.')}
+                                    </span>
+
+                                    <textarea rows="7" @input=${e => { text = e.target.value; render(); }}>${text}</textarea>
+                                    <div class="tip">Vous pourrez préciser le type de chaque relation dans un second temps.</div>
+                                </label>
+                            </div>
+
+                            <div class="actions">
+                                <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
+                                <button type="submit" ?disabled=${!text}>Ajouter</button>
+                            </div>
+                        </div>
+                    `;
+                },
+
+                submit: (elements) => {
+                    let names = text.split(/[, \n]+/).filter(name => name.length);
+                    return names;
                 }
-            },
+            });
 
-            submit: (elements) => {
-                if (!names.length)
-                    throw new Error('Vous n\'avez saisi aucun nom');
+            try {
+                let items = names.map(name => ({
+                    name: name,
+                    kind: DEFAULT_KIND,
+                    quality: DEFAULT_QUALITY
+                }));
 
-                for (let i = 0; i < names.length; i++) {
-                    let name = names[i];
-                    let subject = createSubject(name, new_kind, DEFAULT_QUALITY);
+                await UI.dialog({
+                    run: (render, close) => {
+                        return html`
+                            <div class="tabbar">
+                                <a class="active">Ajouter des relations</a>
+                            </div>
 
-                    world.subjects.push(subject);
-                    mod.registerPush(world.subjects, subject, i > 0);
+                            <div class="tab">
+                                <div class="help right">
+                                    <div>
+                                        <p>Pour chacune de ces personnes, indiquez :
+                                        <ul>
+                                            <li>Le <b>type de relation</b>
+                                            <li>La <b>qualité de la relation</b>
+                                        </ul>
+                                        <p>Validez vos choix pour ajouter ces personnes à votre sociogramme. Vous pourrez toujours <b>modifier vos choix</b> en cliquant sur chaque personne du sociogramme !
+                                    </div>
+                                    <img src=${ASSETS['pictures/help2']} alt="" />
+                                </div>
 
-                    createPerson(subject, true);
-                }
+                                <div class="box">
+                                    ${items.map(it => html`
+                                        <label style="align-items: stretch;">
+                                            <span>${it.name}</span>
+                                            <div class="row">
+                                                <select @change=${e => { it.kind = e.target.value; render(); }}>
+                                                    ${Object.keys(PERSON_KINDS).map(kind => {
+                                                        let info = PERSON_KINDS[kind];
+                                                        let active = (kind == it.kind);
+
+                                                        return html`<option value=${kind} ?selected=${active}>${info.text}</option>`;
+                                                    })}
+                                                </select>
+                                                <div class="slider net_quality" style="flex: 1;">
+                                                    <span>Très mauvaise</span>
+                                                    <input type="range" min="-5" max="5" value=${it.quality}
+                                                           @change=${e => { it.quality = parseInt(e.target.value, 10); render(); }} />
+                                                    <span>Très bonne</span>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    `)}
+                                </div>
+
+                                <div class="actions">
+                                    <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
+                                    <button type="submit">Ajouter</button>
+                                </div>
+                            </div>
+                        `;
+                    },
+
+                    submit: (elements) => {
+                        for (let i = 0; i < items.length; i++) {
+                            let it = items[i];
+                            let subject = createSubject(it.name, it.kind, it.quality);
+
+                            world.subjects.push(subject);
+                            mod.registerPush(world.subjects, subject, i > 0);
+
+                            createPerson(subject, true);
+                        }
+                    }
+                });
+
+                break;
+            } catch (err) {
+                if (err != null)
+                    throw err;
             }
-        });
+        }
 
         if (world.subjects.length > 1) {
             let step1 = mod.isGuideNeeded('movePersons');
