@@ -728,6 +728,9 @@ form {
             appearance: none;
             -webkit-appearance: none;
 
+            width: 20px;
+            height: 20px;
+            margin-top: -6px;
             background-color: #444;
             border: 3px solid #444;
             border-radius: 50%;
