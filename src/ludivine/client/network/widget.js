@@ -286,10 +286,7 @@ function NetworkWidget(app, mod, world) {
 
         // Handle active link creation
         if (active_edit != null && active_edit.type == 'link') {
-            if (mouse_state.left > 0) {
-                active_edit.x = cursor.x;
-                active_edit.y = cursor.y;
-            } else {
+            if (mouse_state.left == -1) {
                 let [target, idx] = findPerson(cursor);
 
                 if (idx > 0) {
@@ -330,6 +327,11 @@ function NetworkWidget(app, mod, world) {
                 }
 
                 active_edit = null;
+
+                mouse_state.left = 0;
+            } else {
+                active_edit.x = cursor.x;
+                active_edit.y = cursor.y;
             }
 
             if (mouse_state.moving)
@@ -394,7 +396,9 @@ function NetworkWidget(app, mod, world) {
             let [target, idx] = findPerson(cursor);
 
             if (idx > 0) {
-                if (mouse_state.left > 0) {
+                let start = (mouse_state.moving && mouse_state.left > 0) || mouse_state.left == -1;
+
+                if (start) {
                     if (!select_persons.includes(target)) {
                         select_persons.length = 0;
                         select_persons.push(target);
