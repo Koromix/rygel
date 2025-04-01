@@ -806,8 +806,6 @@ function NetworkWidget(app, mod, world) {
         for (let p of targets) {
             let idx = persons.indexOf(p);
 
-            console.log(p, idx);
-
             if (idx <= 0)
                 continue;
 
