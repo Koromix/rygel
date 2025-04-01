@@ -513,7 +513,8 @@ function FormBuilder(state, model, base = {}) {
         });
 
         Object.defineProperties(widget, {
-            value: { get: () => key.obj[key.name], enumerable: true }
+            value: { get: () => key.obj[key.name], enumerable: true },
+            notes: { get: () => annotate(key.obj, key.name), enumerable: true }
         });
 
         return widget;

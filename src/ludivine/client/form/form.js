@@ -261,15 +261,12 @@ function FormModule(app, study, page) {
         let valid = true;
 
         for (let widget of part.widgets) {
-            let key = widget.key;
-
-            if (key == null)
+            if (widget.key == null)
                 continue;
 
-            let value = key.obj[key.name];
-            let notes = annotate(key.obj, key.name);
+            let notes = widget.notes;
 
-            if (value != null || widget.optional || widget.disabled) {
+            if (widget.value != null || widget.optional || widget.disabled) {
                 delete notes.skip;
             } else if (!notes.skip) {
                 notes.skip = false;

@@ -74,13 +74,12 @@ async function run() {
 
                 let entries = [];
                 for (let result of results) {
-                    let [raw, obj] = wrap(result.data);
-                    let values = await extractValues(test.build, raw);
+                    let [values, fields] = await extractFields(test.build, result.data);
 
                     let entry = {
                         participant: result.participant,
-                        data: obj,
-                        values: values
+                        values: values,
+                        fields: fields
                     };
 
                     entries.push(entry);
@@ -89,7 +88,9 @@ async function run() {
                 let [variables, columns] = structureTable(entries);
 
                 let filename = path.join(options.destination, test.key.substr(1) + '.xlsx');
-                exportXLSX(filename, columns, variables, entries);
+                let tab = path.basename(test.key);
+
+                exportXLSX(filename, tab, columns, variables, entries);
             } break;
 
             case 'network': {
@@ -148,7 +149,7 @@ function loadResults(db, study, key) {
     return results;
 }
 
-async function extractValues(build, data) {
+async function extractFields(build, data) {
     let { FormState, FormModel, FormBuilder } = await importScript('../client/form/builder.js');
 
     let state = new FormState(data);
@@ -157,26 +158,29 @@ async function extractValues(build, data) {
 
     build(builder, state.values, () => {});
 
-    let values = [];
+    let fields = [];
 
     for (let widget of model.widgets) {
-        if (widget.key == null)
+        let key = widget.key;
+
+        if (key == null)
             continue;
 
-        let value = {
-            key: makePropertyName(state.values, widget.key.obj, widget.key.name),
+        let field = {
+            key: makePropertyName(state.values, key.obj, key.name),
             label: widget.label,
             value: widget.value,
+            notes: widget.notes,
             type: widget.type
         };
 
         if (widget.props != null)
-            value.props = widget.props;
+            field.props = widget.props;
 
-        values.push(value);
+        fields.push(field);
     }
 
-    return values;
+    return [state.values, fields];
 }
 
 function makePropertyName(root, obj, key) {
@@ -215,16 +219,16 @@ function structureTable(entries) {
     ctx.next = ctx;
 
     for (let entry of entries) {
-        let values = entry.values;
+        let fields = entry.fields;
 
-        for (let i = 0; i < values.length; i++) {
-            let variable = values[i];
+        for (let i = 0; i < fields.length; i++) {
+            let field = fields[i];
 
-            if (!ctx.map.has(variable.key)) {
-                let previous = ctx.map.get(values[i - 1]?.key) ?? ctx;
+            if (!ctx.map.has(field.key)) {
+                let previous = ctx.map.get(fields[i - 1]?.key) ?? ctx;
 
                 let head = {
-                    variable: Object.assign({}, variable),
+                    variable: Object.assign({}, field),
                     prev: previous,
                     next: previous.next
                 };
@@ -233,7 +237,7 @@ function structureTable(entries) {
                 previous.next.prev = head;
                 previous.next = head;
 
-                ctx.map.set(variable.key, head);
+                ctx.map.set(field.key, head);
             }
         }
     }
@@ -288,28 +292,40 @@ function readProperty(obj, prop) {
     return func(obj);
 }
 
-function exportXLSX(filename, columns, variables, entries) {
+function exportXLSX(filename, tab, columns, variables, entries) {
     let dirname = path.dirname(filename);
     fs.mkdirSync(dirname, { recursive: true });
 
     let ws = XLSX.utils.aoa_to_sheet([['participant', ...columns.map(column => column.name)]]);
+    let comments = XLSX.utils.aoa_to_sheet([['participant', 'variable', 'comment']]);
     let definitions = XLSX.utils.aoa_to_sheet([['variable', 'label', 'type']]);
     let propositions = XLSX.utils.aoa_to_sheet([['variable', 'prop', 'label']]);
 
+    // Results
     for (let entry of entries) {
         let row = [
             entry.participant,
             ...columns.map(column => {
-                let result = column.read(entry.data);
-                if (result == null)
-                    return 'NA';
-                return result;
+                let result = column.read(entry.values);
+                return result ?? 'NA';
             })
         ];
 
         XLSX.utils.sheet_add_aoa(ws, [row], { origin: -1 });
     }
 
+    // Comments
+    for (let entry of entries) {
+        for (let field of entry.fields) {
+            if (!field.notes?.comment)
+                continue;
+
+            let comment = [entry.participant, field.key, field.notes.comment];
+            XLSX.utils.sheet_add_aoa(comments, [comment], { origin: -1 });
+        }
+    }
+
+    // Definitions and propositions
     for (let variable of variables) {
         let info = [variable.key, variable.label, variable.type];
         XLSX.utils.sheet_add_aoa(definitions, [info], { origin: -1 });
@@ -321,7 +337,8 @@ function exportXLSX(filename, columns, variables, entries) {
     }
 
     let wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'data');
+    XLSX.utils.book_append_sheet(wb, ws, tab);
+    XLSX.utils.book_append_sheet(wb, comments, '@comments');
     XLSX.utils.book_append_sheet(wb, definitions, '@definitions');
     XLSX.utils.book_append_sheet(wb, propositions, '@propositions');
 
