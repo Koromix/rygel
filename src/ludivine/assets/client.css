@@ -110,6 +110,15 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     }
 }
 
+.shortcut {
+    width: 16px;
+    height: 16px;
+    padding: 2px;
+    background: var(--button_color);
+    border-radius: 6px;
+    vertical-align: middle;
+}
+
 #log {
     position: fixed;
     left: 50%;

@@ -942,6 +942,7 @@ async function runDashboard() {
                             <img src=${ASSETS['pictures/help1']} alt="" />
                             <div>
                                 <p>Ajoutez les <b>prochaines étapes de l'étude à votre agenda</b> pour revenir le moment venu !
+                                <p>Utilisez les boutons <img class="shortcut" src=${ASSETS['ui/calendar']} alt="Agenda" /> dans la section <b>« À venir »</b>.
                             </div>
                         </div>
                     ` : ''}
