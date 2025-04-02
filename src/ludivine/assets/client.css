@@ -260,6 +260,8 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     }
 
     .help {
+        align-items: center;
+
         & > img { width: 100px; }
         & > div {
             min-height: 60px;
