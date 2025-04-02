@@ -109,8 +109,7 @@ async function buildProject(key) {
 
     // Get basic project info
     {
-        let filename = import.meta.dirname + '/../projects/projects.js';
-        let { PROJECTS: projects } = await importScript(filename);
+        let { PROJECTS: projects } = await importScript('../projects/projects.js');
 
         info = projects.find(project => project.key == key);
 
@@ -119,10 +118,7 @@ async function buildProject(key) {
     }
 
     // Build project script
-    {
-        let filename = import.meta.dirname + `/../projects/${key}.js`;
-        bundle = await importScript(filename);
-    }
+    bundle = await importScript(`../projects/${key}.js`);
 
     // Create project structure
     {
@@ -347,6 +343,8 @@ function exportXLSX(filename, tab, columns, variables, entries) {
 }
 
 async function importScript(filename) {
+    filename = path.join(import.meta.dirname, filename);
+
     let mod = imports.get(filename);
 
     if (mod == null) {
