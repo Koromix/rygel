@@ -25,7 +25,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 124;
+const int InstanceVersion = 125;
 const int LegacyVersion = 60;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
@@ -2636,9 +2636,129 @@ bool MigrateInstance(sq_Database *db, int target)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 124: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX rec_threads_t;
+                    DROP INDEX rec_entries_ts;
+                    DROP INDEX rec_entries_e;
+                    DROP INDEX rec_fragments_t;
+                    DROP INDEX rec_fragments_r;
+                    DROP INDEX rec_tags_t;
+                    DROP INDEX rec_tags_n;
+                    DROP INDEX rec_tags_en;
+                    DROP INDEX ins_claims_ut;
+                    DROP INDEX seq_constraints_skv;
+
+                    ALTER TABLE rec_threads RENAME TO rec_threads_BAK;
+                    ALTER TABLE rec_entries RENAME TO rec_entries_BAK;
+                    ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
+                    ALTER TABLE rec_tags RENAME TO rec_tags_BAK;
+                    ALTER TABLE ins_claims RENAME TO ins_claims_BAK;
+                    ALTER TABLE seq_constraints RENAME TO seq_constraints_BAK;
+
+                    CREATE TABLE rec_threads (
+                        sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                        tid TEXT NOT NULL,
+                        hid TEXT,
+                        counters TEXT NOT NULL,
+                        secrets TEXT NOT NULL,
+                        locked NOT NULL
+                    );
+                    CREATE UNIQUE INDEX rec_threads_t ON rec_threads (tid);
+
+                    CREATE TABLE rec_entries (
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid) DEFERRABLE INITIALLY DEFERRED,
+                        eid TEXT NOT NULL,
+                        anchor INTEGER NOT NULL,
+                        ctime INTEGER NOT NULL,
+                        mtime INTEGER NOT NULL,
+                        store TEXT NOT NULL,
+                        deleted INTEGER CHECK (deleted IN (0, 1)) NOT NULL,
+                        summary TEXT,
+                        data TEXT,
+                        meta TEXT,
+                        tags TEXT
+                    );
+                    CREATE UNIQUE INDEX rec_entries_ts ON rec_entries (tid, store);
+                    CREATE UNIQUE INDEX rec_entries_e ON rec_entries (eid);
+
+                    CREATE TABLE rec_fragments (
+                        anchor INTEGER PRIMARY KEY AUTOINCREMENT,
+                        previous INTEGER REFERENCES rec_fragments (anchor),
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid) DEFERRABLE INITIALLY DEFERRED,
+                        eid TEXT NOT NULL REFERENCES rec_entries (eid) DEFERRABLE INITIALLY DEFERRED,
+                        userid INTEGER NOT NULL,
+                        username TEXT NOT NULL,
+                        mtime INTEGER NOT NULL,
+                        fs INTEGER,
+                        summary TEXT,
+                        data TEXT,
+                        meta TEXT,
+                        tags TEXT,
+                        page TEXT
+                    );
+                    CREATE INDEX rec_fragments_t ON rec_fragments (tid);
+                    CREATE INDEX rec_fragments_r ON rec_fragments (eid);
+
+                    CREATE TABLE rec_tags (
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid) DEFERRABLE INITIALLY DEFERRED,
+                        eid TEXT NOT NULL REFERENCES rec_entries (eid) DEFERRABLE INITIALLY DEFERRED,
+                        name TEXT NOT NULL
+                    );
+                    CREATE INDEX rec_tags_t ON rec_tags (tid);
+                    CREATE INDEX rec_tags_n ON rec_tags (name);
+                    CREATE UNIQUE INDEX rec_tags_en ON rec_tags (eid, name);
+
+                    CREATE TABLE ins_claims (
+                        userid INTEGER NOT NULL,
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid) DEFERRABLE INITIALLY DEFERRED
+                    );
+                    CREATE UNIQUE INDEX ins_claims_ut ON ins_claims (userid, tid);
+
+                    CREATE TABLE seq_constraints (
+                        eid TEXT NOT NULL REFERENCES rec_entries (eid) DEFERRABLE INITIALLY DEFERRED,
+                        store TEXT NOT NULL,
+                        key TEXT NOT NULL,
+                        mandatory INTEGER CHECK (mandatory IN (0, 1)) NOT NULL,
+                        value TEXT,
+
+                        CHECK ((value IS NOT NULL AND value <> '') OR mandatory = 0)
+                    );
+                    CREATE UNIQUE INDEX seq_constraints_skv ON seq_constraints (store, key, value);
+
+                    INSERT INTO rec_threads (tid, locked, counters, secrets)
+                        SELECT tid, locked, '{}', '{}' FROM rec_threads_BAK;
+                    INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime, store, deleted, data, meta, tags)
+                        SELECT tid, eid, anchor, ctime, mtime, store, deleted, data, meta, tags FROM rec_entries_BAK;
+                    INSERT INTO rec_fragments (anchor, previous, tid, eid, userid, username, mtime, fs, summary, data, meta, tags, page)
+                        SELECT anchor, previous, tid, eid, userid, username, mtime, fs, summary, data, meta, tags, page FROM rec_fragments_BAK;
+                    INSERT INTO rec_tags (tid, eid, name)
+                        SELECT tid, eid, name FROM rec_tags_BAK;
+                    INSERT INTO ins_claims (userid, tid)
+                        SELECT userid, tid FROM ins_claims_BAK;
+                    INSERT INTO seq_constraints (eid, store, key, mandatory, value)
+                        SELECT eid, store, key, mandatory, value FROM seq_constraints_BAK;
+
+                    DROP TABLE rec_threads_BAK;
+                    DROP TABLE rec_entries_BAK;
+                    DROP TABLE rec_fragments_BAK;
+                    DROP TABLE rec_tags_BAK;
+                    DROP TABLE ins_claims_BAK;
+                    DROP TABLE seq_constraints_BAK;
+
+                    CREATE TABLE seq_counters (
+                        key TEXT NOT NULL,
+                        state INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX seq_counters_k ON seq_counters (key);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 124);
+            static_assert(InstanceVersion == 125);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

@@ -40,6 +40,8 @@ struct RecordFilter {
 struct RecordInfo {
     int64_t t = -1;
     const char *tid = nullptr;
+    const char *counters = nullptr;
+    const char *secrets = nullptr;
     bool locked = false;
 
     int64_t e = -1;
@@ -85,7 +87,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
 
     if (filter.audit_anchor < 0) {
         sql.len += Fmt(sql.TakeAvailable(),
-                       R"(SELECT t.sequence AS t, t.tid, t.locked,
+                       R"(SELECT t.sequence AS t, t.tid, t.counters, t.secrets, t.locked,
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime,
                                  e.store, e.summary, e.tags AS tags,
                                  IIF(?6 = 1, e.data, NULL) AS data, IIF(?7 = 1, e.meta, NULL) AS meta
@@ -128,7 +130,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                                   WHERE f.anchor <= ?3 AND f.previous = rec.anchor
                               ORDER BY anchor
                           )
-                          SELECT t.sequence AS t, t.tid, t.locked,
+                          SELECT t.sequence AS t, t.tid, t.counters, t.secrets, t.locked,
                                  e.rowid AS e, e.eid, IIF(rec.data IS NULL, 1, 0) AS deleted,
                                  rec.anchor, e.ctime, rec.mtime, e.store,
                                  rec.summary, rec.tags, rec.data, rec.meta
@@ -206,7 +208,7 @@ again:
         return false;
 
     int64_t t = sqlite3_column_int64(stmt, 0);
-    int64_t e = sqlite3_column_int64(stmt, 3);
+    int64_t e = sqlite3_column_int64(stmt, 5);
 
     // This can happen with the recursive CTE is used for historical data
     if (e == cursor.e)
@@ -214,21 +216,23 @@ again:
 
     cursor.t = t;
     cursor.tid = (const char *)sqlite3_column_text(stmt, 1);
-    cursor.locked = sqlite3_column_int(stmt, 2);
+    cursor.counters = (const char *)sqlite3_column_text(stmt, 2);
+    cursor.secrets = (const char *)sqlite3_column_text(stmt, 3);
+    cursor.locked = sqlite3_column_int(stmt, 4);
 
     cursor.e = e;
-    cursor.eid = (const char *)sqlite3_column_text(stmt, 4);
-    cursor.deleted = !!sqlite3_column_int(stmt, 5);
-    cursor.anchor = sqlite3_column_int64(stmt, 6);
-    cursor.ctime = sqlite3_column_int64(stmt, 7);
-    cursor.mtime = sqlite3_column_int64(stmt, 8);
-    cursor.store = (const char *)sqlite3_column_text(stmt, 9);
-    cursor.summary = (const char *)sqlite3_column_text(stmt, 10);
-    cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 11), sqlite3_column_bytes(stmt, 11));
+    cursor.eid = (const char *)sqlite3_column_text(stmt, 6);
+    cursor.deleted = !!sqlite3_column_int(stmt, 7);
+    cursor.anchor = sqlite3_column_int64(stmt, 8);
+    cursor.ctime = sqlite3_column_int64(stmt, 9);
+    cursor.mtime = sqlite3_column_int64(stmt, 10);
+    cursor.store = (const char *)sqlite3_column_text(stmt, 11);
+    cursor.summary = (const char *)sqlite3_column_text(stmt, 12);
+    cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 13), sqlite3_column_bytes(stmt, 13));
 
-    cursor.data = read_data ? MakeSpan((const char *)sqlite3_column_text(stmt, 12), sqlite3_column_bytes(stmt, 12))
+    cursor.data = read_data ? MakeSpan((const char *)sqlite3_column_text(stmt, 14), sqlite3_column_bytes(stmt, 14))
                             : MakeSpan((const char *)nullptr, 0);
-    cursor.meta = read_meta ? MakeSpan((const char *)sqlite3_column_text(stmt, 13), sqlite3_column_bytes(stmt, 13))
+    cursor.meta = read_meta ? MakeSpan((const char *)sqlite3_column_text(stmt, 15), sqlite3_column_bytes(stmt, 15))
                             : MakeSpan((const char *)nullptr, 0);
 
     return true;
@@ -467,6 +471,7 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
         json.Key("tid"); json.String(cursor->tid);
         json.Key("sequence"); json.Int64(cursor->t);
         json.Key("hid"); json.Null();
+        json.Key("counters"); json.Raw(cursor->counters);
         json.Key("saved"); json.Bool(true);
         json.Key("locked"); json.Bool(cursor->locked);
 
@@ -683,6 +688,8 @@ void RunExport(http_IO *io, InstanceHolder *instance, bool data, bool meta)
         json.Key("tid"); json.String(cursor->tid);
         json.Key("sequence"); json.Int64(cursor->t);
         json.Key("hid"); json.Null();
+        json.Key("counters"); json.Raw(cursor->counters);
+        json.Key("secrets"); json.Raw(cursor->secrets);
 
         json.Key("entries"); json.StartObject();
         do {

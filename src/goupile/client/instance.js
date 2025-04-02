@@ -2006,6 +2006,7 @@ async function openRecord(tid, anchor, page) {
     } else {
         new_thread = {
             tid: Util.makeULID(),
+            counters: {},
             saved: false,
             locked: false,
             entries: {}
@@ -2133,7 +2134,7 @@ async function saveRecord(tid, entry, data, meta) {
         entry.tags = Array.from(tags);
     }
 
-    await records.save(tid, entry, ENV.version, meta.constraints, route.page.claim, meta.signup);
+    await records.save(tid, entry, ENV.version, route.page.claim, meta);
 
     if (!profile.userid) {
         let url = route.page.url + `/${form_thread.tid}`;

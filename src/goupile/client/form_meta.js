@@ -19,6 +19,7 @@ import { contextualizeURL, computeStatus, go } from './instance.js';
 function MetaModel() {
     this.summary = null;
     this.constraints = {};
+    this.counters = {};
     this.signup = null;
 }
 
@@ -30,8 +31,11 @@ function MetaInterface(page, data, meta) {
     });
 
     this.constrain = function(key, types) {
+        if (!key)
+            throw new Error('Constraint keys cannot be empty');
         if (key.startsWith('__'))
             throw new Error('Keys must not start with \'__\'');
+
         if (!Array.isArray(types))
             types = [types];
 
@@ -52,6 +56,32 @@ function MetaInterface(page, data, meta) {
             throw new Error('Ignoring empty constraint');
 
         meta.constraints[key] = constraint;
+    };
+
+    this.count = function(key) {
+        if (!key)
+            throw new Error('Counter keys cannot be empty');
+        if (key.startsWith('__'))
+            throw new Error('Keys must not start with \'__\'');
+
+        meta.counters[key] = {
+            max: null,
+            randomize: false,
+            secret: false
+        };
+    };
+
+    this.randomize = function(key, max = 2) {
+        if (!key)
+            throw new Error('')
+        if (max < 2 || max > 32)
+            throw new Error('Number of randomization groups must be between 2 and 32');
+
+        meta.counters[key] = {
+            max: max,
+            randomize: true,
+            secret: true
+        };
     };
 
     this.signUp = function(to, subject, content, text = null) {

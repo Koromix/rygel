@@ -25,11 +25,21 @@ async function exportRecords(stores, filter = null) {
 
     let XLSX = await import(`${ENV.urls.static}sheetjs/XLSX.bundle.js`);
 
-    let definitions = XLSX.utils.aoa_to_sheet([['table', 'variable', 'label', 'type']]);
-    let propositions = XLSX.utils.aoa_to_sheet([['table', 'variable', 'prop', 'label']]);
-
     // Assemble information about tables and columns
-    let tables = await structureTables();
+    let [tables, counters] = await structureTables();
+
+    // Metadata worksheets
+    let meta = {
+        definitions: XLSX.utils.aoa_to_sheet([['table', 'variable', 'label', 'type']]),
+        propositions: XLSX.utils.aoa_to_sheet([['table', 'variable', 'prop', 'label']]),
+        counters: null
+    };
+
+    // Prepare worksheet for counters
+    if (counters.length) {
+        let columns = ['__tid', ...counters];
+        meta.counters = XLSX.utils.aoa_to_sheet([columns]);
+    }
 
     // Create base worksheets
     let worksheets = stores.map(store => {
@@ -41,11 +51,11 @@ async function exportRecords(stores, filter = null) {
         // Definitions and propositions
         for (let variable of table.variables) {
             let info = [store, variable.key, variable.label, variable.type];
-            XLSX.utils.sheet_add_aoa(definitions, [info], { origin: -1 });
+            XLSX.utils.sheet_add_aoa(meta.definitions, [info], { origin: -1 });
 
             if (variable.props != null) {
                 let props = variable.props.filter(prop => prop.value != null).map(prop => [store, variable.key, prop.value, prop.label]);
-                XLSX.utils.sheet_add_aoa(propositions, props, { origin: -1 });
+                XLSX.utils.sheet_add_aoa(meta.propositions, props, { origin: -1 });
             }
         }
 
@@ -77,14 +87,24 @@ async function exportRecords(stores, filter = null) {
                 thread.tid, thread.sequence,
                 ...table.columns.map(column => {
                     let result = column.read(entry.data);
-                    if (result == null)
-                        return 'NA';
-                    return result;
+                    return result ?? 'NA';
                 })
             ];
 
             XLSX.utils.sheet_add_aoa(ws, [row], { origin: -1 });
             table.length++;
+        }
+
+        if (meta.counters != null) {
+            let row = [
+                thread.tid,
+                ...counters.map(key => {
+                    let counter = thread.counters[key] ?? thread.secrets[key];
+                    return counter ?? 'NA';
+                })
+            ];
+
+            XLSX.utils.sheet_add_aoa(meta.counters, [row], { origin: -1 });
         }
     });
 
@@ -100,8 +120,14 @@ async function exportRecords(stores, filter = null) {
 
         XLSX.utils.book_append_sheet(wb, ws, store);
     }
-    XLSX.utils.book_append_sheet(wb, definitions, '@definitions');
-    XLSX.utils.book_append_sheet(wb, propositions, '@propositions');
+    for (let key in meta) {
+        let ws = meta[key];
+
+        if (ws == null)
+            continue;
+
+        XLSX.utils.book_append_sheet(wb, ws, '@' + key);
+    }
 
     // ... and export it!
     let filename = `${ENV.key}_${wb_name}.xlsx`;
@@ -110,9 +136,15 @@ async function exportRecords(stores, filter = null) {
 
 async function structureTables() {
     let tables = {};
+    let counters = new Set;
 
     // Reconstitute logical order
     await walkThreads('meta', thread => {
+        for (let key in thread.counters)
+            counters.add(key);
+        for (let key in thread.secrets)
+            counters.add(key);
+
         for (let store in thread.entries) {
             let entry = thread.entries[store];
 
@@ -174,7 +206,9 @@ async function structureTables() {
         };
     }
 
-    return tables;
+    counters = Array.from(counters);
+
+    return [tables, counters];
 }
 
 function expandColumns(variables) {

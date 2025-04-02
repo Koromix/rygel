@@ -46,6 +46,13 @@ struct RecordFragment {
     bool claim = true;
 };
 
+struct CounterInfo {
+    const char *key = nullptr;
+    int max = 0;
+    bool randomize = false;
+    bool secret = false;
+};
+
 struct SignupInfo {
     bool enable = false;
 
@@ -174,6 +181,40 @@ static bool PrepareSignup(const InstanceHolder *instance, const char *tid, const
     return true;
 }
 
+static int64_t UpdateCounter(const CounterInfo &counter, int64_t state, int64_t *out_state)
+{
+    if (counter.max) {
+        RG_ASSERT(counter.max >= 1 && counter.max <= 32);
+
+        uint32_t mask = state ? (uint32_t)state : ((1u << counter.max) - 1);
+
+        if (counter.randomize) {
+            int range = PopCount(mask);
+
+            int rnd = GetRandomInt(0, range);
+            int value = -1;
+
+            while (rnd >= 0) {
+                value++;
+                rnd -= !!(mask & (1u << value));
+            };
+
+            *out_state = (int64_t)(mask & ~(1u << value));
+            return value + 1;
+        } else {
+            int64_t value = CountTrailingZeros(mask);
+
+            *out_state = (int64_t)(mask & ~(1u << value));
+            return value + 1;
+        }
+    } else {
+        int64_t value = (int64_t)state + 1;
+
+        *out_state = value;
+        return value;
+    }
+}
+
 void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 {
     if (!instance->config.data_remote) {
@@ -198,6 +239,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
     char tid[27];
     RecordFragment fragment = {};
+    HeapArray<CounterInfo> counters;
     SignupInfo signup = {};
     {
         StreamReader st;
@@ -293,44 +335,72 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                                 fragment.tags.Append(tag.ptr);
                             }
                         }
-                    } else if (key == "constraints") {
-                        parser.ParseObject();
-                        while (parser.InObject()) {
-                            DataConstraint constraint = {};
-
-                            parser.ParseKey(&constraint.key);
-                            parser.ParseObject();
-                            while (parser.InObject()) {
-                                Span<const char> type = {};
-                                parser.ParseKey(&type);
-
-                                if (type == "exists") {
-                                    parser.ParseBool(&constraint.exists);
-                                } else if (type == "unique") {
-                                    parser.ParseBool(&constraint.unique);
-                                } else {
-                                    if (parser.IsValid()) {
-                                        LogError("Unknown constraint type '%1'", type);
-                                    }
-                                    io->SendError(422);
-                                    return;
-                                }
-                            }
-
-                            if (!CheckKey(constraint.key)) {
-                                io->SendError(422);
-                                return;
-                            }
-
-                            fragment.constraints.Append(constraint);
-                        }
-                    } else if (key == "claim") {
-                        parser.ParseBool(&fragment.claim);
                     } else if (parser.IsValid()) {
                         LogError("Unexpected key '%1'", key);
                         io->SendError(422);
                         return;
                     }
+                }
+            } else if (key == "claim") {
+                parser.ParseBool(&fragment.claim);
+            } else if (key == "constraints") {
+                parser.ParseObject();
+                while (parser.InObject()) {
+                    DataConstraint constraint = {};
+
+                    parser.ParseKey(&constraint.key);
+                    parser.ParseObject();
+                    while (parser.InObject()) {
+                        Span<const char> type = {};
+                        parser.ParseKey(&type);
+
+                        if (type == "exists") {
+                            parser.ParseBool(&constraint.exists);
+                        } else if (type == "unique") {
+                            parser.ParseBool(&constraint.unique);
+                        } else {
+                            if (parser.IsValid()) {
+                                LogError("Unknown constraint type '%1'", type);
+                            }
+                            io->SendError(422);
+                            return;
+                        }
+                    }
+
+                    if (!CheckKey(constraint.key)) {
+                        io->SendError(422);
+                        return;
+                    }
+
+                    fragment.constraints.Append(constraint);
+                }
+            } else if (key == "counters") {
+                parser.ParseObject();
+                while (parser.InObject()) {
+                    CounterInfo counter = {};
+
+                    parser.ParseKey(&counter.key);
+                    parser.ParseObject();
+                    while (parser.InObject()) {
+                        Span<const char> key = {};
+                        parser.ParseKey(&key);
+
+                        if (key == "key") {
+                            parser.ParseString(&counter.key);
+                        } else if (key == "max") {
+                            parser.SkipNull() || parser.ParseInt(&counter.max);
+                        } else if (key == "randomize") {
+                            parser.ParseBool(&counter.randomize);
+                        } else if (key == "secret") {
+                            parser.ParseBool(&counter.secret);
+                        } else {
+                            LogError("Unexpected key '%1'", key);
+                            io->SendError(422);
+                            return;
+                        }
+                    }
+
+                    counters.Append(counter);
                 }
             } else if (key == "signup") {
                 switch (parser.PeekToken()) {
@@ -395,6 +465,17 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         if (fragment.fs < 0 || !fragment.eid[0] || !fragment.store || !fragment.has_data) {
             LogError("Missing fragment fields");
             valid = false;
+        }
+
+        for (const CounterInfo &counter: counters) {
+            if (!counter.key || !counter.key[0]) {
+                LogError("Empty counter key is not allowed");
+                valid = false;
+            }
+            if (counter.max < 0 || counter.max > 32) {
+                LogError("Counter maximum must be between 1 and 32");
+                valid = false;
+            }
         }
 
         if (signup.enable) {
@@ -488,6 +569,23 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
             }
         }
 
+        // List known counters
+        HashSet<const char *> prev_counters;
+        {
+            sq_Statement stmt;
+            if (!instance->db->Prepare(R"(SELECT c.key
+                                          FROM rec_threads t, json_each(t.counters) c
+                                          WHERE tid = ?1)", &stmt, tid))
+                return false;
+
+            while (stmt.Step()) {
+                const char *key = (const char *)sqlite3_column_text(stmt, 0);
+                const char *copy = DuplicateString(key, io->Allocator()).ptr;
+
+                prev_counters.Set(copy);
+            }
+        }
+
         // Check permissions
         if (!stamp->HasPermission(UserPermission::DataRead)) {
             if (prev_anchor < 0) {
@@ -570,7 +668,9 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         }
 
         // Create thread if needed
-        if (!instance->db->Run("INSERT INTO rec_threads (tid, locked) VALUES (?1, 0) ON CONFLICT DO NOTHING", tid))
+        if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets, locked)
+                                  VALUES (?1, '{}', '{}', 0)
+                                  ON CONFLICT DO NOTHING)", tid))
             return false;
 
         // Update entry and fragment tags
@@ -579,6 +679,41 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         for (const char *tag: fragment.tags) {
             if (!instance->db->Run(R"(INSERT INTO rec_tags (tid, eid, name) VALUES (?1, ?2, ?3)
                                       ON CONFLICT (eid, name) DO NOTHING)", tid, fragment.eid, tag))
+                return false;
+        }
+
+        // Update counters
+        for (CounterInfo &counter: counters) {
+            if (prev_counters.Find(counter.key))
+                continue;
+
+            int64_t state;
+            {
+                sq_Statement stmt;
+                if (!instance->db->Prepare("SELECT state FROM seq_counters WHERE key = ?1", &stmt, counter.key))
+                    return false;
+
+                if (stmt.Step()) {
+                    state = sqlite3_column_int64(stmt, 0);
+                } else if (stmt.IsValid()) {
+                    state = 0;
+                } else {
+                    return false;
+                }
+            }
+
+            int value = UpdateCounter(counter, state, &state);
+
+            if (!instance->db->Run(R"(UPDATE rec_threads SET counters = json_patch(counters, json_object(?2, ?3)),
+                                                             secrets = json_patch(secrets, json_object(?2, ?4))
+                                      WHERE tid = ?1)",
+                                   tid, counter.key, !counter.secret ? sq_Binding(value) : sq_Binding(),
+                                                     counter.secret ? sq_Binding(value) : sq_Binding()))
+                return false;
+            if (!instance->db->Run(R"(INSERT INTO seq_counters (key, state)
+                                      VALUES (?1, ?2)
+                                      ON CONFLICT DO UPDATE SET state = excluded.state)",
+                                   counter.key, state))
                 return false;
         }
 
@@ -739,9 +874,9 @@ void HandleRecordDelete(http_IO *io, InstanceHolder *instance)
                                                                          mtime, fs, summary, data, meta, tags)
                                               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
                                               RETURNING anchor)",
-                                              &stmt, prev_anchor, tid,
-                                              eid, session->userid, session->username, now, nullptr,
-                                              nullptr, nullptr, nullptr, tags))
+                                           &stmt, prev_anchor, tid,
+                                           eid, session->userid, session->username, now, nullptr,
+                                           nullptr, nullptr, nullptr, tags))
                     return false;
                 if (!stmt.GetSingleValue(&new_anchor))
                     return false;
