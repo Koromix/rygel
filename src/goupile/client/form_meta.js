@@ -23,7 +23,7 @@ function MetaModel() {
     this.signup = null;
 }
 
-function MetaInterface(page, data, meta) {
+function MetaInterface(thread, page, meta) {
     let url = makeCompleteURL(page.url);
 
     Object.defineProperties(this, {
@@ -69,6 +69,9 @@ function MetaInterface(page, data, meta) {
             randomize: false,
             secret: false
         };
+
+        let value = thread.counters[key];
+        return value;
     };
 
     this.randomize = function(key, max = 2) {
