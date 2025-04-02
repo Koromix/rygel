@@ -49,7 +49,6 @@ struct RecordInfo {
     int64_t ctime = -1;
     int64_t mtime = -1;
     const char *store = nullptr;
-    int64_t sequence = -1;
     Span<const char> tags = {};
 
     const char *summary = nullptr;
@@ -88,7 +87,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
         sql.len += Fmt(sql.TakeAvailable(),
                        R"(SELECT t.sequence AS t, t.tid, t.locked,
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime,
-                                 e.store, e.sequence, e.summary, e.tags AS tags,
+                                 e.store, e.summary, e.tags AS tags,
                                  IIF(?6 = 1, e.data, NULL) AS data, IIF(?7 = 1, e.meta, NULL) AS meta
                           FROM rec_threads t
                           INNER JOIN rec_entries e ON (e.tid = t.tid)
@@ -131,7 +130,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                           )
                           SELECT t.sequence AS t, t.tid, t.locked,
                                  e.rowid AS e, e.eid, IIF(rec.data IS NULL, 1, 0) AS deleted,
-                                 rec.anchor, e.ctime, rec.mtime, e.store, e.sequence,
+                                 rec.anchor, e.ctime, rec.mtime, e.store,
                                  rec.summary, rec.tags, rec.data, rec.meta
                               FROM rec
                               INNER JOIN rec_entries e ON (e.eid = rec.eid)
@@ -224,13 +223,12 @@ again:
     cursor.ctime = sqlite3_column_int64(stmt, 7);
     cursor.mtime = sqlite3_column_int64(stmt, 8);
     cursor.store = (const char *)sqlite3_column_text(stmt, 9);
-    cursor.sequence = sqlite3_column_int64(stmt, 10);
-    cursor.summary = (const char *)sqlite3_column_text(stmt, 11);
-    cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 12), sqlite3_column_bytes(stmt, 12));
+    cursor.summary = (const char *)sqlite3_column_text(stmt, 10);
+    cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 11), sqlite3_column_bytes(stmt, 11));
 
-    cursor.data = read_data ? MakeSpan((const char *)sqlite3_column_text(stmt, 13), sqlite3_column_bytes(stmt, 13))
+    cursor.data = read_data ? MakeSpan((const char *)sqlite3_column_text(stmt, 12), sqlite3_column_bytes(stmt, 12))
                             : MakeSpan((const char *)nullptr, 0);
-    cursor.meta = read_meta ? MakeSpan((const char *)sqlite3_column_text(stmt, 14), sqlite3_column_bytes(stmt, 14))
+    cursor.meta = read_meta ? MakeSpan((const char *)sqlite3_column_text(stmt, 13), sqlite3_column_bytes(stmt, 13))
                             : MakeSpan((const char *)nullptr, 0);
 
     return true;
@@ -347,7 +345,6 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
             json.Key("anchor"); json.Int64(cursor->anchor);
             json.Key("ctime"); json.Int64(cursor->ctime);
             json.Key("mtime"); json.Int64(cursor->mtime);
-            json.Key("sequence"); json.Int64(cursor->sequence);
             if (cursor->summary) {
                 json.Key("summary"); json.String(cursor->summary);
             } else {
@@ -487,7 +484,6 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
             json.Key("anchor"); json.Int64(cursor->anchor);
             json.Key("ctime"); json.Int64(cursor->ctime);
             json.Key("mtime"); json.Int64(cursor->mtime);
-            json.Key("sequence"); json.Int64(cursor->sequence);
             if (cursor->summary) {
                 json.Key("summary"); json.String(cursor->summary);
             } else {
@@ -697,7 +693,6 @@ void RunExport(http_IO *io, InstanceHolder *instance, bool data, bool meta)
             json.Key("anchor"); json.Int64(cursor->anchor);
             json.Key("ctime"); json.Int64(cursor->ctime);
             json.Key("mtime"); json.Int64(cursor->mtime);
-            json.Key("sequence"); json.Int64(cursor->sequence);
             json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
 
             if (data) {
