@@ -86,7 +86,8 @@ function init(build, start, values) {
             return;
         }
 
-        let first = start.plus(anciennete * 7);
+        let avance = -Math.max(0, anciennete - 1);
+        let debut = start.plus(avance * 7);
 
         mod.level = 'Temporalité';
         mod.help = (progress, total) => {
@@ -193,7 +194,7 @@ function init(build, start, values) {
                 <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
             `;
 
-            let options = { schedule: first.plus(6 * 7) };
+            let options = { schedule: debut.plus(6 * 7) };
 
             build.module('entourage', 'Entourage', () => {
                 build.form('ssq6', 'Soutien social', ssq6, options)
@@ -234,7 +235,7 @@ function init(build, start, values) {
                 <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
             `;
 
-            let options = { schedule: first.plusMonths(3) };
+            let options = { schedule: debut.plusMonths(3) };
 
             build.module('entourage', 'Entourage', () => {
                 build.form('ssq6', 'Soutien social', ssq6, options)
@@ -273,7 +274,7 @@ function init(build, start, values) {
                 <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
             `;
 
-            let options = { schedule: first.plusMonths(6) };
+            let options = { schedule: debut.plusMonths(6) };
 
             build.module('entourage', 'Entourage', () => {
                 build.form('ssq6', 'Soutien social', ssq6, options)
@@ -311,7 +312,7 @@ function init(build, start, values) {
                 <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
             `;
 
-            let options = { schedule: first.plusMonths(12) };
+            let options = { schedule: debut.plusMonths(12) };
 
             build.module('entourage', 'Entourage', () => {
                 build.form('ssq6', 'Soutien social', ssq6, options)
