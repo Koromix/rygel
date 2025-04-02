@@ -7,7 +7,7 @@ PKG_AUTHOR="Niels Martignène <niels.martignene@protonmail.com>"
 PKG_DESCRIPTION="GUI and command-line tools to manage Teensy devices"
 PKG_DEPENDENCIES="libqt6core6, libudev1"
 PKG_LICENSE=Unlicense
-PKG_ARCHITECTURES="amd64 i386 arm64"
+PKG_ARCHITECTURES="amd64 arm64"
 
 SCRIPT_PATH=src/tytools/dist/linux/debian.sh
 VERSION_TARGET=tycmd

@@ -7,7 +7,7 @@ PKG_AUTHOR="Niels Martignène <niels.martignene@protonmail.com>"
 PKG_DESCRIPTION="Small build system made specifically for this repository"
 PKG_DEPENDENCIES=""
 PKG_LICENSE=GPL-3.0-or-later
-PKG_ARCHITECTURES="amd64 i386 arm64"
+PKG_ARCHITECTURES="amd64 arm64"
 
 SCRIPT_PATH=src/felix/dist/linux/debian.sh
 VERSION_TARGET=felix

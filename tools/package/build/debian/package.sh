@@ -47,9 +47,6 @@ License: ${PKG_LICENSE}" > ${DEBIAN_DIR}/copyright
     if echo "${PKG_ARCHITECTURES}" | grep -q -w amd64; then
         docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build x86_64-linux-gnu amd64
     fi
-    if echo "${PKG_ARCHITECTURES}" | grep -q -w i386; then
-        docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build i686-linux-gnu i386
-    fi
     if echo "${PKG_ARCHITECTURES}" | grep -q -w arm64; then
         docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build aarch64-linux-gnu arm64
     fi

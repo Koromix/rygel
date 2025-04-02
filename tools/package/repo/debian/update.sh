@@ -23,7 +23,7 @@ mkdir -p pool
 
 rm -rf dists
 
-for arch in amd64 i386 arm64; do
+for arch in amd64 arm64; do
     mkdir -p dists/stable/main/binary-$arch
     apt-ftparchive --arch $arch packages pool >dists/stable/main/binary-$arch/Packages
     gzip -f -k -9 dists/stable/main/binary-$arch/Packages
