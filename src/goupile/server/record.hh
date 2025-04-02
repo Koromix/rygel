@@ -35,6 +35,4 @@ void HandleRecordDelete(http_IO *io, InstanceHolder *instance);
 void HandleRecordLock(http_IO *io, InstanceHolder *instance);
 void HandleRecordUnlock(http_IO *io, InstanceHolder *instance);
 
-void HandleRecordSequence(http_IO *io, InstanceHolder *instance);
-
 }

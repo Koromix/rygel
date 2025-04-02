@@ -25,7 +25,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 123;
+const int InstanceVersion = 124;
 const int LegacyVersion = 60;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
@@ -2619,7 +2619,26 @@ bool MigrateInstance(sq_Database *db, int target)
                     return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 123);
+            case 123: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE mig_sequences (
+                        eid TEXT NOT NULL,
+                        sequence INTEGER NOT NULL
+                    );
+
+                    INSERT INTO mig_sequences (eid, sequence)
+                        SELECT eid, sequence FROM rec_entries;
+
+                    DROP INDEX rec_entries_ss;
+                    ALTER TABLE rec_entries DROP COLUMN sequence;
+
+                    DROP TABLE seq_counters;
+                )");
+                if (!success)
+                    return false;
+            } // [[fallthrough]];
+
+            static_assert(InstanceVersion == 124);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
