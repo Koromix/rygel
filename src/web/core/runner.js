@@ -80,7 +80,9 @@ function AppRunner(canvas) {
         left: 0,
         middle: 0,
         right: 0,
-        wheel: 0
+
+        wheel: 0,
+        pinch: null
     };
     let mouse_mirror = {};
     let skip_clicks = 0;
@@ -304,7 +306,9 @@ function AppRunner(canvas) {
         }
 
         if (e.deltaY) {
-            mouse_state.wheel += Util.clamp(e.deltaY, -1, 1);
+            let delta = Math.round(e.deltaY);
+
+            mouse_state.wheel += Util.clamp(delta, -1, 1);
 
             e.preventDefault();
             e.stopPropagation();
@@ -346,16 +350,11 @@ function AppRunner(canvas) {
 
                 // Give some time for stabilisation :)
                 if (draw_counter - touch_start.counter >= 6) {
-                    if (new_distance / touch_distance >= 1.2) {
-                        mouse_state.wheel--;
-                        touch_distance = new_distance;
-                    } else if (new_distance / touch_distance <= 0.8) {
-                        mouse_state.wheel++;
-                        touch_distance = new_distance;
-                    }
-                } else {
-                    touch_distance = new_distance;
+                    let pinch = mouse_state.pinch ?? 0;
+                    mouse_state.pinch = pinch + Math.log2(new_distance / touch_distance);
                 }
+
+                touch_distance = new_distance;
             }
 
             mouse_state.contact = true;
@@ -389,6 +388,8 @@ function AppRunner(canvas) {
 
             touch_start = null;
             touch_distance = null;
+
+            mouse_state.pinch = null;
         }
     }
 
@@ -444,6 +445,8 @@ function AppRunner(canvas) {
                 if (mouse_state.right)
                     mouse_state.right++;
                 mouse_state.wheel = 0;
+                if (mouse_state.pinch != null)
+                    mouse_state.pinch = 0;
 
                 if (audio != null) {
                     for (let sfx of old_sources.values()) {

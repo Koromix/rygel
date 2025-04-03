@@ -485,10 +485,12 @@ function NetworkWidget(app, mod, world) {
             select_persons.length = 0;
 
         // Handle zoom
-        if (mouse_state.wheel < 0) {
-            zoom(1, cursor);
-        } else if (mouse_state.wheel > 0) {
-            zoom(-1, cursor);
+        if (mouse_state.wheel) {
+            let delta = Util.clamp(-mouse_state.wheel, -1, 1);
+            zoom(delta, cursor);
+        } else if (mouse_state.pinch) {
+            let delta = 10 * mouse_state.pinch;
+            zoom(delta, cursor);
         }
     };
 
@@ -1410,9 +1412,7 @@ function NetworkWidget(app, mod, world) {
     }
 
     function computeScale(zoom) {
-        zoom += 2;
-
-        let scale = Math.min(canvas.width / 2, canvas.height / 2) * Math.exp(zoom / 10);
+        let scale = Math.min(canvas.width / 2, canvas.height / 2) * Math.pow(2, zoom / 10);
         return scale;
     }
 

@@ -39,6 +39,7 @@ function TileMap(runner) {
 
     let last_wheel_time = 0;
     let zoom_animation = null;
+    let pinch_acc = 0;
 
     let render_elements = [];
     let render_tooltip = null;
@@ -344,6 +345,17 @@ function TileMap(runner) {
 
                 last_wheel_time = now;
             }
+        } else if (mouse_state.pinch != null) {
+            pinch_acc += mouse_state.pinch;
+
+            let delta = Math.round(pinch_acc);
+
+            if (delta) {
+                self.zoom(delta, mouse_state);
+                pinch_acc = 0;
+            }
+        } else {
+            pinch_acc = 0;
         }
 
         // Make sure we stay in the box
