@@ -137,6 +137,6 @@ void HandleChangeTOTP(http_IO *io);
 void HandleChangeMode(http_IO *io, InstanceHolder *instance);
 void HandleChangeExportKey(http_IO *io, InstanceHolder *instance);
 
-RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *instance, const char *username);
+RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *instance);
 
 }

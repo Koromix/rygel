@@ -17,7 +17,6 @@
 #include "goupile.hh"
 #include "domain.hh"
 #include "instance.hh"
-#include "message.hh"
 #include "record.hh"
 #include "user.hh"
 #include "src/core/request/smtp.hh"
@@ -51,17 +50,6 @@ struct CounterInfo {
     int max = 0;
     bool randomize = false;
     bool secret = false;
-};
-
-struct SignupInfo {
-    bool enable = false;
-
-    const char *username = nullptr;
-    const char *url = nullptr;
-    const char *to = nullptr;
-    const char *subject = nullptr;
-    Span<const char> html = nullptr;
-    Span<const char> text = nullptr;
 };
 
 static bool CheckTag(Span<const char> tag)
@@ -130,57 +118,6 @@ static const char *TagsToJson(Span<const char *const> tags, Allocator *alloc)
     return buf.Leak().ptr;
 }
 
-static bool PrepareSignup(const InstanceHolder *instance, const char *tid, const char *username,
-                          SignupInfo &info, Allocator *alloc, smtp_MailContent *out_mail)
-{
-    Span<char> token;
-    {
-        Span<const char> msg = Fmt(alloc, R"({"key": "%1"})", username);
-
-        Span<uint8_t> cypher = AllocateSpan<uint8_t>(alloc, msg.len + crypto_box_SEALBYTES);
-
-        // Encode token
-        if (crypto_box_seal((uint8_t *)cypher.ptr, (const uint8_t *)msg.ptr, msg.len, instance->config.token_pkey) != 0) {
-            LogError("Failed to seal token");
-            return false;
-        }
-
-        // Encode Base64
-        token = AllocateSpan<char>(alloc, cypher.len * 2 + 1);
-        sodium_bin2hex(token.ptr, (size_t)token.len, cypher.ptr, (size_t)cypher.len);
-        token.len = (Size)strlen(token.ptr);
-    }
-
-    const char *url = Fmt(alloc, "%1/%2?token=%3", info.url, tid, token).ptr;
-
-    Span<const uint8_t> text = PatchFile(info.text.As<const uint8_t>(), alloc,
-                                         [&](Span<const char> expr, StreamWriter *writer) {
-        Span<const char> key = TrimStr(expr);
-
-        if (key == "LINK") {
-            writer->Write(url);
-        } else {
-            Print(writer, "{{%1}}", expr);
-        }
-    });
-    Span<const uint8_t> html = PatchFile(info.html.As<const uint8_t>(), alloc,
-                                         [&](Span<const char> expr, StreamWriter *writer) {
-        Span<const char> key = TrimStr(expr);
-
-        if (key == "LINK") {
-            writer->Write(url);
-        } else {
-            Print(writer, "{{%1}}", expr);
-        }
-    });
-
-    out_mail->subject = DuplicateString(info.subject, alloc).ptr;
-    out_mail->text = (const char *)text.ptr;
-    out_mail->html = (const char *)html.ptr;
-
-    return true;
-}
-
 static int64_t UpdateCounter(const CounterInfo &counter, int64_t state, int64_t *out_state)
 {
     if (counter.max) {
@@ -240,7 +177,6 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     char tid[27];
     RecordFragment fragment = {};
     HeapArray<CounterInfo> counters;
-    SignupInfo signup = {};
     {
         StreamReader st;
         if (!io->OpenForRead(Mebibytes(8), &st))
@@ -402,46 +338,6 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
                     counters.Append(counter);
                 }
-            } else if (key == "signup") {
-                switch (parser.PeekToken()) {
-                    case json_TokenType::Null: {
-                        parser.ParseNull();
-                        signup.enable = false;
-                    } break;
-                    case json_TokenType::StartObject: {
-                        signup.enable = (session->userid <= 0);
-
-                        parser.ParseObject();
-                        while (parser.InObject()) {
-                            Span<const char> key = {};
-                            parser.ParseKey(&key);
-
-                            if (key == "username") {
-                                parser.ParseString(&signup.username);
-                            } else if (key == "url") {
-                                parser.ParseString(&signup.url);
-                            } else if (key == "to") {
-                                parser.ParseString(&signup.to);
-                            } else if (key == "subject") {
-                                parser.ParseString(&signup.subject);
-                            } else if (key == "html") {
-                                parser.ParseString(&signup.html);
-                            } else if (key == "text") {
-                                parser.ParseString(&signup.text);
-                            } else if (parser.IsValid()) {
-                                LogError("Unexpected key '%1'", key);
-                                io->SendError(422);
-                                return;
-                            }
-                        }
-                    } break;
-
-                    default: {
-                        LogError("Unexpected value type for signup data");
-                        io->SendError(422);
-                        return;
-                    } break;
-                }
             } else if (parser.IsValid()) {
                 LogError("Unexpected key '%1'", key);
                 io->SendError(422);
@@ -478,26 +374,6 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
             }
         }
 
-        if (signup.enable) {
-            if (!gp_domain.config.smtp.url) {
-                LogError("This instance is not configured to send mails");
-                io->SendError(403);
-                return;
-            }
-
-            bool content = signup.text.len || signup.html.len;
-
-            if (!signup.url || !signup.to || !signup.subject || !content) {
-                LogError("Missing signup fields");
-                valid = false;
-            }
-
-            if (signup.username && !signup.username[0]) {
-                LogError("Empty username is not allowed");
-                valid = false;
-            }
-        }
-
         if (!valid) {
             io->SendError(422);
             return;
@@ -506,7 +382,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
     // Create full session for guests
     if (!session->userid) {
-        session = MigrateGuestSession(io, instance, signup.username);
+        session = MigrateGuestSession(io, instance);
         if (!session)
             return;
 
@@ -728,22 +604,6 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     });
     if (!success)
         return;
-
-    // Best effort
-    if (signup.enable) {
-        RG_ASSERT(session->userid < 0);
-
-        do {
-            smtp_MailContent content;
-
-            if (!PrepareSignup(instance, tid, session->username, signup, io->Allocator(), &content))
-                break;
-            if (!SendMail(signup.to, content))
-                break;
-
-            LogDebug("Sent signup mail to '%1'", signup.to);
-        } while (false);
-    }
 
     const char *json = Fmt(io->Allocator(), "{ \"anchor\": %1 }", new_anchor).ptr;
     io->SendText(200, json, "application/json");

@@ -1628,10 +1628,11 @@ void HandleChangeExportKey(http_IO *io, InstanceHolder *instance)
     json.Finish();
 }
 
-RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *instance, const char *username)
+RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *instance)
 {
-    // Create random username (if needed)
-    if (!username || !username[0]) {
+    // Create random username
+    const char *username;
+    {
         Span<char> key = AllocateSpan<char>(io->Allocator(), 11);
 
         for (Size i = 0; i < 7; i++) {

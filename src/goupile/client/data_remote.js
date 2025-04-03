@@ -43,8 +43,7 @@ function DataRemote() {
             },
             claim: claim,
             constraints: meta.constraints,
-            counters: meta.counters,
-            signup: meta.signup
+            counters: meta.counters
         });
     };
 
