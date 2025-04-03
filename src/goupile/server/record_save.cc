@@ -41,7 +41,6 @@ struct RecordFragment {
     Span<const char> data = {};
     Span<const char> meta = {};
     HeapArray<const char *> tags;
-    HeapArray<DataConstraint> constraints;
     bool claim = true;
 };
 
@@ -176,6 +175,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
     char tid[27];
     RecordFragment fragment = {};
+    HeapArray<DataConstraint> constraints;
     HeapArray<CounterInfo> counters;
     {
         StreamReader st;
@@ -295,20 +295,13 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                         } else if (type == "unique") {
                             parser.ParseBool(&constraint.unique);
                         } else {
-                            if (parser.IsValid()) {
-                                LogError("Unknown constraint type '%1'", type);
-                            }
+                            LogError("Unexpected key '%1'", key);
                             io->SendError(422);
                             return;
                         }
                     }
 
-                    if (!CheckKey(constraint.key)) {
-                        io->SendError(422);
-                        return;
-                    }
-
-                    fragment.constraints.Append(constraint);
+                    constraints.Append(constraint);
                 }
             } else if (key == "counters") {
                 parser.ParseObject();
@@ -363,11 +356,13 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
             valid = false;
         }
 
+        for (const DataConstraint &constraint: constraints) {
+            valid &= CheckKey(constraint.key);
+        }
+
         for (const CounterInfo &counter: counters) {
-            if (!counter.key || !counter.key[0]) {
-                LogError("Empty counter key is not allowed");
-                valid = false;
-            }
+            valid &= CheckKey(counter.key);
+
             if (counter.max < 0 || counter.max > 32) {
                 LogError("Counter maximum must be between 1 and 32");
                 valid = false;
@@ -492,7 +487,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         // Apply constraints
         if (!instance->db->Run("DELETE FROM seq_constraints WHERE eid = ?1", fragment.eid))
             return false;
-        for (const DataConstraint &constraint: fragment.constraints) {
+        for (const DataConstraint &constraint: constraints) {
             bool success = instance->db->Run(R"(INSERT INTO seq_constraints (eid, store, key, mandatory, value)
                                                 VALUES (?1, ?2, ?3, ?4, json_extract(?5, '$.' || ?3)))",
                                              fragment.eid, fragment.store, constraint.key, 0 + constraint.exists, fragment.data);
