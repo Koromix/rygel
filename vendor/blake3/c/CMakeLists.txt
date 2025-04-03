@@ -10,7 +10,7 @@ if (POLICY CMP0102)
 endif()
 
 project(libblake3
-  VERSION 1.8.0
+  VERSION 1.8.1
   DESCRIPTION "BLAKE3 C implementation"
   LANGUAGES C CXX ASM
 )
@@ -240,6 +240,8 @@ if(BLAKE3_USE_TBB)
       PUBLIC
         BLAKE3_USE_TBB)
   endif()
+  list(APPEND PKG_CONFIG_REQUIRES "tbb >= ${TBB_VERSION}")
+  list(APPEND BLAKE3_PKGCONFIG_CFLAGS -DBLAKE3_USE_TBB)
 endif()
 
 if(BLAKE3_USE_TBB)
@@ -330,6 +332,25 @@ function(join_paths joined_path first_path_segment)
     set(${joined_path} "${temp_path}" PARENT_SCOPE)
 endfunction()
 
+# In-place rewrite a list of strings `requires` into a comma separated string.
+#
+# TODO: Replace function with list(JOIN) when updating to CMake 3.12
+function(join_pkg_config_requires requires)
+  set(_requires "${${requires}}") # avoid shadowing issues, e.g. "${requires}"=len
+  list(LENGTH "${requires}" len)
+  set(idx 1)
+  foreach(req IN LISTS _requires)
+    string(APPEND acc "${req}")
+    if(idx LESS len)
+      string(APPEND acc ", ")
+    endif()
+    math(EXPR idx "${idx} + 1")
+  endforeach()
+  set("${requires}" "${acc}" PARENT_SCOPE)
+endfunction()
+
+# pkg-config support
+join_pkg_config_requires(PKG_CONFIG_REQUIRES)
 join_paths(PKG_CONFIG_INSTALL_LIBDIR "\${prefix}" "${CMAKE_INSTALL_LIBDIR}")
 join_paths(PKG_CONFIG_INSTALL_INCLUDEDIR "\${prefix}" "${CMAKE_INSTALL_INCLUDEDIR}")
 configure_file(libblake3.pc.in libblake3.pc @ONLY)
