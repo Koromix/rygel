@@ -117,12 +117,12 @@ static const char *TagsToJson(Span<const char *const> tags, Allocator *alloc)
     return buf.Leak().ptr;
 }
 
-static int64_t UpdateCounter(const CounterInfo &counter, int64_t state, int64_t *out_state)
+static int64_t RunCounter(const CounterInfo &counter, int64_t state, int64_t *out_state)
 {
     if (counter.max) {
-        RG_ASSERT(counter.max >= 1 && counter.max <= 32);
+        RG_ASSERT(counter.max >= 1 && counter.max <= 64);
 
-        uint32_t mask = state ? (uint32_t)state : ((1u << counter.max) - 1);
+        uint64_t mask = state ? (uint64_t)state : ((1u << counter.max) - 1);
 
         if (counter.randomize) {
             int range = PopCount(mask);
@@ -363,8 +363,8 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         for (const CounterInfo &counter: counters) {
             valid &= CheckKey(counter.key);
 
-            if (counter.max < 0 || counter.max > 32) {
-                LogError("Counter maximum must be between 1 and 32");
+            if (counter.max < 0 || counter.max > 64) {
+                LogError("Counter maximum must be between 1 and 64");
                 valid = false;
             }
         }
@@ -573,7 +573,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 }
             }
 
-            int value = UpdateCounter(counter, state, &state);
+            int value = RunCounter(counter, state, &state);
 
             if (!instance->db->Run(R"(UPDATE rec_threads SET counters = json_patch(counters, json_object(?2, ?3)),
                                                              secrets = json_patch(secrets, json_object(?2, ?4))
