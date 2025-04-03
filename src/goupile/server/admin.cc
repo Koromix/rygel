@@ -2290,6 +2290,9 @@ void HandleArchiveCreate(http_IO *io)
         return;
     }
 
+    // Can take a long time, don't timeout because request looks idle
+    io->SetTimeout(60000);
+
     // Do the work
     {
         bool conflict;
