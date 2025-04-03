@@ -319,6 +319,7 @@ function AppRunner(canvas) {
         canvas.focus();
         self.busy();
 
+        let body = document.body.getBoundingClientRect();
         let rect = canvas.getBoundingClientRect();
 
         // Prevent refresh when swipping up and other stuff
@@ -332,14 +333,14 @@ function AppRunner(canvas) {
                 return;
 
             if (touch_digits == 1) {
-                mouse_state.x = (e.touches[0].pageX - rect.left) * dpr;
-                mouse_state.y = (e.touches[0].pageY - rect.top) * dpr;
+                mouse_state.x = (e.touches[0].pageX - rect.left + body.left) * dpr;
+                mouse_state.y = (e.touches[0].pageY - rect.top + body.top) * dpr;
 
                 if (e.type == 'touchstart' && !mouse_state.left)
                     mouse_state.left = 1;
             } else if (touch_digits == 2) {
-                let p1 = { x: e.touches[0].pageX - rect.left, y: e.touches[0].pageY - rect.top };
-                let p2 = { x: e.touches[1].pageX - rect.left, y: e.touches[1].pageY - rect.top };
+                let p1 = { x: e.touches[0].pageX - rect.left + body.left, y: e.touches[0].pageY - rect.top + body.top };
+                let p2 = { x: e.touches[1].pageX - rect.left + body.left, y: e.touches[1].pageY - rect.top + body.top };
 
                 mouse_state.x = (p1.x + p2.x) / 2 * dpr;
                 mouse_state.y = (p1.y + p2.y) / 2 * dpr;
