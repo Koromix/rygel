@@ -1,5 +1,17 @@
 # Goupile changelog
 
+## Goupile 3.10
+
+*Released on 2025-04-03*
+
+- Add `meta.count()` for custom sequential counters
+- Add `meta.random()` for low-level for randomization
+- Restore empty record summaries (regression introduced in Goupile 3.9)
+- Improve some database schema migration steps
+- Fix empty space in main toolbar
+- Drop per-store sequence numbers (unused)
+- Drop custom signup system (unused)
+
 ## Goupile 3.9
 
 ### Goupile 3.9.3

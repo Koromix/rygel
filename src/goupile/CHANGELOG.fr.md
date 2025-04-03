@@ -1,5 +1,17 @@
 # Historique des versions
 
+## Goupile 3.10
+
+*Sortie le 03/04/2025*
+
+- Ajout de `meta.count()` pour des compteurs séquentiels personnalisés
+- Ajout de `meta.random()` pour la randomisation
+- Restauration des résumés d'enregistrements vides (régression introduite dans Goupile 3.9)
+- Amélioration de certaines étapes de migration du schéma de base de données
+- Correction d'un espace vide dans la barre d'outils principale
+- Suppression des numéros de séquence par entrée (non utilisés)
+- Suppression du système d'inscription personnalisé (non utilisé)
+
 ## Goupile 3.9
 
 ### Goupile 3.9.3
