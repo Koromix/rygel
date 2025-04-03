@@ -219,7 +219,7 @@ function renderMenu() {
             ` : ''}
 
             ${app.panels.editor || app.panels.data ? html`
-                <div style="width: 8px;"></div>
+                ${goupile.hasPermission('build_code') || goupile.canUnlock() ? html`<div style="width: 8px;"></div>` : ''}
                 ${app.panels.editor ? html`
                     <button class=${'icon code' + (!UI.hasTwoPanels() && UI.isPanelActive('editor') ? ' active' : '')}
                             @click=${UI.wrap(e => togglePanels(true, false))}></button>
