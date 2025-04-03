@@ -58,33 +58,46 @@ function MetaInterface(thread, page, meta) {
         meta.constraints[key] = constraint;
     };
 
-    this.count = function(key) {
+    this.count = function(key, secret = false) {
         if (!key)
             throw new Error('Counter keys cannot be empty');
         if (key.startsWith('__'))
             throw new Error('Keys must not start with \'__\'');
 
+        secret = !!secret;
+
         meta.counters[key] = {
             max: null,
             randomize: false,
-            secret: false
+            secret: secret
         };
+
+        if (secret)
+            return null;
 
         let value = thread.counters[key];
         return value;
     };
 
-    this.randomize = function(key, max = 2) {
+    this.randomize = function(key, max = 2, secret = true) {
         if (!key)
             throw new Error('')
         if (max < 2 || max > 32)
             throw new Error('Number of randomization groups must be between 2 and 32');
 
+        secret = !!secret;
+
         meta.counters[key] = {
             max: max,
             randomize: true,
-            secret: true
+            secret: secret
         };
+
+        if (secret)
+            return null;
+
+        let value = thread.counters[key];
+        return value;
     };
 
     this.signUp = function(to, subject, content, text = null) {
