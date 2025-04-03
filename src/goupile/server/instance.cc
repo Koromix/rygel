@@ -2502,8 +2502,8 @@ bool MigrateInstance(sq_Database *db, int target)
 
                     INSERT INTO rec_threads (tid, locked)
                         SELECT tid, locked FROM rec_threads_BAK;
-                    INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime, store, sequence, deleted, data, meta, tags)
-                        SELECT tid, eid, anchor, ctime, mtime, store, sequence, deleted, data, meta, tags FROM rec_entries_BAK;
+                    INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime, store, sequence, deleted, summary, data, meta, tags)
+                        SELECT tid, eid, anchor, ctime, mtime, store, sequence, deleted, summary, data, meta, tags FROM rec_entries_BAK;
                     INSERT INTO rec_fragments (anchor, previous, tid, eid, userid, username, mtime, fs, summary, data, meta, tags, page)
                         SELECT anchor, previous, tid, eid, userid, username, mtime, fs, summary, data, meta, tags, page FROM rec_fragments_BAK;
                     INSERT INTO rec_tags (tid, eid, name)
@@ -2728,10 +2728,10 @@ bool MigrateInstance(sq_Database *db, int target)
                     );
                     CREATE UNIQUE INDEX seq_constraints_skv ON seq_constraints (store, key, value);
 
-                    INSERT INTO rec_threads (tid, locked, counters, secrets)
-                        SELECT tid, locked, '{}', '{}' FROM rec_threads_BAK;
-                    INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime, store, deleted, data, meta, tags)
-                        SELECT tid, eid, anchor, ctime, mtime, store, deleted, data, meta, tags FROM rec_entries_BAK;
+                    INSERT INTO rec_threads (sequence, tid, hid, counters, secrets, locked)
+                        SELECT sequence, tid, hid, '{}', '{}', locked FROM rec_threads_BAK;
+                    INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime, store, deleted, summary, data, meta, tags)
+                        SELECT tid, eid, anchor, ctime, mtime, store, deleted, summary, data, meta, tags FROM rec_entries_BAK;
                     INSERT INTO rec_fragments (anchor, previous, tid, eid, userid, username, mtime, fs, summary, data, meta, tags, page)
                         SELECT anchor, previous, tid, eid, userid, username, mtime, fs, summary, data, meta, tags, page FROM rec_fragments_BAK;
                     INSERT INTO rec_tags (tid, eid, name)
