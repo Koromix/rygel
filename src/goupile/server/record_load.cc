@@ -331,7 +331,6 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
 
         json.Key("tid"); json.String(cursor->tid);
         json.Key("sequence"); json.Int64(cursor->t);
-        json.Key("hid"); json.Null();
         json.Key("saved"); json.Bool(true);
         json.Key("locked"); json.Bool(cursor->locked);
 
@@ -470,7 +469,6 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
 
         json.Key("tid"); json.String(cursor->tid);
         json.Key("sequence"); json.Int64(cursor->t);
-        json.Key("hid"); json.Null();
         json.Key("counters"); json.Raw(cursor->counters);
         json.Key("saved"); json.Bool(true);
         json.Key("locked"); json.Bool(cursor->locked);
@@ -687,7 +685,6 @@ void RunExport(http_IO *io, InstanceHolder *instance, bool data, bool meta)
 
         json.Key("tid"); json.String(cursor->tid);
         json.Key("sequence"); json.Int64(cursor->t);
-        json.Key("hid"); json.Null();
         json.Key("counters"); json.Raw(cursor->counters);
         json.Key("secrets"); json.Raw(cursor->secrets);
 
