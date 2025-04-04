@@ -23,6 +23,7 @@ const int DomainVersion = 109;
 
 const int MaxInstancesPerDomain = 1024;
 const int64_t FullSnapshotDelay = 86400 * 1000;
+const int DemoPruneDelay = 7 * 86400 * 1000;
 
 // Process-wide unique instance identifier
 static std::atomic_int64_t next_unique = 0;

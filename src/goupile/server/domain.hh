@@ -26,6 +26,7 @@ namespace RG {
 
 extern const int DomainVersion;
 extern const int MaxInstancesPerDomain;
+extern const int DemoPruneDelay;
 
 enum class PasswordComplexity {
     Easy,

@@ -1123,7 +1123,7 @@ void PruneDemos()
 
     // Best effort
     gp_domain.db.Transaction([&] {
-        int64_t treshold = GetUnixTime() - 2 * 86400000;
+        int64_t treshold = GetUnixTime() - DemoPruneDelay;
 
         if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE demo IS NOT NULL AND demo < ?1", treshold))
             return false;
