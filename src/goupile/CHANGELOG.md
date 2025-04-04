@@ -2,6 +2,15 @@
 
 ## Goupile 3.10
 
+### Goupile 3.10.1
+
+*Released on 2025-04-04*
+
+- Increase demo pruning delay to 7 days
+- Fix early timeout when creating big archives from admin panel
+
+### Goupile 3.10
+
 *Released on 2025-04-03*
 
 - Add `meta.count()` for custom sequential counters

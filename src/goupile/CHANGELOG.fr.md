@@ -2,6 +2,15 @@
 
 ## Goupile 3.10
 
+### Goupile 3.10.1
+
+*Sortie le 04/04/2025*
+
+- Augmentation de la durée de persistance des projets démo à 7 jours
+- Correction de l'erreur 502 précoce lors de la création d'archives volumineuses depuis le panneau d'administration
+
+### Goupile 3.10
+
 *Sortie le 03/04/2025*
 
 - Ajout de `meta.count()` pour des compteurs séquentiels personnalisés
