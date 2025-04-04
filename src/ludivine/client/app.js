@@ -163,6 +163,16 @@ async function start() {
             return 'Les modifications en cours seront perdues si vous continuez, êtes-vous sûr(e) de vouloir continuer ?';
     };
 
+    // Keep this around for gesture emulation on desktop
+    if (false) {
+        let script = document.createElement('script');
+
+        script.onload = () => TouchEmulator();
+        script.src = BUNDLES['touch-emulator.js'];
+
+        document.head.appendChild(script);
+    }
+
     // Perform mail login
     if (window.location.hash) {
         let hash = window.location.hash.substr(1);
