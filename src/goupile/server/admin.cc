@@ -1068,7 +1068,7 @@ void HandleDemoCreate(http_IO *io)
         return;
     }
 
-    char name[17];
+    char name[9];
     Fmt(name, "%1", FmtRandom(RG_SIZE(name) - 1));
 
     bool success = gp_domain.db.Transaction([&]() {
