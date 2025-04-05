@@ -2,6 +2,12 @@
 
 ## Goupile 3.10
 
+### Goupile 3.10.2
+
+*Sortie le 05/04/2025*
+
+- Réduction de la longueur des noms des projets démo
+
 ### Goupile 3.10.1
 
 *Sortie le 04/04/2025*

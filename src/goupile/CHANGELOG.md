@@ -2,6 +2,12 @@
 
 ## Goupile 3.10
 
+### Goupile 3.10.2
+
+*Released on 2025-04-05*
+
+- Reduce length of demo project names
+
 ### Goupile 3.10.1
 
 *Released on 2025-04-04*
