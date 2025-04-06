@@ -703,7 +703,7 @@ public:
 
             if (clang_ver >= 160000) {
                 if (architecture == HostArchitecture::x86_64) {
-                    Fmt(&buf, " -fcf-protection=branch");
+                    Fmt(&buf, " -fcf-protection=full");
                 } else if (architecture == HostArchitecture::ARM64) {
                     Fmt(&buf, " -mbranch-protection=bti+pac-ret");
                 }
