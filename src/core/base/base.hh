@@ -34,7 +34,7 @@
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
-#if __has_include(<source_location>)
+#if __cplusplus >= 202002L && __has_include(<source_location>)
     #include <source_location>
 #endif
 #include <stddef.h>
@@ -4012,7 +4012,7 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
     LogFmt(level, ctx, fmt, fmt_args);
 }
 
-#if defined(RG_DEBUG) && __has_include(<source_location>)
+#if defined(RG_DEBUG) && __cplusplus >= 202002L && __has_include(<source_location>)
     struct LogContext {
         const char *fmt;
         char str[56] = {};
