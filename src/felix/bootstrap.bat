@@ -19,7 +19,7 @@ where /q clang-cl && where /q lld-link
 if NOT ERRORLEVEL 1 (
     echo Bootstrapping felix with Clang...
     mkdir %TEMP%
-    clang-cl /nologo /std:c++20 /I../.. /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fo%TEMP%\
+    clang-cl /nologo /std:c++17 /I../.. /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fo%TEMP%\
     lld-link /nologo %TEMP%\*.obj ws2_32.lib advapi32.lib shell32.lib ole32.lib /out:%TEMP%\felix.exe
     %TEMP%\felix.exe -pFast felix %*
     copy %BUILD%\felix.exe %BINARY% >NUL
@@ -36,7 +36,7 @@ where /q cl
 if NOT ERRORLEVEL 1 (
     echo Bootstrapping felix with MSVC...
     mkdir %TEMP%
-    cl /nologo /std:c++20 /Zc:twoPhase- /I../.. /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fo%TEMP%\
+    cl /nologo /std:c++17 /Zc:twoPhase- /I../.. /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fo%TEMP%\
     link /nologo %TEMP%\*.obj ws2_32.lib advapi32.lib shell32.lib ole32.lib /out:%TEMP%\felix.exe
     %TEMP%\felix.exe -pFast felix %*
     copy %BUILD%\felix.exe %BINARY% >NUL
@@ -53,7 +53,7 @@ where /q g++
 if NOT ERRORLEVEL 1 (
     echo Bootstrapping felix with GCC...
     mkdir %TEMP%
-    g++ -std=gnu++20 -O0 -I../.. -DNDEBUG -DNOMINMAX  -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE %SRC% -lws2_32 -ladvapi32 -lshell32 -lole32 -luuid -w -o%TEMP%\felix.exe
+    g++ -std=gnu++17 -O0 -I../.. -DNDEBUG -DNOMINMAX  -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE %SRC% -lws2_32 -ladvapi32 -lshell32 -lole32 -luuid -w -o%TEMP%\felix.exe
     %TEMP%\felix.exe -pFast felix %*
     copy %BUILD%\felix.exe %BINARY% >NUL
 

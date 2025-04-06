@@ -512,7 +512,10 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++20", cxx); } break;
+            case SourceType::Cxx: {
+                int std = (clang_ver >= 160000) ? 20 : 17;
+                Fmt(&buf, "\"%1\" -std=gnu++%2", cxx, std);
+            } break;
 
             case SourceType::GnuAssembly:
             case SourceType::MicrosoftAssembly:
@@ -698,10 +701,12 @@ public:
         if (features & (int)CompileFeature::CFI) {
             RG_ASSERT(features & (int)CompileFeature::LTO);
 
-            if (architecture == HostArchitecture::x86_64) {
-                Fmt(&buf, " -fcf-protection=branch");
-            } else if (architecture == HostArchitecture::ARM64) {
-                Fmt(&buf, " -mbranch-protection=bti+pac-ret");
+            if (clang_ver >= 160000) {
+                if (architecture == HostArchitecture::x86_64) {
+                    Fmt(&buf, " -fcf-protection=branch");
+                } else if (architecture == HostArchitecture::ARM64) {
+                    Fmt(&buf, " -mbranch-protection=bti+pac-ret");
+                }
             }
 
             // Fine-grained forward CFI
@@ -1208,7 +1213,10 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++20", cxx); } break;
+            case SourceType::Cxx: {
+                int std = (gcc_ver >= 120000) ? 20 : 17;
+                Fmt(&buf, "\"%1\" -std=gnu++%2", cxx, std);
+            } break;
 
             case SourceType::GnuAssembly:
             case SourceType::MicrosoftAssembly:
