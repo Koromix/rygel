@@ -1091,8 +1091,12 @@ public:
             supported |= (int)CompileFeature::LTO;
         }
         supported |= (int)CompileFeature::ZeroInit;
-        if (platform == HostPlatform::Linux && architecture == HostArchitecture::x86_64) {
-            supported |= (int)CompileFeature::CFI;
+        if (platform == HostPlatform::Linux) {
+            if (architecture == HostArchitecture::x86_64) {
+                supported |= (int)CompileFeature::CFI;
+            } else if (architecture == HostArchitecture::ARM64 && gcc_ver >= 130000) {
+                supported |= (int)CompileFeature::CFI;
+            }
         }
         supported |= (int)CompileFeature::StaticRuntime;
         supported |= (int)CompileFeature::LinkLibrary;
@@ -1367,7 +1371,11 @@ public:
             Fmt(&buf, " -ftrivial-auto-var-init=zero");
         }
         if (features & (int)CompileFeature::CFI) {
-            Fmt(&buf, " -fcf-protection=full");
+            if (architecture == HostArchitecture::x86_64) {
+                Fmt(&buf, " -fcf-protection=full");
+            } else if (architecture == HostArchitecture::ARM64) {
+                Fmt(&buf, " -mbranch-protection=standard");
+            }
         }
 
         // Sources and definitions
