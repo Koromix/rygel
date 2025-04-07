@@ -49,7 +49,7 @@ struct Config {
 
     BlockAllocator str_alloc;
 
-    void AppendSource(const char *path);
+    void AppendSource(const char *path, Span<const char> root_directory);
 
     bool Validate(bool require_sources = true);
 };
@@ -103,12 +103,17 @@ static bool LooksLikeURL(const char *path)
     return StartsWith(path, "://");
 }
 
-void Config::AppendSource(const char *path)
+void Config::AppendSource(const char *path, Span<const char> root_directory)
 {
     SourceInfo src = {};
 
-    src.type = LooksLikeURL(path) ? SourceType::Remote : SourceType::Local;
-    src.path = DuplicateString(path, &str_alloc).ptr;
+    if (LooksLikeURL(path)) {
+        src.type = SourceType::Remote;
+        src.path = DuplicateString(path, &str_alloc).ptr;
+    } else {
+        src.type = SourceType::Local;
+        src.path = NormalizePath(path, root_directory, &str_alloc).ptr;
+    }
 
     sources.Append(src);
 }
@@ -218,7 +223,7 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
             } else if (prop.section == "Sources") {
                 do {
                     if (prop.key == "Source") {
-                        config.AppendSource(prop.value.ptr);
+                        config.AppendSource(prop.value.ptr, root_directory);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -846,7 +851,7 @@ Options:
 
         if (arg) {
             do {
-                config.AppendSource(arg);
+                config.AppendSource(arg, ".");
             } while ((arg = opt.ConsumeNonOption()));
         } else if (!config.sources.len) {
             config.sources.Append({ SourceType::Local, "." });
