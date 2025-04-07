@@ -8071,7 +8071,7 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
     return true;
 }
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 
 static void *memrchr(const void *m, int c, size_t n)
 {
