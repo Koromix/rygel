@@ -39,85 +39,39 @@
 
 namespace RG {
 
-static const int BaseAccepts = 512;
-static const int MaxAccepts = 16384;
-
-static const Size AcceptAddressLen = 2 * sizeof(SOCKADDR_STORAGE) + 16;
-
-enum class PendingOperation {
-    None,
-    Accept,
-    Disconnect,
-    Read,
-    Execute,
-    Done,
-
-    Manage,
-    Exit
-};
-
 struct http_Socket {
     int sock = -1;
-    bool connected = false;
+    bool process = false;
 
-    PendingOperation op = PendingOperation::None;
-    OVERLAPPED overlapped = {};
+    http_IO client;
 
-    uint8_t accept[2 * AcceptAddressLen];
-    std::function<void(DWORD)> execute;
-    std::function<void()> finalize;
-
-    std::mutex mutex;
-    http_IO *client = nullptr;
-
-    ~http_Socket()
-    {
-        closesocket(sock);
-
-        if (client) {
-            delete client;
-        }
-        if (finalize) {
-            finalize();
-        }
-    };
+    http_Socket(http_Daemon *daemon) : client(daemon) {}
+    ~http_Socket() { CloseSocket(sock); }
 };
 
-struct IndirectFunctions {
-    LPFN_ACCEPTEX AcceptEx;
-    LPFN_GETACCEPTEXSOCKADDRS GetAcceptExSockaddrs;
-    LPFN_DISCONNECTEX DisconnectEx;
-};
+static const int WorkersPerDispatcher = 4;
 
 class http_Dispatcher {
-    RG_DELETE_COPY(http_Dispatcher);
-
     http_Daemon *daemon;
-    HANDLE iocp;
-    IndirectFunctions fn;
+    http_Dispatcher *next;
 
     int listener;
 
-    std::atomic_int pending_accepts { 0 };
-    std::atomic_int create_accepts { 0 };
+    int pair_fd[2] = { -1, -1 };
+
     HeapArray<http_Socket *> sockets;
+    LocalArray<http_Socket *, 64> free_sockets;
 
 public:
-    http_Dispatcher(http_Daemon *daemon, HANDLE iocp, IndirectFunctions fn, int listener)
-        : daemon(daemon), iocp(iocp), fn(fn), listener(listener) {}
-    ~http_Dispatcher();
+    http_Dispatcher(http_Daemon *daemon, http_Dispatcher *next, int listener)
+        : daemon(daemon), next(next), listener(listener) {}
 
     bool Run();
+    void Wake(http_Socket *socket);
 
 private:
-    bool PostAccept(http_Socket *socket);
-    bool PostRead(http_Socket *socket);
-
-    http_Socket *InitSocket();
-    void DisconnectSocket(http_Socket *socket);
-    void DestroySocket(http_Socket *socket);
-
-    http_IO *InitClient(http_Socket *socket, int64_t start, struct sockaddr *sa);
+    http_Socket *InitSocket(int sock, int64_t start, struct sockaddr *sa);
+    void ParkSocket(http_Socket *socket);
 
     friend class http_Daemon;
 };
@@ -130,13 +84,13 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         return false;
 
     int listener = -1;
-    RG_DEFER_N(err_guard) { CloseDescriptor(listener); };
+    RG_DEFER_N(err_guard) { CloseSocket(listener); };
 
     switch (config.sock_type) {
         case SocketType::Dual:
         case SocketType::IPv4:
-        case SocketType::IPv6: { listener = OpenIPSocket(config.sock_type, config.port, SOCK_STREAM | SOCK_OVERLAPPED); } break;
-        case SocketType::Unix: { listener = OpenUnixSocket(config.unix_path, SOCK_STREAM | SOCK_OVERLAPPED); } break;
+        case SocketType::IPv6: { listener = OpenIPSocket(config.sock_type, config.port, SOCK_STREAM); } break;
+        case SocketType::Unix: { listener = OpenUnixSocket(config.unix_path, SOCK_STREAM); } break;
     }
     if (listener < 0)
         return false;
@@ -145,6 +99,8 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         LogError("Failed to listen on socket: %1", strerror(errno));
         return false;
     }
+
+    SetDescriptorNonBlock(listener, true);
 
     listeners.Append(listener);
     err_guard.Disable();
@@ -167,87 +123,16 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
     RG_ASSERT(!handle_func);
     RG_ASSERT(func);
 
-    int listener = listeners[0];
-
-    RG_DEFER_N(err_guard) {
-        if (async) {
-            delete async;
-            async = nullptr;
-        }
-
-        if (iocp) {
-            CloseHandle(iocp);
-            iocp = nullptr;
-        }
-
-        if (dispatcher) {
-            delete dispatcher;
-            dispatcher = nullptr;
-        }
-    };
-
-    // Heuristic found on MSDN
-    async = new Async(1 + 4 * GetCoreCount());
-
-    iocp = CreateIoCompletionPort((HANDLE)(uintptr_t)listener, nullptr, 0, 0);
-    if (!iocp) {
-        LogError("Failed to create I/O completion port: %1", GetWin32ErrorString());
-        return false;
-    }
-
-    IndirectFunctions fn;
-    {
-        static const GUID AcceptExGuid = WSAID_ACCEPTEX;
-        static const GUID GetAcceptExSockaddrsGuid = WSAID_GETACCEPTEXSOCKADDRS;
-        static const GUID DisconnectExGuid = WSAID_DISCONNECTEX;
-
-        DWORD dummy;
-
-        if (WSAIoctl((SOCKET)listener, SIO_GET_EXTENSION_FUNCTION_POINTER,
-                     (void *)&AcceptExGuid, RG_SIZE(AcceptExGuid), 
-                     &fn.AcceptEx, RG_SIZE(fn.AcceptEx),
-                     &dummy, nullptr, nullptr) == SOCKET_ERROR) {
-            errno = TranslateWinSockError();
-            LogError("Failed to load AcceptEx() function: %1", strerror(errno));
-            return false;
-        }
-
-        if (WSAIoctl((SOCKET)listener, SIO_GET_EXTENSION_FUNCTION_POINTER,
-                     (void *)&GetAcceptExSockaddrsGuid, RG_SIZE(GetAcceptExSockaddrsGuid), 
-                     &fn.GetAcceptExSockaddrs, RG_SIZE(fn.GetAcceptExSockaddrs),
-                     &dummy, nullptr, nullptr) == SOCKET_ERROR) {
-            errno = TranslateWinSockError();
-            LogError("Failed to load GetAcceptExSockaddrs() function: %1", strerror(errno));
-            return false;
-        }
-
-        if (WSAIoctl((SOCKET)listener, SIO_GET_EXTENSION_FUNCTION_POINTER,
-                     (void *)&DisconnectExGuid, RG_SIZE(DisconnectExGuid), 
-                     &fn.DisconnectEx, RG_SIZE(fn.DisconnectEx),
-                     &dummy, nullptr, nullptr) == SOCKET_ERROR) {
-            errno = TranslateWinSockError();
-            LogError("Failed to load DisconnectEx() function: %1", strerror(errno));
-            return false;
-        }
-    }
-
-    dispatcher = new http_Dispatcher(this, iocp, fn, listener);
-
-    // Prepare sockets
-    for (Size i = 0; i < BaseAccepts; i++) {
-        http_Socket *socket = dispatcher->InitSocket();
-
-        if (!dispatcher->PostAccept(socket))
-            return false;
-    }
-
-    // Cannot fail anymore
-    err_guard.Disable();
+    async = new Async(1 + 2 * GetCoreCount());
 
     handle_func = func;
 
-    for (Size i = 1; i < async->GetWorkerCount(); i++) {
-        async->Run([this] { return dispatcher->Run(); });
+    // Run request dispatchers
+    for (int i = 1; i < async->GetWorkerCount(); i++) {
+        http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher, listeners[0]);
+        this->dispatcher = dispatcher;
+
+        async->Run([=] { return dispatcher->Run(); });
     }
 
     return true;
@@ -255,20 +140,22 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
 
 void http_Daemon::Stop()
 {
-    if (async) {
-        for (Size i = 0; i < async->GetWorkerCount(); i++) {
-            PostQueuedCompletionStatus(iocp, 0, (int)PendingOperation::Exit, nullptr);
-        }
+    // Shut everything down
+    for (int listener: listeners) {
+        shutdown(listener, SD_BOTH);
+    }
 
+    if (async) {
         async->Sync();
 
         delete async;
         async = nullptr;
     }
 
-    if (dispatcher) {
+    while (dispatcher) {
+        http_Dispatcher *next = dispatcher->next;
         delete dispatcher;
-        dispatcher = nullptr;
+        dispatcher = next;
     }
 
     for (int listener: listeners) {
@@ -276,28 +163,22 @@ void http_Daemon::Stop()
     }
     listeners.Clear();
 
-    if (iocp) {
-        CloseHandle(iocp);
-        iocp = nullptr;
-    }
-
     handle_func = {};
 }
 
-void http_Daemon::StartRead(http_Socket *)
+void http_Daemon::StartRead(http_Socket *socket)
 {
-    // Nothing to do
+    SetDescriptorNonBlock(socket->sock, false);
 }
 
-void http_Daemon::StartWrite(http_Socket *)
+void http_Daemon::StartWrite(http_Socket *socket)
 {
-    // Nothing to do
+    SetDescriptorNonBlock(socket->sock, false);
 }
 
-void http_Daemon::EndWrite(http_Socket *socket)
+void http_Daemon::EndWrite(http_Socket *)
 {
-    socket->op = PendingOperation::Done;
-    PostQueuedCompletionStatus(iocp, 0, 0, &socket->overlapped);
+    // Nothing to do
 }
 
 Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
@@ -376,371 +257,347 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
     return true;
 }
 
-static http_Socket *SocketFromOverlapped(void *ptr)
+static bool CreateSocketPair(int out_pair[2])
 {
-    uint8_t *data = (uint8_t *)ptr;
-    return (http_Socket *)(data - offsetof(http_Socket, overlapped));
-}
+    SOCKET listener = INVALID_SOCKET;
+    SOCKET client = INVALID_SOCKET;
+    SOCKET peer = INVALID_SOCKET;
 
-http_Dispatcher::~http_Dispatcher()
-{
-    for (http_Socket *socket: sockets) {
-        delete socket;
+    RG_DEFER {
+        closesocket(listener);
+        closesocket(client);
+        closesocket(peer);
+    };
+
+    sockaddr_in addr = {};
+    socklen_t addr_len = RG_SIZE(addr);
+
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = 0;
+
+    listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (listener == INVALID_SOCKET)
+        goto error;
+
+    // Set reuse flag
+    {
+        int reuse = 1;
+        if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, RG_SIZE(reuse)) < 0)
+            goto error;
     }
 
-    sockets.Clear();
+    if (bind(listener, (struct sockaddr *)&addr, RG_SIZE(addr)) < 0)
+        goto error;
+    if (getsockname(listener, (struct sockaddr *)&addr, &addr_len) < 0)
+        goto error;
+    if (listen(listener, 1) < 0)
+        goto error;
+
+    client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (client == INVALID_SOCKET)
+        goto error;
+    if (connect(client, (struct sockaddr *)&addr, RG_SIZE(addr)) < 0)
+        goto error;
+
+    peer = accept(listener, nullptr, nullptr);
+    if (peer == INVALID_SOCKET)
+        goto error;
+
+    // Success!
+    out_pair[0] = (int)client;
+    out_pair[1] = (int)peer;
+    client = INVALID_SOCKET;
+    peer = INVALID_SOCKET;
+
+    return true;
+
+error:
+    errno = TranslateWinSockError();
+    LogError("Failed to create socket pair: %1", strerror(errno));
+
+    return false;
 }
 
 bool http_Dispatcher::Run()
 {
-    for (;;) {
-        DWORD transferred;
-        uintptr_t key;
-        OVERLAPPED *overlapped;
+    Async async(1 + WorkersPerDispatcher);
 
-        bool success = GetQueuedCompletionStatus(iocp, &transferred, &key, &overlapped, INFINITE);
+    if (!CreateSocketPair(pair_fd))
+        return false;
+    RG_DEFER {
+        CloseSocket(pair_fd[0]);
+        CloseSocket(pair_fd[1]);
 
-        if (!success && !overlapped) {
-            LogError("GetQueuedCompletionStatus() failed: %1", GetWin32ErrorString());
-            return false;
+        pair_fd[0] = -1;
+        pair_fd[1] = -1;
+    };
+
+    // Delete remaining clients when function exits
+    RG_DEFER {
+        if (!async.Wait(100)) {
+            LogInfo("Waiting up to %1 sec before shutting down clients...", (double)daemon->stop_timeout / 1000);
+
+            if (!async.Wait(daemon->stop_timeout)) {
+                for (http_Socket *socket: sockets) {
+                    shutdown(socket->sock, SD_BOTH);
+                }
+                async.Sync();
+            }
         }
 
+        for (http_Socket *socket: sockets) {
+            delete socket;
+        }
+        for (http_Socket *socket: free_sockets) {
+            delete socket;
+        }
+
+        sockets.Clear();
+        free_sockets.Clear();
+    };
+
+    HeapArray<struct pollfd> pfds;
+    int next_worker = 0;
+
+    // React to connections
+    pfds.Append({ listener, POLLIN, 0 });
+    pfds.Append({ pair_fd[0], POLLIN, 0 });
+
+    for (;;) {
         int64_t now = GetMonotonicTime();
-        http_Socket *socket = overlapped ? SocketFromOverlapped(overlapped) : nullptr;
-        PendingOperation op = socket ? socket->op : (PendingOperation)key;
+        bool accepts = false;
 
-        switch (op) {
-            case PendingOperation::None: { RG_UNREACHABLE(); } break;
-
-            case PendingOperation::Accept: {
-                RG_ASSERT(socket);
-
-                std::lock_guard<std::mutex> lock(socket->mutex);
-                socket->op = PendingOperation::None;
-
-                if (--pending_accepts < BaseAccepts) {
-                    bool post = !create_accepts.fetch_add(1);
-
-                    if (post) {
-                        PostQueuedCompletionStatus(iocp, 0, (int)PendingOperation::Manage, nullptr);
-                    }
-                }
-
-                if (!success) {
-                    DestroySocket(socket);
-                    continue;
-                }
-
-                socket->connected = true;
-                setsockopt(socket->sock, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char *)&listener, RG_SIZE(listener));
-
-                sockaddr *local_addr = nullptr;
-                sockaddr *remote_addr = nullptr;
-                int local_len;
-                int remote_len;
-
-                fn.GetAcceptExSockaddrs(socket->accept, 0, AcceptAddressLen, AcceptAddressLen,
-                                        &local_addr, &local_len, &remote_addr, &remote_len);
-
-                http_IO *client = InitClient(socket, now, remote_addr);
-                if (!client) [[unlikely]] {
-                    DisconnectSocket(socket);
-                    continue;
-                }
-
-                RG_ASSERT(!socket->client);
-                socket->client = client;
-
-                if (!PostRead(socket)) {
-                    DisconnectSocket(socket);
-                }
-            } break;
-
-            case PendingOperation::Disconnect: {
-                RG_ASSERT(socket);
-
-                std::lock_guard<std::mutex> lock(socket->mutex);
-                socket->op = PendingOperation::None;
-
-                if (!success) [[unlikely]] {
-                    DestroySocket(socket);
-                    continue;
-                }
-
-                socket->connected = false;
-
-                bool reuse = create_accepts.load(std::memory_order_relaxed) > 4 ||
-                             pending_accepts.load(std::memory_order_relaxed) < BaseAccepts * 2;
-
-                if (!reuse || !PostAccept(socket)) {
-                    DestroySocket(socket);
-                }
-            } break;
-
-            case PendingOperation::Read: {
-                RG_ASSERT(socket);
-
-                std::lock_guard<std::mutex> lock(socket->mutex);
-                socket->op = PendingOperation::None;
-
-                if (!success) [[unlikely]] {
-                    DisconnectSocket(socket);
-                    continue;
-                }
-
-                http_IO *client = socket->client;
-
-                client->incoming.buf.len += (Size)transferred;
-                client->incoming.buf.ptr[client->incoming.buf.len] = 0;
-
-                http_RequestStatus status = client->ParseRequest();
-
-                switch (status) {
-                    case http_RequestStatus::Busy: {
-                        if (!PostRead(socket)) {
-                            DisconnectSocket(socket);
-                        }
-                    } break;
-
-                    case http_RequestStatus::Ready: { daemon->RunHandler(client, now); } break;
-
-                    case http_RequestStatus::Close: { DisconnectSocket(socket); } break;
-                }
-            } break;
-
-            case PendingOperation::Execute: {
-                RG_ASSERT(socket);
-
-                std::lock_guard<std::mutex> lock(socket->mutex);
-                socket->op = PendingOperation::None;
-
-                if (!success) [[unlikely]] {
-                    DisconnectSocket(socket);
-                    continue;
-                }
-
-                socket->execute(transferred);
-            } break;
-
-            case PendingOperation::Done: {
-                RG_ASSERT(socket);
-
-                std::lock_guard<std::mutex> lock(socket->mutex);
-                socket->op = PendingOperation::None;
-
-                if (!success) [[unlikely]] {
-                    DisconnectSocket(socket);
-                    continue;
-                }
-
-                http_IO *client = socket->client;
-
-                if (!client->Rearm(now) || !PostRead(socket)) {
-                    DisconnectSocket(socket);
-                }
-            } break;
-
-            case PendingOperation::Manage: {
-                Size start_len = sockets.len;
-                int prev_create = 0;
-
-                do {
-                    int create = create_accepts;
-                    int pending = pending_accepts;
-
-                    int target = std::clamp(pending + 4 * (create - prev_create), BaseAccepts + 64, MaxAccepts - pending);
-                    int failures = 0;
-
-                    for (int i = pending; i < target; i++) {
-                        http_Socket *socket = InitSocket();
-
-                        if (!PostAccept(socket)) [[unlikely]] {
-                            if (++failures >= 8) {
-                                LogError("System starvation, giving up");
-                                return false;
-                            }
-
-                            WaitDelay(20);
-                        }
-                    }
-
-                    prev_create = create;
-                } while (pending_accepts < BaseAccepts);
-
-                Size j = 0;
-                for (Size i = 0; i < start_len; i++) {
-                    sockets[j] = sockets[i];
-                    j += (sockets[i]->sock >= 0);
-                }
-                for (Size i = start_len; i < sockets.len; i++, j++) {
-                    sockets[j] = sockets[i];
-                }
-                sockets.len = j;
-
-                // Reset last to make sure only one Manage operations runs at the same time
-                create_accepts = 0;
-            } break;
-
-            case PendingOperation::Exit: {
-                RG_ASSERT(success);
+        // Handle poll events
+        if (pfds[0].revents) {
+            if (pfds[0].revents & POLLHUP) [[unlikely]]
                 return true;
-            } break;
 
+            accepts = true;
+        }
+        if (pfds[1].revents) {
+            uintptr_t addr = 0;
+            Size ret = recv(pair_fd[0], (char *)&addr, RG_SIZE(addr), 0);
+
+            if (ret <= 0)
+                break;
+
+            RG_ASSERT(ret == RG_SIZE(void *));
+            http_Socket *socket = (http_Socket *)addr;
+
+            if (socket) [[likely]] {
+                SetDescriptorNonBlock(socket->sock, true);
+                sockets.Append(socket);
+            }
+        }
+        for (Size i = 2; i < pfds.len; i++) {
+            struct pollfd &pfd = pfds[i];
+
+            if (pfd.revents) {
+                http_Socket *socket = sockets[i - 2];
+                socket->process = true;
+            }
+        }
+
+        // Process new connections
+        if (accepts) {
+            sockaddr_storage ss;
+            socklen_t ss_len = RG_SIZE(ss);
+
+            // Accept queued clients
+            for (int i = 0; i < 8; i++) {
+                int sock = accept(listener, (sockaddr *)&ss, &ss_len);
+
+                if (sock < 0) {
+                    errno = TranslateWinSockError();
+
+                    if (errno == EAGAIN)
+                        break;
+                    if (errno == EINVAL)
+                        return true;
+
+                    LogError("Failed to accept client: %1", strerror(errno));
+                    return false;
+                }
+
+                SetDescriptorNonBlock(sock, true);
+
+                http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
+
+                if (!socket) [[unlikely]] {
+                    closesocket(sock);
+                    continue;
+                }
+
+                sockets.Append(socket);
+            }
+        }
+
+        Size keep = 0;
+        unsigned int timeout = UINT_MAX;
+
+        // Process clients
+        for (Size i = 0; i < sockets.len; i++, keep++) {
+            sockets[keep] = sockets[i];
+
+            http_Socket *socket = sockets[i];
+            http_IO *client = &socket->client;
+            http_RequestStatus status = http_RequestStatus::Busy;
+
+            if (socket->process) {
+                socket->process = false;
+
+                client->incoming.buf.Grow(Kibibytes(8));
+
+                Size available = client->incoming.buf.Available() - 1;
+                Size bytes = recv(socket->sock, (char *)client->incoming.buf.ptr, available, 0);
+
+                if (bytes > 0) {
+                    client->incoming.buf.len += bytes;
+                    client->incoming.buf.ptr[client->incoming.buf.len] = 0;
+
+                    status = client->ParseRequest();
+                } else {
+                    errno = TranslateWinSockError();
+
+                    if (!bytes || errno != EAGAIN) {
+                        if (client->IsBusy()) {
+                            const char *reason = bytes ? strerror(errno) : "closed unexpectedly";
+                            LogError("Client connection failed: %1", reason);
+                        }
+
+                        status = http_RequestStatus::Close;
+                    }
+                }
+            }
+
+            switch (status) {
+                case http_RequestStatus::Busy: { /* Do nothing */ } break;
+
+                case http_RequestStatus::Ready: {
+                    int worker_idx = 1 + next_worker;
+                    next_worker = (next_worker + 1) % WorkersPerDispatcher;
+
+                    keep--;
+
+                    async.Run(worker_idx, [=, this] {
+                        do {
+                            daemon->RunHandler(client, now);
+
+                            if (!client->Rearm(GetMonotonicTime())) {
+                                shutdown(socket->sock, SD_RECEIVE);
+                                break;
+                            }
+                        } while (client->ParseRequest() == http_RequestStatus::Ready);
+
+                        Wake(socket);
+
+                        return true;
+                    });
+                } break;
+
+                case http_RequestStatus::Close: {
+                    ParkSocket(socket);
+                    keep--;
+
+                    continue;
+                } break;
+            }
+
+            int delay = (int)(client->timeout_at.load() - now);
+
+            if (delay <= 0) {
+                shutdown(socket->sock, SD_BOTH);
+                continue;
+            }
+
+            timeout = std::min(timeout, (unsigned int)delay);
+        }
+        sockets.len = keep;
+
+        pfds.RemoveFrom(2);
+
+        // Prepare poll descriptors
+        for (const http_Socket *socket: sockets) {
+            struct pollfd pfd = { socket->sock, POLLIN, 0 };
+            pfds.Append(pfd);
+        }
+
+        // The timeout is unsigned to make it easier to use with std::min() without dealing
+        // with the default value -1. If it stays at UINT_MAX, the (int) cast results in -1.
+        int ready = WSAPoll(pfds.ptr, pfds.len, (int)timeout);
+
+        if (ready < 0) {
+            if (errno != EINTR) {
+                LogError("Failed to poll descriptors: %1", strerror(errno));
+                return false;
+            }
+
+            ready = 0;
         }
     }
 
     RG_UNREACHABLE();
 }
 
-bool http_Dispatcher::PostAccept(http_Socket *socket)
+void http_Dispatcher::Wake(http_Socket *socket)
 {
-    DWORD dummy = 0;
-
-    socket->op = PendingOperation::Accept;
-
-retry:
-    if (!fn.AcceptEx((SOCKET)listener, (SOCKET)socket->sock, socket->accept, 0,
-                     AcceptAddressLen, AcceptAddressLen, &dummy, &socket->overlapped) &&
-            WSAGetLastError() != WSA_IO_PENDING) {
-        errno = TranslateWinSockError();
-
-        if (errno == ECONNRESET)
-            goto retry;
-
-        LogError("Failed to issue socket accept operation: %1", strerror(errno));
-        return false;
-    }
-
-    pending_accepts++;
-
-    return true;
+    uintptr_t addr = (uintptr_t)socket;
+    Size ret = send((SOCKET)pair_fd[1], (char *)&addr, RG_SIZE(addr), 0);
+    (void)ret;
 }
 
-bool http_Dispatcher::PostRead(http_Socket *socket)
+http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockaddr *sa)
 {
-    if (socket->op == PendingOperation::Read)
-        return true;
+    http_Socket *socket = nullptr;
 
-    RG_ASSERT(socket->op == PendingOperation::None);
-    RG_ASSERT(socket->client);
+    if (free_sockets.len) {
+        int idx = GetRandomInt(0, (int)free_sockets.len);
 
-    http_IO *client = socket->client;
+        socket = free_sockets[idx];
 
-    client->incoming.buf.Grow(Kibibytes(8));
-
-    WSABUF buf = { (unsigned long)client->incoming.buf.Available() - 1, (char *)client->incoming.buf.end() };
-    DWORD received = 0;
-    DWORD flags = 0;
-
-    socket->op = PendingOperation::Read;
-
-    if (WSARecv((SOCKET)socket->sock, &buf, 1, &received, &flags, &socket->overlapped, nullptr) &&
-            WSAGetLastError() != WSA_IO_PENDING) {
-        errno = TranslateWinSockError();
-        if (errno != ENOTCONN && errno != ECONNRESET) {
-            LogError("Failed to read from socket: %1", strerror(errno));
-        }
-        return false;
+        std::swap(free_sockets[idx], free_sockets[free_sockets.len - 1]);
+        free_sockets.len--;
+    } else {
+        socket = new http_Socket(daemon);
     }
 
-    return true;
-}
+    socket->sock = sock;
 
-// Only call from one thread at a time
-http_Socket *http_Dispatcher::InitSocket()
-{
-    http_Socket *socket = new http_Socket();
     RG_DEFER_N(err_guard) { delete socket; };
 
-    socket->sock = CreateSocket(daemon->sock_type, SOCK_STREAM | SOCK_OVERLAPPED);
-    if (socket->sock < 0)
+    if (!socket->client.Init(socket, start, sa)) [[unlikely]]
         return nullptr;
-
-    if (!CreateIoCompletionPort((HANDLE)(uintptr_t)socket->sock, iocp, 0, 0)) {
-        LogError("Failed to associate socket with IOCP: %1", GetWin32ErrorString());
-        return nullptr;
-    }
 
     err_guard.Disable();
-    sockets.Append(socket);
-
     return socket;
 }
 
-void http_Dispatcher::DisconnectSocket(http_Socket *socket)
+void http_Dispatcher::ParkSocket(http_Socket *socket)
 {
-    if (!socket)
-        return;
+    if (free_sockets.Available()) {
+        closesocket(socket->sock);
+        socket->sock = -1;
 
-    RG_ASSERT(socket->connected);
+        socket->client.socket = nullptr;
+        socket->client.Rearm(-1);
 
-    if (socket->client) {
-        delete socket->client;
-        socket->client = nullptr;
+        free_sockets.Append(socket);
+    } else {
+        delete socket;
     }
-    if (socket->finalize) {
-        socket->finalize();
-        socket->finalize = {};
-    }
-
-    socket->op = PendingOperation::Disconnect;
-
-    if (!fn.DisconnectEx((SOCKET)socket->sock, &socket->overlapped, TF_REUSE_SOCKET, 0) &&
-            WSAGetLastError() != WSA_IO_PENDING) {
-        errno = TranslateWinSockError();
-        if (errno != ENOTCONN) {
-            LogError("Failed to reuse socket: %1", strerror(errno));
-        }
-        DestroySocket(socket);
-    }
-}
-
-void http_Dispatcher::DestroySocket(http_Socket *socket)
-{
-    if (!socket)
-        return;
-
-    socket->~http_Socket();
-    socket->sock = -1;
-    socket->connected = false;
-    socket->op = PendingOperation::None;
-
-    // If anything fails (should be very rare), we're temporarily leaking the struct until
-    // a cleanup happens when more sockets are created (see PendingOperation::Manage).
-
-    socket->sock = CreateSocket(daemon->sock_type, SOCK_STREAM | SOCK_OVERLAPPED);
-    if (socket->sock < 0)
-        return;
-
-    if (!CreateIoCompletionPort((HANDLE)(uintptr_t)socket->sock, iocp, 0, 0)) {
-        LogError("Failed to associate socket with IOCP: %1", GetWin32ErrorString());
-        return;
-    }
-}
-
-http_IO *http_Dispatcher::InitClient(http_Socket *socket, int64_t start, struct sockaddr *sa)
-{
-    http_IO *client = new http_IO(daemon);
-
-    if (!client->Init(socket, start, sa)) [[unlikely]] {
-        delete client;
-        return nullptr;
-    }
-
-    return client;
 }
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
-    static const Size MaxSend = Mebibytes(2);
+    const int64_t MaxSend = Mebibytes(2);
 
     RG_ASSERT(socket);
     RG_ASSERT(!response.started);
 
     response.started = true;
 
-    RG_ASSERT(!socket->finalize);
-    socket->finalize = [=]() { _close(fd); };
+    SetDescriptorNonBlock(socket->sock, false);
 
     if (len < 0) {
         HANDLE h = (HANDLE)_get_osfhandle(fd);
@@ -750,10 +607,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             LogError("Cannot get file size: %1", GetWin32ErrorString());
 
             request.keepalive = false;
-
-            socket->op = PendingOperation::Done;
-            PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
-
             return;
         }
 
@@ -762,66 +615,56 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
     // Send intro and file in one go
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
-    TRANSMIT_FILE_BUFFERS tbuf = { (void *)intro.ptr, (DWORD)intro.len, nullptr, 0 };
 
-    HANDLE h = (HANDLE)_get_osfhandle(fd);
-    int64_t offset = -intro.len;
-    int64_t remain = intro.len + len;
+    if (intro.len >= MaxSend) {
+        if (!daemon->WriteSocket(socket, intro.As<uint8_t>())) {
+            request.keepalive = false;
+            return;
+        }
 
-    if (remain > MaxSend) {
-        socket->execute = [=, this](DWORD transferred) mutable {
-            offset += (Size)transferred;
-            remain -= (Size)transferred;
-
-            if (offset < 0) [[unlikely]] {
-                LogError("TransmitFile() stopped too early");
-
-                request.keepalive = false;
-
-                socket->op = PendingOperation::Done;
-                PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
-
-                return;
-            }
-
-            socket->op = remain ? PendingOperation::Execute : PendingOperation::Done;
-            socket->overlapped.OffsetHigh = (DWORD)(offset >> 32);
-            socket->overlapped.Offset = (DWORD)(offset & 0xFFFFFFFFu);
-
-            DWORD send = (DWORD)std::min(remain, MaxSend);
-
-            if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &socket->overlapped, nullptr, 0) &&
-                    WSAGetLastError() != WSA_IO_PENDING) [[unlikely]] {
-                errno = TranslateWinSockError();
-                LogError("Failed to send file: %1", strerror(errno));
-
-                request.keepalive = false;
-
-                socket->op = PendingOperation::Done;
-                PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
-
-                return;
-            }
-        };
-        socket->op = PendingOperation::Execute;
-    } else {
-        socket->op = PendingOperation::Done;
+        intro.len = 0;
     }
 
-    socket->overlapped.OffsetHigh = 0;
-    socket->overlapped.Offset = 0;
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+    int64_t offset = 0;
+    int64_t remain = len;
 
-    DWORD send = (DWORD)(std::min(remain, MaxSend) - intro.len);
+    // Send intro and start of file
+    {
+        TRANSMIT_FILE_BUFFERS tbuf = { (void *)intro.ptr, (DWORD)intro.len, nullptr, 0 };
+        DWORD send = (DWORD)(std::min(remain, MaxSend) - intro.len);
 
-    if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &socket->overlapped, &tbuf, 0) &&
-            WSAGetLastError() != WSA_IO_PENDING) [[unlikely]] {
-        errno = TranslateWinSockError();
-        LogError("Failed to send file: %1", strerror(errno));
+        if (!TransmitFile((SOCKET)socket->sock, h, send, 0, nullptr, &tbuf, 0)) [[unlikely]] {
+            errno = TranslateWinSockError();
+            LogError("Failed to send file: %1", strerror(errno));
 
-        request.keepalive = false;
+            request.keepalive = false;
+            return;
+        }
 
-        socket->op = PendingOperation::Done;
-        PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
+        offset += send;
+        remain -= send;
+    }
+
+    // Send remaining file content
+    while (remain) {
+        OVERLAPPED ov = {};
+
+        ov.OffsetHigh = (DWORD)(offset >> 32);
+        ov.Offset = (DWORD)(offset & 0xFFFFFFFFu);
+
+        DWORD send = (DWORD)std::min(remain, MaxSend);
+
+        if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &ov, nullptr, 0)) [[unlikely]] {
+            errno = TranslateWinSockError();
+            LogError("Failed to send file: %1", strerror(errno));
+
+            request.keepalive = false;
+            return;
+        }
+
+        offset += send;
+        remain -= send;
     }
 }
 
