@@ -5,7 +5,7 @@ cd %~dp0
 cd ..\..\..\..
 
 start bootstrap.bat
-felix.exe -pFast meestic MeesticTray
+felix.exe -pParanoid meestic MeesticTray
 
 for /f "tokens=2 delims= " %%i in ('bin\Fast\meestic.exe --version') do (
     set RAW_VERSION=%%i

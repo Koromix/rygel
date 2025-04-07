@@ -18,7 +18,7 @@ build() {
     export QMAKE_PATH=/usr/lib64/qt6/bin/qmake
 
     ./bootstrap.sh
-    ./felix -pFast tycmd tycommander tyuploader
+    ./felix -pParanoid tycmd tycommander tyuploader
 
     install -D -m0755 bin/Fast/tycmd ${ROOT_DIR}/usr/bin/tycmd
     install -D -m0755 bin/Fast/tycommander ${ROOT_DIR}/usr/bin/tycommander

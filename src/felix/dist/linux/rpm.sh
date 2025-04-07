@@ -14,7 +14,7 @@ DOCKER_IMAGE=rocky9
 
 build() {
     ./bootstrap.sh
-    ./felix -pFast felix
+    ./felix -pParanoid felix
 
     install -D -m0755 bin/Fast/felix ${ROOT_DIR}/usr/bin/felix
 }

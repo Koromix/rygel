@@ -4,7 +4,7 @@ set -e
 cd "$(dirname $0)/../../../.."
 
 ./bootstrap.sh
-./felix -pFast tycommander tyuploader tycmd
+./felix -pParanoid tycommander tyuploader tycmd
 
 VERSION=$(bin/Fast/tycmd --version | awk -F'[ _]' '/^tycmd/ {print $2}')
 PACKAGE_DIR=bin/Packages/tytools/macos

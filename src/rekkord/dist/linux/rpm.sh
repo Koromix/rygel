@@ -14,7 +14,7 @@ DOCKER_IMAGE=rocky9
 
 build() {
     ./bootstrap.sh
-    ./felix -pFast rekkord
+    ./felix -pParanoid rekkord
 
     install -D -m0755 bin/Fast/rekkord ${ROOT_DIR}/usr/bin/rekkord
 }

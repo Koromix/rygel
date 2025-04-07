@@ -4,7 +4,7 @@ set -e
 cd "$(dirname $0)/../../../.."
 
 ./bootstrap.sh
-./felix -pFast rekkord
+./felix -pParanoid rekkord
 
 VERSION=$(bin/Fast/rekkord --version | awk -F'[ _]' '/^rekkord/ {print $2}')
 PACKAGE_DIR=bin/Packages/rekkord/macos

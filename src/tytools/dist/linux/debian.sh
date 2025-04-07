@@ -20,7 +20,7 @@ build() {
                    imagemagick
 
     ./bootstrap.sh
-    ./felix -pFast --host=$1:clang-18:lld-18 tycmd tycommander tyuploader
+    ./felix -pParanoid --host=$1:clang-18:lld-18 tycmd tycommander tyuploader
 
     install -D -m0755 bin/Fast/tycmd ${ROOT_DIR}/usr/bin/tycmd
     install -D -m0755 bin/Fast/tycommander ${ROOT_DIR}/usr/bin/tycommander
