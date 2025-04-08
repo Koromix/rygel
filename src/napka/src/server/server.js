@@ -35,6 +35,7 @@ const MAPBOX_USERNAME = process.env.MAPBOX_USERNAME || '';
 const MAPBOX_STYLE_ID = process.env.MAPBOX_STYLE_ID || '';
 const MAPBOX_ACCESS_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || '';
 const MAPBOX_TILESIZE = process.env.MAPBOX_TILESIZE || 512;
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
 
 let FILES = {};
 
@@ -49,6 +50,8 @@ function main() {
             errors.push('Missing MAPBOX_STYLE_ID');
         if (!MAPBOX_ACCESS_TOKEN)
             errors.push('Missing MAPBOX_ACCESS_TOKEN');
+        if (!GOOGLE_API_KEY)
+            errors.push('Missing GOOGLE_API_KEY');
         if (!SESSION_SECRET)
             errors.push('Missing SESSION_SECRET (for server-side sessions)');
 
@@ -142,7 +145,7 @@ function main() {
         app.route('/' + it.name + '/api/admin/profile').get((req, res) => session.profile(db, req, res));
 
         // Administration API
-        app.route('/' + it.name + '/api/admin/geocode').post((req, res) => map.geocode(db, req, res, MAPBOX_ACCESS_TOKEN));
+        app.route('/' + it.name + '/api/admin/geocode').post((req, res) => map.geocode(db, req, res, GOOGLE_API_KEY));
         app.route('/' + it.name + '/api/admin/edit').post((req, res) => map.updateEntry(db, req, res));
         app.route('/' + it.name + '/api/admin/delete').post((req, res) => map.deleteEntry(db, req, res));
 
