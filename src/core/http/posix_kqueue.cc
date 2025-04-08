@@ -51,10 +51,6 @@ class http_Dispatcher {
     int kqueue_fd = -1;
     int pair_fd[2] = { -1, -1 };
 
-#if defined(__APPLE__)
-    std::atomic_bool run { true };
-#endif
-
     HeapArray<http_Socket *> sockets;
     LocalArray<http_Socket *, 64> free_sockets;
 
@@ -349,7 +345,7 @@ bool http_Dispatcher::Run()
     // Delete remaining clients when function exits
     RG_DEFER {
         if (!async.Wait(100)) {
-            LogInfo("Waiting up to %1 before shutting down clients", FmtDuration(daemon->stop_timeout));
+            LogInfo("Waiting up to %1 sec before shutting down clients", (double)daemon->stop_timeout / 1000);
 
             if (!async.Wait(daemon->stop_timeout)) {
                 for (http_Socket *socket: sockets) {
@@ -390,23 +386,24 @@ bool http_Dispatcher::Run()
 
                 accepts = true;
             } else if (ev.ident == (uintptr_t)pair_fd[0]) {
-                for (;;) {
-                    uintptr_t addr = 0;
-                    Size ret = RG_RESTART_EINTR(read(pair_fd[0], &addr, RG_SIZE(addr)), < 0);
+                uintptr_t addr = 0;
+                Size ret = RG_RESTART_EINTR(read(pair_fd[0], &addr, RG_SIZE(addr)), < 0);
 
-                    if (ret < 0)
-                        break;
+                if (ret <= 0)
+                    break;
+                RG_ASSERT(ret == RG_SIZE(void *));
 
-                    RG_ASSERT(ret == RG_SIZE(void *));
-                    http_Socket *socket = (http_Socket *)addr;
+                http_Socket *socket = (http_Socket *)addr;
 
-                    if (socket) [[likely]] {
-#if !defined(MSG_DONTWAIT)
-                        SetDescriptorNonBlock(socket->sock, true);
+#if defined(__APPLE__)
+                if (!socket) [[unlikely]]
+                    break;
 #endif
-                        AddEventChange(EVFILT_READ, socket->sock, EV_ENABLE | EV_CLEAR, socket);
-                    }
-                }
+
+#if !defined(MSG_DONTWAIT)
+                SetDescriptorNonBlock(socket->sock, true);
+#endif
+                AddEventChange(EVFILT_READ, socket->sock, EV_ENABLE | EV_CLEAR, socket);
             } else {
                 http_Socket *socket = (http_Socket *)ev.udata;
                 socket->process = true;
@@ -422,7 +419,7 @@ bool http_Dispatcher::Run()
 #if defined(SOCK_CLOEXEC)
                 int sock = accept4(listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
 #else
-                int sock = accept(daemon->listener, (sockaddr *)&ss, &ss_len);
+                int sock = accept(listener, (sockaddr *)&ss, &ss_len);
 #endif
 
                 if (sock < 0) {
@@ -572,7 +569,6 @@ void http_Dispatcher::Wake(http_Socket *socket)
 
 void http_Dispatcher::Stop()
 {
-    run = false;
     Wake(nullptr);
 }
 

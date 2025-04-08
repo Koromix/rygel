@@ -379,8 +379,8 @@ bool http_Dispatcher::Run()
 
             if (ret <= 0)
                 break;
-
             RG_ASSERT(ret == RG_SIZE(void *));
+
             http_Socket *socket = (http_Socket *)addr;
 
             if (socket) [[likely]] {
