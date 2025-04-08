@@ -63,10 +63,6 @@ public:
     bool Run();
     void Wake(http_Socket *socket);
 
-#if defined(__APPLE__)
-    void Stop();
-#endif
-
 private:
     http_Socket *InitSocket(int sock, int64_t start, struct sockaddr *sa);
     void ParkSocket(http_Socket *socket);
@@ -180,9 +176,10 @@ void http_Daemon::Stop()
     }
 
 #if defined(__APPLE__)
-    // On macOS, the shutdown() does not wake up poll()
+    // On macOS, the shutdown() does not wake up poll() so use the pipe to wake it up
+    // and signal the ongoing shutdown.
     for (http_Dispatcher *it = dispatcher; it; it = it->next) {
-        it->Stop();
+        it->Wake(nullptr);
     }
 #endif
 
@@ -564,15 +561,6 @@ void http_Dispatcher::Wake(http_Socket *socket)
     Size ret = RG_RESTART_EINTR(write(pair_fd[1], &addr, RG_SIZE(addr)), < 0);
     (void)ret;
 }
-
-#if defined(__APPLE__)
-
-void http_Dispatcher::Stop()
-{
-    Wake(nullptr);
-}
-
-#endif
 
 http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockaddr *sa)
 {
