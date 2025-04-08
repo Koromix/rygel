@@ -6461,9 +6461,7 @@ int CreateSocket(SocketType type, int flags)
 
     SOCKET sock = WSASocketW(family, flags, 0, nullptr, 0, overlapped ? WSA_FLAG_OVERLAPPED : 0);
     if (sock == INVALID_SOCKET) {
-        errno = TranslateWinSockError();
-
-        LogError("Failed to create IP socket: %1", strerror(errno));
+        LogError("Failed to create IP socket: %1", GetWin32ErrorString());
         return -1;
     }
     RG_DEFER_N(err_guard) { closesocket(sock); };
@@ -6475,69 +6473,13 @@ int CreateSocket(SocketType type, int flags)
         int v6only = (type == SocketType::IPv6);
 
         if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&v6only, sizeof(v6only)) < 0) {
-            errno = TranslateWinSockError();
-
-            LogError("Failed to change dual-stack socket option: %1", strerror(errno));
+            LogError("Failed to change dual-stack socket option: %1", GetWin32ErrorString());
             return -1;
         }
     }
 
     err_guard.Disable();
     return (int)sock;
-}
-
-int TranslateWinSockError(int error)
-{
-    if (error == INT_MAX) {
-        error = WSAGetLastError();
-    }
-
-    switch (error) {
-        case WSAEACCES: return EADDRINUSE;
-        case WSAEADDRINUSE: return EADDRINUSE;
-        case WSAEADDRNOTAVAIL: return EADDRNOTAVAIL;
-        case WSAEALREADY: return EALREADY;
-        case WSAEBADF: return EBADF;
-        case WSAECONNABORTED: return ECONNABORTED;
-        case WSAECONNREFUSED: return ECONNREFUSED;
-        case WSAECONNRESET: return ECONNRESET;
-        case WSAEDESTADDRREQ: return EDESTADDRREQ;
-        // case WSAEDQUOT: return EDQUOT;
-        case WSAEFAULT: return EFAULT;
-        case WSAEHOSTDOWN: return ETIMEDOUT;
-        case WSAEHOSTUNREACH: return EHOSTUNREACH;
-        case WSAEINPROGRESS: return EINPROGRESS;
-        case WSAEINTR: return EINTR;
-        case WSAEINVAL: return EINVAL;
-        case WSAEISCONN: return EISCONN;
-        case WSAELOOP: return ELOOP;
-        case WSAEMFILE: return EMFILE;
-        case WSAEMSGSIZE: return EMSGSIZE;
-        case WSAENAMETOOLONG: return ENAMETOOLONG;
-        case WSAENETDOWN: return ENETDOWN;
-        case WSAENETRESET: return ENETRESET;
-        case WSAENETUNREACH: return ENETUNREACH;
-        case WSAENOBUFS: return ENOBUFS;
-        case WSAENOPROTOOPT: return ENOPROTOOPT;
-        case WSAENOTCONN: return ENOTCONN;
-        case WSAENOTEMPTY: return ENOTEMPTY;
-        case WSAENOTSOCK: return ENOTSOCK;
-        case WSAEOPNOTSUPP: return EOPNOTSUPP;
-        // case WSAEPFNOSUPPORT: return EPFNOSUPPORT;
-        // case WSAEPROCLIM: return EPROCLIM;
-        case WSAEPROTONOSUPPORT: return EPROTONOSUPPORT;
-        case WSAEPROTOTYPE: return EPROTOTYPE;
-        case WSAEREMOTE: return EINVAL;
-        case WSAESHUTDOWN: return EPIPE;
-        // case WSAESOCKTNOSUPPORT: return ESOCKTNOSUPPORT;
-        case WSAESTALE: return EINVAL;
-        case WSAETIMEDOUT: return ETIMEDOUT;
-        // case WSAETOOMANYREFS: return ETOOMANYREFS;
-        // case WSAEUSERS: return EUSERS;
-        case WSAEWOULDBLOCK: return EAGAIN;
-    }
-
-    return error;
 }
 
 #else
@@ -6606,11 +6548,12 @@ bool BindIPSocket(int sock, SocketType type, int port)
 
         if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 #if defined(_WIN32)
-            errno = TranslateWinSockError();
-#endif
-
+            LogError("Failed to bind to port %1: %2", port, GetWin32ErrorString());
+            return false;
+#else
             LogError("Failed to bind to port %1: %2", port, strerror(errno));
             return false;
+#endif
         }
     } else {
         struct sockaddr_in6 addr = {};
@@ -6621,11 +6564,12 @@ bool BindIPSocket(int sock, SocketType type, int port)
 
         if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 #if defined(_WIN32)
-            errno = TranslateWinSockError();
-#endif
-
+            LogError("Failed to bind to port %1: %2", port, GetWin32ErrorString());
+            return false;
+#else
             LogError("Failed to bind to port %1: %2", port, strerror(errno));
             return false;
+#endif
         }
     }
 
@@ -6645,11 +6589,12 @@ bool BindUnixSocket(int sock, const char *path)
     unlink(path);
     if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 #if defined(_WIN32)
-        errno = TranslateWinSockError();
-#endif
-
+        LogError("Failed to bind socket to '%1': %2", path, GetWin32ErrorString());
+        return false;
+#else
         LogError("Failed to bind socket to '%1': %2", path, strerror(errno));
         return false;
+#endif
     }
     chmod(path, 0666);
 
@@ -6703,11 +6648,12 @@ int ConnectToUnixSocket(const char *path, int flags)
 
     if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 #if defined(_WIN32)
-        errno = TranslateWinSockError();
-#endif
-
+        LogError("Failed to connect to '%1': %2", path, GetWin32ErrorString());
+        return -1;
+#else
         LogError("Failed to connect to '%1': %2", path, strerror(errno));
         return -1;
+#endif
     }
 
     err_guard.Disable();

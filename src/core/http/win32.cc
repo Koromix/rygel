@@ -96,7 +96,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         return false;
 
     if (listen(listener, 200) < 0) {
-        LogError("Failed to listen on socket: %1", strerror(errno));
+        LogError("Failed to listen on socket: %1", GetWin32ErrorString());
         return false;
     }
 
@@ -187,9 +187,9 @@ Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
     Size bytes = recv((SOCKET)socket->sock, (char *)buf.ptr, len, 0);
 
     if (bytes < 0) {
-        errno = TranslateWinSockError();
-        if (errno != ENOTCONN && errno != ECONNRESET) {
-            LogError("Failed to read from client: %1", strerror(errno));
+        int error = GetLastError();
+        if (error != WSAENOTCONN && error != WSAECONNRESET) {
+            LogError("Failed to read from client: %1", GetWin32ErrorString(error));
         }
         return -1;
     }
@@ -204,9 +204,9 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
         int bytes = send(socket->sock, (char *)buf.ptr, len, 0);
 
         if (bytes < 0) {
-            errno = TranslateWinSockError();
-            if (errno != ENOTCONN && errno != ECONNRESET) {
-                LogError("Failed to send to client: %1", strerror(errno));
+            int error = GetLastError();
+            if (error != WSAENOTCONN && error != WSAECONNRESET) {
+                LogError("Failed to send to client: %1", GetWin32ErrorString(error));
             }
             return false;
         }
@@ -240,9 +240,9 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
         int ret = WSASend((SOCKET)socket->sock, bufs.data, (DWORD)bufs.len, &sent, 0, nullptr, nullptr);
 
         if (ret) {
-            errno = TranslateWinSockError();
-            if (errno != ENOTCONN && errno != ECONNRESET) {
-                LogError("Failed to send to client: %1", strerror(errno));
+            int error = GetLastError();
+            if (error != WSAENOTCONN && error != WSAECONNRESET) {
+                LogError("Failed to send to client: %1", GetWin32ErrorString(error));
             }
             return false;
         }
@@ -313,9 +313,7 @@ static bool CreateSocketPair(int out_pair[2])
     return true;
 
 error:
-    errno = TranslateWinSockError();
-    LogError("Failed to create socket pair: %1", strerror(errno));
-
+    LogError("Failed to create socket pair: %1", GetWin32ErrorString());
     return false;
 }
 
@@ -409,14 +407,14 @@ bool http_Dispatcher::Run()
                 int sock = accept(listener, (sockaddr *)&ss, &ss_len);
 
                 if (sock < 0) {
-                    errno = TranslateWinSockError();
+                    int error = GetLastError();
 
-                    if (errno == EAGAIN)
+                    if (error == WSAEWOULDBLOCK)
                         break;
-                    if (errno == EINVAL)
+                    if (error == WSAEINVAL)
                         return true;
 
-                    LogError("Failed to accept client: %1", strerror(errno));
+                    LogError("Failed to accept client: %1", GetWin32ErrorString());
                     return false;
                 }
 
@@ -458,11 +456,11 @@ bool http_Dispatcher::Run()
 
                     status = client->ParseRequest();
                 } else {
-                    errno = TranslateWinSockError();
+                    int error = GetLastError();
 
-                    if (!bytes || errno != EAGAIN) {
+                    if (!bytes || error != WSAEWOULDBLOCK) {
                         if (client->IsBusy()) {
-                            const char *reason = bytes ? strerror(errno) : "closed unexpectedly";
+                            const char *reason = bytes ? GetWin32ErrorString() : "closed unexpectedly";
                             LogError("Client connection failed: %1", reason);
                         }
 
@@ -528,12 +526,8 @@ bool http_Dispatcher::Run()
         int ready = WSAPoll(pfds.ptr, pfds.len, (int)timeout);
 
         if (ready < 0) {
-            if (errno != EINTR) {
-                LogError("Failed to poll descriptors: %1", strerror(errno));
-                return false;
-            }
-
-            ready = 0;
+            LogError("Failed to poll descriptors: %1", GetWin32ErrorString());
+            return false;
         }
     }
 
@@ -635,8 +629,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         DWORD send = (DWORD)(std::min(remain, MaxSend) - intro.len);
 
         if (!TransmitFile((SOCKET)socket->sock, h, send, 0, nullptr, &tbuf, 0)) [[unlikely]] {
-            errno = TranslateWinSockError();
-            LogError("Failed to send file: %1", strerror(errno));
+            LogError("Failed to send file: %1", GetWin32ErrorString());
 
             request.keepalive = false;
             return;
@@ -656,8 +649,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         DWORD send = (DWORD)std::min(remain, MaxSend);
 
         if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &ov, nullptr, 0)) [[unlikely]] {
-            errno = TranslateWinSockError();
-            LogError("Failed to send file: %1", strerror(errno));
+            LogError("Failed to send file: %1", GetWin32ErrorString());
 
             request.keepalive = false;
             return;

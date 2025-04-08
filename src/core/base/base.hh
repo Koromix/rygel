@@ -4736,10 +4736,6 @@ static const char *const SocketTypeNames[] = {
 
 int CreateSocket(SocketType type, int flags);
 
-#if defined(_WIN32)
-int TranslateWinSockError(int error = INT_MAX);
-#endif
-
 bool BindIPSocket(int sock, SocketType type, int port);
 bool BindUnixSocket(int sock, const char *path);
 
