@@ -5438,22 +5438,20 @@ bool RaiseMaximumOpenFiles(int limit)
         return false;
     }
 
-    if (limit < 0) {
-        limit = (int)lim.rlim_max;
-    }
+    rlim_t target = (limit >= 0) ? (rlim_t)limit : lim.rlim_max;
 
-    if (lim.rlim_cur >= (rlim_t)limit)
+    if (lim.rlim_cur >= target)
         return true;
 
-    lim.rlim_cur = std::min((rlim_t)limit, lim.rlim_max);
+    lim.rlim_cur = std::min(target, lim.rlim_max);
 
     if (setrlimit(RLIMIT_NOFILE, &lim) < 0) {
         LogError("Could not raise RLIMIT_NOFILE: %2", strerror(errno));
         return false;
     }
 
-    if (lim.rlim_cur < (rlim_t)limit) {
-        LogWarning("Maximum number of open descriptors is low: %1 (recommended: %2)", lim.rlim_cur, limit);
+    if (lim.rlim_cur < target) {
+        LogWarning("Maximum number of open descriptors is low: %1 (recommended: %2)", lim.rlim_cur, target);
     }
 
     return true;
