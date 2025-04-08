@@ -8017,7 +8017,7 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
     return true;
 }
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__APPLE__)
 
 static void *memrchr(const void *m, int c, size_t n)
 {
