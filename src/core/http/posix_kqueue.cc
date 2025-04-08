@@ -397,7 +397,7 @@ bool http_Dispatcher::Run()
 
 #if defined(__APPLE__)
                 if (!socket) [[unlikely]]
-                    break;
+                    return true;
 #endif
 
 #if !defined(MSG_DONTWAIT)
