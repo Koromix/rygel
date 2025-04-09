@@ -50,6 +50,7 @@ struct http_Socket {
 };
 
 static const int WorkersPerDispatcher = 4;
+static const Size MaxSend = Mebibytes(2);
 
 class http_Dispatcher {
     http_Daemon *daemon;
@@ -236,7 +237,7 @@ Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
 bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
 {
     while (buf.len) {
-        int len = (int)std::min(buf.len, (Size)INT_MAX);
+        int len = (int)std::min(buf.len, MaxSend);
         int bytes = send(socket->sock, (char *)buf.ptr, len, 0);
 
         if (bytes < 0) {
@@ -620,8 +621,6 @@ void http_Dispatcher::ParkSocket(http_Socket *socket)
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
-    const int64_t MaxSend = Mebibytes(2);
-
     RG_ASSERT(socket);
     RG_ASSERT(!response.started);
 
@@ -662,7 +661,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     // Send intro and start of file
     {
         TRANSMIT_FILE_BUFFERS tbuf = { (void *)intro.ptr, (DWORD)intro.len, nullptr, 0 };
-        DWORD send = (DWORD)(std::min(remain, MaxSend) - intro.len);
+        DWORD send = (DWORD)(std::min(remain, (int64_t)MaxSend) - intro.len);
 
         if (!TransmitFile((SOCKET)socket->sock, h, send, 0, nullptr, &tbuf, 0)) [[unlikely]] {
             LogError("Failed to send file: %1", GetWin32ErrorString());
@@ -682,7 +681,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         ov.OffsetHigh = (DWORD)(offset >> 32);
         ov.Offset = (DWORD)(offset & 0xFFFFFFFFu);
 
-        DWORD send = (DWORD)std::min(remain, MaxSend);
+        DWORD send = (DWORD)std::min(remain, (int64_t)MaxSend);
 
         if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &ov, nullptr, 0)) [[unlikely]] {
             LogError("Failed to send file: %1", GetWin32ErrorString());

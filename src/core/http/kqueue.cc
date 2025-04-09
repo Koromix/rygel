@@ -50,6 +50,7 @@ struct http_Socket {
 };
 
 static const int WorkersPerDispatcher = 4;
+static const Size MaxSend = Mebibytes(2);
 
 class http_Dispatcher {
     http_Daemon *daemon;
@@ -273,7 +274,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
 #endif
 
     while (buf.len) {
-        Size len = std::min(buf.len, Mebibytes(2));
+        Size len = std::min(buf.len, MaxSend);
         Size bytes = send(socket->sock, buf.ptr, len, flags);
 
         if (bytes < 0) {
@@ -382,6 +383,16 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
+    bool cork = (len >= MaxSend);
+
+    if (cork) {
+        SetDescriptorRetain(socket->sock, true);
+    }
+    RG_DEFER {
+        if (cork) {
+            SetDescriptorRetain(socket->sock, false);
+        }
+    };
 
     struct iovec header = { (void *)intro.ptr, (size_t)intro.len };
     struct sf_hdtr hdtr = { &header, 1, nullptr, 0 };
@@ -391,7 +402,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
     // Send intro and file in one go
     do {
-        Size send = (Size)std::min(remain, (int64_t)Mebibytes(2));
+        Size send = (Size)std::min(remain, (int64_t)MaxSend);
 
 #if defined(__FreeBSD__)
         off_t sent = 0;
