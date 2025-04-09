@@ -26,8 +26,7 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance);
 void HandleRecordGet(http_IO *io, InstanceHolder *instance);
 void HandleRecordAudit(http_IO *io, InstanceHolder *instance);
 
-void HandleExportData(http_IO *io, InstanceHolder *instance);
-void HandleExportMeta(http_IO *io, InstanceHolder *instance);
+void HandleExportRaw(http_IO *io, InstanceHolder *instance);
 
 void HandleRecordSave(http_IO *io, InstanceHolder *instance);
 void HandleRecordDelete(http_IO *io, InstanceHolder *instance);

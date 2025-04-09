@@ -16,9 +16,9 @@
 import { render, html, svg,
          directive, Directive, noChange, nothing } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, Mutex, LocalDate, LocalTime } from '../../web/core/base.js';
+import * as Data from '../../web/core/data.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
-import { MagicData } from './form_data.js';
 
 import './form.css';
 
@@ -26,7 +26,7 @@ import './form.css';
 let ptr_ids = new WeakMap;
 let next_id = 0;
 
-function FormState(data = null) {
+function FormState(raw = null, obj = null) {
     let self = this;
 
     // Hook functions
@@ -44,18 +44,15 @@ function FormState(data = null) {
     this.force_changed = false;
     this.has_interaction = false;
 
-    if (!(data instanceof MagicData)) {
-        if (data == null)
-            data = {};
-        data = new MagicData(data);
-    }
+    if (raw == null)
+        [raw, obj] = Data.wrap({});
 
     // Stored values
-    this.data = data;
-    this.values = data.proxy;
+    this.raw = raw;
+    this.values = obj;
 
     this.hasChanged = function() {
-        if (!data.hasChanged() && !self.force_changed)
+        if (!Data.hasChanged(obj) && !self.force_changed)
             return false;
         if (!self.has_interaction)
             return false;
@@ -127,17 +124,9 @@ function FormBuilder(state, model, options = {}) {
         }
     })();
 
-    let data = state.data;
-
     let intf_map = new WeakMap;
 
-    data.clearNotes('errors');
-    data.clearNotes('variables');
-
-    let paths_stack = [{
-        root: state.values,
-        ptr: state.values
-    }];
+    let paths_stack = [state.values];
 
     let options_stack = [options];
     let widgets_ref = model.widgets0;
@@ -189,23 +178,12 @@ function FormBuilder(state, model, options = {}) {
         if (key.variables.has(key.name))
             throw new Error(`Variable '${key}' already exists`);
 
-        let path = {
-            root: key.ptr[key.name],
-            ptr: null
-        };
+        let path = key.ptr[key.name];
 
-        if (!Util.isPodObject(path.root)) {
-            key.ptr[key.name] = {};
-            path.root = key.ptr[key.name];
+        if (!Util.isPodObject(path)) {
+            path = {}
+            key.ptr[key.name] = path;
         }
-
-        if (sub != null) {
-            if (!Util.isPodObject(path.root[sub]))
-                path.root[sub] = {};
-            path.ptr = path.root[sub];
-        } else {
-            path.ptr = path.root;
-        };
 
         paths_stack.push(path);
     };
@@ -1558,10 +1536,8 @@ instead of:
             let prev_paths = paths_stack;
 
             try {
-                paths_stack = [{
-                    root: values,
-                    ptr: values[i]
-                }];
+                let value = values[i];
+                paths_stack = [value];
 
                 let remove = intf.remove ? (() => intf.remove(i)) : null;
                 captureWidgets(widgets, 'repeat', () => func(values[i], i, remove), options);
@@ -1649,7 +1625,7 @@ instead of:
 
         try {
             widgets_ref = widgets;
-            paths_stack = [paths_stack[paths_stack.length - 1]];
+            paths_stack = paths_stack.slice(paths_stack.length - 1);
             options_stack = [expandOptions(options)];
 
             inline_next = false;
@@ -1724,12 +1700,11 @@ instead of:
         // Normalize key
         if (!Array.isArray(key))
             key = [null, key];
-        if (key.length < 2 || key.length > 3)
+        if (key.length != 2)
             throw new Error('Invalid key type');
 
-        let root = key[0] ?? paths_stack[paths_stack.length - 1].root;
-        let ptr = (key.length >= 3 ? key[1] : key[0]) ?? paths_stack[paths_stack.length - 1].ptr;
-        let name = (key.length >= 3 ? key[2] : key[1]);
+        let ptr = key[0] ?? paths_stack[paths_stack.length - 1];
+        let name = key[1];
 
         // Decode option shortcuts
         for (;;) {
@@ -1778,7 +1753,6 @@ instead of:
         }
 
         key = {
-            root: root,
             ptr: ptr,
             retain: retain,
             variables: variables,
@@ -1953,6 +1927,8 @@ instead of:
         if (key.variables.has(key.name))
             throw new Error(`Variable '${key}' already exists`);
 
+        let notes = Data.annotate(key.ptr, key.name);
+
         Object.assign(intf, {
             key: key,
             value: value,
@@ -1965,10 +1941,8 @@ instead of:
                 delay &&= !key.retain.take_delayed.has(key.name);
 
                 intf.errors.push({ msg: msg, delay: delay });
+                notes.errors.push(msg);
                 model.errors++;
-
-                let note = data.openNote(key.ptr, 'errors', []);
-                note.push({ key: key.name, message: msg });
 
                 return intf;
             }
@@ -1987,6 +1961,9 @@ instead of:
             variable.props = props;
         }
 
+        notes.variable = variable;
+        notes.errors = [];
+
         if (intf.options.mandatory && intf.missing) {
             let msg = intf.options.annotate ? 'Réponse obligatoire sauf justification' : 'Réponse obligatoire';
             intf.error(msg, intf.options.missing_mode !== 'error');
@@ -1994,9 +1971,6 @@ instead of:
 
         model.variables.push(intf);
         key.variables.set(key.name, intf);
-
-        let note = data.openNote(key.root, 'variables', {});
-        note[key.name] = variable;
 
         return intf;
     }
@@ -2040,13 +2014,13 @@ instead of:
                     </div>
                 ` : ''}
 
-                ${intf.options.annotate ? html`<a class="fm_annotate" @click=${e => annotate(e, intf)} title="Ajouter des annotations">🖊\uFE0E</a>` : ''}
+                ${intf.options.annotate ? html`<a class="fm_annotate" @click=${e => changeAnnotation(e, intf)} title="Ajouter des annotations">🖊\uFE0E</a>` : ''}
                 ${extra != null ? html`<span style="font-weight: normal;">${extra}</span>` : ''}
             </div>
         `;
     }
 
-    async function annotate(e, intf) {
+    async function changeAnnotation(e, intf) {
         e.preventDefault();
 
         await state.annotateHandler(e, intf);

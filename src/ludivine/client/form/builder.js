@@ -15,7 +15,7 @@
 
 import { render, html, live } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
-import { wrap, annotate } from './data.js';
+import * as Data from '../../../web/core/data.js';
 import { ASSETS } from '../../assets/assets.js';
 
 let unique = 0;
@@ -25,7 +25,7 @@ function FormState(init = {}) {
 
     let change_handler = () => {};
 
-    let [raw, values] = wrap(init);
+    let [raw, values] = Data.wrap(init);
 
     Object.defineProperties(this, {
         changeHandler: { get: () => change_handler, set: handler => { change_handler = handler; }, enumerable: true },
@@ -430,7 +430,7 @@ function FormBuilder(state, model, base = {}) {
     };
 
     this.error = function(key, msg) {
-        let notes = annotate(ptr, key);
+        let notes = Data.annotate(ptr, key);
 
         if (notes == null)
             throw new Error(`Unkwown variable '${key}'`);
@@ -462,7 +462,7 @@ function FormBuilder(state, model, base = {}) {
     function makeInput(key, label, options, type, func) {
         let id = 'input' + (++unique);
 
-        let notes = annotate(key.obj, key.name);
+        let notes = Data.annotate(key.obj, key.name);
 
         let render = () => {
             let error = notes.error;
@@ -514,7 +514,7 @@ function FormBuilder(state, model, base = {}) {
 
         Object.defineProperties(widget, {
             value: { get: () => key.obj[key.name], enumerable: true },
-            notes: { get: () => annotate(key.obj, key.name), enumerable: true }
+            notes: { get: () => Data.annotate(key.obj, key.name), enumerable: true }
         });
 
         return widget;
@@ -581,11 +581,11 @@ function FormBuilder(state, model, base = {}) {
     }
 
     function getValue(key, type, options) {
-        let notes = annotate(key.obj, key.name);
+        let notes = Data.annotate(key.obj, key.name);
 
         if (notes == null) {
             key.obj[key.name] = options.prefill ?? undefined;
-            notes = annotate(key.obj, key.name);
+            notes = Data.annotate(key.obj, key.name);
         } else if (!notes.changed) {
             key.obj[key.name] = options.prefill ?? undefined;
         }
@@ -605,7 +605,7 @@ function FormBuilder(state, model, base = {}) {
     }
 
     function setValue(key, value) {
-        let notes = annotate(key.obj, key.name);
+        let notes = Data.annotate(key.obj, key.name);
 
         key.obj[key.name] = value;
         notes.changed = true;

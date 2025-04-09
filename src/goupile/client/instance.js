@@ -15,6 +15,7 @@
 
 import { render, html, svg } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LruMap, Mutex, LocalDate, LocalTime } from '../../web/core/base.js';
+import * as Data from '../../web/core/data.js';
 import * as mixer from '../../web/core/mixer.js';
 import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
@@ -24,7 +25,6 @@ import { DataRemote } from './data_remote.js';
 import { ApplicationInfo, ApplicationBuilder } from './instance_app.js';
 import { InstancePublisher } from './instance_publish.js';
 import { FormState, FormModel, FormBuilder } from './form.js';
-import { MagicData } from './form_data.js';
 import { MetaModel, MetaInterface } from './form_meta.js';
 
 import './instance.css';
@@ -48,7 +48,7 @@ let records = new DataRemote;
 
 let form_thread = null;
 let form_entry = null;
-let form_data = null;
+let form_raw = null;
 let form_state = null;
 let form_model = null;
 let form_builder = null;
@@ -1021,7 +1021,7 @@ function addAutomaticActions(builder, model) {
                         await UI.confirm(e, text, 'Continuer', () => {});
                     }
 
-                    await saveRecord(form_thread.tid, form_entry, form_data, form_meta);
+                    await saveRecord(form_thread.tid, form_entry, form_raw, form_meta);
 
                     if (keep_open) {
                         await openRecord(form_thread.tid, null, route.page);
@@ -1119,8 +1119,8 @@ function addAutomaticTags(variables) {
     for (let intf of variables) {
         let tags = [];
 
-        let note = form_data.openNote(intf.key.root, 'status', {});
-        let status = note[intf.key.name] ?? {};
+        let notes = Data.annotate(intf.key.ptr, intf.key.name);
+        let status = notes.status ?? {};
 
         if (form_thread.locked)
             intf.options.readonly = true;
@@ -1615,7 +1615,7 @@ async function go(e, url = null, options = {}) {
                             d.action('Enregistrer', {}, async e => {
                                 try {
                                     form_builder.triggerErrors();
-                                    await saveRecord(form_thread.tid, form_entry, form_data, form_meta);
+                                    await saveRecord(form_thread.tid, form_entry, form_raw, form_meta);
                                 } catch (err) {
                                     reject(err);
                                 }
@@ -1997,7 +1997,7 @@ function throwRunError(err, map) {
 async function openRecord(tid, anchor, page) {
     let new_thread = null;
     let new_entry = null;
-    let new_data = null;
+    let new_raw = null;
     let new_state = null;
 
     // Load or create thread
@@ -2028,17 +2028,20 @@ async function openRecord(tid, anchor, page) {
                 ctime: now,
                 mtime: now,
                 sequence: null,
-                tags: []
+                tags: [],
+                data: {}
             };
 
             new_thread.entries[page.store.key] = new_entry;
         }
 
-        new_data = new MagicData(new_entry.data, new_entry.meta);
-        new_state = new FormState(new_data);
+        let [raw, obj] = Data.wrap(new_entry.data);
+
+        new_raw = raw;
+        new_state = new FormState(raw, obj);
     } else {
-        new_data = new MagicData;
-        new_state = new FormState(new_data);
+        new_raw = null;
+        new_state = new FormState;
     }
 
     if (!profile.develop && !isPageEnabled(page, new_thread))
@@ -2070,7 +2073,7 @@ async function openRecord(tid, anchor, page) {
 
     form_thread = new_thread;
     form_entry = new_entry;
-    form_data = new_data;
+    form_raw = new_raw;
     form_state = new_state;
 
     form_model = null;
@@ -2084,12 +2087,12 @@ async function openRecord(tid, anchor, page) {
 
 function runAnnotationDialog(e, intf) {
     return UI.dialog(e, intf.label, {}, (d, resolve, reject) => {
-        let note = form_data.openNote(intf.key.root, 'status', {});
-        let status = note[intf.key.name];
+        let notes = Data.annotate(intf.key.ptr, intf.key.name);
+        let status = notes.status;
 
         if (status == null) {
             status = {};
-            note[intf.key.name] = status;
+            notes.status = status;
         }
 
         let locked = d.values.hasOwnProperty('locked') ? d.values.locked : status.locked;
@@ -2115,12 +2118,11 @@ function runAnnotationDialog(e, intf) {
 }
 
 // Call with data_mutex locked
-async function saveRecord(tid, entry, data, meta) {
+async function saveRecord(tid, entry, raw, meta) {
     entry = Object.assign({}, entry);
 
     entry.summary = meta.summary;
-    entry.data = JSON.parse(JSON.stringify(data.raw, (k, v) => v != null ? v : null));
-    entry.meta = data.exportNotes();
+    entry.data = JSON.parse(JSON.stringify(raw, (k, v) => v != null ? v : null));
 
     // Gather global list of tags for this record entry
     {

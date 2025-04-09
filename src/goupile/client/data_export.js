@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { Util, Log, Net, Mutex, LocalDate } from '../../web/core/base.js';
+import * as Data from '../../web/core/data.js';
 import { Base64 } from '../../web/core/mixer.js';
 import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
@@ -26,7 +27,7 @@ async function exportRecords(stores, filter = null) {
     let XLSX = await import(`${ENV.urls.static}sheetjs/XLSX.bundle.js`);
 
     // Assemble information about tables and columns
-    let [tables, counters] = await structureTables();
+    let [threads, tables, counters] = await walkThreads();
 
     // Metadata worksheets
     let meta = {
@@ -70,7 +71,7 @@ async function exportRecords(stores, filter = null) {
     });
 
     // Export data
-    await walkThreads('data', thread => {
+    for (let thread of threads) {
         for (let i = 0; i < stores.length; i++) {
             let store = stores[i];
             let ws = worksheets[i];
@@ -106,7 +107,7 @@ async function exportRecords(stores, filter = null) {
 
             XLSX.utils.sheet_add_aoa(meta.counters, [row], { origin: -1 });
         }
-    });
+    }
 
     // Create workbook...
     let wb = XLSX.utils.book_new();
@@ -134,61 +135,80 @@ async function exportRecords(stores, filter = null) {
     XLSX.writeFile(wb, filename);
 }
 
-async function structureTables() {
+async function walkThreads() {
+    let threads = [];
     let tables = {};
     let counters = new Set;
 
-    // Reconstitute logical order
-    await walkThreads('meta', thread => {
-        for (let key in thread.counters)
-            counters.add(key);
-        for (let key in thread.secrets)
-            counters.add(key);
+    // Go through threads
+    {
+        let from = 0;
 
-        for (let store in thread.entries) {
-            let entry = thread.entries[store];
+        do {
+            let url = Util.pasteURL(`${ENV.urls.instance}api/export/raw`, { from: from });
+            let json = await Net.get(url);
 
-            if (entry.meta.notes.variables == null)
-                continue;
+            for (let thread of json.threads) {
+                for (let key in thread.counters)
+                    counters.add(key);
+                for (let key in thread.secrets)
+                    counters.add(key);
 
-            let table = tables[store];
+                for (let store in thread.entries) {
+                    let entry = thread.entries[store];
+                    let table = tables[store];
 
-            if (table == null) {
-                table = {
-                    variables: new Map,
+                    if (table == null) {
+                        table = {
+                            variables: new Map,
 
-                    prev: null,
-                    next: null,
-                };
-                table.previous = table;
-                table.next = table;
+                            prev: null,
+                            next: null,
+                        };
+                        table.previous = table;
+                        table.next = table;
 
-                tables[store] = table;
-            }
+                        tables[store] = table;
+                    }
 
-            let notes = entry.meta.notes;
-            let keys = Object.keys(notes.variables);
+                    let [raw, obj] = Data.wrap(entry.data);
+                    let keys = Object.keys(obj);
 
-            for (let i = 0; i < keys.length; i++) {
-                let key = keys[i];
+                    // Skip undocumented keys
+                    keys = keys.filter(key => {
+                        let notes = Data.annotate(obj, key);
+                        return notes.variable != null;
+                    });
 
-                if (!table.variables.has(key)) {
-                    let previous = table.variables.get(keys[i - 1]) ?? table;
+                    for (let i = 0; i < keys.length; i++) {
+                        let key = keys[i];
+                        let notes = Data.annotate(obj, key);
 
-                    let head = {
-                        variable: { key: key, ...notes.variables[key] },
-                        prev: previous,
-                        next: previous.next
-                    };
+                        if (!table.variables.has(key)) {
+                            let previous = table.variables.get(keys[i - 1]) ?? table;
 
-                    previous.next.prev = head;
-                    previous.next = head;
+                            let head = {
+                                variable: { key: key, ...notes.variable },
+                                prev: previous,
+                                next: previous.next
+                            };
 
-                    table.variables.set(key, head);
+                            previous.next.prev = head;
+                            previous.next = head;
+
+                            table.variables.set(key, head);
+                        }
+                    }
+
+                    entry.data = Data.unwrap(obj);
                 }
+
+                threads.push(thread);
             }
-        }
-    });
+
+            from = json.next;
+        } while (from != null);
+    }
 
     // Expand linked list to proper arrays
     for (let store in tables) {
@@ -208,7 +228,7 @@ async function structureTables() {
 
     counters = Array.from(counters);
 
-    return [tables, counters];
+    return [threads, tables, counters];
 }
 
 function expandColumns(variables) {
@@ -243,20 +263,6 @@ function expandColumns(variables) {
     }
 
     return columns;
-}
-
-async function walkThreads(method, func) {
-    let from = 0;
-
-    do {
-        let url = Util.pasteURL(`${ENV.urls.instance}api/export/${method}`, { from: from });
-        let json = await Net.get(url);
-
-        for (let thread of json.threads)
-            func(thread);
-
-        from = json.next;
-    } while (from != null);
 }
 
 export {

@@ -34,7 +34,6 @@ struct RecordFilter {
     int64_t end_t = -1;
 
     bool read_data = false;
-    bool read_meta = false;
 };
 
 struct RecordInfo {
@@ -55,14 +54,12 @@ struct RecordInfo {
 
     const char *summary = nullptr;
     Span<const char> data = {};
-    Span<const char> meta = {};
 };
 
 class RecordWalker {
     sq_Statement stmt;
 
     bool read_data = false;
-    bool read_meta = false;
 
     bool step = false;
     RecordInfo cursor;
@@ -90,7 +87,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                        R"(SELECT t.sequence AS t, t.tid, t.counters, t.secrets, t.locked,
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime,
                                  e.store, e.summary, e.tags AS tags,
-                                 IIF(?6 = 1, e.data, NULL) AS data, IIF(?7 = 1, e.meta, NULL) AS meta
+                                 IIF(?6 = 1, e.data, NULL) AS data
                           FROM rec_threads t
                           INNER JOIN rec_entries e ON (e.tid = t.tid)
                           WHERE 1=1)").len;
@@ -116,16 +113,14 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
         RG_ASSERT(!filter.use_claims);
 
         sql.len += Fmt(sql.TakeAvailable(),
-                       R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, summary, data, meta, tags) AS (
-                              SELECT 1, eid, anchor, mtime, summary, data, meta, tags
+                       R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, summary, tags, data) AS (
+                              SELECT 1, eid, anchor, mtime, summary, tags, data
                                   FROM rec_fragments
                                   WHERE (tid = ?1 OR ?1 IS NULL) AND
                                         anchor <= ?3 AND previous IS NULL
                               UNION ALL
-                              SELECT rec.idx + 1, f.eid, f.anchor, f.mtime, f.summary,
-                                  IIF(?6 = 1, json_patch(rec.data, f.data), NULL) AS data,
-                                  IIF(?7 = 1, json_patch(rec.meta, f.meta), NULL) AS meta,
-                                  f.tags
+                              SELECT rec.idx + 1, f.eid, f.anchor, f.mtime, f.summary, f.tags,
+                                  IIF(?6 = 1, json_patch(rec.data, f.data), NULL) AS data
                                   FROM rec_fragments f, rec
                                   WHERE f.anchor <= ?3 AND f.previous = rec.anchor
                               ORDER BY anchor
@@ -133,7 +128,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                           SELECT t.sequence AS t, t.tid, t.counters, t.secrets, t.locked,
                                  e.rowid AS e, e.eid, IIF(rec.data IS NULL, 1, 0) AS deleted,
                                  rec.anchor, e.ctime, rec.mtime, e.store,
-                                 rec.summary, rec.tags, rec.data, rec.meta
+                                 rec.summary, rec.tags, rec.data
                               FROM rec
                               INNER JOIN rec_entries e ON (e.eid = rec.eid)
                               INNER JOIN rec_threads t ON (t.tid = e.tid)
@@ -161,10 +156,8 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
     sqlite3_bind_int64(stmt, 4, filter.start_t);
     sqlite3_bind_int64(stmt, 5, filter.end_t);
     sqlite3_bind_int(stmt, 6, 0 + filter.read_data);
-    sqlite3_bind_int(stmt, 7, 0 + filter.read_meta);
 
     read_data = filter.read_data;
-    read_meta = filter.read_meta;
 
     step = true;
     cursor = {};
@@ -230,10 +223,11 @@ again:
     cursor.summary = (const char *)sqlite3_column_text(stmt, 12);
     cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 13), sqlite3_column_bytes(stmt, 13));
 
-    cursor.data = read_data ? MakeSpan((const char *)sqlite3_column_text(stmt, 14), sqlite3_column_bytes(stmt, 14))
-                            : MakeSpan((const char *)nullptr, 0);
-    cursor.meta = read_meta ? MakeSpan((const char *)sqlite3_column_text(stmt, 15), sqlite3_column_bytes(stmt, 15))
-                            : MakeSpan((const char *)nullptr, 0);
+    if (read_data) {
+        cursor.data = MakeSpan((const char *)sqlite3_column_text(stmt, 14), sqlite3_column_bytes(stmt, 14));
+    } else {
+        cursor.data = {};
+    }
 
     return true;
 }
@@ -444,7 +438,6 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
         filter.allow_deleted = allow_deleted;
         filter.use_claims = !stamp->HasPermission(UserPermission::DataRead);
         filter.read_data = true;
-        filter.read_meta = true;
 
         if (!walker.Prepare(instance, session->userid, filter))
             return;
@@ -495,7 +488,6 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
             json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
 
             json.Key("data"); JsonRawOrNull(cursor->data, &json);
-            json.Key("meta"); JsonRawOrNull(cursor->meta, &json);
 
             json.EndObject();
         } while (walker.NextInThread());
@@ -581,7 +573,7 @@ void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
     json.Finish();
 }
 
-void RunExport(http_IO *io, InstanceHolder *instance, bool data, bool meta)
+void HandleExportRaw(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
 
@@ -663,8 +655,7 @@ void RunExport(http_IO *io, InstanceHolder *instance, bool data, bool meta)
 
         filter.start_t = from;
         filter.end_t = to;
-        filter.read_data = data;
-        filter.read_meta = meta;
+        filter.read_data = true;
 
         if (!walker.Prepare(instance, 0, filter))
             return;
@@ -699,12 +690,7 @@ void RunExport(http_IO *io, InstanceHolder *instance, bool data, bool meta)
             json.Key("mtime"); json.Int64(cursor->mtime);
             json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
 
-            if (data) {
-                json.Key("data"); JsonRawOrNull(cursor->data, &json);
-            }
-            if (meta) {
-                json.Key("meta"); JsonRawOrNull(cursor->meta, &json);
-            }
+            json.Key("data"); JsonRawOrNull(cursor->data, &json);
 
             json.EndObject();
         } while (walker.NextInThread());
@@ -725,16 +711,6 @@ void RunExport(http_IO *io, InstanceHolder *instance, bool data, bool meta)
     json.EndObject();
 
     json.Finish();
-}
-
-void HandleExportData(http_IO *io, InstanceHolder *instance)
-{
-    RunExport(io, instance, true, false);
-}
-
-void HandleExportMeta(http_IO *io, InstanceHolder *instance)
-{
-    RunExport(io, instance, false, true);
 }
 
 }
