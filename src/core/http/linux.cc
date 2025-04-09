@@ -537,7 +537,7 @@ bool http_Dispatcher::Run()
                             }
                         } while (client->ParseRequest() == http_RequestStatus::Ready);
 
-                        AddEpollDescriptor(socket->sock, EPOLLIN | EPOLLET, socket);
+                        AddEpollDescriptor(socket->sock, EPOLLIN, socket);
 
                         return true;
                     });
