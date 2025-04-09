@@ -246,6 +246,109 @@ bool http_Config::Validate() const
     return valid;
 }
 
+static int CreateListenSocket(const http_Config &config)
+{
+    int sock = CreateSocket(config.sock_type, SOCK_STREAM);
+    if (sock < 0)
+        return -1;
+    RG_DEFER_N(err_guard) { CloseSocket(sock); };
+
+#if defined(SO_REUSEPORT_LB)
+    int reuse = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &reuse, sizeof(reuse));
+#elif defined(SO_REUSEPORT)
+    int reuse = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse));
+ #endif
+
+    switch (config.sock_type) {
+        case SocketType::Dual:
+        case SocketType::IPv4:
+        case SocketType::IPv6: {
+            if (!BindIPSocket(sock, config.sock_type, config.port))
+                return -1;
+        } break;
+        case SocketType::Unix: {
+            if (!BindUnixSocket(sock, config.unix_path))
+                return -1;
+        } break;
+    }
+
+    if (listen(sock, 200) < 0) {
+#if defined(_WIN32)
+        LogError("Failed to listen on socket: %1", GetWin32ErrorString());
+        return -1;
+#else
+        LogError("Failed to listen on socket: %1", strerror(errno));
+        return -1;
+#endif
+    }
+
+    SetDescriptorNonBlock(sock, true);
+
+    err_guard.Disable();
+    return sock;
+}
+
+bool http_Daemon::Bind(const http_Config &config, bool log_addr)
+{
+    RG_ASSERT(!listeners.len);
+
+    if (!config.Validate())
+        return false;
+
+    if (config.addr_mode == http_AddressMode::Socket) {
+        LogWarning("You may want to %!.._set HTTP.ClientAddress%!0 to X-Forwarded-For or X-Real-IP "
+                   "if you run this behind a reverse proxy that sets one of these headers.");
+    }
+
+    // Copy main confg values
+    sock_type = config.sock_type;
+    addr_mode = config.addr_mode;
+    idle_timeout = config.idle_timeout;
+    keepalive_time = config.keepalive_time;
+    send_timeout = config.send_timeout;
+    stop_timeout = config.stop_timeout;
+    max_request_size = config.max_request_size;
+    max_url_len = config.max_url_len;
+    max_request_headers = config.max_request_headers;
+    max_request_cookies = config.max_request_cookies;
+
+#if defined(_WIN32)
+    if (!InitWinsock())
+        return false;
+#endif
+
+    RG_DEFER_N(err_guard) {
+        for (int listener: listeners) {
+            CloseSocket(listener);
+        }
+        listeners.Clear();
+    };
+
+    Size workers = 2 * GetCoreCount();
+
+    for (Size i = 0; i < workers; i++) {
+        int listener = CreateListenSocket(config);
+        if (listener < 0)
+            return false;
+        listeners.Append(listener);
+    }
+    err_guard.Disable();
+
+    if (log_addr) {
+        if (config.sock_type == SocketType::Unix) {
+            LogInfo("Listening on socket '%!..+%1%!0' (Unix stack)", config.unix_path);
+        } else {
+            LogInfo("Listening on %!..+http://localhost:%1/%!0 (%2 stack)",
+                    config.port, SocketTypeNames[(int)config.sock_type]);
+        }
+    }
+
+    err_guard.Disable();
+    return true;
+}
+
 bool http_Daemon::InitConfig(const http_Config &config)
 {
     if (!config.Validate())
