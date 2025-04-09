@@ -69,6 +69,40 @@ private:
     friend class http_Daemon;
 };
 
+static int CreateListenSocket(const http_Config &config)
+{
+    int sock = CreateSocket(config.sock_type, SOCK_STREAM);
+    if (sock < 0)
+        return -1;
+    RG_DEFER_N(err_guard) { close(sock); };
+
+    int reuse = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse));
+
+    switch (config.sock_type) {
+        case SocketType::Dual:
+        case SocketType::IPv4:
+        case SocketType::IPv6: {
+            if (!BindIPSocket(sock, config.sock_type, config.port))
+                return -1;
+        } break;
+        case SocketType::Unix: {
+            if (!BindUnixSocket(sock, config.unix_path))
+                return -1;
+        } break;
+    }
+
+    if (listen(sock, 200) < 0) {
+        LogError("Failed to listen on socket: %1", strerror(errno));
+        return -1;
+    }
+
+    SetDescriptorNonBlock(sock, true);
+
+    err_guard.Disable();
+    return sock;
+}
+
 bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 {
     RG_ASSERT(!listeners.len);
@@ -76,27 +110,21 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     if (!InitConfig(config))
         return false;
 
-    int listener = -1;
-    RG_DEFER_N(err_guard) { CloseDescriptor(listener); };
+    RG_DEFER_N(err_guard) {
+        for (int listener: listeners) {
+            close(listener);
+        }
+        listeners.Clear();
+    };
 
-    switch (config.sock_type) {
-        case SocketType::Dual:
-        case SocketType::IPv4:
-        case SocketType::IPv6: { listener = OpenIPSocket(config.sock_type, config.port, SOCK_STREAM); } break;
-        case SocketType::Unix: { listener = OpenUnixSocket(config.unix_path, SOCK_STREAM); } break;
+    Size workers = 2 * GetCoreCount();
+
+    for (Size i = 0; i < workers; i++) {
+        int listener = CreateListenSocket(config);
+        if (listener < 0)
+            return false;
+        listeners.Append(listener);
     }
-    if (listener < 0)
-        return false;
-
-    if (listen(listener, 200) < 0) {
-        LogError("Failed to listen on socket: %1", strerror(errno));
-        return false;
-    }
-
-    SetDescriptorNonBlock(listener, true);
-
-    listeners.Append(listener);
-    err_guard.Disable();
 
     if (log_addr) {
         if (config.sock_type == SocketType::Unix) {
@@ -107,22 +135,23 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         }
     }
 
+    err_guard.Disable();
     return true;
 }
 
 bool http_Daemon::Start(std::function<void(http_IO *io)> func)
 {
-    RG_ASSERT(listeners.len == 1);
+    RG_ASSERT(listeners.len);
     RG_ASSERT(!handle_func);
     RG_ASSERT(func);
 
-    async = new Async(1 + 2 * GetCoreCount());
+    async = new Async(1 + listeners.len);
 
     handle_func = func;
 
     // Run request dispatchers
-    for (int i = 1; i < async->GetWorkerCount(); i++) {
-        http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher, listeners[0]);
+    for (int listener: listeners) {
+        http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher, listener);
         this->dispatcher = dispatcher;
 
         async->Run([=] { return dispatcher->Run(); });
