@@ -885,6 +885,28 @@ void *UnwrapPointer(Napi::Value value)
     return obj->GetPointer();
 }
 
+bool GetPointerValue(Napi::Value value, void **out_ptr)
+{
+    void *ptr = nullptr;
+
+    if (CheckValueTag(value, &PointerMarker)) {
+        ptr = UnwrapPointer(value);
+    } else if (IsNullOrUndefined(value)) {
+        ptr = nullptr;
+    } else if (value.IsNumber() || value.IsBigInt()) {
+        uint64_t u = GetNumber<uint64_t>(value);
+        ptr = (void *)u;
+    } else {
+        Napi::Env env = value.Env();
+
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected pointer", GetValueType(value));
+        return false;
+    }
+
+    *out_ptr = ptr;
+    return true;
+}
+
 int GetTypedArrayType(const TypeInfo *type)
 {
     switch (type->primitive) {

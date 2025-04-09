@@ -666,6 +666,9 @@ async function test() {
         UpperToInternalBuffer2('BoNjOuR MoNdE', ptr2);
         check_text(ptr2[0], 'BONJOUR MONDE');
         check_text(ptr1[0], 'BONJOUR MONDE');
+
+        let view = Buffer.from(koffi.view(ptr2[0], 7));
+        assert.equal(view.toString(), 'BONJOUR');
     }
 
     // Use raw buffers for struct output

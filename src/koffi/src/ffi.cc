@@ -664,21 +664,9 @@ Napi::Value InstantiatePointer(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    Napi::Value value = info[0];
     void *ptr = nullptr;
-
-    if (CheckValueTag(value, &PointerMarker)) {
-        ptr = UnwrapPointer(value);
-    } else if (IsNullOrUndefined(value)) {
-        ptr = nullptr;
-    } else if (value.IsNumber() || value.IsBigInt()) {
-        uint64_t u = GetNumber<uint64_t>(value);
-        ptr = (void *)u;
-    } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(value));
+    if (!GetPointerValue(info[0], &ptr))
         return env.Null();
-    }
-
     if (!ptr) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Cannot make null Pointer object");
         return env.Null();
@@ -797,17 +785,9 @@ static Napi::Value CallFree(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    Napi::Value value = info[0];
     void *ptr = nullptr;
-
-    if (CheckValueTag(value, &PointerMarker)) {
-        ptr = UnwrapPointer(value);
-    } else if (IsNullOrUndefined(value)) {
-        ptr = nullptr;
-    } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(value));
+    if (!GetPointerValue(info[0], &ptr))
         return env.Null();
-    }
 
     free(ptr);
 
@@ -2035,20 +2015,9 @@ static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    Napi::Value value = info[0];
     void *ptr = nullptr;
-
-    if (CheckValueTag(value, &PointerMarker)) {
-        ptr = UnwrapPointer(value);
-    } else if (IsNullOrUndefined(value)) {
-        ptr = nullptr;
-    } else if (value.IsNumber() || value.IsBigInt()) {
-        uint64_t u = GetNumber<uint64_t>(value);
-        ptr = (void *)u;
-    } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(value));
+    if (!GetPointerValue(info[0], &ptr))
         return env.Null();
-    }
 
     if (ptr) {
         uint64_t ptr64 = (uint64_t)(uintptr_t)ptr;
@@ -2057,6 +2026,43 @@ static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
         return bigint;
     } else {
         return env.Null();
+    }
+}
+
+static Napi::Value CreateView(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
+        return env.Null();
+    }
+    if (!info[1].IsNumber()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected integer", GetValueType(info[1]));
+        return env.Null();
+    }
+
+    void *ptr = nullptr;
+    if (!GetPointerValue(info[0], &ptr))
+        return env.Null();
+    Size len = (Size)info[1].As<Napi::Number>().Int64Value();
+
+    if (len < 0) {
+        ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
+        return env.Null();
+    }
+
+    if (len) {
+        Napi::ArrayBuffer view = Napi::ArrayBuffer::New(env, ptr, (size_t)len);
+
+        if (!view.ByteLength()) {
+            ThrowError<Napi::Error>(env, "This runtime does not support external buffers");
+            return env.Null();
+        }
+
+        return view;
+    } else {
+        return Napi::ArrayBuffer::New(env, 0);
     }
 }
 
@@ -2318,6 +2324,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("read", Napi::Function::New(env, ReadValue, "read"));
     exports.Set("write", Napi::Function::New(env, WriteValue, "write"));
     exports.Set("address", Napi::Function::New(env, GetPointerAddress, "address"));
+    exports.Set("view", Napi::Function::New(env, CreateView, "view"));
 
     exports.Set("reset", Napi::Function::New(env, ResetKoffi, "reset"));
 

@@ -189,6 +189,15 @@ let hdr = {};
 console.log('PNG header:', hdr);
 ```
 
+# External buffers (views)
+
+*New in Koffi 2.11.0*
+
+You can access unmanaged memory with `koffi.view(ptr, len)`. This function takes a pointer and a length, and creates an ArrayBuffer through which you can access the underlying memory without copy.
+
+> [!NOTE]
+> Some runtimes (such as Electron) forbid the use of external buffers. In this case, trying to create a view will trigger an exception.
+
 # Unwrap pointers
 
 You can use `koffi.address(ptr)` on a pointer to get the numeric value as a [BigInt object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt).

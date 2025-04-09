@@ -156,6 +156,7 @@ bool CheckValueTag(Napi::Value value, const napi_type_tag *tag);
 bool CheckPointerType(const InstanceData *instance, Napi::Value value, const TypeInfo *expect);
 Napi::Value WrapPointer(Napi::Env env, const InstanceData *instance, const TypeInfo *type, void *ptr);
 void *UnwrapPointer(Napi::Value value);
+bool GetPointerValue(Napi::Value value, void **out_ptr);
 
 static inline bool IsNullOrUndefined(Napi::Value value)
 {
