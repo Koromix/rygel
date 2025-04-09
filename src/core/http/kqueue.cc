@@ -607,6 +607,9 @@ bool http_Dispatcher::Run()
                     continue;
                 }
 
+                // Try to read without waiting for more performance
+                socket->process = true;
+
                 sockets.Append(socket);
             }
         }
