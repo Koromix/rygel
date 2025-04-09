@@ -352,9 +352,6 @@ bool http_Dispatcher::Run()
 
             SetDescriptorNonBlock(socket->sock, true);
 
-            // Try to read without waiting for more performance
-            socket->process = true;
-
             sockets.Append(socket);
         }
         for (Size i = 2; i < pfds.len; i++) {
@@ -395,6 +392,9 @@ bool http_Dispatcher::Run()
                     closesocket(sock);
                     continue;
                 }
+
+                // Try to read without waiting for more performance
+                socket->process = true;
 
                 sockets.Append(socket);
             }
