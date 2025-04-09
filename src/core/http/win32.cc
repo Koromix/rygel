@@ -70,11 +70,44 @@ public:
     void Wake(http_Socket *socket);
 
 private:
-    http_Socket *InitSocket(int sock, int64_t start, struct sockaddr *sa);
+    http_Socket *InitSocket(SOCKET sock, int64_t start, struct sockaddr *sa);
     void ParkSocket(http_Socket *socket);
 
     friend class http_Daemon;
 };
+
+
+
+static int CreateListenSocket(const http_Config &config)
+{
+    int sock = CreateSocket(config.sock_type, SOCK_STREAM);
+    if (sock < 0)
+        return -1;
+    RG_DEFER_N(err_guard) { close(sock); };
+
+    switch (config.sock_type) {
+        case SocketType::Dual:
+        case SocketType::IPv4:
+        case SocketType::IPv6: {
+            if (!BindIPSocket(sock, config.sock_type, config.port))
+                return -1;
+        } break;
+        case SocketType::Unix: {
+            if (!BindUnixSocket(sock, config.unix_path))
+                return -1;
+        } break;
+    }
+
+    if (listen(sock, 200) < 0) {
+        LogError("Failed to listen on socket: %1", strerror(errno));
+        return -1;
+    }
+
+    SetDescriptorNonBlock(sock, true);
+
+    err_guard.Disable();
+    return sock;
+}
 
 bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 {
@@ -83,26 +116,24 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     if (!InitConfig(config))
         return false;
 
-    int listener = -1;
-    RG_DEFER_N(err_guard) { CloseSocket(listener); };
-
-    switch (config.sock_type) {
-        case SocketType::Dual:
-        case SocketType::IPv4:
-        case SocketType::IPv6: { listener = OpenIPSocket(config.sock_type, config.port, SOCK_STREAM); } break;
-        case SocketType::Unix: { listener = OpenUnixSocket(config.unix_path, SOCK_STREAM); } break;
-    }
-    if (listener < 0)
+    if (!InitWinsock())
         return false;
 
-    if (listen(listener, 200) < 0) {
-        LogError("Failed to listen on socket: %1", GetWin32ErrorString());
-        return false;
+    RG_DEFER_N(err_guard) {
+        for (int listener: listeners) {
+            close(listener);
+        }
+        listeners.Clear();
+    };
+
+    Size workers = 2 * GetCoreCount();
+
+    for (Size i = 0; i < workers; i++) {
+        int listener = CreateListenSocket(config);
+        if (listener < 0)
+            return false;
+        listeners.Append(listener);
     }
-
-    SetDescriptorNonBlock(listener, true);
-
-    listeners.Append(listener);
     err_guard.Disable();
 
     if (log_addr) {
@@ -114,22 +145,23 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         }
     }
 
+    err_guard.Disable();
     return true;
 }
 
 bool http_Daemon::Start(std::function<void(http_IO *io)> func)
 {
-    RG_ASSERT(listeners.len == 1);
+    RG_ASSERT(listeners.len);
     RG_ASSERT(!handle_func);
     RG_ASSERT(func);
 
-    async = new Async(1 + 2 * GetCoreCount());
+    async = new Async(1 + listeners.len);
 
     handle_func = func;
 
     // Run request dispatchers
-    for (int i = 1; i < async->GetWorkerCount(); i++) {
-        http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher, listeners[0]);
+    for (int listener: listeners) {
+        http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher, listener);
         this->dispatcher = dispatcher;
 
         async->Run([=] { return dispatcher->Run(); });
@@ -143,6 +175,12 @@ void http_Daemon::Stop()
     // Shut everything down
     for (int listener: listeners) {
         shutdown(listener, SD_BOTH);
+    }
+
+    // On Windows, the shutdown() does not wake up poll() so use the pipe to wake it up
+    // and signal the ongoing shutdown.
+    for (http_Dispatcher *it = dispatcher; it; it = it->next) {
+        it->Wake(nullptr);
     }
 
     if (async) {
@@ -283,8 +321,7 @@ static bool CreateSocketPair(int out_pair[2])
     // Set reuse flag
     {
         int reuse = 1;
-        if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, RG_SIZE(reuse)) < 0)
-            goto error;
+        setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, RG_SIZE(reuse));
     }
 
     if (bind(listener, (struct sockaddr *)&addr, RG_SIZE(addr)) < 0)
@@ -359,8 +396,8 @@ bool http_Dispatcher::Run()
     int next_worker = 0;
 
     // React to connections
-    pfds.Append({ listener, POLLIN, 0 });
-    pfds.Append({ pair_fd[0], POLLIN, 0 });
+    pfds.Append({ (SOCKET)listener, POLLIN, 0 });
+    pfds.Append({ (SOCKET)pair_fd[0], POLLIN, 0 });
 
     for (;;) {
         int64_t now = GetMonotonicTime();
@@ -383,10 +420,11 @@ bool http_Dispatcher::Run()
 
             http_Socket *socket = (http_Socket *)addr;
 
-            if (socket) [[likely]] {
-                SetDescriptorNonBlock(socket->sock, true);
-                sockets.Append(socket);
-            }
+            if (!socket) [[unlikely]]
+                return true;
+
+            SetDescriptorNonBlock(socket->sock, true);
+            sockets.Append(socket);
         }
         for (Size i = 2; i < pfds.len; i++) {
             struct pollfd &pfd = pfds[i];
@@ -403,10 +441,10 @@ bool http_Dispatcher::Run()
             socklen_t ss_len = RG_SIZE(ss);
 
             // Accept queued clients
-            for (int i = 0; i < 8; i++) {
-                int sock = accept(listener, (sockaddr *)&ss, &ss_len);
+            for (int i = 0; i < 1; i++) {
+                SOCKET sock = accept(listener, (sockaddr *)&ss, &ss_len);
 
-                if (sock < 0) {
+                if (sock == INVALID_SOCKET) {
                     int error = GetLastError();
 
                     if (error == WSAEWOULDBLOCK)
@@ -418,7 +456,7 @@ bool http_Dispatcher::Run()
                     return false;
                 }
 
-                SetDescriptorNonBlock(sock, true);
+                SetDescriptorNonBlock((int)sock, true);
 
                 http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
 
@@ -517,7 +555,7 @@ bool http_Dispatcher::Run()
 
         // Prepare poll descriptors
         for (const http_Socket *socket: sockets) {
-            struct pollfd pfd = { socket->sock, POLLIN, 0 };
+            struct pollfd pfd = { (SOCKET)socket->sock, POLLIN, 0 };
             pfds.Append(pfd);
         }
 
@@ -541,7 +579,7 @@ void http_Dispatcher::Wake(http_Socket *socket)
     (void)ret;
 }
 
-http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockaddr *sa)
+http_Socket *http_Dispatcher::InitSocket(SOCKET sock, int64_t start, struct sockaddr *sa)
 {
     http_Socket *socket = nullptr;
 
@@ -556,7 +594,7 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
         socket = new http_Socket(daemon);
     }
 
-    socket->sock = sock;
+    socket->sock = (int)sock;
 
     RG_DEFER_N(err_guard) { delete socket; };
 

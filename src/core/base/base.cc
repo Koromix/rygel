@@ -6443,8 +6443,36 @@ int64_t GetRandomInt64(int64_t min, int64_t max)
 
 #if defined(_WIN32)
 
+bool InitWinsock()
+{
+    static bool ready = false;
+    static std::once_flag flag;
+
+    std::call_once(flag, []() {
+        WORD version = MAKEWORD(2, 2);
+        WSADATA wsa = {};
+
+        int ret = WSAStartup(version, &wsa);
+
+        if (ret) {
+            LogError("Failed to initialize Winsock: %1", GetWin32ErrorString(ret));
+            return;
+        }
+
+        RG_ASSERT(LOBYTE(wsa.wVersion) == 2 && HIBYTE(wsa.wVersion) == 2);
+        atexit([]() { WSACleanup(); });
+
+        ready = true;
+    });
+
+    return ready;
+}
+
 int CreateSocket(SocketType type, int flags)
 {
+    if (!InitWinsock())
+        return -1;
+
     int family = 0;
 
     switch (type) {
@@ -6464,8 +6492,8 @@ int CreateSocket(SocketType type, int flags)
     }
     RG_DEFER_N(err_guard) { closesocket(sock); };
 
-    int exclusive = 1;
-    setsockopt(sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char *)&exclusive, sizeof(exclusive));
+    int reuse = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse));
 
     if (type == SocketType::Dual || type == SocketType::IPv6) {
         int v6only = (type == SocketType::IPv6);

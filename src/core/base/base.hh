@@ -4734,6 +4734,10 @@ static const char *const SocketTypeNames[] = {
     #define SOCK_OVERLAPPED 256
 #endif
 
+#if defined(_WIN32)
+bool InitWinsock();
+#endif
+
 int CreateSocket(SocketType type, int flags);
 
 bool BindIPSocket(int sock, SocketType type, int port);
