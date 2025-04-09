@@ -23,7 +23,6 @@
 
 #include "src/core/base/base.hh"
 #include "server.hh"
-#include "posix_priv.hh"
 
 #include <fcntl.h>
 #include <limits.h>
@@ -39,6 +38,16 @@
 #include <sys/sendfile.h>
 
 namespace RG {
+
+struct http_Socket {
+    int sock = -1;
+    bool process = false;
+
+    http_IO client;
+
+    http_Socket(http_Daemon *daemon) : client(daemon) {}
+    ~http_Socket() { CloseDescriptor(sock); }
+};
 
 static const int WorkersPerDispatcher = 4;
 
@@ -188,6 +197,126 @@ void http_Daemon::Stop()
     handle_func = {};
 }
 
+void http_Daemon::StartRead(http_Socket *)
+{
+    // Nothing to do
+}
+
+void http_Daemon::StartWrite(http_Socket *)
+{
+    // Nothing to do
+}
+
+void http_Daemon::EndWrite(http_Socket *socket)
+{
+    SetDescriptorRetain(socket->sock, false);
+}
+
+Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
+{
+restart:
+    Size bytes = recv(socket->sock, buf.ptr, (size_t)buf.len, 0);
+
+    if (bytes < 0) {
+        if (errno == EINTR)
+            goto restart;
+
+        if (errno != EINVAL && errno != EPIPE && errno != ECONNRESET) {
+            LogError("Failed to read from client: %1", strerror(errno));
+        }
+
+        socket->client.request.keepalive = false;
+        return -1;
+    }
+
+    socket->client.timeout_at = GetMonotonicTime() + idle_timeout;
+
+    return bytes;
+}
+
+bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
+{
+    int flags = MSG_NOSIGNAL | MSG_MORE;
+
+    while (buf.len) {
+        Size len = std::min(buf.len, Mebibytes(2));
+        Size bytes = send(socket->sock, buf.ptr, len, flags);
+
+        if (bytes < 0) {
+            if (errno == EINTR)
+                continue;
+
+            if (errno != EINVAL && errno != EPIPE && errno != ECONNRESET) {
+                LogError("Failed to send to client: %1", strerror(errno));
+            }
+
+            socket->client.request.keepalive = false;
+            return false;
+        }
+
+        socket->client.timeout_at = GetMonotonicTime() + send_timeout;
+
+        buf.ptr += bytes;
+        buf.len -= bytes;
+    }
+
+    return true;
+}
+
+bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> parts)
+{
+    static_assert(RG_SIZE(Span<const uint8_t>) == RG_SIZE(struct iovec));
+    static_assert(alignof(Span<const uint8_t>) == alignof(struct iovec));
+    static_assert(offsetof(Span<const uint8_t>, ptr) == offsetof(struct iovec, iov_base));
+    static_assert(offsetof(Span<const uint8_t>, len) == offsetof(struct iovec, iov_len));
+
+    struct msghdr msg = {
+        .msg_name = nullptr,
+        .msg_namelen = 0,
+        .msg_iov = (struct iovec *)parts.ptr,
+        .msg_iovlen = (decltype(msghdr::msg_iovlen))parts.len,
+        .msg_control = nullptr,
+        .msg_controllen = 0,
+        .msg_flags = 0
+    };
+    int flags = MSG_NOSIGNAL | MSG_MORE;
+
+    while (msg.msg_iovlen) {
+        Size sent = sendmsg(socket->sock, &msg, flags);
+
+        if (sent < 0) {
+            if (errno == EINTR)
+                continue;
+
+            if (errno != EINVAL && errno != EPIPE && errno != ECONNRESET) {
+                LogError("Failed to send to client: %1", strerror(errno));
+            }
+
+            socket->client.request.keepalive = false;
+            return false;
+        }
+
+        socket->client.timeout_at = GetMonotonicTime() + send_timeout;
+
+        do {
+            struct iovec *part = msg.msg_iov;
+
+            if (part->iov_len > (size_t)sent) {
+                part->iov_base = (uint8_t *)part->iov_base + sent;
+                part->iov_len -= (size_t)sent;
+
+                break;
+            }
+
+            msg.msg_iov++;
+            msg.msg_iovlen--;
+            sent -= (Size)part->iov_len;
+        } while (msg.msg_iovlen);
+    }
+
+    return true;
+}
+
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
     RG_ASSERT(socket);
@@ -319,6 +448,8 @@ bool http_Dispatcher::Run()
                 int sock = accept4(listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
 
                 if (sock < 0) {
+                    static_assert(EAGAIN == EWOULDBLOCK);
+
                     if (errno == EAGAIN)
                         break;
                     if (errno == EINVAL)
