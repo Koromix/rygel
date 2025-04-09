@@ -76,14 +76,12 @@ private:
     friend class http_Daemon;
 };
 
-
-
 static int CreateListenSocket(const http_Config &config)
 {
     int sock = CreateSocket(config.sock_type, SOCK_STREAM);
     if (sock < 0)
         return -1;
-    RG_DEFER_N(err_guard) { close(sock); };
+    RG_DEFER_N(err_guard) { CloseSocket(sock); };
 
     switch (config.sock_type) {
         case SocketType::Dual:
@@ -121,7 +119,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 
     RG_DEFER_N(err_guard) {
         for (int listener: listeners) {
-            close(listener);
+            CloseSocket(listener);
         }
         listeners.Clear();
     };
