@@ -245,6 +245,9 @@ static bool CreateSocketPair(int out_pair[2])
     listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (listener == INVALID_SOCKET)
         goto error;
+    client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (client == INVALID_SOCKET)
+        goto error;
 
     // Set reuse flag
     {
@@ -257,10 +260,6 @@ static bool CreateSocketPair(int out_pair[2])
     if (getsockname(listener, (struct sockaddr *)&addr, &addr_len) < 0)
         goto error;
     if (listen(listener, 1) < 0)
-        goto error;
-
-    client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (client == INVALID_SOCKET)
         goto error;
     if (connect(client, (struct sockaddr *)&addr, RG_SIZE(addr)) < 0)
         goto error;
