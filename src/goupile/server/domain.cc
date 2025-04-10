@@ -316,6 +316,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
         config.snapshot_directory = NormalizePath("snapshots", root_directory, &config.str_alloc).ptr;
     }
     config.view_directory = NormalizePath("views", root_directory, &config.str_alloc).ptr;
+    config.export_directory = NormalizePath("exports", root_directory, &config.str_alloc).ptr;
 
     if (!config.Validate())
         return false;
@@ -349,6 +350,8 @@ bool DomainHolder::Open(const char *filename)
     if (!MakeDirectory(config.snapshot_directory, false))
         return false;
     if (!MakeDirectory(config.view_directory, false))
+        return false;
+    if (!MakeDirectory(config.export_directory, false))
         return false;
 
     // Open and configure main database

@@ -30,9 +30,6 @@ struct RecordFilter {
     bool allow_deleted = false;
     bool use_claims = false;
 
-    int64_t start_t = -1;
-    int64_t end_t = -1;
-
     bool read_data = false;
 };
 
@@ -87,7 +84,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                        R"(SELECT t.sequence AS t, t.tid, t.counters, t.secrets, t.locked,
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime,
                                  e.store, e.summary, e.tags AS tags,
-                                 IIF(?6 = 1, e.data, NULL) AS data
+                                 IIF(?4 = 1, e.data, NULL) AS data
                           FROM rec_threads t
                           INNER JOIN rec_entries e ON (e.tid = t.tid)
                           WHERE 1=1)").len;
@@ -101,15 +98,10 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
         if (filter.use_claims) {
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM ins_claims WHERE userid = ?2)").len;
         }
-        if (filter.start_t >= 0) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND t.sequence >= ?4").len;
-        }
-        if (filter.end_t >= 0) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND t.sequence < ?5").len;
-        }
 
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.sequence, e.store").len;
     } else {
+        RG_ASSERT(!filter.single_tid);
         RG_ASSERT(!filter.use_claims);
 
         sql.len += Fmt(sql.TakeAvailable(),
@@ -120,7 +112,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                                         anchor <= ?3 AND previous IS NULL
                               UNION ALL
                               SELECT rec.idx + 1, f.eid, f.anchor, f.mtime, f.summary, f.tags,
-                                  IIF(?6 = 1, json_patch(rec.data, f.data), NULL) AS data
+                                  IIF(?4 = 1, json_patch(rec.data, f.data), NULL) AS data
                                   FROM rec_fragments f, rec
                                   WHERE f.anchor <= ?3 AND f.previous = rec.anchor
                               ORDER BY anchor
@@ -137,12 +129,6 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
         if (!filter.allow_deleted) {
             sql.len += Fmt(sql.TakeAvailable(), " AND rec.data IS NOT NULL").len;
         }
-        if (filter.start_t >= 0) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND t.sequence >= ?4").len;
-        }
-        if (filter.end_t >= 0) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND t.sequence < ?5").len;
-        }
 
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.sequence, e.store, rec.idx DESC").len;
     }
@@ -153,9 +139,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
     sqlite3_bind_text(stmt, 1, filter.single_tid, -1, SQLITE_STATIC);
     sqlite3_bind_int64(stmt, 2, -userid);
     sqlite3_bind_int64(stmt, 3, filter.audit_anchor);
-    sqlite3_bind_int64(stmt, 4, filter.start_t);
-    sqlite3_bind_int64(stmt, 5, filter.end_t);
-    sqlite3_bind_int(stmt, 6, 0 + filter.read_data);
+    sqlite3_bind_int(stmt, 4, 0 + filter.read_data);
 
     read_data = filter.read_data;
 
@@ -573,88 +557,71 @@ void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
     json.Finish();
 }
 
-void HandleExportRaw(http_IO *io, InstanceHolder *instance)
+static bool CheckExportPermission(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
+    const char *export_key = !instance->slaves.len ? request.GetHeaderValue("X-Export-Key") : nullptr;
 
+    if (export_key) {
+        const InstanceHolder *master = instance->master;
+
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
+                                     WHERE instance = ?1 AND export_key = ?2)", &stmt))
+            return false;
+        sqlite3_bind_text(stmt, 1, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, export_key, -1, SQLITE_STATIC);
+
+        uint32_t permissions = stmt.Step() ? (uint32_t)sqlite3_column_int(stmt, 0) : 0;
+
+        if (!stmt.IsValid())
+            return false;
+        if (!(permissions & (int)UserPermission::DataExport)) {
+            LogError("Export key is not valid");
+            io->SendError(403);
+            return false;
+        }
+    } else {
+       RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+
+       if (!session) {
+            LogError("User is not logged in");
+            io->SendError(401);
+            return false;
+        } else if (!session->HasPermission(instance, UserPermission::DataExport)) {
+            LogError("User is not allowed to export data");
+            io->SendError(403);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void HandleExportCreate(http_IO *io, InstanceHolder *instance)
+{
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
     }
 
-    // Check permissions
-    {
-        const char *export_key = !instance->slaves.len ? request.GetHeaderValue("X-Export-Key") : nullptr;
+    if (!CheckExportPermission(io, instance))
+        return;
 
-        if (export_key) {
-            const InstanceHolder *master = instance->master;
-
-            sq_Statement stmt;
-            if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
-                                         WHERE instance = ?1 AND export_key = ?2)", &stmt))
-                return;
-            sqlite3_bind_text(stmt, 1, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
-            sqlite3_bind_text(stmt, 2, export_key, -1, SQLITE_STATIC);
-
-            uint32_t permissions = stmt.Step() ? (uint32_t)sqlite3_column_int(stmt, 0) : 0;
-
-            if (!stmt.IsValid())
-                return;
-            if (!(permissions & (int)UserPermission::DataExport)) {
-                LogError("Export key is not valid");
-                io->SendError(403);
-                return;
-            }
-        } else {
-           RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
-
-           if (!session) {
-                LogError("User is not logged in");
-                io->SendError(401);
-                return;
-            } else if (!session->HasPermission(instance, UserPermission::DataExport)) {
-                LogError("User is not allowed to export data");
-                io->SendError(403);
-                return;
-            }
-        }
-    }
-
-    int64_t from = 0;
-    int64_t to = -1;
-    {
-        if (const char *str = request.GetQueryValue("from"); str) {
-            if (!ParseInt(str, &from)) {
-                io->SendError(422);
-                return;
-            }
-            if (from < 0) {
-                LogError("From must be 0 or a positive number");
-                io->SendError(422);
-                return;
-            }
-        }
-
-        if (const char *str = request.GetQueryValue("to"); str) {
-            if (!ParseInt(str, &to)) {
-                io->SendError(422);
-                return;
-            }
-            if (to <= from) {
-                LogError("To must be greater than from");
-                io->SendError(422);
-                return;
-            }
-        }
-    }
+    int fd = -1;
+    const char *tmp_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
+    if (!tmp_filename)
+        return;
+    RG_DEFER {
+        CloseDescriptor(fd);
+        UnlinkFile(tmp_filename);
+    };
 
     RecordWalker walker;
     {
         RecordFilter filter = {};
 
-        filter.start_t = from;
-        filter.end_t = to;
         filter.read_data = true;
 
         if (!walker.Prepare(instance, 0, filter))
@@ -663,14 +630,14 @@ void HandleExportRaw(http_IO *io, InstanceHolder *instance)
 
     const RecordInfo *cursor = walker.GetCursor();
 
-    // Export data
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    StreamWriter st(fd, tmp_filename, 0, CompressionType::Gzip);
+    json_Writer json(&st);
 
-    json.StartObject();
+    int64_t now = GetUnixTime();
+    int64_t max_sequence = -1;
+    int64_t max_anchor = -1;
 
-    json.Key("threads"); json.StartArray();
+    json.StartArray();
     for (int i = 0; walker.Next() && i < 100; i++) {
         json.StartObject();
 
@@ -693,6 +660,9 @@ void HandleExportRaw(http_IO *io, InstanceHolder *instance)
             json.Key("data"); JsonRawOrNull(cursor->data, &json);
 
             json.EndObject();
+
+            max_sequence = std::max(max_sequence, cursor->t);
+            max_anchor = std::max(max_anchor, cursor->anchor);
         } while (walker.NextInThread());
         json.EndObject();
 
@@ -702,15 +672,93 @@ void HandleExportRaw(http_IO *io, InstanceHolder *instance)
         return;
     json.EndArray();
 
-    if (cursor->t > 0) {
-        json.Key("next"); json.Int64(cursor->t + 1);
-    } else {
-        json.Key("next"); json.Null();
+    if (!st.Close())
+        return;
+
+    // We need the export ID to make it, see inside transaction
+    int64_t export_id = 0;
+    const char *filename = nullptr;
+
+    bool success = instance->db->Transaction([&]() {
+        // Create export metadata
+        {
+            sq_Statement stmt;
+            if (!instance->db->Prepare(R"(INSERT INTO rec_exports (ctime, sequence, anchor)
+                                          VALUES (?1, ?2, ?3)
+                                          RETURNING export)",
+                                       &stmt, now, max_sequence, max_anchor))
+                return false;
+            if (!stmt.GetSingleValue(&export_id))
+                return false;
+        }
+
+        TimeSpec spec = DecomposeTimeUTC(now);
+        filename = Fmt(io->Allocator(), "%1%/%2_%3_%4.json.gz", gp_domain.config.export_directory, instance->key, export_id, FmtTimeISO(spec)).ptr;
+
+        if (!RenameFile(tmp_filename, filename, 0))
+            return false;
+
+        return true;
+    });
+    if (!success)
+        return;
+
+    const char *response = Fmt(io->Allocator(), "{ \"export\": %1 }", export_id).ptr;
+    io->SendText(200, response, "application/json");
+}
+
+void HandleExportDownload(http_IO *io, InstanceHolder *instance)
+{
+    const http_RequestInfo &request = io->Request();
+
+    if (!instance->config.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
     }
 
-    json.EndObject();
+    if (!CheckExportPermission(io, instance))
+        return;
 
-    json.Finish();
+    int64_t export_id;
+    if (const char *str = request.GetQueryValue("export"); str) {
+        if (!ParseInt(str, &export_id)) {
+            io->SendError(422);
+            return;
+        }
+        if (export_id <= 0) {
+            LogError("Export ID must be a positive number");
+            io->SendError(422);
+            return;
+        }
+    } else {
+        LogError("Missing 'export' parameter");
+        io->SendError(422);
+        return;
+    }
+
+    int64_t ctime;
+    {
+        sq_Statement stmt;
+        if (!instance->db->Prepare("SELECT ctime FROM rec_exports WHERE export = ?1", &stmt, export_id))
+            return;
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Unknown export %1", export_id);
+                io->SendError(404);
+            }
+            return;
+        }
+
+        ctime = sqlite3_column_int64(stmt, 0);
+    }
+
+    TimeSpec spec = DecomposeTimeUTC(ctime);
+    const char *filename = Fmt(io->Allocator(), "%1%/%2_%3_%4.json.gz", gp_domain.config.export_directory, instance->key, export_id, FmtTimeISO(spec)).ptr;
+
+    io->AddHeader("Content-Encoding", "gzip");
+    io->SendFile(200, filename);
 }
 
 }

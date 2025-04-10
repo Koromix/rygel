@@ -26,8 +26,8 @@ async function exportRecords(stores, filter = null) {
 
     let XLSX = await import(`${ENV.urls.static}sheetjs/XLSX.bundle.js`);
 
-    // Assemble information about tables and columns
-    let [threads, tables, counters] = await walkThreads();
+    let export_id = await createExport();
+    let [threads, tables, counters] = await walkThreads(export_id);
 
     // Metadata worksheets
     let meta = {
@@ -135,79 +135,73 @@ async function exportRecords(stores, filter = null) {
     XLSX.writeFile(wb, filename);
 }
 
-async function walkThreads() {
-    let threads = [];
+async function createExport() {
+    let json = await Net.post(`${ENV.urls.instance}api/export/create`);
+    return json.export;
+}
+
+async function walkThreads(export_id) {
+    let url = Util.pasteURL(`${ENV.urls.instance}api/export/download`, { export: export_id });
+    let threads = await Net.get(url);
+
     let tables = {};
     let counters = new Set;
 
-    // Go through threads
-    {
-        let from = 0;
+    // Reconstitute logical order
+    for (let thread of threads) {
+        for (let key in thread.counters)
+            counters.add(key);
+        for (let key in thread.secrets)
+            counters.add(key);
 
-        do {
-            let url = Util.pasteURL(`${ENV.urls.instance}api/export/raw`, { from: from });
-            let json = await Net.get(url);
+        for (let store in thread.entries) {
+            let entry = thread.entries[store];
+            let table = tables[store];
 
-            for (let thread of json.threads) {
-                for (let key in thread.counters)
-                    counters.add(key);
-                for (let key in thread.secrets)
-                    counters.add(key);
+            if (table == null) {
+                table = {
+                    variables: new Map,
 
-                for (let store in thread.entries) {
-                    let entry = thread.entries[store];
-                    let table = tables[store];
+                    prev: null,
+                    next: null,
+                };
+                table.previous = table;
+                table.next = table;
 
-                    if (table == null) {
-                        table = {
-                            variables: new Map,
-
-                            prev: null,
-                            next: null,
-                        };
-                        table.previous = table;
-                        table.next = table;
-
-                        tables[store] = table;
-                    }
-
-                    let [raw, obj] = Data.wrap(entry.data);
-                    let keys = Object.keys(obj);
-
-                    // Skip undocumented keys
-                    keys = keys.filter(key => {
-                        let notes = Data.annotate(obj, key);
-                        return notes.variable != null;
-                    });
-
-                    for (let i = 0; i < keys.length; i++) {
-                        let key = keys[i];
-                        let notes = Data.annotate(obj, key);
-
-                        if (!table.variables.has(key)) {
-                            let previous = table.variables.get(keys[i - 1]) ?? table;
-
-                            let head = {
-                                variable: { key: key, ...notes.variable },
-                                prev: previous,
-                                next: previous.next
-                            };
-
-                            previous.next.prev = head;
-                            previous.next = head;
-
-                            table.variables.set(key, head);
-                        }
-                    }
-
-                    entry.data = Data.unwrap(obj);
-                }
-
-                threads.push(thread);
+                tables[store] = table;
             }
 
-            from = json.next;
-        } while (from != null);
+            let [raw, obj] = Data.wrap(entry.data);
+            let keys = Object.keys(obj);
+
+            // Skip undocumented keys
+            keys = keys.filter(key => {
+                let notes = Data.annotate(obj, key);
+                return notes.variable != null;
+            });
+
+            for (let i = 0; i < keys.length; i++) {
+                let key = keys[i];
+                let notes = Data.annotate(obj, key);
+
+                if (!table.variables.has(key)) {
+                    let previous = table.variables.get(keys[i - 1]) ?? table;
+
+                    let head = {
+                        variable: { key: key, ...notes.variable },
+                        prev: previous,
+                        next: previous.next
+                    };
+
+                    previous.next.prev = head;
+                    previous.next = head;
+
+                    table.variables.set(key, head);
+                }
+            }
+
+            entry.data = Data.unwrap(obj);
+        }
     }
 
     // Expand linked list to proper arrays

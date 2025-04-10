@@ -584,8 +584,8 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     if (!success)
         return;
 
-    const char *json = Fmt(io->Allocator(), "{ \"anchor\": %1 }", new_anchor).ptr;
-    io->SendText(200, json, "application/json");
+    const char *response = Fmt(io->Allocator(), "{ \"anchor\": %1 }", new_anchor).ptr;
+    io->SendText(200, response, "application/json");
 }
 
 void HandleRecordDelete(http_IO *io, InstanceHolder *instance)

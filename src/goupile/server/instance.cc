@@ -25,7 +25,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 126;
+const int InstanceVersion = 127;
 const int LegacyVersion = 60;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
@@ -2767,9 +2767,22 @@ bool MigrateInstance(sq_Database *db, int target)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 126: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE rec_exports (
+                        export INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ctime INTEGER NOT NULL,
+                        sequence INTEGER NOT NULL,
+                        anchor INTEGER NOT NULL
+                    );
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 126);
+            static_assert(InstanceVersion == 127);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

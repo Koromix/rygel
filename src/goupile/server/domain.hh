@@ -48,6 +48,7 @@ struct DomainConfig {
     const char *archive_directory = nullptr;
     const char *snapshot_directory = nullptr;
     const char *view_directory = nullptr;
+    const char *export_directory = nullptr;
 
     const char *title = nullptr;
     bool demo_mode = false;

@@ -666,6 +666,8 @@ retry_pwd:
             return 1;
         if (!make_directory(domain.config.view_directory))
             return 1;
+        if (!make_directory(domain.config.export_directory))
+            return 1;
     }
 
     // Create database
