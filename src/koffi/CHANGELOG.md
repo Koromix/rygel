@@ -44,6 +44,15 @@ Consult the [migration guide](migration) for more information.
 
 ## Koffi 2
 
+### Koffi 2.11
+
+#### Koffi 2.11.0
+
+*Released on 2025-04-09*
+
+- Add `koffi.view()` to [access memory without copy](pointers#external-buffers-views)
+- Various documentation fixes and improvements
+
 ### Koffi 2.10
 
 #### Koffi 2.10.1
