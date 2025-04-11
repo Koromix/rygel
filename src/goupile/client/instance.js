@@ -720,6 +720,8 @@ async function runExportDialog(e) {
 
     let stores = app.stores.map(store => store.key);
 
+    let disabled = false;
+
     await UI.dialog(e, 'Exports de données', {}, (d, resolve, reject) => {
         d.output(html`
             <table class="ui_table">
@@ -757,9 +759,14 @@ async function runExportDialog(e) {
             </table>
         `);
 
-        d.action('Faire un nouvel export', {}, async () => {
+        if (disabled)
+            setTimeout(() => { disabled = false; d.refresh(); }, 5000);
+
+        d.action('Faire un nouvel export', { disabled: disabled }, async () => {
             await createExport();
+
             downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
+            disabled = true;
 
             d.refresh();
         });
