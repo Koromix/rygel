@@ -142,7 +142,8 @@ async function createExport() {
 
 async function walkThreads(export_id) {
     let url = Util.pasteURL(`${ENV.urls.instance}api/export/download`, { export: export_id });
-    let threads = await Net.get(url);
+    let json = await Net.get(url);
+    let threads = json.threads;
 
     let tables = {};
     let counters = new Set;

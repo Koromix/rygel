@@ -637,7 +637,11 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
     int64_t max_sequence = -1;
     int64_t max_anchor = -1;
 
-    json.StartArray();
+    json.StartObject();
+
+    json.Key("format"); json.Int(1);
+
+    json.Key("threads"); json.StartArray();
     for (int i = 0; walker.Next() && i < 100; i++) {
         json.StartObject();
 
@@ -671,6 +675,8 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
     if (!walker.IsValid())
         return;
     json.EndArray();
+
+    json.EndObject();
 
     if (!st.Close())
         return;
