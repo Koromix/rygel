@@ -716,6 +716,8 @@ function runDeleteRecordDialog(e, row) {
 
 async function runExportDialog(e) {
     let downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
+    let old = downloads.length ? downloads[downloads.length - 1].export : 0;
+
     let stores = app.stores.map(store => store.key);
 
     await UI.dialog(e, 'Exports de données', {}, (d, resolve, reject) => {
@@ -737,14 +739,19 @@ async function runExportDialog(e) {
                 </thead>
 
                 <tbody>
-                    ${downloads.map(download => html`
-                        <tr>
-                            <td>${(new Date(download.ctime)).toLocaleString()}</td>
-                            <td>${download.username}</td>
-                            <td>${download.threads}</td>
-                            <td><a @click=${UI.wrap(e => exportRecords(download.export, stores))}>Télécharger</a></td>
-                        </tr>
-                    `)}
+                    ${Util.mapRange(0, downloads.length, idx => {
+                        let download = downloads[downloads.length - idx - 1];
+                        let active = !idx && download.export > old;
+
+                        return html`
+                            <tr class=${active ? 'active' : ''}>
+                                <td>${(new Date(download.ctime)).toLocaleString()}</td>
+                                <td>${download.username}</td>
+                                <td>${download.threads}</td>
+                                <td><a @click=${UI.wrap(e => exportRecords(download.export, stores))}>Télécharger</a></td>
+                            </tr>
+                        `;
+                    })}
                     ${!downloads.length ? html`<tr><td colspan="4">Aucun export réalisé</td></tr>` : ''}
                 </tbody>
             </table>
