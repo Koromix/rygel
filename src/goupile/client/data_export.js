@@ -20,13 +20,17 @@ import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
 
-async function exportRecords(stores, filter = null) {
+async function createExport() {
+    let json = await Net.post(`${ENV.urls.instance}api/export/create`);
+    return json.export;
+}
+
+async function exportRecords(export_id, stores, filter = null) {
     if (filter == null)
         filter = () => true;
 
     let XLSX = await import(`${ENV.urls.static}sheetjs/XLSX.bundle.js`);
 
-    let export_id = await createExport();
     let [threads, tables, counters] = await walkThreads(export_id);
 
     // Metadata worksheets
@@ -135,15 +139,10 @@ async function exportRecords(stores, filter = null) {
     XLSX.writeFile(wb, filename);
 }
 
-async function createExport() {
-    let json = await Net.post(`${ENV.urls.instance}api/export/create`);
-    return json.export;
-}
-
 async function walkThreads(export_id) {
     let url = Util.pasteURL(`${ENV.urls.instance}api/export/download`, { export: export_id });
     let json = await Net.get(url);
-    let threads = json.threads;
+    let threads = Array.isArray(json) ? json : json.threads;
 
     let tables = {};
     let counters = new Set;
@@ -261,6 +260,6 @@ function expandColumns(variables) {
 }
 
 export {
-    // runExportDialog,
+    createExport,
     exportRecords
 }

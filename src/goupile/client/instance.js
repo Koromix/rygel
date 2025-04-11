@@ -20,7 +20,7 @@ import * as mixer from '../../web/core/mixer.js';
 import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
-import { exportRecords } from './data_export.js';
+import { createExport, exportRecords } from './data_export.js';
 import { DataRemote } from './data_remote.js';
 import { ApplicationInfo, ApplicationBuilder } from './instance_app.js';
 import { InstancePublisher } from './instance_publish.js';
@@ -715,9 +715,35 @@ function runDeleteRecordDialog(e, row) {
 }
 
 async function runExportDialog(e) {
-    // XXX: Restrict to current thread
+    let downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
     let stores = app.stores.map(store => store.key);
-    await exportRecords(stores);
+
+    await UI.dialog(e, 'Exports de données', {}, (d, resolve, reject) => {
+        d.output(html`
+            <table class="ui_table">
+                <colgroup>
+                    <col/>
+                    <col/>
+                </colgroup>
+
+                <tbody>
+                    ${downloads.map(download => html`
+                        <tr>
+                            <td>${(new Date(download.ctime)).toLocaleString()}</td>
+                            <td><a @click=${UI.wrap(e => exportRecords(download.export, stores))}>Télécharger</a></td>
+                        </tr>
+                    `)}
+                </tbody>
+            </table>
+        `);
+
+        d.action('Nouvel export', {}, async () => {
+            await createExport();
+            downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
+
+            d.refresh();
+        });
+    });
 }
 
 function toggleTagFilter(tag) {
