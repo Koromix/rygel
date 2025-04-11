@@ -724,20 +724,33 @@ async function runExportDialog(e) {
                 <colgroup>
                     <col/>
                     <col/>
+                    <col/>
+                    <col/>
                 </colgroup>
+
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Utilisateur</th>
+                        <th>Enregistrements</th>
+                    </tr>
+                </thead>
 
                 <tbody>
                     ${downloads.map(download => html`
                         <tr>
                             <td>${(new Date(download.ctime)).toLocaleString()}</td>
+                            <td>${download.username}</td>
+                            <td>${download.threads}</td>
                             <td><a @click=${UI.wrap(e => exportRecords(download.export, stores))}>Télécharger</a></td>
                         </tr>
                     `)}
+                    ${!downloads.length ? html`<tr><td colspan="4">Aucun export réalisé</td></tr>` : ''}
                 </tbody>
             </table>
         `);
 
-        d.action('Nouvel export', {}, async () => {
+        d.action('Faire un nouvel export', {}, async () => {
             await createExport();
             downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
 

@@ -557,7 +557,8 @@ void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
     json.Finish();
 }
 
-static bool CheckExportPermission(http_IO *io, InstanceHolder *instance)
+static bool CheckExportPermission(http_IO *io, InstanceHolder *instance,
+                                  int64_t *out_userid = nullptr, const char **out_username = nullptr)
 {
     const http_RequestInfo &request = io->Request();
     const char *export_key = !instance->slaves.len ? request.GetHeaderValue("X-Export-Key") : nullptr;
@@ -566,19 +567,36 @@ static bool CheckExportPermission(http_IO *io, InstanceHolder *instance)
         const InstanceHolder *master = instance->master;
 
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
-                                     WHERE instance = ?1 AND export_key = ?2)", &stmt))
+        if (!gp_domain.db.Prepare(R"(SELECT p.permissions, u.userid, u.username
+                                     FROM dom_permissions p
+                                     INNER JOIN dom_users ON (u.userid = p.userid)
+                                     WHERE p.instance = ?1 AND p.export_key = ?2)", &stmt))
             return false;
         sqlite3_bind_text(stmt, 1, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
         sqlite3_bind_text(stmt, 2, export_key, -1, SQLITE_STATIC);
 
-        uint32_t permissions = stmt.Step() ? (uint32_t)sqlite3_column_int(stmt, 0) : 0;
+        if (stmt.Step()) {
+            uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
 
-        if (!stmt.IsValid())
-            return false;
-        if (!(permissions & (int)UserPermission::DataExport)) {
-            LogError("Export key is not valid");
-            io->SendError(403);
+            if (!(permissions & (int)UserPermission::DataExport)) {
+                LogError("Missing data export permission");
+                io->SendError(403);
+                return false;
+            }
+
+            if (out_userid) {
+                RG_ASSERT(out_username);
+
+                *out_userid = sqlite3_column_int64(stmt, 0);
+                *out_username = DuplicateString((const char *)sqlite3_column_text(stmt, 1), io->Allocator()).ptr;
+            }
+
+            return true;
+        } else {
+            if (stmt.IsValid()) {
+                LogError("Export key is not valid");
+                io->SendError(403);
+            }
             return false;
         }
     } else {
@@ -593,9 +611,16 @@ static bool CheckExportPermission(http_IO *io, InstanceHolder *instance)
             io->SendError(403);
             return false;
         }
-    }
 
-    return true;
+        if (out_userid) {
+            RG_ASSERT(out_username);
+
+            *out_userid = session->userid;
+            *out_username = session->username;
+        }
+
+        return true;
+    }
 }
 
 void HandleExportCreate(http_IO *io, InstanceHolder *instance)
@@ -606,7 +631,9 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    if (!CheckExportPermission(io, instance))
+    int64_t userid;
+    const char *username;
+    if (!CheckExportPermission(io, instance, &userid, &username))
         return;
 
     int fd = -1;
@@ -636,6 +663,7 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
     int64_t now = GetUnixTime();
     int64_t max_sequence = -1;
     int64_t max_anchor = -1;
+    int64_t threads = 0;
 
     json.StartObject();
 
@@ -671,6 +699,8 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
         json.EndObject();
 
         json.EndObject();
+
+        threads++;
     }
     if (!walker.IsValid())
         return;
@@ -689,10 +719,10 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
         // Create export metadata
         {
             sq_Statement stmt;
-            if (!instance->db->Prepare(R"(INSERT INTO rec_exports (ctime, sequence, anchor)
-                                          VALUES (?1, ?2, ?3)
+            if (!instance->db->Prepare(R"(INSERT INTO rec_exports (ctime, userid, username, sequence, anchor, threads)
+                                          VALUES (?1, ?2, ?3, ?4, ?5, ?6)
                                           RETURNING export)",
-                                       &stmt, now, max_sequence, max_anchor))
+                                       &stmt, now, userid, username, max_sequence, max_anchor, threads))
                 return false;
             if (!stmt.GetSingleValue(&export_id))
                 return false;
@@ -725,7 +755,8 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
         return;
 
     sq_Statement stmt;
-    if (!instance->db->Prepare("SELECT export, ctime FROM rec_exports ORDER BY export", &stmt))
+    if (!instance->db->Prepare(R"(SELECT export, ctime, userid, username, threads
+                                  FROM rec_exports ORDER BY export)", &stmt))
         return;
 
     http_JsonPageBuilder json;
@@ -736,10 +767,16 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
     while (stmt.Step()) {
         int64_t export_id = sqlite3_column_int64(stmt, 0);
         int64_t ctime = sqlite3_column_int64(stmt, 1);
+        int64_t userid = sqlite3_column_int64(stmt, 2);
+        const char *username = (const char *)sqlite3_column_text(stmt, 3);
+        int64_t threads = sqlite3_column_int64(stmt, 4);
 
         json.StartObject();
         json.Key("export"); json.Int64(export_id);
         json.Key("ctime"); json.Int64(ctime);
+        json.Key("userid"); json.Int64(userid);
+        json.Key("username"); json.String(username);
+        json.Key("threads"); json.Int64(threads);
         json.EndObject();
     }
     if (!stmt.IsValid())
