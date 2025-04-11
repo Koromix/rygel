@@ -708,7 +708,7 @@ function renderData() {
 
             ${goupile.hasPermission('data_export') ? html`
                 <div class="ui_actions">
-                    <button @click=${UI.wrap(runExportCreateDialog)}>Faire un nouvel export</button>
+                    <button @click=${UI.wrap(runExportCreateDialog)}>Créer un export</button>
                     <button @click=${UI.wrap(runExportListDialog)}>Liste des exports récents</button>
                 </div>
             ` : ''}
@@ -736,18 +736,25 @@ async function runExportCreateDialog(e) {
     let downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
     let stores = app.stores.map(store => store.key);
 
+    if (!downloads.length) {
+        await create(null, null);
+        return;
+    }
+
     downloads.reverse();
 
     await UI.dialog(e, 'Créer un nouvel export', {}, (d, resolve, reject) => {
-        d.enumRadio('mode', "Mode d'export", [
-            ['sequence', 'Nouveaux enregistrements'],
-            ['anchor', 'Nouveaux enregistrements et enregistrements modifiés'],
-            ['all', 'Tous les enregistements']
-        ], { value: 'sequence', untoggle: false });
+        if (downloads.length > 0) {
+            d.enumRadio('mode', "Mode d'export", [
+                ['sequence', 'Nouveaux enregistrements'],
+                ['anchor', 'Nouveaux enregistrements et enregistrements modifiés'],
+                ['all', 'Tous les enregistements']
+            ], { value: 'sequence', untoggle: false });
 
-        if (d.values.mode != 'all') {
-            let props = downloads.map(download => [download.export, (new Date(download.ctime)).toLocaleString()]);
-            d.enumDrop('since', 'Depuis cet export :', props, { value: downloads[0]?.export, untoggle: false });
+            if (d.values.mode != 'all') {
+                let props = downloads.map(download => [download.export, (new Date(download.ctime)).toLocaleString()]);
+                d.enumDrop('since', 'Depuis cet export :', props, { value: downloads[0]?.export, untoggle: false });
+            }
         }
 
         d.action('Créer l\'export', {}, async () => {
@@ -766,12 +773,25 @@ async function runExportCreateDialog(e) {
                 } break;
             }
 
-            let export_id = await createExport(sequence, anchor);
-            await exportRecords(export_id, stores);
+            await create(sequence, anchor);
 
             resolve();
         });
     });
+
+    async function create(sequence, anchor) {
+        let progress = Log.progress('Sauvegarde des modifications');
+
+        try {
+            let export_id = await createExport(sequence, anchor);
+            await exportRecords(export_id, stores);
+
+            progress.success('Export complété');
+        } catch (err) {
+            progress.close();
+            Log.error(err);
+        }
+    }
 }
 
 async function runExportListDialog(e) {
