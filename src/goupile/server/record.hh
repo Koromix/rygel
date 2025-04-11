@@ -26,13 +26,13 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance);
 void HandleRecordGet(http_IO *io, InstanceHolder *instance);
 void HandleRecordAudit(http_IO *io, InstanceHolder *instance);
 
-void HandleExportCreate(http_IO *io, InstanceHolder *instance);
-void HandleExportDownload(http_IO *io, InstanceHolder *instance);
-
 void HandleRecordSave(http_IO *io, InstanceHolder *instance);
 void HandleRecordDelete(http_IO *io, InstanceHolder *instance);
-
 void HandleRecordLock(http_IO *io, InstanceHolder *instance);
 void HandleRecordUnlock(http_IO *io, InstanceHolder *instance);
+
+void HandleExportCreate(http_IO *io, InstanceHolder *instance);
+void HandleExportList(http_IO *io, InstanceHolder *instance);
+void HandleExportDownload(http_IO *io, InstanceHolder *instance);
 
 }

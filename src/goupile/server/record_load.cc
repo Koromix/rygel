@@ -713,6 +713,42 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
     io->SendText(200, response, "application/json");
 }
 
+void HandleExportList(http_IO *io, InstanceHolder *instance)
+{
+    if (!instance->config.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
+    }
+
+    if (!CheckExportPermission(io, instance))
+        return;
+
+    sq_Statement stmt;
+    if (!instance->db->Prepare("SELECT export, ctime FROM rec_exports ORDER BY export", &stmt))
+        return;
+
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartArray();
+    while (stmt.Step()) {
+        int64_t export_id = sqlite3_column_int64(stmt, 0);
+        int64_t ctime = sqlite3_column_int64(stmt, 1);
+
+        json.StartObject();
+        json.Key("export"); json.Int64(export_id);
+        json.Key("ctime"); json.Int64(ctime);
+        json.EndObject();
+    }
+    if (!stmt.IsValid())
+        return;
+    json.EndArray();
+
+    json.Finish();
+}
+
 void HandleExportDownload(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
