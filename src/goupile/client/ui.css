@@ -312,7 +312,7 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
     --anchor_color_n1: var(--active_color_n1);
 }
 .ui_table.fixed { table-layout: fixed; }
-.ui_table thead th { background: #f8f8f8; }
+.ui_table thead th { background: #f4f4f4; }
 .ui_table tbody tr:nth-child(2n) > td, .ui_table tbody tr:nth-child(2n) > th { background: #f8f8f8; }
 .ui_table tbody tr:nth-child(2n + 1) > td, .ui_table tbody tr:nth-child(2n + 1) > th { background: white; }
 .ui_table th, .ui_table td {
