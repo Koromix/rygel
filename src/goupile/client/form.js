@@ -1929,6 +1929,11 @@ instead of:
 
         let notes = Data.annotate(key.ptr, key.name);
 
+        if (notes == null) {
+            key.ptr[key.name] = undefined;
+            notes = Data.annotate(key.ptr, key.name);
+        }
+
         Object.assign(intf, {
             key: key,
             value: value,
