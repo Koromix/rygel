@@ -30,6 +30,9 @@ struct RecordFilter {
     bool allow_deleted = false;
     bool use_claims = false;
 
+    int64_t min_sequence = -1;
+    int64_t min_anchor = -1;
+
     bool read_data = false;
 };
 
@@ -84,7 +87,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                        R"(SELECT t.sequence AS t, t.tid, t.counters, t.secrets, t.locked,
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime,
                                  e.store, e.summary, e.tags AS tags,
-                                 IIF(?4 = 1, e.data, NULL) AS data
+                                 IIF(?6 = 1, e.data, NULL) AS data
                           FROM rec_threads t
                           INNER JOIN rec_entries e ON (e.tid = t.tid)
                           WHERE 1=1)").len;
@@ -97,6 +100,12 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
         }
         if (filter.use_claims) {
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM ins_claims WHERE userid = ?2)").len;
+        }
+        if (filter.min_sequence >= 0) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.sequence >= ?4").len;
+        }
+        if (filter.min_anchor >= 0) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM rec_entries WHERE e.anchor >= ?5)").len;
         }
 
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.sequence, e.store").len;
@@ -112,7 +121,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                                         anchor <= ?3 AND previous IS NULL
                               UNION ALL
                               SELECT rec.idx + 1, f.eid, f.anchor, f.mtime, f.summary, f.tags,
-                                  IIF(?4 = 1, json_patch(rec.data, f.data), NULL) AS data
+                                  IIF(?6 = 1, json_patch(rec.data, f.data), NULL) AS data
                                   FROM rec_fragments f, rec
                                   WHERE f.anchor <= ?3 AND f.previous = rec.anchor
                               ORDER BY anchor
@@ -129,6 +138,12 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
         if (!filter.allow_deleted) {
             sql.len += Fmt(sql.TakeAvailable(), " AND rec.data IS NOT NULL").len;
         }
+        if (filter.min_sequence >= 0) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.sequence >= ?4").len;
+        }
+        if (filter.min_anchor >= 0) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM rec_entries WHERE e.anchor >= ?5)").len;
+        }
 
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.sequence, e.store, rec.idx DESC").len;
     }
@@ -139,7 +154,9 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
     sqlite3_bind_text(stmt, 1, filter.single_tid, -1, SQLITE_STATIC);
     sqlite3_bind_int64(stmt, 2, -userid);
     sqlite3_bind_int64(stmt, 3, filter.audit_anchor);
-    sqlite3_bind_int(stmt, 4, 0 + filter.read_data);
+    sqlite3_bind_int64(stmt, 4, filter.min_sequence);
+    sqlite3_bind_int64(stmt, 5, filter.min_anchor);
+    sqlite3_bind_int(stmt, 6, 0 + filter.read_data);
 
     read_data = filter.read_data;
 
@@ -636,6 +653,35 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
     if (!CheckExportPermission(io, instance, &userid, &username))
         return;
 
+    int64_t sequence = -1;
+    int64_t anchor = -1;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(4), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "sequence") {
+                parser.SkipNull() || parser.ParseInt(&sequence);
+            } else if (key == "anchor") {
+                parser.SkipNull() || parser.ParseInt(&anchor);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
     int fd = -1;
     const char *tmp_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
     if (!tmp_filename)
@@ -649,6 +695,8 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
     {
         RecordFilter filter = {};
 
+        filter.min_sequence = sequence;
+        filter.min_anchor = anchor;
         filter.read_data = true;
 
         if (!walker.Prepare(instance, 0, filter))
@@ -711,6 +759,12 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
     if (!st.Close())
         return;
 
+    if (!threads) {
+        LogError("No record to export");
+        io->SendError(404);
+        return;
+    }
+
     // We need the export ID to make it, see inside transaction
     int64_t export_id = 0;
     const char *filename = nullptr;
@@ -755,7 +809,7 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
         return;
 
     sq_Statement stmt;
-    if (!instance->db->Prepare(R"(SELECT export, ctime, userid, username, threads
+    if (!instance->db->Prepare(R"(SELECT export, ctime, userid, username, sequence, anchor, threads
                                   FROM rec_exports ORDER BY export)", &stmt))
         return;
 
@@ -769,13 +823,17 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
         int64_t ctime = sqlite3_column_int64(stmt, 1);
         int64_t userid = sqlite3_column_int64(stmt, 2);
         const char *username = (const char *)sqlite3_column_text(stmt, 3);
-        int64_t threads = sqlite3_column_int64(stmt, 4);
+        int64_t sequence = sqlite3_column_int64(stmt, 4);
+        int64_t anchor = sqlite3_column_int64(stmt, 5);
+        int64_t threads = sqlite3_column_int64(stmt, 6);
 
         json.StartObject();
         json.Key("export"); json.Int64(export_id);
         json.Key("ctime"); json.Int64(ctime);
         json.Key("userid"); json.Int64(userid);
         json.Key("username"); json.String(username);
+        json.Key("sequence"); json.Int64(sequence);
+        json.Key("anchor"); json.Int64(anchor);
         json.Key("threads"); json.Int64(threads);
         json.EndObject();
     }

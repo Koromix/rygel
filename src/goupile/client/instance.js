@@ -708,7 +708,8 @@ function renderData() {
 
             ${goupile.hasPermission('data_export') ? html`
                 <div class="ui_actions">
-                    <button @click=${UI.wrap(runExportDialog)}>Exporter les données</button>
+                    <button @click=${UI.wrap(runExportCreateDialog)}>Faire un nouvel export</button>
+                    <button @click=${UI.wrap(runExportListDialog)}>Liste des exports récents</button>
                 </div>
             ` : ''}
         </div>
@@ -731,13 +732,53 @@ function runDeleteRecordDialog(e, row) {
     });
 }
 
-async function runExportDialog(e) {
+async function runExportCreateDialog(e) {
     let downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
-    let old = downloads.length ? downloads[downloads.length - 1].export : 0;
-
     let stores = app.stores.map(store => store.key);
 
-    let disabled = false;
+    downloads.reverse();
+
+    await UI.dialog(e, 'Créer un nouvel export', {}, (d, resolve, reject) => {
+        d.enumRadio('mode', "Mode d'export", [
+            ['sequence', 'Nouveaux enregistrements'],
+            ['anchor', 'Nouveaux enregistrements et enregistrements modifiés'],
+            ['all', 'Tous les enregistements']
+        ], { value: 'sequence', untoggle: false });
+
+        if (d.values.mode != 'all') {
+            let props = downloads.map(download => [download.export, (new Date(download.ctime)).toLocaleString()]);
+            d.enumDrop('since', 'Depuis cet export :', props, { value: downloads[0]?.export, untoggle: false });
+        }
+
+        d.action('Créer l\'export', {}, async () => {
+            let sequence = null;
+            let anchor = null;
+
+            switch (d.values.mode) {
+                case 'sequence': {
+                    let download = downloads.find(download => download.export == d.values.since);
+                    sequence = download.sequence + 1;
+                } break;
+
+                case 'anchor': {
+                    let download = downloads.find(download => download.export == d.values.since);
+                    anchor = download.anchor + 1;
+                } break;
+            }
+
+            let export_id = await createExport(sequence, anchor);
+            await exportRecords(export_id, stores);
+
+            resolve();
+        });
+    });
+}
+
+async function runExportListDialog(e) {
+    let downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
+    let stores = app.stores.map(store => store.key);
+
+    downloads.reverse();
 
     await UI.dialog(e, 'Exports de données', {}, (d, resolve, reject) => {
         d.output(html`
@@ -758,35 +799,18 @@ async function runExportDialog(e) {
                 </thead>
 
                 <tbody>
-                    ${Util.mapRange(0, downloads.length, idx => {
-                        let download = downloads[downloads.length - idx - 1];
-                        let active = !idx && download.export > old;
-
-                        return html`
-                            <tr class=${active ? 'active' : ''}>
-                                <td>${(new Date(download.ctime)).toLocaleString()}</td>
-                                <td>${download.username}</td>
-                                <td>${download.threads}</td>
-                                <td><a @click=${UI.wrap(e => exportRecords(download.export, stores))}>Télécharger</a></td>
-                            </tr>
-                        `;
-                    })}
+                    ${downloads.map(download => html`
+                        <tr>
+                            <td>${(new Date(download.ctime)).toLocaleString()}</td>
+                            <td>${download.username}</td>
+                            <td>${download.threads}</td>
+                            <td><a @click=${UI.wrap(e => exportRecords(download.export, stores))}>Télécharger</a></td>
+                        </tr>
+                    `)}
                     ${!downloads.length ? html`<tr><td colspan="4">Aucun export réalisé</td></tr>` : ''}
                 </tbody>
             </table>
         `);
-
-        if (disabled)
-            setTimeout(() => { disabled = false; d.refresh(); }, 5000);
-
-        d.action('Faire un nouvel export', { disabled: disabled }, async () => {
-            await createExport();
-
-            downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
-            disabled = true;
-
-            d.refresh();
-        });
     });
 }
 

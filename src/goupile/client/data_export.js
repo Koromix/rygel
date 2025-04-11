@@ -20,9 +20,14 @@ import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
 
-async function createExport() {
-    let json = await Net.post(`${ENV.urls.instance}api/export/create`);
-    return json.export;
+async function createExport(sequence = null, anchor = null) {
+    let json = await Net.post(`${ENV.urls.instance}api/export/create`, {
+        sequence: sequence,
+        anchor: anchor
+    });
+    let export_id = json.export;
+
+    return export_id;
 }
 
 async function exportRecords(export_id, stores, filter = null) {
