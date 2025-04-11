@@ -232,8 +232,23 @@ function renderMenu() {
                     <button class=${'icon dual' + (UI.hasTwoPanels() ? ' active' : '')}
                             @click=${UI.wrap(e => togglePanels(true, true))}></button>
                 ` : ''}
-                <button class=${'icon view' + (!UI.hasTwoPanels() && UI.isPanelActive(1) ? ' active' : '')}
-                        @click=${UI.wrap(e => togglePanels(false, true))}></button>
+                ${app.panels.editor && app.panels.data ? html`
+                    <div class="drop">
+                        <button class=${'icon ' + (UI.isPanelActive('view') || route.tid != null ? 'view' : 'data')
+                                                + (!UI.hasTwoPanels() && UI.isPanelActive(1) ? ' active' : '')}
+                                @click=${UI.deployMenu}></button>
+                        <div>
+                            <button class=${'icon data' + (UI.isPanelActive('data') ? ' active' : '')}
+                                    @click=${UI.wrap(e => togglePanels(UI.hasTwoPanels() && !UI.isPanelActive('data'), 'data'))}>Données</button>
+                            <button class=${'icon view' + (UI.isPanelActive('view') ? ' active' : '')}
+                                    @click=${UI.wrap(e => togglePanels(UI.hasTwoPanels() && !UI.isPanelActive('view'), 'view'))}>Formulaire</button>
+                        </div>
+                    </div>
+                ` : ''}
+                ${!app.panels.editor || !app.panels.data ? html`
+                    <button class=${'icon view' + (!UI.hasTwoPanels() && UI.isPanelActive('view') ? ' active' : '')}
+                            @click=${UI.wrap(e => togglePanels(false, 'view'))}></button>
+                ` : ''}
                 <div style="flex: 1; min-width: 4px;"></div>
             ` : ''}
 
@@ -409,6 +424,8 @@ async function togglePanels(left, right) {
 
     if (typeof right == 'string') {
         UI.togglePanel(right, true);
+    } else if (right && profile.develop && !UI.isPanelActive('data') && route.tid != null) {
+        UI.togglePanel('view', true);
     } else if (right != null) {
         UI.togglePanel(1, right);
     }
