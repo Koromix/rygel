@@ -584,17 +584,17 @@ bool sb_SandboxBuilder::Apply()
                     int syscall = seccomp_syscall_resolve_name("mmap");
                     RG_ASSERT(syscall != __NR_SCMP_ERROR);
 
-                    unsigned int prot_mask = PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC;
-                    unsigned int prot_combinations[] = {
+                    unsigned int mask = PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC;
+                    unsigned int combinations[] = {
                         PROT_NONE,
                         PROT_READ,
                         PROT_WRITE,
                         PROT_READ | PROT_WRITE
                     };
 
-                    for (unsigned int prot_flags: prot_combinations) {
+                    for (unsigned int flags: combinations) {
                         ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 2,
-                                               SCMP_A2(SCMP_CMP_MASKED_EQ, prot_mask, prot_flags),
+                                               SCMP_A2(SCMP_CMP_MASKED_EQ, mask, flags),
                                                SCMP_A3(SCMP_CMP_EQ, MAP_SHARED, 0));
                         if (ret < 0)
                             break;
@@ -603,17 +603,33 @@ bool sb_SandboxBuilder::Apply()
                     int syscall = seccomp_syscall_resolve_name("mprotect");
                     RG_ASSERT(syscall != __NR_SCMP_ERROR);
 
-                    unsigned int prot_mask = PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC;
-                    unsigned int prot_combinations[] = {
+                    unsigned int mask = PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC;
+                    unsigned int combinations[] = {
                         PROT_NONE,
                         PROT_READ,
                         PROT_WRITE,
                         PROT_READ | PROT_WRITE
                     };
 
-                    for (unsigned int prot_flags: prot_combinations) {
+                    for (unsigned int flags: combinations) {
                         ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 1,
-                                               SCMP_A2(SCMP_CMP_MASKED_EQ, prot_mask, prot_flags));
+                                               SCMP_A2(SCMP_CMP_MASKED_EQ, mask, flags));
+                        if (ret < 0)
+                            break;
+                    }
+                } else if (TestStr(item.name, "clone/fork")) {
+                    int syscall = seccomp_syscall_resolve_name("clone");
+                    RG_ASSERT(syscall != __NR_SCMP_ERROR);
+
+                    unsigned int mask = CLONE_CHILD_SETTID | CLONE_CHILD_CLEARTID | SIGCHLD;
+                    unsigned int combinations[] = {
+                        SIGCHLD,
+                        CLONE_CHILD_SETTID | CLONE_CHILD_CLEARTID | SIGCHLD
+                    };
+
+                    for (unsigned int flags: combinations) {
+                        ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 1,
+                                               SCMP_A1(SCMP_CMP_MASKED_EQ, mask, flags));
                         if (ret < 0)
                             break;
                     }
