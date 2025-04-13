@@ -14,8 +14,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
-#include "goupile.hh"
 #include "domain.hh"
+#include "goupile.hh"
 #include "instance.hh"
 #include "record.hh"
 #include "user.hh"
@@ -24,6 +24,61 @@
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
+
+struct RecordFilter {
+    const char *single_tid = nullptr;
+
+    int64_t audit_anchor = -1;
+    bool allow_deleted = false;
+    bool use_claims = false;
+
+    int64_t min_sequence = -1;
+    int64_t min_anchor = -1;
+
+    bool read_data = false;
+};
+
+struct RecordInfo {
+    int64_t t = -1;
+    const char *tid = nullptr;
+    const char *counters = nullptr;
+    const char *secrets = nullptr;
+    bool locked = false;
+
+    int64_t e = -1;
+    const char *eid = nullptr;
+    bool deleted = false;
+    int64_t anchor = -1;
+    int64_t ctime = -1;
+    int64_t mtime = -1;
+    const char *store = nullptr;
+    Span<const char> tags = {};
+
+    const char *summary = nullptr;
+    Span<const char> data = {};
+};
+
+class RecordWalker {
+    sq_Statement stmt;
+
+    bool read_data = false;
+
+    bool step = false;
+    RecordInfo cursor;
+
+public:
+    // Make sure tags are safe and can't lead to SQL injection before calling this function
+    bool Prepare(InstanceHolder *instance, int64_t userid, const RecordFilter &filter);
+
+    bool Next();
+    bool NextInThread();
+
+    const RecordInfo *GetCursor() const { return &cursor; }
+    bool IsValid() const { return stmt.IsValid(); }
+
+private:
+    bool Step();
+};
 
 struct DataConstraint {
     const char *key = nullptr;
@@ -49,6 +104,826 @@ struct CounterInfo {
     bool randomize = false;
     bool secret = false;
 };
+
+bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const RecordFilter &filter)
+{
+    LocalArray<char, 2048> sql;
+
+    if (filter.audit_anchor < 0) {
+        sql.len += Fmt(sql.TakeAvailable(),
+                       R"(SELECT t.sequence AS t, t.tid, t.counters, t.secrets, t.locked,
+                                 e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime,
+                                 e.store, e.summary, e.tags AS tags,
+                                 IIF(?6 = 1, e.data, NULL) AS data
+                          FROM rec_threads t
+                          INNER JOIN rec_entries e ON (e.tid = t.tid)
+                          WHERE 1=1)").len;
+
+        if (filter.single_tid) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.tid = ?1").len;
+        }
+        if (!filter.allow_deleted) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND e.deleted = 0").len;
+        }
+        if (filter.use_claims) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM ins_claims WHERE userid = ?2)").len;
+        }
+        if (filter.min_sequence >= 0) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.sequence >= ?4").len;
+        }
+        if (filter.min_anchor >= 0) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM rec_entries WHERE e.anchor >= ?5)").len;
+        }
+
+        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.sequence, e.store").len;
+    } else {
+        RG_ASSERT(!filter.single_tid);
+        RG_ASSERT(!filter.use_claims);
+
+        sql.len += Fmt(sql.TakeAvailable(),
+                       R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, summary, tags, data) AS (
+                              SELECT 1, eid, anchor, mtime, summary, tags, data
+                                  FROM rec_fragments
+                                  WHERE (tid = ?1 OR ?1 IS NULL) AND
+                                        anchor <= ?3 AND previous IS NULL
+                              UNION ALL
+                              SELECT rec.idx + 1, f.eid, f.anchor, f.mtime, f.summary, f.tags,
+                                  IIF(?6 = 1, json_patch(rec.data, f.data), NULL) AS data
+                                  FROM rec_fragments f, rec
+                                  WHERE f.anchor <= ?3 AND f.previous = rec.anchor
+                              ORDER BY anchor
+                          )
+                          SELECT t.sequence AS t, t.tid, t.counters, t.secrets, t.locked,
+                                 e.rowid AS e, e.eid, IIF(rec.data IS NULL, 1, 0) AS deleted,
+                                 rec.anchor, e.ctime, rec.mtime, e.store,
+                                 rec.summary, rec.tags, rec.data
+                              FROM rec
+                              INNER JOIN rec_entries e ON (e.eid = rec.eid)
+                              INNER JOIN rec_threads t ON (t.tid = e.tid)
+                              WHERE 1+1)").len;
+
+        if (!filter.allow_deleted) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND rec.data IS NOT NULL").len;
+        }
+        if (filter.min_sequence >= 0) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.sequence >= ?4").len;
+        }
+        if (filter.min_anchor >= 0) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM rec_entries WHERE e.anchor >= ?5)").len;
+        }
+
+        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.sequence, e.store, rec.idx DESC").len;
+    }
+
+    if (!instance->db->Prepare(sql.data, &stmt))
+        return false;
+
+    sqlite3_bind_text(stmt, 1, filter.single_tid, -1, SQLITE_STATIC);
+    sqlite3_bind_int64(stmt, 2, -userid);
+    sqlite3_bind_int64(stmt, 3, filter.audit_anchor);
+    sqlite3_bind_int64(stmt, 4, filter.min_sequence);
+    sqlite3_bind_int64(stmt, 5, filter.min_anchor);
+    sqlite3_bind_int(stmt, 6, 0 + filter.read_data);
+
+    read_data = filter.read_data;
+
+    step = true;
+    cursor = {};
+
+    return true;
+}
+
+bool RecordWalker::Next()
+{
+    if (!Step())
+        return false;
+
+    step = true;
+    return true;
+}
+
+bool RecordWalker::NextInThread()
+{
+    int64_t t = cursor.t;
+
+    if (!Step())
+        return false;
+    if (cursor.t != t)
+        return false;
+
+    step = true;
+    return true;
+}
+
+bool RecordWalker::Step()
+{
+    if (stmt.IsDone())
+        return false;
+
+    if (!step)
+        return true;
+    step = false;
+
+again:
+    if (!stmt.Step())
+        return false;
+
+    int64_t t = sqlite3_column_int64(stmt, 0);
+    int64_t e = sqlite3_column_int64(stmt, 5);
+
+    // This can happen with the recursive CTE is used for historical data
+    if (e == cursor.e)
+        goto again;
+
+    cursor.t = t;
+    cursor.tid = (const char *)sqlite3_column_text(stmt, 1);
+    cursor.counters = (const char *)sqlite3_column_text(stmt, 2);
+    cursor.secrets = (const char *)sqlite3_column_text(stmt, 3);
+    cursor.locked = sqlite3_column_int(stmt, 4);
+
+    cursor.e = e;
+    cursor.eid = (const char *)sqlite3_column_text(stmt, 6);
+    cursor.deleted = !!sqlite3_column_int(stmt, 7);
+    cursor.anchor = sqlite3_column_int64(stmt, 8);
+    cursor.ctime = sqlite3_column_int64(stmt, 9);
+    cursor.mtime = sqlite3_column_int64(stmt, 10);
+    cursor.store = (const char *)sqlite3_column_text(stmt, 11);
+    cursor.summary = (const char *)sqlite3_column_text(stmt, 12);
+    cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 13), sqlite3_column_bytes(stmt, 13));
+
+    if (read_data) {
+        cursor.data = MakeSpan((const char *)sqlite3_column_text(stmt, 14), sqlite3_column_bytes(stmt, 14));
+    } else {
+        cursor.data = {};
+    }
+
+    return true;
+}
+
+static void JsonRawOrNull(Span<const char> str, json_Writer *json)
+{
+    if (str.ptr) {
+        json->Raw(str);
+    } else {
+        json->Null();
+    }
+}
+
+void HandleRecordList(http_IO *io, InstanceHolder *instance)
+{
+    const http_RequestInfo &request = io->Request();
+
+    if (!instance->config.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+    const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!stamp) {
+        LogError("User is not allowed to list data");
+        io->SendError(403);
+        return;
+    }
+
+    int64_t anchor = -1;
+    bool allow_deleted = false;
+    {
+        if (const char *str = request.GetQueryValue("anchor"); str) {
+            if (!ParseInt(str, &anchor)) {
+                io->SendError(422);
+                return;
+            }
+            if (anchor <= 0) {
+                LogError("Anchor must be a positive number");
+                io->SendError(422);
+                return;
+            }
+        }
+
+        if (const char *str = request.GetQueryValue("deleted"); str && !ParseBool(str, &allow_deleted)) {
+            io->SendError(422);
+            return;
+        }
+
+        if (!stamp->HasPermission(UserPermission::DataRead) ||
+                !stamp->HasPermission(UserPermission::DataAudit)) {
+            if (anchor >= 0) {
+                LogError("User is not allowed to access historical data");
+                io->SendError(403);
+                return;
+            }
+            if (allow_deleted) {
+                LogError("User is not allowed to access deleted data");
+                io->SendError(403);
+                return;
+            }
+        }
+    }
+
+    // Export data
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    RecordWalker walker;
+    {
+        RecordFilter filter = {};
+
+        filter.audit_anchor = anchor;
+        filter.allow_deleted = allow_deleted;
+        filter.use_claims = !stamp->HasPermission(UserPermission::DataRead);
+
+        if (!walker.Prepare(instance, session->userid, filter))
+            return;
+    }
+
+    json.StartArray();
+    while (walker.Next()) {
+        const RecordInfo *cursor = walker.GetCursor();
+
+        json.StartObject();
+
+        json.Key("tid"); json.String(cursor->tid);
+        json.Key("sequence"); json.Int64(cursor->t);
+        json.Key("saved"); json.Bool(true);
+        json.Key("locked"); json.Bool(cursor->locked);
+
+        json.Key("entries"); json.StartObject();
+        do {
+            json.Key(cursor->store); json.StartObject();
+
+            json.Key("store"); json.String(cursor->store);
+            json.Key("eid"); json.String(cursor->eid);
+            if (stamp->HasPermission(UserPermission::DataAudit)) {
+                json.Key("deleted"); json.Bool(cursor->deleted);
+            } else {
+                RG_ASSERT(!cursor->deleted);
+            }
+            json.Key("anchor"); json.Int64(cursor->anchor);
+            json.Key("ctime"); json.Int64(cursor->ctime);
+            json.Key("mtime"); json.Int64(cursor->mtime);
+            if (cursor->summary) {
+                json.Key("summary"); json.String(cursor->summary);
+            } else {
+                json.Key("summary"); json.Null();
+            }
+            json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
+
+            json.EndObject();
+        } while (walker.NextInThread());
+        json.EndObject();
+
+        json.EndObject();
+    }
+    if (!walker.IsValid())
+        return;
+    json.EndArray();
+
+    json.Finish();
+}
+
+void HandleRecordGet(http_IO *io, InstanceHolder *instance)
+{
+    const http_RequestInfo &request = io->Request();
+
+    if (!instance->config.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+    const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!stamp) {
+        LogError("User is not allowed to load data");
+        io->SendError(403);
+        return;
+    }
+
+    const char *tid = nullptr;
+    int64_t anchor = -1;
+    bool allow_deleted = false;
+    {
+        tid = request.GetQueryValue("tid");
+        if (!tid) {
+            LogError("Missing 'tid' parameter");
+            io->SendError(422);
+            return;
+        }
+
+        if (const char *str = request.GetQueryValue("anchor"); str) {
+            if (!ParseInt(str, &anchor)) {
+                io->SendError(422);
+                return;
+            }
+            if (anchor <= 0) {
+                LogError("Anchor must be a positive number");
+                io->SendError(422);
+                return;
+            }
+        }
+
+        if (const char *str = request.GetQueryValue("deleted"); str && !ParseBool(str, &allow_deleted)) {
+            io->SendError(422);
+            return;
+        }
+
+        if (!stamp->HasPermission(UserPermission::DataRead) ||
+                !stamp->HasPermission(UserPermission::DataAudit)) {
+            if (anchor >= 0) {
+                LogError("User is not allowed to access historical data");
+                io->SendError(403);
+                return;
+            }
+            if (allow_deleted) {
+                LogError("User is not allowed to access deleted data");
+                io->SendError(403);
+                return;
+            }
+        }
+    }
+
+    RecordWalker walker;
+    {
+        RecordFilter filter = {};
+
+        filter.single_tid = tid;
+        filter.audit_anchor = anchor;
+        filter.allow_deleted = allow_deleted;
+        filter.use_claims = !stamp->HasPermission(UserPermission::DataRead);
+        filter.read_data = true;
+
+        if (!walker.Prepare(instance, session->userid, filter))
+            return;
+    }
+
+    if (!walker.Next()) {
+        if (walker.IsValid()) {
+            LogError("Thread '%1' does not exist", tid);
+            io->SendError(404);
+        }
+        return;
+    }
+
+    // Export data
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartObject();
+    {
+        const RecordInfo *cursor = walker.GetCursor();
+
+        json.Key("tid"); json.String(cursor->tid);
+        json.Key("sequence"); json.Int64(cursor->t);
+        json.Key("counters"); json.Raw(cursor->counters);
+        json.Key("saved"); json.Bool(true);
+        json.Key("locked"); json.Bool(cursor->locked);
+
+        json.Key("entries"); json.StartObject();
+        do {
+            json.Key(cursor->store); json.StartObject();
+
+            json.Key("store"); json.String(cursor->store);
+            json.Key("eid"); json.String(cursor->eid);
+            if (stamp->HasPermission(UserPermission::DataAudit)) {
+                json.Key("deleted"); json.Bool(cursor->deleted);
+            } else {
+                RG_ASSERT(!cursor->deleted);
+            }
+            json.Key("anchor"); json.Int64(cursor->anchor);
+            json.Key("ctime"); json.Int64(cursor->ctime);
+            json.Key("mtime"); json.Int64(cursor->mtime);
+            if (cursor->summary) {
+                json.Key("summary"); json.String(cursor->summary);
+            } else {
+                json.Key("summary"); json.Null();
+            }
+            json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
+
+            json.Key("data"); JsonRawOrNull(cursor->data, &json);
+
+            json.EndObject();
+        } while (walker.NextInThread());
+        json.EndObject();
+    }
+    if (!walker.IsValid())
+        return;
+    json.EndObject();
+
+    json.Finish();
+}
+
+void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
+{
+    const http_RequestInfo &request = io->Request();
+
+    if (!instance->config.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!session->HasPermission(instance, UserPermission::DataAudit)) {
+        LogError("User is not allowed to audit data");
+        io->SendError(403);
+        return;
+    }
+
+    const char *tid = request.GetQueryValue("tid");
+    if (!tid) {
+        LogError("Missing 'tid' parameter");
+        io->SendError(422);
+        return;
+    }
+
+    sq_Statement stmt;
+    if (!instance->db->Prepare(R"(SELECT f.anchor, f.eid, e.store, IIF(f.data IS NOT NULL, 'save', 'delete') AS type,
+                                         f.userid, f.username
+                                  FROM rec_threads t
+                                  INNER JOIN rec_fragments f ON (f.tid = t.tid)
+                                  INNER JOIN rec_entries e ON (e.eid = f.eid)
+                                  WHERE t.tid = ?1
+                                  ORDER BY f.anchor)", &stmt, tid))
+        return;
+
+    if (!stmt.Step()) {
+        if (stmt.IsValid()) {
+            LogError("Thread '%1' does not exist", tid);
+            io->SendError(404);
+        }
+        return;
+    }
+
+    // Export data
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartArray();
+    do {
+        json.StartObject();
+
+        json.Key("anchor"); json.Int64(sqlite3_column_int64(stmt, 0));
+        json.Key("eid"); json.String((const char *)sqlite3_column_text(stmt, 1));
+        json.Key("store"); json.String((const char *)sqlite3_column_text(stmt, 2));
+        json.Key("type"); json.String((const char *)sqlite3_column_text(stmt, 3));
+        json.Key("userid"); json.Int64(sqlite3_column_int64(stmt, 4));
+        json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 5));
+
+        json.EndObject();
+    } while (stmt.Step());
+    if (!stmt.IsValid())
+        return;
+    json.EndArray();
+
+    json.Finish();
+}
+
+static bool CheckExportPermission(http_IO *io, InstanceHolder *instance,
+                                  int64_t *out_userid = nullptr, const char **out_username = nullptr)
+{
+    const http_RequestInfo &request = io->Request();
+    const char *export_key = !instance->slaves.len ? request.GetHeaderValue("X-Export-Key") : nullptr;
+
+    if (export_key) {
+        const InstanceHolder *master = instance->master;
+
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT p.permissions, u.userid, u.username
+                                     FROM dom_permissions p
+                                     INNER JOIN dom_users ON (u.userid = p.userid)
+                                     WHERE p.instance = ?1 AND p.export_key = ?2)", &stmt))
+            return false;
+        sqlite3_bind_text(stmt, 1, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, export_key, -1, SQLITE_STATIC);
+
+        if (stmt.Step()) {
+            uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
+
+            if (!(permissions & (int)UserPermission::DataExport)) {
+                LogError("Missing data export permission");
+                io->SendError(403);
+                return false;
+            }
+
+            if (out_userid) {
+                RG_ASSERT(out_username);
+
+                *out_userid = sqlite3_column_int64(stmt, 0);
+                *out_username = DuplicateString((const char *)sqlite3_column_text(stmt, 1), io->Allocator()).ptr;
+            }
+
+            return true;
+        } else {
+            if (stmt.IsValid()) {
+                LogError("Export key is not valid");
+                io->SendError(403);
+            }
+            return false;
+        }
+    } else {
+       RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+
+       if (!session) {
+            LogError("User is not logged in");
+            io->SendError(401);
+            return false;
+        } else if (!session->HasPermission(instance, UserPermission::DataExport)) {
+            LogError("User is not allowed to export data");
+            io->SendError(403);
+            return false;
+        }
+
+        if (out_userid) {
+            RG_ASSERT(out_username);
+
+            *out_userid = session->userid;
+            *out_username = session->username;
+        }
+
+        return true;
+    }
+}
+
+void HandleExportCreate(http_IO *io, InstanceHolder *instance)
+{
+    if (!instance->config.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
+    }
+
+    int64_t userid;
+    const char *username;
+    if (!CheckExportPermission(io, instance, &userid, &username))
+        return;
+
+    int64_t sequence = -1;
+    int64_t anchor = -1;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(4), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "sequence") {
+                parser.SkipNull() || parser.ParseInt(&sequence);
+            } else if (key == "anchor") {
+                parser.SkipNull() || parser.ParseInt(&anchor);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    int fd = -1;
+    const char *tmp_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
+    if (!tmp_filename)
+        return;
+    RG_DEFER {
+        CloseDescriptor(fd);
+        UnlinkFile(tmp_filename);
+    };
+
+    RecordWalker walker;
+    {
+        RecordFilter filter = {};
+
+        filter.min_sequence = sequence;
+        filter.min_anchor = anchor;
+        filter.read_data = true;
+
+        if (!walker.Prepare(instance, 0, filter))
+            return;
+    }
+
+    const RecordInfo *cursor = walker.GetCursor();
+
+    StreamWriter st(fd, tmp_filename, 0, CompressionType::Gzip);
+    json_Writer json(&st);
+
+    int64_t now = GetUnixTime();
+    int64_t max_sequence = -1;
+    int64_t max_anchor = -1;
+    int64_t threads = 0;
+
+    json.StartObject();
+
+    json.Key("format"); json.Int(1);
+
+    json.Key("threads"); json.StartArray();
+    for (int i = 0; walker.Next() && i < 100; i++) {
+        json.StartObject();
+
+        json.Key("tid"); json.String(cursor->tid);
+        json.Key("sequence"); json.Int64(cursor->t);
+        json.Key("counters"); json.Raw(cursor->counters);
+        json.Key("secrets"); json.Raw(cursor->secrets);
+
+        json.Key("entries"); json.StartObject();
+        do {
+            json.Key(cursor->store); json.StartObject();
+
+            json.Key("store"); json.String(cursor->store);
+            json.Key("eid"); json.String(cursor->eid);
+            json.Key("anchor"); json.Int64(cursor->anchor);
+            json.Key("ctime"); json.Int64(cursor->ctime);
+            json.Key("mtime"); json.Int64(cursor->mtime);
+            json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
+
+            json.Key("data"); JsonRawOrNull(cursor->data, &json);
+
+            json.EndObject();
+
+            max_sequence = std::max(max_sequence, cursor->t);
+            max_anchor = std::max(max_anchor, cursor->anchor);
+        } while (walker.NextInThread());
+        json.EndObject();
+
+        json.EndObject();
+
+        threads++;
+    }
+    if (!walker.IsValid())
+        return;
+    json.EndArray();
+
+    json.EndObject();
+
+    if (!st.Close())
+        return;
+
+    if (!threads) {
+        LogError("No record to export");
+        io->SendError(404);
+        return;
+    }
+
+    // We need the export ID to make it, see inside transaction
+    int64_t export_id = 0;
+    const char *filename = nullptr;
+
+    bool success = instance->db->Transaction([&]() {
+        // Create export metadata
+        {
+            sq_Statement stmt;
+            if (!instance->db->Prepare(R"(INSERT INTO rec_exports (ctime, userid, username, sequence, anchor, threads)
+                                          VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                                          RETURNING export)",
+                                       &stmt, now, userid, username, max_sequence, max_anchor, threads))
+                return false;
+            if (!stmt.GetSingleValue(&export_id))
+                return false;
+        }
+
+        TimeSpec spec = DecomposeTimeUTC(now);
+        filename = Fmt(io->Allocator(), "%1%/%2_%3_%4.json.gz", gp_domain.config.export_directory, instance->key, export_id, FmtTimeISO(spec)).ptr;
+
+        if (!RenameFile(tmp_filename, filename, 0))
+            return false;
+
+        return true;
+    });
+    if (!success)
+        return;
+
+    const char *response = Fmt(io->Allocator(), "{ \"export\": %1 }", export_id).ptr;
+    io->SendText(200, response, "application/json");
+}
+
+void HandleExportList(http_IO *io, InstanceHolder *instance)
+{
+    if (!instance->config.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
+    }
+
+    if (!CheckExportPermission(io, instance))
+        return;
+
+    sq_Statement stmt;
+    if (!instance->db->Prepare(R"(SELECT export, ctime, userid, username, sequence, anchor, threads
+                                  FROM rec_exports ORDER BY export)", &stmt))
+        return;
+
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartArray();
+    while (stmt.Step()) {
+        int64_t export_id = sqlite3_column_int64(stmt, 0);
+        int64_t ctime = sqlite3_column_int64(stmt, 1);
+        int64_t userid = sqlite3_column_int64(stmt, 2);
+        const char *username = (const char *)sqlite3_column_text(stmt, 3);
+        int64_t sequence = sqlite3_column_int64(stmt, 4);
+        int64_t anchor = sqlite3_column_int64(stmt, 5);
+        int64_t threads = sqlite3_column_int64(stmt, 6);
+
+        json.StartObject();
+        json.Key("export"); json.Int64(export_id);
+        json.Key("ctime"); json.Int64(ctime);
+        json.Key("userid"); json.Int64(userid);
+        json.Key("username"); json.String(username);
+        json.Key("sequence"); json.Int64(sequence);
+        json.Key("anchor"); json.Int64(anchor);
+        json.Key("threads"); json.Int64(threads);
+        json.EndObject();
+    }
+    if (!stmt.IsValid())
+        return;
+    json.EndArray();
+
+    json.Finish();
+}
+
+void HandleExportDownload(http_IO *io, InstanceHolder *instance)
+{
+    const http_RequestInfo &request = io->Request();
+
+    if (!instance->config.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
+    }
+
+    if (!CheckExportPermission(io, instance))
+        return;
+
+    int64_t export_id;
+    if (const char *str = request.GetQueryValue("export"); str) {
+        if (!ParseInt(str, &export_id)) {
+            io->SendError(422);
+            return;
+        }
+        if (export_id <= 0) {
+            LogError("Export ID must be a positive number");
+            io->SendError(422);
+            return;
+        }
+    } else {
+        LogError("Missing 'export' parameter");
+        io->SendError(422);
+        return;
+    }
+
+    int64_t ctime;
+    {
+        sq_Statement stmt;
+        if (!instance->db->Prepare("SELECT ctime FROM rec_exports WHERE export = ?1", &stmt, export_id))
+            return;
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Unknown export %1", export_id);
+                io->SendError(404);
+            }
+            return;
+        }
+
+        ctime = sqlite3_column_int64(stmt, 0);
+    }
+
+    TimeSpec spec = DecomposeTimeUTC(ctime);
+    const char *filename = Fmt(io->Allocator(), "%1%/%2_%3_%4.json.gz", gp_domain.config.export_directory, instance->key, export_id, FmtTimeISO(spec)).ptr;
+
+    io->AddHeader("Content-Encoding", "gzip");
+    io->SendFile(200, filename);
+}
 
 static bool CheckTag(Span<const char> tag)
 {
