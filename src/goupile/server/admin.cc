@@ -2250,7 +2250,7 @@ void HandleInstanceMigrate(http_IO *io)
     }
 
     // Migration can take a long time, don't timeout because request looks idle
-    io->SetTimeout(120000);
+    io->ExtendTimeout(120000);
 
     // Be safe...
     {
@@ -2293,7 +2293,7 @@ void HandleArchiveCreate(http_IO *io)
     }
 
     // Can take a long time, don't timeout because request looks idle
-    io->SetTimeout(60000);
+    io->ExtendTimeout(60000);
 
     // Do the work
     {

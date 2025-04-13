@@ -265,7 +265,7 @@ public:
     void SendFile(int status, const char *filename, const char *mimetype = nullptr);
     void SendFile(int status, int fd, int64_t len = -1);
 
-    void SetTimeout(int timeout);
+    void ExtendTimeout(int timeout);
 
     bool HasResponded() const { return response.started; }
     const char *LastError() const { return last_err; }
