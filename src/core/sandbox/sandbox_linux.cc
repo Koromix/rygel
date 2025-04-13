@@ -96,9 +96,11 @@ void sb_SandboxBuilder::MountPath(const char *src, const char *dest, bool readon
     RG_ASSERT(dest[0] == '/' && dest[1]);
 
     BindMount bind = {};
-    bind.src = DuplicateString(src, &str_alloc).ptr;
-    bind.dest = DuplicateString(dest, &str_alloc).ptr;
+
+    bind.src = DuplicateString(TrimStrRight(src, RG_PATH_SEPARATORS), &str_alloc).ptr;
+    bind.dest = DuplicateString(TrimStrRight(dest, RG_PATH_SEPARATORS), &str_alloc).ptr;
     bind.readonly = readonly;
+
     mounts.Append(bind);
 }
 
@@ -348,6 +350,22 @@ bool sb_SandboxBuilder::Apply()
             for (const BindMount &bind: mounts) {
                 const char *dest = Fmt(&str_alloc, "%1%2", fs_root, bind.dest).ptr;
                 int flags = MS_BIND | MS_REC | (bind.readonly ? MS_RDONLY : 0);
+
+                // Deal with special cases
+                if (TestStr(bind.src, "/proc/self")) {
+                    char path[256];
+                    Fmt(path, "/proc/%1", getpid());
+
+                    if (!MakeDirectoryRec(dest))
+                        return false;
+
+                    if (mount(path, dest, nullptr, flags, nullptr) < 0) {
+                        LogError("Failed to mount '/proc/self': %1", strerror(errno));
+                        return false;
+                    }
+
+                    continue;
+                }
 
                 // Ensure destination exists
                 {
