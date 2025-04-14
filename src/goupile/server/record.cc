@@ -15,6 +15,7 @@
 
 #include "src/core/base/base.hh"
 #include "domain.hh"
+#include "file.hh"
 #include "goupile.hh"
 #include "instance.hh"
 #include "record.hh"
@@ -98,12 +99,81 @@ struct FragmentInfo {
     bool claim = true;
 };
 
+struct BlobInfo {
+    const char *name = nullptr;
+    const char *sha256 = nullptr;
+};
+
 struct CounterInfo {
     const char *key = nullptr;
     int max = 0;
     bool randomize = false;
     bool secret = false;
 };
+
+static bool CheckTag(Span<const char> tag)
+{
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_'; };
+
+    if (!tag.len) {
+        LogError("Tag name cannot be empty");
+        return false;
+    }
+    if (!std::all_of(tag.begin(), tag.end(), test_char)) {
+        LogError("Tag names must only contain alphanumeric or '_' characters");
+        return false;
+    }
+
+    return true;
+}
+
+static bool CheckULID(Span<const char> str)
+{
+    const auto test_char = [](char c) { return IsAsciiDigit(c) || (c >= 'A' && c <= 'Z'); };
+
+    if (str.len != 26 || !std::all_of(str.begin(), str.end(), test_char)) {
+        LogError("Malformed ULID value '%1'", str);
+        return false;
+    }
+
+    return true;
+}
+
+static bool CheckKey(Span<const char> key)
+{
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_'; };
+
+    if (!key.len) {
+        LogError("Empty key is not allowed");
+        return false;
+    }
+    if (!std::all_of(key.begin(), key.end(), test_char)) {
+        LogError("Invalid key characters");
+        return false;
+    }
+    if (StartsWith(key, "__")) {
+        LogError("Keys must not start with '__'");
+        return false;
+    }
+
+    return true;
+}
+
+static bool CheckSha256(Span<const char> sha256)
+{
+    const auto test_char = [](char c) { return (c >= 'A' && c <= 'Z') || IsAsciiDigit(c); };
+
+    if (sha256.len != 64) {
+        LogError("Malformed SHA256 (incorrect length)");
+        return false;
+    }
+    if (!std::all_of(sha256.begin(), sha256.end(), test_char)) {
+        LogError("Malformed SHA256 (unexpected character)");
+        return false;
+    }
+
+    return true;
+}
 
 bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const RecordFilter &filter)
 {
@@ -925,54 +995,6 @@ void HandleExportDownload(http_IO *io, InstanceHolder *instance)
     io->SendFile(200, filename);
 }
 
-static bool CheckTag(Span<const char> tag)
-{
-    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_'; };
-
-    if (!tag.len) {
-        LogError("Tag name cannot be empty");
-        return false;
-    }
-    if (!std::all_of(tag.begin(), tag.end(), test_char)) {
-        LogError("Tag names must only contain alphanumeric or '_' characters");
-        return false;
-    }
-
-    return true;
-}
-
-static bool CheckULID(Span<const char> str)
-{
-    const auto test_char = [](char c) { return IsAsciiDigit(c) || (c >= 'A' && c <= 'Z'); };
-
-    if (str.len != 26 || !std::all_of(str.begin(), str.end(), test_char)) {
-        LogError("Malformed ULID value '%1'", str);
-        return false;
-    }
-
-    return true;
-}
-
-static bool CheckKey(Span<const char> key)
-{
-    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_'; };
-
-    if (!key.len) {
-        LogError("Empty key is not allowed");
-        return false;
-    }
-    if (!std::all_of(key.begin(), key.end(), test_char)) {
-        LogError("Invalid key characters");
-        return false;
-    }
-    if (StartsWith(key, "__")) {
-        LogError("Keys must not start with '__'");
-        return false;
-    }
-
-    return true;
-}
-
 static const char *TagsToJson(Span<const char *const> tags, Allocator *alloc)
 {
     HeapArray<char> buf(alloc);
@@ -1051,6 +1073,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     FragmentInfo fragment = {};
     HeapArray<DataConstraint> constraints;
     HeapArray<CounterInfo> counters;
+    HeapArray<BlobInfo> blobs;
     {
         StreamReader st;
         if (!io->OpenForRead(Mebibytes(8), &st))
@@ -1191,6 +1214,16 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
                     counters.Append(counter);
                 }
+            } else if (key == "blobs") {
+                parser.ParseObject();
+                while (parser.InObject()) {
+                    BlobInfo blob = {};
+
+                    parser.ParseKey(&blob.name);
+                    parser.ParseString(&blob.sha256);
+
+                    blobs.Append(blob);
+                }
             } else if (parser.IsValid()) {
                 LogError("Unexpected key '%1'", key);
                 io->SendError(422);
@@ -1227,6 +1260,15 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 LogError("Counter maximum must be between 1 and 64");
                 valid = false;
             }
+        }
+
+        for (const BlobInfo &blob: blobs) {
+            if (!blob.name || !blob.name[0] || PathIsAbsolute(blob.name) || PathContainsDotDot(blob.name)) {
+                LogError("Invalid blob filename");
+                valid = false;
+            }
+
+            valid &= CheckSha256(blob.sha256);
         }
 
         if (!valid) {
@@ -1445,6 +1487,20 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                                       ON CONFLICT DO UPDATE SET state = excluded.state)",
                                    counter.key, state))
                 return false;
+        }
+
+        // Insert blobs
+        for (const BlobInfo &blob: blobs) {
+            if (!instance->db->Run(R"(INSERT INTO rec_files (tid, eid, anchor, name, sha256)
+                                      VALUES (?1, ?2, ?3, ?4, ?5))",
+                                   tid, fragment.eid, new_anchor, blob.name, blob.sha256)) {
+                if (sqlite3_extended_errcode(*instance->db) == SQLITE_CONSTRAINT_FOREIGNKEY) {
+                    LogError("Blob '%1' does not exist", blob.sha256);
+                    io->SendError(409);
+                }
+
+                return false;
+            }
         }
 
         // Delete claim if requested (and if any)
@@ -1728,6 +1784,115 @@ void HandleRecordLock(http_IO *io, InstanceHolder *instance)
 void HandleRecordUnlock(http_IO *io, InstanceHolder *instance)
 {
     HandleLock(io, instance, false);
+}
+
+void HandleBlobGet(http_IO *io, InstanceHolder *instance)
+{
+    const http_RequestInfo &request = io->Request();
+    const char *url = request.path + 1 + instance->key.len;
+
+    if (!instance->config.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+    const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!stamp) {
+        LogError("User is not allowed to access blobs");
+        io->SendError(403);
+        return;
+    }
+
+    RG_ASSERT(StartsWith(url, "/blobs/"));
+
+    Span<const char> tid;
+    Span<const char> name;
+    {
+        Span<const char> remain = url + 7;
+
+        tid = SplitStr(remain, '/', &remain);
+        name = SplitStr(remain, '/', &remain);
+
+        if (!CheckULID(tid)) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Get filename and check permission
+    sq_Statement stmt;
+    if (stamp->HasPermission(UserPermission::DataRead)) {
+        if (!instance->db->Prepare(R"(SELECT f.sha256
+                                      FROM rec_files f
+                                      INNER JOIN rec_entries e ON (e.eid = f.eid AND e.anchor = f.anchor)
+                                      WHERE f.tid = ?1 AND name = ?2)",
+                                   &stmt, tid, name))
+            return;
+    } else {
+        if (!instance->db->Prepare(R"(SELECT f.sha256
+                                      FROM rec_files f
+                                      INNER JOIN rec_entries e ON (e.eid = f.eid AND e.anchor = f.anchor)
+                                      INNER JOIN ins_claims c ON (c.tid = e.tid)
+                                      WHERE f.tid = ?1 AND f.name = ?2 AND c.userid = ?3)",
+                                   &stmt, tid, name, session->userid))
+            return;
+    }
+
+    // Not allowed or file does not exist
+    if (!stmt.Step()) {
+        if (stmt.IsValid()) {
+            LogError("File '%1' does not exist", name);
+            io->SendError(404);
+        }
+        return;
+    }
+
+    const char *sha256 = (const char *)sqlite3_column_text(stmt, 0);
+    int64_t max_age = 28ll * 86400000;
+
+    ServeFile(io, instance, sha256, name.ptr, max_age);
+}
+
+void HandleBlobPost(http_IO *io, InstanceHolder *instance)
+{
+    const http_RequestInfo &request = io->Request();
+
+    if (!instance->config.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!session->HasPermission(instance, UserPermission::DataSave)) {
+        LogError("User is not allowed to save blobs");
+        io->SendError(403);
+        return;
+    }
+
+    const char *expect = request.GetQueryValue("sha256");
+    CompressionType compression_type = CompressionType::None;
+    const char *sha256 = nullptr;
+
+    if (!PutFile(io, instance, compression_type, expect, &sha256))
+        return;
+
+    const char *response = Fmt(io->Allocator(), "{ \"sha256\": \"%1\" }", sha256).ptr;
+    io->SendText(200, response, "application/json");
 }
 
 }

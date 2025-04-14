@@ -26,64 +26,20 @@
 
 namespace RG {
 
-void HandleFileList(http_IO *io, InstanceHolder *instance)
+static bool CheckSha256(Span<const char> sha256)
 {
-    const http_RequestInfo &request = io->Request();
+    const auto test_char = [](char c) { return (c >= 'A' && c <= 'Z') || IsAsciiDigit(c); };
 
-    if (instance->master != instance) {
-        LogError("Cannot list files through slave instance");
-        io->SendError(403);
-        return;
+    if (sha256.len != 64) {
+        LogError("Malformed SHA256 (incorrect length)");
+        return false;
+    }
+    if (!std::all_of(sha256.begin(), sha256.end(), test_char)) {
+        LogError("Malformed SHA256 (unexpected character)");
+        return false;
     }
 
-    int64_t fs_version;
-    if (const char *str = request.GetQueryValue("version"); str) {
-        if (!ParseInt(str, &fs_version)) {
-            io->SendError(422);
-            return;
-        }
-
-        if (fs_version == 0) {
-            RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
-
-            if (!session || !session->HasPermission(instance, UserPermission::BuildCode)) {
-                LogError("You cannot access pages in development");
-                io->SendError(403);
-                return;
-            }
-        }
-    } else {
-        fs_version = instance->fs_version.load(std::memory_order_relaxed);
-    }
-
-    sq_Statement stmt;
-    if (!instance->db->Prepare(R"(SELECT i.filename, o.size, i.sha256 FROM fs_index i
-                                  INNER JOIN fs_objects o ON (o.sha256 = i.sha256)
-                                  WHERE i.version = ?1
-                                  ORDER BY i.filename)", &stmt))
-        return;
-    sqlite3_bind_int64(stmt, 1, fs_version);
-
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
-
-    json.StartObject();
-    json.Key("version"); json.Int64(fs_version);
-    json.Key("files"); json.StartArray();
-    while (stmt.Step()) {
-        json.StartObject();
-        json.Key("filename"); json.String((const char *)sqlite3_column_text(stmt, 0));
-        json.Key("size"); json.Int64(sqlite3_column_int64(stmt, 1));
-        json.Key("sha256"); json.String((const char *)sqlite3_column_text(stmt, 2));
-        json.EndObject();
-    }
-    if (!stmt.IsValid())
-        return;
-    json.EndArray();
-    json.EndObject();
-
-    json.Finish();
+    return true;
 }
 
 static void AddMimeTypeHeader(http_IO *io, const char *filename)
@@ -95,88 +51,35 @@ static void AddMimeTypeHeader(http_IO *io, const char *filename)
     }
 }
 
-// Returns true when request has been handled (file exists or an error has occured)
-bool HandleFileGet(http_IO *io, InstanceHolder *instance)
+bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const char *filename, int64_t max_age)
 {
     const http_RequestInfo &request = io->Request();
-    const char *url = request.path + 1 + instance->key.len;
-
-    RG_ASSERT(url <= request.path + strlen(request.path));
-    RG_ASSERT(url[0] == '/');
-
-    const char *client_etag = request.GetHeaderValue("If-None-Match");
-    const char *client_sha256 = request.GetQueryValue("sha256");
-
-    // Handle special paths
-    if (TestStr(url, "/favicon.png")) {
-        url ="/files/favicon.png";
-    } else if (TestStr(url, "/manifest.json")) {
-        url = "/files/manifest.json";
-    }
-
-    // Safety checks
-    if (!StartsWith(url, "/files/"))
-        return false;
-    if (instance->master != instance) {
-        LogError("Cannot get files through slave instance");
-        io->SendError(403);
-        return true;
-    }
-
-    Span<const char> filename = url + 7;
-
-    int64_t fs_version;
-    bool explicit_version;
-    {
-        Span<const char> remain;
-
-        if (ParseInt(filename, &fs_version, 0, &remain) && remain.ptr[0] == '/') {
-            if (fs_version == 0) {
-                RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
-
-                if (!session || !session->HasPermission(instance, UserPermission::BuildCode)) {
-                    LogError("You cannot access pages in development");
-                    io->SendError(403);
-                    return true;
-                }
-            }
-
-            filename = remain.Take(1, remain.len - 1);
-            explicit_version = true;
-        } else {
-            fs_version = instance->fs_version.load(std::memory_order_relaxed);
-            explicit_version = false;
-        }
-    }
 
     // Lookup file in database
     sq_Statement stmt;
-    if (!instance->db->Prepare(R"(SELECT o.rowid, o.compression, o.sha256 FROM fs_index i
-                                  INNER JOIN fs_objects o ON (o.sha256 = i.sha256)
-                                  WHERE i.version = ?1 AND i.filename = ?2)", &stmt))
+    if (!instance->db->Prepare(R"(SELECT rowid, compression
+                                  FROM fs_objects
+                                  WHERE sha256 = ?1)", &stmt, sha256))
         return true;
-    sqlite3_bind_int64(stmt, 1, fs_version);
-    sqlite3_bind_text(stmt, 2, filename.ptr, (int)filename.len, SQLITE_STATIC);
-    if (!stmt.Step())
-        return !stmt.IsValid();
+    if (!stmt.Step()) {
+        if (stmt.IsValid()) {
+            LogError("Missing file object");
+        }
+        return false;
+    }
 
     int64_t rowid = sqlite3_column_int64(stmt, 0);
+    const char *compression = (const char *)sqlite3_column_text(stmt, 1);
 
-    // Handle hash check and caching
+    // Handle caching
     {
-        const char *sha256 = (const char *)sqlite3_column_text(stmt, 2);
+        const char *etag = request.GetHeaderValue("If-None-Match");
 
-        if (client_etag && TestStr(client_etag, sha256)) {
+        if (etag && TestStr(etag, sha256)) {
             io->SendEmpty(304);
-            return true;
-        }
-        if (client_sha256 && !TestStr(client_sha256, sha256)) {
-            LogError("Fetch refused because of sha256 mismatch");
-            io->SendError(422);
-            return true;
+            return false;
         }
 
-        int64_t max_age = (explicit_version && fs_version > 0) ? (365ll * 86400000) : 0;
         io->AddCachingHeaders(max_age, sha256);
     }
 
@@ -184,14 +87,13 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
     CompressionType src_encoding;
     CompressionType dest_encoding;
     {
-        const char *name = (const char *)sqlite3_column_text(stmt, 1);
-        if (!name || !OptionToEnumI(CompressionTypeNames, name, &src_encoding)) {
-            LogError("Unknown compression type '%1'", name);
-            return true;
+        if (!compression || !OptionToEnumI(CompressionTypeNames, compression, &src_encoding)) {
+            LogError("Unknown compression type '%1'", compression);
+            return false;
         }
 
         if (!io->NegociateEncoding(src_encoding, &dest_encoding))
-            return true;
+            return false;
     }
 
     // Open file blob
@@ -199,7 +101,7 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
     Size src_len;
     if (sqlite3_blob_open(*instance->db, "main", "fs_objects", "blob", rowid, 0, &src_blob) != SQLITE_OK) {
         LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
-        return true;
+        return false;
     }
     src_len = sqlite3_blob_bytes(src_blob);
     RG_DEFER { sqlite3_blob_close(src_blob); };
@@ -211,15 +113,15 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
 
         if (sqlite3_blob_read(src_blob, ptr, (int)src_len, 0) != SQLITE_OK) {
             LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
-            return true;
+            return false;
         }
 
         io->AddEncodingHeader(dest_encoding);
-        AddMimeTypeHeader(io, filename.ptr);
+        AddMimeTypeHeader(io, filename);
 
         io->SendBinary(200, MakeSpan(ptr, src_len));
 
-        return true;
+        return false;
     }
 
     // Handle range requests
@@ -230,7 +132,7 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
 
             if (str && !http_ParseRange(str, src_len, &ranges)) {
                 io->SendError(416);
-                return true;
+                return false;
             }
         }
 
@@ -288,7 +190,7 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
 
             StreamWriter writer;
             if (!io->OpenForWrite(206, dest_encoding, total_len, &writer))
-                return true;
+                return false;
 
             for (Size i = 0; i < ranges.len; i++) {
                 const http_ByteRange &range = ranges[i];
@@ -303,7 +205,7 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
 
                     if (sqlite3_blob_read(src_blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
                         LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
-                        return true;
+                        return false;
                     }
 
                     writer.Write(buf, copy_len);
@@ -314,7 +216,7 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
             }
             writer.Close();
 
-            return true;
+            return false;
         } else if (ranges.len == 1) {
             const http_ByteRange &range = ranges[0];
             Size range_len = range.end - range.start;
@@ -326,12 +228,12 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
 
                 io->AddHeader("Content-Range", buf);
                 io->AddEncodingHeader(dest_encoding);
-                AddMimeTypeHeader(io, filename.ptr);
+                AddMimeTypeHeader(io, filename);
             }
 
             StreamWriter writer;
             if (!io->OpenForWrite(206, dest_encoding, range_len, &writer))
-                return  true;
+                return  false;
 
             Size offset = 0;
             while (offset < range_len) {
@@ -340,7 +242,7 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
 
                 if (sqlite3_blob_read(src_blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
                     LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
-                    return true;
+                    return false;
                 }
 
                 writer.Write(buf, copy_len);
@@ -348,7 +250,7 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
             }
             writer.Close();
 
-            return true;
+            return false;
         } else {
             io->AddHeader("Accept-Ranges", "bytes");
 
@@ -359,17 +261,17 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
     // Default path, for big files and/or transcoding (Gzip to None, etc.)
     {
         io->AddEncodingHeader(dest_encoding);
-        AddMimeTypeHeader(io, filename.ptr);
+        AddMimeTypeHeader(io, filename);
 
         StreamWriter writer;
         if (src_encoding == dest_encoding) {
             src_encoding = CompressionType::None;
 
             if (!io->OpenForWrite(200, src_len, &writer))
-                return true;
+                return false;
         } else {
             if (!io->OpenForWrite(200, dest_encoding, -1, &writer))
-                return true;
+                return false;
         }
 
         Size offset = 0;
@@ -383,7 +285,7 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
 
             offset += copy_len;
             return copy_len;
-        }, filename.ptr, src_encoding);
+        }, filename, src_encoding);
 
         // Not much we can do at this stage in case of error. Client will get truncated data.
         SpliceStream(&reader, -1, &writer);
@@ -393,90 +295,33 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
     return true;
 }
 
-static bool CheckSha256(Span<const char> sha256)
+static bool BlobExists(InstanceHolder *instance, const char *sha256)
 {
-    const auto test_char = [](char c) { return (c >= 'A' && c <= 'Z') || IsAsciiDigit(c); };
-
-    if (sha256.len != 64) {
-        LogError("Malformed SHA256 (incorrect length)");
+    sq_Statement stmt;
+    if (!instance->db->Prepare("SELECT rowid FROM fs_objects WHERE sha256 = ?1", &stmt))
         return false;
-    }
-    if (!std::all_of(sha256.begin(), sha256.end(), test_char)) {
-        LogError("Malformed SHA256 (unexpected character)");
-        return false;
-    }
+    sqlite3_bind_text(stmt, 1, sha256, -1, SQLITE_STATIC);
 
-    return true;
+    return stmt.Step();
 }
 
-void HandleFilePut(http_IO *io, InstanceHolder *instance)
+bool PutFile(http_IO *io, InstanceHolder *instance, CompressionType compression_type,
+             const char *expect, const char **out_sha256)
 {
-    const http_RequestInfo &request = io->Request();
-    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
-
-    if (!session) {
-        LogError("User is not logged in");
-        io->SendError(401);
-        return;
-    }
-    if (!session->HasPermission(instance, UserPermission::BuildCode)) {
-        LogError("User is not allowed to upload files");
-        io->SendError(403);
-        return;
-    }
-
-    const char *url = request.path + 1 + instance->key.len;
-    const char *filename = url + 7;
-    const char *client_sha256 = request.GetQueryValue("sha256");
-
-    if (!StartsWith(url, "/files/")) {
-        LogError("Cannot write to file outside '/files/'");
-        io->SendError(403);
-        return;
-    }
-    if (!filename[0]) {
-        LogError("Empty filename");
-        io->SendError(422);
-        return;
-    }
-    if (client_sha256 && !CheckSha256(client_sha256)) {
-        io->SendError(422);
-        return;
-    }
-
-    // See if this object is already on the server
-    if (client_sha256) {
-        sq_Statement stmt;
-        if (!instance->db->Prepare("SELECT rowid FROM fs_objects WHERE sha256 = ?1", &stmt))
-            return;
-        sqlite3_bind_text(stmt, 1, client_sha256, -1, SQLITE_STATIC);
-
-        if (stmt.Step()) {
-            if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
-                                      VALUES (0, ?1, ?2)
-                                      ON CONFLICT DO UPDATE SET sha256 = excluded.sha256)",
-                                   filename, client_sha256))
-                return;
-
-            io->SendText(200, "{}", "application/json");
-            return;
-        } else if (!stmt.IsValid()) {
-            return;
-        }
+    if (expect && BlobExists(instance, expect)) {
+        *out_sha256 = DuplicateString(expect, io->Allocator()).ptr;
+        return true;
     }
 
     // Create temporary file
     int fd = -1;
     const char *tmp_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
     if (!tmp_filename)
-        return;
+        return false;
     RG_DEFER {
         CloseDescriptor(fd);
         UnlinkFile(tmp_filename);
     };
-
-    CompressionType compression_type = CanCompressFile(filename) ? CompressionType::Gzip
-                                                                    : CompressionType::None;
 
     // Read and compress request body
     int64_t total_len = 0;
@@ -485,7 +330,7 @@ void HandleFilePut(http_IO *io, InstanceHolder *instance)
         StreamWriter writer(fd, "<temp>", 0, compression_type);
         StreamReader reader;
         if (!io->OpenForRead(instance->config.max_file_size, &reader))
-            return;
+            return false;
 
         crypto_hash_sha256_state state;
         crypto_hash_sha256_init(&state);
@@ -494,31 +339,38 @@ void HandleFilePut(http_IO *io, InstanceHolder *instance)
             LocalArray<uint8_t, 16384> buf;
             buf.len = reader.Read(buf.data);
             if (buf.len < 0)
-                return;
+                return false;
             total_len += buf.len;
 
             if (!writer.Write(buf))
-                return;
+                return false;
 
             crypto_hash_sha256_update(&state, buf.data, buf.len);
         } while (!reader.IsEOF());
         if (!writer.Close())
-            return;
+            return false;
 
         uint8_t hash[crypto_hash_sha256_BYTES];
         crypto_hash_sha256_final(&state, hash);
         FormatSha256(hash, sha256);
     }
 
-    // Don't lie to me :)
-    if (client_sha256 && !TestStr(sha256, client_sha256)) {
-        LogError("Upload refused because of sha256 mismatch");
-        io->SendError(422);
-        return;
+    // Check checksum
+    if (expect) {
+        if (!TestStr(sha256, expect)) {
+            LogError("Upload refused because of sha256 mismatch");
+            io->SendError(422);
+            return false;
+        }
+    } else {
+        if (BlobExists(instance, sha256)) {
+            *out_sha256 = DuplicateString(sha256, io->Allocator()).ptr;
+            return true;
+        }
     }
 
-    // Copy and commit to database
-    instance->db->Transaction([&]() {
+    // Copy to database blob
+    {
 #if defined(_WIN32)
         int64_t file_len = _lseeki64(fd, 0, SEEK_CUR);
 #else
@@ -584,16 +436,196 @@ void HandleFilePut(http_IO *io, InstanceHolder *instance)
             LogError("Temporary file size has changed (truncated)");
             return false;
         }
+    }
 
-        if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
-                                  VALUES (0, ?1, ?2)
-                                  ON CONFLICT DO UPDATE SET sha256 = excluded.sha256)",
-                               filename, sha256))
-            return false;
+    *out_sha256 = DuplicateString(sha256, io->Allocator()).ptr;
+    return true;
+}
 
-        io->SendText(200, "{}", "application/json");
+void HandleFileList(http_IO *io, InstanceHolder *instance)
+{
+    const http_RequestInfo &request = io->Request();
+
+    if (instance->master != instance) {
+        LogError("Cannot list files through slave instance");
+        io->SendError(403);
+        return;
+    }
+
+    int64_t fs_version;
+    if (const char *str = request.GetQueryValue("version"); str) {
+        if (!ParseInt(str, &fs_version)) {
+            io->SendError(422);
+            return;
+        }
+
+        if (fs_version == 0) {
+            RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+
+            if (!session || !session->HasPermission(instance, UserPermission::BuildCode)) {
+                LogError("You cannot access pages in development");
+                io->SendError(403);
+                return;
+            }
+        }
+    } else {
+        fs_version = instance->fs_version.load(std::memory_order_relaxed);
+    }
+
+    sq_Statement stmt;
+    if (!instance->db->Prepare(R"(SELECT i.filename, o.size, i.sha256 FROM fs_index i
+                                  INNER JOIN fs_objects o ON (o.sha256 = i.sha256)
+                                  WHERE i.version = ?1
+                                  ORDER BY i.filename)", &stmt))
+        return;
+    sqlite3_bind_int64(stmt, 1, fs_version);
+
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartObject();
+    json.Key("version"); json.Int64(fs_version);
+    json.Key("files"); json.StartArray();
+    while (stmt.Step()) {
+        json.StartObject();
+        json.Key("filename"); json.String((const char *)sqlite3_column_text(stmt, 0));
+        json.Key("size"); json.Int64(sqlite3_column_int64(stmt, 1));
+        json.Key("sha256"); json.String((const char *)sqlite3_column_text(stmt, 2));
+        json.EndObject();
+    }
+    if (!stmt.IsValid())
+        return;
+    json.EndArray();
+    json.EndObject();
+
+    json.Finish();
+}
+
+// Returns true when request has been handled (file exists or an error has occured)
+bool HandleFileGet(http_IO *io, InstanceHolder *instance)
+{
+    const http_RequestInfo &request = io->Request();
+    const char *url = request.path + 1 + instance->key.len;
+
+    RG_ASSERT(url <= request.path + strlen(request.path));
+    RG_ASSERT(url[0] == '/');
+
+    const char *client_sha256 = request.GetQueryValue("sha256");
+
+    // Handle special paths
+    if (TestStr(url, "/favicon.png")) {
+        url ="/files/favicon.png";
+    } else if (TestStr(url, "/manifest.json")) {
+        url = "/files/manifest.json";
+    }
+
+    // Safety checks
+    if (!StartsWith(url, "/files/"))
+        return false;
+    if (instance->master != instance) {
+        LogError("Cannot get files through slave instance");
+        io->SendError(403);
         return true;
-    });
+    }
+
+    Span<const char> filename = url + 7;
+
+    int64_t fs_version;
+    bool explicit_version;
+    {
+        Span<const char> remain;
+
+        if (ParseInt(filename, &fs_version, 0, &remain) && remain.ptr[0] == '/') {
+            if (fs_version == 0) {
+                RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+
+                if (!session || !session->HasPermission(instance, UserPermission::BuildCode)) {
+                    LogError("You cannot access pages in development");
+                    io->SendError(403);
+                    return true;
+                }
+            }
+
+            filename = remain.Take(1, remain.len - 1);
+            explicit_version = true;
+        } else {
+            fs_version = instance->fs_version.load(std::memory_order_relaxed);
+            explicit_version = false;
+        }
+    }
+
+    // Lookup file in database
+    sq_Statement stmt;
+    if (!instance->db->Prepare("SELECT sha256 FROM fs_index WHERE version = ?1 AND filename = ?2",
+                               &stmt, fs_version, filename))
+        return true;
+    if (!stmt.Step())
+        return !stmt.IsValid();
+
+    const char *sha256 = (const char *)sqlite3_column_text(stmt, 0);
+
+    // Handle hash check
+    if (client_sha256 && !TestStr(client_sha256, sha256)) {
+        LogError("Fetch refused because of sha256 mismatch");
+        io->SendError(422);
+        return true;
+    }
+
+    int64_t max_age = (explicit_version && fs_version > 0) ? (28ll * 86400000) : 0;
+    ServeFile(io, instance, sha256, filename.ptr, max_age);
+
+    return true;
+}
+
+void HandleFilePut(http_IO *io, InstanceHolder *instance)
+{
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!session->HasPermission(instance, UserPermission::BuildCode)) {
+        LogError("User is not allowed to upload files");
+        io->SendError(403);
+        return;
+    }
+
+    const char *url = request.path + 1 + instance->key.len;
+    const char *filename = url + 7;
+    const char *expect = request.GetQueryValue("sha256");
+
+    if (!StartsWith(url, "/files/")) {
+        LogError("Cannot write to file outside '/files/'");
+        io->SendError(403);
+        return;
+    }
+    if (!filename[0]) {
+        LogError("Empty filename");
+        io->SendError(422);
+        return;
+    }
+    if (expect && !CheckSha256(expect)) {
+        io->SendError(422);
+        return;
+    }
+
+    CompressionType compression_type = CanCompressFile(filename) ? CompressionType::Gzip
+                                                                 : CompressionType::None;
+    const char *sha256 = nullptr;
+
+    if (!PutFile(io, instance, compression_type, expect, &sha256))
+        return;
+    if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
+                              VALUES (0, ?1, ?2)
+                              ON CONFLICT DO UPDATE SET sha256 = excluded.sha256)",
+                           filename, sha256))
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleFileDelete(http_IO *io, InstanceHolder *instance)

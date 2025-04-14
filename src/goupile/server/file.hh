@@ -22,6 +22,9 @@ namespace RG {
 
 class InstanceHolder;
 
+bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const char *filename, int64_t max_age);
+bool PutFile(http_IO *io, InstanceHolder *instance, CompressionType compression_type, const char *expect, const char **out_sha256);
+
 void HandleFileList(http_IO *io, InstanceHolder *instance);
 bool HandleFileGet(http_IO *io, InstanceHolder *instance);
 void HandleFilePut(http_IO *io, InstanceHolder *instance);

@@ -134,6 +134,7 @@ static bool CheckInstanceKey(Span<const char> key)
         "main",
         "static",
         "files",
+        "blobs",
         "help"
     };
 
