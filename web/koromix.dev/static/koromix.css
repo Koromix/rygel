@@ -59,6 +59,17 @@ html {
     & img { object-fit: contain; }
 }
 
+.project {
+    display: flex;
+    gap: 1em;
+
+    & > img {
+        margin: 0 1em;
+        object-fit: contain;
+    }
+    & > div { flex: 1; }
+}
+
 @media screen and (max-width: 1300px) {
     #hire {
         position: fixed;
@@ -70,4 +81,9 @@ html {
 @media screen and (max-width: 960px) {
     #top li > a.active { display: block !important; }
     #me > img { display: none; }
+
+    .project {
+        flex-direction: column !important;
+        align-items: center;
+    }
 }

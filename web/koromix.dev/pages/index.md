@@ -14,26 +14,39 @@
 
 ## Goupile
 
-Goupile is an **open-source electronic data capture** application that strives to make form creation and data entry both powerful and easy.
-
-Find out more on the [page dedicated to Goupile](goupile).
+<div class="project">
+    <img src="{{ ASSET static/goupile/logo.webp }}" width="260" alt="" />
+    <div>
+        <p>Goupile is an <b>open-source electronic data capture</b> application that strives to make form creation and data entry both powerful and easy.
+        <p>Find out more on the <a href="goupile">page dedicated to Goupile</a>.
+    </div>
+</div>
 
 ## Koffi
 
-Koffi is a **fast and easy-to-use JS to C FFI module** for [Node.js](https://nodejs.org/), featuring:
-
-* Low-overhead and fast performance (see [benchmarks](https://koffi.dev/benchmarks))
-* Support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value
-* Javascript functions can be used as C callbacks (since 1.2.0)
-* Well-tested code base for popular OS/architecture combinations
-
-Find out more on the [page dedicated to Koffi](koffi).
+<div class="project" style="flex-direction: row-reverse;">
+    <img src="{{ ASSET static/koffi/logo.webp }}" width="180" alt="" />
+    <div>
+        <p>Koffi is a <b>fast and easy-to-use JS to C FFI module</b> for <a href="https://nodejs.org/">Node.js</a>, featuring:
+        <ul>
+            <li>Low-overhead and fast performance (see <a href="https://koffi.dev/benchmarks">benchmarks</a>)
+            <li>Support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value
+            <li>Javascript functions can be used as C callbacks (since 1.2.0)
+            <li>Well-tested code base for popular OS/architecture combinations
+        </ul>
+        <p>Find out more on the <a href="koffi">page dedicated to Koffi</a>.
+    </div>
+</div>
 
 ## Rekkord
 
-Rekkord is a multi-platform **backup tool with deduplication and asymmetric encryption**, with support for local and remote storage back-ends.
-
-Find out more on the [page dedicated to Rekkord](rekkord).
+<div class="project">
+    <img src="{{ ASSET static/rekkord/logo.webp }}" width="260" alt="" />
+    <div>
+        <p>Rekkord is a multi-platform <b>backup tool with deduplication and asymmetric encryption</b>, with support for local and remote storage back-ends.
+        <p>Find out more on the <a href="rekkord">page dedicated to Rekkord</a>.
+    </div>
+</div>
 
 ## TyTools
 
@@ -44,6 +57,10 @@ Tool        | Type                      | Description
 TyCommander | Qt GUI (static)           | Upload, monitor and communicate with multiple boards
 TyUploader  | Qt GUI (static)           | Simple firmware / sketch uploader
 tycmd       | Command-line<br>_No Qt !_ | Command-line tool to manage Teensy boards
+
+<div class="illustrations">
+    <img src="{{ ASSET static/tytools/logo.webp }}" width="260" alt="" />
+</div>
 
 Find out more on the [page dedicated to TyTools](tytools).
 
@@ -57,9 +74,13 @@ Find out more on the [page dedicated to libhs](libhs).
 
 ## Meestic
 
-Meestic is a small utility made to control **the lights of MSI Delta 15 laptop keyboards** on Windows and Linux. It provides both a CLI and a system-tray GUI, and can fully replace the official MSI tool (which is not even available for Linux).
-
-Find out more on the [page dedicated to Meestic](meestic).
+<div class="project" style="flex-direction: row-reverse;">
+    <img src="{{ ASSET static/meestic/windows.webp }}" width="200" alt="" />
+    <div>
+        <p>Meestic is a small utility made to control <b>the lights of MSI Delta 15 laptop keyboards</b> on Windows and Linux. It provides both a CLI and a system-tray GUI, and can fully replace the official MSI tool (which is not even available for Linux).
+        <p>Find out more on the <a href="meestic">page dedicated to Meestic</a>.
+    </div>
+</div>
 
 # Other projects
 
