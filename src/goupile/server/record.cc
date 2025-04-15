@@ -86,7 +86,7 @@ struct DataConstraint {
     bool unique = false;
 };
 
-struct RecordFragment {
+struct FragmentInfo {
     int64_t fs = -1;
     char eid[27] = {};
     const char *store = nullptr;
@@ -1048,7 +1048,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     }
 
     char tid[27];
-    RecordFragment fragment = {};
+    FragmentInfo fragment = {};
     HeapArray<DataConstraint> constraints;
     HeapArray<CounterInfo> counters;
     {
