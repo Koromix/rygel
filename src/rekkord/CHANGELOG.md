@@ -6,6 +6,23 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.40
+
+*Released on 2025-04-16*
+
+- Derive encryption keys from the master key
+- Use separate data key pair (for blobs) and tag/log key pair (for snapshot log)
+- Derive the FastCDC chunker seed from the write key
+- Derive the BLAKE3 hash salt from the write key
+- Pad blobs with Padmé algorithm to reduce size leakage
+- Always prompt user for master key export path
+- Drop `rekkord export_key` command since the master key is not stored anymore
+- Drop *--skip_key* option from `rekkord init` since export is not possible after that
+- Sort `rekkord list_users` entries alphabetically
+
+> [!WARNING]
+> This is a breaking change, and there is no migration path. A new repository must be used.
+
 ### Rekkord 0.39
 
 *Released on 2025-03-23*
