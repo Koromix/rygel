@@ -73,17 +73,21 @@ rekkord init
 
 This command will initialize the repository with a random 256-bit master key.
 
-After initialization, the **master key** is exported to a binary file, named `master.key` by default (in the current directory). You can change the export file with the `--key_file <file>` option, or skip it altogether with `--skip_key`.
+After initialization, the **master key** is exported to a binary file, named `master.key` by default (in the current directory). You can change the export file with the `--key_file <file>` option.
 
 > [!IMPORTANT]
-> You should **store this master key in a secure place**, it can be used to reset user accounts and passwords (see below).
+> You should **store this master key in a secure place**, it can be used to reset user accounts and passwords (see below). It cannot be recreated if you lose the file.
 > However, if it leaks, everyone will be able to decrypt your snapshots!
 
-The **write-only key** (public key) is derived from this master key (secret key).
+Rekkord uses **multiple encryption keys** which are derived from this master key:
 
-Rekkord repositories support multiple user accounts. A **user account named default** is created when the repository is initialized. The master key and the write-key are each encrypted and stored in the repository with two account passwords:
+- The *shared key (skey)* is used for auxiliary information (such as the cache ID)
+- The *data key (dkey)* is paired with a *write key (wkey)* for data encryption (snapshot information, directory metadata, file content)
+- The *log key (lkey)* is paired with a *tag key (tkey)*, for the list of snapshots and basic snapshot information
 
-- *Master password*, which allows writing and reading from the repository
+Rekkord repositories support multiple user accounts. A **user account named default** is created when the repository is initialized. A subset of the keys mentioned above are encrypted and stored in the repository with two account passwords:
+
+- *Full password*, which allows writing and reading from the repository
 - *Write-only password*, which can be used to create snapshots but cannot be used to list or restore existing snapshots
 
 You will need one or the other to use other rekkord commands. Please store these passwords securely.
@@ -91,5 +95,3 @@ You will need one or the other to use other rekkord commands. Please store these
 > [!IMPORTANT]
 > You can reset any account or password (including the default one) **as long as you have the master key** file.
 > As mentioned previously, this one, you must not lose or leak!
-
-You can use `rekkord export_key` to re-export the master key at any time.
