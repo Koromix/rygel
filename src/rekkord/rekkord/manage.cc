@@ -46,7 +46,6 @@ int RunInit(Span<const char *> arguments)
     bool random_full_pwd = true;
     bool random_write_pwd = true;
     const char *key_filename = nullptr;
-    bool skip_key = false;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -61,8 +60,7 @@ Options:
         %!..+--master_password [pwd]%!0    Set master password manually
         %!..+--write_password [pwd]%!0     Set write-only password manually
 
-    %!..+-K, --key_file filename%!0        Set explicit master key export file
-        %!..+--skip_key%!0                 Skip master key export)", FelixTarget);
+    %!..+-K, --key_file filename%!0        Set explicit master key export file)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -89,8 +87,6 @@ Options:
                 random_write_pwd = false;
             } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
                 key_filename = opt.current_value;
-            } else if (opt.Test("--skip_key")) {
-                skip_key = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -103,24 +99,20 @@ Options:
     if (!config.Complete(false))
         return 1;
 
-    if (!skip_key) {
-        if (!key_filename) {
-            key_filename = Prompt("Master key export file: ", "master.key", nullptr, &temp_alloc);
+    if (!key_filename) {
+        key_filename = Prompt("Master key export file: ", "master.key", nullptr, &temp_alloc);
 
-            if (!key_filename)
-                return 1;
-            if (!key_filename[0]) {
-                LogError("Cannot export to empty path");
-                return 1;
-            }
-        }
-
-        if (TestFile(key_filename)) {
-            LogError("Master key export file '%1' already exists", key_filename);
+        if (!key_filename)
+            return 1;
+        if (!key_filename[0]) {
+            LogError("Cannot export to empty path");
             return 1;
         }
-    } else {
-        key_filename = nullptr;
+    }
+
+    if (TestFile(key_filename)) {
+        LogError("Master key export file '%1' already exists", key_filename);
+        return 1;
     }
 
     std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
@@ -168,101 +160,14 @@ Options:
     } else {
         LogInfo("    write-only password: %!D..(hidden)%!0");
     }
+    LogInfo();
 
     // Continue even if it fails, an error will be shown regardless
-    if (key_filename) {
+    if (WriteFile(disk->GetFullKey(), key_filename)) {
+        LogInfo("Wrote master key: %!..+%1%!0", key_filename);
         LogInfo();
-
-        if (WriteFile(disk->GetFullKey(), key_filename)) {
-            LogInfo("Wrote master key: %!..+%1%!0", key_filename);
-            LogInfo();
-            LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even if the default account is lost or deleted.");
-        } else {
-            LogInfo("Use %!..+rekkord export_key%!0 to export the master key and keep it safe.");
-        }
+        LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even if the default account is lost or deleted.");
     }
-
-    return 0;
-}
-
-int RunExportKey(Span<const char *> arguments)
-{
-    // Options
-    rk_Config config;
-    const char *key_filename = "master.key";
-
-    const auto print_usage = [=](StreamWriter *st) {
-        PrintLn(st,
-R"(Usage: %!..+%1 export_key [-C filename] [option...]%!0
-
-Options:
-
-    %!..+-C, --config_file filename%!0     Set configuration file
-
-    %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username
-        %!..+--password password%!0        Set repository password
-
-    %!..+-K, --key_file filename%!0        Set explicit master key export file
-                                   %!D..(default: %2)%!0)", FelixTarget, key_filename);
-    };
-
-    if (!FindAndLoadConfig(arguments, &config))
-        return 1;
-
-    // Parse arguments
-    {
-        OptionParser opt(arguments);
-
-        while (opt.Next()) {
-            if (opt.Test("--help")) {
-                print_usage(StdOut);
-                return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                // Already handled
-            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                if (!rk_DecodeURL(opt.current_value, &config))
-                    return 1;
-            } else if (opt.Test("-u", "--username", OptionType::Value)) {
-                config.username = opt.current_value;
-            } else if (opt.Test("--password", OptionType::Value)) {
-                config.password = opt.current_value;
-            } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
-                key_filename = opt.current_value;
-            } else {
-                opt.LogUnknownError();
-                return 1;
-            }
-        }
-
-        opt.LogUnusedArguments();
-    }
-
-    if (!config.Complete(true))
-        return 1;
-
-    if (TestFile(key_filename)) {
-        LogError("Master key export file '%1' already exists", key_filename);
-        return 1;
-    }
-
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
-    if (!disk)
-        return 1;
-
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::Full) {
-        LogError("You must use the read-write password with this command");
-        return 1;
-    }
-    LogInfo();
-
-    if (!WriteFile(disk->GetFullKey(), key_filename))
-        return 1;
-
-    LogInfo("Wrote master key: %!..+%1%!0", key_filename);
-    LogInfo();
-    LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even if the default account is lost or deleted.");
 
     return 0;
 }

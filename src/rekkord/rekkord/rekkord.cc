@@ -24,7 +24,6 @@
 namespace RG {
 
 int RunInit(Span<const char *> arguments);
-int RunExportKey(Span<const char *> arguments);
 int RunAddUser(Span<const char *> arguments);
 int RunDeleteUser(Span<const char *> arguments);
 int RunListUsers(Span<const char *> arguments);
@@ -68,7 +67,6 @@ R"(Usage: %!..+%1 command [arg...]%!0
 Management commands:
 
     %!..+init%!0                           Init new backup repository
-    %!..+export_key%!0                     Export master repository key
 
     %!..+add_user%!0                       Add user
     %!..+delete_user%!0                    Delete user
@@ -150,8 +148,6 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
 
     if (TestStr(cmd, "init")) {
         return RunInit(arguments);
-    } else if (TestStr(cmd, "export_key")) {
-        return RunExportKey(arguments);
     } else if (TestStr(cmd, "add_user")) {
         return RunAddUser(arguments);
     } else if (TestStr(cmd, "delete_user")) {
