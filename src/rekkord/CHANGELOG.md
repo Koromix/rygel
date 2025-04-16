@@ -8,13 +8,13 @@
 
 ### Rekkord 0.39
 
-*Released on 2024-03-23*
+*Released on 2025-03-23*
 
 - Fix excessive memory usage during `rekkord save`
 
 ### Rekkord 0.38
 
-*Released on 2024-03-23*
+*Released on 2025-03-23*
 
 - Use 256 subdirectories for blobs instead of 4096
 
@@ -23,7 +23,7 @@
 
 ### Rekkord 0.37
 
-*Released on 2024-03-23*
+*Released on 2025-03-23*
 
 - Add retry logic to handle transient SFTP errors in rekkord
 - Add *--preserve_atime* option to `rekkord save`
@@ -32,7 +32,7 @@
 
 ### Rekkord 0.36
 
-*Released on 2024-03-22*
+*Released on 2025-03-22*
 
 - Fix stalling and deadlock when restoring many files in `rekkord restore`
 
