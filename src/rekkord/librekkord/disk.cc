@@ -469,7 +469,8 @@ bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
 {
     BlockAllocator temp_alloc;
 
-    RG_DEFER_NC(out_guard, len = out_users->len) { out_users->RemoveFrom(len); };
+    Size prev_len = out_users->len;
+    RG_DEFER_N(out_guard) { out_users->RemoveFrom(prev_len); };
 
     HashMap<const char *, Size> known_map;
 
@@ -515,6 +516,11 @@ bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
     });
     if (!success)
         return false;
+
+    std::sort(out_users->begin() + prev_len, out_users->end(),
+              [](const rk_UserInfo &user1, const rk_UserInfo &user2) {
+        return CmpStr(user1.username, user2.username) < 0;
+    });
 
     out_guard.Disable();
     return true;
