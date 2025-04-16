@@ -24,6 +24,8 @@ struct rk_Config;
 struct s3_Config;
 struct ssh_Config;
 
+static const int rk_MasterKeySize = 32;
+
 struct rk_Hash {
     uint8_t hash[32];
 
@@ -75,7 +77,7 @@ static const char *const rk_BlobTypeNames[] = {
     "Snapshot3"
 };
 
-enum class rk_SaltType {
+enum class rk_SaltKind {
     BlobHash = 0,
     SplitterSeed = 1
 };
@@ -105,8 +107,11 @@ protected:
 
     rk_DiskMode mode = rk_DiskMode::Secure;
     const char *user = nullptr;
-    uint8_t pkey[32] = {};
     uint8_t skey[32] = {};
+    uint8_t dkey[32] = {};
+    uint8_t wkey[32] = {};
+    uint8_t lkey[32] = {};
+    uint8_t tkey[32] = {};
     bool mlocked = false;
 
     sq_Database cache_db;
@@ -125,30 +130,18 @@ public:
 
     virtual ~rk_Disk();
 
-    virtual bool Init(const char *full_pwd, const char *write_pwd) = 0;
+    virtual bool Init(Span<const uint8_t> mkey, const char *full_pwd, const char *write_pwd) = 0;
 
     bool Authenticate(const char *username, const char *pwd);
-    bool Authenticate(Span<const uint8_t> key);
+    bool Authenticate(Span<const uint8_t> mkey);
     void Lock();
 
     const char *GetURL() const { return url; }
     rk_DiskMode GetMode() const { return mode; }
     const char *GetUser() const { return user; }
-
-    Span<const uint8_t> GetFullKey() const
-    {
-        RG_ASSERT(mode == rk_DiskMode::Full);
-        return skey;
-    }
-    Span<const uint8_t> GetWriteKey() const
-    {
-        RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::Full);
-        return pkey;
-    }
-
     Async *GetAsync() { return &tasks; }
 
-    void MakeSalt(rk_SaltType type, Span<uint8_t> out_buf) const;
+    void MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const;
 
     bool ChangeID();
 
@@ -178,15 +171,15 @@ protected:
     virtual bool CreateDirectory(const char *path) = 0;
     virtual bool DeleteDirectory(const char *path) = 0;
 
-    bool InitDefault(const char *full_pwd, const char *write_pwd);
+    bool InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const char *write_pwd);
 
     bool PutCache(const char *key);
 
 private:
     StatResult TestFast(const char *path);
 
-    bool WriteKey(const char *path, const char *pwd, const uint8_t payload[32]);
-    bool ReadKey(const char *path, const char *pwd, uint8_t *out_payload, bool *out_error);
+    bool WriteKeys(const char *path, const char *pwd, Span<const uint8_t *const> keys);
+    bool ReadKeys(const char *path, const char *pwd, Span<uint8_t *const> out_keys, bool *out_error);
 
     bool WriteSecret(const char *path, Span<const uint8_t> buf, bool overwrite);
     bool ReadSecret(const char *path, Span<uint8_t> out_buf);

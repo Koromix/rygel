@@ -150,7 +150,7 @@ Available sort orders: %!..+%4%!0)",
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != rk_DiskMode::Full) {
-        LogError("You must use the read-write password with this command");
+        LogError("You must use the full-access password with this command");
         return 1;
     }
     LogInfo();
@@ -551,7 +551,7 @@ Available output formats: %!..+%3%!0)",
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != rk_DiskMode::Full) {
-        LogError("You must use the read-write password with this command");
+        LogError("You must use the full-access password with this command");
         return 1;
     }
     LogInfo();

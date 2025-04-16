@@ -57,7 +57,7 @@ Options:
 
     %!..+-R, --repository filename%!0      Set repository URL
 
-        %!..+--master_password [pwd]%!0    Set master password manually
+        %!..+--full_password [pwd]%!0      Set full password manually
         %!..+--write_password [pwd]%!0     Set write-only password manually
 
     %!..+-K, --key_file filename%!0        Set explicit master key export file)", FelixTarget);
@@ -79,7 +79,7 @@ Options:
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
                 if (!rk_DecodeURL(opt.current_value, &config))
                     return 1;
-            } else if (opt.Test("--master_password", OptionType::OptionalValue)) {
+            } else if (opt.Test("--full_password", OptionType::OptionalValue)) {
                 full_pwd = opt.current_value;
                 random_full_pwd = false;
             } else if (opt.Test("--write_password", OptionType::OptionalValue)) {
@@ -130,7 +130,7 @@ Options:
            return 1;
        full_pwd = buf.ptr;
     } else if (!full_pwd) {
-        full_pwd = Prompt("Master password: ", nullptr, "*", &temp_alloc);
+        full_pwd = Prompt("Full password: ", nullptr, "*", &temp_alloc);
         if (!full_pwd)
             return 1;
     }
@@ -145,25 +145,29 @@ Options:
             return 1;
     }
 
+    uint8_t mkey[rk_MasterKeySize] = {};
+    randombytes_buf(mkey, RG_SIZE(mkey));
+    RG_DEFER { ZeroMemorySafe(mkey, RG_SIZE(mkey)); };
+
     LogInfo("Initializing...");
-    if (!disk->Init(full_pwd, write_pwd))
+    if (!disk->Init(mkey, full_pwd, write_pwd))
         return 1;
     LogInfo();
 
     if (random_full_pwd) {
-        LogInfo("Default master password: %!..+%1%!0", full_pwd);
+        LogInfo("Default full password: %!..+%1%!0", full_pwd);
     } else {
-        LogInfo("Default master password: %!D..(hidden)%!0");
+        LogInfo("Default full password: %!D..(hidden)%!0");
     }
     if (random_write_pwd) {
-        LogInfo("    write-only password: %!..+%1%!0", write_pwd);
+        LogInfo("  write-only password: %!..+%1%!0", write_pwd);
     } else {
-        LogInfo("    write-only password: %!D..(hidden)%!0");
+        LogInfo("  write-only password: %!D..(hidden)%!0");
     }
     LogInfo();
 
     // Continue even if it fails, an error will be shown regardless
-    if (WriteFile(disk->GetFullKey(), key_filename)) {
+    if (WriteFile(mkey, key_filename)) {
         LogInfo("Wrote master key: %!..+%1%!0", key_filename);
         LogInfo();
         LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even if the default account is lost or deleted.");
@@ -203,7 +207,7 @@ Options:
 
     %!..+-m, --mode mode%!0                Access mode (see below)
 
-        %!..+--master_password [pwd]%!0    Set master password manually
+        %!..+--full_password [pwd]%!0      Set full password manually
         %!..+--write_password [pwd]%!0     Set write-only password manually
 
         %!..+--force%!0                    Overwrite exisiting user %!D..(if any)%!0
@@ -243,7 +247,7 @@ Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_
                     LogError("Unknown mode '%1'", opt.current_value);
                     return 1;
                 }
-            } else if (opt.Test("--master_password", OptionType::OptionalValue)) {
+            } else if (opt.Test("--full_password", OptionType::OptionalValue)) {
                 full_pwd = opt.current_value;
                 random_full_pwd = false;
             } else if (opt.Test("--write_password", OptionType::OptionalValue)) {
@@ -279,18 +283,18 @@ Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_
     if (!authenticate) {
         RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
 
-        LocalArray<uint8_t, 128> master_key;
-        master_key.len = ReadFile(key_filename, master_key.data);
-        if (master_key.len < 0)
+        LocalArray<uint8_t, 128> mkey;
+        mkey.len = ReadFile(key_filename, mkey.data);
+        if (mkey.len < 0)
             return 1;
 
-        if (!disk->Authenticate(master_key))
+        if (!disk->Authenticate(mkey))
             return false;
     }
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     if (mode == rk_DiskMode::Full && disk->GetMode() != rk_DiskMode::Full) {
-        LogError("You must use the read-write password with this command");
+        LogError("You must use the full-access password with this command");
         return 1;
     }
     LogInfo();
@@ -303,12 +307,12 @@ Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_
                return 1;
            full_pwd = buf.ptr;
         } else if (!full_pwd) {
-            full_pwd = Prompt("Master password: ", nullptr, "*", &temp_alloc);
+            full_pwd = Prompt("Full password: ", nullptr, "*", &temp_alloc);
             if (!full_pwd)
                 return 1;
         }
     } else if (!random_full_pwd) {
-        LogError("Don't set master password for write-only user");
+        LogError("Don't set full password for write-only user");
         return 1;
     }
     if (random_write_pwd) {
@@ -328,16 +332,16 @@ Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_
     LogInfo("Added user: %!..+%1%!0", username);
     LogInfo();
     if (mode != rk_DiskMode::Full) {
-        LogInfo("New user master password: %!D..(none)%!0");
+        LogInfo("New user full password: %!D..(none)%!0");
     } else if (random_full_pwd) {
-        LogInfo("New user master password: %!..+%1%!0", full_pwd);
+        LogInfo("New user full password: %!..+%1%!0", full_pwd);
     } else {
-        LogInfo("New user master password: %!D..(hidden)%!0");
+        LogInfo("New user full password: %!D..(hidden)%!0");
     }
     if (random_write_pwd) {
-        LogInfo("     write-only password: %!..+%1%!0", write_pwd);
+        LogInfo("   write-only password: %!..+%1%!0", write_pwd);
     } else {
-        LogInfo("     write-only password: %!D..(hidden)%!0");
+        LogInfo("   write-only password: %!D..(hidden)%!0");
     }
 
     return 0;

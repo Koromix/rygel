@@ -20,11 +20,24 @@
 
 namespace RG {
 
+static const char *const DerivationContext = "REKKORD0";
+static const int MaxKeys = 8;
+static const int SecretVersion = 1;
+static const int TagVersion = 1;
+static const int BlobVersion = 7;
+static const Size BlobSplit = Kibibytes(32);
+
+enum class MasterDerivation {
+    SharedKey = 0,
+    DataKey = 1,
+    LogKey = 2
+};
+
 #pragma pack(push, 1)
 struct KeyData {
     uint8_t salt[16];
     uint8_t nonce[24];
-    uint8_t cypher[16 + 32];
+    uint8_t cypher[16 + MaxKeys * 32];
 };
 #pragma pack(pop)
 
@@ -51,11 +64,6 @@ struct BlobIntro {
     uint8_t header[24];
 };
 #pragma pack(pop)
-
-static const int SecretVersion = 1;
-static const int TagVersion = 1;
-static const int BlobVersion = 7;
-static const Size BlobSplit = Kibibytes(32);
 
 static const int CacheVersion = 4;
 

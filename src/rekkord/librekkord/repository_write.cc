@@ -90,12 +90,12 @@ PutContext::PutContext(rk_Disk *disk, sq_Database *db, ProgressHandle *progress,
     : disk(disk), db(db), progress(progress), preserve_atime(preserve_atime),
       dir_tasks(disk->GetAsync()), file_tasks(disk->GetAsync())
 {
-    disk->MakeSalt(rk_SaltType::BlobHash, salt32);
+    disk->MakeSalt(rk_SaltKind::BlobHash, salt32);
 
     // Seed the CDC splitter too
     {
         uint8_t buf[RG_SIZE(salt8)];
-        disk->MakeSalt(rk_SaltType::SplitterSeed, buf);
+        disk->MakeSalt(rk_SaltKind::SplitterSeed, buf);
         MemCpy(&salt8, buf, RG_SIZE(salt8));
     }
 }
@@ -608,7 +608,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         return false;
 
     uint8_t salt32[BLAKE3_KEY_LEN];
-    disk->MakeSalt(rk_SaltType::BlobHash, salt32);
+    disk->MakeSalt(rk_SaltKind::BlobHash, salt32);
 
     HeapArray<uint8_t> snapshot_blob;
     snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader));
