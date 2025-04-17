@@ -198,6 +198,72 @@ You can access unmanaged memory with `koffi.view(ptr, len)`. This function takes
 > [!NOTE]
 > Some runtimes (such as Electron) forbid the use of external buffers. In this case, trying to create a view will trigger an exception.
 
+The following Linux example writes the string "Hello World!" to a file named "hello.txt" through mmaped memory, to demontrate the use of `koffi.view()`:
+
+```js
+const koffi = require('koffi');
+
+// ES6 syntax: import koffi from 'koffi';
+const libc = koffi.load('libc.so.6');
+
+const mode_t = koffi.alias('mode_t', 'uint32_t');
+const off_t = koffi.alias('off_t', 'int64_t');
+
+// These values are used on Linux and may differ on other systems
+const O_RDONLY = 00000000;
+const O_WRONLY = 00000001;
+const O_RDWR = 00000002;
+const O_CREAT = 00000100;
+const O_EXCL = 00000200;
+const O_CLOEXEC = 02000000;
+
+// These values are used on Linux and may differ on other systems
+const PROT_READ = 0x01;
+const PROT_WRITE = 0x02;
+const PROT_EXEC = 0x04;
+const MAP_SHARED = 0x01;
+const MAP_PRIVATE = 0x02;
+
+const open = libc.func('int open(const char *path, int flags, uint32_t mode)');
+const close = libc.func('int close(int fd)');
+const ftruncate = libc.func('int ftruncate(int fd, off_t length)');
+const mmap = libc.func('void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)');
+const munmap = libc.func('int munmap(void *addr, size_t length)');
+const strerror = libc.func('const char *strerror(int errnum)');
+
+write('hello.txt', 'Hello World!');
+
+function write(filename, str) {
+    let fd = -1;
+    let ptr = null;
+
+    // Work with encoded string
+    str = Buffer.from(str);
+
+    try {
+        fd = open(filename, O_CREAT | O_EXCL | O_RDWR | O_CLOEXEC, 0644);
+        if (fd < 0)
+            throw new Error(`Failed to create '${filename}': ` + strerror(koffi.errno()));
+
+        if (ftruncate(fd, str.length) < 0)
+            throw new Error(`Failed to resize '${filename}': ` + strerror(koffi.errno()));
+
+        ptr = mmap(null, str.length, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        if (ptr == null)
+            throw new Error(`Failed to map '${filename}' to memory: ` + strerror(koffi.errno()));
+
+        let ab = koffi.view(ptr, str.length);
+        let view = new Uint8Array(ab);
+
+        str.copy(view);
+     } finally {
+        if (ptr)
+            munmap(ptr, str.length);
+        close(fd);
+    }
+}
+```
+
 # Unwrap pointers
 
 You can use `koffi.address(ptr)` on a pointer to get the numeric value as a [BigInt object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt).
