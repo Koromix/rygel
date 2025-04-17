@@ -5,7 +5,7 @@ cd %~dp0
 cd ..\..\..\..
 
 start bootstrap.bat
-felix.exe -pParanoid rekkord
+felix.exe -pFast rekkord
 
 for /f "tokens=2 delims= " %%i in ('bin\Fast\rekkord.exe --version') do (
     set RAW_VERSION=%%i

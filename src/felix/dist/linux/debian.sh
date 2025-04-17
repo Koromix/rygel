@@ -15,7 +15,7 @@ DOCKER_IMAGE=debian11
 
 build() {
     ./bootstrap.sh
-    ./felix -pParanoid --host=$1:clang-18:lld-18 felix
+    ./felix -pFast --host=$1:clang-18:lld-18 felix
 
     install -D -m0755 bin/Fast/felix ${ROOT_DIR}/usr/bin/felix
 }

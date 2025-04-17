@@ -16,7 +16,7 @@ build() {
     dnf install -y libudev-devel
 
     ./bootstrap.sh
-    ./felix -pParanoid meestic MeesticTray
+    ./felix -pFast meestic MeesticTray
 
     install -D -m0755 bin/Fast/meestic ${ROOT_DIR}/usr/bin/meestic
     install -D -m0755 bin/Fast/MeesticTray ${ROOT_DIR}/usr/bin/MeesticTray
