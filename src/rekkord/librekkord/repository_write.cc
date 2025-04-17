@@ -597,8 +597,8 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
             LogError("Snapshot name cannot be empty");
             return false;
         }
-        if (strlen(settings.name) >= RG_SIZE(SnapshotHeader2::name)) {
-            LogError("Snapshot name '%1' is too long (limit is %2 bytes)", settings.name, RG_SIZE(SnapshotHeader2::name));
+        if (strlen(settings.name) > rk_MaxSnapshotNameLength) {
+            LogError("Snapshot name '%1' is too long (limit is %2 bytes)", settings.name, rk_MaxSnapshotNameLength);
             return false;
         }
     }

@@ -21,6 +21,8 @@ namespace RG {
 
 class rk_Disk;
 
+static const Size rk_MaxSnapshotNameLength = 80;
+
 struct rk_PutSettings {
     const char *name = nullptr;
     bool follow_symlinks = false;

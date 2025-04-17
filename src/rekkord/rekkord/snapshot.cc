@@ -116,7 +116,15 @@ Options:
         RG_ASSERT(username);
 
         if (!settings.name) {
-            Span<const char> path = NormalizePath(filenames[0], &temp_alloc);
+            Span<char> path = NormalizePath(filenames[0], &temp_alloc);
+
+            if (path.len > rk_MaxSnapshotNameLength) {
+                path.len = rk_MaxSnapshotNameLength;
+                path.ptr[path.len] = 0;
+
+                LogWarning("Truncating snapshot name to '%1'", path);
+            }
+
             settings.name = path.ptr;
         }
     }
