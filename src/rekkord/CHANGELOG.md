@@ -6,6 +6,15 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.41
+
+*Released on 2025-04-17*
+
+- Drop support for long snapshot names (reduce list performance)
+- Explictly limit snapshot name length to 80 bytes
+- Remove username suffix in default snapshot names
+- Fix ignored value from *REKKORD_USERNAME* environment variable
+
 ### Rekkord 0.40
 
 *Released on 2025-04-16*
