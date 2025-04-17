@@ -116,8 +116,8 @@ Options:
         RG_ASSERT(username);
 
         if (!settings.name) {
-            const char *path = NormalizePath(filenames[0], &temp_alloc).ptr;
-            settings.name = Fmt(&temp_alloc, "%1@%2", path, username).ptr;
+            Span<const char> path = NormalizePath(filenames[0], &temp_alloc);
+            settings.name = path.ptr;
         }
     }
 
