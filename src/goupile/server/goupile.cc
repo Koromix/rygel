@@ -782,6 +782,8 @@ static void HandleInstanceRequest(http_IO *io)
         HandleRecordUnlock(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/records/public") && request.method == http_RequestMethod::Get) {
         HandleRecordPublic(io, instance);
+    } else if (!instance->legacy && TestStr(instance_url, "/api/records/batch") && request.method == http_RequestMethod::Post) {
+        HandleRecordBatch(io, instance);
     } else if (!instance->legacy && StartsWith(instance_url, "/blobs/") && request.method == http_RequestMethod::Get) {
         HandleBlobGet(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/records/blob") && request.method == http_RequestMethod::Post) {

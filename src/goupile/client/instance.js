@@ -135,11 +135,12 @@ async function runMainScript() {
     let builder = new ApplicationBuilder(new_app);
 
     try {
-        let build = await buildScript(buffer.code, ['app']);
+        let build = await buildScript(buffer.code, ['app', 'profile']);
         let func = build.func;
 
         await func({
-            app: builder
+            app: builder,
+            profile: profile
         });
         if (!new_app.pages.length)
             throw new Error('Main script does not define any page');

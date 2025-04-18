@@ -30,7 +30,8 @@
 namespace RG {
 
 enum class RequestType {
-    MergeDataMeta = 0
+    MergeDataMeta = 0,
+    RunData = 1
 };
 
 static const int64_t KillDelay = 5000;
@@ -419,6 +420,85 @@ static bool HandleMergeDataMeta(json_Parser *parser, Allocator *alloc, StreamWri
     return true;
 }
 
+static bool HandleRunData(json_Parser *parser, Allocator *alloc, StreamWriter *writer)
+{
+    const char *view = nullptr;
+    Span<const char> profile = {};
+    const char *store = nullptr;
+    Span<const char> data = {};
+    {
+        parser->ParseObject();
+        while (parser->InObject()) {
+            Span<const char> key = {};
+            parser->ParseKey(&key);
+
+            if (key == "view") {
+                parser->ParseString(&view);
+            } else if (key == "profile") {
+                if (parser->PeekToken() != json_TokenType::StartObject) {
+                    LogError("Unexpected value type for profile");
+                    return false;
+                }
+
+                parser->PassThrough(&profile);
+            } else if (key == "store") {
+                parser->ParseString(&store);
+            } else if (key == "data") {
+                parser->PassThrough(&data);
+            } else {
+                LogError("Unexpected key '%1'", key);
+                return false;
+            }
+        }
+        if (!parser->IsValid())
+            return false;
+
+        if (!view || !profile.len || !store || !data.len) {
+            LogError("Missing request values");
+            return false;
+        }
+    }
+
+    const char *zip_filename = Fmt(alloc, "%1%/%2.zip", main_directory, view).ptr;
+    if (!InitView(zip_filename))
+        return false;
+    RG_DEFER { ReleaseView(); };
+
+    // Build app from main script
+    JSValueRef app;
+    {
+        JSValueRef args[] = {
+            JSValueMakeString(vm_ctx, js_AutoString(profile))
+        };
+
+        app = CallMethod(vm_ctx, vm_api, "buildApp", args);
+        if (!app)
+            return false;
+    }
+
+    // Run and transform user data
+    Span<const char> result;
+    {
+        JSValueRef args[] = {
+            app,
+            JSValueMakeString(vm_ctx, js_AutoString(profile)),
+            JSValueMakeString(vm_ctx, js_AutoString(store)),
+            JSValueMakeString(vm_ctx, js_AutoString(data))
+        };
+
+        JSValueRef ret = CallMethod(vm_ctx, vm_api, "runData", args);
+        if (!ret)
+            return false;
+        RG_ASSERT(JSValueIsString(vm_ctx, ret));
+
+        result = js_ReadString(vm_ctx, ret, alloc);
+    }
+
+    writer->Write(result);
+
+    return true;
+}
+
 static bool HandleRequest(int kind, struct cmsghdr *cmsg, pid_t *out_pid)
 {
     BlockAllocator temp_alloc;
@@ -459,6 +539,8 @@ static bool HandleRequest(int kind, struct cmsghdr *cmsg, pid_t *out_pid)
 
         switch (kind) {
             case (int)RequestType::MergeDataMeta: { HandleMergeDataMeta(&parser, &temp_alloc, &writer); } break;
+            case (int)RequestType::RunData: { HandleRunData(&parser, &temp_alloc, &writer); } break;
+
             default: { LogError("Ignoring unknown message 0x%1 from server process", FmtHex(kind).Pad0(-2)); } break;
         }
 
@@ -821,6 +903,43 @@ Span<const char> MergeDataMeta(Span<const char> data, Span<const char> meta, All
 
     result = DuplicateString(result, alloc);
     return result;
+}
+
+bool RunData(InstanceHolder *instance, int64_t fs_version, Span<const char> profile,
+             const char *store, Span<const char> data)
+{
+    BlockAllocator temp_alloc;
+
+    // Input
+    InstanceHolder *master = instance->master;
+    const char *view = Fmt(&temp_alloc, "%1_%2", master->key, fs_version).ptr;
+
+    // Output
+    Span<char> result = {};
+
+    bool success = SendRequest(
+        RequestType::RunData, &temp_alloc,
+
+        [&](json_Writer *json) {
+            json->StartObject();
+            json->Key("view"); json->String(view);
+            json->Key("profile"); json->Raw(profile);
+            json->Key("store"); json->String(store);
+            json->Key("data"); json->Raw(data);
+            json->EndObject();
+
+            return true;
+        },
+
+        [&](json_Parser *parser) {
+            parser->PassThrough(&result);
+            return true;
+        }
+    );
+    if (!success)
+        return false;
+
+    return true;
 }
 
 }

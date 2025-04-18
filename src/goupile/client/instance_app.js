@@ -115,7 +115,7 @@ function ApplicationBuilder(app) {
             key: key,
             title: title,
             filename: options.filename ?? `pages/${key}.js`,
-            url: ENV.urls.instance + key,
+            url: (typeof ENV != 'undefined') ? (ENV.urls.instance + key) : null,
 
             chain: null,
             children: [],
@@ -165,7 +165,7 @@ function ApplicationBuilder(app) {
             current_store = {
                 key: key,
                 title: title,
-                url: ENV.urls.instance + key,
+                url: (typeof ENV != 'undefined') ? (ENV.urls.instance + key) : null,
                 many: null
             };
 

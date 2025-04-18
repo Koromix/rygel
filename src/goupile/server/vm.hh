@@ -32,5 +32,7 @@ void StopZygote();
 bool CheckZygote();
 
 Span<const char> MergeDataMeta(Span<const char> data, Span<const char> meta, Allocator *alloc);
+bool RunData(InstanceHolder *instance, int64_t fs_version, Span<const char> profile,
+             const char *store, Span<const char> data);
 
 }

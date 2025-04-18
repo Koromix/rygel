@@ -18,7 +18,6 @@ import { render, html, svg,
 import { Util, Log, Net, Mutex,
          LocalDate, LocalTime, FileReference } from '../../web/core/base.js';
 import * as Data from '../../web/core/data.js';
-import { profile } from './goupile.js';
 import * as UI from './ui.js';
 
 import './form.css';

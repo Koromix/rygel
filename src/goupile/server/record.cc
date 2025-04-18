@@ -2188,4 +2188,69 @@ void HandleBlobPost(http_IO *io, InstanceHolder *instance)
     io->SendText(200, response, "application/json");
 }
 
+void HandleRecordBatch(http_IO *io, InstanceHolder *instance)
+{
+    const InstanceHolder *master = instance->master;
+
+    if (!instance->config.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+    const SessionStamp *stamp = session ? session->GetStamp(master) : nullptr;
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!stamp || !stamp->HasPermission(UserPermission::BuildBatch)) {
+        LogError("User is not allowed to batch changes");
+        io->SendError(403);
+        return;
+    }
+
+    int64_t fs_version = master->fs_version.load(std::memory_order_relaxed);
+    Span<const char> profile = ExportProfile(session.GetRaw(), instance, io->Allocator());
+
+    RecordWalker walker;
+    {
+        RecordFilter filter = {};
+
+        filter.read_data = true;
+
+        if (!walker.Prepare(instance, 0, filter))
+            return;
+    }
+
+    int64_t start = GetMonotonicTime();
+    std::atomic_int count = 0;
+
+    while (walker.Next()) {
+        const RecordInfo *cursor = walker.GetCursor();
+
+        Async async;
+
+        for (int i = 0; i < 2000; i++) {
+            async.Run([&]() {
+                count++;
+                if (!RunData(instance, fs_version, profile, cursor->store, cursor->data))
+                    return false;
+                return true;
+            });
+        }
+
+        async.Sync();
+
+        io->ExtendTimeout(10000);
+    }
+
+    int64_t end = GetMonotonicTime();
+    LogInfo("TIME: %1 %2", end - start, count.load());
+
+    io->SendText(200, "{}", "application/json");
+}
+
 }
