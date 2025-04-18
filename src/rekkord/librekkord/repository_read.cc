@@ -699,14 +699,16 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             MigrateLegacyEntries(&blob, 0);
         } [[fallthrough]];
         case rk_BlobType::Directory2: {
-            if (!settings.force && TestFile(dest_path, FileType::Directory)) {
-                if (!IsDirectoryEmpty(dest_path)) {
-                    LogError("Directory '%1' exists and is not empty", dest_path);
-                    return false;
+            if (!settings.fake) {
+                if (!settings.force && TestFile(dest_path, FileType::Directory)) {
+                    if (!IsDirectoryEmpty(dest_path)) {
+                        LogError("Directory '%1' exists and is not empty", dest_path);
+                        return false;
+                    }
+                } else {
+                    if (!MakeDirectory(dest_path, !settings.force))
+                        return false;
                 }
-            } else {
-                if (!MakeDirectory(dest_path, !settings.force))
-                    return false;
             }
 
             if (blob.len < RG_SIZE(DirectoryHeader)) {
@@ -741,14 +743,16 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             MigrateLegacyEntries(&blob, RG_SIZE(SnapshotHeader2));
         } [[fallthrough]];
         case rk_BlobType::Snapshot3: {
-            if (!settings.force && TestFile(dest_path, FileType::Directory)) {
-                if (!IsDirectoryEmpty(dest_path)) {
-                    LogError("Directory '%1' exists and is not empty", dest_path);
-                    return false;
+            if (!settings.fake) {
+                if (!settings.force && TestFile(dest_path, FileType::Directory)) {
+                    if (!IsDirectoryEmpty(dest_path)) {
+                        LogError("Directory '%1' exists and is not empty", dest_path);
+                        return false;
+                    }
+                } else {
+                    if (!MakeDirectory(dest_path, !settings.force))
+                        return false;
                 }
-            } else {
-                if (!MakeDirectory(dest_path, !settings.force))
-                    return false;
             }
 
             // There must be at least one entry
