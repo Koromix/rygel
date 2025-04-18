@@ -323,22 +323,24 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
     }
 
     for (Size offset = RG_SIZE(DirectoryHeader); offset < entries.len;) {
-        EntryInfo *entry = ctx->entries.AppendDefault();
+        EntryInfo entry = {};
 
-        Size skip = DecodeEntry(entries, offset, allow_separators, &ctx->temp_alloc, entry);
+        Size skip = DecodeEntry(entries, offset, allow_separators, &ctx->temp_alloc, &entry);
         if (skip < 0)
             return false;
         offset += skip;
 
-        if (entry->kind == (int)RawFile::Kind::Unknown)
+        if (entry.kind == (int)RawFile::Kind::Unknown)
             continue;
-        if (!(entry->flags & (int)RawFile::Flags::Readable))
+        if (!(entry.flags & (int)RawFile::Flags::Readable))
             continue;
 
-        entry->filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry->basename).ptr;
+        entry.filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry.basename).ptr;
 
-        if (!settings.fake && allow_separators && !EnsureDirectoryExists(entry->filename.ptr))
+        if (!settings.fake && allow_separators && !EnsureDirectoryExists(entry.filename.ptr))
             return false;
+
+        ctx->entries.Append(entry);
     }
 
     if (settings.unlink) {
