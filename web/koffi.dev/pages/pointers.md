@@ -201,9 +201,9 @@ You can access unmanaged memory with `koffi.view(ptr, len)`. This function takes
 The following Linux example writes the string "Hello World!" to a file named "hello.txt" through mmaped memory, to demontrate the use of `koffi.view()`:
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
 
-// ES6 syntax: import koffi from 'koffi';
 const libc = koffi.load('libc.so.6');
 
 const mode_t = koffi.alias('mode_t', 'uint32_t');
@@ -257,7 +257,7 @@ function write(filename, str) {
 
         str.copy(view);
      } finally {
-        if (ptr)
+        if (ptr != null)
             munmap(ptr, str.length);
         close(fd);
     }
