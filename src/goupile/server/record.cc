@@ -96,7 +96,6 @@ struct FragmentInfo {
     bool has_data = false;
     Span<const char> data = {};
     HeapArray<const char *> tags;
-    bool claim = true;
 };
 
 struct BlobInfo {
@@ -1074,6 +1073,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     HeapArray<DataConstraint> constraints;
     HeapArray<CounterInfo> counters;
     HeapArray<BlobInfo> blobs;
+    bool claim = true;
     {
         StreamReader st;
         if (!io->OpenForRead(Mebibytes(8), &st))
@@ -1096,72 +1096,58 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
                     CopyString(str, tid);
                 }
-            } else if (key == "fragment") {
-                parser.ParseObject();
-                while (parser.InObject()) {
-                    Span<const char> key = {};
-                    parser.ParseKey(&key);
+            } else if (key == "eid") {
+                Span<const char> str = nullptr;
 
-                    if (key == "fs") {
-                        parser.ParseInt(&fragment.fs);
-                    } else if (key == "eid") {
-                        Span<const char> str = nullptr;
-
-                        if (parser.ParseString(&str)) {
-                            if (!CheckULID(str)) {
-                                io->SendError(422);
-                                return;
-                            }
-
-                            CopyString(str, fragment.eid);
-                        }
-                    } else if (key == "store") {
-                        parser.ParseString(&fragment.store);
-                    } else if (key == "anchor") {
-                        parser.ParseInt(&fragment.anchor);
-                    } else if (key == "summary") {
-                        parser.SkipNull() || parser.ParseString(&fragment.summary);
-                    } else if (key == "data") {
-                        switch (parser.PeekToken()) {
-                            case json_TokenType::Null: {
-                                parser.ParseNull();
-
-                                fragment.data = {};
-                                fragment.has_data = true;
-                            } break;
-                            case json_TokenType::StartObject: {
-                                parser.PassThrough(&fragment.data);
-                                fragment.has_data = true;
-                            } break;
-
-                            default: {
-                                LogError("Unexpected value type for fragment data");
-                                io->SendError(422);
-                                return;
-                            } break;
-                        }
-                    } else if (key == "tags") {
-                        parser.ParseArray();
-                        while (parser.InArray()) {
-                            Span<const char> tag = {};
-
-                            if (parser.ParseString(&tag)) {
-                                if (!CheckTag(tag)) {
-                                    io->SendError(422);
-                                    return;
-                                }
-
-                                fragment.tags.Append(tag.ptr);
-                            }
-                        }
-                    } else if (parser.IsValid()) {
-                        LogError("Unexpected key '%1'", key);
+                if (parser.ParseString(&str)) {
+                    if (!CheckULID(str)) {
                         io->SendError(422);
                         return;
                     }
+
+                    CopyString(str, fragment.eid);
                 }
-            } else if (key == "claim") {
-                parser.ParseBool(&fragment.claim);
+            } else if (key == "store") {
+                parser.ParseString(&fragment.store);
+            } else if (key == "anchor") {
+                parser.ParseInt(&fragment.anchor);
+            } else if (key == "fs") {
+                parser.ParseInt(&fragment.fs);
+            } else if (key == "summary") {
+                parser.SkipNull() || parser.ParseString(&fragment.summary);
+            } else if (key == "data") {
+                switch (parser.PeekToken()) {
+                    case json_TokenType::Null: {
+                        parser.ParseNull();
+
+                        fragment.data = {};
+                        fragment.has_data = true;
+                    } break;
+                    case json_TokenType::StartObject: {
+                        parser.PassThrough(&fragment.data);
+                        fragment.has_data = true;
+                    } break;
+
+                    default: {
+                        LogError("Unexpected value type for fragment data");
+                        io->SendError(422);
+                        return;
+                    } break;
+                }
+            } else if (key == "tags") {
+                parser.ParseArray();
+                while (parser.InArray()) {
+                    Span<const char> tag = {};
+
+                    if (parser.ParseString(&tag)) {
+                        if (!CheckTag(tag)) {
+                            io->SendError(422);
+                            return;
+                        }
+
+                        fragment.tags.Append(tag.ptr);
+                    }
+                }
             } else if (key == "constraints") {
                 parser.ParseObject();
                 while (parser.InObject()) {
@@ -1224,6 +1210,8 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
                     blobs.Append(blob);
                 }
+            } else if (key == "claim") {
+                parser.ParseBool(&claim);
             } else if (parser.IsValid()) {
                 LogError("Unexpected key '%1'", key);
                 io->SendError(422);
@@ -1504,11 +1492,9 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         }
 
         // Delete claim if requested (and if any)
-        if (!fragment.claim) {
-            if (!instance->db->Run("DELETE FROM ins_claims WHERE userid = ?1 AND tid = ?2",
-                                   -session->userid, tid))
-                return false;
-        }
+        if (!claim && !instance->db->Run("DELETE FROM ins_claims WHERE userid = ?1 AND tid = ?2",
+                                         -session->userid, tid))
+            return false;
 
         return true;
     });

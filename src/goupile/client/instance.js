@@ -2233,10 +2233,13 @@ function runAnnotationDialog(e, intf) {
 
 // Call with data_mutex locked
 async function saveRecord(tid, entry, raw, meta) {
-    entry = Object.assign({}, entry);
-
-    entry.summary = meta.summary;
-    entry.data = JSON.parse(JSON.stringify(raw, (k, v) => v != null ? v : null));
+    let frag = {
+        summary: meta.summary,
+        data: raw,
+        tags: null,
+        constraints: meta.constraints,
+        counters: meta.counters
+    };
 
     // Gather global list of tags for this record entry
     {
@@ -2247,10 +2250,10 @@ async function saveRecord(tid, entry, raw, meta) {
                     tags.add(tag.key);
             }
         }
-        entry.tags = Array.from(tags);
+        frag.tags = Array.from(tags);
     }
 
-    await records.save(tid, entry, ENV.version, route.page.claim, meta);
+    await records.save(tid, entry, frag, ENV.version, route.page.claim);
 
     if (!profile.userid) {
         let url = route.page.url + `/${form_thread.tid}`;

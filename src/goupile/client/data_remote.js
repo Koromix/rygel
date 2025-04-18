@@ -13,7 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { Util, Log, Net } from '../../web/core/base.js';
+import { Util, Log, Net, LocalDate, LocalTime } from '../../web/core/base.js';
+import * as Data from '../../web/core/data.js';
 
 function DataRemote() {
     let self = this;
@@ -25,24 +26,30 @@ function DataRemote() {
         });
         let thread = await Net.get(url);
 
+        for (let store in thread.entries) {
+            let entry = thread.entries[store];
+            entry.data = restore(entry.data);
+        }
+
         return thread;
     };
 
-    this.save = async function(tid, entry, fs, claim, meta) {
+    this.save = async function(tid, entry, frag, fs, claim) {
         await Net.post(ENV.urls.instance + 'api/records/save', {
             tid: tid,
-            fragment: {
-                fs: fs,
-                eid: entry.eid,
-                store: entry.store,
-                anchor: entry.anchor,
-                summary: entry.summary,
-                data: entry.data,
-                tags: entry.tags
-            },
-            claim: claim,
-            constraints: meta.constraints,
-            counters: meta.counters
+
+            eid: entry.eid,
+            store: entry.store,
+            anchor: entry.anchor,
+            fs: fs,
+
+            summary: frag.summary,
+            data: preserve(frag.data),
+            tags: frag.tags,
+            constraints: frag.constraints,
+            counters: frag.counters,
+
+            claim: claim
         });
     };
 
@@ -57,6 +64,70 @@ function DataRemote() {
     this.unlock = async function(tid) {
         await Net.post(ENV.urls.instance + 'api/records/unlock', { tid: tid });
     };
+}
+
+function preserve(obj) {
+    if (Util.isPodObject(obj)) {
+        obj = Object.assign({}, obj);
+
+        for (let key in obj) {
+            let wrap = obj[key];
+
+            wrap = {
+                $n: Object.assign({}, wrap.$n),
+                $v: preserve(wrap.$v)
+            };
+
+            if (wrap.$v instanceof LocalDate) {
+                wrap.$n.special = 'LocalDate';
+            } else if (wrap.$v instanceof LocalTime) {
+                wrap.$n.special = 'LocalTime';
+            } else {
+                delete wrap.$n.special;
+            }
+
+            obj[key] = wrap;
+        }
+
+        return obj;
+    } else if (obj == null) {
+        return null;
+    } else {
+        return obj;
+    }
+}
+
+function restore(obj) {
+    if (Util.isPodObject(obj)) {
+        obj = Object.assign({}, obj);
+
+        for (let key in obj) {
+            let wrap = obj[key];
+
+            if (!Util.isPodObject(wrap) || !wrap.hasOwnProperty('$v'))
+                continue;
+
+            wrap = {
+                $n: Object.assign({}, wrap.$n ?? {}),
+                $v: preserve(wrap.$v)
+            };
+
+            if (wrap.$n.special == 'LocalDate') {
+                wrap.$v = LocalDate.parse(wrap.$v);
+            } else if (wrap.$n?.special == 'LocalTime') {
+                wrap.$v = LocalTime.parse(wrap.$v);
+            }
+            delete wrap.$n.special;
+
+            obj[key] = wrap;
+        }
+
+        return obj;
+    } else if (obj == null) {
+        return null;
+    } else {
+        return obj;
+    }
 }
 
 export { DataRemote };
