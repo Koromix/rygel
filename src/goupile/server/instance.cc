@@ -2841,7 +2841,7 @@ bool MigrateInstance(sq_Database *db, int target)
                     sq_Statement stmt;
                     if (!db->Prepare(R"(SELECT eid, data, meta
                                         FROM rec_entries
-                                        WHERE data IS NOT NULL AND meta IS NOT NULL)", &stmt))
+                                        WHERE data IS NOT NULL)", &stmt))
                         return false;
 
                     while (stmt.Step()) {
@@ -2863,7 +2863,7 @@ bool MigrateInstance(sq_Database *db, int target)
                     sq_Statement stmt;
                     if (!db->Prepare(R"(SELECT anchor, data, meta
                                         FROM rec_fragments
-                                        WHERE data IS NOT NULL AND meta IS NOT NULL)", &stmt))
+                                        WHERE data IS NOT NULL)", &stmt))
                         return false;
 
                     while (stmt.Step()) {

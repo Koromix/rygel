@@ -55,7 +55,7 @@ function VmApi(native) {
                 $v: value,
                 $n: {
                     errors: meta.notes?.errors?.[key] ?? [],
-                    variable: (try_root ? root.notes?.variables[key] : null) ?? meta.notes?.variables[key] ?? {},
+                    variable: (try_root ? root.notes?.variables?.[key] : null) ?? meta.notes?.variables?.[key] ?? {},
                     status: meta.notes?.status?.[key] ?? {}
                 }
             };

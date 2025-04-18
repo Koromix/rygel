@@ -785,6 +785,10 @@ Span<const char> MergeDataMeta(Span<const char> data, Span<const char> meta, All
 {
     BlockAllocator temp_alloc;
 
+    if (!meta.len) {
+        meta = "{}";
+    }
+
     // Output
     Span<char> result = {};
 
