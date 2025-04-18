@@ -1000,9 +1000,15 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
             RG_ASSERT(session->userid < 0);
 
             for (const char *claim: claims) {
-                if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, ulid) VALUES (?1, ?2)
-                                          ON CONFLICT DO NOTHING)", -session->userid, claim))
-                    return false;
+                if (!instance->legacy) {
+                    if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, tid) VALUES (?1, ?2)
+                                              ON CONFLICT DO NOTHING)", -session->userid, claim))
+                        return false;
+                } else {
+                    if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, ulid) VALUES (?1, ?2)
+                                              ON CONFLICT DO NOTHING)", -session->userid, claim))
+                        return false;
+                }
             }
 
             return true;
