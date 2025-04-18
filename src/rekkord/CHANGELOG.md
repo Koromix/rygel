@@ -6,6 +6,13 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.42
+
+*Released on 2025-04-18*
+
+- Fix error when trying to restore special files (suck as sockets)
+- Skip creation of root directory in `rekkord restore` when *--dry_run* is used
+
 ### Rekkord 0.41
 
 *Released on 2025-04-17*
