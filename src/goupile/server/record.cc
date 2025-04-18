@@ -1284,27 +1284,48 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     bool success = instance->db->Transaction([&]() {
         int64_t now = GetUnixTime();
 
-        // Get existing entry and check for lock or mismatch
-        int64_t prev_anchor;
+        // Check for existing thread and claim
+        bool new_thread;
+        bool claimed;
         {
             sq_Statement stmt;
-            if (!instance->db->Prepare(R"(SELECT t.locked, e.tid, e.store, e.anchor
-                                          FROM rec_entries e
-                                          INNER JOIN rec_threads t ON (t.tid = e.tid)
-                                          WHERE e.eid = ?1)",
-                                       &stmt, fragment.eid))
+            if (!instance->db->Prepare(R"(SELECT t.locked, IIF(c.userid IS NOT NULL, 1, 0) AS claimed
+                                          FROM rec_threads t
+                                          LEFT JOIN ins_claims c ON (c.tid = t.tid AND c.userid = ?2)
+                                          WHERE t.tid = ?1)",
+                                       &stmt, tid, session->userid))
                 return false;
 
             if (stmt.Step()) {
                 bool locked = sqlite3_column_int(stmt, 0);
-                const char *prev_tid = (const char *)sqlite3_column_text(stmt, 1);
-                const char *prev_store = (const char *)sqlite3_column_text(stmt, 2);
 
                 if (locked) {
                     LogError("This record is locked");
                     io->SendError(403);
                     return false;
                 }
+
+                new_thread = false;
+                claimed = sqlite3_column_int(stmt, 1);
+            } else if (stmt.IsValid()) {
+                new_thread = true;
+                claimed = false;
+            } else {
+                return false;
+            }
+        }
+
+        // Check for existing entry and check for lock or mismatch
+        int64_t prev_anchor;
+        {
+            sq_Statement stmt;
+            if (!instance->db->Prepare("SELECT tid, store, anchor FROM rec_entries e WHERE e.eid = ?1",
+                                       &stmt, fragment.eid))
+                return false;
+
+            if (stmt.Step()) {
+                const char *prev_tid = (const char *)sqlite3_column_text(stmt, 0);
+                const char *prev_store = (const char *)sqlite3_column_text(stmt, 1);
 
                 if (prev_tid && !TestStr(tid, prev_tid)) {
                     LogError("Record entry thread mismatch");
@@ -1317,7 +1338,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                     return false;
                 }
 
-                prev_anchor = sqlite3_column_int64(stmt, 3);
+                prev_anchor = sqlite3_column_int64(stmt, 2);
             } else if (stmt.IsValid()) {
                 prev_anchor = -1;
             } else {
@@ -1348,30 +1369,19 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
             }
         }
 
-        // Check permissions
+        // Check thread claim
         if (!stamp->HasPermission(UserPermission::DataRead)) {
-            if (prev_anchor < 0) {
+            if (new_thread) {
                 if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, tid) VALUES (?1, ?2)
                                           ON CONFLICT DO NOTHING)",
                                        -session->userid, tid))
                     return false;
             } else {
-                sq_Statement stmt;
-                if (!instance->db->Prepare(R"(SELECT e.rowid
-                                              FROM rec_entries e
-                                              INNER JOIN ins_claims c ON (c.userid = ?1 AND c.tid = e.tid)
-                                              WHERE e.tid = ?2)", &stmt))
-                    return false;
-                sqlite3_bind_int64(stmt, 1, -session->userid);
-                sqlite3_bind_text(stmt, 2, tid, -1, SQLITE_STATIC);
-
-                if (!stmt.Step()) {
-                    if (stmt.IsValid()) {
-                        LogError("You are not allowed to alter this record");
-                        io->SendError(403);
-                    }
-                    return false;
+                if (!claimed) {
+                    LogError("You are not allowed to alter this record");
+                    io->SendError(403);
                 }
+                return false;
             }
         }
 
@@ -1397,41 +1407,41 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                                                                      mtime, fs, summary, data, tags)
                                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
                                           RETURNING anchor)",
-                                          &stmt, prev_anchor > 0 ? sq_Binding(prev_anchor) : sq_Binding(), tid,
-                                          fragment.eid, session->userid, session->username, now,
-                                          fragment.fs, fragment.summary, fragment.data,
-                                          TagsToJson(fragment.tags, io->Allocator())))
+                                       &stmt, prev_anchor > 0 ? sq_Binding(prev_anchor) : sq_Binding(), tid,
+                                       fragment.eid, session->userid, session->username, now,
+                                       fragment.fs, fragment.summary, fragment.data,
+                                       TagsToJson(fragment.tags, io->Allocator())))
                 return false;
             if (!stmt.GetSingleValue(&new_anchor))
                 return false;
         }
 
         // Create or update store entry
-        int64_t e;
-        {
-            sq_Statement stmt;
-            if (!instance->db->Prepare(R"(INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime, store,
-                                                                   deleted, summary, data, tags)
-                                          VALUES (?1, ?2, ?3, ?4, ?4, ?5, ?6, ?7, ?8, ?9)
-                                          ON CONFLICT DO UPDATE SET anchor = excluded.anchor,
-                                                                    mtime = excluded.mtime,
-                                                                    deleted = excluded.deleted,
-                                                                    summary = excluded.summary,
-                                                                    data = json_patch(data, excluded.data),
-                                                                    tags = excluded.tags
-                                          RETURNING rowid)",
-                                       &stmt, tid, fragment.eid, new_anchor, now, fragment.store,
-                                       0 + !fragment.data.len, fragment.summary, fragment.data,
-                                       TagsToJson(fragment.tags, io->Allocator())))
+        if (prev_anchor < 0) {
+            if (!instance->db->Run(R"(INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime, store,
+                                                               deleted, summary, data, tags)
+                                      VALUES (?1, ?2, ?3, ?4, ?4, ?5, ?6, ?7, ?8, ?9))",
+                                   tid, fragment.eid, new_anchor, now, fragment.store,
+                                   0 + !fragment.data.len, fragment.summary, fragment.data,
+                                   TagsToJson(fragment.tags, io->Allocator())))
                 return false;
-            if (!stmt.GetSingleValue(&e))
+        } else {
+            if (!instance->db->Run(R"(UPDATE rec_entries SET anchor = ?2,
+                                                             mtime = ?3,
+                                                             deleted = ?4,
+                                                             summary = ?5,
+                                                             data = json_patch(data, ?6),
+                                                             tags = ?7
+                                      WHERE eid = ?1)",
+                                   fragment.eid, new_anchor, now, 0 + !fragment.data.len,
+                                   fragment.summary, fragment.data, TagsToJson(fragment.tags, io->Allocator())))
                 return false;
         }
 
         // Create thread if needed
-        if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets, locked)
-                                  VALUES (?1, '{}', '{}', 0)
-                                  ON CONFLICT DO NOTHING)", tid))
+        if (new_thread && !instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets, locked)
+                                                VALUES (?1, '{}', '{}', 0)
+                                                ON CONFLICT DO NOTHING)", tid))
             return false;
 
         // Update entry and fragment tags
@@ -1439,7 +1449,8 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
             return false;
         for (const char *tag: fragment.tags) {
             if (!instance->db->Run(R"(INSERT INTO rec_tags (tid, eid, name) VALUES (?1, ?2, ?3)
-                                      ON CONFLICT (eid, name) DO NOTHING)", tid, fragment.eid, tag))
+                                      ON CONFLICT (eid, name) DO NOTHING)",
+                                   tid, fragment.eid, tag))
                 return false;
         }
 
