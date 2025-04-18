@@ -10,7 +10,7 @@
 
 *Released on 2025-04-18*
 
-- Fix error when trying to restore special files (suck as sockets)
+- Fix error when trying to restore special files (such as sockets)
 - Skip creation of root directory in `rekkord restore` when *--dry_run* is used
 
 ### Rekkord 0.41
