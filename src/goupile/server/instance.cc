@@ -18,6 +18,7 @@
 #include "file.hh"
 #include "goupile.hh"
 #include "instance.hh"
+#include "vm.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include "vendor/miniz/miniz.h"
@@ -25,7 +26,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 129;
+const int InstanceVersion = 130;
 const int LegacyVersion = 60;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
@@ -2817,9 +2818,70 @@ bool MigrateInstance(sq_Database *db, int target)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 129: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE mig_meta (
+                        eid TEXT,
+                        anchor INTEGER,
+                        meta TEXT NOT NULL
+                    );
+
+                    INSERT INTO mig_meta (eid, meta)
+                        SELECT eid, meta FROM rec_entries WHERE meta IS NOT NULL;
+                    INSERT INTO mig_meta (eid, anchor, meta)
+                        SELECT eid, anchor, meta FROM rec_fragments WHERE meta IS NOT NULL;
+                )");
+                if (!success)
+                    return false;
+
+                // Migrate entries first
+                {
+                    sq_Statement stmt;
+                    if (!db->Prepare(R"(SELECT eid, data, meta
+                                        FROM rec_entries
+                                        WHERE data IS NOT NULL AND meta IS NOT NULL)", &stmt))
+                        return false;
+
+                    while (stmt.Step()) {
+                        const char *eid = (const char *)sqlite3_column_text(stmt, 0);
+                        Span<const char> data = MakeSpan((const char *)sqlite3_column_text(stmt, 1),
+                                                         sqlite3_column_bytes(stmt, 1));
+                        Span<const char> meta = MakeSpan((const char *)sqlite3_column_text(stmt, 2),
+                                                         sqlite3_column_bytes(stmt, 2));
+
+                        Span<const char> raw = MergeDataMeta(data, meta, &temp_alloc);
+
+                        if (!db->Run("UPDATE rec_entries SET data = ?2, meta = NULL WHERE eid = ?1", eid, raw))
+                            return false;
+                    }
+                }
+
+                // Migrate fragments first
+                {
+                    sq_Statement stmt;
+                    if (!db->Prepare(R"(SELECT anchor, data, meta
+                                        FROM rec_fragments
+                                        WHERE data IS NOT NULL AND meta IS NOT NULL)", &stmt))
+                        return false;
+
+                    while (stmt.Step()) {
+                        int64_t anchor = sqlite3_column_int64(stmt, 0);
+                        Span<const char> data = MakeSpan((const char *)sqlite3_column_text(stmt, 1),
+                                                         sqlite3_column_bytes(stmt, 1));
+                        Span<const char> meta = MakeSpan((const char *)sqlite3_column_text(stmt, 2),
+                                                         sqlite3_column_bytes(stmt, 2));
+
+                        Span<const char> raw = MergeDataMeta(data, meta, &temp_alloc);
+
+                        if (!db->Run("UPDATE rec_fragments SET data = ?2, meta = NULL WHERE anchor = ?1", anchor, raw))
+                            return false;
+                    }
+                }
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 129);
+            static_assert(InstanceVersion == 130);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

@@ -115,6 +115,9 @@ public:
     void AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions, const char *lock = nullptr);
 };
 
+void ExportProfile(const SessionInfo *session, const InstanceHolder *instance, json_Writer *json);
+Span<const char> ExportProfile(const SessionInfo *session, const InstanceHolder *instance, Allocator *alloc);
+
 void InvalidateUserStamps(int64_t userid);
 
 RetainPtr<const SessionInfo> GetNormalSession(http_IO *io, InstanceHolder *instance);

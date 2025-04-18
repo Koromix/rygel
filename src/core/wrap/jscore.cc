@@ -32,18 +32,36 @@ void js_ExposeFunction(JSContextRef ctx, JSObjectRef obj, const char *name, JSOb
     JSObjectSetProperty(ctx, obj, key, value, kJSPropertyAttributeNone, nullptr);
 }
 
+Span<const char> js_ReadString(JSContextRef, JSStringRef str, Allocator *alloc)
+{
+    RG_ASSERT(alloc);
+
+    Size max = JSStringGetMaximumUTF8CStringSize(str);
+    Span<char> buf = AllocateSpan<char>(alloc, max);
+
+    buf.len = JSStringGetUTF8CString(str, buf.ptr, buf.len) - 1;
+    RG_ASSERT(buf.len >= 0);
+
+    return buf;
+}
+
+Span<const char> js_ReadString(JSContextRef ctx, JSValueRef value, Allocator *alloc)
+{
+    RG_ASSERT(JSValueIsString(ctx, value));
+
+    JSStringRef str = JSValueToStringCopy(ctx, value, nullptr);
+    if (!str)
+        return false;
+    RG_DEFER { JSStringRelease(str); };
+
+    return js_ReadString(ctx, str, alloc);
+}
+
 bool js_PrintValue(JSContextRef ctx, JSValueRef value, JSValueRef *ex, StreamWriter *st)
 {
-    JSStringRef str = nullptr;
-
-    if (JSValueIsString(ctx, value)) {
-        str = (JSStringRef)value;
-        JSStringRetain(str);
-    } else {
-        str = JSValueToStringCopy(ctx, value, ex);
-        if (!str)
-            return false;
-    }
+    JSStringRef str = JSValueToStringCopy(ctx, value, ex);
+    if (!str)
+        return false;
     RG_DEFER { JSStringRelease(str); };
 
     Size max = JSStringGetMaximumUTF8CStringSize(str);

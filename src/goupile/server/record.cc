@@ -20,6 +20,7 @@
 #include "instance.hh"
 #include "record.hh"
 #include "user.hh"
+#include "vm.hh"
 #include "src/core/request/smtp.hh"
 #include "src/core/wrap/json.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"

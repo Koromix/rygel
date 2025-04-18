@@ -210,34 +210,31 @@ void SessionInfo::AuthorizeInstance(const InstanceHolder *instance, uint32_t per
     stamps_map.Set(stamp);
 }
 
-static void WriteProfileJson(http_IO *io, const SessionInfo *session, const InstanceHolder *instance)
+void ExportProfile(const SessionInfo *session, const InstanceHolder *instance, json_Writer *json)
 {
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
     char buf[512];
 
-    json.StartObject();
+    json->StartObject();
     if (session) {
-        json.Key("userid"); json.Int64(session->userid);
-        json.Key("username"); json.String(session->username);
-        json.Key("online"); json.Bool(true);
+        json->Key("userid"); json->Int64(session->userid);
+        json->Key("username"); json->String(session->username);
+        json->Key("online"); json->Bool(true);
 
         // Atomic load
         SessionConfirm confirm = session->confirm;
 
         if (session->change_password) {
-            json.Key("authorized"); json.Bool(false);
-            json.Key("confirm"); json.String("password");
+            json->Key("authorized"); json->Bool(false);
+            json->Key("confirm"); json->String("password");
         } else if (confirm != SessionConfirm::None) {
-            json.Key("authorized"); json.Bool(false);
+            json->Key("authorized"); json->Bool(false);
 
             switch (confirm) {
                 case SessionConfirm::None: { RG_UNREACHABLE(); } break;
-                case SessionConfirm::Mail: { json.Key("confirm"); json.String("mail"); } break;
-                case SessionConfirm::SMS: { json.Key("confirm"); json.String("sms"); } break;
-                case SessionConfirm::TOTP: { json.Key("confirm"); json.String("totp"); } break;
-                case SessionConfirm::QRcode: { json.Key("confirm"); json.String("qrcode"); } break;
+                case SessionConfirm::Mail: { json->Key("confirm"); json->String("mail"); } break;
+                case SessionConfirm::SMS: { json->Key("confirm"); json->String("sms"); } break;
+                case SessionConfirm::TOTP: { json->Key("confirm"); json->String("totp"); } break;
+                case SessionConfirm::QRcode: { json->Key("confirm"); json->String("qrcode"); } break;
             }
         } else if (instance) {
             const InstanceHolder *master = instance->master;
@@ -255,85 +252,108 @@ static void WriteProfileJson(http_IO *io, const SessionInfo *session, const Inst
             }
 
             if (stamp) {
-                json.Key("instance"); json.String(instance->key.ptr);
-                json.Key("authorized"); json.Bool(true);
+                json->Key("instance"); json->String(instance->key.ptr);
+                json->Key("authorized"); json->Bool(true);
 
                 switch (session->type) {
-                    case SessionType::Login: { json.Key("type"); json.String("login"); } break;
-                    case SessionType::Token: { json.Key("type"); json.String("token"); } break;
+                    case SessionType::Login: { json->Key("type"); json->String("login"); } break;
+                    case SessionType::Token: { json->Key("type"); json->String("token"); } break;
                     case SessionType::Key: {
                         RG_ASSERT(instance->config.auto_key);
-                        json.Key("type"); json.String("key");
+                        json->Key("type"); json->String("key");
                     } break;
-                    case SessionType::Auto: { json.Key("type"); json.String("auto"); } break;
+                    case SessionType::Auto: { json->Key("type"); json->String("auto"); } break;
                 }
 
                 if (!instance->slaves.len) {
-                    json.Key("namespaces"); json.StartObject();
+                    json->Key("namespaces"); json->StartObject();
                     if (instance->config.shared_key) {
-                        json.Key("records"); json.String("global");
+                        json->Key("records"); json->String("global");
                     } else {
-                        json.Key("records"); json.Int64(session->userid);
+                        json->Key("records"); json->Int64(session->userid);
                     }
-                    json.EndObject();
-                    json.Key("keys"); json.StartObject();
+                    json->EndObject();
+                    json->Key("keys"); json->StartObject();
                     if (instance->config.shared_key) {
-                        json.Key("records"); json.String(instance->config.shared_key);
+                        json->Key("records"); json->String(instance->config.shared_key);
                     } else if (session->local_key[0]) {
-                        json.Key("records"); json.String(session->local_key);
+                        json->Key("records"); json->String(session->local_key);
                     }
                     if (session->type == SessionType::Login) {
-                        json.Key("lock"); json.String(instance->config.lock_key);
+                        json->Key("lock"); json->String(instance->config.lock_key);
                     }
-                    json.EndObject();
+                    json->EndObject();
                 }
 
                 if (master->slaves.len) {
-                    json.Key("instances"); json.StartArray();
+                    json->Key("instances"); json->StartArray();
                     for (const InstanceHolder *slave: master->slaves) {
                         if (session->GetStamp(slave)) {
-                            json.StartObject();
-                            json.Key("key"); json.String(slave->key.ptr);
-                            json.Key("title"); json.String(slave->title);
-                            json.Key("name"); json.String(slave->config.name);
-                            json.Key("url"); json.String(Fmt(buf, "/%1/", slave->key).ptr);
-                            json.EndObject();
+                            json->StartObject();
+                            json->Key("key"); json->String(slave->key.ptr);
+                            json->Key("title"); json->String(slave->title);
+                            json->Key("name"); json->String(slave->config.name);
+                            json->Key("url"); json->String(Fmt(buf, "/%1/", slave->key).ptr);
+                            json->EndObject();
                         }
                     }
-                    json.EndArray();
+                    json->EndArray();
                 }
 
-                json.Key("permissions"); json.StartObject();
+                json->Key("permissions"); json->StartObject();
                 for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
                     Span<const char> key = json_ConvertToJsonName(UserPermissionNames[i], buf);
-                    json.Key(key.ptr, (size_t)key.len); json.Bool(stamp->permissions & (1 << i));
+                    json->Key(key.ptr, (size_t)key.len); json->Bool(stamp->permissions & (1 << i));
                 }
-                json.EndObject();
+                json->EndObject();
 
                 if (stamp->lock) {
-                    json.Key("lock"); json.Raw(stamp->lock);
+                    json->Key("lock"); json->Raw(stamp->lock);
                 }
 
                 if (stamp->HasPermission(UserPermission::BuildCode)) {
                     const SessionStamp *stamp = session->GetStamp(master);
-                    json.Key("develop"); json.Bool(stamp && stamp->develop.load(std::memory_order_relaxed));
+                    json->Key("develop"); json->Bool(stamp && stamp->develop.load(std::memory_order_relaxed));
                 } else {
                     RG_ASSERT(!stamp->develop.load());
                 }
 
-                json.Key("root"); json.Bool(session->is_root);
+                json->Key("root"); json->Bool(session->is_root);
             } else {
-                json.Key("authorized"); json.Bool(false);
+                json->Key("authorized"); json->Bool(false);
             }
         } else {
             bool authorized = (session->is_admin && session->admin_until > GetMonotonicTime());
 
-            json.Key("authorized"); json.Bool(authorized);
-            json.Key("root"); json.Bool(session->is_root);
+            json->Key("authorized"); json->Bool(authorized);
+            json->Key("root"); json->Bool(session->is_root);
         }
     }
-    json.EndObject();
+    json->EndObject();
+}
 
+Span<const char> ExportProfile(const SessionInfo *session, const InstanceHolder *instance, Allocator *alloc)
+{
+    HeapArray<char> buf(alloc);
+    StreamWriter st(&buf);
+    json_Writer json(&st);
+
+    ExportProfile(session, instance, &json);
+    RG_ASSERT(st.Close());
+
+    buf.Grow(1);
+    buf.ptr[buf.len] = 0;
+
+    return buf.TrimAndLeak(1);
+}
+
+static void SendProfile(http_IO *io, const SessionInfo *session, const InstanceHolder *instance)
+{
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    ExportProfile(session, instance, &json);
     json.Finish();
 }
 
@@ -676,7 +696,7 @@ void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
                 session->change_password = change_password;
 
                 sessions.Open(io, session);
-                WriteProfileJson(io, session.GetRaw(), instance);
+                SendProfile(io, session.GetRaw(), instance);
             }
 
             return;
@@ -1143,7 +1163,7 @@ void HandleSessionConfirm(http_IO *io, InstanceHolder *instance)
                 session->confirm = SessionConfirm::None;
                 sodium_memzero(session->secret, RG_SIZE(session->secret));
 
-                WriteProfileJson(io, session.GetRaw(), instance);
+                SendProfile(io, session.GetRaw(), instance);
             } else {
                 const EventInfo *event = RegisterEvent(request.client_addr, session->username);
 
@@ -1168,7 +1188,7 @@ void HandleSessionConfirm(http_IO *io, InstanceHolder *instance)
                 sodium_memzero(session->secret, RG_SIZE(session->secret));
 
                 lock_excl.unlock();
-                WriteProfileJson(io, session.GetRaw(), instance);
+                SendProfile(io, session.GetRaw(), instance);
             } else {
                 const EventInfo *event = RegisterEvent(request.client_addr, session->username);
 
@@ -1191,7 +1211,7 @@ void HandleSessionLogout(http_IO *io)
 void HandleSessionProfile(http_IO *io, InstanceHolder *instance)
 {
     RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
-    WriteProfileJson(io, session.GetRaw(), instance);
+    SendProfile(io, session.GetRaw(), instance);
 }
 
 void HandleChangePassword(http_IO *io, InstanceHolder *instance)
@@ -1344,7 +1364,7 @@ void HandleChangePassword(http_IO *io, InstanceHolder *instance)
         session->change_password = false;
 
         lock_excl.unlock();
-        WriteProfileJson(io, session.GetRaw(), instance);
+        SendProfile(io, session.GetRaw(), instance);
     } else {
         io->SendText(200, "{}", "application/json");
     }

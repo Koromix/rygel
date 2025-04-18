@@ -66,6 +66,9 @@ static inline bool js_IsNullOrUndefined(JSContextRef ctx, JSValueRef value)
 
 void js_ExposeFunction(JSContextRef ctx, JSObjectRef obj, const char *name, JSObjectCallAsFunctionCallback func);
 
+Span<const char> js_ReadString(JSContextRef ctx, JSStringRef str, Allocator *alloc);
+Span<const char> js_ReadString(JSContextRef ctx, JSValueRef value, Allocator *alloc);
+
 bool js_PrintValue(JSContextRef ctx, JSValueRef value, JSValueRef *ex, StreamWriter *st);
 
 }

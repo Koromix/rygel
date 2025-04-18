@@ -1,0 +1,22 @@
+diff --git a/vendor/lit-html/lit/packages/lit-html/src/lit-html.ts b/vendor/lit-html/lit/packages/lit-html/src/lit-html.ts
+index bf5efc13..6057080e 100644
+--- a/vendor/lit-html/lit/packages/lit-html/src/lit-html.ts
++++ b/vendor/lit-html/lit/packages/lit-html/src/lit-html.ts
+@@ -11,7 +11,7 @@ import type {TrustedHTML, TrustedTypesWindow} from 'trusted-types/lib/index.js';
+ const DEV_MODE = true;
+ const ENABLE_EXTRA_SECURITY_HOOKS = true;
+ const ENABLE_SHADYDOM_NOPATCH = true;
+-const NODE_MODE = false;
++// const NODE_MODE = false;
+ 
+ // Allows minifiers to rename references to globalThis
+ const global = globalThis;
+@@ -356,7 +356,7 @@ const markerMatch = '?' + marker;
+ const nodeMarker = `<${markerMatch}>`;
+ 
+ const d =
+-  NODE_MODE && global.document === undefined
++  global.document === undefined
+     ? ({
+         createTreeWalker() {
+           return {};

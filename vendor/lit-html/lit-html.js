@@ -7,6 +7,9 @@ const { until } = require('lit/directives/until.js');
 const { unsafeHTML } = require('lit/directives/unsafe-html.js');
 
 const html = (strings, ...values) => {
+    if (typeof document == 'undefined')
+        return;
+
     transformValues(values);
     return {
         ['_$litType$']: 1, // HTML_RESULT
@@ -15,6 +18,9 @@ const html = (strings, ...values) => {
     };
 };
 const svg = (strings, ...values) => {
+    if (typeof document == 'undefined')
+        return;
+
     transformValues(values);
     return {
         ['_$litType$']: 2, // SVG_RESULT

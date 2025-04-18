@@ -22,6 +22,7 @@
 #include "message.hh"
 #include "record.hh"
 #include "user.hh"
+#include "vm.hh"
 #include "../legacy/records.hh"
 #include "src/core/http/http.hh"
 #include "src/core/request/curl.hh"
@@ -1065,6 +1066,18 @@ For help about those commands, type: %!..+%1 command --help%!0)",
         return 1;
 #endif
 
+    LogInfo("Init zygote");
+    {
+        ZygoteResult ret = RunZygote(sandbox, gp_domain.config.view_directory);
+
+        switch (ret) {
+            case ZygoteResult::Parent: {} break;
+
+            case ZygoteResult::Child: return 0;
+            case ZygoteResult::Error: return 1;
+        }
+    }
+
     // Apply sandbox
     if (sandbox) {
         LogInfo("Init sandbox");
@@ -1080,7 +1093,8 @@ For help about those commands, type: %!..+%1 command --help%!0)",
             gp_domain.config.database_directory,
             gp_domain.config.archive_directory,
             gp_domain.config.snapshot_directory,
-            gp_domain.config.tmp_directory
+            gp_domain.config.tmp_directory,
+            gp_domain.config.view_directory
         };
         const char *const mask_files[] = {
             gp_domain.config.config_filename
@@ -1095,7 +1109,9 @@ For help about those commands, type: %!..+%1 command --help%!0)",
         return 1;
 
     // From here on, don't quit abruptly
+    // Trigger a check when something happens to the zygote process
     WaitForInterrupt(0);
+    SetSignalHandler(SIGCHLD, [](int) { SignalWaitFor(); });
 
     // Run!
     if (!daemon.Start(HandleRequest))
@@ -1183,9 +1199,16 @@ For help about those commands, type: %!..+%1 command --help%!0)",
             LogDebug("Prune template renders");
             PruneRenders();
 
+            LogDebug("Check zygote");
+            if (!CheckZygote())
+                return 1;
+
             first = false;
         }
     }
+
+    LogDebug("Stop zygote");
+    StopZygote();
 
     LogDebug("Stop HTTP server");
     daemon.Stop();
