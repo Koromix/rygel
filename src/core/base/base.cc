@@ -524,8 +524,24 @@ void UnlockMemory(void *ptr, Size len)
 
 #elif !defined(__wasm__)
 
+static int GetPageSize()
+{
+    static Size pagesize = sysconf(_SC_PAGESIZE);
+    return pagesize;
+}
+
 bool LockMemory(void *ptr, Size len)
 {
+    // madvise() operates on memory pages
+    uint8_t *end = AlignUp((uint8_t *)ptr + len, GetPageSize());
+    uint8_t *page = AlignDown((uint8_t *)ptr, GetPageSize());
+
+#if defined(MADV_DONTDUMP)
+    (void)madvise(page, (size_t)(end - page), MADV_DONTDUMP);
+#elif defined(MADV_NOCORE)
+    (void)madvise(page, (size_t)(end - page), MADV_NOCORE);
+#endif
+
     if (mlock(ptr, (size_t)len) < 0) {
         LogError("Failed to lock memory (%1): %2", FmtMemSize(len), strerror(errno));
         return false;
@@ -536,6 +552,16 @@ bool LockMemory(void *ptr, Size len)
 
 void UnlockMemory(void *ptr, Size len)
 {
+    // madvise() operates on memory pages
+    uint8_t *end = AlignUp((uint8_t *)ptr + len, GetPageSize());
+    uint8_t *page = AlignDown((uint8_t *)ptr, GetPageSize());
+
+#if defined(MADV_DONTDUMP)
+    (void)madvise(page, (size_t)(end - page), MADV_DODUMP);
+#elif defined(MADV_NOCORE)
+    (void)madvise(page, (size_t)(end - page), MADV_CORE);
+#endif
+
     munlock(ptr, (size_t)len);
 }
 
