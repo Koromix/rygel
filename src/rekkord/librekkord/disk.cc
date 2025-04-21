@@ -1194,9 +1194,7 @@ Size rk_Disk::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role,
         *out_error = true;
         return -1;
     }
-    for (Size i = 0; i < data.keys; i++) {
-        MemCpy(out_keys[i], &payload[i * 32], 32);
-    }
+    MemCpy(out_keys.ptr, payload, data.keys * 32);
 
     return data.keys;
 }
