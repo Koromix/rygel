@@ -99,6 +99,14 @@ Options:
     if (!config.Complete(false))
         return 1;
 
+    std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
+    if (!disk)
+        return 1;
+    RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
+
+    LogInfo("Repository: %!..+%1%!0", disk->GetURL());
+    LogInfo();
+
     if (!key_filename) {
         key_filename = Prompt("Master key export file: ", "master.key", nullptr, &temp_alloc);
 
@@ -108,22 +116,12 @@ Options:
             LogError("Cannot export to empty path");
             return 1;
         }
-
-        LogInfo();
     }
 
     if (TestFile(key_filename)) {
         LogError("Master key export file '%1' already exists", key_filename);
         return 1;
     }
-
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
-    if (!disk)
-        return 1;
-    RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
-
-    LogInfo("Repository: %!..+%1%!0", disk->GetURL());
-    LogInfo();
 
     bool random_full_pwd = false;
     bool random_write_pwd = false;
