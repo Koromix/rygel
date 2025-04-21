@@ -22,7 +22,7 @@ namespace RG {
 bool rk_Config::Complete(bool require_auth)
 {
     if (!url) {
-        url = GetEnv("REKKORD_URL");
+        url = GetEnv("REKKORD_REPOSITORY");
         if (!url) {
             LogError("Missing repository location");
             return false;
