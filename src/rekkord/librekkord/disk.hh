@@ -82,9 +82,18 @@ enum class rk_SaltKind {
     SplitterSeed = 1
 };
 
+enum class rk_UserRole {
+    ReadWrite = 0,
+    WriteOnly = 1
+};
+static const char *const rk_UserRoleNames[] = {
+    "ReadWrite",
+    "WriteOnly"
+};
+
 struct rk_UserInfo {
     const char *username;
-    rk_DiskMode mode; // WriteOnly or Full
+    rk_UserRole role;
 };
 
 struct rk_TagInfo {
@@ -148,7 +157,7 @@ public:
     sq_Database *OpenCache(bool build);
     bool RebuildCache();
 
-    bool InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force);
+    bool InitUser(const char *username, rk_UserRole role, const char *pwd, bool force);
     bool DeleteUser(const char *username);
     bool ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users);
 
@@ -178,8 +187,8 @@ protected:
 private:
     StatResult TestFast(const char *path);
 
-    bool WriteKeys(const char *path, const char *pwd, Span<const uint8_t *const> keys);
-    bool ReadKeys(const char *path, const char *pwd, Span<uint8_t *const> out_keys, bool *out_error);
+    bool WriteKeys(const char *path, const char *pwd, rk_UserRole role, Span<const uint8_t *const> keys);
+    Size ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, Span<uint8_t[32]> out_keys, bool *out_error);
 
     bool WriteSecret(const char *path, Span<const uint8_t> buf, bool overwrite);
     bool ReadSecret(const char *path, Span<uint8_t> out_buf);

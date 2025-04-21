@@ -202,8 +202,6 @@ bool SftpDisk::Init(Span<const uint8_t> mkey, const char *full_pwd, const char *
 
         if (!make_directory("keys"))
             return false;
-        if (!make_directory("keys/default"))
-            return false;
         if (!make_directory("tags"))
             return false;
         if (!make_directory("blobs"))

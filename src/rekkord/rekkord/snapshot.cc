@@ -134,7 +134,7 @@ Options:
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != rk_DiskMode::WriteOnly) {
-        LogWarning("You should prefer write-only passwords for this command");
+        LogWarning("You should prefer write-only users for this command");
     }
     LogInfo();
 
@@ -273,7 +273,7 @@ Snapshot names are not unique, if you use a snapshot name, rekkord will use the 
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != rk_DiskMode::Full) {
-        LogError("Cannot decrypt with write-only key");
+        LogError("Cannot decrypt with write-only access");
         return 1;
     }
     LogInfo();

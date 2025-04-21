@@ -41,6 +41,7 @@ int RunInit(Span<const char *> arguments)
 
     // Options
     rk_Config config;
+    bool create_users = true;
     const char *full_pwd = nullptr;
     const char *write_pwd = nullptr;
     bool random_full_pwd = true;
@@ -57,8 +58,9 @@ Options:
 
     %!..+-R, --repository filename%!0      Set repository URL
 
-        %!..+--full_password [pwd]%!0      Set full password manually
-        %!..+--write_password [pwd]%!0     Set write-only password manually
+        %!..+--skip_users%!0               Omit default users (full and write)
+        %!..+--full_password [pwd]%!0      Set full user password manually
+        %!..+--write_password [pwd]%!0     Set write user password manually
 
     %!..+-K, --key_file filename%!0        Set explicit master key export file)", FelixTarget);
     };
@@ -79,6 +81,8 @@ Options:
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
                 if (!rk_DecodeURL(opt.current_value, &config))
                     return 1;
+            } else if (opt.Test("--skip_users")) {
+                create_users = false;
             } else if (opt.Test("--full_password", OptionType::OptionalValue)) {
                 full_pwd = opt.current_value;
                 random_full_pwd = false;
@@ -108,6 +112,8 @@ Options:
             LogError("Cannot export to empty path");
             return 1;
         }
+
+        LogInfo();
     }
 
     if (TestFile(key_filename)) {
@@ -124,25 +130,30 @@ Options:
     LogInfo();
 
     // Generate repository passwords
-    if (random_full_pwd) {
-        Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
-        if (!GeneratePassword(buf))
-           return 1;
-       full_pwd = buf.ptr;
-    } else if (!full_pwd) {
-        full_pwd = Prompt("Full password: ", nullptr, "*", &temp_alloc);
-        if (!full_pwd)
-            return 1;
-    }
-    if (random_write_pwd) {
-        Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
-        if (!GeneratePassword(buf))
-           return 1;
-        write_pwd = buf.ptr;
-    } else if (!write_pwd) {
-        write_pwd = Prompt("Write-only password: ", nullptr, "*", &temp_alloc);
-        if (!write_pwd)
-            return 1;
+    if (create_users) {
+        if (random_full_pwd) {
+            Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
+            if (!GeneratePassword(buf))
+               return 1;
+           full_pwd = buf.ptr;
+        } else if (!full_pwd) {
+            full_pwd = Prompt("Full password: ", nullptr, "*", &temp_alloc);
+            if (!full_pwd)
+                return 1;
+        }
+        if (random_write_pwd) {
+            Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
+            if (!GeneratePassword(buf))
+               return 1;
+            write_pwd = buf.ptr;
+        } else if (!write_pwd) {
+            write_pwd = Prompt("Write-only password: ", nullptr, "*", &temp_alloc);
+            if (!write_pwd)
+                return 1;
+        }
+    } else {
+        full_pwd = nullptr;
+        write_pwd = nullptr;
     }
 
     uint8_t mkey[rk_MasterKeySize] = {};
@@ -154,15 +165,17 @@ Options:
         return 1;
     LogInfo();
 
-    if (random_full_pwd) {
-        LogInfo("Default full password: %!..+%1%!0", full_pwd);
-    } else {
-        LogInfo("Default full password: %!D..(hidden)%!0");
-    }
-    if (random_write_pwd) {
-        LogInfo("  write-only password: %!..+%1%!0", write_pwd);
-    } else {
-        LogInfo("  write-only password: %!D..(hidden)%!0");
+    if (create_users) {
+        if (random_full_pwd) {
+            LogInfo("Default full user password: %!..+%1%!0", full_pwd);
+        } else {
+            LogInfo("Default full user password: %!D..(hidden)%!0");
+        }
+        if (random_write_pwd) {
+            LogInfo("       write user password: %!..+%1%!0", write_pwd);
+        } else {
+            LogInfo("       write user password: %!D..(hidden)%!0");
+        }
     }
     LogInfo();
 
@@ -170,7 +183,7 @@ Options:
     if (WriteFile(mkey, key_filename)) {
         LogInfo("Wrote master key: %!..+%1%!0", key_filename);
         LogInfo();
-        LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even if the default account is lost or deleted.");
+        LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even if the default accounts are lost or deleted.");
     }
 
     return 0;
@@ -183,11 +196,9 @@ int RunAddUser(Span<const char *> arguments)
     // Options
     rk_Config config;
     const char *key_filename = nullptr;
-    rk_DiskMode mode = rk_DiskMode::Full;
-    const char *full_pwd = nullptr;
-    const char *write_pwd = nullptr;
-    bool random_full_pwd = true;
-    bool random_write_pwd = true;
+    rk_UserRole role = rk_UserRole::WriteOnly;
+    const char *pwd = nullptr;
+    bool random_pwd = true;
     bool force = false;
     const char *username = nullptr;
 
@@ -205,15 +216,13 @@ Options:
 
     %!..+-K, --key_file filename%!0        Use master key instead of username/password
 
-    %!..+-m, --mode mode%!0                Access mode (see below)
-
-        %!..+--full_password [pwd]%!0      Set full password manually
-        %!..+--write_password [pwd]%!0     Set write-only password manually
+    %!..+-r, --role role%!0                User role (see below)
+                                   %!D..(default: %2)%!0
+        %!..+--password [pwd]%!0           Set password manually
 
         %!..+--force%!0                    Overwrite exisiting user %!D..(if any)%!0
 
-Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_DiskMode::Full],
-                                                       rk_DiskModeNames[(int)rk_DiskMode::WriteOnly]);
+Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], FmtSpan(rk_UserRoleNames));
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -238,21 +247,14 @@ Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_
                 config.password = opt.current_value;
             } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
                 key_filename = opt.current_value;
-            } else if (opt.Test("-m", "--mode", OptionType::Value)) {
-                if (TestStr(opt.current_value, rk_DiskModeNames[(int)rk_DiskMode::Full])) {
-                    mode = rk_DiskMode::Full;
-                } else if (TestStr(opt.current_value, rk_DiskModeNames[(int)rk_DiskMode::WriteOnly])) {
-                    mode = rk_DiskMode::WriteOnly;
-                } else {
-                    LogError("Unknown mode '%1'", opt.current_value);
+            } else if (opt.Test("-r", "--role", OptionType::Value)) {
+                if (!OptionToEnumI(rk_UserRoleNames, opt.current_value, &role)) {
+                    LogError("Unknown user role '%1'", opt.current_value);
                     return 1;
                 }
-            } else if (opt.Test("--full_password", OptionType::OptionalValue)) {
-                full_pwd = opt.current_value;
-                random_full_pwd = false;
-            } else if (opt.Test("--write_password", OptionType::OptionalValue)) {
-                write_pwd = opt.current_value;
-                random_write_pwd = false;
+            } else if (opt.Test("--password", OptionType::OptionalValue)) {
+                pwd = opt.current_value;
+                random_pwd = false;
             } else if (opt.Test("--force")) {
                 force = true;
             } else {
@@ -293,55 +295,33 @@ Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_
     }
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (mode == rk_DiskMode::Full && disk->GetMode() != rk_DiskMode::Full) {
-        LogError("You must use the full-access password with this command");
+    if (role == rk_UserRole::ReadWrite && disk->GetMode() != rk_DiskMode::Full) {
+        LogError("You must have read-write access to create user with ReadWrite role");
         return 1;
     }
     LogInfo();
 
-    // Generate repository passwords
-    if (mode == rk_DiskMode::Full) {
-        if (random_full_pwd) {
-            Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
-            if (!GeneratePassword(buf))
-               return 1;
-           full_pwd = buf.ptr;
-        } else if (!full_pwd) {
-            full_pwd = Prompt("Full password: ", nullptr, "*", &temp_alloc);
-            if (!full_pwd)
-                return 1;
-        }
-    } else if (!random_full_pwd) {
-        LogError("Don't set full password for write-only user");
-        return 1;
-    }
-    if (random_write_pwd) {
+    if (random_pwd) {
         Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
         if (!GeneratePassword(buf))
            return 1;
-        write_pwd = buf.ptr;
-    } else if (!write_pwd) {
-        write_pwd = Prompt("Write-only password: ", nullptr, "*", &temp_alloc);
-        if (!write_pwd)
+       pwd = buf.ptr;
+    } else if (!pwd) {
+        pwd = Prompt("User password: ", nullptr, "*", &temp_alloc);
+        if (!pwd)
             return 1;
     }
 
-    if (!disk->InitUser(username, full_pwd, write_pwd, force))
+    if (!disk->InitUser(username, role, pwd, force))
         return 1;
 
     LogInfo("Added user: %!..+%1%!0", username);
     LogInfo();
-    if (mode != rk_DiskMode::Full) {
-        LogInfo("New user full password: %!D..(none)%!0");
-    } else if (random_full_pwd) {
-        LogInfo("New user full password: %!..+%1%!0", full_pwd);
+    LogInfo("Role: %!..+%1%!0", rk_UserRoleNames[(int)role]);
+    if (random_pwd) {
+        LogInfo("Password: %!..+%1%!0", pwd);
     } else {
-        LogInfo("New user full password: %!D..(hidden)%!0");
-    }
-    if (random_write_pwd) {
-        LogInfo("   write-only password: %!..+%1%!0", write_pwd);
-    } else {
-        LogInfo("   write-only password: %!D..(hidden)%!0");
+        LogInfo("Password: %!D..(hidden)%!0");
     }
 
     return 0;
@@ -502,7 +482,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
         case OutputFormat::Plain: {
             if (users.len) {
                 for (const rk_UserInfo &user: users) {
-                    PrintLn("%!..+%1%!0 [%2]", FmtArg(user.username).Pad(24), rk_DiskModeNames[(int)user.mode]);
+                    PrintLn("%!..+%1%!0 [%2]", FmtArg(user.username).Pad(24), rk_UserRoleNames[(int)user.role]);
                 }
             } else {
                 LogInfo("There does not seem to be any user");
@@ -517,7 +497,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                 json.StartObject();
 
                 json.Key("name"); json.String(user.username);
-                json.Key("mode"); json.String(rk_DiskModeNames[(int)user.mode]);
+                json.Key("role"); json.String(rk_UserRoleNames[(int)user.role]);
 
                 json.EndObject();
             }
@@ -535,7 +515,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                 pugi::xml_node element = root.append_child("User");
 
                 element.append_attribute("Name") = user.username;
-                element.append_attribute("Mode") = rk_DiskModeNames[(int)user.mode];
+                element.append_attribute("Role") = rk_UserRoleNames[(int)user.role];
             }
 
             xml_PugiWriter writer(StdOut);

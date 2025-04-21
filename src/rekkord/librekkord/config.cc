@@ -35,8 +35,8 @@ bool rk_Config::Complete(bool require_auth)
     if (require_auth && !username) {
         username = GetEnv("REKKORD_USERNAME");
         if (!username) {
-            username = "default";
-            LogWarning("Rekkord username is not set, using '%1'", username);
+            LogError("Missing repository username");
+            return false;
         }
     }
 

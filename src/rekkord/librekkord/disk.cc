@@ -49,14 +49,13 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
 
     RG_DEFER_N(err_guard) { Lock(); };
 
-    const char *full_filename = Fmt(&str_alloc, "keys/%1/full", username).ptr;
-    const char *write_filename = Fmt(&str_alloc, "keys/%1/write", username).ptr;
+    const char *filename = Fmt(&str_alloc, "keys/%1.key", username).ptr;
 
     if (!CheckRepository())
         return false;
 
     // Does user exist?
-    switch (TestRaw(write_filename)) {
+    switch (TestRaw(filename)) {
         case StatResult::Success: {} break;
         case StatResult::MissingPath: {
             LogError("User '%1' does not exist", username);
@@ -71,23 +70,49 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
 
     // Open disk and determine mode
     {
+        rk_UserRole role;
+        LocalArray<uint8_t[32], MaxKeys> keys;
         bool error = false;
 
-        if (ReadKeys(write_filename, pwd, { skey, wkey, tkey }, &error)) {
-            mode = rk_DiskMode::WriteOnly;
+        keys.len = ReadKeys(filename, pwd, &role, keys.data, &error);
 
-            ZeroMemorySafe(dkey, RG_SIZE(dkey));
-            ZeroMemorySafe(lkey, RG_SIZE(lkey));
-        } else if (ReadKeys(full_filename, pwd, { skey, dkey, lkey }, &error)) {
-            mode = rk_DiskMode::Full;
-
-            crypto_scalarmult_base(wkey, dkey);
-            crypto_scalarmult_base(tkey, lkey);
-        } else {
+        if (keys.len < 0) {
             if (!error) {
                 LogError("Failed to open repository (wrong password?)");
             }
             return false;
+        }
+
+        switch (role) {
+            case rk_UserRole::ReadWrite: {
+                if (keys.len != 3) {
+                    LogError("Expected %1 user keys, got %2", 3, keys.len);
+                    return false;
+                }
+
+                mode = rk_DiskMode::Full;
+
+                MemCpy(skey, keys[0], RG_SIZE(skey));
+                MemCpy(dkey, keys[1], RG_SIZE(dkey));
+                MemCpy(lkey, keys[2], RG_SIZE(lkey));
+                crypto_scalarmult_base(wkey, dkey);
+                crypto_scalarmult_base(tkey, lkey);
+            } break;
+
+            case rk_UserRole::WriteOnly: {
+                if (keys.len != 3) {
+                    LogError("Expected %1 user keys, got %2", 3, keys.len);
+                    return false;
+                }
+
+                mode = rk_DiskMode::WriteOnly;
+
+                MemCpy(skey, keys[0], RG_SIZE(skey));
+                MemCpy(wkey, keys[1], RG_SIZE(wkey));
+                MemCpy(tkey, keys[2], RG_SIZE(tkey));
+                ZeroMemorySafe(dkey, RG_SIZE(dkey));
+                ZeroMemorySafe(lkey, RG_SIZE(lkey));
+            } break;
         }
 
         user = DuplicateString(username, &str_alloc).ptr;
@@ -358,42 +383,26 @@ bool rk_Disk::RebuildCache()
     return true;
 }
 
-bool rk_Disk::InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force)
+bool rk_Disk::InitUser(const char *username, rk_UserRole role, const char *pwd, bool force)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Full || mode == rk_DiskMode::WriteOnly);
-    RG_ASSERT(!full_pwd || mode == rk_DiskMode::Full);
+    RG_ASSERT(mode == rk_DiskMode::Full || role == rk_UserRole::WriteOnly);
+    RG_ASSERT(pwd);
 
     BlockAllocator temp_alloc;
 
     if (!CheckUserName(username))
         return false;
-    if (!full_pwd && !write_pwd) {
-        LogError("Cannot create user '%1' without any password", username);
-        return false;
-    }
 
-    const char *directory = Fmt(&temp_alloc, "keys/%1", username).ptr;
-    const char *full_filename = Fmt(&temp_alloc, "%1/full", directory).ptr;
-    const char *write_filename = Fmt(&temp_alloc, "%1/write", directory).ptr;
-
+    const char *filename = Fmt(&temp_alloc, "keys/%1.key", username).ptr;
     bool exists = false;
 
-    if (full_pwd) {
-        switch (TestRaw(full_filename)) {
-            case StatResult::Success: { exists = true; } break;
-            case StatResult::MissingPath: {} break;
-            case StatResult::AccessDenied:
-            case StatResult::OtherError: return false;
-        }
-    }
-    if (write_pwd) {
-        switch (TestRaw(write_filename)) {
-            case StatResult::Success: { exists = true; } break;
-            case StatResult::MissingPath: {} break;
-            case StatResult::AccessDenied:
-            case StatResult::OtherError: return false;
-        }
+    switch (TestRaw(filename)) {
+        case StatResult::Success: { exists = true; } break;
+        case StatResult::MissingPath: {} break;
+        case StatResult::AccessDenied:
+        case StatResult::OtherError: return false;
     }
 
     if (exists) {
@@ -405,15 +414,18 @@ bool rk_Disk::InitUser(const char *username, const char *full_pwd, const char *w
         }
     }
 
-    DeleteRaw(full_filename);
-    DeleteRaw(write_filename);
+    DeleteRaw(filename);
 
-    if (!CreateDirectory(directory))
-        return false;
-    if (full_pwd && !WriteKeys(full_filename, full_pwd, { skey, dkey, lkey }))
-        return false;
-    if (write_pwd && !WriteKeys(write_filename, write_pwd, { skey, wkey, tkey }))
-        return false;
+    switch (role) {
+        case rk_UserRole::ReadWrite: {
+            if (!WriteKeys(filename, pwd, rk_UserRole::ReadWrite, { skey, dkey, lkey }))
+                return false;
+        } break;
+        case rk_UserRole::WriteOnly: {
+            if (!WriteKeys(filename, pwd, rk_UserRole::WriteOnly, { skey, wkey, tkey }))
+                return false;
+        } break;
+    }
 
     return true;
 }
@@ -427,39 +439,19 @@ bool rk_Disk::DeleteUser(const char *username)
     if (!CheckUserName(username))
         return false;
 
-    const char *directory = Fmt(&temp_alloc, "keys/%1", username).ptr;
-    const char *full_filename = Fmt(&temp_alloc, "%1/full", directory).ptr;
-    const char *write_filename = Fmt(&temp_alloc, "%1/write", directory).ptr;
+    const char *filename = Fmt(&temp_alloc, "keys/%1.key", username).ptr;
 
-    bool exists = false;
-
-    switch (TestRaw(full_filename)) {
-        case StatResult::Success: { exists = true; } break;
-        case StatResult::MissingPath: {} break;
-        case StatResult::AccessDenied:
-        case StatResult::OtherError: return false;
-    }
-    switch (TestRaw(write_filename)) {
-        case StatResult::Success: { exists = true; } break;
-        case StatResult::MissingPath: {} break;
+    switch (TestRaw(filename)) {
+        case StatResult::Success: {} break;
+        case StatResult::MissingPath: {
+            LogError("User '%1' does not exist", username);
+            return false;
+        } break;
         case StatResult::AccessDenied:
         case StatResult::OtherError: return false;
     }
 
-    if (!exists) {
-        LogError("User '%1' does not exist", username);
-
-        // Clean up directory (if any) anyway
-        DeleteDirectory(directory);
-
-        return false;
-    }
-
-    if (!DeleteRaw(full_filename))
-        return false;
-    if (!DeleteRaw(write_filename))
-        return false;
-    if (!DeleteDirectory(directory))
+    if (!DeleteRaw(filename))
         return false;
 
     return true;
@@ -467,51 +459,59 @@ bool rk_Disk::DeleteUser(const char *username)
 
 bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
 {
-    BlockAllocator temp_alloc;
-
     Size prev_len = out_users->len;
     RG_DEFER_N(out_guard) { out_users->RemoveFrom(prev_len); };
 
-    HashMap<const char *, Size> known_map;
+    bool success = ListRaw("keys", [&](const char *path) {
+        rk_UserInfo user = {};
 
-    bool success = ListRaw("keys", [&](const char *filename) {
-        Span<const char> remain = filename;
+        Span<const char> remain = path;
 
         if (!StartsWith(remain, "keys/"))
             return true;
-        remain = remain.Take(5, remain.len - 5);
+        if (!EndsWith(remain, ".key"))
+            return true;
 
-        Span<const char> username = SplitStr(remain, '/', &remain);
-        Span<const char> mode = remain;
+        Span<const char> username = remain.Take(5, remain.len - 9);
 
         if (!IsUserName(username))
             return true;
-        if (mode != "write" && mode != "full")
-            return true;
 
-        username = DuplicateString(username, &temp_alloc);
+        user.username = DuplicateString(username, alloc).ptr;
 
-        bool inserted;
-        auto bucket = known_map.TrySetDefault(username.ptr, &inserted);
+        // Read user role
+        {
+            KeyData data = {};
+            RG_DEFER { ZeroMemorySafe(&data, RG_SIZE(data)); };
 
-        rk_UserInfo *user = nullptr;
+            // Read file data
+            {
+                Span<uint8_t> buf = MakeSpan((uint8_t *)&data, offsetof(KeyData, cypher));
+                Size len = ReadRaw(path, buf);
 
-        if (inserted) {
-            bucket->key = DuplicateString(bucket->key, alloc).ptr;
-            bucket->value = out_users->len;
+                if (len != buf.len) {
+                    if (len >= 0) {
+                        LogError("Truncated keys in '%1'", path);
+                    }
 
-            user = out_users->AppendDefault();
+                    return true;
+                }
+            }
 
-            user->username = bucket->key;
-            user->mode = rk_DiskMode::WriteOnly;
-        } else {
-            user = &(*out_users)[bucket->value];
+            switch (data.role) {
+                case (int)rk_UserRole::ReadWrite:
+                case (int)rk_UserRole::WriteOnly: break;
+
+                default: {
+                    LogError("Invalid user role in '%1'", path);
+                    return true;
+                } break;
+            }
+
+            user.role = (rk_UserRole)data.role;
         }
 
-        if (mode != "write") {
-            user->mode = rk_DiskMode::Full;
-        }
-
+        out_users->Append(user);
         return true;
     });
     if (!success)
@@ -872,8 +872,8 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
 
     HeapArray<const char *> filenames;
     {
-        bool success = ListRaw("tags", [&](const char *filename) {
-            filename = DuplicateString(filename, alloc).ptr;
+        bool success = ListRaw("tags", [&](const char *path) {
+            const char *filename = DuplicateString(path, alloc).ptr;
             filenames.Append(filename);
 
             return true;
@@ -1000,12 +1000,16 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const 
     names.Append("rekkord");
 
     // Write key files
-    if (!WriteKeys("keys/default/full", full_pwd, { skey, dkey, lkey }))
-        return false;
-    names.Append("keys/default/full");
-    if (!WriteKeys("keys/default/write", write_pwd, { skey, wkey, tkey }))
-        return false;
-    names.Append("keys/default/write");
+    if (full_pwd) {
+        if (!WriteKeys("keys/full.key", full_pwd, rk_UserRole::ReadWrite, { skey, dkey, lkey }))
+            return false;
+        names.Append("keys/full.key");
+    }
+    if (write_pwd) {
+        if (!WriteKeys("keys/write.key", write_pwd, rk_UserRole::WriteOnly, { skey, wkey, tkey }))
+            return false;
+        names.Append("keys/write.key");
+    }
 
     // Success!
     mode = rk_DiskMode::Full;
@@ -1085,7 +1089,7 @@ static bool DeriveFromPassword(const char *pwd, const uint8_t salt[16], uint8_t 
     return true;
 }
 
-bool rk_Disk::WriteKeys(const char *path, const char *pwd, Span<const uint8_t *const> keys)
+bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, Span<const uint8_t *const> keys)
 {
     RG_ASSERT(keys.len <= MaxKeys);
 
@@ -1098,6 +1102,8 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, Span<const uint8_t *c
 
     randombytes_buf(data.salt, RG_SIZE(data.salt));
     randombytes_buf(data.nonce, RG_SIZE(data.nonce));
+    data.role = (int8_t)role;
+    data.keys = (int8_t)keys.len;
 
     for (Size i = 0; i < keys.len; i++) {
         MemCpy(&payload[i * 32], keys[i], 32);
@@ -1124,7 +1130,7 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, Span<const uint8_t *c
     return true;
 }
 
-bool rk_Disk::ReadKeys(const char *path, const char *pwd, Span<uint8_t *const> out_keys, bool *out_error)
+Size rk_Disk::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, Span<uint8_t[32]> out_keys, bool *out_error)
 {
     RG_ASSERT(out_keys.len <= MaxKeys);
 
@@ -1146,7 +1152,7 @@ bool rk_Disk::ReadKeys(const char *path, const char *pwd, Span<uint8_t *const> o
             }
 
             *out_error = true;
-            return false;
+            return -1;
         }
     }
 
@@ -1155,17 +1161,46 @@ bool rk_Disk::ReadKeys(const char *path, const char *pwd, Span<uint8_t *const> o
         uint8_t key[32];
         if (!DeriveFromPassword(pwd, data.salt, key)) {
             *out_error = true;
-            return false;
+            return -1;
         }
-        if (crypto_secretbox_open_easy(payload, data.cypher, RG_SIZE(data.cypher), data.nonce, key))
-            return false;
+        if (crypto_secretbox_open_easy(payload, data.cypher, RG_SIZE(data.cypher), data.nonce, key)) {
+            *out_error = false;
+            return -1;
+        }
     }
 
-    for (Size i = 0; i < out_keys.len; i++) {
+    // Safety checks
+    switch (data.role) {
+        case (int)rk_UserRole::ReadWrite:
+        case (int)rk_UserRole::WriteOnly: break;
+
+        default: {
+            LogError("Invalid user role in '%1'", path);
+
+            *out_error = true;
+            return -1;
+        } break;
+    }
+    if (data.keys < 1 || data.keys > MaxKeys) {
+        LogError("Invalid count of keys in '%1'", path);
+
+        *out_error = true;
+        return -1;
+    }
+    if (out_keys.len < data.keys) {
+        LogError("Too many keys to unpack in '%1'", path);
+
+        *out_error = true;
+        return -1;
+    }
+
+    *out_role = (rk_UserRole)data.role;
+
+    for (Size i = 0; i < data.keys; i++) {
         MemCpy(out_keys[i], &payload[i * 32], 32);
     }
 
-    return true;
+    return data.keys;
 }
 
 bool rk_Disk::WriteSecret(const char *path, Span<const uint8_t> data, bool overwrite)
