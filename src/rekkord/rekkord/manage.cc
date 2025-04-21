@@ -220,7 +220,7 @@ Options:
                                    %!D..(default: %2)%!0
         %!..+--password [pwd]%!0           Set password manually
 
-        %!..+--force%!0                    Overwrite exisiting user %!D..(if any)%!0
+    %!..+-f, --force%!0                    Overwrite exisiting user %!D..(if any)%!0
 
 Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], FmtSpan(rk_UserRoleNames));
     };
@@ -255,7 +255,7 @@ Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], Fm
             } else if (opt.Test("--password", OptionType::OptionalValue)) {
                 pwd = opt.current_value;
                 random_pwd = false;
-            } else if (opt.Test("--force")) {
+            } else if (opt.Test("-f", "--force")) {
                 force = true;
             } else {
                 opt.LogUnknownError();
@@ -344,7 +344,7 @@ Options:
 
     %!..+-R, --repository URL%!0           Set repository URL
 
-        %!..+--force%!0                    Force deletion %!D..(to delete yourself)%!0)", FelixTarget);
+    %!..+-f, --force%!0                    Force deletion %!D..(to delete yourself)%!0)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -363,7 +363,7 @@ Options:
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
                 if (!rk_DecodeURL(opt.current_value, &config))
                     return 1;
-            } else if (opt.Test("--force")) {
+            } else if (opt.Test("-f", "--force")) {
                 force = true;
             } else {
                 opt.LogUnknownError();
