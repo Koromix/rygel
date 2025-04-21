@@ -6,6 +6,13 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.44
+
+*Released on 2025-04-21*
+
+- Auto-generate user passwords when prompt is left empty
+- Fix ambiguous *--password* option in `rekkord add_user`
+
 ### Rekkord 0.43
 
 *Released on 2025-04-21*
