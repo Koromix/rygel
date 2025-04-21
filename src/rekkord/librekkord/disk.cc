@@ -971,9 +971,9 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const 
     RG_DEFER_N(err_guard) {
         Lock();
 
-        DeleteRaw("rekkord");
-        DeleteRaw("keys/default/full");
-        DeleteRaw("keys/default/write");
+        for (const char *name: names) {
+            DeleteRaw(name);
+        }
     };
 
     switch (TestRaw("rekkord")) {
