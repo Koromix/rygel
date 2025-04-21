@@ -21,7 +21,7 @@
 namespace RG {
 
 static const char *const DerivationContext = "REKKORD0";
-static const int MaxKeys = 8;
+static const int MaxKeys = 16;
 static const int SecretVersion = 1;
 static const int TagVersion = 1;
 static const int BlobVersion = 7;

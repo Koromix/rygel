@@ -507,22 +507,39 @@ void BlockAllocator::GiveTo(LinkedAllocator *alloc)
 
 #if defined(_WIN32)
 
-bool LockMemory(void *ptr, Size len)
+void *AllocateSafe(Size len)
 {
-    if (!VirtualLock(ptr, (SIZE_T)len)) {
-        LogError("Failed to lock memory (%1): %2", FmtMemSize(len), GetWin32ErrorString());
-        return false;
+    void *ptr = VirtualAlloc(nullptr, (SIZE_T)len, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    if (!ptr) {
+        LogError("Failed to allocate %1 of memory: %2", FmtMemSize(len), GetWin32ErrorString());
+        abort();
     }
 
-    return true;
+    if (!VirtualLock(ptr, (SIZE_T)len)) {
+        LogError("Failed to lock memory (%1): %2", FmtMemSize(len), GetWin32ErrorString());
+        abort();
+    }
+
+    ZeroSafe(ptr, len);
+
+    return ptr;
 }
 
-void UnlockMemory(void *ptr, Size len)
+void ReleaseSafe(void *ptr, Size len)
 {
-    VirtualUnlock(ptr, (SIZE_T)len);
+    if (!ptr)
+        return;
+
+    ZeroSafe(ptr, len);
+    VirtualFree(ptr, 0, MEM_RELEASE);
 }
 
-#elif !defined(__wasm__)
+void ZeroSafe(void *ptr, Size len)
+{
+    SecureZeroMemory(ptr, (SIZE_T)len);
+}
+
+#elif !defined(__wasi__)
 
 static int GetPageSize()
 {
@@ -530,39 +547,52 @@ static int GetPageSize()
     return pagesize;
 }
 
-bool LockMemory(void *ptr, Size len)
+void *AllocateSafe(Size len)
 {
-    // madvise() operates on memory pages
-    uint8_t *end = AlignUp((uint8_t *)ptr + len, GetPageSize());
-    uint8_t *page = AlignDown((uint8_t *)ptr, GetPageSize());
+    Size aligned = AlignLen(len, GetPageSize());
+    int flags = MAP_PRIVATE | MAP_ANONYMOUS;
 
-#if defined(MADV_DONTDUMP)
-    (void)madvise(page, (size_t)(end - page), MADV_DONTDUMP);
-#elif defined(MADV_NOCORE)
-    (void)madvise(page, (size_t)(end - page), MADV_NOCORE);
+#if defined(MAP_CONCEAL)
+    flags |= MAP_CONCEAL;
 #endif
 
-    if (mlock(ptr, (size_t)len) < 0) {
-        LogError("Failed to lock memory (%1): %2", FmtMemSize(len), strerror(errno));
-        return false;
+    void *ptr = mmap(nullptr, (size_t)aligned, PROT_READ | PROT_WRITE, flags, 0, 0);
+    if (!ptr) {
+        LogError("Failed to allocate %1 of memory: %2", FmtMemSize(len), strerror(errno));
+        abort();
     }
 
-    return true;
-}
-
-void UnlockMemory(void *ptr, Size len)
-{
-    // madvise() operates on memory pages
-    uint8_t *end = AlignUp((uint8_t *)ptr + len, GetPageSize());
-    uint8_t *page = AlignDown((uint8_t *)ptr, GetPageSize());
+    if (mlock(ptr, (size_t)aligned) < 0) {
+        LogError("Failed to lock memory (%1): %2", FmtMemSize(len), strerror(errno));
+        abort();
+    }
 
 #if defined(MADV_DONTDUMP)
-    (void)madvise(page, (size_t)(end - page), MADV_DODUMP);
+    (void)madvise(ptr, (size_t)aligned, MADV_DONTDUMP);
 #elif defined(MADV_NOCORE)
-    (void)madvise(page, (size_t)(end - page), MADV_CORE);
+    (void)madvise(ptr, (size_t)aligned, MADV_NOCORE);
 #endif
 
-    munlock(ptr, (size_t)len);
+    ZeroSafe(ptr, len);
+
+    return ptr;
+}
+
+void ReleaseSafe(void *ptr, Size len)
+{
+    if (!ptr)
+        return;
+
+    ZeroSafe(ptr, len);
+
+    Size aligned = AlignLen(len, GetPageSize());
+    munmap(ptr, aligned);
+}
+
+void ZeroSafe(void *ptr, Size len)
+{
+    MemSet(ptr, 0, len);
+    __asm__ __volatile__("" : : "r"(ptr) : "memory");
 }
 
 #endif
@@ -6294,16 +6324,6 @@ static void RunChaCha20(uint32_t state[16], uint8_t out_buf[64])
     state[13] += !state[12];
 }
 
-void ZeroMemorySafe(void *ptr, Size len)
-{
-#if defined(_WIN32)
-    SecureZeroMemory(ptr, (SIZE_T)len);
-#else
-    MemSet(ptr, 0, len);
-    __asm__ __volatile__("" : : "r"(ptr) : "memory");
-#endif
-}
-
 void FillRandomSafe(void *out_buf, Size len)
 {
     bool reseed = false;
@@ -6335,7 +6355,7 @@ restart:
 #endif
 
         InitChaCha20(rnd_state, buf.key, buf.iv);
-        ZeroMemorySafe(&buf, RG_SIZE(buf));
+        ZeroSafe(&buf, RG_SIZE(buf));
 
         rnd_remain = Mebibytes(4);
         rnd_time = GetMonotonicTime();
@@ -6348,7 +6368,7 @@ restart:
 
     Size copy_len = std::min(RG_SIZE(rnd_buf) - rnd_offset, len);
     MemCpy(out_buf, rnd_buf + rnd_offset, copy_len);
-    ZeroMemorySafe(rnd_buf + rnd_offset, copy_len);
+    ZeroSafe(rnd_buf + rnd_offset, copy_len);
     rnd_offset += copy_len;
 
     for (Size i = copy_len; i < len; i += RG_SIZE(rnd_buf)) {
@@ -6356,7 +6376,7 @@ restart:
 
         copy_len = std::min(RG_SIZE(rnd_buf), len - i);
         MemCpy((uint8_t *)out_buf + i, rnd_buf, copy_len);
-        ZeroMemorySafe(rnd_buf, copy_len);
+        ZeroSafe(rnd_buf, copy_len);
         rnd_offset = copy_len;
     }
 

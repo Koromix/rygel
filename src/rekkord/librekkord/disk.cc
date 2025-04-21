@@ -36,20 +36,17 @@ static_assert(crypto_kdf_blake2b_KEYBYTES == crypto_box_PUBLICKEYBYTES);
 rk_Disk::~rk_Disk()
 {
     Lock();
-
-    if (mlocked) {
-        UnlockMemory(this, RG_SIZE(*this));
-    }
 }
 
 bool rk_Disk::Authenticate(const char *username, const char *pwd)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Secure);
+    RG_ASSERT(!keyset);
 
     RG_DEFER_N(err_guard) { Lock(); };
 
-    const char *filename = Fmt(&str_alloc, "keys/%1.key", username).ptr;
+    const char *filename = Fmt(&str_alloc, "keys/%1", username).ptr;
 
     if (!CheckRepository())
         return false;
@@ -65,53 +62,29 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
         case StatResult::OtherError: return false;
     }
 
-    // Best effort
-    mlocked = mlocked || LockMemory(this, RG_SIZE(*this));
+    keyset = (KeySet *)AllocateSafe(RG_SIZE(KeySet));
 
     // Open disk and determine mode
     {
         rk_UserRole role;
         LocalArray<uint8_t[32], MaxKeys> keys;
-        bool error = false;
 
-        keys.len = ReadKeys(filename, pwd, &role, keys.data, &error);
-
-        if (keys.len < 0) {
-            if (!error) {
-                LogError("Failed to open repository (wrong password?)");
-            }
+        if (!ReadKeys(filename, pwd, &role, keyset))
             return false;
-        }
 
         switch (role) {
             case rk_UserRole::ReadWrite: {
-                if (keys.len != 3) {
-                    LogError("Expected %1 user keys, got %2", 3, keys.len);
-                    return false;
-                }
-
                 mode = rk_DiskMode::Full;
 
-                MemCpy(skey, keys[0], RG_SIZE(skey));
-                MemCpy(dkey, keys[1], RG_SIZE(dkey));
-                MemCpy(lkey, keys[2], RG_SIZE(lkey));
-                crypto_scalarmult_base(wkey, dkey);
-                crypto_scalarmult_base(tkey, lkey);
+                crypto_scalarmult_base(keyset->wkey, keyset->dkey);
+                crypto_scalarmult_base(keyset->tkey, keyset->lkey);
             } break;
 
             case rk_UserRole::WriteOnly: {
-                if (keys.len != 3) {
-                    LogError("Expected %1 user keys, got %2", 3, keys.len);
-                    return false;
-                }
-
                 mode = rk_DiskMode::WriteOnly;
 
-                MemCpy(skey, keys[0], RG_SIZE(skey));
-                MemCpy(wkey, keys[1], RG_SIZE(wkey));
-                MemCpy(tkey, keys[2], RG_SIZE(tkey));
-                ZeroMemorySafe(dkey, RG_SIZE(dkey));
-                ZeroMemorySafe(lkey, RG_SIZE(lkey));
+                ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
+                ZeroSafe(keyset->lkey, RG_SIZE(keyset->lkey));
             } break;
         }
 
@@ -130,6 +103,7 @@ bool rk_Disk::Authenticate(Span<const uint8_t> mkey)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Secure);
+    RG_ASSERT(!keyset);
 
     RG_DEFER_N(err_guard) { Lock(); };
 
@@ -141,15 +115,14 @@ bool rk_Disk::Authenticate(Span<const uint8_t> mkey)
     if (!CheckRepository())
         return false;
 
-    // Best effort
-    mlocked = mlocked || LockMemory(this, RG_SIZE(*this));
+    keyset = (KeySet *)AllocateSafe(RG_SIZE(KeySet));
 
     mode = rk_DiskMode::Full;
-    crypto_kdf_blake2b_derive_from_key(skey, RG_SIZE(skey), (int)MasterDerivation::SharedKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(dkey, RG_SIZE(dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(lkey, RG_SIZE(lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
-    crypto_scalarmult_base(wkey, dkey);
-    crypto_scalarmult_base(tkey, lkey);
+    crypto_kdf_blake2b_derive_from_key(keyset->skey, RG_SIZE(keyset->skey), (int)MasterDerivation::SharedKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
+    crypto_scalarmult_base(keyset->wkey, keyset->dkey);
+    crypto_scalarmult_base(keyset->tkey, keyset->lkey);
     user = nullptr;
 
     // Get cache ID
@@ -165,12 +138,9 @@ void rk_Disk::Lock()
     mode = rk_DiskMode::Secure;
     user = nullptr;
 
-    ZeroMemorySafe(cache_id, RG_SIZE(cache_id));
-    ZeroMemorySafe(skey, RG_SIZE(skey));
-    ZeroMemorySafe(dkey, RG_SIZE(dkey));
-    ZeroMemorySafe(wkey, RG_SIZE(wkey));
-    ZeroMemorySafe(lkey, RG_SIZE(lkey));
-    ZeroMemorySafe(tkey, RG_SIZE(tkey));
+    ZeroSafe(cache_id, RG_SIZE(cache_id));
+    ReleaseSafe(keyset, RG_SIZE(*keyset));
+    keyset = nullptr;
     str_alloc.ReleaseAll();
 
     cache_db.Close();
@@ -213,7 +183,7 @@ void rk_Disk::MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const
     RG_ASSERT(strlen(DerivationContext) == 8);
     uint64_t subkey = (uint64_t)kind;
 
-    crypto_kdf_blake2b_derive_from_key(out_buf.ptr, out_buf.len, subkey, DerivationContext, wkey);
+    crypto_kdf_blake2b_derive_from_key(out_buf.ptr, out_buf.len, subkey, DerivationContext, keyset->wkey);
 }
 
 bool rk_Disk::ChangeID()
@@ -395,7 +365,7 @@ bool rk_Disk::InitUser(const char *username, rk_UserRole role, const char *pwd, 
     if (!CheckUserName(username))
         return false;
 
-    const char *filename = Fmt(&temp_alloc, "keys/%1.key", username).ptr;
+    const char *filename = Fmt(&temp_alloc, "keys/%1", username).ptr;
     bool exists = false;
 
     switch (TestRaw(filename)) {
@@ -418,11 +388,11 @@ bool rk_Disk::InitUser(const char *username, rk_UserRole role, const char *pwd, 
 
     switch (role) {
         case rk_UserRole::ReadWrite: {
-            if (!WriteKeys(filename, pwd, rk_UserRole::ReadWrite, { skey, dkey, lkey }))
+            if (!WriteKeys(filename, pwd, rk_UserRole::ReadWrite, *keyset))
                 return false;
         } break;
         case rk_UserRole::WriteOnly: {
-            if (!WriteKeys(filename, pwd, rk_UserRole::WriteOnly, { skey, wkey, tkey }))
+            if (!WriteKeys(filename, pwd, rk_UserRole::WriteOnly, *keyset))
                 return false;
         } break;
     }
@@ -439,7 +409,7 @@ bool rk_Disk::DeleteUser(const char *username)
     if (!CheckUserName(username))
         return false;
 
-    const char *filename = Fmt(&temp_alloc, "keys/%1.key", username).ptr;
+    const char *filename = Fmt(&temp_alloc, "keys/%1", username).ptr;
 
     switch (TestRaw(filename)) {
         case StatResult::Success: {} break;
@@ -485,10 +455,8 @@ bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
 
         if (!StartsWith(remain, "keys/"))
             return true;
-        if (!EndsWith(remain, ".key"))
-            return true;
 
-        Span<const char> username = remain.Take(5, remain.len - 9);
+        Span<const char> username = remain.Take(5, remain.len - 5);
 
         if (!IsUserName(username))
             return true;
@@ -498,7 +466,7 @@ bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
         // Read user role
         {
             KeyData data = {};
-            RG_DEFER { ZeroMemorySafe(&data, RG_SIZE(data)); };
+            RG_DEFER { ZeroSafe(&data, RG_SIZE(data)); };
 
             // Read file data
             {
@@ -594,7 +562,7 @@ bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uin
         type = (rk_BlobType)intro.type;
 
         uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
-        if (crypto_box_seal_open(key, intro.ekey, RG_SIZE(intro.ekey), wkey, dkey) != 0) {
+        if (crypto_box_seal_open(key, intro.ekey, RG_SIZE(intro.ekey), keyset->wkey, keyset->dkey) != 0) {
             LogError("Failed to unseal blob (wrong key?)");
             return false;
         }
@@ -687,7 +655,7 @@ Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                 LogError("Failed to initialize symmetric encryption");
                 return false;
             }
-            if (crypto_box_seal(intro.ekey, key, RG_SIZE(key), wkey) != 0) {
+            if (crypto_box_seal(intro.ekey, key, RG_SIZE(key), keyset->wkey) != 0) {
                 LogError("Failed to seal symmetric key");
                 return false;
             }
@@ -844,7 +812,7 @@ Size rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
 
         cypher.RemoveFrom(0);
         cypher.Reserve(cypher_len);
-        if (crypto_box_seal(cypher.end(), src.ptr, src.len, tkey) != 0) {
+        if (crypto_box_seal(cypher.end(), src.ptr, src.len, keyset->tkey) != 0) {
             LogError("Failed to seal tag payload");
             return -1;
         }
@@ -925,7 +893,7 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
             Size data_len = cypher.len - crypto_box_SEALBYTES;
             Span<uint8_t> data = AllocateSpan<uint8_t>(alloc, data_len);
 
-            if (crypto_box_seal_open(data.ptr, cypher.ptr, cypher.len, tkey, lkey) != 0) {
+            if (crypto_box_seal_open(data.ptr, cypher.ptr, cypher.len, keyset->tkey, keyset->lkey) != 0) {
                 LogError("Failed to unseal tag data from '%1'", basename);
                 return true;
             }
@@ -967,6 +935,7 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const 
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Secure);
+    RG_ASSERT(!keyset);
 
     if (mkey.len != rk_MasterKeySize) {
         LogError("Malformed master key");
@@ -993,12 +962,14 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const 
         case StatResult::OtherError: return false;
     }
 
+    keyset = (KeySet *)AllocateSafe(RG_SIZE(KeySet));
+
     // Derive data and log keys
-    crypto_kdf_blake2b_derive_from_key(skey, RG_SIZE(skey), (int)MasterDerivation::SharedKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(dkey, RG_SIZE(dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(lkey, RG_SIZE(lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
-    crypto_scalarmult_base(wkey, dkey);
-    crypto_scalarmult_base(tkey, lkey);
+    crypto_kdf_blake2b_derive_from_key(keyset->skey, RG_SIZE(keyset->skey), (int)MasterDerivation::SharedKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
+    crypto_scalarmult_base(keyset->wkey, keyset->dkey);
+    crypto_scalarmult_base(keyset->tkey, keyset->lkey);
 
     // Generate random ID for local cache
     randombytes_buf(id, RG_SIZE(id));
@@ -1008,14 +979,14 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const 
 
     // Write key files
     if (full_pwd) {
-        if (!WriteKeys("keys/full.key", full_pwd, rk_UserRole::ReadWrite, { skey, dkey, lkey }))
+        if (!WriteKeys("keys/full", full_pwd, rk_UserRole::ReadWrite, *keyset))
             return false;
-        names.Append("keys/full.key");
+        names.Append("keys/full");
     }
     if (write_pwd) {
-        if (!WriteKeys("keys/write.key", write_pwd, rk_UserRole::WriteOnly, { skey, wkey, tkey }))
+        if (!WriteKeys("keys/write", write_pwd, rk_UserRole::WriteOnly, *keyset))
             return false;
-        names.Append("keys/write.key");
+        names.Append("keys/write");
     }
 
     // Success!
@@ -1096,32 +1067,30 @@ static bool DeriveFromPassword(const char *pwd, const uint8_t salt[16], uint8_t 
     return true;
 }
 
-bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, Span<const uint8_t *const> keys)
+bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, const KeySet &keys)
 {
-    RG_ASSERT(keys.len <= MaxKeys);
+    const Size PayloadSize = RG_SIZE(KeyData::cypher) - 16;
+    static_assert(RG_SIZE(keys) <= PayloadSize);
 
     KeyData data = {};
-    uint8_t payload[MaxKeys * 32];
+    uint8_t *payload = (uint8_t *)AllocateSafe(PayloadSize);
     RG_DEFER {
-        ZeroMemorySafe(&data, RG_SIZE(data));
-        ZeroMemorySafe(payload, RG_SIZE(payload));
+        ZeroSafe(&data, RG_SIZE(data));
+        ReleaseSafe(payload, PayloadSize);
     };
 
     randombytes_buf(data.salt, RG_SIZE(data.salt));
     randombytes_buf(data.nonce, RG_SIZE(data.nonce));
     data.role = (int8_t)role;
-    data.keys = (int8_t)keys.len;
 
-    for (Size i = 0; i < keys.len; i++) {
-        MemCpy(&payload[i * 32], keys[i], 32);
-    }
+    MemCpy(payload, &keys, RG_SIZE(keys));
 
     // Encrypt payload
     {
         uint8_t key[32];
         if (!DeriveFromPassword(pwd, data.salt, key))
             return false;
-        crypto_secretbox_easy(data.cypher, payload, RG_SIZE(payload), data.nonce, key);
+        crypto_secretbox_easy(data.cypher, payload, PayloadSize, data.nonce, key);
     }
 
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
@@ -1137,15 +1106,16 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, Spa
     return true;
 }
 
-Size rk_Disk::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, Span<uint8_t[32]> out_keys, bool *out_error)
+bool rk_Disk::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, KeySet *out_keys)
 {
-    RG_ASSERT(out_keys.len <= MaxKeys);
+    const Size PayloadSize = RG_SIZE(KeyData::cypher) - 16;
+    static_assert(RG_SIZE(*out_keys) <= PayloadSize);
 
     KeyData data = {};
-    uint8_t payload[MaxKeys * 32] = {};
+    uint8_t *payload = (uint8_t *)AllocateSafe(PayloadSize);
     RG_DEFER {
-        ZeroMemorySafe(&data, RG_SIZE(data));
-        ZeroMemorySafe(&payload, RG_SIZE(payload));
+        ZeroSafe(&data, RG_SIZE(data));
+        ReleaseSafe(payload, PayloadSize);
     };
 
     // Read file data
@@ -1157,46 +1127,27 @@ Size rk_Disk::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role,
             if (len >= 0) {
                 LogError("Truncated keys in '%1'", path);
             }
-
-            *out_error = true;
-            return -1;
+            return false;
         }
     }
 
     // Decrypt payload
     {
         uint8_t key[32];
-        if (!DeriveFromPassword(pwd, data.salt, key)) {
-            *out_error = true;
-            return -1;
-        }
+        if (!DeriveFromPassword(pwd, data.salt, key))
+            return false;
+
         if (crypto_secretbox_open_easy(payload, data.cypher, RG_SIZE(data.cypher), data.nonce, key)) {
-            *out_error = false;
-            return -1;
+            LogError("Failed to open repository (wrong password?)");
+            return false;
         }
     }
 
-    // Safety checks
-    if (data.keys < 1 || data.keys > MaxKeys) {
-        LogError("Invalid count of keys in '%1'", path);
+    if (!DecodeRole(data.role, out_role))
+        return false;
+    MemCpy(out_keys, payload, RG_SIZE(*out_keys));
 
-        *out_error = true;
-        return -1;
-    }
-    if (out_keys.len < data.keys) {
-        LogError("Too many keys to unpack in '%1'", path);
-
-        *out_error = true;
-        return -1;
-    }
-
-    if (!DecodeRole(data.role, out_role)) {
-        *out_error = true;
-        return -1;
-    }
-    MemCpy(out_keys.ptr, payload, data.keys * 32);
-
-    return data.keys;
+    return true;
 }
 
 bool rk_Disk::WriteSecret(const char *path, Span<const uint8_t> data, bool overwrite)
@@ -1208,7 +1159,7 @@ bool rk_Disk::WriteSecret(const char *path, Span<const uint8_t> data, bool overw
     secret.version = SecretVersion;
 
     randombytes_buf(secret.nonce, RG_SIZE(secret.nonce));
-    crypto_secretbox_easy(secret.cypher, data.ptr, (size_t)data.len, secret.nonce, skey);
+    crypto_secretbox_easy(secret.cypher, data.ptr, (size_t)data.len, secret.nonce, keyset->skey);
 
     Size len = offsetof(SecretData, cypher) + crypto_secretbox_MACBYTES + data.len;
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&secret, len);
@@ -1241,7 +1192,7 @@ bool rk_Disk::ReadSecret(const char *path, Span<uint8_t> out_buf)
     len -= offsetof(SecretData, cypher);
     len = std::min(len, out_buf.len + (Size)crypto_secretbox_MACBYTES);
 
-    if (crypto_secretbox_open_easy(out_buf.ptr, secret.cypher, len, secret.nonce, skey)) {
+    if (crypto_secretbox_open_easy(out_buf.ptr, secret.cypher, len, secret.nonce, keyset->skey)) {
         LogError("Failed to decrypt secret '%1'", path);
         return false;
     }

@@ -434,7 +434,7 @@ bool DomainHolder::Open(const char *filename)
     // Don't keep this in memory!
     if (config.default_password) {
         Size len = strlen(config.default_password);
-        ZeroMemorySafe((void *)config.default_password, len);
+        ZeroSafe((void *)config.default_password, len);
     }
     config.default_password = nullptr;
 

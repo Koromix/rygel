@@ -142,7 +142,7 @@ Available sort orders: %!..+%4%!0)",
     if (!disk)
         return 1;
 
-    ZeroMemorySafe((void *)config.password, strlen(config.password));
+    ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
@@ -540,7 +540,7 @@ Available output formats: %!..+%3%!0)",
     if (!disk)
         return 1;
 
-    ZeroMemorySafe((void *)config.password, strlen(config.password));
+    ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);

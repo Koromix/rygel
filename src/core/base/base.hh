@@ -1266,10 +1266,9 @@ private:
     bool AllocateSeparately(Size aligned_size) const { return aligned_size > block_size / 2; }
 };
 
-#if !defined(__wasi__)
-bool LockMemory(void *ptr, Size len);
-void UnlockMemory(void *ptr, Size len);
-#endif
+void *AllocateSafe(Size len);
+void ReleaseSafe(void *ptr, Size len);
+void ZeroSafe(void *ptr, Size len);
 
 // ------------------------------------------------------------------------
 // Reference counting
@@ -4669,7 +4668,6 @@ bool ParseVersion(Span<const char> str, int parts, int multiplier, int64_t *out_
 // Random
 // ------------------------------------------------------------------------
 
-void ZeroMemorySafe(void *ptr, Size len);
 void FillRandomSafe(void *buf, Size len);
 static inline void FillRandomSafe(Span<uint8_t> buf) { FillRandomSafe(buf.ptr, buf.len); }
 

@@ -530,7 +530,7 @@ Snapshot names are not unique, if you use a snapshot name, rekkord will use the 
     if (!rk_Locate(disk.get(), identifier, &hash))
         return 1;
 
-    ZeroMemorySafe((void *)config.password, strlen(config.password));
+    ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);

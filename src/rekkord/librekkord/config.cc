@@ -194,7 +194,7 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                         config.username = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "Password") {
                         config.password = DuplicateString(prop.value, &config.str_alloc).ptr;
-                        ZeroMemorySafe((void *)prop.value.ptr, prop.value.len);
+                        ZeroSafe((void *)prop.value.ptr, prop.value.len);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

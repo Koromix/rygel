@@ -161,9 +161,10 @@ Options:
         write_pwd = nullptr;
     }
 
-    uint8_t mkey[rk_MasterKeySize] = {};
-    randombytes_buf(mkey, RG_SIZE(mkey));
-    RG_DEFER { ZeroMemorySafe(mkey, RG_SIZE(mkey)); };
+    Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
+    RG_DEFER { ReleaseSafe(mkey.ptr, mkey.len); };
+
+    randombytes_buf(mkey.ptr, mkey.len);
 
     LogInfo("Initializing...");
     if (!disk->Init(mkey, full_pwd, write_pwd))
