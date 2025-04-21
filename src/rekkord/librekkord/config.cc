@@ -33,7 +33,7 @@ bool rk_Config::Complete(bool require_auth)
         return false;
 
     if (require_auth && !username) {
-        username = GetEnv("REKKORD_USERNAME");
+        username = GetEnv("REKKORD_USER");
         if (!username) {
             LogError("Missing repository username");
             return false;
@@ -190,7 +190,7 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                 do {
                     if (prop.key == "URL") {
                         valid &= rk_DecodeURL(prop.value, &config);
-                    } else if (prop.key == "Username") {
+                    } else if (prop.key == "User") {
                         config.username = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "Password") {
                         config.password = DuplicateString(prop.value, &config.str_alloc).ptr;
