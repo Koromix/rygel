@@ -44,8 +44,6 @@ int RunInit(Span<const char *> arguments)
     bool create_users = true;
     const char *full_pwd = nullptr;
     const char *write_pwd = nullptr;
-    bool random_full_pwd = true;
-    bool random_write_pwd = true;
     const char *key_filename = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -59,8 +57,8 @@ Options:
     %!..+-R, --repository filename%!0      Set repository URL
 
         %!..+--skip_users%!0               Omit default users (full and write)
-        %!..+--full_password [pwd]%!0      Set full user password manually
-        %!..+--write_password [pwd]%!0     Set write user password manually
+        %!..+--full_password password%!0   Set full user password manually
+        %!..+--write_password password%!0  Set write user password manually
 
     %!..+-K, --key_file filename%!0        Set explicit master key export file)", FelixTarget);
     };
@@ -83,12 +81,10 @@ Options:
                     return 1;
             } else if (opt.Test("--skip_users")) {
                 create_users = false;
-            } else if (opt.Test("--full_password", OptionType::OptionalValue)) {
+            } else if (opt.Test("--full_password", OptionType::Value)) {
                 full_pwd = opt.current_value;
-                random_full_pwd = false;
-            } else if (opt.Test("--write_password", OptionType::OptionalValue)) {
+            } else if (opt.Test("--write_password", OptionType::Value)) {
                 write_pwd = opt.current_value;
-                random_write_pwd = false;
             } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
                 key_filename = opt.current_value;
             } else {
@@ -129,27 +125,38 @@ Options:
     LogInfo("Repository: %!..+%1%!0", disk->GetURL());
     LogInfo();
 
+    bool random_full_pwd = false;
+    bool random_write_pwd = false;
+
     // Generate repository passwords
     if (create_users) {
-        if (random_full_pwd) {
-            Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
-            if (!GeneratePassword(buf))
-               return 1;
-           full_pwd = buf.ptr;
-        } else if (!full_pwd) {
-            full_pwd = Prompt("Full password: ", nullptr, "*", &temp_alloc);
+        if (!full_pwd) {
+            full_pwd = Prompt("Full password (leave empty to autogenerate): ", nullptr, "*", &temp_alloc);
             if (!full_pwd)
                 return 1;
+
+            if (!full_pwd[0]) {
+                Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
+                if (!GeneratePassword(buf))
+                   return 1;
+
+                full_pwd = buf.ptr;
+                random_full_pwd = true;
+            }
         }
-        if (random_write_pwd) {
-            Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
-            if (!GeneratePassword(buf))
-               return 1;
-            write_pwd = buf.ptr;
-        } else if (!write_pwd) {
-            write_pwd = Prompt("Write-only password: ", nullptr, "*", &temp_alloc);
+        if (!write_pwd) {
+            write_pwd = Prompt("Write-only password (leave empty to autogenerate): ", nullptr, "*", &temp_alloc);
             if (!write_pwd)
                 return 1;
+
+            if (!write_pwd[0]) {
+                Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
+                if (!GeneratePassword(buf))
+                   return 1;
+
+                write_pwd = buf.ptr;
+                random_write_pwd = true;
+            }
         }
     } else {
         full_pwd = nullptr;
@@ -165,12 +172,14 @@ Options:
         return 1;
     LogInfo();
 
-    if (create_users) {
+    if (full_pwd) {
         if (random_full_pwd) {
             LogInfo("Default full user password: %!..+%1%!0", full_pwd);
         } else {
             LogInfo("Default full user password: %!D..(hidden)%!0");
         }
+    }
+    if (write_pwd) {
         if (random_write_pwd) {
             LogInfo("       write user password: %!..+%1%!0", write_pwd);
         } else {
@@ -198,7 +207,6 @@ int RunAddUser(Span<const char *> arguments)
     const char *key_filename = nullptr;
     rk_UserRole role = rk_UserRole::WriteOnly;
     const char *pwd = nullptr;
-    bool random_pwd = true;
     bool force = false;
     const char *username = nullptr;
 
@@ -212,13 +220,12 @@ Options:
 
     %!..+-R, --repository URL%!0           Set repository URL
     %!..+-u, --user username%!0            Set repository username
-        %!..+--password password%!0        Set repository password
 
     %!..+-K, --key_file filename%!0        Use master key instead of username/password
 
     %!..+-r, --role role%!0                User role (see below)
                                    %!D..(default: %2)%!0
-        %!..+--password [pwd]%!0           Set password manually
+        %!..+--password password%!0        Set password explicitly
 
     %!..+-f, --force%!0                    Overwrite exisiting user %!D..(if any)%!0
 
@@ -243,8 +250,6 @@ Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], Fm
                     return 1;
             } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 config.username = opt.current_value;
-            } else if (opt.Test("--password", OptionType::Value)) {
-                config.password = opt.current_value;
             } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
                 key_filename = opt.current_value;
             } else if (opt.Test("-r", "--role", OptionType::Value)) {
@@ -252,9 +257,8 @@ Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], Fm
                     LogError("Unknown user role '%1'", opt.current_value);
                     return 1;
                 }
-            } else if (opt.Test("--password", OptionType::OptionalValue)) {
+            } else if (opt.Test("--password", OptionType::Value)) {
                 pwd = opt.current_value;
-                random_pwd = false;
             } else if (opt.Test("-f", "--force")) {
                 force = true;
             } else {
@@ -301,15 +305,21 @@ Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], Fm
     }
     LogInfo();
 
-    if (random_pwd) {
-        Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
-        if (!GeneratePassword(buf))
-           return 1;
-       pwd = buf.ptr;
-    } else if (!pwd) {
-        pwd = Prompt("User password: ", nullptr, "*", &temp_alloc);
+    bool random_pwd = false;
+
+    if (!pwd) {
+        pwd = Prompt("User password (leave empty to autogenerate): ", nullptr, "*", &temp_alloc);
         if (!pwd)
             return 1;
+
+        if (!pwd[0]) {
+            Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
+            if (!GeneratePassword(buf))
+               return 1;
+
+            pwd = buf.ptr;
+            random_pwd = true;
+        }
     }
 
     if (!disk->InitUser(username, role, pwd, force))

@@ -56,7 +56,6 @@ Options:
 
     %!..+-R, --repository URL%!0           Set repository URL
     %!..+-u, --user username%!0            Set repository username
-        %!..+--password password%!0        Set repository password
 
     %!..+-j, --threads threads%!0          Change number of threads
                                    %!D..(default: automatic)%!0
@@ -91,8 +90,6 @@ Available sort orders: %!..+%4%!0)",
                     return 1;
             } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 config.username = opt.current_value;
-            } else if (opt.Test("--password", OptionType::Value)) {
-                config.password = opt.current_value;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &config.threads))
                     return 1;
@@ -458,7 +455,6 @@ Options:
 
     %!..+-R, --repository URL%!0           Set repository URL
     %!..+-u, --user username%!0            Set repository username
-        %!..+--password password%!0        Set repository password
 
     %!..+-j, --threads threads%!0          Change number of threads
                                    %!D..(default: automatic)%!0
@@ -497,8 +493,6 @@ Available output formats: %!..+%3%!0)",
                     return 1;
             } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 config.username = opt.current_value;
-            } else if (opt.Test("--password", OptionType::Value)) {
-                config.password = opt.current_value;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &config.threads))
                     return 1;

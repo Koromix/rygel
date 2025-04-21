@@ -37,7 +37,6 @@ Options:
 
     %!..+-R, --repository URL%!0           Set repository URL
     %!..+-u, --user username%!0            Set repository username
-        %!..+--password password%!0        Set repository password
 
     %!..+-n, --name name%!0                Set custom snapshot name
         %!..+--raw%!0                      Skip snapshot object and report data hash
@@ -67,8 +66,6 @@ Options:
                     return 1;
             } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 config.username = opt.current_value;
-            } else if (opt.Test("--password", OptionType::Value)) {
-                config.password = opt.current_value;
             } else if (opt.Test("-n", "--name", OptionType::Value)) {
                 settings.name = opt.current_value;
             } else if (opt.Test("--follow_symlinks")) {
@@ -184,7 +181,6 @@ Options:
 
     %!..+-R, --repository URL%!0           Set repository URL
     %!..+-u, --user username%!0            Set repository username
-        %!..+--password password%!0        Set repository password
 
     %!..+-O, --output path%!0              Restore file or directory to path
 
@@ -221,8 +217,6 @@ Snapshot names are not unique, if you use a snapshot name, rekkord will use the 
                     return 1;
             } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 config.username = opt.current_value;
-            } else if (opt.Test("--password", OptionType::Value)) {
-                config.password = opt.current_value;
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 dest_filename = opt.current_value;
             } else if (opt.Test("-f", "--force")) {

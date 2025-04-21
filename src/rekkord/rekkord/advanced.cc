@@ -34,8 +34,7 @@ Options:
     %!..+-C, --config_file filename%!0     Set configuration file
 
     %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username
-        %!..+--password password%!0        Set repository password)", FelixTarget);
+    %!..+-u, --user username%!0            Set repository username)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -56,8 +55,6 @@ Options:
                     return 1;
             } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 config.username = opt.current_value;
-            } else if (opt.Test("--password", OptionType::Value)) {
-                config.password = opt.current_value;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -99,8 +96,7 @@ Options:
     %!..+-C, --config_file filename%!0     Set configuration file
 
     %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username
-        %!..+--password password%!0        Set repository password)", FelixTarget);
+    %!..+-u, --user username%!0            Set repository username)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -121,8 +117,6 @@ Options:
                     return 1;
             } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 config.username = opt.current_value;
-            } else if (opt.Test("--password", OptionType::Value)) {
-                config.password = opt.current_value;
             } else {
                 opt.LogUnknownError();
                 return 1;
