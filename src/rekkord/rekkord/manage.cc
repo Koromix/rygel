@@ -225,7 +225,7 @@ Options:
                                    %!D..(default: %2)%!0
         %!..+--password password%!0        Set password explicitly
 
-    %!..+-f, --force%!0                    Overwrite exisiting user %!D..(if any)%!0
+    %!..+-f, --force%!0                    Overwrite existing user %!D..(if any)%!0
 
 Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], FmtSpan(rk_UserRoleNames));
     };

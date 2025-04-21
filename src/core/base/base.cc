@@ -7933,8 +7933,8 @@ bool StreamWriter::Close(bool implicit)
                             break;
                         }
 
-                        // The linkat() call cannot overwrite an exisiting file. We try to unlink() the file if
-                        // needed everal times (see loop above) to make it work but it it still doesn't, link to
+                        // The linkat() call cannot overwrite an existing file. We try to unlink() the file if
+                        // needed several times (see loop above) to make it work but it it still doesn't, link to
                         // a temporary file and let RenameFile() handle the final step. Should be rare!
                         if (!linked) {
                             Span<const char> directory = GetPathDirectory(filename);

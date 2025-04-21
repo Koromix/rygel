@@ -17,14 +17,14 @@
 
 *Released on 2025-04-21*
 
-- Change users to be single-role and create two users by defaullt (*full* and *write*)
+- Change users to be single-role and create two users by default (*full* and *write*)
 - Rename repository environment variable from `REKKORD_URL` to `REKKORD_REPOSITORY`
 - Rename user setting and environment variable
 - Support -f as shortcut for `--force` in Rekkord user commands
 - Try to prevent sensitive memory from ending up in core dumps
 
 > [!WARNING]
-> Exisiting users are not migrated and new users must be created with the master key.
+> Existing users are not migrated and new users must be created with the master key.
 
 ### Rekkord 0.42
 
