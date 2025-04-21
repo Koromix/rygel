@@ -457,6 +457,22 @@ bool rk_Disk::DeleteUser(const char *username)
     return true;
 }
 
+static bool DecodeRole(int value, rk_UserRole *out_role)
+{
+    switch (value) {
+        case (int)rk_UserRole::ReadWrite:
+        case (int)rk_UserRole::WriteOnly: break;
+
+        default: {
+            LogError("Invalid user role %1", value);
+            return false;
+        } break;
+    }
+
+    *out_role = (rk_UserRole)value;
+    return true;
+}
+
 bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
 {
     Size prev_len = out_users->len;
@@ -498,17 +514,8 @@ bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
                 }
             }
 
-            switch (data.role) {
-                case (int)rk_UserRole::ReadWrite:
-                case (int)rk_UserRole::WriteOnly: break;
-
-                default: {
-                    LogError("Invalid user role in '%1'", path);
-                    return true;
-                } break;
-            }
-
-            user.role = (rk_UserRole)data.role;
+            if (!DecodeRole(data.role, &user.role))
+                return true;
         }
 
         out_users->Append(user);
@@ -1170,17 +1177,6 @@ Size rk_Disk::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role,
     }
 
     // Safety checks
-    switch (data.role) {
-        case (int)rk_UserRole::ReadWrite:
-        case (int)rk_UserRole::WriteOnly: break;
-
-        default: {
-            LogError("Invalid user role in '%1'", path);
-
-            *out_error = true;
-            return -1;
-        } break;
-    }
     if (data.keys < 1 || data.keys > MaxKeys) {
         LogError("Invalid count of keys in '%1'", path);
 
@@ -1194,8 +1190,10 @@ Size rk_Disk::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role,
         return -1;
     }
 
-    *out_role = (rk_UserRole)data.role;
-
+    if (!DecodeRole(data.role, out_role)) {
+        *out_error = true;
+        return -1;
+    }
     for (Size i = 0; i < data.keys; i++) {
         MemCpy(out_keys[i], &payload[i * 32], 32);
     }
