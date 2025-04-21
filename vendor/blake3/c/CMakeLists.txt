@@ -10,7 +10,7 @@ if (POLICY CMP0102)
 endif()
 
 project(libblake3
-  VERSION 1.8.1
+  VERSION 1.8.2
   DESCRIPTION "BLAKE3 C implementation"
   LANGUAGES C CXX ASM
 )
@@ -127,13 +127,13 @@ add_library(blake3
 add_library(BLAKE3::blake3 ALIAS blake3)
 
 # library configuration
-set(BLAKE3_PKGCONFIG_CFLAGS)
+set(PKG_CONFIG_CFLAGS)
 if (BUILD_SHARED_LIBS)
   target_compile_definitions(blake3
     PUBLIC BLAKE3_DLL
     PRIVATE BLAKE3_DLL_EXPORTS
   )
-  list(APPEND BLAKE3_PKGCONFIG_CFLAGS -DBLAKE3_DLL)
+  list(APPEND PKG_CONFIG_CFLAGS -DBLAKE3_DLL)
 endif()
 target_include_directories(blake3 PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
@@ -241,7 +241,15 @@ if(BLAKE3_USE_TBB)
         BLAKE3_USE_TBB)
   endif()
   list(APPEND PKG_CONFIG_REQUIRES "tbb >= ${TBB_VERSION}")
-  list(APPEND BLAKE3_PKGCONFIG_CFLAGS -DBLAKE3_USE_TBB)
+  list(APPEND PKG_CONFIG_CFLAGS -DBLAKE3_USE_TBB)
+  include(CheckCXXSymbolExists)
+  check_cxx_symbol_exists(_LIBCPP_VERSION "version" BLAKE3_HAVE_LIBCPP)
+  check_cxx_symbol_exists(__GLIBCXX__ "version" BLAKE3_HAVE_GLIBCXX)
+  if(BLAKE3_HAVE_GLIBCXX)
+    list(APPEND PKG_CONFIG_LIBS -lstdc++)
+  elseif(BLAKE3_HAVE_LIBCPP)
+    list(APPEND PKG_CONFIG_LIBS -lc++)
+  endif()
 endif()
 
 if(BLAKE3_USE_TBB)
@@ -332,17 +340,17 @@ function(join_paths joined_path first_path_segment)
     set(${joined_path} "${temp_path}" PARENT_SCOPE)
 endfunction()
 
-# In-place rewrite a list of strings `requires` into a comma separated string.
+# In-place rewrite a string and and join by `sep`.
 #
 # TODO: Replace function with list(JOIN) when updating to CMake 3.12
-function(join_pkg_config_requires requires)
+function(join_pkg_config_field sep requires)
   set(_requires "${${requires}}") # avoid shadowing issues, e.g. "${requires}"=len
   list(LENGTH "${requires}" len)
   set(idx 1)
   foreach(req IN LISTS _requires)
     string(APPEND acc "${req}")
     if(idx LESS len)
-      string(APPEND acc ", ")
+      string(APPEND acc "${sep}")
     endif()
     math(EXPR idx "${idx} + 1")
   endforeach()
@@ -350,7 +358,9 @@ function(join_pkg_config_requires requires)
 endfunction()
 
 # pkg-config support
-join_pkg_config_requires(PKG_CONFIG_REQUIRES)
+join_pkg_config_field(", " PKG_CONFIG_REQUIRES)
+join_pkg_config_field(" " PKG_CONFIG_LIBS)
+join_pkg_config_field(" " PKG_CONFIG_CFLAGS)
 join_paths(PKG_CONFIG_INSTALL_LIBDIR "\${prefix}" "${CMAKE_INSTALL_LIBDIR}")
 join_paths(PKG_CONFIG_INSTALL_INCLUDEDIR "\${prefix}" "${CMAKE_INSTALL_INCLUDEDIR}")
 configure_file(libblake3.pc.in libblake3.pc @ONLY)
