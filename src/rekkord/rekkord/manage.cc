@@ -188,7 +188,7 @@ Options:
     LogInfo();
 
     // Continue even if it fails, an error will be shown regardless
-    if (WriteFile(mkey, key_filename)) {
+    if (WriteFile(mkey, key_filename, (int)StreamWriterFlag::NoBuffer)) {
         LogInfo("Wrote master key: %!..+%1%!0", key_filename);
         LogInfo();
         LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even if the default accounts are lost or deleted.");
@@ -288,8 +288,10 @@ Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], Fm
     if (!authenticate) {
         RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
 
-        LocalArray<uint8_t, 128> mkey;
-        mkey.len = ReadFile(key_filename, mkey.data);
+        Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
+        RG_DEFER_C(len = mkey.len) { ReleaseSafe(mkey.ptr, len); };
+
+        mkey.len = ReadFile(key_filename, mkey);
         if (mkey.len < 0)
             return 1;
 
@@ -488,8 +490,10 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
     RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
 
     if (verify) {
-        LocalArray<uint8_t, 128> mkey;
-        mkey.len = ReadFile(key_filename, mkey.data);
+        Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
+        RG_DEFER_C(len = mkey.len) { ReleaseSafe(mkey.ptr, len); };
+
+        mkey.len = ReadFile(key_filename, mkey);
         if (mkey.len < 0)
             return 1;
 
