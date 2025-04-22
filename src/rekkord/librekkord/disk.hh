@@ -149,7 +149,7 @@ public:
 
     const char *GetURL() const { return url; }
     rk_DiskMode GetMode() const { return mode; }
-    const char *GetUser() const { return user; }
+    const char *GetUser() const { return user; } // Can be NULL
     Async *GetAsync() { return &tasks; }
 
     void MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const;
