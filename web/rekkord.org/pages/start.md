@@ -131,6 +131,9 @@ Most Rekkord commands require you to specify the user, you can do this in one of
 - Set the `REKKORD_USER` environment variable (e.g. `export REKKORD_USER=joe`)
 - Set the *User* setting in the *Repository* section of the config file (see example below)
 
+> [!NOTE]
+> If the user is not set, Rekkord tries the *write* user by default.
+
 ```ini
 [Repository]
 URL = ssh://foo@example.com/backup
