@@ -138,7 +138,7 @@ void rk_Disk::Lock()
     mode = rk_DiskMode::Secure;
     user = nullptr;
 
-    ZeroSafe(cache_id, RG_SIZE(cache_id));
+    ZeroSafe(id, RG_SIZE(id));
     ReleaseSafe(keyset, RG_SIZE(*keyset));
     keyset = nullptr;
     str_alloc.ReleaseAll();
@@ -209,8 +209,10 @@ sq_Database *rk_Disk::OpenCache(bool build)
 
     cache_db.Close();
 
-    // Combine repository URL and ID to create secure ID
+    uint8_t cache_id[32] = {};
     {
+        // Combine repository URL and ID to create a secure ID
+
         static_assert(RG_SIZE(cache_id) == crypto_hash_sha256_BYTES);
 
         crypto_hash_sha256_state state;

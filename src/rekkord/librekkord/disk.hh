@@ -120,7 +120,6 @@ protected:
     const char *url = nullptr;
 
     uint8_t id[32];
-    uint8_t cache_id[32];
 
     rk_DiskMode mode = rk_DiskMode::Secure;
     const char *user = nullptr;
