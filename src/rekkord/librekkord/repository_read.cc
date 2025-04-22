@@ -927,37 +927,38 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
             case rk_ObjectType::Snapshot: { RG_UNREACHABLE(); } break;
 
             case rk_ObjectType::Directory: {
-                if (settings.max_depth < 0 || depth < settings.max_depth) {
-                    async.Run([=, &contexts, this]() {
-                        RecurseContext *ctx = &contexts[i];
+                if (!settings.recurse)
+                    break;
 
-                        rk_BlobType entry_type;
-                        HeapArray<uint8_t> entry_blob;
+                async.Run([=, &contexts, this]() {
+                    RecurseContext *ctx = &contexts[i];
 
-                        if (!disk->ReadBlob(entry.hash, &entry_type, &entry_blob))
-                            return false;
+                    rk_BlobType entry_type;
+                    HeapArray<uint8_t> entry_blob;
 
-                        if (entry_type != rk_BlobType::Directory1 && entry_type != rk_BlobType::Directory2) {
-                            LogError("Blob '%1' is not a Directory", entry.hash);
-                            return false;
-                        }
+                    if (!disk->ReadBlob(entry.hash, &entry_type, &entry_blob))
+                        return false;
 
-                        if (entry_type == rk_BlobType::Directory1) {
-                            MigrateLegacyEntries(&entry_blob, 0);
-                        }
+                    if (entry_type != rk_BlobType::Directory1 && entry_type != rk_BlobType::Directory2) {
+                        LogError("Blob '%1' is not a Directory", entry.hash);
+                        return false;
+                    }
 
-                        if (!RecurseEntries(entry_blob, false, depth + 1, &ctx->str_alloc, &ctx->children))
-                            return false;
+                    if (entry_type == rk_BlobType::Directory1) {
+                        MigrateLegacyEntries(&entry_blob, 0);
+                    }
 
-                        for (const rk_ObjectInfo &child: ctx->children) {
-                            obj->children += (child.depth == depth + 1);
-                        }
+                    if (!RecurseEntries(entry_blob, false, depth + 1, &ctx->str_alloc, &ctx->children))
+                        return false;
 
-                        MakeProgress(1);
+                    for (const rk_ObjectInfo &child: ctx->children) {
+                        obj->children += (child.depth == depth + 1);
+                    }
 
-                        return true;
-                    });
-                }
+                    MakeProgress(1);
+
+                    return true;
+                });
             } break;
 
             case rk_ObjectType::File:

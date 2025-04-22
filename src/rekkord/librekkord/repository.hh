@@ -39,7 +39,7 @@ struct rk_GetSettings {
 };
 
 struct rk_ListSettings {
-    int max_depth = 0;
+    bool recurse = false;
 };
 
 struct rk_SnapshotInfo {

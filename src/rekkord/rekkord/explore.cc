@@ -460,9 +460,6 @@ Options:
                                    %!D..(default: automatic)%!0
 
     %!..+-r, --recurse%!0                  Show entire tree of children
-                                   %!D..(same thing as --depth=All)%!0
-        %!..+--depth depth%!0              Set maximum recursion depth
-                                   %!D..(default: 0)%!0
 
     %!..+-f, --format format%!0            Change output format
                                    %!D..(default: %2)%!0
@@ -501,16 +498,7 @@ Available output formats: %!..+%3%!0)",
                     return 1;
                 }
             } else if (opt.Test("-r", "--recurse")) {
-                settings.max_depth = -1;
-            } else if (opt.Test("--depth", OptionType::Value)) {
-                if (TestStr(opt.current_value, "All")) {
-                    settings.max_depth = -1;
-                } else if (!ParseInt(opt.current_value, &settings.max_depth)) {
-                    return 1;
-                } else if (settings.max_depth < 0) {
-                    LogInfo("Option --depth must be 0 or more (or 'All')");
-                    return 1;
-                }
+                settings.recurse = true;
             } else if (opt.Test("-f", "--format", OptionType::Value)) {
                 if (!OptionToEnumI(OutputFormatNames, opt.current_value, &format)) {
                     LogError("Unknown output format '%1'", opt.current_value);
