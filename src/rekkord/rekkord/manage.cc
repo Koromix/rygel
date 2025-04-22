@@ -294,7 +294,7 @@ Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], Fm
             return 1;
 
         if (!disk->Authenticate(mkey))
-            return false;
+            return 1;
     }
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
