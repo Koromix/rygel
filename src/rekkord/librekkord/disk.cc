@@ -92,7 +92,7 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
     }
 
     // Get cache ID
-    if (!ReadSecret("rekkord", id))
+    if (!ReadShared("rekkord", id))
         return false;
 
     err_guard.Disable();
@@ -126,7 +126,7 @@ bool rk_Disk::Authenticate(Span<const uint8_t> mkey)
     user = nullptr;
 
     // Get cache ID
-    if (!ReadSecret("rekkord", id))
+    if (!ReadShared("rekkord", id))
         return false;
 
     err_guard.Disable();
@@ -194,7 +194,7 @@ bool rk_Disk::ChangeID()
     uint8_t new_id[32];
     randombytes_buf(new_id, RG_SIZE(new_id));
 
-    if (!WriteSecret("rekkord", new_id, true))
+    if (!WriteShared("rekkord", new_id, true))
         return false;
 
     MemCpy(id, new_id, RG_SIZE(id));
@@ -975,7 +975,7 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const 
 
     // Generate random ID for local cache
     randombytes_buf(id, RG_SIZE(id));
-    if (!WriteSecret("rekkord", id, false))
+    if (!WriteShared("rekkord", id, false))
         return false;
     names.Append("rekkord");
 
@@ -1165,7 +1165,7 @@ bool rk_Disk::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role,
     return true;
 }
 
-bool rk_Disk::WriteSecret(const char *path, Span<const uint8_t> data, bool overwrite)
+bool rk_Disk::WriteShared(const char *path, Span<const uint8_t> data, bool overwrite)
 {
     RG_ASSERT(data.len + crypto_secretbox_MACBYTES <= RG_SIZE(SecretData::cypher));
 
@@ -1190,7 +1190,7 @@ bool rk_Disk::WriteSecret(const char *path, Span<const uint8_t> data, bool overw
     return true;
 }
 
-bool rk_Disk::ReadSecret(const char *path, Span<uint8_t> out_buf)
+bool rk_Disk::ReadShared(const char *path, Span<uint8_t> out_buf)
 {
     SecretData secret;
 

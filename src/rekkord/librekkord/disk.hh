@@ -192,8 +192,8 @@ private:
     bool WriteKeys(const char *path, const char *pwd, rk_UserRole role, const KeySet &keys);
     bool ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, KeySet *out_keys);
 
-    bool WriteSecret(const char *path, Span<const uint8_t> buf, bool overwrite);
-    bool ReadSecret(const char *path, Span<uint8_t> out_buf);
+    bool WriteShared(const char *path, Span<const uint8_t> buf, bool overwrite);
+    bool ReadShared(const char *path, Span<uint8_t> out_buf);
 
     Size WriteDirect(const char *path, Span<const uint8_t> buf, bool overwrite);
 
