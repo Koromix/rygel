@@ -388,16 +388,8 @@ bool rk_Disk::InitUser(const char *username, rk_UserRole role, const char *pwd, 
 
     DeleteRaw(filename);
 
-    switch (role) {
-        case rk_UserRole::ReadWrite: {
-            if (!WriteKeys(filename, pwd, rk_UserRole::ReadWrite, *keyset))
-                return false;
-        } break;
-        case rk_UserRole::WriteOnly: {
-            if (!WriteKeys(filename, pwd, rk_UserRole::WriteOnly, *keyset))
-                return false;
-        } break;
-    }
+    if (!WriteKeys(filename, pwd, role, *keyset))
+        return false;
 
     return true;
 }
