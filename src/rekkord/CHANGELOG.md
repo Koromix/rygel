@@ -6,6 +6,18 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.45
+
+*Released on 2025-04-22*
+
+- Use OS-specific API to lock and conceal memory containing encryption keys
+- Change format of user key files for simplicity
+- Default to *write* user if not specified
+- Remove *--depth* option from `rekkord list`
+
+> [!WARNING]
+> Existing users are not migrated and new users must be created with the master key.
+
 ### Rekkord 0.44
 
 *Released on 2025-04-21*
