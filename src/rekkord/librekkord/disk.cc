@@ -450,7 +450,7 @@ static bool DecodeRole(int value, rk_UserRole *out_role)
     return true;
 }
 
-bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
+bool rk_Disk::ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserInfo> *out_users)
 {
     Size prev_len = out_users->len;
     RG_DEFER_N(out_guard) { out_users->RemoveFrom(prev_len); };
@@ -470,28 +470,30 @@ bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
 
         user.username = DuplicateString(username, alloc).ptr;
 
-        // Read user role
+        KeyData data = {};
+        RG_DEFER { ZeroSafe(&data, RG_SIZE(data)); };
+
+        // Read file data
         {
-            KeyData data = {};
-            RG_DEFER { ZeroSafe(&data, RG_SIZE(data)); };
+            Span<uint8_t> buf = MakeSpan((uint8_t *)&data, RG_SIZE(KeyData));
+            Size len = ReadRaw(path, buf);
 
-            // Read file data
-            {
-                Span<uint8_t> buf = MakeSpan((uint8_t *)&data, offsetof(KeyData, cypher));
-                Size len = ReadRaw(path, buf);
-
-                if (len != buf.len) {
-                    if (len >= 0) {
-                        LogError("Truncated keys in '%1'", path);
-                    }
-
-                    return true;
+            if (len != buf.len) {
+                if (len >= 0) {
+                    LogError("Truncated keys in '%1'", path);
                 }
-            }
 
-            if (!DecodeRole(data.role, &user.role))
                 return true;
+            }
         }
+
+        if (verify && crypto_sign_verify_detached(data.sig, (const uint8_t *)&data, offsetof(KeyData, sig), keyset->vkey)) {
+            LogError("Invalid signature for user '%1'", user.username);
+            return true;
+        }
+
+        if (!DecodeRole(data.role, &user.role))
+            return true;
 
         out_users->Append(user);
         return true;

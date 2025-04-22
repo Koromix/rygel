@@ -425,6 +425,7 @@ int RunListUsers(Span<const char *> arguments)
     // Options
     rk_Config config;
     OutputFormat format = OutputFormat::Plain;
+    const char *key_filename = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -435,6 +436,8 @@ Options:
     %!..+-C, --config_file filename%!0     Set configuration file
 
     %!..+-R, --repository URL%!0           Set repository URL
+
+    %!..+-K, --key_file filename%!0        Check user signatures with master key file
 
     %!..+-f, --format format%!0            Change output format
                                    %!D..(default: %2)%!0
@@ -458,6 +461,8 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
                 if (!rk_DecodeURL(opt.current_value, &config))
                     return 1;
+            } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
+                key_filename = opt.current_value;
             } else if (opt.Test("-f", "--format", OptionType::Value)) {
                 if (!OptionToEnumI(OutputFormatNames, opt.current_value, &format)) {
                     LogError("Unknown output format '%1'", opt.current_value);
@@ -472,6 +477,8 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
         opt.LogUnusedArguments();
     }
 
+    bool verify = key_filename;
+
     if (!config.Complete(false))
         return 1;
 
@@ -480,11 +487,21 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
         return 1;
     RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
 
+    if (verify) {
+        LocalArray<uint8_t, 128> mkey;
+        mkey.len = ReadFile(key_filename, mkey.data);
+        if (mkey.len < 0)
+            return 1;
+
+        if (!disk->Authenticate(mkey))
+            return 1;
+    }
+
     LogInfo("Repository: %!..+%1%!0", disk->GetURL());
     LogInfo();
 
     HeapArray<rk_UserInfo> users;
-    if (!disk->ListUsers(&temp_alloc, &users))
+    if (!disk->ListUsers(&temp_alloc, verify, &users))
         return 1;
 
     switch (format) {
