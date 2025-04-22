@@ -114,6 +114,8 @@ class rk_Disk {
         uint8_t wkey[32];
         uint8_t lkey[32];
         uint8_t tkey[32];
+        uint8_t useed[32];
+        uint8_t vkey[32];
     };
 
 protected:

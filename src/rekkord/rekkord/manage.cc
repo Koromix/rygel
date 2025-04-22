@@ -298,8 +298,8 @@ Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], Fm
     }
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (role == rk_UserRole::ReadWrite && disk->GetMode() != rk_DiskMode::Full) {
-        LogError("You must have read-write access to create user with ReadWrite role");
+    if (disk->GetMode() != rk_DiskMode::Full) {
+        LogError("Cannot create users with write-only access");
         return 1;
     }
     LogInfo();

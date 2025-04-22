@@ -31,6 +31,8 @@ static_assert(crypto_secretstream_xchacha20poly1305_KEYBYTES == 32);
 static_assert(crypto_secretbox_KEYBYTES == 32);
 static_assert(crypto_secretbox_NONCEBYTES == 24);
 static_assert(crypto_secretbox_MACBYTES == 16);
+static_assert(crypto_sign_ed25519_SEEDBYTES == 32);
+static_assert(crypto_sign_ed25519_BYTES == 64);
 static_assert(crypto_kdf_blake2b_KEYBYTES == crypto_box_PUBLICKEYBYTES);
 
 rk_Disk::~rk_Disk()
@@ -78,6 +80,9 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
 
                 crypto_scalarmult_base(keyset->wkey, keyset->dkey);
                 crypto_scalarmult_base(keyset->tkey, keyset->lkey);
+
+                uint8_t dummy[256];
+                crypto_sign_ed25519_seed_keypair(keyset->vkey, dummy, keyset->useed);
             } break;
 
             case rk_UserRole::WriteOnly: {
@@ -85,6 +90,7 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
 
                 ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
                 ZeroSafe(keyset->lkey, RG_SIZE(keyset->lkey));
+                ZeroSafe(keyset->useed, RG_SIZE(keyset->useed));
             } break;
         }
 
@@ -116,13 +122,21 @@ bool rk_Disk::Authenticate(Span<const uint8_t> mkey)
         return false;
 
     keyset = (KeySet *)AllocateSafe(RG_SIZE(KeySet));
-
     mode = rk_DiskMode::Full;
-    crypto_kdf_blake2b_derive_from_key(keyset->skey, RG_SIZE(keyset->skey), (int)MasterDerivation::SharedKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
-    crypto_scalarmult_base(keyset->wkey, keyset->dkey);
-    crypto_scalarmult_base(keyset->tkey, keyset->lkey);
+
+    // Derive encryption keys
+    {
+        crypto_kdf_blake2b_derive_from_key(keyset->skey, RG_SIZE(keyset->skey), (int)MasterDerivation::SharedKey, DerivationContext, mkey.ptr);
+        crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
+        crypto_scalarmult_base(keyset->wkey, keyset->dkey);
+        crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
+        crypto_scalarmult_base(keyset->tkey, keyset->lkey);
+        crypto_kdf_blake2b_derive_from_key(keyset->useed, RG_SIZE(keyset->useed), (int)MasterDerivation::UserKey, DerivationContext, mkey.ptr);
+
+        uint8_t dummy[256];
+        crypto_sign_ed25519_seed_keypair(keyset->vkey, dummy, keyset->useed);
+    }
+
     user = nullptr;
 
     // Get cache ID
@@ -358,8 +372,7 @@ bool rk_Disk::RebuildCache()
 bool rk_Disk::InitUser(const char *username, rk_UserRole role, const char *pwd, bool force)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::Full || mode == rk_DiskMode::WriteOnly);
-    RG_ASSERT(mode == rk_DiskMode::Full || role == rk_UserRole::WriteOnly);
+    RG_ASSERT(mode == rk_DiskMode::Full);
     RG_ASSERT(pwd);
 
     BlockAllocator temp_alloc;
@@ -957,13 +970,20 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const 
     }
 
     keyset = (KeySet *)AllocateSafe(RG_SIZE(KeySet));
+    mode = rk_DiskMode::Full;
 
-    // Derive data and log keys
-    crypto_kdf_blake2b_derive_from_key(keyset->skey, RG_SIZE(keyset->skey), (int)MasterDerivation::SharedKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
-    crypto_scalarmult_base(keyset->wkey, keyset->dkey);
-    crypto_scalarmult_base(keyset->tkey, keyset->lkey);
+    // Derive encryption keys
+    {
+        crypto_kdf_blake2b_derive_from_key(keyset->skey, RG_SIZE(keyset->skey), (int)MasterDerivation::SharedKey, DerivationContext, mkey.ptr);
+        crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
+        crypto_scalarmult_base(keyset->wkey, keyset->dkey);
+        crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
+        crypto_scalarmult_base(keyset->tkey, keyset->lkey);
+        crypto_kdf_blake2b_derive_from_key(keyset->useed, RG_SIZE(keyset->useed), (int)MasterDerivation::UserKey, DerivationContext, mkey.ptr);
+
+        uint8_t dummy[256];
+        crypto_sign_ed25519_seed_keypair(keyset->vkey, dummy, keyset->useed);
+    }
 
     // Generate random ID for local cache
     randombytes_buf(id, RG_SIZE(id));
@@ -982,9 +1002,6 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const 
             return false;
         names.Append("keys/write");
     }
-
-    // Success!
-    mode = rk_DiskMode::Full;
 
     err_guard.Disable();
     return true;
@@ -1083,12 +1100,14 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
             MemCpy(payload + offsetof(KeySet, skey), keys.skey, RG_SIZE(keys.skey));
             MemCpy(payload + offsetof(KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
             MemCpy(payload + offsetof(KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
+            MemCpy(payload + offsetof(KeySet, useed), keys.useed, RG_SIZE(keys.useed));
         } break;
 
         case rk_UserRole::WriteOnly: {
             MemCpy(payload + offsetof(KeySet, skey), keys.skey, RG_SIZE(keys.skey));
             MemCpy(payload + offsetof(KeySet, wkey), keys.wkey, RG_SIZE(keys.wkey));
             MemCpy(payload + offsetof(KeySet, tkey), keys.tkey, RG_SIZE(keys.tkey));
+            MemCpy(payload + offsetof(KeySet, vkey), keys.vkey, RG_SIZE(keys.vkey));
         } break;
     }
 
@@ -1098,6 +1117,15 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
         if (!DeriveFromPassword(pwd, data.salt, key))
             return false;
         crypto_secretbox_easy(data.cypher, payload, PayloadSize, data.nonce, key);
+    }
+
+    // Sign serialized keyset to detect tampering
+    {
+        uint8_t pk[crypto_sign_ed25519_PUBLICKEYBYTES];
+        uint8_t sk[crypto_sign_ed25519_SECRETKEYBYTES];
+
+        crypto_sign_ed25519_seed_keypair(pk, sk, keyset->useed);
+        crypto_sign_ed25519_detached(data.sig, nullptr, (const uint8_t *)&data, offsetof(KeyData, sig), sk);
     }
 
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));

@@ -84,6 +84,7 @@ Rekkord uses **multiple encryption keys** which are derived from this master key
 - The *shared key (skey)* is used for auxiliary information (such as the cache ID)
 - The *data key (dkey)* is paired with a *write key (wkey)* for data encryption (snapshot information, directory metadata, file content)
 - The *log key (lkey)* is paired with a *tag key (tkey)*, to manage snapshots and record snapshot information
+- The *user key (ukey)* is paired with a *verify key (vkey)* to detect tampering with keyfiles
 
 Rekkord repositories support multiple user accounts. By default, two users accounts are created:
 

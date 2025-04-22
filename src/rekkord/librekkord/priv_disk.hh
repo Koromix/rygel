@@ -30,7 +30,8 @@ static const Size BlobSplit = Kibibytes(32);
 enum class MasterDerivation {
     SharedKey = 0,
     DataKey = 1,
-    LogKey = 2
+    LogKey = 2,
+    UserKey = 3
 };
 
 #pragma pack(push, 1)
@@ -39,6 +40,7 @@ struct KeyData {
     uint8_t nonce[24];
     int8_t role;
     uint8_t cypher[16 + MaxKeys * 32];
+    uint8_t sig[64];
 };
 #pragma pack(pop)
 
