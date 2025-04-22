@@ -1083,7 +1083,20 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
     randombytes_buf(data.nonce, RG_SIZE(data.nonce));
     data.role = (int8_t)role;
 
-    MemCpy(payload, &keys, RG_SIZE(keys));
+    // Pick relevant subset of keys
+    switch (role) {
+        case rk_UserRole::ReadWrite: {
+            MemCpy(payload + offsetof(KeySet, skey), keys.skey, RG_SIZE(keys.skey));
+            MemCpy(payload + offsetof(KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
+            MemCpy(payload + offsetof(KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
+        } break;
+
+        case rk_UserRole::WriteOnly: {
+            MemCpy(payload + offsetof(KeySet, skey), keys.skey, RG_SIZE(keys.skey));
+            MemCpy(payload + offsetof(KeySet, wkey), keys.wkey, RG_SIZE(keys.wkey));
+            MemCpy(payload + offsetof(KeySet, tkey), keys.tkey, RG_SIZE(keys.tkey));
+        } break;
+    }
 
     // Encrypt payload
     {
