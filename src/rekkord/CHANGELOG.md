@@ -6,6 +6,15 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.47
+
+*Released on 2025-04-23*
+
+- Sign root config file to detect tampering
+
+> [!WARNING]
+> The cache ID file (rekkord) must be recreated manually.
+
 ### Rekkord 0.46
 
 *Released on 2025-04-23*
