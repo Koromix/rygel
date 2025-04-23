@@ -53,6 +53,8 @@ let form_state = null;
 let form_model = null;
 let form_builder = null;
 
+let autosave_timer = null;
+
 let data_tags = null;
 let data_threads = null;
 let data_columns = null;
@@ -1135,7 +1137,7 @@ function addAutomaticActions(builder, model) {
                         await UI.confirm(e, text, 'Continuer', () => {});
                     }
 
-                    await saveRecord(form_thread.tid, form_entry, form_raw, form_meta);
+                    await saveRecord(form_thread.tid, form_entry, form_raw, form_meta, false);
 
                     if (keep_open) {
                         await openRecord(form_thread.tid, null, route.page);
@@ -1717,29 +1719,36 @@ async function go(e, url = null, options = {}) {
         if (context_change) {
             if (hasUnsavedData(false)) {
                 try {
-                    await UI.dialog(e, 'Enregistrer (confirmation)', {}, (d, resolve, reject) => {
-                        d.output(html`Si vous continuez, vos <b>modifications seront enregistrées</b>.`);
+                    if (route.page.autosave) {
+                        clearTimeout(autosave_timer);
+                        autosave_timer = null;
 
-                        d.enumRadio('save', 'Que souhaitez-vous faire avant de continuer ?', [
-                            [true, "Enregistrer mes modifications"],
-                            [false, "Oublier mes modifications"]
-                        ], { value: true, untoggle: false });
+                        await saveRecord(form_thread.tid, form_entry, form_raw, form_meta, true);
+                    } else {
+                        await UI.dialog(e, 'Enregistrer (confirmation)', {}, (d, resolve, reject) => {
+                            d.output(html`Si vous continuez, vos <b>modifications seront enregistrées</b>.`);
 
-                        if (d.values.save) {
-                            d.action('Enregistrer', {}, async e => {
-                                try {
-                                    form_builder.triggerErrors();
-                                    await saveRecord(form_thread.tid, form_entry, form_raw, form_meta);
-                                } catch (err) {
-                                    reject(err);
-                                }
+                            d.enumRadio('save', 'Que souhaitez-vous faire avant de continuer ?', [
+                                [true, "Enregistrer mes modifications"],
+                                [false, "Oublier mes modifications"]
+                            ], { value: true, untoggle: false });
 
-                                resolve();
-                            });
-                        } else {
-                            d.action('Oublier', {}, resolve);
-                        }
-                    });
+                            if (d.values.save) {
+                                d.action('Enregistrer', {}, async e => {
+                                    try {
+                                        form_builder.triggerErrors();
+                                        await saveRecord(form_thread.tid, form_entry, form_raw, form_meta, false);
+                                    } catch (err) {
+                                        reject(err);
+                                    }
+
+                                    resolve();
+                                });
+                            } else {
+                                d.action('Oublier', {}, resolve);
+                            }
+                        });
+                    }
                 } catch (err) {
                     if (err != null)
                         Log.error(err);
@@ -2177,8 +2186,30 @@ async function openRecord(tid, anchor, page) {
         // Highlight might need to change (conditions, etc.)
         if (UI.isPanelActive('editor'))
             syncFormHighlight(false);
+
+        if (page.autosave) {
+            let delay = (typeof page.autosave == 'number') ? page.autosave : 5000;
+
+            if (autosave_timer != null)
+                clearTimeout(autosave_timer);
+
+            autosave_timer = setTimeout(() => {
+                autosave_timer = null;
+
+                data_mutex.run(async () => {
+                    await saveRecord(form_thread.tid, form_entry, form_raw, form_meta, true);
+                    await openRecord(form_thread.tid, null, page);
+
+                    await data_mutex.chain(run);
+                });
+            }, delay);
+        }
     };
     new_state.annotateHandler = runAnnotationDialog;
+
+    if (autosave_timer != null)
+        clearTimeout(autosave_timer);
+    autosave_timer = null;
 
     form_thread = new_thread;
     form_entry = new_entry;
@@ -2227,7 +2258,7 @@ function runAnnotationDialog(e, intf) {
 }
 
 // Call with data_mutex locked
-async function saveRecord(tid, entry, raw, meta) {
+async function saveRecord(tid, entry, raw, meta, draft) {
     let frag = {
         summary: meta.summary,
         data: raw,
@@ -2245,6 +2276,8 @@ async function saveRecord(tid, entry, raw, meta) {
                     tags.add(tag.key);
             }
         }
+        if (draft)
+            tags.add('draft');
         frag.tags = Array.from(tags);
     }
 

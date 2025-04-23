@@ -34,7 +34,7 @@ function ApplicationInfo(profile) {
         { key: 'wait', label: 'En attente', color: '#3b96c8', filter: true },
         { key: 'check', label: 'À vérifier', color: '#44997c', filter: true },
         { key: 'error', label: 'Erreur', color: '#db0a0a', filter: true },
-        { key: 'draft', label: 'Brouillon', color: '#d921e8', filter: false },
+        { key: 'draft', label: 'Brouillon', color: '#d921e8', filter: true },
         { key: 'na', label: 'NA/ND/NSP', color: '#aaaaaa', filter: false }
     ];
 }
@@ -48,6 +48,7 @@ function ApplicationBuilder(app) {
     let options_stack = [
         {
             warn_unsaved: true,
+            autosave: false,
             has_lock: false,
             sequence: false,
             progress: true,
@@ -67,6 +68,7 @@ function ApplicationBuilder(app) {
         tags: { get: () => app.tags, set: tags => { app.tags = tags; }, enumerable: true },
 
         warnUnsaved: makeOptionProperty('warn_unsaved'),
+        autosave: makeOptionProperty('autosave'),
         hasLock: makeOptionProperty('has_lock'),
         sequence: makeOptionProperty('sequence'),
         progress: makeOptionProperty('progress'),
