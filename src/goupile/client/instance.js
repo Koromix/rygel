@@ -1336,7 +1336,7 @@ async function syncEditor() {
             if (UI.isPanelActive('view'))
                 setTimeout(syncFormScroll, 0);
         });
-        session.selection.on('changeSelection', () => {
+        session.on('changeSelection', () => {
             syncFormHighlight(true);
             ignore_editor_scroll = performance.now();
         });
