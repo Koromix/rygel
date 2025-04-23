@@ -109,7 +109,8 @@ struct rk_OpenSettings {
 
 class rk_Disk {
     struct KeySet {
-        uint8_t skey[32];
+        uint8_t cseed[32];
+        uint8_t akey[32];
         uint8_t dkey[32];
         uint8_t wkey[32];
         uint8_t lkey[32];
@@ -194,8 +195,8 @@ private:
     bool WriteKeys(const char *path, const char *pwd, rk_UserRole role, const KeySet &keys);
     bool ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, KeySet *out_keys);
 
-    bool WriteShared(const char *path, Span<const uint8_t> buf, bool overwrite);
-    bool ReadShared(const char *path, Span<uint8_t> out_buf);
+    bool WriteConfig(const char *path, Span<const uint8_t> buf, bool overwrite);
+    bool ReadConfig(const char *path, Span<uint8_t> out_buf);
 
     Size WriteDirect(const char *path, Span<const uint8_t> buf, bool overwrite);
 

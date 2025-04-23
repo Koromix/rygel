@@ -72,6 +72,10 @@ Options:
         return 1;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
+    if (disk->GetMode() != rk_DiskMode::Full) {
+        LogError("Cannot change ID with write-only access");
+        return 1;
+    }
     LogInfo();
 
     if (!disk->ChangeID())

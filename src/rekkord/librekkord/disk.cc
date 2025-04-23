@@ -98,7 +98,7 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
     }
 
     // Get cache ID
-    if (!ReadShared("rekkord", id))
+    if (!ReadConfig("rekkord", id))
         return false;
 
     err_guard.Disable();
@@ -126,21 +126,22 @@ bool rk_Disk::Authenticate(Span<const uint8_t> mkey)
 
     // Derive encryption keys
     {
-        crypto_kdf_blake2b_derive_from_key(keyset->skey, RG_SIZE(keyset->skey), (int)MasterDerivation::SharedKey, DerivationContext, mkey.ptr);
+        uint8_t dummy[256];
+
+        crypto_kdf_blake2b_derive_from_key(keyset->cseed, RG_SIZE(keyset->cseed), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
+        crypto_sign_ed25519_seed_keypair(keyset->akey, dummy, keyset->cseed);
         crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
         crypto_scalarmult_base(keyset->wkey, keyset->dkey);
         crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
         crypto_scalarmult_base(keyset->tkey, keyset->lkey);
         crypto_kdf_blake2b_derive_from_key(keyset->useed, RG_SIZE(keyset->useed), (int)MasterDerivation::UserKey, DerivationContext, mkey.ptr);
-
-        uint8_t dummy[256];
         crypto_sign_ed25519_seed_keypair(keyset->vkey, dummy, keyset->useed);
     }
 
     user = nullptr;
 
     // Get cache ID
-    if (!ReadShared("rekkord", id))
+    if (!ReadConfig("rekkord", id))
         return false;
 
     err_guard.Disable();
@@ -203,12 +204,12 @@ void rk_Disk::MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const
 bool rk_Disk::ChangeID()
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::Full || mode == rk_DiskMode::WriteOnly);
+    RG_ASSERT(mode == rk_DiskMode::Full);
 
     uint8_t new_id[32];
     randombytes_buf(new_id, RG_SIZE(new_id));
 
-    if (!WriteShared("rekkord", new_id, true))
+    if (!WriteConfig("rekkord", new_id, true))
         return false;
 
     MemCpy(id, new_id, RG_SIZE(id));
@@ -976,20 +977,21 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const 
 
     // Derive encryption keys
     {
-        crypto_kdf_blake2b_derive_from_key(keyset->skey, RG_SIZE(keyset->skey), (int)MasterDerivation::SharedKey, DerivationContext, mkey.ptr);
+        uint8_t dummy[256];
+
+        crypto_kdf_blake2b_derive_from_key(keyset->cseed, RG_SIZE(keyset->cseed), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
+        crypto_sign_ed25519_seed_keypair(keyset->akey, dummy, keyset->cseed);
         crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
         crypto_scalarmult_base(keyset->wkey, keyset->dkey);
         crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
         crypto_scalarmult_base(keyset->tkey, keyset->lkey);
         crypto_kdf_blake2b_derive_from_key(keyset->useed, RG_SIZE(keyset->useed), (int)MasterDerivation::UserKey, DerivationContext, mkey.ptr);
-
-        uint8_t dummy[256];
         crypto_sign_ed25519_seed_keypair(keyset->vkey, dummy, keyset->useed);
     }
 
     // Generate random ID for local cache
     randombytes_buf(id, RG_SIZE(id));
-    if (!WriteShared("rekkord", id, false))
+    if (!WriteConfig("rekkord", id, false))
         return false;
     names.Append("rekkord");
 
@@ -1099,14 +1101,14 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
     // Pick relevant subset of keys
     switch (role) {
         case rk_UserRole::ReadWrite: {
-            MemCpy(payload + offsetof(KeySet, skey), keys.skey, RG_SIZE(keys.skey));
+            MemCpy(payload + offsetof(KeySet, cseed), keys.cseed, RG_SIZE(keys.cseed));
             MemCpy(payload + offsetof(KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
             MemCpy(payload + offsetof(KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
             MemCpy(payload + offsetof(KeySet, useed), keys.useed, RG_SIZE(keys.useed));
         } break;
 
         case rk_UserRole::WriteOnly: {
-            MemCpy(payload + offsetof(KeySet, skey), keys.skey, RG_SIZE(keys.skey));
+            MemCpy(payload + offsetof(KeySet, akey), keys.akey, RG_SIZE(keys.akey));
             MemCpy(payload + offsetof(KeySet, wkey), keys.wkey, RG_SIZE(keys.wkey));
             MemCpy(payload + offsetof(KeySet, tkey), keys.tkey, RG_SIZE(keys.tkey));
             MemCpy(payload + offsetof(KeySet, vkey), keys.vkey, RG_SIZE(keys.vkey));
@@ -1187,50 +1189,60 @@ bool rk_Disk::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role,
     return true;
 }
 
-bool rk_Disk::WriteShared(const char *path, Span<const uint8_t> data, bool overwrite)
+bool rk_Disk::WriteConfig(const char *path, Span<const uint8_t> data, bool overwrite)
 {
-    RG_ASSERT(data.len + crypto_secretbox_MACBYTES <= RG_SIZE(SecretData::cypher));
+    RG_ASSERT(data.len + crypto_sign_ed25519_BYTES <= RG_SIZE(ConfigData::cypher));
 
-    SecretData secret = {};
+    ConfigData config = {};
 
-    secret.version = SecretVersion;
+    config.version = ConfigVersion;
 
-    randombytes_buf(secret.nonce, RG_SIZE(secret.nonce));
-    crypto_secretbox_easy(secret.cypher, data.ptr, (size_t)data.len, secret.nonce, keyset->skey);
+    // Encrypt and sign config to detect tampering
+    {
+        uint8_t pk[crypto_sign_ed25519_PUBLICKEYBYTES];
+        uint8_t sk[crypto_sign_ed25519_SECRETKEYBYTES];
 
-    Size len = offsetof(SecretData, cypher) + crypto_secretbox_MACBYTES + data.len;
-    Span<const uint8_t> buf = MakeSpan((const uint8_t *)&secret, len);
+        crypto_sign_ed25519_seed_keypair(pk, sk, keyset->cseed);
+        crypto_sign_ed25519(config.cypher, nullptr, data.ptr, (size_t)data.len, sk);
+    }
+
+    Size len = offsetof(ConfigData, cypher) + crypto_sign_ed25519_BYTES + data.len;
+    Span<const uint8_t> buf = MakeSpan((const uint8_t *)&config, len);
     Size written = WriteDirect(path, buf, overwrite);
 
     if (written < 0)
         return false;
     if (!written) {
-        LogError("Secret file '%1' already exists", path);
+        LogError("Config file '%1' already exists", path);
         return false;
     }
 
     return true;
 }
 
-bool rk_Disk::ReadShared(const char *path, Span<uint8_t> out_buf)
+bool rk_Disk::ReadConfig(const char *path, Span<uint8_t> out_buf)
 {
-    SecretData secret;
+    ConfigData config = {};
 
-    Span<uint8_t> buf = MakeSpan((uint8_t *)&secret, RG_SIZE(secret));
+    Span<uint8_t> buf = MakeSpan((uint8_t *)&config, RG_SIZE(config));
     Size len = ReadRaw(path, buf);
 
     if (len < 0)
         return false;
-    if (len < (Size)offsetof(SecretData, cypher)) {
-        LogError("Malformed secret file '%1'", path);
+    if (len < (Size)offsetof(ConfigData, cypher)) {
+        LogError("Malformed config file '%1'", path);
+        return false;
+    }
+    if (config.version != ConfigVersion) {
+        LogError("Unexpected config version %1 (expected %2)", config.version, ConfigVersion);
         return false;
     }
 
-    len -= offsetof(SecretData, cypher);
-    len = std::min(len, out_buf.len + (Size)crypto_secretbox_MACBYTES);
+    len -= offsetof(ConfigData, cypher);
+    len = std::min(len, out_buf.len + (Size)crypto_sign_ed25519_BYTES);
 
-    if (crypto_secretbox_open_easy(out_buf.ptr, secret.cypher, len, secret.nonce, keyset->skey)) {
-        LogError("Failed to decrypt secret '%1'", path);
+    if (crypto_sign_ed25519_open(out_buf.ptr, nullptr, config.cypher, len, keyset->akey)) {
+        LogError("Failed to decrypt config '%1'", path);
         return false;
     }
 
