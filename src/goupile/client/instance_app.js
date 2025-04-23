@@ -47,6 +47,7 @@ function ApplicationBuilder(app) {
 
     let options_stack = [
         {
+            menu: null,
             warn_unsaved: true,
             autosave: false,
             has_lock: false,
@@ -67,6 +68,7 @@ function ApplicationBuilder(app) {
         head: { get: () => app.head, set: head => { app.head = head; }, enumerable: true },
         tags: { get: () => app.tags, set: tags => { app.tags = tags; }, enumerable: true },
 
+        menu: makeOptionProperty('menu'),
         warnUnsaved: makeOptionProperty('warn_unsaved'),
         autosave: makeOptionProperty('autosave'),
         hasLock: makeOptionProperty('has_lock'),
@@ -104,7 +106,7 @@ function ApplicationBuilder(app) {
             throw new Error(`Page key '${key}' is already used`);
 
         title = title || key;
-        options = expandOptions(options);
+        options = expandOptions({ menu: title }, options);
 
         let page = {
             key: key,
@@ -137,8 +139,6 @@ function ApplicationBuilder(app) {
         if (app.stores.some(store => store.key == key))
             throw new Error(`Store key '${key}' is already used`);
 
-        title = title || key;
-
         if (options == null) {
             if (typeof func == 'object') {
                 options = func;
@@ -148,7 +148,8 @@ function ApplicationBuilder(app) {
             }
         }
 
-        options = expandOptions(options);
+        title = title || key;
+        options = expandOptions({ menu: title }, options);
 
         let prev_store = current_store;
         let prev_page = current_page;
@@ -190,8 +191,8 @@ function ApplicationBuilder(app) {
 
                 func();
             } else {
-                options_stack = [expandOptions(options)];
-                self.page(key, func || title);
+                options_stack = [];
+                self.page(key, func || title, options);
             }
 
             if (prev_page != null) {
@@ -239,8 +240,8 @@ function ApplicationBuilder(app) {
             throw new Error('Keys must not start with \'__\'');
     }
 
-    function expandOptions(options) {
-        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+    function expandOptions(...args) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], ...args);
         return options;
     }
 

@@ -324,6 +324,9 @@ function isMenuWide(page) {
 }
 
 function renderDropItem(page, first) {
+    if (!page.menu)
+        return '';
+
     let active = (route.page == page);
     let url = contextualizeURL(page.url, form_thread);
     let status = computeStatus(page, form_thread);
@@ -339,7 +342,7 @@ function renderDropItem(page, first) {
             <span style="align-self: center; margin: 0 6px;">›</span>
             <button class=${active ? 'active' : ''} ?disabled=${!enabled}
                     @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}>
-                <div style="flex: 1;">${page.title}</div>
+                <div style="flex: 1;">${page.menu}</div>
                 ${suffix ? html`&nbsp;&nbsp;<span class="ins_status">${suffix}</span>` : ''}
            </button>
         `;
@@ -1272,15 +1275,18 @@ function addAutomaticTags(variables) {
 }
 
 function renderPageMenu(page) {
-    if (!page.children.length)
+    if (!page.children.some(child => child.menu))
         return '';
     if (!profile.develop && !page.children.some(child => isPageEnabled(child)))
         return '';
 
     return html`
-        <a href=${contextualizeURL(page.url, form_thread)}>${page.title}</a>
+        <a href=${contextualizeURL(page.url, form_thread)}>${page.menu}</a>
         <ul>
             ${Util.map(page.children, (child, idx) => {
+                if (!child.menu)
+                    return '';
+
                 let active = route.page.chain.includes(child);
                 let url = contextualizeURL(child.url, form_thread);
                 let status = computeStatus(child, form_thread);
@@ -1290,7 +1296,7 @@ function renderPageMenu(page) {
 
                 return html`
                     <li><a class=${active ? 'active' : ''} href=${url}>
-                        <div style="flex: 1;">${child.title}</div>
+                        <div style="flex: 1;">${child.menu}</div>
                         <span style="font-size: 0.9em;">${makeStatusText(status, child.progress)}</span>
                     </a></li>
                 `;
