@@ -1,5 +1,95 @@
 # Changelog
 
+## 0.25.3
+
+* Fix lowered `async` arrow functions before `super()` ([#4141](https://github.com/evanw/esbuild/issues/4141), [#4142](https://github.com/evanw/esbuild/pull/4142))
+
+    This change makes it possible to call an `async` arrow function in a constructor before calling `super()` when targeting environments without `async` support, as long as the function body doesn't reference `this`. Here's an example (notice the change from `this` to `null`):
+
+    ```js
+    // Original code
+    class Foo extends Object {
+      constructor() {
+        (async () => await foo())()
+        super()
+      }
+    }
+
+    // Old output (with --target=es2016)
+    class Foo extends Object {
+      constructor() {
+        (() => __async(this, null, function* () {
+          return yield foo();
+        }))();
+        super();
+      }
+    }
+
+    // New output (with --target=es2016)
+    class Foo extends Object {
+      constructor() {
+        (() => __async(null, null, function* () {
+          return yield foo();
+        }))();
+        super();
+      }
+    }
+    ```
+
+    Some background: Arrow functions with the `async` keyword are transformed into generator functions for older language targets such as `--target=es2016`. Since arrow functions capture `this`, the generated code forwards `this` into the body of the generator function. However, JavaScript class syntax forbids using `this` in a constructor before calling `super()`, and this forwarding was problematic since previously happened even when the function body doesn't use `this`. Starting with this release, esbuild will now only forward `this` if it's used within the function body.
+
+    This fix was contributed by [@magic-akari](https://github.com/magic-akari).
+
+* Fix memory leak with `--watch=true` ([#4131](https://github.com/evanw/esbuild/issues/4131), [#4132](https://github.com/evanw/esbuild/pull/4132))
+
+    This release fixes a memory leak with esbuild when `--watch=true` is used instead of `--watch`. Previously using `--watch=true` caused esbuild to continue to use more and more memory for every rebuild, but `--watch=true` should now behave like `--watch` and not leak memory.
+
+    This bug happened because esbuild disables the garbage collector when it's not run as a long-lived process for extra speed, but esbuild's checks for which arguments cause esbuild to be a long-lived process weren't updated for the new `--watch=true` style of boolean command-line flags. This has been an issue since this boolean flag syntax was added in version 0.14.24 in 2022. These checks are unfortunately separate from the regular argument parser because of how esbuild's internals are organized (the command-line interface is exposed as a separate [Go API](https://pkg.go.dev/github.com/evanw/esbuild/pkg/cli) so you can build your own custom esbuild CLI).
+
+    This fix was contributed by [@mxschmitt](https://github.com/mxschmitt).
+
+* More concise output for repeated legal comments ([#4139](https://github.com/evanw/esbuild/issues/4139))
+
+    Some libraries have many files and also use the same legal comment text in all files. Previously esbuild would copy each legal comment to the output file. Starting with this release, legal comments duplicated across separate files will now be grouped in the output file by unique comment content.
+
+* Allow a custom host with the development server ([#4110](https://github.com/evanw/esbuild/issues/4110))
+
+    With this release, you can now use a custom non-IP `host` with esbuild's local development server (either with `--serve=` for the CLI or with the `serve()` call for the API). This was previously possible, but was intentionally broken in [version 0.25.0](https://github.com/evanw/esbuild/releases/v0.25.0) to fix a security issue. This change adds the functionality back except that it's now opt-in and only for a single domain name that you provide.
+
+    For example, if you add a mapping in your `/etc/hosts` file from `local.example.com` to `127.0.0.1` and then use `esbuild --serve=local.example.com:8000`, you will now be able to visit http://local.example.com:8000/ in your browser and successfully connect to esbuild's development server (doing that would previously have been blocked by the browser). This should also work with HTTPS if it's enabled (see esbuild's documentation for how to do that).
+
+* Add a limit to CSS nesting expansion ([#4114](https://github.com/evanw/esbuild/issues/4114))
+
+    With this release, esbuild will now fail with an error if there is too much CSS nesting expansion. This can happen when nested CSS is converted to CSS without nesting for older browsers as expanding CSS nesting is inherently exponential due to the resulting combinatorial explosion. The expansion limit is currently hard-coded and cannot be changed, but is extremely unlikely to trigger for real code. It exists to prevent esbuild from using too much time and/or memory. Here's an example:
+
+    ```css
+    a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{color:red}}}}}}}}}}}}}}}}}}}}
+    ```
+
+    Previously, transforming this file with `--target=safari1` took 5 seconds and generated 40mb of CSS. Trying to do that will now generate the following error instead:
+
+    ```
+    ✘ [ERROR] CSS nesting is causing too much expansion
+
+        example.css:1:60:
+          1 │ a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{color:red}}}}}}}}}}}}}}}}}}}}
+            ╵                                                             ^
+
+      CSS nesting expansion was terminated because a rule was generated with 65536 selectors. This limit
+      exists to prevent esbuild from using too much time and/or memory. Please change your CSS to use
+      fewer levels of nesting.
+    ```
+
+* Fix path resolution edge case ([#4144](https://github.com/evanw/esbuild/issues/4144))
+
+    This fixes an edge case where esbuild's path resolution algorithm could deviate from node's path resolution algorithm. It involves a confusing situation where a directory shares the same file name as a file (but without the file extension). See the linked issue for specific details. This appears to be a case where esbuild is correctly following [node's published resolution algorithm](https://nodejs.org/api/modules.html#all-together) but where node itself is doing something different. Specifically the step `LOAD_AS_FILE` appears to be skipped when the input ends with `..`. This release changes esbuild's behavior for this edge case to match node's behavior.
+
+* Update Go from 1.23.7 to 1.23.8 ([#4133](https://github.com/evanw/esbuild/issues/4133), [#4134](https://github.com/evanw/esbuild/pull/4134))
+
+    This should have no effect on existing code as this version change does not change Go's operating system support. It may remove certain reports from vulnerability scanners that detect which version of the Go compiler esbuild uses, such as for CVE-2025-22871.
+
+    As a reminder, esbuild's development server is intended for development, not for production, so I do not consider most networking-related vulnerabilities in Go to be vulnerabilities in esbuild. Please do not use esbuild's development server in production.
+
 ## 0.25.2
 
 * Support flags in regular expressions for the API ([#4121](https://github.com/evanw/esbuild/issues/4121))

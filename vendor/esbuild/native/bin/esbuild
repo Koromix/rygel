@@ -200,7 +200,7 @@ for your current platform.`);
         "node_modules",
         ".cache",
         "esbuild",
-        `pnpapi-${pkg.replace("/", "-")}-${"0.25.2"}-${path.basename(subpath)}`
+        `pnpapi-${pkg.replace("/", "-")}-${"0.25.3"}-${path.basename(subpath)}`
       );
       if (!fs.existsSync(binTargetPath)) {
         fs.mkdirSync(path.dirname(binTargetPath), { recursive: true });
