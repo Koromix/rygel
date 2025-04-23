@@ -1836,8 +1836,6 @@ async function run(push_history = true) {
 
                         for (let tag of entry.tags)
                             tags.add(tag);
-                        if (!thread.locked)
-                            entry.tags.push('draft');
 
                         min_ctime = Math.min(min_ctime, entry.ctime);
                         max_mtime = Math.max(max_mtime, entry.mtime);
@@ -1845,9 +1843,6 @@ async function run(push_history = true) {
                         entry.ctime = new Date(entry.ctime);
                         entry.mtime = new Date(entry.mtime);
                     }
-
-                    if (!thread.locked)
-                        tags.add('draft');
 
                     return {
                         tid: thread.tid,
