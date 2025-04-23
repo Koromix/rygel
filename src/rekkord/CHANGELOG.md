@@ -6,6 +6,18 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.46
+
+*Released on 2025-04-23*
+
+- Sign user keyfiles to detect tampering
+- Add option to check user signatures with `rekkord list_users`
+- Fix exit code when `rekkord add_user -K` fails
+- Protect keys in more places
+
+> [!WARNING]
+> Existing users are not migrated and new users must be created with the master key.
+
 ### Rekkord 0.45
 
 *Released on 2025-04-22*
