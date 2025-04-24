@@ -83,6 +83,7 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
 
                 uint8_t dummy[256];
                 crypto_sign_ed25519_seed_keypair(keyset->vkey, dummy, keyset->useed);
+                crypto_sign_ed25519_seed_keypair(keyset->akey, dummy, keyset->cseed);
             } break;
 
             case rk_UserRole::WriteOnly: {
