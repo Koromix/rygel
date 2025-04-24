@@ -6,6 +6,14 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.49
+
+*Released on 2025-04-24*
+
+- Use two 128-bit repository IDs: RID (repository ID) and CID (cache ID)
+- Replace `rekkord change_id` command with `rekkord change_cid`
+- Prevent stale leftover cache files after ID change
+
 ### Rekkord 0.48
 
 *Released on 2025-04-24*
