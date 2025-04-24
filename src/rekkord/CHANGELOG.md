@@ -6,9 +6,9 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
-### Rekkord 0.47
+### Rekkord 0.48
 
-*Released on 2025-04-23*
+*Released on 2025-04-24*
 
 - Sign root config file to detect tampering
 
