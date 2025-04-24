@@ -349,9 +349,9 @@ Options:
     if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         return 1;
     if (!db.SetWAL(true))
-        return false;
+        return 1;
     if (!db.SetSynchronousFull(config.sync_full))
-        return false;
+        return 1;
     if (!MigrateDatabase(&db, config.vault_directory))
         return 1;
     if (!MakeDirectory(config.vault_directory, false))
