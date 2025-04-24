@@ -45,14 +45,14 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 
-<p><code>#include &lt;<a class="el" href="fuse-3_817_81-rc0_2lib_2fuse__i_8h_source.html">fuse_i.h</a>&gt;</code></p>
+<p><code>#include &lt;<a class="el" href="fuse__i_8h_source.html">fuse_i.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Data Fields</h2></td></tr>
 <tr class="memitem:a6a8527939446625e5466cd8baf399f08" id="r_a6a8527939446625e5466cd8baf399f08"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structfuse__loop__config.html#a6a8527939446625e5466cd8baf399f08">clone_fd</a></td></tr>
 <tr class="separator:a6a8527939446625e5466cd8baf399f08"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab075331126d66bb44fb761ced2493214" id="r_ab075331126d66bb44fb761ced2493214"><td class="memItemLeft" align="right" valign="top">unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structfuse__loop__config.html#ab075331126d66bb44fb761ced2493214">max_idle_threads</a></td></tr>
-<tr class="separator:ab075331126d66bb44fb761ced2493214"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab9412a7c922432f6d3cdcfacb5aaa032" id="r_ab9412a7c922432f6d3cdcfacb5aaa032"><td class="memItemLeft" align="right" valign="top">unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structfuse__loop__config.html#ab9412a7c922432f6d3cdcfacb5aaa032">max_idle_threads</a></td></tr>
+<tr class="separator:ab9412a7c922432f6d3cdcfacb5aaa032"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab075331126d66bb44fb761ced2493214" id="r_ab075331126d66bb44fb761ced2493214"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structfuse__loop__config.html#ab075331126d66bb44fb761ced2493214">max_idle_threads</a></td></tr>
 <tr class="separator:ab075331126d66bb44fb761ced2493214"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa91fc3ebb89633f27e94d8ab510bc37e" id="r_aa91fc3ebb89633f27e94d8ab510bc37e"><td class="memItemLeft" align="right" valign="top">unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structfuse__loop__config.html#aa91fc3ebb89633f27e94d8ab510bc37e">max_threads</a></td></tr>
@@ -62,7 +62,7 @@ Data Fields</h2></td></tr>
 <div class="textblock"><p>Configuration parameters passed to fuse_session_loop_mt() and fuse_loop_mt().</p>
 <p>Internal API to avoid exposing the plain data structure and causing compat issues after adding or removing struct members. </p>
 
-<p class="definition">Definition at line <a class="el" href="fuse-3_817_81-rc0_2include_2fuse__common_8h_source.html#l00149">149</a> of file <a class="el" href="fuse-3_817_81-rc0_2include_2fuse__common_8h_source.html">fuse_common.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="fuse__common_8h_source.html#l00147">147</a> of file <a class="el" href="fuse__common_8h_source.html">fuse_common.h</a>.</p>
 </div><h2 class="groupheader">Field Documentation</h2>
 <a id="a6a8527939446625e5466cd8baf399f08" name="a6a8527939446625e5466cd8baf399f08"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6a8527939446625e5466cd8baf399f08">&#9670;&#160;</a></span>clone_fd</h2>
@@ -77,27 +77,25 @@ Data Fields</h2></td></tr>
 </div><div class="memdoc">
 <p>whether to use separate device fds for each thread (may increase performance) </p>
 
-<p class="definition">Definition at line <a class="el" href="fuse-3_817_81-rc0_2include_2fuse__common_8h_source.html#l00157">157</a> of file <a class="el" href="fuse-3_817_81-rc0_2include_2fuse__common_8h_source.html">fuse_common.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="fuse__common_8h_source.html#l00155">155</a> of file <a class="el" href="fuse__common_8h_source.html">fuse_common.h</a>.</p>
 
 </div>
 </div>
-<a id="ab075331126d66bb44fb761ced2493214" name="ab075331126d66bb44fb761ced2493214"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab075331126d66bb44fb761ced2493214">&#9670;&#160;</a></span>max_idle_threads <span class="overload">[1/2]</span></h2>
+<a id="ab9412a7c922432f6d3cdcfacb5aaa032" name="ab9412a7c922432f6d3cdcfacb5aaa032"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab9412a7c922432f6d3cdcfacb5aaa032">&#9670;&#160;</a></span>max_idle_threads <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int fuse_loop_config::max_idle_threads</td>
+          <td class="memname">unsigned int fuse_loop_config::max_idle_threads</td>
         </tr>
       </table>
 </div><div class="memdoc">
 <p>The maximum number of available worker threads before they start to get deleted when they become idle. If not specified, the default is 10.</p>
-<p>Adjusting this has performance implications; a very small number of threads in the pool will cause a lot of thread creation and deletion overhead and performance may suffer. When set to 0, a new thread will be created to service every operation.</p>
-<p>The maximum number of available worker threads before they start to get deleted when they become idle. If not specified, the default is 10.</p>
-<p>Adjusting this has performance implications; a very small number of threads in the pool will cause a lot of thread creation and deletion overhead and performance may suffer. When set to 0, a new thread will be created to service every operation. The special value of -1 means that this parameter is disabled. </p>
+<p>Adjusting this has performance implications; a very small number of threads in the pool will cause a lot of thread creation and deletion overhead and performance may suffer. When set to 0, a new thread will be created to service every operation. </p>
 
-<p class="definition">Definition at line <a class="el" href="fuse-3_817_81-rc0_2include_2fuse__common_8h_source.html#l00169">169</a> of file <a class="el" href="fuse-3_817_81-rc0_2include_2fuse__common_8h_source.html">fuse_common.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="fuse__common_8h_source.html#l00167">167</a> of file <a class="el" href="fuse__common_8h_source.html">fuse_common.h</a>.</p>
 
 </div>
 </div>
@@ -115,7 +113,7 @@ Data Fields</h2></td></tr>
 <p>The maximum number of available worker threads before they start to get deleted when they become idle. If not specified, the default is 10.</p>
 <p>Adjusting this has performance implications; a very small number of threads in the pool will cause a lot of thread creation and deletion overhead and performance may suffer. When set to 0, a new thread will be created to service every operation. The special value of -1 means that this parameter is disabled. </p>
 
-<p class="definition">Definition at line <a class="el" href="fuse-3_817_81-rc0_2lib_2fuse__i_8h_source.html#l00146">146</a> of file <a class="el" href="fuse-3_817_81-rc0_2lib_2fuse__i_8h_source.html">fuse_i.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="fuse__i_8h_source.html#l00151">151</a> of file <a class="el" href="fuse__i_8h_source.html">fuse_i.h</a>.</p>
 
 </div>
 </div>
@@ -133,15 +131,13 @@ Data Fields</h2></td></tr>
 <p>max number of threads taking and processing kernel requests</p>
 <p>As of now threads are created dynamically </p>
 
-<p class="definition">Definition at line <a class="el" href="fuse-3_817_81-rc0_2lib_2fuse__i_8h_source.html#l00153">153</a> of file <a class="el" href="fuse-3_817_81-rc0_2lib_2fuse__i_8h_source.html">fuse_i.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="fuse__i_8h_source.html#l00158">158</a> of file <a class="el" href="fuse__i_8h_source.html">fuse_i.h</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this struct was generated from the following files:<ul>
-<li>fuse-3.17.1-rc0/include/<a class="el" href="fuse-3_817_81-rc0_2include_2fuse__common_8h_source.html">fuse_common.h</a></li>
-<li>fuse-3.17.1-rc0/lib/<a class="el" href="fuse-3_817_81-rc0_2lib_2fuse__i_8h_source.html">fuse_i.h</a></li>
-<li>include/<a class="el" href="include_2fuse__common_8h_source.html">fuse_common.h</a></li>
-<li>lib/<a class="el" href="lib_2fuse__i_8h_source.html">fuse_i.h</a></li>
+<li>include/<a class="el" href="fuse__common_8h_source.html">fuse_common.h</a></li>
+<li>lib/<a class="el" href="fuse__i_8h_source.html">fuse_i.h</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->

@@ -47,10 +47,10 @@ $(function() {
 <h2><a class="anchor" id="autotoc_md0"></a>
 Getting started</h2>
 <p>libfuse offers two APIs: a "high-level", synchronous API, and a "low-level" asynchronous API. In both cases, incoming requests from the kernel are passed to the main program using callbacks. When using the high-level API, the callbacks may work with file names and paths instead of inodes, and processing of a request finishes when the callback function returns. When using the low-level API, the callbacks must work with inodes and responses must be sent explicitly using a separate set of API functions.</p>
-<p>The high-level API that is primarily specified in fuse.h. The low-level API that is primarily documented in fuse_lowlevel.h.</p>
+<p>The high-level API that is primarily specified in <a class="el" href="fuse_8h.html">fuse.h</a>. The low-level API that is primarily documented in <a class="el" href="fuse__lowlevel_8h.html">fuse_lowlevel.h</a>.</p>
 <h2><a class="anchor" id="autotoc_md1"></a>
 Examples</h2>
-<p>FUSE comes with several examples in the <a href="files.html">examples</a> directory. A good starting point are hello.c (for the high-level API) and hello_ll.c (for the low-level API).</p>
+<p>FUSE comes with several examples in the <a href="files.html">examples</a> directory. A good starting point are hello.c (for the high-level API) and <a class="el" href="hello__ll_8c.html">hello_ll.c</a> (for the low-level API).</p>
 <h2><a class="anchor" id="autotoc_md2"></a>
 FUSE internals</h2>
 <p>The authoritative source of information about libfuse internals (including the protocol used for communication with the FUSE kernel module) is the source code.</p>

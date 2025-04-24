@@ -204,60 +204,65 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>        <span class="keywordflow">if</span> (rc &lt; 0)</div>
 <div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>                <span class="keywordflow">return</span> rc;</div>
 <div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span> </div>
-<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>        <span class="keywordflow">if</span> (fuse_instance == NULL)</div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>                fuse_instance = se;</div>
-<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>        <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>}</div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>        <span class="comment">/*</span></div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span><span class="comment">         * needs to be set independently if already set, as some  applications</span></div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span><span class="comment">         * may have multiple sessions and might rely on traditional behavior</span></div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span><span class="comment">         * that the last session is used.</span></div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span><span class="comment">         */</span></div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>        fuse_instance = se;</div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span> </div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>        <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>}</div>
 </div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span> </div>
-<div class="foldopen" id="foldopen00158" data-start="{" data-end="}">
-<div class="line"><a id="l00158" name="l00158"></a><span class="lineno"><a class="line" href="fuse__common_8h.html#a15830cd29289a75894e21f6a3ff573fa">  158</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="fuse__common_8h.html#a15830cd29289a75894e21f6a3ff573fa">fuse_set_fail_signal_handlers</a>(<span class="keyword">struct</span> fuse_session *se)</div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>{</div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>        <span class="keywordtype">size_t</span> nr_signals = <span class="keyword">sizeof</span>(fail_sigs) / <span class="keyword">sizeof</span>(fail_sigs[0]);</div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span> </div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>        <span class="keywordtype">int</span> rc = _fuse_set_signal_handlers(fail_sigs, nr_signals,</div>
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>                                           exit_backtrace);</div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>        <span class="keywordflow">if</span> (rc &lt; 0)</div>
-<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>                <span class="keywordflow">return</span> rc;</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span> </div>
+<div class="foldopen" id="foldopen00163" data-start="{" data-end="}">
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno"><a class="line" href="fuse__common_8h.html#a15830cd29289a75894e21f6a3ff573fa">  163</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="fuse__common_8h.html#a15830cd29289a75894e21f6a3ff573fa">fuse_set_fail_signal_handlers</a>(<span class="keyword">struct</span> fuse_session *se)</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>{</div>
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>        <span class="keywordtype">size_t</span> nr_signals = <span class="keyword">sizeof</span>(fail_sigs) / <span class="keyword">sizeof</span>(fail_sigs[0]);</div>
 <div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span> </div>
-<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>        <span class="keywordflow">if</span> (fuse_instance == NULL)</div>
-<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>                fuse_instance = se;</div>
-<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span> </div>
-<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>        <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>}</div>
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>        <span class="keywordtype">int</span> rc = _fuse_set_signal_handlers(fail_sigs, nr_signals,</div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>                                           exit_backtrace);</div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>        <span class="keywordflow">if</span> (rc &lt; 0)</div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>                <span class="keywordflow">return</span> rc;</div>
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span> </div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>        <span class="comment">/* See fuse_set_signal_handlers, why set unconditionally */</span></div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>        fuse_instance = se;</div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span> </div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>        <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>}</div>
 </div>
-<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span> </div>
-<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span><span class="keyword">static</span> <span class="keywordtype">void</span> _fuse_remove_signal_handlers(<span class="keywordtype">int</span> signals[], <span class="keywordtype">int</span> nr_signals,</div>
-<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>                                         <span class="keywordtype">void</span> (*handler)(<span class="keywordtype">int</span>))</div>
-<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>{</div>
-<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> idx = 0; idx &lt; nr_signals; idx++)</div>
-<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>                set_one_signal_handler(signals[idx], handler, 1);</div>
-<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>}</div>
-<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span> </div>
-<div class="foldopen" id="foldopen00180" data-start="{" data-end="}">
-<div class="line"><a id="l00180" name="l00180"></a><span class="lineno"><a class="line" href="fuse__common_8h.html#aeb674bbc11074c4fe520b952d6bfdd30">  180</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="fuse__common_8h.html#aeb674bbc11074c4fe520b952d6bfdd30">fuse_remove_signal_handlers</a>(<span class="keyword">struct</span> fuse_session *se)</div>
-<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>{</div>
-<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>        <span class="keywordtype">size_t</span> nr_signals;</div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span> </div>
-<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>        <span class="keywordflow">if</span> (fuse_instance != se)</div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>                <a class="code hl_function" href="fuse__log_8h.html#a4506ffd6ed3a631e01999b32b1eb8621">fuse_log</a>(FUSE_LOG_ERR,</div>
-<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>                        <span class="stringliteral">&quot;fuse: fuse_remove_signal_handlers: unknown session\n&quot;</span>);</div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>        <span class="keywordflow">else</span></div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>                fuse_instance = NULL;</div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span> </div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>        nr_signals = <span class="keyword">sizeof</span>(teardown_sigs) / <span class="keyword">sizeof</span>(teardown_sigs[0]);</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>        _fuse_remove_signal_handlers(teardown_sigs, nr_signals, exit_handler);</div>
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span> </div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>        nr_signals = <span class="keyword">sizeof</span>(ignore_sigs) / <span class="keyword">sizeof</span>(ignore_sigs[0]);</div>
-<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>        _fuse_remove_signal_handlers(ignore_sigs, nr_signals, do_nothing);</div>
-<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span> </div>
-<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>        nr_signals = <span class="keyword">sizeof</span>(fail_sigs) / <span class="keyword">sizeof</span>(fail_sigs[0]);</div>
-<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>        _fuse_remove_signal_handlers(fail_sigs, nr_signals, exit_backtrace);</div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>}</div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span> </div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span><span class="keyword">static</span> <span class="keywordtype">void</span> _fuse_remove_signal_handlers(<span class="keywordtype">int</span> signals[], <span class="keywordtype">int</span> nr_signals,</div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>                                         <span class="keywordtype">void</span> (*handler)(<span class="keywordtype">int</span>))</div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>{</div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> idx = 0; idx &lt; nr_signals; idx++)</div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>                set_one_signal_handler(signals[idx], handler, 1);</div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>}</div>
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span> </div>
+<div class="foldopen" id="foldopen00185" data-start="{" data-end="}">
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno"><a class="line" href="fuse__common_8h.html#aeb674bbc11074c4fe520b952d6bfdd30">  185</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="fuse__common_8h.html#aeb674bbc11074c4fe520b952d6bfdd30">fuse_remove_signal_handlers</a>(<span class="keyword">struct</span> fuse_session *se)</div>
+<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>{</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>        <span class="keywordtype">size_t</span> nr_signals;</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span> </div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>        <span class="keywordflow">if</span> (fuse_instance != se)</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>                <a class="code hl_function" href="fuse__log_8h.html#a4506ffd6ed3a631e01999b32b1eb8621">fuse_log</a>(FUSE_LOG_ERR,</div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>                        <span class="stringliteral">&quot;fuse: fuse_remove_signal_handlers: unknown session\n&quot;</span>);</div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>        <span class="keywordflow">else</span></div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>                fuse_instance = NULL;</div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span> </div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>        nr_signals = <span class="keyword">sizeof</span>(teardown_sigs) / <span class="keyword">sizeof</span>(teardown_sigs[0]);</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>        _fuse_remove_signal_handlers(teardown_sigs, nr_signals, exit_handler);</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span> </div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>        nr_signals = <span class="keyword">sizeof</span>(ignore_sigs) / <span class="keyword">sizeof</span>(ignore_sigs[0]);</div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>        _fuse_remove_signal_handlers(ignore_sigs, nr_signals, do_nothing);</div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span> </div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>        nr_signals = <span class="keyword">sizeof</span>(fail_sigs) / <span class="keyword">sizeof</span>(fail_sigs[0]);</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>        _fuse_remove_signal_handlers(fail_sigs, nr_signals, exit_backtrace);</div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>}</div>
 </div>
-<div class="ttc" id="afuse__common_8h_html_a15830cd29289a75894e21f6a3ff573fa"><div class="ttname"><a href="fuse__common_8h.html#a15830cd29289a75894e21f6a3ff573fa">fuse_set_fail_signal_handlers</a></div><div class="ttdeci">int fuse_set_fail_signal_handlers(struct fuse_session *se)</div><div class="ttdef"><b>Definition</b> <a href="fuse__signals_8c_source.html#l00158">fuse_signals.c:158</a></div></div>
+<div class="ttc" id="afuse__common_8h_html_a15830cd29289a75894e21f6a3ff573fa"><div class="ttname"><a href="fuse__common_8h.html#a15830cd29289a75894e21f6a3ff573fa">fuse_set_fail_signal_handlers</a></div><div class="ttdeci">int fuse_set_fail_signal_handlers(struct fuse_session *se)</div><div class="ttdef"><b>Definition</b> <a href="fuse__signals_8c_source.html#l00163">fuse_signals.c:163</a></div></div>
 <div class="ttc" id="afuse__common_8h_html_a292dccc3c7b1799cb054efa2ba0c774b"><div class="ttname"><a href="fuse__common_8h.html#a292dccc3c7b1799cb054efa2ba0c774b">fuse_set_signal_handlers</a></div><div class="ttdeci">int fuse_set_signal_handlers(struct fuse_session *se)</div><div class="ttdef"><b>Definition</b> <a href="fuse__signals_8c_source.html#l00138">fuse_signals.c:138</a></div></div>
-<div class="ttc" id="afuse__common_8h_html_aeb674bbc11074c4fe520b952d6bfdd30"><div class="ttname"><a href="fuse__common_8h.html#aeb674bbc11074c4fe520b952d6bfdd30">fuse_remove_signal_handlers</a></div><div class="ttdeci">void fuse_remove_signal_handlers(struct fuse_session *se)</div><div class="ttdef"><b>Definition</b> <a href="fuse__signals_8c_source.html#l00180">fuse_signals.c:180</a></div></div>
+<div class="ttc" id="afuse__common_8h_html_aeb674bbc11074c4fe520b952d6bfdd30"><div class="ttname"><a href="fuse__common_8h.html#aeb674bbc11074c4fe520b952d6bfdd30">fuse_remove_signal_handlers</a></div><div class="ttdeci">void fuse_remove_signal_handlers(struct fuse_session *se)</div><div class="ttdef"><b>Definition</b> <a href="fuse__signals_8c_source.html#l00185">fuse_signals.c:185</a></div></div>
 <div class="ttc" id="afuse__log_8h_html_a4506ffd6ed3a631e01999b32b1eb8621"><div class="ttname"><a href="fuse__log_8h.html#a4506ffd6ed3a631e01999b32b1eb8621">fuse_log</a></div><div class="ttdeci">void fuse_log(enum fuse_log_level level, const char *fmt,...)</div><div class="ttdef"><b>Definition</b> <a href="fuse__log_8c_source.html#l00077">fuse_log.c:77</a></div></div>
 <div class="ttc" id="afuse__lowlevel_8h_html"><div class="ttname"><a href="fuse__lowlevel_8h.html">fuse_lowlevel.h</a></div></div>
 <div class="ttc" id="afuse__lowlevel_8h_html_a198429f3fbc23ef29ef9971271827690"><div class="ttname"><a href="fuse__lowlevel_8h.html#a198429f3fbc23ef29ef9971271827690">fuse_session_exit</a></div><div class="ttdeci">void fuse_session_exit(struct fuse_session *se)</div></div>

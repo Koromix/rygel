@@ -75,13 +75,15 @@ struct fuse_session {
 	int broken_splice_nonblock;
 	uint64_t notify_ctr;
 	struct fuse_notify_req notify_list;
-	size_t bufsize;
+	_Atomic size_t bufsize;
 	int error;
 
 	/* This is useful if any kind of ABI incompatibility is found at
 	 * a later version, to 'fix' it at run time.
 	 */
 	struct libfuse_version version;
+
+	/* true if reading requests from /dev/fuse are handled internally */
 	bool buf_reallocable;
 };
 
@@ -253,6 +255,9 @@ static inline int convert_to_conn_want_ext(struct fuse_conn_info *conn,
 		conn->want_ext = fuse_higher_32_bits(conn->want_ext) |
 				 conn->want;
 	}
+
+	/* ensure there won't be a second conversion */
+	conn->want = fuse_lower_32_bits(conn->want_ext);
 
 	return 0;
 }
