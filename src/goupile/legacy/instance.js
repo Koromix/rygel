@@ -1914,8 +1914,6 @@ async function go(e, url = null, options = {}) {
 
             // Goodbye!
             if (!url.pathname.startsWith(`${ENV.urls.instance}main/`)) {
-                console.log(url.pathname, ENV.urls.instance);
-
                 if (hasUnsavedData())
                     await goupile.confirmDangerousAction(e);
 
