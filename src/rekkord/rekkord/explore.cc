@@ -145,9 +145,9 @@ Available sort orders: %!..+%4%!0)",
     ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::Full) {
-        LogError("You must use the full-access password with this command");
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
+    if (!disk->HasMode(rk_AccessMode::Log)) {
+        LogError("Cannot list snapshots with %1 role", disk->GetRole());
         return 1;
     }
     LogInfo();
@@ -531,9 +531,9 @@ Available output formats: %!..+%3%!0)",
     ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::Full) {
-        LogError("You must use the full-access password with this command");
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
+    if (!disk->HasMode(rk_AccessMode::Read)) {
+        LogError("Cannot list objects with %1 role", disk->GetRole());
         return 1;
     }
     LogInfo();

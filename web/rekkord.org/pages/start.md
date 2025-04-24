@@ -86,9 +86,10 @@ Rekkord uses **multiple encryption keys** which are derived from this master key
 - The *log key (lkey)* is paired with a *tag key (tkey)*, to manage snapshots and record snapshot information
 - The *user key (ukey)* is paired with a *verify key (vkey)* to detect tampering with keyfiles
 
-Rekkord repositories support multiple user accounts. By default, two user accounts are created:
+Rekkord repositories support multiple user accounts. By default, three user accounts are created:
 
-- *full*: This user has the keys necessary for read-write access to stored data
+- *admin*: This user has the keys necessary to manage users and access data
+- *data*: This user has the keys necessary for read-write access to stored data
 - *write*: This user can only write new data but cannot read historical data, or list existing snapshots
 
 You will need one or the other to use other rekkord commands. Please store these passwords securely.
@@ -101,7 +102,7 @@ You can skip the creation of these two default users with `rekkord init --skip_u
 
 # Repository users
 
-As stated before, by default Rekkord creates two users named *full* and *write*. These are enough for simple needs.
+As stated before, by default Rekkord creates three users named *admin*, *data* and *write*. These are enough for simple needs.
 
 > [!WARNING]
 > Repository users contain the necessary encryption keys for a given role, protected by a password.

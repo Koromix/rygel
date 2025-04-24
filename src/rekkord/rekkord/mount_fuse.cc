@@ -526,19 +526,19 @@ Snapshot names are not unique, if you use a snapshot name, rekkord will use the 
         return 1;
     RG_DEFER { disk.reset(nullptr); };
 
-    rk_Hash hash = {};
-    if (!rk_Locate(disk.get(), identifier, &hash))
-        return 1;
-
     ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::Full) {
-        LogError("You must use the full-access password with this command");
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
+    if (!disk->HasMode(rk_AccessMode::Read)) {
+        LogError("Cannot mount with %1 role", disk->GetRole());
         return 1;
     }
     LogInfo();
+
+    rk_Hash hash = {};
+    if (!rk_Locate(disk.get(), identifier, &hash))
+        return 1;
 
     LogInfo("Mounting %!..+%1%!0 to '%2'...", hash, mountpoint);
     if (!InitRoot(hash))

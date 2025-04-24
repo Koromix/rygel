@@ -70,9 +70,9 @@ Options:
     if (!disk)
         return 1;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::Full) {
-        LogError("Cannot change ID with write-only access");
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
+    if (!disk->HasMode(rk_AccessMode::Config)) {
+        LogError("Cannot change ID with %1 role", disk->GetRole());
         return 1;
     }
     LogInfo();
@@ -136,7 +136,7 @@ Options:
     if (!disk)
         return 1;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
     LogInfo();
 
     if (!disk->OpenCache(false))

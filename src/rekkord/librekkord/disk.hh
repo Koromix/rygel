@@ -45,15 +45,17 @@ struct rk_Hash {
 };
 static_assert(RG_SIZE(rk_Hash) == 32);
 
-enum class rk_DiskMode {
-    Secure,
-    WriteOnly,
-    Full
+enum class rk_AccessMode {
+    Config = 1 << 0,
+    Read = 1 << 1,
+    Write = 1 << 2,
+    Log = 1 << 3
 };
-static const char *const rk_DiskModeNames[] = {
-    "Secure",
-    "WriteOnly",
-    "Full"
+static const char *const rk_AccessModeNames[] = {
+    "Config",
+    "Read",
+    "Write",
+    "Log"
 };
 
 enum class rk_BlobType: int8_t {
@@ -83,8 +85,9 @@ enum class rk_SaltKind {
 };
 
 enum class rk_UserRole {
-    ReadWrite = 0,
-    WriteOnly = 1
+    Admin = 0,
+    WriteOnly = 1,
+    ReadWrite = 2
 };
 static const char *const rk_UserRoleNames[] = {
     "ReadWrite",
@@ -128,8 +131,9 @@ protected:
     const char *url = nullptr;
     IdSet ids;
 
-    rk_DiskMode mode = rk_DiskMode::Secure;
+    unsigned int modes = 0;
     const char *user = nullptr;
+    const char *role = "Secure";
     KeySet *keyset = nullptr;
 
     sq_Database cache_db;
@@ -148,16 +152,18 @@ public:
 
     virtual ~rk_Disk();
 
-    virtual bool Init(Span<const uint8_t> mkey, const char *full_pwd, const char *write_pwd) = 0;
+    virtual bool Init(Span<const uint8_t> mkey, const char *admin_pwd, const char *data_pwd, const char *write_pwd) = 0;
 
     bool Authenticate(const char *username, const char *pwd);
     bool Authenticate(Span<const uint8_t> mkey);
     void Lock();
 
     const char *GetURL() const { return url; }
-    rk_DiskMode GetMode() const { return mode; }
     const char *GetUser() const { return user; } // Can be NULL
+    const char *GetRole() const { return role; }
     Async *GetAsync() { return &tasks; }
+
+    bool HasMode(rk_AccessMode mode) const { return modes & (int)mode; }
 
     void MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const;
 
@@ -189,7 +195,7 @@ protected:
     virtual bool CreateDirectory(const char *path) = 0;
     virtual bool DeleteDirectory(const char *path) = 0;
 
-    bool InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const char *write_pwd);
+    bool InitDefault(Span<const uint8_t> mkey, const char *admin_pwd, const char *data_pwd, const char *write_pwd);
 
     bool PutCache(const char *key);
 

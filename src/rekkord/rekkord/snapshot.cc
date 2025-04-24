@@ -129,8 +129,8 @@ Options:
     ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::WriteOnly) {
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
+    if (disk->HasMode(rk_AccessMode::Read)) {
         LogWarning("You should prefer write-only users for this command");
     }
     LogInfo();
@@ -265,9 +265,9 @@ Snapshot names are not unique, if you use a snapshot name, rekkord will use the 
     ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::Full) {
-        LogError("Cannot decrypt with write-only access");
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
+    if (!disk->HasMode(rk_AccessMode::Read)) {
+        LogError("Cannot restore data with %1 role", disk->GetRole());
         return 1;
     }
     LogInfo();

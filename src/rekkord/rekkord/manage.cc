@@ -42,7 +42,8 @@ int RunInit(Span<const char *> arguments)
     // Options
     rk_Config config;
     bool create_users = true;
-    const char *full_pwd = nullptr;
+    const char *admin_pwd = nullptr;
+    const char *data_pwd = nullptr;
     const char *write_pwd = nullptr;
     const char *key_filename = nullptr;
 
@@ -56,8 +57,9 @@ Options:
 
     %!..+-R, --repository filename%!0      Set repository URL
 
-        %!..+--skip_users%!0               Omit default users (full and write)
-        %!..+--full_password password%!0   Set full user password manually
+        %!..+--skip_users%!0               Omit default users
+        %!..+--admin_password password%!0  Set admin user password manually
+        %!..+--data_password password%!0   Set data user password manually
         %!..+--write_password password%!0  Set write user password manually
 
     %!..+-K, --key_file filename%!0        Set explicit master key export file)", FelixTarget);
@@ -81,8 +83,10 @@ Options:
                     return 1;
             } else if (opt.Test("--skip_users")) {
                 create_users = false;
-            } else if (opt.Test("--full_password", OptionType::Value)) {
-                full_pwd = opt.current_value;
+            } else if (opt.Test("--admin_password", OptionType::Value)) {
+                admin_pwd = opt.current_value;
+            } else if (opt.Test("--data_password", OptionType::Value)) {
+                data_pwd = opt.current_value;
             } else if (opt.Test("--write_password", OptionType::Value)) {
                 write_pwd = opt.current_value;
             } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
@@ -102,7 +106,6 @@ Options:
     std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
     if (!disk)
         return 1;
-    RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
 
     LogInfo("Repository: %!..+%1%!0", disk->GetURL());
     LogInfo();
@@ -123,23 +126,38 @@ Options:
         return 1;
     }
 
-    bool random_full_pwd = false;
+    bool random_admin_pwd = false;
+    bool random_data_pwd = false;
     bool random_write_pwd = false;
 
     // Generate repository passwords
     if (create_users) {
-        if (!full_pwd) {
-            full_pwd = Prompt("Full password (leave empty to autogenerate): ", nullptr, "*", &temp_alloc);
-            if (!full_pwd)
+        if (!admin_pwd) {
+            admin_pwd = Prompt("Admin password (leave empty to autogenerate): ", nullptr, "*", &temp_alloc);
+            if (!admin_pwd)
                 return 1;
 
-            if (!full_pwd[0]) {
+            if (!admin_pwd[0]) {
                 Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
                 if (!GeneratePassword(buf))
                    return 1;
 
-                full_pwd = buf.ptr;
-                random_full_pwd = true;
+                admin_pwd = buf.ptr;
+                random_admin_pwd = true;
+            }
+        }
+        if (!data_pwd) {
+            data_pwd = Prompt("Read-write password (leave empty to autogenerate): ", nullptr, "*", &temp_alloc);
+            if (!data_pwd)
+                return 1;
+
+            if (!data_pwd[0]) {
+                Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
+                if (!GeneratePassword(buf))
+                   return 1;
+
+                data_pwd = buf.ptr;
+                random_data_pwd = true;
             }
         }
         if (!write_pwd) {
@@ -157,7 +175,8 @@ Options:
             }
         }
     } else {
-        full_pwd = nullptr;
+        admin_pwd = nullptr;
+        data_pwd = nullptr;
         write_pwd = nullptr;
     }
 
@@ -167,22 +186,29 @@ Options:
     randombytes_buf(mkey.ptr, mkey.len);
 
     LogInfo("Initializing...");
-    if (!disk->Init(mkey, full_pwd, write_pwd))
+    if (!disk->Init(mkey, admin_pwd, data_pwd, write_pwd))
         return 1;
     LogInfo();
 
-    if (full_pwd) {
-        if (random_full_pwd) {
-            LogInfo("Default full user password: %!..+%1%!0", full_pwd);
+    if (admin_pwd) {
+        if (random_admin_pwd) {
+            LogInfo("Default admin user password: %!..+%1%!0", admin_pwd);
         } else {
-            LogInfo("Default full user password: %!D..(hidden)%!0");
+            LogInfo("Default admin user password: %!D..(hidden)%!0");
+        }
+    }
+    if (data_pwd) {
+        if (random_data_pwd) {
+            LogInfo("         data user password: %!..+%1%!0", data_pwd);
+        } else {
+            LogInfo("         data user password: %!D..(hidden)%!0");
         }
     }
     if (write_pwd) {
         if (random_write_pwd) {
-            LogInfo("       write user password: %!..+%1%!0", write_pwd);
+            LogInfo("        write user password: %!..+%1%!0", write_pwd);
         } else {
-            LogInfo("       write user password: %!D..(hidden)%!0");
+            LogInfo("        write user password: %!D..(hidden)%!0");
         }
     }
     LogInfo();
@@ -286,8 +312,6 @@ Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], Fm
 
     // Use master key instead of username/password
     if (!authenticate) {
-        RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
-
         Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
         RG_DEFER_C(len = mkey.len) { ReleaseSafe(mkey.ptr, len); };
 
@@ -299,9 +323,9 @@ Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], Fm
             return 1;
     }
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::Full) {
-        LogError("Cannot create users with write-only access");
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
+    if (!disk->HasMode(rk_AccessMode::Config)) {
+        LogError("Cannot create user with %1 role", disk->GetRole());
         return 1;
     }
     LogInfo();
@@ -398,12 +422,12 @@ Options:
     if (!disk)
         return 1;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
     LogInfo();
 
     if (!force) {
-        if (disk->GetMode() != rk_DiskMode::Full) {
-            LogError("Refusing to delete without full authentification (unless --force is used)");
+        if (!disk->HasMode(rk_AccessMode::Config)) {
+            LogError("Refusing to delete without config access");
             return 1;
         }
         if (TestStr(username, config.username)) {
@@ -487,7 +511,6 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
     std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
     if (!disk)
         return 1;
-    RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
 
     if (verify) {
         Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
@@ -501,7 +524,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
             return 1;
     }
 
-    LogInfo("Repository: %!..+%1%!0", disk->GetURL());
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
     LogInfo();
 
     HeapArray<rk_UserInfo> users;

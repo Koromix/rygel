@@ -49,7 +49,6 @@ rk_Disk::~rk_Disk()
 bool rk_Disk::Authenticate(const char *username, const char *pwd)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::Secure);
     RG_ASSERT(!keyset);
 
     RG_DEFER_N(err_guard) { Lock(); };
@@ -81,8 +80,12 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
             return false;
 
         switch (role) {
-            case rk_UserRole::ReadWrite: {
-                mode = rk_DiskMode::Full;
+            case rk_UserRole::Admin: {
+                modes = (int)rk_AccessMode::Config |
+                        (int)rk_AccessMode::Read |
+                        (int)rk_AccessMode::Write |
+                        (int)rk_AccessMode::Log;
+                this->role = "Admin";
 
                 SeedSigningPair(keyset->ckey, keyset->akey);
                 crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
@@ -91,11 +94,25 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
             } break;
 
             case rk_UserRole::WriteOnly: {
-                mode = rk_DiskMode::WriteOnly;
+                modes = (int)rk_AccessMode::Write |
+                        (int)rk_AccessMode::Log;
+                this->role = "WriteOnly";
 
                 ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
                 ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
                 ZeroSafe(keyset->lkey, RG_SIZE(keyset->lkey));
+                ZeroSafe(keyset->ukey, RG_SIZE(keyset->ukey));
+            } break;
+
+            case rk_UserRole::ReadWrite: {
+                modes = (int)rk_AccessMode::Read |
+                        (int)rk_AccessMode::Write |
+                        (int)rk_AccessMode::Log;
+                this->role = "ReadWrite";
+
+                ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
+                crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
+                crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
                 ZeroSafe(keyset->ukey, RG_SIZE(keyset->ukey));
             } break;
         }
@@ -118,7 +135,6 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
 bool rk_Disk::Authenticate(Span<const uint8_t> mkey)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::Secure);
     RG_ASSERT(!keyset);
 
     RG_DEFER_N(err_guard) { Lock(); };
@@ -132,7 +148,8 @@ bool rk_Disk::Authenticate(Span<const uint8_t> mkey)
         return false;
 
     keyset = (KeySet *)AllocateSafe(RG_SIZE(KeySet));
-    mode = rk_DiskMode::Full;
+    modes = UINT_MAX;
+    role = "Master";
 
     // Derive encryption keys
     crypto_kdf_blake2b_derive_from_key(keyset->ckey, RG_SIZE(keyset->ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
@@ -160,8 +177,9 @@ bool rk_Disk::Authenticate(Span<const uint8_t> mkey)
 
 void rk_Disk::Lock()
 {
-    mode = rk_DiskMode::Secure;
+    modes = 0;
     user = nullptr;
+    role = "Secure";
 
     ZeroSafe(&ids, RG_SIZE(ids));
     ReleaseSafe(keyset, RG_SIZE(*keyset));
@@ -201,7 +219,7 @@ static bool IsUserName(Span<const char> username)
 
 void rk_Disk::MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const
 {
-    RG_ASSERT(mode != rk_DiskMode::Secure);
+    RG_ASSERT(HasMode(rk_AccessMode::Write));
     RG_ASSERT(out_buf.len >= 8);
     RG_ASSERT(out_buf.len <= 32);
 
@@ -214,7 +232,7 @@ void rk_Disk::MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const
 bool rk_Disk::ChangeCID()
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::Full);
+    RG_ASSERT(HasMode(rk_AccessMode::Config));
 
     IdSet new_ids = ids;
     randombytes_buf(new_ids.cid, RG_SIZE(new_ids.cid));
@@ -236,7 +254,7 @@ bool rk_Disk::ChangeCID()
 
 sq_Database *rk_Disk::OpenCache(bool build)
 {
-    RG_ASSERT(mode != rk_DiskMode::Secure);
+    RG_ASSERT(keyset);
 
     cache_db.Close();
 
@@ -425,7 +443,7 @@ bool rk_Disk::RebuildCache()
 bool rk_Disk::InitUser(const char *username, rk_UserRole role, const char *pwd, bool force)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::Full);
+    RG_ASSERT(HasMode(rk_AccessMode::Config));
     RG_ASSERT(pwd);
 
     BlockAllocator temp_alloc;
@@ -586,7 +604,7 @@ static int64_t PadMe(int64_t len)
 bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::Full);
+    RG_ASSERT(HasMode(rk_AccessMode::Read));
 
     Size prev_len = out_blob->len;
     RG_DEFER_N(err_guard) { out_blob->RemoveFrom(prev_len); };
@@ -690,7 +708,7 @@ bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uin
 Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_t> blob)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::Full);
+    RG_ASSERT(HasMode(rk_AccessMode::Write));
 
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs/%1/%2", GetBlobPrefix(hash), hash).len;
@@ -854,7 +872,7 @@ Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
 Size rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::Full);
+    RG_ASSERT(HasMode(rk_AccessMode::Write));
     RG_ASSERT(payload.len <= ComputeMaxTagPayload());
 
     TagIntro intro = {};
@@ -902,7 +920,7 @@ Size rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
 bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::Full);
+    RG_ASSERT(HasMode(rk_AccessMode::Log));
 
     Size start_len = out_tags->len;
     RG_DEFER_N(out_guard) { out_tags->RemoveFrom(start_len); };
@@ -993,10 +1011,9 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
     return true;
 }
 
-bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const char *write_pwd)
+bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *admin_pwd, const char *data_pwd, const char *write_pwd)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::Secure);
     RG_ASSERT(!keyset);
 
     if (mkey.len != rk_MasterKeySize) {
@@ -1025,7 +1042,8 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const 
     }
 
     keyset = (KeySet *)AllocateSafe(RG_SIZE(KeySet));
-    mode = rk_DiskMode::Full;
+    modes = UINT_MAX;
+    role = "Admin";
 
     // Derive encryption keys
     crypto_kdf_blake2b_derive_from_key(keyset->ckey, RG_SIZE(keyset->ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
@@ -1051,10 +1069,15 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const 
     }
 
     // Write key files
-    if (full_pwd) {
-        if (!WriteKeys("keys/full", full_pwd, rk_UserRole::ReadWrite, *keyset))
+    if (admin_pwd) {
+        if (!WriteKeys("keys/admin", admin_pwd, rk_UserRole::Admin, *keyset))
             return false;
-        names.Append("keys/full");
+        names.Append("keys/admin");
+    }
+    if (data_pwd) {
+        if (!WriteKeys("keys/data", data_pwd, rk_UserRole::ReadWrite, *keyset))
+            return false;
+        names.Append("keys/data");
     }
     if (write_pwd) {
         if (!WriteKeys("keys/write", write_pwd, rk_UserRole::WriteOnly, *keyset))
@@ -1139,6 +1162,8 @@ static bool DeriveFromPassword(const char *pwd, const uint8_t salt[16], uint8_t 
 
 bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, const KeySet &keys)
 {
+    RG_ASSERT(HasMode(rk_AccessMode::Config));
+
     const Size PayloadSize = RG_SIZE(KeyData::cypher) - 16;
     static_assert(RG_SIZE(keys) <= PayloadSize);
 
@@ -1155,7 +1180,7 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
 
     // Pick relevant subset of keys
     switch (role) {
-        case rk_UserRole::ReadWrite: {
+        case rk_UserRole::Admin: {
             MemCpy(payload + offsetof(KeySet, ckey), keys.ckey, RG_SIZE(keys.ckey));
             MemCpy(payload + offsetof(KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
             MemCpy(payload + offsetof(KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
@@ -1166,6 +1191,13 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
             MemCpy(payload + offsetof(KeySet, akey), keys.akey, RG_SIZE(keys.akey));
             MemCpy(payload + offsetof(KeySet, wkey), keys.wkey, RG_SIZE(keys.wkey));
             MemCpy(payload + offsetof(KeySet, tkey), keys.tkey, RG_SIZE(keys.tkey));
+            MemCpy(payload + offsetof(KeySet, vkey), keys.vkey, RG_SIZE(keys.vkey));
+        } break;
+
+        case rk_UserRole::ReadWrite: {
+            MemCpy(payload + offsetof(KeySet, akey), keys.akey, RG_SIZE(keys.akey));
+            MemCpy(payload + offsetof(KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
+            MemCpy(payload + offsetof(KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
             MemCpy(payload + offsetof(KeySet, vkey), keys.vkey, RG_SIZE(keys.vkey));
         } break;
     }
@@ -1240,6 +1272,7 @@ bool rk_Disk::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role,
 
 bool rk_Disk::WriteConfig(const char *path, Span<const uint8_t> data, bool overwrite)
 {
+    RG_ASSERT(HasMode(rk_AccessMode::Config));
     RG_ASSERT(data.len + crypto_sign_ed25519_BYTES <= RG_SIZE(ConfigData::cypher));
 
     ConfigData config = {};
