@@ -109,13 +109,13 @@ struct rk_OpenSettings {
 
 class rk_Disk {
     struct KeySet {
-        uint8_t cseed[32];
+        uint8_t ckey[32];
         uint8_t akey[32];
         uint8_t dkey[32];
         uint8_t wkey[32];
         uint8_t lkey[32];
         uint8_t tkey[32];
-        uint8_t useed[32];
+        uint8_t ukey[32];
         uint8_t vkey[32];
     };
 

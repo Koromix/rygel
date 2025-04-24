@@ -35,6 +35,12 @@ static_assert(crypto_sign_ed25519_SEEDBYTES == 32);
 static_assert(crypto_sign_ed25519_BYTES == 64);
 static_assert(crypto_kdf_blake2b_KEYBYTES == crypto_box_PUBLICKEYBYTES);
 
+static void SeedSigningPair(uint8_t sk[32], uint8_t pk[32])
+{
+    crypto_hash_sha512(pk, sk, 32);
+    crypto_scalarmult_ed25519_base(pk, pk);
+}
+
 rk_Disk::~rk_Disk()
 {
     Lock();
@@ -78,20 +84,19 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
             case rk_UserRole::ReadWrite: {
                 mode = rk_DiskMode::Full;
 
-                crypto_scalarmult_base(keyset->wkey, keyset->dkey);
-                crypto_scalarmult_base(keyset->tkey, keyset->lkey);
-
-                uint8_t dummy[256];
-                crypto_sign_ed25519_seed_keypair(keyset->vkey, dummy, keyset->useed);
-                crypto_sign_ed25519_seed_keypair(keyset->akey, dummy, keyset->cseed);
+                SeedSigningPair(keyset->ckey, keyset->akey);
+                crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
+                crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
+                SeedSigningPair(keyset->ukey, keyset->vkey);
             } break;
 
             case rk_UserRole::WriteOnly: {
                 mode = rk_DiskMode::WriteOnly;
 
+                ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
                 ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
                 ZeroSafe(keyset->lkey, RG_SIZE(keyset->lkey));
-                ZeroSafe(keyset->useed, RG_SIZE(keyset->useed));
+                ZeroSafe(keyset->ukey, RG_SIZE(keyset->ukey));
             } break;
         }
 
@@ -126,18 +131,14 @@ bool rk_Disk::Authenticate(Span<const uint8_t> mkey)
     mode = rk_DiskMode::Full;
 
     // Derive encryption keys
-    {
-        uint8_t dummy[256];
-
-        crypto_kdf_blake2b_derive_from_key(keyset->cseed, RG_SIZE(keyset->cseed), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
-        crypto_sign_ed25519_seed_keypair(keyset->akey, dummy, keyset->cseed);
-        crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
-        crypto_scalarmult_base(keyset->wkey, keyset->dkey);
-        crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
-        crypto_scalarmult_base(keyset->tkey, keyset->lkey);
-        crypto_kdf_blake2b_derive_from_key(keyset->useed, RG_SIZE(keyset->useed), (int)MasterDerivation::UserKey, DerivationContext, mkey.ptr);
-        crypto_sign_ed25519_seed_keypair(keyset->vkey, dummy, keyset->useed);
-    }
+    crypto_kdf_blake2b_derive_from_key(keyset->ckey, RG_SIZE(keyset->ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(keyset->ukey, RG_SIZE(keyset->ukey), (int)MasterDerivation::UserKey, DerivationContext, mkey.ptr);
+    SeedSigningPair(keyset->ckey, keyset->akey);
+    crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
+    crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
+    SeedSigningPair(keyset->ukey, keyset->vkey);
 
     user = nullptr;
 
@@ -977,18 +978,14 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const 
     mode = rk_DiskMode::Full;
 
     // Derive encryption keys
-    {
-        uint8_t dummy[256];
-
-        crypto_kdf_blake2b_derive_from_key(keyset->cseed, RG_SIZE(keyset->cseed), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
-        crypto_sign_ed25519_seed_keypair(keyset->akey, dummy, keyset->cseed);
-        crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
-        crypto_scalarmult_base(keyset->wkey, keyset->dkey);
-        crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
-        crypto_scalarmult_base(keyset->tkey, keyset->lkey);
-        crypto_kdf_blake2b_derive_from_key(keyset->useed, RG_SIZE(keyset->useed), (int)MasterDerivation::UserKey, DerivationContext, mkey.ptr);
-        crypto_sign_ed25519_seed_keypair(keyset->vkey, dummy, keyset->useed);
-    }
+    crypto_kdf_blake2b_derive_from_key(keyset->ckey, RG_SIZE(keyset->ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(keyset->ukey, RG_SIZE(keyset->ukey), (int)MasterDerivation::UserKey, DerivationContext, mkey.ptr);
+    SeedSigningPair(keyset->ckey, keyset->akey);
+    crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
+    crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
+    SeedSigningPair(keyset->ukey, keyset->vkey);
 
     // Generate random ID for local cache
     randombytes_buf(id, RG_SIZE(id));
@@ -1102,10 +1099,10 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
     // Pick relevant subset of keys
     switch (role) {
         case rk_UserRole::ReadWrite: {
-            MemCpy(payload + offsetof(KeySet, cseed), keys.cseed, RG_SIZE(keys.cseed));
+            MemCpy(payload + offsetof(KeySet, ckey), keys.ckey, RG_SIZE(keys.ckey));
             MemCpy(payload + offsetof(KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
             MemCpy(payload + offsetof(KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
-            MemCpy(payload + offsetof(KeySet, useed), keys.useed, RG_SIZE(keys.useed));
+            MemCpy(payload + offsetof(KeySet, ukey), keys.ukey, RG_SIZE(keys.ukey));
         } break;
 
         case rk_UserRole::WriteOnly: {
@@ -1125,13 +1122,7 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
     }
 
     // Sign serialized keyset to detect tampering
-    {
-        uint8_t pk[crypto_sign_ed25519_PUBLICKEYBYTES];
-        uint8_t sk[crypto_sign_ed25519_SECRETKEYBYTES];
-
-        crypto_sign_ed25519_seed_keypair(pk, sk, keyset->useed);
-        crypto_sign_ed25519_detached(data.sig, nullptr, (const uint8_t *)&data, offsetof(KeyData, sig), sk);
-    }
+    crypto_sign_ed25519_detached(data.sig, nullptr, (const uint8_t *)&data, offsetof(KeyData, sig), keyset->ukey);
 
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
     Size written = WriteDirect(path, buf, false);
@@ -1198,14 +1189,8 @@ bool rk_Disk::WriteConfig(const char *path, Span<const uint8_t> data, bool overw
 
     config.version = ConfigVersion;
 
-    // Encrypt and sign config to detect tampering
-    {
-        uint8_t pk[crypto_sign_ed25519_PUBLICKEYBYTES];
-        uint8_t sk[crypto_sign_ed25519_SECRETKEYBYTES];
-
-        crypto_sign_ed25519_seed_keypair(pk, sk, keyset->cseed);
-        crypto_sign_ed25519(config.cypher, nullptr, data.ptr, (size_t)data.len, sk);
-    }
+    // Sign config to detect tampering
+    crypto_sign_ed25519(config.cypher, nullptr, data.ptr, (size_t)data.len, keyset->ckey);
 
     Size len = offsetof(ConfigData, cypher) + crypto_sign_ed25519_BYTES + data.len;
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&config, len);
