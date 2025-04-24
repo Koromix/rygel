@@ -89,7 +89,7 @@ Rekkord uses **multiple encryption keys** which are derived from this master key
 Rekkord repositories support multiple user accounts. By default, two users accounts are created:
 
 - *full*: This user has the keys necessary for read-write access to stored data
-- *write*: This user can only write new data but cannot read historical data, or list existing snapshot
+- *write*: This user can only write new data but cannot read historical data, or list existing snapshots
 
 You will need one or the other to use other rekkord commands. Please store these passwords securely.
 
