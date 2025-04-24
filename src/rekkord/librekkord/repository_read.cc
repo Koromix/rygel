@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "disk.hh"
 #include "repository.hh"
-#include "priv_repository.hh"
+#include "repository_priv.hh"
 
 #if defined(_WIN32)
     #if !defined(NOMINMAX)

@@ -16,8 +16,8 @@
 #include "src/core/base/base.hh"
 #include "disk.hh"
 #include "repository.hh"
+#include "repository_priv.hh"
 #include "splitter.hh"
-#include "priv_repository.hh"
 #include "vendor/blake3/c/blake3.h"
 #if defined(__linux__)
     #include <fcntl.h>

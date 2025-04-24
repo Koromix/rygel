@@ -17,6 +17,4 @@
 
 #include "config.hh"
 #include "disk.hh"
-#include "lz4.hh"
 #include "repository.hh"
-#include "splitter.hh"

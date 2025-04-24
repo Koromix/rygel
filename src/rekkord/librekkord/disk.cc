@@ -16,8 +16,8 @@
 #include "src/core/base/base.hh"
 #include "config.hh"
 #include "disk.hh"
+#include "disk_priv.hh"
 #include "lz4.hh"
-#include "priv_disk.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
