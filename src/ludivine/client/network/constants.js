@@ -23,6 +23,7 @@ const PERSON_KINDS = {
     help: { text: 'Professionnel (santé, juridique, social, ...) ', icon: 'network/help' },
     online: { text: 'Membre d’une communauté (en ligne)', icon: 'network/online' },
     community: { text: 'Membre d’une communauté (hors ligne)', icon: 'network/community' },
+    org: { text: 'Association d’aide aux victimes', icon: 'network/org' },
     animal: { text: 'Animal', icon: 'network/animal' },
     other: { text: 'Autre', icon: 'network/other' }
 };
