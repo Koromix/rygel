@@ -19,14 +19,14 @@
 
 namespace RG {
 
-int RunChangeID(Span<const char *> arguments)
+int RunChangeCID(Span<const char *> arguments)
 {
     // Options
     rk_Config config;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 change_id [-C filename] [option...]%!0
+R"(Usage: %!..+%1 change_cid [-C filename] [option...]%!0
 
 Options:
 
@@ -77,7 +77,7 @@ Options:
     }
     LogInfo();
 
-    if (!disk->ChangeID())
+    if (!disk->ChangeCID())
         return 1;
 
     LogInfo("Changed cache ID");

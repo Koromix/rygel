@@ -103,9 +103,13 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
         user = DuplicateString(username, &str_alloc).ptr;
     }
 
-    // Get cache ID
-    if (!ReadConfig("rekkord", id))
-        return false;
+    // Read unique identifiers
+    {
+        uint8_t buf[RG_SIZE(ids)];
+        if (!ReadConfig("rekkord", buf))
+            return false;
+        MemCpy(&ids, buf, RG_SIZE(ids));
+    }
 
     err_guard.Disable();
     return true;
@@ -142,9 +146,13 @@ bool rk_Disk::Authenticate(Span<const uint8_t> mkey)
 
     user = nullptr;
 
-    // Get cache ID
-    if (!ReadConfig("rekkord", id))
-        return false;
+    // Read unique identifiers
+    {
+        uint8_t buf[RG_SIZE(ids)];
+        if (!ReadConfig("rekkord", buf))
+            return false;
+        MemCpy(&ids, buf, RG_SIZE(ids));
+    }
 
     err_guard.Disable();
     return true;
@@ -155,7 +163,7 @@ void rk_Disk::Lock()
     mode = rk_DiskMode::Secure;
     user = nullptr;
 
-    ZeroSafe(id, RG_SIZE(id));
+    ZeroSafe(&ids, RG_SIZE(ids));
     ReleaseSafe(keyset, RG_SIZE(*keyset));
     keyset = nullptr;
     str_alloc.ReleaseAll();
@@ -203,18 +211,24 @@ void rk_Disk::MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const
     crypto_kdf_blake2b_derive_from_key(out_buf.ptr, out_buf.len, subkey, DerivationContext, keyset->wkey);
 }
 
-bool rk_Disk::ChangeID()
+bool rk_Disk::ChangeCID()
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Full);
 
-    uint8_t new_id[32];
-    randombytes_buf(new_id, RG_SIZE(new_id));
+    IdSet new_ids = ids;
+    randombytes_buf(new_ids.cid, RG_SIZE(new_ids.cid));
 
-    if (!WriteConfig("rekkord", new_id, true))
-        return false;
+    // Write new IDs
+    {
+        uint8_t buf[RG_SIZE(new_ids)];
+        MemCpy(buf, &new_ids, RG_SIZE(new_ids));
 
-    MemCpy(id, new_id, RG_SIZE(id));
+        if (!WriteConfig("rekkord", buf, true))
+            return false;
+    }
+
+    MemCpy(ids.cid, new_ids.cid, RG_SIZE(new_ids.cid));
     cache_db.Close();
 
     return true;
@@ -228,14 +242,14 @@ sq_Database *rk_Disk::OpenCache(bool build)
 
     uint8_t cache_id[32] = {};
     {
-        // Combine repository URL and ID to create a secure ID
+        // Combine repository URL and RID to create a secure ID
 
         static_assert(RG_SIZE(cache_id) == crypto_hash_sha256_BYTES);
 
         crypto_hash_sha256_state state;
         crypto_hash_sha256_init(&state);
 
-        crypto_hash_sha256_update(&state, id, RG_SIZE(id));
+        crypto_hash_sha256_update(&state, ids.rid, RG_SIZE(ids.rid));
         crypto_hash_sha256_update(&state, (const uint8_t *)url, strlen(url));
 
         crypto_hash_sha256_final(&state, cache_id);
@@ -317,13 +331,21 @@ sq_Database *rk_Disk::OpenCache(bool build)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 4: {
+                    bool success = cache_db.RunMany(R"(
+                        CREATE TABLE meta (
+                            cid BLOB
+                        );
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 4);
+                static_assert(CacheVersion == 5);
             }
 
-            if (build && !version && !RebuildCache())
-                return false;
             if (!cache_db.SetUserVersion(CacheVersion))
                 return false;
 
@@ -335,6 +357,28 @@ sq_Database *rk_Disk::OpenCache(bool build)
             return nullptr;
         }
     }
+
+    // Check known CID against repository CID
+    {
+        sq_Statement stmt;
+        if (!cache_db.Prepare("SELECT cid FROM meta", &stmt))
+            return nullptr;
+
+        if (stmt.Step()) {
+            Span<const uint8_t> cid = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 0),
+                                               sqlite3_column_bytes(stmt, 0));
+
+            build &= (cid.len != RG_SIZE(ids.cid)) || memcmp(cid.ptr, ids.cid, RG_SIZE(ids.cid));
+        } else if (stmt.IsValid()) {
+            if (!cache_db.Run("INSERT INTO meta (cid) VALUES (NULL)"))
+                return nullptr;
+        } else {
+            return nullptr;
+        }
+    }
+
+    if (build && !RebuildCache())
+        return nullptr;
 
     RG_ASSERT(cache_db.IsValid());
     return &cache_db;
@@ -349,8 +393,6 @@ bool rk_Disk::RebuildCache()
 
     LogInfo("Rebuilding local cache...");
 
-    BlockAllocator temp_alloc;
-
     bool success = cache_db.Transaction([&]() {
         if (!cache_db.Run("DELETE FROM objects"))
             return false;
@@ -364,7 +406,15 @@ bool rk_Disk::RebuildCache()
 
             return true;
         });
-        return success;
+        if (!success)
+            return false;
+
+        Span<const uint8_t> cid = ids.cid;
+
+        if (!cache_db.Run("UPDATE meta SET cid = ?1", cid))
+            return false;
+
+        return true;
     });
     if (!success)
         return false;
@@ -987,11 +1037,18 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *full_pwd, const 
     crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
     SeedSigningPair(keyset->ukey, keyset->vkey);
 
-    // Generate random ID for local cache
-    randombytes_buf(id, RG_SIZE(id));
-    if (!WriteConfig("rekkord", id, false))
-        return false;
-    names.Append("rekkord");
+    // Generate unique repository IDs
+    {
+        randombytes_buf(ids.rid, RG_SIZE(ids.rid));
+        randombytes_buf(ids.cid, RG_SIZE(ids.cid));
+
+        uint8_t buf[RG_SIZE(ids)];
+        MemCpy(buf, &ids, RG_SIZE(ids));
+
+        if (!WriteConfig("rekkord", buf, true))
+            return false;
+        names.Append("rekkord");
+    }
 
     // Write key files
     if (full_pwd) {
@@ -1274,6 +1331,9 @@ void rk_Disk::ClearCache()
         if (!cache_db.Run("DELETE FROM objects"))
             return false;
         if (!cache_db.Run("DELETE FROM stats"))
+            return false;
+
+        if (!cache_db.Run("UPDATE meta SET cid = NULL"))
             return false;
 
         return true;

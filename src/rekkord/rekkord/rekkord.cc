@@ -35,7 +35,7 @@ int RunSnapshots(Span<const char *> arguments);
 int RunList(Span<const char *> arguments);
 int RunMount(Span<const char *> arguments);
 
-int RunChangeID(Span<const char *> arguments);
+int RunChangeCID(Span<const char *> arguments);
 int RunRebuildCache(Span<const char *> arguments);
 
 bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config)
@@ -87,7 +87,7 @@ Exploration commands:
             PrintLn(st, R"(
 Advanced commands:
 
-    %!..+change_id%!0                      Change repository cache ID
+    %!..+change_cid%!0                     Change repository cache ID (CID)
     %!..+rebuild_cache%!0                  Rebuild local repository cache)");
         } else {
             PrintLn(st, R"(
@@ -164,8 +164,8 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         return RunList(arguments);
     } else if (TestStr(cmd, "mount")) {
         return RunMount(arguments);
-    } else if (TestStr(cmd, "change_id")) {
-        return RunChangeID(arguments);
+    } else if (TestStr(cmd, "change_cid")) {
+        return RunChangeCID(arguments);
     } else if (TestStr(cmd, "rebuild_cache")) {
         return RunRebuildCache(arguments);
     } else {

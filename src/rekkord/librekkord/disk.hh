@@ -108,6 +108,11 @@ struct rk_OpenSettings {
 };
 
 class rk_Disk {
+    struct IdSet {
+        uint8_t rid[16];
+        uint8_t cid[16];
+    };
+
     struct KeySet {
         uint8_t ckey[32];
         uint8_t akey[32];
@@ -121,8 +126,7 @@ class rk_Disk {
 
 protected:
     const char *url = nullptr;
-
-    uint8_t id[32];
+    IdSet ids;
 
     rk_DiskMode mode = rk_DiskMode::Secure;
     const char *user = nullptr;
@@ -157,7 +161,7 @@ public:
 
     void MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const;
 
-    bool ChangeID();
+    bool ChangeCID();
 
     sq_Database *OpenCache(bool build);
     bool RebuildCache();
