@@ -18,7 +18,15 @@
 #include "config.hh"
 #include "database.hh"
 #include "ludivine.hh"
+#include "src/core/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
+#if !defined(_WIN32)
+    #include <signal.h>
+    #include <sys/time.h>
+    #include <sys/types.h>
+    #include <sys/socket.h>
+    #include <netdb.h>
+#endif
 
 namespace RG {
 
@@ -29,6 +37,180 @@ static HashMap<const char *, const AssetInfo *> assets_map;
 static AssetInfo assets_index;
 static BlockAllocator assets_alloc;
 static char shared_etag[17];
+
+static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *const> mask_files)
+{
+    if (!sb_IsSandboxSupported()) {
+        LogError("Sandbox mode is not supported on this platform");
+        return false;
+    }
+
+    sb_SandboxBuilder sb;
+
+    sb.RevealPaths(reveal_paths, false);
+    sb.MaskFiles(mask_files);
+
+#if defined(__linux__)
+    // Force glibc to load all the NSS crap beforehand, so we don't need to
+    // expose it in the sandbox...
+    // What a bunch of crap. Why does all this need to use shared libraries??
+    {
+        struct addrinfo *result = nullptr;
+        int err = getaddrinfo("www.example.com", nullptr, nullptr, &result);
+
+        if (err != 0) {
+            LogError("Failed to init DNS resolver: '%1'", gai_strerror(err));
+            return false;
+        }
+
+        freeaddrinfo(result);
+    }
+
+    // More DNS resolving crap, the list was determined through an elaborate
+    // process of trial and error.
+    sb.RevealPaths({
+        "/etc/resolv.conf",
+        "/etc/hosts",
+        "/etc/ld.so.cache"
+    }, true);
+
+    sb.FilterSyscalls({
+        { "exit", sb_FilterAction::Allow },
+        { "exit_group", sb_FilterAction::Allow },
+        { "brk", sb_FilterAction::Allow },
+        { "mmap/anon", sb_FilterAction::Allow },
+        { "mmap/shared", sb_FilterAction::Allow },
+        { "munmap", sb_FilterAction::Allow },
+        { "mremap", sb_FilterAction::Allow },
+        { "mprotect/noexec", sb_FilterAction::Allow },
+        { "mlock", sb_FilterAction::Allow },
+        { "mlock2", sb_FilterAction::Allow },
+        { "mlockall", sb_FilterAction::Allow },
+        { "madvise", sb_FilterAction::Allow },
+        { "pipe", sb_FilterAction::Allow },
+        { "pipe2", sb_FilterAction::Allow },
+        { "open", sb_FilterAction::Allow },
+        { "openat", sb_FilterAction::Allow },
+        { "openat2", sb_FilterAction::Allow },
+        { "close", sb_FilterAction::Allow },
+        { "fcntl", sb_FilterAction::Allow },
+        { "read", sb_FilterAction::Allow },
+        { "readv", sb_FilterAction::Allow },
+        { "write", sb_FilterAction::Allow },
+        { "writev", sb_FilterAction::Allow },
+        { "pread64", sb_FilterAction::Allow },
+        { "pwrite64", sb_FilterAction::Allow },
+        { "lseek", sb_FilterAction::Allow },
+        { "ftruncate", sb_FilterAction::Allow },
+        { "fsync", sb_FilterAction::Allow },
+        { "fdatasync", sb_FilterAction::Allow },
+        { "fstat", sb_FilterAction::Allow },
+        { "stat", sb_FilterAction::Allow },
+        { "lstat", sb_FilterAction::Allow },
+        { "lstat64", sb_FilterAction::Allow },
+        { "fstatat64", sb_FilterAction::Allow },
+        { "newfstatat", sb_FilterAction::Allow },
+        { "statx", sb_FilterAction::Allow },
+        { "access", sb_FilterAction::Allow },
+        { "faccessat", sb_FilterAction::Allow },
+        { "faccessat2", sb_FilterAction::Allow },
+        { "ioctl/tty", sb_FilterAction::Allow },
+        { "getrandom", sb_FilterAction::Allow },
+        { "getpid", sb_FilterAction::Allow },
+        { "gettid", sb_FilterAction::Allow },
+        { "getuid", sb_FilterAction::Allow },
+        { "getgid", sb_FilterAction::Allow },
+        { "geteuid", sb_FilterAction::Allow },
+        { "getegid", sb_FilterAction::Allow },
+        { "getcwd", sb_FilterAction::Allow },
+        { "rt_sigaction", sb_FilterAction::Allow },
+        { "rt_sigpending", sb_FilterAction::Allow },
+        { "rt_sigprocmask", sb_FilterAction::Allow },
+        { "rt_sigqueueinfo", sb_FilterAction::Allow },
+        { "rt_sigreturn", sb_FilterAction::Allow },
+        { "rt_sigsuspend", sb_FilterAction::Allow },
+        { "rt_sigtimedwait", sb_FilterAction::Allow },
+        { "rt_sigtimedwait_time64", sb_FilterAction::Allow },
+        { "waitpid", sb_FilterAction::Allow },
+        { "waitid", sb_FilterAction::Allow },
+        { "wait3", sb_FilterAction::Allow },
+        { "wait4", sb_FilterAction::Allow },
+        { "kill", sb_FilterAction::Allow },
+        { "tgkill", sb_FilterAction::Allow },
+        { "mkdir", sb_FilterAction::Allow },
+        { "mkdirat", sb_FilterAction::Allow },
+        { "unlink", sb_FilterAction::Allow },
+        { "unlinkat", sb_FilterAction::Allow },
+        { "rename", sb_FilterAction::Allow },
+        { "renameat", sb_FilterAction::Allow },
+        { "renameat2", sb_FilterAction::Allow },
+        { "rmdir", sb_FilterAction::Allow },
+        { "chown", sb_FilterAction::Allow },
+        { "fchown", sb_FilterAction::Allow },
+        { "fchownat", sb_FilterAction::Allow },
+        { "chmod", sb_FilterAction::Allow },
+        { "fchmod", sb_FilterAction::Allow },
+        { "fchmodat", sb_FilterAction::Allow },
+        { "fchmodat2", sb_FilterAction::Allow },
+        { "clone", sb_FilterAction::Allow },
+        { "clone3", sb_FilterAction::Allow },
+        { "futex", sb_FilterAction::Allow },
+        { "futex_time64", sb_FilterAction::Allow },
+        { "rseq", sb_FilterAction::Allow },
+        { "set_robust_list", sb_FilterAction::Allow },
+        { "socket", sb_FilterAction::Allow },
+        { "socketpair", sb_FilterAction::Allow },
+        { "getsockopt", sb_FilterAction::Allow },
+        { "setsockopt", sb_FilterAction::Allow },
+        { "getsockname", sb_FilterAction::Allow },
+        { "getpeername", sb_FilterAction::Allow },
+        { "connect", sb_FilterAction::Allow },
+        { "bind", sb_FilterAction::Allow },
+        { "listen", sb_FilterAction::Allow },
+        { "accept", sb_FilterAction::Allow },
+        { "accept4", sb_FilterAction::Allow },
+        { "eventfd", sb_FilterAction::Allow },
+        { "eventfd2", sb_FilterAction::Allow },
+        { "getdents", sb_FilterAction::Allow },
+        { "getdents64", sb_FilterAction::Allow },
+        { "prctl", sb_FilterAction::Allow },
+        { "epoll_create", sb_FilterAction::Allow },
+        { "epoll_create1", sb_FilterAction::Allow },
+        { "epoll_ctl", sb_FilterAction::Allow },
+        { "epoll_pwait", sb_FilterAction::Allow },
+        { "epoll_wait", sb_FilterAction::Allow },
+        { "poll", sb_FilterAction::Allow },
+        { "ppoll", sb_FilterAction::Allow },
+        { "select", sb_FilterAction::Allow },
+        { "pselect6", sb_FilterAction::Allow },
+        { "clock_nanosleep", sb_FilterAction::Allow },
+        { "clock_gettime", sb_FilterAction::Allow },
+        { "clock_gettime64", sb_FilterAction::Allow },
+        { "clock_nanosleep", sb_FilterAction::Allow },
+        { "clock_nanosleep_time64", sb_FilterAction::Allow },
+        { "nanosleep", sb_FilterAction::Allow },
+        { "sched_yield", sb_FilterAction::Allow },
+        { "sched_getaffinity", sb_FilterAction::Allow },
+        { "recv", sb_FilterAction::Allow },
+        { "recvfrom", sb_FilterAction::Allow },
+        { "recvmmsg", sb_FilterAction::Allow },
+        { "recvmmsg_time64", sb_FilterAction::Allow },
+        { "recvmsg", sb_FilterAction::Allow },
+        { "sendmsg", sb_FilterAction::Allow },
+        { "sendmmsg", sb_FilterAction::Allow },
+        { "sendfile", sb_FilterAction::Allow },
+        { "sendfile64", sb_FilterAction::Allow },
+        { "sendto", sb_FilterAction::Allow },
+        { "shutdown", sb_FilterAction::Allow },
+        { "uname", sb_FilterAction::Allow },
+        { "utime", sb_FilterAction::Allow },
+        { "utimensat", sb_FilterAction::Allow },
+        { "getrusage", sb_FilterAction::Allow }
+    });
+#endif
+
+    return sb.Apply();
+}
 
 static bool NameContainsHash(Span<const char> name)
 {
@@ -274,6 +456,7 @@ int Main(int argc, char **argv)
 
     // Options
     const char *config_filename = "ludivine.ini";
+    bool sandbox = false;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -285,7 +468,8 @@ Options:
                                    %!D..(default: %2)%!0
 
     %!..+-p, --port port%!0                Change web server port
-                                   %!D..(default: %3)%!0)",
+                                   %!D..(default: %3)%!0
+        %!..+--sandbox%!0                  Run sandboxed (on supported platforms))",
                 FelixTarget, config_filename, config.http.port);
     };
 
@@ -335,6 +519,8 @@ Options:
             } else if (opt.Test("-p", "--port", OptionType::Value)) {
                 if (!config.http.SetPortOrPath(opt.current_value))
                     return 1;
+            } else if (opt.Test("--sandbox")) {
+                sandbox = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -356,6 +542,8 @@ Options:
         return 1;
     if (!MakeDirectory(config.vault_directory, false))
         return 1;
+    if (!MakeDirectory(config.tmp_directory, false))
+        return 1;
 
     LogInfo("Init messaging");
     if (!InitSMTP(config.smtp))
@@ -369,13 +557,45 @@ Options:
     http_Daemon daemon;
     if (!daemon.Bind(config.http))
         return 1;
-    if (!daemon.Start(HandleRequest))
-        return 1;
+
+    // Apply sandbox
+    if (sandbox) {
+        LogInfo("Init sandbox");
+
+        // We use temp_store = MEMORY but, just in case...
+        sqlite3_temp_directory = sqlite3_mprintf("%s", config.tmp_directory);
+
+        HeapArray<const char *> reveal_paths;
+        HeapArray<const char *> mask_files;
+
+#if defined(FELIX_HOT_ASSETS)
+        // Needed for asset module
+        reveal_paths.Append(GetApplicationDirectory());
+#endif
+
+        const char *database_directory = DuplicateString(GetPathDirectory(config.database_filename), &temp_alloc).ptr;
+
+        reveal_paths.Append(database_directory);
+        reveal_paths.Append(config.vault_directory);
+        reveal_paths.Append(config.tmp_directory);
+        if (config.static_directory) {
+            reveal_paths.Append(config.static_directory);
+        }
+
+        mask_files.Append(config_filename);
+
+        if (!ApplySandbox(reveal_paths, mask_files))
+            return 1;
+    }
 
 #if defined(__linux__)
     if (!NotifySystemd())
         return 1;
 #endif
+
+    // Run!
+    if (!daemon.Start(HandleRequest))
+        return 1;
 
     // Run periodic tasks until exit
     int status = 0;
