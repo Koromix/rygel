@@ -466,7 +466,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
 
     // Split the file
     {
-        rk_Splitter splitter(ChunkAverage, ChunkMin, ChunkMax, salt8);
+        FastSplitter splitter(ChunkAverage, ChunkMin, ChunkMax, salt8);
 
         bool use_big_buffer = (--big_semaphore >= 0);
         RG_DEFER { big_semaphore++; };

@@ -90,7 +90,7 @@ static Size CenterSize(Size avg, Size min, Size max)
     return size;
 }
 
-rk_Splitter::rk_Splitter(Size avg, Size min, Size max, uint64_t salt8)
+FastSplitter::FastSplitter(Size avg, Size min, Size max, uint64_t salt8)
     : avg(avg), min(min), max(max)
 {
     RG_ASSERT(AverageMin <= avg && avg <= AverageMax);
@@ -120,8 +120,8 @@ rk_Splitter::rk_Splitter(Size avg, Size min, Size max, uint64_t salt8)
     }
 }
 
-Size rk_Splitter::Process(Span<const uint8_t> buf, bool last,
-                          FunctionRef<bool(Size idx, int64_t total, Span<const uint8_t> chunk)> func)
+Size FastSplitter::Process(Span<const uint8_t> buf, bool last,
+                           FunctionRef<bool(Size idx, int64_t total, Span<const uint8_t> chunk)> func)
 {
     Size processed = 0;
 
@@ -144,7 +144,7 @@ Size rk_Splitter::Process(Span<const uint8_t> buf, bool last,
     return processed;
 }
 
-Size rk_Splitter::Cut(Span<const uint8_t> buf, bool last)
+Size FastSplitter::Cut(Span<const uint8_t> buf, bool last)
 {
     if (buf.len <= min)
         return last ? buf.len : 0;

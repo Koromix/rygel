@@ -19,7 +19,7 @@
 
 namespace RG {
 
-class rk_Splitter {
+class FastSplitter {
     Size avg;
     Size min;
     Size max;
@@ -32,7 +32,7 @@ class rk_Splitter {
     int64_t total = 0;
 
 public:
-    rk_Splitter(Size avg, Size min, Size max, uint64_t salt8 = 0);
+    FastSplitter(Size avg, Size min, Size max, uint64_t salt8 = 0);
 
     Size Process(Span<const uint8_t> buf, bool last,
                  FunctionRef<bool(Size idx, int64_t total, Span<const uint8_t> chunk)> func);
