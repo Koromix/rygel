@@ -196,7 +196,8 @@ void SessionInfo::InvalidateStamps()
     // be in use so they will waste memory until the session ends.
 }
 
-void SessionInfo::AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions, const char *lock)
+void SessionInfo::AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions,
+                                    bool single, const char *lock)
 {
     std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
@@ -205,6 +206,7 @@ void SessionInfo::AuthorizeInstance(const InstanceHolder *instance, uint32_t per
     stamp->unique = instance->unique;
     stamp->authorized = true;
     stamp->permissions = permissions;
+    stamp->single = single;
     stamp->lock = lock ? DuplicateString(lock, &stamps_alloc).ptr : nullptr;
 
     stamps_map.Set(stamp);
@@ -307,6 +309,7 @@ void ExportProfile(const SessionInfo *session, const InstanceHolder *instance, j
                 }
                 json->EndObject();
 
+                json->Key("single"); json->Bool(stamp->single);
                 if (stamp->lock) {
                     json->Key("lock"); json->Raw(stamp->lock);
                 }
@@ -716,7 +719,8 @@ void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
 }
 
 static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, SessionType type, const char *key,
-                                                const char *username, const char *email, const char *sms, const char *lock)
+                                                const char *username, const char *email, const char *sms,
+                                                bool single, const char *lock)
 {
     RG_ASSERT(!email || !sms);
 
@@ -822,7 +826,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
     }
 
     uint32_t permissions = (int)UserPermission::DataSave;
-    session->AuthorizeInstance(instance, permissions, lock);
+    session->AuthorizeInstance(instance, permissions, single, lock);
 
     return session;
 }
@@ -910,6 +914,7 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
     const char *id = nullptr;
     const char *username = nullptr;
     HeapArray<const char *> claims;
+    bool many = instance->legacy;
     const char *lock = nullptr;
     {
         StreamReader st(json);
@@ -935,7 +940,9 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
                     parser.ParseString(&claim);
                     claims.Append(claim);
                 }
-            } else if (TestStr(key, "lock")) {
+            } else if (!instance->legacy && TestStr(key, "many")) {
+                parser.ParseBool(&many);
+            } else if (instance->legacy && TestStr(key, "lock")) {
                 if (instance->legacy) {
                     parser.ParseString(&lock);
                 } else {
@@ -991,7 +998,8 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Token, id, username, email, sms, lock);
+    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Token, id, username,
+                                                       email, sms, !many, lock);
     if (!session)
         return;
 
@@ -1061,7 +1069,8 @@ void HandleSessionKey(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, session_key, session_key, nullptr, nullptr, nullptr);
+    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, session_key, session_key,
+                                                       nullptr, nullptr, false, nullptr);
     if (!session)
         return;
     sessions.Open(io, session);

@@ -1315,6 +1315,22 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
             }
         }
 
+        // Check for single TID mode
+        if (stamp->single && !claimed) {
+            sq_Statement stmt;
+            if (!instance->db->Prepare("SELECT rowid FROM ins_claims WHERE userid = ?1",
+                                       &stmt, -session->userid))
+                return false;
+
+            if (stmt.Step()) {
+                LogError("Cannot create new thread");
+                io->SendError(403);
+                return false;
+            } else if (!stmt.IsValid()) {
+                return false;
+            }
+        }
+
         // Check for existing entry and check for lock or mismatch
         int64_t prev_anchor;
         {

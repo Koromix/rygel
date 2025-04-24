@@ -1703,6 +1703,14 @@ async function go(e, url = null, options = {}) {
                 }
             }
 
+            // Handle single-thread mode
+            if (profile.single && new_route.tid == null) {
+                let threads = await Net.get(`${ENV.urls.instance}api/records/list`);
+
+                if (threads.length)
+                    new_route.tid = threads[0].tid;
+            }
+
             // Restore explicit panels (if any)
             let panels = url.searchParams.get('p');
 

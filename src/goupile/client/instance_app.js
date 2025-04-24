@@ -25,7 +25,7 @@ function ApplicationInfo(profile) {
 
     this.panels = {
         editor: profile.develop,
-        data: profile.userid > 0 && profile.lock == null
+        data: !profile.single
     };
 
     this.tags = [

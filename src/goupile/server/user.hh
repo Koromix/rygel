@@ -71,6 +71,7 @@ struct SessionStamp {
     bool authorized;
     std::atomic_bool develop;
     uint32_t permissions;
+    bool single;
     const char *lock;
 
     bool HasPermission(UserPermission perm) const { return permissions & (int)perm; };
@@ -112,7 +113,8 @@ public:
     SessionStamp *GetStamp(const InstanceHolder *instance) const;
     void InvalidateStamps();
 
-    void AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions, const char *lock = nullptr);
+    void AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions,
+                           bool single = false, const char *lock = nullptr);
 };
 
 void ExportProfile(const SessionInfo *session, const InstanceHolder *instance, json_Writer *json);
