@@ -1293,7 +1293,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                                           FROM rec_threads t
                                           LEFT JOIN ins_claims c ON (c.tid = t.tid AND c.userid = ?2)
                                           WHERE t.tid = ?1)",
-                                       &stmt, tid, session->userid))
+                                       &stmt, tid, -session->userid))
                 return false;
 
             if (stmt.Step()) {
@@ -1380,8 +1380,8 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 if (!claimed) {
                     LogError("You are not allowed to alter this record");
                     io->SendError(403);
+                    return false;
                 }
-                return false;
             }
         }
 
