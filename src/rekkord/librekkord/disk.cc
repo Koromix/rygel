@@ -112,6 +112,16 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
                 crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
                 ZeroSafe(keyset->ukey, RG_SIZE(keyset->ukey));
             } break;
+
+            case rk_UserRole::LogOnly: {
+                modes = (int)rk_AccessMode::Log;
+
+                ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
+                ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
+                ZeroSafe(keyset->wkey, RG_SIZE(keyset->wkey));
+                crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
+                ZeroSafe(keyset->ukey, RG_SIZE(keyset->ukey));
+            } break;
         }
 
         this->role = rk_UserRoleNames[(int)role];
@@ -505,15 +515,9 @@ bool rk_Disk::DeleteUser(const char *username)
 
 static bool DecodeRole(int value, rk_UserRole *out_role)
 {
-    switch (value) {
-        case (int)rk_UserRole::Admin:
-        case (int)rk_UserRole::ReadWrite:
-        case (int)rk_UserRole::WriteOnly: break;
-
-        default: {
-            LogError("Invalid user role %1", value);
-            return false;
-        } break;
+    if (value < 0 || value >= RG_LEN(rk_UserRoleNames)) {
+        LogError("Invalid user role %1", value);
+        return false;
     }
 
     *out_role = (rk_UserRole)value;
@@ -1191,6 +1195,12 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
         case rk_UserRole::ReadWrite: {
             MemCpy(payload + offsetof(KeySet, akey), keys.akey, RG_SIZE(keys.akey));
             MemCpy(payload + offsetof(KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
+            MemCpy(payload + offsetof(KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
+            MemCpy(payload + offsetof(KeySet, vkey), keys.vkey, RG_SIZE(keys.vkey));
+        } break;
+
+        case rk_UserRole::LogOnly: {
+            MemCpy(payload + offsetof(KeySet, akey), keys.akey, RG_SIZE(keys.akey));
             MemCpy(payload + offsetof(KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
             MemCpy(payload + offsetof(KeySet, vkey), keys.vkey, RG_SIZE(keys.vkey));
         } break;

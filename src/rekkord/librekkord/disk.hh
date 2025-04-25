@@ -87,12 +87,14 @@ enum class rk_SaltKind {
 enum class rk_UserRole {
     Admin = 0,
     WriteOnly = 1,
-    ReadWrite = 2
+    ReadWrite = 2,
+    LogOnly = 3
 };
 static const char *const rk_UserRoleNames[] = {
     "Admin",
     "WriteOnly",
-    "ReadWrite"
+    "ReadWrite",
+    "LogOnly"
 };
 
 struct rk_UserInfo {
