@@ -85,7 +85,6 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
                         (int)rk_AccessMode::Read |
                         (int)rk_AccessMode::Write |
                         (int)rk_AccessMode::Log;
-                this->role = "Admin";
 
                 SeedSigningPair(keyset->ckey, keyset->akey);
                 crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
@@ -96,7 +95,6 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
             case rk_UserRole::WriteOnly: {
                 modes = (int)rk_AccessMode::Write |
                         (int)rk_AccessMode::Log;
-                this->role = "WriteOnly";
 
                 ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
                 ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
@@ -108,7 +106,6 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
                 modes = (int)rk_AccessMode::Read |
                         (int)rk_AccessMode::Write |
                         (int)rk_AccessMode::Log;
-                this->role = "ReadWrite";
 
                 ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
                 crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
@@ -117,7 +114,8 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
             } break;
         }
 
-        user = DuplicateString(username, &str_alloc).ptr;
+        this->role = rk_UserRoleNames[(int)role];
+        this->user = DuplicateString(username, &str_alloc).ptr;
     }
 
     // Read unique identifiers
@@ -508,6 +506,7 @@ bool rk_Disk::DeleteUser(const char *username)
 static bool DecodeRole(int value, rk_UserRole *out_role)
 {
     switch (value) {
+        case (int)rk_UserRole::Admin:
         case (int)rk_UserRole::ReadWrite:
         case (int)rk_UserRole::WriteOnly: break;
 

@@ -90,8 +90,9 @@ enum class rk_UserRole {
     ReadWrite = 2
 };
 static const char *const rk_UserRoleNames[] = {
-    "ReadWrite",
-    "WriteOnly"
+    "Admin",
+    "WriteOnly",
+    "ReadWrite"
 };
 
 struct rk_UserInfo {
