@@ -186,8 +186,22 @@ Options:
     randombytes_buf(mkey.ptr, mkey.len);
 
     LogInfo("Initializing...");
-    if (!disk->Init(mkey, admin_pwd, data_pwd, write_pwd))
-        return 1;
+    {
+        LocalArray<rk_UserInfo, 8> users;
+
+        if (admin_pwd) {
+            users.Append({ "admin", rk_UserRole::Admin, admin_pwd });
+        }
+        if (data_pwd) {
+            users.Append({ "data", rk_UserRole::ReadWrite, data_pwd });
+        }
+        if (write_pwd) {
+            users.Append({ "write", rk_UserRole::WriteOnly, write_pwd });
+        }
+
+        if (!disk->Init(mkey, users))
+            return 1;
+    }
     LogInfo();
 
     if (admin_pwd) {

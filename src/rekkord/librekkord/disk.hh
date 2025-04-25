@@ -97,6 +97,7 @@ static const char *const rk_UserRoleNames[] = {
 struct rk_UserInfo {
     const char *username;
     rk_UserRole role;
+    const char *pwd; // NULL unless used to create users
 };
 
 struct rk_TagInfo {
@@ -152,7 +153,7 @@ public:
 
     virtual ~rk_Disk();
 
-    virtual bool Init(Span<const uint8_t> mkey, const char *admin_pwd, const char *data_pwd, const char *write_pwd) = 0;
+    virtual bool Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users) = 0;
 
     bool Authenticate(const char *username, const char *pwd);
     bool Authenticate(Span<const uint8_t> mkey);
@@ -195,7 +196,7 @@ protected:
     virtual bool CreateDirectory(const char *path) = 0;
     virtual bool DeleteDirectory(const char *path) = 0;
 
-    bool InitDefault(Span<const uint8_t> mkey, const char *admin_pwd, const char *data_pwd, const char *write_pwd);
+    bool InitDefault(Span<const uint8_t> mkey, Span<const rk_UserInfo> users);
 
     bool PutCache(const char *key);
 

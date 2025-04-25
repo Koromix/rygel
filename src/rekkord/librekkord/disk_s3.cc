@@ -27,7 +27,7 @@ public:
     S3Disk(const s3_Config &config, const rk_OpenSettings &settings);
     ~S3Disk() override;
 
-    bool Init(Span<const uint8_t> mkey, const char *admin_pwd, const char *data_pwd, const char *write_pwd) override;
+    bool Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users) override;
 
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
@@ -56,12 +56,12 @@ S3Disk::~S3Disk()
 {
 }
 
-bool S3Disk::Init(Span<const uint8_t> mkey, const char *admin_pwd, const char *data_pwd, const char *write_pwd)
+bool S3Disk::Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users)
 {
     RG_ASSERT(url);
     RG_ASSERT(!keyset);
 
-    return InitDefault(mkey, admin_pwd, data_pwd, write_pwd);
+    return InitDefault(mkey, users);
 }
 
 Size S3Disk::ReadRaw(const char *path, Span<uint8_t> out_buf)

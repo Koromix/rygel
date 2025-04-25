@@ -26,7 +26,7 @@ public:
     LocalDisk(const char *path, const rk_OpenSettings &settings);
     ~LocalDisk() override;
 
-    bool Init(Span<const uint8_t> mkey, const char *admin_pwd, const char *data_pwd, const char *write_pwd) override;
+    bool Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users) override;
 
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
@@ -60,7 +60,7 @@ LocalDisk::~LocalDisk()
 {
 }
 
-bool LocalDisk::Init(Span<const uint8_t> mkey, const char *admin_pwd, const char *data_pwd, const char *write_pwd)
+bool LocalDisk::Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users)
 {
     RG_ASSERT(url);
     RG_ASSERT(!keyset);
@@ -119,7 +119,7 @@ bool LocalDisk::Init(Span<const uint8_t> mkey, const char *admin_pwd, const char
         }
     }
 
-    if (!InitDefault(mkey, admin_pwd, data_pwd, write_pwd))
+    if (!InitDefault(mkey, users))
         return false;
 
     err_guard.Disable();

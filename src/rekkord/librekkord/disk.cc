@@ -1011,10 +1011,12 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
     return true;
 }
 
-bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *admin_pwd, const char *data_pwd, const char *write_pwd)
+bool rk_Disk::InitDefault(Span<const uint8_t> mkey, Span<const rk_UserInfo> users)
 {
     RG_ASSERT(url);
     RG_ASSERT(!keyset);
+
+    BlockAllocator temp_alloc;
 
     if (mkey.len != rk_MasterKeySize) {
         LogError("Malformed master key");
@@ -1069,20 +1071,13 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, const char *admin_pwd, const
     }
 
     // Write key files
-    if (admin_pwd) {
-        if (!WriteKeys("keys/admin", admin_pwd, rk_UserRole::Admin, *keyset))
+    for (const rk_UserInfo &user: users) {
+        RG_ASSERT(user.pwd);
+
+        const char *filename = Fmt(&temp_alloc, "keys/%1", user.username).ptr;
+        if (!WriteKeys(filename, user.pwd, user.role, *keyset))
             return false;
-        names.Append("keys/admin");
-    }
-    if (data_pwd) {
-        if (!WriteKeys("keys/data", data_pwd, rk_UserRole::ReadWrite, *keyset))
-            return false;
-        names.Append("keys/data");
-    }
-    if (write_pwd) {
-        if (!WriteKeys("keys/write", write_pwd, rk_UserRole::WriteOnly, *keyset))
-            return false;
-        names.Append("keys/write");
+        names.Append(filename);
     }
 
     err_guard.Disable();
