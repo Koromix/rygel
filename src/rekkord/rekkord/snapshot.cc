@@ -130,6 +130,10 @@ Options:
     config.password = nullptr;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
+    if (!disk->HasMode(rk_AccessMode::Write)) {
+        LogError("Cannot save data with %1 role", disk->GetRole());
+        return 1;
+    }
     if (disk->HasMode(rk_AccessMode::Read)) {
         LogWarning("You should prefer write-only users for this command");
     }
