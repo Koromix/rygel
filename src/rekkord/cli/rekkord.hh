@@ -16,7 +16,7 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "src/rekkord/librekkord/librekkord.hh"
+#include "src/rekkord/lib/librekkord.hh"
 
 namespace RG {
 

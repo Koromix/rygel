@@ -15,7 +15,7 @@
 
 #include "src/core/base/base.hh"
 #include "rekkord.hh"
-#include "../librekkord/disk_priv.hh"
+#include "../lib/disk_priv.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
