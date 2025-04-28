@@ -268,7 +268,6 @@ void HandleRegister(http_IO *io)
         FillRandomSafe(uid);
         FillRandomSafe(tkey);
 
-        sq_Statement stmt;
         if (!db.Run(R"(INSERT INTO users (uid, mail, registration)
                        VALUES (?1, ?2, 1)
                        ON CONFLICT (mail) DO UPDATE SET registration = registration + IIF(token IS NULL, 1, 0))",
