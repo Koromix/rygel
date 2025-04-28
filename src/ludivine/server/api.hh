@@ -21,7 +21,6 @@
 namespace RG {
 
 struct smtp_Config;
-struct smtp_MailContent;
 
 bool InitSMTP(const smtp_Config &config);
 
