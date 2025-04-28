@@ -816,7 +816,7 @@ bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *o
 
         if (tag.payload.len < (Size)offsetof(SnapshotHeader2, name) + 1 ||
                 tag.payload.len > RG_SIZE(SnapshotHeader2)) {
-            LogError("Malformed snapshot tag for '%1' (ignoring)", tag.hash);
+            LogError("Malformed snapshot tag (ignoring)");
             continue;
         }
 
@@ -824,7 +824,7 @@ bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *o
         MemCpy(&header, tag.payload.ptr, tag.payload.len);
         header.name[RG_SIZE(header.name) - 1] = 0;
 
-        snapshot.tag = DuplicateString(tag.path, alloc).ptr;
+        snapshot.tag = DuplicateString(tag.id, alloc).ptr;
         snapshot.hash = tag.hash;
         snapshot.name = DuplicateString(header.name, alloc).ptr;
         snapshot.time = LittleEndian(header.time);

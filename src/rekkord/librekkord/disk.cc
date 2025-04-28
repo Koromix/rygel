@@ -89,7 +89,7 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
                 SeedSigningPair(keyset->ckey, keyset->akey);
                 crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
                 crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-                SeedSigningPair(keyset->ukey, keyset->vkey);
+                SeedSigningPair(keyset->skey, keyset->vkey);
             } break;
 
             case rk_UserRole::WriteOnly: {
@@ -99,7 +99,7 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
                 ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
                 ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
                 ZeroSafe(keyset->lkey, RG_SIZE(keyset->lkey));
-                ZeroSafe(keyset->ukey, RG_SIZE(keyset->ukey));
+                SeedSigningPair(keyset->skey, keyset->vkey);
             } break;
 
             case rk_UserRole::ReadWrite: {
@@ -110,7 +110,7 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
                 ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
                 crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
                 crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-                ZeroSafe(keyset->ukey, RG_SIZE(keyset->ukey));
+                SeedSigningPair(keyset->skey, keyset->vkey);
             } break;
 
             case rk_UserRole::LogOnly: {
@@ -120,7 +120,7 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
                 ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
                 ZeroSafe(keyset->wkey, RG_SIZE(keyset->wkey));
                 crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-                ZeroSafe(keyset->ukey, RG_SIZE(keyset->ukey));
+                ZeroSafe(keyset->skey, RG_SIZE(keyset->skey));
             } break;
         }
 
@@ -163,11 +163,11 @@ bool rk_Disk::Authenticate(Span<const uint8_t> mkey)
     crypto_kdf_blake2b_derive_from_key(keyset->ckey, RG_SIZE(keyset->ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
     crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
     crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(keyset->ukey, RG_SIZE(keyset->ukey), (int)MasterDerivation::UserKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(keyset->skey, RG_SIZE(keyset->skey), (int)MasterDerivation::SignKey, DerivationContext, mkey.ptr);
     SeedSigningPair(keyset->ckey, keyset->akey);
     crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
     crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-    SeedSigningPair(keyset->ukey, keyset->vkey);
+    SeedSigningPair(keyset->skey, keyset->vkey);
 
     user = nullptr;
 
@@ -862,62 +862,78 @@ Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
     return written;
 }
 
-[[maybe_unused]] static Size ComputeMaxTagPayload()
-{
-    const Size MaxNameLen = 255;
-
-    Size extra = RG_SIZE(TagIntro) + crypto_box_SEALBYTES;
-    Size available = MaxNameLen / 4 * 3 - extra;
-
-    return available;
-}
-
 Size rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
 {
+    // Accounting for the ID and order value, and base64 encoding, each filename must fit into 255 characters
+    const Size MaxFragmentSize = 160;
+
     RG_ASSERT(url);
     RG_ASSERT(HasMode(rk_AccessMode::Write));
-    RG_ASSERT(payload.len <= ComputeMaxTagPayload());
 
+    BlockAllocator temp_alloc;
+
+    uint8_t id[16] = {};
     TagIntro intro = {};
 
+    // Prepare tag data
+    randombytes_buf(id, RG_SIZE(id));
     intro.version = TagVersion;
     intro.hash = hash;
 
-    HeapArray<uint8_t> src;
-    src.Append(MakeSpan((const uint8_t *)&intro, RG_SIZE(intro)));
-    src.Append(payload);
+    // Encrypt tag
+    HeapArray<uint8_t> cypher(&temp_alloc);
+    {
+        HeapArray<uint8_t> src(&temp_alloc);
 
-    // Reuse for performance
-    HeapArray<uint8_t> cypher;
+        src.Append(MakeSpan((const uint8_t *)&intro, RG_SIZE(intro)));
+        src.Append(payload);
 
-    for (int i = 0; i < 100; i++) {
-        Size cypher_len = crypto_box_SEALBYTES + src.len;
-
-        cypher.RemoveFrom(0);
+        Size cypher_len = src.len + crypto_box_SEALBYTES;
         cypher.Reserve(cypher_len);
-        if (crypto_box_seal(cypher.end(), src.ptr, src.len, keyset->tkey) != 0) {
+
+        if (crypto_box_seal(cypher.ptr, src.ptr, (size_t)src.len, keyset->tkey) != 0) {
             LogError("Failed to seal tag payload");
             return -1;
         }
-        cypher.len = cypher_len;
 
-        LocalArray<char, 2048> path;
-        path.len = Fmt(path.data, "tags/").len;
-
-        RG_ASSERT(sodium_base64_ENCODED_LEN(cypher.len, sodium_base64_VARIANT_URLSAFE_NO_PADDING) < path.Available());
-        sodium_bin2base64(path.end(), path.Available(), cypher.ptr, cypher.len, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
-
-        Size written = WriteDirect(path.data, cypher, false);
-
-        if (written > 0)
-            return written;
-        if (written < 0)
-            return -1;
+        cypher.len = src.len + crypto_box_SEALBYTES;
     }
 
-    // We really really should never reach this...
-    LogError("Failed to create tag for '%1'", hash);
-    return -1;
+    // Sign it to avoid tampering
+    {
+        cypher.Reserve(crypto_sign_BYTES);
+        crypto_sign_ed25519_detached(cypher.end(), nullptr, cypher.ptr, cypher.len, keyset->skey);
+        cypher.len += crypto_sign_BYTES;
+    }
+
+    // How many files do we need to generate?
+    int fragments = (cypher.len + MaxFragmentSize - 1) / MaxFragmentSize;
+
+    if (fragments > INT8_MAX) {
+        LogError("Excessive tag payload size");
+        return -1;
+    }
+
+    Size total_size = 0;
+
+    for (int i = 0; i < fragments; i++) {
+        Size offset = i * MaxFragmentSize;
+        Size len = std::min(offset + MaxFragmentSize, cypher.len) - offset;
+
+        LocalArray<char, 512> path;
+        path.len = Fmt(path.data, "tags/%1_%2_", FmtSpan(id, FmtType::BigHex, "").Pad0(-2), FmtHex(i).Pad0(-2)).len;
+
+        sodium_bin2base64(path.end(), path.Available(), cypher.ptr + offset, len, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
+
+        Size written = WriteDirect(path.data, cypher, true);
+        if (written < 0)
+            return -1;
+        RG_ASSERT(written);
+
+        total_size += written;
+    }
+
+    return total_size;
 }
 
 bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
@@ -928,10 +944,10 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
     Size start_len = out_tags->len;
     RG_DEFER_N(out_guard) { out_tags->RemoveFrom(start_len); };
 
-    HeapArray<const char *> filenames;
+    HeapArray<Span<const char>> filenames;
     {
         bool success = ListRaw("tags", [&](const char *path) {
-            const char *filename = DuplicateString(path, alloc).ptr;
+            Span<const char> filename = DuplicateString(path, alloc);
             filenames.Append(filename);
 
             return true;
@@ -940,75 +956,99 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
             return false;
     }
 
-    HeapArray<bool> ready;
-    out_tags->AppendDefault(filenames.len);
-    ready.AppendDefault(filenames.len);
+    std::sort(filenames.begin(), filenames.end(),
+              [](Span<const char> filename1, Span<const char> filename2) {
+        return CmpStr(filename1, filename2) < 0;
+    });
 
-    Async async(GetAsync());
+    Size offset = 0;
 
-    // List snapshots
-    for (Size i = 0; i < filenames.len; i++) {
-        const char *filename = filenames[i];
+    while (offset < filenames.len) {
+        rk_TagInfo tag = {};
 
-        async.Run([=, &ready, this]() {
-            rk_TagInfo tag = {};
+        Size end = offset + 1;
+        RG_DEFER { offset = end; };
 
-            Span<const char> basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
+        // Extract common ID
+        Span<const char> id = {};
+        {
+            Span<const char> filename = filenames[offset];
+            Span<const char> basename = SplitStrReverse(filenames[offset], '/');
 
-            HeapArray<uint8_t> cypher;
-            {
-                cypher.Reserve(basename.len);
-
-                size_t len = 0;
-                if (sodium_base642bin(cypher.ptr, cypher.capacity, basename.ptr, basename.len, nullptr,
-                                      &len, nullptr, sodium_base64_VARIANT_URLSAFE_NO_PADDING) < 0) {
-                    LogError("Invalid base64 string in tag");
-                    return true;
-                }
-                cypher.len = (Size)len;
-
-                if (cypher.len < (Size)crypto_box_SEALBYTES + RG_SIZE(TagIntro)) {
-                    LogError("Truncated cypher in tag");
-                    return true;
-                }
+            if (basename.len <= 36 || basename[32] != '_' || basename[35] != '_') {
+                LogError("Malformed tag file '%1'", filename);
+                continue;
             }
 
-            Size data_len = cypher.len - crypto_box_SEALBYTES;
-            Span<uint8_t> data = AllocateSpan<uint8_t>(alloc, data_len);
+            id = basename.Take(0, 32);
+        }
 
-            if (crypto_box_seal_open(data.ptr, cypher.ptr, cypher.len, keyset->tkey, keyset->lkey) != 0) {
-                LogError("Failed to unseal tag data from '%1'", basename);
-                return true;
+        // How many fragments?
+        while (end < filenames.len) {
+            Span<const char> basename = SplitStrReverse(filenames[end], '/');
+
+            // Error will be issued in next loop iteration
+            if (basename.len <= 36 || basename[32] != '_' || basename[35] != '_')
+                break;
+            if (!StartsWith(basename, id))
+                break;
+
+            end++;
+        }
+
+        // Reassemble fragments
+        HeapArray<uint8_t> cypher;
+        for (Size i = offset; i < end; i++) {
+            Span<const char> basename = SplitStrReverse(filenames[i], '/');
+            Span<const char> base64 = basename.Take(36, basename.len - 36);
+
+            cypher.Grow(base64.len);
+
+            size_t len = 0;
+            sodium_base642bin(cypher.end(), base64.len, base64.ptr, base64.len, nullptr,
+                              &len, nullptr, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
+            cypher.len += (Size)len;
+        }
+
+        if (cypher.len < (Size)crypto_box_SEALBYTES + RG_SIZE(TagIntro) + (Size)crypto_sign_BYTES) {
+            LogError("Truncated cypher in tag");
+            continue;
+        }
+
+        // Check signature first to detect tampering
+        {
+            Span<const uint8_t> msg = MakeSpan(cypher.ptr, cypher.len - crypto_sign_BYTES);
+            const uint8_t *sig = msg.end();
+
+            if (crypto_sign_verify_detached(sig, msg.ptr, msg.len, keyset->vkey)) {
+                LogError("Invalid signature for tag '%1'", id);
+                continue;
             }
+        }
 
-            TagIntro intro = {};
-            MemCpy(&intro, data.ptr, RG_SIZE(intro));
+        Size src_len = cypher.len - crypto_box_SEALBYTES - crypto_sign_BYTES;
+        Span<uint8_t> src = AllocateSpan<uint8_t>(alloc, src_len);
 
-            if (intro.version != TagVersion) {
-                LogError("Unexpected tag version %1 (expected %2) in '%3'", intro.version, TagVersion, basename);
-                return true;
-            }
+        // Get payload back at least
+        if (crypto_box_seal_open(src.ptr, cypher.ptr, cypher.len - crypto_sign_BYTES, keyset->tkey, keyset->lkey) != 0) {
+            LogError("Failed to unseal tag data from '%1'", id);
+            continue;
+        }
 
-            tag.path = basename.ptr;
-            tag.hash = intro.hash;
-            tag.payload = data.Take(RG_SIZE(intro), data.len - RG_SIZE(intro));
+        TagIntro intro = {};
+        MemCpy(&intro, src.ptr, RG_SIZE(intro));
 
-            out_tags->ptr[start_len + i] = tag;
-            ready[i] = true;
+        if (intro.version != TagVersion) {
+            LogError("Unexpected tag version %1 (expected %2) in '%3'", intro.version, TagVersion, id);
+            continue;
+        }
 
-            return true;
-        });
+        tag.id = DuplicateString(id, alloc).ptr;
+        tag.hash = intro.hash;
+        tag.payload = src.Take(RG_SIZE(intro), src.len - RG_SIZE(intro));
+
+        out_tags->Append(tag);
     }
-
-    if (!async.Sync())
-        return false;
-
-    Size j = 0;
-    for (Size i = 0; i < filenames.len; i++) {
-        out_tags->ptr[start_len + j] = out_tags->ptr[start_len + i];
-        j += ready[i];
-    }
-    out_tags->len = start_len + j;
 
     out_guard.Disable();
     return true;
@@ -1054,11 +1094,11 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, Span<const rk_UserInfo> user
     crypto_kdf_blake2b_derive_from_key(keyset->ckey, RG_SIZE(keyset->ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
     crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
     crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(keyset->ukey, RG_SIZE(keyset->ukey), (int)MasterDerivation::UserKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(keyset->skey, RG_SIZE(keyset->skey), (int)MasterDerivation::SignKey, DerivationContext, mkey.ptr);
     SeedSigningPair(keyset->ckey, keyset->akey);
     crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
     crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-    SeedSigningPair(keyset->ukey, keyset->vkey);
+    SeedSigningPair(keyset->skey, keyset->vkey);
 
     // Generate unique repository IDs
     {
@@ -1182,21 +1222,21 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
             MemCpy(payload + offsetof(KeySet, ckey), keys.ckey, RG_SIZE(keys.ckey));
             MemCpy(payload + offsetof(KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
             MemCpy(payload + offsetof(KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
-            MemCpy(payload + offsetof(KeySet, ukey), keys.ukey, RG_SIZE(keys.ukey));
+            MemCpy(payload + offsetof(KeySet, skey), keys.skey, RG_SIZE(keys.skey));
         } break;
 
         case rk_UserRole::WriteOnly: {
             MemCpy(payload + offsetof(KeySet, akey), keys.akey, RG_SIZE(keys.akey));
             MemCpy(payload + offsetof(KeySet, wkey), keys.wkey, RG_SIZE(keys.wkey));
             MemCpy(payload + offsetof(KeySet, tkey), keys.tkey, RG_SIZE(keys.tkey));
-            MemCpy(payload + offsetof(KeySet, vkey), keys.vkey, RG_SIZE(keys.vkey));
+            MemCpy(payload + offsetof(KeySet, skey), keys.skey, RG_SIZE(keys.skey));
         } break;
 
         case rk_UserRole::ReadWrite: {
             MemCpy(payload + offsetof(KeySet, akey), keys.akey, RG_SIZE(keys.akey));
             MemCpy(payload + offsetof(KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
             MemCpy(payload + offsetof(KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
-            MemCpy(payload + offsetof(KeySet, vkey), keys.vkey, RG_SIZE(keys.vkey));
+            MemCpy(payload + offsetof(KeySet, skey), keys.skey, RG_SIZE(keys.skey));
         } break;
 
         case rk_UserRole::LogOnly: {
@@ -1215,7 +1255,7 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
     }
 
     // Sign serialized keyset to detect tampering
-    crypto_sign_ed25519_detached(data.sig, nullptr, (const uint8_t *)&data, offsetof(KeyData, sig), keyset->ukey);
+    crypto_sign_ed25519_detached(data.sig, nullptr, (const uint8_t *)&data, offsetof(KeyData, sig), keyset->ckey);
 
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
     Size written = WriteDirect(path, buf, false);

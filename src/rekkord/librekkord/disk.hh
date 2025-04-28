@@ -104,7 +104,7 @@ struct rk_UserInfo {
 };
 
 struct rk_TagInfo {
-    const char *path;
+    const char *id;
     rk_Hash hash;
     Span<const uint8_t> payload;
 };
@@ -127,7 +127,7 @@ class rk_Disk {
         uint8_t wkey[32];
         uint8_t lkey[32];
         uint8_t tkey[32];
-        uint8_t ukey[32];
+        uint8_t skey[32];
         uint8_t vkey[32];
     };
 

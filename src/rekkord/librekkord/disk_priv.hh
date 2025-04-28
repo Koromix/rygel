@@ -23,7 +23,7 @@ namespace RG {
 static const char *const DerivationContext = "REKKORD0";
 static const int MaxKeys = 24;
 static const int ConfigVersion = 2;
-static const int TagVersion = 1;
+static const int TagVersion = 2;
 static const int BlobVersion = 7;
 static const Size BlobSplit = Kibibytes(32);
 
@@ -31,7 +31,7 @@ enum class MasterDerivation {
     ConfigKey = 0,
     DataKey = 1,
     LogKey = 2,
-    UserKey = 3
+    SignKey = 3
 };
 
 #pragma pack(push, 1)
