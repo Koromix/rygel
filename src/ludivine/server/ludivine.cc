@@ -438,7 +438,7 @@ static void HandleRequest(http_IO *io)
         const AssetInfo *asset = assets_map.FindValue(path, nullptr);
 
         if (asset) {
-            int64_t max_age = StartsWith(request.path, "/static/") ? (365ll * 86400000) : 0;
+            int64_t max_age = StartsWith(request.path, "/static/") ? (28ll * 86400000) : 0;
             AttachStatic(io, *asset, max_age, shared_etag);
 
             return;
