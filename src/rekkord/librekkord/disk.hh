@@ -114,21 +114,21 @@ struct rk_OpenSettings {
     int compression_level = 4;
 };
 
+struct rk_KeySet {
+    uint8_t ckey[32];
+    uint8_t akey[32];
+    uint8_t dkey[32];
+    uint8_t wkey[32];
+    uint8_t lkey[32];
+    uint8_t tkey[32];
+    uint8_t skey[32];
+    uint8_t vkey[32];
+};
+
 class rk_Disk {
     struct IdSet {
         uint8_t rid[16];
         uint8_t cid[16];
-    };
-
-    struct KeySet {
-        uint8_t ckey[32];
-        uint8_t akey[32];
-        uint8_t dkey[32];
-        uint8_t wkey[32];
-        uint8_t lkey[32];
-        uint8_t tkey[32];
-        uint8_t skey[32];
-        uint8_t vkey[32];
     };
 
 protected:
@@ -138,7 +138,7 @@ protected:
     unsigned int modes = 0;
     const char *user = nullptr;
     const char *role = "Secure";
-    KeySet *keyset = nullptr;
+    rk_KeySet *keyset = nullptr;
 
     sq_Database cache_db;
     std::mutex cache_mutex;
@@ -166,6 +166,9 @@ public:
     const char *GetUser() const { return user; } // Can be NULL
     const char *GetRole() const { return role; }
     Async *GetAsync() { return &tasks; }
+
+    // You should not need this, but if you do, be careful!
+    rk_KeySet *GetKeySet() const { return keyset; }
 
     bool HasMode(rk_AccessMode mode) const { return modes & (int)mode; }
 
@@ -206,8 +209,8 @@ protected:
 private:
     StatResult TestFast(const char *path);
 
-    bool WriteKeys(const char *path, const char *pwd, rk_UserRole role, const KeySet &keys);
-    bool ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, KeySet *out_keys);
+    bool WriteKeys(const char *path, const char *pwd, rk_UserRole role, const rk_KeySet &keys);
+    bool ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, rk_KeySet *out_keys);
 
     bool WriteConfig(const char *path, Span<const uint8_t> buf, bool overwrite);
     bool ReadConfig(const char *path, Span<uint8_t> out_buf);

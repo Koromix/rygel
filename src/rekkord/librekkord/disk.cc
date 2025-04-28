@@ -69,7 +69,7 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
         case StatResult::OtherError: return false;
     }
 
-    keyset = (KeySet *)AllocateSafe(RG_SIZE(KeySet));
+    keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
 
     // Open disk and determine mode
     {
@@ -155,7 +155,7 @@ bool rk_Disk::Authenticate(Span<const uint8_t> mkey)
     if (!CheckRepository())
         return false;
 
-    keyset = (KeySet *)AllocateSafe(RG_SIZE(KeySet));
+    keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
     modes = UINT_MAX;
     role = "Master";
 
@@ -1080,7 +1080,7 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, Span<const rk_UserInfo> user
         case StatResult::OtherError: return false;
     }
 
-    keyset = (KeySet *)AllocateSafe(RG_SIZE(KeySet));
+    keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
     modes = UINT_MAX;
     role = "Admin";
 
@@ -1192,7 +1192,7 @@ static bool DeriveFromPassword(const char *pwd, const uint8_t salt[16], uint8_t 
     return true;
 }
 
-bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, const KeySet &keys)
+bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, const rk_KeySet &keys)
 {
     RG_ASSERT(HasMode(rk_AccessMode::Config));
 
@@ -1213,30 +1213,30 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
     // Pick relevant subset of keys
     switch (role) {
         case rk_UserRole::Admin: {
-            MemCpy(payload + offsetof(KeySet, ckey), keys.ckey, RG_SIZE(keys.ckey));
-            MemCpy(payload + offsetof(KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
-            MemCpy(payload + offsetof(KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
-            MemCpy(payload + offsetof(KeySet, skey), keys.skey, RG_SIZE(keys.skey));
+            MemCpy(payload + offsetof(rk_KeySet, ckey), keys.ckey, RG_SIZE(keys.ckey));
+            MemCpy(payload + offsetof(rk_KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
+            MemCpy(payload + offsetof(rk_KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
+            MemCpy(payload + offsetof(rk_KeySet, skey), keys.skey, RG_SIZE(keys.skey));
         } break;
 
         case rk_UserRole::WriteOnly: {
-            MemCpy(payload + offsetof(KeySet, akey), keys.akey, RG_SIZE(keys.akey));
-            MemCpy(payload + offsetof(KeySet, wkey), keys.wkey, RG_SIZE(keys.wkey));
-            MemCpy(payload + offsetof(KeySet, tkey), keys.tkey, RG_SIZE(keys.tkey));
-            MemCpy(payload + offsetof(KeySet, skey), keys.skey, RG_SIZE(keys.skey));
+            MemCpy(payload + offsetof(rk_KeySet, akey), keys.akey, RG_SIZE(keys.akey));
+            MemCpy(payload + offsetof(rk_KeySet, wkey), keys.wkey, RG_SIZE(keys.wkey));
+            MemCpy(payload + offsetof(rk_KeySet, tkey), keys.tkey, RG_SIZE(keys.tkey));
+            MemCpy(payload + offsetof(rk_KeySet, skey), keys.skey, RG_SIZE(keys.skey));
         } break;
 
         case rk_UserRole::ReadWrite: {
-            MemCpy(payload + offsetof(KeySet, akey), keys.akey, RG_SIZE(keys.akey));
-            MemCpy(payload + offsetof(KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
-            MemCpy(payload + offsetof(KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
-            MemCpy(payload + offsetof(KeySet, skey), keys.skey, RG_SIZE(keys.skey));
+            MemCpy(payload + offsetof(rk_KeySet, akey), keys.akey, RG_SIZE(keys.akey));
+            MemCpy(payload + offsetof(rk_KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
+            MemCpy(payload + offsetof(rk_KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
+            MemCpy(payload + offsetof(rk_KeySet, skey), keys.skey, RG_SIZE(keys.skey));
         } break;
 
         case rk_UserRole::LogOnly: {
-            MemCpy(payload + offsetof(KeySet, akey), keys.akey, RG_SIZE(keys.akey));
-            MemCpy(payload + offsetof(KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
-            MemCpy(payload + offsetof(KeySet, vkey), keys.vkey, RG_SIZE(keys.vkey));
+            MemCpy(payload + offsetof(rk_KeySet, akey), keys.akey, RG_SIZE(keys.akey));
+            MemCpy(payload + offsetof(rk_KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
+            MemCpy(payload + offsetof(rk_KeySet, vkey), keys.vkey, RG_SIZE(keys.vkey));
         } break;
     }
 
@@ -1264,7 +1264,7 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
     return true;
 }
 
-bool rk_Disk::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, KeySet *out_keys)
+bool rk_Disk::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, rk_KeySet *out_keys)
 {
     const Size PayloadSize = RG_SIZE(KeyData::cypher) - 16;
     static_assert(RG_SIZE(*out_keys) <= PayloadSize);
