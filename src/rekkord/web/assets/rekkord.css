@@ -1,0 +1,179 @@
+/* Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+
+@import url('../../../web/flat/flat.css');
+
+html {
+    --top_color: #6aa051;
+    --button_color: #6aa051;
+    --anchor_color: #6aa051;
+
+    --bar_color: #76b35a;
+    --tab_color: #f4f4f4;
+    --box_color: #efefef;
+
+    --top_height: 80px;
+    --small_height: 70px;
+}
+
+body { font-size: 15px; }
+
+:is(main, dialog) a { text-decoration: underline; }
+:is(main, dialog) a:hover { color: #26346c; }
+:is(main, dialog) a:has(> img) { text-decoration: none !important; }
+
+h1 {
+    color: var(--top_color);
+    border-bottom: 1px solid color-mix(in srgb, var(--top_color), transparent 60%);
+}
+
+span[title] { border-bottom: 1px dotted #383838; }
+
+button {
+    border-radius: 20px;
+    font-weight: bold;
+}
+
+.reference {
+    font-weight: bold;
+    color: var(--top_color);
+}
+
+p + .actions { margin-top: 2em; }
+.actions { gap: 20px; }
+.actions > :is(a, button) {
+    width: auto;
+    border-radius: 30px;
+    font-weight: bold;
+}
+
+.avatar {
+    box-sizing: border-box;
+    background: white;
+    border-radius: 50%;
+    border: 3px solid var(--bar_color);
+}
+.avatar.anonymous { border: none; }
+
+#top { font-size: 1.1em; }
+#top menu {
+    gap: 2em;
+    text-transform: none;
+}
+#top li > a {
+    border-bottom: none;
+    text-transform: none;
+}
+#top.border { border-bottom-color: var(--top_background); }
+#top .avatar {
+    width: 51px;
+    height: 51px;
+}
+
+footer {
+    font-size: 1.1em;
+
+    & .legal {
+        display: block;
+        font-size: 0.8em;
+    }
+}
+
+@media screen and (max-width: 960px) {
+    #logo { display: none; }
+
+    #top menu { gap: 0; }
+    #top li > a.active { display: block !important; }
+    #top .avatar {
+        position: fixed;
+        top: 14px;
+        right: 14px;
+        width: 34px;
+        height: 34px;
+    }
+
+    footer {
+        padding-left: 1em;
+        align-items: start;
+        text-align: left;
+
+        & .legal { display: none; }
+    }
+}
+
+dialog {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    padding: 44px 1em 1em 1em;
+    display: flex;
+    align-items: start;
+    justify-content: center;
+    background: #ffffffcc;
+    border: none;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+
+.tabbar {
+    display: flex;
+    gap: 0.6em;
+
+    & > a {
+        position: relative;
+        padding: 0.4em 1em 0.5em 1em;
+        background: color-mix(in srgb, var(--bar_color), white 50%);
+        cursor: pointer;
+        font-size: 1.1em;
+        text-decoration: none;
+        color: black;
+        text-align: center;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+
+        & > img {
+            width: 24px;
+            height: 24px;
+            transform: translateY(3px);
+            filter: invert(100%);
+        }
+
+        &:is(.active, :hover) {
+            background: var(--bar_color);
+            color: white;
+
+            & > img { filter: none; }
+        }
+        &.active { font-weight: bold; }
+    }
+}
+.tab {
+    padding: 1em;
+    background: var(--tab_color);
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+@media screen and (max-width: 960px) {
+    .tabbar > a {
+        padding: 0.2em 0.7em 0.3em 0.7;
+        font-size: 0.9em;
+    }
+    .tab { padding: 1em 0.5em; }
+}
