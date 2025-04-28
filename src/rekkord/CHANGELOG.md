@@ -6,6 +6,20 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.50
+
+*Released on 2025-04-28*
+
+- Differentiate disk access modes and user roles
+- Support four user roles: *Admin, ReadWrite, WriteOnly and LogOnly*
+- Sign tags to prevent tampering by LogOnly users
+- Increase maximum snapshot name length (256 bytes)
+
+> [!WARNING]
+> Existing users are not migrated and new users must be created with the master key.
+>
+> The snapshot tag format has changed, but you can use `rekkord migrate_tags` to migrate snapshot tags made with previous versions.
+
 ### Rekkord 0.49
 
 *Released on 2025-04-24*
