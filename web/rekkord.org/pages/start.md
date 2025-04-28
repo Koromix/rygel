@@ -81,10 +81,10 @@ After initialization, the **master key** is exported to a binary file, named `ma
 
 Rekkord uses **multiple encryption keys** which are derived from this master key:
 
-- The *config key (ckey)* is paired with an *access key (akey)* for repository identity (RID and CID)
+- The *config key (ckey)* is paired with an *access key (akey)* to sign config files and user key files
 - The *data key (dkey)* is paired with a *write key (wkey)* for data encryption (snapshot information, directory metadata, file content)
 - The *log key (lkey)* is paired with a *tag key (tkey)*, to manage snapshots and record snapshot information
-- The *user key (ukey)* is paired with a *verify key (vkey)* to detect tampering with keyfiles
+- The *sign key (skey)* is paired with a *verify key (vkey)* to detect tampering with tags
 
 Rekkord repositories support multiple user accounts. By default, three user accounts are created:
 
