@@ -736,10 +736,8 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
             Size payload_len = offsetof(SnapshotHeader2, name) + strlen(header1->name) + 1;
             Span<const uint8_t> payload = MakeSpan((const uint8_t *)header1, payload_len);
 
-            Size written = disk->WriteTag(hash, payload);
-            if (written < 0)
+            if (!disk->WriteTag(hash, payload))
                 return false;
-            total_stored += written;
         }
     } else {
         const RawFile *entry = (const RawFile *)(snapshot_blob.ptr + RG_SIZE(SnapshotHeader2));

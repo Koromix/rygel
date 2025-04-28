@@ -183,7 +183,7 @@ public:
     bool ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob);
     Size WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_t> blob);
 
-    Size WriteTag(const rk_Hash &hash, Span<const uint8_t> payload);
+    bool WriteTag(const rk_Hash &hash, Span<const uint8_t> payload);
     bool ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags);
 
     virtual Size ReadRaw(const char *path, Span<uint8_t> out_buf) = 0;

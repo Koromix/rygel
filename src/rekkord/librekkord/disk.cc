@@ -862,7 +862,7 @@ Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
     return written;
 }
 
-Size rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
+bool rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
 {
     // Accounting for the ID and order value, and base64 encoding, each filename must fit into 255 characters
     const Size MaxFragmentSize = 160;
@@ -893,7 +893,7 @@ Size rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
 
         if (crypto_box_seal(cypher.ptr, src.ptr, (size_t)src.len, keyset->tkey) != 0) {
             LogError("Failed to seal tag payload");
-            return -1;
+            return false;
         }
 
         cypher.len = src.len + crypto_box_SEALBYTES;
@@ -911,10 +911,8 @@ Size rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
 
     if (fragments > INT8_MAX) {
         LogError("Excessive tag payload size");
-        return -1;
+        return false;
     }
-
-    Size total_size = 0;
 
     for (int i = 0; i < fragments; i++) {
         Size offset = i * MaxFragmentSize;
@@ -925,15 +923,11 @@ Size rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
 
         sodium_bin2base64(path.end(), path.Available(), cypher.ptr + offset, len, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
 
-        Size written = WriteDirect(path.data, cypher, true);
-        if (written < 0)
-            return -1;
-        RG_ASSERT(written);
-
-        total_size += written;
+        if (WriteDirect(path.data, {}, true) < 0)
+            return false;
     }
 
-    return total_size;
+    return true;
 }
 
 bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
