@@ -26,8 +26,10 @@ bool InitSMTP(const smtp_Config &config);
 
 bool PruneTokens();
 
+void HandleUserSession(http_IO *io);
 void HandleUserRegister(http_IO *io);
 void HandleUserLogin(http_IO *io);
+void HandleUserLogout(http_IO *io);
 void HandleUserRecover(http_IO *io);
 void HandleUserReset(http_IO *io);
 void HandleUserPassword(http_IO *io);

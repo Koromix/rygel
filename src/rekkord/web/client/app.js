@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, ref } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net } from '../../../web/core/base.js';
+import { Util, Log, Net, HttpError } from '../../../web/core/base.js';
 import * as UI from './ui.js';
 import { deploy } from '../../../web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';
@@ -110,9 +110,9 @@ function go(url = null, push = true) {
 
     switch (mode) {
         case 'register':
-        case 'login':
         case 'confirm':
-        case 'recover': { changes.mode = mode; } break;
+        case 'recover':
+        case 'reset': { changes.mode = mode; } break;
 
         case 'dashboard': { changes.mode = mode; } break;
 
@@ -138,17 +138,27 @@ async function run(changes = {}, push = false) {
             return;
         }
 
-        // Run module
         switch (route.mode) {
             case 'register': { await runRegister(); } break;
-            case 'login': { await runLogin(); } break;
             case 'confirm': { await runConfirm(); } break;
+
             case 'recover': { await runRecover(); } break;
+            case 'reset':  { await runReset(); } break;
+
+            default: {
+                if (session == null) {
+                    await runLogin();
+                    return;
+                }
+            } break;
+        }
+
+        switch (route.mode) {
             case 'dashboard': { await runDashboard(); } break;
         }
 
         // Update URL
-        {
+        if (session != null) {
             let url = makeURL();
 
             if (url != route_url) {
@@ -212,7 +222,7 @@ function renderApp(el) {
 async function runRegister() {
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Enregistrez-vous</a>
+            <a class="active">Register</a>
         </div>
 
         <div class="tab">
@@ -220,7 +230,9 @@ async function runRegister() {
                 <div class="header">Register to continue</div>
 
                 <form style="text-align: center;" @submit=${UI.wrap(register)}>
-                    <input type="text" name="mail" style="width: 20em;" placeholder="mail address" />
+                    <label>
+                        <input type="text" name="mail" style="width: 20em;" placeholder="mail address" />
+                    </label>
                     <div class="actions">
                         <button type="submit">Create account</button>
                     </div>
@@ -246,15 +258,221 @@ async function register(e) {
 }
 
 async function runConfirm() {
-    UI.main('');
+    let error = 'Missing token';
+    let token = null;
+
+    if (window.location.hash) {
+        let hash = window.location.hash.substr(1);
+        let query = new URLSearchParams(hash);
+
+        token = query.get('token') || null;
+
+        if (token != null) {
+            try {
+                await Net.post('/api/user/reset', { token: token });
+                error = null;
+            } catch (err) {
+                if (!(error instanceof HttpError))
+                    throw err;
+
+                error = err.message;
+            }
+        }
+    }
+
+    UI.main(html`
+        <div class="tabbar">
+            <a class="active">Finalize account</a>
+        </div>
+
+        <div class="tab">
+            <div class="box" style="align-items: center;">
+                <div class="header">Create password</div>
+
+                <form style="text-align: center;" @submit=${UI.wrap(e => confirm(e, token))}>
+                    ${error == null ? html`
+                        <label>
+                            <span>Choose password</span>
+                            <input type="password" name="password" style="width: 20em;" placeholder="password" />
+                        </label>
+                        <div class="actions">
+                            <button type="submit">Set password</button>
+                        </div>
+                    ` : ''}
+                    ${error != null ? html`<p>${error}</p>` : ''}
+                </form>
+            </div>
+        </div>
+    `);
+}
+
+async function confirm(e, token) {
+    let form = e.currentTarget;
+    let elements = form.elements;
+
+    let password = elements.password.value.trim();
+
+    if (!password)
+        throw new Error('Password is missing');
+
+    await Net.post('/api/user/reset', {
+        token: token,
+        password: password
+    });
+
+    form.innerHTML = '';
+    render(html`<p>Your account is now ready, please login to continue.</p>`, form);
 }
 
 async function runLogin() {
-    UI.main('');
+    UI.main(html`
+        <div class="tabbar">
+            <a class="active">Login</a>
+        </div>
+
+        <div class="tab">
+            <div class="box" style="align-items: center;">
+                <div class="header">Login</div>
+
+                <form style="text-align: center;" @submit=${UI.wrap(login)}>
+                    <label>
+                        <input type="text" name="mail" style="width: 20em;" placeholder="mail address" />
+                    </label>
+                    <label>
+                        <input type="password" name="password" style="width: 20em;" placeholder="password" />
+                    </label>
+                    <div class="actions">
+                        <button type="submit">Login</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `);
+}
+
+async function login(e) {
+    let form = e.currentTarget;
+    let elements = form.elements;
+
+    let mail = elements.mail.value.trim();
+    let password = elements.password.value.trim();
+
+    if (!mail)
+        throw new Error('Mail address is missing');
+    if (!password)
+        throw new Error('Password is missing');
+
+    session = await Net.post('/api/user/login', {
+        mail: mail,
+        password: password
+    });
+
+    await run({}, false);
 }
 
 async function runRecover() {
-    UI.main('');
+    UI.main(html`
+        <div class="tabbar">
+            <a class="active">Recover account</a>
+        </div>
+
+        <div class="tab">
+            <div class="box" style="align-items: center;">
+                <div class="header">Recover account</div>
+
+                <form style="text-align: center;" @submit=${UI.wrap(recover)}>
+                    <label>
+                        <input type="text" name="mail" style="width: 20em;" placeholder="mail address" />
+                    </label>
+                    <div class="actions">
+                        <button type="submit">Reset password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `);
+}
+
+async function recover(e) {
+    let form = e.currentTarget;
+    let elements = form.elements;
+
+    let mail = elements.mail.value.trim();
+
+    if (!mail)
+        throw new Error('Mail address is missing');
+
+    await Net.post('/api/user/recover', { mail: mail });
+
+    form.innerHTML = '';
+    render(html`<p>Consult the <b>mail that has been sent</b> and click the link inside to reset your password.</p>`, form);
+}
+
+async function runReset() {
+    let error = 'Missing token';
+    let token = null;
+
+    if (window.location.hash) {
+        let hash = window.location.hash.substr(1);
+        let query = new URLSearchParams(hash);
+
+        token = query.get('token') || null;
+
+        if (token != null) {
+            try {
+                await Net.post('/api/user/reset', { token: token });
+                error = null;
+            } catch (err) {
+                if (!(error instanceof HttpError))
+                    throw err;
+
+                error = err.message;
+            }
+        }
+    }
+
+    UI.main(html`
+        <div class="tabbar">
+            <a class="active">Recover account</a>
+        </div>
+
+        <div class="tab">
+            <div class="box" style="align-items: center;">
+                <div class="header">Recover account</div>
+
+                <form style="text-align: center;" @submit=${UI.wrap(e => reset(e, token))}>
+                    ${error == null ? html`
+                        <label>
+                            <span>New password</span>
+                            <input type="password" name="password" style="width: 20em;" placeholder="password" />
+                        </label>
+                        <div class="actions">
+                            <button type="submit">Confirm password</button>
+                        </div>
+                    ` : ''}
+                    ${error != null ? html`<p>${error}</p>` : ''}
+                </form>
+            </div>
+        </div>
+    `);
+}
+
+async function reset(e, token) {
+    let form = e.currentTarget;
+    let elements = form.elements;
+
+    let password = elements.password.value.trim();
+
+    if (!password)
+        throw new Error('Password is missing');
+
+    await Net.post('/api/user/reset', {
+        token: token,
+        password: password
+    });
+
+    form.innerHTML = '';
+    render(html`<p>Your password has been changed, please login to continue.</p>`, form);
 }
 
 function isLogged() {

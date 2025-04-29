@@ -360,10 +360,14 @@ static void HandleRequest(http_IO *io)
 
     // API endpoint?
     if (StartsWith(request.path, "/api/")) {
-        if (TestStr(request.path, "/api/user/register") && request.method == http_RequestMethod::Post) {
+        if (TestStr(request.path, "/api/user/session") && request.method == http_RequestMethod::Get) {
+            HandleUserSession(io);
+        } else if (TestStr(request.path, "/api/user/register") && request.method == http_RequestMethod::Post) {
             HandleUserRegister(io);
         } else if (TestStr(request.path, "/api/user/login") && request.method == http_RequestMethod::Post) {
             HandleUserLogin(io);
+        } else if (TestStr(request.path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
+            HandleUserLogout(io);
         } else if (TestStr(request.path, "/api/user/recover") && request.method == http_RequestMethod::Post) {
             HandleUserRecover(io);
         } else if (TestStr(request.path, "/api/user/reset") && request.method == http_RequestMethod::Post) {

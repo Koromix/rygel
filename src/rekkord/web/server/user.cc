@@ -116,7 +116,7 @@ If it is not you, ignore this mail. Use the recovery page if you are trying to l
     {}
 };
 
-static const smtp_MailContent RecoverPassword = {
+static const smtp_MailContent ResetPassword = {
     "Reset {{ TITLE }} password",
     R"(Hello,
 
@@ -219,16 +219,16 @@ static bool SendExistingMail(const char *to, Allocator *alloc)
     return smtp.Send(to, content);
 }
 
-static bool SendRecoveryMail(const char *to, const uint8_t token[16], Allocator *alloc)
+static bool SendResetMail(const char *to, const uint8_t token[16], Allocator *alloc)
 {
     smtp_MailContent content;
 
     const char *uuid = FormatUUID(token, alloc);
-    const char *url = Fmt(alloc, "%1/recover#token=%2", config.url, uuid).ptr;
+    const char *url = Fmt(alloc, "%1/reset#token=%2", config.url, uuid).ptr;
 
-    content.subject = PatchText(RecoverPassword.subject, to, url, alloc).ptr;
-    content.html = PatchText(RecoverPassword.html, to, url, alloc).ptr;
-    content.text = PatchText(RecoverPassword.text, to, url, alloc).ptr;
+    content.subject = PatchText(ResetPassword.subject, to, url, alloc).ptr;
+    content.html = PatchText(ResetPassword.html, to, url, alloc).ptr;
+    content.text = PatchText(ResetPassword.text, to, url, alloc).ptr;
 
     return smtp.Send(to, content);
 }
@@ -408,6 +408,30 @@ void HandleUserRegister(http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
+static void ExportSession(const SessionInfo *session, http_IO *io)
+{
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    if (session) {
+        json.StartObject();
+        json.Key("userid"); json.Int64(session->userid);
+        json.Key("username"); json.String(session->username);
+        json.EndObject();
+    } else {
+        json.Null();
+    }
+
+    json.Finish();
+}
+
+void HandleUserSession(http_IO *io)
+{
+    RetainPtr<SessionInfo> session = sessions.Find(io);
+    ExportSession(session.GetRaw(), io);
+}
+
 void HandleUserLogin(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
@@ -479,7 +503,7 @@ void HandleUserLogin(http_IO *io)
             RetainPtr<SessionInfo> session = CreateUserSession(userid, username);
             sessions.Open(io, session);
 
-            io->SendText(200, "{}", "application/json");
+            ExportSession(session.GetRaw(), io);
             return;
         } else {
             RegisterEvent(request.client_addr, username);
@@ -581,10 +605,16 @@ void HandleUserRecover(http_IO *io)
             return;
 
         // XXX: Use a proper task queue for mails!
-        if (!SendRecoveryMail(mail, token, io->Allocator()))
+        if (!SendResetMail(mail, token, io->Allocator()))
             return;
     }
 
+    io->SendText(200, "{}", "application/json");
+}
+
+void HandleUserLogout(http_IO *io)
+{
+    sessions.Close(io);
     io->SendText(200, "{}", "application/json");
 }
 
