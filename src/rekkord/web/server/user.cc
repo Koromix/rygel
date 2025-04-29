@@ -88,7 +88,7 @@ Once your address is confirmed, you will be invited to choose a secure password.
 <p>Use the following link to validate your account and access {{ TITLE }}:</p>
 <div align="center"><br>
     <a style="padding: 0.7em 2em; background: #2d8261; border-radius: 30px;
-              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ URL }}">Connexion à {{ TITLE }}</a>
+              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ URL }}">Create account</a>
 <br><br></div>
 <p>Once your address is confirmed, you will be invited to choose a secure password.</p>
 <p><i>{{ TITLE }}</i></p>
@@ -132,7 +132,7 @@ If you did not ask for password recovery, delete this mail. Someone may have tri
 <p>Use the following link to reset your password on {{ TITLE }}:</p>
 <div align="center"><br>
     <a style="padding: 0.7em 2em; background: #2d8261; border-radius: 30px;
-              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ URL }}">Connexion à {{ TITLE }}</a>
+              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ URL }}">Reset password</a>
 <br><br></div>
 <p>If you did not ask for password recovery, delete this mail. Someone may have tried to access your account without your permission.</p>
 <p><i>{{ TITLE }}</i></p>
