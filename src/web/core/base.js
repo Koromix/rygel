@@ -783,6 +783,46 @@ const Net = new function() {
         return json;
     };
 
+    this.put = async function(url, blob, options = {}) {
+        options = Object.assign({}, options, {
+            method: 'PUT',
+            headers: {
+                'X-Requested-With': 'XMLHTTPRequest',
+                'Content-Type': blob.type
+            },
+            body: blob
+        });
+
+        let response = await self.fetch(url, options);
+
+        if (!response.ok) {
+            let msg = await self.readError(response);
+            throw new HttpError(response.status, msg);
+        }
+
+        let json = await response.json();
+        return json;
+    };
+
+    this.delete = async function(url, obj = null, options = {}) {
+        options = Object.assign({}, options, {
+            method: 'DELETE',
+            headers: {
+                'X-Requested-With': 'XMLHTTPRequest'
+            }
+        });
+
+        let response = await self.fetch(url, options);
+
+        if (!response.ok) {
+            let msg = await self.readError(response);
+            throw new HttpError(response.status, msg);
+        }
+
+        let json = await response.json();
+        return json;
+    };
+
     this.cache = async function(key, url) {
         let entry = caches[key];
         let now = performance.now();
