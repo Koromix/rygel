@@ -53,13 +53,36 @@ button {
     color: var(--top_color);
 }
 
-p + .actions { margin-top: 2em; }
-.actions { gap: 20px; }
+.actions {
+    display: flex;
+    margin-top: 1em;
+    gap: 20px;
+    justify-content: center;
+    align-items: start;
+    flex-wrap: wrap;
+}
+.actions + * { margin-top: 1em; }
 .actions > :is(a, button) {
+    display: block;
     width: auto;
+    min-width: 10em;
+    background: var(--button_color);
     border-radius: 30px;
     font-weight: bold;
+    color: white;
+    padding: 0.35em 2em 0.45em 2em;
+    text-decoration: none;
+    text-align: center;
 }
+.actions > :is(a, button):hover {
+    background: color-mix(in srgb, var(--button_color) 90%, black);
+    color: white;
+}
+.actions > :is(a, button).disabled {
+    pointer-events: none;
+    filter: saturate(10%) brightness(50%);
+}
+p + .actions { margin-top: 2em; }
 
 .avatar {
     box-sizing: border-box;

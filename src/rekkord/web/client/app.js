@@ -109,6 +109,7 @@ function go(url = null, push = true) {
     let mode = parts.shift();
 
     switch (mode) {
+        case 'login':
         case 'register':
         case 'confirm':
         case 'recover':
@@ -140,6 +141,7 @@ async function run(changes = {}, push = false) {
         }
 
         switch (route.mode) {
+            case 'login': { await runLogin(); } break;
             case 'register': { await runRegister(); } break;
             case 'confirm': { await runConfirm(); } break;
 
@@ -160,7 +162,7 @@ async function run(changes = {}, push = false) {
         }
 
         // Update URL
-        if (session != null) {
+        {
             let url = makeURL();
 
             if (url != route_url) {
@@ -208,7 +210,8 @@ function renderApp(el) {
                 ` : ''}
                 ${session == null ? html`
                     <div style="flex: 1;"></div>
-                    <img class="avatar" src=${ASSETS['ui/anonymous']} alt="" />
+                    <li><a href="/register" class=${route.mode == 'register' ? 'active' : ''}>Register</a></li>
+                    <li><a href="/dashboard" class=${route.mode != 'register' ? 'active' : ''}>Login</a></li>
                 ` : ''}
             </menu>
         </nav>
@@ -257,14 +260,15 @@ async function runRegister() {
 
         <div class="tab">
             <div class="box" style="align-items: center;">
-                <div class="header">Register to continue</div>
+                <div class="header">Create your account</div>
 
                 <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                     <label>
                         <input type="text" name="mail" style="width: 20em;" placeholder="mail address" />
                     </label>
                     <div class="actions">
-                        <button type="submit">Create account</button>
+                        <button type="submit">Register</button>
+                        <a href="/login">Already have an account?</a>
                     </div>
                 </form>
             </div>
@@ -362,7 +366,7 @@ async function runLogin() {
 
         <div class="tab">
             <div class="box" style="align-items: center;">
-                <div class="header">Login</div>
+                <div class="header">Login to ${ENV.title}</div>
 
                 <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                     <label>
@@ -373,6 +377,8 @@ async function runLogin() {
                     </label>
                     <div class="actions">
                         <button type="submit">Login</button>
+                        <a href="/register">Create a new account?</a>
+                        <a href="/recover">Lost your password?</a>
                     </div>
                 </form>
             </div>
