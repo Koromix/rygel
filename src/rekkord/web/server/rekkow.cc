@@ -374,10 +374,22 @@ static void HandleRequest(http_IO *io)
             HandleUserReset(io);
         } else if (TestStr(request.path, "/api/user/password") && request.method == http_RequestMethod::Post) {
             HandleUserPassword(io);
+        } else if (TestStr(request.path, "/api/user/picture") && request.method == http_RequestMethod::Get) {
+            HandlePictureGet(io);
+        } else if (TestStr(request.path, "/api/user/picture") && request.method == http_RequestMethod::Put) {
+            HandlePicturePut(io);
+        } else if (TestStr(request.path, "/api/user/picture") && request.method == http_RequestMethod::Delete) {
+            HandlePictureDelete(io);
         } else {
             io->SendError(404);
         }
 
+        return;
+    }
+
+    // User picture?
+    if (StartsWith(request.path, "/pictures/") && request.method == http_RequestMethod::Get) {
+        HandlePictureGet(io);
         return;
     }
 
@@ -494,6 +506,8 @@ Options:
     if (!db.SetSynchronousFull(config.sync_full))
         return 1;
     if (!MigrateDatabase(&db))
+        return 1;
+    if (!MakeDirectory(config.tmp_directory, false))
         return 1;
 
     LogInfo("Init messaging");

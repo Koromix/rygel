@@ -34,4 +34,8 @@ void HandleUserRecover(http_IO *io);
 void HandleUserReset(http_IO *io);
 void HandleUserPassword(http_IO *io);
 
+void HandlePictureGet(http_IO *io);
+void HandlePicturePut(http_IO *io);
+void HandlePictureDelete(http_IO *io);
+
 }

@@ -18,7 +18,7 @@ import { Util, Log, Net, HttpError } from '../../../web/core/base.js';
 import * as UI from './ui.js';
 import { deploy } from '../../../web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';
-import * as app from './app.js';
+import { PictureCropper } from './picture.js';
 
 import '../assets/client.css';
 
@@ -215,7 +215,7 @@ function renderApp(el) {
                     <li><a href="/dashboard" class=${route.mode == 'dashboard' ? 'active' : ''}>Overview</a></li>
                     <div style="flex: 1;"></div>
                     <li><a href="/account" class=${route.mode == 'account' ? 'active' : ''}>Account</a></li>
-                    <img class="avatar" src=${ASSETS['ui/anonymous']} alt="" />
+                    <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
                 ` : ''}
                 ${session == null ? html`
                     <div style="flex: 1;"></div>
@@ -561,11 +561,48 @@ async function runAccount() {
             <div class="box" style="align-items: center;">
                 <div class="header">Account</div>
                 <div class="actions">
+                    <button type="button" @click=${UI.wrap(changePicture)}>Change picture</button>
                     <button type="button" @click=${UI.insist(logout)}>Logout</button>
                 </div>
             </div>
         </div>
     `);
+}
+
+async function changePicture() {
+    let title = `Change ${session.username} picture`;
+    let current = null;
+
+    // Fetch exisiting picture
+    {
+        let response = await Net.fetch('/api/user/picture');
+
+        if (response.ok) {
+            current = await response.blob();
+        } else if (response.status == 404) {
+            current = null;
+        } else {
+            let err = await Net.readError(response);
+            throw new Error(err);
+        }
+    }
+
+    let cropper = new PictureCropper(title, 256);
+
+    cropper.defaultURL = ASSETS['ui/anonyous'];
+    cropper.imageFormat = 'image/png';
+
+    await cropper.run(current, async blob => {
+        if (blob != null) {
+            let json = await Net.put('/api/user/picture', blob);
+            session.picture = json.picture;
+        } else {
+            let json = await Net.delete('/api/user/picture');
+            session.picture = json.picture;
+        }
+    });
+
+    await run({}, false);
 }
 
 export {

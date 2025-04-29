@@ -31,8 +31,12 @@ static const int64_t InvalidTimeout = 86400 * 1000;
 static const int BanThreshold = 6;
 static const int64_t BanTime = 1800 * 1000;
 
+static const int64_t PictureCacheDelay = 3600 * 1000;
+static const Size MaxPictureSize = Kibibytes(256);
+
 struct SessionInfo: public RetainObject<SessionInfo> {
     int64_t userid;
+    std::atomic_int picture;
     char username[];
 };
 
@@ -244,7 +248,7 @@ bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes])
     return true;
 }
 
-static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *username)
+static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *username, int picture)
 {
     Size username_bytes = strlen(username) + 1;
     Size session_bytes = RG_SIZE(SessionInfo) + username_bytes;
@@ -258,6 +262,7 @@ static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *user
     });
 
     session->userid = userid;
+    session->picture = picture;
     CopyString(username, MakeSpan((char *)session->username, username_bytes));
 
     return ptr;
@@ -374,7 +379,8 @@ void HandleUserRegister(http_IO *io)
         int64_t now = GetUnixTime();
 
         sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO users (mail, username, creation) VALUES (?1, ?2, ?3)
+        if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, version)
+                           VALUES (?1, ?2, ?3, 1)
                            ON CONFLICT DO UPDATE SET mail = excluded.mail
                            RETURNING id, password_hash)",
                         &stmt, mail, mail, GetUnixTime()))
@@ -418,6 +424,7 @@ static void ExportSession(const SessionInfo *session, http_IO *io)
         json.StartObject();
         json.Key("userid"); json.Int64(session->userid);
         json.Key("username"); json.String(session->username);
+        json.Key("picture"); json.Int(session->picture);
         json.EndObject();
     } else {
         json.Null();
@@ -489,7 +496,9 @@ void HandleUserLogin(http_IO *io)
     int64_t start = GetMonotonicTime();
 
     sq_Statement stmt;
-    if (!db.Prepare("SELECT id, password_hash, username FROM users WHERE mail = ?1", &stmt, mail))
+    if (!db.Prepare(R"(SELECT id, password_hash, username, version
+                       FROM users
+                       WHERE mail = ?1)", &stmt, mail))
         return;
     stmt.Run();
 
@@ -498,9 +507,10 @@ void HandleUserLogin(http_IO *io)
         int64_t userid = sqlite3_column_int64(stmt, 0);
         const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
         const char *username = (const char *)sqlite3_column_text(stmt, 2);
+        int picture = sqlite3_column_int(stmt, 3);
 
         if (password_hash && crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
-            RetainPtr<SessionInfo> session = CreateUserSession(userid, username);
+            RetainPtr<SessionInfo> session = CreateUserSession(userid, username, picture);
             sessions.Open(io, session);
 
             ExportSession(session.GetRaw(), io);
@@ -846,6 +856,217 @@ void HandleUserPassword(http_IO *io)
 
     io->SendText(200, "{}", "application/json");
     return;
+}
+
+static void SendDefaultPicture(http_IO *io)
+{
+#if defined(FELIX_HOT_ASSETS)
+    const AssetInfo *DefaultPicture = FindEmbedAsset("src/rekkord/web/assets/ui/anonymous.png");
+    RG_ASSERT(DefaultPicture);
+#else
+    static const AssetInfo *DefaultPicture = FindEmbedAsset("src/rekkord/web/assets/ui/anonymous.png");
+    RG_ASSERT(DefaultPicture);
+#endif
+
+    io->AddEncodingHeader(DefaultPicture->compression_type);
+    io->SendBinary(200, DefaultPicture->data, "image.png");
+}
+
+void HandlePictureGet(http_IO *io)
+{
+    const http_RequestInfo &request = io->Request();
+
+    int64_t userid = -1;
+    bool explicit_user = false;
+
+    if (StartsWith(request.path, "/pictures/")) {
+        RG_ASSERT(StartsWith(request.path, "/pictures/"));
+        Span<const char> str = request.path + 10;
+
+        if (!ParseInt(str, &userid)) {
+            io->SendError(422);
+            return;
+        }
+
+        explicit_user = true;
+    } else {
+        RetainPtr<SessionInfo> session = sessions.Find(io);
+
+        if (!session) {
+            LogError("User is not logged in");
+            io->SendError(404);
+            return;
+        }
+
+        userid = session->userid;
+        explicit_user = false;
+    }
+
+    sqlite3_blob *blob;
+    if (sqlite3_blob_open(db, "main", "users", "picture", userid, 0, &blob) != SQLITE_OK) {
+        // Assume there's no picture!
+
+        if (explicit_user) {
+            SendDefaultPicture(io);
+            return;
+        } else {
+            io->SendError(404);
+            return;
+        }
+    }
+    RG_DEFER { sqlite3_blob_close(blob); };
+
+    Size len = sqlite3_blob_bytes(blob);
+
+    // Send file
+    {
+        io->AddHeader("Content-Type", "image/png");
+        io->AddCachingHeaders(explicit_user ? PictureCacheDelay : 0);
+
+        StreamWriter writer;
+        if (!io->OpenForWrite(200, len, &writer))
+            return;
+
+        Size offset = 0;
+        StreamReader reader([&](Span<uint8_t> buf) {
+            Size copy_len = std::min(len - offset, buf.len);
+
+            if (sqlite3_blob_read(blob, buf.ptr, (int)copy_len, (int)offset) != SQLITE_OK) {
+                LogError("SQLite Error: %1", sqlite3_errmsg(db));
+                return (Size)-1;
+            }
+
+            offset += copy_len;
+            return copy_len;
+        }, "<picture>");
+
+        // Not much we can do at this stage in case of error. Client will get truncated data.
+        SpliceStream(&reader, -1, &writer);
+        writer.Close();
+    }
+}
+
+void HandlePicturePut(http_IO *io)
+{
+    RetainPtr<SessionInfo> session = sessions.Find(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(404);
+        return;
+    }
+
+    // Create temporary file
+    int fd = -1;
+    const char *tmp_filename = CreateUniqueFile(config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
+    if (!tmp_filename)
+        return;
+    RG_DEFER {
+        CloseDescriptor(fd);
+        UnlinkFile(tmp_filename);
+    };
+
+    // Read request body
+    {
+        StreamWriter writer(fd, "<temp>", 0);
+
+        StreamReader reader;
+        if (!io->OpenForRead(MaxPictureSize, &reader))
+            return;
+
+        do {
+            LocalArray<uint8_t, 16384> buf;
+            buf.len = reader.Read(buf.data);
+
+            if (buf.len < 0)
+                return;
+
+            if (!writer.Write(buf))
+                return;
+        } while (!reader.IsEOF());
+
+        if (!writer.Close())
+            return;
+    }
+
+    // Copy to database blob
+    bool success = db.Transaction([&]() {
+#if defined(_WIN32)
+        int64_t file_len = _lseeki64(fd, 0, SEEK_CUR);
+#else
+        int64_t file_len = lseek(fd, 0, SEEK_CUR);
+#endif
+
+        if (lseek(fd, 0, SEEK_SET) < 0) {
+            LogError("lseek('<temp>') failed: %1", strerror(errno));
+            return false;
+        }
+
+        if (!db.Run("UPDATE users SET picture = ?2, version = version + 1 WHERE id = ?1",
+                    session->userid, sq_Binding::Zeroblob(file_len)))
+            return false;
+
+        sqlite3_blob *blob;
+        if (sqlite3_blob_open(db, "main", "users", "picture", session->userid, 1, &blob) != SQLITE_OK) {
+            LogError("SQLite Error: %1", sqlite3_errmsg(db));
+            return false;
+        }
+        RG_DEFER { sqlite3_blob_close(blob); };
+
+        StreamReader reader(fd, "<temp>");
+        int64_t read_len = 0;
+
+        do {
+            LocalArray<uint8_t, 16384> buf;
+            buf.len = reader.Read(buf.data);
+
+            if (buf.len < 0)
+                return false;
+            if (buf.len + read_len > file_len) {
+                LogError("Temporary file size has changed (bigger)");
+                return false;
+            }
+
+            if (sqlite3_blob_write(blob, buf.data, (int)buf.len, (int)read_len) != SQLITE_OK) {
+                LogError("SQLite Error: %1", sqlite3_errmsg(db));
+                return false;
+            }
+
+            read_len += buf.len;
+        } while (!reader.IsEOF());
+
+        if (read_len < file_len) {
+            LogError("Temporary file size has changed (truncated)");
+            return false;
+        }
+
+        return true;
+    });
+    if (!success)
+        return;
+
+    int picture = ++session->picture;
+
+    const char *response = Fmt(io->Allocator(), "{ \"picture\": %1 }", picture).ptr;
+    io->SendText(200, response, "application/json");
+}
+
+void HandlePictureDelete(http_IO *io)
+{
+    RetainPtr<SessionInfo> session = sessions.Find(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(404);
+        return;
+    }
+
+    if (!db.Run("UPDATE users SET picture = NULL, version = 0 WHERE id = ?1", session->userid))
+        return;
+
+    session->picture = 0;
+
+    io->SendText(200, "{ \"picture\": 0 }", "application/json");
 }
 
 }

@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 1;
+const int DatabaseVersion = 2;
 
 bool MigrateDatabase(sq_Database *db)
 {
@@ -68,9 +68,44 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 1: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX tokens_t;
+                    DROP INDEX users_m;
+
+                    ALTER TABLE tokens RENAME TO tokens_BAK;
+                    ALTER TABLE users RENAME TO users_BAK;
+
+                    CREATE TABLE users (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        mail TEXT COLLATE NOCASE NOT NULL,
+                        password_hash TEXT,
+                        username TEXT NOT NULL,
+                        creation INTEGER NOT NULL,
+                        picture BLOB,
+                        version INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX users_m ON users (mail);
+
+                    CREATE TABLE tokens (
+                        token TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        user INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE
+                    );
+                    CREATE UNIQUE INDEX tokens_t ON tokens (token);
+
+                    INSERT INTO users (id, mail, password_hash, username, creation, version)
+                        SELECT id, mail, password_hash, username, creation, 1 FROM users_BAK;
+                    INSERT INTO tokens (token, timestamp, user)
+                        SELECT token, timestamp, user FROM tokens;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 1);
+            static_assert(DatabaseVersion == 2);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

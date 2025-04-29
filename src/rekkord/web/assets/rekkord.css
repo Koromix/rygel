@@ -59,7 +59,7 @@ button {
 #top li > a { border-bottom: none; }
 #top.border { border-bottom-color: var(--top_background); }
 
-.avatar {
+.picture {
     box-sizing: border-box;
     width: 51px;
     height: 51px;
@@ -68,7 +68,7 @@ button {
     border: none;
     vertical-align: middle;
 }
-li + .avatar { margin-left: -1em; }
+li + .picture { margin-left: -1em; }
 
 footer {
     font-size: 1.1em;
