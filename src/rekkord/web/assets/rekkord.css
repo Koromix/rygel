@@ -59,28 +59,24 @@ p + .actions { margin-top: 2em; }
     font-weight: bold;
 }
 
-.avatar {
-    box-sizing: border-box;
-    background: white;
-    border-radius: 50%;
-    border: 3px solid var(--bar_color);
-}
-.avatar.anonymous { border: none; }
-
 #top { font-size: 1.1em; }
 #top menu {
     gap: 2em;
     text-transform: none;
 }
-#top li > a {
-    border-bottom: none;
-    text-transform: none;
-}
+#top li > a { border-bottom: none; }
 #top.border { border-bottom-color: var(--top_background); }
-#top .avatar {
+
+.avatar {
+    box-sizing: border-box;
     width: 51px;
     height: 51px;
+    background: white;
+    border-radius: 50%;
+    border: none;
+    vertical-align: middle;
 }
+li + .avatar { margin-left: -1em; }
 
 footer {
     font-size: 1.1em;

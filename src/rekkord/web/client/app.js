@@ -114,7 +114,8 @@ function go(url = null, push = true) {
         case 'recover':
         case 'reset': { changes.mode = mode; } break;
 
-        case 'dashboard': { changes.mode = mode; } break;
+        case 'dashboard':
+        case 'account': { changes.mode = mode; } break;
 
         default: { changes.mode = 'dashboard'; } break;
     }
@@ -155,6 +156,7 @@ async function run(changes = {}, push = false) {
 
         switch (route.mode) {
             case 'dashboard': { await runDashboard(); } break;
+            case 'account': { await runAccount(); } break;
         }
 
         // Update URL
@@ -198,8 +200,16 @@ function renderApp(el) {
         <nav id="top">
             <menu>
                 <a id="logo" href="/"><img src=${ASSETS['main/logo']} alt=${'Logo ' + ENV.title} /></a>
-                <div style="flex: 1;"></div>
-                <a href="/dashboard"><img class="avatar anonymous" src=${ASSETS['ui/anonymous']} alt="" /></a>
+                ${session != null ? html`
+                    <li><a href="/dashboard" class=${route.mode == 'dashboard' ? 'active' : ''}>Overview</a></li>
+                    <div style="flex: 1;"></div>
+                    <li><a href="/account" class=${route.mode == 'account' ? 'active' : ''}>Account</a></li>
+                    <img class="avatar" src=${ASSETS['ui/anonymous']} alt="" />
+                ` : ''}
+                ${session == null ? html`
+                    <div style="flex: 1;"></div>
+                    <img class="avatar" src=${ASSETS['ui/anonymous']} alt="" />
+                ` : ''}
             </menu>
         </nav>
 
@@ -213,6 +223,26 @@ function renderApp(el) {
             </div>
         </footer>
     `, root_el);
+}
+
+async function login(mail, password) {
+    session = await Net.post('/api/user/login', {
+        mail: mail,
+        password: password
+    });
+
+    await run({}, false);
+}
+
+async function logout() {
+    await Net.post('/api/user/logout');
+
+    session = null;
+
+    window.onbeforeunload = null;
+    window.location.href = '/';
+
+    poisoned = true;
 }
 
 // ------------------------------------------------------------------------
@@ -229,7 +259,7 @@ async function runRegister() {
             <div class="box" style="align-items: center;">
                 <div class="header">Register to continue</div>
 
-                <form style="text-align: center;" @submit=${UI.wrap(register)}>
+                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                     <label>
                         <input type="text" name="mail" style="width: 20em;" placeholder="mail address" />
                     </label>
@@ -240,21 +270,21 @@ async function runRegister() {
             </div>
         </div>
     `);
-}
 
-async function register(e) {
-    let form = e.currentTarget;
-    let elements = form.elements;
+    async function submit(e) {
+        let form = e.currentTarget;
+        let elements = form.elements;
 
-    let mail = elements.mail.value.trim();
+        let mail = elements.mail.value.trim();
 
-    if (!mail)
-        throw new Error('Mail address is missing');
+        if (!mail)
+            throw new Error('Mail address is missing');
 
-    await Net.post('/api/user/register', { mail: mail });
+        await Net.post('/api/user/register', { mail: mail });
 
-    form.innerHTML = '';
-    render(html`<p>Consult the <b>mail that has been sent</b> and click the link inside to finalize your registration.</p>`, form);
+        form.innerHTML = '';
+        render(html`<p>Consult the <b>mail that has been sent</b> and click the link inside to finalize your registration.</p>`, form);
+    }
 }
 
 async function runConfirm() {
@@ -289,7 +319,7 @@ async function runConfirm() {
             <div class="box" style="align-items: center;">
                 <div class="header">Create password</div>
 
-                <form style="text-align: center;" @submit=${UI.wrap(e => confirm(e, token))}>
+                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                     ${error == null ? html`
                         <label>
                             <span>Choose password</span>
@@ -304,24 +334,24 @@ async function runConfirm() {
             </div>
         </div>
     `);
-}
 
-async function confirm(e, token) {
-    let form = e.currentTarget;
-    let elements = form.elements;
+    async function submit(e) {
+        let form = e.currentTarget;
+        let elements = form.elements;
 
-    let password = elements.password.value.trim();
+        let password = elements.password.value.trim();
 
-    if (!password)
-        throw new Error('Password is missing');
+        if (!password)
+            throw new Error('Password is missing');
 
-    await Net.post('/api/user/reset', {
-        token: token,
-        password: password
-    });
+        await Net.post('/api/user/reset', {
+            token: token,
+            password: password
+        });
 
-    form.innerHTML = '';
-    render(html`<p>Your account is now ready, please login to continue.</p>`, form);
+        form.innerHTML = '';
+        render(html`<p>Your account is now ready, please login to continue.</p>`, form);
+    }
 }
 
 async function runLogin() {
@@ -334,7 +364,7 @@ async function runLogin() {
             <div class="box" style="align-items: center;">
                 <div class="header">Login</div>
 
-                <form style="text-align: center;" @submit=${UI.wrap(login)}>
+                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                     <label>
                         <input type="text" name="mail" style="width: 20em;" placeholder="mail address" />
                     </label>
@@ -348,26 +378,26 @@ async function runLogin() {
             </div>
         </div>
     `);
-}
 
-async function login(e) {
-    let form = e.currentTarget;
-    let elements = form.elements;
+    async function submit(e) {
+        let form = e.currentTarget;
+        let elements = form.elements;
 
-    let mail = elements.mail.value.trim();
-    let password = elements.password.value.trim();
+        let mail = elements.mail.value.trim();
+        let password = elements.password.value.trim();
 
-    if (!mail)
-        throw new Error('Mail address is missing');
-    if (!password)
-        throw new Error('Password is missing');
+        if (!mail)
+            throw new Error('Mail address is missing');
+        if (!password)
+            throw new Error('Password is missing');
 
-    session = await Net.post('/api/user/login', {
-        mail: mail,
-        password: password
-    });
+        session = await Net.post('/api/user/login', {
+            mail: mail,
+            password: password
+        });
 
-    await run({}, false);
+        await run({}, false);
+    }
 }
 
 async function runRecover() {
@@ -380,7 +410,7 @@ async function runRecover() {
             <div class="box" style="align-items: center;">
                 <div class="header">Recover account</div>
 
-                <form style="text-align: center;" @submit=${UI.wrap(recover)}>
+                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                     <label>
                         <input type="text" name="mail" style="width: 20em;" placeholder="mail address" />
                     </label>
@@ -391,21 +421,21 @@ async function runRecover() {
             </div>
         </div>
     `);
-}
 
-async function recover(e) {
-    let form = e.currentTarget;
-    let elements = form.elements;
+    async function submit(e) {
+        let form = e.currentTarget;
+        let elements = form.elements;
 
-    let mail = elements.mail.value.trim();
+        let mail = elements.mail.value.trim();
 
-    if (!mail)
-        throw new Error('Mail address is missing');
+        if (!mail)
+            throw new Error('Mail address is missing');
 
-    await Net.post('/api/user/recover', { mail: mail });
+        await Net.post('/api/user/recover', { mail: mail });
 
-    form.innerHTML = '';
-    render(html`<p>Consult the <b>mail that has been sent</b> and click the link inside to reset your password.</p>`, form);
+        form.innerHTML = '';
+        render(html`<p>Consult the <b>mail that has been sent</b> and click the link inside to reset your password.</p>`, form);
+    }
 }
 
 async function runReset() {
@@ -440,7 +470,7 @@ async function runReset() {
             <div class="box" style="align-items: center;">
                 <div class="header">Recover account</div>
 
-                <form style="text-align: center;" @submit=${UI.wrap(e => reset(e, token))}>
+                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                     ${error == null ? html`
                         <label>
                             <span>New password</span>
@@ -455,24 +485,24 @@ async function runReset() {
             </div>
         </div>
     `);
-}
 
-async function reset(e, token) {
-    let form = e.currentTarget;
-    let elements = form.elements;
+    async function submit(e) {
+        let form = e.currentTarget;
+        let elements = form.elements;
 
-    let password = elements.password.value.trim();
+        let password = elements.password.value.trim();
 
-    if (!password)
-        throw new Error('Password is missing');
+        if (!password)
+            throw new Error('Password is missing');
 
-    await Net.post('/api/user/reset', {
-        token: token,
-        password: password
-    });
+        await Net.post('/api/user/reset', {
+            token: token,
+            password: password
+        });
 
-    form.innerHTML = '';
-    render(html`<p>Your password has been changed, please login to continue.</p>`, form);
+        form.innerHTML = '';
+        render(html`<p>Your password has been changed, please login to continue.</p>`, form);
+    }
 }
 
 function isLogged() {
@@ -481,11 +511,39 @@ function isLogged() {
 }
 
 // ------------------------------------------------------------------------
-// Repositories
+// Modules
 // ------------------------------------------------------------------------
 
 async function runDashboard() {
-    UI.main('');
+    UI.main(html`
+        <div class="tabbar">
+            <a class="active">Overview</a>
+        </div>
+
+        <div class="tab">
+            <div class="box">
+                <div class="header">Repositories</div>
+                <p>Nothing yet :)</p>
+            </div>
+        </div>
+    `);
+}
+
+async function runAccount() {
+    UI.main(html`
+        <div class="tabbar">
+            <a class="active">Account</a>
+        </div>
+
+        <div class="tab">
+            <div class="box" style="align-items: center;">
+                <div class="header">Account</div>
+                <div class="actions">
+                    <button type="button" @click=${UI.insist(logout)}>Logout</button>
+                </div>
+            </div>
+        </div>
+    `);
 }
 
 export {
