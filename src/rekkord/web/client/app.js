@@ -182,8 +182,10 @@ async function run(changes = {}, push = false) {
 }
 
 function makeURL(changes = {}) {
+    let hash = window.location.hash ?? '';
+
     let values = Object.assign({}, route, changes);
-    let path = '/' + values.mode;
+    let path = '/' + values.mode + hash;
 
     return path;
 }
