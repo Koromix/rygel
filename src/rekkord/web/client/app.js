@@ -329,7 +329,10 @@ async function runConfirm() {
                     ${error == null ? html`
                         <label>
                             <span>Choose password</span>
-                            <input type="password" name="password" style="width: 20em;" placeholder="password" />
+                            <input type="password" name="password1" style="width: 20em;" placeholder="password" />
+                        </label>
+                        <label>
+                            <input type="password" name="password2" style="width: 20em;" placeholder="confirm" />
                         </label>
                         <div class="actions">
                             <button type="submit">Set password</button>
@@ -345,14 +348,17 @@ async function runConfirm() {
         let form = e.currentTarget;
         let elements = form.elements;
 
-        let password = elements.password.value.trim();
+        let password1 = elements.password1.value.trim();
+        let password2 = elements.password2.value.trim();
 
-        if (!password)
+        if (!password1 || !password2)
             throw new Error('Password is missing');
+        if (password2 != password1)
+            throw new Error('Passwords do not match');
 
         await Net.post('/api/user/reset', {
             token: token,
-            password: password
+            password: password1
         });
 
         form.innerHTML = '';
@@ -482,7 +488,10 @@ async function runReset() {
                     ${error == null ? html`
                         <label>
                             <span>New password</span>
-                            <input type="password" name="password" style="width: 20em;" placeholder="password" />
+                            <input type="password" name="password1" style="width: 20em;" placeholder="password" />
+                        </label>
+                        <label>
+                            <input type="password" name="password2" style="width: 20em;" placeholder="confirm" />
                         </label>
                         <div class="actions">
                             <button type="submit">Confirm password</button>
@@ -498,14 +507,17 @@ async function runReset() {
         let form = e.currentTarget;
         let elements = form.elements;
 
-        let password = elements.password.value.trim();
+        let password1 = elements.password1.value.trim();
+        let password2 = elements.password2.value.trim();
 
-        if (!password)
+        if (!password1 || !password2)
             throw new Error('Password is missing');
+        if (password2 != password1)
+            throw new Error('Passwords do not match');
 
         await Net.post('/api/user/reset', {
             token: token,
-            password: password
+            password: password1
         });
 
         form.innerHTML = '';
