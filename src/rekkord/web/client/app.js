@@ -109,7 +109,14 @@ function go(url = null, push = true) {
     let mode = parts.shift();
 
     switch (mode) {
-        case 'login':
+        case 'login': {
+            if (session != null) {
+                changes.mode = 'dashboard';
+            } else {
+                changes.mode = 'login';
+            }
+        } break;
+
         case 'register':
         case 'confirm':
         case 'recover':
@@ -405,12 +412,7 @@ async function runLogin() {
         if (!password)
             throw new Error('Password is missing');
 
-        session = await Net.post('/api/user/login', {
-            mail: mail,
-            password: password
-        });
-
-        await run({}, false);
+        await login(mail, password);
     }
 }
 
