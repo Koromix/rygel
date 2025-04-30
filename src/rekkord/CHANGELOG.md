@@ -6,6 +6,14 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.51
+
+*Released on 2025-04-30*
+
+- Replace snapshot names with channels
+- Fix incoherent mode checks with WriteOnly role
+- Rename *--sort* values in `rekkord snapshots`
+
 ### Rekkord 0.50
 
 *Released on 2025-04-28*
