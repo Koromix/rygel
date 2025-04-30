@@ -908,7 +908,7 @@ bool rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
     // How many files do we need to generate?
     int fragments = (cypher.len + MaxFragmentSize - 1) / MaxFragmentSize;
 
-    if (fragments > INT8_MAX) {
+    if (fragments >= 100) {
         LogError("Excessive tag payload size");
         return false;
     }
@@ -918,7 +918,7 @@ bool rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
         Size len = std::min(offset + MaxFragmentSize, cypher.len) - offset;
 
         LocalArray<char, 512> path;
-        path.len = Fmt(path.data, "tags/%1_%2_", FmtSpan(id, FmtType::BigHex, "").Pad0(-2), FmtHex(i).Pad0(-2)).len;
+        path.len = Fmt(path.data, "tags/%1_%2_", FmtSpan(id, FmtType::BigHex, "").Pad0(-2), FmtArg(i).Pad0(-2)).len;
 
         sodium_bin2base64(path.end(), path.Available(), cypher.ptr + offset, len, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
 
