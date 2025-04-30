@@ -189,13 +189,9 @@ Options:
     {
         LocalArray<rk_UserInfo, 8> users;
 
-        if (admin_pwd) {
+        if (create_users) {
             users.Append({ "admin", rk_UserRole::Admin, admin_pwd });
-        }
-        if (data_pwd) {
             users.Append({ "data", rk_UserRole::ReadWrite, data_pwd });
-        }
-        if (write_pwd) {
             users.Append({ "write", rk_UserRole::WriteOnly, write_pwd });
         }
 
@@ -204,28 +200,24 @@ Options:
     }
     LogInfo();
 
-    if (admin_pwd) {
+    if (create_users) {
         if (random_admin_pwd) {
             LogInfo("Default admin user password: %!..+%1%!0", admin_pwd);
         } else {
             LogInfo("Default admin user password: %!D..(hidden)%!0");
         }
-    }
-    if (data_pwd) {
         if (random_data_pwd) {
             LogInfo("         data user password: %!..+%1%!0", data_pwd);
         } else {
             LogInfo("         data user password: %!D..(hidden)%!0");
         }
-    }
-    if (write_pwd) {
         if (random_write_pwd) {
             LogInfo("        write user password: %!..+%1%!0", write_pwd);
         } else {
             LogInfo("        write user password: %!D..(hidden)%!0");
         }
+        LogInfo();
     }
-    LogInfo();
 
     // Continue even if it fails, an error will be shown regardless
     if (WriteFile(mkey, key_filename, (int)StreamWriterFlag::NoBuffer)) {
