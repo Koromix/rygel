@@ -25,14 +25,14 @@ enum class SortOrder {
     Time,
     Name,
     Size,
-    Stored
+    Storage
 };
 static const char *const SortOrderNames[] = {
     "Hash",
     "Time",
     "Name",
     "Size",
-    "Stored"
+    "Storage"
 };
 
 int RunSnapshots(Span<const char *> arguments)
@@ -182,7 +182,7 @@ Available sort orders: %!..+%4%!0)",
                 case SortOrder::Time: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.time - s2.time; }; } break;
                 case SortOrder::Name: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return CmpStr(s1.name, s2.name); }; } break;
                 case SortOrder::Size: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.size - s2.size; }; } break;
-                case SortOrder::Stored: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.storage - s2.storage; }; } break;
+                case SortOrder::Storage: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.storage - s2.storage; }; } break;
             }
             RG_ASSERT(func);
 
