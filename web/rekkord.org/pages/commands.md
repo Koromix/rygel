@@ -6,7 +6,7 @@
 
 Each snapshot has a unique hash (which is actually a BLAKE3 hash in hexadecimal form), which is generated automatically when the snapshot is created.
 
-By default, snapshots are named with the normalized path you are backing up. You can use `-n <NAME>` to use a custom name. You must give an explicit name if you specify multiple paths. Please note that there is a **maximum snapshot name length** (256 bytes).
+By default, snapshots are named with the normalized path you are backing up. You can use `-c <CHANNEL>` to use a custom channel name. Please note that there is a *maximum snapshot channel length* (256 bytes).
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini

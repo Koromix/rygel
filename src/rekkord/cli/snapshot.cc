@@ -38,14 +38,16 @@ Options:
     %!..+-R, --repository URL%!0           Set repository URL
     %!..+-u, --user username%!0            Set repository username
 
-    %!..+-n, --name name%!0                Set custom snapshot name
+    %!..+-c, --channel channel%!0          Set custom snapshot channel
+                                   %!D..(default: %2)%!0
         %!..+--raw%!0                      Skip snapshot object and report data hash
 
         %!..+--follow_symlinks%!0          Follow symbolic links (instead of storing them as-is)
         %!..+--preserve_atime%!0           Do not modify atime if possible (Linux-only)
 
     %!..+-j, --threads threads%!0          Change number of threads
-                                   %!D..(default: automatic)%!0)", FelixTarget);
+                                   %!D..(default: automatic)%!0)",
+                FelixTarget, rk_DefaultSnapshotChannel);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -66,8 +68,8 @@ Options:
                     return 1;
             } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 config.username = opt.current_value;
-            } else if (opt.Test("-n", "--name", OptionType::Value)) {
-                settings.name = opt.current_value;
+            } else if (opt.Test("-c", "--channel", OptionType::Value)) {
+                settings.channel = opt.current_value;
             } else if (opt.Test("--follow_symlinks")) {
                 settings.follow_symlinks = true;
             } else if (opt.Test("--preserve_atime")) {
@@ -96,35 +98,12 @@ Options:
         return 1;
     }
 
-    if (!settings.name && !settings.raw && filenames.len > 1) {
-        LogError("You must use an explicit name with %!..+-n name%!0 to save multiple paths");
-        return 1;
-    }
-
     if (!config.Complete(true))
         return 1;
 
     std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
     if (!disk)
         return 1;
-
-    if (!settings.raw) {
-        const char *username = disk->GetUser();
-        RG_ASSERT(username);
-
-        if (!settings.name) {
-            Span<char> path = NormalizePath(filenames[0], &temp_alloc);
-
-            if (path.len > rk_MaxSnapshotNameLength) {
-                path.len = rk_MaxSnapshotNameLength;
-                path.ptr[path.len] = 0;
-
-                LogWarning("Truncating snapshot name to '%1'", path);
-            }
-
-            settings.name = path.ptr;
-        }
-    }
 
     ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
@@ -156,7 +135,7 @@ Options:
         LogInfo("Data hash: %!..+%1%!0", hash);
     } else {
         LogInfo("Snapshot hash: %!..+%1%!0", hash);
-        LogInfo("Snapshot name: %!..+%1%!0", settings.name);
+        LogInfo("Snapshot channel: %!..+%1%!0", settings.channel);
     }
     LogInfo("Source size: %!..+%1%!0", FmtDiskSize(total_size));
     LogInfo("Total written: %!..+%1%!0", FmtDiskSize(total_written));

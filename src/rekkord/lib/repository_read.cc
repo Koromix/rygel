@@ -814,7 +814,7 @@ bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *o
     for (const rk_TagInfo &tag: tags) {
         rk_SnapshotInfo snapshot = {};
 
-        if (tag.payload.len < (Size)offsetof(SnapshotHeader2, name) + 1 ||
+        if (tag.payload.len < (Size)offsetof(SnapshotHeader2, channel) + 1 ||
                 tag.payload.len > RG_SIZE(SnapshotHeader2)) {
             LogError("Malformed snapshot tag (ignoring)");
             continue;
@@ -822,11 +822,11 @@ bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *o
 
         SnapshotHeader2 header = {};
         MemCpy(&header, tag.payload.ptr, tag.payload.len);
-        header.name[RG_SIZE(header.name) - 1] = 0;
+        header.channel[RG_SIZE(header.channel) - 1] = 0;
 
         snapshot.tag = DuplicateString(tag.id, alloc).ptr;
         snapshot.hash = tag.hash;
-        snapshot.name = DuplicateString(header.name, alloc).ptr;
+        snapshot.channel = DuplicateString(header.channel, alloc).ptr;
         snapshot.time = LittleEndian(header.time);
         snapshot.size = LittleEndian(header.size);
         snapshot.storage = LittleEndian(header.storage);
@@ -1040,7 +1040,7 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
             header2.time = header1->time;
             header2.size = header1->size;
             header2.storage = header1->storage;
-            MemCpy(header2.name, header1->name, RG_SIZE(header2.name));
+            MemCpy(header2.channel, header1->channel, RG_SIZE(header2.channel));
 
             MemCpy(blob.ptr, &header2, RG_SIZE(SnapshotHeader2));
         } [[fallthrough]];
@@ -1060,14 +1060,14 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
             ProgressHandle progress;
             ListContext tree(disk, settings, &progress, total);
 
-            // Make sure snapshot name is NUL terminated
-            header1->name[RG_SIZE(header1->name) - 1] = 0;
+            // Make sure snapshot channel is NUL terminated
+            header1->channel[RG_SIZE(header1->channel) - 1] = 0;
 
             rk_ObjectInfo *obj = out_objects->AppendDefault();
 
             obj->hash = hash;
             obj->type = rk_ObjectType::Snapshot;
-            obj->name = DuplicateString(header1->name, alloc).ptr;
+            obj->name = DuplicateString(header1->channel, alloc).ptr;
             obj->mtime = LittleEndian(header1->time);
             obj->btime = LittleEndian(header1->time);
             obj->size = LittleEndian(header1->size);
@@ -1149,7 +1149,7 @@ bool rk_Locate(rk_Disk *disk, Span<const char> identifier, rk_Hash *out_hash)
             for (Size i = snapshots.len - 1; i >= 0; i--) {
                 const rk_SnapshotInfo &snapshot = snapshots[i];
 
-                if (TestStr(name, snapshot.name)) {
+                if (TestStr(name, snapshot.channel)) {
                     hash = snapshot.hash;
 
                     found = true;

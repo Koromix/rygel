@@ -584,21 +584,21 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     RG_ASSERT(filenames.len >= 1);
 
     if (settings.raw) {
-        if (settings.name) {
-            LogError("Cannot use snapshot name in raw mode");
+        if (settings.channel) {
+            LogError("Cannot use snapshot channel in raw mode");
             return false;
         }
         if (filenames.len != 1) {
             LogError("Only one object can be saved up in raw mode");
             return false;
         }
-    } else {
-        if (!settings.name || !settings.name[0]) {
-            LogError("Snapshot name cannot be empty");
+    } else if (settings.channel) {
+        if (!settings.channel[0]) {
+            LogError("Snapshot channel cannot be empty");
             return false;
         }
-        if (strlen(settings.name) > rk_MaxSnapshotNameLength) {
-            LogError("Snapshot name '%1' is too long (limit is %2 bytes)", settings.name, rk_MaxSnapshotNameLength);
+        if (strlen(settings.channel) > rk_MaxSnapshotChannelLength) {
+            LogError("Snapshot channel '%1' is too long (limit is %2 bytes)", settings.channel, rk_MaxSnapshotChannelLength);
             return false;
         }
     }
@@ -712,9 +712,10 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     if (!settings.raw) {
         SnapshotHeader2 *header1 = (SnapshotHeader2 *)snapshot_blob.ptr;
         DirectoryHeader *header2 = (DirectoryHeader *)(header1 + 1);
+        const char *channel = settings.channel ? settings.channel : rk_DefaultSnapshotChannel;
 
         header1->time = LittleEndian(GetUnixTime());
-        CopyString(settings.name, header1->name);
+        CopyString(channel, header1->channel);
         header1->size = LittleEndian(total_size);
         header1->storage = LittleEndian(total_stored);
 
@@ -733,7 +734,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
         // Create tag file
         {
-            Size payload_len = offsetof(SnapshotHeader2, name) + strlen(header1->name) + 1;
+            Size payload_len = offsetof(SnapshotHeader2, channel) + strlen(header1->channel) + 1;
             Span<const uint8_t> payload = MakeSpan((const uint8_t *)header1, payload_len);
 
             if (!disk->WriteTag(hash, payload))

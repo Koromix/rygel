@@ -21,10 +21,11 @@ namespace RG {
 
 class rk_Disk;
 
-static const Size rk_MaxSnapshotNameLength = 256;
+static const char *const rk_DefaultSnapshotChannel = "default";
+static const Size rk_MaxSnapshotChannelLength = 256;
 
 struct rk_PutSettings {
-    const char *name = nullptr;
+    const char *channel = nullptr;
     bool follow_symlinks = false;
     bool preserve_atime = false;
     bool raw = false;
@@ -46,7 +47,7 @@ struct rk_SnapshotInfo {
     const char *tag;
     rk_Hash hash;
 
-    const char *name;
+    const char *channel;
     int64_t time;
     int64_t size;
     int64_t storage;

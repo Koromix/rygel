@@ -23,14 +23,14 @@ namespace RG {
 enum class SortOrder {
     Hash,
     Time,
-    Name,
+    Channel,
     Size,
     Storage
 };
 static const char *const SortOrderNames[] = {
     "Hash",
     "Time",
-    "Name",
+    "Channel",
     "Size",
     "Storage"
 };
@@ -162,7 +162,7 @@ Available sort orders: %!..+%4%!0)",
             const rk_SnapshotInfo &snapshot = snapshots[i];
 
             snapshots[j] = snapshot;
-            j += MatchPathName(snapshot.name, pattern);
+            j += MatchPathName(snapshot.channel, pattern);
         }
         snapshots.len = j;
     }
@@ -180,7 +180,7 @@ Available sort orders: %!..+%4%!0)",
             switch (order) {
                 case SortOrder::Hash: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.hash - s2.hash; }; } break;
                 case SortOrder::Time: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.time - s2.time; }; } break;
-                case SortOrder::Name: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return CmpStr(s1.name, s2.name); }; } break;
+                case SortOrder::Channel: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return CmpStr(s1.channel, s2.channel); }; } break;
                 case SortOrder::Size: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.size - s2.size; }; } break;
                 case SortOrder::Storage: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.storage - s2.storage; }; } break;
             }
@@ -209,7 +209,7 @@ Available sort orders: %!..+%4%!0)",
                 for (const rk_SnapshotInfo &snapshot: snapshots) {
                     TimeSpec spec = DecomposeTimeLocal(snapshot.time);
 
-                    PrintLn("%!Y.+%1%!0 %!G..%2%!0", FmtArg(snapshot.name).Pad(40), FmtTimeNice(spec));
+                    PrintLn("%!Y.+%1%!0 %!G..%2%!0", FmtArg(snapshot.channel).Pad(40), FmtTimeNice(spec));
                     PrintLn("  + Hash: %!..+%1%!0", snapshot.hash);
                     PrintLn("  + Size: %!..+%1%!0", FmtDiskSize(snapshot.size));
                     PrintLn("  + Storage: %!..+%1%!0", FmtDiskSize(snapshot.storage));
@@ -239,11 +239,7 @@ Available sort orders: %!..+%4%!0)",
                     Fmt(time, "%1", FmtTimeISO(spec, true));
                 }
 
-                if (snapshot.name) {
-                    json.Key("name"); json.String(snapshot.name);
-                } else {
-                    json.Key("name"); json.Null();
-                }
+                json.Key("channel"); json.String(snapshot.channel);
                 json.Key("hash"); json.String(hash);
                 json.Key("time"); json.String(time);
                 json.Key("size"); json.Int64(snapshot.size);
@@ -274,7 +270,7 @@ Available sort orders: %!..+%4%!0)",
                     Fmt(time, "%1", FmtTimeISO(spec, true));
                 }
 
-                element.append_attribute("Name") = snapshot.name ? snapshot.name : "";
+                element.append_attribute("Channel") = snapshot.channel;
                 element.append_attribute("Hash") = hash;
                 element.append_attribute("Time") = time;
                 element.append_attribute("Size") = snapshot.size;
