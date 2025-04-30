@@ -93,8 +93,7 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
             } break;
 
             case rk_UserRole::WriteOnly: {
-                modes = (int)rk_AccessMode::Write |
-                        (int)rk_AccessMode::Log;
+                modes = (int)rk_AccessMode::Write;
 
                 ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
                 ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
