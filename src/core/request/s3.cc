@@ -181,15 +181,18 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
         Span<const char> remain = host;
 
         if (!StartsWith(remain, "s3.")) {
-            Span<const char> part = SplitStr(remain, '.', &remain);
+            Span<const char> part = SplitStr(remain, ".s3.", &remain);
 
-            if (StartsWith(remain, "s3.")) {
+            if (remain.len) {
                 if (path_mode) {
                     LogError("Duplicate bucket name in S3 URL '%1'", url);
                     return false;
                 }
 
                 bucket = DuplicateString(part, &out_config->str_alloc).ptr;
+
+                remain.ptr -= 3;
+                remain.len += 3;
             } else {
                 region = DuplicateString(part, &out_config->str_alloc).ptr;
             }
