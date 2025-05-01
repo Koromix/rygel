@@ -82,7 +82,7 @@ private:
 
     void *InitConnection(); // CURL
 
-    int RunSafe(const char *action, FunctionRef<int(void)> func);
+    int RunSafe(const char *action, FunctionRef<int(void)> func, bool quick = false);
 
     Size PrepareHeaders(const char *method, const char *path, const char *query, const char *mimetype,
                         Span<const uint8_t> body, Allocator *alloc, Span<curl_slist> out_headers);

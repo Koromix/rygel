@@ -769,7 +769,7 @@ bool s3_Session::OpenAccess()
             return 200;
 
         return status;
-    });
+    }, true);
     if (status != 200)
         return false;
 
@@ -835,11 +835,12 @@ CURL *s3_Session::InitConnection()
     return curl;
 }
 
-int s3_Session::RunSafe(const char *action, FunctionRef<int(void)> func)
+int s3_Session::RunSafe(const char *action, FunctionRef<int(void)> func, bool quick)
 {
+    int tries = quick ? 3 : 9;
     int status = 0;
 
-    for (int i = 0; i < 9; i++) {
+    for (int i = 0; i < tries; i++) {
         status = func();
 
         if (status == 200 || status == 404)
