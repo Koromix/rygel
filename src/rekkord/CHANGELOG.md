@@ -6,6 +6,14 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.53
+
+*Released on 2025-05-01*
+
+- Reduce delay before initial S3 connection error
+- Improve support for S3 URLs with dotted bucket names
+- Fix silent exit with missing S3 bucket (status 404)
+
 ### Rekkord 0.52
 
 *Released on 2025-05-01*
