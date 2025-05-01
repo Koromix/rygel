@@ -584,15 +584,13 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     RG_ASSERT(filenames.len >= 1);
 
     if (settings.raw) {
-        if (settings.channel) {
-            LogError("Cannot use snapshot channel in raw mode");
-            return false;
-        }
         if (filenames.len != 1) {
             LogError("Only one object can be saved up in raw mode");
             return false;
         }
-    } else if (settings.channel) {
+    } else {
+        RG_ASSERT(settings.channel);
+
         if (!settings.channel[0]) {
             LogError("Snapshot channel cannot be empty");
             return false;
@@ -712,10 +710,9 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     if (!settings.raw) {
         SnapshotHeader2 *header1 = (SnapshotHeader2 *)snapshot_blob.ptr;
         DirectoryHeader *header2 = (DirectoryHeader *)(header1 + 1);
-        const char *channel = settings.channel ? settings.channel : rk_DefaultSnapshotChannel;
 
         header1->time = LittleEndian(GetUnixTime());
-        CopyString(channel, header1->channel);
+        CopyString(settings.channel, header1->channel);
         header1->size = LittleEndian(total_size);
         header1->storage = LittleEndian(total_stored);
 
