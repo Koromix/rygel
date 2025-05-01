@@ -6,6 +6,14 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.52
+
+*Released on 2025-05-01*
+
+- Fix broken big file deduplication caused by unstable splitter seed
+- Fix default snapshot channel reported as null after save
+- Adjust naming of tag files
+
 ### Rekkord 0.51
 
 *Released on 2025-04-30*
