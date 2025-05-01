@@ -770,8 +770,13 @@ bool s3_Session::OpenAccess()
 
         return status;
     }, true);
-    if (status != 200)
+
+    if (status == 404) {
+        LogError("Unknown S3 bucket (error 404)");
         return false;
+    } else if (status != 200) {
+        return false;
+    }
 
     open = true;
     return true;
