@@ -233,7 +233,10 @@ void rk_Disk::MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const
     RG_ASSERT(strlen(DerivationContext) == 8);
     uint64_t subkey = (uint64_t)kind;
 
-    crypto_kdf_blake2b_derive_from_key(out_buf.ptr, out_buf.len, subkey, DerivationContext, keyset->wkey);
+    uint8_t buf[32] = {};
+    crypto_kdf_blake2b_derive_from_key(buf, RG_SIZE(buf), subkey, DerivationContext, keyset->wkey);
+
+    MemCpy(out_buf.ptr, buf, out_buf.len);
 }
 
 bool rk_Disk::ChangeCID()
