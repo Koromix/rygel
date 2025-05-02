@@ -167,9 +167,6 @@ public:
     const char *GetRole() const { return role; }
     Async *GetAsync() { return &tasks; }
 
-    // You should not need this, but if you do, be careful!
-    rk_KeySet *GetKeySet() const { return keyset; }
-
     bool HasMode(rk_AccessMode mode) const { return modes & (int)mode; }
 
     void MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const;
