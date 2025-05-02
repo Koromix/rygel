@@ -220,7 +220,94 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     color: var(--top_color);
 }
 
+dialog {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    padding-top: 44px;
+    display: flex;
+    align-items: start;
+    justify-content: center;
+    background: #ffffffcc;
+    backdrop-filter: blur(4px);
+
+    & > form {
+        background-color: white;
+        max-width: 80%;
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+    }
+}
+dialog ~ .dialog { padding-top: 66px; }
+
+@media screen and (max-width: 960px) {
+    & dialog {
+        padding-top: 22px;
+
+        & > form {
+            max-width: 90%;
+            max-height: calc(100vh - 50px);
+        }
+    }
+    & dialog ~ dialog { padding-top: 44px; }
+}
+
 form {
+    & > .title {
+        display: flex;
+        position: sticky;
+        top: 0;
+        z-index: 9999;
+        font-weight: bold;
+        border-bottom: 1px solid #ededf0;
+        border-radius: 6px 6px 0 0;
+        background: #eee;
+        padding: 10px;
+        align-items: center;
+        justify-content: center;
+        gap: 0.71em;
+    }
+    & > .title > span {
+        padding-left: 5px;
+        flex: 1;
+    }
+    & > .title > span + button { margin-left: 50px; }
+    & > .main {
+        display: flex;
+        box-sizing: border-box;
+        max-width: 100%;
+        flex-direction: column;
+        gap: 0.71em;
+        overflow-y: auto;
+        padding: 16px;
+    }
+    & > .meta {
+        display: flex;
+        flex-direction: column;
+        padding: 8px 80px 20px 80px;
+        min-width: 200px;
+        border-radius: 3px;
+        background: #eee;
+        gap: 0.71em;
+    }
+    & > .meta > label > span:first-child { width: 120px; }
+    & > .footer {
+        display: flex;
+        position: sticky;
+        bottom: 0;
+        z-index: 9999;
+        border-bottom: 1px solid #ededf0;
+        border-radius: 0 0 6px 6px;
+        background: #eee;
+        padding: 10px;
+        align-items: center;
+        justify-content: right;
+        gap: 0.71em;
+    }
+
     & :is(label:not([for]), .widget) {
         display: flex;
         flex-direction: column;

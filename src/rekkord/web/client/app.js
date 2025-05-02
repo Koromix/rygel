@@ -570,7 +570,6 @@ async function runAccount() {
 }
 
 async function changePicture() {
-    let title = `Change ${session.username} picture`;
     let current = null;
 
     // Fetch exisiting picture
@@ -587,7 +586,7 @@ async function changePicture() {
         }
     }
 
-    let cropper = new PictureCropper(title, 256);
+    let cropper = new PictureCropper('Change picture', 256);
 
     cropper.defaultURL = ASSETS['ui/anonyous'];
     cropper.imageFormat = 'image/png';

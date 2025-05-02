@@ -62,7 +62,7 @@ function PictureCropper(title, size) {
         apply_func = func;
         is_default = true;
 
-        let sha256 = await UI.dialog({
+        let ret = await UI.dialog({
             open: () => {
                 canvas.addEventListener('pointerdown', react);
                 canvas.addEventListener('wheel', react);
@@ -141,7 +141,7 @@ function PictureCropper(title, size) {
             submit: apply
         });
 
-        return sha256;
+        return ret;
     };
 
     async function load(file) {

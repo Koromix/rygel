@@ -196,12 +196,7 @@ function main(content = null) {
         main_el.className = 'primary';
     }
 
-    if (dialogs.length) {
-        let el = dialogs[dialogs.length - 1].el;
-        render_func(el);
-    } else {
-        render_func(main_el);
-    }
+    render_func(main_el);
 
     if (content != null)
         render(content, main_el);
@@ -216,8 +211,6 @@ function dialog(options = {}) {
         options.can_be_closed = true;
 
     let dlg = {
-        el: null,
-
         update: null,
         resolve: null,
         reject: null,
@@ -242,8 +235,7 @@ function dialog(options = {}) {
         init_dialogs = true;
     }
 
-    dlg.el = document.createElement('main');
-    dlg.el.className = 'dialog';
+    let dlg_el = document.createElement('dialog');
 
     let p = new Promise((resolve, reject) => {
         dlg.update = () => {
@@ -257,15 +249,15 @@ function dialog(options = {}) {
                       @submit=${wrap(e => handleSubmit(e, dlg))}>
                     ${options.run(dlg.update, () => reject())}
                 </form>
-            `, dlg.el);
+            `, dlg_el);
         };
 
         dlg.resolve = resolve;
         dlg.reject = reject;
 
         window.requestAnimationFrame(() => {
-            let widget0 = dlg.el.querySelector('label > *[autofocus]') ||
-                          dlg.el.querySelector(`label > input:not(:disabled),
+            let widget0 = dlg_el.querySelector('label > *[autofocus]') ||
+                          dlg_el.querySelector(`label > input:not(:disabled),
                                                 label > select:not(:disabled),
                                                 label > textarea:not(:disabled)`);
 
@@ -283,6 +275,8 @@ function dialog(options = {}) {
         if (options.close != null)
             options.close();
 
+        document.body.removeChild(dlg_el);
+
         dialogs = dialogs.filter(it => it != dlg);
 
         if (dialogs.length) {
@@ -291,22 +285,20 @@ function dialog(options = {}) {
         }
 
         setTimeout(run_func, 0);
-
-        main();
     });
 
     dialogs.push(dlg);
     dlg.update();
 
+    document.body.appendChild(dlg_el);
+
     if (options.open != null)
-        options.open(dlg.el.children[0]);
+        options.open(dlg_el.children[0]);
     if (options.can_be_closed)
         p.close = () => dlg.reject();
 
-    main();
-
-    if (dlg.el.show != null)
-        dlg.el.show();
+    if (dlg_el.show != null)
+        dlg_el.show();
 
     return p;
 }
