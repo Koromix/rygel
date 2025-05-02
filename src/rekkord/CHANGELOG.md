@@ -6,6 +6,13 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.54
+
+*Released on 2025-05-02*
+
+- Add `rekkord channels` to help notice failing snapshots
+- Remove tag migration command
+
 ### Rekkord 0.53
 
 *Released on 2025-05-01*
