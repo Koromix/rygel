@@ -32,6 +32,7 @@ int RunSave(Span<const char *> arguments);
 int RunRestore(Span<const char *> arguments);
 
 int RunSnapshots(Span<const char *> arguments);
+int RunChannels(Span<const char *> arguments);
 int RunList(Span<const char *> arguments);
 int RunMount(Span<const char *> arguments);
 
@@ -80,6 +81,7 @@ Snapshot commands:
 Exploration commands:
 
     %!..+snapshots%!0                      List known snapshots
+    %!..+channels%!0                       Show status of snapshot channels
     %!..+list%!0                           List snapshot or directory children
     %!..+mount%!0                          Mount repository readonly as user filesystem)", FelixTarget);
 
@@ -161,6 +163,8 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         return RunRestore(arguments);
     } else if (TestStr(cmd, "snapshots")) {
         return RunSnapshots(arguments);
+    } else if (TestStr(cmd, "channels")) {
+        return RunChannels(arguments);
     } else if (TestStr(cmd, "list")) {
         return RunList(arguments);
     } else if (TestStr(cmd, "mount")) {

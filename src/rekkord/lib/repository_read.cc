@@ -841,6 +841,50 @@ bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *o
     return true;
 }
 
+bool rk_Channels(rk_Disk *disk, Allocator *alloc, HeapArray<rk_ChannelInfo> *out_channels)
+{
+    BlockAllocator temp_alloc;
+
+    Size prev_len = out_channels->len;
+    RG_DEFER_N(out_guard) { out_channels->RemoveFrom(prev_len); };
+
+    HeapArray<rk_SnapshotInfo> snapshots;
+    if (!rk_Snapshots(disk, &temp_alloc, &snapshots))
+        return false;
+
+    HashMap<const char *, Size> map;
+
+    for (const rk_SnapshotInfo &snapshot: snapshots) {
+        Size *ptr = map.TrySet(snapshot.channel, -1);
+        Size idx = *ptr;
+
+        if (idx < 0) {
+            rk_ChannelInfo channel = {};
+
+            channel.name = DuplicateString(snapshot.channel, alloc).ptr;
+
+            idx = out_channels->len;
+            *ptr = idx;
+
+            out_channels->Append(channel);
+        }
+
+        rk_ChannelInfo *channel = &(*out_channels)[idx];
+
+        if (snapshot.time > channel->time) {
+            channel->hash = snapshot.hash;
+            channel->time = std::max(channel->time, snapshot.time);
+            channel->size = snapshot.size;
+        }
+    }
+
+    std::sort(out_channels->ptr + prev_len, out_channels->end(),
+              [](const rk_ChannelInfo &channel1, const rk_ChannelInfo &channel2) { return CmpStr(channel1.name, channel2.name) < 0; });
+
+    out_guard.Disable();
+    return true;
+}
+
 class ListContext {
     rk_Disk *disk;
     rk_ListSettings settings;

@@ -286,6 +286,175 @@ Available sort orders: %!..+%4%!0)",
     return 0;
 }
 
+int RunChannels(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    rk_Config config;
+    OutputFormat format = OutputFormat::Plain;
+    int verbose = 0;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 channels [-C filename] [option...]%!0
+
+Options:
+
+    %!..+-C, --config_file filename%!0     Set configuration file
+
+    %!..+-R, --repository URL%!0           Set repository URL
+    %!..+-u, --user username%!0            Set repository username
+
+    %!..+-j, --threads threads%!0          Change number of threads
+                                   %!D..(default: automatic)%!0
+
+    %!..+-f, --format format%!0            Change output format
+                                   %!D..(default: %2)%!0
+    %!..+-v, --verbose%!0                  Enable verbose output (plain only)
+
+Available output formats: %!..+%3%!0)",
+                FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
+    };
+
+    if (!FindAndLoadConfig(arguments, &config))
+        return 1;
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
+            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
+                if (!rk_DecodeURL(opt.current_value, &config))
+                    return 1;
+            } else if (opt.Test("-u", "--username", OptionType::Value)) {
+                config.username = opt.current_value;
+            } else if (opt.Test("-j", "--threads", OptionType::Value)) {
+                if (!ParseInt(opt.current_value, &config.threads))
+                    return 1;
+                if (config.threads < 1) {
+                    LogError("Threads count cannot be < 1");
+                    return 1;
+                }
+            } else if (opt.Test("-f", "--format", OptionType::Value)) {
+                if (!OptionToEnumI(OutputFormatNames, opt.current_value, &format)) {
+                    LogError("Unknown output format '%1'", opt.current_value);
+                    return 1;
+                }
+            } else if (opt.Test("-v", "--verbose")) {
+                verbose++;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        opt.LogUnusedArguments();
+    }
+
+    if (!config.Complete(true))
+        return 1;
+
+    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
+    if (!disk)
+        return 1;
+
+    ZeroSafe((void *)config.password, strlen(config.password));
+    config.password = nullptr;
+
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
+    if (!disk->HasMode(rk_AccessMode::Log)) {
+        LogError("Cannot list snapshots with %1 role", disk->GetRole());
+        return 1;
+    }
+    LogInfo();
+
+    HeapArray<rk_ChannelInfo> channels;
+    if (!rk_Channels(disk.get(), &temp_alloc, &channels))
+        return 1;
+
+    switch (format) {
+        case OutputFormat::Plain: {
+            if (channels.len) {
+                for (const rk_ChannelInfo &channel: channels) {
+                    TimeSpec spec = DecomposeTimeLocal(channel.time);
+
+                    PrintLn("%!Y.+%1%!0 %!G..%2%!0 %!..+%3%!0",
+                            FmtArg(channel.name).Pad(40), FmtTimeNice(spec).Pad(30), FmtDiskSize(channel.size));
+                    if (verbose >= 1) {
+                        PrintLn("  + Hash: %!..+%1%!0", channel.hash);
+                    }
+                }
+            } else {
+                LogInfo("There does not seem to be any snapshot");
+            }
+        } break;
+
+        case OutputFormat::JSON: {
+            json_PrettyWriter json(StdOut);
+
+            json.StartArray();
+            for (const rk_ChannelInfo &channel: channels) {
+                json.StartObject();
+
+                char hash[128];
+                Fmt(hash, "%1", channel.hash);
+
+                char time[64];
+                {
+                    TimeSpec spec = DecomposeTimeUTC(channel.time);
+                    Fmt(time, "%1", FmtTimeISO(spec, true));
+                }
+
+                json.Key("channel"); json.String(channel.name);
+                json.Key("hash"); json.String(hash);
+                json.Key("time"); json.String(time);
+                json.Key("size"); json.Int64(channel.size);
+
+                json.EndObject();
+            }
+            json.EndArray();
+
+            json.Flush();
+            PrintLn();
+        } break;
+
+        case OutputFormat::XML: {
+            pugi::xml_document doc;
+            pugi::xml_node root = doc.append_child("Channels");
+
+            for (const rk_ChannelInfo &channel: channels) {
+                pugi::xml_node element = root.append_child("Channel");
+
+                char hash[128];
+                Fmt(hash, "%1", channel.hash);
+
+                char time[64];
+                {
+                    TimeSpec spec = DecomposeTimeUTC(channel.time);
+                    Fmt(time, "%1", FmtTimeISO(spec, true));
+                }
+
+                element.append_attribute("Name") = channel.name;
+                element.append_attribute("Hash") = hash;
+                element.append_attribute("Time") = time;
+                element.append_attribute("Size") = channel.size;
+            }
+
+            xml_PugiWriter writer(StdOut);
+            doc.save(writer, "    ");
+        } break;
+    }
+
+    return 0;
+}
+
 static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbose)
 {
     TimeSpec mspec = DecomposeTimeUTC(obj.mtime);

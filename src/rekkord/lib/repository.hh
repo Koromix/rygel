@@ -53,6 +53,14 @@ struct rk_SnapshotInfo {
     int64_t storage;
 };
 
+struct rk_ChannelInfo {
+    const char *name;
+
+    rk_Hash hash;
+    int64_t time;
+    Size size;
+};
+
 enum class rk_ObjectType {
     Snapshot,
     File,
@@ -103,6 +111,7 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings,
 
 // Exploration commands
 bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
+bool rk_Channels(rk_Disk *disk, Allocator *alloc, HeapArray<rk_ChannelInfo> *out_channels);
 bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
              Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
 bool rk_Locate(rk_Disk *disk, Span<const char> identifier, rk_Hash *out_hash);
