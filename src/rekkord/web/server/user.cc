@@ -22,6 +22,10 @@
 #include "user.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
+#if defined(_WIN32)
+    #include <io.h>
+#endif
+
 namespace RG {
 
 static const int PasswordHashBytes = 128;
