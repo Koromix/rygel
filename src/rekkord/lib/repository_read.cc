@@ -876,6 +876,8 @@ bool rk_Channels(rk_Disk *disk, Allocator *alloc, HeapArray<rk_ChannelInfo> *out
             channel->time = std::max(channel->time, snapshot.time);
             channel->size = snapshot.size;
         }
+
+        channel->count++;
     }
 
     std::sort(out_channels->ptr + prev_len, out_channels->end(),

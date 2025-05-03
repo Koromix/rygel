@@ -385,8 +385,9 @@ Available output formats: %!..+%3%!0)",
                 for (const rk_ChannelInfo &channel: channels) {
                     TimeSpec spec = DecomposeTimeLocal(channel.time);
 
-                    PrintLn("%!Y.+%1%!0 %!G..%2%!0 %!..+%3%!0",
-                            FmtArg(channel.name).Pad(40), FmtTimeNice(spec).Pad(30), FmtDiskSize(channel.size));
+                    PrintLn("%!Y.+%1%!0 %!D..%2 snapshots%!0  %!G..%3%!0  %!..+%4%!0",
+                            FmtArg(channel.name).Pad(28), FmtArg(channel.count).Pad(-4),
+                            FmtTimeNice(spec), FmtDiskSize(channel.size));
                     if (verbose >= 1) {
                         PrintLn("  + Hash: %!..+%1%!0", channel.hash);
                     }
@@ -416,6 +417,7 @@ Available output formats: %!..+%3%!0)",
                 json.Key("hash"); json.String(hash);
                 json.Key("time"); json.String(time);
                 json.Key("size"); json.Int64(channel.size);
+                json.Key("count"); json.Int64(channel.count);
 
                 json.EndObject();
             }
@@ -445,6 +447,7 @@ Available output formats: %!..+%3%!0)",
                 element.append_attribute("Hash") = hash;
                 element.append_attribute("Time") = time;
                 element.append_attribute("Size") = channel.size;
+                element.append_attribute("Count") = channel.count;
             }
 
             xml_PugiWriter writer(StdOut);

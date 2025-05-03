@@ -59,6 +59,8 @@ struct rk_ChannelInfo {
     rk_Hash hash;
     int64_t time;
     Size size;
+
+    int count;
 };
 
 enum class rk_ObjectType {
