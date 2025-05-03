@@ -236,6 +236,8 @@ dialog {
 
     & > form {
         background-color: white;
+        border: 1px solid #ededf0;
+        border-radius: 6px;
         max-width: 80%;
         max-height: calc(100vh - 100px);
         overflow-y: auto;
@@ -263,18 +265,18 @@ form {
         z-index: 9999;
         font-weight: bold;
         border-bottom: 1px solid #ededf0;
-        border-radius: 6px 6px 0 0;
         background: #eee;
         padding: 10px;
         align-items: center;
         justify-content: center;
         gap: 0.71em;
+
+        & > span {
+            padding-left: 5px;
+            flex: 1;
+        }
+        & > span + button { margin-left: 50px; }
     }
-    & > .title > span {
-        padding-left: 5px;
-        flex: 1;
-    }
-    & > .title > span + button { margin-left: 50px; }
     & > .main {
         display: flex;
         box-sizing: border-box;
@@ -284,23 +286,12 @@ form {
         overflow-y: auto;
         padding: 16px;
     }
-    & > .meta {
-        display: flex;
-        flex-direction: column;
-        padding: 8px 80px 20px 80px;
-        min-width: 200px;
-        border-radius: 3px;
-        background: #eee;
-        gap: 0.71em;
-    }
-    & > .meta > label > span:first-child { width: 120px; }
     & > .footer {
         display: flex;
         position: sticky;
         bottom: 0;
         z-index: 9999;
-        border-bottom: 1px solid #ededf0;
-        border-radius: 0 0 6px 6px;
+        border-top: 1px solid #ededf0;
         background: #eee;
         padding: 10px;
         align-items: center;
