@@ -238,15 +238,17 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
 
 #else
 
+static std::once_flag flag;
+
 bool ReadXAttributes(int, const char *, Allocator *, HeapArray<XAttrInfo> *)
 {
-    LogError("Extended attributes (xattrs) are not implemented or supported on this platform");
+    std::call_once(flag, []() { LogError("Extended attributes (xattrs) are not implemented or supported on this platform"); });
     return false;
 }
 
 bool WriteXAttributes(int, const char *, Span<const XAttrInfo>)
 {
-    LogError("Extended attributes (xattrs) are not implemented or supported on this platform");
+    std::call_once(flag, []() { LogError("Extended attributes (xattrs) are not implemented or supported on this platform"); });
     return false;
 }
 
