@@ -1328,7 +1328,7 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
     mem->stack.len = stack_size;
     mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
 
-    RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
+    RG_CRITICAL(mem->stack.ptr != MAP_FAILED, "Failed to allocate %1 of memory", mem->stack.len);
 #endif
 
 #if defined(__OpenBSD__)
@@ -1345,7 +1345,7 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
 #else
     mem->heap.ptr = (uint8_t *)mmap(nullptr, mem->heap.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
 #endif
-    RG_CRITICAL(mem->heap.ptr, "Failed to allocate %1 of memory", mem->heap.len);
+    RG_CRITICAL(mem->heap.ptr != MAP_FAILED, "Failed to allocate %1 of memory", mem->heap.len);
 
     if (temporary) {
         instance->temporaries++;

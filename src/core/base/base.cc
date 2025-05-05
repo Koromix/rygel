@@ -556,8 +556,8 @@ void *AllocateSafe(Size len)
     flags |= MAP_CONCEAL;
 #endif
 
-    void *ptr = mmap(nullptr, (size_t)aligned, PROT_READ | PROT_WRITE, flags, 0, 0);
-    if (!ptr) {
+    void *ptr = mmap(nullptr, (size_t)aligned, PROT_READ | PROT_WRITE, flags, -1, 0);
+    if (ptr == MAP_FAILED) {
         LogError("Failed to allocate %1 of memory: %2", FmtMemSize(len), strerror(errno));
         abort();
     }
