@@ -708,7 +708,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
             name = name.Take(1, name.len - 1);
 
-            entry->name_len = (uint16_t)name.len;
+            entry->name_len = LittleEndian((uint16_t)name.len);
             MemCpy(entry->GetName().ptr, name.ptr, name.len);
 
             if (changed) {
