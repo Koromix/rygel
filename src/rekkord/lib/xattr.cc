@@ -120,7 +120,7 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
         int ret = fsetxattr(fd, xattr.key, xattr.value.ptr, xattr.value.len, 0);
 
         if (ret < 0) {
-            LogError("Failed to writer extended attribute '%1' to '%2': %3'", xattr.key, filename, strerror(errno));
+            LogError("Failed to write extended attribute '%1' to '%2': %3'", xattr.key, filename, strerror(errno));
             success = false;
         }
     }
@@ -224,7 +224,7 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
         int ret = extattr_set_fd(fd, EXTATTR_NAMESPACE_USER, xattr.key, xattr.value.ptr, xattr.value.len);
 
         if (ret < 0) {
-            LogError("Failed to writer extended attribute '%1' to '%2': %3'", xattr.key, filename, strerror(errno));
+            LogError("Failed to write extended attribute '%1' to '%2': %3'", xattr.key, filename, strerror(errno));
             success = false;
         }
     }
