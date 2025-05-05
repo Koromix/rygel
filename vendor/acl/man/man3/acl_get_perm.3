@@ -1,0 +1,98 @@
+.\" Access Control Lists manual pages
+.\"
+.\" (C) 2002 Andreas Gruenbacher, <andreas.gruenbacher@gmail.com>
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this manual.  If not, see
+.\" <http://www.gnu.org/licenses/>.
+.\"
+.Dd March 23, 2002
+.Dt ACL_GET_PERM 3
+.Os "Linux ACL"
+.Sh NAME
+.Nm acl_get_perm
+.Nd test for a permission in an ACL permission set
+.Sh LIBRARY
+Linux Access Control Lists library (libacl, \-lacl).
+.Sh SYNOPSIS
+.In sys/types.h
+.In acl/libacl.h
+.Ft int
+.Fn acl_get_perm "acl_permset_t permset_d" "acl_perm_t perm"
+.Sh DESCRIPTION
+The
+.Fn acl_get_perm
+function tests if the permission specified by the argument
+.Va perm
+(one of ACL_READ, ACL_WRITE, ACL_EXECUTE)
+is contained in the ACL permission set pointed to by the argument
+.Va permset_d .
+.Pp
+Any existing descriptors that refer to
+.Va permset_d
+continue to refer to that permission set.
+.Sh RETURN VALUE
+If successful, the
+.Fn acl_get_perm
+function returns
+.Li 1
+if the permission specified by
+.Va perm
+is contained in the ACL permission set
+.Va permset_d ,
+and
+.Li 0
+if the permission is not contained in the permission set. Otherwise,
+the value
+.Li -1
+is returned and the global variable
+.Va errno
+is set to indicate the error.
+.Sh ERRORS
+If any of the following conditions occur, the
+.Fn acl_get_perm
+function returns
+.Li -1
+and sets
+.Va errno
+to the corresponding value:
+.Bl -tag -width Er
+.It Bq Er EINVAL
+The argument
+.Va permset_d
+is not a valid descriptor for a permission set within an ACL entry.
+.Pp
+The argument
+.Va perm
+is not a valid
+.Va acl_perm_t
+value.
+.El
+.Sh STANDARDS
+This is a non-portable, Linux specific extension to the ACL manipulation
+functions defined in IEEE Std 1003.1e draft 17 (\(lqPOSIX.1e\(rq, abandoned).
+.Sh SEE ALSO
+.Xr acl_add_perm 3 ,
+.Xr acl_clear_perms 3 ,
+.Xr acl_delete_perm 3 ,
+.Xr acl_get_permset 3 ,
+.Xr acl_set_permset 3 ,
+.Xr acl 5
+.Sh AUTHOR
+Written by
+.An "Andreas Gruenbacher" Aq andreas.gruenbacher@gmail.com .

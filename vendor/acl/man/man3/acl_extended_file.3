@@ -1,0 +1,124 @@
+.\" Access Control Lists manual pages
+.\"
+.\" (C) 2002 Andreas Gruenbacher, <andreas.gruenbacher@gmail.com>
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this manual.  If not, see
+.\" <http://www.gnu.org/licenses/>.
+.\"
+.Dd March 23, 2002
+.Dt ACL_EXTENDED_FILE 3
+.Os "Linux ACL"
+.Sh NAME
+.Nm acl_extended_file, acl_extended_file_nofollow
+.Nd test for information in ACLs by file name
+.Sh LIBRARY
+Linux Access Control Lists library (libacl, \-lacl).
+.Sh SYNOPSIS
+.In sys/types.h
+.In acl/libacl.h
+.Ft int
+.Fn acl_extended_file "const char *path_p"
+.Ft int
+.Fn acl_extended_file_nofollow "const char *path_p"
+.Sh DESCRIPTION
+The
+.Fn acl_extended_file
+function returns
+.Li 1
+if the file or directory referred to by the argument
+.Va path_p
+is associated with an extended access ACL, or if the directory referred to by
+.Va path_p
+is associated with a default ACL. The function returns
+.Li 0
+if the file has neither an extended access ACL nor a default ACL.
+.Pp
+An extended ACL is an ACL that contains entries other than the three
+required entries of tag types ACL_USER_OBJ, ACL_GROUP_OBJ and ACL_OTHER.
+If the result of the
+.Fn acl_extended_file
+function for a file object is
+.Li 0 ,
+then ACLs define no discretionary access rights other than those
+already defined by the traditional file permission bits.
+.Pp
+Access to the file object may be further restricted by other
+mechanisms, such as Mandatory Access Control schemes. The
+.Xr access 2
+system call can be used to check whether a given type of access to a file
+object would be granted.
+.Pp
+.Fn acl_extended_file_nofollow
+is identical to
+.Fn acl_extended_file ,
+except in the case of a symbolic link, where the link itself is interrogated,
+not the file that it refers to.  Since symbolic links have no ACL themselves,
+the operation is supposed to fail on them.
+.Sh RETURN VALUE
+If successful, the
+.Fn acl_extended_file
+function returns
+.Li 1
+if the file object referred to by
+.Va path_p
+has an extended access ACL or a default ACL, and
+.Li 0
+if the file object referred to by
+.Va path_p
+has neither an extended access ACL nor a default ACL. Otherwise, the value
+.Li -1
+is returned and the global variable
+.Va errno
+is set to indicate the error.
+.Sh ERRORS
+If any of the following conditions occur, the
+.Fn acl_extended_file
+function returns
+.Li -1
+and sets
+.Va errno
+to the corresponding value:
+.Bl -tag -width Er
+.It Bq Er EACCES
+Search permission is denied for a component of the path prefix.
+.It Bq Er ENAMETOOLONG
+The length of the argument
+.Va path_p
+is too long.
+.It Bq Er ENOENT
+The named object does not exist or the argument
+.Va path_p
+points to an empty string.
+.It Bq Er ENOTDIR
+A component of the path prefix is not a directory.
+.It Bq Er ENOTSUP
+The file system on which the file identified by
+.Va path_p
+is located does not support ACLs, or ACLs are disabled.
+.El
+.Sh STANDARDS
+This is a non-portable, Linux specific extension to the ACL manipulation
+functions defined in IEEE Std 1003.1e draft 17 (\(lqPOSIX.1e\(rq, abandoned).
+.Sh SEE ALSO
+.Xr access 2 ,
+.Xr acl_get_file 3 ,
+.Xr acl 5
+.Sh AUTHOR
+Written by
+.An "Andreas Gruenbacher" Aq andreas.gruenbacher@gmail.com .

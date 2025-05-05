@@ -1,0 +1,19 @@
+Test for malformed input to --restore
+ https://savannah.nongnu.org/bugs/index.php?28185
+
+	$ cp "%TESTDIR/malformed-restore-double-owner.acl" tmp.acl
+	$ sed -i "s/USER/%TUSER/g" tmp.acl
+	$ sed -i "s/GROUP/%TGROUP/g" tmp.acl
+	$ touch tmp
+	$ setfacl --restore tmp.acl
+	> setfacl: tmp.acl: Invalid argument
+	$ rm tmp.acl tmp
+
+	$ mkdir tmp
+	$ chmod 1777 tmp
+	$ getfacl tmp > tmp.acl
+	$ sed -i 's/--t/--x/g' tmp.acl
+	$ setfacl --restore tmp.acl
+	> setfacl: tmp.acl: Invalid argument
+	$ rmdir tmp
+	$ rm tmp.acl

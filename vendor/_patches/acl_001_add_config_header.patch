@@ -1,0 +1,8 @@
+diff --git b/vendor/acl/include/config.h a/vendor/acl/include/config.h
+new file mode 100644
+index 0000000000..9fcfa447bc
+--- /dev/null
++++ a/vendor/acl/include/config.h
+@@ -0,0 +1 @@
++#define EXPORT
+\ No newline at end of file

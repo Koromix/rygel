@@ -1,0 +1,125 @@
+.\" Access Control Lists manual pages
+.\"
+.\" (C) 2002 Andreas Gruenbacher, <andreas.gruenbacher@gmail.com>
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this manual.  If not, see
+.\" <http://www.gnu.org/licenses/>.
+.\"
+.Dd March 23, 2002
+.Dt ACL_GET_QUALIFIER 3
+.Os "Linux ACL"
+.Sh NAME
+.Nm acl_get_qualifier
+.Nd retrieve the qualifier from an ACL entry
+.Sh LIBRARY
+Linux Access Control Lists library (libacl, \-lacl).
+.Sh SYNOPSIS
+.In sys/types.h
+.In sys/acl.h
+.Ft void *
+.Fn acl_get_qualifier "acl_entry_t entry_d"
+.Sh DESCRIPTION
+The
+.Fn acl_get_qualifier
+function retrieves the qualifier from the ACL entry indicated by the argument
+.Va entry_d
+into working storage and returns a pointer to that storage.
+.Pp
+If the value of the tag type in the ACL entry referred to by
+.Va entry_d
+is ACL_USER, then the value returned by
+.Fn acl_get_qualifier
+is a pointer to type
+.Va uid_t .
+If the value of the tag type in the ACL entry referred to by
+.Va entry_d
+is ACL_GROUP, then the value returned by
+.Fn acl_get_qualifier
+is a pointer to type
+.Va gid_t .
+If the tag type in the ACL entry referred to by
+.Va entry_d
+is a tag type for which a qualifier is not supported,
+.Fn acl_get_qualifier
+returns a value of
+.Li (void *)NULL
+and the function fails. Subsequent operations using the returned pointer
+operate on an independent copy of the qualifier in working storage, and will not change the qualifier of the ACL entry.
+.Pp
+This function may cause memory to be allocated. The caller should free any
+releasable memory, when the new qualifier is no longer required, by calling
+.Fn acl_free
+with the
+.Va void *
+value returned by
+.Fn acl_get_qualifier
+as an argument.
+.Pp
+The argument
+.Va entry_d
+and any other ACL entry descriptors that refer to entries within the ACL
+containing the entry referred to by
+.Va entry_d
+continue to refer to those entries. The order of all existing
+entries in the ACL containing the entry referred to by
+.Va entry_d
+remains unchanged.
+.Sh RETURN VALUE
+On success, the function returns a pointer to the tag qualifier that was retrieved into ACL working storage. On error, a value of
+.Li (void *)NULL
+is returned and
+.Va errno
+is set appropriately.
+.Sh ERRORS
+If any of the following conditions occur, the
+.Fn acl_get_qualifier
+function returns
+.Li (void *)NULL
+and sets
+.Va errno
+to the corresponding value:
+.Bl -tag -width Er
+.It Bq Er EINVAL
+The argument
+.Va entry_d
+is not a valid descriptor for an ACL entry.
+.Pp
+The value of the tag type in the ACL entry referenced by the argument
+.Va entry_d
+is neither ACL_USER nor ACL_GROUP.
+.It Bq Er ENOMEM
+The value to be returned requires more memory than is allowed by the hardware or system-imposed memory management constraints.
+.El
+.Sh STANDARDS
+IEEE Std 1003.1e draft 17 (\(lqPOSIX.1e\(rq, abandoned)
+.Sh SEE ALSO
+.Xr acl_create_entry 3 ,
+.Xr acl_free 3 ,
+.Xr acl_get_entry 3 ,
+.Xr acl_get_permset 3 ,
+.Xr acl_get_tag_type 3 ,
+.Xr acl_set_permset 3 ,
+.Xr acl_set_qualifier 3 ,
+.Xr acl_set_tag_type 3 ,
+.Xr acl 5
+.Sh AUTHOR
+Derived from the FreeBSD manual pages written by
+.An "Robert N M Watson" Aq rwatson@FreeBSD.org ,
+and adapted for Linux by
+.An "Andreas Gruenbacher" Aq andreas.gruenbacher@gmail.com .

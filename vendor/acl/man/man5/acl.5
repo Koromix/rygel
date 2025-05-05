@@ -1,0 +1,511 @@
+.\" Access Control Lists manual pages
+.\"
+.\" (C) 2002 Andreas Gruenbacher, <andreas.gruenbacher@gmail.com>
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this manual.  If not, see
+.\" <http://www.gnu.org/licenses/>.
+.\"
+.Dd March 23, 2002
+.Dt ACL 5
+.Os "Linux ACL"
+.Sh NAME
+.Nm acl
+.Nd Access Control Lists
+.Sh DESCRIPTION
+This manual page describes POSIX Access Control Lists, which are used to
+define more fine-grained discretionary access rights for files and
+directories.
+.Sh ACL TYPES
+Every object can be thought of as having associated with it an ACL that
+governs the discretionary access to that object; this ACL is referred to
+as an access ACL. In addition, a directory may have an associated ACL
+that governs the initial access ACL for objects created within that
+directory; this ACL is referred to as a default ACL.
+.Sh ACL ENTRIES
+An ACL consists of a set of ACL entries. An ACL entry specifies the
+access permissions on the associated object for an individual user or a
+group of users as a combination of read, write and search/execute
+permissions.
+.Pp
+An ACL entry contains an entry tag type, an optional entry tag
+qualifier, and a set of permissions.
+We use the term qualifier to denote the entry tag qualifier of an ACL entry.
+.Pp
+The qualifier denotes the identifier of a user or a group, for entries
+with tag types of ACL_USER or ACL_GROUP, respectively. Entries with tag
+types other than ACL_USER or ACL_GROUP have no defined qualifiers.
+.Pp
+The following entry tag types are defined:
+.Bl -tag -offset indent -width ACL_GROUP_OBJ.
+.It ACL_USER_OBJ
+The ACL_USER_OBJ entry denotes access rights for the file owner.
+.It ACL_USER
+ACL_USER entries denote access rights for users identified by
+the entry's qualifier.
+.It ACL_GROUP_OBJ
+The ACL_GROUP_OBJ entry denotes access rights for the file group.
+.It ACL_GROUP
+ACL_GROUP entries denote access rights for groups identified by
+the entry's qualifier.
+.It ACL_MASK
+The ACL_MASK entry denotes the maximum access rights that can be granted
+by entries of type ACL_USER, ACL_GROUP_OBJ, or ACL_GROUP.
+.It ACL_OTHER
+The ACL_OTHER entry denotes access rights for processes
+that do not match any other entry in the ACL.
+.El
+.Pp
+When an access check is performed, the ACL_USER_OBJ and ACL_USER entries
+are tested against the effective user ID. The effective group ID, as
+well as all supplementary group IDs are tested against the ACL_GROUP_OBJ
+and ACL_GROUP entries.
+.Sh VALID ACLs
+A valid ACL contains exactly one entry with each of the ACL_USER_OBJ,
+ACL_GROUP_OBJ, and ACL_OTHER tag types. Entries with ACL_USER and
+ACL_GROUP tag types may appear zero or more times in an ACL. An ACL that
+contains entries of ACL_USER or ACL_GROUP tag types must contain
+exactly one entry of the ACL_MASK tag type. If an ACL contains no
+entries of ACL_USER or ACL_GROUP tag types, the ACL_MASK entry is
+optional.
+.Pp
+All user ID qualifiers must be unique among all entries of
+ACL_USER tag type, and all group IDs must be unique among all entries of
+ACL_GROUP tag type.
+.\"minimal vs. extended ACLs
+.Pp
+  The
+.Fn acl_get_file
+function returns an ACL with zero ACL entries as the default ACL of a
+directory, if the directory is not associated with a default ACL. The
+.Fn acl_set_file
+function also accepts an ACL with zero ACL entries as a valid default ACL for
+directories, denoting that the directory shall not be associated with a
+default ACL. This is equivalent to using the
+.Fn acl_delete_def_file
+function.
+.Sh CORRESPONDENCE BETWEEN ACL ENTRIES AND FILE PERMISSION BITS
+The permissions defined by ACLs are a superset of the permissions
+specified by the file permission bits.
+.Pp
+There is a correspondence between the file owner, group, and other
+permissions and specific ACL entries: the owner permissions correspond
+to the permissions of the ACL_USER_OBJ entry. If the ACL has an ACL_MASK
+entry, the group permissions correspond to the permissions of the
+ACL_MASK entry.  Otherwise, if the ACL has no ACL_MASK entry, the group
+permissions correspond to the permissions of the ACL_GROUP_OBJ entry.
+The other permissions correspond to the permissions of the ACL_OTHER
+entry.
+.Pp
+The file owner, group, and other permissions always match the
+permissions of the corresponding ACL entry. Modification of the file
+permission bits results in the modification of the associated ACL
+entries, and modification of these ACL entries results in the
+modification of the file permission bits.
+.Sh OBJECT CREATION AND DEFAULT ACLs
+The access ACL of a file object is initialized when the object is
+created with any of the
+.Fn creat ,
+.Fn mkdir ,
+.Fn mknod ,
+.Fn mkfifo ,
+or
+.Fn open
+functions. If a default ACL is associated with a directory, the
+.Va mode
+parameter to the functions creating file objects and the default ACL of
+the directory are used to determine the ACL of the new object:
+.Bl -enum
+.It
+The new object inherits the default ACL of the containing directory
+as its access ACL.
+.It
+The access ACL entries corresponding to the file permission bits are
+modified so that they contain no permissions that are not
+contained in the permissions specified by the
+.Va mode
+parameter.
+.El
+.Pp
+If no default ACL is associated with a directory, the
+.Va mode
+parameter to the functions creating file objects and the file creation
+mask (see
+.Xr umask 2 )
+are used to determine the ACL of the new object:
+.Bl -enum
+.It
+The new object is assigned an access ACL containing entries of tag types
+ACL_USER_OBJ, ACL_GROUP_OBJ, and ACL_OTHER. The permissions of these
+entries are set to the permissions specified by the file creation mask.
+.It
+The access ACL entries corresponding to the file permission bits are
+modified so that they contain no permissions that are not
+contained in the permissions specified by the
+.Va mode
+parameter.
+.El
+.Sh ACCESS CHECK ALGORITHM
+A process may request read, write, or execute/search access to a file object
+protected by an ACL. The access check algorithm determines whether access to
+the object will be granted.
+.Bl -enum
+.It
+.Sy If
+the effective user ID of the process matches the user ID of the file object owner,
+.Sy then
+.Pp
+.Bd -filled -offset indent
+.Sy if
+the ACL_USER_OBJ entry contains the requested permissions, access is granted,
+.Pp
+.Sy else
+access is denied.
+.Ed
+.It
+.Sy "else if"
+the effective user ID of the process matches the qualifier of any entry
+of type ACL_USER,
+.Sy then
+.Pp
+.Bd -filled -offset indent
+.Sy if
+the matching ACL_USER entry and the ACL_MASK entry contain the requested
+permissions, access is granted,
+.Pp
+.Sy else
+access is denied.
+.Ed
+.It
+.Sy else if
+the effective group ID or any of the supplementary group IDs of the process
+match the file group or the qualifier of any entry of type ACL_GROUP, 
+.Sy then
+.Pp
+.Bd -filled -offset indent
+.Sy if
+the ACL contains an ACL_MASK entry,
+.Sy then
+.Bd -filled -offset indent
+.Sy if
+the ACL_MASK entry and any of the matching ACL_GROUP_OBJ or ACL_GROUP entries
+contain
+the requested permissions, access is granted,
+.Pp
+.Sy else
+access is denied.
+.Pp
+.Ed
+.Sy else
+(note that there can be no ACL_GROUP entries without an ACL_MASK entry)
+.Bd -filled -offset indent
+.Sy if
+the ACL_GROUP_OBJ entry contains the requested permissions,
+access is granted,
+.Pp
+.Sy else
+access is denied.
+.Ed
+.Ed
+.Pp
+.It
+.Sy else if
+the ACL_OTHER entry contains the requested permissions, access is granted.
+.It
+.Sy else
+access is denied.
+.El
+.\".It
+.\"Checking whether the requested access modes are granted by the matched entry.
+.\".El
+.Sh ACL TEXT FORMS
+A long and a short text form for representing ACLs is defined. In both forms, ACL entries are represented as three colon separated fields: an ACL entry tag type, an ACL entry qualifier, and the discretionary access permissions. The first field contains one of the following entry tag type keywords:
+.Bl -tag -offset indent -width group.
+.It Li user
+A
+.Li user
+ACL entry specifies the access granted to either the file owner (entry tag
+type ACL_USER_OBJ) or a specified user (entry tag type ACL_USER).
+.It Li group
+A
+.Li group
+ACL entry specifies the access granted to either the file group (entry tag
+type ACL_GROUP_OBJ) or a specified group (entry tag type ACL_GROUP).
+.It Li mask
+A
+.Li mask
+ACL entry specifies the maximum access which can be granted by any ACL
+entry except the
+.Li user
+entry for the file owner and the
+.Li other
+entry (entry tag type ACL_MASK).
+.It Li other
+An
+.Li other
+ACL entry specifies the access granted to any process that does
+not match any
+.Li user
+or
+.Li group
+ACL entries (entry tag type ACL_OTHER).
+.El
+.Pp
+The second field contains the user or group identifier of the user or
+group associated with the ACL entry for entries of entry tag type ACL_USER
+or ACL_GROUP, and is empty for all other entries. A user identifier can
+be a user name or a user ID number in decimal form. A group identifier can
+be a group name or a group ID number in decimal form.
+.Pp
+The third field contains the discretionary access permissions. The read,
+write and search/execute permissions are represented by the
+.Li r ,
+.Li w ,
+and
+.Li x
+characters, in this order. Each of these characters is replaced by the
+.Li \-
+character to denote that a permission is absent in the ACL entry.
+When converting from the text form to the internal representation,
+permissions that are absent need not be specified.
+.Pp
+White space is permitted at the beginning and end of each ACL entry, and
+immediately before and after a field separator (the colon character).
+.Ss LONG TEXT FORM
+The long text form contains one ACL entry per line. In addition, a
+number sign
+.No ( Li # )
+may start a comment that extends until the end of the line. If an
+ACL_USER, ACL_GROUP_OBJ or ACL_GROUP ACL entry contains permissions that
+are not also contained in the ACL_MASK entry, the entry is followed by a
+number sign, the string \(lqeffective:\(rq, and the effective access
+permissions defined by that entry. This is an example of the long text
+form:
+.Bd -literal -offset indent
+user::rw-
+user:lisa:rw-         #effective:r--
+group::r--
+group:toolies:rw-     #effective:r--
+mask::r--
+other::r--
+.Ed
+.Ss SHORT TEXT FORM
+The short text form is a sequence of ACL entries separated by commas,
+and is used for input. Comments are not supported. Entry tag type
+keywords may either appear in their full unabbreviated form, or in their
+single letter abbreviated form. The abbreviation for
+.Li user
+is
+.Li u ,
+the abbreviation for
+.Li group
+is
+.Li g ,
+the abbreviation for
+.Li mask
+is
+.Li m ,
+and the abbreviation for
+.Li other
+is
+.Li o .
+The permissions may contain at most one each of the following characters
+in any order:
+.Li r ,
+.Li w ,
+.Li x .
+These are examples of the short text form:
+.Bd -literal -offset indent
+u::rw-,u:lisa:rw-,g::r--,g:toolies:rw-,m::r--,o::r--
+g:toolies:rw,u:lisa:rw,u::wr,g::r,o::r,m::r
+.Ed
+.Sh RATIONALE
+IEEE 1003.1e draft 17 defines Access Control Lists that include entries
+of tag type ACL_MASK, and defines a mapping between file permission bits
+that is not constant. The standard working group defined this relatively
+complex interface in order to ensure that applications that are compliant
+with IEEE 1003.1 (\(lqPOSIX.1\(rq) will still function as expected on
+systems with ACLs. The IEEE 1003.1e draft 17 contains the rationale for
+choosing this interface in section B.23. 
+.Sh CHANGES TO THE FILE UTILITIES
+On a system that supports ACLs, the file utilities
+.Xr ls 1 ,
+.Xr cp 1 ,
+and
+.Xr mv 1
+change their behavior in the following way:
+.Bl -bullet
+.It
+For files that have a default ACL or an access ACL that contains more than
+the three required ACL entries, the
+.Xr ls 1
+utility in the long form produced by
+.Ic "ls \-l"
+displays a plus sign
+.No ( Li + )
+after the permission string.
+.It
+If the
+.Fl p
+flag is specified, the
+.Xr cp 1
+utility also preserves ACLs.
+If this is not possible, a warning is produced.
+.It
+  The
+.Xr mv 1
+utility always preserves ACLs. If this is not possible, a warning is produced.
+.El
+.Pp
+The effect of the
+.Xr chmod 1
+utility, and of the
+.Xr chmod 2
+system call, on the access ACL is described in
+.Sx "CORRESPONDENCE BETWEEN ACL ENTRIES AND FILE PERMISSION BITS" .
+.Sh STANDARDS
+The IEEE 1003.1e draft 17 (\(lqPOSIX.1e\(rq) document describes several
+security extensions to the IEEE 1003.1 standard. While the work on
+1003.1e has been abandoned, many UNIX style systems implement parts of
+POSIX.1e draft 17, or of earlier drafts.
+.Pp
+Linux Access Control Lists implement the full set of functions and
+utilities defined for Access Control Lists in POSIX.1e, and several
+extensions.  The implementation is fully compliant with POSIX.1e draft
+17; extensions are marked as such.
+The Access Control List manipulation functions are defined in
+the ACL library (libacl, \-lacl). The POSIX compliant interfaces are
+declared in the
+.Li <sys/acl.h>
+header.  Linux-specific extensions to these functions are declared in the
+.Li <acl/libacl.h>
+header.
+.Sh NOTES
+.Ss DENIED PERMISSIONS AND LINUX USER NAMESPACES
+While ACLs can be used to deny processes permissions based on the groups they
+are in, this is considered bad practice.
+Privileged helpers such as
+.Xr newuidmap 1
+can give unprivileged processes access to the
+.Xr setgroups 2
+system call, which allows them to drop supplementary group membership and
+render restrictions based on that membership ineffective.
+For further details, see
+.Xr user_namespaces 7 .
+.Sh SEE ALSO
+.Xr chmod 1 ,
+.Xr creat 2 ,
+.Xr getfacl 1 ,
+.Xr ls 1 ,
+.Xr mkdir 2 ,
+.Xr mkfifo 2 ,
+.Xr mknod 2 ,
+.Xr mount 8 ,
+.Xr open 2 ,
+.Xr setfacl 1 ,
+.Xr stat 2 ,
+.Xr umask 1
+.Ss POSIX 1003.1e DRAFT 17
+.Xr "https://wt.tuxomania.net/publications/posix.1e/download.html"
+.Ss POSIX 1003.1e FUNCTIONS BY CATEGORY
+.Bl -tag -width "MMM"
+.It Sy ACL storage management
+.Xr acl_dup 3 ,
+.Xr acl_free 3 ,
+.Xr acl_init 3
+.It Sy ACL entry manipulation
+.Xr acl_copy_entry 3 ,
+.Xr acl_create_entry 3 ,
+.Xr acl_delete_entry 3 ,
+.Xr acl_get_entry 3 ,
+.Xr acl_valid 3
+.Pp
+.Xr acl_add_perm 3 ,
+.Xr acl_calc_mask 3 ,
+.Xr acl_clear_perms 3 ,
+.Xr acl_delete_perm 3 ,
+.Xr acl_get_permset 3 ,
+.Xr acl_set_permset 3
+.Pp
+.Xr acl_get_qualifier 3 ,
+.Xr acl_get_tag_type 3 ,
+.Xr acl_set_qualifier 3 ,
+.Xr acl_set_tag_type 3
+.It Sy ACL manipulation on an object
+.Xr acl_delete_def_file 3 ,
+.Xr acl_get_fd 3 ,
+.Xr acl_get_file 3 ,
+.Xr acl_set_fd 3 ,
+.Xr acl_set_file 3
+.It Sy ACL format translation
+.Xr acl_copy_entry 3 ,
+.Xr acl_copy_ext 3 ,
+.Xr acl_from_text 3 ,
+.Xr acl_to_text 3 ,
+.Xr acl_size 3
+.El
+.Ss POSIX 1003.1e FUNCTIONS BY AVAILABILITY
+The first group of functions is supported on most systems with POSIX-like
+access control lists, while the second group is supported on fewer systems.
+For applications that will be ported the second group is best avoided.
+.Pp
+.Xr acl_delete_def_file 3 ,
+.Xr acl_dup 3 ,
+.Xr acl_free 3 ,
+.Xr acl_from_text 3 ,
+.Xr acl_get_fd 3 ,
+.Xr acl_get_file 3 ,
+.Xr acl_init 3 ,
+.Xr acl_set_fd 3 ,
+.Xr acl_set_file 3 ,
+.Xr acl_to_text 3 ,
+.Xr acl_valid 3
+.Pp
+.Xr acl_add_perm 3 ,
+.Xr acl_calc_mask 3 ,
+.Xr acl_clear_perms 3 ,
+.Xr acl_copy_entry 3 ,
+.Xr acl_copy_ext 3 ,
+.Xr acl_copy_int 3 ,
+.Xr acl_create_entry 3 ,
+.Xr acl_delete_entry 3 ,
+.Xr acl_delete_perm 3 ,
+.Xr acl_get_entry 3 ,
+.Xr acl_get_permset 3 ,
+.Xr acl_get_qualifier 3 ,
+.Xr acl_get_tag_type 3 ,
+.Xr acl_set_permset 3 ,
+.Xr acl_set_qualifier 3 ,
+.Xr acl_set_tag_type 3 ,
+.Xr acl_size 3
+.Ss LINUX EXTENSIONS
+These non-portable extensions are available on Linux systems.
+.Pp
+.Xr acl_check 3 ,
+.Xr acl_cmp 3 ,
+.Xr acl_entries 3 ,
+.Xr acl_equiv_mode 3 ,
+.Xr acl_error 3 ,
+.Xr acl_extended_fd 3 ,
+.Xr acl_extended_file 3 ,
+.Xr acl_extended_file_nofollow 3 ,
+.Xr acl_from_mode 3 ,
+.Xr acl_get_perm 3 ,
+.Xr acl_to_any_text 3
+.Sh AUTHOR
+Andreas Gruenbacher, <andreas.gruenbacher@gmail.com>

@@ -1,0 +1,73 @@
+Internals of the libacl library
+===============================
+
+Posix 1003.1e DS17 leaves the library developer relatively few choices
+on how to  implement the  library. A  pseudo object  oriented approach
+seems necessary (otherwise, not all of the  requirements can  be met).
+Unfortunately, C is no object oriented language,  so the  classes etc.
+need to be hand coded. Here is how it works. 
+
+From the user's point of view, the following things are objects:
+
+  F - acl_t objects
+    - acl_entry_t objects
+    - acl_permset_t objects
+  F - strings returned by acl_to_text
+  F - entities returned by acl_get_qualifier
+
+The objects flagged with F need to be freed with acl_free()  when they
+are no longer needed. 
+
+The user gets pointers to the contents of  these objects.  Each object
+also has a prefix, which is not accessible from the user. The complete
+objects  are  declared  in  <lib/libacl.h>. The  p_magic field  of the
+prefix is set to <object_name>_MAGIC. 
+
+The macros ext2int() and  int2ext() convert  between the  internal and
+external view on objects. The  macros new_obj_p()  and new_var_obj_p()
+create a new object and object with  variable size,  respectively. See
+the code for the rest. 
+
+The code necessary to access fields in objects, especially  in objects
+accessed through indirections, would get almost unreadable. The second
+ACL entry of an ACL would be: 
+
+  acl_obj *acl_p;
+  acl_entry_obj *acl_entry_p = acl_p->i.a_ring->i.e_next;
+
+For  better  readability,  all the  "i.a_", "i.e_"  etc. parts  can be
+hidden using macros: 
+
+  acl_obj *acl_p;
+  acl_entry_obj *acl_entry_p = acl_p->aring->enext;
+
+
+ACLs and ACL entries
+====================
+The ACL entries associated with an ACL are stored  on a  sorted double
+linked list. The first and last entries in that list are available via
+ACL object. This is implemented with a little trick: 
+  
+  The  acl_obj  and  acl_entry_obj  have  {a,e}_prev  and {a,e}_prev
+  pointers at the same  memory location  (directly after  the object
+  prefix).  The  a_prev  and  a_next  entries  of  an   acl_obj  are
+  initialized to point to the acl_obj itself  (this requires  a type
+  cast).  We  only  need  to check  if the  acl_obj object  has been
+  reached to detect the end of  the list.  Since the  acl_obj object
+  isn't actually an acl_entry_obj object, care must be taken  not to
+  manipulate any of the other acl_entry_obj fields other than e_prev
+  and e_next. 
+
+Whenever  an  entry  is  changed,  __acl_reorder_obj_p()  reorders the
+entries  accordingly. This  takes O(n^2)  time, but  that's not  a big
+problem as long as ACLs don't contain very many  entries. Some  of the
+library  functions  need a  sorted ACL  anyway, so  the best  we could
+possibly do is  O(n*log(n)), with  a sorted  flag in  each ACL,  and a
+complicated  sorting  function  (the  linked  list  would  have  to be
+converted to an array first to allow more efficient sorting). 
+
+
+Hope that helps. Good luck!
+
+Andreas
+

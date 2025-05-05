@@ -1,0 +1,12 @@
+*.gmo
+*.sed
+*.sin
+acl.pot
+Makefile.in.in
+Makevars.template
+POTFILES
+POTFILES.in
+Rules-quot
+en@boldquot.*
+en@quot.*
+stamp-po

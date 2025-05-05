@@ -1,0 +1,168 @@
+.\" Access Control Lists manual pages
+.\"
+.\" (C) 2002 Andreas Gruenbacher, <andreas.gruenbacher@gmail.com>
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this manual.  If not, see
+.\" <http://www.gnu.org/licenses/>.
+.\"
+.Dd March 23, 2002
+.Dt ACL_SET_FILE 3
+.Os "Linux ACL"
+.Sh NAME
+.Nm acl_set_file
+.Nd set an ACL by filename
+.Sh LIBRARY
+Linux Access Control Lists library (libacl, \-lacl).
+.Sh SYNOPSIS
+.In sys/types.h
+.In sys/acl.h
+.Ft int
+.Fn acl_set_file "const char *path_p" "acl_type_t type" "acl_t acl"
+.Sh DESCRIPTION
+The
+.Fn acl_set_file
+function associates an access ACL with a file or directory, or
+associates a default ACL with a directory. The pathname for the file or
+directory is pointed to by the argument
+.Va path_p .
+.Pp
+The effective user ID of the process must match the owner of the file or
+directory or the process must have the CAP_FOWNER capability for the
+request to succeed.
+.Pp
+The value of the argument
+.Va type
+is used to indicate whether the access ACL or the default ACL associated
+with
+.Va path_p
+is being set. If the
+.Va type
+parameter is ACL_TYPE_ACCESS, the access ACL of
+.Va path_p
+shall be set. If the
+.Va type
+parameter is ACL_TYPE_DEFAULT, the default ACL of
+.Va path_p
+shall be set. If the argument
+.Va type
+specifies a type of ACL that cannot be associated with
+.Va path_p ,
+then the function fails.
+.Pp
+The
+.Va acl
+parameter must reference a valid ACL according to the rules described on the
+.Xr acl_valid 3
+manual page if the
+.Va type
+parameter is ACL_TYPE_ACCESS, and must either reference a valid ACL or an ACL with zero ACL entries if the
+.Va type
+parameter is ACL_TYPE_DEFAULT. If the
+.Va acl
+parameter references an empty ACL, then the
+.Fn acl_set_file
+function removes any default ACL associated with the directory referred to
+by the
+.Va path_p
+parameter.
+.Sh RETURN VALUE
+.Rv -std acl_set_file
+.Sh ERRORS
+If any of the following conditions occur, the
+.Fn acl_set_file
+function returns
+.Li -1
+and sets
+.Va errno
+to the corresponding value:
+.Bl -tag -width Er
+.It Bq Er EACCES
+Search permission is denied for a component of the path prefix or the
+object exists and the process does not have appropriate access rights.
+.Pp
+Argument
+.Va type
+specifies a type of ACL that cannot be associated with
+.Va path_p .
+.It Bq Er EINVAL
+The argument
+.Va acl
+does not point to a valid ACL.
+.Pp
+The ACL has more entries than the file referred to by
+.Va path_p
+can obtain.
+.Pp
+The
+.Va type
+parameter is not ACL_TYPE_ACCESS or ACL_TYPE_DEFAULT.
+.Pp
+The
+.Va type
+parameter is ACL_TYPE_DEFAULT, but the file referred to by
+.Va path_p
+is not a directory.
+.It Bq Er ENAMETOOLONG
+The length of the argument
+.Va path_p
+is too long.
+.It Bq Er ENOENT
+The named object does not exist or the argument
+.Va path_p
+points to an empty string.
+.It Bq Er ENOSPC
+The directory or file system that would contain the new ACL cannot be extended or the file system is out of file allocation resources.
+.It Bq Er ENOTDIR
+A component of the path prefix is not a directory.
+.It Bq Er ENOTSUP
+The file identified by
+.Va path_p 
+cannot be associated with the ACL because the file system on which the file
+is located does not support this.
+.It Bq Er EPERM
+The process does not have appropriate privilege to perform the operation to set the ACL.
+.It Bq Er EROFS
+This function requires modification of a file system which is currently read-only.
+.El
+.Sh STANDARDS
+IEEE Std 1003.1e draft 17 (\(lqPOSIX.1e\(rq, abandoned)
+.Pp
+The behavior of
+.Fn acl_set_file
+when the
+.Va acl
+parameter refers to an empty ACL and the
+.Va type
+parameter is ACL_TYPE_DEFAULT is an extension in the Linux implementation, in order that all values returned by
+.Fn acl_get_file
+can be passed to
+.Fn acl_set_file .
+The POSIX.1e function for removing a default ACL is
+.Fn acl_delete_def_file .
+.Sh SEE ALSO
+.Xr acl_delete_def_file 3 ,
+.Xr acl_get_file 3 ,
+.Xr acl_set_fd 3 ,
+.Xr acl_valid 3 ,
+.Xr acl 5
+.Sh AUTHOR
+Derived from the FreeBSD manual pages written by
+.An "Robert N M Watson" Aq rwatson@FreeBSD.org ,
+and adapted for Linux by
+.An "Andreas Gruenbacher" Aq andreas.gruenbacher@gmail.com .

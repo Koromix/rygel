@@ -1,0 +1,609 @@
+acl 2.2.49 (19 November 2009)
+==========
+* Add missing files to tarball: tests/sort-getfacl-output and examples/copyperm.c
+* Update docs/CHANGES for 2.2.48 release
+
+acl 2.2.48 (31 July 2009)
+==========
+* Make sure that getfacl -R only calls stat(2) on symlinks when it needs to.
+  This fixes http://oss.sgi.com/bugzilla/show_bug.cgi?id=790 "getfacl follows
+  symlinks, even without -L".
+* Stop quoting nonprintable characters in the getfacl output: what is printable
+  or not depends on the locale settings, and getfacl often gets it wrong. We
+  still need to quote a few special characters like newlines so that setfacl
+  can always parse getfacl's output.
+* Fix in acl_equiv_mode(): Return the mode that the acl corresponds to even
+  when the acl has more than three entries (i.e., it is not equivalent to
+  this mode).
+* When restoring acls and the file ownership from the output of getfacl
+  with setfacl --restore, make sure to only chown(2) files when the
+  owner or owning group does not match the current owner or owning group:
+  otherwise, if the caller does not have the appropriate privilege,
+  chown(2) will implicitly clear the suid and sgid flags.
+* Fix attr/acl code for handling of recursive walking without following symlinks
+  Patch contributed by Brandon Philips <brandon@ifup.org>.
+  http://oss.sgi.com/archives/xfs/2008-07/msg00162.html
+* Fix NULL pointer access / segmentation fault in setfacl.
+  When invoked as ``setfacl -- ...'', setfacl segfaults. Reported
+  by Peng Haitao; fix based on patches by Peng Haitao and Jiri
+  Moskovcak.  Final fix from Andreas Gruenbacher <agruen@suse.de>.
+  Red Hat Bugzilla Bug 430458.
+* Avoid unnecessary but destructive chown calls when restoring acls with
+  setfacl --restore
+* Update to new homepage URL: http://savannah.nongnu.org/projects/acl
+* Stop quoting nonprintable characters in the getfacl output
+* Make sure that getfacl -R only calls stat(2) on symlinks when it needs to
+  http://oss.sgi.com/bugzilla/show_bug.cgi?id=790
+* Include the S_ISUID, S_ISGID, S_ISVTX flags in the getfacl output, and
+  restore them with "setfacl --restore=file"
+* test/run: fix lt- prefix from libtool wrappers
+
+acl 2.2.47
+==========
+* From Andreas Gruenbacher:
+    * fix issues for tree walking with file descriptors
+	- fd duplicates and running out
+
+acl 2.2.46 (21 November 2007)
+==========
+* From Andreas Gruenbacher:
+    * Update acl.5 man page to clarify the relationship between
+      the file permissions and the *OBJ ACL entries.
+    * In some cases, gcc does not link in functions from libmisc.a
+      unless libmisc is specified before the dynamic libraries on
+      the command line.
+    * Rip out nftw tree walking, it is broken and hopeless to fix.
+      The replacement walk_tree() function does exactly what we
+      want, and is much simpler to use.
+
+acl 2.2.45 (11 September 2007)
+==========
+* Fix symlink handling with getfacl and setfacl, thanks to Utako Usaka.
+
+acl 2.2.44 (27 March 2007)
+==========
+* Add Spanish and Galician translation
+  (thanks to Antonio Trueba)
+
+acl 2.2.43 (23 January 2007)
+==========
+* Fix a build issue with cross-compiling, thanks to Diego Petten�
+
+acl 2.2.42 (08 December 2006)
+==========
+* Fix a build issue on GNU/kFreeBSD, thanks to Petr Salinger.
+
+acl 2.2.41 (14 July 2006)
+==========
+* Fix issues with makedepend on libtool libraries.
+* Fix issues with install using named ids instead of numeric ones.
+
+acl 2.2.40 (03 July 2006)
+==========
+* Update translation Makefile to work better with the Ubuntu
+  translation system.  Thanks to feedback from Martin Pitt.
+* Fix annoying "ignores datarootdir" warning from configure.
+* Fix issues with makedepend build infrastructure.
+
+acl 2.2.39 (06 June 2006)
+==========
+* Fix a segfault in getfacl/setfacl when handling non-existent
+  files, related to previos nftw-related workarounds.  Thanks
+  to Daniel Kahn Gillmor for the fix.
+
+acl 2.2.38 (23 May 2006)
+==========
+* Add Swedish translation from the debian localisation folks
+  (thanks to Daniel Nylander)
+
+acl 2.2.37 (02 May 2006)
+==========
+* Fix handling of symbolic links in setfacl/getfacl, and resulting
+  nftw-related oddities.
+
+acl 2.2.36 (28 March 2006)
+==========
+* Debian packaging updates (libc-dev dependency fixed)
+* Enable -O2 optimised builds by default
+
+acl 2.2.35 (15 February 2006)
+==========
+* Debian packaging updates (debmake out, debhelper in)
+* Fix GNU/Hurd builds (no PATH_MAX macro)
+
+acl 2.2.34 (05 December 2005)
+==========
+* Debian packaging updates
+
+acl 2.2.33 (10 November 2005)
+==========
+* Sync up build system (m4 macros, etc) with other projects
+* Update SGI copyright/licence notices
+
+acl 2.2.32 (29 September 2005)
+==========
+* Add French translation from the debian-l10n-french folks
+  (thanks to Sylvain Archenault)
+
+acl 2.2.31 (11 March 2005)
+==========
+* Fix setfacl builds when compiling without gettext support
+  (thanks to vapier@gentoo.org).
+
+acl 2.2.30 (21 February 2005)
+==========
+* Allocate the line buffer dynamically when reading from a file.
+* This mainly fixes restoring of large ACLs.
+
+acl 2.2.29 (31 January 2005)
+==========
+* Replace use of _POSIX_PATH_MAX with the larger PATH_MAX
+  (thanks to Andree Leidenfrost).
+
+acl 2.2.28 (30 November 2004)
+==========
+* Licensing fixes and clarifications.
+* Update outdated email addresses.
+
+acl 2.2.27 (29 September 2004)
+==========
+* Update m4 macros, incorporating some portability changes.
+
+acl 2.2.26 (8 September 2004)
+==========
+* Fix email address in manual pages.
+
+acl 2.2.25 (25 August 2004)
+==========
+* Fix processing of the X pseudo permission in setfacl: Must not
+  modify the sequence of commands directly or else only the first
+  file is processed correctly, and X is not evaluated for any other
+  file. Add test case for X pseudo permission.
+* Remove support for relative permission changes; this non-standard
+  feature was disabled since a while already.
+
+acl 2.2.24 (17 May 2004)
+==========
+* Update example source code.
+
+acl 2.2.23 (02 February 2004)
+==========
+* Included Polish message translations by Jakub Bogusz.
+
+acl 2.2.22 (06 January 2004)
+==========
+* Fix a permission bug in directory tree walking code.
+
+acl 2.2.21 (10 November 2003)
+==========
+* Update Debian packaging conflict with Kerberos development package.
+
+acl 2.2.20 (13 October 2003)
+==========
+* Fix build on the GNU/Hurd platform for some Debian folks.
+
+acl 2.2.19 (07 October 2003)
+==========
+* Man page tweaks
+
+acl 2.2.18 (30 September 2003)
+==========
+* Fix a documentation error in setfacl manual page, was refering to a
+  non-existent getfacl option in the example section.
+
+acl 2.2.17 (29 August 2003)
+==========
+* Fix a bug in nftw worker routines' error handling code.
+
+acl 2.2.16 (27 August 2003)
+==========
+* Fix issues in the libmisc quote routine (from Ben Escoto).
+
+acl 2.2.15 (08 August 2003)
+==========
+acl * Somehow the SEGV fix from 2.2.14 got lost, reinstate it.
+==========
+
+acl 2.2.14 (04 August 2003)
+==========
+* Fix chacl argument count checking in one or two places.
+* Fix libmisc quote/unquote routines so they handle NULL as input,
+  was causing some SEGV's inside libacl routines.
+
+acl 2.2.13 (29 July 2003)
+==========
+* Add internal library for misc. functions: quote, unquote, high_water_alloc.
+* Quote special characters in path names and user names.
+* Fix examples/get-acl.c: Retrieving the default ACL of a plain file used
+  to result in an empty ACL, but fails now.
+* Update the test scripts.
+
+acl 2.2.12 (03 July 2003)
+==========
+* Tweak the build so we don't always run msgmerge, fix from
+  Steve Langasek originally.
+
+acl 2.2.11 (04 June 2003)
+==========
+* More Debian-specific packaging changes.
+
+acl 2.2.10 (26 May 2003)
+==========
+* Some Debian-specific packaging changes.
+
+acl 2.2.9 (26 April 2003)
+==========
+* Rework configure.in to make use of shared macros.
+
+acl 2.2.8 (14 April 2003)
+==========
+* Fix configure tests that used AC_PATH_PROG incorrectly.
+* Minor cosmetic cleanups to configure.in.
+* Some dependency fixes to the Debian packaging.
+
+acl 2.2.7 (27 March 2003)
+==========
+* Cleanups to the build process, in particular the automatic rpm
+  package generation Makefile and spec file template.
+* Makepkgs script can now propagate failures back up from make.
+* Change default --prefix to /usr.
+
+acl 2.2.6 (26 February 2003)
+==========
+* Add symbol level versioning to libacl. This improves link time
+  consistency checks. The library versions are also honored by RPM, so
+  an RPM package built against say, libacl.so.1(ACL_1.1) won't link
+  against libacl.so.1(ACL_1.0), which was not checked before.
+* Added routines to libattr for copying extended attributes -
+  perm_copy_file and perm_copy_fd.
+* Increment the libacl version number, so that the presence of
+  those functions can be checked.
+
+acl 2.2.5 (20 February 2003)
+==========
+* Merge symbol visibility patch from Andreas for hiding symbols
+  in libacl which we don't want exported, provided the compiler
+  supports that (added a new configure check too).
+
+acl 2.2.4 (10 February 2003)
+==========
+* Merge several patches from Andreas - note that the library minor
+acl   version number has been incremented (libacl.so.1.0.3 -> 1.0.4)
+==========
+* A minor acl.5 update.
+* Fix memory leak in libacl (reported by
+  Leo Qiu <leoxqiu@yahoo.com> -- thanks!).
+* Preallocation of ACL entries in acl_init() to avoid calling
+  malloc() repeatedly.
+* Moved ACL entry reordering outside of loops to avoid O(n^2)
+  behavior (where n = #entries).
+* Fixed bug in acl_get_file() when the guessed number of entries
+  in a default ACL turned out to be too low (access ACL was used
+  instead).
+* Correct a signedness issue in getfacl's handling of uid/gid.
+
+acl 2.2.3 (06 February 2003)
+==========
+* Fix order of library declarations in tools to allow linking when
+  only a static libattr library is available (mario@klebsch.de).
+
+acl 2.2.2 (15 January 2003)
+==========
+* Add 'X' permission specification for setfacl(1) following
+  the same usage as chmod(1).
+
+acl 2.2.1 (16 December 2002)
+==========
+* Clarify man page with respect to fileutils support.
+* Minor Debian build update to remove a shell script "bash-ism".
+
+acl 2.2.0 (29 November 2002)
+==========
+* Complete the localisation/internationalisation support, including
+  the initial German translation by Andreas.
+
+acl 2.1.1 (31 October 2002)
+==========
+* Minor updates to the Debian packaging.
+
+acl 2.1.0 (19 October 2002)
+==========
+* Remove the -s and -S short options from setfacl, since it confuses
+  many users (--set and -set-file still exist).
+* Update the setfacl(1) manual page.
+* Improve the wording of some error messages, and update the pot/po
+  files. Also update the setfacl.test script.
+* Change the devel .rpm and .deb package names so that they now use
+  a "lib" prefix.
+* Several packaging changes related to this to ensure upgrades work
+  and dependency information isn't lost.
+
+acl 2.0.19 (04 September 2002)
+==========
+* Correct the description of the access check algorithm in acl(5).
+* Add --numeric option to getfacl (so all uid's/gid's are displayed
+  numerically rather than by symbolic name). Also enlarge the static
+  buffer used for numeric identifiers from 12 to 22 characters, which
+  is enough for 64 bit id's.
+* Add a test case for setting just a base ACL.
+* Make the test/run script return a proper status code.
+* Check for ENOATTR and for ENODATA error numbers in places where
+  ENOATTR is expected, so if ENOATTR is assigned a separate number
+  we'll only need to rebuild.
+
+acl 2.0.18 (21 August 2002)
+==========
+* Setfacl failed to parse ACLs with whitespace around user/group
+  names or ids (e.g., 'u: bin :rw', 'u: 0 :rwx').
+
+acl 2.0.17 (12 August 2002)
+==========
+* Setfacl tried to retrieve the default ACL of regular files, which
+acl   resulted in errno = EACCES since 2.0.13, and broke setfacl's
+==========
+  --restore operation.
+
+acl 2.0.16 (08 August 2002)
+==========
+* Fix an IA64 alignment issue affecting several libacl functions.
+acl * Updated libacl version number from libacl.so.1.0.2 to libacl.so.1.0.3
+==========
+
+acl 2.0.15 (08 July 2002)
+==========
+* Fix configure warning (autoconf 2.13) - namely:
+	"AC_TRY_RUN called without default to allow cross compiling"
+* Fix a couple of typos in the documentation
+* Fix a Debian-specific build issue
+
+acl 2.0.14 (04 July 2002)
+==========
+* Build infrastructure updates so that configure options can be used
+  to specify paths rather than semi-hard-coded path names controlled
+  by ROOT/ROOT_PREFIX env variables; eg. now allows /lib64 and /lib32.
+
+acl 2.0.13 (25 June 2002)
+==========
+* Make acl_get_file() fail for regular files and type ACL_TYPE_DEFAULT,
+  as required by 1003.1e draft 17. Update manual page accordingly.
+* Make acl_set_file() fail for regular files and type ACL_TYPE_DEFAULT,
+  as required by 1003.1e draft 17. Update manual page accordingly.
+acl * Updated libacl version number from libacl.so.1.0.1 to libacl.so.1.0.2.
+==========
+* Updated chacl(1) command to behave correctly with this libacl change.
+
+acl 2.0.12 (25 June 2002)
+==========
+* Increment the libacl version so that its possible for other packages
+  like Samba to easily tell which library version has the libacl build
+  bug fixed (without having to play configure games, etc).
+acl * In other words, libacl.so.1.0.0 is now libacl.so.1.0.1; nothing else
+==========
+  has changed in this release.
+
+acl 2.0.11 (30 April 2002)
+==========
+* Fix a bug when reallocating space in __acl_to_any_text.c
+  (the bug causes ACL entries to get skipped!)
+* Minor clean-up in the test/setfacl.test script
+
+acl 2.0.10 (22 April 2002)
+==========
+* Add accidentally removed dependency of libacl on libattr.
+
+acl 2.0.9 (16 April 2002)
+==========
+* Fix a struct alignment issue in libacl on 64 bit platforms.
+
+acl 2.0.8 (13 April 2002)
+==========
+acl * Fix a minor issue in build macro handling introduced in 2.0.7.
+==========
+
+acl 2.0.7 (10 April 2002)
+==========
+* Fix a bug in the --tabular format of getfacl where user/group names
+  without a symbolic name did not get printed
+* Remove setfacl/user_group.[ch] as these are no longer used
+* Added configure check for libattr -- uses libtool archive if found
+
+acl 2.0.6 (08 April 2002)
+==========
+* Fix a bug that causes setfacl not to report error messages if
+acl   acl_set_file() fails (the bug was introduced in version 2.0.3).
+==========
+
+acl 2.0.5 (26 March 2002)
+==========
+* Fix up acl_to_text compliance with POSIX draft.
+* Add the new acl(5) manual page.
+* Add a manual section 3 directory and Makefile.
+* Add the libacl manual pages.
+* Rename the existing acl_to_any_text function to __acl_to_any_text, and
+  add a new acl_to_any_text function that only contains parameters that
+  are actually useful.  Make acl_to_text and acl_to_any_text invoke
+  __acl_to_any_text internally.  Update all uses of acl_to_any_text in
+  getfacl/getfacl.c, setfacl/do_set.c, and chacl/chacl.c.
+* Move the acl_size function form the LIBACL_CFILES to the POSIX_CFILES
+  section (it is a POSIX function)
+* Rearrange libacl routines so that several non-POSIX routines which
+  were being exported are no longer exported (eg. acl_entry_to_any_str,
+  acl_get_file_mode, acl_get_fd_mode, acl_set_file_mode, acl_set_fd_mode).
+
+acl 2.0.4 (12 March 2002)
+==========
+* Man page updates from Andreas
+* Test script updates from Andreas
+
+acl 2.0.3 (05 March 2002)
+==========
+* Clean up the --default option handling in setfacl. The old
+  workarounds caused a bug for unusual input.
+* Changes to the --test output format setfacl generates: ACLs that
+  are not changed are now displayed as `*'.
+* Fix a bug in setfacl/sequence.c:seq_delete_cmd().
+* Minor changes to test scripts
+
+acl 2.0.2 (01 March 2002)
+==========
+* Apply several patches from Andreas, namely:
+* man page fixes
+* libacl code reformatting
+* acl_from_text errno handling
+
+acl 2.0.1 (27 February 2002)
+==========
+* Apply Andreas Gruenbacher's diffs.
+* Fix up chacl for deletion of access ACL to be in line with Andreas.
+* Incorporate the Debian packaging again.
+
+acl 2.0.0 (21 February 2002)
+==========
+* Reworked to use the new official system call API.
+* Sync up with the XFS project, the SGI folk now use this source.
+* Jumped to version 2 to allow XFS users to upgrade
+  (Rationale: the XFS ACL user tools were at version 1.1.X, and
+  packaging tools like rpm, dpkg, etc. must be presented with a
+  greater version number to allow an upgrade to proceed).
+* Added the chacl command to ease migration for existing XFS users,
+  and for compatibility with IRIX.
+* Added a flag to allow acl_print to produce a single-line ACL, in
+  addition to the multi-line format.
+* Extended attribute documentation has moved into the extended
+  attribute package from SGI ("attr"), this ACL package now deals
+  exclusively with ACLs.
+* acl_from_text sometimes did not set errno when failing.
+* Moved files and simplified #includes in libacl
+
+acl 0.7.22
+==========
+* Create a shared version of libacl, instead of linking statically.
+* Added missing error reporting to getfacl do_print() function.
+
+acl 0.7.16
+==========
+* Minor cleanups/fixes in the make files
+* The test cases in test/src have been updated to match the
+acl   corrected ACL entry syntax (see the 0.7.15 changes).
+==========
+
+acl 0.7.15
+==========
+* acl_from_text() now accepts mask and other entries with either two
+  or three fields (`other:rwx' or `other::rwx'). Posix 1003.1e specifies
+  that these entries should have three entries, while under Solaris,
+  they have only two fields.
+* setfacl now parses mask and other entries with two or three entries.
+* getfacl now produces mask and other entries with three fields
+  (`mask::rwx' instead of the previous `mask:rwx').
+* acl_get_fd(), acl_get_file(), acl_set_fd(), acl_set_file() now only
+  fail with errno=ENOSYS if the underlying filesystem doesn't support
+  ACLs. acl_get_fd() and acl_get_file() construct ACLs from the file
+  mode permission bits if the kernel supports ACLs, but no ACL extended
+  attributes are defined for the file (errno=ENOATTR).
+* acl_to_text() wrongly separated ACL entires with ',' instead of '\n'.
+* acl_from_text() only accepted three-letter permission strings
+  (rwx, ---, rw-, etc.). Now also short strings (rw, -, etc.) are
+  supported.
+
+acl 0.7.10
+==========
+* acl_get_fd(), acl_get_file() now don't return basic ACL's anymore.
+* acl_set_fd(), acl_set_file() fail on filesystems that don't support
+  ACLs, even if the ACL to be set is a basice ACL.
+* If msgfmt is not present on a system, the message catalog(s) are
+  no longer being built.
+
+acl 0.7.8 (19 February 2001)
+==========
+* Buffer overflow bug in ACL library (acl_to_any_text).
+  (Reported by Charles Bertsch <CBertsch@microtest.com>)
+
+acl 0.7.2 (22 November 2000)
+==========
+* Replace rman with groff for building HTML versions of the
+  manual pages.
+* Add descriptions of the permissions required for manipulating
+  ACLs to the manual pages.
+* Add long options to getfacl and setfacl, update the manual pages.
+* Remove some small bugs from the src/showacl Perl script.
+* showacl is now integrated in getfacl.
+* Bug in acl_to_any_text() for ACLs with 0 entries fixed.
+* Bug in acl_to_text(): Used '\n' as the ACL entry separator.
+* German messages updated.
+
+acl 0.7.1 (23 October 2000)
+==========
+* Basic GNU gettext support and a German translation of messages
+  added.
+
+acl 0.7.0 (22 October 2000)
+==========
+* Updates to the documentation
+* Now an ACL_MASK entry is cloned from the ACL_GROUP_OBJ entry
+  when needed also when the ACL_MASK entry is not re-calculated
+  (-n option), so setfacl doesn't complain about an invalid ACL.
+
+acl 0.6.8 (11 October 2000)
+==========
+* src/walk_tree.c was stat()ing the targets of symbolic links in
+  WALK_PHYSICAL mode.
+* Removed spurious definitions from src/gettext.h that caused
+  problems with several versions of GNU gettext headers
+* setfacl calls acl_delete_def_file() if removing the default ACL
+  of a directory that doesn't have a default ACL. i(If the user lacks
+  appropriate permissions, that no-operation fails.) Fixed.
+* Tiny bug in src/showacl script (mask entry not applied to owning
+  group entry)
+
+acl 0.6.5 (10 September 2000)
+==========
+* Command line options revised for POSIX compatibility (now defaults to
+  -H half-logical walk, added -L logical walk, -P physical walk).
+* Funny post-order option no longer documented.
+
+acl 0.6.0 (24 March 2000)
+==========
+* Permissions were not set to the union of the ACL_GROUP_OBJ and
+  ACL_MASK_OBJ entries for `setfacl -b'.
+* getfacl didn't display the default ACL for links do directories.
+
+acl 0.5.6 (31 Jan 2000)
+==========
+* Cleaned up the ACL entry ring handling in the library
+* Fixed a few minor issues with setfacl
+* Fixed a bug in acl_equiv_mode
+* Added acl_{get,set}_{file,fd}_mode functions
+
+acl 0.5.5 (19 October 1999)
+==========
+* Updates to the documentation
+* Some other things (?)
+
+acl 0.5.4 (up to 14 October 1999)
+==========
+* Fixed an incompatibility with more recent GNU getopt
+* Fixed a problem with errno handling in lib/text.c
+* Some cosmetic changes to streamline the distribution process
+* setfacl now implies `user:' if neither of `user', `group:',
+  `other:' and `mask:' is given. Was a major annoyance (to me).
+* errno not set when acl_read was presented with an empty file.
+* some missing '\n' chars in setfacl
+
+acl 0.5.3
+==========
+* Fixed a bug in setfacl.c that caused the default mask to
+  be recalculated wrong.
+* Fixed a bug in acl_kernel.c:acl_check_one() that caused
+  invalid ACLs to be accepted
+
+acl 0.5.2 (25 September 1999)
+==========
+* Added doc/Implementation.txt (some internals and ideas)
+* Fixed a bug in lib/manip.c that caused setfacl to reject
+  some valid ACLs
+* Fixed a bug that caused setfacl to produce duplicate ACL
+  entries
+* Fixed a bug/feature that caused `sefacl -s' to include the
+  current base ACL entries in results. This is not done with
+  `setfacl -bm'.

@@ -1,0 +1,108 @@
+.\" Access Control Lists manual pages
+.\"
+.\" (C) 2002 Andreas Gruenbacher, <andreas.gruenbacher@gmail.com>
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this manual.  If not, see
+.\" <http://www.gnu.org/licenses/>.
+.\"
+.Dd March 23, 2002
+.Dt ACL_COPY_EXT 3
+.Os "Linux ACL"
+.Sh NAME
+.Nm acl_copy_ext
+.Nd copy an ACL from internal to external representation
+.Sh LIBRARY
+Linux Access Control Lists library (libacl, \-lacl).
+.Sh SYNOPSIS
+.In sys/types.h
+.In sys/acl.h
+.Ft ssize_t
+.Fn acl_copy_ext "void *buf_p" "acl_t acl" "ssize_t size"
+.Sh DESCRIPTION
+The
+.Fn acl_copy_ext
+function copies the ACL pointed to by
+.Va acl
+from system-managed space to the user managed space pointed to by
+.Va buf_p .
+The
+.Va size
+parameter represents the size in bytes of the buffer pointed to by
+.Va buf_p .
+The format of the ACL placed in the buffer pointed to by
+.Va buf_p
+is a contiguous, persistent data item, the format of which is unspecified.
+It is the responsibility of the invoker to allocate an area large enough
+to hold the copied ACL. The size of the exportable, contiguous, persistent
+form of the ACL may be obtained by invoking the
+.Fn acl_size
+function.
+.Pp
+Any ACL entry descriptors that refer to an entry in the ACL referenced by
+.Va acl
+continue to refer to those entries. Any existing ACL pointers that refer
+to the ACL referenced by
+.Va acl
+continue to refer to the ACL.
+.Sh RETURN VALUE
+Upon success, this function returns the number of bytes placed in the buffer pointed to by
+.Va buf_p .
+On error, a value of
+.Li (ssize_t)-1
+is returned and
+.Va errno
+is set appropriately.
+.Sh ERRORS
+If any of the following conditions occur, the
+.Fn acl_copy_ext
+function returns a value of
+.Li (ssize_t)-1
+and sets
+.Va errno
+to the corresponding value:
+.Bl -tag -width Er
+.It Bq Er EINVAL
+The
+.Va size
+parameter is zero or negative.
+.Pp
+The argument
+.Va acl
+is not a valid pointer to an ACL.
+.Pp
+The ACL referenced by
+.Va acl
+contains one or more improperly formed ACL entries, or for some other
+reason cannot be translated into the external form of an ACL.
+.It Bq Er ERANGE
+The
+.Va size
+parameter is greater than zero but smaller than the length of the contiguous, persistent form of the ACL.
+.El
+.Sh STANDARDS
+IEEE Std 1003.1e draft 17 (\(lqPOSIX.1e\(rq, abandoned)
+.Sh SEE ALSO
+.Xr acl_copy_int 3 ,
+.Xr acl_size 3 ,
+.Xr acl 5
+.Sh AUTHOR
+Derived from the FreeBSD manual pages written by
+.An "Robert N M Watson" Aq rwatson@FreeBSD.org ,
+and adapted for Linux by
+.An "Andreas Gruenbacher" Aq andreas.gruenbacher@gmail.com .

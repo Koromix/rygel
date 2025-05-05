@@ -1,0 +1,13 @@
+#!/bin/sh -e
+
+(
+echo "# updated automatically by $0"
+echo
+find \
+	include \
+	libacl \
+	libmisc \
+	tools \
+	-name '*.[ch]' \
+	| grep -v include/config.h | LC_ALL=C sort
+) > po/POTFILES.in

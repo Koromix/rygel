@@ -1,0 +1,7 @@
+Check getfacl large-file support.
+This test can be run on a filesystem with large-file support.
+
+	$ umask 027
+	$ dd bs=65536 seek=32768 if=/dev/null of=large-file 2>/dev/null ||:
+	$ sh -c 'if test -f large-file; then getfacl large-file >/dev/null; fi'
+	$ rm large-file

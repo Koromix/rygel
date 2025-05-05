@@ -1,0 +1,142 @@
+.\" Access Control Lists manual pages
+.\"
+.\" (C) 2002 Andreas Gruenbacher, <andreas.gruenbacher@gmail.com>
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this manual.  If not, see
+.\" <http://www.gnu.org/licenses/>.
+.\"
+.Dd March 23, 2002
+.Dt ACL_GET_ENTRY 3
+.Os "Linux ACL"
+.Sh NAME
+.Nm acl_get_entry
+.Nd get an ACL entry
+.Sh LIBRARY
+Linux Access Control Lists library (libacl, \-lacl).
+.Sh SYNOPSIS
+.In sys/types.h
+.In sys/acl.h
+.Ft int
+.Fn acl_get_entry "acl_t acl" "int entry_id" "acl_entry_t *entry_p"
+.Sh DESCRIPTION
+The
+.Fn acl_get_entry
+function obtains a descriptor for an ACL entry as specified by
+.Va entry_id
+within the ACL indicated by the argument
+.Va acl .
+If the value of
+.Va entry_id
+is ACL_FIRST_ENTRY, then the function returns in
+.Va entry_p
+a descriptor for the first ACL entry within
+.Va acl .
+If the value of 
+.Va entry_id 
+is ACL_NEXT_ENTRY, then the function returns in
+.Va entry_p 
+a descriptor for the next ACL entry within
+.Va acl .
+.Pp
+If a call is made to
+.Fn acl_get_entry
+with
+.Va entry_id
+set to ACL_NEXT_ENTRY when there has not been either an initial
+successful call to
+.Fn acl_get_entry ,
+or a previous successful call to
+.Fn acl_get_entry
+following a call to
+.Fn acl_calc_mask ,
+.Fn acl_copy_int ,
+.Fn acl_create_entry ,
+.Fn acl_delete_entry ,
+.Fn acl_dup ,
+.Fn acl_from_text ,
+.Fn acl_get_fd ,
+.Fn acl_get_file ,
+.Fn acl_set_fd ,
+.Fn acl_set_file ,
+or
+.Fn acl_valid ,
+then the effect is unspecified.
+.Pp
+Calls to
+.Fn acl_get_entry
+do not modify any ACL entries. Subsequent operations using the returned
+ACL entry descriptor operate on the ACL entry within the ACL in working
+storage. The order of all existing entries in the ACL remains unchanged.
+Any existing ACL entry descriptors that refer to entries within the ACL
+continue to refer to those entries. Any existing ACL pointers that refer
+to the ACL referred to by
+.Va acl
+continue to refer to the ACL.
+.Sh RETURN VALUE
+If the function successfully obtains an ACL entry, the function returns a
+value of
+.Li 1 .
+If the ACL has no ACL entries, the function returns the value
+.Li 0 .
+If the value of
+.Va entry_id
+is ACL_NEXT_ENTRY and the last ACL entry in the ACL has already been
+returned by a previous call to
+.Fn acl_get_entry ,
+the function returns the value
+.Li 0
+until a successful call with an
+.Va entry_id
+of ACL_FIRST_ENTRY is made. Otherwise, the value
+.Li -1
+is returned and
+.Va errno
+is set to indicate the error.
+.Sh ERRORS
+If any of the following conditions occur, the
+.Fn acl_get_entry
+function returns
+.Li -1
+and sets
+.Va errno
+to the corresponding value:
+.Bl -tag -width Er
+.It Bq Er EINVAL
+The argument
+.Va acl_p
+is not a valid pointer to an ACL.
+.Pp
+The argument
+.Va entry_id
+is neither ACL_NEXT_ENTRY nor ACL_FIRST_ENTRY.
+.El
+.Sh STANDARDS
+IEEE Std 1003.1e draft 17 (\(lqPOSIX.1e\(rq, abandoned)
+.Sh SEE ALSO
+.Xr acl_calc_mask 3 ,
+.Xr acl_create_entry 3 ,
+.Xr acl_copy_entry 3 ,
+.Xr acl_delete_entry 3 ,
+.Xr acl_get_file 3 ,
+.Xr acl 5
+.Sh AUTHOR
+Derived from the FreeBSD manual pages written by
+.An "Robert N M Watson" Aq rwatson@FreeBSD.org ,
+and adapted for Linux by
+.An "Andreas Gruenbacher" Aq andreas.gruenbacher@gmail.com .

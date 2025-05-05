@@ -1,0 +1,195 @@
+Tests for proper path recursion
+
+	$ umask 022
+	$ mkdir -p 1/2/3
+	$ mkdir 1/link
+	$ touch 1/link/file
+	$ ln -s `pwd`/1/link 1/2/link
+	$ getfacl -P -R 1/2 | sort-getfacl-output
+	> # file: 1/2
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/2/3
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+
+	$ getfacl -R 1/2 | sort-getfacl-output
+	> # file: 1/2
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/2/3
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+
+	$ getfacl -R -L 1/2 | sort-getfacl-output
+	> # file: 1/2
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/2/3
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/2/link
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/2/link/file
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rw-
+	> group::r--
+	> other::r--
+	>
+
+	$ getfacl -P -R 1 | sort-getfacl-output
+	> # file: 1
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/2
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/2/3
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/link
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/link/file
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rw-
+	> group::r--
+	> other::r--
+	>
+
+	$ getfacl -R 1 | sort-getfacl-output
+	> # file: 1
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/2
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/2/3
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/link
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/link/file
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rw-
+	> group::r--
+	> other::r--
+	>
+
+	$ getfacl -R -L 1 | sort-getfacl-output
+	> # file: 1
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/2
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/2/3
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/2/link
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/2/link/file
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rw-
+	> group::r--
+	> other::r--
+	>
+	> # file: 1/link
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	> # file: 1/link/file
+	> # owner: %TUSER
+	> # group: %TGROUP
+	> user::rw-
+	> group::r--
+	> other::r--
+	>
+
+	$ rm -R 1/

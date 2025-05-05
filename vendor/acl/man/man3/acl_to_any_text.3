@@ -1,0 +1,169 @@
+.\" Access Control Lists manual pages
+.\"
+.\" (C) 2002 Andreas Gruenbacher, <andreas.gruenbacher@gmail.com>
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this manual.  If not, see
+.\" <http://www.gnu.org/licenses/>.
+.\"
+.Dd March 25, 2002
+.Dt ACL_TO_ANY_TEXT 3
+.Os "Linux ACL"
+.Sh NAME
+.Nm acl_to_any_text
+.Nd convert an ACL to text
+.Sh LIBRARY
+Linux Access Control Lists library (libacl, \-lacl).
+.Sh SYNOPSIS
+.In sys/types.h
+.In acl/libacl.h
+.Ft char *
+.Fo acl_to_any_text
+.Fa "acl_t acl"
+.Fa "const char *prefix"
+.Fa "char separator"
+.Fa "int options"
+.Fc
+.Sh DESCRIPTION
+The
+.Fn acl_to_any_text
+function translates the ACL pointed to by the argument
+.Va acl
+into a
+.Li NULL
+terminated character string. This character string
+is composed of the ACL entries contained in
+.Va acl ,
+in the entry text format described on
+.Xr acl 5 .
+Entries are separated from each other by the
+.Va separator
+character. If the argument
+.Va prefix
+is not
+.Li (const char *)NULL ,
+each entry is prefixed by this character string.
+.Pp
+If the argument
+.Va options
+is
+.Li 0 ,
+ACL entries are converted using the entry tag type keywords
+.Li user , group , mask ,
+and
+.Li other .
+User IDs and group IDs of ACL entries that contain such
+qualifiers are converted to their corresponding names; if an identifier
+has no corresponding name, a decimal number string is produced. The
+ACL text representation contains no additional comments.
+A bitwise combinations of the following
+.Va options
+can be used to modify the result:
+.Bl -tag
+.It TEXT_ABBREVIATE
+Instead of the full tag type keywords, single letter abbreviations are used.
+The abbreviation for
+.Li user
+is
+.Li u ,
+the abbreviation for
+.Li group
+is
+.Li g ,
+the abbreviation for
+.Li mask
+is
+.Li m ,
+and the abbreviation for
+.Li other
+is
+.Li o .
+.It TEXT_NUMERIC_IDS
+User IDs and group IDs are included as decimal numbers instead of names.
+.It TEXT_SOME_EFFECTIVE
+A comment containing the effective permissions of the ACL entry is
+included after ACL entries that contain permissions which are ineffective
+because they are masked by an ACL_MASK entry. The ACL entry and the comment
+are separated by a tab character.
+.It TEXT_ALL_EFFECTIVE
+A comment containing the effective permissions of the ACL entry is
+included after all ACL entries that are affected by an ACL_MASK entry.
+The comment is included even if the permissions contained in the ACL
+entry equal the effective permissions. The ACL entry and the comment are
+separated by a tab character.
+.It TEXT_SMART_INDENT
+This option is used in combination with the TEXT_SOME_EFFECTIVE or
+TEXT_ALL_EFFECTIVE option. The number of tab characters inserted between
+the ACL entry and the comment is increased so that the comment is
+aligned to the fourth tab stop position.
+A tab width of 8 characters is assumed.
+.El
+.Pp
+The ACL referred to by
+.Va acl
+is not changed.
+.Pp
+This function allocates any memory necessary to contain the string and
+returns a pointer to the string.  The caller should free any releasable
+memory, when the new string is no longer required, by calling
+.Fn acl_free
+with the
+.Va (void*)char
+returned by
+.Fn acl_to_any_text
+as an argument.
+.Sh RETURN VALUE
+On success, this function returns a pointer to the text
+representation of the ACL.  On error, a value of
+.Li (char *)NULL
+is returned, and
+.Va errno
+is set appropriately.
+.Sh ERRORS
+If any of the following conditions occur, the
+.Fn acl_to_any_text
+function returns a value of
+.Li (char *)NULL
+and sets
+.Va errno
+to the corresponding value:
+.Bl -tag -width Er
+.It Bq Er EINVAL
+The argument
+.Va acl
+is not a valid pointer to an ACL.
+.Pp
+The ACL referenced by
+.Va acl
+contains one or more improperly formed ACL entries, or for some other
+reason cannot be translated into the text form of an ACL.
+.It Bq Er ENOMEM
+The character string to be returned requires more memory than is allowed
+by the hardware or system-imposed memory management constraints.
+.El
+.Sh STANDARDS
+This is a non-portable, Linux specific extension to the ACL manipulation
+functions defined in IEEE Std 1003.1e draft 17 (\(lqPOSIX.1e\(rq, abandoned).
+.Sh SEE ALSO
+.Xr acl_from_text 3 ,
+.Xr acl_to_text 3 ,
+.Xr acl_free 3 ,
+.Xr acl 5
+.Sh AUTHOR
+Written by
+.An "Andreas Gruenbacher" Aq andreas.gruenbacher@gmail.com .

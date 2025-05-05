@@ -1,0 +1,12 @@
+Simple examples using libacl
+============================
+
+This directory contains very simple examples of how to use the acl
+library. After installing the acl library on your system, you can
+build the examples by typing the following command in this directory:
+
+  make -f Makefile.examples
+
+
+ --Andreas Gruenbacher.
+

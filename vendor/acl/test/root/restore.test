@@ -1,0 +1,27 @@
+Ensure setuid bit is restored when the owner changes
+ https://bugzilla.redhat.com/show_bug.cgi?id=467936#c7
+
+Cry immediately if we are not running as root.
+
+	$ require_root
+
+	$ touch passwd
+	$ chmod 755 passwd
+	$ chmod u+s passwd
+	$ getfacl passwd > passwd.acl
+	$ cat passwd.acl
+	> # file: passwd
+	> # owner: root
+	> # group: root
+	> # flags: s--
+	> user::rwx
+	> group::r-x
+	> other::r-x
+	>
+	$ chown bin passwd
+	$ chmod u+s passwd
+	$ setfacl --restore passwd.acl
+	$ ls -dl passwd | awk '{print $1 " " $3 " " $4}' | sed 's/\\.//g'
+	> -rwsr-xr-x root root
+
+	$ rm passwd passwd.acl

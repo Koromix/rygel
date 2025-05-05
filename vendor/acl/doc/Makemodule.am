@@ -1,0 +1,10 @@
+dist_doc_DATA += \
+	doc/CHANGES \
+	doc/COPYING \
+	doc/COPYING.LGPL \
+	doc/extensions.txt \
+	doc/libacl.txt
+
+EXTRA_DIST += \
+	doc/INSTALL \
+	doc/TODO

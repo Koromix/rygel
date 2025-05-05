@@ -1,0 +1,4 @@
+dist_man_MANS += \
+	man/man1/chacl.1 \
+	man/man1/getfacl.1 \
+	man/man1/setfacl.1

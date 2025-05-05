@@ -1,0 +1,14 @@
++Test the setfacl --restore with utf8 paths.
++Regression test: https://bugzilla.redhat.com/show_bug.cgi?id=183181
+
+The utf string UPATH is 250 bytes long and is repeated 4 times to create the
+path that setfacl will use. This size should work on systems with a small 255
+NAME_MAX.
+
+       $ export UPATH="官官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話官話話官話官話官話>官話官話話官話官"
+       $ mkdir -p $UPATH/$UPATH/$UPATH
+       $ touch $UPATH/$UPATH/$UPATH/$UPATH
+       $ getfacl $UPATH/$UPATH/$UPATH/$UPATH > utf8-filenames.acl
+       $ setfacl  --restore=utf8-filenames.acl
+       $ rm -R $UPATH
+       $ rm utf8-filenames.acl

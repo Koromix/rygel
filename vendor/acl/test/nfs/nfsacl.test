@@ -1,0 +1,42 @@
+This is a regression test for bugs in the nfsacl protocol extension.
+The test should be run on an NFS export mount with ACL support.
+
+	Create a test directory and file.
+
+	$ umask 022
+	$ mkdir -p test/sub
+	$ echo blah > test/sub/blah
+
+	$ cp -rp test/sub test/sub2
+	$ find test/sub2 | sort | xargs ls -dl | awk '{print $1,$8}'
+	> drwxr-xr-x test/sub2
+	> -rw-r--r-- test/sub2/blah
+
+	$ rm -rf test/sub2
+
+	$ setfacl -m u:daemon:rwx test/sub
+	$ setfacl -dm u:daemon:rwx test/sub
+	$ getfattr -m- test/sub
+	> # file: test/sub
+	> system.posix_acl_access
+	> system.posix_acl_default
+	>
+
+	$ cp -rp test/sub test/sub2
+	$ find test/sub2 | sort | xargs ls -dl | awk '{print $1,$8}'
+	> drwxrwxr-x+ test/sub2
+	> -rw-r--r-- test/sub2/blah
+
+	$ rm -rf test/sub2
+
+	$ setfacl -m u:daemon:rw test/sub/blah
+	$ cp -rp test/sub test/sub2
+	$ find test/sub2 | sort | xargs ls -dl | awk '{print $1,$8}'
+	> drwxrwxr-x+ test/sub2
+	> -rw-rw-r--+ test/sub2/blah
+
+	$ rm -rf test/sub2
+
+	Clean up.
+
+	$ rm -rf test

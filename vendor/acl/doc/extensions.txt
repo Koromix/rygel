@@ -1,0 +1,77 @@
+The Posix ACL user library
+==========================
+
+The Posix ACL manipulation functions defined in Posix 1003.1e DS17 are
+declared in <sys/acl.h>; you need to link against libacl.a for these
+functions to be included in your binaries.
+
+There is an additional header file <acl/libacl.h> that gives you
+access to some extensions that are also contained in the same library.
+The functions declared there are:
+
+acl_to_any_text()
+
+  Similar to acl_to_text(), but also allows you to specify:
+    - a prefix string that is printed before each ACL entry.
+    - a separator character that is printed between two ACL entries.
+    - a set of options (TEXT_* constants).
+
+  This function returns the length in characters of the text returned
+  in the len_p parameter, unless len_p is NULL. The returned string
+  must be freed using the acl_free() function.
+
+  Returns NULL and sets errno accordingly on error.
+
+acl_entry_to_any_str()
+
+  Converts a single ACL entry to text, filling a buffer. It takes as
+  additional parameter the ACL mask entry (which is used to computer
+  the effective permissions if specified). The prefix and options are
+  the same as for acl_to_any_text().
+
+  Returns -1 and sets errno accordingly on error.
+
+acl_cmp()
+
+  Returns 0 if both ACLs are equal, and 1 otherwise.
+
+  Returns -1 and sets errno accordingly on error.
+
+acl_check()
+
+  Checks an ACL for validity, similar to acl_valid. Returns the entry
+  at which an error occurred in last (unless last is NULL), and
+  returns a positive error code (ACL_*_ERROR) if the ACL is invalid; 0
+  on success.
+
+  Returns -1 and sets errno accordingly on error.
+
+acl_equiv_mode()
+
+  Checks if an ACL is a basic ACL. If so, returns 0 and sets mode_p to
+  the file mode permission bits that correspond to the ACL. Returns 1
+  otherwise.
+
+  Returns -1 and sets errno accordingly on error.
+
+acl_entries()
+
+  Returns the number of entries in an ACL.
+
+  Returns -1 and sets errno accordingly on error.
+
+acl_error()
+
+  Returns a textual message describing the error code returned by
+  acl_check().
+
+acl_get_perm()
+
+  Check if a permission is set in a permission set (acl_permset_t).
+
+  Returns 1 if the permission is set, or 0 if it is not set.
+  Returns -1 and sets errno if an error occurs.
+
+
+Andreas
+

@@ -1,0 +1,122 @@
+.\" Access Control Lists manual pages
+.\"
+.\" (C) 2002 Andreas Gruenbacher, <andreas.gruenbacher@gmail.com>
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this manual.  If not, see
+.\" <http://www.gnu.org/licenses/>.
+.\"
+.Dd March 23, 2002
+.Dt ACL_CHECK 3
+.Os "Linux ACL"
+.Sh NAME
+.Nm acl_check
+.Nd check an ACL for validity
+.Sh LIBRARY
+Linux Access Control Lists library (libacl, \-lacl).
+.Sh SYNOPSIS
+.In sys/types.h
+.In acl/libacl.h
+.Ft int
+.Fn acl_check "acl_t acl" "int *last"
+.Sh DESCRIPTION
+The
+.Fn acl_check
+function checks the ACL referred to by the argument
+.Va acl
+for validity.
+.Pp
+The three required entries ACL_USER_OBJ, ACL_GROUP_OBJ, and ACL_OTHER
+must exist exactly once in the ACL. If the ACL contains any ACL_USER or
+ACL_GROUP entries, then an ACL_MASK entry is also required. The ACL
+may contain at most one ACL_MASK entry.
+.Pp
+The user identifiers must be unique among all entries of type ACL_USER.
+The group identifiers must be unique among all entries of type ACL_GROUP.
+.Pp
+If the ACL referred to by
+.Va acl
+is invalid,
+.Fn acl_check
+returns a positive error code that indicates which type of error was detected.
+The following symbolic error codes are defined:
+.Bl -tag -width ACL_DUPLICATE_ERROR.
+.It ACL_MULTI_ERROR
+The ACL contains multiple entries that have a tag type
+that may occur at most once.
+.It ACL_DUPLICATE_ERROR
+The ACL contains multiple ACL_USER entries with the same user ID, or
+multiple ACL_GROUP entries with the same group ID.
+.It ACL_MISS_ERROR
+A required entry is missing.
+.It ACL_ENTRY_ERROR
+The ACL contains an invalid entry tag type.
+.El
+.Pp
+The
+.Fn acl_error
+function can be used to translate error codes to text messages.
+.Pp
+In addition, if the pointer
+.Va last
+is not
+.Li NULL ,
+.Fn acl_check
+assigns the number of the ACL entry at which the error was detected to
+the value pointed to by
+.Va last .
+Entries are numbered starting with zero, in the order in which they would be
+returned by the
+.Fn acl_get_entry
+function.
+.Sh RETURN VALUE
+If successful, the
+.Fn acl_check
+function returns
+.Li 0
+if the ACL referred to by
+.Va acl
+is valid, and a positive error code if the ACL is invalid. Otherwise, a
+value of
+.Li -1
+is returned and the global variable
+.Va errno
+is set to indicate the error.
+.Sh ERRORS
+If any of the following conditions occur, the
+.Fn acl_check
+function returns
+.Li -1
+and sets
+.Va errno
+to the corresponding value:
+.Bl -tag -width Er
+.It Bq Er EINVAL
+The argument
+.Va acl
+is not a valid pointer to an ACL.
+.El
+.Sh STANDARDS
+This is a non-portable, Linux specific extension to the ACL manipulation
+functions defined in IEEE Std 1003.1e draft 17 (\(lqPOSIX.1e\(rq, abandoned).
+.Sh SEE ALSO
+.Xr acl_valid 3 ,
+.Xr acl 5
+.Sh AUTHOR
+Written by
+.An "Andreas Gruenbacher" Aq andreas.gruenbacher@gmail.com .

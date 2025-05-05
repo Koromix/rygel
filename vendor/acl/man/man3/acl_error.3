@@ -1,0 +1,71 @@
+.\" Access Control Lists manual pages
+.\"
+.\" (C) 2002 Andreas Gruenbacher, <andreas.gruenbacher@gmail.com>
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this manual.  If not, see
+.\" <http://www.gnu.org/licenses/>.
+.\"
+.Dd March 23, 2002
+.Dt ACL_CHECK 3
+.Os "Linux ACL"
+.Sh NAME
+.Nm acl_error
+.Nd convert an ACL error code to a text message
+.Sh LIBRARY
+Linux Access Control Lists library (libacl, \-lacl).
+.Sh SYNOPSIS
+.In sys/types.h
+.In acl/libacl.h
+.Ft const char *
+.Fn acl_error "int code"
+.Sh DESCRIPTION
+The
+.Fn acl_error
+function converts an ACL error code such as returned by the
+.Fn acl_check
+function to a text message describing the error condition. In the
+\(lqPOSIX\(rq locale,
+.Fn acl_check
+returns the following descriptions for the error codes.
+.Bl -tag -width ACL_DUPLICATE_ERROR.
+.It ACL_MULTI_ERROR
+\(lqMultiple entries\(rq
+.It ACL_DUPLICATE_ERROR
+\(lqDuplicate entries\(rq
+.It ACL_MISS_ERROR
+\(lqMissing or wrong entry\(rq
+.It ACL_ENTRY_ERROR
+\(lqInvalid entry type\(rq
+.El
+.Sh RETURN VALUE
+The
+.Fn acl_error
+function returns a text message if the error code is recognized, and a value of
+.Li (const char *)NULL
+otherwise.
+.Sh STANDARDS
+This is a non-portable, Linux specific extension to the ACL manipulation
+functions defined in IEEE Std 1003.1e draft 17 (\(lqPOSIX.1e\(rq, abandoned).
+.Sh SEE ALSO
+.Xr acl_check 3 ,
+.Xr acl_valid 3 ,
+.Xr acl 5
+.Sh AUTHOR
+Written by
+.An "Andreas Gruenbacher" Aq andreas.gruenbacher@gmail.com .

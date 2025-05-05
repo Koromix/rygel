@@ -1,0 +1,50 @@
+This is a regression test for a bug in 2.4 kernels. The test must be run
+as root on a machine that has a loopback mounted NFS export. The mount
+must have root squashing enabled. The test must be run in the root of
+the nfs mount, and requires the following environment variable:
+
+EXPORT_PATH => the path that is mounted at the working directory.
+
+	Create a test directory and file.
+
+	$ umask 022
+	$ mkdir %{EXPORT_PATH}/test
+	$ echo blah > %{EXPORT_PATH}/test/blah
+
+	Make sure the file can be accessed before.
+
+	$ su bin
+	$ cat test/blah
+	> blah
+
+	Set up a situation that triggers the bug.
+
+	$ su
+	$ chmod go-rwx %{EXPORT_PATH}/test
+	$ setfacl -m u:bin:rx %{EXPORT_PATH}/test
+	$ ls -dl %{EXPORT_PATH}/test | awk '{print $1, $3, $4}'
+	> drwxr-x---+ root root
+	$ getfacl --omit-header %{EXPORT_PATH}/test 2> /dev/null
+	> user::rwx
+	> user:bin:r-x
+	> group::---
+	> mask::r-x
+	> other::---
+	>
+
+	This should also succeed. With the bug, reading the file would
+	fail with "Stale NFS file handle" or "Input/output error".
+
+	$ su bin
+	$ cat test/blah
+	> blah
+	$ sleep 3
+	$ cat test/blah
+	> blah
+	$ cat test/blah
+	> blah
+
+	Clean up.
+
+	$ su
+	$ rm -rf %{EXPORT_PATH}/test

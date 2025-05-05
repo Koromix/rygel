@@ -1,0 +1,83 @@
+lib_LTLIBRARIES += libacl.la
+
+# No other library exports version info, otherwise we'd have to add
+# "libacl_" prefix to all these variables.
+LT_CURRENT = 2
+# The configure script will set this for us automatically.
+#LT_REVISION =
+LT_AGE = 1
+LTVERSION = $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
+
+CFILES = $(POSIX_CFILES) $(LIBACL_CFILES) $(INTERNAL_CFILES) \
+	libacl/perm_copy_fd.c \
+	libacl/perm_copy_file.c
+HFILES = \
+	libacl/libobj.h \
+	libacl/libacl.h \
+	libacl/byteorder.h \
+	libacl/__acl_from_xattr.h \
+	libacl/__acl_to_xattr.h \
+	libacl/perm_copy.h \
+	libacl/__acl_extended_file.h
+
+POSIX_CFILES = \
+	libacl/acl_add_perm.c \
+	libacl/acl_calc_mask.c \
+	libacl/acl_clear_perms.c \
+	libacl/acl_copy_entry.c \
+	libacl/acl_copy_ext.c \
+	libacl/acl_copy_int.c \
+	libacl/acl_create_entry.c \
+	libacl/acl_delete_def_file.c \
+	libacl/acl_delete_entry.c \
+	libacl/acl_delete_perm.c \
+	libacl/acl_dup.c \
+	libacl/acl_free.c \
+	libacl/acl_from_text.c \
+	libacl/acl_get_entry.c \
+	libacl/acl_get_fd.c \
+	libacl/acl_get_file.c \
+	libacl/acl_get_perm.c \
+	libacl/acl_get_permset.c \
+	libacl/acl_get_qualifier.c \
+	libacl/acl_get_tag_type.c \
+	libacl/acl_init.c \
+	libacl/acl_set_fd.c \
+	libacl/acl_set_file.c \
+	libacl/acl_set_permset.c \
+	libacl/acl_set_qualifier.c \
+	libacl/acl_set_tag_type.c \
+	libacl/acl_size.c \
+	libacl/acl_to_text.c \
+	libacl/acl_valid.c
+
+LIBACL_CFILES = \
+	libacl/acl_check.c \
+	libacl/acl_cmp.c \
+	libacl/acl_entries.c \
+	libacl/acl_equiv_mode.c \
+	libacl/acl_error.c \
+	libacl/acl_extended_fd.c \
+	libacl/acl_extended_file.c \
+	libacl/acl_extended_file_nofollow.c \
+	libacl/acl_from_mode.c \
+	libacl/acl_to_any_text.c \
+	libacl/__acl_extended_file.c
+
+INTERNAL_CFILES = \
+	libacl/__acl_from_xattr.c \
+	libacl/__acl_reorder_obj_p.c \
+	libacl/__acl_to_any_text.c \
+	libacl/__acl_to_xattr.c \
+	libacl/__apply_mask_to_mode.c \
+	libacl/__libobj.c
+
+libacl_la_DEPENDENCIES = exports libmisc.la
+libacl_la_SOURCES = $(CFILES) $(HFILES)
+## Since libacl translates its error messages, we have to link libintl.
+## See the AM_GNU_GETTEXT documentation for details.
+libacl_la_LIBADD = -lattr libmisc.la $(LTLIBINTL)
+libacl_la_CFLAGS = $(AM_CFLAGS) -include $(srcdir)/libacl/perm_copy.h
+libacl_la_LDFLAGS = \
+	-Wl,--version-script,$(top_srcdir)/exports \
+	-version-info $(LTVERSION)

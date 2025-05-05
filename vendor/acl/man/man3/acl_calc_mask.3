@@ -1,0 +1,101 @@
+.\" Access Control Lists manual pages
+.\"
+.\" (C) 2002 Andreas Gruenbacher, <andreas.gruenbacher@gmail.com>
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this manual.  If not, see
+.\" <http://www.gnu.org/licenses/>.
+.\"
+.Dd March 23, 2002
+.Dt ACL_CALC_MASK 3
+.Os "Linux ACL"
+.Sh NAME
+.Nm acl_calc_mask
+.Nd calculate the file group class mask
+.Sh LIBRARY
+Linux Access Control Lists library (libacl, \-lacl).
+.Sh SYNOPSIS
+.In sys/types.h
+.In sys/acl.h
+.Ft int
+.Fn acl_calc_mask "acl_t *acl_p"
+.Sh DESCRIPTION
+The
+.Fn acl_calc_mask
+function calculates and sets the permissions associated with the ACL_MASK
+ACL entry of the ACL referred to by
+.Va acl_p .
+The value of the new permissions is the union of the permissions
+granted by all entries of tag type ACL_GROUP, ACL_GROUP_OBJ, or ACL_USER.
+If the ACL referred to by
+.Va acl_p
+already contains an ACL_MASK entry, its permissions are overwritten;
+if it does not contain an ACL_MASK entry, one is added.
+.Pp
+If the ACL referred to by
+.Va acl_p
+does not contain enough space for the new ACL entry, then additional working
+storage may be allocated. If the working storage cannot be increased in the
+current location, then it may be relocated and the previous working storage
+is released and a pointer to the new working storage is returned via
+.Va acl_p .
+.Pp
+The order of existing entries in the ACL is undefined after this function.
+.Pp
+Any existing ACL entry descriptors that refer to entries in the ACL continue to
+refer to those entries. Any existing ACL pointers that refer to the ACL
+referred to by
+.Va acl_p
+continue to refer to the ACL.
+.\" <AG>
+.\" Conflict between requirements:
+.\" (a) ACL may be relocated,
+.\" (b) all pointers remain valid.
+.\" </AG>
+.Sh RETURN VALUE
+.Rv -std acl_calc_mask
+.Sh ERRORS
+If any of the following conditions occur, the
+.Fn acl_calc_mask
+function returns
+.Li -1
+and sets
+.Va errno
+to the corresponding value:
+.Bl -tag -width Er
+.It Bq Er EINVAL
+The argument
+.Va acl
+is not a valid pointer to an ACL.
+.It Bq Er ENOMEM
+The
+.Fn acl_calc_mask
+function is unable to allocate the memory required for an ACL_MASK ACL entry.
+.El
+.Sh STANDARDS
+IEEE Std 1003.1e draft 17 (\(lqPOSIX.1e\(rq, abandoned)
+.Sh SEE ALSO
+.Xr acl_check 3 ,
+.Xr acl_get_entry 3 ,
+.Xr acl_valid 3 ,
+.Xr acl 5
+.Sh AUTHOR
+Derived from the FreeBSD manual pages written by
+.An "Robert N M Watson" Aq rwatson@FreeBSD.org ,
+and adapted for Linux by
+.An "Andreas Gruenbacher" Aq andreas.gruenbacher@gmail.com .

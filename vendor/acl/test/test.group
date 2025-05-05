@@ -1,0 +1,5 @@
+root:x:0:root
+bin:x:1:daemon
+daemon:x:2:
+users:x:100:
+loooooooooooooooooooooooonggroup:x:1000:

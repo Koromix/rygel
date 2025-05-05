@@ -1,0 +1,22 @@
+Ensure setting of SUID/SGID/sticky via --restore works
+
+	$ umask 022
+	$ mkdir d
+	$ touch d/g
+	$ touch d/u
+	$ chmod u+s d/u
+	$ chmod g+s d/g
+	$ chmod +t d
+	$ getfacl -R d > d.acl
+	$ rm -R d
+	$ mkdir d
+	$ touch d/g
+	$ touch d/u
+	$ setfacl --restore d.acl
+	$ ls -dl d | awk '{print $1}' | sed 's/\\.$//g'
+	> drwxr-xr-t
+	$ ls -dl d/u | awk '{print $1}' | sed 's/\\.$//g'
+	> -rwSr--r--
+	$ ls -dl d/g | awk '{print $1}' | sed 's/\\.$//g'
+	> -rw-r-Sr--
+	$ rm -Rf d

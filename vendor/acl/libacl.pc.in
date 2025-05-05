@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name:		libacl
+Description:	A library for POSIX Access Control Lists
+Version:	@PACKAGE_VERSION@
+Cflags:		-I${includedir}
+Libs:		-L${libdir} -lacl

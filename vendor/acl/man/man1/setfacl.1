@@ -1,0 +1,318 @@
+.\" Access Control Lists manual pages
+.\"
+.\" (C) 2000 Andreas Gruenbacher, <andreas.gruenbacher@gmail.com>
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this manual.  If not, see
+.\" <http://www.gnu.org/licenses/>.
+.\"
+.TH SETFACL 1 "ACL File Utilities" "May 2000" "Access Control Lists"
+.SH NAME
+setfacl \- set file access control lists
+.SH SYNOPSIS
+
+.B setfacl
+[\-bkndRLPvh] [{\-m|\-x} acl_spec] [{\-M|\-X} acl_file] file ...
+
+.B setfacl
+\-\-restore={file|-}
+
+.SH DESCRIPTION
+This utility sets Access Control Lists (ACLs) of files and directories.
+On the command line, a sequence of commands is followed by a sequence of
+files (which in turn can be followed by another sequence of commands, ...).
+
+The
+.I \-m
+and
+.I \-x
+options expect an ACL on the command line. Multiple ACL entries are separated
+by comma characters (`,'). The
+.I \-M
+and
+.I \-X
+options read an ACL from a file or from standard input. The ACL entry format is
+described in Section ACL ENTRIES.
+
+The
+.IR "\-\-set" " and " "\-\-set-file"
+options set the ACL of a file or a directory. The previous ACL is
+replaced.
+ACL entries for this operation must include permissions.
+
+The
+.IR "\-m (\-\-modify)" " and " "\-M (\-\-modify-file)"
+options modify the ACL of a file or directory.
+ACL entries for this operation must include permissions.
+
+The
+.IR "\-x (\-\-remove)" " and " "\-X (\-\-remove-file)"
+options remove ACL entries. It is not an error to remove an entry which
+does not exist.  Only ACL entries without the
+.I perms
+field are accepted as parameters, unless POSIXLY_CORRECT is defined.
+
+When reading from files using the 
+.I \-M
+and
+.IR \-X
+options, setfacl accepts the output getfacl produces.
+There is at most one ACL entry per line. After a Pound sign (`#'),
+everything up to the end of the line is treated as a comment.
+
+If setfacl is used on a file system which does not support ACLs, setfacl
+operates on the file mode permission bits. If the ACL does not fit completely
+in the permission bits, setfacl modifies the file mode permission bits to reflect the ACL as closely as possible, writes an error message to standard error, and returns with an exit status greater than 0.
+
+.SS PERMISSIONS
+The file owner and processes capable of CAP_FOWNER are granted the right
+to modify ACLs of a file. This is analogous to the permissions required
+for accessing the file mode. (On current Linux systems, root is the only
+user with the CAP_FOWNER capability.)
+
+.SH OPTIONS
+.TP 4
+.I \-b, \-\-remove-all
+Remove all extended ACL entries. The base ACL entries of the owner, group and others are retained.
+.TP 4
+.I \-k, \-\-remove-default
+Remove the Default ACL. If no Default ACL exists, no warnings are issued.
+.TP 4
+.I \-n, \-\-no-mask
+Do not recalculate the effective rights mask. The default behavior of
+setfacl is to recalculate the ACL mask entry, unless a mask entry was explicitly given.
+The mask entry is set to the union of all permissions of the owning group, and all named user and group entries. (These are exactly the entries affected by the mask entry).
+.TP 4
+.I \-\-mask
+Do recalculate the effective rights mask, even if an ACL mask entry was explicitly given. (See the
+.IR "\-n " option.)
+.TP 4
+.I \-d, \-\-default
+All operations apply to the Default ACL. Regular ACL entries in the
+input set are promoted to Default ACL entries. Default ACL entries in
+the input set are discarded. (A warning is issued if that happens).
+.TP 4
+.I \-\-restore={file|-}
+Restore a permission backup created by `getfacl \-R' or similar. All permissions
+of a complete directory subtree are restored using this mechanism. If the input
+contains owner comments or group comments, setfacl attempts to restore the
+owner and owning group. If the input contains flags comments (which define the setuid,
+setgid, and sticky bits), setfacl sets those three bits accordingly; otherwise,
+it clears them. This option cannot be mixed with other options except `\-\-test'.
+If the file specified is '\fB-\fP', then it will be read from standard input.
+.TP 4
+.I \-\-test
+Test mode. Instead of changing the ACLs of any files, the resulting ACLs are listed.
+.TP 4
+.I \-R, \-\-recursive
+Apply operations to all files and directories recursively. This option cannot be mixed with `\-\-restore'.
+.TP 4
+.I \-L, \-\-logical
+Logical walk, follow symbolic links to directories. The default behavior is to follow
+symbolic link arguments, and skip symbolic links encountered in subdirectories.
+Only effective in combination with \-R.
+This option cannot be mixed with `\-\-restore'.
+.TP 4
+.I \-P, \-\-physical
+Physical walk, do not follow symbolic links to directories.
+This also skips symbolic link arguments.
+Only effective in combination with \-R.
+This option cannot be mixed with `\-\-restore'.
+.TP 4
+.I \-v, \-\-version
+Print the version of setfacl and exit.
+.TP 4
+.I \-h, \-\-help
+Print help explaining the command line options.
+.TP 4
+.I \-\-
+End of command line options. All remaining parameters are interpreted as file names, even if they start with a dash.
+.TP 4
+.I \-
+If the file name parameter is a single dash, setfacl reads a list of files from standard input.
+
+.SS ACL ENTRIES
+The setfacl utility recognizes the following ACL entry formats (blanks
+inserted for clarity):
+
+.fam C
+.TP
+.RI "[d[efault]:] [u[ser]:]" "uid " [: perms ]
+.fam T
+Permissions of a named user. Permissions of the file owner if
+.I uid
+is empty.
+.fam C
+.TP
+.RI "[d[efault]:] g[roup]:" "gid " [: perms ]
+.fam T
+Permissions of a named group. Permissions of the owning group if
+.I gid
+is empty.
+.fam C
+.TP
+.RI "[d[efault]:] m[ask][:] [:" perms ]
+.fam T
+Effective rights mask
+.fam C
+.TP
+.RI "[d[efault]:] o[ther][:] [:" perms ]
+.fam T
+Permissions of others.
+.PP
+Whitespace between delimiter characters and non-delimiter characters is ignored.
+.PP
+.PP
+Proper ACL entries including permissions are used in modify and set operations. (options
+.IR \-m ", " \-M ", " \-\-set " and " \-\-set-file ).
+Entries without the
+.I perms
+field are used for
+.I deletion
+of entries (options
+.IR \-x " and " \-X ).
+.PP
+For
+.I uid
+and
+.I gid
+you can specify either a name or a number.  Character literals may be specified
+with a backslash followed by the 3-digit octal digits corresponding to the
+ASCII code for the character (e.g.,
+.I \e101
+for 'A').  If the name contains a literal backslash followed by 3 digits, the
+backslash must be escaped (i.e.,
+.IR "\e\e" ).
+.PP
+The
+.I perms
+field is a combination of characters that indicate the read
+.IR (r) ,
+write
+.IR (w) ,
+execute
+.IR (x)
+permissions.  Dash characters in the
+.I perms
+field
+.IR (\-)
+are ignored.  The character
+.I X
+stands for the execute permission if the file is a directory or already has
+execute permission for some user.  Alternatively, the
+.I perms
+field can define the permissions numerically, as a bit-wise combination of read
+.IR (4) ,
+write
+.IR (2) ,
+and execute
+.IR (1) .
+Zero
+.I perms
+fields or
+.I perms
+fields that only consist of dashes indicate no permissions.
+.PP
+.SS AUTOMATICALLY CREATED ENTRIES
+Initially, files and directories contain only the three base ACL entries
+for the owner, the group, and others. There are some rules that
+need to be satisfied in order for an ACL to be valid:
+.IP * 4
+The three base entries cannot be removed. There must be exactly one
+entry of each of these base entry types.
+.IP * 4
+Whenever an ACL contains named user entries or named group objects,
+it must also contain an effective rights mask.
+.IP * 4
+Whenever an ACL contains any Default ACL entries, the three Default ACL
+base entries (default owner, default group, and default others) must also exist.
+.IP * 4
+Whenever a Default ACL contains named user entries or named group objects,
+it must also contain a default effective rights mask.
+.PP
+To help the user ensure these rules, setfacl creates entries from existing
+entries under the following conditions:
+.IP * 4
+If an ACL contains named user or named group entries, and
+no mask entry exists, a mask entry containing the same permissions as
+the group entry is created. Unless the
+.I \-n
+option is given, the permissions of the mask entry are further adjusted to include the union of all permissions affected by the mask entry. (See the
+.I \-n
+option description).
+.IP * 4
+If a Default ACL entry is created, and the Default ACL contains no
+owner, owning group, or others entry, a copy of the ACL owner, owning group, or others entry is added to the Default ACL.
+.IP * 4
+If a Default ACL contains named user entries or named group entries, and no mask entry exists, a mask entry containing the same permissions as the default Default ACL's group entry is added. Unless the
+.I \-n
+option is given, the permissions of the mask entry are further adjusted to
+include the union of all permissions affected by the mask entry. (See the
+.I \-n
+option description).
+.PP
+.SH EXAMPLES
+.PP
+Granting an additional user read access
+.RS
+.fam C
+setfacl \-m u:lisa:r file
+.fam T
+.RE
+.PP
+Revoking write access from all groups and all named users (using the effective rights mask)
+.RS
+.fam C
+setfacl \-m m::rx file
+.fam T
+.RE
+.PP
+Removing a named group entry from a file's ACL
+.RS
+.fam C
+setfacl \-x g:staff file
+.fam T
+.RE
+.PP
+Copying the ACL of one file to another
+.RS
+.fam C
+getfacl file1 | setfacl \-\-set-file=\- file2
+.fam T
+.RE
+.PP
+Copying the access ACL into the Default ACL
+.RS
+.fam C
+getfacl \-\-access dir | setfacl \-d \-M\- dir
+.fam T
+.RE
+.SH CONFORMANCE TO POSIX 1003.1e DRAFT STANDARD 17
+If the environment variable POSIXLY_CORRECT is defined, the default behavior of setfacl changes as follows: All non-standard options are disabled.
+The ``default:'' prefix is disabled.
+The
+.IR \-x " and " \-X
+options also accept permission fields (and ignore them). 
+.SH AUTHOR
+Andreas Gruenbacher,
+.RI < andreas.gruenbacher@gmail.com >.
+
+Please send your bug reports, suggested features and comments to the
+above address.
+.SH SEE ALSO
+.BR getfacl "(1), " chmod "(1), " umask "(1), " acl (5)

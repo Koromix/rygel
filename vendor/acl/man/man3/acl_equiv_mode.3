@@ -1,0 +1,96 @@
+.\" Access Control Lists manual pages
+.\"
+.\" (C) 2002 Andreas Gruenbacher, <andreas.gruenbacher@gmail.com>
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this manual.  If not, see
+.\" <http://www.gnu.org/licenses/>.
+.\"
+.Dd March 23, 2002
+.Dt ACL_EQUIV_MODE 3
+.Os "Linux ACL"
+.Sh NAME
+.Nm acl_equiv_mode
+.Nd check for an equivalent ACL
+.Sh LIBRARY
+Linux Access Control Lists library (libacl, \-lacl).
+.Sh SYNOPSIS
+.In sys/types.h
+.In acl/libacl.h
+.Ft int
+.Fn acl_equiv_mode "acl_t acl" "mode_t *mode_p"
+.Sh DESCRIPTION
+The
+.Fn acl_equiv_mode
+function checks if the ACL pointed to by the argument
+.Va acl
+contains only the required ACL entries of tag types
+ACL_USER_OBJ, ACL_GROUP_OBJ, and ACL_OTHER, and contains no
+permissions other that ACL_READ, ACL_WRITE or ACL_EXECUTE.
+If the ACL has this form, it can can be fully represented with
+the traditional file permission bits, and is considered
+equivalent with the traditional file permission bits.
+.Pp
+If
+.Va acl
+is an equivalent ACL and the pointer
+.Va mode_p
+is not
+.Li NULL , 
+the value pointed to by
+.Va mode_p
+is set to the value that defines the same owner, group and other
+permissions as contained in
+the ACL.
+.Sh RETURN VALUE
+On success, this function returns the value
+.Li 0
+if
+.Va acl
+is an equivalent ACL, and the value
+.Li 1
+if
+.Va acl
+is not an equivalent ACL. On error, the value
+.Li -1
+is returned, and
+.Va errno
+is set appropriately.
+.Sh ERRORS
+If any of the following conditions occur, the
+.Fn acl_equiv_mode
+function returns the value
+.Li -1
+and sets
+.Va errno
+to the corresponding value:
+.Bl -tag -width Er
+.It Bq Er EINVAL
+The argument
+.Va acl
+is not a valid pointer to an ACL.
+.El
+.Sh STANDARDS
+This is a non-portable, Linux specific extension to the ACL manipulation
+functions defined in IEEE Std 1003.1e draft 17 (\(lqPOSIX.1e\(rq, abandoned).
+.Sh SEE ALSO
+.Xr acl_from_mode 3 ,
+.Xr acl 5
+.Sh AUTHOR
+Written by
+.An "Andreas Gruenbacher" Aq andreas.gruenbacher@gmail.com .

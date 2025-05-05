@@ -1,0 +1,23 @@
+tools_ldadd = libacl.la libmisc.la $(LTLIBINTL)
+
+bin_PROGRAMS += chacl
+chacl_SOURCES = tools/chacl.c
+chacl_LDADD = $(tools_ldadd)
+
+bin_PROGRAMS += getfacl
+getfacl_SOURCES = \
+	tools/getfacl.c \
+	tools/user_group.c \
+	tools/user_group.h
+getfacl_LDADD = $(tools_ldadd)
+
+bin_PROGRAMS += setfacl
+setfacl_SOURCES = \
+	tools/do_set.c \
+	tools/do_set.h \
+	tools/parse.c \
+	tools/parse.h \
+	tools/sequence.c \
+	tools/sequence.h \
+	tools/setfacl.c
+setfacl_LDADD = $(tools_ldadd)

@@ -1,0 +1,7 @@
+EXTRA_DIST += \
+	examples/copy-acl.c \
+	examples/copyperm.c \
+	examples/get-acl.c \
+	examples/Makefile \
+	examples/README \
+	examples/set-acl.c

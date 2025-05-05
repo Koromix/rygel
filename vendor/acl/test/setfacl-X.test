@@ -1,0 +1,119 @@
+	$ umask 022
+	$ mkdir d
+	$ cd d
+
+	$ setfacl -dm u:bin:rwx .
+
+	$ touch f g
+	$ chmod ugo+x f
+	$ setfacl -m u:bin:rw,g::r g
+	$ setfacl -m u:root:rwX f g
+	$ getfacl --omit-header --no-effective f g
+	> user::rwx
+	> user:root:rwx
+	> user:bin:rwx
+	> group::r-x
+	> mask::rwx
+	> other::r-x
+	>
+	> user::rw-
+	> user:root:rw-
+	> user:bin:rw-
+	> group::r--
+	> mask::rw-
+	> other::r--
+	>
+
+	$ rm f g
+	$ touch f g
+	$ mkdir d e
+	$ setfacl -n -m u:root:rwX d f e g
+	$ getfacl --omit-header --no-effective d e f g
+	> user::rwx
+	> user:root:rwx
+	> user:bin:rwx
+	> group::r-x
+	> mask::rwx
+	> other::r-x
+	> default:user::rwx
+	> default:user:bin:rwx
+	> default:group::r-x
+	> default:mask::rwx
+	> default:other::r-x
+	>
+	> user::rwx
+	> user:root:rwx
+	> user:bin:rwx
+	> group::r-x
+	> mask::rwx
+	> other::r-x
+	> default:user::rwx
+	> default:user:bin:rwx
+	> default:group::r-x
+	> default:mask::rwx
+	> default:other::r-x
+	>
+	> user::rw-
+	> user:root:rwx
+	> user:bin:rwx
+	> group::r-x
+	> mask::rw-
+	> other::r--
+	>
+	> user::rw-
+	> user:root:rwx
+	> user:bin:rwx
+	> group::r-x
+	> mask::rw-
+	> other::r--
+	>
+
+	$ rm f g
+	$ rmdir d e
+	$ touch f g
+	$ mkdir d e
+	$ setfacl -n -m u:root:rwX f d g e
+	$ getfacl --omit-header --no-effective d e f g
+	> user::rwx
+	> user:root:rwx
+	> user:bin:rwx
+	> group::r-x
+	> mask::rwx
+	> other::r-x
+	> default:user::rwx
+	> default:user:bin:rwx
+	> default:group::r-x
+	> default:mask::rwx
+	> default:other::r-x
+	>
+	> user::rwx
+	> user:root:rwx
+	> user:bin:rwx
+	> group::r-x
+	> mask::rwx
+	> other::r-x
+	> default:user::rwx
+	> default:user:bin:rwx
+	> default:group::r-x
+	> default:mask::rwx
+	> default:other::r-x
+	>
+	> user::rw-
+	> user:root:rwx
+	> user:bin:rwx
+	> group::r-x
+	> mask::rw-
+	> other::r--
+	>
+	> user::rw-
+	> user:root:rwx
+	> user:bin:rwx
+	> group::r-x
+	> mask::rw-
+	> other::r--
+	>
+
+	$ rm f g
+	$ rmdir d e
+	$ cd ..
+	$ rm -rf d
