@@ -66,7 +66,9 @@ enum class rk_BlobType: int8_t {
     Link = 4,
     Snapshot2 = 5,
     Directory2 = 6,
-    Snapshot3 = 7
+    Snapshot3 = 7,
+    Directory3 = 8,
+    Snapshot4 = 9
 };
 static const char *const rk_BlobTypeNames[] = {
     "Chunk",
@@ -76,7 +78,9 @@ static const char *const rk_BlobTypeNames[] = {
     "Link",
     "Snapshot2",
     "Directory2",
-    "Snapshot3"
+    "Snapshot3",
+    "Directory3",
+    "Snapshot4"
 };
 
 enum class rk_SaltKind {

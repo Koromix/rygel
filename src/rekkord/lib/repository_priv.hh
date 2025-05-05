@@ -68,6 +68,7 @@ struct RawFile {
     uint16_t name_len; // Little Endian
     uint16_t extended_len; // Little Endian
     int64_t mtime; // Little Endian
+    int64_t ctime; // Little Endian
     int64_t btime; // Little Endian
     uint32_t uid; // Little Endian
     uint32_t gid; // Little Endian
@@ -83,7 +84,7 @@ struct RawFile {
     inline Span<const uint8_t> GetExtended() const { return MakeSpan((const uint8_t *)this + RG_SIZE(RawFile) + LittleEndian(name_len), LittleEndian(extended_len)); }
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(RawFile) == 76);
+static_assert(RG_SIZE(RawFile) == 84);
 
 #pragma pack(push, 1)
 struct RawChunk {

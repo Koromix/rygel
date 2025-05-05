@@ -4264,6 +4264,7 @@ struct FileInfo {
 
     int64_t size;
     int64_t mtime;
+    int64_t ctime;
     int64_t btime;
     unsigned int mode;
 
@@ -4297,7 +4298,7 @@ enum class RenameFlag {
 bool RenameFile(const char *src_filename, const char *dest_filename, unsigned int flags);
 
 bool ResizeFile(int fd, const char *filename, int64_t len);
-bool SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t btime, uint32_t mode);
+bool SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t ctime, uint32_t mode);
 
 struct VolumeInfo {
     int64_t total;
