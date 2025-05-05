@@ -26,7 +26,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 130;
+const int InstanceVersion = 131;
 const int LegacyVersion = 60;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
@@ -1912,6 +1912,10 @@ bool MigrateInstance(sq_Database *db, int target)
                         hid TEXT
                     );
 
+                    CREATE TABLE mig_deletions (
+                        tid TEXT NOT NULL
+                    );
+
                     INSERT INTO rec_threads (tid, deleted)
                         SELECT root_ulid, deleted FROM rec_entries_BAK WHERE ulid = root_ulid;
                     INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime, store, context, sequence, hid, data)
@@ -1930,6 +1934,9 @@ bool MigrateInstance(sq_Database *db, int target)
                     INSERT INTO mig_threads (tid, sequence, hid)
                         SELECT root_ulid, sequence, hid FROM rec_entries_BAK
                         WHERE ulid = root_ulid AND deleted = 0;
+
+                    INSERT INTO mig_deletions (tid)
+                        SELECT ulid FROM rec_entries_BAK WHERE deleted = 1;
 
                     DROP TABLE rec_fragments_BAK;
                     DROP TABLE rec_entries_BAK;
@@ -2881,7 +2888,18 @@ bool MigrateInstance(sq_Database *db, int target)
                 }
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 130);
+            case 130: {
+                if (db->TableExists("mig_deletions")) {
+                    bool success = db->RunMany(R"(
+                        UPDATE rec_entries SET deleted = 1 WHERE tid IN (SELECT tid FROM mig_deletions);
+                        DROP TABLE mig_deletions;
+                    )");
+                    if (!success)
+                        return false;
+                }
+            } break;
+
+            static_assert(InstanceVersion == 131);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
