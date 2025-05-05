@@ -166,7 +166,7 @@ bool ReadXAttributes(int fd, const char *filename, Allocator *alloc, HeapArray<X
 {
     RG_DEFER_NC(err_guard, len = out_xattrs->len) { out_xattrs->RemoveFrom(len); };
 
-    HeapArray<char> list(alloc);
+    HeapArray<char> list;
     {
         Size size = Kibibytes(4);
 
@@ -185,7 +185,6 @@ retry:
         }
 
         list.len = len;
-        list.Trim(1);
     }
 
     for (Size offset = 0; offset < list.len;) {
@@ -194,11 +193,13 @@ retry:
         Span<const char> key = MakeSpan(list.ptr + offset + 1, list[offset]);
 
         // Prepare next iteration
-        list[offset] = 0;
-        offset += key.len + 1;
+        offset += 1 + key.len;
+
+        // Prefix attribute namespace
+        key = Fmt(alloc, "user.%1", key);
 
         HeapArray<uint8_t> value(alloc);
-        Size len = ReadValue(fd, filename, key.ptr, &value);
+        Size len = ReadValue(fd, filename, key.ptr + 5, &value);
 
         if (len < 0)
             continue;
@@ -209,9 +210,6 @@ retry:
         out_xattrs->Append(xattr);
     }
 
-    list.ptr[list.len] = 0;
-    list.Leak();
-
     err_guard.Disable();
     return true;
 }
@@ -221,7 +219,13 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
     bool success = true;
 
     for (const XAttrInfo &xattr: xattrs) {
-        int ret = extattr_set_fd(fd, EXTATTR_NAMESPACE_USER, xattr.key, xattr.value.ptr, xattr.value.len);
+        if (!StartsWith(xattr.key, "user.")) {
+            LogError("Cannot restore extended attribute '%1' for '%2': unsupported prefix", xattr.key, filename);
+            success = false;
+            continue;
+        }
+
+        int ret = extattr_set_fd(fd, EXTATTR_NAMESPACE_USER, xattr.key + 5, xattr.value.ptr, xattr.value.len);
 
         if (ret < 0) {
             LogError("Failed to write extended attribute '%1' to '%2': %3'", xattr.key, filename, strerror(errno));
