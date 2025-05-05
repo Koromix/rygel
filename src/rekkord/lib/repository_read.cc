@@ -17,6 +17,7 @@
 #include "disk.hh"
 #include "repository.hh"
 #include "repository_priv.hh"
+#include "xattr.hh"
 
 #if defined(_WIN32)
     #if !defined(NOMINMAX)
@@ -39,11 +40,6 @@ namespace RG {
     #undef CreateSymbolicLink
 #endif
 
-enum class ExtractFlag {
-    AllowSeparators = 1 << 1,
-    FlattenName = 1 << 2
-};
-
 struct EntryInfo {
     rk_Hash hash;
 
@@ -59,6 +55,8 @@ struct EntryInfo {
     uint32_t uid;
     uint32_t gid;
     int64_t size;
+
+    Span<XAttrInfo> xattrs;
 };
 
 struct FileChunk {
@@ -242,6 +240,62 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
     entry.gid = LittleEndian(ptr->gid);
     entry.size = LittleEndian(ptr->size);
 
+    if (ptr->extended_len) {
+        Span<const uint8_t> extended = ptr->GetExtended();
+
+        // Count ahead of time to avoid reallocations
+        Size count = 0;
+
+        for (Size offset = 0; offset < extended.len;) {
+            if (extended.len - offset < RG_SIZE(uint16_t)) {
+                LogError("Truncated extended blob");
+                return -1;
+            }
+
+            uint16_t attr_len;
+            MemCpy(&attr_len, extended.ptr + offset, RG_SIZE(attr_len));
+            attr_len = LittleEndian(attr_len);
+
+            if (attr_len > extended.len) {
+                LogError("Invalid extended length prefix");
+                return -1;
+            }
+
+            count++;
+            offset += 2 + attr_len;
+        }
+
+        HeapArray<XAttrInfo> xattrs(alloc);
+        xattrs.Reserve(count);
+
+        for (Size offset = 0; offset < extended.len;) {
+            XAttrInfo *xattr = xattrs.AppendDefault();
+
+            uint16_t attr_len;
+            MemCpy(&attr_len, extended.ptr + offset, RG_SIZE(attr_len));
+            attr_len = LittleEndian(attr_len);
+
+            Span<const uint8_t> attr = MakeSpan(extended.ptr + offset + 2, attr_len);
+            const uint8_t *split = (const uint8_t *)memchr(attr.ptr, 0, (size_t)attr.len);
+
+            if (!split) {
+                LogError("Invalid extended length prefix");
+                return -1;
+            }
+
+            Size key_len = split - attr.ptr;
+            Size value_len = attr.len - key_len - 1;
+
+            xattr->key = DuplicateString(MakeSpan((const char *)attr.ptr, key_len), alloc).ptr;
+            xattr->value = AllocateSpan<uint8_t>(alloc, value_len);
+            MemCpy(xattr->value.ptr, attr.end() - value_len, value_len);
+
+            offset += 2 + attr_len;
+        }
+
+        entry.xattrs = xattrs.Leak();
+    }
+
     // Sanity checks
     if (entry.kind != (int8_t)RawFile::Kind::Directory &&
             entry.kind != (int8_t)RawFile::Kind::File &&
@@ -309,6 +363,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                     SetFileOwner(fd, meta.filename.ptr, meta.uid, meta.gid);
                 }
                 SetFileMetaData(fd, meta.filename.ptr, meta.mtime, meta.btime, meta.mode);
+
+                WriteXAttributes(fd, meta.filename.ptr, meta.xattrs);
             }
         }
     };
@@ -318,6 +374,13 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
     if (dest.basename.len) {
         ctx->meta = dest;
         ctx->meta.filename = DuplicateString(dest.filename, &ctx->temp_alloc);
+
+        if (ctx->meta.xattrs.len) {
+            Span<XAttrInfo> xattrs = ctx->meta.xattrs;
+            ctx->meta.xattrs = AllocateSpan<XAttrInfo>(&ctx->temp_alloc, xattrs.len);
+            MemCpy(ctx->meta.xattrs.ptr, xattrs.ptr, xattrs.len * RG_SIZE(XAttrInfo));
+        }
+
         ctx->chown = settings.chown;
         ctx->fake = settings.fake;
     }
@@ -432,6 +495,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                         SetFileOwner(fd, entry.filename.ptr, entry.uid, entry.gid);
                     }
                     SetFileMetaData(fd, entry.filename.ptr, entry.mtime, entry.btime, entry.mode);
+
+                    WriteXAttributes(fd, entry.filename.ptr, entry.xattrs);
                 } break;
 
                 case (int)RawFile::Kind::Link: {
@@ -448,8 +513,19 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                         LogInfo("%!D..[L]%!0 %1%/%!..+%2%!0", prefix, entry.basename);
                     }
 
-                    if (!settings.fake && !CreateSymbolicLink(entry.filename.ptr, (const char *)entry_blob.ptr, settings.force))
-                        return false;
+                    if (!settings.fake) {
+                        if (!CreateSymbolicLink(entry.filename.ptr, (const char *)entry_blob.ptr, settings.force))
+                            return false;
+
+                        if (entry.xattrs.len) {
+                            int fd = OpenFile(entry.filename.ptr, (int)OpenFlag::Write);
+                            RG_DEFER { CloseDescriptor(fd); };
+
+                            if (fd >= 0) {
+                                WriteXAttributes(fd, entry.filename.ptr, entry.xattrs);
+                            }
+                        }
+                    }
                 } break;
 
                 default: { RG_UNREACHABLE(); } break;

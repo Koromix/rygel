@@ -18,8 +18,9 @@
 #include "repository.hh"
 #include "repository_priv.hh"
 #include "splitter.hh"
+#include "xattr.hh"
 #include "vendor/blake3/c/blake3.h"
-#if defined(__linux__)
+#if !defined(_WIN32)
     #include <fcntl.h>
 #endif
 
@@ -42,13 +43,12 @@ enum class PutResult {
 class PutContext {
     rk_Disk *disk;
     sq_Database *db;
+    rk_PutSettings settings;
 
     uint8_t salt32[32];
     uint64_t salt8;
 
     ProgressHandle *progress;
-
-    bool preserve_atime = false;
 
     std::atomic_int64_t put_size { 0 };
     std::atomic_int64_t put_stored { 0 };
@@ -60,7 +60,7 @@ class PutContext {
     std::atomic_int big_semaphore { FileBigLimit };
 
 public:
-    PutContext(rk_Disk *disk, sq_Database *db, ProgressHandle *progress, bool preserve_atime);
+    PutContext(rk_Disk *disk, sq_Database *db, const rk_PutSettings &settings, ProgressHandle *progress);
 
     PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash, int64_t *out_subdirs = nullptr);
     PutResult PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_size = nullptr);
@@ -86,8 +86,8 @@ static void HashBlake3(rk_BlobType type, Span<const uint8_t> buf, const uint8_t 
     blake3_hasher_finalize(&hasher, out_hash->hash, RG_SIZE(out_hash->hash));
 }
 
-PutContext::PutContext(rk_Disk *disk, sq_Database *db, ProgressHandle *progress, bool preserve_atime)
-    : disk(disk), db(db), progress(progress), preserve_atime(preserve_atime),
+PutContext::PutContext(rk_Disk *disk, sq_Database *db, const rk_PutSettings &settings, ProgressHandle *progress)
+    : disk(disk), db(db), settings(settings), progress(progress),
       dir_tasks(disk->GetAsync()), file_tasks(disk->GetAsync())
 {
     disk->MakeSalt(rk_SaltKind::BlobHash, salt32);
@@ -122,6 +122,10 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     Async async(&dir_tasks);
     bool success = true;
 
+    // Reuse for performance
+    HeapArray<XAttrInfo> xattrs;
+    HeapArray<uint8_t> extended;
+
     // Enumerate directory hierarchy and process files
     BucketArray<PendingDirectory> pending_directories;
     {
@@ -136,17 +140,81 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             const auto callback = [&](const char *basename, FileType) {
                 const char *filename = Fmt(&temp_alloc, "%1%/%2", pending->dirname, basename).ptr;
 
-                Size basename_len = strlen(basename);
-                Size entry_len = RG_SIZE(RawFile) + basename_len;
+                RawFile *entry = nullptr;
 
-                RawFile *entry = (RawFile *)pending->blob.AppendDefault(entry_len);
+                int fd = -1;
+                RG_DEFER { CloseDescriptor(fd); };
+
+                // Open file
+                {
+                    int flags = O_RDONLY | O_CLOEXEC | (follow_symlinks ? 0 : O_NOFOLLOW);
+
+#if defined(__linux__)
+                    fd = settings.preserve_atime ? open(filename, flags | O_NOATIME) : -1;
+
+                    if (fd < 0) {
+                        fd = open(filename, flags);
+                    }
+#else
+                    fd = open(filename, flags);
+#endif
+
+                    if (fd < 0) {
+                        LogError("Cannot open '%1': %2", filename, strerror(errno));
+                    }
+                }
+
+                // Read extended attributes, best effort
+                if (settings.xattrs) {
+                    xattrs.RemoveFrom(0);
+                    extended.RemoveFrom(0);
+
+                    if (fd >= 0) [[likely]] {
+                        ReadXAttributes(fd, filename, &temp_alloc, &xattrs);
+
+                        for (const XAttrInfo &xattr: xattrs) {
+                            Size key_len = strlen(xattr.key);
+                            Size total_len = key_len + 1 + xattr.value.len;
+
+                            if (total_len > UINT16_MAX) {
+                                LogWarning("Cannot store xattr '%1' for '%2': too big", xattr.key, filename);
+                                continue;
+                            }
+
+                            uint16_t len_16le = LittleEndian((uint16_t)total_len);
+
+                            extended.Append(MakeSpan((const uint8_t *)&len_16le, RG_SIZE(len_16le)));
+                            extended.Append(MakeSpan((const uint8_t *)xattr.key, key_len + 1));
+                            extended.Append(xattr.value);
+                        }
+
+                        if (extended.len > INT16_MAX) {
+                            LogWarning("Cannot store xattrs for '%1': too big", filename);
+                            extended.RemoveFrom(0);
+                        }
+                    }
+                }
+
+                // Create raw entry
+                {
+                    Size basename_len = strlen(basename);
+                    Size entry_len = RG_SIZE(RawFile) + basename_len + extended.len;
+
+                    entry = (RawFile *)pending->blob.AppendDefault(entry_len);
+
+                    entry->name_len = (uint16_t)basename_len;
+                    entry->extended_len = (uint16_t)extended.len;
+                    MemCpy(entry->GetName().ptr, basename, basename_len);
+                    MemCpy(entry->GetExtended().ptr, extended.ptr, extended.len);
+                }
+
+                if (fd < 0) [[unlikely]]
+                    return true;
 
                 // Stat file
                 {
-                    unsigned int flags = follow_symlinks ? (int)StatFlag::FollowSymlink : 0;
-
                     FileInfo file_info = {};
-                    StatResult ret = StatFile(filename, flags, &file_info);
+                    StatResult ret = StatFile(fd, filename, &file_info);
 
                     if (ret == StatResult::Success) {
                         entry->flags |= LittleEndian((int16_t)RawFile::Flags::Stated);
@@ -198,16 +266,13 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                     }
                 }
 
-                entry->name_len = (int16_t)basename_len;
-                MemCpy(entry->GetName().ptr, basename, basename_len);
-
                 return true;
             };
 
 #if defined(__linux__)
             EnumResult ret;
             {
-                int fd = preserve_atime ? open(pending->dirname, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOATIME) : -1;
+                int fd = settings.preserve_atime ? open(pending->dirname, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOATIME) : -1;
 
                 if (fd >= 0) {
                     ret = EnumerateDirectory(fd, pending->dirname, nullptr, -1, callback);
@@ -443,7 +508,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
     StreamReader st;
     {
 #if defined(__linux__)
-        int fd = preserve_atime ? open(src_filename, O_RDONLY | O_CLOEXEC | O_NOATIME) : -1;
+        int fd = settings.preserve_atime ? open(src_filename, O_RDONLY | O_CLOEXEC | O_NOATIME) : -1;
 
         if (fd >= 0) {
             st.Open(fd, src_filename);
@@ -612,7 +677,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader));
 
     ProgressHandle progress("Store");
-    PutContext put(disk, db, &progress, settings.preserve_atime);
+    PutContext put(disk, db, settings, &progress);
 
     // Process snapshot entries
     for (const char *filename: filenames) {
@@ -649,7 +714,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
             name = name.Take(1, name.len - 1);
 
-            entry->name_len = (int16_t)name.len;
+            entry->name_len = (uint16_t)name.len;
             MemCpy(entry->GetName().ptr, name.ptr, name.len);
 
             if (changed) {

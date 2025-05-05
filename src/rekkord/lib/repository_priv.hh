@@ -65,8 +65,8 @@ struct RawFile {
     rk_Hash hash;
     int16_t flags; // Little Endian
     int16_t kind; // Little Endian
-    int16_t name_len; // Little Endian
-    int16_t extended_len; // Little Endian
+    uint16_t name_len; // Little Endian
+    uint16_t extended_len; // Little Endian
     int64_t mtime; // Little Endian
     int64_t btime; // Little Endian
     uint32_t uid; // Little Endian
@@ -78,6 +78,9 @@ struct RawFile {
 
     inline Span<char> GetName() { return MakeSpan((char *)this + RG_SIZE(RawFile), name_len); }
     inline Span<const char> GetName() const { return MakeSpan((const char *)this + RG_SIZE(RawFile), name_len); }
+
+    inline Span<uint8_t> GetExtended() { return MakeSpan((uint8_t *)this + RG_SIZE(RawFile) + name_len, extended_len); }
+    inline Span<const uint8_t> GetExtended() const { return MakeSpan((const uint8_t *)this + RG_SIZE(RawFile) + name_len, extended_len); }
 };
 #pragma pack(pop)
 static_assert(RG_SIZE(RawFile) == 76);

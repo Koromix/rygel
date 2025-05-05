@@ -43,6 +43,7 @@ Options:
         %!..+--raw%!0                      Skip snapshot object and report data hash
 
         %!..+--follow_symlinks%!0          Follow symbolic links (instead of storing them as-is)
+        %!..+--xattrs%!0                   Store extended attributes on supported platforms
         %!..+--preserve_atime%!0           Do not modify atime if possible (Linux-only)
 
     %!..+-j, --threads threads%!0          Change number of threads
@@ -72,6 +73,8 @@ Options:
                 settings.channel = opt.current_value;
             } else if (opt.Test("--follow_symlinks")) {
                 settings.follow_symlinks = true;
+            } else if (opt.Test("--xattrs")) {
+                settings.xattrs = true;
             } else if (opt.Test("--preserve_atime")) {
                 settings.preserve_atime = true;
             } else if (opt.Test("--raw")) {
@@ -171,6 +174,7 @@ Options:
         %!..+--delete%!0                   Delete extraneous files from destination
 
         %!..+--chown%!0                    Restore original file UID and GID
+        %!..+--xattrs%!0                   Restore extended file attributes
 
     %!..+-v, --verbose%!0                  Show detailed actions
     %!..+-n, --dry_run%!0                  Fake file restoration
@@ -208,6 +212,8 @@ Snapshot names are not unique, if you use a snapshot name, rekkord will use the 
                 settings.unlink = true;
             } else if (opt.Test("--chown")) {
                 settings.chown = true;
+            } else if (opt.Test("--xattrs")) {
+                settings.xattrs = true;
             } else if (opt.Test("-v", "--verbose")) {
                 settings.verbose = true;
             } else if (opt.Test("-n", "--dry_run")) {

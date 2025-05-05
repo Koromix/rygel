@@ -27,6 +27,7 @@ static const Size rk_MaxSnapshotChannelLength = 256;
 struct rk_PutSettings {
     const char *channel = rk_DefaultSnapshotChannel;
     bool follow_symlinks = false;
+    bool xattrs = false;
     bool preserve_atime = false;
     bool raw = false;
 };
@@ -35,6 +36,7 @@ struct rk_GetSettings {
     bool force = false;
     bool unlink = false;
     bool chown = false;
+    bool xattrs = false;
     bool verbose = false;
     bool fake = false;
 };

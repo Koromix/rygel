@@ -1,0 +1,251 @@
+// Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+#include "src/core/base/base.hh"
+#include "xattr.hh"
+
+#if defined(__linux__)
+    #include <sys/xattr.h>
+#elif defined(__FreeBSD__)
+    #include <sys/types.h>
+    #include <sys/extattr.h>
+#endif
+
+namespace RG {
+
+#if defined(__linux__)
+
+static Size ReadValue(int fd, const char *filename, const char *key, HeapArray<uint8_t> *out_value)
+{
+    Size size = fgetxattr(fd, key, nullptr, 0);
+
+    if (size < 0) {
+        LogError("Failed to read extended attribute '%1' from '%2': %3", key, filename, strerror(errno));
+        return -1;
+    }
+    if (!size)
+        return 0;
+
+retry:
+    out_value->Grow(size);
+
+    Size len = fgetxattr(fd, key, out_value->end(), out_value->capacity - out_value->len);
+
+    if (len < 0) {
+        if (errno == E2BIG) {
+            size += Kibibytes(4);
+            goto retry;
+        }
+
+        LogError("Failed to read extended attribute '%1' from '%2': %3", key, filename, strerror(errno));
+        return -1;
+    }
+
+    out_value->len += len;
+    out_value->Trim();
+
+    return len;
+}
+
+bool ReadXAttributes(int fd, const char *filename, Allocator *alloc, HeapArray<XAttrInfo> *out_xattrs)
+{
+    RG_DEFER_NC(err_guard, len = out_xattrs->len) { out_xattrs->RemoveFrom(len); };
+
+    HeapArray<char> list(alloc);
+    {
+        Size size = Kibibytes(4);
+
+retry:
+        list.Grow(size);
+
+        Size len = flistxattr(fd, list.ptr, (size_t)list.capacity);
+
+        if (len < 0) {
+            if (errno == E2BIG) {
+                size += Kibibytes(4);
+                goto retry;
+            }
+
+            LogError("Failed to list extended attributes of '%1': %2", filename, strerror(errno));
+            return false;
+        }
+
+        list.len = len;
+        list.Trim();
+    }
+
+    for (Size offset = 0; offset < list.len;) {
+        XAttrInfo xattr = {};
+
+        Span<const char> key = list.ptr + offset;
+
+        // Prepare next iteration
+        offset += key.len + 1;
+
+        HeapArray<uint8_t> value(alloc);
+        Size len = ReadValue(fd, filename, key.ptr, &value);
+
+        if (len < 0)
+            continue;
+
+        xattr.key = key.ptr;
+        xattr.value = value.TrimAndLeak();
+
+        out_xattrs->Append(xattr);
+    }
+
+    list.Leak();
+
+    err_guard.Disable();
+    return true;
+}
+
+bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs)
+{
+    bool success = true;
+
+    for (const XAttrInfo &xattr: xattrs) {
+        int ret = fsetxattr(fd, xattr.key, xattr.value.ptr, xattr.value.len, 0);
+
+        if (ret < 0) {
+            LogError("Failed to writer extended attribute '%1' to '%2': %3'", xattr.key, filename, strerror(errno));
+            success = false;
+        }
+    }
+
+    return success;
+}
+
+#elif defined(__FreeBSD__)
+
+static Size ReadValue(int fd, const char *filename, const char *key, HeapArray<uint8_t> *out_value)
+{
+    Size size = extattr_get_fd(fd, EXTATTR_NAMESPACE_USER, key, nullptr, 0);
+
+    if (size < 0) {
+        LogError("Failed to read extended attribute '%1' from '%2': %3", key, filename, strerror(errno));
+        return -1;
+    }
+    if (!size)
+        return 0;
+
+retry:
+    out_value->Grow(size);
+
+    Size available = out_value->capacity - out_value->len;
+    Size len = extattr_get_fd(fd, EXTATTR_NAMESPACE_USER, key, out_value->end(), available);
+
+    if (len == available) {
+        size += Kibibytes(4);
+        goto retry;
+    }
+    if (len < 0) {
+        LogError("Failed to read extended attribute '%1' from '%2': %3", key, filename, strerror(errno));
+        return -1;
+    }
+
+    out_value->len += len;
+    out_value->Trim();
+
+    return len;
+}
+
+bool ReadXAttributes(int fd, const char *filename, Allocator *alloc, HeapArray<XAttrInfo> *out_xattrs)
+{
+    RG_DEFER_NC(err_guard, len = out_xattrs->len) { out_xattrs->RemoveFrom(len); };
+
+    HeapArray<char> list(alloc);
+    {
+        Size size = Kibibytes(4);
+
+retry:
+        list.Grow(size);
+
+        Size len = extattr_list_fd(fd, EXTATTR_NAMESPACE_USER, list.ptr, (size_t)list.capacity);
+
+        if (len == list.capacity) {
+            size += Kibibytes(4);
+            goto retry;
+        }
+        if (len < 0) {
+            LogError("Failed to list extended attributes of '%1': %2", filename, strerror(errno));
+            return false;
+        }
+
+        list.len = len;
+        list.Trim(1);
+    }
+
+    for (Size offset = 0; offset < list.len;) {
+        XAttrInfo xattr = {};
+
+        Span<const char> key = MakeSpan(list.ptr + offset + 1, list[offset]);
+
+        // Prepare next iteration
+        list[offset] = 0;
+        offset += key.len + 1;
+
+        HeapArray<uint8_t> value(alloc);
+        Size len = ReadValue(fd, filename, key.ptr, &value);
+
+        if (len < 0)
+            continue;
+
+        xattr.key = key.ptr;
+        xattr.value = value.TrimAndLeak();
+
+        out_xattrs->Append(xattr);
+    }
+
+    list.ptr[list.len] = 0;
+    list.Leak();
+
+    err_guard.Disable();
+    return true;
+}
+
+bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs)
+{
+    bool success = true;
+
+    for (const XAttrInfo &xattr: xattrs) {
+        int ret = extattr_set_fd(fd, EXTATTR_NAMESPACE_USER, xattr.key, xattr.value.ptr, xattr.value.len);
+
+        if (ret < 0) {
+            LogError("Failed to writer extended attribute '%1' to '%2': %3'", xattr.key, filename, strerror(errno));
+            success = false;
+        }
+    }
+
+    return success;
+}
+
+#else
+
+bool ReadXAttributes(int, const char *, Allocator *, HeapArray<XAttrInfo> *)
+{
+    LogError("Extended attributes (xattrs) are not implemented or supported on this platform");
+    return false;
+}
+
+bool WriteXAttributes(int, const char *, Span<const XAttrInfo>)
+{
+    LogError("Extended attributes (xattrs) are not implemented or supported on this platform");
+    return false;
+}
+
+#endif
+
+}
