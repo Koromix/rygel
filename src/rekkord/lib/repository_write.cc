@@ -86,6 +86,35 @@ static void HashBlake3(rk_BlobType type, Span<const uint8_t> buf, const uint8_t 
     blake3_hasher_finalize(&hasher, out_hash->hash, RG_SIZE(out_hash->hash));
 }
 
+static void PackExtended(const char *filename,  Span<const XAttrInfo> xattrs, HeapArray<uint8_t> *out_extended)
+{
+    Size prev_len = out_extended->len;
+    RG_DEFER_N(err_guard) { out_extended->RemoveFrom(prev_len); };
+
+    for (const XAttrInfo &xattr: xattrs) {
+        Size key_len = strlen(xattr.key);
+        Size total_len = key_len + 1 + xattr.value.len;
+
+        if (total_len > UINT16_MAX) {
+            LogWarning("Cannot store xattr '%1' for '%2': too big", xattr.key, filename);
+            continue;
+        }
+
+        uint16_t len_16le = LittleEndian((uint16_t)total_len);
+
+        out_extended->Append(MakeSpan((const uint8_t *)&len_16le, RG_SIZE(len_16le)));
+        out_extended->Append(MakeSpan((const uint8_t *)xattr.key, key_len + 1));
+        out_extended->Append(xattr.value);
+    }
+
+    if (out_extended->len - prev_len > INT16_MAX) {
+        LogWarning("Cannot store xattrs for '%1': too big", filename);
+        return;
+    }
+
+    err_guard.Disable();
+}
+
 PutContext::PutContext(rk_Disk *disk, sq_Database *db, const rk_PutSettings &settings, ProgressHandle *progress)
     : disk(disk), db(db), settings(settings), progress(progress),
       dir_tasks(disk->GetAsync()), file_tasks(disk->GetAsync())
@@ -165,27 +194,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
                     if (fd >= 0) [[likely]] {
                         ReadXAttributes(fd, filename, &temp_alloc, &xattrs);
-
-                        for (const XAttrInfo &xattr: xattrs) {
-                            Size key_len = strlen(xattr.key);
-                            Size total_len = key_len + 1 + xattr.value.len;
-
-                            if (total_len > UINT16_MAX) {
-                                LogWarning("Cannot store xattr '%1' for '%2': too big", xattr.key, filename);
-                                continue;
-                            }
-
-                            uint16_t len_16le = LittleEndian((uint16_t)total_len);
-
-                            extended.Append(MakeSpan((const uint8_t *)&len_16le, RG_SIZE(len_16le)));
-                            extended.Append(MakeSpan((const uint8_t *)xattr.key, key_len + 1));
-                            extended.Append(xattr.value);
-                        }
-
-                        if (extended.len > INT16_MAX) {
-                            LogWarning("Cannot store xattrs for '%1': too big", filename);
-                            extended.RemoveFrom(0);
-                        }
+                        PackExtended(filename, xattrs, &extended);
                     }
                 }
 
@@ -673,6 +682,10 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     ProgressHandle progress("Store");
     PutContext put(disk, db, settings, &progress);
 
+    // Reuse for performance
+    HeapArray<XAttrInfo> xattrs;
+    HeapArray<uint8_t> extended;
+
     // Process snapshot entries
     for (const char *filename: filenames) {
         Span<char> name = NormalizePath(filename, GetWorkingDirectory(), &temp_alloc);
@@ -682,10 +695,33 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
             return false;
         }
 
+        int fd = -1;
+        RG_DEFER { CloseDescriptor(fd); };
+
+#if defined(__linux__)
+        fd = settings.preserve_atime ? open(filename, O_RDONLY | O_CLOEXEC | O_NOATIME) : -1;
+#endif
+
+        // Open file
+        if (fd < 0) {
+            fd = OpenFile(filename, (int)OpenFlag::Read);
+
+            if (fd < 0)
+                return false;
+        }
+
+        if (settings.xattrs) {
+            xattrs.RemoveFrom(0);
+            extended.RemoveFrom(0);
+
+            ReadXAttributes(fd, filename, &temp_alloc, &xattrs);
+            PackExtended(filename, xattrs, &extended);
+        }
+
         RG_ASSERT(PathIsAbsolute(name.ptr));
         RG_ASSERT(!PathContainsDotDot(name.ptr));
 
-        Size entry_len = RG_SIZE(RawFile) + name.len;
+        Size entry_len = RG_SIZE(RawFile) + name.len + extended.len;
         RawFile *entry = (RawFile *)snapshot_blob.Grow(entry_len);
         MemSet(entry, 0, entry_len);
 
@@ -708,18 +744,20 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
             name = name.Take(1, name.len - 1);
 
-            entry->name_len = LittleEndian((uint16_t)name.len);
-            MemCpy(entry->GetName().ptr, name.ptr, name.len);
-
             if (changed) {
                 LogWarning("Storing '%1' as '%2'", filename, entry->GetName());
             }
         }
 
+        entry->name_len = LittleEndian((uint16_t)name.len);
+        entry->extended_len = LittleEndian((uint16_t)extended.len);
+        MemCpy(entry->GetName().ptr, name.ptr, name.len);
+        MemCpy(entry->GetExtended().ptr, extended.ptr, extended.len);
+
         snapshot_blob.len += entry->GetSize();
 
         FileInfo file_info;
-        if (StatFile(filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
+        if (StatFile(fd, filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
             return false;
         entry->flags |= LittleEndian((int16_t)RawFile::Flags::Stated);
 
