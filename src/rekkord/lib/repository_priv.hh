@@ -74,13 +74,13 @@ struct RawFile {
     uint32_t mode; // Little Endian
     int64_t size; // Little Endian
 
-    inline Size GetSize() { return RG_SIZE(RawFile) + name_len + extended_len; }
+    inline Size GetSize() const { return RG_SIZE(RawFile) + LittleEndian(name_len) + LittleEndian(extended_len); }
 
-    inline Span<char> GetName() { return MakeSpan((char *)this + RG_SIZE(RawFile), name_len); }
-    inline Span<const char> GetName() const { return MakeSpan((const char *)this + RG_SIZE(RawFile), name_len); }
+    inline Span<char> GetName() { return MakeSpan((char *)this + RG_SIZE(RawFile), LittleEndian(name_len)); }
+    inline Span<const char> GetName() const { return MakeSpan((const char *)this + RG_SIZE(RawFile), LittleEndian(name_len)); }
 
-    inline Span<uint8_t> GetExtended() { return MakeSpan((uint8_t *)this + RG_SIZE(RawFile) + name_len, extended_len); }
-    inline Span<const uint8_t> GetExtended() const { return MakeSpan((const uint8_t *)this + RG_SIZE(RawFile) + name_len, extended_len); }
+    inline Span<uint8_t> GetExtended() { return MakeSpan((uint8_t *)this + RG_SIZE(RawFile) + LittleEndian(name_len), LittleEndian(extended_len)); }
+    inline Span<const uint8_t> GetExtended() const { return MakeSpan((const uint8_t *)this + RG_SIZE(RawFile) + LittleEndian(name_len), LittleEndian(extended_len)); }
 };
 #pragma pack(pop)
 static_assert(RG_SIZE(RawFile) == 76);
