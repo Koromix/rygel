@@ -4261,6 +4261,9 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
         RG_ASSERT(oflags & O_CREAT);
         oflags |= O_EXCL;
     }
+    if (flags & (int)OpenFlag::NoFollow) {
+        oflags |= O_NOFOLLOW;
+    }
 
     int fd = RG_RESTART_EINTR(open(filename, oflags, 0644), < 0);
     if (fd < 0) {

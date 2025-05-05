@@ -145,23 +145,17 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 int fd = -1;
                 RG_DEFER { CloseDescriptor(fd); };
 
-                // Open file
+#if defined(__linux__)
                 {
                     int flags = O_RDONLY | O_CLOEXEC | (follow_symlinks ? 0 : O_NOFOLLOW);
-
-#if defined(__linux__)
                     fd = settings.preserve_atime ? open(filename, flags | O_NOATIME) : -1;
-
-                    if (fd < 0) {
-                        fd = open(filename, flags);
-                    }
-#else
-                    fd = open(filename, flags);
+                }
 #endif
 
-                    if (fd < 0) {
-                        LogError("Cannot open '%1': %2", filename, strerror(errno));
-                    }
+                // Open file
+                if (fd < 0) {
+                    int flags = (int)OpenFlag::Read | (follow_symlinks ? 0 : (int)OpenFlag::NoFollow);
+                    fd = OpenFile(filename, flags);
                 }
 
                 // Read extended attributes, best effort

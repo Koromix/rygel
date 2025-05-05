@@ -4371,7 +4371,8 @@ enum class OpenFlag {
     Keep = 1 << 3,
     Directory = 1 << 4,
     Exists = 1 << 5,
-    Exclusive = 1 << 6
+    Exclusive = 1 << 6,
+    NoFollow = 1 << 7
 };
 
 enum class OpenResult {
