@@ -371,7 +371,33 @@ sq_Database *rk_Disk::OpenCache(bool build)
                         return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 5);
+                case 5: {
+                    bool success = cache_db.RunMany(R"(
+                        DROP INDEX stats_p;
+
+                        ALTER TABLE stats RENAME TO stats_BAK;
+
+                        CREATE TABLE stats (
+                            path TEXT NOT NULL,
+                            mtime INTEGER NOT NULL,
+                            ctime INTEGER NOT NULL,
+                            btime INEGER NOT NULL,
+                            mode INTEGER NOT NULL,
+                            size INTEGER NOT NULL,
+                            hash BLOB NOT NULL
+                        );
+                        CREATE UNIQUE INDEX stats_p ON stats (path);
+
+                        INSERT INTO stats (path, mtime, ctime, btime, mode, size, hash)
+                            SELECT path, mtime, btime, btime, mode, size, hash FROM stats_BAK;
+
+                        DROP TABLE stats_BAK;
+                    )");
+                    if (!success)
+                        return false;
+                } // [[fallthrough]];
+
+                static_assert(CacheVersion == 6);
             }
 
             if (!cache_db.SetUserVersion(CacheVersion))

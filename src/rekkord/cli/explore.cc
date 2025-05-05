@@ -533,12 +533,15 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
     }
 
     char mtime[64];
+    char ctime[64];
     char btime[64];
     {
         TimeSpec mspec = DecomposeTimeUTC(obj.mtime);
+        TimeSpec cspec = DecomposeTimeUTC(obj.ctime);
         TimeSpec bspec = DecomposeTimeUTC(obj.btime);
 
         Fmt(mtime, "%1", FmtTimeISO(mspec, true));
+        Fmt(ctime, "%1", FmtTimeISO(cspec, true));
         Fmt(btime, "%1", FmtTimeISO(bspec, true));
     }
 
@@ -546,6 +549,7 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
         json->Key("time"); json->String(mtime);
     } else {
         json->Key("mtime"); json->String(mtime);
+        json->Key("ctime"); json->String(ctime);
         json->Key("btime"); json->String(btime);
         if (obj.type != rk_ObjectType::Link) {
             json->Key("mode"); json->String(Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr);
@@ -580,12 +584,15 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
     }
 
     char mtime[64];
+    char ctime[64];
     char btime[64];
     {
         TimeSpec mspec = DecomposeTimeUTC(obj.mtime);
+        TimeSpec cspec = DecomposeTimeUTC(obj.ctime);
         TimeSpec bspec = DecomposeTimeUTC(obj.btime);
 
         Fmt(mtime, "%1", FmtTimeISO(mspec, true));
+        Fmt(ctime, "%1", FmtTimeISO(cspec, true));
         Fmt(btime, "%1", FmtTimeISO(bspec, true));
     }
 
@@ -593,6 +600,7 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
         element.append_attribute("Time") = mtime;
     } else {
         element.append_attribute("Mtime") = mtime;
+        element.append_attribute("Ctime") = ctime;
         element.append_attribute("Btime") = btime;
         if (obj.type != rk_ObjectType::Link) {
             element.append_attribute("Mode") = Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr;

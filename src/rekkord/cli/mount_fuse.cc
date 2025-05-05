@@ -91,32 +91,32 @@ static void CopyAttributes(const rk_ObjectInfo &obj, CacheEntry *out_entry)
 #if defined(__linux__)
     out_entry->sb.st_mtim.tv_sec = obj.mtime / 1000;
     out_entry->sb.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
-    out_entry->sb.st_ctim.tv_sec = obj.btime / 1000;
-    out_entry->sb.st_ctim.tv_nsec = (obj.btime % 1000) * 1000000;
+    out_entry->sb.st_ctim.tv_sec = obj.ctime / 1000;
+    out_entry->sb.st_ctim.tv_nsec = (obj.ctime % 1000) * 1000000;
     out_entry->sb.st_atim = out_entry->sb.st_mtim;
 #elif defined(__APPLE__)
     out_entry->sb.st_mtimespec.tv_sec = obj.mtime / 1000;
     out_entry->sb.st_mtimespec.tv_nsec = (obj.mtime % 1000) * 1000000;
-    out_entry->sb.st_birthtimespec.tv_sec = obj.btime / 1000;
-    out_entry->sb.st_birthtimespec.tv_nsec = (obj.btime % 1000) * 1000000;
+    out_entry->sb.st_birthtimespec.tv_sec = obj.ctime / 1000;
+    out_entry->sb.st_birthtimespec.tv_nsec = (obj.ctime % 1000) * 1000000;
     out_entry->sb.st_atimespec = out_entry->sb.st_mtimespec;
 #elif defined(__OpenBSD__)
     out_entry->sb.st_mtim.tv_sec = obj.mtime / 1000;
     out_entry->sb.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
-    out_entry->sb.__st_birthtim.tv_sec = obj.btime / 1000;
-    out_entry->sb.__st_birthtim.tv_nsec = (obj.btime % 1000) * 1000000;
+    out_entry->sb.__st_birthtim.tv_sec = obj.ctime / 1000;
+    out_entry->sb.__st_birthtim.tv_nsec = (obj.ctime % 1000) * 1000000;
     out_entry->sb.st_atim = out_entry->sb.st_mtim;
 #elif defined(__FreeBSD__)
     out_entry->sb.st_mtim.tv_sec = obj.mtime / 1000;
     out_entry->sb.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
-    out_entry->sb.st_birthtim.tv_sec = obj.btime / 1000;
-    out_entry->sb.st_birthtim.tv_nsec = (obj.btime % 1000) * 1000000;
+    out_entry->sb.st_birthtim.tv_sec = obj.ctime / 1000;
+    out_entry->sb.st_birthtim.tv_nsec = (obj.ctime % 1000) * 1000000;
     out_entry->sb.st_atim = out_entry->sb.st_mtim;
 #else
     out_entry->sb.st_mtim.tv_sec = obj.mtime / 1000;
     out_entry->sb.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
-    out_entry->sb.st_ctim.tv_sec = obj.btime / 1000;
-    out_entry->sb.st_ctim.tv_nsec = (obj.btime % 1000) * 1000000;
+    out_entry->sb.st_ctim.tv_sec = obj.ctime / 1000;
+    out_entry->sb.st_ctim.tv_nsec = (obj.ctime % 1000) * 1000000;
     out_entry->sb.st_atim = out_entry->sb.st_mtim;
 #endif
 }

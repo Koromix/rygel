@@ -88,6 +88,7 @@ struct rk_ObjectInfo {
     const char *name; // Can be NULL for snapshots
 
     int64_t mtime;
+    int64_t ctime;
     int64_t btime;
     uint32_t mode;
     uint32_t uid;

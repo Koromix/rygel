@@ -50,6 +50,7 @@ struct EntryInfo {
     Span<const char> filename;
 
     int64_t mtime;
+    int64_t ctime;
     int64_t btime;
     uint32_t mode;
     uint32_t uid;
@@ -189,20 +190,44 @@ static void SetFileOwner(int fd, const char *filename, uint32_t uid, uint32_t gi
 
 #endif
 
-static void MigrateLegacyEntries(HeapArray<uint8_t> *blob, Size offset)
+static void MigrateLegacyEntries1(HeapArray<uint8_t> *blob, Size start)
 {
     if (blob->len < RG_SIZE(int64_t))
         return;
 
     blob->Grow(RG_SIZE(DirectoryHeader));
 
-    MemMove(blob->ptr + offset + RG_SIZE(DirectoryHeader), blob->ptr + offset, blob->len);
+    MemMove(blob->ptr + start + RG_SIZE(DirectoryHeader), blob->ptr + start, blob->len);
     blob->len += RG_SIZE(DirectoryHeader) - RG_SIZE(int64_t);
 
-    DirectoryHeader *header = (DirectoryHeader *)(blob->ptr + offset);
+    DirectoryHeader *header = (DirectoryHeader *)(blob->ptr + start);
 
     MemCpy(&header->size, blob->end(), RG_SIZE(int64_t));
     header->entries = 0;
+}
+
+static void MigrateLegacyEntries2(HeapArray<uint8_t> *blob, Size start)
+{
+    HeapArray<uint8_t> entries;
+    Size offset = start + RG_SIZE(DirectoryHeader);
+
+    while (offset < blob->len) {
+        RawFile *ptr = (RawFile *)(blob->ptr + offset);
+        Size skip = ptr->GetSize() - 8;
+
+        if (blob->len - offset < skip)
+            break;
+
+        entries.Grow(ptr->GetSize());
+        MemCpy(entries.end(), blob->ptr + offset, skip);
+        MemMove(entries.end() + offsetof(RawFile, btime), entries.end() + offsetof(RawFile, ctime), skip - offsetof(RawFile, ctime));
+        entries.len += ptr->GetSize();
+
+        offset += skip;
+    }
+
+    blob->RemoveFrom(start + RG_SIZE(DirectoryHeader));
+    blob->Append(entries);
 }
 
 // Does not fill EntryInfo::filename
@@ -211,7 +236,7 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
 {
     RawFile *ptr = (RawFile *)(entries.ptr + offset);
 
-    if (entries.len - offset < RG_SIZE(*ptr)) {
+    if (entries.len - offset < ptr->GetSize()) {
         LogError("Malformed entry in directory blob");
         return -1;
     }
@@ -234,6 +259,7 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
 #endif
 
     entry.mtime = LittleEndian(ptr->mtime);
+    entry.ctime = LittleEndian(ptr->ctime);
     entry.btime = LittleEndian(ptr->btime);
     entry.mode = LittleEndian(ptr->mode);
     entry.uid = LittleEndian(ptr->uid);
@@ -449,7 +475,9 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
 
             switch (entry.kind) {
                 case (int)RawFile::Kind::Directory: {
-                    if (entry_type != rk_BlobType::Directory1 && entry_type != rk_BlobType::Directory2) {
+                    if (entry_type != rk_BlobType::Directory1 &&
+                            entry_type != rk_BlobType::Directory2 &&
+                            entry_type != rk_BlobType::Directory3) {
                         LogError("Blob '%1' is not a Directory", entry.hash);
                         return false;
                     }
@@ -459,8 +487,10 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                         LogInfo("%!D..[D]%!0 %1%/%!..+%2%/%!0", prefix, entry.basename);
                     }
 
-                    if (entry_type == rk_BlobType::Directory1) {
-                        MigrateLegacyEntries(&entry_blob, 0);
+                    switch (entry_type) {
+                        case rk_BlobType::Directory1: { MigrateLegacyEntries1(&entry_blob, 0); } [[fallthrough]];
+                        case rk_BlobType::Directory2: { MigrateLegacyEntries2(&entry_blob, 0); } [[fallthrough]];
+                        default: {} break;
                     }
 
                     if (!settings.fake && !MakeDirectory(entry.filename.ptr, false))
@@ -658,9 +688,11 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
 
         case rk_BlobType::Directory1:
         case rk_BlobType::Directory2:
+        case rk_BlobType::Directory3:
         case rk_BlobType::Snapshot1:
         case rk_BlobType::Snapshot2:
         case rk_BlobType::Snapshot3:
+        case rk_BlobType::Snapshot4:
         case rk_BlobType::Link: { RG_UNREACHABLE(); } break;
     }
 
@@ -772,9 +804,12 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
         } break;
 
         case rk_BlobType::Directory1: {
-            MigrateLegacyEntries(&blob, 0);
+            MigrateLegacyEntries1(&blob, 0);
         } [[fallthrough]];
         case rk_BlobType::Directory2: {
+            MigrateLegacyEntries2(&blob, 0);
+        } [[fallthrough]];
+        case rk_BlobType::Directory3: {
             if (!settings.fake) {
                 if (!settings.force && TestFile(dest_path, FileType::Directory)) {
                     if (!IsDirectoryEmpty(dest_path)) {
@@ -816,9 +851,12 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2));
         } [[fallthrough]];
         case rk_BlobType::Snapshot2: {
-            MigrateLegacyEntries(&blob, RG_SIZE(SnapshotHeader2));
+            MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2));
         } [[fallthrough]];
         case rk_BlobType::Snapshot3: {
+            MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2));
+        } [[fallthrough]];
+        case rk_BlobType::Snapshot4: {
             if (!settings.fake) {
                 if (!settings.force && TestFile(dest_path, FileType::Directory)) {
                     if (!IsDirectoryEmpty(dest_path)) {
@@ -1038,6 +1076,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         }
         obj->name = entry.basename.ptr;
         obj->mtime = entry.mtime;
+        obj->ctime = entry.ctime;
         obj->btime = entry.btime;
         obj->mode = entry.mode;
         obj->uid = entry.uid;
@@ -1061,13 +1100,17 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
                     if (!disk->ReadBlob(entry.hash, &entry_type, &entry_blob))
                         return false;
 
-                    if (entry_type != rk_BlobType::Directory1 && entry_type != rk_BlobType::Directory2) {
+                    if (entry_type != rk_BlobType::Directory1 &&
+                            entry_type != rk_BlobType::Directory2 &&
+                            entry_type != rk_BlobType::Directory3) {
                         LogError("Blob '%1' is not a Directory", entry.hash);
                         return false;
                     }
 
-                    if (entry_type == rk_BlobType::Directory1) {
-                        MigrateLegacyEntries(&entry_blob, 0);
+                    switch (entry_type) {
+                        case rk_BlobType::Directory1: { MigrateLegacyEntries1(&entry_blob, 0); } [[fallthrough]];
+                        case rk_BlobType::Directory2: { MigrateLegacyEntries2(&entry_blob, 0); } [[fallthrough]];
+                        default: {} break;
                     }
 
                     if (!RecurseEntries(entry_blob, false, depth + 1, &ctx->str_alloc, &ctx->children))
@@ -1130,9 +1173,12 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
 
     switch (type) {
         case rk_BlobType::Directory1: {
-            MigrateLegacyEntries(&blob, 0);
+            MigrateLegacyEntries1(&blob, 0);
         } [[fallthrough]];
         case rk_BlobType::Directory2: {
+            MigrateLegacyEntries2(&blob, 0);
+        } [[fallthrough]];
+        case rk_BlobType::Directory3: {
             if (blob.len < RG_SIZE(DirectoryHeader)) {
                 LogError("Malformed directory blob '%1'", hash);
                 return false;
@@ -1167,9 +1213,12 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
             MemCpy(blob.ptr, &header2, RG_SIZE(SnapshotHeader2));
         } [[fallthrough]];
         case rk_BlobType::Snapshot2: {
-            MigrateLegacyEntries(&blob, RG_SIZE(SnapshotHeader2));
+            MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2));
         } [[fallthrough]];
         case rk_BlobType::Snapshot3: {
+            MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2));
+        } [[fallthrough]];
+        case rk_BlobType::Snapshot4: {
             if (blob.len < RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader)) {
                 LogError("Malformed snapshot blob '%1'", hash);
                 return false;
@@ -1191,6 +1240,7 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
             obj->type = rk_ObjectType::Snapshot;
             obj->name = DuplicateString(header1->channel, alloc).ptr;
             obj->mtime = LittleEndian(header1->time);
+            obj->ctime = LittleEndian(header1->time);
             obj->btime = LittleEndian(header1->time);
             obj->size = LittleEndian(header1->size);
             obj->readable = true;
@@ -1511,9 +1561,11 @@ std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Disk *disk, const rk_Hash &hash)
 
         case rk_BlobType::Directory1:
         case rk_BlobType::Directory2:
+        case rk_BlobType::Directory3:
         case rk_BlobType::Snapshot1:
         case rk_BlobType::Snapshot2:
         case rk_BlobType::Snapshot3:
+        case rk_BlobType::Snapshot4:
         case rk_BlobType::Link: {
             LogError("Expected file for '%1'", hash);
             return nullptr;
