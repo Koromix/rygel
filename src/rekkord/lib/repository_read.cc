@@ -803,12 +803,8 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             }
         } break;
 
-        case rk_BlobType::Directory1: {
-            MigrateLegacyEntries1(&blob, 0);
-        } [[fallthrough]];
-        case rk_BlobType::Directory2: {
-            MigrateLegacyEntries2(&blob, 0);
-        } [[fallthrough]];
+        case rk_BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
+        case rk_BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
         case rk_BlobType::Directory3: {
             if (!settings.fake) {
                 if (!settings.force && TestFile(dest_path, FileType::Directory)) {
@@ -847,15 +843,9 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             }
         } break;
 
-        case rk_BlobType::Snapshot1: {
-            static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2));
-        } [[fallthrough]];
-        case rk_BlobType::Snapshot2: {
-            MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2));
-        } [[fallthrough]];
-        case rk_BlobType::Snapshot3: {
-            MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2));
-        } [[fallthrough]];
+        case rk_BlobType::Snapshot1: { static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case rk_BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case rk_BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case rk_BlobType::Snapshot4: {
             if (!settings.fake) {
                 if (!settings.force && TestFile(dest_path, FileType::Directory)) {
@@ -1172,12 +1162,8 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
         return false;
 
     switch (type) {
-        case rk_BlobType::Directory1: {
-            MigrateLegacyEntries1(&blob, 0);
-        } [[fallthrough]];
-        case rk_BlobType::Directory2: {
-            MigrateLegacyEntries2(&blob, 0);
-        } [[fallthrough]];
+        case rk_BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
+        case rk_BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
         case rk_BlobType::Directory3: {
             if (blob.len < RG_SIZE(DirectoryHeader)) {
                 LogError("Malformed directory blob '%1'", hash);
@@ -1212,12 +1198,8 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
 
             MemCpy(blob.ptr, &header2, RG_SIZE(SnapshotHeader2));
         } [[fallthrough]];
-        case rk_BlobType::Snapshot2: {
-            MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2));
-        } [[fallthrough]];
-        case rk_BlobType::Snapshot3: {
-            MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2));
-        } [[fallthrough]];
+        case rk_BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case rk_BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case rk_BlobType::Snapshot4: {
             if (blob.len < RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader)) {
                 LogError("Malformed snapshot blob '%1'", hash);
