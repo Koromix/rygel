@@ -93,31 +93,62 @@ static void CopyAttributes(const rk_ObjectInfo &obj, CacheEntry *out_entry)
     out_entry->sb.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
     out_entry->sb.st_ctim.tv_sec = obj.ctime / 1000;
     out_entry->sb.st_ctim.tv_nsec = (obj.ctime % 1000) * 1000000;
-    out_entry->sb.st_atim = out_entry->sb.st_mtim;
+    if (obj.atime) {
+        out_entry->sb.st_atim.tv_sec = obj.atime / 1000;
+        out_entry->sb.st_atim.tv_nsec = (obj.atime % 1000) * 1000000;
+    } else {
+        out_entry->sb.st_atim = out_entry->sb.st_mtim;
+    }
 #elif defined(__APPLE__)
     out_entry->sb.st_mtimespec.tv_sec = obj.mtime / 1000;
     out_entry->sb.st_mtimespec.tv_nsec = (obj.mtime % 1000) * 1000000;
-    out_entry->sb.st_birthtimespec.tv_sec = obj.ctime / 1000;
-    out_entry->sb.st_birthtimespec.tv_nsec = (obj.ctime % 1000) * 1000000;
-    out_entry->sb.st_atimespec = out_entry->sb.st_mtimespec;
+    out_entry->sb.st_ctimespec.tv_sec = obj.ctime / 1000;
+    out_entry->sb.st_ctimespec.tv_nsec = (obj.ctime % 1000) * 1000000;
+    if (obj.atime) {
+        out_entry->sb.st_atimespec.tv_sec = obj.atime / 1000;
+        out_entry->sb.st_atimespec.tv_nsec = (obj.atime % 1000) * 1000000;
+    } else {
+        out_entry->sb.st_atimespec = out_entry->sb.st_mtimespec;
+    }
+    out_entry->sb.st_birthtimespec.tv_sec = obj.btime / 1000;
+    out_entry->sb.st_birthtimespec.tv_nsec = (obj.btime % 1000) * 1000000;
 #elif defined(__OpenBSD__)
     out_entry->sb.st_mtim.tv_sec = obj.mtime / 1000;
     out_entry->sb.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
-    out_entry->sb.__st_birthtim.tv_sec = obj.ctime / 1000;
-    out_entry->sb.__st_birthtim.tv_nsec = (obj.ctime % 1000) * 1000000;
-    out_entry->sb.st_atim = out_entry->sb.st_mtim;
+    out_entry->sb.st_ctim.tv_sec = obj.ctime / 1000;
+    out_entry->sb.st_ctim.tv_nsec = (obj.ctime % 1000) * 1000000;
+    if (obj.atime) {
+        out_entry->sb.st_atim.tv_sec = obj.atime / 1000;
+        out_entry->sb.st_atim.tv_nsec = (obj.atime % 1000) * 1000000;
+    } else {
+        out_entry->sb.st_atim = out_entry->sb.st_mtim;
+    }
+    out_entry->sb.__st_birthtim.tv_sec = obj.btime / 1000;
+    out_entry->sb.__st_birthtim.tv_nsec = (obj.btime % 1000) * 1000000;
 #elif defined(__FreeBSD__)
     out_entry->sb.st_mtim.tv_sec = obj.mtime / 1000;
     out_entry->sb.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
-    out_entry->sb.st_birthtim.tv_sec = obj.ctime / 1000;
-    out_entry->sb.st_birthtim.tv_nsec = (obj.ctime % 1000) * 1000000;
-    out_entry->sb.st_atim = out_entry->sb.st_mtim;
+    out_entry->sb.st_ctim.tv_sec = obj.ctime / 1000;
+    out_entry->sb.st_ctim.tv_nsec = (obj.ctime % 1000) * 1000000;
+    if (obj.atime) {
+        out_entry->sb.st_atim.tv_sec = obj.atime / 1000;
+        out_entry->sb.st_atim.tv_nsec = (obj.atime % 1000) * 1000000;
+    } else {
+        out_entry->sb.st_atim = out_entry->sb.st_mtim;
+    }
+    out_entry->sb.st_birthtim.tv_sec = obj.btime / 1000;
+    out_entry->sb.st_birthtim.tv_nsec = (obj.btime % 1000) * 1000000;
 #else
     out_entry->sb.st_mtim.tv_sec = obj.mtime / 1000;
     out_entry->sb.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
     out_entry->sb.st_ctim.tv_sec = obj.ctime / 1000;
     out_entry->sb.st_ctim.tv_nsec = (obj.ctime % 1000) * 1000000;
-    out_entry->sb.st_atim = out_entry->sb.st_mtim;
+    if (obj.atime) {
+        out_entry->sb.st_atim.tv_sec = obj.atime / 1000;
+        out_entry->sb.st_atim.tv_nsec = (obj.atime % 1000) * 1000000;
+    } else {
+        out_entry->sb.st_atim = out_entry->sb.st_mtim;
+    }
 #endif
 }
 
