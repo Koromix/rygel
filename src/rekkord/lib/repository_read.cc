@@ -376,6 +376,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
 
         EntryInfo meta = {};
         bool chown = false;
+        bool xattrs = false;
         bool fake = false;
 
         HeapArray<EntryInfo> entries;
@@ -393,7 +394,9 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                 }
                 SetFileMetaData(fd, meta.filename.ptr, meta.mtime, meta.btime, meta.mode);
 
-                WriteXAttributes(fd, meta.filename.ptr, meta.xattrs);
+                if (xattrs) {
+                    WriteXAttributes(fd, meta.filename.ptr, meta.xattrs);
+                }
             }
         }
     };
@@ -411,6 +414,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
         }
 
         ctx->chown = settings.restore_owner;
+        ctx->xattrs = settings.restore_xattrs;
         ctx->fake = settings.fake;
     }
 
@@ -529,7 +533,9 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                     }
                     SetFileMetaData(fd, entry.filename.ptr, entry.mtime, entry.btime, entry.mode);
 
-                    WriteXAttributes(fd, entry.filename.ptr, entry.xattrs);
+                    if (settings.restore_xattrs) {
+                        WriteXAttributes(fd, entry.filename.ptr, entry.xattrs);
+                    }
                 } break;
 
                 case (int)RawFile::Kind::Link: {
@@ -550,7 +556,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                         if (!CreateSymbolicLink(entry.filename.ptr, (const char *)entry_blob.ptr, settings.force))
                             return false;
 
-                        if (entry.xattrs.len) {
+                        if (settings.restore_xattrs && entry.xattrs.len) {
                             int fd = OpenFile(entry.filename.ptr, (int)OpenFlag::Write);
                             RG_DEFER { CloseDescriptor(fd); };
 
