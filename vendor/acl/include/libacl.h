@@ -20,7 +20,7 @@
 #ifndef __ACL_LIBACL_H
 #define __ACL_LIBACL_H
 
-#include <sys/acl.h>
+#include "acl.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,24 +52,24 @@ extern "C" {
 #define ACL_MISS_ERROR		(0x3000)     /* missing required entry */
 #define ACL_ENTRY_ERROR		(0x4000)     /* wrong entry type */
 
-EXPORT char *acl_to_any_text(acl_t acl, const char *prefix,
+char *acl_to_any_text(acl_t acl, const char *prefix,
 			     char separator, int options);
-EXPORT int acl_cmp(acl_t acl1, acl_t acl2);
-EXPORT int acl_check(acl_t acl, int *last);
-EXPORT acl_t acl_from_mode(mode_t mode);
-EXPORT int acl_equiv_mode(acl_t acl, mode_t *mode_p);
-EXPORT int acl_extended_file(const char *path_p);
-EXPORT int acl_extended_file_nofollow(const char *path_p);
-EXPORT int acl_extended_fd(int fd);
-EXPORT int acl_entries(acl_t acl);
-EXPORT const char *acl_error(int code);
-EXPORT int acl_get_perm(acl_permset_t permset_d, acl_perm_t perm);
+int acl_cmp(acl_t acl1, acl_t acl2);
+int acl_check(acl_t acl, int *last);
+acl_t acl_from_mode(mode_t mode);
+int acl_equiv_mode(acl_t acl, mode_t *mode_p);
+int acl_extended_file(const char *path_p);
+int acl_extended_file_nofollow(const char *path_p);
+int acl_extended_fd(int fd);
+int acl_entries(acl_t acl);
+const char *acl_error(int code);
+int acl_get_perm(acl_permset_t permset_d, acl_perm_t perm);
 
 /* Copying permissions between files */
 struct error_context;
-EXPORT int perm_copy_file (const char *, const char *,
+int perm_copy_file (const char *, const char *,
 			    struct error_context *);
-EXPORT int perm_copy_fd (const char *, int, const char *, int,
+int perm_copy_fd (const char *, int, const char *, int,
 			  struct error_context *);
 
 #ifdef __cplusplus

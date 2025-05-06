@@ -1,0 +1,149 @@
+diff --git a/vendor/acl/include/acl.h b/vendor/acl/include/acl.h
+index 710bf319a9..6a1b438054 100644
+--- a/vendor/acl/include/acl.h
++++ b/vendor/acl/include/acl.h
+@@ -74,50 +74,50 @@ typedef struct __acl_permset_ext *acl_permset_t;
+ 
+ /*=== ACL manipulation ===*/
+ 
+-EXPORT acl_t acl_init(int count);
+-EXPORT acl_t acl_dup(acl_t acl);
+-EXPORT int acl_free(void *obj_p);
+-EXPORT int acl_valid(acl_t acl);
++acl_t acl_init(int count);
++acl_t acl_dup(acl_t acl);
++int acl_free(void *obj_p);
++int acl_valid(acl_t acl);
+ 
+ /*=== Entry manipulation ===*/
+ 
+-EXPORT int
++int
+ acl_copy_entry(acl_entry_t dest_d, acl_entry_t src_d);
+-EXPORT int acl_create_entry(acl_t *acl_p, acl_entry_t *entry_p);
+-EXPORT int acl_delete_entry(acl_t acl, acl_entry_t entry_d);
+-EXPORT int acl_get_entry(acl_t acl, int entry_id, acl_entry_t *entry_p);
++int acl_create_entry(acl_t *acl_p, acl_entry_t *entry_p);
++int acl_delete_entry(acl_t acl, acl_entry_t entry_d);
++int acl_get_entry(acl_t acl, int entry_id, acl_entry_t *entry_p);
+ 
+ /* Manipulate ACL entry permissions */
+ 
+-EXPORT int acl_add_perm(acl_permset_t permset_d, acl_perm_t perm);
+-EXPORT int acl_calc_mask(acl_t *acl_p);
+-EXPORT int acl_clear_perms(acl_permset_t permset_d);
+-EXPORT int acl_delete_perm(acl_permset_t permset_d, acl_perm_t perm);
+-EXPORT int acl_get_permset(acl_entry_t entry_d, acl_permset_t *permset_p);
+-EXPORT int acl_set_permset(acl_entry_t entry_d, acl_permset_t permset_d);
++int acl_add_perm(acl_permset_t permset_d, acl_perm_t perm);
++int acl_calc_mask(acl_t *acl_p);
++int acl_clear_perms(acl_permset_t permset_d);
++int acl_delete_perm(acl_permset_t permset_d, acl_perm_t perm);
++int acl_get_permset(acl_entry_t entry_d, acl_permset_t *permset_p);
++int acl_set_permset(acl_entry_t entry_d, acl_permset_t permset_d);
+ 
+ /* Manipulate ACL entry tag type and qualifier */
+ 
+-EXPORT void * acl_get_qualifier(acl_entry_t entry_d);
+-EXPORT int acl_get_tag_type(acl_entry_t entry_d, acl_tag_t *tag_type_p);
+-EXPORT int acl_set_qualifier(acl_entry_t entry_d, const void *tag_qualifier_p);
+-EXPORT int acl_set_tag_type(acl_entry_t entry_d, acl_tag_t tag_type);
++void * acl_get_qualifier(acl_entry_t entry_d);
++int acl_get_tag_type(acl_entry_t entry_d, acl_tag_t *tag_type_p);
++int acl_set_qualifier(acl_entry_t entry_d, const void *tag_qualifier_p);
++int acl_set_tag_type(acl_entry_t entry_d, acl_tag_t tag_type);
+ 
+ /*=== Format translation ===*/
+ 
+-EXPORT ssize_t acl_copy_ext(void *buf_p, acl_t acl, ssize_t size);
+-EXPORT acl_t acl_copy_int(const void *buf_p);
+-EXPORT acl_t acl_from_text(const char *buf_p);
+-EXPORT ssize_t acl_size(acl_t acl);
+-EXPORT char *acl_to_text(acl_t acl, ssize_t *len_p);
++ssize_t acl_copy_ext(void *buf_p, acl_t acl, ssize_t size);
++acl_t acl_copy_int(const void *buf_p);
++acl_t acl_from_text(const char *buf_p);
++ssize_t acl_size(acl_t acl);
++char *acl_to_text(acl_t acl, ssize_t *len_p);
+ 
+ /*=== Object manipulation ===*/
+ 
+-EXPORT int acl_delete_def_file(const char *path_p);
+-EXPORT acl_t acl_get_fd(int fd);
+-EXPORT acl_t acl_get_file(const char *path_p, acl_type_t type);
+-EXPORT int acl_set_fd(int fd, acl_t acl);
+-EXPORT int acl_set_file(const char *path_p, acl_type_t type, acl_t acl);
++int acl_delete_def_file(const char *path_p);
++acl_t acl_get_fd(int fd);
++acl_t acl_get_file(const char *path_p, acl_type_t type);
++int acl_set_fd(int fd, acl_t acl);
++int acl_set_file(const char *path_p, acl_type_t type, acl_t acl);
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/vendor/acl/include/libacl.h b/vendor/acl/include/libacl.h
+index b1f3bcfd00..86de268585 100644
+--- a/vendor/acl/include/libacl.h
++++ b/vendor/acl/include/libacl.h
+@@ -20,7 +20,7 @@
+ #ifndef __ACL_LIBACL_H
+ #define __ACL_LIBACL_H
+ 
+-#include <sys/acl.h>
++#include "acl.h"
+ 
+ #ifdef __cplusplus
+ extern "C" {
+@@ -52,24 +52,24 @@ extern "C" {
+ #define ACL_MISS_ERROR		(0x3000)     /* missing required entry */
+ #define ACL_ENTRY_ERROR		(0x4000)     /* wrong entry type */
+ 
+-EXPORT char *acl_to_any_text(acl_t acl, const char *prefix,
++char *acl_to_any_text(acl_t acl, const char *prefix,
+ 			     char separator, int options);
+-EXPORT int acl_cmp(acl_t acl1, acl_t acl2);
+-EXPORT int acl_check(acl_t acl, int *last);
+-EXPORT acl_t acl_from_mode(mode_t mode);
+-EXPORT int acl_equiv_mode(acl_t acl, mode_t *mode_p);
+-EXPORT int acl_extended_file(const char *path_p);
+-EXPORT int acl_extended_file_nofollow(const char *path_p);
+-EXPORT int acl_extended_fd(int fd);
+-EXPORT int acl_entries(acl_t acl);
+-EXPORT const char *acl_error(int code);
+-EXPORT int acl_get_perm(acl_permset_t permset_d, acl_perm_t perm);
++int acl_cmp(acl_t acl1, acl_t acl2);
++int acl_check(acl_t acl, int *last);
++acl_t acl_from_mode(mode_t mode);
++int acl_equiv_mode(acl_t acl, mode_t *mode_p);
++int acl_extended_file(const char *path_p);
++int acl_extended_file_nofollow(const char *path_p);
++int acl_extended_fd(int fd);
++int acl_entries(acl_t acl);
++const char *acl_error(int code);
++int acl_get_perm(acl_permset_t permset_d, acl_perm_t perm);
+ 
+ /* Copying permissions between files */
+ struct error_context;
+-EXPORT int perm_copy_file (const char *, const char *,
++int perm_copy_file (const char *, const char *,
+ 			    struct error_context *);
+-EXPORT int perm_copy_fd (const char *, int, const char *, int,
++int perm_copy_fd (const char *, int, const char *, int,
+ 			  struct error_context *);
+ 
+ #ifdef __cplusplus
+diff --git a/vendor/acl/libacl/libacl.h b/vendor/acl/libacl/libacl.h
+index 1e4152c5c8..b149ab035d 100644
+--- a/vendor/acl/libacl/libacl.h
++++ b/vendor/acl/libacl/libacl.h
+@@ -17,8 +17,8 @@
+ 
+ #include "config.h"
+ #include <errno.h>
+-#include <sys/acl.h>
+-#include <acl/libacl.h>
++#include "../include/acl.h"
++#include "../include/libacl.h"
+ #include <errno.h>
+ #include "libobj.h"
+ 

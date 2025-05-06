@@ -17,8 +17,8 @@
 #include "xattr.hh"
 
 #if defined(__linux__)
-    #include <acl/libacl.h>
     #include <sys/xattr.h>
+    #include "vendor/acl/include/libacl.h"
 #elif defined(__FreeBSD__)
     #include <sys/acl.h>
     #include <sys/types.h>

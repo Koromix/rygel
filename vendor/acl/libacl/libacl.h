@@ -17,8 +17,8 @@
 
 #include "config.h"
 #include <errno.h>
-#include <sys/acl.h>
-#include <acl/libacl.h>
+#include "../include/acl.h"
+#include "../include/libacl.h"
 #include <errno.h>
 #include "libobj.h"
 
