@@ -5305,6 +5305,121 @@ let serveTests = {
       await context.dispose();
     }
   },
+
+  async serveCORSNoOrigins({ esbuild, testDir }) {
+    const input = path.join(testDir, 'in.js')
+    await writeFileAsync(input, `console.log(123)`)
+
+    const context = await esbuild.context({
+      entryPoints: [input],
+      format: 'esm',
+      outdir: testDir,
+      write: false,
+    });
+    try {
+      const result = await context.serve({
+        port: 0,
+        cors: {},
+      })
+      assert(result.hosts.length > 0);
+      assert.strictEqual(typeof result.port, 'number');
+
+      // There should be no CORS header
+      const origin = 'https://example.com'
+      const buffer = await fetch(result.hosts[0], result.port, '/in.js', { headers: { Origin: origin } })
+      assert.strictEqual(buffer.toString(), `console.log(123);\n`);
+      assert.strictEqual(fs.readFileSync(input, 'utf8'), `console.log(123)`)
+      assert.strictEqual(buffer.headers['access-control-allow-origin'], undefined)
+    } finally {
+      await context.dispose();
+    }
+  },
+
+  async serveCORSAllOrigins({ esbuild, testDir }) {
+    const input = path.join(testDir, 'in.js')
+    await writeFileAsync(input, `console.log(123)`)
+
+    const context = await esbuild.context({
+      entryPoints: [input],
+      format: 'esm',
+      outdir: testDir,
+      write: false,
+    });
+    try {
+      const result = await context.serve({
+        port: 0,
+        cors: { origin: '*' },
+      })
+      assert(result.hosts.length > 0);
+      assert.strictEqual(typeof result.port, 'number');
+
+      // There should be a CORS header allowing all origins
+      const origin = 'https://example.com'
+      const buffer = await fetch(result.hosts[0], result.port, '/in.js', { headers: { Origin: origin } })
+      assert.strictEqual(buffer.toString(), `console.log(123);\n`);
+      assert.strictEqual(fs.readFileSync(input, 'utf8'), `console.log(123)`)
+      assert.strictEqual(buffer.headers['access-control-allow-origin'], '*')
+    } finally {
+      await context.dispose();
+    }
+  },
+
+  async serveCORSSpecificOrigins({ esbuild, testDir }) {
+    const input = path.join(testDir, 'in.js')
+    await writeFileAsync(input, `console.log(123)`)
+
+    const context = await esbuild.context({
+      entryPoints: [input],
+      format: 'esm',
+      outdir: testDir,
+      write: false,
+    });
+    try {
+      const result = await context.serve({
+        port: 0,
+        cors: {
+          origin: [
+            'http://example.com',
+            'http://foo.example.com',
+            'https://*.example.com',
+          ],
+        },
+      })
+      assert(result.hosts.length > 0);
+      assert.strictEqual(typeof result.port, 'number');
+
+      const allowedOrigins = [
+        'http://example.com',
+        'http://foo.example.com',
+        'https://bar.example.com',
+      ]
+
+      const forbiddenOrigins = [
+        'http://bar.example.com',
+        'https://example.com',
+        'http://evil.com',
+        'https://evil.com',
+      ]
+
+      // GET /in.js from each allowed origin
+      for (const origin of allowedOrigins) {
+        const buffer = await fetch(result.hosts[0], result.port, '/in.js', { headers: { Origin: origin } })
+        assert.strictEqual(buffer.toString(), `console.log(123);\n`);
+        assert.strictEqual(fs.readFileSync(input, 'utf8'), `console.log(123)`)
+        assert.strictEqual(buffer.headers['access-control-allow-origin'], origin)
+      }
+
+      // GET /in.js from each forbidden origin
+      for (const origin of forbiddenOrigins) {
+        const buffer = await fetch(result.hosts[0], result.port, '/in.js', { headers: { Origin: origin } })
+        assert.strictEqual(buffer.toString(), `console.log(123);\n`);
+        assert.strictEqual(fs.readFileSync(input, 'utf8'), `console.log(123)`)
+        assert.strictEqual(buffer.headers['access-control-allow-origin'], undefined)
+      }
+    } finally {
+      await context.dispose();
+    }
+  },
 }
 
 async function futureSyntax(esbuild, js, targetBelow, targetAbove) {
@@ -5963,10 +6078,21 @@ class Foo {
     assert.strictEqual(code, `div{color:#abcd}\n`)
   },
 
-  async cssNestingExpansionLimit({ esbuild }) {
+  async cssNestingExpansionLimitWithoutIs({ esbuild }) {
     const css = `a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{color:red}}}}}}}}}}}}}}}}}}}}`
     try {
       await esbuild.transform(css, { loader: 'css', target: 'safari1' })
+      throw new Error('Expected a transform failure')
+    } catch (e) {
+      assert.strictEqual(e.errors.length, 1)
+      assert.strictEqual(e.errors[0].text, 'CSS nesting is causing too much expansion')
+    }
+  },
+
+  async cssNestingExpansionLimitWithIs({ esbuild }) {
+    const css = `a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{a,b{color:red}}}}}}}}}}}}}}}}}}}}`
+    try {
+      await esbuild.transform(css, { loader: 'css', target: 'safari14' })
       throw new Error('Expected a transform failure')
     } catch (e) {
       assert.strictEqual(e.errors.length, 1)

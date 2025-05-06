@@ -8,10 +8,14 @@ const quote: (x: string) => string = JSON.stringify
 const buildLogLevelDefault = 'warning'
 const transformLogLevelDefault = 'silent'
 
-function validateTarget(target: string): string {
-  validateStringValue(target, 'target')
-  if (target.indexOf(',') >= 0) throw new Error(`Invalid target: ${target}`)
-  return target
+function validateAndJoinStringArray(values: string[], what: string): string {
+  const toJoin: string[] = []
+  for (const value of values) {
+    validateStringValue(value, what)
+    if (value.indexOf(',') >= 0) throw new Error(`Invalid ${what}: ${value}`)
+    toJoin.push(value)
+  }
+  return toJoin.join(',')
 }
 
 let canBeAnything = () => null
@@ -37,6 +41,9 @@ let mustBeFunction = (value: Function | undefined): string | null =>
 let mustBeArray = <T>(value: T[] | undefined): string | null =>
   Array.isArray(value) ? null : 'an array'
 
+let mustBeArrayOfStrings = (value: string[] | undefined): string | null =>
+  Array.isArray(value) && value.every(x => typeof x === 'string') ? null : 'an array of strings'
+
 let mustBeObject = (value: Object | undefined): string | null =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? null : 'an object'
 
@@ -55,8 +62,8 @@ let mustBeStringOrBoolean = (value: string | boolean | undefined): string | null
 let mustBeStringOrObject = (value: string | Object | undefined): string | null =>
   typeof value === 'string' || typeof value === 'object' && value !== null && !Array.isArray(value) ? null : 'a string or an object'
 
-let mustBeStringOrArray = (value: string | string[] | undefined): string | null =>
-  typeof value === 'string' || Array.isArray(value) ? null : 'a string or an array'
+let mustBeStringOrArrayOfStrings = (value: string | string[] | undefined): string | null =>
+  typeof value === 'string' || (Array.isArray(value) && value.every(x => typeof x === 'string')) ? null : 'a string or an array of strings'
 
 let mustBeStringOrUint8Array = (value: string | Uint8Array | undefined): string | null =>
   typeof value === 'string' || value instanceof Uint8Array ? null : 'a string or a Uint8Array'
@@ -138,7 +145,7 @@ function pushCommonFlags(flags: string[], options: CommonOptions, keys: OptionKe
   let legalComments = getFlag(options, keys, 'legalComments', mustBeString)
   let sourceRoot = getFlag(options, keys, 'sourceRoot', mustBeString)
   let sourcesContent = getFlag(options, keys, 'sourcesContent', mustBeBoolean)
-  let target = getFlag(options, keys, 'target', mustBeStringOrArray)
+  let target = getFlag(options, keys, 'target', mustBeStringOrArrayOfStrings)
   let format = getFlag(options, keys, 'format', mustBeString)
   let globalName = getFlag(options, keys, 'globalName', mustBeString)
   let mangleProps = getFlag(options, keys, 'mangleProps', mustBeRegExp)
@@ -149,8 +156,8 @@ function pushCommonFlags(flags: string[], options: CommonOptions, keys: OptionKe
   let minifyWhitespace = getFlag(options, keys, 'minifyWhitespace', mustBeBoolean)
   let minifyIdentifiers = getFlag(options, keys, 'minifyIdentifiers', mustBeBoolean)
   let lineLimit = getFlag(options, keys, 'lineLimit', mustBeInteger)
-  let drop = getFlag(options, keys, 'drop', mustBeArray)
-  let dropLabels = getFlag(options, keys, 'dropLabels', mustBeArray)
+  let drop = getFlag(options, keys, 'drop', mustBeArrayOfStrings)
+  let dropLabels = getFlag(options, keys, 'dropLabels', mustBeArrayOfStrings)
   let charset = getFlag(options, keys, 'charset', mustBeString)
   let treeShaking = getFlag(options, keys, 'treeShaking', mustBeBoolean)
   let ignoreAnnotations = getFlag(options, keys, 'ignoreAnnotations', mustBeBoolean)
@@ -163,7 +170,7 @@ function pushCommonFlags(flags: string[], options: CommonOptions, keys: OptionKe
   let define = getFlag(options, keys, 'define', mustBeObject)
   let logOverride = getFlag(options, keys, 'logOverride', mustBeObject)
   let supported = getFlag(options, keys, 'supported', mustBeObject)
-  let pure = getFlag(options, keys, 'pure', mustBeArray)
+  let pure = getFlag(options, keys, 'pure', mustBeArrayOfStrings)
   let keepNames = getFlag(options, keys, 'keepNames', mustBeBoolean)
   let platform = getFlag(options, keys, 'platform', mustBeString)
   let tsconfigRaw = getFlag(options, keys, 'tsconfigRaw', mustBeStringOrObject)
@@ -171,10 +178,7 @@ function pushCommonFlags(flags: string[], options: CommonOptions, keys: OptionKe
   if (legalComments) flags.push(`--legal-comments=${legalComments}`)
   if (sourceRoot !== void 0) flags.push(`--source-root=${sourceRoot}`)
   if (sourcesContent !== void 0) flags.push(`--sources-content=${sourcesContent}`)
-  if (target) {
-    if (Array.isArray(target)) flags.push(`--target=${Array.from(target).map(validateTarget).join(',')}`)
-    else flags.push(`--target=${validateTarget(target)}`)
-  }
+  if (target) flags.push(`--target=${validateAndJoinStringArray(Array.isArray(target) ? target : [target], 'target')}`)
   if (format) flags.push(`--format=${format}`)
   if (globalName) flags.push(`--global-name=${globalName}`)
   if (platform) flags.push(`--platform=${platform}`)
@@ -189,7 +193,7 @@ function pushCommonFlags(flags: string[], options: CommonOptions, keys: OptionKe
   if (treeShaking !== void 0) flags.push(`--tree-shaking=${treeShaking}`)
   if (ignoreAnnotations) flags.push(`--ignore-annotations`)
   if (drop) for (let what of drop) flags.push(`--drop:${validateStringValue(what, 'drop')}`)
-  if (dropLabels) flags.push(`--drop-labels=${Array.from(dropLabels).map(what => validateStringValue(what, 'dropLabels')).join(',')}`)
+  if (dropLabels) flags.push(`--drop-labels=${validateAndJoinStringArray(dropLabels, 'drop label')}`)
   if (mangleProps) flags.push(`--mangle-props=${jsRegExpToGoRegExp(mangleProps)}`)
   if (reserveProps) flags.push(`--reserve-props=${jsRegExpToGoRegExp(reserveProps)}`)
   if (mangleQuoted !== void 0) flags.push(`--mangle-quoted=${mangleQuoted}`)
@@ -258,11 +262,11 @@ function flagsForBuildOptions(
   let outdir = getFlag(options, keys, 'outdir', mustBeString)
   let outbase = getFlag(options, keys, 'outbase', mustBeString)
   let tsconfig = getFlag(options, keys, 'tsconfig', mustBeString)
-  let resolveExtensions = getFlag(options, keys, 'resolveExtensions', mustBeArray)
-  let nodePathsInput = getFlag(options, keys, 'nodePaths', mustBeArray)
-  let mainFields = getFlag(options, keys, 'mainFields', mustBeArray)
-  let conditions = getFlag(options, keys, 'conditions', mustBeArray)
-  let external = getFlag(options, keys, 'external', mustBeArray)
+  let resolveExtensions = getFlag(options, keys, 'resolveExtensions', mustBeArrayOfStrings)
+  let nodePathsInput = getFlag(options, keys, 'nodePaths', mustBeArrayOfStrings)
+  let mainFields = getFlag(options, keys, 'mainFields', mustBeArrayOfStrings)
+  let conditions = getFlag(options, keys, 'conditions', mustBeArrayOfStrings)
+  let external = getFlag(options, keys, 'external', mustBeArrayOfStrings)
   let packages = getFlag(options, keys, 'packages', mustBeString)
   let alias = getFlag(options, keys, 'alias', mustBeObject)
   let loader = getFlag(options, keys, 'loader', mustBeObject)
@@ -271,7 +275,7 @@ function flagsForBuildOptions(
   let entryNames = getFlag(options, keys, 'entryNames', mustBeString)
   let chunkNames = getFlag(options, keys, 'chunkNames', mustBeString)
   let assetNames = getFlag(options, keys, 'assetNames', mustBeString)
-  let inject = getFlag(options, keys, 'inject', mustBeArray)
+  let inject = getFlag(options, keys, 'inject', mustBeArrayOfStrings)
   let banner = getFlag(options, keys, 'banner', mustBeObject)
   let footer = getFlag(options, keys, 'footer', mustBeObject)
   let entryPoints = getFlag(options, keys, 'entryPoints', mustBeEntryPoints)
@@ -294,37 +298,13 @@ function flagsForBuildOptions(
   if (outbase) flags.push(`--outbase=${outbase}`)
   if (tsconfig) flags.push(`--tsconfig=${tsconfig}`)
   if (packages) flags.push(`--packages=${packages}`)
-  if (resolveExtensions) {
-    let values: string[] = []
-    for (let value of resolveExtensions) {
-      validateStringValue(value, 'resolve extension')
-      if (value.indexOf(',') >= 0) throw new Error(`Invalid resolve extension: ${value}`)
-      values.push(value)
-    }
-    flags.push(`--resolve-extensions=${values.join(',')}`)
-  }
+  if (resolveExtensions) flags.push(`--resolve-extensions=${validateAndJoinStringArray(resolveExtensions, 'resolve extension')}`)
   if (publicPath) flags.push(`--public-path=${publicPath}`)
   if (entryNames) flags.push(`--entry-names=${entryNames}`)
   if (chunkNames) flags.push(`--chunk-names=${chunkNames}`)
   if (assetNames) flags.push(`--asset-names=${assetNames}`)
-  if (mainFields) {
-    let values: string[] = []
-    for (let value of mainFields) {
-      validateStringValue(value, 'main field')
-      if (value.indexOf(',') >= 0) throw new Error(`Invalid main field: ${value}`)
-      values.push(value)
-    }
-    flags.push(`--main-fields=${values.join(',')}`)
-  }
-  if (conditions) {
-    let values: string[] = []
-    for (let value of conditions) {
-      validateStringValue(value, 'condition')
-      if (value.indexOf(',') >= 0) throw new Error(`Invalid condition: ${value}`)
-      values.push(value)
-    }
-    flags.push(`--conditions=${values.join(',')}`)
-  }
+  if (mainFields) flags.push(`--main-fields=${validateAndJoinStringArray(mainFields, 'main field')}`)
+  if (conditions) flags.push(`--conditions=${validateAndJoinStringArray(conditions, 'condition')}`)
   if (external) for (let name of external) flags.push(`--external:${validateStringValue(name, 'external')}`)
   if (alias) {
     for (let old in alias) {
@@ -1100,6 +1080,7 @@ function buildOrContextImpl(
           const keyfile = getFlag(options, keys, 'keyfile', mustBeString)
           const certfile = getFlag(options, keys, 'certfile', mustBeString)
           const fallback = getFlag(options, keys, 'fallback', mustBeString)
+          const cors = getFlag(options, keys, 'cors', mustBeObject)
           const onRequest = getFlag(options, keys, 'onRequest', mustBeFunction)
           checkForInvalidFlags(options, keys, `in serve() call`)
 
@@ -1114,6 +1095,14 @@ function buildOrContextImpl(
           if (keyfile !== void 0) request.keyfile = keyfile
           if (certfile !== void 0) request.certfile = certfile
           if (fallback !== void 0) request.fallback = fallback
+
+          if (cors) {
+            const corsKeys: OptionKeys = {}
+            const origin = getFlag(cors, corsKeys, 'origin', mustBeStringOrArrayOfStrings)
+            checkForInvalidFlags(cors, corsKeys, `on "cors" object`)
+            if (Array.isArray(origin)) request.corsOrigin = origin
+            else if (origin !== void 0) request.corsOrigin = [origin]
+          }
 
           sendRequest<protocol.ServeRequest, protocol.ServeResponse>(refs, request, (error, response) => {
             if (error) return reject(new Error(error))
@@ -1409,8 +1398,8 @@ let handlePlugins = async (
           let pluginData = getFlag(result, keys, 'pluginData', canBeAnything)
           let errors = getFlag(result, keys, 'errors', mustBeArray)
           let warnings = getFlag(result, keys, 'warnings', mustBeArray)
-          let watchFiles = getFlag(result, keys, 'watchFiles', mustBeArray)
-          let watchDirs = getFlag(result, keys, 'watchDirs', mustBeArray)
+          let watchFiles = getFlag(result, keys, 'watchFiles', mustBeArrayOfStrings)
+          let watchDirs = getFlag(result, keys, 'watchDirs', mustBeArrayOfStrings)
           checkForInvalidFlags(result, keys, `from onResolve() callback in plugin ${quote(name)}`)
 
           response.id = id
@@ -1458,8 +1447,8 @@ let handlePlugins = async (
           let loader = getFlag(result, keys, 'loader', mustBeString)
           let errors = getFlag(result, keys, 'errors', mustBeArray)
           let warnings = getFlag(result, keys, 'warnings', mustBeArray)
-          let watchFiles = getFlag(result, keys, 'watchFiles', mustBeArray)
-          let watchDirs = getFlag(result, keys, 'watchDirs', mustBeArray)
+          let watchFiles = getFlag(result, keys, 'watchFiles', mustBeArrayOfStrings)
+          let watchDirs = getFlag(result, keys, 'watchDirs', mustBeArrayOfStrings)
           checkForInvalidFlags(result, keys, `from onLoad() callback in plugin ${quote(name)}`)
 
           response.id = id

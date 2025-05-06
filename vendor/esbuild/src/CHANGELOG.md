@@ -1,5 +1,57 @@
 # Changelog
 
+## 0.25.4
+
+* Add simple support for CORS to esbuild's development server ([#4125](https://github.com/evanw/esbuild/issues/4125))
+
+    Starting with version 0.25.0, esbuild's development server is no longer configured to serve cross-origin requests. This was a deliberate change to prevent any website you visit from accessing your running esbuild development server. However, this change prevented (by design) certain use cases such as "debugging in production" by having your production website load code from `localhost` where the esbuild development server is running.
+
+    To enable this use case, esbuild is adding a feature to allow [Cross-Origin Resource Sharing](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS) (a.k.a. CORS) for [simple requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS#simple_requests). Specifically, passing your origin to the new `cors` option will now set the `Access-Control-Allow-Origin` response header when the request has a matching `Origin` header. Note that this currently only works for requests that don't send a preflight `OPTIONS` request, as esbuild's development server doesn't currently support `OPTIONS` requests.
+
+    Some examples:
+
+    * **CLI:**
+
+        ```
+        esbuild --servedir=. --cors-origin=https://example.com
+        ```
+
+    * **JS:**
+
+        ```js
+        const ctx = await esbuild.context({})
+        await ctx.serve({
+          servedir: '.',
+          cors: {
+            origin: 'https://example.com',
+          },
+        })
+        ```
+
+    * **Go:**
+
+        ```go
+        ctx, _ := api.Context(api.BuildOptions{})
+        ctx.Serve(api.ServeOptions{
+          Servedir: ".",
+          CORS: api.CORSOptions{
+            Origin: []string{"https://example.com"},
+          },
+        })
+        ```
+
+    The special origin `*` can be used to allow any origin to access esbuild's development server. Note that this means any website you visit will be able to read everything served by esbuild.
+
+* Pass through invalid URLs in source maps unmodified ([#4169](https://github.com/evanw/esbuild/issues/4169))
+
+    This fixes a regression in version 0.25.0 where `sources` in source maps that form invalid URLs were not being passed through to the output. Version 0.25.0 changed the interpretation of `sources` from file paths to URLs, which means that URL parsing can now fail. Previously URLs that couldn't be parsed were replaced with the empty string. With this release, invalid URLs in `sources` should now be passed through unmodified.
+
+* Handle exports named `__proto__` in ES modules ([#4162](https://github.com/evanw/esbuild/issues/4162), [#4163](https://github.com/evanw/esbuild/pull/4163))
+
+    In JavaScript, the special property name `__proto__` sets the prototype when used inside an object literal. Previously esbuild's ESM-to-CommonJS conversion didn't special-case the property name of exports named `__proto__` so the exported getter accidentally became the prototype of the object literal. It's unclear what this affects, if anything, but it's better practice to avoid this by using a computed property name in this case.
+
+    This fix was contributed by [@magic-akari](https://github.com/magic-akari).
+
 ## 0.25.3
 
 * Fix lowered `async` arrow functions before `super()` ([#4141](https://github.com/evanw/esbuild/issues/4141), [#4142](https://github.com/evanw/esbuild/pull/4142))
