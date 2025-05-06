@@ -36,8 +36,8 @@ struct rk_PutSettings {
 struct rk_GetSettings {
     bool force = false;
     bool unlink = false;
-    bool chown = false;
-    bool xattrs = false;
+    bool restore_owner = false;
+    bool restore_xattrs = false;
     bool verbose = false;
     bool fake = false;
 };

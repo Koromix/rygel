@@ -177,8 +177,8 @@ Options:
     %!..+-f, --force%!0                    Overwrite destination files
         %!..+--delete%!0                   Delete extraneous files from destination
 
-        %!..+--chown%!0                    Restore original file UID and GID
-        %!..+--xattrs%!0                   Restore extended file attributes
+        %!..+--restore_owner%!0            Restore original file UID and GID
+        %!..+--restore_xattrs%!0           Restore extended file attributes
 
     %!..+-v, --verbose%!0                  Show detailed actions
     %!..+-n, --dry_run%!0                  Fake file restoration
@@ -214,10 +214,10 @@ Snapshot names are not unique, if you use a snapshot name, rekkord will use the 
                 settings.force = true;
             } else if (opt.Test("--delete")) {
                 settings.unlink = true;
-            } else if (opt.Test("--chown")) {
-                settings.chown = true;
-            } else if (opt.Test("--xattrs")) {
-                settings.xattrs = true;
+            } else if (opt.Test("--restore_owner")) {
+                settings.restore_owner = true;
+            } else if (opt.Test("--restore_xattrs")) {
+                settings.restore_xattrs = true;
             } else if (opt.Test("-v", "--verbose")) {
                 settings.verbose = true;
             } else if (opt.Test("-n", "--dry_run")) {

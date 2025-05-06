@@ -410,7 +410,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
             MemCpy(ctx->meta.xattrs.ptr, xattrs.ptr, xattrs.len * RG_SIZE(XAttrInfo));
         }
 
-        ctx->chown = settings.chown;
+        ctx->chown = settings.restore_owner;
         ctx->fake = settings.fake;
     }
 
@@ -524,7 +524,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                     RG_DEFER { CloseDescriptor(fd); };
 
                     // Set file metadata
-                    if (settings.chown) {
+                    if (settings.restore_owner) {
                         SetFileOwner(fd, entry.filename.ptr, entry.uid, entry.gid);
                     }
                     SetFileMetaData(fd, entry.filename.ptr, entry.mtime, entry.btime, entry.mode);
