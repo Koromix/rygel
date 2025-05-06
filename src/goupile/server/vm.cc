@@ -144,6 +144,8 @@ static bool ApplySandbox(Span<const char *const> reveal_paths)
         { "nanosleep", sb_FilterAction::Allow },
         { "sched_yield", sb_FilterAction::Allow },
         { "sched_getaffinity", sb_FilterAction::Allow },
+        { "sched_getscheduler", sb_FilterAction::Allow },
+        { "sched_setscheduler", sb_FilterAction::Allow },
         { "recv", sb_FilterAction::Allow },
         { "recvfrom", sb_FilterAction::Allow },
         { "recvmmsg", sb_FilterAction::Allow },
@@ -157,7 +159,8 @@ static bool ApplySandbox(Span<const char *const> reveal_paths)
         { "shutdown", sb_FilterAction::Allow },
         { "uname", sb_FilterAction::Allow },
         { "utime", sb_FilterAction::Allow },
-        { "getrusage", sb_FilterAction::Allow }
+        { "getrusage", sb_FilterAction::Allow },
+        { "readlink", sb_FilterAction::Allow }
     });
 #endif
 

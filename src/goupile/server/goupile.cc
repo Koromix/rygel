@@ -230,7 +230,8 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         { "uname", sb_FilterAction::Allow },
         { "utime", sb_FilterAction::Allow },
         { "utimensat", sb_FilterAction::Allow },
-        { "getrusage", sb_FilterAction::Allow }
+        { "getrusage", sb_FilterAction::Allow },
+        { "readlink", sb_FilterAction::Allow }
     });
 #endif
 
