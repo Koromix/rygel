@@ -1074,6 +1074,9 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         obj->size = entry.size;
         obj->readable = (entry.flags & (int)RawFile::Flags::Readable);
 
+        if (!(entry.flags & (int)RawFile::Flags::Readable))
+            continue;
+
         switch (obj->type) {
             case rk_ObjectType::Snapshot: { RG_UNREACHABLE(); } break;
 
