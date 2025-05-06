@@ -520,6 +520,12 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
 {
     char buf[128];
 
+    const auto format_time = [&](int64_t time) {
+        TimeSpec spec = DecomposeTimeUTC(time);
+        Fmt(buf, "%1", FmtTimeISO(spec, true));
+        return buf;
+    };
+
     json->Key("type"); json->String(rk_ObjectTypeNames[(int)obj.type]);
     if (obj.name) {
         json->Key("name"); json->String(obj.name);
@@ -532,31 +538,15 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
         json->Key("hash"); json->Null();
     }
 
-    char mtime[64];
-    char ctime[64];
-    char atime[64];
-    char btime[64];
-    {
-        TimeSpec mspec = DecomposeTimeUTC(obj.mtime);
-        TimeSpec cspec = DecomposeTimeUTC(obj.ctime);
-        TimeSpec aspec = DecomposeTimeUTC(obj.atime);
-        TimeSpec bspec = DecomposeTimeUTC(obj.btime);
-
-        Fmt(mtime, "%1", FmtTimeISO(mspec, true));
-        Fmt(ctime, "%1", FmtTimeISO(cspec, true));
-        Fmt(atime, "%1", FmtTimeISO(aspec, true));
-        Fmt(btime, "%1", FmtTimeISO(bspec, true));
-    }
-
     if (obj.type == rk_ObjectType::Snapshot) {
-        json->Key("time"); json->String(mtime);
+        json->Key("time"); json->String(format_time(obj.mtime));
     } else {
-        json->Key("mtime"); json->String(mtime);
-        json->Key("ctime"); json->String(ctime);
+        json->Key("mtime"); json->String(format_time(obj.mtime));
+        json->Key("ctime"); json->String(format_time(obj.ctime));
         if (obj.atime) {
-            json->Key("atime"); json->String(atime);
+            json->Key("atime"); json->String(format_time(obj.atime));
         }
-        json->Key("btime"); json->String(btime);
+        json->Key("btime"); json->String(format_time(obj.btime));
         if (obj.type != rk_ObjectType::Link) {
             json->Key("mode"); json->String(Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr);
         }
@@ -580,6 +570,12 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
 {
     char buf[128];
 
+    const auto format_time = [&](int64_t time) {
+        TimeSpec spec = DecomposeTimeUTC(time);
+        Fmt(buf, "%1", FmtTimeISO(spec, true));
+        return buf;
+    };
+
     pugi::xml_node element = ptr->append_child(rk_ObjectTypeNames[(int)obj.type]);
 
     element.append_attribute("Name") = obj.name ? obj.name : "";
@@ -589,31 +585,15 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
         element.append_attribute("Hash") = "";
     }
 
-    char mtime[64];
-    char ctime[64];
-    char atime[64];
-    char btime[64];
-    {
-        TimeSpec mspec = DecomposeTimeUTC(obj.mtime);
-        TimeSpec cspec = DecomposeTimeUTC(obj.ctime);
-        TimeSpec aspec = DecomposeTimeUTC(obj.atime);
-        TimeSpec bspec = DecomposeTimeUTC(obj.btime);
-
-        Fmt(mtime, "%1", FmtTimeISO(mspec, true));
-        Fmt(ctime, "%1", FmtTimeISO(cspec, true));
-        Fmt(atime, "%1", FmtTimeISO(aspec, true));
-        Fmt(btime, "%1", FmtTimeISO(bspec, true));
-    }
-
     if (obj.type == rk_ObjectType::Snapshot) {
-        element.append_attribute("Time") = mtime;
+        element.append_attribute("Time") = format_time(obj.mtime);
     } else {
-        element.append_attribute("Mtime") = mtime;
-        element.append_attribute("Ctime") = ctime;
+        element.append_attribute("Mtime") = format_time(obj.mtime);
+        element.append_attribute("Ctime") = format_time(obj.ctime);
         if (obj.atime) {
-            element.append_attribute("Atime") = atime;
+            element.append_attribute("Atime") = format_time(obj.atime);
         }
-        element.append_attribute("Btime") = btime;
+        element.append_attribute("Btime") = format_time(obj.btime);
         if (obj.type != rk_ObjectType::Link) {
             element.append_attribute("Mode") = Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr;
         }
