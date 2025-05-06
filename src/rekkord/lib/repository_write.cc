@@ -201,7 +201,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 }
 
                 // Read extended attributes, best effort
-                if (settings.xattrs) {
+                if (settings.store_xattrs) {
                     xattrs.RemoveFrom(0);
                     extended.RemoveFrom(0);
 
@@ -277,6 +277,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
                         entry->mtime = LittleEndian(file_info.mtime);
                         entry->ctime = LittleEndian(file_info.ctime);
+                        entry->atime = settings.store_atime ? LittleEndian(file_info.atime) : 0;
                         entry->btime = LittleEndian(file_info.btime);
                         entry->mode = LittleEndian((uint32_t)file_info.mode);
                         entry->uid = LittleEndian(file_info.uid);
@@ -327,7 +328,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                         // Skip file analysis if metadata is unchanged
                         {
                             sq_Statement stmt;
-                            if (!db->Prepare("SELECT mtime, ctime, btime, mode, size, hash FROM stats WHERE path = ?1", &stmt)) {
+                            if (!db->Prepare("SELECT mtime, ctime, mode, size, hash FROM stats WHERE path = ?1", &stmt)) {
                                 success = false;
                                 break;
                             }
@@ -336,15 +337,13 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                             if (stmt.Step()) {
                                 int64_t mtime = sqlite3_column_int64(stmt, 0);
                                 int64_t ctime = sqlite3_column_int64(stmt, 1);
-                                int64_t btime = sqlite3_column_int64(stmt, 2);
-                                uint32_t mode = (uint32_t)sqlite3_column_int64(stmt, 3);
-                                int64_t size = sqlite3_column_int64(stmt, 4);
-                                Span<const uint8_t> hash = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 5),
-                                                                    sqlite3_column_bytes(stmt, 5));
+                                uint32_t mode = (uint32_t)sqlite3_column_int64(stmt, 2);
+                                int64_t size = sqlite3_column_int64(stmt, 3);
+                                Span<const uint8_t> hash = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 4),
+                                                                    sqlite3_column_bytes(stmt, 4));
 
                                 if (hash.len == RG_SIZE(rk_Hash) && mtime == entry->mtime &&
                                                                     ctime == entry->ctime &&
-                                                                    btime == entry->btime &&
                                                                     mode == entry->mode &&
                                                                     size == entry->size) {
                                     MemCpy(&entry->hash, hash.ptr, RG_SIZE(rk_Hash));
@@ -487,15 +486,14 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
                     if ((flags & (int)RawFile::Flags::Readable) &&
                             entry->kind == (int16_t)RawFile::Kind::File) {
-                        if (!db->Run(R"(INSERT INTO stats (path, mtime, ctime, btime, mode, size, hash)
-                                            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                        if (!db->Run(R"(INSERT INTO stats (path, mtime, ctime, mode, size, hash)
+                                            VALUES (?1, ?2, ?3, ?4, ?5, ?6)
                                             ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
                                                                              ctime = excluded.ctime,
-                                                                             btime = excluded.btime,
                                                                              mode = excluded.mode,
                                                                              size = excluded.size,
                                                                              hash = excluded.hash)",
-                                     filename, entry->mtime, entry->ctime, entry->btime, entry->mode, entry->size,
+                                     filename, entry->mtime, entry->ctime, entry->mode, entry->size,
                                      MakeSpan((const uint8_t *)&entry->hash, RG_SIZE(entry->hash))))
                             return false;
                     }
@@ -728,7 +726,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
                 return false;
         }
 
-        if (settings.xattrs) {
+        if (settings.store_xattrs) {
             xattrs.RemoveFrom(0);
             extended.RemoveFrom(0);
 
@@ -812,6 +810,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
         entry->mtime = LittleEndian(file_info.mtime);
         entry->ctime = LittleEndian(file_info.ctime);
+        entry->atime = settings.store_atime ? LittleEndian(file_info.atime) : 0;
         entry->btime = LittleEndian(file_info.btime);
         entry->mode = LittleEndian((uint32_t)file_info.mode);
         entry->uid = LittleEndian(file_info.uid);

@@ -51,6 +51,7 @@ struct EntryInfo {
 
     int64_t mtime;
     int64_t ctime;
+    int64_t atime;
     int64_t btime;
     uint32_t mode;
     uint32_t uid;
@@ -213,7 +214,7 @@ static void MigrateLegacyEntries2(HeapArray<uint8_t> *blob, Size start)
 
     while (offset < blob->len) {
         RawFile *ptr = (RawFile *)(blob->ptr + offset);
-        Size skip = ptr->GetSize() - 8;
+        Size skip = ptr->GetSize() - 16;
 
         if (blob->len - offset < skip)
             break;
@@ -221,6 +222,7 @@ static void MigrateLegacyEntries2(HeapArray<uint8_t> *blob, Size start)
         entries.Grow(ptr->GetSize());
         MemCpy(entries.end(), blob->ptr + offset, skip);
         MemMove(entries.end() + offsetof(RawFile, btime), entries.end() + offsetof(RawFile, ctime), skip - offsetof(RawFile, ctime));
+        MemSet(entries.end() + offsetof(RawFile, atime), 0, RG_SIZE(RawFile::atime));
         entries.len += ptr->GetSize();
 
         offset += skip;
@@ -260,6 +262,7 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
 
     entry.mtime = LittleEndian(ptr->mtime);
     entry.ctime = LittleEndian(ptr->ctime);
+    entry.atime = LittleEndian(ptr->atime);
     entry.btime = LittleEndian(ptr->btime);
     entry.mode = LittleEndian(ptr->mode);
     entry.uid = LittleEndian(ptr->uid);
@@ -1067,6 +1070,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         obj->name = entry.basename.ptr;
         obj->mtime = entry.mtime;
         obj->ctime = entry.ctime;
+        obj->atime = entry.atime;
         obj->btime = entry.btime;
         obj->mode = entry.mode;
         obj->uid = entry.uid;
@@ -1225,8 +1229,6 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
             obj->type = rk_ObjectType::Snapshot;
             obj->name = DuplicateString(header1->channel, alloc).ptr;
             obj->mtime = LittleEndian(header1->time);
-            obj->ctime = LittleEndian(header1->time);
-            obj->btime = LittleEndian(header1->time);
             obj->size = LittleEndian(header1->size);
             obj->readable = true;
 

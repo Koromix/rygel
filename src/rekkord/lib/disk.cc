@@ -395,9 +395,17 @@ sq_Database *rk_Disk::OpenCache(bool build)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 6: {
+                    bool success = cache_db.RunMany(R"(
+                        ALTER TABLE stats DROP COLUMN btime;
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 6);
+                static_assert(CacheVersion == 7);
             }
 
             if (!cache_db.SetUserVersion(CacheVersion))

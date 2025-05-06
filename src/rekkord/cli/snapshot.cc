@@ -43,8 +43,10 @@ Options:
         %!..+--raw%!0                      Skip snapshot object and report data hash
 
         %!..+--follow_symlinks%!0          Follow symbolic links (instead of storing them as-is)
-        %!..+--xattrs%!0                   Store extended attributes on supported platforms
         %!..+--preserve_atime%!0           Do not modify atime if possible (Linux-only)
+
+        %!..+--store_atime%!0              Store file access times
+        %!..+--store_xattrs%!0             Store extended attributes on supported platforms
 
     %!..+-j, --threads threads%!0          Change number of threads
                                    %!D..(default: automatic)%!0)",
@@ -73,8 +75,10 @@ Options:
                 settings.channel = opt.current_value;
             } else if (opt.Test("--follow_symlinks")) {
                 settings.follow_symlinks = true;
-            } else if (opt.Test("--xattrs")) {
-                settings.xattrs = true;
+            } else if (opt.Test("--store_atime")) {
+                settings.store_atime = true;
+            } else if (opt.Test("--store_xattrs")) {
+                settings.store_xattrs = true;
             } else if (opt.Test("--preserve_atime")) {
                 settings.preserve_atime = true;
             } else if (opt.Test("--raw")) {

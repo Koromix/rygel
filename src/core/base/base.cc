@@ -2443,6 +2443,7 @@ static StatResult StatHandle(HANDLE h, const char *filename, FileInfo *out_info)
     out_info->size = ((uint64_t)attr.nFileSizeHigh << 32) | attr.nFileSizeLow;
     out_info->mtime = FileTimeToUnixTime(attr.ftLastWriteTime);
     out_info->ctime = FileTimeToUnixTime(attr.ftCreationTime);
+    out_info->atime = FileTimeToUnixTime(attr.ftLastAccessTime);
     out_info->btime = out_info->ctime;
     out_info->mode = (out_info->type == FileType::Directory) ? 0755 : 0644;
     out_info->uid = 0;
@@ -2764,6 +2765,8 @@ static StatResult StatAt(int fd, bool fd_is_directory, const char *filename, uns
                       (int64_t)sxb.stx_mtime.tv_nsec / 1000000;
     out_info->ctime = (int64_t)sxb.stx_ctime.tv_sec * 1000 +
                       (int64_t)sxb.stx_ctime.tv_nsec / 1000000;
+    out_info->atime = (int64_t)sxb.stx_atime.tv_sec * 1000 +
+                      (int64_t)sxb.stx_atime.tv_nsec / 1000000;
     if (sxb.stx_mask & STATX_BTIME) {
         out_info->btime = (int64_t)sxb.stx_btime.tv_sec * 1000 +
                           (int64_t)sxb.stx_btime.tv_nsec / 1000000;
@@ -2819,12 +2822,16 @@ static StatResult StatAt(int fd, bool fd_is_directory, const char *filename, uns
                       (int64_t)sb.st_mtim.tv_nsec / 1000000;
     out_info->ctime = (int64_t)sb.st_ctim.tv_sec * 1000 +
                       (int64_t)sb.st_ctim.tv_nsec / 1000000;
+    out_info->atime = (int64_t)sb.st_atim.tv_sec * 1000 +
+                      (int64_t)sb.st_atim.tv_nsec / 1000000;
     out_info->btime = out_info->mtime;
 #elif defined(__APPLE__)
     out_info->mtime = (int64_t)sb.st_mtimespec.tv_sec * 1000 +
                       (int64_t)sb.st_mtimespec.tv_nsec / 1000000;
     out_info->ctime = (int64_t)sb.st_ctimespec.tv_sec * 1000 +
                       (int64_t)sb.st_ctimespec.tv_nsec / 1000000;
+    out_info->atime = (int64_t)sb.st_atimespec.tv_sec * 1000 +
+                      (int64_t)sb.st_atimespec.tv_nsec / 1000000;
     out_info->btime = (int64_t)sb.st_birthtimespec.tv_sec * 1000 +
                       (int64_t)sb.st_birthtimespec.tv_nsec / 1000000;
 #elif defined(__OpenBSD__)
@@ -2832,6 +2839,8 @@ static StatResult StatAt(int fd, bool fd_is_directory, const char *filename, uns
                       (int64_t)sb.st_mtim.tv_nsec / 1000000;
     out_info->ctime = (int64_t)sb.st_ctim.tv_sec * 1000 +
                       (int64_t)sb.st_ctim.tv_nsec / 1000000;
+    out_info->atime = (int64_t)sb.st_atim.tv_sec * 1000 +
+                      (int64_t)sb.st_atim.tv_nsec / 1000000;
     out_info->btime = (int64_t)sb.__st_birthtim.tv_sec * 1000 +
                       (int64_t)sb.__st_birthtim.tv_nsec / 1000000;
 #elif defined(__FreeBSD__)
@@ -2839,6 +2848,8 @@ static StatResult StatAt(int fd, bool fd_is_directory, const char *filename, uns
                       (int64_t)sb.st_mtim.tv_nsec / 1000000;
     out_info->ctime = (int64_t)sb.st_ctim.tv_sec * 1000 +
                       (int64_t)sb.st_ctim.tv_nsec / 1000000;
+    out_info->atime = (int64_t)sb.st_atim.tv_sec * 1000 +
+                      (int64_t)sb.st_atim.tv_nsec / 1000000;
     out_info->btime = (int64_t)sb.st_birthtim.tv_sec * 1000 +
                       (int64_t)sb.st_birthtim.tv_nsec / 1000000;
 #else
@@ -2846,6 +2857,8 @@ static StatResult StatAt(int fd, bool fd_is_directory, const char *filename, uns
                       (int64_t)sb.st_mtim.tv_nsec / 1000000;
     out_info->ctime = (int64_t)sb.st_ctim.tv_sec * 1000 +
                       (int64_t)sb.st_ctim.tv_nsec / 1000000;
+    out_info->atime = (int64_t)sb.st_atim.tv_sec * 1000 +
+                      (int64_t)sb.st_atim.tv_nsec / 1000000;
     out_info->btime = out_info->mtime;
 #endif
     out_info->mode = (unsigned int)sb.st_mode;
