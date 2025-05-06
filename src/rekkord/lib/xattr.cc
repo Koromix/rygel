@@ -31,7 +31,8 @@ namespace RG {
 
 static Span<const char> ReadACLs(int fd, const char *filename, Allocator *alloc)
 {
-    acl_t acl = acl_get_fd(fd);
+    acl_t acl = (fd >= 0) ? acl_get_fd(fd)
+                          : acl_get_file(filename, ACL_TYPE_ACCESS);
     if (!acl) {
         LogError("Failed to open ACL entries for '%1': %2", filename, strerror(errno));
         return {};
@@ -64,9 +65,16 @@ static bool WriteACLs(int fd, const char *filename, Span<const char> str)
     }
     RG_DEFER { acl_free(acl); };
 
-    if (acl_set_fd(fd, acl) < 0) {
-        LogError("Failed to set ACL for '%1': %2", filename, strerror(errno));
-        return false;
+    if (fd >= 0) {
+        if (acl_set_fd(fd, acl) < 0) {
+            LogError("Failed to set ACL for '%1': %2", filename, strerror(errno));
+            return false;
+        }
+    } else {
+        if (acl_set_file(filename, ACL_TYPE_ACCESS, acl) < 0) {
+            LogError("Failed to set ACL for '%1': %2", filename, strerror(errno));
+            return false;
+        }
     }
 
     return true;
@@ -74,7 +82,8 @@ static bool WriteACLs(int fd, const char *filename, Span<const char> str)
 
 static Size ReadAttribute(int fd, const char *filename, const char *key, HeapArray<uint8_t> *out_value)
 {
-    Size size = fgetxattr(fd, key, nullptr, 0);
+    Size size = (fd >= 0) ? fgetxattr(fd, key, nullptr, 0)
+                          : lgetxattr(filename, key, nullptr, 0);
 
     if (size < 0) {
         LogError("Failed to read extended attribute '%1' from '%2': %3", key, filename, strerror(errno));
@@ -86,7 +95,8 @@ static Size ReadAttribute(int fd, const char *filename, const char *key, HeapArr
 retry:
     out_value->Grow(size);
 
-    Size len = fgetxattr(fd, key, out_value->end(), out_value->capacity - out_value->len);
+    Size len = (fd >= 0) ? fgetxattr(fd, key, out_value->end(), out_value->capacity - out_value->len)
+                         : lgetxattr(filename, key, out_value->end(), out_value->capacity - out_value->len);
 
     if (len < 0) {
         if (errno == E2BIG) {
@@ -122,7 +132,8 @@ bool ReadXAttributes(int fd, const char *filename, Allocator *alloc, HeapArray<X
 retry:
         list.Grow(size);
 
-        Size len = flistxattr(fd, list.ptr, (size_t)list.capacity);
+        Size len = (fd >= 0) ? flistxattr(fd, list.ptr, (size_t)list.capacity)
+                             : llistxattr(filename, list.ptr, (size_t)list.capacity);
 
         if (len < 0) {
             if (errno == E2BIG) {
@@ -178,7 +189,8 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
             continue;
         }
 
-        int ret = fsetxattr(fd, xattr.key, xattr.value.ptr, xattr.value.len, 0);
+        int ret = (fd >= 0) ? fsetxattr(fd, xattr.key, xattr.value.ptr, xattr.value.len, 0)
+                            : lsetxattr(filename, xattr.key, xattr.value.ptr, xattr.value.len, 0);
 
         if (ret < 0) {
             LogError("Failed to write extended attribute '%1' to '%2': %3'", xattr.key, filename, strerror(errno));
@@ -193,7 +205,8 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
 
 static Span<const char> ReadACLs(int fd, const char *filename, Allocator *alloc)
 {
-    acl_t acl = acl_get_fd(fd);
+    acl_t acl = (fd >= 0) ? acl_get_fd(fd)
+                          : acl_get_link_np(filename, ACL_TYPE_ACCESS);
     if (!acl) {
         LogError("Failed to open ACL entries for '%1': %2", filename, strerror(errno));
         return {};
@@ -232,9 +245,16 @@ static bool WriteACLs(int fd, const char *filename, Span<const char> str)
     }
     RG_DEFER { acl_free(acl); };
 
-    if (acl_set_fd(fd, acl) < 0) {
-        LogError("Failed to set ACL for '%1': %2", filename, strerror(errno));
-        return false;
+    if (fd >= 0) {
+        if (acl_set_fd(fd, acl) < 0) {
+            LogError("Failed to set ACL for '%1': %2", filename, strerror(errno));
+            return false;
+        }
+    } else {
+        if (acl_set_link_np(filename, acl) < 0) {
+            LogError("Failed to set ACL for '%1': %2", filename, strerror(errno));
+            return false;
+        }
     }
 
     return true;
@@ -242,7 +262,8 @@ static bool WriteACLs(int fd, const char *filename, Span<const char> str)
 
 static Size ReadAttribute(int fd, const char *filename, const char *key, HeapArray<uint8_t> *out_value)
 {
-    Size size = extattr_get_fd(fd, EXTATTR_NAMESPACE_USER, key, nullptr, 0);
+    Size size = (fd >= 0) ? extattr_get_fd(fd, EXTATTR_NAMESPACE_USER, key, nullptr, 0)
+                          : extattr_get_link(filename, EXTATTR_NAMESPACE_USER, key, nullptr, 0);
 
     if (size < 0) {
         LogError("Failed to read extended attribute '%1' from '%2': %3", key, filename, strerror(errno));
@@ -255,7 +276,8 @@ retry:
     out_value->Grow(size);
 
     Size available = out_value->capacity - out_value->len;
-    Size len = extattr_get_fd(fd, EXTATTR_NAMESPACE_USER, key, out_value->end(), available);
+    Size len = (fd >= 0) ? extattr_get_fd(fd, EXTATTR_NAMESPACE_USER, key, out_value->end(), available)
+                         : extattr_get_link(filename, EXTATTR_NAMESPACE_USER, key, out_value->end(), available);
 
     if (len == available) {
         size += Kibibytes(4);
@@ -290,7 +312,8 @@ bool ReadXAttributes(int fd, const char *filename, Allocator *alloc, HeapArray<X
 retry:
         list.Grow(size);
 
-        Size len = extattr_list_fd(fd, EXTATTR_NAMESPACE_USER, list.ptr, (size_t)list.capacity);
+        Size len = (fd >= 0) ? extattr_list_fd(fd, EXTATTR_NAMESPACE_USER, list.ptr, (size_t)list.capacity)
+                             : extattr_list_link(filename, EXTATTR_NAMESPACE_USER, list.ptr, (size_t)list.capacity);
 
         if (len == list.capacity) {
             size += Kibibytes(4);
@@ -347,11 +370,16 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
             continue;
         }
 
-        int ret = extattr_set_fd(fd, EXTATTR_NAMESPACE_USER, xattr.key + 5, xattr.value.ptr, xattr.value.len);
-
-        if (ret < 0) {
-            LogError("Failed to write extended attribute '%1' to '%2': %3'", xattr.key, filename, strerror(errno));
-            success = false;
+        if (fd >= 0) {
+            if (extattr_set_fd(fd, EXTATTR_NAMESPACE_USER, xattr.key + 5, xattr.value.ptr, xattr.value.len) < 0) {
+                LogError("Failed to write extended attribute '%1' to '%2': %3'", xattr.key, filename, strerror(errno));
+                success = false;
+            }
+        } else {
+            if (extattr_set_link(filename, EXTATTR_NAMESPACE_USER, xattr.key + 5, xattr.value.ptr, xattr.value.len) < 0) {
+                LogError("Failed to write extended attribute '%1' to '%2': %3'", xattr.key, filename, strerror(errno));
+                success = false;
+            }
         }
     }
 

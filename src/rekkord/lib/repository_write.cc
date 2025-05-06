@@ -170,21 +170,34 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 const char *filename = Fmt(&temp_alloc, "%1%/%2", pending->dirname, basename).ptr;
 
                 RawFile *entry = nullptr;
+                bool skip = false;
 
                 int fd = -1;
                 RG_DEFER { CloseDescriptor(fd); };
 
+#if !defined(_WIN32)
 #if defined(__linux__)
-                {
-                    int flags = O_RDONLY | O_CLOEXEC | (follow_symlinks ? 0 : O_NOFOLLOW);
-                    fd = settings.preserve_atime ? open(filename, flags | O_NOATIME) : -1;
+                if (settings.preserve_atime) {
+                    int flags = O_RDONLY | O_CLOEXEC | (follow_symlinks ? 0 : O_NOFOLLOW) | O_NOATIME;
+                    fd = open(filename, flags);
                 }
 #endif
 
                 // Open file
                 if (fd < 0) {
-                    int flags = (int)OpenFlag::Read | (follow_symlinks ? 0 : (int)OpenFlag::NoFollow);
-                    fd = OpenFile(filename, flags);
+                    int flags = O_RDONLY | O_CLOEXEC | (follow_symlinks ? 0 : O_NOFOLLOW);
+                    fd = open(filename, flags);
+
+                    if (fd < 0) {
+                        // We cannot open symbolic links with O_NOFOLLOW but we still care about them!
+                        // Most systems return ELOOP, but FreeBSD uses EMLINK.
+                        bool ignore = !follow_symlinks && (errno == EMLINK || errno == ELOOP);
+
+                        if (!ignore) {
+                            LogError("Cannot open '%1': %2", filename, strerror(errno));
+                            skip = true;
+                        }
+                    }
                 }
 
                 // Read extended attributes, best effort
@@ -192,11 +205,12 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                     xattrs.RemoveFrom(0);
                     extended.RemoveFrom(0);
 
-                    if (fd >= 0) [[likely]] {
+                    if (!skip) [[likely]] {
                         ReadXAttributes(fd, filename, &temp_alloc, &xattrs);
                         PackExtended(filename, xattrs, &extended);
                     }
                 }
+#endif
 
                 // Create raw entry
                 {
@@ -211,7 +225,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                     MemCpy(entry->GetExtended().ptr, extended.ptr, extended.len);
                 }
 
-                if (fd < 0) [[unlikely]]
+                if (skip) [[unlikely]]
                     return true;
 
                 // Stat file
