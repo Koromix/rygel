@@ -6,6 +6,21 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.55
+
+*Released on 2025-05-06*
+
+- Store ctime and atime (if *--store_atime* is used) values
+- Fix `rekkord list` error with special or failed files
+- Properly handle symlink following in new xattr code
+- Support xattrs (with *--store_xattrs*) on Linux and FreeBSD
+- Add --channel option to `rekkord snapshots`
+- Rename `rekkord restore` options for consistency
+- Fix minor endianness issues
+
+> [!NOTE]
+> The new metadata (ctime and atime) will cause transient repository size expansion.
+
 ### Rekkord 0.54
 
 *Released on 2025-05-02*
