@@ -2167,10 +2167,17 @@ async function openRecord(tid, anchor, page) {
             new_thread.entries[page.store.key] = new_entry;
         }
 
-        let [raw, obj] = Data.wrap(new_entry.data);
+        for (let store in new_thread.entries) {
+            let entry = new_thread.entries[store];
+            let [raw, obj] = Data.wrap(entry.data);
 
-        new_raw = raw;
-        new_state = new FormState(raw, obj);
+            if (entry == new_entry) {
+                new_raw = raw;
+                new_state = new FormState(raw, obj);
+            }
+
+            entry.data = obj;
+        }
     } else {
         new_raw = null;
         new_state = new FormState;
