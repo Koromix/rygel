@@ -2886,7 +2886,7 @@ bool MigrateInstance(sq_Database *db, int target)
                             return false;
                     }
                 }
-            } // [[fallthrough]];
+            } [[fallthrough]];
 
             case 130: {
                 if (db->TableExists("mig_deletions")) {
@@ -2897,7 +2897,7 @@ bool MigrateInstance(sq_Database *db, int target)
                     if (!success)
                         return false;
                 }
-            } break;
+            } // [[fallthrough]];
 
             static_assert(InstanceVersion == 131);
         }
