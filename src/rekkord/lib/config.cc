@@ -100,7 +100,7 @@ static bool LooksLikeS3(Span<const char> str)
 
 static bool LooksLikeUserName(Span<const char> str)
 {
-    const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_' || c == '.' || c == '-'; };
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_' || c == '.' || c == '-'; };
 
     if (!str.len)
         return false;
