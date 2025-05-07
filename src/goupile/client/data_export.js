@@ -120,7 +120,6 @@ async function exportRecords(export_id, stores, filter = null) {
 
     // Create workbook...
     let wb = XLSX.utils.book_new();
-    let wb_name = `export_${ENV.key}_${LocalDate.today()}`;
     for (let i = 0; i < stores.length; i++) {
         let store = stores[i];
         let ws = worksheets[i];
@@ -140,7 +139,7 @@ async function exportRecords(export_id, stores, filter = null) {
     }
 
     // ... and export it!
-    let filename = `${ENV.key}_${wb_name}.xlsx`;
+    let filename = `export_${ENV.key}_${LocalDate.today()}.xlsx`;
     XLSX.writeFile(wb, filename);
 }
 
