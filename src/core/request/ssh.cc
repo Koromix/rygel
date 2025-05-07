@@ -49,6 +49,9 @@ bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<
     } else if (key == "Password") {
         password = DuplicateString(value, &str_alloc).ptr;
         return true;
+    } else if (key == "Key") {
+        key = DuplicateString(value, &str_alloc).ptr;
+        return true;
     } else if (key == "KeyFile") {
         keyfile = DuplicateString(value, &str_alloc).ptr;
         return true;
@@ -60,21 +63,17 @@ bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<
 
 bool ssh_Config::Complete()
 {
-    if (!password && !keyfile) {
-        const char *str = GetEnv("SSH_KEY_FILE");
-
-        if (str) {
+    if (!password && !keyfile && !key) {
+        if (const char *str = GetEnv("SSH_KEY"); str) {
+            key = DuplicateString(str, &str_alloc).ptr;
+        } else if (const char *str = GetEnv("SSH_KEY_FILE"); str) {
             keyfile = DuplicateString(str, &str_alloc).ptr;
-        } else {
-            str = GetEnv("SSH_PASSWORD");
-
-            if (str) {
-                password = DuplicateString(str, &str_alloc).ptr;
-            } else if (username && FileIsVt100(STDERR_FILENO)) {
-                password = Prompt("SSH password: ", nullptr, "*", &str_alloc);
-                if (!password)
-                    return false;
-            }
+        } else if (const char *str = GetEnv("SSH_PASSWORD"); str) {
+            password = DuplicateString(str, &str_alloc).ptr;
+        } else if (username && FileIsVt100(STDERR_FILENO)) {
+            password = Prompt("SSH password: ", nullptr, "*", &str_alloc);
+            if (!password)
+                return false;
         }
     }
 
@@ -104,11 +103,11 @@ bool ssh_Config::Validate() const
     }
 
     if (!known_hosts && !fingerprint) {
-        LogError("Cannot use SFTP without HostFingerprint and no valid server hash");
+        LogError("Cannot use SFTP without known Fingerprint and no valid server hash");
         valid = false;
     }
-    if (!password && !keyfile) {
-        LogError("Missing SFTP password (SSH_PASSWORD) and/or keyfile (SSH_KEY_FILE)");
+    if (!password && !key && !keyfile) {
+        LogError("Missing SFTP password (SSH_PASSWORD) and/or key (SSH_KEY or SSH_KEY_FILE)");
         valid = false;
     }
 
@@ -126,6 +125,7 @@ void ssh_Config::Clone(ssh_Config *out_config) const
     out_config->known_hosts = known_hosts;
     out_config->fingerprint = fingerprint ? DuplicateString(fingerprint, &out_config->str_alloc).ptr : nullptr;
     out_config->password = password ? DuplicateString(password, &out_config->str_alloc).ptr : nullptr;
+    out_config->key = key ? DuplicateString(key, &out_config->str_alloc).ptr : nullptr;
     out_config->keyfile = keyfile ? DuplicateString(keyfile, &out_config->str_alloc).ptr : nullptr;
 }
 
@@ -293,6 +293,19 @@ ssh_session ssh_Connect(const ssh_Config &config)
     }
 
     // Authenticate user
+    if (config.key) {
+        ssh_key private_key = nullptr;
+        if (ssh_pki_import_privkey_base64(config.key, nullptr, nullptr, nullptr, &private_key) < 0) {
+            LogError("Failed to import private key string");
+            return nullptr;
+        }
+        RG_DEFER { ssh_key_free(private_key); };
+
+        if (ssh_userauth_publickey(ssh, nullptr, private_key) != SSH_AUTH_SUCCESS) {
+            LogError("Failed to authenticate to '%1@%2': %3", config.username, config.host, ssh_get_error(ssh));
+            return nullptr;
+        }
+    }
     if (config.keyfile) {
         ssh_key private_key = nullptr;
         if (ssh_pki_import_privkey_file(config.keyfile, nullptr, nullptr, nullptr, &private_key) < 0) {
