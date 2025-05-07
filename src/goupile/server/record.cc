@@ -737,6 +737,19 @@ static bool CheckExportPermission(http_IO *io, InstanceHolder *instance,
     }
 }
 
+static const char *MakeExportFileName(const char *instance_key, int64_t export_id, int64_t ctime, Allocator *alloc)
+{
+    TimeSpec spec = DecomposeTimeUTC(ctime);
+    Span<char> basename = Fmt(alloc, "%1_%2_%3.json.gz", instance_key, export_id, FmtTimeISO(spec));
+
+    for (char &c: basename) {
+        c = (c == '/') ? '@' : c;
+    }
+
+    const char *filename = Fmt(alloc, "%1%/%2", gp_domain.config.export_directory, basename).ptr;
+    return filename;
+}
+
 void HandleExportCreate(http_IO *io, InstanceHolder *instance)
 {
     if (!instance->config.data_remote) {
@@ -879,8 +892,7 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
                 return false;
         }
 
-        TimeSpec spec = DecomposeTimeUTC(now);
-        filename = Fmt(io->Allocator(), "%1%/%2_%3_%4.json.gz", gp_domain.config.export_directory, instance->key, export_id, FmtTimeISO(spec)).ptr;
+        filename = MakeExportFileName(instance->key.ptr, export_id, now, io->Allocator());
 
         if (!RenameFile(tmp_filename, filename, 0))
             return false;
@@ -988,8 +1000,7 @@ void HandleExportDownload(http_IO *io, InstanceHolder *instance)
         ctime = sqlite3_column_int64(stmt, 0);
     }
 
-    TimeSpec spec = DecomposeTimeUTC(ctime);
-    const char *filename = Fmt(io->Allocator(), "%1%/%2_%3_%4.json.gz", gp_domain.config.export_directory, instance->key, export_id, FmtTimeISO(spec)).ptr;
+    const char *filename = MakeExportFileName(instance->key.ptr, export_id, ctime, io->Allocator());
 
     io->AddHeader("Content-Encoding", "gzip");
     io->SendFile(200, filename);
