@@ -186,8 +186,8 @@ Options:
     %!..+-j, --threads threads%!0          Change number of threads
                                    %!D..(default: automatic)%!0
 
-Use an object hash or a snapshot name as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<hash|name>[:<path>]%!0.
-Snapshot names are not unique, if you use a snapshot name, rekkord will use the most recent snapshot object that matches.)", FelixTarget);
+Use an object hash or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<hash|channel>[:<path>]%!0.
+If you use a snapshot channel, rekkord will use the most recent snapshot object that matches.)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))

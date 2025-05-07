@@ -645,8 +645,8 @@ Options:
                                    %!D..(default: %2)%!0
     %!..+-v, --verbose%!0                  Enable verbose output (plain only)
 
-Use an object hash or a snapshot name as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<hash|name>[:<path>]%!0.
-Snapshot names are not unique, if you use a snapshot name, rekkord will use the most recent snapshot object that matches.
+Use an object hash or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<hash|channel>[:<path>]%!0.
+If you use a snapshot channel, rekkord will use the most recent snapshot object that matches.
 
 Available output formats: %!..+%3%!0)",
                 FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
