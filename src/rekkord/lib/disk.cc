@@ -369,7 +369,7 @@ sq_Database *rk_Disk::OpenCache(bool build)
                     )");
                     if (!success)
                         return false;
-                } // [[fallthrough]];
+                } [[fallthrough]];
 
                 case 5: {
                     bool success = cache_db.RunMany(R"(
