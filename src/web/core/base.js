@@ -705,6 +705,8 @@ class HttpError extends Error {
 const Net = new function() {
     let self = this;
 
+    let caches = {};
+
     this.retryHandler = response => false;
 
     this.fetch = async function(url, options = {}) {
@@ -825,30 +827,40 @@ const Net = new function() {
 
     this.cache = async function(key, url) {
         let entry = caches[key];
-        let now = performance.now();
+        let outdated = false;
 
         if (entry == null) {
             entry = {
                 url: null,
-                time: -self.cache_duration,
                 data: null
             };
             caches[key] = entry;
-        }
 
-        if (entry.url != url || entry.time < now - self.cache_duration) {
+            outdated = true;
+        }
+        if (entry.url != url)
+            outdated = true;
+
+        if (outdated) {
             entry.data = await self.get(url);
 
             if (entry.data == null) {
-                delete(caches[key]);
+                delete caches[key];
                 return null;
             }
 
-            entry.time = performance.now();
             entry.url = url;
         }
 
         return entry.data;
+    };
+
+    this.invalidate = function(key) {
+        delete caches[key];
+    };
+
+    this.invalidateAll = function() {
+        caches = {};
     };
 
     this.loadScript = function(url) {

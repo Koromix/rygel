@@ -35,7 +35,7 @@ let session = null;
 let root_el = null;
 
 let cache = {
-    // Nothing yet
+    repositories: []
 };
 
 // ------------------------------------------------------------------------
@@ -537,6 +537,8 @@ function isLogged() {
 // ------------------------------------------------------------------------
 
 async function runDashboard() {
+    cache.repositories = await Net.cache('repositories', '/api/repository/list');
+
     UI.main(html`
         <div class="tabbar">
             <a class="active">Overview</a>
@@ -545,10 +547,169 @@ async function runDashboard() {
         <div class="tab">
             <div class="box">
                 <div class="header">Repositories</div>
-                <p>Nothing yet :)</p>
+                <table style="table-layout: fixed; width: 100%;">
+                    <colgroup>
+                        <col style="width: 30%;"></col>
+                        <col></col>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>URL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${cache.repositories.map(repo => html`
+                            <tr>
+                                <td class="edit" @click=${UI.wrap(e => configureRepository(repo))}>${repo.name}</td>
+                                <td>${repo.url}</td>
+                            </tr>
+                        `)}
+                        ${!cache.repositories.length ? html`<tr><td colspan="2" style="text-align: center;">No repository</td></tr>` : ''}
+                    </tbody>
+                </table>
+                <div class="actions">
+                    <button type="button" @click=${UI.wrap(e => configureRepository(null))}>Add repository</button>
+                </div>
             </div>
         </div>
     `);
+}
+
+async function configureRepository(repo) {
+    let ptr = repo;
+
+    if (repo == null) {
+        repo = {
+            name: '',
+            url: '',
+            variables: {}
+        };
+    }
+
+    let url = repo.url;
+
+    await UI.dialog({
+        run: (render, close) => {
+            let type = detectType(url);
+
+            return html`
+                <div class="title">
+                    ${ptr != null ? 'Edit repository' : 'Create repository'}
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                </div>
+
+                <div class="main">
+                    <label>
+                        <span>Name</span>
+                        <input name="name" required value=${repo.name} />
+                    </label>
+                    <div class="section">Repository</div>
+                    <label>
+                        <span>URL</span>
+                        <input name="url" required value=${url}
+                               @input=${e => { url = e.target.value; render(); }} />
+                    </label>
+                    <label>
+                        <span>User</span>
+                        <input name="user" required value=${repo.user} />
+                    </label>
+                    <label>
+                        <span>Password</span>
+                        <input name="password" required value=${repo.password} />
+                    </label>
+                    ${type == 's3' ? html`
+                        <div class="section">S3</div>
+                        <label>
+                            <span>Key ID</span>
+                            <input name="AWS_ACCESS_KEY_ID" required value=${repo.variables.AWS_ACCESS_KEY_ID ?? ''}>
+                        </label>
+                        <label>
+                            <span>Secret access key</span>
+                            <input name="AWS_SECRET_ACCESS_KEY" required value=${repo.variables.AWS_SECRET_ACCESS_KEY ?? ''}>
+                        </label>
+                    ` : ''}
+                    ${type == 'ssh' ? html`
+                        <div class="section">SFTP</div>
+                        <label>
+                            <span>Password</span>
+                            <input name="SSH_PASSWORD" value=${repo.variables.SSH_PASSWORD ?? ''}>
+                        </label>
+                        <label>
+                            <span>Key</span>
+                            <input name="SSH_KEY" value=${repo.variables.SSH_KEY ?? ''}>
+                        </label>
+                        <label>
+                            <span>Fingerprint</span>
+                            <input name="SSH_FINGERPRINT" value=${repo.variables.SSH_FINGERPRINT ?? ''}>
+                        </label>
+                    ` : ''}
+                </div>
+
+                <div class="footer">
+                    ${ptr != null ? html`
+                        <button type="button" class="danger"
+                                @click=${UI.confirm('Delete repository', e => deleteRepository(repo.id).then(close))}>Delete</button>
+                        <div style="flex: 1;"></div>
+                    ` : ''}
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
+                    <button type="submit">${ptr != null ? 'Edit' : 'Create'}</button>
+                </div>
+            `
+        },
+
+        submit: async (elements) => {
+            let obj = {
+                id: repo.id,
+                name: elements.name.value.trim() || null,
+                url: elements.url.value.trim() || null,
+                user: elements.user.value.trim() || null,
+                password: elements.password.value.trim() || null,
+                variables: {}
+            };
+
+            for (let el of elements) {
+                let name = el.getAttribute('name');
+
+                if (!name)
+                    continue;
+                if (obj.hasOwnProperty(name))
+                    continue;
+                if (!el.value)
+                    continue;
+
+                let value = el.value.toString();
+                obj.variables[name] = value.trim() || null;
+            }
+
+            await Net.post('/api/repository/save', obj);
+            Net.invalidate('repositories');
+        }
+    });
+}
+
+async function deleteRepository(id) {
+    await Net.post('/api/repository/delete', { id: id });
+    Net.invalidate('repositories');
+}
+
+function detectType(url) {
+    if (url.startsWith("http://"))
+        return 's3';
+    if (url.startsWith("https://"))
+        return 's3';
+    if (url.startsWith("s3://"))
+        return 's3';
+
+    if (url.startsWith("ssh://"))
+        return 'ssh';
+    if (url.startsWith("sftp://"))
+        return 'ssh';
+    if (url.match(/^[a-zA-Z0-9_\-\.]+@.+:$/))
+        return 'ssh';
+
+    return null;
 }
 
 async function runAccount() {
@@ -572,9 +733,9 @@ async function runAccount() {
 async function changePicture() {
     let current = null;
 
-    // Fetch exisiting picture
+    // Fetch existing picture
     {
-        let response = await Net.fetch('/api/user/picture');
+        let response = await Net.fetch('/api/picture/get');
 
         if (response.ok) {
             current = await response.blob();
@@ -593,10 +754,10 @@ async function changePicture() {
 
     await cropper.run(current, async blob => {
         if (blob != null) {
-            let json = await Net.put('/api/user/picture', blob);
+            let json = await Net.put('/api/picture/save', blob);
             session.picture = json.picture;
         } else {
-            let json = await Net.delete('/api/user/picture');
+            let json = await Net.delete('/api/picture/delete');
             session.picture = json.picture;
         }
     });

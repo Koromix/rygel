@@ -17,6 +17,7 @@
 #include "config.hh"
 #include "database.hh"
 #include "rekkow.hh"
+#include "repository.hh"
 #include "user.hh"
 #include "src/core/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
@@ -374,12 +375,18 @@ static void HandleRequest(http_IO *io)
             HandleUserReset(io);
         } else if (TestStr(request.path, "/api/user/password") && request.method == http_RequestMethod::Post) {
             HandleUserPassword(io);
-        } else if (TestStr(request.path, "/api/user/picture") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(request.path, "/api/picture/get") && request.method == http_RequestMethod::Get) {
             HandlePictureGet(io);
-        } else if (TestStr(request.path, "/api/user/picture") && request.method == http_RequestMethod::Put) {
-            HandlePicturePut(io);
-        } else if (TestStr(request.path, "/api/user/picture") && request.method == http_RequestMethod::Delete) {
+        } else if (TestStr(request.path, "/api/picture/save") && request.method == http_RequestMethod::Post) {
+            HandlePictureSave(io);
+        } else if (TestStr(request.path, "/api/picture/delete") && request.method == http_RequestMethod::Post) {
             HandlePictureDelete(io);
+        } else if (TestStr(request.path, "/api/repository/list") && request.method == http_RequestMethod::Get) {
+            HandleRepositoryList(io);
+        } else if (TestStr(request.path, "/api/repository/save") && request.method == http_RequestMethod::Post) {
+            HandleRepositorySave(io);
+        } else if (TestStr(request.path, "/api/repository/delete") && request.method == http_RequestMethod::Post) {
+            HandleRepositoryDelete(io);
         } else {
             io->SendError(404);
         }

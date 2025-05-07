@@ -38,12 +38,6 @@ static const int64_t BanTime = 1800 * 1000;
 static const int64_t PictureCacheDelay = 3600 * 1000;
 static const Size MaxPictureSize = Kibibytes(256);
 
-struct SessionInfo: public RetainObject<SessionInfo> {
-    int64_t userid;
-    std::atomic_int picture;
-    char username[];
-};
-
 struct EventInfo {
     struct Key {
         const char *where;
@@ -325,6 +319,12 @@ bool PruneTokens()
         return false;
 
     return true;
+}
+
+RetainPtr<const SessionInfo> GetNormalSession(http_IO *io)
+{
+    RetainPtr<SessionInfo> session = sessions.Find(io);
+    return session;
 }
 
 void HandleUserRegister(http_IO *io)
@@ -950,7 +950,7 @@ void HandlePictureGet(http_IO *io)
     }
 }
 
-void HandlePicturePut(http_IO *io)
+void HandlePictureSave(http_IO *io)
 {
     RetainPtr<SessionInfo> session = sessions.Find(io);
 

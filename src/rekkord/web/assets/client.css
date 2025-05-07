@@ -124,13 +124,13 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     }
 }
 
-.shortcut {
-    width: 16px;
-    height: 16px;
-    padding: 2px;
-    background: var(--button_color);
-    border-radius: 6px;
-    vertical-align: middle;
+.edit {
+    background-image: url('./ui/edit.webp');
+    background-repeat: no-repeat;
+    background-size: 16px 16px;
+    background-position: center right;
+    padding-right: 24px;
+    cursor: pointer;
 }
 
 #log {

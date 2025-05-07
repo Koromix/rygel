@@ -16,11 +16,13 @@
 import asset0 from './main/logo.webp';
 import asset1 from './main/rekkord.png';
 import asset2 from './ui/anonymous.png';
+import asset3 from './ui/edit.webp';
 
 const ASSETS = {
     'main/logo': asset0,
     'main/rekkord': asset1,
     'ui/anonymous': asset2,
+    'ui/edit': asset3,
 };
 
 export { ASSETS }
