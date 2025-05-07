@@ -1145,6 +1145,7 @@ For help about those commands, type: %!..+%1 command --help%!0)",
             PruneOldFiles(gp_domain.config.tmp_directory, nullptr, true, first ? 0 : 7200 * 1000);
             PruneOldFiles(gp_domain.config.snapshot_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
             PruneOldFiles(gp_domain.config.archive_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
+            PruneOldFiles(gp_domain.config.export_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
 
             LogDebug("Prune old snapshot files");
             PruneOldFiles(gp_domain.config.snapshot_directory, nullptr, true, 3 * 86400 * 1000);

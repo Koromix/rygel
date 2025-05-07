@@ -780,7 +780,7 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
     }
 
     int fd = -1;
-    const char *tmp_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
+    const char *tmp_filename = CreateUniqueFile(gp_domain.config.export_directory, nullptr, ".tmp", io->Allocator(), &fd);
     if (!tmp_filename)
         return;
     RG_DEFER {
