@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+# Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy of
 # this software and associated documentation files (the “Software”), to deal in
@@ -66,7 +66,7 @@ def simplify(word):
     return word
 
 def write_dict_header(words, f):
-    f.write("""// Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+    f.write("""// Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of
 // this software and associated documentation files (the “Software”), to deal in

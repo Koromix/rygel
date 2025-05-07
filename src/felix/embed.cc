@@ -1,4 +1,4 @@
-// Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+// Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ namespace RG {
 // For simplicity, I've replicated the required data structures from libcc
 // and packer.hh directly below. Don't forget to keep them in sync.
 static const char *const CodePrefix =
-R"(// Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+R"(// Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of
 // this software and associated documentation files (the “Software”), to deal in

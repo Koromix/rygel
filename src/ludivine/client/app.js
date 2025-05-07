@@ -1,4 +1,4 @@
-// Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+// Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -664,7 +664,7 @@ function renderApp(el, fullscreen) {
 
             <footer>
                 <div style="text-align: right;">
-                    ${ENV.title} © 2024
+                    ${ENV.title} © 2025
                     <a class="legal" href="/mentions">Mentions légales</a>
                 </div>
                 <img src=${ASSETS['main/footer']} alt="" width="79" height="64">

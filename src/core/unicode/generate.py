@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+# Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of
 # this software and associated documentation files (the “Software”), to deal in
@@ -30,7 +30,7 @@ from collections import namedtuple
 
 DEFAULT_URL = 'https://unicode.org/Public/16.0.0'
 
-LICENSE_HEADER = """// Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+LICENSE_HEADER = """// Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of
 // this software and associated documentation files (the “Software”), to deal in

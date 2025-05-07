@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+// Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const HEADER = `// Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+const HEADER = `// Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
