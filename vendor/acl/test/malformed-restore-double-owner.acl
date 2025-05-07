@@ -1,8 +1,0 @@
-# file: tmp
-# owner: USER
-# owner: USER
-# group: GROUP
-user::rwx
-group::rwx
-other::rwx
-

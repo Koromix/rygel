@@ -1,2 +1,0 @@
-dist_man_MANS += \
-	man/man5/acl.5

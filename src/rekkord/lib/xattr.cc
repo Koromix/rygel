@@ -18,7 +18,6 @@
 
 #if defined(__linux__)
     #include <sys/xattr.h>
-    #include "vendor/acl/include/libacl.h"
 #elif defined(__FreeBSD__)
     #include <sys/acl.h>
     #include <sys/types.h>
@@ -29,55 +28,192 @@ namespace RG {
 
 #if defined(__linux__)
 
-static Span<const char> ReadACLs(int fd, const char *filename, Allocator *alloc)
+static const char *AclAccessAttribute = "system.posix_acl_access";
+static const char *AclDefaultAttribute = "system.posix_acl_default";
+static const int AclVersion = 2;
+
+struct AclHeader {
+    uint32_t version;
+};
+static_assert(RG_SIZE(AclHeader) == 4);
+
+struct AclEntry {
+    uint16_t tag;
+    uint16_t perm;
+    uint32_t id;
+};
+static_assert(RG_SIZE(AclEntry) == 8);
+
+enum class AclPermission {
+    Read = 4,
+    Write = 2,
+    Execute = 1
+};
+
+enum class AclTag {
+    Undefined = 0,
+    UserObj = 1,
+    User = 2,
+    GroupObj = 4,
+    Group = 8,
+    Mask = 16,
+    Other = 32
+};
+
+static FmtArg FormatPermissions(uint16_t perm)
 {
-    acl_t acl = (fd >= 0) ? acl_get_fd(fd)
-                          : acl_get_file(filename, ACL_TYPE_ACCESS);
-    if (!acl) {
-        LogError("Failed to open ACL entries for '%1': %2", filename, strerror(errno));
-        return {};
-    }
-    RG_DEFER { acl_free(acl); };
+    FmtArg arg = {};
 
-    if (!acl_equiv_mode(acl, nullptr))
-        return {};
+    arg.type = FmtType::Buffer;
+    arg.u.buf[0] = (perm & (int)AclPermission::Read) ? 'r' : '-';
+    arg.u.buf[1] = (perm & (int)AclPermission::Write) ? 'w' : '-';
+    arg.u.buf[2] = (perm & (int)AclPermission::Execute) ? 'x' : '-';
+    arg.u.buf[3] = 0;
 
-    char *str = acl_to_any_text(acl, nullptr, '\n', TEXT_NUMERIC_IDS);
-    if (!str) {
-        LogError("Failed to read ACL entries for '%1': %2", filename, strerror(errno));
-        return {};
-    }
-    RG_DEFER { acl_free(str); };
-
-    Span<const char> copy = DuplicateString(str, alloc).ptr;
-    return copy;
+    return arg;
 }
 
-static bool WriteACLs(int fd, const char *filename, Span<const char> str)
+static Span<const char> FormatACLs(const char *filename, Span<const uint8_t> raw, Allocator *alloc)
 {
-    char buf[32768];
-    CopyString(str, buf);
+    HeapArray<char> str(alloc);
 
-    acl_t acl = acl_from_text(buf);
-    if (!acl) {
-        LogError("Failed to decode ACL string for '%1': %2", filename, strerror(errno));
+    // Check size and header
+    {
+        if (raw.len < RG_SIZE(AclHeader) || raw.len % RG_SIZE(AclEntry) != RG_SIZE(AclHeader)) {
+            LogError("Invalid ACL attribute size in '%1'", filename);
+            return {};
+        }
+
+        AclHeader header = *(const AclHeader *)raw.ptr;
+
+        header.version = LittleEndian(header.version);
+
+        if (header.version != AclVersion) {
+            LogError("Unsupported ACL version in '%1'", filename);
+            return {};
+        }
+    }
+
+    for (Size offset = RG_SIZE(AclHeader); offset < raw.len; offset += RG_SIZE(AclEntry)) {
+        AclEntry entry = *(const AclEntry *)(raw.ptr + offset);
+
+        entry.tag = LittleEndian(entry.tag);
+        entry.perm = LittleEndian(entry.perm);
+        entry.id = LittleEndian(entry.id);
+
+        switch (entry.tag) {
+            case (int)AclTag::UserObj: { Fmt(&str, "user::%1\n", FormatPermissions(entry.perm)); } break;
+            case (int)AclTag::User: { Fmt(&str, "user:%1:%2\n", entry.id, FormatPermissions(entry.perm)); } break;
+            case (int)AclTag::GroupObj: { Fmt(&str, "group::%1\n", FormatPermissions(entry.perm)); } break;
+            case (int)AclTag::Group: { Fmt(&str, "group:%1:%2\n", entry.id, FormatPermissions(entry.perm)); } break;
+            case (int)AclTag::Mask: { Fmt(&str, "mask::%1\n", FormatPermissions(entry.perm)); } break;
+            case (int)AclTag::Other: { Fmt(&str, "other::%1\n", FormatPermissions(entry.perm)); } break;
+
+            default: continue;
+        }
+    }
+
+    // Strip last LF byte
+    str.len = std::max((Size)0, str.len - 1);
+
+    return str.TrimAndLeak();
+}
+
+static bool ParsePermissions(Span<const char> str, uint16_t *out_perm)
+{
+    if (!str.len) {
+        LogError("Invalid empty permission set");
         return false;
     }
-    RG_DEFER { acl_free(acl); };
 
-    if (fd >= 0) {
-        if (acl_set_fd(fd, acl) < 0) {
-            LogError("Failed to set ACL for '%1': %2", filename, strerror(errno));
-            return false;
-        }
-    } else {
-        if (acl_set_file(filename, ACL_TYPE_ACCESS, acl) < 0) {
-            LogError("Failed to set ACL for '%1': %2", filename, strerror(errno));
-            return false;
+    uint16_t perm = 0;
+
+    for (char c: str) {
+        switch (c) {
+            case 'r': { perm |= (int)AclPermission::Read; } break;
+            case 'w': { perm |= (int)AclPermission::Write; } break;
+            case 'x': { perm |= (int)AclPermission::Execute; } break;
+            case '-': {} break;
+
+            default: {
+                LogError("Invalid permission set '%1'", str);
+                return false;
+            } break;
         }
     }
 
+    *out_perm = perm;
     return true;
+}
+
+static Size ParseACLs(Span<const char> str, Span<uint8_t> out_buf)
+{
+    RG_ASSERT(out_buf.len >= RG_SIZE(AclHeader));
+
+    Size len = 0;
+
+    // Append header
+    {
+        AclHeader header = {};
+        header.version = LittleEndian(AclVersion);
+
+        MemCpy(out_buf.ptr, &header, RG_SIZE(header));
+        len += RG_SIZE(header);
+
+        out_buf.ptr += RG_SIZE(header);
+        out_buf.len -= RG_SIZE(header);
+    }
+
+    // Parse entries
+    while (str.len) {
+        Span<const char> line = TrimStr(SplitStr(str, '\n', &str));
+
+        if (!line.len)
+            continue;
+        if (line[0] == '#')
+            continue;
+
+        AclEntry entry = {};
+
+        Span<const char> tag = TrimStrRight(SplitStr(line, ':', &line));
+        Span<const char> id = TrimStr(SplitStr(line, ':', &line));
+        Span<const char> perm = TrimStrLeft(line);
+
+        if (TestStr(tag, "u") || TestStr(tag, "user")) {
+            entry.tag = id.len ? (int)AclTag::User : (int)AclTag::UserObj;
+        } else if (TestStr(tag, "g") || TestStr(tag, "group")) {
+            entry.tag = id.len ? (int)AclTag::Group : (int)AclTag::GroupObj;
+        } else if (TestStr(tag, "m") || TestStr(tag, "mask")) {
+            entry.tag = (int)AclTag::Mask;
+        } else if (TestStr(tag, "o") || TestStr(tag, "other")) {
+            entry.tag = (int)AclTag::Other;
+        } else {
+            LogError("Invalid ACL tag '%1'", tag);
+            return -1;
+        }
+
+        if (id.len && !ParseInt(id, &entry.id))
+            return -1;
+        if (!ParsePermissions(perm, &entry.perm))
+            return -1;
+
+        entry.tag = LittleEndian(entry.tag);
+        entry.id = LittleEndian(entry.id);
+        entry.perm = LittleEndian(entry.perm);
+
+        if (out_buf.len < RG_SIZE(entry)) {
+            LogError("Excessive POSIX ACL size");
+            return -1;
+        }
+
+        MemCpy(out_buf.ptr, &entry, RG_SIZE(entry));
+        len += RG_SIZE(entry);
+
+        out_buf.ptr += RG_SIZE(entry);
+        out_buf.len -= RG_SIZE(entry);
+    }
+
+    return len;
 }
 
 static Size ReadAttribute(int fd, const char *filename, const char *key, HeapArray<uint8_t> *out_value)
@@ -118,13 +254,6 @@ bool ReadXAttributes(int fd, const char *filename, Allocator *alloc, HeapArray<X
 {
     RG_DEFER_NC(err_guard, len = out_xattrs->len) { out_xattrs->RemoveFrom(len); };
 
-    Span<const char> acls = ReadACLs(fd, filename, alloc);
-
-    if (acls.len) {
-        XAttrInfo xattr = { "rekkord.acl1", acls.As<uint8_t>() };
-        out_xattrs->Append(xattr);
-    }
-
     HeapArray<char> list(alloc);
     {
         Size size = Kibibytes(4);
@@ -157,15 +286,27 @@ retry:
         // Prepare next iteration
         offset += key.len + 1;
 
-        // Skip ACL xattrs
-        if (StartsWith(key, "system."))
-            continue;
-
         HeapArray<uint8_t> value(alloc);
         Size len = ReadAttribute(fd, filename, key.ptr, &value);
 
         if (len < 0)
             continue;
+
+        if (TestStr(key, AclAccessAttribute)) {
+            Span<const char> acls = FormatACLs(filename, value, alloc);
+
+            if (acls.len) {
+                XAttrInfo xattr = { "rekkord.acl1", acls.As<uint8_t>() };
+                out_xattrs->Append(xattr);
+            }
+
+            continue;
+        } else if (TestStr(key, AclDefaultAttribute)) {
+            // XXX: Handle default ACL
+
+            LogDebug("Default ACLs are not supported yet");
+            continue;
+        }
 
         xattr.key = key.ptr;
         xattr.value = value.TrimAndLeak();
@@ -183,10 +324,22 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
 {
     bool success = true;
 
-    for (const XAttrInfo &xattr: xattrs) {
+    // Hold transformed/parsed values (such as ACL)
+    uint8_t buf[16384];
+
+    for (XAttrInfo xattr: xattrs) {
         if (TestStr(xattr.key, "rekkord.acl1")) {
-            success &= WriteACLs(fd, filename, xattr.value.As<char>());
-            continue;
+            Size len = ParseACLs(xattr.value.As<const char>(), buf);
+
+            if (len < 0) {
+                success = false;
+                continue;
+            }
+            if (!len)
+                continue;
+
+            xattr.key = AclAccessAttribute;
+            xattr.value = MakeSpan(buf, len);
         }
 
         int ret = (fd >= 0) ? fsetxattr(fd, xattr.key, xattr.value.ptr, xattr.value.len, 0)

@@ -1,3 +1,0 @@
-include man/man1/Makemodule.am
-include man/man3/Makemodule.am
-include man/man5/Makemodule.am

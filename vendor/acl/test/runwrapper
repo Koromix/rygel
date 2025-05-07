@@ -1,7 +1,0 @@
-#!/bin/bash
-
-if [ -e "$PWD/.libs/libtestlookup.so" ]; then
-	export LD_PRELOAD="$PWD/.libs/libtestlookup.so"
-fi
-
-"${srcdir:-${PWD}}"/test/run "$@"
