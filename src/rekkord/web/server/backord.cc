@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "config.hh"
 #include "database.hh"
-#include "rekkow.hh"
+#include "backord.hh"
 #include "repository.hh"
 #include "user.hh"
 #include "src/core/sandbox/sandbox.hh"
@@ -429,7 +429,7 @@ int Main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *config_filename = "rekkow.ini";
+    const char *config_filename = "backord.ini";
     bool sandbox = false;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -469,7 +469,7 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
-                    config_filename = Fmt(&temp_alloc, "%1%/rekkow.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
+                    config_filename = Fmt(&temp_alloc, "%1%/backord.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
                 } else {
                     config_filename = opt.current_value;
                 }

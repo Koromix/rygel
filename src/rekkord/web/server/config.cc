@@ -108,7 +108,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
     // Default values
     if (!config.database_filename) {
-        config.database_filename = NormalizePath("rekkow.db", root_directory, &config.str_alloc).ptr;
+        config.database_filename = NormalizePath("backord.db", root_directory, &config.str_alloc).ptr;
     }
     if (!config.tmp_directory) {
         config.tmp_directory = NormalizePath("tmp", root_directory, &config.str_alloc).ptr;
