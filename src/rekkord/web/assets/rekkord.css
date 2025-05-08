@@ -28,7 +28,7 @@ html {
     --small_height: 70px;
 }
 
-body { font-size: 15px; }
+body { font-size: 14px; }
 
 :is(main, dialog) a { text-decoration: underline; }
 :is(main, dialog) a:hover { color: #26346c; }

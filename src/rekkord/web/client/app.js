@@ -654,7 +654,7 @@ async function configureRepository(repo) {
                         <div style="flex: 1;"></div>
                     ` : ''}
                     <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
-                    <button type="submit">${ptr != null ? 'Edit' : 'Create'}</button>
+                    <button type="submit">${ptr != null ? 'Save' : 'Create'}</button>
                 </div>
             `
         },

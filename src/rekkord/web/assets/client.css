@@ -96,21 +96,47 @@ main.dialog {
 .actions > a { font-size: 0.9em; }
 p + .actions { margin-top: 2em; }
 
-button.confirm { --button_color: #2d8261; }
-button.secondary { --button_color: var(--bar_color); }
-button.secondary.active { color: white !important; }
+button { font-weight: normal !important; }
+button.secondary {
+    background: #ddd;
+    border: 1px solid #ddd;
+    color: black;
+}
+button.secondary:not(.insist) > img { filter: none; }
+button.danger {
+    background: #d33410;
+    border-color: #d33410;
+    --color: white;
+    color: var(--color);
+}
 button.insist {
-    --button_color: #d33410 !important;
+    background: #d33410 !important;
+    border-color: #d33410 !important;
     --color: white;
     color: var(--color) !important;
     transition: --color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
-button.small { font-size: 0.7em; }
+button.danger.insist {
+    background: #951a0b !important;
+    border-color: #951a0b !important;
+}
+button.small {
+    background: #ddd;
+    border: 1px solid #ddd;
+    color: black;
+    font-size: 0.7em;
+}
 button.small > img {
+    top: 2px;
     width: 12px;
     height: 12px;
 }
-button:is(.secondary, .small) { font-weight: normal !important; }
+button.small:not(.insist) > img { filter: none; }
+button.active { filter: invert(100%); }
+button:disabled {
+    filter: saturate(0%) contrast(50%);
+    cursor: not-allowed;
+}
 
 button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 @keyframes highlight {
@@ -299,14 +325,27 @@ form {
         gap: 0.71em;
     }
 
+    & .section {
+        display: flex;
+        margin-bottom: 6px;
+        padding-bottom: 6px;
+        font-weight: bold;
+        color: #525461;
+        text-align: left;
+        border-bottom: 1px solid #ededf0;
+        align-items: end;
+    }
+    & * + .section { margin-top: 12px; }
+
     & :is(label:not([for]), .widget) {
         display: flex;
-        flex-direction: column;
-        gap: 0.6em;
-        align-items: start;
+        gap: 0.43em;
+        align-items: center;
+        height: 2em;
+
+        & > span:first-child { width: 180px; }
     }
     & * + :is(label, .widget) { margin-top: 1em; }
-    & :is(label, .widget) > :is(input, textarea, select, div) { margin-left: 1em !important; }
     & label:empty { display: none; }
 
     & .widget.annotate {
