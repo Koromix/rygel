@@ -764,14 +764,20 @@ const Net = new function() {
         return json;
     };
 
-    this.post = async function(url, obj = null, options = {}) {
+    this.post = async function(url, body = null, options = {}) {
+        if (body != null &&
+                !(body instanceof Blob) &&
+                !(body instanceof ArrayBuffer) &&
+                !ArrayBuffer.isView(body))
+            body = JSON.stringify(body);
+
         options = Object.assign({}, options, {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHTTPRequest',
                 'Content-Type': 'application/json'
             },
-            body: (obj != null) ? JSON.stringify(obj) : null
+            body: body
         });
 
         let response = await self.fetch(url, options);

@@ -754,10 +754,10 @@ async function changePicture() {
 
     await cropper.run(current, async blob => {
         if (blob != null) {
-            let json = await Net.put('/api/picture/save', blob);
+            let json = await Net.post('/api/picture/save', blob);
             session.picture = json.picture;
         } else {
-            let json = await Net.delete('/api/picture/delete');
+            let json = await Net.post('/api/picture/delete');
             session.picture = json.picture;
         }
     });
