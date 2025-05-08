@@ -1044,14 +1044,14 @@ void HandlePictureSave(http_IO *io)
             return false;
         }
 
+        session->picture++;
+
         return true;
     });
     if (!success)
         return;
 
-    int picture = ++session->picture;
-
-    const char *response = Fmt(io->Allocator(), "{ \"picture\": %1 }", picture).ptr;
+    const char *response = Fmt(io->Allocator(), "{ \"picture\": %1 }", session->picture.load()).ptr;
     io->SendText(200, response, "application/json");
 }
 
@@ -1065,12 +1065,19 @@ void HandlePictureDelete(http_IO *io)
         return;
     }
 
-    if (!db.Run("UPDATE users SET picture = NULL, version = 0 WHERE id = ?1", session->userid))
+    bool success = db.Transaction([&]() {
+        if (!db.Run("UPDATE users SET picture = NULL, version = version + 1 WHERE id = ?1", session->userid))
+            return false;
+
+        session->picture++;
+
+        return true;
+    });
+    if (!success)
         return;
 
-    session->picture = 0;
-
-    io->SendText(200, "{ \"picture\": 0 }", "application/json");
+    const char *response = Fmt(io->Allocator(), "{ \"picture\": %1 }", session->picture.load()).ptr;
+    io->SendText(200, response, "application/json");
 }
 
 }
