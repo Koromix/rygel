@@ -22,6 +22,19 @@
 
 namespace RG {
 
+struct DefaultUser {
+    const char *title;
+    const char *username;
+    rk_UserRole role;
+};
+
+static const DefaultUser DefaultUsers[] = {
+    { "Admin", "admin", rk_UserRole::Admin },
+    { "Read-write", "data", rk_UserRole::ReadWrite },
+    { "Write-only", "write", rk_UserRole::WriteOnly },
+    { "Log-only", "log", rk_UserRole::LogOnly }
+};
+
 static bool GeneratePassword(Span<char> out_pwd)
 {
     RG_ASSERT(out_pwd.len >= 33);
@@ -42,9 +55,6 @@ int RunInit(Span<const char *> arguments)
     // Options
     rk_Config config;
     bool create_users = true;
-    const char *admin_pwd = nullptr;
-    const char *data_pwd = nullptr;
-    const char *write_pwd = nullptr;
     const char *key_filename = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -58,9 +68,6 @@ Options:
     %!..+-R, --repository filename%!0      Set repository URL
 
         %!..+--skip_users%!0               Omit default users
-        %!..+--admin_password password%!0  Set admin user password manually
-        %!..+--data_password password%!0   Set data user password manually
-        %!..+--write_password password%!0  Set write user password manually
 
     %!..+-K, --key_file filename%!0        Set explicit master key export file)", FelixTarget);
     };
@@ -83,12 +90,6 @@ Options:
                     return 1;
             } else if (opt.Test("--skip_users")) {
                 create_users = false;
-            } else if (opt.Test("--admin_password", OptionType::Value)) {
-                admin_pwd = opt.current_value;
-            } else if (opt.Test("--data_password", OptionType::Value)) {
-                data_pwd = opt.current_value;
-            } else if (opt.Test("--write_password", OptionType::Value)) {
-                write_pwd = opt.current_value;
             } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
                 key_filename = opt.current_value;
             } else {
@@ -126,58 +127,34 @@ Options:
         return 1;
     }
 
-    bool random_admin_pwd = false;
-    bool random_data_pwd = false;
-    bool random_write_pwd = false;
+    LocalArray<rk_UserInfo, RG_LEN(DefaultUsers)> users;
+    LocalArray<bool, RG_LEN(DefaultUsers)> random_pwds;
 
     // Generate repository passwords
     if (create_users) {
-        if (!admin_pwd) {
-            admin_pwd = Prompt("Admin password (leave empty to autogenerate): ", nullptr, "*", &temp_alloc);
-            if (!admin_pwd)
-                return 1;
+        for (Size i = 0; i < RG_LEN(DefaultUsers); i++) {
+            const DefaultUser &def = DefaultUsers[i];
 
-            if (!admin_pwd[0]) {
+            char prompt[256];
+            Fmt(prompt, "%1 password (leave empty to autogenerate): ", def.title);
+
+            const char *pwd = Prompt(prompt, nullptr, "*", &temp_alloc);
+            if (!pwd)
+                return 1;
+            bool random = false;
+
+            if (!pwd[0]) {
                 Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
                 if (!GeneratePassword(buf))
                    return 1;
 
-                admin_pwd = buf.ptr;
-                random_admin_pwd = true;
+                pwd = buf.ptr;
+                random = true;
             }
+
+            users.Append({ def.username, def.role, pwd });
+            random_pwds.Append(random);
         }
-        if (!data_pwd) {
-            data_pwd = Prompt("Read-write password (leave empty to autogenerate): ", nullptr, "*", &temp_alloc);
-            if (!data_pwd)
-                return 1;
-
-            if (!data_pwd[0]) {
-                Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
-                if (!GeneratePassword(buf))
-                   return 1;
-
-                data_pwd = buf.ptr;
-                random_data_pwd = true;
-            }
-        }
-        if (!write_pwd) {
-            write_pwd = Prompt("Write-only password (leave empty to autogenerate): ", nullptr, "*", &temp_alloc);
-            if (!write_pwd)
-                return 1;
-
-            if (!write_pwd[0]) {
-                Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
-                if (!GeneratePassword(buf))
-                   return 1;
-
-                write_pwd = buf.ptr;
-                random_write_pwd = true;
-            }
-        }
-    } else {
-        admin_pwd = nullptr;
-        data_pwd = nullptr;
-        write_pwd = nullptr;
     }
 
     Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
@@ -186,36 +163,27 @@ Options:
     randombytes_buf(mkey.ptr, mkey.len);
 
     LogInfo("Initializing...");
-    {
-        LocalArray<rk_UserInfo, 8> users;
-
-        if (create_users) {
-            users.Append({ "admin", rk_UserRole::Admin, admin_pwd });
-            users.Append({ "data", rk_UserRole::ReadWrite, data_pwd });
-            users.Append({ "write", rk_UserRole::WriteOnly, write_pwd });
-        }
-
-        if (!disk->Init(mkey, users))
-            return 1;
-    }
+    if (!disk->Init(mkey, users))
+        return 1;
     LogInfo();
 
-    if (create_users) {
-        if (random_admin_pwd) {
-            LogInfo("Default admin user password: %!..+%1%!0", admin_pwd);
-        } else {
-            LogInfo("Default admin user password: %!D..(hidden)%!0");
+    if (users.len) {
+        int align = 0;
+
+        for (const rk_UserInfo &user: users) {
+            align = std::max(align, (int)strlen(user.username));
         }
-        if (random_data_pwd) {
-            LogInfo("         data user password: %!..+%1%!0", data_pwd);
-        } else {
-            LogInfo("         data user password: %!D..(hidden)%!0");
+
+        for (Size i = 0; i < users.len; i++) {
+            const rk_UserInfo &user = users[i];
+
+            if (random_pwds[i]) {
+                LogInfo("%1 %2 user password: %!..+%3%!0", i ? "       " : "Default", FmtArg(user.username).Pad(-align), user.pwd);
+            } else {
+                LogInfo("%1 %2 user password: %!D..(hidden)%!0", i ? "       " : "Default", FmtArg(user.username).Pad(-align));
+            }
         }
-        if (random_write_pwd) {
-            LogInfo("        write user password: %!..+%1%!0", write_pwd);
-        } else {
-            LogInfo("        write user password: %!D..(hidden)%!0");
-        }
+
         LogInfo();
     }
 
