@@ -22,17 +22,11 @@
 
 namespace RG {
 
-struct DefaultUser {
-    const char *title;
-    const char *username;
-    rk_UserRole role;
-};
-
-static const DefaultUser DefaultUsers[] = {
-    { "Admin", "admin", rk_UserRole::Admin },
-    { "Read-write", "data", rk_UserRole::ReadWrite },
-    { "Write-only", "write", rk_UserRole::WriteOnly },
-    { "Log-only", "log", rk_UserRole::LogOnly }
+static const rk_UserInfo DefaultUsers[] = {
+    { "admin", rk_UserRole::Admin, nullptr },
+    { "data", rk_UserRole::ReadWrite, nullptr },
+    { "write", rk_UserRole::WriteOnly, nullptr },
+    { "log", rk_UserRole::LogOnly, nullptr }
 };
 
 static bool GeneratePassword(Span<char> out_pwd)
@@ -133,26 +127,26 @@ Options:
     // Generate repository passwords
     if (create_users) {
         for (Size i = 0; i < RG_LEN(DefaultUsers); i++) {
-            const DefaultUser &def = DefaultUsers[i];
-
-            char prompt[256];
-            Fmt(prompt, "%1 password (leave empty to autogenerate): ", def.title);
-
-            const char *pwd = Prompt(prompt, nullptr, "*", &temp_alloc);
-            if (!pwd)
-                return 1;
+            rk_UserInfo user = DefaultUsers[i];
             bool random = false;
 
-            if (!pwd[0]) {
+            char prompt[256];
+            Fmt(prompt, "User '%1' password (leave empty to autogenerate): ", user.username);
+
+            user.pwd = Prompt(prompt, nullptr, "*", &temp_alloc);
+            if (!user.pwd)
+                return 1;
+
+            if (!user.pwd[0]) {
                 Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
                 if (!GeneratePassword(buf))
                    return 1;
 
-                pwd = buf.ptr;
+                user.pwd = buf.ptr;
                 random = true;
             }
 
-            users.Append({ def.username, def.role, pwd });
+            users.Append(user);
             random_pwds.Append(random);
         }
     }
