@@ -122,13 +122,12 @@ Options:
     }
 
     LocalArray<rk_UserInfo, RG_LEN(DefaultUsers)> users;
-    LocalArray<bool, RG_LEN(DefaultUsers)> random_pwds;
+    LocalArray<bool, RG_LEN(DefaultUsers)> show_pwds;
 
     // Generate repository passwords
     if (create_users) {
-        for (Size i = 0; i < RG_LEN(DefaultUsers); i++) {
-            rk_UserInfo user = DefaultUsers[i];
-            bool random = false;
+        for (rk_UserInfo user: DefaultUsers) {
+            bool show_pwd = false;
 
             char prompt[256];
             Fmt(prompt, "User '%1' password (leave empty to autogenerate): ", user.username);
@@ -143,11 +142,11 @@ Options:
                    return 1;
 
                 user.pwd = buf.ptr;
-                random = true;
+                show_pwd = true;
             }
 
             users.Append(user);
-            random_pwds.Append(random);
+            show_pwds.Append(show_pwd);
         }
     }
 
@@ -171,7 +170,7 @@ Options:
         for (Size i = 0; i < users.len; i++) {
             const rk_UserInfo &user = users[i];
 
-            if (random_pwds[i]) {
+            if (show_pwds[i]) {
                 LogInfo("%1 %2 user password: %!..+%3%!0", i ? "       " : "Default", FmtArg(user.username).Pad(-align), user.pwd);
             } else {
                 LogInfo("%1 %2 user password: %!D..(hidden)%!0", i ? "       " : "Default", FmtArg(user.username).Pad(-align));
