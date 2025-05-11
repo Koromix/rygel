@@ -6,6 +6,17 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.56
+
+*Released on 2025-05-11*
+
+- Create new default log user in `rekkord init`
+- Fix inaccurate `rekkord restore` progress with small files
+- Report number of restored entries
+- Make *--dry_run* behave closer to normal restore (except it does not write to disk)
+- Accept SSH usernames with capitals
+- Replace libacl with handmade code for Linux
+
 ### Rekkord 0.55
 
 *Released on 2025-05-06*
