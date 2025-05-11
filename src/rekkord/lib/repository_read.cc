@@ -71,9 +71,12 @@ class GetContext {
     rk_Disk *disk;
     rk_GetSettings settings;
 
-    ProgressHandle *progress;
+    ProgressHandle pg_entries { "Entries" };
+    ProgressHandle pg_size { "Size" };
 
+    int64_t total_entries = 0;
     int64_t total_size = 0;
+    std::atomic_int64_t restored_entries = 0;
     std::atomic_int64_t restored_size = 0;
 
     Async tasks;
@@ -81,7 +84,7 @@ class GetContext {
     std::atomic<int64_t> stat_size { 0 };
 
 public:
-    GetContext(rk_Disk *disk, const rk_GetSettings &settings, ProgressHandle *progress, int64_t total);
+    GetContext(rk_Disk *disk, const rk_GetSettings &settings, int64_t entries, int64_t size);
 
     bool ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const char *dest_dirname);
     bool ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const EntryInfo &dest);
@@ -95,11 +98,11 @@ public:
 private:
     bool CleanDirectory(Span<const char> dirname, const HashSet<Span<const char>> &keep);
 
-    void MakeProgress(int64_t delta);
+    void MakeProgress(int64_t entries, int64_t size);
 };
 
-GetContext::GetContext(rk_Disk *disk, const rk_GetSettings &settings, ProgressHandle *progress, int64_t total)
-    : disk(disk), settings(settings), progress(progress), total_size(total), tasks(disk->GetAsync())
+GetContext::GetContext(rk_Disk *disk, const rk_GetSettings &settings, int64_t entries, int64_t size)
+    : disk(disk), settings(settings), total_entries(entries), total_size(size), tasks(disk->GetAsync())
 {
 }
 
@@ -504,6 +507,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                         return false;
                     if (!ExtractEntries(entry_blob, false, entry))
                         return false;
+
+                    MakeProgress(1, 0);
                 } break;
 
                 case (int)RawFile::Kind::File: {
@@ -565,6 +570,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                             }
                         }
                     }
+
+                    MakeProgress(1, 0);
                 } break;
 
                 default: { RG_UNREACHABLE(); } break;
@@ -659,7 +666,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                         return false;
                     }
 
-                    MakeProgress(chunk.len);
+                    MakeProgress(0, chunk.len);
 
                     return true;
                 });
@@ -681,6 +688,8 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                     return -1;
                 }
             }
+
+            MakeProgress(1, 0);
         } break;
 
         case rk_BlobType::Chunk: {
@@ -694,7 +703,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                 return -1;
             }
 
-            MakeProgress(file_blob.len);
+            MakeProgress(1, file_blob.len);
         } break;
 
         case rk_BlobType::Directory1:
@@ -759,12 +768,14 @@ bool GetContext::CleanDirectory(Span<const char> dirname, const HashSet<Span<con
     return clean_directory(copy);
 }
 
-void GetContext::MakeProgress(int64_t delta)
+void GetContext::MakeProgress(int64_t entries, int64_t size)
 {
-    int64_t restored = restored_size.fetch_add(delta, std::memory_order_relaxed) + delta;
+    entries = restored_entries.fetch_add(entries, std::memory_order_relaxed) + entries;
+    size = restored_size.fetch_add(size, std::memory_order_relaxed) + size;
 
     if (!settings.verbose) {
-        progress->SetFmt(restored, total_size, "%1 / %2", FmtDiskSize(restored), FmtDiskSize(total_size));
+        pg_entries.SetFmt(entries, total_entries, "%1 / %2 entries", entries, total_entries);
+        pg_size.SetFmt(size, total_size, "%1 / %2", FmtDiskSize(size), FmtDiskSize(total_size));
     }
 }
 
@@ -801,8 +812,7 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
                 LogInfo("Restore file %!..+%1%!0", hash);
             }
 
-            ProgressHandle progress("Restore");
-            GetContext get(disk, settings, &progress, file_size);
+            GetContext get(disk, settings, 1, file_size);
 
             int fd = get.GetFile(hash, type, blob, dest_path);
             if (!settings.fake && fd < 0)
@@ -835,14 +845,15 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             }
 
             DirectoryHeader *header = (DirectoryHeader *)blob.ptr;
-            int64_t total = LittleEndian(header->size);
+            int64_t entries = LittleEndian(header->entries);
+            int64_t size = LittleEndian(header->size);
 
             if (settings.verbose) {
                 LogInfo("Restore directory %!..+%1%!0", hash);
             }
 
             ProgressHandle progress("Restore");
-            GetContext get(disk, settings, &progress, total);
+            GetContext get(disk, settings, entries, size);
 
             if (!get.ExtractEntries(blob, false, dest_path))
                 return false;
@@ -877,18 +888,19 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             }
 
             DirectoryHeader *header = (DirectoryHeader *)(blob.ptr + RG_SIZE(SnapshotHeader2));
-            int64_t total = LittleEndian(header->size);
+            int64_t entries = LittleEndian(header->entries);
+            int64_t size = LittleEndian(header->size);
 
             if (settings.verbose) {
                 LogInfo("Restore snapshot %!..+%1%!0", hash);
             }
 
             ProgressHandle progress("Restore");
-            GetContext get(disk, settings, &progress, total);
+            GetContext get(disk, settings, entries, size);
 
-            Span<uint8_t> entries = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
+            Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
 
-            if (!get.ExtractEntries(entries, true, dest_path))
+            if (!get.ExtractEntries(dir, true, dest_path))
                 return false;
             if (!get.Sync())
                 return false;
@@ -1006,23 +1018,23 @@ class ListContext {
     rk_Disk *disk;
     rk_ListSettings settings;
 
-    ProgressHandle *progress;
+    ProgressHandle pg_entries { "Entries" };
 
     int64_t total_entries = 0;
     std::atomic_int64_t known_entries = 0;
 
 public:
-    ListContext(rk_Disk *disk, const rk_ListSettings &settings, ProgressHandle *progress, int64_t total);
+    ListContext(rk_Disk *disk, const rk_ListSettings &settings, int64_t entries);
 
     bool RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
                         Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
 
 private:
-    void MakeProgress(int64_t delta);
+    void MakeProgress(int64_t entries);
 };
 
-ListContext::ListContext(rk_Disk *disk, const rk_ListSettings &settings, ProgressHandle *progress, int64_t total)
-    : disk(disk), settings(settings), progress(progress), total_entries(total)
+ListContext::ListContext(rk_Disk *disk, const rk_ListSettings &settings, int64_t entries)
+    : disk(disk), settings(settings), total_entries(entries)
 {
 }
 
@@ -1154,14 +1166,14 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
     return true;
 }
 
-void ListContext::MakeProgress(int64_t delta)
+void ListContext::MakeProgress(int64_t entries)
 {
-    int64_t known = known_entries.fetch_add(delta, std::memory_order_relaxed) + delta;
+    entries = known_entries.fetch_add(entries, std::memory_order_relaxed) + entries;
 
     if (total_entries) {
-        progress->SetFmt(known, total_entries, "%1 / %2 entries", known, total_entries);
+        pg_entries.SetFmt(entries, total_entries, "%1 / %2 entries", entries, total_entries);
     } else {
-        progress->SetFmt(known, total_entries, "%1 entries", known);
+        pg_entries.SetFmt(entries, total_entries, "%1 entries", entries);
     }
 }
 
@@ -1186,10 +1198,10 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
             }
 
             DirectoryHeader *header = (DirectoryHeader *)blob.ptr;
-            int64_t total = LittleEndian(header->entries);
+            int64_t entries = LittleEndian(header->entries);
 
             ProgressHandle progress;
-            ListContext tree(disk, settings, &progress, total);
+            ListContext tree(disk, settings, entries);
 
             if (!tree.RecurseEntries(blob, false, 0, alloc, out_objects))
                 return false;
@@ -1223,10 +1235,9 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
 
             SnapshotHeader2 *header1 = (SnapshotHeader2 *)blob.ptr;
             DirectoryHeader *header2 = (DirectoryHeader *)(header1 + 1);
-            int64_t total = LittleEndian(header2->entries);
+            int64_t entries = LittleEndian(header2->entries);
 
-            ProgressHandle progress;
-            ListContext tree(disk, settings, &progress, total);
+            ListContext tree(disk, settings, entries);
 
             // Make sure snapshot channel is NUL terminated
             header1->channel[RG_SIZE(header1->channel) - 1] = 0;
@@ -1239,12 +1250,11 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
             obj->mtime = LittleEndian(header1->time);
             obj->size = LittleEndian(header1->size);
             obj->readable = true;
-
             obj->storage = LittleEndian(header1->storage);
 
-            Span<uint8_t> entries = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
+            Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
 
-            if (!tree.RecurseEntries(entries, true, 1, alloc, out_objects))
+            if (!tree.RecurseEntries(dir, true, 1, alloc, out_objects))
                 return false;
 
             // Reacquire correct pointer (array may have moved)

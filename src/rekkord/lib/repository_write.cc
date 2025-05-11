@@ -48,7 +48,7 @@ class PutContext {
     uint8_t salt32[32];
     uint64_t salt8;
 
-    ProgressHandle *progress;
+    ProgressHandle pg_stored { "Stored" };
 
     std::atomic_int64_t put_size { 0 };
     std::atomic_int64_t put_stored { 0 };
@@ -60,7 +60,7 @@ class PutContext {
     std::atomic_int big_semaphore { FileBigLimit };
 
 public:
-    PutContext(rk_Disk *disk, sq_Database *db, const rk_PutSettings &settings, ProgressHandle *progress);
+    PutContext(rk_Disk *disk, sq_Database *db, const rk_PutSettings &settings);
 
     PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash, int64_t *out_subdirs = nullptr);
     PutResult PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_size = nullptr);
@@ -70,7 +70,7 @@ public:
     int64_t GetEntries() const { return put_entries; }
 
 private:
-    void MakeProgress(int64_t delta);
+    void MakeProgress(int64_t written);
 };
 
 static void HashBlake3(rk_BlobType type, Span<const uint8_t> buf, const uint8_t salt[32], rk_Hash *out_hash)
@@ -115,8 +115,8 @@ static void PackExtended(const char *filename,  Span<const XAttrInfo> xattrs, He
     err_guard.Disable();
 }
 
-PutContext::PutContext(rk_Disk *disk, sq_Database *db, const rk_PutSettings &settings, ProgressHandle *progress)
-    : disk(disk), db(db), settings(settings), progress(progress),
+PutContext::PutContext(rk_Disk *disk, sq_Database *db, const rk_PutSettings &settings)
+    : disk(disk), db(db), settings(settings),
       dir_tasks(disk->GetAsync()), file_tasks(disk->GetAsync())
 {
     disk->MakeSalt(rk_SaltKind::BlobHash, salt32);
@@ -657,7 +657,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
 void PutContext::MakeProgress(int64_t delta)
 {
     int64_t stored = put_stored.fetch_add(delta, std::memory_order_relaxed) + delta;
-    progress->SetFmt("%1 written", FmtDiskSize(stored));
+    pg_stored.SetFmt("%1 written", FmtDiskSize(stored));
 }
 
 bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *const> filenames,
@@ -695,8 +695,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     HeapArray<uint8_t> snapshot_blob;
     snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader));
 
-    ProgressHandle progress("Store");
-    PutContext put(disk, db, settings, &progress);
+    PutContext put(disk, db, settings);
 
     // Reuse for performance
     HeapArray<XAttrInfo> xattrs;
