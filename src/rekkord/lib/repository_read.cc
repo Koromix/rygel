@@ -522,24 +522,20 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                         LogInfo("%!D..[F]%!0 %1%/%!..+%2%!0", prefix, entry.basename);
                     }
 
-                    if (settings.fake) {
-                        stat_size += entry.size;
-                        break;
-                    }
-
                     int fd = GetFile(entry.hash, entry_type, entry_blob, entry.filename.ptr);
                     if (fd < 0)
                         return false;
                     RG_DEFER { CloseDescriptor(fd); };
 
-                    // Set file metadata
-                    if (settings.restore_owner) {
-                        SetFileOwner(fd, entry.filename.ptr, entry.uid, entry.gid);
-                    }
-                    SetFileMetaData(fd, entry.filename.ptr, entry.mtime, entry.btime, entry.mode);
+                    if (!settings.fake) {
+                        if (settings.restore_owner) {
+                            SetFileOwner(fd, entry.filename.ptr, entry.uid, entry.gid);
+                        }
+                        SetFileMetaData(fd, entry.filename.ptr, entry.mtime, entry.btime, entry.mode);
 
-                    if (settings.restore_xattrs) {
-                        WriteXAttributes(fd, entry.filename.ptr, entry.xattrs);
+                        if (settings.restore_xattrs) {
+                            WriteXAttributes(fd, entry.filename.ptr, entry.xattrs);
+                        }
                     }
                 } break;
 
@@ -619,10 +615,8 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                 LogError("Malformed file blob '%1'", hash);
                 return -1;
             }
-            if (settings.fake)
-                break;
 
-            if (!ResizeFile(fd, dest_filename, file_size))
+            if (!settings.fake && !ResizeFile(fd, dest_filename, file_size))
                 return -1;
 
             Async async(&tasks);
@@ -661,7 +655,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                         LogError("Chunk size mismatch for '%1'", chunk.hash);
                         return false;
                     }
-                    if (!WriteAt(fd, dest_filename, chunk.offset, buf)) {
+                    if (!settings.fake && !WriteAt(fd, dest_filename, chunk.offset, buf)) {
                         LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
                         return false;
                     }
@@ -695,10 +689,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
         case rk_BlobType::Chunk: {
             file_size = file_blob.len;
 
-            if (settings.fake)
-                break;
-
-            if (!WriteAt(fd, dest_filename, 0, file_blob)) {
+            if (!settings.fake && !WriteAt(fd, dest_filename, 0, file_blob)) {
                 LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
                 return -1;
             }
