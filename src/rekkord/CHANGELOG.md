@@ -14,6 +14,7 @@
 - Fix inaccurate `rekkord restore` progress with small files
 - Report number of restored entries
 - Make *--dry_run* behave closer to normal restore (except it does not write to disk)
+- Support SSH key setting in base64 format
 - Accept SSH usernames with capitals
 - Replace libacl with handmade code for Linux
 
