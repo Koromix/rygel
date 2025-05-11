@@ -693,6 +693,8 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                 LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
                 return -1;
             }
+
+            MakeProgress(file_blob.len);
         } break;
 
         case rk_BlobType::Directory1:
