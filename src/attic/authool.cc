@@ -26,8 +26,8 @@ static int RunGeneratePassword(Span<const char *> arguments)
     const int MaxPasswordLength = 256;
 
     // Options
-    int length = 24;
-    const char *pattern = nullptr;
+    int length = 32;
+    const char *pattern = "l-u-d-s";
     bool check = true;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -39,6 +39,7 @@ Options:
     %!..+-l, --length length%!0            Set desired password length
                                    %!D..(default: %2)%!0
     %!..+-p, --pattern chars%!0            Set allowed/required characters, see below
+                                   %!D..(default: %3)%!0
 
         %!..+--no_check%!0                 Don't check password strength
 
@@ -58,7 +59,7 @@ Here are a few example patterns:
 
     %!..+lud%!0                            Use all characters (lower and uppercase) and digits
     %!..+l-u-s%!0                          Use non-ambiguous characters (lower and uppercase) and basic special symbols
-    %!..+d!%!0                             Use all digits and dangerous special symbols)", FelixTarget, length);
+    %!..+d!%!0                             Use all digits and dangerous special symbols)", FelixTarget, length, pattern);
     };
 
     // Parse arguments
@@ -93,51 +94,47 @@ Here are a few example patterns:
     password_buf.len = length + 1;
 
     unsigned int flags = 0;
-    if (pattern) {
-        for (Size i = 0; pattern[i]; i++) {
-            char c = pattern[i];
+    for (Size i = 0; pattern[i]; i++) {
+        char c = pattern[i];
 
-            switch (c) {
-                case 'l': {
-                    if (pattern[i + 1] == '-') {
-                        flags |= (int)pwd_GenerateFlag::LowersNoAmbi;
-                        i++;
-                    } else {
-                        flags |= (int)pwd_GenerateFlag::Lowers;
-                    }
-                } break;
-                case 'u': {
-                    if (pattern[i + 1] == '-') {
-                        flags |= (int)pwd_GenerateFlag::UppersNoAmbi;
-                        i++;
-                    } else {
-                        flags |= (int)pwd_GenerateFlag::Uppers;
-                    }
-                } break;
-                case 'd': {
-                    if (pattern[i + 1] == '-') {
-                        flags |= (int)pwd_GenerateFlag::DigitsNoAmbi;
-                        i++;
-                    } else {
-                        flags |= (int)pwd_GenerateFlag::Digits;
-                    }
-                } break;
-                case 's': { flags |= (int)pwd_GenerateFlag::Specials; } break;
-                case '!': { flags |= (int)pwd_GenerateFlag::Dangerous; } break;
+        switch (c) {
+            case 'l': {
+                if (pattern[i + 1] == '-') {
+                    flags |= (int)pwd_GenerateFlag::LowersNoAmbi;
+                    i++;
+                } else {
+                    flags |= (int)pwd_GenerateFlag::Lowers;
+                }
+            } break;
+            case 'u': {
+                if (pattern[i + 1] == '-') {
+                    flags |= (int)pwd_GenerateFlag::UppersNoAmbi;
+                    i++;
+                } else {
+                    flags |= (int)pwd_GenerateFlag::Uppers;
+                }
+            } break;
+            case 'd': {
+                if (pattern[i + 1] == '-') {
+                    flags |= (int)pwd_GenerateFlag::DigitsNoAmbi;
+                    i++;
+                } else {
+                    flags |= (int)pwd_GenerateFlag::Digits;
+                }
+            } break;
+            case 's': { flags |= (int)pwd_GenerateFlag::Specials; } break;
+            case '!': { flags |= (int)pwd_GenerateFlag::Dangerous; } break;
 
-                default: {
-                    if ((uint8_t)c < 32 || (uint8_t)c >= 128) {
-                        LogError("Illegal pattern byte 0x%1", FmtHex((uint8_t)c).Pad0(-2));
-                    } else {
-                        LogError("Unsupported pattern character '%1'", c);
-                    }
+            default: {
+                if ((uint8_t)c < 32 || (uint8_t)c >= 128) {
+                    LogError("Illegal pattern byte 0x%1", FmtHex((uint8_t)c).Pad0(-2));
+                } else {
+                    LogError("Unsupported pattern character '%1'", c);
+                }
 
-                    return 1;
-                } break;
-            }
+                return 1;
+            } break;
         }
-    } else {
-        flags = UINT_MAX;
     }
     flags = ApplyMask(flags, (int)pwd_GenerateFlag::Check, check);
 
