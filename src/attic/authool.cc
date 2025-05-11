@@ -27,7 +27,7 @@ static int RunGeneratePassword(Span<const char *> arguments)
 
     // Options
     int length = 32;
-    const char *pattern = "l-u-d-s";
+    const char *pattern = "luds";
     bool check = true;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -45,21 +45,21 @@ Options:
 
 Use a pattern to set which characters classes are present in the password:
 
-    %!..+l%!0                              Use lowercase characters
-    %!..+l-%!0                             Use non-ambiguous lowercase characters (exclude l)
-    %!..+u%!0                              Use uppercase characters
-    %!..+u-%!0                             Use non-ambiguous lowercase characters (exclude I and O)
-    %!..+d%!0                              Use digits
-    %!..+d-%!0                             Use non-ambiguous digits (exclude 1 and 0)
+    %!..+l%!0                              Use non-ambiguous lowercase characters
+    %!..+L%!0                              Use all lowercase characters (including l)
+    %!..+u%!0                              Use non-ambiguous uppercase characters
+    %!..+U%!0                              Use all lowercase characters (including I and O)
+    %!..+d%!0                              Use non-ambiguous digits
+    %!..+D%!0                              Use all digits (including 1 and 0)
     %!..+s%!0                              Use basic special symbols
     %!..+!%!0                              Use dangerous special symbols
                                    %!D..(annoying to type or to use in terminals)%!0
 
 Here are a few example patterns:
 
-    %!..+lud%!0                            Use all characters (lower and uppercase) and digits
-    %!..+l-u-s%!0                          Use non-ambiguous characters (lower and uppercase) and basic special symbols
-    %!..+d!%!0                             Use all digits and dangerous special symbols)", FelixTarget, length, pattern);
+    %!..+LUD%!0                            Use all characters (lower and uppercase) and digits
+    %!..+lus%!0                            Use non-ambiguous characters (lower and uppercase) and basic special symbols
+    %!..+D!%!0                             Use all digits and dangerous special symbols)", FelixTarget, length, pattern);
     };
 
     // Parse arguments
@@ -98,30 +98,12 @@ Here are a few example patterns:
         char c = pattern[i];
 
         switch (c) {
-            case 'l': {
-                if (pattern[i + 1] == '-') {
-                    flags |= (int)pwd_GenerateFlag::LowersNoAmbi;
-                    i++;
-                } else {
-                    flags |= (int)pwd_GenerateFlag::Lowers;
-                }
-            } break;
-            case 'u': {
-                if (pattern[i + 1] == '-') {
-                    flags |= (int)pwd_GenerateFlag::UppersNoAmbi;
-                    i++;
-                } else {
-                    flags |= (int)pwd_GenerateFlag::Uppers;
-                }
-            } break;
-            case 'd': {
-                if (pattern[i + 1] == '-') {
-                    flags |= (int)pwd_GenerateFlag::DigitsNoAmbi;
-                    i++;
-                } else {
-                    flags |= (int)pwd_GenerateFlag::Digits;
-                }
-            } break;
+            case 'l': { flags |= (int)pwd_GenerateFlag::LowersNoAmbi; } break;
+            case 'L': { flags |= (int)pwd_GenerateFlag::Lowers; } break;
+            case 'u': { flags |= (int)pwd_GenerateFlag::UppersNoAmbi; } break;
+            case 'U': { flags |= (int)pwd_GenerateFlag::Uppers; } break;
+            case 'd': { flags |= (int)pwd_GenerateFlag::DigitsNoAmbi; } break;
+            case 'D': { flags |= (int)pwd_GenerateFlag::Digits; } break;
             case 's': { flags |= (int)pwd_GenerateFlag::Specials; } break;
             case '!': { flags |= (int)pwd_GenerateFlag::Dangerous; } break;
 
