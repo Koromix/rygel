@@ -583,7 +583,7 @@ async function runDashboard() {
                                     ${!repo.checked ? 'Pending' : ''}
                                     ${repo.checked && !repo.errors ? 'Success' : ''}
                                     ${repo.errors ? html`<span style="color: red;">${repo.failed || 'Unknown error'}</span>` : ''}
-                                    ${repo.checked ? html`<br><i>${(new Date(repo.checked)).toLocaleString()}` : ''}
+                                    ${repo.checked ? html`<br><span class="sub">${(new Date(repo.checked)).toLocaleString()}</span>` : ''}
                                 </td>
                             </tr>
                         `)}
@@ -641,22 +641,19 @@ async function runRepository() {
                             <col></col>
                             <col></col>
                             <col></col>
-                            <col></col>
                         </colgroup>
                         <thead>
                             <tr>
                                 <th>Name</th>
                                 <th>Size</th>
-                                <th>Count</th>
                                 <th>Timestamp</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${cache.repository.channels.map(channel => html`
                                 <tr>
-                                    <td>${channel.name}</td>
-                                    <td style="text-align: right;">${channel.size}</td>
-                                    <td style="text-align: right;">${channel.count}</td>
+                                    <td>${channel.name} <span class="sub">(${channel.count})</span></td>
+                                    <td style="text-align: right;">${formatSize(channel.size)}</td>
                                     <td style="text-align: right;">${(new Date(channel.time)).toLocaleString()}</td>
                                 </tr>
                             `)}
@@ -667,6 +664,27 @@ async function runRepository() {
             </div>
         </div>
     `);
+}
+
+function formatSize(size) {
+    if (size >= 999950000) {
+        let value = size / 1000000000;
+        let prec = 1 + (size < 9.9995) + (size < 99.995);
+
+        return value.toFixed(prec) + ' GB';
+    } else if (size >= 999950) {
+        let value = size / 1000000;
+        let prec = 1 + (size < 9.9995) + (size < 99.995);
+
+        return value.toFixed(prec) + ' MB';
+    } else if (size >= 999.95) {
+        let value = size / 1000;
+        let prec = 1 + (size < 9.9995) + (size < 99.995);
+
+        return value.toFixed(prec) + ' kB';
+    } else {
+        return value + ' B';
+    }
 }
 
 async function configureRepository(repo) {

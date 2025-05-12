@@ -156,6 +156,14 @@ table tbody tr:hover > td {
     --color: white;
 }
 
+.sub {
+    font-size: 0.8em;
+    font-weight: normal;
+    text-transform: none;
+    font-variant: normal;
+    color: var(--color, #888);
+}
+
 #log {
     position: fixed;
     left: 50%;
