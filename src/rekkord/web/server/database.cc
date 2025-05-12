@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 3;
+const int DatabaseVersion = 4;
 
 bool MigrateDatabase(sq_Database *db)
 {
@@ -125,9 +125,59 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 3: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX repositories_un;
+
+                    ALTER TABLE repositories RENAME TO repositories_BAK;
+                    ALTER TABLE variables RENAME TO variables_BAK;
+
+                    CREATE TABLE repositories (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        owner INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                        name TEXT NOT NULL,
+                        url TEXT NOT NULL,
+                        user TEXT NOT NULL,
+                        password TEXT NOT NULL,
+                        checked INTEGER NOT NULL,
+                        failed TEXT,
+                        errors INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX repositories_un ON repositories (user, name);
+
+                    CREATE TABLE variables (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        repository INTEGER REFERENCES repositories (id) ON DELETE CASCADE,
+                        key TEXT NOT NULL,
+                        value TEXT NOT NULL
+                    );
+
+                    CREATE TABLE channels (
+                        repository INTEGER REFERENCES repositories (id) ON DELETE CASCADE,
+                        name TEXT NOT NULL,
+                        hash TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        size INTEGER NOT NULL,
+                        count INTEGER NOT NULL,
+                        ignore CHECK (ignore IN (0, 1)) NOT NULL
+                    );
+                    CREATE UNIQUE INDEX channels_rn ON channels (repository, name);
+
+                    INSERT INTO repositories (id, owner, name, url, user, password, checked, failed, errors)
+                        SELECT id, owner, name, url, user, password, 0, NULL, 0 FROM repositories_BAK;
+                    INSERT INTO variables (repository, key, value)
+                        SELECT repository, key, value FROM variables_BAK;
+
+                    DROP TABLE variables_BAK;
+                    DROP TABLE repositories_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 3);
+            static_assert(DatabaseVersion == 4);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

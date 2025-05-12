@@ -73,6 +73,16 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
                 }
+            } else if (prop.section == "Repositories") {
+                do {
+                    if (prop.key == "UpdatePeriod") {
+                        valid &= ParseDuration(prop.value, &config.update_delay);
+                    } else if (prop.key == "RetryDelay") {
+                        valid &= ParseDuration(prop.value, &config.retry_delay);
+                    } else {
+                        valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
+                    }
+                } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
                 do {
                     if (prop.key == "RequireHost") {

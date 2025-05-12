@@ -29,6 +29,9 @@ struct Config {
     const char *tmp_directory = nullptr;
     bool sync_full = false;
 
+    int64_t update_delay = 6 * 3600000;
+    int64_t retry_delay = 10 * 60000;
+
     http_Config http { 8891 };
     const char *require_host = nullptr;
 

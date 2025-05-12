@@ -22,6 +22,179 @@
 
 namespace RG {
 
+enum class OpenError {
+    FailedConnection,
+    AuthenticationError
+};
+
+static std::unique_ptr<rk_Disk> OpenRepository(const rk_Config &repo, OpenError *out_error)
+{
+    RG_ASSERT(repo.Validate(true));
+
+    std::unique_ptr<rk_Disk> disk = rk_Open(repo, false);
+
+    if (!disk) {
+        *out_error = OpenError::FailedConnection;
+        return nullptr;
+    }
+    if (!disk->Authenticate(repo.username, repo.password)) {
+        *out_error = OpenError::AuthenticationError;
+        return nullptr;
+    }
+
+    return disk;
+}
+
+static bool FillConfig(const char *url, const char *user, const char *password,
+                       const HashMap<const char *, const char *> variables, rk_Config *out_repo)
+{
+    rk_Config repo;
+
+    if (!rk_DecodeURL(url, &repo))
+        return false;
+
+    switch (repo.type) {
+        case rk_DiskType::S3:
+        case rk_DiskType::SFTP: {} break;
+
+        case rk_DiskType::Local: {
+            LogError("Unsupported URL '%1'", url);
+            return false;
+        }
+    }
+
+    repo.username = user;
+    repo.password = password;
+
+    switch (repo.type) {
+        case rk_DiskType::Local: { RG_UNREACHABLE(); } break;
+
+        case rk_DiskType::S3: {
+            repo.s3.access_id = variables.FindValue("AWS_ACCESS_KEY_ID", nullptr);
+            repo.s3.access_key = variables.FindValue("AWS_SECRET_ACCESS_KEY", nullptr);
+        } break;
+
+        case rk_DiskType::SFTP: {
+            repo.ssh.known_hosts = false;
+            repo.ssh.password = variables.FindValue("SSH_PASSWORD", nullptr);
+            repo.ssh.key = variables.FindValue("SSH_KEY", nullptr);
+            repo.ssh.fingerprint = variables.FindValue("SSH_FINGERPRINT", nullptr);
+        } break;
+    }
+
+    if (!repo.Validate(true))
+        return false;
+
+    std::swap(*out_repo, repo);
+    return true;
+}
+
+bool CheckRepositories()
+{
+    BlockAllocator temp_alloc;
+
+    int64_t now = GetUnixTime();
+
+    sq_Statement stmt;
+    if (!db.Prepare(R"(SELECT r.id, r.url, r.user, r.password, v.key, v.value
+                       FROM repositories r
+                       LEFT JOIN variables v
+                       WHERE r.checked <= ?1 + IIF(r.errors = 0, ?2, ?3)
+                       ORDER BY r.id)", &stmt, now, config.update_delay, config.retry_delay))
+        return false;
+    if (!stmt.Run())
+        return false;
+
+    Async async;
+    BucketArray<rk_Config> repositories;
+
+    while (stmt.IsRow()) {
+        rk_Config *repo = repositories.AppendDefault();
+
+        int64_t id = sqlite3_column_int64(stmt, 0);
+        const char *url = DuplicateString((const char *)sqlite3_column_text(stmt, 1), &temp_alloc).ptr;
+        const char *user = DuplicateString((const char *)sqlite3_column_text(stmt, 2), &temp_alloc).ptr;
+        const char *password = DuplicateString((const char *)sqlite3_column_text(stmt, 3), &temp_alloc).ptr;
+
+        HashMap<const char *, const char *> variables;
+        do {
+            if (sqlite3_column_int64(stmt, 0) != id)
+                break;
+            if (sqlite3_column_type(stmt, 4) == SQLITE_NULL)
+                break;
+
+            const char *key = DuplicateString((const char *)sqlite3_column_text(stmt, 4), &temp_alloc).ptr;
+            const char *value = DuplicateString((const char *)sqlite3_column_text(stmt, 5), &temp_alloc).ptr;
+
+            variables.Set(key, value);
+        } while (stmt.Step());
+
+        if (!FillConfig(url, user, password, variables, repo))
+            continue;
+
+        async.Run([=]() {
+            BlockAllocator temp_alloc;
+
+            const char *last_err = nullptr;
+
+            // Keep last error message
+            PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+                if (level == LogLevel::Error) {
+                    last_err = DuplicateString(msg, &temp_alloc).ptr;
+                }
+
+                func(level, ctx, msg);
+            });
+            RG_DEFER { PopLogFilter(); };
+
+            OpenError error;
+            std::unique_ptr<rk_Disk> disk = OpenRepository(*repo, &error);
+
+            if (!disk) {
+                db.Run(R"(UPDATE repositories SET checked = ?2,
+                                                  failed = ?3,
+                                                  errors = errors + 1
+                          WHERE id = ?1)", id, now, last_err);
+                return false;
+            }
+
+            HeapArray<rk_ChannelInfo> channels;
+            if (!rk_Channels(disk.get(), &temp_alloc, &channels)) {
+                db.Run(R"(UPDATE repositories SET checked = ?2,
+                                                  failed = ?3,
+                                                  errors = errors + 1
+                          WHERE id = ?1)", id, now, last_err);
+                return false;
+            }
+
+            for (const rk_ChannelInfo &channel: channels) {
+                char hash[128];
+                Fmt(hash, "%1", channel.hash);
+
+                if (!db.Run(R"(INSERT INTO channels (repository, name, hash, timestamp, size, count, ignore)
+                               VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)
+                               ON CONFLICT DO UPDATE SET hash = excluded.hash,
+                                                         timestamp = excluded.timestamp,
+                                                         size = excluded.size,
+                                                         count = excluded.count)",
+                            id, channel.name, hash, channel.time, channel.size, channel.count))
+                    return false;
+            }
+
+            db.Run("UPDATE repositories SET checked = ?2, failed = NULL, errors = 0 WHERE id = ?1", id, now);
+
+            return true;
+        });
+    }
+    if (!stmt.IsValid())
+        return false;
+
+    // Some tasks may fail but it is not critical
+    async.Sync();
+
+    return true;
+}
+
 void HandleRepositoryList(http_IO *io)
 {
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
@@ -33,7 +206,8 @@ void HandleRepositoryList(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT r.id, r.name, r.url, r.user, r.password, v.key, v.value
+    if (!db.Prepare(R"(SELECT r.id, r.name, r.url, r.user, r.password,
+                              r.checked, r.failed, r.errors, v.key, v.value
                        FROM repositories r
                        LEFT JOIN variables v
                        WHERE r.owner = ?1
@@ -53,6 +227,9 @@ void HandleRepositoryList(http_IO *io)
         const char *url = (const char *)sqlite3_column_text(stmt, 2);
         const char *user = (const char *)sqlite3_column_text(stmt, 3);
         const char *password = (const char *)sqlite3_column_text(stmt, 4);
+        int64_t checked = sqlite3_column_int64(stmt, 5);
+        const char *failed = (const char *)sqlite3_column_text(stmt, 6);
+        int errors = sqlite3_column_int(stmt, 7);
 
         json.StartObject();
 
@@ -61,16 +238,27 @@ void HandleRepositoryList(http_IO *io)
         json.Key("url"); json.String(url);
         json.Key("user"); json.String(user);
         json.Key("password"); json.String(password);
+        if (checked) {
+            json.Key("checked"); json.Int64(checked);
+        } else {
+            json.Key("checked"); json.Null();
+        }
+        if (failed) {
+            json.Key("failed"); json.String(failed);
+        } else {
+            json.Key("failed"); json.Null();
+        }
+        json.Key("errors"); json.Int(errors);
 
         json.Key("variables"); json.StartObject();
         do {
             if (sqlite3_column_int64(stmt, 0) != id)
                 break;
-            if (sqlite3_column_type(stmt, 5) == SQLITE_NULL)
+            if (sqlite3_column_type(stmt, 8) == SQLITE_NULL)
                 break;
 
-            const char *key = (const char *)sqlite3_column_text(stmt, 5);
-            const char *value = (const char *)sqlite3_column_text(stmt, 6);
+            const char *key = (const char *)sqlite3_column_text(stmt, 8);
+            const char *value = (const char *)sqlite3_column_text(stmt, 9);
 
             json.Key(key); json.String(value);
         } while (stmt.Step());
@@ -145,10 +333,11 @@ void HandleRepositorySave(http_IO *io)
         }
     }
 
+    rk_Config repo;
+
     // Check missing or invalid values
     {
         bool valid = true;
-        rk_Config config;
 
         if (!name || !name[0]) {
             LogError("Missing or invalid 'name' parameter");
@@ -163,46 +352,11 @@ void HandleRepositorySave(http_IO *io)
             valid = false;
         }
 
-        config.username = user;
-        config.password = password;
-
         if (url) {
-            if (rk_DecodeURL(url, &config)) {
-                switch (config.type) {
-                    case rk_DiskType::S3:
-                    case rk_DiskType::SFTP: {} break;
-
-                    case rk_DiskType::Local: {
-                        LogError("Unsupported URL '%1'", url);
-                        valid = false;
-                    }
-                }
-            } else {
-                valid = false;
-            }
+            valid &= FillConfig(url, user, password, variables, &repo);
         } else {
             LogError("Missing 'url' value");
             valid = false;
-        }
-
-        switch (config.type) {
-            case rk_DiskType::Local: { RG_ASSERT(!valid); } break;
-
-            case rk_DiskType::S3: {
-                config.s3.access_id = variables.FindValue("AWS_ACCESS_KEY_ID", nullptr);
-                config.s3.access_key = variables.FindValue("AWS_SECRET_ACCESS_KEY", nullptr);
-
-                valid &= config.Validate(true);
-            } break;
-
-            case rk_DiskType::SFTP: {
-                config.ssh.known_hosts = false;
-                config.ssh.password = variables.FindValue("SSH_PASSWORD", nullptr);
-                config.ssh.key = variables.FindValue("SSH_KEY", nullptr);
-                config.ssh.fingerprint = variables.FindValue("SSH_FINGERPRINT", nullptr);
-
-                valid &= config.Validate(true);
-            } break;
         }
 
         if (!valid) {
@@ -211,14 +365,29 @@ void HandleRepositorySave(http_IO *io)
         }
     }
 
+    // Make sure it works
+    {
+        OpenError error;
+        std::unique_ptr<rk_Disk> disk = OpenRepository(repo, &error);
+
+        if (!disk) {
+            switch (error) {
+                case OpenError::FailedConnection: { io->SendError(404); } break;
+                case OpenError::AuthenticationError: { io->SendError(403); } break;
+            }
+            return;
+        }
+    }
+
     // Create or update repository
     bool success = db.Transaction([&]() {
         sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO repositories (id, owner, name, url, user, password)
-                           VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+        if (!db.Prepare(R"(INSERT INTO repositories (id, owner, name, url, user, password, checked, failed, errors)
+                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, NULL, 0)
                            ON CONFLICT DO UPDATE SET id = IF(owner = excluded.owner, id, NULL),
                                                      name = excluded.name,
-                                                     url = excluded.url
+                                                     url = excluded.url,
+                                                     checked = excluded.checked
                            RETURNING id)",
                         &stmt, id >= 0 ? sq_Binding(id) : sq_Binding(), session->userid,
                         name, url, user, password))

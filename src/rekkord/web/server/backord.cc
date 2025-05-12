@@ -576,6 +576,9 @@ Options:
         LogInfo("Periodic timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
+            LogDebug("Check repositories");
+            CheckRepositories();
+
             WaitForResult ret = WaitForInterrupt(timeout);
 
             if (ret == WaitForResult::Exit) {

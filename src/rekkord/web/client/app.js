@@ -551,11 +551,13 @@ async function runDashboard() {
                     <colgroup>
                         <col style="width: 30%;"></col>
                         <col></col>
+                        <col style="width: 200px;"></col>
                     </colgroup>
                     <thead>
                         <tr>
                             <th>Name</th>
                             <th>URL</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -563,6 +565,12 @@ async function runDashboard() {
                             <tr>
                                 <td class="edit" @click=${UI.wrap(e => configureRepository(repo))}>${repo.name}</td>
                                 <td>${repo.url}</td>
+                                <td style="text-align: right;">
+                                    ${!repo.checked ? 'Pending' : ''}
+                                    ${repo.checked && !repo.errors ? 'Success' : ''}
+                                    ${repo.errors ? html`<span style="color: red;">${repo.failed || 'Unknown error'}</span>` : ''}
+                                    ${repo.checked ? html`<br><i>${(new Date(repo.checked)).toLocaleString()}` : ''}
+                                </td>
                             </tr>
                         `)}
                         ${!cache.repositories.length ? html`<tr><td colspan="2" style="text-align: center;">No repository</td></tr>` : ''}

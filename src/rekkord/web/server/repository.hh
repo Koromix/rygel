@@ -20,6 +20,8 @@
 
 namespace RG {
 
+bool CheckRepositories();
+
 void HandleRepositoryList(http_IO *io);
 void HandleRepositorySave(http_IO *io);
 void HandleRepositoryDelete(http_IO *io);
