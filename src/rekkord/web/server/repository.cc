@@ -488,6 +488,8 @@ void HandleRepositorySave(http_IO *io)
                            ON CONFLICT DO UPDATE SET id = IF(owner = excluded.owner, id, NULL),
                                                      name = excluded.name,
                                                      url = excluded.url,
+                                                     user = excluded.user,
+                                                     password = excluded.password,
                                                      checked = excluded.checked
                            RETURNING id)",
                         &stmt, id >= 0 ? sq_Binding(id) : sq_Binding(), session->userid,
