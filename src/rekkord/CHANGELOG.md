@@ -6,6 +6,15 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.57
+
+*Released on 2025-05-12*
+
+- Fix wrong key used to sign user keysets
+
+> [!WARNING]
+> Existing users are not migrated and new users must be created with the master key.
+
 ### Rekkord 0.56
 
 *Released on 2025-05-11*
