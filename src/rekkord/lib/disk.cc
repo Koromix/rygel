@@ -1341,6 +1341,17 @@ bool rk_Disk::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role,
         return false;
     MemCpy(out_keys, payload, RG_SIZE(*out_keys));
 
+#if 0
+    PrintLn("ckey = %1", FmtSpan(out_keys->ckey, FmtType::BigHex, "").Pad0(-2));
+    PrintLn("akey = %1", FmtSpan(out_keys->akey, FmtType::BigHex, "").Pad0(-2));
+    PrintLn("dkey = %1", FmtSpan(out_keys->dkey, FmtType::BigHex, "").Pad0(-2));
+    PrintLn("wkey = %1", FmtSpan(out_keys->wkey, FmtType::BigHex, "").Pad0(-2));
+    PrintLn("lkey = %1", FmtSpan(out_keys->lkey, FmtType::BigHex, "").Pad0(-2));
+    PrintLn("tkey = %1", FmtSpan(out_keys->tkey, FmtType::BigHex, "").Pad0(-2));
+    PrintLn("skey = %1", FmtSpan(out_keys->skey, FmtType::BigHex, "").Pad0(-2));
+    PrintLn("vkey = %1", FmtSpan(out_keys->vkey, FmtType::BigHex, "").Pad0(-2));
+#endif
+
     return true;
 }
 
