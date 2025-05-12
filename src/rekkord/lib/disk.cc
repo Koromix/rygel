@@ -597,7 +597,7 @@ bool rk_Disk::ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserInfo> *o
             }
         }
 
-        if (verify && crypto_sign_ed25519_verify_detached(data.sig, (const uint8_t *)&data, offsetof(KeyData, sig), keyset->vkey)) {
+        if (verify && crypto_sign_ed25519_verify_detached(data.sig, (const uint8_t *)&data, offsetof(KeyData, sig), keyset->akey)) {
             LogError("Invalid signature for user '%1'", user.username);
             return true;
         }
@@ -1285,7 +1285,7 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
     }
 
     // Sign serialized keyset to detect tampering
-    crypto_sign_ed25519_detached(data.sig, nullptr, (const uint8_t *)&data, offsetof(KeyData, sig), keyset->skey);
+    crypto_sign_ed25519_detached(data.sig, nullptr, (const uint8_t *)&data, offsetof(KeyData, sig), keyset->ckey);
 
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
     Size written = WriteDirect(path, buf, false);
