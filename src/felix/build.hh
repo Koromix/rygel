@@ -40,6 +40,7 @@ class Builder {
 
     struct Node {
         const char *text;
+        const char *src_filename;
         const char *dest_filename;
         HeapArray<Size> triggers;
 
@@ -52,13 +53,14 @@ class Builder {
     };
 
     struct CacheEntry {
-        const char *filename;
+        const char *dest_filename;
+        const char *src_filename;
         Span<const char> cmd_line;
 
         Size deps_offset;
         Size deps_len;
 
-        RG_HASHTABLE_HANDLER(CacheEntry, filename);
+        RG_HASHTABLE_HANDLER(CacheEntry, dest_filename);
     };
 
     struct DependencyEntry {

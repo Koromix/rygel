@@ -891,8 +891,9 @@ void Builder::SaveCache()
         return;
 
     for (const CacheEntry &entry: cache_map) {
-        PrintLn(&st, "%1>%2", entry.deps_len, entry.filename);
-        PrintLn(&st, "%1", entry.cmd_line);
+        PrintLn(&st, ">%1", entry.dest_filename);
+        PrintLn(&st, "<%1", entry.src_filename);
+        PrintLn(&st, "%1:%2", entry.deps_len, entry.cmd_line);
         for (Size i = 0; i < entry.deps_len; i++) {
             const DependencyEntry &dep = cache_dependencies[entry.deps_offset + i];
             PrintLn(&st, "%1|%2", dep.mtime, dep.filename);
@@ -934,21 +935,40 @@ void Builder::LoadCache()
 
             // Filename and dependency count
             {
-                Span<char> part = SplitStr(remain, '>', &remain);
+                if (!remain.len || remain[0] != '>') {
+                    LogError("Missing destination file marker");
+                    return;
+                }
+                remain = remain.Take(1, remain.len - 1);
+
+                Span<char> part = SplitStr(remain, '\n', &remain);
+                part.ptr[part.len] = 0;
+                entry.dest_filename = part.ptr;
+            }
+
+            // Source file
+            {
+                if (!remain.len || remain[0] != '<') {
+                    LogError("Missing source file marker");
+                    return;
+                }
+                remain = remain.Take(1, remain.len - 1);
+
+                Span<char> part = SplitStr(remain, '\n', &remain);
+                part.ptr[part.len] = 0;
+                entry.src_filename = part.ptr;
+            }
+
+            // Command and dependency count
+            {
+                Span<char> part = SplitStr(remain, ':', &remain);
                 if (!ParseInt(part, &entry.deps_len))
                     return;
                 entry.deps_offset = cache_dependencies.len;
 
                 part = SplitStr(remain, '\n', &remain);
                 part.ptr[part.len] = 0;
-                entry.filename = part.ptr;
-            }
-
-            // Command line
-            {
-                Span<char> part = SplitStr(remain, '\n', &remain);
-                part.ptr[part.len] = 0;
-                entry.cmd_line = part;
+                entry.cmd_line = part.ptr;
             }
 
             // Dependencies
@@ -985,18 +1005,14 @@ void Builder::SaveCompile()
     json.StartArray();
 
     for (const CacheEntry &entry: cache_map) {
-        if (!entry.deps_len)
-            continue;
-
         const char *directory = GetWorkingDirectory();
-        const DependencyEntry &dep0 = cache_dependencies[entry.deps_offset];
 
         json.StartObject();
 
         json.Key("directory"); json.String(directory);
         json.Key("command"); json.String(entry.cmd_line.ptr, entry.cmd_line.len);
-        json.Key("file"); json.String(dep0.filename);
-        json.Key("output"); json.String(entry.filename);
+        json.Key("file"); json.String(entry.src_filename);
+        json.Key("output"); json.String(entry.dest_filename);
 
         json.EndObject();
     }
@@ -1123,6 +1139,7 @@ bool Builder::AppendNode(const char *text, const char *dest_filename, const Comm
         Node *node = nodes.AppendDefault();
 
         node->text = text;
+        node->src_filename = CleanFileName(src_filenames[0]);
         node->dest_filename = dest_filename;
         node->cmd = cmd;
 
@@ -1503,7 +1520,8 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
         {
             CacheEntry entry;
 
-            entry.filename = node->dest_filename;
+            entry.dest_filename = node->dest_filename;
+            entry.src_filename = node->src_filename;
             entry.cmd_line = cmd.cmd_line.Take(0, cmd.cache_len);
 
             entry.deps_offset = worker->dependencies.len;
