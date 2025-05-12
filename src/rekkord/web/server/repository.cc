@@ -99,7 +99,7 @@ bool CheckRepositories()
     if (!db.Prepare(R"(SELECT r.id, r.url, r.user, r.password, v.key, v.value
                        FROM repositories r
                        LEFT JOIN variables v
-                       WHERE r.checked <= ?1 + IIF(r.errors = 0, ?2, ?3)
+                       WHERE r.checked - IIF(r.errors = 0, ?2, ?3) <= ?1
                        ORDER BY r.id)", &stmt, now, config.update_delay, config.retry_delay))
         return false;
     if (!stmt.Run())
