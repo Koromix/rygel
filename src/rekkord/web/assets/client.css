@@ -150,13 +150,10 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     }
 }
 
-.edit {
-    background-image: url('./ui/edit.webp');
-    background-repeat: no-repeat;
-    background-size: 16px 16px;
-    background-position: center right;
-    padding-right: 24px;
-    cursor: pointer;
+table tbody tr:hover > td {
+    background: #76b35a;
+    color: white;
+    --color: white;
 }
 
 #log {

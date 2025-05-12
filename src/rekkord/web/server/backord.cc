@@ -383,6 +383,8 @@ static void HandleRequest(http_IO *io)
             HandlePictureDelete(io);
         } else if (TestStr(request.path, "/api/repository/list") && request.method == http_RequestMethod::Get) {
             HandleRepositoryList(io);
+        } else if (TestStr(request.path, "/api/repository/get") && request.method == http_RequestMethod::Get) {
+            HandleRepositoryGet(io);
         } else if (TestStr(request.path, "/api/repository/save") && request.method == http_RequestMethod::Post) {
             HandleRepositorySave(io);
         } else if (TestStr(request.path, "/api/repository/delete") && request.method == http_RequestMethod::Post) {

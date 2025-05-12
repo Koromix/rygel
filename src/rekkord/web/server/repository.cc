@@ -206,14 +206,9 @@ void HandleRepositoryList(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT r.id, r.name, r.url, r.user, r.password,
-                              r.checked, r.failed, r.errors, v.key, v.value
-                       FROM repositories r
-                       LEFT JOIN variables v
-                       WHERE r.owner = ?1
-                       ORDER BY r.id)", &stmt, session->userid))
-        return;
-    if (!stmt.Run())
+    if (!db.Prepare(R"(SELECT id, name, url, checked, failed, errors
+                       FROM repositories
+                       WHERE owner = ?1)", &stmt, session->userid))
         return;
 
     http_JsonPageBuilder json;
@@ -221,17 +216,93 @@ void HandleRepositoryList(http_IO *io)
         return;
 
     json.StartArray();
-    while (stmt.IsRow()) {
+    while (stmt.Step()) {
         int64_t id = sqlite3_column_int64(stmt, 0);
         const char *name = (const char *)sqlite3_column_text(stmt, 1);
         const char *url = (const char *)sqlite3_column_text(stmt, 2);
-        const char *user = (const char *)sqlite3_column_text(stmt, 3);
-        const char *password = (const char *)sqlite3_column_text(stmt, 4);
-        int64_t checked = sqlite3_column_int64(stmt, 5);
-        const char *failed = (const char *)sqlite3_column_text(stmt, 6);
-        int errors = sqlite3_column_int(stmt, 7);
+        int64_t checked = sqlite3_column_int64(stmt, 3);
+        const char *failed = (const char *)sqlite3_column_text(stmt, 4);
+        int errors = sqlite3_column_int(stmt, 5);
 
         json.StartObject();
+
+        json.Key("id"); json.Int64(id);
+        json.Key("name"); json.String(name);
+        json.Key("url"); json.String(url);
+        if (checked) {
+            json.Key("checked"); json.Int64(checked);
+        } else {
+            json.Key("checked"); json.Null();
+        }
+        if (failed) {
+            json.Key("failed"); json.String(failed);
+        } else {
+            json.Key("failed"); json.Null();
+        }
+        json.Key("errors"); json.Int(errors);
+
+        json.EndObject();
+    }
+    if (!stmt.IsValid())
+        return;
+    json.EndArray();
+
+    json.Finish();
+}
+
+void HandleRepositoryGet(http_IO *io)
+{
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetNormalSession(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(404);
+        return;
+    }
+
+    // Get and check vault ID
+    int64_t id = -1;
+    {
+        const char *str = request.GetQueryValue("id");
+
+        if (!str || !ParseInt(str, &id, (int)ParseFlag::End)) {
+            LogError("Missing or invalid repository ID");
+
+            io->SendError(422);
+            return;
+        }
+    }
+
+    sq_Statement stmt;
+    if (!db.Prepare(R"(SELECT name, url, user, password, checked, failed, errors
+                       FROM repositories
+                       WHERE owner = ?1 AND id = ?2)", &stmt, session->userid, id))
+        return;
+
+    if (!stmt.Step()) {
+        if (stmt.IsValid()) {
+            LogError("Unknown repository ID %1", id);
+            io->SendError(404);
+        }
+        return;
+    }
+
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartObject();
+
+    // Main information
+    {
+        const char *name = (const char *)sqlite3_column_text(stmt, 0);
+        const char *url = (const char *)sqlite3_column_text(stmt, 1);
+        const char *user = (const char *)sqlite3_column_text(stmt, 2);
+        const char *password = (const char *)sqlite3_column_text(stmt, 3);
+        int64_t checked = sqlite3_column_int64(stmt, 4);
+        const char *failed = (const char *)sqlite3_column_text(stmt, 5);
+        int errors = sqlite3_column_int(stmt, 6);
 
         json.Key("id"); json.Int64(id);
         json.Key("name"); json.String(name);
@@ -249,26 +320,56 @@ void HandleRepositoryList(http_IO *io)
             json.Key("failed"); json.Null();
         }
         json.Key("errors"); json.Int(errors);
+    }
+
+    // Variables
+    {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT key, value FROM variables WHERE repository = ?1", &stmt, id))
+            return;
 
         json.Key("variables"); json.StartObject();
-        do {
-            if (sqlite3_column_int64(stmt, 0) != id)
-                break;
-            if (sqlite3_column_type(stmt, 8) == SQLITE_NULL)
-                break;
-
-            const char *key = (const char *)sqlite3_column_text(stmt, 8);
-            const char *value = (const char *)sqlite3_column_text(stmt, 9);
+        while (stmt.Step()) {
+            const char *key = (const char *)sqlite3_column_text(stmt, 0);
+            const char *value = (const char *)sqlite3_column_text(stmt, 1);
 
             json.Key(key); json.String(value);
-        } while (stmt.Step());
-        json.EndObject();
-
+        }
+        if (!stmt.IsValid())
+            return;
         json.EndObject();
     }
-    if (!stmt.IsValid())
-        return;
-    json.EndArray();
+
+    // Channels
+    {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT name, hash, timestamp, size, count, ignore FROM channels WHERE repository = ?1", &stmt, id))
+            return;
+
+        json.Key("channels"); json.StartArray();
+        while (stmt.Step()) {
+            const char *name = (const char *)sqlite3_column_text(stmt, 0);
+            const char *hash = (const char *)sqlite3_column_text(stmt, 1);
+            int64_t time = sqlite3_column_int64(stmt, 2);
+            int64_t size = sqlite3_column_int64(stmt, 3);
+            int64_t count = sqlite3_column_int64(stmt, 4);
+            bool ignore = sqlite3_column_int(stmt, 5);
+
+            json.StartObject();
+            json.Key("name"); json.String(name);
+            json.Key("hash"); json.String(hash);
+            json.Key("time"); json.Int64(time);
+            json.Key("size"); json.Int64(size);
+            json.Key("count"); json.Int64(count);
+            json.Key("ignore"); json.Bool(ignore);
+            json.EndObject();
+        }
+        if (!stmt.IsValid())
+            return;
+        json.EndArray();
+    }
+
+    json.EndObject();
 
     json.Finish();
 }

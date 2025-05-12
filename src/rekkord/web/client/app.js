@@ -25,7 +25,8 @@ import '../assets/client.css';
 const RUN_LOCK = 'run';
 
 let route = {
-    mode: null
+    mode: null,
+    repository: null
 };
 let route_url = null;
 let poisoned = false;
@@ -35,7 +36,8 @@ let session = null;
 let root_el = null;
 
 let cache = {
-    repositories: []
+    repositories: [],
+    repository: null
 };
 
 // ------------------------------------------------------------------------
@@ -125,6 +127,13 @@ function go(url = null, push = true) {
         case 'dashboard':
         case 'account': { changes.mode = mode; } break;
 
+        case 'repository': {
+            changes.repository = parseInt(parts[0], 10);
+            if (Number.isNaN(changes.repository))
+                changes.repository = null;
+            changes.mode = mode;
+        } break;
+
         default: { changes.mode = 'dashboard'; } break;
     }
 
@@ -165,6 +174,7 @@ async function run(changes = {}, push = false) {
 
         switch (route.mode) {
             case 'dashboard': { await runDashboard(); } break;
+            case 'repository': { await runRepository(); } break;
             case 'account': { await runAccount(); } break;
         }
 
@@ -194,6 +204,10 @@ function makeURL(changes = {}) {
     let values = Object.assign({}, route, changes);
     let path = '/' + values.mode + hash;
 
+    switch (values.mode) {
+        case 'repository': { path += '/' + route.repository; } break;
+    }
+
     return path;
 }
 
@@ -212,7 +226,7 @@ function renderApp(el) {
             <menu>
                 <a id="logo" href="/"><img src=${ASSETS['main/logo']} alt=${'Logo ' + ENV.title} /></a>
                 ${session != null ? html`
-                    <li><a href="/dashboard" class=${route.mode == 'dashboard' ? 'active' : ''}>Overview</a></li>
+                    <li><a href="/dashboard" class=${route.mode == 'dashboard' || route.mode == 'repository' ? 'active' : ''}>Repositories</a></li>
                     <div style="flex: 1;"></div>
                     <li><a href="/account" class=${route.mode == 'account' ? 'active' : ''}>Account</a></li>
                     <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
@@ -533,7 +547,7 @@ function isLogged() {
 }
 
 // ------------------------------------------------------------------------
-// Modules
+// Repositories
 // ------------------------------------------------------------------------
 
 async function runDashboard() {
@@ -562,8 +576,8 @@ async function runDashboard() {
                     </thead>
                     <tbody>
                         ${cache.repositories.map(repo => html`
-                            <tr>
-                                <td class="edit" @click=${UI.wrap(e => configureRepository(repo))}>${repo.name}</td>
+                            <tr style="cursor: pointer;">
+                                <td class="edit" @click=${UI.wrap(e => toggleRepository(repo.id))}>${repo.name}</td>
                                 <td>${repo.url}</td>
                                 <td style="text-align: right;">
                                     ${!repo.checked ? 'Pending' : ''}
@@ -573,11 +587,82 @@ async function runDashboard() {
                                 </td>
                             </tr>
                         `)}
-                        ${!cache.repositories.length ? html`<tr><td colspan="2" style="text-align: center;">No repository</td></tr>` : ''}
+                        ${!cache.repositories.length ? html`<tr><td colspan="3" style="text-align: center;">No repository</td></tr>` : ''}
                     </tbody>
                 </table>
                 <div class="actions">
                     <button type="button" @click=${UI.wrap(e => configureRepository(null))}>Add repository</button>
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+async function toggleRepository(id) {
+    let url = '/repository/' + id;
+    await go(url);
+}
+
+async function runRepository() {
+    try {
+        let url = Util.pasteURL('/api/repository/get', { id: route.repository });
+        cache.repository = await Net.cache('repository', url);
+    } catch (err) {
+        if (!(err instanceof HttpError))
+            throw err;
+        if (err.status != 404 && err.status != 422)
+            throw err;
+
+        cache.repository = null;
+    }
+
+    if (cache.repository == null) {
+        go('/dashboard');
+        return;
+    }
+
+    UI.main(html`
+        <div class="tabbar">
+            <a href="/dashboard">Overview</a>
+            <a class="active">Repository</a>
+        </div>
+
+        <div class="tab">
+            <div class="row">
+                <div class="box">
+                    <div class="header">Repository</div>
+                    <button type="button" @click=${UI.wrap(e => configureRepository(cache.repository))}>Configure</button>
+                </div>
+
+                <div class="box">
+                    <div class="header">Channels</div>
+                    <table style="table-layout: fixed; width: 100%;">
+                        <colgroup>
+                            <col></col>
+                            <col></col>
+                            <col></col>
+                            <col></col>
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Size</th>
+                                <th>Count</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${cache.repository.channels.map(channel => html`
+                                <tr>
+                                    <td>${channel.name}</td>
+                                    <td style="text-align: right;">${channel.size}</td>
+                                    <td style="text-align: right;">${channel.count}</td>
+                                    <td style="text-align: right;">${(new Date(channel.time)).toLocaleString()}</td>
+                                </tr>
+                            `)}
+                            ${!cache.repository.channels.length ? html`<tr><td colspan="4" style="text-align: center;">No repository</td></tr>` : ''}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -692,7 +777,9 @@ async function configureRepository(repo) {
             }
 
             await Net.post('/api/repository/save', obj);
+
             Net.invalidate('repositories');
+            Net.invalidate('repository');
         }
     });
 }
@@ -719,6 +806,10 @@ function detectType(url) {
 
     return null;
 }
+
+// ------------------------------------------------------------------------
+// Account
+// ------------------------------------------------------------------------
 
 async function runAccount() {
     UI.main(html`
