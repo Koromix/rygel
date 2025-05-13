@@ -75,23 +75,13 @@ main.dialog {
 .actions > button {
     display: block;
     width: auto;
-    min-width: 10em;
-    background: var(--button_color);
+    min-width: 13em;
     font-weight: bold;
-    color: white;
     padding: 0.35em 2em 0.45em 2em;
     text-decoration: none;
     text-align: center;
 }
 .actions > button + * { margin-top: 10px; }
-.actions > button:hover {
-    background: color-mix(in srgb, var(--button_color) 90%, black);
-    color: white;
-}
-.actions > button.disabled {
-    pointer-events: none;
-    filter: saturate(10%) brightness(50%);
-}
 .actions > a { font-size: 0.9em; }
 p + .actions { margin-top: 2em; }
 

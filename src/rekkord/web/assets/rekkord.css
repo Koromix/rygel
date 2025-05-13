@@ -57,9 +57,11 @@ button { border-radius: 16px; }
 #top.border { border-bottom-color: var(--top_background); }
 
 .picture {
+    --size: 48px;
+
     box-sizing: border-box;
-    width: 51px;
-    height: 51px;
+    width: var(--size);
+    height: var(--size);
     background: white;
     border-radius: 50%;
     border: none;
