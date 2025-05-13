@@ -150,6 +150,30 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     }
 }
 
+table .arrows {
+    margin-left: 4px;
+    display: inline-flex;
+    flex-direction: column;
+    gap: 1px;
+    vertical-align: middle;
+}
+table .arrows .up {
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid lightgray;
+}
+table .arrows .down {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid lightgray;
+}
+table .arrows .up.active { border-bottom: 5px solid #525461; }
+table .arrows .down.active { border-top: 5px solid #525461; }
 table tbody tr:hover > td {
     background: #76b35a;
     color: white;

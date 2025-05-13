@@ -553,6 +553,8 @@ function isLogged() {
 async function runDashboard() {
     cache.repositories = await Net.cache('repositories', '/api/repository/list');
 
+    let repositories = UI.tableValues('repositories', cache.repositories, 'name');
+
     UI.main(html`
         <div class="tabbar">
             <a class="active">Overview</a>
@@ -569,13 +571,19 @@ async function runDashboard() {
                     </colgroup>
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>URL</th>
-                            <th>Status</th>
+                            ${UI.tableHeader('repositories', 'name', 'Name')}
+                            ${UI.tableHeader('repositories', 'url', 'URL')}
+                            ${UI.tableHeader('repositories', repo => {
+                                if (repo.errors) {
+                                    return 1;
+                                } else {
+                                    return -(repo.checked ?? 0);
+                                }
+                            }, 'Status')}
                         </tr>
                     </thead>
                     <tbody>
-                        ${cache.repositories.map(repo => html`
+                        ${repositories.map(repo => html`
                             <tr style="cursor: pointer;" @click=${UI.wrap(e => toggleRepository(repo.id))}>
                                 <td style="font-weight: bold;">${repo.name}</td>
                                 <td>${repo.url}</td>
@@ -587,7 +595,7 @@ async function runDashboard() {
                                 </td>
                             </tr>
                         `)}
-                        ${!cache.repositories.length ? html`<tr><td colspan="3" style="text-align: center;">No repository</td></tr>` : ''}
+                        ${!repositories.length ? html`<tr><td colspan="3" style="text-align: center;">No repository</td></tr>` : ''}
                     </tbody>
                 </table>
                 <div class="actions">
@@ -621,6 +629,8 @@ async function runRepository() {
         return;
     }
 
+    let channels = UI.tableValues('channels', cache.repository.channels, 'name');
+
     UI.main(html`
         <div class="tabbar">
             <a href="/dashboard">Overview</a>
@@ -644,20 +654,20 @@ async function runRepository() {
                         </colgroup>
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Size</th>
-                                <th>Timestamp</th>
+                                ${UI.tableHeader('channels', 'name', 'Name')}
+                                ${UI.tableHeader('channels', 'size', 'Size')}
+                                ${UI.tableHeader('channels', 'time', 'Timestamp')}
                             </tr>
                         </thead>
                         <tbody>
-                            ${cache.repository.channels.map(channel => html`
+                            ${channels.map(channel => html`
                                 <tr>
                                     <td>${channel.name} <span class="sub">(${channel.count})</span></td>
                                     <td style="text-align: right;">${formatSize(channel.size)}</td>
                                     <td style="text-align: right;">${(new Date(channel.time)).toLocaleString()}</td>
                                 </tr>
                             `)}
-                            ${!cache.repository.channels.length ? html`<tr><td colspan="4" style="text-align: center;">No repository</td></tr>` : ''}
+                            ${!channels.length ? html`<tr><td colspan="3" style="text-align: center;">No channel</td></tr>` : ''}
                         </tbody>
                     </table>
                 </div>
