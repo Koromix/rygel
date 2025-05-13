@@ -576,8 +576,8 @@ async function runDashboard() {
                     </thead>
                     <tbody>
                         ${cache.repositories.map(repo => html`
-                            <tr style="cursor: pointer;">
-                                <td class="edit" @click=${UI.wrap(e => toggleRepository(repo.id))}>${repo.name}</td>
+                            <tr style="cursor: pointer;" @click=${UI.wrap(e => toggleRepository(repo.id))}>
+                                <td style="font-weight: bold;">${repo.name}</td>
                                 <td>${repo.url}</td>
                                 <td style="text-align: right;">
                                     ${!repo.checked ? 'Pending' : ''}
