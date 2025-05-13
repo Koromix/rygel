@@ -99,8 +99,9 @@ bool CheckRepositories()
     if (!db.Prepare(R"(SELECT r.id, r.url, r.user, r.password, v.key, v.value
                        FROM repositories r
                        LEFT JOIN variables v
-                       WHERE r.checked - IIF(r.errors = 0, ?2, ?3) <= ?1
-                       ORDER BY r.id)", &stmt, now, config.update_delay, config.retry_delay))
+                       WHERE r.checked + IIF(r.errors = 0, ?2, ?3) <= ?1
+                       ORDER BY r.id)",
+                    &stmt, now, config.update_delay, config.retry_delay))
         return false;
     if (!stmt.Run())
         return false;
@@ -115,6 +116,8 @@ bool CheckRepositories()
         const char *url = DuplicateString((const char *)sqlite3_column_text(stmt, 1), &temp_alloc).ptr;
         const char *user = DuplicateString((const char *)sqlite3_column_text(stmt, 2), &temp_alloc).ptr;
         const char *password = DuplicateString((const char *)sqlite3_column_text(stmt, 3), &temp_alloc).ptr;
+
+        LogDebug("Checking repository '%1'", url);
 
         HashMap<const char *, const char *> variables;
         do {
@@ -277,7 +280,8 @@ void HandleRepositoryGet(http_IO *io)
     sq_Statement stmt;
     if (!db.Prepare(R"(SELECT name, url, user, password, checked, failed, errors
                        FROM repositories
-                       WHERE owner = ?1 AND id = ?2)", &stmt, session->userid, id))
+                       WHERE owner = ?1 AND id = ?2)",
+                    &stmt, session->userid, id))
         return;
 
     if (!stmt.Step()) {
