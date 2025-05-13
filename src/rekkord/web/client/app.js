@@ -578,7 +578,7 @@ async function runDashboard() {
                                 if (repo.errors) {
                                     return 1;
                                 } else {
-                                    return -(repo.checked ?? 0);
+                                    return repo.checked ?? 0;
                                 }
                             }, 'Status')}
                         </tr>
@@ -589,10 +589,10 @@ async function runDashboard() {
                                 <td style="font-weight: bold;">${repo.name}</td>
                                 <td>${repo.url}</td>
                                 <td style="text-align: right;">
-                                    ${!repo.checked ? 'Pending' : ''}
+                                    ${!repo.checked ? 'Valid' : ''}
                                     ${repo.checked && !repo.errors ? 'Success' : ''}
                                     ${repo.errors ? html`<span style="color: red;">${repo.failed || 'Unknown error'}</span>` : ''}
-                                    ${repo.checked ? html`<br><span class="sub">${(new Date(repo.checked)).toLocaleString()}</span>` : ''}
+                                    <br><span class="sub">${repo.checked ? (new Date(repo.checked)).toLocaleString() : 'Check pending'}</span>
                                 </td>
                             </tr>
                         `)}
