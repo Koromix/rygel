@@ -669,17 +669,17 @@ async function runRepository() {
 function formatSize(size) {
     if (size >= 999950000) {
         let value = size / 1000000000;
-        let prec = 1 + (size < 9.9995) + (size < 99.995);
+        let prec = 1 + (value < 9.9995) + (value < 99.995);
 
         return value.toFixed(prec) + ' GB';
     } else if (size >= 999950) {
         let value = size / 1000000;
-        let prec = 1 + (size < 9.9995) + (size < 99.995);
+        let prec = 1 + (value < 9.9995) + (value < 99.995);
 
         return value.toFixed(prec) + ' MB';
     } else if (size >= 999.95) {
         let value = size / 1000;
-        let prec = 1 + (size < 9.9995) + (size < 99.995);
+        let prec = 1 + (value < 9.9995) + (value < 99.995);
 
         return value.toFixed(prec) + ' kB';
     } else {
