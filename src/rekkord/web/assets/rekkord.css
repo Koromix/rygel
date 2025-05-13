@@ -49,7 +49,7 @@ button { border-radius: 16px; }
 }
 
 .picture {
-    --size: 128px;
+    --size: 256px;
 
     box-sizing: border-box;
     width: var(--size);
