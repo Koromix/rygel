@@ -711,6 +711,8 @@ async function configureRepository(repo) {
         repo = {
             name: '',
             url: '',
+            user: 'log',
+            password: '',
             variables: {}
         };
     }
