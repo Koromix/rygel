@@ -192,6 +192,8 @@ bool CheckRepositories()
     if (!stmt.IsValid())
         return false;
 
+    stmt.Finalize();
+
     // Some tasks may fail but it is not critical
     async.Sync();
 
