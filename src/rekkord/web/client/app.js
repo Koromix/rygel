@@ -229,7 +229,7 @@ function renderApp(el) {
                     <li><a href="/dashboard" class=${route.mode == 'dashboard' || route.mode == 'repository' ? 'active' : ''}>Repositories</a></li>
                     <div style="flex: 1;"></div>
                     <li><a href="/account" class=${route.mode == 'account' ? 'active' : ''}>Account</a></li>
-                    <img class="picture" style="--size: 48px;" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
+                    <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
                 ` : ''}
                 ${session == null ? html`
                     <div style="flex: 1;"></div>
@@ -568,7 +568,7 @@ async function runDashboard() {
                     <colgroup>
                         <col style="width: 30%;"></col>
                         <col></col>
-                        <col style="width: 200px;"></col>
+                        <col style="width: 140px;"></col>
                     </colgroup>
                     <thead>
                         <tr>
@@ -857,7 +857,7 @@ async function runAccount() {
             <div class="box" style="align-items: center;">
                 <div class="header">Account</div>
                 <div class="sub">${session.username}</div>
-                <img class="picture" style="--size: 128px;" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
+                <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
                 <div class="actions">
                     <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>Change picture</button>
                     <button type="button" @click=${UI.insist(logout)}>Logout</button>

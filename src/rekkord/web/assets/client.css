@@ -273,6 +273,7 @@ dialog {
     z-index: 9999;
     left: 0;
     top: 0;
+    box-sizing: border-box;
     width: 100%;
     height: 100%;
     padding-top: 44px;
@@ -280,6 +281,8 @@ dialog {
     align-items: start;
     justify-content: center;
     background: #ffffffcc;
+    border: none;
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
 
     & > form {

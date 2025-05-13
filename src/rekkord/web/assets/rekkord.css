@@ -48,16 +48,8 @@ button { border-radius: 16px; }
     color: var(--top_color);
 }
 
-#top { font-size: 1.1em; }
-#top menu {
-    gap: 2em;
-    text-transform: none;
-}
-#top li > a { border-bottom: none; }
-#top.border { border-bottom-color: var(--top_background); }
-
 .picture {
-    --size: 48px;
+    --size: 128px;
 
     box-sizing: border-box;
     width: var(--size);
@@ -68,6 +60,19 @@ button { border-radius: 16px; }
     vertical-align: middle;
 }
 li + .picture { margin-left: -1em; }
+
+#top {
+    font-size: 1.1em;
+
+    & menu {
+        gap: 2em;
+        text-transform: none;
+    }
+    & li > a { border-bottom: none; }
+    & .picture { --size: 48px; }
+
+    &.border { border-bottom-color: var(--top_background); }
+}
 
 footer {
     font-size: 1.1em;
@@ -81,14 +86,17 @@ footer {
 @media screen and (max-width: 960px) {
     #logo { display: none; }
 
-    #top menu { gap: 0; }
-    #top li > a.active { display: block !important; }
-    #top .avatar {
-        position: fixed;
-        top: 14px;
-        right: 14px;
-        width: 34px;
-        height: 34px;
+    #top {
+        & menu { gap: 0; }
+        & div { display: none; }
+        & li > a.active { display: block !important; }
+        & .picture {
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            width: 34px;
+            height: 34px;
+        }
     }
 
     footer {

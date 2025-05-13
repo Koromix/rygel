@@ -120,6 +120,7 @@ footer {
     #logo { display: none; }
 
     #top menu { gap: 0; }
+    #top div { display: none; }
     #top li > a.active { display: block !important; }
     #top .avatar {
         position: fixed;
