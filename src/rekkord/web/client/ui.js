@@ -505,6 +505,9 @@ function dragOver(e, items, dest) {
         return;
     }
 
+    e.dataTransfer.dropEffect = 'move';
+    e.preventDefault();
+
     let idx1 = drag_items.indexOf(drag_src);
     let idx2 = drag_items.indexOf(dest);
 
@@ -512,9 +515,6 @@ function dragOver(e, items, dest) {
         return;
 
     reorder(drag_items, idx1, idx2);
-
-    e.dataTransfer.dropEffect = 'move';
-    e.preventDefault();
 
     return run_func();
 }
@@ -558,21 +558,13 @@ function reorder(items, idx1, idx2) {
     }
 }
 
-function tableHeader(key, title, by, func = null) {
-    if (func == null) {
-        if (typeof by == 'function') {
-            func = by;
-        } else {
-            func = value => value[by];
-        }
-    }
-    by = String(by);
-
+function tableHeader(key, by, title) {
     let info = table_orders[key];
-    let ascending = (info != null && info.by == by) ? info.ascending : null;
+
+    let ascending = (info != null && info.by_str == String(by)) ? info.ascending : null;
 
     return html`
-        <th class="item" @click=${e => { sortTable(key, by, func); run_func(); }}>
+        <th class="item" @click=${e => { setOrder(key, by); run_func(); }}>
             ${title}
             <div class="arrows">
                 <span class=${'up' + (ascending === false ? ' active' : '')}></span>
@@ -582,11 +574,14 @@ function tableHeader(key, title, by, func = null) {
     `;
 }
 
-function sortTable(key, by, func, ascending = null) {
+function setOrder(key, by, ascending = null) {
+    let by_str = String(by);
+    let by_func = (typeof by == 'function') ? by : (value => value[by_str]);
+
     if (ascending == null) {
         let order = table_orders[key];
 
-        if (order != null && order.by == by) {
+        if (order != null && order.by_str == String(by)) {
             ascending = !order.ascending;
         } else {
             ascending = true;
@@ -594,8 +589,8 @@ function sortTable(key, by, func, ascending = null) {
     }
 
     let order = {
-        by: by,
-        func: func,
+        by_str: by_str,
+        by_func: by_func,
         ascending: ascending,
 
         comparator: null,
@@ -603,7 +598,7 @@ function sortTable(key, by, func, ascending = null) {
     };
 
     order.language = document.documentElement.lang || 'en';
-    order.comparator = makeComparator(order);
+    order.comparator = makeComparator(order, order.language);
 
     table_orders[key] = order;
 }
@@ -613,10 +608,10 @@ function tableFilter(key, ...keys) {
 
     return html`<input type="search" placeholder=${T.filter + '...'} style="width: 10em;"
                        value=${(filter != null) ? filter.str : ''}
-                       @input=${e => { filterTable(key, e.target.value, keys); run_func(); }} />`;
-};
+                       @input=${e => { setFilter(key, e.target.value, keys); run_func(); }} />`;
+}
 
-function filterTable(key, str, keys) {
+function setFilter(key, str, keys) {
     if (str) {
         let filter = {
             str: str,
@@ -629,21 +624,12 @@ function filterTable(key, str, keys) {
     }
 }
 
-function tableValues(key, values, by = null, func = null) {
+function tableValues(key, values, default_by = null) {
     let order = table_orders[key];
     let filter = table_filters[key];
 
-    if (order == null && by != null) {
-        if (func == null) {
-            if (typeof by == 'function') {
-                func = by;
-            } else {
-                func = value => value[by];
-            }
-        }
-        by = String(by);
-
-        sortTable(key, by, func);
+    if (order == null && default_by != null) {
+        setOrder(key, default_by);
         order = table_orders[key];
     }
     if (order != null) {
@@ -651,7 +637,7 @@ function tableValues(key, values, by = null, func = null) {
 
         if (lang != order.language) {
             order.language = lang;
-            order.comparator = makeComparator(order);
+            order.comparator = makeComparator(order, lang);
         }
 
         values = values.slice().sort(order.comparator);
@@ -674,18 +660,18 @@ function tableValues(key, values, by = null, func = null) {
     }
 
     return values;
-};
+}
 
-function makeComparator(order) {
-    let collator = new Intl.Collator(order.language, {
+function makeComparator(order, language) {
+    let collator = new Intl.Collator(language, {
         numeric: true,
         ignorePunctuation: true,
         sensitivity: 'base'
     });
 
     let comparator = (obj1, obj2) => {
-        let value1 = order.func(obj1);
-        let value2 = order.func(obj2);
+        let value1 = order.by_func(obj1);
+        let value2 = order.by_func(obj2);
 
         if (value1 === '')
             value1 = null;
