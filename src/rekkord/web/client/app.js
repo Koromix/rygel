@@ -639,8 +639,12 @@ async function runRepository() {
 
         <div class="tab">
             <div class="row">
-                <div class="box">
+                <div class="box" style="min-width: 200px;">
                     <div class="header">Repository</div>
+                    <div class="info">
+                        ${cache.repository.name}
+                        <div class="sub">${cache.repository.url}</div>
+                    </div>
                     <button type="button" @click=${UI.wrap(e => configureRepository(cache.repository))}>Configure</button>
                 </div>
 

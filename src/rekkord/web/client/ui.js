@@ -171,17 +171,17 @@ function confirm(action, func = null) {
     function run() {
         return dialog({
             run: (render, close) => html`
-                <div class="tabbar">
-                    <a class="active">${action}</a>
+                <div class="title">
+                    ${action}
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="secondary" @click=${wrap(close)}>✖\uFE0E</button>
                 </div>
 
-                <div class="tab">
-                    <div class="box">${T.confirm_not_reversible}</div>
+                <div class="main">${T.confirm_not_reversible}</div>
 
-                    <div class="actions">
-                        <button type="button" class="secondary" @click=${wrap(close)}>${T.cancel}</button>
-                        <button type="submit">${T.confirm}</button>
-                    </div>
+                <div class="footer">
+                    <button type="button" class="secondary" @click=${wrap(close)}>${T.cancel}</button>
+                    <button type="submit" class="danger">${T.confirm}</button>
                 </div>
             `,
 

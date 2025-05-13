@@ -41,10 +41,7 @@ h1 {
 
 span[title] { border-bottom: 1px dotted #383838; }
 
-button {
-    border-radius: 20px;
-    font-weight: bold;
-}
+button { border-radius: 16px; }
 
 .reference {
     font-weight: bold;

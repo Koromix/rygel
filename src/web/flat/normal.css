@@ -309,10 +309,7 @@ button {
     white-space: nowrap;
 }
 button::-moz-focus-inner { border: 0; }
-button:not(:disabled):not(.active):hover {
-    background: color-mix(in srgb, var(--button_color) 90%, black);
-    color: white;
-}
+button:not(:disabled):not(.active):hover { background: color-mix(in srgb, var(--button_color) 90%, black); }
 button:disabled {
     filter: saturate(10%) brightness(80%);
     cursor: not-allowed;
