@@ -408,13 +408,15 @@ const Util = new function() {
                 if (href) {
                     if (!href.match(/^[a-z]+:/)) {
                         func(e, href);
+
                         e.preventDefault();
+                        e.stopPropagation();
                     }
                 } else {
                     e.preventDefault();
                 }
             }
-        });
+        }, { capture: true });
     };
 
     this.formatDiskSize = function(size) {
