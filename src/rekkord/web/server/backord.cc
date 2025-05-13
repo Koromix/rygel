@@ -566,6 +566,9 @@ Options:
     if (!daemon.Start(HandleRequest))
         return 1;
 
+    // From here on, don't quit abruptly
+    WaitForInterrupt(0);
+
     // Run periodic tasks until exit
     int status = 0;
     {
