@@ -205,7 +205,7 @@ function makeURL(changes = {}) {
     let path = '/' + values.mode + hash;
 
     switch (values.mode) {
-        case 'repository': { path += '/' + route.repository; } break;
+        case 'repository': { path += '/' + values.repository; } break;
     }
 
     return path;
@@ -584,18 +584,22 @@ async function runDashboard() {
                         </tr>
                     </thead>
                     <tbody>
-                        ${repositories.map(repo => html`
-                            <tr style="cursor: pointer;" @click=${UI.wrap(e => toggleRepository(repo.id))}>
-                                <td style="font-weight: bold;">${repo.name}</td>
-                                <td>${repo.url}</td>
-                                <td style="text-align: right;">
-                                    ${!repo.checked ? 'Valid' : ''}
-                                    ${repo.checked && !repo.errors ? 'Success' : ''}
-                                    ${repo.errors ? html`<span style="color: red;">${repo.failed || 'Unknown error'}</span>` : ''}
-                                    <br><span class="sub">${repo.checked ? (new Date(repo.checked)).toLocaleString() : 'Check pending'}</span>
-                                </td>
-                            </tr>
-                        `)}
+                        ${repositories.map(repo => {
+                            let url = makeURL({ mode: 'repository', repository: repo.id });
+
+                            return html`
+                                <tr style="cursor: pointer;" @click=${UI.wrap(e => go(url))}>
+                                    <td><a href=${url}>${repo.name}</a></td>
+                                    <td>${repo.url}</td>
+                                    <td style="text-align: right;">
+                                        ${!repo.checked ? 'Valid' : ''}
+                                        ${repo.checked && !repo.errors ? 'Success' : ''}
+                                        ${repo.errors ? html`<span style="color: red;">${repo.failed || 'Unknown error'}</span>` : ''}
+                                        <br><span class="sub">${repo.checked ? (new Date(repo.checked)).toLocaleString() : 'Check pending'}</span>
+                                    </td>
+                                </tr>
+                            `;
+                        })}
                         ${!repositories.length ? html`<tr><td colspan="3" style="text-align: center;">No repository</td></tr>` : ''}
                     </tbody>
                 </table>
@@ -605,11 +609,6 @@ async function runDashboard() {
             </div>
         </div>
     `);
-}
-
-async function toggleRepository(id) {
-    let url = '/repository/' + id;
-    await go(url);
 }
 
 async function runRepository() {
