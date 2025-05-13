@@ -558,6 +558,7 @@ async function runDashboard() {
     UI.main(html`
         <div class="tabbar">
             <a class="active">Overview</a>
+            ${cache.repository != null ? html`<a href=${makeURL({ mode: 'repository' })}>${cache.repository.name}</a>` : ''}
         </div>
 
         <div class="tab">
@@ -624,6 +625,8 @@ async function runRepository() {
         cache.repository = null;
     }
 
+    route.repository = cache.repository?.id;
+
     if (cache.repository == null) {
         go('/dashboard');
         return;
@@ -634,7 +637,7 @@ async function runRepository() {
     UI.main(html`
         <div class="tabbar">
             <a href="/dashboard">Overview</a>
-            <a class="active">Repository</a>
+            <a class="active">${cache.repository.name}</a>
         </div>
 
         <div class="tab">
