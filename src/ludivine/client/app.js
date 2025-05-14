@@ -706,7 +706,7 @@ async function initProject(project, study) {
 
     // Update study tests
     await db.transaction(async t => {
-        let prevs = await t.fetchAll(`SELECT id, key, title, visible, schedule
+        let prevs = await t.fetchAll(`SELECT id, key, title, schedule
                                       FROM tests
                                       WHERE study = ? AND visible = 1`, study.id);
         let map = new Map(prevs.map(prev => [prev.key, prev]));
@@ -1091,10 +1091,10 @@ async function runConsent() {
 
 async function runProject() {
     // Sync tests
-    cache.tests = await db.fetchAll(`SELECT t.id, t.key, t.visible, t.status, t.notify
+    cache.tests = await db.fetchAll(`SELECT t.id, t.key, t.status, t.notify
                                      FROM tests t
                                      INNER JOIN studies s ON (s.id = t.study)
-                                     WHERE s.id = ?`, cache.study.id);
+                                     WHERE s.id = ? AND t.visible = 1`, cache.study.id);
 
     // Best effort, don't wait
     syncEvents();
@@ -1482,13 +1482,11 @@ function isComplete(page, date, saved = []) {
 }
 
 function computeProgress(page, date) {
-    let tests = page.tests.filter(test => test.schedule == null || test.schedule <= date);
-
-    let progress = tests.reduce((acc, child) => {
+    let progress = page.tests.reduce((acc, child) => {
         let test = cache.tests.find(test => test.key == child.key);
         return acc + (test.status == 'done');
     }, 0);
-    let total = tests.length;
+    let total = page.tests.length;
 
     return [progress, total];
 }
