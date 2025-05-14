@@ -314,10 +314,11 @@ function init(build, start, values) {
 
         build.module('m3', '3 mois', mod => {
             mod.level = 'Module';
+
             mod.help = html`
-                <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
-                <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
+                <p>Ce module n'est <b>pas prêt</b> ! Revenez plus tard :)
             `;
+            return;
 
             let options = { schedule: debut.plusMonths(3) };
 
@@ -353,10 +354,11 @@ function init(build, start, values) {
 
         build.module('m6', '6 mois', mod => {
             mod.level = 'Module';
+
             mod.help = html`
-                <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
-                <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
+                <p>Ce module n'est <b>pas prêt</b> ! Revenez plus tard :)
             `;
+            return;
 
             let options = { schedule: debut.plusMonths(6) };
 
@@ -392,9 +394,11 @@ function init(build, start, values) {
 
         build.module('m12', '1 an', mod => {
             mod.level = 'Module';
+
             mod.help = html`
-                <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
+                <p>Ce module n'est <b>pas prêt</b> ! Revenez plus tard :)
             `;
+            return;
 
             let options = { schedule: debut.plusMonths(12) };
 
