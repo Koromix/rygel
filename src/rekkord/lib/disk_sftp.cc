@@ -48,7 +48,7 @@ class SftpDisk: public rk_Disk {
         Async *tasks;
 
         std::mutex mutex;
-        FunctionRef<bool(const char *path)> func;
+        FunctionRef<bool(const char *, int64_t)> func;
     };
 
     ssh_Config config;
@@ -69,8 +69,8 @@ public:
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
 
-    bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
-    StatResult TestRaw(const char *path) override;
+    bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
+    StatResult TestRaw(const char *path, int64_t *out_size = nullptr) override;
 
     bool CreateDirectory(const char *path) override;
     bool DeleteDirectory(const char *path) override;
@@ -506,7 +506,7 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
     if (!success)
         return -1;
 
-    if (!PutCache(path))
+    if (!PutCache(path, written_len))
         return -1;
 
     return written_len;
@@ -537,7 +537,7 @@ bool SftpDisk::DeleteRaw(const char *path)
     return success;
 }
 
-bool SftpDisk::ListRaw(const char *path, FunctionRef<bool(const char *path)> func)
+bool SftpDisk::ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func)
 {
     ListContext ctx = {};
     Async tasks(GetAsync());
@@ -555,11 +555,16 @@ bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
     LocalArray<char, MaxPathSize + 128> dirname;
     dirname.len = Fmt(dirname.data, "%1/%2", config.path, path).len;
 
-    HeapArray<const char *> filenames;
+    struct FileInfo {
+        const char *filename;
+        int64_t size;
+    };
+
+    HeapArray<FileInfo> files;
     BlockAllocator temp_alloc;
 
     bool success = RunSafe("list directory", [&](ConnectionData *conn) {
-        filenames.RemoveFrom(0);
+        files.RemoveFrom(0);
         temp_alloc.Reset();
 
         sftp_dir dir = sftp_opendir(conn->sftp, dirname.data);
@@ -607,7 +612,7 @@ bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
                 if (!ListRaw(ctx, filename))
                     return RunResult::SpecificError;
             } else {
-                filenames.Append(filename);
+                files.Append({ filename, (int64_t)attr->size });
             }
         }
 
@@ -623,8 +628,8 @@ bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
     {
         std::lock_guard<std::mutex> lock(ctx->mutex);
 
-        for (const char *filename: filenames) {
-            if (!ctx->func(filename))
+        for (const FileInfo &file: files) {
+            if (!ctx->func(file.filename, file.size))
                 return false;
         }
     }
@@ -632,7 +637,7 @@ bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
     return true;
 }
 
-StatResult SftpDisk::TestRaw(const char *path)
+StatResult SftpDisk::TestRaw(const char *path, int64_t *out_size)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
@@ -676,7 +681,11 @@ StatResult SftpDisk::TestRaw(const char *path)
             return RunResult::Success;
         }
 
+        if (out_size) {
+            *out_size = (int64_t)attr->size;
+        }
         ret = StatResult::Success;
+
         return RunResult::Success;
     });
     if (!success)

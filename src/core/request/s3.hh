@@ -70,10 +70,10 @@ public:
     const s3_Config &GetConfig() const { return config; }
     const char *GetURL() const { return url; }
 
-    bool ListObjects(const char *prefix, FunctionRef<bool(const char *key)> func);
+    bool ListObjects(const char *prefix, FunctionRef<bool(const char *, int64_t)> func);
     Size GetObject(Span<const char> key, Span<uint8_t> out_buf);
     Size GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj);
-    StatResult HasObject(Span<const char> key);
+    StatResult HasObject(Span<const char> key, int64_t *out_size = nullptr);
     bool PutObject(Span<const char> key, Span<const uint8_t> data, const char *mimetype = nullptr);
     bool DeleteObject(Span<const char> key);
 

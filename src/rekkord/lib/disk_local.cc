@@ -34,8 +34,8 @@ public:
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
 
-    bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
-    StatResult TestRaw(const char *path) override;
+    bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
+    StatResult TestRaw(const char *path, int64_t *out_size = nullptr) override;
 
     bool CreateDirectory(const char *path) override;
     bool DeleteDirectory(const char *path) override;
@@ -192,10 +192,12 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
         return -1;
     tmp_guard.Disable();
 
-    if (!PutCache(path))
+    int64_t written = writer.GetRawWritten();
+
+    if (!PutCache(path, written))
         return -1;
 
-    return writer.GetRawWritten();
+    return written;
 }
 
 bool LocalDisk::DeleteRaw(const char *path)
@@ -206,7 +208,7 @@ bool LocalDisk::DeleteRaw(const char *path)
     return UnlinkFile(filename.data);
 }
 
-bool LocalDisk::ListRaw(const char *path, FunctionRef<bool(const char *path)> func)
+bool LocalDisk::ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func)
 {
     BlockAllocator temp_alloc;
 
@@ -221,11 +223,11 @@ bool LocalDisk::ListRaw(const char *path, FunctionRef<bool(const char *path)> fu
     for (Size i = 0; i < pending_directories.len; i++) {
         const char *dirname = pending_directories[i];
 
-        EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, FileType file_type) {
+        EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
             const char *filename = Fmt(&temp_alloc, "%1/%2", dirname, basename).ptr;
             const char *path = filename + url_len + 1;
 
-            switch (file_type) {
+            switch (file_info.type) {
                 case FileType::Directory: {
                     if (TestStr(path, "tmp"))
                         return true;
@@ -234,7 +236,7 @@ bool LocalDisk::ListRaw(const char *path, FunctionRef<bool(const char *path)> fu
 
                 case FileType::File:
                 case FileType::Link: {
-                    if (!func(path))
+                    if (!func(path, file_info.size))
                         return false;
                 } break;
 
@@ -252,7 +254,7 @@ bool LocalDisk::ListRaw(const char *path, FunctionRef<bool(const char *path)> fu
     return true;
 }
 
-StatResult LocalDisk::TestRaw(const char *path)
+StatResult LocalDisk::TestRaw(const char *path, int64_t *out_size)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
@@ -265,6 +267,9 @@ StatResult LocalDisk::TestRaw(const char *path)
         return StatResult::OtherError;
     }
 
+    if (out_size) {
+        *out_size = file_info.size;
+    }
     return ret;
 }
 

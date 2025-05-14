@@ -131,8 +131,8 @@ Options:
 
     rk_Hash hash = {};
     int64_t total_size = 0;
-    int64_t total_written = 0;
-    if (!rk_Put(disk.get(), settings, filenames, &hash, &total_size, &total_written))
+    int64_t total_stored = 0;
+    if (!rk_Put(disk.get(), settings, filenames, &hash, &total_size, &total_stored))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
@@ -145,7 +145,7 @@ Options:
         LogInfo("Snapshot channel: %!..+%1%!0", settings.channel);
     }
     LogInfo("Source size: %!..+%1%!0", FmtDiskSize(total_size));
-    LogInfo("Total written: %!..+%1%!0", FmtDiskSize(total_written));
+    LogInfo("Total stored: %!..+%1%!0", FmtDiskSize(total_stored));
     LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
 
     return 0;

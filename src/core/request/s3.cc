@@ -319,7 +319,7 @@ static void EncodeUrlSafe(Span<const char> str, const char *passthrough, HeapArr
     out_buf->ptr[out_buf->len] = 0;
 }
 
-bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *key)> func)
+bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *, int64_t)> func)
 {
     BlockAllocator temp_alloc;
 
@@ -396,9 +396,10 @@ bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *ke
 
         for (const pugi::xpath_node &node: contents) {
             const char *key = node.node().child("Key").text().get();
+            int64_t size = node.node().child("Size").text().as_llong();
 
             if (key && key[0]) [[likely]] {
-                if (!func(key))
+                if (!func(key, size))
                     return false;
                 after_node = &node;
             }
@@ -561,7 +562,7 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     return ctx.total_len;
 }
 
-StatResult s3_Session::HasObject(Span<const char> key)
+StatResult s3_Session::HasObject(Span<const char> key, int64_t *out_size)
 {
     BlockAllocator temp_alloc;
 
@@ -595,7 +596,21 @@ StatResult s3_Session::HasObject(Span<const char> key)
     });
 
     switch (status) {
-        case 200: return StatResult::Success;
+        case 200: {
+            if (out_size) {
+                curl_off_t length;
+
+                if (curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &length)) {
+                    LogError("Failed to stat object '%1': missing size", key);
+                    return StatResult::OtherError;
+                }
+
+                *out_size = (int64_t)length;
+            }
+
+            return StatResult::Success;
+        } break;
+
         case 404: return StatResult::MissingPath;
         case 403: {
             LogError("Failed to stat object '%1': permission denied", key);

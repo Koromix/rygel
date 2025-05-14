@@ -35,8 +35,8 @@ public:
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
 
-    bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
-    StatResult TestRaw(const char *path) override;
+    bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
+    StatResult TestRaw(const char *path, int64_t *out_size) override;
 
     bool CreateDirectory(const char *path) override;
     bool DeleteDirectory(const char *path) override;
@@ -82,7 +82,7 @@ Size S3Disk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<c
 
     if (!s3.PutObject(path, obj))
         return -1;
-    if (!PutCache(path))
+    if (!PutCache(path, obj.len))
         return -1;
 
     return obj.len;
@@ -93,7 +93,7 @@ bool S3Disk::DeleteRaw(const char *path)
     return s3.DeleteObject(path);
 }
 
-bool S3Disk::ListRaw(const char *path, FunctionRef<bool(const char *path)> func)
+bool S3Disk::ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func)
 {
     char prefix[4096];
 
@@ -106,9 +106,9 @@ bool S3Disk::ListRaw(const char *path, FunctionRef<bool(const char *path)> func)
     return s3.ListObjects(prefix, func);
 }
 
-StatResult S3Disk::TestRaw(const char *path)
+StatResult S3Disk::TestRaw(const char *path, int64_t *out_size)
 {
-    return s3.HasObject(path);
+    return s3.HasObject(path, out_size);
 }
 
 bool S3Disk::CreateDirectory(const char *)

@@ -403,9 +403,40 @@ sq_Database *rk_Disk::OpenCache(bool build)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 7: {
+                    bool success = cache_db.RunMany(R"(
+                        DROP INDEX objects_k;
+                        DROP INDEX stats_p;
+
+                        DROP TABLE objects;
+                        DROP TABLE stats;
+
+                        CREATE TABLE objects (
+                            key TEXT NOT NULL,
+                            size INTEGER NOT NULL
+                        );
+                        CREATE UNIQUE INDEX objects_k ON objects (key);
+
+                        CREATE TABLE stats (
+                            path TEXT NOT NULL,
+                            mtime INTEGER NOT NULL,
+                            ctime INTEGER NOT NULL,
+                            mode INTEGER NOT NULL,
+                            size INTEGER NOT NULL,
+                            hash BLOB NOT NULL,
+                            stored INTEGER NOT NULL
+                        );
+                        CREATE UNIQUE INDEX stats_p ON stats (path);
+
+                        UPDATE meta SET cid = NULL;
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 7);
+                static_assert(CacheVersion == 8);
             }
 
             if (!cache_db.SetUserVersion(CacheVersion))
@@ -461,9 +492,10 @@ bool rk_Disk::RebuildCache()
         if (!cache_db.Run("DELETE FROM stats"))
             return false;
 
-        bool success = ListRaw(nullptr, [&](const char *path) {
-            if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
-                                 ON CONFLICT (key) DO NOTHING)", path))
+        bool success = ListRaw(nullptr, [&](const char *path, int64_t size) {
+            if (!cache_db.Run(R"(INSERT INTO objects (key, size) VALUES (?1, ?2)
+                                 ON CONFLICT (key) DO UPDATE SET size = excluded.size)",
+                              path, size))
                 return false;
 
             return true;
@@ -565,7 +597,7 @@ bool rk_Disk::ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserInfo> *o
     Size prev_len = out_users->len;
     RG_DEFER_N(out_guard) { out_users->RemoveFrom(prev_len); };
 
-    bool success = ListRaw("keys", [&](const char *path) {
+    bool success = ListRaw("keys", [&](const char *path, int64_t) {
         rk_UserInfo user = {};
 
         Span<const char> remain = path;
@@ -752,11 +784,17 @@ Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs/%1/%2", GetBlobPrefix(hash), hash).len;
 
-    switch (TestFast(path.data)) {
-        case StatResult::Success: return 0;
-        case StatResult::MissingPath: {} break;
-        case StatResult::AccessDenied:
-        case StatResult::OtherError: return -1;
+    // Skip objects that already exist
+    {
+        int64_t written = 0;
+
+        switch (TestFast(path.data, &written)) {
+            case StatResult::Success: return (Size)written;
+            case StatResult::MissingPath: {} break;
+
+            case StatResult::AccessDenied:
+            case StatResult::OtherError: return -1;
+        }
     }
 
     Size written = WriteRaw(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
@@ -976,7 +1014,7 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
 
     HeapArray<Span<const char>> filenames;
     {
-        bool success = ListRaw("tags", [&](const char *path) {
+        bool success = ListRaw("tags", [&](const char *path, int64_t) {
             Span<const char> filename = DuplicateString(path, alloc);
             filenames.Append(filename);
 
@@ -1157,43 +1195,46 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, Span<const rk_UserInfo> user
     return true;
 }
 
-bool rk_Disk::PutCache(const char *key)
+bool rk_Disk::PutCache(const char *key, int64_t size)
 {
     if (!cache_db.IsValid())
         return true;
 
-    bool success = cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
-                                   ON CONFLICT DO NOTHING)", key);
+    bool success = cache_db.Run(R"(INSERT INTO objects (key, size) VALUES (?1, ?2)
+                                   ON CONFLICT DO NOTHING)", key, size);
     return success;
 }
 
-StatResult rk_Disk::TestFast(const char *path)
+StatResult rk_Disk::TestFast(const char *path, int64_t *out_size)
 {
     if (!cache_db.IsValid())
-        return TestRaw(path);
+        return TestRaw(path, out_size);
 
-    bool should_exist;
+    int64_t known_size = -1;
     {
         sq_Statement stmt;
-        if (!cache_db.Prepare("SELECT rowid FROM objects WHERE key = ?1", &stmt))
+        if (!cache_db.Prepare("SELECT size FROM objects WHERE key = ?1", &stmt))
             return StatResult::OtherError;
         sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
-        should_exist = stmt.Step();
+        if (stmt.Step()) {
+            known_size = sqlite3_column_int64(stmt, 0);
+        }
     }
 
     // Probabilistic check
     if (GetRandomInt(0, 100) < 2) {
-        bool really_exists = false;
+        int64_t real_size = -1;
 
-        switch (TestRaw(path)) {
-            case StatResult::Success: { really_exists = true; } break;
-            case StatResult::MissingPath: { really_exists = false; } break;
+        switch (TestRaw(path, &real_size)) {
+            case StatResult::Success:
+            case StatResult::MissingPath: {} break;
+
             case StatResult::AccessDenied: return StatResult::AccessDenied;
             case StatResult::OtherError: return StatResult::OtherError;
         }
 
-        if (really_exists && !should_exist) {
+        if (real_size >= 0 && known_size < 0) {
             std::unique_lock<std::mutex> lock(cache_mutex, std::try_to_lock);
 
             if (lock.owns_lock() && ++cache_misses >= 4) {
@@ -1201,8 +1242,11 @@ StatResult rk_Disk::TestFast(const char *path)
                 cache_misses = 0;
             }
 
-            return really_exists ? StatResult::Success : StatResult::MissingPath;
-        } else if (should_exist && !really_exists) {
+            if (out_size) {
+                *out_size = real_size;
+            }
+            return StatResult::Success;
+        } else if (known_size >= 0 && real_size < 0) {
             ClearCache();
 
             LogError("The local cache database was mismatched and could have resulted in missing data in the backup.");
@@ -1212,7 +1256,13 @@ StatResult rk_Disk::TestFast(const char *path)
         }
     }
 
-    return should_exist ? StatResult::Success : StatResult::MissingPath;
+    if (known_size < 0)
+        return StatResult::MissingPath;
+
+    if (out_size) {
+        *out_size = known_size;
+    }
+    return StatResult::Success;
 }
 
 static bool DeriveFromPassword(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])

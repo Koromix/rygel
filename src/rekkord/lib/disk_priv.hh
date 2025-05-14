@@ -67,6 +67,6 @@ struct BlobIntro {
 };
 #pragma pack(pop)
 
-static const int CacheVersion = 7;
+static const int CacheVersion = 8;
 
 }

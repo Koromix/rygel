@@ -63,7 +63,7 @@ public:
     PutContext(rk_Disk *disk, sq_Database *db, const rk_PutSettings &settings);
 
     PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash, int64_t *out_subdirs = nullptr);
-    PutResult PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_size = nullptr);
+    PutResult PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_size = nullptr, int64_t *out_stored = nullptr);
 
     int64_t GetSize() const { return put_size; }
     int64_t GetStored() const { return put_stored; }
@@ -139,10 +139,11 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
         const char *dirname = nullptr;
         HeapArray<uint8_t> blob;
+        HeapArray<int64_t> stored;
         bool failed = false;
 
         std::atomic_int64_t size { 0 };
-        std::atomic_int64_t entries { 0 };
+        int64_t entries = 0;
         int64_t subdirs = 0;
 
         rk_Hash hash = {};
@@ -166,6 +167,9 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         for (Size i = 0; i < pending_directories.count; i++) {
             PendingDirectory *pending = &pending_directories[i];
 
+            // We can't use pending->entries because if does not count non-stored entities (such as pipes)
+            Size children = 0;
+
             const auto callback = [&](const char *basename, FileType) {
                 const char *filename = Fmt(&temp_alloc, "%1%/%2", pending->dirname, basename).ptr;
 
@@ -174,6 +178,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
                 int fd = -1;
                 RG_DEFER { CloseDescriptor(fd); };
+
+                children++;
 
 #if !defined(_WIN32)
 #if defined(__linux__)
@@ -315,9 +321,13 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 }
             }
 
+            // Don't reallocate
+            pending->stored.Reserve(children);
+
             // Process data entries (file, links)
             for (Size offset = RG_SIZE(DirectoryHeader); offset < pending->blob.len;) {
                 RawFile *entry = (RawFile *)(pending->blob.ptr + offset);
+                int64_t *stored = pending->stored.AppendDefault();
 
                 const char *filename = Fmt(&temp_alloc, "%1%/%2", pending->dirname, entry->GetName()).ptr;
 
@@ -328,7 +338,9 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                         // Skip file analysis if metadata is unchanged
                         {
                             sq_Statement stmt;
-                            if (!db->Prepare("SELECT mtime, ctime, mode, size, hash FROM stats WHERE path = ?1", &stmt)) {
+                            if (!db->Prepare(R"(SELECT mtime, ctime, mode, size, hash, stored
+                                                FROM stats
+                                                WHERE path = ?1)", &stmt)) {
                                 success = false;
                                 break;
                             }
@@ -341,6 +353,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                 int64_t size = sqlite3_column_int64(stmt, 3);
                                 Span<const uint8_t> hash = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 4),
                                                                     sqlite3_column_bytes(stmt, 4));
+                                int64_t written = sqlite3_column_int64(stmt, 5);
 
                                 if (hash.len == RG_SIZE(rk_Hash) && mtime == entry->mtime &&
                                                                     ctime == entry->ctime &&
@@ -353,6 +366,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
                                     // Done by PutFile in theory, but we're skipping it
                                     put_size += size;
+                                    MakeProgress(written);
+                                    *stored = written;
 
                                     break;
                                 }
@@ -364,7 +379,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
                         async.Run([=, this]() {
                             int64_t file_size = 0;
-                            PutResult ret = PutFile(filename, &entry->hash, &file_size);
+                            PutResult ret = PutFile(filename, &entry->hash, &file_size, stored);
 
                             if (ret == PutResult::Success) {
                                 entry->flags |= LittleEndian((int16_t)RawFile::Flags::Readable);
@@ -436,7 +451,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             DirectoryHeader *header = (DirectoryHeader *)pending->blob.ptr;
 
             header->size = LittleEndian(pending->size.load());
-            header->entries = LittleEndian(pending->entries.load());
+            header->entries = LittleEndian(pending->entries);
 
             HashBlake3(rk_BlobType::Directory3, pending->blob, salt32, &pending->hash);
 
@@ -477,24 +492,27 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                     continue;
 
                 Size limit = pending.blob.len - RG_SIZE(int64_t);
+                Size idx = 0;
 
                 for (Size offset = RG_SIZE(DirectoryHeader); offset < limit;) {
                     RawFile *entry = (RawFile *)(pending.blob.ptr + offset);
+                    int64_t stored = pending.stored[idx++];
 
                     const char *filename = Fmt(&temp_alloc, "%1%/%2", pending.dirname, entry->GetName()).ptr;
                     int flags = LittleEndian(entry->flags);
 
                     if ((flags & (int)RawFile::Flags::Readable) &&
                             entry->kind == (int16_t)RawFile::Kind::File) {
-                        if (!db->Run(R"(INSERT INTO stats (path, mtime, ctime, mode, size, hash)
-                                            VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-                                            ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
-                                                                             ctime = excluded.ctime,
-                                                                             mode = excluded.mode,
-                                                                             size = excluded.size,
-                                                                             hash = excluded.hash)",
+                        if (!db->Run(R"(INSERT INTO stats (path, mtime, ctime, mode, size, hash, stored)
+                                        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                                        ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
+                                                                         ctime = excluded.ctime,
+                                                                         mode = excluded.mode,
+                                                                         size = excluded.size,
+                                                                         hash = excluded.hash,
+                                                                         stored = excluded.stored)",
                                      filename, entry->mtime, entry->ctime, entry->mode, entry->size,
-                                     MakeSpan((const uint8_t *)&entry->hash, RG_SIZE(entry->hash))))
+                                     MakeSpan((const uint8_t *)&entry->hash, RG_SIZE(entry->hash)), stored))
                             return false;
                     }
 
@@ -522,7 +540,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     return PutResult::Success;
 }
 
-PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_size)
+PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_size, int64_t *out_stored)
 {
     StreamReader st;
     {
@@ -547,6 +565,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
 
     HeapArray<uint8_t> file_blob;
     int64_t file_size = 0;
+    std::atomic_int64_t file_stored = 0;
 
     // Split the file
     {
@@ -600,6 +619,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
                             return false;
 
                         MakeProgress(written);
+                        file_stored += written;
 
                         MemCpy(file_blob.ptr + idx * RG_SIZE(entry), &entry, RG_SIZE(entry));
 
@@ -640,6 +660,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
             return PutResult::Error;
 
         MakeProgress(written);
+        file_stored += written;
     } else {
         const RawChunk *entry0 = (const RawChunk *)file_blob.ptr;
         file_hash = entry0->hash;
@@ -651,13 +672,16 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
     if (out_size) {
         *out_size = file_size;
     }
+    if (out_stored) {
+        *out_stored += file_stored;
+    }
     return PutResult::Success;
 }
 
 void PutContext::MakeProgress(int64_t delta)
 {
     int64_t stored = put_stored.fetch_add(delta, std::memory_order_relaxed) + delta;
-    pg_stored.SetFmt("%1 written", FmtDiskSize(stored));
+    pg_stored.SetFmt("%1 stored", FmtDiskSize(stored));
 }
 
 bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *const> filenames,

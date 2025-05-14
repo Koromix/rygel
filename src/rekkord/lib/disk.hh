@@ -197,8 +197,8 @@ public:
     virtual Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
     virtual bool DeleteRaw(const char *path) = 0;
 
-    virtual bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) = 0;
-    virtual StatResult TestRaw(const char *path) = 0;
+    virtual bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) = 0;
+    virtual StatResult TestRaw(const char *path, int64_t *out_size = nullptr) = 0;
 
 protected:
     virtual bool CreateDirectory(const char *path) = 0;
@@ -206,10 +206,10 @@ protected:
 
     bool InitDefault(Span<const uint8_t> mkey, Span<const rk_UserInfo> users);
 
-    bool PutCache(const char *key);
+    bool PutCache(const char *key, int64_t size);
 
 private:
-    StatResult TestFast(const char *path);
+    StatResult TestFast(const char *path, int64_t *out_size);
 
     bool WriteKeys(const char *path, const char *pwd, rk_UserRole role, const rk_KeySet &keys);
     bool ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, rk_KeySet *out_keys);
