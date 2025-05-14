@@ -58,7 +58,7 @@ function build(form, values) {
 
             for (let prop of props) {
                 let key = "?q3_" + prop[0]
-                let label = `À quel point avez-vous ressenti les ${prop[1]} comme positifs ?`
+                let label = html`À quel point avez-vous ressenti les ${prop[1]} comme positifs ?`
 
                 form.slider(key, label, {
                     min: 0, max: 10,
