@@ -389,6 +389,8 @@ static void HandleRequest(http_IO *io)
             HandleRepositorySave(io);
         } else if (TestStr(request.path, "/api/repository/delete") && request.method == http_RequestMethod::Post) {
             HandleRepositoryDelete(io);
+        } else if (TestStr(request.path, "/api/repository/snapshots") && request.method == http_RequestMethod::Get) {
+            HandleRepositorySnapshots(io);
         } else {
             io->SendError(404);
         }

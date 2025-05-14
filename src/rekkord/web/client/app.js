@@ -667,7 +667,7 @@ async function runRepository() {
                         </thead>
                         <tbody>
                             ${channels.map(channel => html`
-                                <tr>
+                                <tr style="cursor: pointer;" @click=${UI.wrap(e => runChannel(cache.repository, channel.name))}>
                                     <td>${channel.name} <span class="sub">(${channel.count})</span></td>
                                     <td style="text-align: right;">${formatSize(channel.size)}</td>
                                     <td style="text-align: right;">${(new Date(channel.time)).toLocaleString()}</td>
@@ -680,27 +680,6 @@ async function runRepository() {
             </div>
         </div>
     `);
-}
-
-function formatSize(size) {
-    if (size >= 999950000) {
-        let value = size / 1000000000;
-        let prec = 1 + (value < 9.9995) + (value < 99.995);
-
-        return value.toFixed(prec) + ' GB';
-    } else if (size >= 999950) {
-        let value = size / 1000000;
-        let prec = 1 + (value < 9.9995) + (value < 99.995);
-
-        return value.toFixed(prec) + ' MB';
-    } else if (size >= 999.95) {
-        let value = size / 1000;
-        let prec = 1 + (value < 9.9995) + (value < 99.995);
-
-        return value.toFixed(prec) + ' kB';
-    } else {
-        return value + ' B';
-    }
 }
 
 async function configureRepository(repo) {
@@ -841,6 +820,76 @@ function detectType(url) {
         return 'ssh';
 
     return null;
+}
+
+async function runChannel(repo, channel) {
+    let url = Util.pasteURL('/api/repository/snapshots', { id: repo.id, channel: channel });
+    let snapshots = await Net.cache('snapshots', url);
+
+    await UI.dialog({
+        run: (render, close) => {
+            snapshots = UI.tableValues('snapshots', snapshots, 'time');
+
+            return html`
+                <div class="title">
+                    ${channel} snapshots
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                </div>
+
+                <div class="main">
+                    <table style="table-layout: fixed;">
+                        <colgroup>
+                            <col></col>
+                            <col></col>
+                            <col></col>
+                            <col></col>
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                ${UI.tableHeader('snapshots', 'time', 'Timestamp')}
+                                ${UI.tableHeader('snapshots', 'hash', 'Hash')}
+                                ${UI.tableHeader('snapshots', 'size', 'Size')}
+                                ${UI.tableHeader('snapshots', 'storage', 'Storage')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${snapshots.map(snapshot => html`
+                                <tr>
+                                    <td>${(new Date(snapshot.time)).toLocaleString()}</td>
+                                    <td><span class="sub">${snapshot.hash}</span></td>
+                                    <td style="text-align: right;">${formatSize(snapshot.size)}</td>
+                                    <td style="text-align: right;">${formatSize(snapshot.storage)}</td>
+                                </tr>
+                            `)}
+                            ${!snapshots.length ? html`<tr><td colspan="4" style="text-align: center;">No snapshot</td></tr>` : ''}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+    });
+}
+
+function formatSize(size) {
+    if (size >= 999950000) {
+        let value = size / 1000000000;
+        let prec = 1 + (value < 9.9995) + (value < 99.995);
+
+        return value.toFixed(prec) + ' GB';
+    } else if (size >= 999950) {
+        let value = size / 1000000;
+        let prec = 1 + (value < 9.9995) + (value < 99.995);
+
+        return value.toFixed(prec) + ' MB';
+    } else if (size >= 999.95) {
+        let value = size / 1000;
+        let prec = 1 + (value < 9.9995) + (value < 99.995);
+
+        return value.toFixed(prec) + ' kB';
+    } else {
+        return value + ' B';
+    }
 }
 
 // ------------------------------------------------------------------------

@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 4;
+const int DatabaseVersion = 5;
 
 bool MigrateDatabase(sq_Database *db)
 {
@@ -175,9 +175,26 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 4: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE snapshots (
+                        repository INTEGER REFERENCES repositories (id) ON DELETE CASCADE,
+                        hash TEXT NOT NULL,
+                        channel TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        size INTEGER NOT NULL,
+                        storage INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX snapshots_rh ON snapshots (repository, hash);
+                    CREATE INDEX snapshots_c ON snapshots (channel);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 4);
+            static_assert(DatabaseVersion == 5);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

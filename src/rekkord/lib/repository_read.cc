@@ -963,12 +963,18 @@ bool rk_Channels(rk_Disk *disk, Allocator *alloc, HeapArray<rk_ChannelInfo> *out
 {
     BlockAllocator temp_alloc;
 
-    Size prev_len = out_channels->len;
-    RG_DEFER_N(out_guard) { out_channels->RemoveFrom(prev_len); };
-
     HeapArray<rk_SnapshotInfo> snapshots;
     if (!rk_Snapshots(disk, &temp_alloc, &snapshots))
         return false;
+
+    rk_Channels(snapshots, alloc, out_channels);
+
+    return true;
+}
+
+void rk_Channels(Span<const rk_SnapshotInfo> snapshots, Allocator *alloc, HeapArray<rk_ChannelInfo> *out_channels)
+{
+    Size prev_len = out_channels->len;
 
     HashMap<const char *, Size> map;
 
@@ -1000,9 +1006,6 @@ bool rk_Channels(rk_Disk *disk, Allocator *alloc, HeapArray<rk_ChannelInfo> *out
 
     std::sort(out_channels->ptr + prev_len, out_channels->end(),
               [](const rk_ChannelInfo &channel1, const rk_ChannelInfo &channel2) { return CmpStr(channel1.name, channel2.name) < 0; });
-
-    out_guard.Disable();
-    return true;
 }
 
 class ListContext {

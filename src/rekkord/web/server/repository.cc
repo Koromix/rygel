@@ -161,13 +161,30 @@ bool CheckRepositories()
                 return false;
             }
 
-            HeapArray<rk_ChannelInfo> channels;
-            if (!rk_Channels(disk.get(), &temp_alloc, &channels)) {
+            HeapArray<rk_SnapshotInfo> snapshots;
+            if (!rk_Snapshots(disk.get(), &temp_alloc, &snapshots)) {
                 db.Run(R"(UPDATE repositories SET checked = ?2,
                                                   failed = ?3,
                                                   errors = errors + 1
                           WHERE id = ?1)", id, now, last_err);
                 return false;
+            }
+
+            HeapArray<rk_ChannelInfo> channels;
+            rk_Channels(snapshots, &temp_alloc, &channels);
+
+            for (const rk_SnapshotInfo &snapshot: snapshots) {
+                char hash[128];
+                Fmt(hash, "%1", snapshot.hash);
+
+                if (!db.Run(R"(INSERT INTO snapshots (repository, hash, channel, timestamp, size, storage)
+                               VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                               ON CONFLICT DO UPDATE SET channel = excluded.channel,
+                                                         timestamp = excluded.timestamp,
+                                                         size = excluded.size,
+                                                         storage = excluded.storage)",
+                            id, hash, snapshot.channel, snapshot.time, snapshot.size, snapshot.storage))
+                    return false;
             }
 
             for (const rk_ChannelInfo &channel: channels) {
@@ -266,14 +283,12 @@ void HandleRepositoryGet(http_IO *io)
         return;
     }
 
-    // Get and check vault ID
     int64_t id = -1;
     {
         const char *str = request.GetQueryValue("id");
 
         if (!str || !ParseInt(str, &id, (int)ParseFlag::End)) {
             LogError("Missing or invalid repository ID");
-
             io->SendError(422);
             return;
         }
@@ -569,6 +584,73 @@ void HandleRepositoryDelete(http_IO *io)
         return;
 
     io->SendText(200, "{}", "application/json");
+}
+
+void HandleRepositorySnapshots(http_IO *io)
+{
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetNormalSession(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(404);
+        return;
+    }
+
+    int64_t id = -1;
+    const char *channel = nullptr;
+    {
+        const char *str = request.GetQueryValue("id");
+
+        if (!str || !ParseInt(str, &id, (int)ParseFlag::End)) {
+            LogError("Missing or invalid repository ID");
+            io->SendError(422);
+            return;
+        }
+
+        channel = request.GetQueryValue("channel");
+
+        if (!channel || !channel[0]) {
+            LogError("Missing or invalid channel name");
+            io->SendError(422);
+            return;
+        }
+    }
+
+    sq_Statement stmt;
+    if (!db.Prepare(R"(SELECT s.hash, s.timestamp, s.size, s.storage
+                       FROM snapshots s
+                       INNER JOIN repositories r ON (r.id = s.repository)
+                       WHERE r.owner = ?1 AND r.id = ?2 AND
+                             s.channel = ?3)",
+                    &stmt, session->userid, id, channel))
+        return;
+
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartArray();
+
+    while (stmt.Step()) {
+        const char *hash = (const char *)sqlite3_column_text(stmt, 0);
+        int64_t time = sqlite3_column_int64(stmt, 1);
+        int64_t size = sqlite3_column_int64(stmt, 2);
+        int64_t storage = sqlite3_column_int64(stmt, 3);
+
+        json.StartObject();
+        json.Key("hash"); json.String(hash);
+        json.Key("time"); json.Int64(time);
+        json.Key("size"); json.Int64(size);
+        json.Key("storage"); json.Int64(storage);
+        json.EndObject();
+    }
+    if (!stmt.IsValid())
+        return;
+
+    json.EndArray();
+
+    json.Finish();
 }
 
 }

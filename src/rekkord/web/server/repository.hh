@@ -26,5 +26,6 @@ void HandleRepositoryList(http_IO *io);
 void HandleRepositoryGet(http_IO *io);
 void HandleRepositorySave(http_IO *io);
 void HandleRepositoryDelete(http_IO *io);
+void HandleRepositorySnapshots(http_IO *io);
 
 }
