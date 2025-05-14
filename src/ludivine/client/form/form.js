@@ -186,7 +186,7 @@ function FormModule(app, study, page) {
                 <div class="box">
                     <div class="row">
                         <img style="width: 100px; align-self: center;" src=${ASSETS['pictures/help1']} alt="" />
-                        <div style="margin-left: 1em;">${intro}</div>
+                        <div style="flex: 1; margin-left: 1em;">${intro}</div>
                     </div>
                 </div>
             `;
@@ -194,7 +194,7 @@ function FormModule(app, study, page) {
             return html`
                 <div class="box">
                     <div class="row">
-                        <div style="margin-right: 1em;">${intro}</div>
+                        <div style="flex: 1; margin-right: 1em;">${intro}</div>
                         <img style="width: 100px; align-self: center;" src=${ASSETS['pictures/help2']} alt="" />
                     </div>
                 </div>
