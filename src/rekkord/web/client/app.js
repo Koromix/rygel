@@ -935,7 +935,7 @@ async function changePicture() {
 
     let cropper = new PictureCropper('Change picture', 256);
 
-    cropper.defaultURL = ASSETS['ui/anonyous'];
+    cropper.defaultURL = ASSETS['ui/anonymous'];
     cropper.imageFormat = 'image/png';
 
     await cropper.run(current, async blob => {
