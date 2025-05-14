@@ -64,6 +64,8 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 } else if (prop.key == "URL") {
                     Span<const char> url = TrimStrRight(prop.value, '/');
                     config.url = DuplicateString(url, &config.str_alloc).ptr;
+                } else if (prop.key == "DevMode") {
+                    valid &= ParseBool(prop.value, &config.dev_mode);
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;

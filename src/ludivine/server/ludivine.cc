@@ -299,6 +299,7 @@ static void InitAssets()
                 json.EndObject();
             }
             json.EndArray();
+            json.Key("dev"); json.Bool(config.dev_mode);
             json.EndObject();
         } else if (key == "JS") {
             writer->Write(js);

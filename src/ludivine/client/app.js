@@ -1250,6 +1250,7 @@ function renderModule() {
                     let cls = 'module';
                     let status = null;
                     let img = null;
+                    let available = true;
 
                     if (total && progress == total) {
                         cls += ' done';
@@ -1273,14 +1274,18 @@ function renderModule() {
 
                         if (earliest != null && earliest > today) {
                             status = niceDate(earliest, true);
-                            cls += ' disabled';
+
+                            if (!ENV.dev) {
+                                cls += ' disabled';
+                                available = false;
+                            }
                         } else {
                             cls += ' draft';
                         }
                     }
 
                     return html`
-                        <div class=${cls} @click=${UI.wrap(e => navigateStudy(child))}>
+                        <div class=${cls} @click=${available ? UI.wrap(e => navigateStudy(child)) : null}>
                             <div class="title">${child.title}</div>
                             ${img != null ? html`<img src=${img} alt="" />` : ''}
                             <div class="status">${status}</div>
@@ -1293,20 +1298,25 @@ function renderModule() {
                     let cls = 'module ' + test.status;
                     let status = null;
                     let img = null;
+                    let available = true;
 
                     if (test.status == 'done') {
                         status = 'Terminé';
                         img = ASSETS['ui/validate'];
                     } else if (child.schedule != null && child.schedule > today) {
                         status = niceDate(child.schedule, true);
-                        cls += ' disabled';
+
+                        if (!ENV.dev) {
+                            cls += ' disabled';
+                            available = false;
+                        }
                     } else {
                         status = 'À compléter';
                         cls += ' draft';
                     }
 
                     return html`
-                        <div class=${cls} @click=${UI.wrap(e => navigateStudy(child))}>
+                        <div class=${cls} @click=${available ? UI.wrap(ae => navigateStudy(child)) : null}>
                             <div class="title">${child.title}</div>
                             ${img != null ? html`<img src=${img} alt="" />` : ''}
                             <div class="status">${status}</div>
