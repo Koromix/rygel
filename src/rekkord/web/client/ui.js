@@ -624,12 +624,12 @@ function setFilter(key, str, keys) {
     }
 }
 
-function tableValues(key, values, default_by = null) {
+function tableValues(key, values, default_by = null, default_ascending = null) {
     let order = table_orders[key];
     let filter = table_filters[key];
 
     if (order == null && default_by != null) {
-        setOrder(key, default_by);
+        setOrder(key, default_by, default_ascending);
         order = table_orders[key];
     }
     if (order != null) {

@@ -828,7 +828,7 @@ async function runChannel(repo, channel) {
 
     await UI.dialog({
         run: (render, close) => {
-            snapshots = UI.tableValues('snapshots', snapshots, 'time');
+            snapshots = UI.tableValues('snapshots', snapshots, 'time', false);
 
             return html`
                 <div class="title">
