@@ -15,7 +15,7 @@
 
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values) {
+function build(form, values, since) {
     form.values = values
 
     form.intro = ''
@@ -36,7 +36,7 @@ function build(form, values) {
             [99, "Autre", html`<b>autres évènements survenus</b>`]
         ]
 
-        form.binary("q1", html`<b>Depuis l’évènement qui vous a amené ici</b>, avez-vous vécu des évènements particulièrement bons pour vous ? Quelque chose qui vous a fait du bien ?`)
+        form.binary("q1", html`<b>Depuis ${since}</b>, avez-vous vécu des évènements particulièrement bons pour vous ? Quelque chose qui vous a fait du bien ?`)
 
         // Domaines
         {

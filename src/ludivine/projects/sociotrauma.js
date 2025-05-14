@@ -14,29 +14,38 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { html } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { PERSON_KINDS } from '../client/network/constants.js';
 import { ASSETS } from '../assets/assets.js';
 
 import adnm20 from './forms/adnm20.js';
+import adnm20s6 from './forms/adnm20s6.js';
+import cerq from './forms/cerq.js';
+import cfs from './forms/cfs.js';
 import cses from './forms/cses.js';
-import ctqsf from './forms/ctqsf.js';
-import evenement from './forms/evenement.js';
+import ctq from './forms/ctq.js';
+import evenement0 from './forms/evenement0.js';
+import evenement6 from './forms/evenement6.js';
 import gad7 from './forms/gad7.js';
 import isi from './forms/isi.js';
 import isrc from './forms/isrc.js';
 import lec5 from './forms/lec5.js';
 import mhqol from './forms/mhqol.js';
+import mini5s from './forms/mini5s.js';
+import nouveaus6 from './forms/nouveaus6.js';
 import pcl5 from './forms/pcl5.js';
 import pdeq from './forms/pdeq.js';
+import pensees6 from './forms/pensees6.js';
 import phq9 from './forms/phq9.js';
 import positif from './forms/positif.js';
 import sociodemo from './forms/sociodemo.js';
 import ptci from './forms/ptci.js';
 import rds from './forms/rds.js';
+import rdss6 from './forms/rdss6.js';
 import sni from './forms/sni.js';
 import sps10 from './forms/sps10.js';
 import ssi from './forms/ssi.js';
 import ssq6 from './forms/ssq6.js';
-import substances from './forms/substances.js';
+import substance from './forms/substance.js';
 
 const consent = {
     text: html`
@@ -149,7 +158,7 @@ function init(build, start, values) {
                     <p>N'hésitez pas à interrompre l'application ou à cliquer sur le <b>bouton « SOS »</b> si cela s’avère nécessaire pour vous. Vous pouvez également arrêter à tout moment et revenir plus tard.
                 `
 
-                build.form('evenement', 'L’évènement qui vous a amené ici', evenement, options)
+                build.form('evenement', 'L’évènement qui vous a amené ici', evenement0, options)
                 build.form('pensees', 'Pensées et ressentis', (form, values) => {
                     if (values.pdeq == null)
                         values.pdeq = {}
@@ -169,7 +178,7 @@ function init(build, start, values) {
 
                     adnm20(form, values.adnm20)
                     lec5(form, values.lec5)
-                    positif(form, values.positif)
+                    positif(form, values.positif, 'l’évènement qui vous a amené ici')
                 }, options)
             });
 
@@ -190,41 +199,116 @@ function init(build, start, values) {
         build.module('s6', '6 semaines', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
-                <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
+                <p>Nous vous remercions d'avoir rempli le premier questionnaire. Pour compléter notre étude, nous avons besoin que vous répondiez à un <b>deuxième questionnaire</b> sur ce que vous avez ressenti suite à l'événement qui vous a amené ici.
+                <p>Vous remarquerez peut-être que certaines questions <b>semblent se répéter</b>. C'est normal et voulu ! Chaque question a son importance pour nous permettre d'analyser correctement les résultats.
+                <p>Nous vous sommes très reconnaissants pour votre temps et votre patience. Vos <b>réponses sont précieuses</b> pour notre recherche !
+            `;
+            mod.step = html`
+                <p>Bienvenue dans ce <b>premier suivi</b> de socio-trauma !
+                <p>À tout moment, vous pouvez arrêter l'étude ou la mettre en pause et y revenir plus tard. Vous avez également la possibilité de consulter les pages « Ressources » ou « Se détendre ».
             `;
 
             let options = { schedule: debut.plus(6 * 7) };
 
-            build.module('entourage', 'Entourage', () => {
+            build.module('evenement', 'Évènement', mod => {
+                mod.help = html`
+                    <p>Dans ce module, nous vous poserons des questions sur l’<b>événement qui vous a conduit à participer à cette étude</b>, ainsi que sur <b>tout autre événement, qu’il soit positif ou négatif</b>, qui fait actuellement partie de votre réalité.
+                    <p>N'hésitez pas à interrompre l'application ou à cliquer sur le <b>bouton « SOS »</b> si cela s’avère nécessaire pour vous. Vous pouvez également arrêter à tout moment et revenir plus tard.
+                `
+
+                build.form('evenement', 'L’évènement qui vous a amené ici', (form, values) => evenement6(form, values, start), options)
+                build.form('pensees', 'Pensées et ressentis', pensees6, options)
+                build.form('autres', 'Autres évènements de vie', (form, values) => {
+                    if (values.adnm20 == null)
+                        values.adnm20 = {}
+                    if (values.nouveau == null)
+                        values.nouveau = {}
+                    if (values.positif == null)
+                        values.positif = {}
+
+                    adnm20s6(form, values.adnm20)
+                    nouveaus6(form, values.nouveau)
+                    positif(form, values.positif, 'la fin du bilan initial')
+                }, options)
+                build.form('enfance', 'Enfance et adolescence', ctq, options)
+            });
+
+            build.module('qualite', 'Qualité de vie', mod => {
+                mod.help = html`
+                    <p>Ce module porte sur votre <b>état de santé</b>. Ces informations nous permettront de savoir comment vous vous sentez dans votre vie de tous les jours.
+                    <p>N'hésitez pas à interrompre l'application ou à cliquer sur le <b>bouton « SOS »</b> si cela s’avère nécessaire pour vous. Vous pouvez également arrêter à tout moment et revenir plus tard.
+                `
+
+                build.form('mhqol', 'Qualité de vie', mhqol, options)
+                build.form('substances', 'Comportements', substance, options)
+                build.form('sommeil', 'Sommeil', isi, options)
+                build.form('stress', 'Gestion du stress', (form, values) => {
+                    if (values.cfs == null)
+                        values.cfs = {}
+                    if (values.cerq == null)
+                        values.cerq = {}
+
+                    cfs(form, values.cfs)
+                    cerq(form, values.cerq)
+                }, options)
+                build.form('autres', 'Autres difficultées', (form, values) => {
+                    if (values.phq9 == null)
+                        values.phq9 = {}
+                    if (values.gad7 == null)
+                        values.gad7 = {}
+                    if (values.mini5s == null)
+                        values.mini5s = {}
+
+                    phq9(form, values.phq9)
+                    gad7(form, values.gad7)
+                    mini5s(form, values.mini5s)
+                }, options)
+            });
+
+            build.module('entourage', 'Entourage', mod => {
+                mod.help = html`
+                    <p>Dans ce module, nous visons à comprendre votre <b>environnement social</b> : À qui parlez-vous de manière régulière ? Qui est là pour vous ? Êtes-vous satisfaits du soutien que vous recevez ?
+                    <p>À la fin de ce module, nous vous demanderons de décrire votre entourage précisément à l'aide d'un <abbr title="Outil permettant de représenter visuellement vos relations sociales">sociogramme</abbr> interactif.
+                `;
+
                 build.form('ssq6', 'Soutien social', ssq6, options)
                 build.form('sni', 'Interactions sociales', sni, options)
-                build.form('sps10', 'Disponibilité de votre entourage', sps10, options)
+                build.form('sps10', 'Disponibilité de votre entourage', (form, values) => {
+                    sps10(form, values);
+
+                    form.part(() => {
+                        form.binary('sup1', 'Considérez-vous que l’évènement qui vous a amené ici a engendré une rupture avec votre vie d’avant ?')
+
+                        if (values.sup1) {
+                            let types = Object.keys(PERSON_KINDS).map(kind => [kind, PERSON_KINDS[kind].text])
+
+                            form.multiCheck('sup2', 'Dans quelle(s) sphère(s) de votre vie ressentez-vous cette rupture ?', types, {
+                                help: "Plusieurs réponses possibles"
+                            })
+                        }
+                    })
+                }, options)
                 build.network('network', 'Sociogramme', options)
             });
 
-            build.module('evenement', 'Évènement', () => {
-                build.form('pcl5', 'Problèmes liés à l\'évènement', pcl5, options)
-                build.form('adnm20', 'Évènements de vie', adnm20, options)
-                build.form('ctqsf', 'Enfance', ctqsf, options)
-                build.form('ptci', 'Pensées suite à l\'évènement', ptci, options)
-            });
+            build.module('divulgation', 'Communication', mod => {
+                mod.help = html`
+                    <p>Dans ce module, nous allons nous intéresser à la façon dont vous <b>souhaitez – ou non – parler de votre expérience</b> à vos proches, ainsi qu’à leurs réactions (si vous leur en avez parlé).
+                `
 
-            build.module('sante', 'Santé mentale', () => {
-                build.form('phq9', 'Manifestations dépressives', phq9, options)
-                build.form('gad7', 'Difficultés anxieuses', gad7, options)
-                build.form('ssi', 'Idées suicidaires', ssi, options)
-                build.form('substances', 'Consommations', substances, options)
-                build.form('isi', 'Qualité du sommeil', isi, options)
-            });
+                build.form('cses', 'Témoignage à l\'entourage', (form, values) => {
+                    cses(form, values)
 
-            build.module('qualite', 'Qualité de vie', () => {
-                build.form('mhqol', 'Qualité de vie', mhqol, options)
-            });
+                    form.part(() => {
+                        form.enumButtons('meme', 'Est-ce que la personne à qui vous pensez est la même que celle à laquelle vous faisiez référence lors du bilan initial', [
+                            [1, 'Oui'],
+                            [0, 'Non'],
+                            [-1, 'Je ne me souviens plus']
+                        ])
+                    })
+                }, options)
 
-            build.module('divulgation', 'Divulgation', () => {
-                build.form('cses', 'Communication à l\'entourage', cses, options)
-                build.form('rds', 'Réactions des proches', rds, options)
+                build.form('rds', 'Réactions des proches', (form, values) => rdss6(form, values, start), options)
             });
         });
 
@@ -253,7 +337,7 @@ function init(build, start, values) {
                 build.form('phq9', 'Manifestations dépressives', phq9, options)
                 build.form('gad7', 'Difficultés anxieuses', gad7, options)
                 build.form('ssi', 'Idées suicidaires', ssi, options)
-                build.form('substances', 'Consommations', substances, options)
+                build.form('substances', 'Consommations', substance, options)
                 build.form('isi', 'Qualité du sommeil', isi, options)
             });
 
@@ -292,7 +376,7 @@ function init(build, start, values) {
                 build.form('phq9', 'Manifestations dépressives', phq9, options)
                 build.form('gad7', 'Difficultés anxieuses', gad7, options)
                 build.form('ssi', 'Idées suicidaires', ssi, options)
-                build.form('substances', 'Consommations', substances, options)
+                build.form('substances', 'Consommations', substance, options)
                 build.form('isi', 'Qualité du sommeil', isi, options)
             });
 
@@ -330,7 +414,7 @@ function init(build, start, values) {
                 build.form('phq9', 'Manifestations dépressives', phq9, options)
                 build.form('gad7', 'Difficultés anxieuses', gad7, options)
                 build.form('ssi', 'Idées suicidaires', ssi, options)
-                build.form('substances', 'Consommations', substances, options)
+                build.form('substances', 'Consommations', substance, options)
                 build.form('isi', 'Qualité du sommeil', isi, options)
             });
 

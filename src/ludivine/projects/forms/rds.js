@@ -91,6 +91,7 @@ function build(form, values) {
 
     form.part(() => {
         form.binary("inter1a", "Avez-vous eu des interactions avec un personnel médical en lien avec cet évènement ?")
+
         if (values.inter1a == 1) {
             form.slider("inter1b", "Comment avez-vous perçu vos interactions avec le personnel médical ?", {
                 min: -10, max: 10,
@@ -100,6 +101,7 @@ function build(form, values) {
         }
 
         form.binary("inter2a", "Avez-vous eu des interactions avec un personnel judiciaire en lien avec cet évènement ?")
+
         if (values.inter2a == 1) {
             form.slider("inter2b", "Comment avez-vous perçu vos interactions avec le personnel judiciaire ?", {
                 min: -10, max: 10,
@@ -109,6 +111,7 @@ function build(form, values) {
         }
 
         form.binary("inter3a", "Avez-vous eu des interactions avec un personnel d'aide psychologique en lien avec cet évènement ?")
+
         if (values.inter3a == 1) {
             form.slider("inter3b", "Comment avez-vous perçu vos interactions avec le personnel d'aide psychologique ?", {
                 min: -10, max: 10,

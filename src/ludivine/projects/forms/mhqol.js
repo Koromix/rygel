@@ -38,7 +38,7 @@ function build(form, values) {
             [1, "Je suis satisfait(e) de mon niveau d'indépendance"],
             [-1, "Je suis insatisfait(e) de mon niveau d'indépendance"],
             [-2, "Je suis très insatisfait(e) de mon niveau d'indépendance"]
-        ], { help: "Par exemple : liberté dans vos choix, vos finances, les co-décisions" })
+        ], { help: "Par exemple : liberté dans vos choix, vos finances, les co-décisions" })
     })
 
     form.part(() => {
@@ -56,7 +56,7 @@ function build(form, values) {
             [1, "Je suis satisfait(e) de mes relations"],
             [-1, "Je suis insatisfait(e) de mes relations"],
             [-2, "Je suis très insatisfait(e) de mes relations"]
-        ], { help: "Par exemple : partenaire, enfants, famille, amis, collègues" })
+        ], { help: "Par exemple : partenaire, enfants, famille, amis, collègues" })
     })
 
     form.part(() => {

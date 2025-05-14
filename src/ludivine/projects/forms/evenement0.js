@@ -24,7 +24,7 @@ function build(form, values) {
     `
 
     form.part(() => {
-        form.binary("q1", "Est-ce que l’événement qui vous a conduit à participer à cette étude concerne une situation de longue durée ayant impliqué de la violence physique et / ou morale ?", {
+        form.binary("q1", "Est-ce que l’événement qui vous a conduit à participer à cette étude concerne une situation de longue durée ayant impliqué de la violence physique et/ou morale ?", {
             help: "Exemples : relation abusive, traite humaine, esclavagisme, secte, inceste, situations dans lesquels les secours ont mis plusieurs jours à intervenir, etc."
         })
 

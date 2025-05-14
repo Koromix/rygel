@@ -25,22 +25,22 @@ function build(form, values) {
 
     form.part(() => {
         form.output(html`
-            <p>Veuillez estimer la <b>sévérité actuelle (derniers mois)</b> de vos difficultés de sommeil :
+            <p><i>Veuillez estimer la <b>sévérité actuelle (derniers mois)</b> de vos difficultés de sommeil.</i>
         `)
 
-        q("diff1", "Difficultés à s'endormir :")
+        q("diff1", "Difficultés à vous endormir :")
         q("diff2", "Difficultés à rester endormi(e) :")
         q("diff3", "Problèmes de réveil trop tôt le matin :")
     })
 
     form.part(() => {
         form.output(html`
-            <p>Veuillez estimer la <b>satisfaction actuelle (derniers mois)</b> que vous retirez de votre sommeil :
+            <p><i>Veuillez estimer la <b>satisfaction actuelle (derniers mois)</b> que vous retirez de votre sommeil</i>
         `)
 
         q("satisf1", html`Jusqu'à quel point êtes-vous <b>SATISFAIT(E)</b> de votre sommeil actuel ?`)
         q("satisf2", html`Jusqu'à quel point considérez-vous que vos difficultés de sommeil <b>PERTURBENT</b> votre fonctionnement quotidien ?`, {
-            help: "Par exemple fatigue, concentration, mémoire, humeur ?"
+            help: "Par exemple :fatigue, concentration, mémoire, humeur"
         })
         q("satisf3", html`À quel point considérez-vous que vos difficultés de sommeil sont <b>APPARENTES</b> pour les autres en termes de détérioration de la qualité de votre vie ?`)
         q("satisf4", html`Jusqu’à quel point êtes-vous <b>INQUIET(ÈTE)</b>/préoccupé(e) à propos de vos difficultés de sommeil ?`)

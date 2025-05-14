@@ -21,7 +21,7 @@ function build(form, values, mask) {
 
     form.intro = html`
         <p>Nous cherchons dans un premier temps à avoir une représentation des <b>personnes de votre environnement</b> qui vous procurent de l’aide ou du soutien.
-        <p>Chaque question comporte 4 étapes :
+        <p>Chaque question comporte 4 étapes :
         <ol>
             <li>Indiquez le nombre de personnes (de 0 à 9) sur qui vous pouvez compter
             <li>Inscrivez le prénom ou le surnom de chaque personne
