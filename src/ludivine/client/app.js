@@ -1275,7 +1275,7 @@ function renderModule() {
                         if (earliest != null && earliest > today) {
                             status = niceDate(earliest, true);
 
-                            if (!ENV.dev) {
+                            if (!ENV.test) {
                                 cls += ' disabled';
                                 available = false;
                             }
@@ -1306,7 +1306,7 @@ function renderModule() {
                     } else if (child.schedule != null && child.schedule > today) {
                         status = niceDate(child.schedule, true);
 
-                        if (!ENV.dev) {
+                        if (!ENV.test) {
                             cls += ' disabled';
                             available = false;
                         }
