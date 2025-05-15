@@ -31,6 +31,8 @@ struct Config {
 
     int64_t update_delay = 6 * 3600000;
     int64_t retry_delay = 10 * 60000;
+    int64_t stale_delay = 30 * 3600000;
+    int64_t error_delay = 1 * 3600000;
 
     http_Config http { 8891 };
     const char *require_host = nullptr;

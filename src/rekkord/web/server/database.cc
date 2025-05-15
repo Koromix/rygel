@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 5;
+const int DatabaseVersion = 6;
 
 bool MigrateDatabase(sq_Database *db)
 {
@@ -192,9 +192,33 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 5: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE failures (
+                        repository INTEGER REFERENCES repositories (id) ON DELETE CASCADE,
+                        timestamp INTEGER NOT NULL,
+                        message TEXT NOT NULL,
+                        sent INTEGER,
+                        resolved CHECK (resolved IN (0, 1)) NOT NULL
+                    );
+                    CREATE UNIQUE INDEX failures_r ON failures (repository);
+
+                    CREATE TABLE stales (
+                        repository INTEGER REFERENCES repositories (id) ON DELETE CASCADE,
+                        channel TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        sent INTEGER,
+                        resolved CHECK (resolved IN (0, 1)) NOT NULL
+                    );
+                    CREATE UNIQUE INDEX stales_rc ON stales (repository, channel);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 5);
+            static_assert(DatabaseVersion == 6);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

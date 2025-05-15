@@ -79,6 +79,10 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                         valid &= ParseDuration(prop.value, &config.update_delay);
                     } else if (prop.key == "RetryDelay") {
                         valid &= ParseDuration(prop.value, &config.retry_delay);
+                    } else if (prop.key == "StaleDelay") {
+                        valid &= ParseDuration(prop.value, &config.stale_delay);
+                    } else if (prop.key == "ErrorDelay") {
+                        valid &= ParseDuration(prop.value, &config.error_delay);
                     } else {
                         valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
                     }

@@ -27,24 +27,6 @@ enum class OpenError {
     AuthenticationError
 };
 
-static std::unique_ptr<rk_Disk> OpenRepository(const rk_Config &repo, OpenError *out_error)
-{
-    RG_ASSERT(repo.Validate(true));
-
-    std::unique_ptr<rk_Disk> disk = rk_Open(repo, false);
-
-    if (!disk) {
-        *out_error = OpenError::FailedConnection;
-        return nullptr;
-    }
-    if (!disk->Authenticate(repo.username, repo.password)) {
-        *out_error = OpenError::AuthenticationError;
-        return nullptr;
-    }
-
-    return disk;
-}
-
 static bool FillConfig(const char *url, const char *user, const char *password,
                        const HashMap<const char *, const char *> variables, rk_Config *out_repo)
 {
@@ -86,6 +68,38 @@ static bool FillConfig(const char *url, const char *user, const char *password,
         return false;
 
     std::swap(*out_repo, repo);
+    return true;
+}
+
+static std::unique_ptr<rk_Disk> OpenRepository(const rk_Config &repo, OpenError *out_error)
+{
+    RG_ASSERT(repo.Validate(true));
+
+    std::unique_ptr<rk_Disk> disk = rk_Open(repo, false);
+
+    if (!disk) {
+        *out_error = OpenError::FailedConnection;
+        return nullptr;
+    }
+    if (!disk->Authenticate(repo.username, repo.password)) {
+        *out_error = OpenError::AuthenticationError;
+        return nullptr;
+    }
+
+    return disk;
+}
+
+static bool ListSnapshots(const rk_Config &repo, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
+{
+    OpenError error;
+    std::unique_ptr<rk_Disk> disk = OpenRepository(repo, &error);
+
+    if (!disk)
+        return false;
+
+    if (!rk_Snapshots(disk.get(), alloc, out_snapshots))
+        return false;
+
     return true;
 }
 
@@ -138,70 +152,99 @@ bool CheckRepositories()
         async.Run([=]() {
             BlockAllocator temp_alloc;
 
-            const char *last_err = nullptr;
+            HeapArray<rk_SnapshotInfo> snapshots;
+            HeapArray<rk_ChannelInfo> channels;
 
-            // Keep last error message
-            PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-                if (level == LogLevel::Error) {
-                    last_err = DuplicateString(msg, &temp_alloc).ptr;
+            // Fetch snapshots
+            {
+                const char *last_err = nullptr;
+
+                // Keep last error message
+                PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+                    if (level == LogLevel::Error) {
+                        last_err = DuplicateString(msg, &temp_alloc).ptr;
+                    }
+
+                    func(level, ctx, msg);
+                });
+                RG_DEFER { PopLogFilter(); };
+
+                if (!ListSnapshots(*repo, &temp_alloc, &snapshots)) {
+                    bool success = db.Transaction([&]() {
+                        if (!db.Run(R"(UPDATE repositories SET failed = ?2,
+                                                               errors = errors + 1
+                                       WHERE id = ?1)", id, last_err))
+                            return false;
+
+                        if (!db.Run(R"(INSERT INTO failures (repository, timestamp, message, resolved)
+                                       VALUES (?1, ?2, ?3, 0)
+                                       ON CONFLICT DO UPDATE SET resolved = 0)", id, now, last_err))
+                            return false;
+
+                        return true;
+                    });
+                    if (!success)
+                        return false;
+
+                    return true;
                 }
 
-                func(level, ctx, msg);
+                rk_Channels(snapshots, &temp_alloc, &channels);
+            }
+
+            bool success = db.Transaction([&]() {
+                if (!db.Run("UPDATE failures SET resolved = 1 WHERE repository = ?1", id))
+                    return false;
+
+                for (const rk_SnapshotInfo &snapshot: snapshots) {
+                    char hash[128];
+                    Fmt(hash, "%1", snapshot.hash);
+
+                    if (!db.Run(R"(INSERT INTO snapshots (repository, hash, channel, timestamp, size, storage)
+                                   VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                                   ON CONFLICT DO UPDATE SET channel = excluded.channel,
+                                                             timestamp = excluded.timestamp,
+                                                             size = excluded.size,
+                                                             storage = excluded.storage)",
+                                id, hash, snapshot.channel, snapshot.time, snapshot.size, snapshot.storage))
+                        return false;
+                }
+
+                for (const rk_ChannelInfo &channel: channels) {
+                    char hash[128];
+                    Fmt(hash, "%1", channel.hash);
+
+                    if (!db.Run(R"(INSERT INTO channels (repository, name, hash, timestamp, size, count, ignore)
+                                   VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)
+                                   ON CONFLICT DO UPDATE SET hash = excluded.hash,
+                                                             timestamp = excluded.timestamp,
+                                                             size = excluded.size,
+                                                             count = excluded.count)",
+                                id, channel.name, hash, channel.time, channel.size, channel.count))
+                        return false;
+
+                    if (now - channel.time >= config.stale_delay) {
+                        if (!db.Run(R"(INSERT INTO stales (repository, channel, timestamp, resolved)
+                                       VALUES (?1, ?2, ?3, 0)
+                                       ON CONFLICT DO UPDATE SET timestamp = excluded.timestamp,
+                                                                 resolved = 0)",
+                                    id, channel.name, channel.time))
+                            return false;
+                    } else {
+                        if (!db.Run(R"(UPDATE stales SET resolved = 1
+                                       WHERE repository = ?1 AND channel = ?2)",
+                                    id, channel.name))
+                            return false;
+                    }
+                }
+
+                if (!db.Run("UPDATE repositories SET checked = ?2, failed = NULL, errors = 0 WHERE id = ?1", id, now))
+                    return false;
+
+                return true;
             });
-            RG_DEFER { PopLogFilter(); };
-
-            OpenError error;
-            std::unique_ptr<rk_Disk> disk = OpenRepository(*repo, &error);
-
-            if (!disk) {
-                db.Run(R"(UPDATE repositories SET checked = ?2,
-                                                  failed = ?3,
-                                                  errors = errors + 1
-                          WHERE id = ?1)", id, now, last_err);
+            if (!success)
                 return false;
-            }
-
-            HeapArray<rk_SnapshotInfo> snapshots;
-            if (!rk_Snapshots(disk.get(), &temp_alloc, &snapshots)) {
-                db.Run(R"(UPDATE repositories SET checked = ?2,
-                                                  failed = ?3,
-                                                  errors = errors + 1
-                          WHERE id = ?1)", id, now, last_err);
-                return false;
-            }
-
-            HeapArray<rk_ChannelInfo> channels;
-            rk_Channels(snapshots, &temp_alloc, &channels);
-
-            for (const rk_SnapshotInfo &snapshot: snapshots) {
-                char hash[128];
-                Fmt(hash, "%1", snapshot.hash);
-
-                if (!db.Run(R"(INSERT INTO snapshots (repository, hash, channel, timestamp, size, storage)
-                               VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-                               ON CONFLICT DO UPDATE SET channel = excluded.channel,
-                                                         timestamp = excluded.timestamp,
-                                                         size = excluded.size,
-                                                         storage = excluded.storage)",
-                            id, hash, snapshot.channel, snapshot.time, snapshot.size, snapshot.storage))
-                    return false;
-            }
-
-            for (const rk_ChannelInfo &channel: channels) {
-                char hash[128];
-                Fmt(hash, "%1", channel.hash);
-
-                if (!db.Run(R"(INSERT INTO channels (repository, name, hash, timestamp, size, count, ignore)
-                               VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)
-                               ON CONFLICT DO UPDATE SET hash = excluded.hash,
-                                                         timestamp = excluded.timestamp,
-                                                         size = excluded.size,
-                                                         count = excluded.count)",
-                            id, channel.name, hash, channel.time, channel.size, channel.count))
-                    return false;
-            }
-
-            db.Run("UPDATE repositories SET checked = ?2, failed = NULL, errors = 0 WHERE id = ?1", id, now);
 
             return true;
         });
@@ -211,10 +254,7 @@ bool CheckRepositories()
 
     stmt.Finalize();
 
-    // Some tasks may fail but it is not critical
-    async.Sync();
-
-    return true;
+    return async.Sync();
 }
 
 void HandleRepositoryList(http_IO *io)
