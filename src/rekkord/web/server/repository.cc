@@ -352,7 +352,7 @@ bool CheckRepositories()
                            INNER JOIN users u ON (u.id = r.owner)
                            WHERE f.timestamp < ?1 AND
                                  (f.sent IS NULL OR f.sent < ?2))",
-                        &stmt, now - config.error_delay, now - config.repeat_delay))
+                        &stmt, now - config.mail_delay, now - config.repeat_delay))
             return false;
 
         while (stmt.Step()) {
@@ -396,8 +396,9 @@ bool CheckRepositories()
                            FROM stales s
                            INNER JOIN repositories r ON (r.id = s.repository)
                            INNER JOIN users u ON (u.id = r.owner)
-                           WHERE s.sent IS NULL OR s.sent < ?1)",
-                        &stmt, now - config.repeat_delay))
+                           WHERE s.timestamp < ?1 AND
+                                 (s.sent IS NULL OR s.sent < ?2))",
+                        &stmt, now - config.mail_delay, now - config.repeat_delay))
             return false;
 
         while (stmt.Step()) {

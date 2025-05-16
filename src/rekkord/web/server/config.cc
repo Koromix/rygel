@@ -88,8 +88,8 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 do {
                     if (prop.key == "StaleDelay") {
                         valid &= ParseDuration(prop.value, &config.stale_delay);
-                    } else if (prop.key == "ErrorDelay") {
-                        valid &= ParseDuration(prop.value, &config.error_delay);
+                    } else if (prop.key == "MailDelay") {
+                        valid &= ParseDuration(prop.value, &config.mail_delay);
                     } else if (prop.key == "RepeatDelay") {
                         valid &= ParseDuration(prop.value, &config.repeat_delay);
                     } else {
