@@ -2302,7 +2302,7 @@ async function saveRecord(tid, entry, raw, meta, draft) {
         frag.tags = Array.from(tags);
     }
 
-    await records.save(tid, entry, frag, ENV.version, route.page.claim);
+    await records.save(tid, entry, frag, ENV.version, meta.signup, route.page.claim);
 
     if (!profile.userid) {
         let url = route.page.url + `/${form_thread.tid}`;

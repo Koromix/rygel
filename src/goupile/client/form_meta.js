@@ -20,6 +20,7 @@ function MetaModel() {
     this.summary = null;
     this.constraints = {};
     this.counters = {};
+    this.signup = null;
 }
 
 function MetaInterface(thread, page, meta) {
@@ -97,6 +98,24 @@ function MetaInterface(thread, page, meta) {
 
         let value = thread.counters[key];
         return value;
+    };
+
+    this.signup = function(to, subject, content, text = null) {
+        let div = document.createElement('div');
+        render(content, div);
+
+        content = div.innerHTML;
+
+        if (text == null)
+            text = content.innerText;
+
+        meta.signup = {
+            url: url,
+            to: to,
+            subject: subject,
+            html: content,
+            text: text
+        };
     };
 
     function makeCompleteURL(url) {
