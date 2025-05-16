@@ -25,7 +25,8 @@ namespace RG {
 
 enum class OpenError {
     FailedConnection,
-    AuthenticationError
+    AuthenticationError,
+    ModeError
 };
 
 static smtp_MailContent FailureMessage = {
@@ -110,8 +111,14 @@ static std::unique_ptr<rk_Disk> OpenRepository(const rk_Config &repo, OpenError 
         *out_error = OpenError::FailedConnection;
         return nullptr;
     }
+
     if (!disk->Authenticate(repo.username, repo.password)) {
         *out_error = OpenError::AuthenticationError;
+        return nullptr;
+    }
+    if (disk->GetModes() != (int)rk_AccessMode::Log) {
+        LogError("Select repository user with LogOnly role and nothing else");
+        *out_error = OpenError::ModeError;
         return nullptr;
     }
 
@@ -718,6 +725,7 @@ void HandleRepositorySave(http_IO *io)
             switch (error) {
                 case OpenError::FailedConnection: { io->SendError(404); } break;
                 case OpenError::AuthenticationError: { io->SendError(403); } break;
+                case OpenError::ModeError: { io->SendError(403); } break;
             }
             return;
         }

@@ -171,6 +171,7 @@ public:
     const char *GetRole() const { return role; }
     Async *GetAsync() { return &tasks; }
 
+    unsigned int GetModes() const { return modes; }
     bool HasMode(rk_AccessMode mode) const { return modes & (int)mode; }
 
     void MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const;
