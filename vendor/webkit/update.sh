@@ -2,7 +2,7 @@
 
 ICU=release-77-1
 WEBKIT=WebKit-7620.2.4.111.7
-DOCKER_IMAGE=rocky9
+DOCKER_IMAGE=debian11
 
 set -e
 cd $(dirname $0)

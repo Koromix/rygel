@@ -51,7 +51,7 @@ function buildICU() {
         run('icu/build', '../icu4c/source/runConfigureICU', [
             'Linux',
             '--enable-shared', '--enable-static'
-        ], { CFLAGS: '-fPIC', CXXFLAGS: '-fPIC' });
+        ], { CC: 'clang-18', CXX: 'clang++-18', CFLAGS: '-fPIC', CXXFLAGS: '-fPIC' });
         run('icu/build', 'make', ['-j' + (os.cpus().length + 1)]);
     }
 
@@ -118,7 +118,7 @@ function buildWebKit() {
             '-DDEVELOPER_MODE=OFF', '-DENABLE_FTL_JIT=ON',
             '-DENABLE_STATIC_JSC=ON', '-DUSE_THIN_ARCHIVES=OFF',
             '..'
-        ], { CC: 'clang', CXX: 'clang++' });
+        ], { CC: 'clang-18', CXX: 'clang++-18' });
         run('webkit/build', 'ninja');
     }
 
