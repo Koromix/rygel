@@ -76,15 +76,25 @@ bool LoadConfig(StreamReader *st, Config *out_config)
             } else if (prop.section == "Repositories") {
                 do {
                     if (prop.key == "UpdatePeriod") {
-                        valid &= ParseDuration(prop.value, &config.update_delay);
+                        valid &= ParseDuration(prop.value, &config.update_period);
                     } else if (prop.key == "RetryDelay") {
                         valid &= ParseDuration(prop.value, &config.retry_delay);
-                    } else if (prop.key == "StaleDelay") {
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Alerts") {
+                do {
+                    if (prop.key == "StaleDelay") {
                         valid &= ParseDuration(prop.value, &config.stale_delay);
                     } else if (prop.key == "ErrorDelay") {
                         valid &= ParseDuration(prop.value, &config.error_delay);
+                    } else if (prop.key == "RepeatDelay") {
+                        valid &= ParseDuration(prop.value, &config.repeat_delay);
                     } else {
-                        valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
                     }
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {

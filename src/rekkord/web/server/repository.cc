@@ -16,6 +16,7 @@
 #include "src/core/base/base.hh"
 #include "src/core/http/http.hh"
 #include "backord.hh"
+#include "mail.hh"
 #include "repository.hh"
 #include "user.hh"
 #include "../../lib/librekkord.hh"
@@ -188,8 +189,11 @@ static bool CheckRepository(const rk_Config &repo, int64_t id)
                             id, channel.name, channel.time))
                     return false;
             } else {
-                if (!db.Run(R"(UPDATE stales SET resolved = 1
-                               WHERE repository = ?1 AND channel = ?2)",
+                if (!db.Run(R"(UPDATE stales SET resolved = 1,
+                                                 sent = NULL
+                               WHERE repository = ?1 AND
+                                     channel = ?2 AND
+                                     resolved = 0)",
                             id, channel.name))
                     return false;
             }
@@ -212,54 +216,168 @@ bool CheckRepositories()
 
     int64_t now = GetUnixTime();
 
-    sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT r.id, r.url, r.user, r.password, v.key, v.value
-                       FROM repositories r
-                       LEFT JOIN variables v
-                       WHERE r.checked + IIF(r.errors = 0, ?2, ?3) <= ?1
-                       ORDER BY r.id)",
-                    &stmt, now, config.update_delay, config.retry_delay))
-        return false;
-    if (!stmt.Run())
-        return false;
+    // Check repositories
+    {
+        sq_Statement stmt;
+        if (!db.Prepare(R"(SELECT r.id, r.url, r.user, r.password, v.key, v.value
+                           FROM repositories r
+                           LEFT JOIN variables v
+                           WHERE r.checked + IIF(r.errors = 0, ?2, ?3) <= ?1
+                           ORDER BY r.id)",
+                        &stmt, now, config.update_period, config.retry_delay))
+            return false;
+        if (!stmt.Run())
+            return false;
 
-    Async async;
-    BucketArray<rk_Config> repositories;
+        Async async;
+        BucketArray<rk_Config> repositories;
 
-    while (stmt.IsRow()) {
-        rk_Config *repo = repositories.AppendDefault();
+        while (stmt.IsRow()) {
+            rk_Config *repo = repositories.AppendDefault();
 
-        int64_t id = sqlite3_column_int64(stmt, 0);
-        const char *url = DuplicateString((const char *)sqlite3_column_text(stmt, 1), &temp_alloc).ptr;
-        const char *user = DuplicateString((const char *)sqlite3_column_text(stmt, 2), &temp_alloc).ptr;
-        const char *password = DuplicateString((const char *)sqlite3_column_text(stmt, 3), &temp_alloc).ptr;
+            int64_t id = sqlite3_column_int64(stmt, 0);
+            const char *url = DuplicateString((const char *)sqlite3_column_text(stmt, 1), &temp_alloc).ptr;
+            const char *user = DuplicateString((const char *)sqlite3_column_text(stmt, 2), &temp_alloc).ptr;
+            const char *password = DuplicateString((const char *)sqlite3_column_text(stmt, 3), &temp_alloc).ptr;
 
-        LogDebug("Checking repository '%1'", url);
+            LogDebug("Checking repository '%1'", url);
 
-        HashMap<const char *, const char *> variables;
-        do {
-            if (sqlite3_column_int64(stmt, 0) != id)
-                break;
-            if (sqlite3_column_type(stmt, 4) == SQLITE_NULL)
-                break;
+            HashMap<const char *, const char *> variables;
+            do {
+                if (sqlite3_column_int64(stmt, 0) != id)
+                    break;
+                if (sqlite3_column_type(stmt, 4) == SQLITE_NULL)
+                    break;
 
-            const char *key = DuplicateString((const char *)sqlite3_column_text(stmt, 4), &temp_alloc).ptr;
-            const char *value = DuplicateString((const char *)sqlite3_column_text(stmt, 5), &temp_alloc).ptr;
+                const char *key = DuplicateString((const char *)sqlite3_column_text(stmt, 4), &temp_alloc).ptr;
+                const char *value = DuplicateString((const char *)sqlite3_column_text(stmt, 5), &temp_alloc).ptr;
 
-            variables.Set(key, value);
-        } while (stmt.Step());
+                variables.Set(key, value);
+            } while (stmt.Step());
 
-        if (!FillConfig(url, user, password, variables, repo))
-            continue;
+            if (!FillConfig(url, user, password, variables, repo))
+                continue;
 
-        async.Run([=]() { return CheckRepository(*repo, id); });
+            async.Run([=]() { return CheckRepository(*repo, id); });
+        }
+        if (!stmt.IsValid())
+            return false;
+
+        stmt.Finalize();
+
+        if (!async.Sync())
+            return false;
     }
-    if (!stmt.IsValid())
-        return false;
 
-    stmt.Finalize();
+    // Post error alerts
+    {
+        sq_Statement stmt;
+        if (!db.Prepare(R"(SELECT f.id, u.mail, r.name, f.message, f.resolved
+                           FROM failures f
+                           INNER JOIN repositories r ON (r.id = f.repository)
+                           INNER JOIN users u ON (u.id = r.owner)
+                           WHERE f.timestamp < ?1 AND
+                                 f.sent IS NULL OR f.sent < ?2)",
+                        &stmt, now - config.error_delay, now - config.repeat_delay))
+            return false;
 
-    return async.Sync();
+        while (stmt.Step()) {
+            bool success = db.Transaction([&]() {
+                int64_t id = sqlite3_column_int64(stmt, 0);
+                const char *to = (const char *)sqlite3_column_text(stmt, 1);
+                const char *name = (const char *)sqlite3_column_text(stmt, 2);
+                const char *error = (const char *)sqlite3_column_text(stmt, 3);
+                bool resolved = sqlite3_column_int(stmt, 4);
+
+                if (resolved) {
+                    smtp_MailContent content = {
+                        "Repository error has been resolved",
+                        Fmt(&temp_alloc, "Repository %1 is back", name).ptr,
+                        {}, {}
+                    };
+
+                    if (!PostMail(to, content))
+                        return false;
+                    if (!db.Run("DELETE FROM failures WHERE id = ?1", id))
+                        return false;
+                } else {
+                    smtp_MailContent content = {
+                        "Repository check error",
+                        Fmt(&temp_alloc, "Failed to check for %1: %2", name, error).ptr,
+                        {}, {}
+                    };
+
+                    if (!PostMail(to, content))
+                        return false;
+                    if (!db.Run("UPDATE failures SET sent = ?2 WHERE id = ?1", id, now))
+                        return false;
+                }
+
+                return true;
+            });
+            if (!success)
+                return false;
+        }
+        if (!stmt.IsValid())
+            return false;
+    }
+
+    // Post stale alerts
+    {
+        sq_Statement stmt;
+        if (!db.Prepare(R"(SELECT s.id, u.mail, r.name, s.channel, s.timestamp, s.resolved
+                           FROM stales s
+                           INNER JOIN repositories r ON (r.id = s.repository)
+                           INNER JOIN users u ON (u.id = r.owner)
+                           WHERE s.sent IS NULL OR s.sent < ?1)",
+                        &stmt, now - config.repeat_delay))
+            return false;
+
+        while (stmt.Step()) {
+            bool success = db.Transaction([&]() {
+                int64_t id = sqlite3_column_int64(stmt, 0);
+                const char *to = (const char *)sqlite3_column_text(stmt, 1);
+                const char *name = (const char *)sqlite3_column_text(stmt, 2);
+                const char *channel = (const char *)sqlite3_column_text(stmt, 3);
+                int64_t timestamp = sqlite3_column_int64(stmt, 4);
+                bool resolved = sqlite3_column_int(stmt, 5);
+
+                if (resolved) {
+                    smtp_MailContent content = {
+                        "Stale repository channel has been resolved",
+                        Fmt(&temp_alloc, "Repository %1, channel %2 is back", name, channel).ptr,
+                        {}, {}
+                    };
+
+                    if (!PostMail(to, content))
+                        return false;
+                    if (!db.Run("DELETE FROM stales WHERE id = ?1", id))
+                        return false;
+                } else {
+                    TimeSpec spec = DecomposeTimeUTC(timestamp);
+
+                    smtp_MailContent content = {
+                        "Stale repository channel",
+                        Fmt(&temp_alloc, "Repository %1, channel %2 has not been updated since %3", name, channel, FmtTimeNice(spec)).ptr,
+                        {}, {}
+                    };
+
+                    if (!PostMail(to, content))
+                        return false;
+                    if (!db.Run("UPDATE stales SET sent = ?2 WHERE id = ?1", id, now))
+                        return false;
+                }
+
+                return true;
+            });
+            if (!success)
+                return false;
+        }
+        if (!stmt.IsValid())
+            return false;
+    }
+
+    return true;
 }
 
 void HandleRepositoryList(http_IO *io)
