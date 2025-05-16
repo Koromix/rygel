@@ -4206,7 +4206,6 @@ body.ck-fullscreen .page-break__label {
 }
 .ck-fullscreen__main-wrapper .ck-fullscreen__editable {
   margin-top: var(--ck-fullscreen-editor-top-margin);
-  margin-bottom: 56px;
   height: 100%;
   margin-left: auto;
 }
@@ -4218,8 +4217,10 @@ body.ck-fullscreen .page-break__label {
 .ck-fullscreen__main-wrapper .ck-fullscreen__editable .ck.ck-editor__editable:not(.ck-editor__nested-editable) {
   box-sizing: border-box;
   width: calc(210mm + 2px);
+  max-width: calc(210mm + 2px);
   min-height: 297mm;
   height: fit-content;
+  margin: 0;
   padding: 20mm 12mm;
   border: 1px var(--ck-color-base-border) solid;
   background: hsl(0, 0%, 100%);
@@ -5732,8 +5733,7 @@ div.ck.ck-balloon-panel.ck-mention-balloon {
   width: 100%;
   height: 100%;
 }
-.ck-content figure.table:not(.layout-table),
-.ck-content table.table:not(.layout-table) {
+.ck-content .table:not(.layout-table) {
   margin: 0.9em auto;
 }
 .ck-content table.table:not(.layout-table),
