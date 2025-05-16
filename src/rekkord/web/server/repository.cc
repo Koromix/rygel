@@ -129,9 +129,10 @@ static bool CheckRepository(const rk_Config &repo, int64_t id)
 
         if (!ListSnapshots(repo, &temp_alloc, &snapshots)) {
             bool success = db.Transaction([&]() {
-                if (!db.Run(R"(UPDATE repositories SET failed = ?2,
+                if (!db.Run(R"(UPDATE repositories SET checked = ?2,
+                                                       failed = ?3,
                                                        errors = errors + 1
-                               WHERE id = ?1)", id, last_err))
+                               WHERE id = ?1)", id, now, last_err))
                     return false;
 
                 if (!db.Run(R"(INSERT INTO failures (repository, timestamp, message, resolved)
@@ -151,7 +152,10 @@ static bool CheckRepository(const rk_Config &repo, int64_t id)
     }
 
     bool success = db.Transaction([&]() {
-        if (!db.Run("UPDATE failures SET resolved = 1 WHERE repository = ?1", id))
+        if (!db.Run(R"(UPDATE failures SET resolved = 1,
+                                           sent = NULL
+                       WHERE repository = ?1 AND
+                             resolved = 0)", id))
             return false;
 
         for (const rk_SnapshotInfo &snapshot: snapshots) {
@@ -277,7 +281,7 @@ bool CheckRepositories()
                            INNER JOIN repositories r ON (r.id = f.repository)
                            INNER JOIN users u ON (u.id = r.owner)
                            WHERE f.timestamp < ?1 AND
-                                 f.sent IS NULL OR f.sent < ?2)",
+                                 (f.sent IS NULL OR f.sent < ?2))",
                         &stmt, now - config.error_delay, now - config.repeat_delay))
             return false;
 
