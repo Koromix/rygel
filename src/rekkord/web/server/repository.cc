@@ -28,6 +28,34 @@ enum class OpenError {
     AuthenticationError
 };
 
+static smtp_MailContent FailureMessage = {
+    "[Error] {{ TITLE }}: {{ REPOSITORY }}",
+    R"(Failed to check for {{ REPOSITORY }}:\n{{ ERROR }})",
+    R"(<html lang="en"><body><p>Failed to check for <b>{{ REPOSITORY }}</b>:</p><p style="color: red;">{{ ERROR }}</p></body></html>)",
+    {}
+};
+
+static smtp_MailContent FailureResolved = {
+    "[Resolved] {{ TITLE }}: {{ REPOSITORY }}",
+    R"(Access to {{ REPOSITORY }} is now back on track!)",
+    R"(<html lang="en"><body><p>Access to <b>{{ REPOSITORY }}</b> is now back on track!</p></body></html>)",
+    {}
+};
+
+static smtp_MailContent StaleMessage = {
+    "[Stale] {{ TITLE }}: {{ REPOSITORY }} channel {{ CHANNEL }}",
+    R"(Repository {{ REPOSITORY }} channel {{ CHANNEL }} looks stale.\n\nLast snapshot: {{ TIMESTAMP }})",
+    R"(<html lang="en"><body><p>Repository <b>{{ REPOSITORY }}</b> channel <b>{{ CHANNEL }}</b> looks stale.</p><p>Last snapshot: <b>{{ TIMESTAMP }}</b></p></body></html>)",
+    {}
+};
+
+static smtp_MailContent StaleResolved = {
+    "[Resolved] {{ TITLE }}: {{ REPOSITORY }} channel {{ CHANNEL }}",
+    R"(Repository {{ REPOSITORY }} channel {{ CHANNEL }} is now back on track!\n\nLast snapshot: {{ TIMESTAMP }})",
+    R"(<html lang="en"><body><p>Repository <b>{{ REPOSITORY }}</b> channel <b>{{ CHANNEL }}</b> is now back on track!.</p><p>Last snapshot: <b>{{ TIMESTAMP }}</b></p></body></html>)",
+    {}
+};
+
 static bool FillConfig(const char *url, const char *user, const char *password,
                        const HashMap<const char *, const char *> variables, rk_Config *out_repo)
 {
@@ -214,6 +242,48 @@ static bool CheckRepository(const rk_Config &repo, int64_t id)
     return true;
 }
 
+static Span<const char> PatchFailure(Span<const char> text, const char *repository, const char *message, Allocator *alloc)
+{
+    Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
+        if (key == "TITLE") {
+            writer->Write(config.title);
+        } else if (key == "REPOSITORY") {
+            writer->Write(repository);
+        } else if (key == "ERROR") {
+            writer->Write(message);
+        } else {
+            Print(writer, "{{%1}}", expr);
+        }
+    });
+
+    return ret;
+}
+
+static Span<const char> PatchStale(Span<const char> text, const char *repository,
+                                   const char *channel, int64_t timestamp, Allocator *alloc)
+{
+    Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
+        if (key == "TITLE") {
+            writer->Write(config.title);
+        } else if (key == "REPOSITORY") {
+            writer->Write(repository);
+        } else if (key == "CHANNEL") {
+            writer->Write(channel);
+        } else if (key == "TIMESTAMP") {
+            TimeSpec spec = DecomposeTimeUTC(timestamp);
+            Print(writer, "%1", FmtTimeNice(spec));
+        } else {
+            Print(writer, "{{%1}}", expr);
+        }
+    });
+
+    return ret;
+}
+
 bool CheckRepositories()
 {
     BlockAllocator temp_alloc;
@@ -291,29 +361,22 @@ bool CheckRepositories()
                 const char *to = (const char *)sqlite3_column_text(stmt, 1);
                 const char *name = (const char *)sqlite3_column_text(stmt, 2);
                 const char *error = (const char *)sqlite3_column_text(stmt, 3);
-                bool resolved = sqlite3_column_int(stmt, 4);
+                bool unsolved = !sqlite3_column_int(stmt, 4);
 
-                if (resolved) {
-                    smtp_MailContent content = {
-                        "Repository error has been resolved",
-                        Fmt(&temp_alloc, "Repository %1 is back", name).ptr,
-                        {}, {}
-                    };
+                smtp_MailContent content = unsolved ? FailureMessage : FailureResolved;
 
-                    if (!PostMail(to, content))
-                        return false;
-                    if (!db.Run("DELETE FROM failures WHERE id = ?1", id))
+                content.subject = PatchFailure(content.subject, name, error, &temp_alloc).ptr;
+                content.text = PatchFailure(content.text, name, error, &temp_alloc).ptr;
+                content.html = PatchFailure(content.html, name, error, &temp_alloc).ptr;
+
+                if (!PostMail(to, content))
+                    return false;
+
+                if (unsolved) {
+                    if (!db.Run("UPDATE failures SET sent = ?2 WHERE id = ?1", id, now))
                         return false;
                 } else {
-                    smtp_MailContent content = {
-                        "Repository check error",
-                        Fmt(&temp_alloc, "Failed to check for %1: %2", name, error).ptr,
-                        {}, {}
-                    };
-
-                    if (!PostMail(to, content))
-                        return false;
-                    if (!db.Run("UPDATE failures SET sent = ?2 WHERE id = ?1", id, now))
+                    if (!db.Run("DELETE FROM failures WHERE id = ?1", id))
                         return false;
                 }
 
@@ -344,31 +407,22 @@ bool CheckRepositories()
                 const char *name = (const char *)sqlite3_column_text(stmt, 2);
                 const char *channel = (const char *)sqlite3_column_text(stmt, 3);
                 int64_t timestamp = sqlite3_column_int64(stmt, 4);
-                bool resolved = sqlite3_column_int(stmt, 5);
+                bool unsolved = !sqlite3_column_int(stmt, 5);
 
-                if (resolved) {
-                    smtp_MailContent content = {
-                        "Stale repository channel has been resolved",
-                        Fmt(&temp_alloc, "Repository %1, channel %2 is back", name, channel).ptr,
-                        {}, {}
-                    };
+                smtp_MailContent content = unsolved ? StaleMessage : StaleResolved;
 
-                    if (!PostMail(to, content))
-                        return false;
-                    if (!db.Run("DELETE FROM stales WHERE id = ?1", id))
+                content.subject = PatchStale(content.subject, name, channel, timestamp, &temp_alloc).ptr;
+                content.text = PatchStale(content.text, name, channel, timestamp, &temp_alloc).ptr;
+                content.html = PatchStale(content.html, name, channel, timestamp, &temp_alloc).ptr;
+
+                if (!PostMail(to, content))
+                    return false;
+
+                if (unsolved) {
+                    if (!db.Run("UPDATE stales SET sent = ?2 WHERE id = ?1", id, now))
                         return false;
                 } else {
-                    TimeSpec spec = DecomposeTimeUTC(timestamp);
-
-                    smtp_MailContent content = {
-                        "Stale repository channel",
-                        Fmt(&temp_alloc, "Repository %1, channel %2 has not been updated since %3", name, channel, FmtTimeNice(spec)).ptr,
-                        {}, {}
-                    };
-
-                    if (!PostMail(to, content))
-                        return false;
-                    if (!db.Run("UPDATE stales SET sent = ?2 WHERE id = ?1", id, now))
+                    if (!db.Run("DELETE FROM stales WHERE id = ?1", id))
                         return false;
                 }
 
