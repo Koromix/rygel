@@ -16,17 +16,17 @@ function main() {
 
     // Cleanup
     if (fs.existsSync('icu'))
-        fs.rmSync('icu', { recursive: true, force: true });
+        fs.rmdirSync('icu', { recursive: true });
     if (fs.existsSync('webkit'))
-        fs.rmSync('webkit', { recursive: true, force: true });
+        fs.rmdirSync('webkit', { recursive: true });
 
     // Clone ICU repository
     run('.', 'git', ['clone', '--branch', ICU, '--depth', '1', 'https://github.com/unicode-org/icu.git', 'icu'])
-    fs.rmSync('webkit/.git', { recursive: true, force: true });
+    fs.rmdirSync('icu/.git', { recursive: true });
 
     // Clone WebKit repository
     run('.', 'git', ['clone', '--branch', WEBKIT, '--depth', '1', 'https://github.com/WebKit/WebKit.git', 'webkit'])
-    fs.rmSync('webkit/.git', { recursive: true, force: true });
+    fs.rmdirSync('webkit/.git', { recursive: true });
 
     buildICU();
     buildWebKit();
@@ -45,7 +45,7 @@ function buildICU() {
     // Build ICU
     {
         if (fs.existsSync('icu/build'))
-            fs.rmSync('icu/build', { recursive: true, force: true });
+            fs.rmdirSync('icu/build', { recursive: true });
         fs.mkdirSync('icu/build', { mode: 0o755 });
 
         run('icu/build', '../icu4c/source/runConfigureICU', [
@@ -73,7 +73,7 @@ function buildICU() {
         let include_dir = 'icu/build/include/unicode';
 
         if (fs.existsSync(include_dir))
-            fs.rmSync(include_dir, { recursive: true, force: true });
+            fs.rmdirSync(include_dir, { recursive: true });
         fs.mkdirSync(include_dir, { recursive: true, mode: 0o755 });
 
         for (let src_dir of source_dirs) {
@@ -103,7 +103,7 @@ function buildWebKit() {
     // Build JSCore
     {
         if (fs.existsSync('webkit/build'))
-            fs.rmSync('webkit/build', { recursive: true, force: true });
+            fs.rmdirSync('webkit/build', { recursive: true });
         fs.mkdirSync('webkit/build', { mode: 0o755 });
 
         run('webkit/build', 'cmake', [
@@ -146,7 +146,7 @@ function buildWebKit() {
         let include_dir = 'include/JavaScriptCore'
 
         if (fs.existsSync(include_dir))
-            fs.rmSync(include_dir, { recursive: true, force: true });
+            fs.rmdirSync(include_dir, { recursive: true });
         fs.mkdirSync(include_dir, { recursive: true, mode: 0o755 });
 
         for (let basename of fs.readdirSync(src_dir)) {
