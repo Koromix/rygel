@@ -883,9 +883,9 @@ function updatePriceChart(Chart, ghm_root, columns, max_duration, apply_coeff) {
                     },
                     y: {
                         type: 'linear',
+                        suggestedMin: 0.0,
+                        suggestedMax: max_price,
                         ticks: {
-                            suggestedMin: 0.0,
-                            suggestedMax: max_price,
                             callback: value => formatPrice(value)
                         }
                     }
