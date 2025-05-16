@@ -14,9 +14,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "backord.hh"
 #include "config.hh"
 #include "database.hh"
-#include "backord.hh"
+#include "mail.hh"
 #include "repository.hh"
 #include "user.hh"
 #include "src/core/sandbox/sandbox.hh"
@@ -599,6 +600,9 @@ Options:
 
             LogDebug("Prune tokens");
             PruneTokens();
+
+            LogDebug("Send mails");
+            SendMails();
         }
     }
 

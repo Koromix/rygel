@@ -16,8 +16,8 @@
 #include "src/core/base/base.hh"
 #include "src/core/http/http.hh"
 #include "src/core/password/password.hh"
-#include "src/core/request/smtp.hh"
 #include "backord.hh"
+#include "mail.hh"
 #include "user.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
@@ -68,8 +68,6 @@ static http_SessionManager<SessionInfo> sessions;
 static std::shared_mutex events_mutex;
 static BucketArray<EventInfo> events;
 static HashTable<EventInfo::Key, EventInfo *> events_map;
-
-static smtp_Sender smtp;
 
 static const smtp_MailContent NewUser = {
     "Welcome to {{ TITLE }}",
@@ -159,11 +157,6 @@ static bool IsMailValid(const char *mail)
     return true;
 }
 
-bool InitSMTP(const smtp_Config &config)
-{
-    return smtp.Init(config);
-}
-
 static Span<const char> PatchText(Span<const char> text, const char *mail, const char *url, Allocator *alloc)
 {
     Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
@@ -206,7 +199,7 @@ static bool SendNewMail(const char *to, const uint8_t token[16], Allocator *allo
     content.html = PatchText(NewUser.html, to, url, alloc).ptr;
     content.text = PatchText(NewUser.text, to, url, alloc).ptr;
 
-    return smtp.Send(to, content);
+    return PostMail(to, content);
 }
 
 static bool SendExistingMail(const char *to, Allocator *alloc)
@@ -217,7 +210,7 @@ static bool SendExistingMail(const char *to, Allocator *alloc)
     content.html = PatchText(ExistingUser.html, to, nullptr, alloc).ptr;
     content.text = PatchText(ExistingUser.text, to, nullptr, alloc).ptr;
 
-    return smtp.Send(to, content);
+    return PostMail(to, content);
 }
 
 static bool SendResetMail(const char *to, const uint8_t token[16], Allocator *alloc)
@@ -231,7 +224,7 @@ static bool SendResetMail(const char *to, const uint8_t token[16], Allocator *al
     content.html = PatchText(ResetPassword.html, to, url, alloc).ptr;
     content.text = PatchText(ResetPassword.text, to, url, alloc).ptr;
 
-    return smtp.Send(to, content);
+    return PostMail(to, content);
 }
 
 bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes])

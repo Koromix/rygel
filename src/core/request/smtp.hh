@@ -56,7 +56,13 @@ class smtp_Sender {
 
 public:
     bool Init(const smtp_Config &config);
+
+    const smtp_Config &GetConfig() const { return config; }
+
     bool Send(const char *to, const smtp_MailContent &content);
+    bool Send(const char *to, Span<const char> mail);
 };
+
+Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_MailContent &content, Allocator *alloc);
 
 }

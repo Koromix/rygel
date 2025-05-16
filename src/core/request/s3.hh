@@ -67,6 +67,7 @@ public:
     void Close();
 
     bool IsValid() const { return open; }
+    const s3_Config &GetConfig() const { return config; }
     const char *GetURL() const { return url; }
 
     bool ListObjects(const char *prefix, FunctionRef<bool(const char *key)> func);

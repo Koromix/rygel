@@ -16,32 +16,15 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "src/core/http/http.hh"
 
 namespace RG {
 
 struct smtp_Config;
+struct smtp_MailContent;
 
-struct SessionInfo: public RetainObject<SessionInfo> {
-    int64_t userid;
-    std::atomic_int picture;
-    char username[];
-};
+bool InitSMTP(const smtp_Config &config);
 
-bool PruneTokens();
-
-RetainPtr<const SessionInfo> GetNormalSession(http_IO *io);
-
-void HandleUserSession(http_IO *io);
-void HandleUserRegister(http_IO *io);
-void HandleUserLogin(http_IO *io);
-void HandleUserLogout(http_IO *io);
-void HandleUserRecover(http_IO *io);
-void HandleUserReset(http_IO *io);
-void HandleUserPassword(http_IO *io);
-
-void HandlePictureGet(http_IO *io);
-void HandlePictureSave(http_IO *io);
-void HandlePictureDelete(http_IO *io);
+bool PostMail(const char *to, const smtp_MailContent &content);
+bool SendMails();
 
 }
