@@ -118,7 +118,7 @@ function buildWebKit() {
             '-DDEVELOPER_MODE=OFF', '-DENABLE_FTL_JIT=ON',
             '-DENABLE_STATIC_JSC=ON', '-DUSE_THIN_ARCHIVES=OFF',
             '..'
-        ]);
+        ], { CC: 'clang', CXX: 'clang++' });
         run('webkit/build', 'ninja');
     }
 
