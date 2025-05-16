@@ -103,6 +103,109 @@ static bool ListSnapshots(const rk_Config &repo, Allocator *alloc, HeapArray<rk_
     return true;
 }
 
+static bool CheckRepository(const rk_Config &repo, int64_t id)
+{
+    BlockAllocator temp_alloc;
+
+    int64_t now = GetUnixTime();
+
+    HeapArray<rk_SnapshotInfo> snapshots;
+    HeapArray<rk_ChannelInfo> channels;
+
+    // Fetch snapshots
+    {
+        const char *last_err = nullptr;
+
+        // Keep last error message
+        PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+            if (level == LogLevel::Error) {
+                last_err = DuplicateString(msg, &temp_alloc).ptr;
+            }
+
+            func(level, ctx, msg);
+        });
+        RG_DEFER { PopLogFilter(); };
+
+        if (!ListSnapshots(repo, &temp_alloc, &snapshots)) {
+            bool success = db.Transaction([&]() {
+                if (!db.Run(R"(UPDATE repositories SET failed = ?2,
+                                                       errors = errors + 1
+                               WHERE id = ?1)", id, last_err))
+                    return false;
+
+                if (!db.Run(R"(INSERT INTO failures (repository, timestamp, message, resolved)
+                               VALUES (?1, ?2, ?3, 0)
+                               ON CONFLICT DO UPDATE SET resolved = 0)", id, now, last_err))
+                    return false;
+
+                return true;
+            });
+            if (!success)
+                return false;
+
+            return true;
+        }
+
+        rk_Channels(snapshots, &temp_alloc, &channels);
+    }
+
+    bool success = db.Transaction([&]() {
+        if (!db.Run("UPDATE failures SET resolved = 1 WHERE repository = ?1", id))
+            return false;
+
+        for (const rk_SnapshotInfo &snapshot: snapshots) {
+            char hash[128];
+            Fmt(hash, "%1", snapshot.hash);
+
+            if (!db.Run(R"(INSERT INTO snapshots (repository, hash, channel, timestamp, size, storage)
+                           VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                           ON CONFLICT DO UPDATE SET channel = excluded.channel,
+                                                     timestamp = excluded.timestamp,
+                                                     size = excluded.size,
+                                                     storage = excluded.storage)",
+                        id, hash, snapshot.channel, snapshot.time, snapshot.size, snapshot.storage))
+                return false;
+        }
+
+        for (const rk_ChannelInfo &channel: channels) {
+            char hash[128];
+            Fmt(hash, "%1", channel.hash);
+
+            if (!db.Run(R"(INSERT INTO channels (repository, name, hash, timestamp, size, count, ignore)
+                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)
+                           ON CONFLICT DO UPDATE SET hash = excluded.hash,
+                                                     timestamp = excluded.timestamp,
+                                                     size = excluded.size,
+                                                     count = excluded.count)",
+                        id, channel.name, hash, channel.time, channel.size, channel.count))
+                return false;
+
+            if (now - channel.time >= config.stale_delay) {
+                if (!db.Run(R"(INSERT INTO stales (repository, channel, timestamp, resolved)
+                               VALUES (?1, ?2, ?3, 0)
+                               ON CONFLICT DO UPDATE SET timestamp = excluded.timestamp,
+                                                         resolved = 0)",
+                            id, channel.name, channel.time))
+                    return false;
+            } else {
+                if (!db.Run(R"(UPDATE stales SET resolved = 1
+                               WHERE repository = ?1 AND channel = ?2)",
+                            id, channel.name))
+                    return false;
+            }
+        }
+
+        if (!db.Run("UPDATE repositories SET checked = ?2, failed = NULL, errors = 0 WHERE id = ?1", id, now))
+            return false;
+
+        return true;
+    });
+    if (!success)
+        return false;
+
+    return true;
+}
+
 bool CheckRepositories()
 {
     BlockAllocator temp_alloc;
@@ -149,105 +252,7 @@ bool CheckRepositories()
         if (!FillConfig(url, user, password, variables, repo))
             continue;
 
-        async.Run([=]() {
-            BlockAllocator temp_alloc;
-
-            HeapArray<rk_SnapshotInfo> snapshots;
-            HeapArray<rk_ChannelInfo> channels;
-
-            // Fetch snapshots
-            {
-                const char *last_err = nullptr;
-
-                // Keep last error message
-                PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-                    if (level == LogLevel::Error) {
-                        last_err = DuplicateString(msg, &temp_alloc).ptr;
-                    }
-
-                    func(level, ctx, msg);
-                });
-                RG_DEFER { PopLogFilter(); };
-
-                if (!ListSnapshots(*repo, &temp_alloc, &snapshots)) {
-                    bool success = db.Transaction([&]() {
-                        if (!db.Run(R"(UPDATE repositories SET failed = ?2,
-                                                               errors = errors + 1
-                                       WHERE id = ?1)", id, last_err))
-                            return false;
-
-                        if (!db.Run(R"(INSERT INTO failures (repository, timestamp, message, resolved)
-                                       VALUES (?1, ?2, ?3, 0)
-                                       ON CONFLICT DO UPDATE SET resolved = 0)", id, now, last_err))
-                            return false;
-
-                        return true;
-                    });
-                    if (!success)
-                        return false;
-
-                    return true;
-                }
-
-                rk_Channels(snapshots, &temp_alloc, &channels);
-            }
-
-            bool success = db.Transaction([&]() {
-                if (!db.Run("UPDATE failures SET resolved = 1 WHERE repository = ?1", id))
-                    return false;
-
-                for (const rk_SnapshotInfo &snapshot: snapshots) {
-                    char hash[128];
-                    Fmt(hash, "%1", snapshot.hash);
-
-                    if (!db.Run(R"(INSERT INTO snapshots (repository, hash, channel, timestamp, size, storage)
-                                   VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-                                   ON CONFLICT DO UPDATE SET channel = excluded.channel,
-                                                             timestamp = excluded.timestamp,
-                                                             size = excluded.size,
-                                                             storage = excluded.storage)",
-                                id, hash, snapshot.channel, snapshot.time, snapshot.size, snapshot.storage))
-                        return false;
-                }
-
-                for (const rk_ChannelInfo &channel: channels) {
-                    char hash[128];
-                    Fmt(hash, "%1", channel.hash);
-
-                    if (!db.Run(R"(INSERT INTO channels (repository, name, hash, timestamp, size, count, ignore)
-                                   VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)
-                                   ON CONFLICT DO UPDATE SET hash = excluded.hash,
-                                                             timestamp = excluded.timestamp,
-                                                             size = excluded.size,
-                                                             count = excluded.count)",
-                                id, channel.name, hash, channel.time, channel.size, channel.count))
-                        return false;
-
-                    if (now - channel.time >= config.stale_delay) {
-                        if (!db.Run(R"(INSERT INTO stales (repository, channel, timestamp, resolved)
-                                       VALUES (?1, ?2, ?3, 0)
-                                       ON CONFLICT DO UPDATE SET timestamp = excluded.timestamp,
-                                                                 resolved = 0)",
-                                    id, channel.name, channel.time))
-                            return false;
-                    } else {
-                        if (!db.Run(R"(UPDATE stales SET resolved = 1
-                                       WHERE repository = ?1 AND channel = ?2)",
-                                    id, channel.name))
-                            return false;
-                    }
-                }
-
-                if (!db.Run("UPDATE repositories SET checked = ?2, failed = NULL, errors = 0 WHERE id = ?1", id, now))
-                    return false;
-
-                return true;
-            });
-            if (!success)
-                return false;
-
-            return true;
-        });
+        async.Run([=]() { return CheckRepository(*repo, id); });
     }
     if (!stmt.IsValid())
         return false;
