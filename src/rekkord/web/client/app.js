@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, ref } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { Chart } from '../../../../vendor/chartjs/chart.bundle.js';
 import { Util, Log, Net, HttpError } from '../../../web/core/base.js';
 import * as UI from './ui.js';
 import { deploy } from '../../../web/flat/static.js';
@@ -826,6 +827,69 @@ async function runChannel(repo, channel) {
     let url = Util.pasteURL('/api/repository/snapshots', { id: repo.id, channel: channel });
     let snapshots = await Net.cache('snapshots', url);
 
+    // Make sure it is sorted by time
+    snapshots.sort((snapshot1, snapshot2) => snapshot1.time - snapshot2.time);
+
+    let canvas = document.createElement('canvas');
+
+    if (snapshots.length >= 2) {
+        let size = {
+            label: 'Size',
+            data: [],
+            fill: false
+        };
+        let storage = {
+            label: 'Storage',
+            data: [],
+            fill: false
+        };
+
+        for (let snapshot of snapshots) {
+            size.data.push({ x: snapshot.time, y: snapshot.size });
+            storage.data.push({ x: snapshot.time, y: snapshot.storage });
+        }
+
+        let ctx = canvas.getContext('2d');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [size, storage]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: items => (new Date(items[0].parsed.x)).toLocaleString(),
+                            label: item => `${item.dataset.label}: ${formatSize(item.parsed.y)}`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        min: snapshots[0].time,
+                        max: snapshots[snapshots.length - 1].time,
+                        ticks: {
+                            callback: value => (new Date(value)).toLocaleDateString()
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        min: 0,
+                        ticks: {
+                            callback: formatSize
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     await UI.dialog({
         run: (render, close) => {
             snapshots = UI.tableValues('snapshots', snapshots, 'time', false);
@@ -838,6 +902,7 @@ async function runChannel(repo, channel) {
                 </div>
 
                 <div class="main">
+                    <div style="width: 80%; margin: 0 auto;">${canvas}</div>
                     <table style="table-layout: fixed;">
                         <colgroup>
                             <col></col>
