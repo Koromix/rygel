@@ -888,7 +888,7 @@ function formatSize(size) {
 
         return value.toFixed(prec) + ' kB';
     } else {
-        return value + ' B';
+        return size + ' B';
     }
 }
 
