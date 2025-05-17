@@ -2,13 +2,18 @@
 
 ICU=release-77-1
 WEBKIT=WebKit-7620.2.4.111.7
-DOCKER_IMAGE=debian11
 
 set -e
 cd $(dirname $0)
 
 PLATFORM=$(../../felix --version | awk -F '[:/ ]' '/^Host:/ { print $NF }')
 ARCHITECTURE=$(../../felix --version | awk -F '[:/ ]' '/^Architecture:/ { print $NF }')
+
+if [ "$ARCHITECTURE" = "x86_64" ]; then
+    DOCKER_IMAGE=rocky9
+else
+    DOCKER_IMAGE=debian12
+fi
 
 docker build -t rygel/${DOCKER_IMAGE} ../../tools/docker/${DOCKER_IMAGE}
 

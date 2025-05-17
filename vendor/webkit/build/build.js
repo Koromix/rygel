@@ -9,8 +9,6 @@ const WEBKIT = process.env.WEBKIT;
 const PLATFORM = process.env.PLATFORM;
 const ARCHITECTURE = process.env.ARCHITECTURE;
 
-let CMAKE = 'cmake';
-
 main();
 
 function main() {
@@ -21,20 +19,6 @@ function main() {
         fs.rmdirSync('icu', { recursive: true });
     if (fs.existsSync('webkit'))
         fs.rmdirSync('webkit', { recursive: true });
-
-    // Prepare recent CMake build
-    if (PLATFORM == 'Linux') {
-        switch (ARCHITECTURE) {
-            case 'x86_64': { run('.', 'curl', ['-L', 'https://github.com/Kitware/CMake/releases/download/v4.0.2/cmake-4.0.2-linux-x86_64.sh', '-o', '/tmp/cmake.sh']); } break;
-            case 'ARM64': { run('.', 'curl', ['-L', 'https://github.com/Kitware/CMake/releases/download/v4.0.2/cmake-4.0.2-linux-aarch64.sh', '-o', '/tmp/cmake.sh']); } break;
-        }
-
-        if (fs.existsSync('/tmp/cmake.sh')) {
-            fs.mkdirSync('/tmp/cmake')
-            run('/tmp', '/bin/sh', ['/tmp/cmake.sh', '--skip-license', '--prefix=/tmp/cmake'])
-            CMAKE = '/tmp/cmake/bin/cmake'
-        }
-    }
 
     // Clone ICU repository
     run('.', 'git', ['clone', '--branch', ICU, '--depth', '1', 'https://github.com/unicode-org/icu.git', 'icu'])
@@ -122,7 +106,7 @@ function buildWebKit() {
             fs.rmdirSync('webkit/build', { recursive: true });
         fs.mkdirSync('webkit/build', { mode: 0o755 });
 
-        run('webkit/build', CMAKE, [
+        run('webkit/build', 'cmake', [
             '-G', 'Ninja',
             '-DPORT=JSCOnly',
             '-DICU_INCLUDE_DIR=../../icu/build/include',
