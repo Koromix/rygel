@@ -6,6 +6,12 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.59
+
+*Released on 2025-05-18*
+
+- Store full storage size in each snapshot
+
 ### Rekkord 0.58
 
 *Released on 2025-05-12*
