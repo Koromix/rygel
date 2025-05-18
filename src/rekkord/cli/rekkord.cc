@@ -94,7 +94,7 @@ Advanced commands:
     %!..+migrate_tags%!0                   Migrate old snaphsot tags made (before 0.50))");
         } else {
             PrintLn(st, R"(
-Advanced and low-level commands are hidden, use %!..+rekkord --help full%!0 to reveal them.)");
+Advanced and low-level commands are hidden, use %!..+rekkord --help all%!0 to reveal them.)");
         }
 
         PrintLn(st, R"(
@@ -132,7 +132,7 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
     // Handle help and version arguments
     if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
         if (arguments.len && arguments[0][0] != '-') {
-            if (TestStr(arguments[0], "full")) {
+            if (TestStr(arguments[0], "all")) {
                 print_usage(StdOut, true);
                 return 0;
             } else {
