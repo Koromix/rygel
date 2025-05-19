@@ -333,6 +333,9 @@ function renderDropItem(page, first) {
     let enabled = status.enabled || profile.develop;
 
     if (first) {
+        if (!route.page.chain.some(child => child.menu))
+            return '';
+
         return html`<button class=${'icon home' + (active ? ' active' : '')} ?disabled=${!enabled}
                             @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}></button>`;
     } else {
