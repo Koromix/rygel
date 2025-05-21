@@ -545,7 +545,7 @@ void http_IO::AddEncodingHeader(CompressionType encoding)
     }
 }
 
-void http_IO::AddCookieHeader(const char *path, const char *name, const char *value, bool http_only)
+void http_IO::AddCookieHeader(const char *path, const char *name, const char *value, unsigned int flags)
 {
     LocalArray<char, 1024> buf;
 
@@ -555,8 +555,15 @@ void http_IO::AddCookieHeader(const char *path, const char *name, const char *va
         buf.len = Fmt(buf.data, "%1=; Path=%2; Max-Age=0;", name, path).len;
     }
 
-    RG_ASSERT(buf.Available() >= 64);
-    buf.len += Fmt(buf.TakeAvailable(), " SameSite=Strict;%1", http_only ? " HttpOnly;" : "").len;
+    RG_ASSERT(buf.Available() >= 128);
+
+    buf.len += Fmt(buf.TakeAvailable(), " SameSite=Strict;").len;
+    if (flags & (int)http_CookieFlag::HttpOnly) {
+        buf.len += Fmt(buf.TakeAvailable(), " HttpOnly;").len;
+    }
+    if (flags & (int)http_CookieFlag::Secure) {
+        buf.len += Fmt(buf.TakeAvailable(), " Secure;").len;
+    }
 
     AddHeader("Set-Cookie", buf.data);
 }
