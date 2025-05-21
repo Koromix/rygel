@@ -372,7 +372,7 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
 
-    Size written_len = 0;
+    int64_t written_len = 0;
 
     bool success = RunSafe("write file", [&](ConnectionData *conn) {
         written_len = 0;
