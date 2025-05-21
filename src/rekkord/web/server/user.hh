@@ -33,6 +33,8 @@ bool PruneTokens();
 RetainPtr<const SessionInfo> GetNormalSession(http_IO *io);
 
 void HandleUserSession(http_IO *io);
+void HandleUserPing(http_IO *io);
+
 void HandleUserRegister(http_IO *io);
 void HandleUserLogin(http_IO *io);
 void HandleUserLogout(http_IO *io);

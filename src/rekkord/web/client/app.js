@@ -33,6 +33,7 @@ let route_url = null;
 let poisoned = false;
 
 let session = null;
+let ping_timer = null;
 
 let root_el = null;
 
@@ -144,6 +145,13 @@ function go(url = null, push = true) {
 async function run(changes = {}, push = false) {
     if (poisoned)
         return;
+
+    // Keep session alive
+    if (session != null && ping_timer == null) {
+        ping_timer = setInterval(() => {
+            Net.get('/api/user/ping');
+        }, 360 * 1000);
+    }
 
     // Go back to top app when the context changes
     let scroll = (changes.mode != null && changes.mode != route.mode);

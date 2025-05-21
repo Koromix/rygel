@@ -319,6 +319,38 @@ RetainPtr<const SessionInfo> GetNormalSession(http_IO *io)
     return session;
 }
 
+static void ExportSession(const SessionInfo *session, http_IO *io)
+{
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    if (session) {
+        json.StartObject();
+        json.Key("userid"); json.Int64(session->userid);
+        json.Key("username"); json.String(session->username);
+        json.Key("picture"); json.Int(session->picture);
+        json.EndObject();
+    } else {
+        json.Null();
+    }
+
+    json.Finish();
+}
+
+void HandleUserSession(http_IO *io)
+{
+    RetainPtr<SessionInfo> session = sessions.Find(io);
+    ExportSession(session.GetRaw(), io);
+}
+
+void HandleUserPing(http_IO *io)
+{
+    // Do this to renew session and clear invalid session cookies
+    GetNormalSession(io);
+    io->SendText(200, "{}", "application/json");
+}
+
 void HandleUserRegister(http_IO *io)
 {
     // Parse input data
@@ -408,31 +440,6 @@ void HandleUserRegister(http_IO *io)
     }
 
     io->SendText(200, "{}", "application/json");
-}
-
-static void ExportSession(const SessionInfo *session, http_IO *io)
-{
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
-
-    if (session) {
-        json.StartObject();
-        json.Key("userid"); json.Int64(session->userid);
-        json.Key("username"); json.String(session->username);
-        json.Key("picture"); json.Int(session->picture);
-        json.EndObject();
-    } else {
-        json.Null();
-    }
-
-    json.Finish();
-}
-
-void HandleUserSession(http_IO *io)
-{
-    RetainPtr<SessionInfo> session = sessions.Find(io);
-    ExportSession(session.GetRaw(), io);
 }
 
 void HandleUserLogin(http_IO *io)

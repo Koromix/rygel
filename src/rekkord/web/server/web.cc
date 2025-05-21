@@ -364,6 +364,8 @@ static void HandleRequest(http_IO *io)
     if (StartsWith(request.path, "/api/")) {
         if (TestStr(request.path, "/api/user/session") && request.method == http_RequestMethod::Get) {
             HandleUserSession(io);
+        } else if (TestStr(request.path, "/api/user/ping") && request.method == http_RequestMethod::Get) {
+            HandleUserPing(io);
         } else if (TestStr(request.path, "/api/user/register") && request.method == http_RequestMethod::Post) {
             HandleUserRegister(io);
         } else if (TestStr(request.path, "/api/user/login") && request.method == http_RequestMethod::Post) {
