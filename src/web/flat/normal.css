@@ -339,6 +339,7 @@ code:not(.hljs) {
     font-family: monospace;
     font-size: 14px;
     background: #eee;
+    white-space: nowrap;
 }
 pre > code:not(.hljs) {
     padding: 0;
