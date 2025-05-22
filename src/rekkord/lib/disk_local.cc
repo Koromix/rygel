@@ -42,7 +42,7 @@ public:
 };
 
 LocalDisk::LocalDisk(const char *path, const rk_OpenSettings &settings)
-    : rk_Disk(settings, 8 * GetCoreCount())
+    : rk_Disk(settings, std::min(2 * GetCoreCount(), 32))
 {
     Span<const char> directory = NormalizePath(path, GetWorkingDirectory(), &str_alloc);
 

@@ -98,7 +98,7 @@ static bool IsSftpErrorSpecific(int error)
 }
 
 SftpDisk::SftpDisk(const ssh_Config &config, const rk_OpenSettings &settings)
-    : rk_Disk(settings, std::max(32, 4 * GetCoreCount()))
+    : rk_Disk(settings, std::min(4 * GetCoreCount(), 64))
 {
     config.Clone(&this->config);
 

@@ -43,7 +43,7 @@ public:
 };
 
 S3Disk::S3Disk(const s3_Config &config, const rk_OpenSettings &settings)
-    : rk_Disk(settings, 100)
+    : rk_Disk(settings, std::min(4 * GetCoreCount(), 64))
 {
     if (!s3.Open(config))
         return;
