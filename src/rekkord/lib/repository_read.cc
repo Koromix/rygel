@@ -925,15 +925,26 @@ bool rk_ListSnapshots(rk_Disk *disk, Allocator *alloc,
 
     BlockAllocator temp_alloc;
 
+    Size prev_snapshots = out_snapshots ? out_snapshots->len : 0;
+    Size prev_channels = out_channels ? out_channels->len : 0;
+    RG_DEFER_N(err_guard) {
+        if (out_snapshots) {
+            out_snapshots->RemoveFrom(prev_snapshots);
+        }
+        if (out_channels) {
+            out_channels->RemoveFrom(prev_channels);
+        }
+    };
+
     HeapArray<rk_TagInfo> tags;
     if (!disk->ListTags(&temp_alloc, &tags))
         return false;
 
-    HeapArray<rk_SnapshotInfo> snapshots;
+    // Decode tags
     {
-        for (const rk_TagInfo &tag: tags) {
-            rk_SnapshotInfo snapshot = {};
+        HashMap<const char *, Size> map;
 
+        for (const rk_TagInfo &tag: tags) {
             if (tag.payload.len < (Size)offsetof(SnapshotHeader2, channel) + 1 ||
                     tag.payload.len > RG_SIZE(SnapshotHeader2)) {
                 LogError("Malformed snapshot tag (ignoring)");
@@ -944,57 +955,60 @@ bool rk_ListSnapshots(rk_Disk *disk, Allocator *alloc,
             MemCpy(&header, tag.payload.ptr, tag.payload.len);
             header.channel[RG_SIZE(header.channel) - 1] = 0;
 
-            snapshot.tag = out_snapshots ? DuplicateString(tag.id, alloc).ptr : tag.id;
-            snapshot.hash = tag.hash;
-            snapshot.channel = DuplicateString(header.channel, out_snapshots ? alloc : &temp_alloc).ptr;
-            snapshot.time = LittleEndian(header.time);
-            snapshot.size = LittleEndian(header.size);
-            snapshot.storage = LittleEndian(header.storage);
+            const char *name = DuplicateString(header.channel, &temp_alloc).ptr;
+            int64_t time = LittleEndian(header.time);
 
-            snapshots.Append(snapshot);
+            if (out_snapshots) {
+                rk_SnapshotInfo snapshot = {};
+
+                snapshot.tag = DuplicateString(tag.id, alloc).ptr;
+                snapshot.hash = tag.hash;
+                snapshot.channel = DuplicateString(name, alloc).ptr;
+                snapshot.time = LittleEndian(header.time);
+                snapshot.size = LittleEndian(header.size);
+                snapshot.storage = LittleEndian(header.storage);
+
+                out_snapshots->Append(snapshot);
+            }
+
+            if (out_channels) {
+                Size *ptr = map.TrySet(name, -1);
+                Size idx = *ptr;
+
+                if (idx < 0) {
+                    rk_ChannelInfo channel = {};
+
+                    channel.name = DuplicateString(name, alloc).ptr;
+
+                    idx = out_channels->len;
+                    *ptr = idx;
+
+                    out_channels->Append(channel);
+                }
+
+                rk_ChannelInfo *channel = &(*out_channels)[idx];
+
+                if (time > channel->time) {
+                    channel->hash = tag.hash;
+                    channel->time = time;
+                    channel->size = LittleEndian(header.size);
+                }
+
+                channel->count++;
+            }
         }
-
-        std::sort(snapshots.begin(), snapshots.end(),
-                  [](const rk_SnapshotInfo &snapshot1, const rk_SnapshotInfo &snapshot2) { return snapshot1.time < snapshot2.time; });
     }
 
     if (out_snapshots) {
-        out_snapshots->Append(snapshots);
+        std::sort(out_snapshots->begin() + prev_snapshots, out_snapshots->end(),
+                  [](const rk_SnapshotInfo &snapshot1, const rk_SnapshotInfo &snapshot2) { return snapshot1.time < snapshot2.time; });
     }
-
     if (out_channels) {
-        Size prev_len = out_channels->len;
-
-        HashMap<const char *, Size> map;
-
-        for (const rk_SnapshotInfo &snapshot: snapshots) {
-            Size *ptr = map.TrySet(snapshot.channel, -1);
-            Size idx = *ptr;
-
-            if (idx < 0) {
-                rk_ChannelInfo channel = {};
-
-                channel.name = DuplicateString(snapshot.channel, alloc).ptr;
-
-                idx = out_channels->len;
-                *ptr = idx;
-
-                out_channels->Append(channel);
-            }
-
-            rk_ChannelInfo *channel = &(*out_channels)[idx];
-
-            channel->hash = snapshot.hash;
-            channel->time = snapshot.time;
-            channel->size = snapshot.size;
-
-            channel->count++;
-        }
-
-        std::sort(out_channels->begin() + prev_len, out_channels->end(),
+        std::sort(out_channels->begin() + prev_channels, out_channels->end(),
                   [](const rk_ChannelInfo &channel1, const rk_ChannelInfo &channel2) { return CmpStr(channel1.name, channel2.name) < 0; });
     }
 
+    err_guard.Disable();
     return true;
 }
 
