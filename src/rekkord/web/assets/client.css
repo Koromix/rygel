@@ -65,24 +65,22 @@ main.dialog {
 }
 
 .actions {
-    display: flex;
-    margin-top: 1em;
     flex-direction: column;
+    gap: 0;
     align-items: center;
-    flex-wrap: wrap;
+
+    & > button { min-width: 13em; }
+    & > button + * { margin-top: 10px; }
+
+    & > a {
+        width: auto;
+        padding: 0;
+        background: none !important;
+        color: var(--anchor_color) !important;
+        font-size: 0.9em;
+        text-decoration: underline;
+    }
 }
-.actions + * { margin-top: 1em; }
-.actions > button {
-    display: block;
-    width: auto;
-    min-width: 13em;
-    font-weight: bold;
-    padding: 0.35em 2em 0.45em 2em;
-    text-decoration: none;
-    text-align: center;
-}
-.actions > button + * { margin-top: 10px; }
-.actions > a { font-size: 0.9em; }
 p + .actions { margin-top: 2em; }
 
 button {
