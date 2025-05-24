@@ -163,7 +163,7 @@ Available sort orders: %!..+%4%!0)",
     LogInfo();
 
     HeapArray<rk_SnapshotInfo> snapshots;
-    if (!rk_Snapshots(disk.get(), &temp_alloc, &snapshots))
+    if (!rk_ListSnapshots(disk.get(), &temp_alloc, &snapshots))
         return 1;
 
     if (channel || pattern) {
@@ -388,7 +388,7 @@ Available output formats: %!..+%3%!0)",
     LogInfo();
 
     HeapArray<rk_ChannelInfo> channels;
-    if (!rk_Channels(disk.get(), &temp_alloc, &channels))
+    if (!rk_ListSnapshots(disk.get(), &temp_alloc, &channels))
         return 1;
 
     switch (format) {
@@ -719,11 +719,11 @@ Available output formats: %!..+%3%!0)",
     LogInfo();
 
     rk_Hash hash = {};
-    if (!rk_Locate(disk.get(), identifier, &hash))
+    if (!rk_LocateObject(disk.get(), identifier, &hash))
         return 1;
 
     HeapArray<rk_ObjectInfo> objects;
-    if (!rk_List(disk.get(), hash, settings, &temp_alloc, &objects))
+    if (!rk_ListChildren(disk.get(), hash, settings, &temp_alloc, &objects))
         return 1;
 
     switch (format) {

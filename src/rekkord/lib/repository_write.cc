@@ -43,7 +43,7 @@ enum class PutResult {
 class PutContext {
     rk_Disk *disk;
     sq_Database *db;
-    rk_PutSettings settings;
+    rk_SaveSettings settings;
 
     uint8_t salt32[32];
     uint64_t salt8;
@@ -60,7 +60,7 @@ class PutContext {
     std::atomic_int big_semaphore { FileBigLimit };
 
 public:
-    PutContext(rk_Disk *disk, sq_Database *db, const rk_PutSettings &settings);
+    PutContext(rk_Disk *disk, sq_Database *db, const rk_SaveSettings &settings);
 
     PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash, int64_t *out_subdirs = nullptr);
     PutResult PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_size = nullptr, int64_t *out_stored = nullptr);
@@ -115,7 +115,7 @@ static void PackExtended(const char *filename,  Span<const XAttrInfo> xattrs, He
     err_guard.Disable();
 }
 
-PutContext::PutContext(rk_Disk *disk, sq_Database *db, const rk_PutSettings &settings)
+PutContext::PutContext(rk_Disk *disk, sq_Database *db, const rk_SaveSettings &settings)
     : disk(disk), db(db), settings(settings),
       dir_tasks(disk->GetAsync()), file_tasks(disk->GetAsync())
 {
@@ -684,8 +684,8 @@ void PutContext::MakeProgress(int64_t delta)
     pg_stored.SetFmt("%1 stored", FmtDiskSize(stored));
 }
 
-bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *const> filenames,
-            rk_Hash *out_hash, int64_t *out_size, int64_t *out_stored)
+bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *const> filenames,
+             rk_Hash *out_hash, int64_t *out_size, int64_t *out_stored)
 {
     BlockAllocator temp_alloc;
 

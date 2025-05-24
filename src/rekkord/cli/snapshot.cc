@@ -24,7 +24,7 @@ int RunSave(Span<const char *> arguments)
 
     // Options
     rk_Config config;
-    rk_PutSettings settings;
+    rk_SaveSettings settings;
     HeapArray<const char *> filenames;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -132,7 +132,7 @@ Options:
     rk_Hash hash = {};
     int64_t total_size = 0;
     int64_t total_stored = 0;
-    if (!rk_Put(disk.get(), settings, filenames, &hash, &total_size, &total_stored))
+    if (!rk_Save(disk.get(), settings, filenames, &hash, &total_size, &total_stored))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
@@ -157,7 +157,7 @@ int RunRestore(Span<const char *> arguments)
 
     // Options
     rk_Config config;
-    rk_GetSettings settings;
+    rk_RestoreSettings settings;
     const char *dest_filename = nullptr;
     const char *identifier = nullptr;
 
@@ -270,11 +270,11 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
     int64_t now = GetMonotonicTime();
 
     rk_Hash hash = {};
-    if (!rk_Locate(disk.get(), identifier, &hash))
+    if (!rk_LocateObject(disk.get(), identifier, &hash))
         return 1;
 
     int64_t file_len = 0;
-    if (!rk_Get(disk.get(), hash, settings, dest_filename, &file_len))
+    if (!rk_Restore(disk.get(), hash, settings, dest_filename, &file_len))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;

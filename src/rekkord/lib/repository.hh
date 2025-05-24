@@ -24,7 +24,7 @@ class rk_Disk;
 static const char *const rk_DefaultSnapshotChannel = "default";
 static const Size rk_MaxSnapshotChannelLength = 256;
 
-struct rk_PutSettings {
+struct rk_SaveSettings {
     const char *channel = rk_DefaultSnapshotChannel;
     bool follow_symlinks = false;
     bool store_atime = false;
@@ -33,7 +33,7 @@ struct rk_PutSettings {
     bool raw = false;
 };
 
-struct rk_GetSettings {
+struct rk_RestoreSettings {
     bool force = false;
     bool unlink = false;
     bool restore_owner = false;
@@ -111,23 +111,25 @@ public:
 };
 
 // Snapshot commands
-bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *const> filenames,
-            rk_Hash *out_hash, int64_t *out_size = nullptr, int64_t *out_stored = nullptr);
-bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings,
-            const char *dest_path, int64_t *out_size = nullptr);
+bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *const> filenames,
+             rk_Hash *out_hash, int64_t *out_size = nullptr, int64_t *out_stored = nullptr);
+bool rk_Restore(rk_Disk *disk, const rk_Hash &hash, const rk_RestoreSettings &settings,
+                const char *dest_path, int64_t *out_size = nullptr);
 
-// Exploration commands
-bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
-bool rk_Channels(rk_Disk *disk, Allocator *alloc, HeapArray<rk_ChannelInfo> *out_channels);
-void rk_Channels(Span<const rk_SnapshotInfo> snapshots, Allocator *alloc, HeapArray<rk_ChannelInfo> *out_channels);
-bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
-             Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
-bool rk_Locate(rk_Disk *disk, Span<const char> identifier, rk_Hash *out_hash);
+// Snapshot exploration
+bool rk_ListSnapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots, HeapArray<rk_ChannelInfo> *out_channels);
+static inline bool rk_ListSnapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
+    { return rk_ListSnapshots(disk, alloc, out_snapshots, nullptr); }
+static inline bool rk_ListSnapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_ChannelInfo> *out_channels)
+    { return rk_ListSnapshots(disk, alloc, nullptr, out_channels); }
 
-// Symbolic links
+// List objects
+bool rk_ListChildren(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
+                     Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
+bool rk_LocateObject(rk_Disk *disk, Span<const char> identifier, rk_Hash *out_hash);
+
+// Direct access
 const char *rk_ReadLink(rk_Disk *disk, const rk_Hash &hash, Allocator *alloc);
-
-// Files
 std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Disk *disk, const rk_Hash &hash);
 
 }

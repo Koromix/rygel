@@ -69,7 +69,7 @@ struct FileChunk {
 
 class GetContext {
     rk_Disk *disk;
-    rk_GetSettings settings;
+    rk_RestoreSettings settings;
 
     ProgressHandle pg_entries { "Entries" };
     ProgressHandle pg_size { "Size" };
@@ -84,7 +84,7 @@ class GetContext {
     std::atomic<int64_t> stat_size { 0 };
 
 public:
-    GetContext(rk_Disk *disk, const rk_GetSettings &settings, int64_t entries, int64_t size);
+    GetContext(rk_Disk *disk, const rk_RestoreSettings &settings, int64_t entries, int64_t size);
 
     bool ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const char *dest_dirname);
     bool ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const EntryInfo &dest);
@@ -101,7 +101,7 @@ private:
     void MakeProgress(int64_t entries, int64_t size);
 };
 
-GetContext::GetContext(rk_Disk *disk, const rk_GetSettings &settings, int64_t entries, int64_t size)
+GetContext::GetContext(rk_Disk *disk, const rk_RestoreSettings &settings, int64_t entries, int64_t size)
     : disk(disk), settings(settings), total_entries(entries), total_size(size), tasks(disk->GetAsync())
 {
 }
@@ -770,7 +770,7 @@ void GetContext::MakeProgress(int64_t entries, int64_t size)
     }
 }
 
-bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, const char *dest_path, int64_t *out_size)
+bool rk_Restore(rk_Disk *disk, const rk_Hash &hash, const rk_RestoreSettings &settings, const char *dest_path, int64_t *out_size)
 {
     rk_BlobType type;
     HeapArray<uint8_t> blob;
@@ -918,94 +918,84 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
     return true;
 }
 
-bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
+bool rk_ListSnapshots(rk_Disk *disk, Allocator *alloc,
+                      HeapArray<rk_SnapshotInfo> *out_snapshots, HeapArray<rk_ChannelInfo> *out_channels)
 {
-    BlockAllocator temp_alloc;
+    RG_ASSERT(out_snapshots || out_channels);
 
-    Size prev_len = out_snapshots->len;
-    RG_DEFER_N(out_guard) { out_snapshots->RemoveFrom(prev_len); };
+    BlockAllocator temp_alloc;
 
     HeapArray<rk_TagInfo> tags;
     if (!disk->ListTags(&temp_alloc, &tags))
         return false;
 
-    for (const rk_TagInfo &tag: tags) {
-        rk_SnapshotInfo snapshot = {};
-
-        if (tag.payload.len < (Size)offsetof(SnapshotHeader2, channel) + 1 ||
-                tag.payload.len > RG_SIZE(SnapshotHeader2)) {
-            LogError("Malformed snapshot tag (ignoring)");
-            continue;
-        }
-
-        SnapshotHeader2 header = {};
-        MemCpy(&header, tag.payload.ptr, tag.payload.len);
-        header.channel[RG_SIZE(header.channel) - 1] = 0;
-
-        snapshot.tag = DuplicateString(tag.id, alloc).ptr;
-        snapshot.hash = tag.hash;
-        snapshot.channel = DuplicateString(header.channel, alloc).ptr;
-        snapshot.time = LittleEndian(header.time);
-        snapshot.size = LittleEndian(header.size);
-        snapshot.storage = LittleEndian(header.storage);
-
-        out_snapshots->Append(snapshot);
-    }
-
-    std::sort(out_snapshots->ptr + prev_len, out_snapshots->end(),
-              [](const rk_SnapshotInfo &snapshot1, const rk_SnapshotInfo &snapshot2) { return snapshot1.time < snapshot2.time; });
-
-    out_guard.Disable();
-    return true;
-}
-
-bool rk_Channels(rk_Disk *disk, Allocator *alloc, HeapArray<rk_ChannelInfo> *out_channels)
-{
-    BlockAllocator temp_alloc;
-
     HeapArray<rk_SnapshotInfo> snapshots;
-    if (!rk_Snapshots(disk, &temp_alloc, &snapshots))
-        return false;
+    {
+        for (const rk_TagInfo &tag: tags) {
+            rk_SnapshotInfo snapshot = {};
 
-    rk_Channels(snapshots, alloc, out_channels);
+            if (tag.payload.len < (Size)offsetof(SnapshotHeader2, channel) + 1 ||
+                    tag.payload.len > RG_SIZE(SnapshotHeader2)) {
+                LogError("Malformed snapshot tag (ignoring)");
+                continue;
+            }
 
-    return true;
-}
+            SnapshotHeader2 header = {};
+            MemCpy(&header, tag.payload.ptr, tag.payload.len);
+            header.channel[RG_SIZE(header.channel) - 1] = 0;
 
-void rk_Channels(Span<const rk_SnapshotInfo> snapshots, Allocator *alloc, HeapArray<rk_ChannelInfo> *out_channels)
-{
-    Size prev_len = out_channels->len;
+            snapshot.tag = out_snapshots ? DuplicateString(tag.id, alloc).ptr : tag.id;
+            snapshot.hash = tag.hash;
+            snapshot.channel = DuplicateString(header.channel, out_snapshots ? alloc : &temp_alloc).ptr;
+            snapshot.time = LittleEndian(header.time);
+            snapshot.size = LittleEndian(header.size);
+            snapshot.storage = LittleEndian(header.storage);
 
-    HashMap<const char *, Size> map;
-
-    for (const rk_SnapshotInfo &snapshot: snapshots) {
-        Size *ptr = map.TrySet(snapshot.channel, -1);
-        Size idx = *ptr;
-
-        if (idx < 0) {
-            rk_ChannelInfo channel = {};
-
-            channel.name = DuplicateString(snapshot.channel, alloc).ptr;
-
-            idx = out_channels->len;
-            *ptr = idx;
-
-            out_channels->Append(channel);
+            snapshots.Append(snapshot);
         }
 
-        rk_ChannelInfo *channel = &(*out_channels)[idx];
-
-        if (snapshot.time > channel->time) {
-            channel->hash = snapshot.hash;
-            channel->time = std::max(channel->time, snapshot.time);
-            channel->size = snapshot.size;
-        }
-
-        channel->count++;
+        std::sort(snapshots.begin(), snapshots.end(),
+                  [](const rk_SnapshotInfo &snapshot1, const rk_SnapshotInfo &snapshot2) { return snapshot1.time < snapshot2.time; });
     }
 
-    std::sort(out_channels->ptr + prev_len, out_channels->end(),
-              [](const rk_ChannelInfo &channel1, const rk_ChannelInfo &channel2) { return CmpStr(channel1.name, channel2.name) < 0; });
+    if (out_snapshots) {
+        out_snapshots->Append(snapshots);
+    }
+
+    if (out_channels) {
+        Size prev_len = out_channels->len;
+
+        HashMap<const char *, Size> map;
+
+        for (const rk_SnapshotInfo &snapshot: snapshots) {
+            Size *ptr = map.TrySet(snapshot.channel, -1);
+            Size idx = *ptr;
+
+            if (idx < 0) {
+                rk_ChannelInfo channel = {};
+
+                channel.name = DuplicateString(snapshot.channel, alloc).ptr;
+
+                idx = out_channels->len;
+                *ptr = idx;
+
+                out_channels->Append(channel);
+            }
+
+            rk_ChannelInfo *channel = &(*out_channels)[idx];
+
+            channel->hash = snapshot.hash;
+            channel->time = snapshot.time;
+            channel->size = snapshot.size;
+
+            channel->count++;
+        }
+
+        std::sort(out_channels->begin() + prev_len, out_channels->end(),
+                  [](const rk_ChannelInfo &channel1, const rk_ChannelInfo &channel2) { return CmpStr(channel1.name, channel2.name) < 0; });
+    }
+
+    return true;
 }
 
 class ListContext {
@@ -1171,8 +1161,8 @@ void ListContext::MakeProgress(int64_t entries)
     }
 }
 
-bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
-             Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects)
+bool rk_ListChildren(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
+                     Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects)
 {
     Size prev_len = out_objects->len;
     RG_DEFER_N(out_guard) { out_objects->RemoveFrom(prev_len); };
@@ -1300,7 +1290,7 @@ static bool ParseHash(Span<const char> str, rk_Hash *out_hash)
     return true;
 }
 
-bool rk_Locate(rk_Disk *disk, Span<const char> identifier, rk_Hash *out_hash)
+bool rk_LocateObject(rk_Disk *disk, Span<const char> identifier, rk_Hash *out_hash)
 {
     BlockAllocator temp_alloc;
 
@@ -1314,7 +1304,7 @@ bool rk_Locate(rk_Disk *disk, Span<const char> identifier, rk_Hash *out_hash)
 
         if (!found) {
             HeapArray<rk_SnapshotInfo> snapshots;
-            if (!rk_Snapshots(disk, &temp_alloc, &snapshots))
+            if (!rk_ListSnapshots(disk, &temp_alloc, &snapshots))
                 return false;
 
             for (Size i = snapshots.len - 1; i >= 0; i--) {
@@ -1343,7 +1333,7 @@ bool rk_Locate(rk_Disk *disk, Span<const char> identifier, rk_Hash *out_hash)
         do {
             objects.RemoveFrom(0);
 
-            if (!rk_List(disk, hash, {}, &temp_alloc, &objects))
+            if (!rk_ListChildren(disk, hash, {}, &temp_alloc, &objects))
                 return false;
 
             bool match = false;

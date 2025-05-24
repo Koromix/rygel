@@ -167,7 +167,7 @@ static bool InitRoot(const rk_Hash &hash)
     entries.Append(&root);
 
     HeapArray<rk_ObjectInfo> objects;
-    if (!rk_List(disk.get(), hash, {}, &temp_alloc, &objects))
+    if (!rk_ListChildren(disk.get(), hash, {}, &temp_alloc, &objects))
         return false;
 
     for (const rk_ObjectInfo &obj: objects) {
@@ -224,7 +224,7 @@ static bool CacheDirectoryChildren(CacheEntry *entry)
 
     if (!entry->directory.ready) {
         HeapArray<rk_ObjectInfo> objects;
-        if (!rk_List(disk.get(), entry->hash, {}, &entry->directory.str_alloc, &objects))
+        if (!rk_ListChildren(disk.get(), entry->hash, {}, &entry->directory.str_alloc, &objects))
             return false;
 
         entry->directory.children.Reserve(objects.len);
@@ -568,7 +568,7 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
     LogInfo();
 
     rk_Hash hash = {};
-    if (!rk_Locate(disk.get(), identifier, &hash))
+    if (!rk_LocateObject(disk.get(), identifier, &hash))
         return 1;
 
     LogInfo("Mounting %!..+%1%!0 to '%2'...", hash, mountpoint);

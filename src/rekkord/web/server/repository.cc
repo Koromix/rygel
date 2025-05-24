@@ -125,15 +125,15 @@ static std::unique_ptr<rk_Disk> OpenRepository(const rk_Config &repo, OpenError 
     return disk;
 }
 
-static bool ListSnapshots(const rk_Config &repo, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
+static bool ListSnapshots(const rk_Config &repo, Allocator *alloc,
+                          HeapArray<rk_SnapshotInfo> *out_snapshots, HeapArray<rk_ChannelInfo> *out_channels)
 {
     OpenError error;
     std::unique_ptr<rk_Disk> disk = OpenRepository(repo, &error);
 
     if (!disk)
         return false;
-
-    if (!rk_Snapshots(disk.get(), alloc, out_snapshots))
+    if (!rk_ListSnapshots(disk.get(), alloc, out_snapshots, out_channels))
         return false;
 
     return true;
@@ -162,7 +162,7 @@ static bool CheckRepository(const rk_Config &repo, int64_t id)
         });
         RG_DEFER { PopLogFilter(); };
 
-        if (!ListSnapshots(repo, &temp_alloc, &snapshots)) {
+        if (!ListSnapshots(repo, &temp_alloc, &snapshots, &channels)) {
             bool success = db.Transaction([&]() {
                 if (!db.Run(R"(UPDATE repositories SET checked = ?2,
                                                        failed = ?3,
@@ -182,8 +182,6 @@ static bool CheckRepository(const rk_Config &repo, int64_t id)
 
             return true;
         }
-
-        rk_Channels(snapshots, &temp_alloc, &channels);
     }
 
     bool success = db.Transaction([&]() {
