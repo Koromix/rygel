@@ -89,7 +89,7 @@ int RunResetCache(Span<const char *> arguments)
 {
     // Options
     rk_Config config;
-    bool list = false;
+    bool list = true;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -102,7 +102,7 @@ Options:
     %!..+-R, --repository URL%!0           Set repository URL
     %!..+-u, --user username%!0            Set repository username
 
-        %!..+--list%!0                     List existing objects)", FelixTarget);
+        %!..+--clear%!0                    Skip list of existing blobs)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -123,8 +123,8 @@ Options:
                     return 1;
             } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 config.username = opt.current_value;
-            } else if (opt.Test("--list")) {
-                list = true;
+            } else if (opt.Test("--clear")) {
+                list = false;
             } else {
                 opt.LogUnknownError();
                 return 1;
