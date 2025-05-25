@@ -1230,7 +1230,7 @@ StatResult rk_Disk::TestFast(const char *path, int64_t *out_size)
             case StatResult::OtherError: return StatResult::OtherError;
         }
 
-        if (known_size >= 0 && real_size < 0) {
+        if (known_size >= 0 && real_size != known_size) {
             ResetCache(false);
 
             LogError("The local cache database was mismatched and could have resulted in missing data in the backup.");
