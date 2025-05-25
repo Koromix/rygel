@@ -31,7 +31,7 @@ public:
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
 
-    Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
+    WriteResult WriteRaw(const char *path, Span<const uint8_t> buf, bool overwrite) override;
     bool DeleteRaw(const char *path) override;
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
@@ -139,10 +139,10 @@ Size LocalDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
-    return ReadFile(filename.data, Mebibytes(256), out_buf);
+    return ReadFile(filename.data, Mebibytes(64), out_buf);
 }
 
-Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
+rk_Disk::WriteResult LocalDisk::WriteRaw(const char *path, Span<const uint8_t> buf, bool overwrite)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
@@ -163,41 +163,47 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
                 tmp.len += len;
                 break;
             } else if (ret != OpenResult::FileExists) {
-                return -1;
+                return WriteResult::OtherError;
             }
         }
 
         if (fd < 0) [[unlikely]] {
             LogError("Failed to create temporary file in '%1'", tmp);
-            return -1;
+            return WriteResult::OtherError;
         }
     }
-    RG_DEFER_N(file_guard) { CloseDescriptor(fd); };
-    RG_DEFER_N(tmp_guard) { UnlinkFile(tmp.data); };
+
+    RG_DEFER_N(tmp_guard) {
+        CloseDescriptor(fd);
+        UnlinkFile(tmp.data);
+    };
 
     StreamWriter writer(fd, filename.data);
 
     // Write encrypted content
-    if (!func([&](Span<const uint8_t> buf) { return writer.Write(buf); }))
-        return -1;
+    if (!writer.Write(buf))
+        return WriteResult::OtherError;
     if (!writer.Close())
-        return -1;
+        return WriteResult::OtherError;
 
     // File is complete
     CloseDescriptor(fd);
-    file_guard.Disable();
+    fd = -1;
 
-    // Atomic rename
-    if (RenameFile(tmp.data, filename.data, (int)RenameFlag::Overwrite) != RenameResult::Success)
-        return -1;
+    // Finalize!
+    {
+        unsigned int flags = overwrite ? (int)RenameFlag::Overwrite : 0;
+        RenameResult ret = RenameFile(tmp.data, filename.data, (int)RenameResult::AlreadyExists, flags);
+
+        switch (ret) {
+            case RenameResult::Success: {} break;
+            case RenameResult::AlreadyExists: return WriteResult::AlreadyExists;
+            case RenameResult::OtherError: return WriteResult::OtherError;
+        }
+    }
+
     tmp_guard.Disable();
-
-    int64_t written = writer.GetRawWritten();
-
-    if (!PutCache(path, written))
-        return -1;
-
-    return written;
+    return WriteResult::Success;
 }
 
 bool LocalDisk::DeleteRaw(const char *path)

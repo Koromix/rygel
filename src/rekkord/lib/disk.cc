@@ -490,6 +490,10 @@ bool rk_Disk::ResetCache(bool list)
 
         if (list) {
             bool success = ListRaw("blobs", [&](const char *path, int64_t size) {
+                // We never write empty blobs, something went wrong
+                if (!size) [[unlikely]]
+                    return true;
+
                 if (!cache_db.Run(R"(INSERT INTO objects (key, size) VALUES (?1, ?2)
                                      ON CONFLICT (key) DO UPDATE SET size = excluded.size)",
                                   path, size))
@@ -793,143 +797,149 @@ Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
         }
     }
 
-    Size written = WriteRaw(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
-        // Write blob intro
-        crypto_secretstream_xchacha20poly1305_state state;
-        {
-            BlobIntro intro = {};
+    HeapArray<uint8_t> raw;
+    crypto_secretstream_xchacha20poly1305_state state;
 
-            intro.version = BlobVersion;
-            intro.type = (int8_t)type;
+    // Write blob intro
+    {
+        BlobIntro intro = {};
 
-            uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
-            crypto_secretstream_xchacha20poly1305_keygen(key);
-            if (crypto_secretstream_xchacha20poly1305_init_push(&state, intro.header, key) != 0) {
-                LogError("Failed to initialize symmetric encryption");
-                return false;
-            }
-            if (crypto_box_seal(intro.ekey, key, RG_SIZE(key), keyset->wkey) != 0) {
-                LogError("Failed to seal symmetric key");
-                return false;
-            }
+        intro.version = BlobVersion;
+        intro.type = (int8_t)type;
 
-            Span<const uint8_t> buf = MakeSpan((const uint8_t *)&intro, RG_SIZE(intro));
-
-            if (!func(buf))
-                return false;
+        uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
+        crypto_secretstream_xchacha20poly1305_keygen(key);
+        if (crypto_secretstream_xchacha20poly1305_init_push(&state, intro.header, key) != 0) {
+            LogError("Failed to initialize symmetric encryption");
+            return -1;
+        }
+        if (crypto_box_seal(intro.ekey, key, RG_SIZE(key), keyset->wkey) != 0) {
+            LogError("Failed to seal symmetric key");
+            return -1;
         }
 
-        // Initialize compression
-        EncodeLZ4 lz4;
-        if (!lz4.Start(compression_level))
-            return false;
+        Span<const uint8_t> buf = MakeSpan((const uint8_t *)&intro, RG_SIZE(intro));
+        raw.Append(buf);
+    }
 
-        // Encrypt blob data
-        {
-            bool complete = false;
-            int64_t compressed = 0;
+    // Initialize compression
+    EncodeLZ4 lz4;
+    if (!lz4.Start(compression_level))
+        return -1;
 
-            do {
-                Size frag_len = std::min(BlobSplit, blob.len);
-                Span<const uint8_t> frag = blob.Take(0, frag_len);
+    // Encrypt blob data
+    {
+        bool complete = false;
+        int64_t compressed = 0;
 
-                blob.ptr += frag.len;
-                blob.len -= frag.len;
+        do {
+            Size frag_len = std::min(BlobSplit, blob.len);
+            Span<const uint8_t> frag = blob.Take(0, frag_len);
 
-                complete |= (frag.len < BlobSplit);
+            blob.ptr += frag.len;
+            blob.len -= frag.len;
 
-                if (!lz4.Append(frag))
-                    return false;
+            complete |= (frag.len < BlobSplit);
 
-                bool success = lz4.Flush(complete, [&](Span<const uint8_t> buf) {
-                    // This should rarely loop because data should compress to less
-                    // than BlobSplit but we ought to be safe ;)
+            if (!lz4.Append(frag))
+                return -1;
 
-                    Size processed = 0;
+            bool success = lz4.Flush(complete, [&](Span<const uint8_t> buf) {
+                // This should rarely loop because data should compress to less
+                // than BlobSplit but we ought to be safe ;)
 
-                    while (buf.len >= BlobSplit) {
-                        Size piece_len = std::min(BlobSplit, buf.len);
-                        Span<const uint8_t> piece = buf.Take(0, piece_len);
+                Size processed = 0;
 
-                        buf.ptr += piece.len;
-                        buf.len -= piece.len;
-                        processed += piece.len;
+                while (buf.len >= BlobSplit) {
+                    Size piece_len = std::min(BlobSplit, buf.len);
+                    Span<const uint8_t> piece = buf.Take(0, piece_len);
 
-                        uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
-                        unsigned long long cypher_len;
-                        crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, piece.ptr, piece.len, nullptr, 0, 0);
+                    buf.ptr += piece.len;
+                    buf.len -= piece.len;
+                    processed += piece.len;
 
-                        Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
+                    uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
+                    unsigned long long cypher_len;
+                    crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, piece.ptr, piece.len, nullptr, 0, 0);
 
-                        if (!func(final))
-                            return (Size)-1;
-                    }
+                    Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
+                    raw.Append(final);
+                }
 
-                    compressed += processed;
+                compressed += processed;
 
-                    if (!complete)
-                        return processed;
-
-                    processed += buf.len;
-                    compressed += buf.len;
-
-                    // Reduce size disclosure with Padmé algorithm
-                    // More information here: https://lbarman.ch/blog/padme/
-                    int64_t padding = PadMe((uint64_t)compressed);
-
-                    // Write remaining bytes and start padding
-                    {
-                        LocalArray<uint8_t, BlobSplit> expand;
-
-                        Size pad = (Size)std::min(padding, (int64_t)RG_SIZE(expand.data) - buf.len);
-
-                        MemCpy(expand.data, buf.ptr, buf.len);
-                        MemSet(expand.data + buf.len, 0, pad);
-                        expand.len = buf.len + pad;
-
-                        padding -= pad;
-
-                        uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
-                        unsigned char tag = !padding ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
-                        unsigned long long cypher_len;
-                        crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, expand.data, expand.len, nullptr, 0, tag);
-
-                        Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
-
-                        if (!func(final))
-                            return (Size)-1;
-                    }
-
-                    // Finalize padding
-                    while (padding) {
-                        static const uint8_t padder[BlobSplit] = {};
-
-                        Size pad = (Size)std::min(padding, (int64_t)RG_SIZE(padder));
-
-                        padding -= pad;
-
-                        uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
-                        unsigned char tag = !padding ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
-                        unsigned long long cypher_len;
-                        crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, padder, pad, nullptr, 0, tag);
-
-                        Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
-
-                        if (!func(final))
-                            return (Size)-1;
-                    }
-
+                if (!complete)
                     return processed;
-                });
-                if (!success)
-                    return false;
-            } while (!complete);
+
+                processed += buf.len;
+                compressed += buf.len;
+
+                // Reduce size disclosure with Padmé algorithm
+                // More information here: https://lbarman.ch/blog/padme/
+                int64_t padding = PadMe((uint64_t)compressed);
+
+                // Write remaining bytes and start padding
+                {
+                    LocalArray<uint8_t, BlobSplit> expand;
+
+                    Size pad = (Size)std::min(padding, (int64_t)RG_SIZE(expand.data) - buf.len);
+
+                    MemCpy(expand.data, buf.ptr, buf.len);
+                    MemSet(expand.data + buf.len, 0, pad);
+                    expand.len = buf.len + pad;
+
+                    padding -= pad;
+
+                    uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
+                    unsigned char tag = !padding ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
+                    unsigned long long cypher_len;
+                    crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, expand.data, expand.len, nullptr, 0, tag);
+
+                    Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
+                    raw.Append(final);
+                }
+
+                // Finalize padding
+                while (padding) {
+                    static const uint8_t padder[BlobSplit] = {};
+
+                    Size pad = (Size)std::min(padding, (int64_t)RG_SIZE(padder));
+
+                    padding -= pad;
+
+                    uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
+                    unsigned char tag = !padding ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
+                    unsigned long long cypher_len;
+                    crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, padder, pad, nullptr, 0, tag);
+
+                    Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
+                    raw.Append(final);
+                }
+
+                return processed;
+            });
+            if (!success)
+                return -1;
+        } while (!complete);
+    }
+
+    // Write the damn thing
+    {
+        WriteResult ret = WriteRaw(path.data, raw, false);
+
+        switch (ret) {
+            case WriteResult::Success:
+            case WriteResult::AlreadyExists: {} break;
+
+            case WriteResult::OtherError: return -1;
         }
+    }
 
-        return true;
-    });
+    if (!cache_db.Run(R"(INSERT INTO objects (key, size) VALUES (?1, ?2)
+                         ON CONFLICT DO NOTHING)", path, raw.len))
+        return -1;
 
-    return written;
+    return raw.len;
 }
 
 bool rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
@@ -993,7 +1003,7 @@ bool rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
 
         sodium_bin2base64(path.end(), path.Available(), cypher.ptr + offset, len, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
 
-        if (WriteDirect(path.data, {}, true) < 0)
+        if (WriteRaw(path.data, {}, true) != WriteResult::Success)
             return false;
     }
 
@@ -1191,16 +1201,6 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, Span<const rk_UserInfo> user
     return true;
 }
 
-bool rk_Disk::PutCache(const char *key, int64_t size)
-{
-    if (!cache_db.IsValid())
-        return true;
-
-    bool success = cache_db.Run(R"(INSERT INTO objects (key, size) VALUES (?1, ?2)
-                                   ON CONFLICT DO NOTHING)", key, size);
-    return success;
-}
-
 StatResult rk_Disk::TestFast(const char *path, int64_t *out_size)
 {
     if (!cache_db.IsValid())
@@ -1322,16 +1322,18 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
     crypto_sign_ed25519_detached(data.sig, nullptr, (const uint8_t *)&data, offsetof(KeyData, sig), keyset->ckey);
 
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
-    Size written = WriteDirect(path, buf, false);
+    WriteResult ret = WriteRaw(path, buf, false);
 
-    if (written < 0)
-        return false;
-    if (!written) {
-        LogError("Key file '%1' already exists", path);
-        return false;
+    switch (ret) {
+        case WriteResult::Success: return true;
+        case WriteResult::AlreadyExists: {
+            LogError("Key file '%1' already exists", path);
+            return false;
+        } break;
+        case WriteResult::OtherError: return false;
     }
 
-    return true;
+    RG_UNREACHABLE();
 }
 
 bool rk_Disk::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, rk_KeySet *out_keys)
@@ -1403,16 +1405,18 @@ bool rk_Disk::WriteConfig(const char *path, Span<const uint8_t> data, bool overw
 
     Size len = offsetof(ConfigData, cypher) + crypto_sign_ed25519_BYTES + data.len;
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&config, len);
-    Size written = WriteDirect(path, buf, overwrite);
+    WriteResult ret = WriteRaw(path, buf, overwrite);
 
-    if (written < 0)
-        return false;
-    if (!written) {
-        LogError("Config file '%1' already exists", path);
-        return false;
+    switch (ret) {
+        case WriteResult::Success: return true;
+        case WriteResult::AlreadyExists: {
+            LogError("Config file '%1' already exists", path);
+            return false;
+        } break;
+        case WriteResult::OtherError: return false;
     }
 
-    return true;
+    RG_UNREACHABLE();
 }
 
 bool rk_Disk::ReadConfig(const char *path, Span<uint8_t> out_buf)
@@ -1442,21 +1446,6 @@ bool rk_Disk::ReadConfig(const char *path, Span<uint8_t> out_buf)
     }
 
     return true;
-}
-
-Size rk_Disk::WriteDirect(const char *path, Span<const uint8_t> buf, bool overwrite)
-{
-    if (!overwrite) {
-        switch (TestRaw(path)) {
-            case StatResult::Success: return 0;
-            case StatResult::MissingPath: {} break;
-            case StatResult::AccessDenied:
-            case StatResult::OtherError: return -1;
-        }
-    }
-
-    Size written = WriteRaw(path, [&](FunctionRef<bool(Span<const uint8_t>)> func) { return func(buf); });
-    return written;
 }
 
 bool rk_Disk::CheckRepository()

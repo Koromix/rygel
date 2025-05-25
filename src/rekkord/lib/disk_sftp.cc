@@ -66,7 +66,7 @@ public:
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
 
-    Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
+    WriteResult WriteRaw(const char *path, Span<const uint8_t> buf, bool overwrite) override;
     bool DeleteRaw(const char *path) override;
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
@@ -367,16 +367,14 @@ Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
     return read_len;
 }
 
-Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
+rk_Disk::WriteResult SftpDisk::WriteRaw(const char *path, Span<const uint8_t> buf, bool overwrite)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
 
-    int64_t written_len = 0;
+    WriteResult ret = WriteResult::Success;
 
     bool success = RunSafe("write file", [&](ConnectionData *conn) {
-        written_len = 0;
-
         // Create temporary file
         sftp_file file = nullptr;
         LocalArray<char, MaxPathSize + 128> tmp;
@@ -416,43 +414,29 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
                 return RunResult::SpecificError;
             }
         }
-        RG_DEFER_N(file_guard) { sftp_close(file); };
-        RG_DEFER_N(tmp_guard) { sftp_unlink(conn->sftp, tmp.data); };
 
-        // Write encrypted content
-        {
-            bool specific = false;
+        RG_DEFER_N(tmp_guard) {
+            sftp_close(file);
+            sftp_unlink(conn->sftp, tmp.data);
+        };
 
-            bool success = func([&](Span<const uint8_t> buf) {
-                written_len += buf.len;
+        // Write content
+        while (buf.len) {
+            ssize_t bytes = sftp_write(file, buf.ptr, (size_t)buf.len);
 
-                while (buf.len) {
-                    ssize_t bytes = sftp_write(file, buf.ptr, (size_t)buf.len);
+            if (bytes < 0) {
+                int error = sftp_get_error(conn->sftp);
 
-                    if (bytes < 0) {
-                        int error = sftp_get_error(conn->sftp);
-
-                        if (IsSftpErrorSpecific(error)) {
-                            LogError("Failed to write to '%1': %2", tmp, sftp_GetErrorString(conn->sftp));
-
-                            specific = true;
-                            return false;
-                        } else {
-                            return false;
-                        }
-                    }
-
-                    buf.ptr += (Size)bytes;
-                    buf.len -= (Size)bytes;
+                if (IsSftpErrorSpecific(error)) {
+                    LogError("Failed to write to '%1': %2", tmp, sftp_GetErrorString(conn->sftp));
+                    return RunResult::SpecificError;
+                } else {
+                    return RunResult::OtherError;
                 }
-
-                return true;
-            });
-
-            if (!success) {
-                RunResult ret = specific ? RunResult::SpecificError : RunResult::OtherError;
-                return ret;
             }
+
+            buf.ptr += (Size)bytes;
+            buf.len -= (Size)bytes;
         }
 
         // Finalize file
@@ -466,50 +450,41 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
                 return RunResult::OtherError;
             }
         }
-        sftp_close(file);
-        file_guard.Disable();
 
-        // Atomic rename is not supported by older SSH servers, and the error code is unhelpful (Generic failure)
-        if (sftp_rename(conn->sftp, tmp.data, filename.data) < 0) {
-            bool renamed = false;
+        sftp_close(file);
+        file = nullptr;
+
+        if (sftp_rename2(conn->sftp, tmp.data, filename.data, overwrite) < 0) {
+            if (!overwrite) {
+                // Atomic rename is not supported by older SSH servers, and the error code is unhelpful (Generic failure)...
+                // So we need to stat the path to emulate EEXIST.
+
+                sftp_attributes attr = sftp_stat(conn->sftp, filename.data);
+                RG_DEFER { sftp_attributes_free(attr); };
+
+                if (attr) {
+                    ret = WriteResult::AlreadyExists;
+                    return RunResult::Success;
+                }
+            }
 
             int error = sftp_get_error(conn->sftp);
 
-            if (!IsSftpErrorSpecific(error)) {
-                for (int i = 0; i < 20; i++) {
-                    int rnd = GetRandomInt(50, 100);
-                    WaitDelay(rnd);
-
-                    sftp_unlink(conn->sftp, filename.data);
-
-                    if (!sftp_rename(conn->sftp, tmp.data, filename.data)) {
-                        renamed = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!renamed) {
-                int error = sftp_get_error(conn->sftp);
-
-                if (IsSftpErrorSpecific(error)) {
-                    LogError("Failed to rename '%1' to '%2': %3", tmp.data, filename.data, sftp_GetErrorString(conn->sftp));
-                    return RunResult::SpecificError;
-                } else {
-                    return RunResult::OtherError;
-                }
+            if (IsSftpErrorSpecific(error)) {
+                LogError("Failed to rename '%1' to '%2': %3", tmp.data, filename.data, sftp_GetErrorString(conn->sftp));
+                return RunResult::SpecificError;
+            } else {
+                return RunResult::OtherError;
             }
         }
 
+        tmp_guard.Disable();
         return RunResult::Success;
     });
     if (!success)
-        return -1;
+        return WriteResult::OtherError;
 
-    if (!PutCache(path, written_len))
-        return -1;
-
-    return written_len;
+    return ret;
 }
 
 bool SftpDisk::DeleteRaw(const char *path)
@@ -642,7 +617,7 @@ StatResult SftpDisk::TestRaw(const char *path, int64_t *out_size)
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
 
-    StatResult ret = StatResult::OtherError;
+    StatResult ret = StatResult::Success;
 
     bool success = RunSafe("stat file", [&](ConnectionData *conn) {
         sftp_attributes attr = sftp_stat(conn->sftp, filename.data);
@@ -684,8 +659,6 @@ StatResult SftpDisk::TestRaw(const char *path, int64_t *out_size)
         if (out_size) {
             *out_size = (int64_t)attr->size;
         }
-        ret = StatResult::Success;
-
         return RunResult::Success;
     });
     if (!success)

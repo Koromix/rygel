@@ -136,6 +136,12 @@ class rk_Disk {
     };
 
 protected:
+    enum class WriteResult {
+        Success,
+        AlreadyExists,
+        OtherError
+    };
+
     const char *url = nullptr;
     IdSet ids;
 
@@ -193,7 +199,8 @@ public:
     virtual Size ReadRaw(const char *path, Span<uint8_t> out_buf) = 0;
     virtual Size ReadRaw(const char *path, HeapArray<uint8_t> *out_blob) = 0;
 
-    virtual Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
+    // WriteResult::AlreadyExists must be silent, let the caller emit an error if relevant
+    virtual WriteResult WriteRaw(const char *path, Span<const uint8_t> buf, bool overwrite) = 0;
     virtual bool DeleteRaw(const char *path) = 0;
 
     virtual bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) = 0;
@@ -205,8 +212,6 @@ protected:
 
     bool InitDefault(Span<const uint8_t> mkey, Span<const rk_UserInfo> users);
 
-    bool PutCache(const char *key, int64_t size);
-
 private:
     StatResult TestFast(const char *path, int64_t *out_size);
 
@@ -215,8 +220,6 @@ private:
 
     bool WriteConfig(const char *path, Span<const uint8_t> buf, bool overwrite);
     bool ReadConfig(const char *path, Span<uint8_t> out_buf);
-
-    Size WriteDirect(const char *path, Span<const uint8_t> buf, bool overwrite);
 
     bool CheckRepository();
 };

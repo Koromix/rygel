@@ -32,7 +32,7 @@ public:
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
 
-    Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
+    WriteResult WriteRaw(const char *path, Span<const uint8_t> buf, bool overwrite) override;
     bool DeleteRaw(const char *path) override;
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
@@ -74,18 +74,18 @@ Size S3Disk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
     return s3.GetObject(path, Mebibytes(256), out_buf);
 }
 
-Size S3Disk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
+rk_Disk::WriteResult S3Disk::WriteRaw(const char *path, Span<const uint8_t> buf, bool overwrite)
 {
-    HeapArray<uint8_t> obj;
-    if (!func([&](Span<const uint8_t> buf) { obj.Append(buf); return true; }))
-        return -1;
+    s3_PutInfo info = { .conditional = !overwrite };
+    s3_PutResult ret = s3.PutObject(path, buf, info);
 
-    if (!s3.PutObject(path, obj))
-        return -1;
-    if (!PutCache(path, obj.len))
-        return -1;
+    switch (ret) {
+        case s3_PutResult::Success: return WriteResult::Success;
+        case s3_PutResult::ObjectExists: return WriteResult::AlreadyExists;
+        case s3_PutResult::OtherError: return WriteResult::OtherError;
+    }
 
-    return obj.len;
+    RG_UNREACHABLE();
 }
 
 bool S3Disk::DeleteRaw(const char *path)
