@@ -1883,6 +1883,114 @@ int sftp_rename(sftp_session sftp, const char *original, const char *newname)
     return -1;
 }
 
+int sftp_rename2(sftp_session sftp, const char *original, const char *newname, bool overwrite)
+{
+    sftp_status_message status = NULL;
+    sftp_message msg = NULL;
+    ssh_buffer buffer = NULL;
+    uint32_t id;
+    const char *extension_name = "posix-rename@openssh.com";
+    int request_type;
+    int rc;
+
+    buffer = ssh_buffer_new();
+    if (buffer == NULL) {
+        ssh_set_error_oom(sftp->session);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return -1;
+    }
+
+    id = sftp_get_new_id(sftp);
+
+    if (overwrite && sftp_extension_supported(sftp,
+                                              extension_name,
+                                              "1")) {
+        rc = ssh_buffer_pack(buffer,
+                             "dsss",
+                             id,
+                             extension_name,
+                             original,
+                             newname);
+        if (rc != SSH_OK) {
+            ssh_set_error_oom(sftp->session);
+            SSH_BUFFER_FREE(buffer);
+            sftp_set_error(sftp, SSH_FX_FAILURE);
+            return -1;
+        }
+
+        request_type = SSH_FXP_EXTENDED;
+    } else {
+        rc = ssh_buffer_pack(buffer,
+                             "dss",
+                             id,
+                             original,
+                             newname);
+        if (rc != SSH_OK) {
+            ssh_set_error_oom(sftp->session);
+            SSH_BUFFER_FREE(buffer);
+            sftp_set_error(sftp, SSH_FX_FAILURE);
+            return -1;
+        }
+
+        if (sftp->version >= 4) {
+            ssh_buffer_add_u32(buffer, overwrite ? SSH_FXF_RENAME_OVERWRITE : 0);
+        } else if (overwrite) {
+            ssh_set_error(sftp->session, SSH_REQUEST_DENIED, "SFTP server does not support atomic rename");
+            SSH_BUFFER_FREE(buffer);
+            sftp_set_error(sftp, SSH_FX_OP_UNSUPPORTED);
+            return -1;
+        }
+
+        request_type = SSH_FXP_RENAME;
+    }
+
+    rc = sftp_packet_write(sftp, request_type, buffer);
+    SSH_BUFFER_FREE(buffer);
+    if (rc < 0) {
+        return -1;
+    }
+
+    while (msg == NULL) {
+        if (sftp_read_and_dispatch(sftp) < 0) {
+            return -1;
+        }
+        msg = sftp_dequeue(sftp, id);
+    }
+
+    /* By specification, this command only returns SSH_FXP_STATUS */
+    if (msg->packet_type == SSH_FXP_STATUS) {
+        status = parse_status_msg(msg);
+        sftp_message_free(msg);
+        if (status == NULL) {
+            return -1;
+        }
+        sftp_set_error(sftp, status->status);
+        switch (status->status) {
+            case SSH_FX_OK:
+                status_msg_free(status);
+                return 0;
+            default:
+                break;
+        }
+        /*
+         * Status should be SSH_FX_OK if the command was successful,
+         * if it didn't, then there was an error
+         */
+        ssh_set_error(sftp->session, SSH_REQUEST_DENIED,
+                      "SFTP server: %s", status->errormsg);
+        status_msg_free(status);
+        return -1;
+    } else {
+        ssh_set_error(sftp->session, SSH_FATAL,
+                      "Received message %d when attempting to rename",
+                      msg->packet_type);
+        sftp_message_free(msg);
+        sftp_set_error(sftp, SSH_FX_BAD_MESSAGE);
+    }
+
+    return -1;
+}
+
 /* Code written by Nick */
 /* Set file attributes on a file, directory or symbolic link. */
 int sftp_setstat(sftp_session sftp, const char *file, sftp_attributes attr)

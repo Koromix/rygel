@@ -38,6 +38,7 @@
 #define SFTP_H
 
 #include <sys/types.h>
+#include <stdbool.h>
 
 #include "libssh.h"
 
@@ -926,6 +927,25 @@ LIBSSH_API int sftp_mkdir(sftp_session sftp, const char *directory, mode_t mode)
  * @see sftp_get_error()
  */
 LIBSSH_API int sftp_rename(sftp_session sftp, const char *original, const  char *newname);
+
+/**
+ * @brief Rename or move a file or directory.
+ *
+ * @param sftp          The sftp session handle.
+ *
+ * @param original      The original url (source url) of file or directory to
+ *                      be moved.
+ *
+ * @param newname       The new url (destination url) of the file or directory
+ *                      after the move.
+ *
+ * @param overwrite     Overwrite existing file
+ *
+ * @return              0 on success, < 0 on error with ssh and sftp error set.
+ *
+ * @see sftp_get_error()
+ */
+LIBSSH_API int sftp_rename2(sftp_session sftp, const char *original, const  char *newname, bool overwrite);
 
 /**
  * @brief Set file attributes on a file, directory or symbolic link.
