@@ -2894,7 +2894,6 @@ void HandleArchiveRestore(http_IO *io)
         if (renameat2(AT_FDCWD, gp_domain.config.instances_directory,
                       AT_FDCWD, tmp_directory, RENAME_EXCHANGE) < 0) {
             LogDebug("Failed to swap directories atomically: %1", strerror(errno));
-
 #else
         if (true) {
 #endif
@@ -2903,9 +2902,9 @@ void HandleArchiveRestore(http_IO *io)
             unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
 
             // Non atomic swap but it is hard to do better here
-            if (!RenameFile(gp_domain.config.instances_directory, swap_directory, flags))
+            if (RenameFile(gp_domain.config.instances_directory, swap_directory, flags) != RenameResult::Success)
                 return false;
-            if (!RenameFile(tmp_directory, gp_domain.config.instances_directory, flags)) {
+            if (RenameFile(tmp_directory, gp_domain.config.instances_directory, flags) != RenameResult::Success) {
                 // If this goes wrong, we're completely screwed :)
                 // At least on Linux we have some hope to avoid this problem
                 RenameFile(swap_directory, gp_domain.config.instances_directory, flags);

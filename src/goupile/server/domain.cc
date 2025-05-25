@@ -373,7 +373,7 @@ bool DomainHolder::Open(const char *filename)
         const char *tmp_filename2 = CreateUniqueFile(config.instances_directory, "", ".tmp", &config.str_alloc);
         RG_DEFER { UnlinkFile(tmp_filename2); };
 
-        if (!RenameFile(tmp_filename1, tmp_filename2, (int)RenameFlag::Overwrite)) {
+        if (RenameFile(tmp_filename1, tmp_filename2, (int)RenameFlag::Overwrite) != RenameResult::Success) {
             UnlinkFile(tmp_filename1);
             return false;
         }

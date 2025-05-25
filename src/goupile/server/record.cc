@@ -905,7 +905,7 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
 
         filename = MakeExportFileName(instance->key.ptr, export_id, now, io->Allocator());
 
-        if (!RenameFile(tmp_filename, filename, 0))
+        if (RenameFile(tmp_filename, filename, 0) != RenameResult::Success)
             return false;
 
         return true;

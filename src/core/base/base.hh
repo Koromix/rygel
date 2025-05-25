@@ -4295,8 +4295,17 @@ enum class RenameFlag {
     Sync = 1 << 1
 };
 
-// Sync failures are logged but not reported as errors (function returns true)
-bool RenameFile(const char *src_filename, const char *dest_filename, unsigned int flags);
+enum class RenameResult {
+    Success = 0,
+
+    AlreadyExists = 1 << 0,
+    OtherError = 1 << 1
+};
+
+// Sync failures are logged but not reported as errors
+RenameResult RenameFile(const char *src_filename, const char *dest_filename, unsigned int silent, unsigned int flags);
+static inline RenameResult RenameFile(const char *src_filename, const char *dest_filename, unsigned int flags)
+    { return RenameFile(src_filename, dest_filename, 0, flags); }
 
 bool ResizeFile(int fd, const char *filename, int64_t len);
 bool SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t ctime, uint32_t mode);

@@ -2500,36 +2500,48 @@ StatResult StatFile(int fd, const char *filename, unsigned int flags, FileInfo *
     }
 }
 
-bool RenameFile(const char *src_filename, const char *dest_filename, unsigned int flags)
+RenameResult RenameFile(const char *src_filename, const char *dest_filename, unsigned int silent, unsigned int flags)
 {
+    RG_ASSERT(!(silent & ((int)RenameResult::Success | (int)RenameResult::OtherError)));
+
     DWORD move_flags = (flags & (int)RenameFlag::Overwrite) ? MOVEFILE_REPLACE_EXISTING : 0;
+    DWORD err = ERROR_SUCCESS;
 
     for (int i = 0; i < 10; i++) {
         if (win32_utf8) {
             if (MoveFileExA(src_filename, dest_filename, move_flags))
-                return true;
+                return RenameResult::Success;
         } else {
             wchar_t src_filename_w[4096];
             wchar_t dest_filename_w[4096];
             if (ConvertUtf8ToWin32Wide(src_filename, src_filename_w) < 0)
-                return false;
+                return RenameResult::OtherError;
             if (ConvertUtf8ToWin32Wide(dest_filename, dest_filename_w) < 0)
-                return false;
+                return RenameResult::OtherError;
 
             if (MoveFileExW(src_filename_w, dest_filename_w, move_flags))
-                return true;
+                return RenameResult::Success;
         }
 
-        if (GetLastError() != ERROR_ACCESS_DENIED)
-            break;
+        err = GetLastError();
 
         // If two threads are trying to rename to the same destination or the FS is
         // very busy, we get spurious ERROR_ACCESS_DENIED errors. Wait a bit and retry :)
+        if (err != ERROR_ACCESS_DENIED)
+            break;
+
         Sleep(1);
     }
 
-    LogError("Failed to rename file '%1' to '%2': %3", src_filename, dest_filename, GetWin32ErrorString());
-    return false;
+    if (err == ERROR_ALREADY_EXISTS) {
+        if (!(silent & (int)RenameResult::AlreadyExists)) {
+            LogError("Failed to rename file '%1' to '%2': file already exists", src_filename, dest_filename);
+        }
+        return RenameResult::AlreadyExists;
+    } else {
+        LogError("Failed to rename file '%1' to '%2': %3", src_filename, dest_filename, GetWin32ErrorString(err));
+        return RenameResult::OtherError;
+    }
 }
 
 bool ResizeFile(int fd, const char *filename, int64_t len)
@@ -2899,41 +2911,57 @@ static bool SyncDirectory(Span<const char> directory)
     return true;
 }
 
-bool RenameFile(const char *src_filename, const char *dest_filename, unsigned int flags)
+RenameResult RenameFile(const char *src_filename, const char *dest_filename, unsigned int silent, unsigned int flags)
 {
-    int fd = -1;
-    if (!(flags & (int)RenameFlag::Overwrite)) {
-        fd = RG_RESTART_EINTR(open(dest_filename, O_CREAT | O_EXCL, 0644), < 0);
-        if (fd < 0) {
-            if (errno == EEXIST) {
-                LogError("File '%1' already exists", dest_filename);
-            } else {
-                LogError("Failed to rename '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
-            }
-            return false;
+    RG_ASSERT(!(silent & ((int)RenameResult::Success | (int)RenameResult::OtherError)));
+
+    if (flags & (int)RenameFlag::Overwrite) {
+        if (rename(src_filename, dest_filename) < 0)
+            goto error;
+    } else {
+#if defined(RENAME_NOREPLACE)
+        if (!renameat2(AT_FDCWD, src_filename, AT_FDCWD, dest_filename, RENAME_NOREPLACE))
+            goto sync;
+        if (errno != ENOSYS && errno != EINVAL)
+            goto error;
+#endif
+
+        if (link(src_filename, dest_filename) < 0)
+            goto error;
+        if (unlink(src_filename) < 0) {
+            unlink(dest_filename);
+            goto error;
         }
-    }
-    RG_DEFER { CloseDescriptor(fd); };
 
-    // Rename the file
-    if (rename(src_filename, dest_filename) < 0) {
-        LogError("Failed to rename '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
-        return false;
+        // Useless, but we need something to use the sync label if RENAME_NOREPLACE is not defined
+        goto sync;
     }
 
-    // Not much we can do if fsync fails (I think), so ignore errors.
-    // Hope for the best: that's the spirit behind the POSIX filesystem API (...).
+sync:
     if (flags & (int)RenameFlag::Sync) {
         Span<const char> src_directory = GetPathDirectory(src_filename);
         Span<const char> dest_directory = GetPathDirectory(dest_filename);
 
+        // Not much we can do if fsync fails (I think), so ignore errors.
+        // Hope for the best: that's the spirit behind the POSIX filesystem API ;)
         SyncDirectory(src_directory);
         if (dest_directory != src_directory) {
             SyncDirectory(dest_directory);
         }
     }
 
-    return true;
+    return RenameResult::Success;
+
+error:
+    if (errno == EEXIST) {
+        if (!(silent & (int)RenameResult::AlreadyExists)) {
+            LogError("Failed to rename '%1' to '%2': file already exists", src_filename, dest_filename);
+        }
+        return RenameResult::AlreadyExists;
+    }
+
+    LogError("Failed to rename '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
+    return RenameResult::OtherError;
 }
 
 bool ResizeFile(int fd, const char *filename, int64_t len)
@@ -8007,7 +8035,7 @@ bool StreamWriter::Close(bool implicit)
                     if (dest.u.file.tmp_filename) {
                         unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
 
-                        if (RenameFile(dest.u.file.tmp_filename, filename, flags)) {
+                        if (RenameFile(dest.u.file.tmp_filename, filename, flags) == RenameResult::Success) {
                             dest.u.file.tmp_filename = nullptr;
                         } else {
                             error = true;
