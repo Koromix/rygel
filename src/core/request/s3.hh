@@ -50,7 +50,23 @@ struct s3_Config {
 
 bool s3_DecodeURL(Span<const char> url, s3_Config *out_config);
 
+struct s3_PutInfo {
+    const char *mimetype = nullptr;
+    bool conditional = false;
+};
+
+enum class s3_PutResult {
+    Success,
+    ObjectExists,
+    OtherError
+};
+
 class s3_Session {
+    struct KeyValue {
+        const char *key;
+        const char *value;
+    };
+
     s3_Config config;
     const char *url = nullptr;
 
@@ -74,7 +90,7 @@ public:
     Size GetObject(Span<const char> key, Span<uint8_t> out_buf);
     Size GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj);
     StatResult HasObject(Span<const char> key, int64_t *out_size = nullptr);
-    bool PutObject(Span<const char> key, Span<const uint8_t> data, const char *mimetype = nullptr);
+    s3_PutResult PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutInfo &info = {});
     bool DeleteObject(Span<const char> key);
 
 private:
@@ -85,7 +101,7 @@ private:
 
     int RunSafe(const char *action, FunctionRef<int(void)> func, bool quick = false);
 
-    Size PrepareHeaders(const char *method, const char *path, const char *query, const char *mimetype,
+    Size PrepareHeaders(const char *method, const char *path, const char *query, Span<const KeyValue> kvs,
                         Span<const uint8_t> body, Allocator *alloc, Span<curl_slist> out_headers);
     void MakeSignature(const char *method, const char *path, const char *query,
                        const TimeSpec &date, const uint8_t sha256[32], uint8_t out_signature[32]);
