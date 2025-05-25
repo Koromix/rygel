@@ -745,7 +745,7 @@ bool s3_Session::OpenAccess()
     // Test access
     int status = RunSafe("authenticate to S3 bucket", [&]() {
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("GET", path.ptr, nullptr, {}, {}, &temp_alloc, headers.data);
+        headers.len = PrepareHeaders("HEAD", path.ptr, nullptr, {}, {}, &temp_alloc, headers.data);
 
         // Set CURL options
         {
@@ -753,6 +753,7 @@ bool s3_Session::OpenAccess()
 
             success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
             success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+            success &= !curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
 
             success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,
                                          +[](char *buf, size_t, size_t nmemb, void *udata) {
