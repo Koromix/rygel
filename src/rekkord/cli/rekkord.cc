@@ -37,7 +37,7 @@ int RunList(Span<const char *> arguments);
 int RunMount(Span<const char *> arguments);
 
 int RunChangeCID(Span<const char *> arguments);
-int RunRebuildCache(Span<const char *> arguments);
+int RunResetCache(Span<const char *> arguments);
 
 bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config)
 {
@@ -90,7 +90,7 @@ Exploration commands:
 Advanced commands:
 
     %!..+change_cid%!0                     Change repository cache ID (CID)
-    %!..+rebuild_cache%!0                  Rebuild local repository cache
+    %!..+reset_cache%!0                    Reset or rebuild local repository cache
     %!..+migrate_tags%!0                   Migrate old snaphsot tags made (before 0.50))");
         } else {
             PrintLn(st, R"(
@@ -171,8 +171,8 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         return RunMount(arguments);
     } else if (TestStr(cmd, "change_cid")) {
         return RunChangeCID(arguments);
-    } else if (TestStr(cmd, "rebuild_cache")) {
-        return RunRebuildCache(arguments);
+    } else if (TestStr(cmd, "reset_cache")) {
+        return RunResetCache(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;

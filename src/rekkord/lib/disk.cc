@@ -262,7 +262,7 @@ bool rk_Disk::ChangeCID()
     return true;
 }
 
-sq_Database *rk_Disk::OpenCache(bool build)
+sq_Database *rk_Disk::OpenCache(bool reset)
 {
     RG_ASSERT(keyset);
 
@@ -461,7 +461,7 @@ sq_Database *rk_Disk::OpenCache(bool build)
             Span<const uint8_t> cid = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 0),
                                                sqlite3_column_bytes(stmt, 0));
 
-            build &= (cid.len != RG_SIZE(ids.cid)) || memcmp(cid.ptr, ids.cid, RG_SIZE(ids.cid));
+            reset &= (cid.len != RG_SIZE(ids.cid)) || memcmp(cid.ptr, ids.cid, RG_SIZE(ids.cid));
         } else if (stmt.IsValid()) {
             if (!cache_db.Run("INSERT INTO meta (cid) VALUES (NULL)"))
                 return nullptr;
@@ -470,21 +470,17 @@ sq_Database *rk_Disk::OpenCache(bool build)
         }
     }
 
-    if (build && !RebuildCache())
+    if (reset && !ResetCache(false))
         return nullptr;
 
     RG_ASSERT(cache_db.IsValid());
     return &cache_db;
 }
 
-bool rk_Disk::RebuildCache()
+bool rk_Disk::ResetCache(bool list)
 {
-    if (!cache_db.IsValid()) {
-        LogError("Cache is not open");
+    if (!cache_db.IsValid())
         return false;
-    }
-
-    LogInfo("Rebuilding local cache...");
 
     bool success = cache_db.Transaction([&]() {
         if (!cache_db.Run("DELETE FROM objects"))
@@ -492,16 +488,18 @@ bool rk_Disk::RebuildCache()
         if (!cache_db.Run("DELETE FROM stats"))
             return false;
 
-        bool success = ListRaw(nullptr, [&](const char *path, int64_t size) {
-            if (!cache_db.Run(R"(INSERT INTO objects (key, size) VALUES (?1, ?2)
-                                 ON CONFLICT (key) DO UPDATE SET size = excluded.size)",
-                              path, size))
-                return false;
+        if (list) {
+            bool success = ListRaw("blobs", [&](const char *path, int64_t size) {
+                if (!cache_db.Run(R"(INSERT INTO objects (key, size) VALUES (?1, ?2)
+                                     ON CONFLICT (key) DO UPDATE SET size = excluded.size)",
+                                  path, size))
+                    return false;
 
-            return true;
-        });
-        if (!success)
-            return false;
+                return true;
+            });
+            if (!success)
+                return false;
+        }
 
         Span<const uint8_t> cid = ids.cid;
 
@@ -510,10 +508,8 @@ bool rk_Disk::RebuildCache()
 
         return true;
     });
-    if (!success)
-        return false;
 
-    return true;
+    return success;
 }
 
 bool rk_Disk::InitUser(const char *username, rk_UserRole role, const char *pwd, bool force)
@@ -1234,20 +1230,8 @@ StatResult rk_Disk::TestFast(const char *path, int64_t *out_size)
             case StatResult::OtherError: return StatResult::OtherError;
         }
 
-        if (real_size >= 0 && known_size < 0) {
-            std::unique_lock<std::mutex> lock(cache_mutex, std::try_to_lock);
-
-            if (lock.owns_lock() && ++cache_misses >= 4) {
-                RebuildCache();
-                cache_misses = 0;
-            }
-
-            if (out_size) {
-                *out_size = real_size;
-            }
-            return StatResult::Success;
-        } else if (known_size >= 0 && real_size < 0) {
-            ClearCache();
+        if (known_size >= 0 && real_size < 0) {
+            ResetCache(false);
 
             LogError("The local cache database was mismatched and could have resulted in missing data in the backup.");
             LogError("You must start over to fix this situation.");
@@ -1488,24 +1472,6 @@ bool rk_Disk::CheckRepository()
     }
 
     RG_UNREACHABLE();
-}
-
-void rk_Disk::ClearCache()
-{
-    if (!cache_db.IsValid())
-        return;
-
-    cache_db.Transaction([&]() {
-        if (!cache_db.Run("DELETE FROM objects"))
-            return false;
-        if (!cache_db.Run("DELETE FROM stats"))
-            return false;
-
-        if (!cache_db.Run("UPDATE meta SET cid = NULL"))
-            return false;
-
-        return true;
-    });
 }
 
 std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool authenticate)

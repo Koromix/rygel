@@ -85,21 +85,24 @@ Options:
     return 0;
 }
 
-int RunRebuildCache(Span<const char *> arguments)
+int RunResetCache(Span<const char *> arguments)
 {
     // Options
     rk_Config config;
+    bool list = false;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 rebuild_cache [-C filename] [option...]%!0
+R"(Usage: %!..+%1 reset_cache [-C filename] [option...]%!0
 
 Options:
 
     %!..+-C, --config_file filename%!0     Set configuration file
 
     %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username)", FelixTarget);
+    %!..+-u, --user username%!0            Set repository username
+
+        %!..+--list%!0                     List existing objects)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -120,6 +123,8 @@ Options:
                     return 1;
             } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 config.username = opt.current_value;
+            } else if (opt.Test("--list")) {
+                list = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -139,9 +144,11 @@ Options:
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
     LogInfo();
 
+    LogInfo("Resetting cache...");
+
     if (!disk->OpenCache(false))
         return 1;
-    if (!disk->RebuildCache())
+    if (!disk->ResetCache(list))
         return 1;
     LogInfo("Done");
 

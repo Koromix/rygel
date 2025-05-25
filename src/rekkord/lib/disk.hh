@@ -146,7 +146,6 @@ protected:
 
     sq_Database cache_db;
     std::mutex cache_mutex;
-    int cache_misses = 0;
     int compression_level = 0;
 
     Async tasks;
@@ -179,7 +178,7 @@ public:
     bool ChangeCID();
 
     sq_Database *OpenCache(bool build);
-    bool RebuildCache();
+    bool ResetCache(bool list);
 
     bool InitUser(const char *username, rk_UserRole role, const char *pwd, bool force);
     bool DeleteUser(const char *username);
@@ -220,8 +219,6 @@ private:
     Size WriteDirect(const char *path, Span<const uint8_t> buf, bool overwrite);
 
     bool CheckRepository();
-
-    void ClearCache();
 };
 
 std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool authenticate);
