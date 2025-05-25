@@ -368,10 +368,8 @@ bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *, 
                 });
                 success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
 
-                if (!success) {
-                    LogError("Failed to set libcurl options");
-                    return -1;
-                }
+                if (!success)
+                    return -CURLE_FAILED_INIT;
             }
 
             return curl_Perform(curl, nullptr);
@@ -466,10 +464,8 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
             });
             success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ctx);
 
-            if (!success) {
-                LogError("Failed to set libcurl options");
-                return -1;
-            }
+            if (!success)
+                return -CURLE_FAILED_INIT;
         }
 
         return curl_Perform(curl, nullptr);
@@ -542,10 +538,8 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
             });
             success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ctx);
 
-            if (!success) {
-                LogError("Failed to set libcurl options");
-                return -1;
-            }
+            if (!success)
+                return -CURLE_FAILED_INIT;
         }
 
         return curl_Perform(curl, nullptr);
@@ -586,10 +580,8 @@ StatResult s3_Session::HasObject(Span<const char> key, int64_t *out_size)
             success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
             success &= !curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
 
-            if (!success) {
-                LogError("Failed to set libcurl options");
-                return -1;
-            }
+            if (!success)
+                return -CURLE_FAILED_INIT;
         }
 
         return curl_Perform(curl, nullptr);
@@ -662,10 +654,8 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
             success &= !curl_easy_setopt(curl, CURLOPT_READDATA, &remain);
             success &= !curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)remain.len);
 
-            if (!success) {
-                LogError("Failed to set libcurl options");
-                return -1;
-            }
+            if (!success)
+                return -CURLE_FAILED_INIT;
         }
 
         int status = curl_Perform(curl, nullptr);
@@ -707,10 +697,8 @@ bool s3_Session::DeleteObject(Span<const char> key)
             success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
             success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
 
-            if (!success) {
-                LogError("Failed to set libcurl options");
-                return -1;
-            }
+            if (!success)
+                return -CURLE_FAILED_INIT;
         }
 
         int status = curl_Perform(curl, nullptr);
@@ -772,10 +760,8 @@ bool s3_Session::OpenAccess()
             });
             success &= !curl_easy_setopt(curl, CURLOPT_HEADERDATA, this);
 
-            if (!success) {
-                LogError("Failed to set libcurl options");
-                return -1;
-            }
+            if (!success)
+                return -CURLE_FAILED_INIT;
         }
 
         int status = curl_Perform(curl, nullptr);
