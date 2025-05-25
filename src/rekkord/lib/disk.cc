@@ -262,7 +262,7 @@ bool rk_Disk::ChangeCID()
     return true;
 }
 
-sq_Database *rk_Disk::OpenCache(bool reset)
+sq_Database *rk_Disk::OpenCache(bool build)
 {
     RG_ASSERT(keyset);
 
@@ -307,6 +307,8 @@ sq_Database *rk_Disk::OpenCache(bool reset)
         LogError("Cache schema is too recent (%1, expected %2)", version, CacheVersion);
         return nullptr;
     } else if (version < CacheVersion) {
+        LogInfo("Migrating cache database...");
+
         bool success = cache_db.Transaction([&]() {
             switch (version) {
                 case 0: {
@@ -461,7 +463,7 @@ sq_Database *rk_Disk::OpenCache(bool reset)
             Span<const uint8_t> cid = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 0),
                                                sqlite3_column_bytes(stmt, 0));
 
-            reset &= (cid.len != RG_SIZE(ids.cid)) || memcmp(cid.ptr, ids.cid, RG_SIZE(ids.cid));
+            build &= (cid.len != RG_SIZE(ids.cid)) || memcmp(cid.ptr, ids.cid, RG_SIZE(ids.cid));
         } else if (stmt.IsValid()) {
             if (!cache_db.Run("INSERT INTO meta (cid) VALUES (NULL)"))
                 return nullptr;
@@ -470,8 +472,12 @@ sq_Database *rk_Disk::OpenCache(bool reset)
         }
     }
 
-    if (reset && !ResetCache(false))
-        return nullptr;
+    if (build) {
+        LogInfo("Rebuilding cache...");
+
+        if (!ResetCache(true))
+            return nullptr;
+    }
 
     RG_ASSERT(cache_db.IsValid());
     return &cache_db;
