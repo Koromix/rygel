@@ -6,6 +6,17 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.60
+
+*Released on 2025-05-25*
+
+- Avoid blob overwrites (with conditional S3 writes)
+- Remove probabilistic blob cache rebuilds
+- Adjust default Rekkord concurrency values
+- Rename `rekkord rebuild_cache` command to `rekkord reset_cache`
+- Change `rekkord --help full` to `rekkord --help all`
+- Rename public librekkord repository API
+
 ### Rekkord 0.59
 
 *Released on 2025-05-18*
