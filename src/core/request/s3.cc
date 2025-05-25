@@ -193,8 +193,6 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
 
                 remain.ptr -= 3;
                 remain.len += 3;
-            } else {
-                region = DuplicateString(part, &out_config->str_alloc).ptr;
             }
         }
 
