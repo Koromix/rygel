@@ -48,7 +48,7 @@ struct rk_ListSettings {
 
 struct rk_SnapshotInfo {
     const char *tag;
-    rk_Hash hash;
+    rk_ObjectID oid;
 
     const char *channel;
     int64_t time;
@@ -59,7 +59,7 @@ struct rk_SnapshotInfo {
 struct rk_ChannelInfo {
     const char *name;
 
-    rk_Hash hash;
+    rk_ObjectID oid;
     int64_t time;
     Size size;
 
@@ -82,7 +82,7 @@ static const char *const rk_ObjectTypeNames[] = {
 };
 
 struct rk_ObjectInfo {
-    rk_Hash hash;
+    rk_ObjectID oid;
 
     int depth;
     rk_ObjectType type;
@@ -112,8 +112,8 @@ public:
 
 // Snapshot commands
 bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *const> filenames,
-             rk_Hash *out_hash, int64_t *out_size = nullptr, int64_t *out_stored = nullptr);
-bool rk_Restore(rk_Disk *disk, const rk_Hash &hash, const rk_RestoreSettings &settings,
+             rk_ObjectID *out_oid, int64_t *out_size = nullptr, int64_t *out_stored = nullptr);
+bool rk_Restore(rk_Disk *disk, const rk_ObjectID &oid, const rk_RestoreSettings &settings,
                 const char *dest_path, int64_t *out_size = nullptr);
 
 // Snapshot exploration
@@ -124,12 +124,12 @@ static inline bool rk_ListSnapshots(rk_Disk *disk, Allocator *alloc, HeapArray<r
     { return rk_ListSnapshots(disk, alloc, nullptr, out_channels); }
 
 // List objects
-bool rk_ListChildren(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
+bool rk_ListChildren(rk_Disk *disk, const rk_ObjectID &oid, const rk_ListSettings &settings,
                      Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
-bool rk_LocateObject(rk_Disk *disk, Span<const char> identifier, rk_Hash *out_hash);
+bool rk_LocateObject(rk_Disk *disk, Span<const char> identifier, rk_ObjectID *out_pid);
 
 // Direct access
-const char *rk_ReadLink(rk_Disk *disk, const rk_Hash &hash, Allocator *alloc);
-std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Disk *disk, const rk_Hash &hash);
+const char *rk_ReadLink(rk_Disk *disk, const rk_ObjectID &oid, Allocator *alloc);
+std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Disk *disk, const rk_ObjectID &oid);
 
 }

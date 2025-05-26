@@ -921,7 +921,7 @@ async function runChannel(repo, channel) {
                         <thead>
                             <tr>
                                 ${UI.tableHeader('snapshots', 'time', 'Timestamp')}
-                                ${UI.tableHeader('snapshots', 'hash', 'Hash')}
+                                ${UI.tableHeader('snapshots', 'oid', 'OID')}
                                 ${UI.tableHeader('snapshots', 'size', 'Size')}
                                 ${UI.tableHeader('snapshots', 'storage', 'Storage')}
                             </tr>
@@ -930,7 +930,7 @@ async function runChannel(repo, channel) {
                             ${snapshots.map(snapshot => html`
                                 <tr>
                                     <td>${(new Date(snapshot.time)).toLocaleString()}</td>
-                                    <td><span class="sub">${snapshot.hash}</span></td>
+                                    <td><span class="sub">${snapshot.oid}</span></td>
                                     <td style="text-align: right;">${formatSize(snapshot.size)}</td>
                                     <td style="text-align: right;">${formatSize(snapshot.storage)}</td>
                                 </tr>

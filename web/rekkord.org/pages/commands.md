@@ -4,7 +4,7 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
-Each snapshot has a unique hash (which is actually a BLAKE3 hash in hexadecimal form), which is generated automatically when the snapshot is created.
+Each snapshot has a unique object ID (or OID), which is generated automatically when the snapshot is created.
 
 By default, snapshots are named with the normalized path you are backing up. You can use `-c <CHANNEL>` to use a custom channel name. Please note that there is a *maximum snapshot channel length* (256 bytes).
 
@@ -14,7 +14,7 @@ rekkord save <PATH>
 rekkord save -n <NAME> <PATH1> <PATH2> ...
 ```
 
-The command will give you the object hash of the snapshot once it finishes. You can retrieve the hash later with [rekkord snapshots](#list-snapshots).
+The command will give you the object ID (OID) of the snapshot once it finishes. You can retrieve the OID later with [rekkord snapshots](#list-snapshots).
 
 # List snapshots
 
@@ -26,18 +26,21 @@ rekkord snapshots
 The output looks something like this:
 
 ```text
-# <hash>                                                           <name>                   <date>
+# <OID>                                                             <name>                   <date>
 
-DA24E2C01C2AF6ACADF94FED087FD2695DF1E5352FA5474E091DABE38A104641   webserver1               [2023-11-26 06:09:57 +0100]
-96389F2763173C9575C85A9D8972FE8DC06FC220BA7A05A673D7C19E520C22EB   webserver1               [2023-11-27 06:05:15 +0100]
-221FA094C07FAABA1A6B8710EED613F441410C95855D69653A2BDCBB590C8E9F   webserver1               [2023-11-28 06:18:15 +0100]
+mDA24E2C01C2AF6ACADF94FED087FD2695DF1E5352FA5474E091DABE38A104641   webserver1               [2023-11-26 06:09:57 +0100]
+m96389F2763173C9575C85A9D8972FE8DC06FC220BA7A05A673D7C19E520C22EB   webserver1               [2023-11-27 06:05:15 +0100]
+m221FA094C07FAABA1A6B8710EED613F441410C95855D69653A2BDCBB590C8E9F   webserver1               [2023-11-28 06:18:15 +0100]
 ```
 
 Use `--format JSON` or `--format XML` to get this list in a JSON or XML format.
 
+> [!NOTE]
+> Each object ID (or OID) contains a single-letter prefix and a BLAKE3 hash in hexadecimal form.
+
 # Explore snapshot
 
-You can list the directories and files in a snapshot with the `rekkord list` command. You can either use the unique [object hash](#list-snapshots), or provide a snapshot name, in which case rekkord will use the most recent snapshot that matches it.
+You can list the directories and files in a snapshot with the `rekkord list` command. You can either use the unique [object ID](#list-snapshots), or provide a snapshot name, in which case rekkord will use the most recent snapshot that matches it.
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
@@ -45,16 +48,16 @@ rekkord list <IDENTIFIER>
 ```
 
 > [!TIP]
-> You can use an object hash or a snapshot name as the identifier. In addition, you can specify a path to locate an object inside the main snapshot or directory, separated with a colon.
+> You can use an object ID (OID) or a snapshot name as the identifier. In addition, you can specify a path to locate an object inside the main snapshot or directory, separated with a colon.
 >
 > Here are two examples without path:
 >
-> - `BC49879164FDEF1DD26501441B20013202E6DC7AF5D5C5AC8C97AC8126FDF4B4`: use snapshot with hash *BC4987916...*
+> - `mBC49879164FDEF1DD26501441B20013202E6DC7AF5D5C5AC8C97AC8126FDF4B4`: use snapshot with OID *mBC4987916...*
 > - `front-machine`: find latest snapshot named *front-machine*
 >
 > Here are two examples with an additional path:
 >
-> - `51D1AE52921C8F636A18F9065D5348FC47BD61546B9688FD5D1D45F5AE240FAC:var/lib/mysql`: locate directory *var/lib/mysql* inside snapshot with hash *51D1AE529...* 
+> - `m51D1AE52921C8F636A18F9065D5348FC47BD61546B9688FD5D1D45F5AE240FAC:var/lib/mysql`: locate directory *var/lib/mysql* inside snapshot with OID *m51D1AE529...* 
 > - `database-machine:var/lib/mysql`: locate directory *var/lib/mysql* inside inside latest snapshot named *database-machine*
 
 The output looks something like this:
@@ -66,7 +69,7 @@ The output looks something like this:
   [D] opt/                                                        (0755) [2023-10-05 17:03:38 +0200]
 ```
 
-You can recursively list the content with `rekkord list <hash> --recurse` flag:
+You can recursively list the content with `rekkord list <OID> --recurse` flag:
 
 ```text
 # <type> <name>                                                   <mode> <date>                      <size>
@@ -124,7 +127,7 @@ Use `--format JSON` or `--format XML` to get the file tree in a JSON or XML form
 
 # Restore snapshot
 
-Use the `rekkord restore` command to restore the files from a snapshot onto the local filesystem. You can either use the unique [object hash](#list-snapshots), or provide a snapshot name, in which case rekkord will use the most recent snapshot that matches it.
+Use the `rekkord restore` command to restore the files from a snapshot onto the local filesystem. You can either use the unique [object ID](#list-snapshots), or provide a snapshot name, in which case rekkord will use the most recent snapshot that matches it.
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
@@ -136,7 +139,7 @@ rekkord restore <IDENTIFIER> -O <PATH>
 
 # Mount snapshot
 
-You can also use `rekkord mount <hash> <mountpoint>` to mount a snapshot or a directory as a read-only filesystem. You can either use the unique [object hash](#list-snapshots), or provide a snapshot name, in which case rekkord will use the most recent snapshot that matches it.
+You can also use `rekkord mount <IDENTIFIER> <mountpoint>` to mount a snapshot or a directory as a read-only filesystem. You can either use the unique [object ID](#list-snapshots), or provide a snapshot name, in which case rekkord will use the most recent snapshot that matches it.
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini

@@ -208,38 +208,22 @@ bool SftpDisk::Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users)
             return false;
         if (!make_directory("tmp"))
             return false;
-    }
 
-    // Init blob subdirectories
-    {
-        Async async(GetAsync());
+        for (char catalog: rk_BlobCatalogNames) {
+            char parent[128];
+            Fmt(parent, "blobs/%1", catalog);
 
-        for (int i = 0; i < 256; i++) {
-            const char *path = Fmt(&temp_alloc, "%1/blobs/%2", config.path, FmtHex(i).Pad0(-2)).ptr;
+            if (!make_directory(parent))
+                return false;
 
-            async.Run([=, this]() {
-                bool success = RunSafe("init directory", [&](ConnectionData *conn) {
-                    if (sftp_mkdir(conn->sftp, path, 0755) < 0) {
-                        int error = sftp_get_error(conn->sftp);
+            for (int i = 0; i < 256; i++) {
+                char name[128];
+                Fmt(name, "%1/%2", parent, FmtHex(i).Pad0(-2));
 
-                        if (IsSftpErrorSpecific(error)) {
-                            LogError("Cannot create directory '%1': %2", path, sftp_GetErrorString(conn->sftp));
-                            return RunResult::SpecificError;
-                        } else {
-                            return RunResult::OtherError;
-                        }
-                    }
-
-                    return RunResult::Success;
-                });
-
-                return success;
-            });
-
-            directories.Append(path);
+                if (!make_directory(name))
+                    return false;
+            }
         }
-
-        async.Sync();
     }
 
     if (!InitDefault(mkey, users))

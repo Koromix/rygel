@@ -29,21 +29,46 @@ static const int rk_MasterKeySize = 32;
 struct rk_Hash {
     uint8_t hash[32];
 
+    int operator-(const rk_Hash &other) const { return memcmp(hash, other.hash, RG_SIZE(hash)); }
+
     operator FmtArg() const { return FmtSpan(hash, FmtType::BigHex, "").Pad0(-2); }
-
-    int operator-(const rk_Hash &other) const
-    {
-        for (Size i = 0; i < RG_SIZE(hash); i++) {
-            int delta = hash[i] - other.hash[i];
-
-            if (delta)
-                return delta;
-        }
-
-        return 0;
-    }
 };
 static_assert(RG_SIZE(rk_Hash) == 32);
+
+enum class rk_BlobCatalog: int8_t {
+    Meta,
+    Raw
+};
+static const char rk_BlobCatalogNames[] = {
+    'm',
+    'r'
+};
+
+struct rk_ObjectID {
+    rk_BlobCatalog catalog;
+    rk_Hash hash;
+
+    bool IsValid() const
+    {
+        if ((int)catalog < 0)
+            return false; 
+        if ((int)catalog >= RG_LEN(rk_BlobCatalogNames))
+            return false;
+
+        return true;
+    }
+
+    int operator-(const rk_ObjectID &other) const { return MultiCmp((int)catalog - (int)other.catalog, hash - other.hash); }
+
+    void Format(FunctionRef<void(Span<const char>)> append) const
+    {
+        FmtArg arg = FmtSpan(hash.hash, FmtType::BigHex, "").Pad0(-2);
+        Fmt(append, "%1%2", rk_BlobCatalogNames[(int)catalog], arg);
+    }
+
+    operator FmtArg() { return FmtCustom(*this); }
+};
+static_assert(RG_SIZE(rk_ObjectID) == 33);
 
 enum class rk_AccessMode {
     Config = 1 << 0,
@@ -108,8 +133,8 @@ struct rk_UserInfo {
 };
 
 struct rk_TagInfo {
-    const char *id;
-    rk_Hash hash;
+    const char *prefix;
+    rk_ObjectID oid;
     Span<const uint8_t> payload;
 };
 
@@ -190,10 +215,10 @@ public:
     bool DeleteUser(const char *username);
     bool ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserInfo> *out_users);
 
-    bool ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob);
-    Size WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_t> blob);
+    bool ReadBlob(const rk_ObjectID &oid, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob);
+    Size WriteBlob(const rk_ObjectID &oid, rk_BlobType type, Span<const uint8_t> blob);
 
-    bool WriteTag(const rk_Hash &hash, Span<const uint8_t> payload);
+    bool WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload);
     bool ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags);
 
     virtual Size ReadRaw(const char *path, Span<uint8_t> out_buf) = 0;

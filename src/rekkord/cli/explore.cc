@@ -21,14 +21,14 @@
 namespace RG {
 
 enum class SortOrder {
-    Hash,
+    OID,
     Time,
     Channel,
     Size,
     Storage
 };
 static const char *const SortOrderNames[] = {
-    "Hash",
+    "OID",
     "Time",
     "Channel",
     "Size",
@@ -190,7 +190,7 @@ Available sort orders: %!..+%4%!0)",
             std::function<int64_t(const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2)> func;
 
             switch (order) {
-                case SortOrder::Hash: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.hash - s2.hash; }; } break;
+                case SortOrder::OID: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.oid - s2.oid; }; } break;
                 case SortOrder::Time: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.time - s2.time; }; } break;
                 case SortOrder::Channel: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return CmpStr(s1.channel, s2.channel); }; } break;
                 case SortOrder::Size: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.size - s2.size; }; } break;
@@ -222,7 +222,7 @@ Available sort orders: %!..+%4%!0)",
                     TimeSpec spec = DecomposeTimeLocal(snapshot.time);
 
                     PrintLn("%!Y.+%1%!0 %!G..%2%!0", FmtArg(snapshot.channel).Pad(40), FmtTimeNice(spec));
-                    PrintLn("  + Hash: %!..+%1%!0", snapshot.hash);
+                    PrintLn("  + OID: %!..+%1%!0", snapshot.oid);
                     PrintLn("  + Size: %!..+%1%!0", FmtDiskSize(snapshot.size));
                     PrintLn("  + Storage: %!..+%1%!0", FmtDiskSize(snapshot.storage));
 
@@ -242,8 +242,8 @@ Available sort orders: %!..+%4%!0)",
             for (const rk_SnapshotInfo &snapshot: snapshots) {
                 json.StartObject();
 
-                char hash[128];
-                Fmt(hash, "%1", snapshot.hash);
+                char oid[128];
+                Fmt(oid, "%1", snapshot.oid);
 
                 char time[64];
                 {
@@ -252,7 +252,7 @@ Available sort orders: %!..+%4%!0)",
                 }
 
                 json.Key("channel"); json.String(snapshot.channel);
-                json.Key("hash"); json.String(hash);
+                json.Key("oid"); json.String(oid);
                 json.Key("time"); json.String(time);
                 json.Key("size"); json.Int64(snapshot.size);
                 json.Key("storage"); json.Int64(snapshot.storage);
@@ -273,8 +273,8 @@ Available sort orders: %!..+%4%!0)",
             for (const rk_SnapshotInfo &snapshot: snapshots) {
                 pugi::xml_node element = root.append_child("Snapshot");
 
-                char hash[128];
-                Fmt(hash, "%1", snapshot.hash);
+                char oid[128];
+                Fmt(oid, "%1", snapshot.oid);
 
                 char time[64];
                 {
@@ -283,7 +283,7 @@ Available sort orders: %!..+%4%!0)",
                 }
 
                 element.append_attribute("Channel") = snapshot.channel;
-                element.append_attribute("Hash") = hash;
+                element.append_attribute("OID") = oid;
                 element.append_attribute("Time") = time;
                 element.append_attribute("Size") = snapshot.size;
                 element.append_attribute("Storage") = snapshot.storage;
@@ -401,7 +401,7 @@ Available output formats: %!..+%3%!0)",
                             FmtArg(channel.name).Pad(28), FmtArg(channel.count).Pad(-4),
                             FmtTimeNice(spec), FmtDiskSize(channel.size));
                     if (verbose >= 1) {
-                        PrintLn("  + Hash: %!..+%1%!0", channel.hash);
+                        PrintLn("  + OID: %!..+%1%!0", channel.oid);
                     }
                 }
             } else {
@@ -416,8 +416,8 @@ Available output formats: %!..+%3%!0)",
             for (const rk_ChannelInfo &channel: channels) {
                 json.StartObject();
 
-                char hash[128];
-                Fmt(hash, "%1", channel.hash);
+                char oid[128];
+                Fmt(oid, "%1", channel.oid);
 
                 char time[64];
                 {
@@ -426,7 +426,7 @@ Available output formats: %!..+%3%!0)",
                 }
 
                 json.Key("channel"); json.String(channel.name);
-                json.Key("hash"); json.String(hash);
+                json.Key("oid"); json.String(oid);
                 json.Key("time"); json.String(time);
                 json.Key("size"); json.Int64(channel.size);
                 json.Key("count"); json.Int64(channel.count);
@@ -446,8 +446,8 @@ Available output formats: %!..+%3%!0)",
             for (const rk_ChannelInfo &channel: channels) {
                 pugi::xml_node element = root.append_child("Channel");
 
-                char hash[128];
-                Fmt(hash, "%1", channel.hash);
+                char oid[128];
+                Fmt(oid, "%1", channel.oid);
 
                 char time[64];
                 {
@@ -456,7 +456,7 @@ Available output formats: %!..+%3%!0)",
                 }
 
                 element.append_attribute("Name") = channel.name;
-                element.append_attribute("Hash") = hash;
+                element.append_attribute("OID") = oid;
                 element.append_attribute("Time") = time;
                 element.append_attribute("Size") = channel.size;
                 element.append_attribute("Count") = channel.count;
@@ -503,7 +503,7 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbo
     }
 
     if (verbose >= 1) {
-        PrintLn("%1    + Hash: %!..+%2%!0", FmtArg(" ").Repeat(indent), obj.hash);
+        PrintLn("%1    + OID: %!..+%2%!0", FmtArg(" ").Repeat(indent), obj.oid);
     }
     if (obj.type != rk_ObjectType::Snapshot) {
         if (verbose >= 1) {
@@ -533,9 +533,9 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
         json->Key("name"); json->Null();
     }
     if (obj.readable) {
-        json->Key("hash"); json->String(Fmt(buf, "%1", obj.hash).ptr);
+        json->Key("oid"); json->String(Fmt(buf, "%1", obj.oid).ptr);
     } else {
-        json->Key("hash"); json->Null();
+        json->Key("oid"); json->Null();
     }
 
     if (obj.type == rk_ObjectType::Snapshot) {
@@ -580,9 +580,9 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
 
     element.append_attribute("Name") = obj.name ? obj.name : "";
     if (obj.readable) {
-        element.append_attribute("Hash") = Fmt(buf, "%1", obj.hash).ptr;
+        element.append_attribute("OID") = Fmt(buf, "%1", obj.oid).ptr;
     } else {
-        element.append_attribute("Hash") = "";
+        element.append_attribute("OID") = "";
     }
 
     if (obj.type == rk_ObjectType::Snapshot) {
@@ -645,7 +645,7 @@ Options:
                                    %!D..(default: %2)%!0
     %!..+-v, --verbose%!0                  Enable verbose output (plain only)
 
-Use an object hash or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<hash|channel>[:<path>]%!0.
+Use an object ID (OID) or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<OID|channel>[:<path>]%!0.
 If you use a snapshot channel, rekkord will use the most recent snapshot object that matches.
 
 Available output formats: %!..+%3%!0)",
@@ -718,12 +718,12 @@ Available output formats: %!..+%3%!0)",
     }
     LogInfo();
 
-    rk_Hash hash = {};
-    if (!rk_LocateObject(disk.get(), identifier, &hash))
+    rk_ObjectID oid = {};
+    if (!rk_LocateObject(disk.get(), identifier, &oid))
         return 1;
 
     HeapArray<rk_ObjectInfo> objects;
-    if (!rk_ListChildren(disk.get(), hash, settings, &temp_alloc, &objects))
+    if (!rk_ListChildren(disk.get(), oid, settings, &temp_alloc, &objects))
         return 1;
 
     switch (format) {

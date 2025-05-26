@@ -678,7 +678,7 @@ static int64_t PadMe(int64_t len)
     return (int64_t)padding;
 }
 
-bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob)
+bool rk_Disk::ReadBlob(const rk_ObjectID &oid, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob)
 {
     RG_ASSERT(url);
     RG_ASSERT(HasMode(rk_AccessMode::Read));
@@ -687,7 +687,7 @@ bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uin
     RG_DEFER_N(err_guard) { out_blob->RemoveFrom(prev_len); };
 
     LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "blobs/%1/%2", GetBlobPrefix(hash), hash).len;
+    path.len = Fmt(path.data, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash).len;
 
     HeapArray<uint8_t> raw;
     if (ReadRaw(path.data, &raw) < 0)
@@ -782,13 +782,13 @@ bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uin
     return true;
 }
 
-Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_t> blob)
+Size rk_Disk::WriteBlob(const rk_ObjectID &oid, rk_BlobType type, Span<const uint8_t> blob)
 {
     RG_ASSERT(url);
     RG_ASSERT(HasMode(rk_AccessMode::Write));
 
     LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "blobs/%1/%2", GetBlobPrefix(hash), hash).len;
+    path.len = Fmt(path.data, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash).len;
 
     // Skip objects that already exist
     {
@@ -948,7 +948,7 @@ Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
     return raw.len;
 }
 
-bool rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
+bool rk_Disk::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload)
 {
     // Accounting for the ID and order value, and base64 encoding, each filename must fit into 255 characters
     const Size MaxFragmentSize = 160;
@@ -958,13 +958,13 @@ bool rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
 
     BlockAllocator temp_alloc;
 
-    uint8_t id[16] = {};
+    uint8_t prefix[16] = {};
     TagIntro intro = {};
 
     // Prepare tag data
-    randombytes_buf(id, RG_SIZE(id));
+    randombytes_buf(prefix, RG_SIZE(prefix));
     intro.version = TagVersion;
-    intro.hash = hash;
+    intro.oid = oid;
 
     // Encrypt tag
     HeapArray<uint8_t> cypher(&temp_alloc);
@@ -1005,7 +1005,7 @@ bool rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
         Size len = std::min(offset + MaxFragmentSize, cypher.len) - offset;
 
         LocalArray<char, 512> path;
-        path.len = Fmt(path.data, "tags/%1_%2_", FmtSpan(id, FmtType::BigHex, "").Pad0(-2), FmtArg(i).Pad0(-2)).len;
+        path.len = Fmt(path.data, "tags/%1_%2_", FmtSpan(prefix, FmtType::BigHex, "").Pad0(-2), FmtArg(i).Pad0(-2)).len;
 
         sodium_bin2base64(path.end(), path.Available(), cypher.ptr + offset, len, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
 
@@ -1050,7 +1050,7 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
         RG_DEFER { offset = end; };
 
         // Extract common ID
-        Span<const char> id = {};
+        Span<const char> prefix = {};
         {
             Span<const char> filename = filenames[offset];
             Span<const char> basename = SplitStrReverse(filenames[offset], '/');
@@ -1060,7 +1060,7 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
                 continue;
             }
 
-            id = basename.Take(0, 32);
+            prefix = basename.Take(0, 32);
         }
 
         // How many fragments?
@@ -1070,7 +1070,7 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
             // Error will be issued in next loop iteration
             if (basename.len <= 36 || basename[32] != '_' || basename[35] != '_')
                 break;
-            if (!StartsWith(basename, id))
+            if (!StartsWith(basename, prefix))
                 break;
 
             end++;
@@ -1101,7 +1101,7 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
             const uint8_t *sig = msg.end();
 
             if (crypto_sign_ed25519_verify_detached(sig, msg.ptr, msg.len, keyset->vkey)) {
-                LogError("Invalid signature for tag '%1'", id);
+                LogError("Invalid signature for tag '%1'", prefix);
                 continue;
             }
         }
@@ -1111,7 +1111,7 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
 
         // Get payload back at least
         if (crypto_box_seal_open(src.ptr, cypher.ptr, cypher.len - crypto_sign_BYTES, keyset->tkey, keyset->lkey) != 0) {
-            LogError("Failed to unseal tag data from '%1'", id);
+            LogError("Failed to unseal tag data from '%1'", prefix);
             continue;
         }
 
@@ -1119,12 +1119,16 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
         MemCpy(&intro, src.ptr, RG_SIZE(intro));
 
         if (intro.version != TagVersion) {
-            LogError("Unexpected tag version %1 (expected %2) in '%3'", intro.version, TagVersion, id);
+            LogError("Unexpected tag version %1 (expected %2) in '%3'", intro.version, TagVersion, prefix);
+            continue;
+        }
+        if (!intro.oid.IsValid()) {
+            LogError("Invalid tag OID in '%1'", prefix);
             continue;
         }
 
-        tag.id = DuplicateString(id, alloc).ptr;
-        tag.hash = intro.hash;
+        tag.prefix = DuplicateString(prefix, alloc).ptr;
+        tag.oid = intro.oid;
         tag.payload = src.Take(RG_SIZE(intro), src.len - RG_SIZE(intro));
 
         out_tags->Append(tag);

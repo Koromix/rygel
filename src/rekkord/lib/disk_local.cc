@@ -110,12 +110,20 @@ bool LocalDisk::Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users)
         if (!make_directory("tmp"))
             return false;
 
-        for (int i = 0; i < 256; i++) {
-            char name[128];
-            Fmt(name, "blobs/%1", FmtHex(i).Pad0(-2));
+        for (char catalog: rk_BlobCatalogNames) {
+            char parent[128];
+            Fmt(parent, "blobs/%1", catalog);
 
-            if (!make_directory(name))
+            if (!make_directory(parent))
                 return false;
+
+            for (int i = 0; i < 256; i++) {
+                char name[128];
+                Fmt(name, "%1/%2", parent, FmtHex(i).Pad0(-2));
+
+                if (!make_directory(name))
+                    return false;
+            }
         }
     }
 

@@ -26,7 +26,7 @@ struct CacheEntry {
     CacheEntry *parent;
 
     const char *name;
-    rk_Hash hash;
+    rk_ObjectID oid;
     struct stat sb;
 
     struct {
@@ -152,7 +152,7 @@ static void CopyAttributes(const rk_ObjectInfo &obj, CacheEntry *out_entry)
 #endif
 }
 
-static bool InitRoot(const rk_Hash &hash)
+static bool InitRoot(const rk_ObjectID &oid)
 {
     BlockAllocator temp_alloc;
 
@@ -167,7 +167,7 @@ static bool InitRoot(const rk_Hash &hash)
     entries.Append(&root);
 
     HeapArray<rk_ObjectInfo> objects;
-    if (!rk_ListChildren(disk.get(), hash, {}, &temp_alloc, &objects))
+    if (!rk_ListChildren(disk.get(), oid, {}, &temp_alloc, &objects))
         return false;
 
     for (const rk_ObjectInfo &obj: objects) {
@@ -199,14 +199,14 @@ static bool InitRoot(const rk_Hash &hash)
             entry = child;
         }
 
-        entry->hash = obj.hash;
+        entry->oid = obj.oid;
         entry->sb.st_nlink = (nlink_t)(2 + obj.size);
     }
 
     // Fix up fake nodes
     for (CacheEntry *entry: entries) {
         if (entry->directory.ready) {
-            entry->hash = {};
+            entry->oid = {};
             entry->sb.st_mode = S_IFDIR | 0755;
             entry->sb.st_uid = getuid();
             entry->sb.st_gid = getgid();
@@ -224,7 +224,7 @@ static bool CacheDirectoryChildren(CacheEntry *entry)
 
     if (!entry->directory.ready) {
         HeapArray<rk_ObjectInfo> objects;
-        if (!rk_ListChildren(disk.get(), entry->hash, {}, &entry->directory.str_alloc, &objects))
+        if (!rk_ListChildren(disk.get(), entry->oid, {}, &entry->directory.str_alloc, &objects))
             return false;
 
         entry->directory.children.Reserve(objects.len);
@@ -239,7 +239,7 @@ static bool CacheDirectoryChildren(CacheEntry *entry)
 
             child->parent = entry;
             child->name = obj.name;
-            child->hash = obj.hash;
+            child->oid = obj.oid;
 
             CopyAttributes(obj, child);
         }
@@ -318,7 +318,7 @@ static int DoReadLink(const char *path, char *buf, size_t size)
         return -ENOENT;
 
     if (!entry->link.ready) {
-        entry->link.target = rk_ReadLink(disk.get(), entry->hash, &entry->parent->directory.str_alloc);
+        entry->link.target = rk_ReadLink(disk.get(), entry->oid, &entry->parent->directory.str_alloc);
         entry->link.ready = true;
     }
     if (!entry->link.target)
@@ -388,7 +388,7 @@ static int DoOpen(const char *path, fuse_file_info *fi)
     if ((fi->flags & O_ACCMODE) != O_RDONLY)
         return -EACCES;
 
-    std::unique_ptr<rk_FileHandle> handle = rk_OpenFile(disk.get(), entry->hash);
+    std::unique_ptr<rk_FileHandle> handle = rk_OpenFile(disk.get(), entry->oid);
     if (!handle)
         return -EIO;
 
@@ -469,7 +469,7 @@ Options:
 
         %!..+--debug%!0                    Debug FUSE calls
 
-Use an object hash or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<hash|channel>[:<path>]%!0.
+Use an object ID (OID) or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<OID|channel>[:<path>]%!0.
 If you use a snapshot channel, rekkord will use the most recent snapshot object that matches.)", FelixTarget);
     };
 
@@ -567,12 +567,12 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
     }
     LogInfo();
 
-    rk_Hash hash = {};
-    if (!rk_LocateObject(disk.get(), identifier, &hash))
+    rk_ObjectID oid = {};
+    if (!rk_LocateObject(disk.get(), identifier, &oid))
         return 1;
 
-    LogInfo("Mounting %!..+%1%!0 to '%2'...", hash, mountpoint);
-    if (!InitRoot(hash))
+    LogInfo("Mounting %!..+%1%!0 to '%2'...", oid, mountpoint);
+    if (!InitRoot(oid))
         return 1;
     LogInfo("Ready");
 

@@ -40,7 +40,7 @@ Options:
 
     %!..+-c, --channel channel%!0          Set custom snapshot channel
                                    %!D..(default: %2)%!0
-        %!..+--raw%!0                      Skip snapshot object and report data hash
+        %!..+--raw%!0                      Skip snapshot object and report data OID
 
         %!..+--follow_symlinks%!0          Follow symbolic links (instead of storing them as-is)
         %!..+--preserve_atime%!0           Do not modify atime if possible (Linux-only)
@@ -129,19 +129,19 @@ Options:
 
     int64_t now = GetMonotonicTime();
 
-    rk_Hash hash = {};
+    rk_ObjectID oid = {};
     int64_t total_size = 0;
     int64_t total_stored = 0;
-    if (!rk_Save(disk.get(), settings, filenames, &hash, &total_size, &total_stored))
+    if (!rk_Save(disk.get(), settings, filenames, &oid, &total_size, &total_stored))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
 
     LogInfo();
     if (settings.raw) {
-        LogInfo("Data hash: %!..+%1%!0", hash);
+        LogInfo("Data OID: %!..+%1%!0", oid);
     } else {
-        LogInfo("Snapshot hash: %!..+%1%!0", hash);
+        LogInfo("Snapshot OID: %!..+%1%!0", oid);
         LogInfo("Snapshot channel: %!..+%1%!0", settings.channel);
     }
     LogInfo("Source size: %!..+%1%!0", FmtDiskSize(total_size));
@@ -186,7 +186,7 @@ Options:
     %!..+-j, --threads threads%!0          Change number of threads
                                    %!D..(default: automatic)%!0
 
-Use an object hash or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<hash|channel>[:<path>]%!0.
+Use an object ID (OID) or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<OID|channel>[:<path>]%!0.
 If you use a snapshot channel, rekkord will use the most recent snapshot object that matches.)", FelixTarget);
     };
 
@@ -269,12 +269,12 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
 
     int64_t now = GetMonotonicTime();
 
-    rk_Hash hash = {};
-    if (!rk_LocateObject(disk.get(), identifier, &hash))
+    rk_ObjectID oid = {};
+    if (!rk_LocateObject(disk.get(), identifier, &oid))
         return 1;
 
     int64_t file_len = 0;
-    if (!rk_Restore(disk.get(), hash, settings, dest_filename, &file_len))
+    if (!rk_Restore(disk.get(), oid, settings, dest_filename, &file_len))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;

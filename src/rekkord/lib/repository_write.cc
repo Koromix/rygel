@@ -75,12 +75,11 @@ private:
 
 static void HashBlake3(rk_BlobType type, Span<const uint8_t> buf, const uint8_t salt[32], rk_Hash *out_hash)
 {
-    blake3_hasher hasher;
-
     uint8_t salt2[32];
     MemCpy(salt2, salt, RG_SIZE(salt2));
     salt2[31] ^= (uint8_t)type;
 
+    blake3_hasher hasher;
     blake3_hasher_init_keyed(&hasher, salt2);
     blake3_hasher_update(&hasher, buf.ptr, buf.len);
     blake3_hasher_finalize(&hasher, out_hash->hash, RG_SIZE(out_hash->hash));
@@ -416,8 +415,9 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                             }
 
                             HashBlake3(rk_BlobType::Link, target, salt32, &entry->hash);
+                            rk_ObjectID oid = { rk_BlobCatalog::Raw, entry->hash };
 
-                            Size written = disk->WriteBlob(entry->hash, rk_BlobType::Link, target);
+                            Size written = disk->WriteBlob(oid, rk_BlobType::Link, target);
                             if (written < 0)
                                 return false;
 
@@ -470,7 +470,9 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             }
 
             async.Run([pending, this]() mutable {
-                Size written = disk->WriteBlob(pending->hash, rk_BlobType::Directory3, pending->blob);
+                rk_ObjectID oid = { rk_BlobCatalog::Meta, pending->hash };
+
+                Size written = disk->WriteBlob(oid, rk_BlobType::Directory3, pending->blob);
                 if (written < 0)
                     return false;
 
@@ -613,8 +615,9 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
                         entry.len = LittleEndian((int32_t)chunk.len);
 
                         HashBlake3(rk_BlobType::Chunk, chunk, salt32, &entry.hash);
+                        rk_ObjectID oid = { rk_BlobCatalog::Raw, entry.hash };
 
-                        Size written = disk->WriteBlob(entry.hash, rk_BlobType::Chunk, chunk);
+                        Size written = disk->WriteBlob(oid, rk_BlobType::Chunk, chunk);
                         if (written < 0)
                             return false;
 
@@ -647,15 +650,17 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
         } while (!st.IsEOF() || buf.len);
     }
 
-    // Write list of chunks (unless there is exactly one)
     rk_Hash file_hash = {};
+
+    // Write list of chunks (unless there is exactly one)
     if (file_blob.len != RG_SIZE(RawChunk)) {
         int64_t len_64le = LittleEndian(st.GetRawRead());
         file_blob.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
 
         HashBlake3(rk_BlobType::File, file_blob, salt32, &file_hash);
+        rk_ObjectID oid = { rk_BlobCatalog::Raw, file_hash };
 
-        Size written = disk->WriteBlob(file_hash, rk_BlobType::File, file_blob);
+        Size written = disk->WriteBlob(oid, rk_BlobType::File, file_blob);
         if (written < 0)
             return PutResult::Error;
 
@@ -685,7 +690,7 @@ void PutContext::MakeProgress(int64_t delta)
 }
 
 bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *const> filenames,
-             rk_Hash *out_hash, int64_t *out_size, int64_t *out_stored)
+             rk_ObjectID *out_oid, int64_t *out_size, int64_t *out_stored)
 {
     BlockAllocator temp_alloc;
 
@@ -724,6 +729,8 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
     // Reuse for performance
     HeapArray<XAttrInfo> xattrs;
     HeapArray<uint8_t> extended;
+
+    rk_ObjectID oid = {};
 
     // Process snapshot entries
     for (const char *filename: filenames) {
@@ -810,6 +817,9 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
                 entry->size = LittleEndian(subdirs);
 
                 entry->flags |= LittleEndian((int16_t)RawEntry::Flags::Readable);
+
+                // Will be changed for full (non-raw) snapshots
+                oid.catalog = rk_BlobCatalog::Meta;
             } break;
             case FileType::File: {
                 entry->kind = (int16_t)RawEntry::Kind::File;
@@ -819,6 +829,9 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
                     return false;
 
                 entry->flags |= LittleEndian((int16_t)RawEntry::Flags::Readable);
+
+                // Will be changed for full (non-raw) snapshots
+                oid.catalog = rk_BlobCatalog::Raw;
             } break;
 
             case FileType::Link: { RG_UNREACHABLE(); } break;
@@ -844,7 +857,6 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
     int64_t total_stored = put.GetStored();
     int64_t total_entries = put.GetEntries();
 
-    rk_Hash hash = {};
     if (!settings.raw) {
         SnapshotHeader2 *header1 = (SnapshotHeader2 *)snapshot_blob.ptr;
         DirectoryHeader *header2 = (DirectoryHeader *)(header1 + 1);
@@ -857,11 +869,12 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
         header2->size = LittleEndian(total_size);
         header2->entries = LittleEndian(total_entries);
 
-        HashBlake3(rk_BlobType::Snapshot4, snapshot_blob, salt32, &hash);
+        oid.catalog = rk_BlobCatalog::Meta;
+        HashBlake3(rk_BlobType::Snapshot4, snapshot_blob, salt32, &oid.hash);
 
         // Write snapshot blob
         {
-            Size written = disk->WriteBlob(hash, rk_BlobType::Snapshot4, snapshot_blob);
+            Size written = disk->WriteBlob(oid, rk_BlobType::Snapshot4, snapshot_blob);
             if (written < 0)
                 return false;
             total_stored += written;
@@ -872,15 +885,15 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
             Size payload_len = offsetof(SnapshotHeader2, channel) + strlen(header1->channel) + 1;
             Span<const uint8_t> payload = MakeSpan((const uint8_t *)header1, payload_len);
 
-            if (!disk->WriteTag(hash, payload))
+            if (!disk->WriteTag(oid, payload))
                 return false;
         }
     } else {
         const RawEntry *entry0 = (const RawEntry *)(snapshot_blob.ptr + RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader));
-        hash = entry0->hash;
+        oid.hash = entry0->hash;
     }
 
-    *out_hash = hash;
+    *out_oid = oid;
     if (out_size) {
         *out_size += total_size;
     }
