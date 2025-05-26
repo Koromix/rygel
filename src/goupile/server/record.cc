@@ -1069,7 +1069,7 @@ static int64_t RunCounter(const CounterInfo &counter, int64_t state, int64_t *ou
     }
 }
 
-static bool PrepareSignup(const InstanceHolder *instance, const char *tid, const char *username,
+static bool PrepareSignup(const InstanceHolder *instance, const char *username,
                           SignupInfo &info, Allocator *alloc, smtp_MailContent *out_mail)
 {
     Span<char> token;
@@ -1090,7 +1090,7 @@ static bool PrepareSignup(const InstanceHolder *instance, const char *tid, const
         token.len = (Size)strlen(token.ptr);
     }
 
-    const char *url = Fmt(alloc, "%1/%2?token=%3", info.url, tid, token).ptr;
+    const char *url = Fmt(alloc, "%1?token=%2", info.url, token).ptr;
 
     Span<const uint8_t> text = PatchFile(info.text.As<const uint8_t>(), alloc,
                                          [&](Span<const char> expr, StreamWriter *writer) {
@@ -1669,7 +1669,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         do {
             smtp_MailContent content;
 
-            if (!PrepareSignup(instance, tid, session->username, signup, io->Allocator(), &content))
+            if (!PrepareSignup(instance, session->username, signup, io->Allocator(), &content))
                 break;
             if (!SendMail(signup.to, content))
                 break;

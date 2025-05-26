@@ -883,7 +883,7 @@ async function renderPage() {
             app: app,
             form: builder,
             page: route.page,
-            meta: new MetaInterface(form_thread, route.page, meta),
+            meta: new MetaInterface(app, route.page, form_thread, meta),
             thread: form_thread,
             values: form_state.values
         });

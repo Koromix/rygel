@@ -23,9 +23,7 @@ function MetaModel() {
     this.signup = null;
 }
 
-function MetaInterface(thread, page, meta) {
-    let url = makeCompleteURL(page.url);
-
+function MetaInterface(app, page, thread, meta) {
     Object.defineProperties(this, {
         summary: { get: () => meta.summary, set: summary => { meta.summary = summary; }, enumerable: true }
     });
@@ -100,7 +98,12 @@ function MetaInterface(thread, page, meta) {
         return value;
     };
 
-    this.signup = function(to, subject, content, text = null) {
+    this.signup = function(key, to, subject, content, text = null) {
+        page = app.pages.find(page => page.key == key);
+
+        if (page == null)
+            throw new Error(`Unkown page '${key}'`);
+
         let div = document.createElement('div');
         render(content, div);
 
@@ -110,7 +113,7 @@ function MetaInterface(thread, page, meta) {
             text = content.innerText;
 
         meta.signup = {
-            url: url,
+            url: makeCompleteURL(page.url),
             to: to,
             subject: subject,
             html: content,
