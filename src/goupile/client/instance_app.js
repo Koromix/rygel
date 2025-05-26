@@ -106,7 +106,10 @@ function ApplicationBuilder(app) {
             throw new Error(`Page key '${key}' is already used`);
 
         title = title || key;
-        options = expandOptions({ menu: title }, options);
+        options = expandOptions(options);
+
+        if (options.menu == null)
+            options.menu = title;
 
         let page = {
             key: key,
@@ -149,7 +152,10 @@ function ApplicationBuilder(app) {
         }
 
         title = title || key;
-        options = expandOptions({ menu: title }, options);
+        options = expandOptions(options);
+
+        if (options.menu == null)
+            options.menu = title;
 
         let prev_store = current_store;
         let prev_page = current_page;
@@ -240,8 +246,8 @@ function ApplicationBuilder(app) {
             throw new Error('Keys must not start with \'__\'');
     }
 
-    function expandOptions(...args) {
-        options = Object.assign({}, options_stack[options_stack.length - 1], ...args);
+    function expandOptions(options) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
         return options;
     }
 
