@@ -163,6 +163,7 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
             } else if (instance->config.allow_guests) {
                 stamp->authorized = true;
                 stamp->permissions = (int)UserPermission::DataSave;
+                stamp->single = true;
             }
         }
     }
@@ -1070,7 +1071,7 @@ void HandleSessionKey(http_IO *io, InstanceHolder *instance)
     }
 
     RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, session_key, session_key,
-                                                       nullptr, nullptr, false, nullptr);
+                                                       nullptr, nullptr, true, nullptr);
     if (!session)
         return;
     sessions.Open(io, session);
@@ -1711,7 +1712,7 @@ RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *in
     RetainPtr<SessionInfo> session = CreateUserSession(SessionType::Auto, userid, username, local_key);
 
     uint32_t permissions = (int)UserPermission::DataSave;
-    session->AuthorizeInstance(instance, permissions);
+    session->AuthorizeInstance(instance, permissions, true);
 
     sessions.Open(io, session);
 
