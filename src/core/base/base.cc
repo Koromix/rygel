@@ -1178,6 +1178,8 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             case FmtType::Buffer: { out = arg.u.buf; } break;
             case FmtType::Char: { out = MakeSpan(&arg.u.ch, 1); } break;
 
+            case FmtType::Custom: { arg.u.custom.Format(append); } break;
+
             case FmtType::Bool: {
                 if (arg.u.b) {
                     out = "true";
@@ -1497,6 +1499,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         case FmtType::Str2: { arg2.u.str2 = *(const Span<const char> *)ptr; } break;
                         case FmtType::Buffer: { RG_UNREACHABLE(); } break;
                         case FmtType::Char: { arg2.u.ch = *(const char *)ptr; } break;
+                        case FmtType::Custom: { RG_UNREACHABLE(); } break;
                         case FmtType::Bool: { arg2.u.b = *(const bool *)ptr; } break;
                         case FmtType::Integer:
                         case FmtType::Unsigned:
@@ -1778,7 +1781,14 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, Allocato
 
     HeapArray<char> buf(alloc);
     FmtFmt(fmt, args, vt100, &buf);
+
     return buf.TrimAndLeak(1);
+}
+
+void FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, FunctionRef<void(Span<const char>)> append)
+{
+    // This one dos not null terminate! Be careful!
+    DoFormat(fmt, args, vt100, append);
 }
 
 void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)

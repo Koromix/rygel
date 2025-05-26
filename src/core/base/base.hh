@@ -3680,6 +3680,7 @@ enum class FmtType {
     Str2,
     Buffer,
     Char,
+    Custom,
     Bool,
     Integer,
     Unsigned,
@@ -3700,6 +3701,49 @@ enum class FmtType {
     Span
 };
 
+template <typename T>
+class FmtTraits {
+public:
+    static void Format(const T &obj, FunctionRef<void(Span<const char>)> append) { return obj.Format(append); }
+};
+
+class FmtCustom {
+    struct Base {
+        virtual void Format(FunctionRef<void(Span<const char>)> append) const = 0;
+    };
+
+    template <typename T>
+    struct Concrete: public Base {
+        typedef void FuncType(const T &obj, FunctionRef<void(Span<const char>)>);
+
+        const T *obj;
+        FuncType *func;
+
+        Concrete(const T *obj, FuncType *func) : obj(obj), func(func) {}
+
+        void Format(FunctionRef<void(Span<const char>)> append) const override { func(*obj, append); }
+    };
+
+    // Concrete has 3 pointers (vtable, obj, func), so size should match!
+    void *raw[3];
+
+public:
+    FmtCustom() = default;
+
+    template <typename T>
+    explicit FmtCustom(const T &obj)
+    {
+        static_assert(RG_SIZE(*this) <= RG_SIZE(raw));
+        new (raw) Concrete<T>(&obj, &FmtTraits<T>::Format);
+    }
+
+    void Format(FunctionRef<void(Span<const char>)> append) const
+    {
+        const Base *ptr = reinterpret_cast<const Base *>(&raw);
+        ptr->Format(append);
+    }
+};
+
 class FmtArg {
 public:
     FmtType type;
@@ -3708,6 +3752,7 @@ public:
         Span<const char> str2;
         char buf[32];
         char ch;
+        FmtCustom custom;
         bool b;
         int64_t i;
         uint64_t u;
@@ -3758,6 +3803,7 @@ public:
     FmtArg(const char *str) : type(FmtType::Str1) { u.str1 = str ? str : "(null)"; }
     FmtArg(Span<const char> str) : type(FmtType::Str2) { u.str2 = str; }
     FmtArg(char c) : type(FmtType::Char) { u.ch = c; }
+    FmtArg(const FmtCustom &custom) : type(FmtType::Custom) { u.custom = custom; }
     FmtArg(bool b) : type(FmtType::Bool) { u.b = b; }
     FmtArg(unsigned char i)  : type(FmtType::Unsigned) { u.u = i; }
     FmtArg(short i) : type(FmtType::Integer) { u.i = i; }
@@ -3922,6 +3968,7 @@ enum class LogLevel {
 Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, Span<char> out_buf);
 Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, HeapArray<char> *out_buf);
 Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, Allocator *alloc);
+void FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, FunctionRef<void(Span<const char>)> append);
 void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *out_st);
 void PrintLnFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *out_st);
 
@@ -3961,6 +4008,7 @@ void PrintLnFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *out_st);
 DEFINE_FMT_VARIANT(Span<char>, Span<char>)
 DEFINE_FMT_VARIANT(Span<char>, HeapArray<char> *)
 DEFINE_FMT_VARIANT(Span<char>, Allocator *)
+DEFINE_FMT_VARIANT(void, FunctionRef<void(Span<const char>)>)
 DEFINE_PRINT_VARIANT(Print, void, StreamWriter *)
 DEFINE_PRINT_VARIANT(PrintLn, void, StreamWriter *)
 
