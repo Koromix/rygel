@@ -1281,7 +1281,7 @@ function renderPageMenu(page) {
         return '';
 
     return html`
-        <a href=${contextualizeURL(page.url, form_thread)}>${page.menu}</a>
+        <a href=${contextualizeURL(page.url, form_thread)}>${page.menu || page.title}</a>
         <ul>
             ${Util.map(page.children, (child, idx) => {
                 if (!child.menu)
