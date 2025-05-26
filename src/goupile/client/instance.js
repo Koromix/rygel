@@ -871,7 +871,7 @@ async function renderPage() {
             let buffer = code_buffers.get(route.page.filename);
 
             build = code_builds.get(buffer.sha256);
-            func = build.func;
+            func = build?.func;
         } else {
             func = defaultFormPage;
         }
