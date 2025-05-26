@@ -198,7 +198,7 @@ void HandleLegacySave(http_IO *io, InstanceHolder *instance)
     if (!session->userid) {
         RG_ASSERT(session->type == SessionType::Auto);
 
-        session = MigrateGuestSession(io, instance);
+        session = MigrateGuestSession(io, instance, nullptr);
         if (!session)
             return;
         stamp = session->GetStamp(instance);

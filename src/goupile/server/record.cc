@@ -1401,7 +1401,9 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
     // Create full session for guests
     if (!session->userid) {
-        session = MigrateGuestSession(io, instance);
+        const char *username = signup.enable ? signup.to : nullptr;
+
+        session = MigrateGuestSession(io, instance, username);
         if (!session)
             return;
 
