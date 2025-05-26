@@ -324,6 +324,8 @@ function isMenuWide(page) {
 }
 
 function renderDropItem(page, first) {
+    if (!profile.develop && !route.page.menu)
+        return '';
     if (!page.menu)
         return '';
 
@@ -1275,6 +1277,8 @@ function addAutomaticTags(variables) {
 }
 
 function renderPageMenu(page) {
+    if (!profile.develop && !route.page.menu)
+        return '';
     if (!page.children.some(child => child.menu))
         return '';
     if (!profile.develop && !page.children.some(child => isPageEnabled(child)))
