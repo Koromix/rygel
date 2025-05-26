@@ -216,7 +216,7 @@ static void MigrateLegacyEntries2(HeapArray<uint8_t> *blob, Size start)
     Size offset = start + RG_SIZE(DirectoryHeader);
 
     while (offset < blob->len) {
-        RawFile *ptr = (RawFile *)(blob->ptr + offset);
+        RawEntry *ptr = (RawEntry *)(blob->ptr + offset);
         Size skip = ptr->GetSize() - 16;
 
         if (blob->len - offset < skip)
@@ -224,8 +224,8 @@ static void MigrateLegacyEntries2(HeapArray<uint8_t> *blob, Size start)
 
         entries.Grow(ptr->GetSize());
         MemCpy(entries.end(), blob->ptr + offset, skip);
-        MemMove(entries.end() + offsetof(RawFile, btime), entries.end() + offsetof(RawFile, ctime), skip - offsetof(RawFile, ctime));
-        MemSet(entries.end() + offsetof(RawFile, atime), 0, RG_SIZE(RawFile::atime));
+        MemMove(entries.end() + offsetof(RawEntry, btime), entries.end() + offsetof(RawEntry, ctime), skip - offsetof(RawEntry, ctime));
+        MemSet(entries.end() + offsetof(RawEntry, atime), 0, RG_SIZE(RawEntry::atime));
         entries.len += ptr->GetSize();
 
         offset += skip;
@@ -239,7 +239,7 @@ static void MigrateLegacyEntries2(HeapArray<uint8_t> *blob, Size start)
 static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_separators,
                         Allocator *alloc, EntryInfo *out_entry)
 {
-    RawFile *ptr = (RawFile *)(entries.ptr + offset);
+    RawEntry *ptr = (RawEntry *)(entries.ptr + offset);
 
     if (entries.len - offset < ptr->GetSize()) {
         LogError("Malformed entry in directory blob");
@@ -329,10 +329,10 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
     }
 
     // Sanity checks
-    if (entry.kind != (int8_t)RawFile::Kind::Directory &&
-            entry.kind != (int8_t)RawFile::Kind::File &&
-            entry.kind != (int8_t)RawFile::Kind::Link &&
-            entry.kind != (int8_t)RawFile::Kind::Unknown) {
+    if (entry.kind != (int8_t)RawEntry::Kind::Directory &&
+            entry.kind != (int8_t)RawEntry::Kind::File &&
+            entry.kind != (int8_t)RawEntry::Kind::Link &&
+            entry.kind != (int8_t)RawEntry::Kind::Unknown) {
         LogError("Unknown object kind 0x%1", FmtHex((unsigned int)entry.kind));
         return -1;
     }
@@ -429,9 +429,9 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
             return false;
         offset += skip;
 
-        if (entry.kind == (int)RawFile::Kind::Unknown)
+        if (entry.kind == (int)RawEntry::Kind::Unknown)
             continue;
-        if (!(entry.flags & (int)RawFile::Flags::Readable))
+        if (!(entry.flags & (int)RawEntry::Flags::Readable))
             continue;
 
         entry.filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry.basename).ptr;
@@ -484,7 +484,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                 return false;
 
             switch (entry.kind) {
-                case (int)RawFile::Kind::Directory: {
+                case (int)RawEntry::Kind::Directory: {
                     if (entry_type != rk_BlobType::Directory1 &&
                             entry_type != rk_BlobType::Directory2 &&
                             entry_type != rk_BlobType::Directory3) {
@@ -511,7 +511,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                     MakeProgress(1, 0);
                 } break;
 
-                case (int)RawFile::Kind::File: {
+                case (int)RawEntry::Kind::File: {
                     if (entry_type != rk_BlobType::File && entry_type != rk_BlobType::Chunk) {
                         LogError("Blob '%1' is not a File", entry.hash);
                         return false;
@@ -539,7 +539,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                     }
                 } break;
 
-                case (int)RawFile::Kind::Link: {
+                case (int)RawEntry::Kind::Link: {
                     if (entry_type != rk_BlobType::Link) {
                         LogError("Blob '%1' is not a Link", entry.hash);
                         return false;
@@ -1078,10 +1078,10 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         obj->hash = entry.hash;
         obj->depth = depth;
         switch (entry.kind) {
-            case (int)RawFile::Kind::Directory: { obj->type = rk_ObjectType::Directory; } break;
-            case (int)RawFile::Kind::File: { obj->type = rk_ObjectType::File; } break;
-            case (int)RawFile::Kind::Link: { obj->type = rk_ObjectType::Link; } break;
-            case (int)RawFile::Kind::Unknown: { obj->type = rk_ObjectType::Unknown; } break;
+            case (int)RawEntry::Kind::Directory: { obj->type = rk_ObjectType::Directory; } break;
+            case (int)RawEntry::Kind::File: { obj->type = rk_ObjectType::File; } break;
+            case (int)RawEntry::Kind::Link: { obj->type = rk_ObjectType::Link; } break;
+            case (int)RawEntry::Kind::Unknown: { obj->type = rk_ObjectType::Unknown; } break;
 
             default: { RG_UNREACHABLE(); } break;
         }
@@ -1094,9 +1094,9 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         obj->uid = entry.uid;
         obj->gid = entry.gid;
         obj->size = entry.size;
-        obj->readable = (entry.flags & (int)RawFile::Flags::Readable);
+        obj->readable = (entry.flags & (int)RawEntry::Flags::Readable);
 
-        if (!(entry.flags & (int)RawFile::Flags::Readable))
+        if (!(entry.flags & (int)RawEntry::Flags::Readable))
             continue;
 
         switch (obj->type) {
