@@ -876,8 +876,8 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
                 return false;
         }
     } else {
-        const RawEntry *entry = (const RawEntry *)(snapshot_blob.ptr + RG_SIZE(SnapshotHeader2));
-        hash = entry->hash;
+        const RawEntry *entry0 = (const RawEntry *)(snapshot_blob.ptr + RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader));
+        hash = entry0->hash;
     }
 
     *out_hash = hash;
