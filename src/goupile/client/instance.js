@@ -1886,6 +1886,9 @@ async function run(push_history = true) {
                 data_rows = data_rows.filter(thread => thread.tags.some(tag => data_tags.has(tag)));
 
             for (let page of root.children) {
+                if (page.store == null)
+                    continue;
+
                 let col = {
                     page: page,
                     count: data_rows.reduce((acc, row) => acc + (row.entries[page.store.key] != null), 0)
