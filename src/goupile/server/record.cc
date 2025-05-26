@@ -1282,7 +1282,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                         signup.enable = false;
                     } break;
                     case json_TokenType::StartObject: {
-                        signup.enable = (session->userid <= 0);
+                        signup.enable = (session->userid >= 0);
 
                         parser.ParseObject();
                         while (parser.InObject()) {
@@ -1364,7 +1364,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         }
 
         if (signup.enable) {
-            if (!gp_domain.config.smtp.url) {
+            if (!session->userid && !gp_domain.config.smtp.url) {
                 LogError("This instance is not configured to send mails");
                 io->SendError(403);
                 return;
@@ -1393,8 +1393,8 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         }
     }
 
-    if (signup.enable && session->userid) {
-        LogError("Cannot sign up from existing session");
+    if (signup.enable && session->userid < 0) {
+        LogError("Cannot sign up from this session");
         io->SendError(403);
         return;
     }
@@ -1458,7 +1458,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 return false;
 
             if (stmt.Step()) {
-                LogError("Cannot create new thread");
+                LogError("Cannot create new %1", signup.enable ? "registration" : "thread");
                 io->SendError(403);
                 return false;
             } else if (!stmt.IsValid()) {
@@ -1520,7 +1520,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
             }
         }
 
-        // Check thread claim
+        // Deal with thread claim
         if (!stamp->HasPermission(UserPermission::DataRead)) {
             if (new_thread) {
                 if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, tid) VALUES (?1, ?2)
@@ -1534,6 +1534,17 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                     return false;
                 }
             }
+        }
+        if (session->userid > 0 && signup.enable) {
+            int64_t userid = CreateInstanceUser(instance, signup.to);
+
+            if (!userid)
+                return false;
+
+            if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, tid) VALUES (?1, ?2)
+                                      ON CONFLICT DO NOTHING)",
+                                   -userid, tid))
+                return false;
         }
 
         // Apply constraints
@@ -1665,9 +1676,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         return;
 
     // Best effort
-    if (signup.enable) {
-        RG_ASSERT(session->userid < 0);
-
+    if (signup.enable && session->userid < 0) {
         do {
             smtp_MailContent content;
 

@@ -1664,6 +1664,41 @@ void HandleChangeExportKey(http_IO *io, InstanceHolder *instance)
     json.Finish();
 }
 
+int64_t CreateInstanceUser(InstanceHolder *instance, const char *username)
+{
+    RG_ASSERT(username);
+
+    // Create random local key
+    char local_key[45];
+    {
+        uint8_t buf[32];
+        FillRandomSafe(buf);
+        sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+    }
+
+    int64_t userid;
+    bool success = instance->db->Transaction([&]() {
+        sq_Statement stmt;
+        if (!instance->db->Prepare(R"(INSERT INTO ins_users (key, local_key)
+                                      VALUES (?1, ?2)
+                                      ON CONFLICT (key) DO UPDATE SET key = key
+                                      RETURNING userid)",
+                                   &stmt, username, local_key))
+            return false;
+        if (!stmt.GetSingleValue(&userid))
+            return false;
+
+        return true;
+    });
+    if (!success)
+        return 0;
+
+    RG_ASSERT(userid > 0);
+    userid = -userid;
+
+    return userid;
+}
+
 RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *instance, const char *username)
 {
     // Create random username (if needed)
@@ -1689,11 +1724,12 @@ RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *in
         sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
     }
 
-    int64_t userid;
+    int64_t userid = CreateInstanceUser(instance, username);
     bool success = instance->db->Transaction([&]() {
         sq_Statement stmt;
         if (!instance->db->Prepare(R"(INSERT INTO ins_users (key, local_key)
                                       VALUES (?1, ?2)
+                                      ON CONFLICT (key) DO UPDATE SET key = key
                                       RETURNING userid)",
                                    &stmt, username, local_key))
             return false;
