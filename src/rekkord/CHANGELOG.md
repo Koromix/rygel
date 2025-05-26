@@ -6,9 +6,9 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
-### Rekkord 0.60
+### Rekkord 0.61
 
-*Released on 2025-05-25*
+*Released on 2025-05-26*
 
 - Avoid blob overwrites (with conditional S3 writes)
 - Remove probabilistic blob cache rebuilds
