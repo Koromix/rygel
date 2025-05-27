@@ -485,8 +485,10 @@ sq_Database *rk_Disk::OpenCache(bool build)
 
 bool rk_Disk::ResetCache(bool list)
 {
-    if (!cache_db.IsValid())
+    if (!cache_db.IsValid()) {
+        LogInfo("Cannot reset closed cache");
         return false;
+    }
 
     bool success = cache_db.Transaction([&]() {
         if (!cache_db.Run("DELETE FROM objects"))
@@ -941,8 +943,7 @@ Size rk_Disk::WriteBlob(const rk_ObjectID &oid, rk_BlobType type, Span<const uin
         }
     }
 
-    if (!cache_db.Run(R"(INSERT INTO objects (key, size) VALUES (?1, ?2)
-                         ON CONFLICT DO NOTHING)", path, raw.len))
+    if (!PutCache(path.data, raw.len))
         return -1;
 
     return raw.len;
@@ -1209,6 +1210,16 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, Span<const rk_UserInfo> user
 
     err_guard.Disable();
     return true;
+}
+
+bool rk_Disk::PutCache(const char *key, int64_t size)
+{
+    if (!cache_db.IsValid())
+        return true;
+
+    bool success = cache_db.Run(R"(INSERT INTO objects (key, size) VALUES (?1, ?2)
+                                   ON CONFLICT DO NOTHING)", key, size);
+    return success;
 }
 
 StatResult rk_Disk::TestFast(const char *path, int64_t *out_size)
