@@ -37,9 +37,6 @@ public:
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
     StatResult TestRaw(const char *path, int64_t *out_size) override;
-
-    bool CreateDirectory(const char *path) override;
-    bool DeleteDirectory(const char *path) override;
 };
 
 S3Disk::S3Disk(const s3_Config &config, const rk_OpenSettings &settings)
@@ -109,18 +106,6 @@ bool S3Disk::ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> 
 StatResult S3Disk::TestRaw(const char *path, int64_t *out_size)
 {
     return s3.HasObject(path, out_size);
-}
-
-bool S3Disk::CreateDirectory(const char *)
-{
-    // Directories don't really exist, it's just a prefix
-    return true;
-}
-
-bool S3Disk::DeleteDirectory(const char *)
-{
-    // Directories don't really exist, it's just a prefix
-    return true;
 }
 
 std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *username, const char *pwd, const rk_OpenSettings &settings)

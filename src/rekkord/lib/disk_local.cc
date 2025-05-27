@@ -36,9 +36,6 @@ public:
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
     StatResult TestRaw(const char *path, int64_t *out_size = nullptr) override;
-
-    bool CreateDirectory(const char *path) override;
-    bool DeleteDirectory(const char *path) override;
 };
 
 LocalDisk::LocalDisk(const char *path, const rk_OpenSettings &settings)
@@ -285,22 +282,6 @@ StatResult LocalDisk::TestRaw(const char *path, int64_t *out_size)
         *out_size = file_info.size;
     }
     return ret;
-}
-
-bool LocalDisk::CreateDirectory(const char *path)
-{
-    LocalArray<char, MaxPathSize + 128> filename;
-    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
-
-    return MakeDirectory(filename.data, false);
-}
-
-bool LocalDisk::DeleteDirectory(const char *path)
-{
-    LocalArray<char, MaxPathSize + 128> filename;
-    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
-
-    return UnlinkDirectory(filename.data);
 }
 
 std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, const rk_OpenSettings &settings)

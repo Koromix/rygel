@@ -232,9 +232,6 @@ public:
     virtual StatResult TestRaw(const char *path, int64_t *out_size = nullptr) = 0;
 
 protected:
-    virtual bool CreateDirectory(const char *path) = 0;
-    virtual bool DeleteDirectory(const char *path) = 0;
-
     bool InitDefault(Span<const uint8_t> mkey, Span<const rk_UserInfo> users);
 
 private:
