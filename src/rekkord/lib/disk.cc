@@ -682,17 +682,22 @@ static int64_t PadMe(int64_t len)
 
 bool rk_Disk::ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t> *out_blob)
 {
+    char path[256];
+    Fmt(path, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash);
+
+    return ReadBlob(path, out_type, out_blob);
+}
+
+bool rk_Disk::ReadBlob(const char *path, int *out_type, HeapArray<uint8_t> *out_blob)
+{
     RG_ASSERT(url);
     RG_ASSERT(HasMode(rk_AccessMode::Read));
 
     Size prev_len = out_blob->len;
     RG_DEFER_N(err_guard) { out_blob->RemoveFrom(prev_len); };
 
-    LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash).len;
-
     HeapArray<uint8_t> raw;
-    if (ReadRaw(path.data, &raw) < 0)
+    if (ReadRaw(path, &raw) < 0)
         return false;
     Span<const uint8_t> remain = raw;
 
@@ -779,18 +784,23 @@ bool rk_Disk::ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t>
 
 Size rk_Disk::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob)
 {
+    char path[256];
+    Fmt(path, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash);
+
+    return WriteBlob(path, type, blob);
+}
+
+Size rk_Disk::WriteBlob(const char *path, int type, Span<const uint8_t> blob)
+{
     RG_ASSERT(url);
     RG_ASSERT(HasMode(rk_AccessMode::Write));
     RG_ASSERT(type >= 0 && type < INT8_MAX);
-
-    LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash).len;
 
     // Skip objects that already exist
     {
         int64_t written = 0;
 
-        switch (TestFast(path.data, &written)) {
+        switch (TestFast(path, &written)) {
             case StatResult::Success: return (Size)written;
             case StatResult::MissingPath: {} break;
 
@@ -927,7 +937,7 @@ Size rk_Disk::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> bl
 
     // Write the damn thing
     {
-        WriteResult ret = WriteRaw(path.data, raw, false);
+        WriteResult ret = WriteRaw(path, raw, false);
 
         switch (ret) {
             case WriteResult::Success:
@@ -937,7 +947,7 @@ Size rk_Disk::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> bl
         }
     }
 
-    if (!PutCache(path.data, raw.len))
+    if (!PutCache(path, raw.len))
         return -1;
 
     return raw.len;

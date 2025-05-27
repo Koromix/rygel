@@ -191,7 +191,9 @@ public:
     bool ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserInfo> *out_users);
 
     bool ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t> *out_blob);
+    bool ReadBlob(const char *path, int *out_type, HeapArray<uint8_t> *out_blob);
     Size WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob);
+    Size WriteBlob(const char *path, int type, Span<const uint8_t> blob);
 
     bool WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload);
     bool ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags);
@@ -206,7 +208,9 @@ public:
     virtual bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) = 0;
     virtual StatResult TestRaw(const char *path, int64_t *out_size = nullptr) = 0;
 
-protected:
+    virtual bool CreateDirectory(const char *path) = 0;
+    virtual bool DeleteDirectory(const char *path) = 0;
+
     bool InitDefault(Span<const uint8_t> mkey, Span<const rk_UserInfo> users);
 
 private:
