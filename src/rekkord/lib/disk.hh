@@ -40,8 +40,8 @@ enum class rk_BlobCatalog: int8_t {
     Raw
 };
 static const char rk_BlobCatalogNames[] = {
-    'm',
-    'r'
+    'M',
+    'R'
 };
 
 struct rk_ObjectID {

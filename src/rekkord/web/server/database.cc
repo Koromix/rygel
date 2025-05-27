@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 9;
+const int DatabaseVersion = 10;
 
 bool MigrateDatabase(sq_Database *db)
 {
@@ -274,9 +274,18 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 9: {
+                bool success = db->RunMany(R"(
+                    UPDATE channels SET oid = UPPER(oid);
+                    UPDATE snapshots SET oid = UPPER(oid);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 9);
+            static_assert(DatabaseVersion == 10);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",
