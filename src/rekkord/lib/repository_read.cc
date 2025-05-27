@@ -531,12 +531,20 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                         LogInfo("%!D..[F]%!0 %1%/%!..+%2%!0", prefix, entry.basename);
                     }
 
-                    bool chunked = (type == (int)BlobType::File);
-
-                    int fd = GetFile(oid, chunked, blob, entry.filename.ptr);
-                    if (!settings.fake && fd < 0)
-                        return false;
+                    int fd = -1;
                     RG_DEFER { CloseDescriptor(fd); };
+
+                    if (entry.size) {
+                        bool chunked = (type == (int)BlobType::File);
+
+                        fd = GetFile(oid, chunked, blob, entry.filename.ptr);
+                        if (!settings.fake && fd < 0)
+                            return false;
+                    } else if (!settings.fake) {
+                        fd = OpenFile(entry.filename.ptr, (int)OpenFlag::Write);
+                        if (fd < 0)
+                            return false;
+                    }
 
                     if (!settings.fake) {
                         if (settings.restore_owner) {
