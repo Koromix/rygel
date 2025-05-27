@@ -20,6 +20,31 @@
 
 namespace RG {
 
+enum class BlobType {
+    Chunk = 0,
+    File = 1,
+    Directory1 = 2,
+    Snapshot1 = 3,
+    Link = 4,
+    Snapshot2 = 5,
+    Directory2 = 6,
+    Snapshot3 = 7,
+    Directory = 8,
+    Snapshot = 9
+};
+static const char *const BlobTypeNames[] = {
+    "Chunk",
+    "File",
+    "Directory1",
+    "Snapshot1",
+    "Link",
+    "Snapshot2",
+    "Directory2",
+    "Snapshot3",
+    "Directory",
+    "Snapshot"
+};
+
 #pragma pack(push, 1)
 struct SnapshotHeader1 {
     char channel[512];

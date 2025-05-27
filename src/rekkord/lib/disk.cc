@@ -680,7 +680,7 @@ static int64_t PadMe(int64_t len)
     return (int64_t)padding;
 }
 
-bool rk_Disk::ReadBlob(const rk_ObjectID &oid, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob)
+bool rk_Disk::ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t> *out_blob)
 {
     RG_ASSERT(url);
     RG_ASSERT(HasMode(rk_AccessMode::Read));
@@ -698,8 +698,7 @@ bool rk_Disk::ReadBlob(const rk_ObjectID &oid, rk_BlobType *out_type, HeapArray<
 
     // Init blob decryption
     crypto_secretstream_xchacha20poly1305_state state;
-    int version;
-    rk_BlobType type;
+    int8_t type;
     {
         BlobIntro intro;
         if (remain.len < RG_SIZE(intro)) {
@@ -712,13 +711,12 @@ bool rk_Disk::ReadBlob(const rk_ObjectID &oid, rk_BlobType *out_type, HeapArray<
             LogError("Unexpected blob version %1 (expected %2)", intro.version, BlobVersion);
             return false;
         }
-        if (intro.type < 0 || intro.type >= RG_LEN(rk_BlobTypeNames)) {
-            LogError("Invalid blob type 0x%1", FmtHex(intro.type));
+        if (intro.type < 0) {
+            LogError("Invalid blob type %1", intro.type);
             return false;
         }
 
-        version = intro.version;
-        type = (rk_BlobType)intro.type;
+        type = intro.type;
 
         uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
         if (crypto_box_seal_open(key, intro.ekey, RG_SIZE(intro.ekey), keyset->wkey, keyset->dkey) != 0) {
@@ -733,11 +731,6 @@ bool rk_Disk::ReadBlob(const rk_ObjectID &oid, rk_BlobType *out_type, HeapArray<
 
         remain.ptr += RG_SIZE(BlobIntro);
         remain.len -= RG_SIZE(BlobIntro);
-    }
-
-    if (version < 7) {
-        LogError("Unsupported old blob format version %1", version);
-        return false;
     }
 
     // Read and decrypt blob
@@ -784,10 +777,11 @@ bool rk_Disk::ReadBlob(const rk_ObjectID &oid, rk_BlobType *out_type, HeapArray<
     return true;
 }
 
-Size rk_Disk::WriteBlob(const rk_ObjectID &oid, rk_BlobType type, Span<const uint8_t> blob)
+Size rk_Disk::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob)
 {
     RG_ASSERT(url);
     RG_ASSERT(HasMode(rk_AccessMode::Write));
+    RG_ASSERT(type >= 0 && type < INT8_MAX);
 
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash).len;
@@ -813,7 +807,7 @@ Size rk_Disk::WriteBlob(const rk_ObjectID &oid, rk_BlobType type, Span<const uin
         BlobIntro intro = {};
 
         intro.version = BlobVersion;
-        intro.type = (int8_t)type;
+        intro.type = type;
 
         uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
         crypto_secretstream_xchacha20poly1305_keygen(key);

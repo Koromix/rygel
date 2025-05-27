@@ -73,7 +73,7 @@ private:
     void MakeProgress(int64_t written);
 };
 
-static void HashBlake3(rk_BlobType type, Span<const uint8_t> buf, const uint8_t salt[32], rk_Hash *out_hash)
+static void HashBlake3(BlobType type, Span<const uint8_t> buf, const uint8_t salt[32], rk_Hash *out_hash)
 {
     uint8_t salt2[32];
     MemCpy(salt2, salt, RG_SIZE(salt2));
@@ -414,10 +414,10 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                 target.len = (Size)ret;
                             }
 
-                            HashBlake3(rk_BlobType::Link, target, salt32, &entry->hash);
+                            HashBlake3(BlobType::Link, target, salt32, &entry->hash);
                             rk_ObjectID oid = { rk_BlobCatalog::Raw, entry->hash };
 
-                            Size written = disk->WriteBlob(oid, rk_BlobType::Link, target);
+                            Size written = disk->WriteBlob(oid, (int)BlobType::Link, target);
                             if (written < 0)
                                 return false;
 
@@ -453,7 +453,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             header->size = LittleEndian(pending->size.load());
             header->entries = LittleEndian(pending->entries);
 
-            HashBlake3(rk_BlobType::Directory3, pending->blob, salt32, &pending->hash);
+            HashBlake3(BlobType::Directory, pending->blob, salt32, &pending->hash);
 
             if (pending->parent_idx >= 0) {
                 PendingDirectory *parent = &pending_directories[pending->parent_idx];
@@ -472,7 +472,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             async.Run([pending, this]() mutable {
                 rk_ObjectID oid = { rk_BlobCatalog::Meta, pending->hash };
 
-                Size written = disk->WriteBlob(oid, rk_BlobType::Directory3, pending->blob);
+                Size written = disk->WriteBlob(oid, (int)BlobType::Directory, pending->blob);
                 if (written < 0)
                     return false;
 
@@ -614,10 +614,10 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
                         entry.offset = LittleEndian(total);
                         entry.len = LittleEndian((int32_t)chunk.len);
 
-                        HashBlake3(rk_BlobType::Chunk, chunk, salt32, &entry.hash);
+                        HashBlake3(BlobType::Chunk, chunk, salt32, &entry.hash);
                         rk_ObjectID oid = { rk_BlobCatalog::Raw, entry.hash };
 
-                        Size written = disk->WriteBlob(oid, rk_BlobType::Chunk, chunk);
+                        Size written = disk->WriteBlob(oid, (int)BlobType::Chunk, chunk);
                         if (written < 0)
                             return false;
 
@@ -657,10 +657,10 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
         int64_t len_64le = LittleEndian(st.GetRawRead());
         file_blob.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
 
-        HashBlake3(rk_BlobType::File, file_blob, salt32, &file_hash);
+        HashBlake3(BlobType::File, file_blob, salt32, &file_hash);
         rk_ObjectID oid = { rk_BlobCatalog::Raw, file_hash };
 
-        Size written = disk->WriteBlob(oid, rk_BlobType::File, file_blob);
+        Size written = disk->WriteBlob(oid, (int)BlobType::File, file_blob);
         if (written < 0)
             return PutResult::Error;
 
@@ -870,11 +870,11 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
         header2->entries = LittleEndian(total_entries);
 
         oid.catalog = rk_BlobCatalog::Meta;
-        HashBlake3(rk_BlobType::Snapshot4, snapshot_blob, salt32, &oid.hash);
+        HashBlake3(BlobType::Snapshot, snapshot_blob, salt32, &oid.hash);
 
         // Write snapshot blob
         {
-            Size written = disk->WriteBlob(oid, rk_BlobType::Snapshot4, snapshot_blob);
+            Size written = disk->WriteBlob(oid, (int)BlobType::Snapshot, snapshot_blob);
             if (written < 0)
                 return false;
             total_stored += written;

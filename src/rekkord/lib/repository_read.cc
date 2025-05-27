@@ -89,7 +89,7 @@ public:
     bool ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const char *dest_dirname);
     bool ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const EntryInfo &dest);
 
-    int GetFile(const rk_ObjectID &oid, rk_BlobType type, Span<const uint8_t> file, const char *dest_filename);
+    int GetFile(const rk_ObjectID &oid, bool chunked, Span<const uint8_t> file, const char *dest_filename);
 
     bool Sync() { return tasks.Sync(); }
 
@@ -329,10 +329,10 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
     }
 
     // Sanity checks
-    if (entry.kind != (int8_t)RawEntry::Kind::Directory &&
-            entry.kind != (int8_t)RawEntry::Kind::File &&
-            entry.kind != (int8_t)RawEntry::Kind::Link &&
-            entry.kind != (int8_t)RawEntry::Kind::Unknown) {
+    if (entry.kind != (int)RawEntry::Kind::Directory &&
+            entry.kind != (int)RawEntry::Kind::File &&
+            entry.kind != (int)RawEntry::Kind::Link &&
+            entry.kind != (int)RawEntry::Kind::Unknown) {
         LogError("Unknown object kind 0x%1", FmtHex((unsigned int)entry.kind));
         return -1;
     }
@@ -487,7 +487,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
     for (const EntryInfo &entry: ctx->entries) {
         tasks.Run([=, ctx = ctx, this] () {
             rk_ObjectID oid = { KindToCatalog(entry.kind), entry.hash };
-            rk_BlobType type;
+
+            int type;
             HeapArray<uint8_t> blob;
 
             if (!disk->ReadBlob(oid, &type, &blob))
@@ -495,22 +496,20 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
 
             switch (entry.kind) {
                 case (int)RawEntry::Kind::Directory: {
-                    if (type != rk_BlobType::Directory1 &&
-                            type != rk_BlobType::Directory2 &&
-                            type != rk_BlobType::Directory3) {
-                        LogError("Blob '%1' is not a Directory", entry.hash);
-                        return false;
+                    switch (type) {
+                        case (int)BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
+                        case (int)BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
+                        case (int)BlobType::Directory: {} break;
+
+                        default: {
+                            LogError("Blob '%1' is not a Directory", entry.hash);
+                            return false;
+                        } break;
                     }
 
                     if (settings.verbose) {
                         Span<const char> prefix = entry.filename.Take(0, entry.filename.len - entry.basename.len - 1);
                         LogInfo("%!D..[D]%!0 %1%/%!..+%2%/%!0", prefix, entry.basename);
-                    }
-
-                    switch (type) {
-                        case rk_BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
-                        case rk_BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
-                        default: {} break;
                     }
 
                     if (!settings.fake && !MakeDirectory(entry.filename.ptr, false))
@@ -522,7 +521,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                 } break;
 
                 case (int)RawEntry::Kind::File: {
-                    if (type != rk_BlobType::File && type != rk_BlobType::Chunk) {
+                    if (type != (int)BlobType::File && type != (int)BlobType::Chunk) {
                         LogError("Blob '%1' is not a File", entry.hash);
                         return false;
                     }
@@ -532,7 +531,9 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                         LogInfo("%!D..[F]%!0 %1%/%!..+%2%!0", prefix, entry.basename);
                     }
 
-                    int fd = GetFile(oid, type, blob, entry.filename.ptr);
+                    bool chunked = (type == (int)BlobType::File);
+
+                    int fd = GetFile(oid, chunked, blob, entry.filename.ptr);
                     if (!settings.fake && fd < 0)
                         return false;
                     RG_DEFER { CloseDescriptor(fd); };
@@ -550,18 +551,18 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                 } break;
 
                 case (int)RawEntry::Kind::Link: {
-                    if (type != rk_BlobType::Link) {
+                    if (type != (int)BlobType::Link) {
                         LogError("Blob '%1' is not a Link", entry.hash);
                         return false;
                     }
-
-                    // NUL terminate the path
-                    blob.Append(0);
 
                     if (settings.verbose) {
                         Span<const char> prefix = entry.filename.Take(0, entry.filename.len - entry.basename.len - 1);
                         LogInfo("%!D..[L]%!0 %1%/%!..+%2%!0", prefix, entry.basename);
                     }
+
+                    // NUL terminate the path
+                    blob.Append(0);
 
                     if (!settings.fake) {
                         if (!CreateSymbolicLink(entry.filename.ptr, (const char *)blob.ptr, settings.force))
@@ -590,10 +591,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
     return true;
 }
 
-int GetContext::GetFile(const rk_ObjectID &oid, rk_BlobType type, Span<const uint8_t> file, const char *dest_filename)
+int GetContext::GetFile(const rk_ObjectID &oid, bool chunked, Span<const uint8_t> file, const char *dest_filename)
 {
-    RG_ASSERT(type == rk_BlobType::File || type == rk_BlobType::Chunk);
-
     // Use StreamWriter machinery to do atomic replace, even through we do not write through it
     // and want to keep the descriptor at the end.
     StreamWriter writer;
@@ -609,114 +608,102 @@ int GetContext::GetFile(const rk_ObjectID &oid, rk_BlobType type, Span<const uin
 
     int64_t file_size = 0;
 
-    switch (type) {
-        case rk_BlobType::File: {
-            if (file.len % RG_SIZE(RawChunk) != RG_SIZE(int64_t)) {
+    if (chunked) {
+        if (file.len % RG_SIZE(RawChunk) != RG_SIZE(int64_t)) {
+            LogError("Malformed file blob '%1'", oid);
+            return -1;
+        }
+        file.len -= RG_SIZE(int64_t);
+
+        // Get file length from end of stream
+        MemCpy(&file_size, file.end(), RG_SIZE(file_size));
+        file_size = LittleEndian(file_size);
+
+        if (file_size < 0) {
+            LogError("Malformed file blob '%1'", oid);
+            return -1;
+        }
+
+        if (!settings.fake && !ResizeFile(fd, dest_filename, file_size))
+            return -1;
+
+        Async async(&tasks);
+
+        // Check coherence
+        Size prev_end = 0;
+
+        // Write unencrypted file
+        for (Size offset = 0; offset < file.len; offset += RG_SIZE(RawChunk)) {
+            FileChunk chunk = {};
+
+            RawChunk entry = {};
+            MemCpy(&entry, file.ptr + offset, RG_SIZE(entry));
+
+            chunk.offset = LittleEndian(entry.offset);
+            chunk.len = LittleEndian(entry.len);
+            chunk.hash = entry.hash;
+
+            if (prev_end > chunk.offset || chunk.len < 0) [[unlikely]] {
                 LogError("Malformed file blob '%1'", oid);
-                return -1;
+                return false;
             }
-            file.len -= RG_SIZE(int64_t);
+            prev_end = chunk.offset + chunk.len;
 
-            // Get file length from end of stream
-            MemCpy(&file_size, file.end(), RG_SIZE(file_size));
-            file_size = LittleEndian(file_size);
+            async.Run([=, this]() {
+                rk_ObjectID oid = { rk_BlobCatalog::Raw, chunk.hash };
 
-            if (file_size < 0) {
-                LogError("Malformed file blob '%1'", oid);
-                return -1;
-            }
+                int type;
+                HeapArray<uint8_t> blob;
 
-            if (!settings.fake && !ResizeFile(fd, dest_filename, file_size))
-                return -1;
-
-            Async async(&tasks);
-
-            // Check coherence
-            Size prev_end = 0;
-
-            // Write unencrypted file
-            for (Size offset = 0; offset < file.len; offset += RG_SIZE(RawChunk)) {
-                FileChunk chunk = {};
-
-                RawChunk entry = {};
-                MemCpy(&entry, file.ptr + offset, RG_SIZE(entry));
-
-                chunk.offset = LittleEndian(entry.offset);
-                chunk.len = LittleEndian(entry.len);
-                chunk.hash = entry.hash;
-
-                if (prev_end > chunk.offset || chunk.len < 0) [[unlikely]] {
-                    LogError("Malformed file blob '%1'", oid);
+                if (!disk->ReadBlob(oid, &type, &blob))
+                    return false;
+                if (type != (int)BlobType::Chunk) [[unlikely]] {
+                    LogError("Blob '%1' is not a Chunk", oid);
                     return false;
                 }
-                prev_end = chunk.offset + chunk.len;
-
-                async.Run([=, this]() {
-                    rk_ObjectID oid = { rk_BlobCatalog::Raw, chunk.hash };
-                    rk_BlobType type;
-                    HeapArray<uint8_t> buf;
-
-                    if (!disk->ReadBlob(oid, &type, &buf))
-                        return false;
-
-                    if (type != rk_BlobType::Chunk) [[unlikely]] {
-                        LogError("Blob '%1' is not a Chunk", oid);
-                        return false;
-                    }
-                    if (buf.len != chunk.len) [[unlikely]] {
-                        LogError("Chunk size mismatch for '%1'", oid);
-                        return false;
-                    }
-                    if (!settings.fake && !WriteAt(fd, dest_filename, chunk.offset, buf)) {
-                        LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
-                        return false;
-                    }
-
-                    MakeProgress(0, chunk.len);
-
-                    return true;
-                });
-            }
-
-            // Only process tasks for this Async, a standard Sync would run other tasks (such as other file tasks)
-            // which could take a while and could provoke an accumulation of unfinished file tasks with many open
-            // file descriptors and the appearence of slow progress.
-            if (!async.SyncSoon())
-                return -1;
-
-            // Check actual file size
-            if (file.len >= RG_SIZE(RawChunk) + RG_SIZE(int64_t)) {
-                const RawChunk *entry = (const RawChunk *)(file.end() - RG_SIZE(RawChunk));
-                int64_t size = LittleEndian(entry->offset) + LittleEndian(entry->len);
-
-                if (size != file_size) [[unlikely]] {
-                    LogError("File size mismatch for '%1'", entry->hash);
-                    return -1;
+                if (blob.len != chunk.len) [[unlikely]] {
+                    LogError("Chunk size mismatch for '%1'", oid);
+                    return false;
                 }
-            }
 
-            MakeProgress(1, 0);
-        } break;
+                if (!settings.fake && !WriteAt(fd, dest_filename, chunk.offset, blob)) {
+                    LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
+                    return false;
+                }
 
-        case rk_BlobType::Chunk: {
-            file_size = file.len;
+                MakeProgress(0, chunk.len);
 
-            if (!settings.fake && !WriteAt(fd, dest_filename, 0, file)) {
-                LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
+                return true;
+            });
+        }
+
+        // Only process tasks for this Async, a standard Sync would run other tasks (such as other file tasks)
+        // which could take a while and could provoke an accumulation of unfinished file tasks with many open
+        // file descriptors and the appearence of slow progress.
+        if (!async.SyncSoon())
+            return -1;
+
+        // Check actual file size
+        if (file.len >= RG_SIZE(RawChunk) + RG_SIZE(int64_t)) {
+            const RawChunk *entry = (const RawChunk *)(file.end() - RG_SIZE(RawChunk));
+            int64_t size = LittleEndian(entry->offset) + LittleEndian(entry->len);
+
+            if (size != file_size) [[unlikely]] {
+                LogError("File size mismatch for '%1'", entry->hash);
                 return -1;
             }
+        }
 
-            MakeProgress(1, file.len);
-        } break;
+        MakeProgress(1, 0);
+    } else {
+        file_size = file.len;
 
-        case rk_BlobType::Directory1:
-        case rk_BlobType::Directory2:
-        case rk_BlobType::Directory3:
-        case rk_BlobType::Snapshot1:
-        case rk_BlobType::Snapshot2:
-        case rk_BlobType::Snapshot3:
-        case rk_BlobType::Snapshot4:
-        case rk_BlobType::Link: { RG_UNREACHABLE(); } break;
+        if (!settings.fake && !WriteAt(fd, dest_filename, 0, file)) {
+            LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
+            return -1;
+        }
+
+        MakeProgress(1, file.len);
     }
 
     if (!settings.fake && !writer.Close())
@@ -784,14 +771,15 @@ void GetContext::MakeProgress(int64_t entries, int64_t size)
 
 bool rk_Restore(rk_Disk *disk, const rk_ObjectID &oid, const rk_RestoreSettings &settings, const char *dest_path, int64_t *out_size)
 {
-    rk_BlobType type;
+    int type;
     HeapArray<uint8_t> blob;
+
     if (!disk->ReadBlob(oid, &type, &blob))
         return false;
 
     switch (type) {
-        case rk_BlobType::Chunk:
-        case rk_BlobType::File: {
+        case (int)BlobType::Chunk:
+        case (int)BlobType::File: {
             if (!settings.force) {
                 if (TestFile(dest_path) && !IsDirectoryEmpty(dest_path)) {
                     LogError("File '%1' already exists", dest_path);
@@ -799,9 +787,10 @@ bool rk_Restore(rk_Disk *disk, const rk_ObjectID &oid, const rk_RestoreSettings 
                 }
             }
 
+            bool chunked = (type == (int)BlobType::File);
             int64_t file_size = 0;
 
-            if (type == rk_BlobType::File) {
+            if (chunked) {
                 if (blob.len < RG_SIZE(int64_t)) {
                     LogError("Malformed file blob '%1'", oid);
                     return false;
@@ -817,7 +806,7 @@ bool rk_Restore(rk_Disk *disk, const rk_ObjectID &oid, const rk_RestoreSettings 
 
             GetContext get(disk, settings, 1, file_size);
 
-            int fd = get.GetFile(oid, type, blob, dest_path);
+            int fd = get.GetFile(oid, chunked, blob, dest_path);
             if (!settings.fake && fd < 0)
                 return false;
             CloseDescriptor(fd);
@@ -827,9 +816,9 @@ bool rk_Restore(rk_Disk *disk, const rk_ObjectID &oid, const rk_RestoreSettings 
             }
         } break;
 
-        case rk_BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
-        case rk_BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
-        case rk_BlobType::Directory3: {
+        case (int)BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
+        case (int)BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
+        case (int)BlobType::Directory: {
             if (!settings.fake) {
                 if (!settings.force && TestFile(dest_path, FileType::Directory)) {
                     if (!IsDirectoryEmpty(dest_path)) {
@@ -868,10 +857,10 @@ bool rk_Restore(rk_Disk *disk, const rk_ObjectID &oid, const rk_RestoreSettings 
             }
         } break;
 
-        case rk_BlobType::Snapshot1: { static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
-        case rk_BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
-        case rk_BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
-        case rk_BlobType::Snapshot4: {
+        case (int)BlobType::Snapshot1: { static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot: {
             if (!settings.fake) {
                 if (!settings.force && TestFile(dest_path, FileType::Directory)) {
                     if (!IsDirectoryEmpty(dest_path)) {
@@ -913,7 +902,7 @@ bool rk_Restore(rk_Disk *disk, const rk_ObjectID &oid, const rk_RestoreSettings 
             }
         } break;
 
-        case rk_BlobType::Link: {
+        case (int)BlobType::Link: {
             blob.Append(0);
 
             if (settings.verbose) {
@@ -924,6 +913,11 @@ bool rk_Restore(rk_Disk *disk, const rk_ObjectID &oid, const rk_RestoreSettings 
 
             if (!CreateSymbolicLink(dest_path, (const char *)blob.ptr, settings.force))
                 return false;
+        } break;
+
+        default: {
+            LogError("Invalid blob type %1", type);
+            return false;
         } break;
     }
 
@@ -1121,23 +1115,21 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
                 async.Run([=, &contexts, this]() {
                     RecurseContext *ctx = &contexts[i];
 
-                    rk_BlobType type;
+                    int type;
                     HeapArray<uint8_t> blob;
 
                     if (!disk->ReadBlob(obj->oid, &type, &blob))
                         return false;
 
-                    if (type != rk_BlobType::Directory1 &&
-                            type != rk_BlobType::Directory2 &&
-                            type != rk_BlobType::Directory3) {
-                        LogError("Blob '%1' is not a Directory", entry.hash);
-                        return false;
-                    }
-
                     switch (type) {
-                        case rk_BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
-                        case rk_BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
-                        default: {} break;
+                        case (int)BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
+                        case (int)BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
+                        case (int)BlobType::Directory: {} break;
+
+                        default: {
+                            LogError("Blob '%1' is not a Directory", entry.hash);
+                            return false;
+                        } break;
                     }
 
                     if (!RecurseEntries(blob, false, depth + 1, &ctx->str_alloc, &ctx->children))
@@ -1193,16 +1185,16 @@ bool rk_ListChildren(rk_Disk *disk, const rk_ObjectID &oid, const rk_ListSetting
     Size prev_len = out_objects->len;
     RG_DEFER_N(out_guard) { out_objects->RemoveFrom(prev_len); };
 
-    rk_BlobType type;
+    int type;
     HeapArray<uint8_t> blob;
 
     if (!disk->ReadBlob(oid, &type, &blob))
         return false;
 
     switch (type) {
-        case rk_BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
-        case rk_BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
-        case rk_BlobType::Directory3: {
+        case (int)BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
+        case (int)BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
+        case (int)BlobType::Directory: {
             if (blob.len < RG_SIZE(DirectoryHeader)) {
                 LogError("Malformed directory blob '%1'", oid);
                 return false;
@@ -1218,7 +1210,7 @@ bool rk_ListChildren(rk_Disk *disk, const rk_ObjectID &oid, const rk_ListSetting
                 return false;
         } break;
 
-        case rk_BlobType::Snapshot1: {
+        case (int)BlobType::Snapshot1: {
             static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2));
 
             if (blob.len <= RG_SIZE(SnapshotHeader1)) {
@@ -1236,9 +1228,9 @@ bool rk_ListChildren(rk_Disk *disk, const rk_ObjectID &oid, const rk_ListSetting
 
             MemCpy(blob.ptr, &header2, RG_SIZE(SnapshotHeader2));
         } [[fallthrough]];
-        case rk_BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
-        case rk_BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
-        case rk_BlobType::Snapshot4: {
+        case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot: {
             if (blob.len < RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader)) {
                 LogError("Malformed snapshot blob '%1'", oid);
                 return false;
@@ -1277,10 +1269,15 @@ bool rk_ListChildren(rk_Disk *disk, const rk_ObjectID &oid, const rk_ListSetting
             }
         } break;
 
-        case rk_BlobType::Chunk:
-        case rk_BlobType::File:
-        case rk_BlobType::Link: {
-            LogInfo("Expected Snapshot or Directory blob, not %1", rk_BlobTypeNames[(int)type]);
+        case (int)BlobType::Chunk:
+        case (int)BlobType::File:
+        case (int)BlobType::Link: {
+            LogInfo("Expected Snapshot or Directory blob, not %1", BlobTypeNames[type]);
+            return false;
+        } break;
+
+        default: {
+            LogError("Invalid blob type %1", type);
             return false;
         } break;
     }
@@ -1410,13 +1407,12 @@ missing:
 
 const char *rk_ReadLink(rk_Disk *disk, const rk_ObjectID &oid, Allocator *alloc)
 {
-    rk_BlobType type;
+    int type;
     HeapArray<uint8_t> blob;
 
     if (!disk->ReadBlob(oid, &type, &blob))
         return nullptr;
-
-    if (type != rk_BlobType::Link) {
+    if (type != (int)BlobType::Link) {
         LogError("Expected symbolic link for '%1'", oid);
         return nullptr;
     }
@@ -1522,12 +1518,12 @@ Size FileHandle::Read(int64_t offset, Span<uint8_t> out_buf)
                 buf.RemoveFrom(0);
 
                 rk_ObjectID oid = { rk_BlobCatalog::Raw, chunk.hash };
-                rk_BlobType type;
+
+                int type;
 
                 if (!disk->ReadBlob(oid, &type, &buf))
                     return false;
-
-                if (type != rk_BlobType::Chunk) [[unlikely]] {
+                if (type != (int)BlobType::Chunk) [[unlikely]] {
                     LogError("Blob '%1' is not a Chunk", chunk.hash);
                     return false;
                 }
@@ -1573,34 +1569,39 @@ Size ChunkHandle::Read(int64_t offset, Span<uint8_t> out_buf)
 
 std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Disk *disk, const rk_ObjectID &oid)
 {
-    rk_BlobType type;
+    int type;
     HeapArray<uint8_t> blob;
 
     if (!disk->ReadBlob(oid, &type, &blob))
         return nullptr;
 
     switch (type) {
-        case rk_BlobType::File: {
+        case (int)BlobType::File: {
             std::unique_ptr<FileHandle> handle = std::make_unique<FileHandle>(disk);
             if (!handle->Init(oid, blob))
                 return nullptr;
             return handle;
         } break;
 
-        case rk_BlobType::Chunk: {
+        case (int)BlobType::Chunk: {
             std::unique_ptr<ChunkHandle> handle = std::make_unique<ChunkHandle>(blob);
             return handle;
         } break;
 
-        case rk_BlobType::Directory1:
-        case rk_BlobType::Directory2:
-        case rk_BlobType::Directory3:
-        case rk_BlobType::Snapshot1:
-        case rk_BlobType::Snapshot2:
-        case rk_BlobType::Snapshot3:
-        case rk_BlobType::Snapshot4:
-        case rk_BlobType::Link: {
+        case (int)BlobType::Directory1:
+        case (int)BlobType::Directory2:
+        case (int)BlobType::Directory:
+        case (int)BlobType::Snapshot1:
+        case (int)BlobType::Snapshot2:
+        case (int)BlobType::Snapshot3:
+        case (int)BlobType::Snapshot:
+        case (int)BlobType::Link: {
             LogError("Expected file for '%1'", oid);
+            return nullptr;
+        } break;
+
+        default: {
+            LogError("Invalid blob type %1", type);
             return nullptr;
         } break;
     }

@@ -83,31 +83,6 @@ static const char *const rk_AccessModeNames[] = {
     "Log"
 };
 
-enum class rk_BlobType: int8_t {
-    Chunk = 0,
-    File = 1,
-    Directory1 = 2,
-    Snapshot1 = 3,
-    Link = 4,
-    Snapshot2 = 5,
-    Directory2 = 6,
-    Snapshot3 = 7,
-    Directory3 = 8,
-    Snapshot4 = 9
-};
-static const char *const rk_BlobTypeNames[] = {
-    "Chunk",
-    "File",
-    "Directory1",
-    "Snapshot1",
-    "Link",
-    "Snapshot2",
-    "Directory2",
-    "Snapshot3",
-    "Directory3",
-    "Snapshot4"
-};
-
 enum class rk_SaltKind {
     BlobHash = 0,
     SplitterSeed = 1
@@ -215,8 +190,8 @@ public:
     bool DeleteUser(const char *username);
     bool ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserInfo> *out_users);
 
-    bool ReadBlob(const rk_ObjectID &oid, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob);
-    Size WriteBlob(const rk_ObjectID &oid, rk_BlobType type, Span<const uint8_t> blob);
+    bool ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t> *out_blob);
+    Size WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob);
 
     bool WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload);
     bool ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags);
