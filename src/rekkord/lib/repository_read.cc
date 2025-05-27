@@ -533,7 +533,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                     }
 
                     int fd = GetFile(oid, type, blob, entry.filename.ptr);
-                    if (fd < 0)
+                    if (!settings.fake && fd < 0)
                         return false;
                     RG_DEFER { CloseDescriptor(fd); };
 
