@@ -90,8 +90,7 @@ Exploration commands:
 Advanced commands:
 
     %!..+change_cid%!0                     Change repository cache ID (CID)
-    %!..+reset_cache%!0                    Reset or rebuild local repository cache
-    %!..+migrate_tags%!0                   Migrate old snaphsot tags made (before 0.50))");
+    %!..+reset_cache%!0                    Reset or rebuild local repository cache)");
         } else {
             PrintLn(st, R"(
 Advanced and low-level commands are hidden, use %!..+rekkord --help all%!0 to reveal them.)");
