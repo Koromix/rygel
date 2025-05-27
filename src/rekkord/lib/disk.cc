@@ -1119,10 +1119,21 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
         TagIntro intro = {};
         MemCpy(&intro, src.ptr, RG_SIZE(intro));
 
-        if (intro.version != TagVersion) {
+        if (intro.version == TagVersion) {
+            src = src.Take(RG_SIZE(intro), src.len - RG_SIZE(intro));
+        } else if (intro.version == 2) {
+            MemMove((uint8_t *)&intro.oid + 1, (const uint8_t *)&intro.oid, RG_SIZE(rk_Hash));
+            intro.oid.catalog = rk_BlobCatalog::Meta;
+
+            Span<uint8_t> copy = AllocateSpan<uint8_t>(alloc, src.len - RG_SIZE(TagIntro) + 1);
+            MemCpy(copy.ptr, src.ptr + RG_SIZE(TagIntro) - 1, copy.len);
+
+            src = copy;
+        } else {
             LogError("Unexpected tag version %1 (expected %2) in '%3'", intro.version, TagVersion, prefix);
             continue;
         }
+
         if (!intro.oid.IsValid()) {
             LogError("Invalid tag OID in '%1'", prefix);
             continue;
@@ -1130,7 +1141,7 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
 
         tag.prefix = DuplicateString(prefix, alloc).ptr;
         tag.oid = intro.oid;
-        tag.payload = src.Take(RG_SIZE(intro), src.len - RG_SIZE(intro));
+        tag.payload = src;
 
         out_tags->Append(tag);
     }
