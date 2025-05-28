@@ -6,6 +6,21 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.62
+
+*Released on 2025-05-28*
+
+- Separate metadata and content blobs
+- Add command to migrate blobs from old Rekkord versions
+- Increase default Rekkord compression level
+- Skip fetch when restoring empty files
+- Fix silent early restore exit when using `--dry_run`
+- Fix reported hash when using `rekkord save --raw`
+- Remove unused command from `rekkord --help all` text
+
+> [!WARNING]
+> This is a breaking change, use `rekkord migrate_blobs` to migrate older repositories.
+
 ### Rekkord 0.61
 
 *Released on 2025-05-26*
