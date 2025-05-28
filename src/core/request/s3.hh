@@ -69,6 +69,7 @@ class s3_Session {
 
     s3_Config config;
     const char *url = nullptr;
+    const char *region = nullptr;
 
     bool open = false;
 

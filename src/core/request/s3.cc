@@ -733,8 +733,7 @@ bool s3_Session::OpenAccess()
     Span<const char> path;
     Span<const char> url = MakeURL({}, &temp_alloc, &path);
 
-    // Determine region if needed
-    if (!config.region && !DetermineRegion(url.ptr))
+    if (!DetermineRegion(url.ptr))
         return false;
 
     CURL *curl = InitConnection();
@@ -763,8 +762,9 @@ bool s3_Session::OpenAccess()
                 Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
                 value = TrimStr(value);
 
+                // Last chance to determine proper region
                 if (!session->config.region && TestStrI(key, "x-amz-bucket-region")) {
-                    session->config.region = DuplicateString(value, &session->config.str_alloc).ptr;
+                    session->region = DuplicateString(value, &session->config.str_alloc).ptr;
                 }
 
                 return nmemb;
@@ -798,6 +798,11 @@ bool s3_Session::DetermineRegion(const char *url)
 {
     RG_ASSERT(!open);
 
+    if (config.region) {
+        region = config.region;
+        return true;
+    }
+
     CURL *curl = InitConnection();
     if (!curl)
         return false;
@@ -817,8 +822,8 @@ bool s3_Session::DetermineRegion(const char *url)
             Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
             value = TrimStr(value);
 
-            if (!session->config.region && TestStrI(key, "x-amz-bucket-region")) {
-                session->config.region = DuplicateString(value, &session->config.str_alloc).ptr;
+            if (TestStrI(key, "x-amz-bucket-region")) {
+                session->region = DuplicateString(value, &session->config.str_alloc).ptr;
             }
 
             return nmemb;
@@ -834,9 +839,9 @@ bool s3_Session::DetermineRegion(const char *url)
     if (curl_Perform(curl, "S3") < 0)
         return false;
 
-    if (!config.region) {
-        LogError("Failed to retrieve bucket region, please define AWS_REGION");
-        return false;
+    if (!region) {
+        // Many S3-compatible services don't really care about region, just pick something
+        region = "default";
     }
 
     return true;
@@ -983,7 +988,7 @@ void s3_Session::MakeSignature(const char *method, const char *path, const char 
     {
         string.len += Fmt(string.TakeAvailable(), "AWS4-HMAC-SHA256\n").len;
         string.len += Fmt(string.TakeAvailable(), "%1\n", FmtTimeISO(date)).len;
-        string.len += Fmt(string.TakeAvailable(), "%1/%2/s3/aws4_request\n", FormatYYYYMMDD(date), config.region).len;
+        string.len += Fmt(string.TakeAvailable(), "%1/%2/s3/aws4_request\n", FormatYYYYMMDD(date), region).len;
         string.len += Fmt(string.TakeAvailable(), "%1", FormatSha256(canonical)).len;
     }
 
@@ -997,7 +1002,7 @@ void s3_Session::MakeSignature(const char *method, const char *path, const char 
         ymd.len = Fmt(ymd.data, "%1", FormatYYYYMMDD(date)).len;
 
         HmacSha256(secret.As<uint8_t>(), ymd, out_signature);
-        HmacSha256(signature, config.region, out_signature);
+        HmacSha256(signature, region, out_signature);
         HmacSha256(signature, "s3", out_signature);
         HmacSha256(signature, "aws4_request", out_signature);
         HmacSha256(signature, string, out_signature);
@@ -1011,7 +1016,7 @@ Span<char> s3_Session::MakeAuthorization(const uint8_t signature[32], const Time
     HeapArray<char> buf(alloc);
 
     Fmt(&buf, "Authorization: AWS4-HMAC-SHA256 ");
-    Fmt(&buf, "Credential=%1/%2/%3/s3/aws4_request, ", config.access_id, FormatYYYYMMDD(date), config.region);
+    Fmt(&buf, "Credential=%1/%2/%3/s3/aws4_request, ", config.access_id, FormatYYYYMMDD(date), region);
     Fmt(&buf, "SignedHeaders=host;x-amz-content-sha256;x-amz-date, ");
     Fmt(&buf, "Signature=%1", FormatSha256(signature));
 
