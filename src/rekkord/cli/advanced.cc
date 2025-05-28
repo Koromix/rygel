@@ -250,12 +250,6 @@ Options:
     }
     LogInfo();
 
-    LogInfo("Reset cache...");
-    if (!disk->OpenCache(false))
-        return 1;
-    if (!disk->ResetCache(false))
-        return 1;
-
     LogInfo("Creating blob catalogs...");
     for (char catalog: rk_BlobCatalogNames) {
         char parent[128];
