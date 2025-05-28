@@ -725,12 +725,12 @@ bool rk_Disk::ReadBlob(const char *path, int *out_type, HeapArray<uint8_t> *out_
 
         uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
         if (crypto_box_seal_open(key, intro.ekey, RG_SIZE(intro.ekey), keyset->wkey, keyset->dkey) != 0) {
-            LogError("Failed to unseal blob (wrong key?)");
+            LogError("Failed to unseal blob '%1'", path);
             return false;
         }
 
         if (crypto_secretstream_xchacha20poly1305_init_pull(&state, intro.header, key) != 0) {
-            LogError("Failed to initialize symmetric decryption (corrupt blob?)");
+            LogError("Failed to initialize symmetric decryption of '%1'", path);
             return false;
         }
 
@@ -754,7 +754,7 @@ bool rk_Disk::ReadBlob(const char *path, int *out_type, HeapArray<uint8_t> *out_
             uint8_t tag;
             if (crypto_secretstream_xchacha20poly1305_pull(&state, buf.ptr, &buf_len, &tag,
                                                            cypher.ptr, cypher.len, nullptr, 0) != 0) {
-                LogError("Failed during symmetric decryption (corrupt blob?)");
+                LogError("Failed during symmetric decryption of '%1'", path);
                 return false;
             }
 
@@ -772,7 +772,7 @@ bool rk_Disk::ReadBlob(const char *path, int *out_type, HeapArray<uint8_t> *out_
         }
 
         if (!eof) {
-            LogError("Truncated blob");
+            LogError("Truncated blob '%1'", path);
             return false;
         }
     }
