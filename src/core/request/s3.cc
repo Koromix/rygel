@@ -840,10 +840,18 @@ int s3_Session::RunSafe(const char *action, FunctionRef<int(CURL *)> func, bool 
         if (status == 200 || status == 404 || status == 412)
             return status;
 
+        // Connection may be busted for some reason, start from scratch
+        curl_easy_cleanup(curl);
+        curl = nullptr;
+
         int delay = 200 + 100 * (1 << i);
         delay += !!i * GetRandomInt(0, delay / 2);
 
         WaitDelay(delay);
+
+        curl = ReserveConnection();
+        if (!curl)
+            return false;
     }
 
     if (status < 0) {
