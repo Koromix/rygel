@@ -338,6 +338,10 @@ Options:
             return 1;
     }
 
+    LogInfo("Changing cache ID...");
+    if (!disk->ChangeCID())
+        return 1;
+
     LogInfo("Done");
 
     return 0;
