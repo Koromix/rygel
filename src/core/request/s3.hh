@@ -73,6 +73,9 @@ class s3_Session {
 
     bool open = false;
 
+    std::mutex connections_mutex;
+    HeapArray<void *> connections; // CURL
+
     void *share = nullptr; // CURLSH
     std::mutex share_mutexes[8];
 
@@ -98,9 +101,10 @@ private:
     bool OpenAccess();
     bool DetermineRegion(const char *url);
 
-    void *InitConnection(); // CURL
+    void *ReserveConnection(); // CURL
+    void ReleaseConnection(void *curl); // CURL
 
-    int RunSafe(const char *action, FunctionRef<int(void)> func, bool quick = false);
+    int RunSafe(const char *action, FunctionRef<int(void *)> func, bool quick = false);
 
     Size PrepareHeaders(const char *method, const char *path, const char *query, Span<const KeyValue> kvs,
                         Span<const uint8_t> body, Allocator *alloc, Span<curl_slist> out_headers);

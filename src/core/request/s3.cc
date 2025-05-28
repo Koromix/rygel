@@ -297,6 +297,11 @@ bool s3_Session::Open(const s3_Config &config)
 
 void s3_Session::Close()
 {
+    for (CURL *curl: connections) {
+        curl_easy_cleanup(curl);
+    }
+    connections.Clear();
+
     open = false;
     config = {};
 }
@@ -304,11 +309,6 @@ void s3_Session::Close()
 bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *, int64_t)> func)
 {
     BlockAllocator temp_alloc;
-
-    CURL *curl = InitConnection();
-    if (!curl)
-        return false;
-    RG_DEFER { curl_easy_cleanup(curl); };
 
     prefix = prefix ? prefix : "";
 
@@ -326,7 +326,7 @@ bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *, 
 
         Fmt(&query, "list-type=2&prefix=%1&start-after=%2", FmtUrlSafe(prefix), FmtUrlSafe(after));
 
-        int status = RunSafe("list S3 objects", [&]() {
+        int status = RunSafe("list S3 objects", [&](CURL *curl) {
             LocalArray<curl_slist, 32> headers;
             headers.len = PrepareHeaders("GET", path.ptr, query.ptr, {}, {}, &temp_alloc, headers.data);
 
@@ -402,11 +402,6 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
 {
     BlockAllocator temp_alloc;
 
-    CURL *curl = InitConnection();
-    if (!curl)
-        return -1;
-    RG_DEFER { curl_easy_cleanup(curl); };
-
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
@@ -419,7 +414,7 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
     ctx.key = key;
     ctx.out = out_buf;
 
-    int status = RunSafe("get S3 object", [&]() {
+    int status = RunSafe("get S3 object", [&](CURL *curl) {
         ctx.len = 0;
 
         LocalArray<curl_slist, 32> headers;
@@ -468,11 +463,6 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     Size prev_len = out_obj->len;
     RG_DEFER_N(out_guard) { out_obj->RemoveFrom(prev_len); };
 
-    CURL *curl = InitConnection();
-    if (!curl)
-        return -1;
-    RG_DEFER { curl_easy_cleanup(curl); };
-
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
@@ -487,7 +477,7 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     ctx.out = out_obj;
     ctx.max_len = max_len;
 
-    int status = RunSafe("get S3 object", [&]() {
+    int status = RunSafe("get S3 object", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
         headers.len = PrepareHeaders("GET", path.ptr, nullptr, {}, {}, &temp_alloc, headers.data);
 
@@ -540,15 +530,10 @@ StatResult s3_Session::HasObject(Span<const char> key, int64_t *out_size)
 {
     BlockAllocator temp_alloc;
 
-    CURL *curl = InitConnection();
-    if (!curl)
-        return StatResult::OtherError;
-    RG_DEFER { curl_easy_cleanup(curl); };
-
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
-    int status = RunSafe("test S3 object", [&]() {
+    int status = RunSafe("test S3 object", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
         headers.len = PrepareHeaders("HEAD", path.ptr, nullptr, {}, {}, &temp_alloc, headers.data);
 
@@ -564,25 +549,19 @@ StatResult s3_Session::HasObject(Span<const char> key, int64_t *out_size)
                 return -CURLE_FAILED_INIT;
         }
 
-        return curl_Perform(curl, nullptr);
+        int ret = curl_Perform(curl, nullptr);
+
+        if (out_size && ret == 200) {
+            curl_off_t length = 0;
+            curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &length);
+            *out_size = (int64_t)length;
+        }
+
+        return ret;
     });
 
     switch (status) {
-        case 200: {
-            if (out_size) {
-                curl_off_t length;
-
-                if (curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &length)) {
-                    LogError("Failed to stat object '%1': missing size", key);
-                    return StatResult::OtherError;
-                }
-
-                *out_size = (int64_t)length;
-            }
-
-            return StatResult::Success;
-        } break;
-
+        case 200: return StatResult::Success;
         case 404: return StatResult::MissingPath;
         case 403: {
             LogError("Failed to stat object '%1': permission denied", key);
@@ -599,11 +578,6 @@ s3_PutResult s3_Session::PutObject(Span<const char> key, Span<const uint8_t> dat
 {
     BlockAllocator temp_alloc;
 
-    CURL *curl = InitConnection();
-    if (!curl)
-        return s3_PutResult::OtherError;
-    RG_DEFER { curl_easy_cleanup(curl); };
-
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
@@ -616,7 +590,7 @@ s3_PutResult s3_Session::PutObject(Span<const char> key, Span<const uint8_t> dat
         kvs.Append({ "If-None-Match", "*" });
     }
 
-    int status = RunSafe("upload S3 object", [&]() {
+    int status = RunSafe("upload S3 object", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
         headers.len = PrepareHeaders("PUT", path.ptr, nullptr, kvs, data, &temp_alloc, headers.data);
 
@@ -669,15 +643,10 @@ bool s3_Session::DeleteObject(Span<const char> key)
 {
     BlockAllocator temp_alloc;
 
-    CURL *curl = InitConnection();
-    if (!curl)
-        return false;
-    RG_DEFER { curl_easy_cleanup(curl); };
-
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
-    int status = RunSafe("delete S3 object", [&]() {
+    int status = RunSafe("delete S3 object", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
         headers.len = PrepareHeaders("DELETE", path.ptr, nullptr, {}, {}, &temp_alloc, headers.data);
 
@@ -718,13 +687,8 @@ bool s3_Session::OpenAccess()
     if (!DetermineRegion(url.ptr))
         return false;
 
-    CURL *curl = InitConnection();
-    if (!curl)
-        return false;
-    RG_DEFER { curl_easy_cleanup(curl); };
-
     // Test access
-    int status = RunSafe("authenticate to S3 bucket", [&]() {
+    int status = RunSafe("authenticate to S3 bucket", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
         headers.len = PrepareHeaders("HEAD", path.ptr, nullptr, {}, {}, &temp_alloc, headers.data);
 
@@ -785,10 +749,10 @@ bool s3_Session::DetermineRegion(const char *url)
         return true;
     }
 
-    CURL *curl = InitConnection();
+    CURL *curl = ReserveConnection();
     if (!curl)
         return false;
-    RG_DEFER { curl_easy_cleanup(curl); };
+    RG_DEFER { ReleaseConnection(curl); };
 
     // Set CURL options
     {
@@ -829,8 +793,18 @@ bool s3_Session::DetermineRegion(const char *url)
     return true;
 }
 
-CURL *s3_Session::InitConnection()
+CURL *s3_Session::ReserveConnection()
 {
+    // Reuse existing connection
+    {
+        std::lock_guard<std::mutex> lock(connections_mutex);
+
+        if (connections.len) {
+            CURL *curl = connections.ptr[--connections.len];
+            return curl;
+        }
+    }
+
     CURL *curl = curl_Init();
     if (!curl)
         return nullptr;
@@ -839,13 +813,29 @@ CURL *s3_Session::InitConnection()
     return curl;
 }
 
-int s3_Session::RunSafe(const char *action, FunctionRef<int(void)> func, bool quick)
+void s3_Session::ReleaseConnection(CURL *curl)
 {
+    if (!curl)
+        return;
+
+    curl_Reset(curl);
+
+    std::lock_guard<std::mutex> lock(connections_mutex);
+    connections.Append(curl);
+}
+
+int s3_Session::RunSafe(const char *action, FunctionRef<int(CURL *)> func, bool quick)
+{
+    CURL *curl = ReserveConnection();
+    if (!curl)
+        return false;
+    RG_DEFER { ReleaseConnection(curl); };
+
     int tries = quick ? 3 : 9;
     int status = 0;
 
     for (int i = 0; i < tries; i++) {
-        status = func();
+        status = func(curl);
 
         if (status == 200 || status == 404 || status == 412)
             return status;
