@@ -1825,6 +1825,27 @@ void PrintLn()
     StdOut->Write('\n');
 }
 
+void FmtUrlSafe::Format(FunctionRef<void(Span<const char>)> append) const
+{
+    static const char literals[] = "0123456789ABCDEF";
+
+    for (char c: str) {
+        if (IsAsciiAlphaOrDigit(c) || c == '-' || c == '.' || c == '_' || c == '~') {
+            append((char)c);
+        } else if (strchr(passthrough, c)) {
+            append((char)c);
+        } else {
+            char encoded[3];
+
+            encoded[0] = '%';
+            encoded[1] = literals[((uint8_t)c >> 4) & 0xF];
+            encoded[2] = literals[((uint8_t)c >> 0) & 0xF];
+
+            append(encoded);
+        }
+    }
+}
+
 FmtArg FmtVersion(int64_t version, int parts, int by)
 {
     RG_ASSERT(version >= 0);

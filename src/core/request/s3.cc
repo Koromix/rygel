@@ -301,22 +301,6 @@ void s3_Session::Close()
     config = {};
 }
 
-static void EncodeUrlSafe(Span<const char> str, const char *passthrough, HeapArray<char> *out_buf)
-{
-    for (char c: str) {
-        if (IsAsciiAlphaOrDigit(c) || c == '-' || c == '.' || c == '_' || c == '~') {
-            out_buf->Append((char)c);
-        } else if (passthrough && strchr(passthrough, c)) {
-            out_buf->Append((char)c);
-        } else {
-            Fmt(out_buf, "%%%1", FmtHex((uint8_t)c).Pad0(-2));
-        }
-    }
-
-    out_buf->Grow(1);
-    out_buf->ptr[out_buf->len] = 0;
-}
-
 bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *, int64_t)> func)
 {
     BlockAllocator temp_alloc;
@@ -340,9 +324,7 @@ bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *, 
         query.RemoveFrom(0);
         xml.RemoveFrom(0);
 
-        Fmt(&query, "list-type=2");
-        Fmt(&query, "&prefix="); EncodeUrlSafe(prefix, nullptr, &query);
-        Fmt(&query, "&start-after="); EncodeUrlSafe(after, nullptr, &query);
+        Fmt(&query, "list-type=2&prefix=%1&start-after=%2", FmtUrlSafe(prefix), FmtUrlSafe(after));
 
         int status = RunSafe("list S3 objects", [&]() {
             LocalArray<curl_slist, 32> headers;
@@ -1036,12 +1018,10 @@ Span<const char> s3_Session::MakeURL(Span<const char> key, Allocator *alloc, Spa
     Size path_offset = buf.len;
 
     if (config.path_mode) {
-        buf.Append('/');
-        EncodeUrlSafe(config.bucket, nullptr, &buf);
+        Fmt(&buf, "/%1", FmtUrlSafe(config.bucket));
     }
     if (key.len) {
-        buf.Append('/');
-        EncodeUrlSafe(key, "/", &buf);
+        Fmt(&buf, "/%1", FmtUrlSafe(key, "/"));
     }
     if (buf.len == path_offset) {
         Fmt(&buf, "/");

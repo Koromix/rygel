@@ -76,22 +76,6 @@ bool sms_Sender::Send(const char *to, const char *message)
     RG_UNREACHABLE();
 }
 
-static void EncodeUrlSafe(Span<const char> str, const char *passthrough, HeapArray<char> *out_buf)
-{
-    for (char c: str) {
-        if (IsAsciiAlphaOrDigit(c) || c == '-' || c == '.' || c == '_' || c == '~') {
-            out_buf->Append((char)c);
-        } else if (passthrough && strchr(passthrough, c)) {
-            out_buf->Append((char)c);
-        } else {
-            Fmt(out_buf, "%%%1", FmtHex((uint8_t)c).Pad0(-2));
-        }
-    }
-
-    out_buf->Grow(1);
-    out_buf->ptr[out_buf->len] = 0;
-}
-
 bool sms_Sender::SendTwilio(const char *to, const char *message)
 {
     BlockAllocator temp_alloc;
@@ -101,17 +85,8 @@ bool sms_Sender::SendTwilio(const char *to, const char *message)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
 
-    const char *url;
-    const char *body;
-    {
-        HeapArray<char> buf(&temp_alloc);
-
-        Fmt(&buf, "To=%1&From=%2&Body=", to, config.from);
-        EncodeUrlSafe(message, nullptr, &buf);
-
-        url = Fmt(&temp_alloc, "https://api.twilio.com/2010-04-01/Accounts/%1/Messages", config.authid).ptr;
-        body = buf.Leak().ptr;
-    }
+    const char *url = Fmt(&temp_alloc, "https://api.twilio.com/2010-04-01/Accounts/%1/Messages", config.authid).ptr;
+    const char *body = Fmt(&temp_alloc, "To=%1&From=%2&Body=%3", to, config.from, FmtUrlSafe(message)).ptr;
 
     // Set CURL options
     {

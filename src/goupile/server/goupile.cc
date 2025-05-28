@@ -583,22 +583,6 @@ static void HandleAdminRequest(http_IO *io)
     }
 }
 
-static void EncodeUrlSafe(Span<const char> str, const char *passthrough, HeapArray<char> *out_buf)
-{
-    for (char c: str) {
-        if (IsAsciiAlphaOrDigit(c) || c == '-' || c == '.' || c == '_' || c == '~') {
-            out_buf->Append((char)c);
-        } else if (passthrough && strchr(passthrough, c)) {
-            out_buf->Append((char)c);
-        } else {
-            Fmt(out_buf, "%%%1", FmtHex((uint8_t)c).Pad0(-2));
-        }
-    }
-
-    out_buf->Grow(1);
-    out_buf->ptr[out_buf->len] = 0;
-}
-
 static void HandleInstanceRequest(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
@@ -640,10 +624,7 @@ static void HandleInstanceRequest(http_IO *io)
 
         Fmt(&buf, "%1/?", request.path);
         for (const http_KeyValue &value: request.values) {
-            EncodeUrlSafe(value.key, nullptr, &buf);
-            buf.Append('=');
-            EncodeUrlSafe(value.value, nullptr, &buf);
-            buf.Append('&');
+            Fmt(&buf, "%1=%2&", FmtUrlSafe(value.key), FmtUrlSafe(value.value));
         }
         buf.ptr[buf.len - 1] = 0;
 

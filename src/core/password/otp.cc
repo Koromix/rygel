@@ -91,23 +91,6 @@ static Size DecodeBase32(Span<const char> b32, Span<uint8_t> out_buf)
     return len;
 }
 
-// XXX: Kind of duplicated in libnet (but changed to allow @). Clean this up!
-static void EncodeUrlSafe(const char *str, HeapArray<char> *out_buf)
-{
-    for (Size i = 0; str[i]; i++) {
-        int c = str[i];
-
-        if (IsAsciiAlphaOrDigit(c) || c == '-' || c == '.' || c == '_' || c == '~' || c == '@') {
-            out_buf->Append((char)c);
-        } else {
-            Fmt(out_buf, "%%%1", FmtHex((uint8_t)c).Pad0(-2));
-        }
-    }
-
-    out_buf->Grow(1);
-    out_buf->ptr[out_buf->len] = 0;
-}
-
 void pwd_GenerateSecret(Span<char> out_buf)
 {
     RG_ASSERT(out_buf.len > 0);
@@ -146,13 +129,13 @@ const char *pwd_GenerateHotpUrl(const char *label, const char *username, const c
     if (!pwd_CheckSecret(secret))
         return nullptr;
 
-    Fmt(&buf, "otpauth://totp/"); EncodeUrlSafe(label, &buf);
+    Fmt(&buf, "otpauth://totp/%1", FmtUrlSafe(label, "@"));
     if (username) {
-        Fmt(&buf, ":"); EncodeUrlSafe(username, &buf);
+        Fmt(&buf, ":%1", FmtUrlSafe(username, "@"));
     }
     Fmt(&buf, "?algorithm=%1&secret=%2&digits=%3", pwd_HotpAlgorithmNames[(int)algo], secret, digits);
     if (issuer) {
-        Fmt(&buf, "&issuer="); EncodeUrlSafe(issuer, &buf);
+        Fmt(&buf, "&issuer=%1", FmtUrlSafe(issuer, "@"));
     }
 
     const char *url = buf.TrimAndLeak(1).ptr;

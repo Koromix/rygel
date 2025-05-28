@@ -3937,8 +3937,6 @@ static inline FmtArg FmtFlags(uint64_t flags, Span<const struct OptionDesc> opti
     return arg;
 }
 
-FmtArg FmtVersion(int64_t version, int parts, int by);
-
 template <typename T>
 FmtArg FmtSpan(Span<T> arr, FmtType type, const char *sep = ", ")
 {
@@ -3957,6 +3955,21 @@ template <typename T, Size N>
 FmtArg FmtSpan(T (&arr)[N], FmtType type, const char *sep = ", ") { return FmtSpan(MakeSpan(arr), type, sep); }
 template <typename T, Size N>
 FmtArg FmtSpan(T (&arr)[N], const char *sep = ", ") { return FmtSpan(MakeSpan(arr), sep); }
+
+class FmtUrlSafe {
+    Span<const char> str;
+    const char *passthrough;
+
+public:
+    FmtUrlSafe(Span<const char> str, const char *passthrough = "")
+        : str(str), passthrough(passthrough) {}
+
+    void Format(FunctionRef<void(Span<const char>)> append) const;
+
+    operator FmtArg() const { return FmtCustom(*this); }
+};
+
+FmtArg FmtVersion(int64_t version, int parts, int by);
 
 enum class LogLevel {
     Debug,
