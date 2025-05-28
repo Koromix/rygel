@@ -14,7 +14,7 @@
 - Add command to migrate blobs from old Rekkord versions
 - Increase default Rekkord compression level
 - Skip fetch when restoring empty files
-- Fix silent early restore exit when using `--dry_run`
+- Fix silent early restore exit when using *--dry_run*
 - Fix reported hash when using `rekkord save --raw`
 - Remove unused command from `rekkord --help all` text
 
