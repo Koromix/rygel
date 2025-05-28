@@ -45,13 +45,14 @@ SPDX-License-Identifier: curl
 
 ## Requires to run
 
-  - perl (and a Unix-style shell)
-  - python (and a Unix-style shell, for SMB and TELNET tests)
-  - python-impacket (for SMB tests)
-  - diff (when a test fails, a diff is shown)
-  - stunnel (for HTTPS and FTPS tests)
-  - OpenSSH or SunSSH (for SCP and SFTP tests)
-  - nghttpx (for HTTP/2 and HTTP/3 tests)
+  - `perl` (and a Unix-style shell)
+  - `python` (and a Unix-style shell, for SMB and TELNET tests)
+  - `python-impacket` (for SMB tests)
+  - `diff` (when a test fails, a diff is shown)
+  - `stunnel` (for HTTPS and FTPS tests)
+  - `openssl` (the command line tool, for generating test server certificates)
+  - `openssh` or `SunSSH` (for SCP and SFTP tests)
+  - `nghttpx` (for HTTP/2 and HTTP/3 tests)
   - An available `en_US.UTF-8` locale
 
 ### Installation of impacket
@@ -73,9 +74,9 @@ SPDX-License-Identifier: curl
 ## Event-based
 
   If curl is built with `Debug` enabled (see below), then the `runtests.pl`
-  script offers a `-e` option that makes it perform *event-based*. Such tests
-  invokes the curl tool with `--test-event`, a debug-only option made for this
-  purpose.
+  script offers a `-e` option (or `--test-event`) that makes it perform
+  *event-based*. Such tests invokes the curl tool with `--test-event`, a
+  debug-only option made for this purpose.
 
   Performing event-based means that the curl tool uses the
   `curl_multi_socket_action()` API call to drive the transfer(s), instead of
@@ -86,12 +87,21 @@ SPDX-License-Identifier: curl
   To be able to use `--test-event` together with `--parallel`, curl requires
   *libuv* to be present and enabled in the build: `configure --enable-libuv`
 
+## Duplicated handles
+
+  If curl is built with `Debug` enabled (see below), then the `runtests.pl`
+  script offers a `--test-duphandle` option. When enabled, curl always
+  duplicates the easy handle and does its transfers using the new one instead
+  of the original. This is done entirely for testing purpose to verify that
+  everything works exactly the same when this is done; confirming that the
+  `curl_easy_duphandle()` function duplicates everything that it should.
+
 ### Port numbers used by test servers
 
-  All test servers run on "random" port numbers. All tests should be written
-  to use suitable variables instead of fixed port numbers so that test cases
-  continue to work independent on what port numbers the test servers actually
-  use.
+  All test servers run on "random" port numbers. All tests must be written to
+  use the suitable variables instead of fixed port numbers so that test cases
+  continue to work independently of what port numbers the test servers
+  actually use.
 
   See [`FILEFORMAT`](FILEFORMAT.md) for the port number variables.
 
@@ -108,10 +118,42 @@ SPDX-License-Identifier: curl
   The HTTP server supports listening on a Unix domain socket, the default
   location is 'http.sock'.
 
-  For HTTP/2 and HTTP/3 testing an installed `nghttpx` is used. HTTP/3
-  tests check if nghttpx supports the protocol. To override the nghttpx
-  used, set the environment variable `NGHTTPX`. The default can also be
-  changed by specifying `--with-test-nghttpx=<path>` as argument to `configure`.
+  For HTTP/2 and HTTP/3 testing an installed `nghttpx` is used. HTTP/3 tests
+  check if nghttpx supports the protocol. To override the nghttpx used, set
+  the environment variable `NGHTTPX`. The default can also be changed by
+  specifying `--with-test-nghttpx=<path>` as argument to `configure`.
+
+### DNS server
+
+  There is a test DNS server to allow tests to resolve hostnames to verify
+  those code paths. This server is started like all the other servers within
+  the `<servers>` section.
+
+  To make a curl build actually use the test DNS server requires a debug
+  build. When such a test runs, the environment variable `CURL_DNS_SERVER` is
+  set to identify the IP address and port number of the DNS server to use.
+
+  - curl built to use c-ares for resolving automatically asks that server for
+    host information
+
+  - curl built to use `getaddrinfo()` for resolving *and* is built with c-ares
+    1.26.0 or later, gets a special work-around. In such builds, when the
+    environment variable is set, curl instead invokes a getaddrinfo wrapper
+    that emulates the function and acknowledges the DNS server environment
+    variable. This way, the getaddrinfo-using code paths in curl are verified,
+    and yet the custom responses from the test DNS server are used.
+
+  curl that is built to support a custom DNS server in a test gets the
+  `override-dns` feature set.
+
+  When curl ask for HTTPS-RR, c-ares is always used and in debug builds such
+  asks respects the dns server environment variable as well.
+
+  The test DNS server only has a few limited responses. When asked for
+
+  - type `A` response, it returns the address `127.0.0.1` three times
+  - type `AAAA` response, it returns the address `::1` three times
+  - other types, it returns a blank response without answers
 
 ### Shell startup scripts
 
@@ -267,3 +309,15 @@ SPDX-License-Identifier: curl
   writing tests that verify behaviors of specific individual functions.
 
   The unit tests depend on curl being built with debug enabled.
+
+### test bundles
+
+  The `--enable-test-bundles` (autotools) and `-DCURL_TEST_BUNDLES=ON` (cmake)
+  build options allow to build tests bundled into single executables, one for
+  libtests, one for unit tests and one for servers.
+  The executables' first argument is the name of libtest, unit test or server
+  respectively.
+  In these executables, the build process automatically renames the entry point
+  to a unique symbol. `test` becomes `test_<tool>`, e.g. `test_lib1598` or
+  `test_unit1305`. For servers `main` becomes `main_sws` for the `sws` server,
+  and so on. Other common symbols may also be suffixed the same way.

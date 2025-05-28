@@ -55,9 +55,11 @@ To insert a sequence of bytes from a hex encoded string, use this syntax:
 
     %hex[ %XX-encoded data to decode ]hex%
 
+Other bytes within the brackets that not percent encoded are inserted as-is.
+
 For example, to insert the binary octets 0, 1 and 255 into the test file:
 
-    %hex[ %00%01%FF ]hex%
+    %hex[%00%01%FF]hex%
 
 ## Repeat content
 
@@ -160,9 +162,9 @@ Available substitute variables include:
 - `%NOLISTENPORT` - Port number where no service is listening
 - `%POP36PORT` - IPv6 port number of the POP3 server
 - `%POP3PORT` - Port number of the POP3 server
-- `%POSIX_PWD` - Current directory somewhat MinGW friendly
 - `%PROXYPORT` - Port number of the HTTP proxy
 - `%PWD` - Current directory
+- `%RESOLVE` - server/resolve command
 - `%RTSP6PORT` - IPv6 port number of the RTSP server
 - `%RTSPPORT` - Port number of the RTSP server
 - `%SMBPORT` - Port number of the SMB server
@@ -172,7 +174,8 @@ Available substitute variables include:
 - `%SOCKSPORT` - Port number of the SOCKS4/5 server
 - `%SOCKSUNIXPATH` - Path to the Unix socket of the SOCKS server
 - `%SRCDIR` - Full path to the source dir
-- `%SSH_PWD` - Current directory friendly for the SSH server
+- `%SCP_PWD` - Current directory friendly for the SSH server for the scp:// protocol
+- `%SFTP_PWD` - Current directory friendly for the SSH server for the sftp:// protocol
 - `%SSHPORT` - Port number of the SCP/SFTP server
 - `%SSHSRVMD5` - MD5 of SSH server's public key
 - `%SSHSRVSHA256` - SHA256 of SSH server's public key
@@ -225,9 +228,12 @@ Tests that have strict timing dependencies have the `timing-dependent` keyword.
 These are intended to eventually be treated specially on CI builds which are
 often run on overloaded machines with unpredictable timing.
 
+Tests using non-7-bit-ASCII characters must provide them with `%hex[]` or
+similar.
+
 ## `<reply>`
 
-### `<data [nocheck="yes"] [sendzero="yes"] [base64="yes"] [hex="yes"] [nonewline="yes"] [crlf="yes"]>`
+### `<data [nocheck="yes"] [sendzero="yes"] [hex="yes"] [nonewline="yes"] [crlf="yes"]>`
 
 data to be sent to the client on its request and later verified that it
 arrived safely. Set `nocheck="yes"` to prevent the test script from verifying
@@ -248,11 +254,6 @@ auth tests and similar.
 
 `sendzero=yes` means that the (FTP) server "sends" the data even if the size
 is zero bytes. Used to verify curl's behavior on zero bytes transfers.
-
-`base64=yes` means that the data provided in the test-file is a chunk of data
-encoded with base64. It is the only way a test case can contain binary
-data. (This attribute can in fact be used on any section, but it does not make
-much sense for other sections than "data").
 
 `hex=yes` means that the data is a sequence of hex pairs. It gets decoded and
 used as "raw" data.
@@ -401,6 +402,7 @@ What server(s) this test case requires/uses. Available servers:
 - `http-proxy`
 - `https`
 - `https-proxy`
+- `https-mtls`
 - `httptls+srp`
 - `httptls+srp-ipv6`
 - `http-unix`
@@ -434,7 +436,9 @@ feature is NOT required. If the feature is present then the test is SKIPPED.
 
 Features testable here are:
 
+- `--libcurl`
 - `alt-svc`
+- `aws` - built with **aws-sigv4** support
 - `AppleIDN`
 - `asyn-rr` - c-ares is used for additional records only
 - `bearssl`
@@ -478,6 +482,7 @@ Features testable here are:
 - `NTLM`
 - `NTLM_WB`
 - `OpenSSL`
+- `override-dns` - this build can use a "fake" DNS server
 - `parsedate`
 - `proxy`
 - `PSL`

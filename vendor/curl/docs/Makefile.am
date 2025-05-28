@@ -28,16 +28,16 @@ if BUILD_DOCS
 # if we disable man page building, ignore these
 MK_CA_DOCS = mk-ca-bundle.1
 CURLCONF_DOCS = curl-config.1
-man_MANS = curl-config.1
+man_MANS = curl-config.1 wcurl.1
 endif
 
-CURLPAGES = curl-config.md mk-ca-bundle.md
+CURLPAGES = curl-config.md mk-ca-bundle.md wcurl.md
 
 SUBDIRS = . cmdline-opts libcurl
 DIST_SUBDIRS = $(SUBDIRS) examples
 
 if BUILD_DOCS
-CLEANFILES = mk-ca-bundle.1 curl-config.1
+CLEANFILES = mk-ca-bundle.1 curl-config.1 wcurl.1
 endif
 
 INTERNALDOCS =                                  \
@@ -48,15 +48,20 @@ INTERNALDOCS =                                  \
  internals/CLIENT-WRITERS.md                    \
  internals/CODE_STYLE.md                        \
  internals/CONNECTION-FILTERS.md                \
+ internals/CURLX.md                             \
  internals/DYNBUF.md                            \
  internals/HASH.md                              \
  internals/LLIST.md                             \
+ internals/MID.md                               \
  internals/MQTT.md                              \
+ internals/MULTI-EV.md                          \
  internals/NEW-PROTOCOL.md                      \
+ internals/PORTING.md                           \
  internals/README.md                            \
  internals/SPLAY.md                             \
  internals/STRPARSE.md                          \
  internals/TLS-SESSIONS.md                      \
+ internals/UINT_SETS.md                         \
  internals/WEBSOCKET.md
 
 EXTRA_DIST =                                    \
@@ -129,6 +134,8 @@ all: $(MK_CA_DOCS) $(CURLCONF_DOCS)
 curl-config.1: curl-config.md
 
 mk-ca-bundle.1: mk-ca-bundle.md
+
+wcurl.1: wcurl.md
 
 distclean:
 	rm -f $(CLEANFILES)

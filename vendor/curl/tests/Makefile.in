@@ -111,8 +111,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@CROSSCOMPILING_FALSE@@USE_TEST_BUNDLES_TRUE@am__append_1 = -bundle
-@BUILD_DOCS_FALSE@@CROSSCOMPILING_FALSE@am__append_2 = !documentation
+@BUILD_DOCS_FALSE@@CROSSCOMPILING_FALSE@am__append_1 = !documentation
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/curl-amissl.m4 \
@@ -417,12 +416,14 @@ TESTSCRIPTS = \
  test1488.pl  \
  test1544.pl  \
  test1707.pl  \
+ test745.pl  \
  test971.pl
 
 EXTRA_DIST = \
  CMakeLists.txt     \
  FILEFORMAT.md      \
  README.md          \
+ allversions.pm     \
  appveyor.pm        \
  azure.pm           \
  devtest.pl         \
@@ -453,7 +454,6 @@ EXTRA_DIST = \
  smbserver.py       \
  sshhelp.pm         \
  sshserver.pl       \
- stunnel.pem        \
  testcurl.pl        \
  testutil.pm        \
  tftpserver.pl      \
@@ -468,14 +468,14 @@ EXTRA_DIST = \
 # we have two variables here to make sure DIST_SUBDIRS won't get 'unit'
 # added twice as then targets such as 'distclean' misbehave and try to
 # do things twice in that subdir at times (and thus fails).
-@BUILD_UNITTESTS_TRUE@BUILD_UNIT = unit
-@BUILD_UNITTESTS_FALSE@DIST_UNIT = unit
+@BUILD_UNITTESTS_TRUE@BUILD_UNIT = unit tunit
+@BUILD_UNITTESTS_FALSE@DIST_UNIT = unit tunit
 @BUILD_UNITTESTS_TRUE@DIST_UNIT = 
 SUBDIRS = certs data server libtest http $(BUILD_UNIT)
 DIST_SUBDIRS = $(SUBDIRS) $(DIST_UNIT)
 PERLFLAGS = -I$(srcdir)
 CLEANFILES = .http.pid .https.pid .ftp.pid .ftps.pid $(MANDISTPAGES)
-TEST_COMMON = $(am__append_1) $(am__append_2)
+TEST_COMMON = $(am__append_1)
 @CROSSCOMPILING_FALSE@TEST = srcdir=$(srcdir) $(PERL) $(PERLFLAGS) $(srcdir)/runtests.pl $(TEST_COMMON)
 @CROSSCOMPILING_TRUE@TEST = @echo "NOTICE: we can't run the tests when cross-compiling!"
 @CROSSCOMPILING_FALSE@PYTEST = pytest
@@ -491,7 +491,7 @@ TEST_COMMON = $(am__append_1) $(am__append_2)
 @CROSSCOMPILING_FALSE@TEST_NF = -a -p ~flaky ~timing-dependent
 
 # special CI target derived from nonflaky with CI-specific flags
-@CROSSCOMPILING_FALSE@TEST_CI = $(TEST_NF) -r -rm -j20
+@CROSSCOMPILING_FALSE@TEST_CI = $(TEST_NF) -r --retry=5 -j20
 CD2NROFF = $(top_srcdir)/scripts/cd2nroff $< >$@
 SUFFIXES = .1 .md
 all: all-recursive
@@ -822,6 +822,9 @@ curl:
 perlcheck:
 	@if ! test -x "$(PERL)"; then echo "No perl!"; exit 2; fi
 
+build-certs:
+	(cd certs && $(MAKE))
+
 test: perlcheck all
 	$(TEST) $(TFLAGS)
 
@@ -849,15 +852,16 @@ event-test: perlcheck all
 default-pytest: ci-pytest
 
 ci-pytest: all
-	srcdir=$(srcdir) $(PYTEST) -v $(srcdir)/http
+	srcdir=$(srcdir) $(PYTEST) -n auto -v $(srcdir)/http
 
 checksrc:
 	(cd libtest && $(MAKE) checksrc)
 	(cd unit && $(MAKE) checksrc)
+	(cd tunit && $(MAKE) checksrc)
 	(cd server && $(MAKE) checksrc)
 	(cd http && $(MAKE) checksrc)
 
-all-local: $(MANFILES)
+all-local: $(MANFILES) build-certs
 
 distclean:
 	rm -f $(MANFILES)

@@ -46,7 +46,7 @@ problems may have been fixed or changed somewhat since this was written.
  6. Authentication
  6.2 MIT Kerberos for Windows build
  6.3 NTLM in system context uses wrong name
- 6.5 NTLM does not support password with § character
+ 6.5 NTLM does not support password with Unicode 'SECTION SIGN' character
  6.6 libcurl can fail to try alternatives with --proxy-any
  6.7 Do not clear digest for single realm
  6.8 Heimdal memory leaks
@@ -66,6 +66,7 @@ problems may have been fixed or changed somewhat since this was written.
  9.3 Remote recursive folder creation with SFTP
  9.4 libssh blocking and infinite loop problem
  9.5 Cygwin: "WARNING: UNPROTECTED PRIVATE KEY FILE!"
+ 9.6 wolfssh: all tests fail
 
  10. Connection
  10.1 --interface with link-scoped IPv6 address
@@ -92,16 +93,12 @@ problems may have been fixed or changed somewhat since this was written.
 
  15. CMake
  15.1 cmake outputs: no version information available
- 15.2 support build with GnuTLS
- 15.3 unusable tool_hugehelp.c with MinGW
  15.6 uses -lpthread instead of Threads::Threads
  15.7 generated .pc file contains strange entries
  15.13 CMake build with MIT Kerberos does not work
 
  16. aws-sigv4
  16.2 aws-sigv4 does not handle multipart/form-data correctly
- 16.3 aws-sigv4 has problems with particular URLs
- 16.6 aws-sigv4 does not behave well with AWS VPC Lattice
 
  17. HTTP/2
  17.1 HTTP/2 prior knowledge over proxy
@@ -319,8 +316,10 @@ problems may have been fixed or changed somewhat since this was written.
  "system context" makes it use wrong(?) username - at least when compared to
  what winhttp does. See https://curl.se/bug/view.cgi?id=535
 
-6.5 NTLM does not support password with § character
+6.5 NTLM does not support password with Unicode 'SECTION SIGN' character
 
+ https://en.wikipedia.org/wiki/Section_sign
+ https://codepoints.net/U+00A7 SECTION SIGN
  https://github.com/curl/curl/issues/2120
 
 6.6 libcurl can fail to try alternatives with --proxy-any
@@ -436,6 +435,12 @@ problems may have been fixed or changed somewhat since this was written.
  Running SCP and SFTP tests on Cygwin makes this warning message appear.
 
  https://github.com/curl/curl/issues/11244
+
+9.6 wolfssh: all tests fail
+
+ Something fundamental stops them all from working properly.
+
+ https://github.com/curl/curl/issues/16794
 
 10. Connection
 
@@ -600,14 +605,6 @@ problems may have been fixed or changed somewhat since this was written.
 
  https://github.com/curl/curl/issues/13351
 
-16.3 aws-sigv4 has problems with particular URLs
-
- https://github.com/curl/curl/issues/13058
-
-16.6 aws-sigv4 does not behave well with AWS VPC Lattice
-
- https://github.com/curl/curl/issues/11007
-
 17. HTTP/2
 
 17.1 HTTP/2 prior knowledge over proxy
@@ -633,7 +630,7 @@ problems may have been fixed or changed somewhat since this was written.
 
 17.4 HTTP/2 + TLS spends a lot of time in recv
 
- It has been observered that by making the speed limit less accurate we could
+ It has been observed that by making the speed limit less accurate we could
  improve this performance. (by reverting
  https://github.com/curl/curl/commit/db5c9f4f9e0779b49624752b135281a0717b277b)
  Can we find a golden middle ground?
