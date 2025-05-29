@@ -216,7 +216,7 @@ public:
     bool InitDefault(Span<const uint8_t> mkey, Span<const rk_UserInfo> users);
 
 private:
-    bool PutCache(const char *key, int64_t size);
+    bool PutCache(const char *key, int64_t size, bool overwrite);
 
     StatResult TestFast(const char *path, int64_t *out_size);
 

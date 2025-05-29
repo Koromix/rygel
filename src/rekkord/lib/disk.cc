@@ -442,9 +442,17 @@ sq_Database *rk_Disk::OpenCache(bool build)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 8: {
+                    bool success = cache_db.RunMany(R"(
+                        ALTER TABLE objects ADD COLUMN checked INTEGER;
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 8);
+                static_assert(CacheVersion == 9);
             }
 
             if (!cache_db.SetUserVersion(CacheVersion))
@@ -509,7 +517,8 @@ bool rk_Disk::ResetCache(bool list)
                     return true;
 
                 if (!cache_db.Run(R"(INSERT INTO objects (key, size) VALUES (?1, ?2)
-                                     ON CONFLICT (key) DO UPDATE SET size = excluded.size)",
+                                     ON CONFLICT (key) DO UPDATE SET size = excluded.size,
+                                                                     checked = NULL)",
                                   path, size))
                     return false;
 
@@ -944,6 +953,7 @@ Size rk_Disk::WriteBlob(const char *path, int type, Span<const uint8_t> blob)
     // Write the damn thing
     {
         WriteResult ret = WriteRaw(path, raw, false);
+        bool overwrite = (ret == WriteResult::Success);
 
         switch (ret) {
             case WriteResult::Success:
@@ -951,10 +961,10 @@ Size rk_Disk::WriteBlob(const char *path, int type, Span<const uint8_t> blob)
 
             case WriteResult::OtherError: return -1;
         }
-    }
 
-    if (!PutCache(path, raw.len))
-        return -1;
+        if (!PutCache(path, raw.len, overwrite))
+            return -1;
+    }
 
     return raw.len;
 }
@@ -1233,13 +1243,14 @@ bool rk_Disk::InitDefault(Span<const uint8_t> mkey, Span<const rk_UserInfo> user
     return true;
 }
 
-bool rk_Disk::PutCache(const char *key, int64_t size)
+bool rk_Disk::PutCache(const char *key, int64_t size, bool overwrite)
 {
     if (!cache_db.IsValid())
         return true;
 
     bool success = cache_db.Run(R"(INSERT INTO objects (key, size) VALUES (?1, ?2)
-                                   ON CONFLICT DO NOTHING)", key, size);
+                                   ON CONFLICT DO UPDATE SET checked = IF(?3 = 1, NULL, checked))",
+                                key, size, 0 + overwrite);
     return success;
 }
 

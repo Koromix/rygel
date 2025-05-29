@@ -19,6 +19,8 @@
 
 namespace RG {
 
+static const int64_t CheckDelay = 7 * 86400000;
+
 int RunChangeCID(Span<const char *> arguments)
 {
     // Options
@@ -155,42 +157,7 @@ Options:
     return 0;
 }
 
-static inline bool IsHexadecimalString(Span<const char> str)
-{
-    for (char c: str) {
-        if (c >= '0' && c <= '9')
-            continue;
-        if (c >= 'A' && c <= 'F')
-            continue;
-        if (c >= 'a' && c <= 'f')
-            continue;
-
-        return false;
-    }
-
-    return true;
-}
-
-static inline char TypeToCatalog(int type)
-{
-    switch (type) {
-        case (int)BlobType::Chunk:
-        case (int)BlobType::File:
-        case (int)BlobType::Link: return rk_BlobCatalogNames[(int)rk_BlobCatalog::Raw];
-
-        case (int)BlobType::Directory1:
-        case (int)BlobType::Snapshot1:
-        case (int)BlobType::Snapshot2:
-        case (int)BlobType::Directory2:
-        case (int)BlobType::Snapshot3:
-        case (int)BlobType::Directory:
-        case (int)BlobType::Snapshot: return rk_BlobCatalogNames[(int)rk_BlobCatalog::Meta];
-    }
-
-    return 0;
-}
-
-int RunMigrateBlobs(Span<const char *> arguments)
+int RunCheckBlobs(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
@@ -199,7 +166,7 @@ int RunMigrateBlobs(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 migrate_blobs [-C filename] [option...]%!0
+R"(Usage: %!..+%1 check_blobs [-C filename] [option...]%!0
 
 Options:
 
@@ -244,78 +211,62 @@ Options:
         return 1;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
-    if (!disk->HasMode(rk_AccessMode::Config) || !disk->HasMode(rk_AccessMode::Read)) {
+    if (!disk->HasMode(rk_AccessMode::Read)) {
         LogError("Cannot migrate blobs with %1 role", disk->GetRole());
         return 1;
     }
     LogInfo();
 
-    LogInfo("Creating blob catalogs...");
-    for (char catalog: rk_BlobCatalogNames) {
-        char parent[128];
-        Fmt(parent, "blobs/%1", catalog);
+    sq_Database *db = disk->OpenCache(true);
+    if (!db)
+        return false;
 
-        if (!disk->CreateDirectory(parent))
-            return 1;
-
-        for (int i = 0; i < 256; i++) {
-            char name[128];
-            Fmt(name, "%1/%2", parent, FmtHex(i).Pad0(-2));
-
-            if (!disk->CreateDirectory(name))
-                return 1;
-        }
-    }
-
-    LogInfo("Moving blobs...");
+    bool valid;
     {
-        ProgressHandle progress("Moving");
+        int64_t now = GetUnixTime();
+
+        ProgressHandle progress("Checking");
         std::atomic_int64_t processed { 0 };
 
         Async async(disk->GetAsync());
 
         bool success = disk->ListRaw("blobs", [&](const char *path, int64_t) {
-            if (!StartsWith(path, "blobs/"))
-                return true;
+            path = DuplicateString(path, &temp_alloc).ptr;
 
-            Span<const char> name;
-            Span<const char> prefix = SplitStr(path + 6, '/', &name);
+            int64_t checked;
+            {
+                sq_Statement stmt;
+                if (!db->Prepare("SELECT checked FROM objects WHERE key = ?1", &stmt, path))
+                    return false;
 
-            // Already processed
-            if (prefix.len == 1 && prefix[0] >= 'A' && prefix[0] <= 'Z')
-                return true;
-
-            if (prefix.len != 2 || !IsHexadecimalString(prefix)) {
-                LogWarning("Skipping blob '%1'", path);
-                return true;
-            }
-            if (name.len != 64 || !IsHexadecimalString(name)) {
-                LogWarning("Skipping blob '%1'", path);
-                return true;
+                if (stmt.Step()) {
+                    checked = sqlite3_column_int64(stmt, 0);
+                } else if (stmt.IsValid()) {
+                    checked = 0;
+                } else {
+                    return false;
+                }
             }
 
-            char *src = DuplicateString(path, &temp_alloc).ptr;
-            char *dest = Fmt(&temp_alloc, "blobs/?/%1/%2", prefix, name).ptr;
+            if (now - checked < CheckDelay) {
+                int64_t done = processed.fetch_add(1, std::memory_order_relaxed) + 1;
+                progress.SetFmt("%1 checked", done);
 
-            async.Run([&, src, dest] {
+                return true;
+            }
+
+            async.Run([&, path] {
                 int type;
                 HeapArray<uint8_t> blob;
 
-                if (!disk->ReadBlob(src, &type, &blob))
+                if (!disk->ReadBlob(path, &type, &blob))
                     return false;
 
-                char catalog = TypeToCatalog(type);
-                if (!catalog)
-                    return false;
-                dest[6] = catalog;
-
-                if (!disk->WriteBlob(dest, type, blob))
-                    return false;
-                if (!disk->DeleteRaw(src))
+                if (!db->Run("UPDATE objects SET checked = ?2 WHERE key = ?1", path, now))
                     return false;
 
-                int64_t done = processed.fetch_add(1) + 1;
-                progress.SetFmt("%1 moved", done);
+                int64_t done = processed.fetch_add(1, std::memory_order_relaxed) + 1;
+                progress.SetFmt("%1 checked", done);
 
                 return true;
             });
@@ -325,26 +276,12 @@ Options:
         if (!success)
             return 1;
 
-        if (!async.Sync())
-            return 1;
+        valid = async.Sync();
     }
-
-    LogInfo("Deleting old blob directories...");
-    for (int i = 0; i < 256; i++) {
-        char name[128];
-        Fmt(name, "blobs/%1", FmtHex(i).Pad0(-2));
-
-        if (!disk->DeleteDirectory(name))
-            return 1;
-    }
-
-    LogInfo("Changing cache ID...");
-    if (!disk->ChangeCID())
-        return 1;
 
     LogInfo("Done");
 
-    return 0;
+    return !valid;
 }
 
 }
