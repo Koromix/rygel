@@ -313,8 +313,6 @@ sq_Database *rk_Disk::OpenCache(bool build)
         LogError("Cache schema is too recent (%1, expected %2)", version, CacheVersion);
         return nullptr;
     } else if (version < CacheVersion) {
-        LogInfo("Migrating cache database...");
-
         bool success = cache_db.Transaction([&]() {
             switch (version) {
                 case 0: {
