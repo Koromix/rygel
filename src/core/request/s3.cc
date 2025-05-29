@@ -32,6 +32,28 @@ namespace RG {
     #undef GetObject
 #endif
 
+static const char *GetS3Env(const char *name)
+{
+    RG_ASSERT(strlen(name) < 64);
+
+    static const char *const prefixes[] = {
+        "S3_",
+        "AWS_"
+    };
+
+    for (const char *prefix: prefixes) {
+        char key[128];
+        Fmt(key, "%1%2", prefix, name);
+
+        const char *str = GetEnv(key);
+
+        if (str)
+            return str;
+    }
+
+    return nullptr;
+}
+
 bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char>)
 {
     if (key == "Location") {
@@ -64,12 +86,12 @@ bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<c
 bool s3_Config::Complete()
 {
     if (!access_id) {
-        const char *str = GetEnv("AWS_ACCESS_KEY_ID");
+        const char *str = GetS3Env("ACCESS_KEY_ID");
         access_id = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
     }
 
     if (!access_key) {
-        const char *str = GetEnv("AWS_SECRET_ACCESS_KEY");
+        const char *str = GetS3Env("SECRET_ACCESS_KEY");
 
         if (str) {
             access_key = DuplicateString(str, &str_alloc).ptr;
@@ -108,11 +130,11 @@ bool s3_Config::Validate() const
     }
 
     if (!access_id) {
-        LogError("Missing AWS key ID (AWS_ACCESS_KEY_ID) variable");
+        LogError("Missing AWS key ID (S3_ACCESS_KEY_ID) variable");
         return false;
     }
     if (!access_key) {
-        LogError("Missing AWS secret key (AWS_SECRET_ACCESS_KEY) variable");
+        LogError("Missing AWS secret key (S3_SECRET_ACCESS_KEY) variable");
         return false;
     }
 
@@ -282,7 +304,7 @@ bool s3_Session::Open(const s3_Config &config)
     }
 
     if (!this->config.region) {
-        const char *region = GetEnv("AWS_REGION");
+        const char *region = GetS3Env("REGION");
         this->config.region = region ? DuplicateString(region, &this->config.str_alloc).ptr : nullptr;
     }
 
