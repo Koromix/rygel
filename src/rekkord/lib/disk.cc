@@ -46,6 +46,12 @@ rk_Disk::~rk_Disk()
     Lock();
 }
 
+bool rk_Disk::IsRepository()
+{
+    StatResult ret = TestRaw("rekkord");
+    return (ret == StatResult::Success);
+}
+
 bool rk_Disk::Authenticate(const char *username, const char *pwd)
 {
     RG_ASSERT(url);

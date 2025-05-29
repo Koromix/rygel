@@ -165,6 +165,8 @@ public:
 
     virtual ~rk_Disk();
 
+    bool IsRepository();
+
     virtual bool Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users) = 0;
 
     bool Authenticate(const char *username, const char *pwd);

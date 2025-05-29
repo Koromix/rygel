@@ -105,6 +105,11 @@ Options:
     LogInfo("Repository: %!..+%1%!0", disk->GetURL());
     LogInfo();
 
+    if (disk->IsRepository()) {
+        LogError("Repository is already initialized");
+        return 1;
+    }
+
     if (!key_filename) {
         key_filename = Prompt("Master key export file: ", "master.key", nullptr, &temp_alloc);
 
