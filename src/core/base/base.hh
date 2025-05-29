@@ -982,6 +982,8 @@ struct Span<const char> {
     Span() = default;
     constexpr Span(const char &ch) : ptr(&ch), len(1) {}
     constexpr Span(const char *ptr_, Size len_) : ptr(ptr_), len(len_) {}
+    template <Size N>
+    Span(const char (&arr)[N]) : ptr(arr), len(strnlen(arr, N)) {}
 #if defined(__clang__) || defined(_MSC_VER)
     constexpr Span(const char *const &str) : ptr(str), len(str ? (Size)__builtin_strlen(str) : 0) {}
 #else

@@ -1841,7 +1841,8 @@ void FmtUrlSafe::Format(FunctionRef<void(Span<const char>)> append) const
             encoded[1] = literals[((uint8_t)c >> 4) & 0xF];
             encoded[2] = literals[((uint8_t)c >> 0) & 0xF];
 
-            append(encoded);
+            Span<const char> buf = MakeSpan(encoded, 3);
+            append(buf);
         }
     }
 }
