@@ -21,14 +21,14 @@
 namespace RG {
 
 enum class SortOrder {
-    OID,
+    Object,
     Time,
     Channel,
     Size,
     Storage
 };
 static const char *const SortOrderNames[] = {
-    "OID",
+    "Object",
     "Time",
     "Channel",
     "Size",
@@ -190,7 +190,7 @@ Available sort orders: %!..+%4%!0)",
             std::function<int64_t(const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2)> func;
 
             switch (order) {
-                case SortOrder::OID: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.oid - s2.oid; }; } break;
+                case SortOrder::Object: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.oid - s2.oid; }; } break;
                 case SortOrder::Time: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.time - s2.time; }; } break;
                 case SortOrder::Channel: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return CmpStr(s1.channel, s2.channel); }; } break;
                 case SortOrder::Size: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.size - s2.size; }; } break;
@@ -252,7 +252,7 @@ Available sort orders: %!..+%4%!0)",
                 }
 
                 json.Key("channel"); json.String(snapshot.channel);
-                json.Key("oid"); json.String(oid);
+                json.Key("object"); json.String(oid);
                 json.Key("time"); json.String(time);
                 json.Key("size"); json.Int64(snapshot.size);
                 json.Key("storage"); json.Int64(snapshot.storage);
@@ -283,7 +283,7 @@ Available sort orders: %!..+%4%!0)",
                 }
 
                 element.append_attribute("Channel") = snapshot.channel;
-                element.append_attribute("OID") = oid;
+                element.append_attribute("Object") = oid;
                 element.append_attribute("Time") = time;
                 element.append_attribute("Size") = snapshot.size;
                 element.append_attribute("Storage") = snapshot.storage;
@@ -426,7 +426,7 @@ Available output formats: %!..+%3%!0)",
                 }
 
                 json.Key("channel"); json.String(channel.name);
-                json.Key("oid"); json.String(oid);
+                json.Key("object"); json.String(oid);
                 json.Key("time"); json.String(time);
                 json.Key("size"); json.Int64(channel.size);
                 json.Key("count"); json.Int64(channel.count);
@@ -456,7 +456,7 @@ Available output formats: %!..+%3%!0)",
                 }
 
                 element.append_attribute("Name") = channel.name;
-                element.append_attribute("OID") = oid;
+                element.append_attribute("Object") = oid;
                 element.append_attribute("Time") = time;
                 element.append_attribute("Size") = channel.size;
                 element.append_attribute("Count") = channel.count;
@@ -533,9 +533,9 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
         json->Key("name"); json->Null();
     }
     if (obj.readable) {
-        json->Key("oid"); json->String(Fmt(buf, "%1", obj.oid).ptr);
+        json->Key("object"); json->String(Fmt(buf, "%1", obj.oid).ptr);
     } else {
-        json->Key("oid"); json->Null();
+        json->Key("object"); json->Null();
     }
 
     if (obj.type == rk_ObjectType::Snapshot) {
@@ -580,9 +580,9 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
 
     element.append_attribute("Name") = obj.name ? obj.name : "";
     if (obj.readable) {
-        element.append_attribute("OID") = Fmt(buf, "%1", obj.oid).ptr;
+        element.append_attribute("Object") = Fmt(buf, "%1", obj.oid).ptr;
     } else {
-        element.append_attribute("OID") = "";
+        element.append_attribute("Object") = "";
     }
 
     if (obj.type == rk_ObjectType::Snapshot) {

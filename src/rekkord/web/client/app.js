@@ -921,7 +921,7 @@ async function runChannel(repo, channel) {
                         <thead>
                             <tr>
                                 ${UI.tableHeader('snapshots', 'time', 'Timestamp')}
-                                ${UI.tableHeader('snapshots', 'oid', 'OID')}
+                                ${UI.tableHeader('snapshots', 'oid', 'Object')}
                                 ${UI.tableHeader('snapshots', 'size', 'Size')}
                                 ${UI.tableHeader('snapshots', 'storage', 'Storage')}
                             </tr>
