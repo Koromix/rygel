@@ -282,7 +282,7 @@ Options:
             Span<const char> prefix = SplitStr(path + 6, '/', &name);
 
             // Already processed
-            if (prefix.len == 2 && prefix[0] >= 'A' && prefix[0] <= 'Z')
+            if (prefix.len == 1 && prefix[0] >= 'A' && prefix[0] <= 'Z')
                 return true;
 
             if (prefix.len != 2 || !IsHexadecimalString(prefix)) {
