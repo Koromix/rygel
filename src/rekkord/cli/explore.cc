@@ -291,7 +291,7 @@ Available sort orders: %!..+%4%!0)",
             }
 
             xml_PugiWriter writer(StdOut);
-            doc.save(writer, "    ");
+            doc.save(writer, "  ");
         } break;
     }
 
@@ -463,7 +463,7 @@ Available output formats: %!..+%3%!0)",
             }
 
             xml_PugiWriter writer(StdOut);
-            doc.save(writer, "    ");
+            doc.save(writer, "  ");
         } break;
     }
 
@@ -798,7 +798,7 @@ Available output formats: %!..+%3%!0)",
             }
 
             xml_PugiWriter writer(StdOut);
-            doc.save(writer, "    ");
+            doc.save(writer, "  ");
         } break;
     }
 

@@ -273,8 +273,19 @@ public:
     void Flush() { writer.Flush(); }
 };
 
-typedef json_WriterBase<rapidjson::Writer<json_StreamWriter>> json_Writer;
-typedef json_WriterBase<rapidjson::PrettyWriter<json_StreamWriter>> json_PrettyWriter;
+class json_Writer: public json_WriterBase<rapidjson::Writer<json_StreamWriter>> {
+public:
+    json_Writer(StreamWriter *st) : json_WriterBase(st) {}
+};
+
+class json_PrettyWriter: public json_WriterBase<rapidjson::PrettyWriter<json_StreamWriter>> {
+public:
+    json_PrettyWriter(StreamWriter *st, int indent = 2)
+        : json_WriterBase(st)
+    {
+        SetIndent(' ', indent);
+    }
+};
 
 // This is to be used only with small static strings (e.g. enum strings)
 Span<const char> json_ConvertToJsonName(Span<const char> name, Span<char> out_buf);
