@@ -15,7 +15,6 @@
 
 #include "src/core/base/base.hh"
 #include "rekkord.hh"
-#include "../lib/repository_priv.hh"
 
 namespace RG {
 
