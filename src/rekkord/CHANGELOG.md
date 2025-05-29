@@ -12,6 +12,7 @@
 
 - Separate metadata and content blobs
 - Add command to migrate blobs from old Rekkord versions
+- Reuse HTTPS connections to improve S3 performance
 - Increase default Rekkord compression level
 - Skip fetch when restoring empty files
 - Fix silent early restore exit when using *--dry_run*
