@@ -450,9 +450,29 @@ sq_Database *rk_Disk::OpenCache(bool build)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 9: {
+                    bool success = cache_db.RunMany(R"(
+                        CREATE TABLE blobs (
+                            key TEXT NOT NULL,
+                            size INTEGER NOT NULL,
+                            checked INTEGER,
+                            missing INTEGER CHECK (missing IN (0, 1)) NOT NULL
+                        );
+                        CREATE UNIQUE INDEX blobs_k ON blobs (key);
+
+                        INSERT INTO blobs (key, size, checked, missing)
+                            SELECT key, size, checked, 0 FROM objects;
+
+                        DROP INDEX objects_k;
+                        DROP TABLE objects;
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 9);
+                static_assert(CacheVersion == 10);
             }
 
             if (!cache_db.SetUserVersion(CacheVersion))
@@ -505,20 +525,21 @@ bool rk_Disk::ResetCache(bool list)
     }
 
     bool success = cache_db.Transaction([&]() {
-        if (!cache_db.Run("DELETE FROM objects"))
-            return false;
         if (!cache_db.Run("DELETE FROM stats"))
             return false;
 
+        if (!cache_db.Run("UPDATE blobs SET missing = 1"))
+            return false;
         if (list) {
             bool success = ListRaw("blobs", [&](const char *path, int64_t size) {
                 // We never write empty blobs, something went wrong
                 if (!size) [[unlikely]]
                     return true;
 
-                if (!cache_db.Run(R"(INSERT INTO objects (key, size) VALUES (?1, ?2)
+                if (!cache_db.Run(R"(INSERT INTO blobs (key, size, missing)
+                                     VALUES (?1, ?2, 0)
                                      ON CONFLICT (key) DO UPDATE SET size = excluded.size,
-                                                                     checked = NULL)",
+                                                                     missing = 0)",
                                   path, size))
                     return false;
 
@@ -527,6 +548,8 @@ bool rk_Disk::ResetCache(bool list)
             if (!success)
                 return false;
         }
+        if (!cache_db.Run("DELETE FROM blobs WHERE missing = 1"))
+            return false;
 
         Span<const uint8_t> cid = ids.cid;
 
@@ -1248,7 +1271,8 @@ bool rk_Disk::PutCache(const char *key, int64_t size, bool overwrite)
     if (!cache_db.IsValid())
         return true;
 
-    bool success = cache_db.Run(R"(INSERT INTO objects (key, size) VALUES (?1, ?2)
+    bool success = cache_db.Run(R"(INSERT INTO blobs (key, size, missing)
+                                   VALUES (?1, ?2, 0)
                                    ON CONFLICT DO UPDATE SET checked = IF(?3 = 1, NULL, checked))",
                                 key, size, 0 + overwrite);
     return success;
@@ -1262,7 +1286,7 @@ StatResult rk_Disk::TestFast(const char *path, int64_t *out_size)
     int64_t known_size = -1;
     {
         sq_Statement stmt;
-        if (!cache_db.Prepare("SELECT size FROM objects WHERE key = ?1", &stmt))
+        if (!cache_db.Prepare("SELECT size FROM blobs WHERE key = ?1", &stmt))
             return StatResult::OtherError;
         sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 

@@ -217,11 +217,15 @@ Options:
     }
     LogInfo();
 
-    sq_Database *db = disk->OpenCache(true);
+    LogInfo("Updating cache...");
+    sq_Database *db = disk->OpenCache(false);
     if (!db)
         return false;
+    if (!disk->ResetCache(true))
+        return false;
 
-    bool valid;
+    LogInfo("Checking blobs...");
+    bool success;
     {
         int64_t now = GetUnixTime();
 
@@ -230,30 +234,13 @@ Options:
 
         Async async(disk->GetAsync());
 
-        bool success = disk->ListRaw("blobs", [&](const char *path, int64_t) {
-            path = DuplicateString(path, &temp_alloc).ptr;
+        sq_Statement stmt;
+        if (!db->Prepare("SELECT key FROM blobs WHERE checked IS NULL OR checked < ?1",
+                         &stmt, now - CheckDelay))
+            return false;
 
-            int64_t checked;
-            {
-                sq_Statement stmt;
-                if (!db->Prepare("SELECT checked FROM objects WHERE key = ?1", &stmt, path))
-                    return false;
-
-                if (stmt.Step()) {
-                    checked = sqlite3_column_int64(stmt, 0);
-                } else if (stmt.IsValid()) {
-                    checked = 0;
-                } else {
-                    return false;
-                }
-            }
-
-            if (now - checked < CheckDelay) {
-                int64_t done = processed.fetch_add(1, std::memory_order_relaxed) + 1;
-                progress.SetFmt("%1 checked", done);
-
-                return true;
-            }
+        while (stmt.Step()) {
+            const char *path = DuplicateString((const char *)sqlite3_column_text(stmt, 0), &temp_alloc).ptr;
 
             async.Run([&, path] {
                 int type;
@@ -272,16 +259,16 @@ Options:
             });
 
             return true;
-        });
-        if (!success)
+        }
+        if (!stmt.IsValid())
             return 1;
 
-        valid = async.Sync();
+        success = async.Sync();
     }
 
     LogInfo("Done");
 
-    return !valid;
+    return !success;
 }
 
 }
