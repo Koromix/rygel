@@ -6,6 +6,17 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.63
+
+*Released on 2025-05-29*
+
+- Fix stack overflow in S3 code
+- Accept *S3_\** environment variables for S3 configuration
+- List *OID* attributes as *Object*
+- Add `rekkord check_blobs` to make sure all blobs are readable
+- Reduce indentation width in XML and JSON outputs
+- Remove `rekkord migrate_blobs` command
+
 ### Rekkord 0.62
 
 *Released on 2025-05-28*
