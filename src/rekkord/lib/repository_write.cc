@@ -783,7 +783,7 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
             }
 
             if (IsAsciiAlpha(name.ptr[0]) && name.ptr[1] == ':') {
-                name[1] = LowerAscii(name[0]);
+                name[1] = UpperAscii(name[0]);
                 name[0] = '/';
 
                 changed = true;
