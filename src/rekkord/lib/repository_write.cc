@@ -793,7 +793,7 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
             name = name.Take(1, name.len - 1);
 
             if (changed) {
-                LogWarning("Storing '%1' as '%2'", filename, entry->GetName());
+                LogWarning("Storing '%1' as '%2'", filename, name);
             }
         }
 
