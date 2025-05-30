@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 11;
+const int DatabaseVersion = 12;
 
 bool MigrateDatabase(sq_Database *db)
 {
@@ -292,9 +292,18 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+                } [[fallthrough]];
+
+            case 11: {
+                bool success = db->RunMany(R"(
+                    UPDATE variables SET key = 'S3_ACCESS_KEY_ID' WHERE key = 'AWS_ACCESS_KEY_ID';
+                    UPDATE variables SET key = 'S3_SECRET_ACCESS_KEY' WHERE key = 'AWS_SECRET_ACCESS_KEY';
+                )");
+                if (!success)
+                    return false;
                 } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 11);
+            static_assert(DatabaseVersion == 12);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

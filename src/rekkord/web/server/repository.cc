@@ -82,8 +82,8 @@ static bool FillConfig(const char *url, const char *user, const char *password,
         case rk_DiskType::Local: { RG_UNREACHABLE(); } break;
 
         case rk_DiskType::S3: {
-            repo.s3.access_id = variables.FindValue("AWS_ACCESS_KEY_ID", nullptr);
-            repo.s3.access_key = variables.FindValue("AWS_SECRET_ACCESS_KEY", nullptr);
+            repo.s3.access_id = variables.FindValue("S3_ACCESS_KEY_ID", nullptr);
+            repo.s3.access_key = variables.FindValue("S3_SECRET_ACCESS_KEY", nullptr);
         } break;
 
         case rk_DiskType::SFTP: {

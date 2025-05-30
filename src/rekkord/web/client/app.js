@@ -740,11 +740,11 @@ async function configureRepository(repo) {
                         <div class="section">S3</div>
                         <label>
                             <span>Key ID</span>
-                            <input name="AWS_ACCESS_KEY_ID" required value=${repo.variables.AWS_ACCESS_KEY_ID ?? ''}>
+                            <input name="S3_ACCESS_KEY_ID" required value=${repo.variables.S3_ACCESS_KEY_ID ?? ''}>
                         </label>
                         <label>
                             <span>Secret access key</span>
-                            <input name="AWS_SECRET_ACCESS_KEY" required value=${repo.variables.AWS_SECRET_ACCESS_KEY ?? ''}>
+                            <input name="S3_SECRET_ACCESS_KEY" required value=${repo.variables.S3_SECRET_ACCESS_KEY ?? ''}>
                         </label>
                     ` : ''}
                     ${type == 'ssh' ? html`
