@@ -752,7 +752,7 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
 
         // Open file
         if (fd < 0) {
-            fd = OpenFile(filename, (int)OpenFlag::Read);
+            fd = OpenFile(filename, (int)OpenFlag::Read | (int)OpenFlag::Directory);
 
             if (fd < 0)
                 return false;
