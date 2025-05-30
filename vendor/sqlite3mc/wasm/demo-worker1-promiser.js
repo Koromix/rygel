@@ -109,6 +109,7 @@ delete globalThis.sqlite3Worker1Promiser;
             "insert into t(a,b) values(1,2),(3,4),(5,6)"
            ].join(';'),
       resultRows: [], columnNames: [],
+      lastInsertRowId: true,
       countChanges: sqConfig.bigIntEnabled ? 64 : true
     }, function(ev){
       ev = ev.result;
@@ -116,7 +117,9 @@ delete globalThis.sqlite3Worker1Promiser;
         .assert(0===ev.columnNames.length)
         .assert(sqConfig.bigIntEnabled
                 ? (3n===ev.changeCount)
-                : (3===ev.changeCount));
+                : (3===ev.changeCount))
+        .assert('bigint'===typeof ev.lastInsertRowId)
+        .assert(ev.lastInsertRowId>=3);
     });
 
     await wtest('exec',{
