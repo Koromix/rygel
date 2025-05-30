@@ -215,6 +215,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                         PackExtended(filename, xattrs, &extended);
                     }
                 }
+#else
+                (void)follow_symlinks;
 #endif
 
                 // Create raw entry
