@@ -6,6 +6,15 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.64
+
+*Released on 2025-06-01*
+
+- Commit local cache periodically to increase performance
+- Fix error when using `rekkord save` on Windows
+- Fix empty warning about snapshot entry rename
+- Uppercase Windows drive letters in rekkord snapshots
+
 ### Rekkord 0.63
 
 *Released on 2025-05-29*
