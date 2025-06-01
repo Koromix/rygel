@@ -274,6 +274,8 @@ sq_Database *rk_Disk::OpenCache(bool build)
 
     CloseCache();
 
+    RG_DEFER_N(err_guard) { CloseCache(); };
+
     uint8_t cache_id[32] = {};
     {
         // Combine repository URL and RID to create a secure ID
@@ -515,7 +517,7 @@ sq_Database *rk_Disk::OpenCache(bool build)
         return nullptr;
     cache_commit = GetMonotonicTime();
 
-    RG_ASSERT(cache_db.IsValid());
+    err_guard.Disable();
     return &cache_db;
 }
 
