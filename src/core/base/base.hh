@@ -4443,10 +4443,11 @@ enum class OpenFlag {
     Append = 1 << 2,
 
     Keep = 1 << 3,
-    Directory = 1 << 4,
-    Exists = 1 << 5,
-    Exclusive = 1 << 6,
-    NoFollow = 1 << 7
+    Exists = 1 << 4,
+    Exclusive = 1 << 5,
+
+    NoFollow = 1 << 6,
+    Directory = 1 << 7
 };
 
 enum class OpenResult {
