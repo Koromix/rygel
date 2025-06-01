@@ -151,7 +151,9 @@ protected:
     rk_KeySet *keyset = nullptr;
 
     sq_Database cache_db;
+    std::atomic_int64_t cache_commit { 0 };
     std::mutex cache_mutex;
+
     int compression_level = 0;
 
     Async tasks;
@@ -217,6 +219,8 @@ public:
 
 private:
     bool PutCache(const char *key, int64_t size, bool overwrite);
+    bool CommitCache(bool force);
+    void CloseCache();
 
     StatResult TestFast(const char *path, int64_t *out_size);
 

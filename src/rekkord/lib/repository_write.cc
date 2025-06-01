@@ -490,43 +490,40 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
     // Update cached stats
     async.Run([&]() {
-        bool success = db->Transaction([&]() {
-            for (const PendingDirectory &pending: pending_directories) {
-                if (pending.failed)
-                    continue;
+        for (const PendingDirectory &pending: pending_directories) {
+            if (pending.failed)
+                continue;
 
-                Size limit = pending.blob.len - RG_SIZE(int64_t);
-                Size idx = 0;
+            Size limit = pending.blob.len - RG_SIZE(int64_t);
+            Size idx = 0;
 
-                for (Size offset = RG_SIZE(DirectoryHeader); offset < limit;) {
-                    RawEntry *entry = (RawEntry *)(pending.blob.ptr + offset);
-                    int64_t stored = pending.stored[idx++];
+            for (Size offset = RG_SIZE(DirectoryHeader); offset < limit;) {
+                RawEntry *entry = (RawEntry *)(pending.blob.ptr + offset);
+                int64_t stored = pending.stored[idx++];
 
-                    const char *filename = Fmt(&temp_alloc, "%1%/%2", pending.dirname, entry->GetName()).ptr;
-                    int flags = LittleEndian(entry->flags);
+                const char *filename = Fmt(&temp_alloc, "%1%/%2", pending.dirname, entry->GetName()).ptr;
+                int flags = LittleEndian(entry->flags);
 
-                    if ((flags & (int)RawEntry::Flags::Readable) &&
-                            entry->kind == (int16_t)RawEntry::Kind::File) {
-                        if (!db->Run(R"(INSERT INTO stats (path, mtime, ctime, mode, size, hash, stored)
-                                        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-                                        ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
-                                                                         ctime = excluded.ctime,
-                                                                         mode = excluded.mode,
-                                                                         size = excluded.size,
-                                                                         hash = excluded.hash,
-                                                                         stored = excluded.stored)",
-                                     filename, entry->mtime, entry->ctime, entry->mode, entry->size,
-                                     MakeSpan((const uint8_t *)&entry->hash, RG_SIZE(entry->hash)), stored))
-                            return false;
-                    }
-
-                    offset += entry->GetSize();
+                if ((flags & (int)RawEntry::Flags::Readable) &&
+                        entry->kind == (int16_t)RawEntry::Kind::File) {
+                    if (!db->Run(R"(INSERT INTO stats (path, mtime, ctime, mode, size, hash, stored)
+                                    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                                    ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
+                                                                     ctime = excluded.ctime,
+                                                                     mode = excluded.mode,
+                                                                     size = excluded.size,
+                                                                     hash = excluded.hash,
+                                                                     stored = excluded.stored)",
+                                 filename, entry->mtime, entry->ctime, entry->mode, entry->size,
+                                 MakeSpan((const uint8_t *)&entry->hash, RG_SIZE(entry->hash)), stored))
+                        return false;
                 }
-            }
 
-            return true;
-        });
-        return success;
+                offset += entry->GetSize();
+            }
+        }
+
+        return true;
     });
 
     if (!async.Sync())

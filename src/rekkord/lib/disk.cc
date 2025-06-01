@@ -199,7 +199,7 @@ void rk_Disk::Lock()
     keyset = nullptr;
     str_alloc.ReleaseAll();
 
-    cache_db.Close();
+    CloseCache();
 }
 
 static bool CheckUserName(Span<const char> username)
@@ -262,8 +262,8 @@ bool rk_Disk::ChangeCID()
             return false;
     }
 
+    CloseCache();
     MemCpy(ids.cid, new_ids.cid, RG_SIZE(new_ids.cid));
-    cache_db.Close();
 
     return true;
 }
@@ -272,7 +272,7 @@ sq_Database *rk_Disk::OpenCache(bool build)
 {
     RG_ASSERT(keyset);
 
-    cache_db.Close();
+    CloseCache();
 
     uint8_t cache_id[32] = {};
     {
@@ -511,6 +511,10 @@ sq_Database *rk_Disk::OpenCache(bool build)
             return nullptr;
     }
 
+    if (!cache_db.Run("BEGIN IMMEDIATE TRANSACTION"))
+        return nullptr;
+    cache_commit = GetMonotonicTime();
+
     RG_ASSERT(cache_db.IsValid());
     return &cache_db;
 }
@@ -522,42 +526,41 @@ bool rk_Disk::ResetCache(bool list)
         return false;
     }
 
-    bool success = cache_db.Transaction([&]() {
-        if (!cache_db.Run("DELETE FROM stats"))
-            return false;
+    if (!cache_db.Run("DELETE FROM stats"))
+        return false;
 
-        if (!cache_db.Run("UPDATE blobs SET missing = 1"))
-            return false;
-        if (list) {
-            bool success = ListRaw("blobs", [&](const char *path, int64_t size) {
-                // We never write empty blobs, something went wrong
-                if (!size) [[unlikely]]
-                    return true;
-
-                if (!cache_db.Run(R"(INSERT INTO blobs (key, size, missing)
-                                     VALUES (?1, ?2, 0)
-                                     ON CONFLICT (key) DO UPDATE SET size = excluded.size,
-                                                                     missing = 0)",
-                                  path, size))
-                    return false;
-
+    if (!cache_db.Run("UPDATE blobs SET missing = 1"))
+        return false;
+    if (list) {
+        bool success = ListRaw("blobs", [&](const char *path, int64_t size) {
+            // We never write empty blobs, something went wrong
+            if (!size) [[unlikely]]
                 return true;
-            });
-            if (!success)
+
+            if (!cache_db.Run(R"(INSERT INTO blobs (key, size, missing)
+                                 VALUES (?1, ?2, 0)
+                                 ON CONFLICT (key) DO UPDATE SET size = excluded.size,
+                                                                 missing = 0)",
+                              path, size))
                 return false;
-        }
-        if (!cache_db.Run("DELETE FROM blobs WHERE missing = 1"))
+
+            return true;
+        });
+        if (!success)
             return false;
+    }
+    if (!cache_db.Run("DELETE FROM blobs WHERE missing = 1"))
+        return false;
 
-        Span<const uint8_t> cid = ids.cid;
+    Span<const uint8_t> cid = ids.cid;
 
-        if (!cache_db.Run("UPDATE meta SET cid = ?1", cid))
-            return false;
+    if (!cache_db.Run("UPDATE meta SET cid = ?1", cid))
+        return false;
 
-        return true;
-    });
+    if (!CommitCache(true))
+        return false;
 
-    return success;
+    return true;
 }
 
 bool rk_Disk::InitUser(const char *username, rk_UserRole role, const char *pwd, bool force)
@@ -1273,7 +1276,53 @@ bool rk_Disk::PutCache(const char *key, int64_t size, bool overwrite)
                                    VALUES (?1, ?2, 0)
                                    ON CONFLICT DO UPDATE SET checked = IF(?3 = 1, NULL, checked))",
                                 key, size, 0 + overwrite);
+    if (!success)
+        return false;
+
+    CommitCache(false);
+
     return success;
+}
+
+bool rk_Disk::CommitCache(bool force)
+{
+    int64_t commit = cache_commit.load(std::memory_order_relaxed);
+
+    if (!cache_db.IsValid())
+        return true;
+    if (!commit)
+        return true;
+
+    int64_t now = GetMonotonicTime();
+
+    if (!force) {
+        int64_t delay = now - commit;
+        force |= (delay >= CacheDelay);
+    }
+
+    if (force) {
+        std::unique_lock lock(cache_mutex, std::try_to_lock);
+
+        if (lock.owns_lock()) {
+            if (!cache_db.RunMany("COMMIT; BEGIN IMMEDIATE TRANSACTION;"))
+                return false;
+
+            cache_commit = now;
+        }
+    }
+
+    return true;
+}
+
+void rk_Disk::CloseCache()
+{
+    if (!cache_db.IsValid())
+        return;
+
+    CommitCache(true);
+
+    cache_db.Close();
+    cache_commit = 0;
 }
 
 StatResult rk_Disk::TestFast(const char *path, int64_t *out_size)
