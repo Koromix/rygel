@@ -26,6 +26,8 @@ html {
 
     --top_height: 80px;
     --small_height: 70px;
+
+    --button_radius: 10px;
 }
 
 body { font-size: 14px; }

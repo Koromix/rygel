@@ -42,6 +42,15 @@ span[title] { border-bottom: 1px dotted #383838; }
 #logo { transition: filter 0.4s ease; }
 #top.border #logo { filter: saturate(0%) brightness(0); }
 
+.actions {
+    flex-direction: row;
+    justify-content: center;
+    align-items: start;
+    flex-wrap: wrap;
+
+    & > :is(a, button) { width: 30%; }
+}
+
 .schema {
     display: block;
     margin: 2em auto;

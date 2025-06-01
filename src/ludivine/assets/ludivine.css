@@ -28,6 +28,8 @@ html {
     --top_background: var(--tab_color);
     --small_height: 70px;
     --footer_background: var(--tab_color);
+
+    --button_radius: 10px;
 }
 
 body { font-size: 15px; }
@@ -43,16 +45,14 @@ h1 {
 
 span[title] { border-bottom: 1px dotted #383838; }
 
-button {
-    border-radius: 20px;
-    font-weight: bold;
-}
+button { font-weight: bold; }
 
 .reference {
     font-weight: bold;
     color: var(--top_color);
 }
 
+.actions > a { font-weight: bold; }
 p + .actions { margin-top: 2em; }
 
 .avatar {

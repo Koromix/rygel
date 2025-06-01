@@ -65,11 +65,9 @@ main.dialog {
 }
 
 .actions {
-    flex-direction: column;
     gap: 0;
     align-items: center;
 
-    & > button { min-width: 13em; }
     & > button + * { margin-top: 10px; }
 
     & > a {

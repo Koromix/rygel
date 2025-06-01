@@ -31,6 +31,8 @@ html {
     --top_background: white;
     --footer_background: #f6f6f9;
 
+    --button_radius: 0;
+
     height: 100%;
     scroll-padding-top: calc(var(--top_height) + 10px);
 }
@@ -303,7 +305,7 @@ button {
     padding: 0.35em 1em 0.45em 1em;
     background: var(--button_color);
     border: none;
-    border-radius: 10px;
+    border-radius: var(--button_radius);
     color: white;
     cursor: pointer;
     white-space: nowrap;
@@ -332,29 +334,30 @@ button > img:only-child {
     display: flex;
     margin-top: 1em;
     gap: 20px;
-    justify-content: center;
-    align-items: start;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: center;
+
+    & > :is(a, button) {
+        display: block;
+        min-width: 15em;
+        max-width: 60em;
+        background: var(--button_color);
+        border-radius: var(--button_radius);
+        color: white;
+        padding: 0.35em 2em 0.45em 2em;
+        text-decoration: none;
+        text-align: center;
+    }
+    & > :is(a, button):hover {
+        background: color-mix(in srgb, var(--button_color) 90%, black);
+        color: white;
+    }
+    & > :is(a, button).disabled {
+        pointer-events: none;
+        filter: saturate(10%) brightness(50%);
+    }
 }
 .actions + * { margin-top: 1em; }
-.actions > :is(a, button) {
-    display: block;
-    width: 30%;
-    min-width: 10em;
-    background: var(--button_color);
-    color: white;
-    padding: 0.35em 2em 0.45em 2em;
-    text-decoration: none;
-    text-align: center;
-}
-.actions > :is(a, button):hover {
-    background: color-mix(in srgb, var(--button_color) 90%, black);
-    color: white;
-}
-.actions > :is(a, button).disabled {
-    pointer-events: none;
-    filter: saturate(10%) brightness(50%);
-}
 
 span.warning { color: var(--color, red); }
 span.warning:before {
