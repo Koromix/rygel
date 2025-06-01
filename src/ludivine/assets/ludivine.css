@@ -29,7 +29,7 @@ html {
     --small_height: 70px;
     --footer_background: var(--tab_color);
 
-    --button_radius: 10px;
+    --button_radius: 30px;
 }
 
 body { font-size: 15px; }
