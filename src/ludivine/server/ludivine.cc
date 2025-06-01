@@ -18,6 +18,7 @@
 #include "config.hh"
 #include "database.hh"
 #include "ludivine.hh"
+#include "mail.hh"
 #include "src/core/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #if !defined(_WIN32)
@@ -615,6 +616,9 @@ Options:
                 status = 1;
                 run = false;
             }
+
+            LogDebug("Send mails");
+            SendMails();
         }
     }
 

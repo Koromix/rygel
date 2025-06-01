@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 13;
+const int DatabaseVersion = 14;
 
 bool MigrateDatabase(sq_Database *db, const char *vault_directory)
 {
@@ -331,9 +331,23 @@ bool MigrateDatabase(sq_Database *db, const char *vault_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 13: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE mails (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        address TEXT NOT NULL,
+                        mail TEXT NOT NULL,
+                        sent INTEGER NOT NULL,
+                        errors INTEGER NOT NULL
+                    );
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 13);
+            static_assert(DatabaseVersion == 14);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

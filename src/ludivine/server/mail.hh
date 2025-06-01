@@ -16,17 +16,15 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "src/core/http/http.hh"
 
 namespace RG {
 
-void HandleRegister(http_IO *io);
-void HandleLogin(http_IO *io);
+struct smtp_Config;
+struct smtp_MailContent;
 
-void HandleDownload(http_IO *io);
-void HandleUpload(http_IO *io);
+bool InitSMTP(const smtp_Config &config);
 
-void HandleRemind(http_IO *io);
-void HandlePublish(http_IO *io);
+bool PostMail(const char *to, const smtp_MailContent &content);
+bool SendMails();
 
 }

@@ -15,13 +15,11 @@
 
 #include "src/core/base/base.hh"
 #include "src/core/http/http.hh"
-#include "src/core/request/smtp.hh"
 #include "src/core/wrap/qrcode.hh"
 #include "ludivine.hh"
+#include "mail.hh"
 
 namespace RG {
-
-static smtp_Sender smtp;
 
 static const smtp_MailContent NewUser = {
     "Connexion à {{ TITLE }} !",
@@ -140,11 +138,6 @@ static bool IsUUIDValid(Span<const char> uuid)
     return true;
 }
 
-bool InitSMTP(const smtp_Config &config)
-{
-    return smtp.Init(config);
-}
-
 static Span<const char> PatchText(Span<const char> text, const char *mail, const char *url, Allocator *alloc)
 {
     Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
@@ -202,7 +195,7 @@ static bool SendNewMail(const char *to, const char *uid, Span<const uint8_t> tke
 
     content.files = files;
 
-    return smtp.Send(to, content);
+    return PostMail(to, content);
 }
 
 static bool SendExistingMail(const char *to, Allocator *alloc)
@@ -213,7 +206,7 @@ static bool SendExistingMail(const char *to, Allocator *alloc)
     content.html = PatchText(ExistingUser.html, to, nullptr, alloc).ptr;
     content.text = PatchText(ExistingUser.text, to, nullptr, alloc).ptr;
 
-    return smtp.Send(to, content);
+    return PostMail(to, content);
 }
 
 void HandleRegister(http_IO *io)
