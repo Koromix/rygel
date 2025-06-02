@@ -176,11 +176,27 @@ static inline bool IsRawBuffer(Napi::Value value)
 static inline Span<uint8_t> GetRawBuffer(Napi::Value value)
 {
     if (value.IsTypedArray()) {
-        Napi::TypedArray array = value.As<Napi::TypedArray>();
-        Napi::ArrayBuffer buffer = array.ArrayBuffer();
-        Size offset = array.ByteOffset();
+        napi_typedarray_type type = napi_int8_array;
+        size_t length = 0;
+        void *ptr = nullptr;
 
-        return MakeSpan((uint8_t *)buffer.Data() + offset, (Size)array.ByteLength());
+        napi_get_typedarray_info(value.Env(), value, &type, &length, &ptr, nullptr, nullptr);
+
+        switch (type) {
+            case napi_int8_array: { length *= 1; } break;
+            case napi_uint8_array: { length *= 1; } break;
+            case napi_uint8_clamped_array: { length *= 1; } break;
+            case napi_int16_array: { length *= 2; } break;
+            case napi_uint16_array: { length *= 2; } break;
+            case napi_int32_array: { length *= 4; } break;
+            case napi_uint32_array: { length *= 4; } break;
+            case napi_float32_array: { length *= 4; } break;
+            case napi_float64_array: { length *= 8; } break;
+            case napi_bigint64_array: { length *= 8; } break;
+            case napi_biguint64_array: { length *= 8; } break;
+        }
+
+        return MakeSpan((uint8_t *)ptr, (Size)length);
     } else if (value.IsArrayBuffer()) {
         Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
 
