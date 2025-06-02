@@ -334,13 +334,14 @@ bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *, 
 
     prefix = prefix ? prefix : "";
 
-    Span<const char> path;
-    Span<const char> url = MakeURL({}, &temp_alloc, &path);
-    const char *after = "";
+    const char *path;
+    Span<const char> url = MakeURL({}, nullptr, &temp_alloc, &path);
 
     // Reuse for performance
     HeapArray<char> query;
     HeapArray<uint8_t> xml;
+
+    const char *after = "";
 
     for (;;) {
         query.RemoveFrom(0);
@@ -350,7 +351,7 @@ bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *, 
 
         int status = RunSafe("list S3 objects", [&](CURL *curl) {
             LocalArray<curl_slist, 32> headers;
-            headers.len = PrepareHeaders("GET", path.ptr, query.ptr, {}, {}, &temp_alloc, headers.data);
+            headers.len = PrepareHeaders("GET", path, query.ptr, {}, {}, &temp_alloc, headers.data);
 
             // Set CURL options
             {
@@ -424,8 +425,8 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
 {
     BlockAllocator temp_alloc;
 
-    Span<const char> path;
-    Span<const char> url = MakeURL(key, &temp_alloc, &path);
+    const char *path;
+    Span<const char> url = MakeURL(key, nullptr, &temp_alloc, &path);
 
     struct GetContext {
         Span<const char> key;
@@ -440,7 +441,7 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
         ctx.len = 0;
 
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("GET", path.ptr, nullptr, {}, {}, &temp_alloc, headers.data);
+        headers.len = PrepareHeaders("GET", path, nullptr, {}, {}, &temp_alloc, headers.data);
 
         // Set CURL options
         {
@@ -485,8 +486,8 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     Size prev_len = out_obj->len;
     RG_DEFER_N(out_guard) { out_obj->RemoveFrom(prev_len); };
 
-    Span<const char> path;
-    Span<const char> url = MakeURL(key, &temp_alloc, &path);
+    const char *path;
+    Span<const char> url = MakeURL(key, nullptr, &temp_alloc, &path);
 
     struct GetContext {
         Span<const char> key;
@@ -501,7 +502,7 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
 
     int status = RunSafe("get S3 object", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("GET", path.ptr, nullptr, {}, {}, &temp_alloc, headers.data);
+        headers.len = PrepareHeaders("GET", path, nullptr, {}, {}, &temp_alloc, headers.data);
 
         ctx.out->RemoveFrom(prev_len);
         ctx.total_len = 0;
@@ -552,12 +553,12 @@ StatResult s3_Session::HasObject(Span<const char> key, int64_t *out_size)
 {
     BlockAllocator temp_alloc;
 
-    Span<const char> path;
-    Span<const char> url = MakeURL(key, &temp_alloc, &path);
+    const char *path;
+    Span<const char> url = MakeURL(key, nullptr, &temp_alloc, &path);
 
     int status = RunSafe("test S3 object", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("HEAD", path.ptr, nullptr, {}, {}, &temp_alloc, headers.data);
+        headers.len = PrepareHeaders("HEAD", path, nullptr, {}, {}, &temp_alloc, headers.data);
 
         // Set CURL options
         {
@@ -596,12 +597,22 @@ StatResult s3_Session::HasObject(Span<const char> key, int64_t *out_size)
     }
 }
 
+static inline const char *GetLockModeString(s3_LockMode mode)
+{
+    switch (mode) {
+        case s3_LockMode::Governance: return "GOVERNANCE";
+        case s3_LockMode::Compliance: return "COMPLIANCE";
+    }
+
+    RG_UNREACHABLE();
+}
+
 s3_PutResult s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutInfo &info)
 {
     BlockAllocator temp_alloc;
 
-    Span<const char> path;
-    Span<const char> url = MakeURL(key, &temp_alloc, &path);
+    const char *path;
+    Span<const char> url = MakeURL(key, nullptr, &temp_alloc, &path);
 
     LocalArray<KeyValue, 8> kvs;
 
@@ -611,10 +622,17 @@ s3_PutResult s3_Session::PutObject(Span<const char> key, Span<const uint8_t> dat
     if (info.conditional) {
         kvs.Append({ "If-None-Match", "*" });
     }
+    if (info.retention) {
+        TimeSpec spec = DecomposeTimeUTC(info.retention);
+        const char *until = Fmt(&temp_alloc, "%1", FmtTimeISO(spec)).ptr;
+
+        kvs.Append({ "x-amz-object-lock-mode", GetLockModeString(info.lock) });
+        kvs.Append({ "x-amz-object-lock-retain-until-date", until });
+    }
 
     int status = RunSafe("upload S3 object", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("PUT", path.ptr, nullptr, kvs, data, &temp_alloc, headers.data);
+        headers.len = PrepareHeaders("PUT", path, nullptr, kvs, data, &temp_alloc, headers.data);
 
         Span<const uint8_t> remain = data;
 
@@ -665,12 +683,12 @@ bool s3_Session::DeleteObject(Span<const char> key)
 {
     BlockAllocator temp_alloc;
 
-    Span<const char> path;
-    Span<const char> url = MakeURL(key, &temp_alloc, &path);
+    const char *path;
+    Span<const char> url = MakeURL(key, nullptr, &temp_alloc, &path);
 
     int status = RunSafe("delete S3 object", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("DELETE", path.ptr, nullptr, {}, {}, &temp_alloc, headers.data);
+        headers.len = PrepareHeaders("DELETE", path, nullptr, {}, {}, &temp_alloc, headers.data);
 
         // Set CURL options
         {
@@ -697,14 +715,70 @@ bool s3_Session::DeleteObject(Span<const char> key)
     return true;
 }
 
+bool s3_Session::RetainObject(Span<const char> key, int64_t until, s3_LockMode mode)
+{
+    BlockAllocator temp_alloc;
+
+    const char *path;
+    Span<const char> url = MakeURL(key, "retention", &temp_alloc, &path);
+
+    static const char *xml = R"(<?xml version="1.0" encoding="UTF-8"?>
+<Retention xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <RetainUntilDate>%1</RetainUntilDate>
+  <Mode>%2</Mode>
+</Retention>
+)";
+
+    TimeSpec spec = DecomposeTimeUTC(until);
+    Span<const char> body = Fmt(&temp_alloc, xml, FmtTimeISO(spec), GetLockModeString(mode));
+
+    int status = RunSafe("retain S3 object", [&](CURL *curl) {
+        LocalArray<curl_slist, 32> headers;
+        headers.len = PrepareHeaders("PUT", path, "retention=", {}, body.As<const uint8_t>(), &temp_alloc, headers.data);
+
+        Span<const char> remain = body;
+
+        // Set CURL options
+        {
+            bool success = true;
+
+            success &= !curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L); // PUT
+            success &= !curl_easy_setopt(curl, CURLOPT_URL, url);
+            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+
+            success &= !curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
+                Span<const char> *remain = (Span<const char> *)udata;
+                Size give = std::min((Size)(size * nmemb), remain->len);
+
+                MemCpy(ptr, remain->ptr, give);
+                remain->ptr += (Size)give;
+                remain->len -= (Size)give;
+
+                return (size_t)give;
+            });
+            success &= !curl_easy_setopt(curl, CURLOPT_READDATA, &remain);
+            success &= !curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)remain.len);
+
+            if (!success)
+                return -CURLE_FAILED_INIT;
+        }
+
+        return curl_Perform(curl, nullptr);
+    });
+    if (status != 200)
+        return false;
+
+    return true;
+}
+
 bool s3_Session::OpenAccess()
 {
     BlockAllocator temp_alloc;
 
     RG_ASSERT(!open);
 
-    Span<const char> path;
-    Span<const char> url = MakeURL({}, &temp_alloc, &path);
+    const char *path;
+    Span<const char> url = MakeURL({}, nullptr, &temp_alloc, &path);
 
     if (!DetermineRegion(url.ptr))
         return false;
@@ -712,7 +786,7 @@ bool s3_Session::OpenAccess()
     // Test access
     int status = RunSafe("authenticate to S3 bucket", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("HEAD", path.ptr, nullptr, {}, {}, &temp_alloc, headers.data);
+        headers.len = PrepareHeaders("HEAD", path, nullptr, {}, {}, &temp_alloc, headers.data);
 
         // Set CURL options
         {
@@ -1025,7 +1099,7 @@ Span<char> s3_Session::MakeAuthorization(const uint8_t signature[32], const Time
     return buf.TrimAndLeak(1);
 }
 
-Span<const char> s3_Session::MakeURL(Span<const char> key, Allocator *alloc, Span<const char> *out_path)
+Span<const char> s3_Session::MakeURL(Span<const char> key, const char *query, Allocator *alloc, const char **out_path)
 {
     RG_ASSERT(alloc);
 
@@ -1035,6 +1109,7 @@ Span<const char> s3_Session::MakeURL(Span<const char> key, Allocator *alloc, Spa
     if (config.port > 0) {
         Fmt(&buf, ":%1", config.port);
     }
+
     Size path_offset = buf.len;
 
     if (config.path_mode) {
@@ -1047,9 +1122,17 @@ Span<const char> s3_Session::MakeURL(Span<const char> key, Allocator *alloc, Spa
         Fmt(&buf, "/");
     }
 
-    if (out_path) {
-        *out_path = MakeSpan(buf.ptr + path_offset, buf.len - path_offset);
+    Size path_end = buf.len;
+
+    if (query) {
+        Fmt(&buf, "?%1", query);
     }
+
+    if (out_path) {
+        Span<const char> path = MakeSpan(buf.ptr + path_offset, path_end - path_offset);
+        *out_path = (path_end < buf.len) ? DuplicateString(path, alloc).ptr : path.ptr;
+    }
+
     return buf.TrimAndLeak(1);
 }
 

@@ -50,9 +50,21 @@ struct s3_Config {
 
 bool s3_DecodeURL(Span<const char> url, s3_Config *out_config);
 
+enum class s3_LockMode {
+    Governance,
+    Compliance
+};
+static const char *const s3_LockModeNames[] = {
+    "Governance",
+    "Compliance"
+};
+
 struct s3_PutInfo {
     const char *mimetype = nullptr;
     bool conditional = false;
+
+    int64_t retention = 0;
+    s3_LockMode lock = s3_LockMode::Governance;
 };
 
 enum class s3_PutResult {
@@ -91,11 +103,14 @@ public:
     const char *GetURL() const { return url; }
 
     bool ListObjects(const char *prefix, FunctionRef<bool(const char *, int64_t)> func);
+
     Size GetObject(Span<const char> key, Span<uint8_t> out_buf);
     Size GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj);
     StatResult HasObject(Span<const char> key, int64_t *out_size = nullptr);
     s3_PutResult PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutInfo &info = {});
     bool DeleteObject(Span<const char> key);
+
+    bool RetainObject(Span<const char> key, int64_t until, s3_LockMode mode);
 
 private:
     bool OpenAccess();
@@ -112,7 +127,7 @@ private:
                        const TimeSpec &date, const uint8_t sha256[32], uint8_t out_signature[32]);
     Span<char> MakeAuthorization(const uint8_t signature[32], const TimeSpec &date, Allocator *alloc);
 
-    Span<const char> MakeURL(Span<const char> key, Allocator *alloc, Span<const char> *out_path = nullptr);
+    Span<const char> MakeURL(Span<const char> key, const char *query, Allocator *alloc, const char **out_path = nullptr);
 };
 
 }
