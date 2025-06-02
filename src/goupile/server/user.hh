@@ -33,9 +33,10 @@ enum class UserPermission {
     DataAudit = 1 << 7,
     DataAnnotate = 1 << 8,
     DataExport = 1 << 9,
-    MiscMail = 1 << 10,
-    MiscTexto = 1 << 11,
-    MiscOffline = 1 << 12
+    DataFetch = 1 << 10,
+    MiscMail = 1 << 11,
+    MiscTexto = 1 << 12,
+    MiscOffline = 1 << 13
 };
 static const char *const UserPermissionNames[] = {
     "BuildCode",
@@ -48,13 +49,14 @@ static const char *const UserPermissionNames[] = {
     "DataAudit",
     "DataAnnotate",
     "DataExport",
+    "DataFetch",
     "MiscMail",
     "MiscTexto",
     "MiscOffline"
 };
-static const uint32_t UserPermissionMasterMask = 0b0000000001111u;
-static const uint32_t UserPermissionSlaveMask =  0b1111111110000u;
-static const uint32_t LegacyPermissionMask =     0b1111000110111u;
+static const uint32_t UserPermissionMasterMask = 0b00000000001111u;
+static const uint32_t UserPermissionSlaveMask =  0b11111111110000u;
+static const uint32_t LegacyPermissionMask =     0b11101000110111u;
 
 static const int PasswordHashBytes = 128;
 

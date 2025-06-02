@@ -682,9 +682,11 @@ void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
     json.Finish();
 }
 
-static bool CheckExportPermission(http_IO *io, InstanceHolder *instance,
+static bool CheckExportPermission(http_IO *io, InstanceHolder *instance, UserPermission perm,
                                   int64_t *out_userid = nullptr, const char **out_username = nullptr)
 {
+    RG_ASSERT(perm == UserPermission::DataExport || perm == UserPermission::DataFetch);
+
     const http_RequestInfo &request = io->Request();
     const char *export_key = !instance->slaves.len ? request.GetHeaderValue("X-Export-Key") : nullptr;
 
@@ -703,8 +705,9 @@ static bool CheckExportPermission(http_IO *io, InstanceHolder *instance,
         if (stmt.Step()) {
             uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
 
-            if (!(permissions & (int)UserPermission::DataExport)) {
-                LogError("Missing data export permission");
+            if (!(permissions & (int)UserPermission::DataExport) ||
+                    !(permissions & (int)UserPermission::DataFetch)) {
+                LogError("Missing data export or fetch permission");
                 io->SendError(403);
                 return false;
             }
@@ -731,7 +734,7 @@ static bool CheckExportPermission(http_IO *io, InstanceHolder *instance,
             LogError("User is not logged in");
             io->SendError(401);
             return false;
-        } else if (!session->HasPermission(instance, UserPermission::DataExport)) {
+        } else if (!session->HasPermission(instance, perm)) {
             LogError("User is not allowed to export data");
             io->SendError(403);
             return false;
@@ -771,7 +774,7 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
 
     int64_t userid;
     const char *username;
-    if (!CheckExportPermission(io, instance, &userid, &username))
+    if (!CheckExportPermission(io, instance, UserPermission::DataExport, &userid, &username))
         return;
 
     int64_t sequence = -1;
@@ -925,7 +928,7 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    if (!CheckExportPermission(io, instance))
+    if (!CheckExportPermission(io, instance, UserPermission::DataFetch))
         return;
 
     sq_Statement stmt;
@@ -974,7 +977,7 @@ void HandleExportDownload(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    if (!CheckExportPermission(io, instance))
+    if (!CheckExportPermission(io, instance, UserPermission::DataFetch))
         return;
 
     int64_t export_id;

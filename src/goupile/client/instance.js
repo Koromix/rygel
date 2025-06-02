@@ -294,7 +294,7 @@ function renderMenu() {
                         <button @click=${UI.wrap(goupile.runChangePasswordDialog)}>Modifier mon mot de passe</button>
                         <button @click=${UI.wrap(goupile.runResetTOTP)}>Configurer la double authentification</button>
                         <hr/>
-                        ${goupile.hasPermission('data_export') ? html`
+                        ${goupile.hasPermission('data_export') && goupile.hasPermission('data_fetch') ? html`
                             <button @click=${UI.wrap(generateExportKey)}>Générer une clé d'export</button>
                             <hr/>
                         ` : ''}
@@ -713,12 +713,10 @@ function renderData() {
                 </tbody>
             </table>
 
-            ${goupile.hasPermission('data_export') ? html`
-                <div class="ui_actions">
-                    <button @click=${UI.wrap(runExportCreateDialog)}>Créer un export</button>
-                    <button @click=${UI.wrap(runExportListDialog)}>Liste des exports récents</button>
-                </div>
-            ` : ''}
+            <div class="ui_actions">
+                ${goupile.hasPermission('data_export') ? html`<button @click=${UI.wrap(runExportCreateDialog)}>Créer un export</button>` : ''}
+                ${goupile.hasPermission('data_fetch') ? html`<button @click=${UI.wrap(runExportListDialog)}>Liste des exports récents</button>` : ''}
+            </div>
         </div>
     `;
 }
@@ -791,7 +789,9 @@ async function runExportCreateDialog(e) {
 
         try {
             let export_id = await createExport(sequence, anchor);
-            await exportRecords(export_id, stores);
+
+            if (goupile.hasPermission('data_fetch'))
+                await exportRecords(export_id, stores);
 
             progress.success('Export complété');
         } catch (err) {
