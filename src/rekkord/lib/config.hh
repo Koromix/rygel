@@ -27,6 +27,15 @@ enum class rk_DiskType {
     SFTP
 };
 
+struct rk_S3Config {
+    s3_Config remote;
+
+    int64_t retention = 0;
+    s3_LockMode lock = s3_LockMode::Governance;
+};
+
+static const int64_t rk_S3MinimalRetention = 7 * 86400000ll; // 7 days
+
 struct rk_Config {
     const char *url = nullptr;
 
@@ -34,7 +43,7 @@ struct rk_Config {
     const char *password = nullptr;
 
     rk_DiskType type = rk_DiskType::Local;
-    s3_Config s3;
+    rk_S3Config s3;
     ssh_Config ssh;
 
     int threads = -1;

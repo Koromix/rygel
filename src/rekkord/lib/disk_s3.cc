@@ -15,6 +15,7 @@
 
 #include "src/core/base/base.hh"
 #include "disk.hh"
+#include "config.hh"
 #include "src/core/request/s3.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
@@ -23,8 +24,11 @@ namespace RG {
 class S3Disk: public rk_Disk {
     s3_Session s3;
 
+    int64_t retention;
+    s3_LockMode lock;
+
 public:
-    S3Disk(const s3_Config &config, const rk_OpenSettings &settings);
+    S3Disk(const rk_S3Config &config, const rk_OpenSettings &settings);
     ~S3Disk() override;
 
     bool Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users) override;
@@ -32,7 +36,7 @@ public:
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
 
-    WriteResult WriteRaw(const char *path, Span<const uint8_t> buf, bool overwrite) override;
+    WriteResult WriteRaw(const char *path, Span<const uint8_t> buf, unsigned int flags) override;
     bool DeleteRaw(const char *path) override;
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
@@ -42,10 +46,10 @@ public:
     bool DeleteDirectory(const char *path) override;
 };
 
-S3Disk::S3Disk(const s3_Config &config, const rk_OpenSettings &settings)
-    : rk_Disk(settings, std::min(4 * GetCoreCount(), 64))
+S3Disk::S3Disk(const rk_S3Config &config, const rk_OpenSettings &settings)
+    : rk_Disk(settings, std::min(4 * GetCoreCount(), 64)), retention(config.retention), lock(config.lock)
 {
-    if (!s3.Open(config))
+    if (!s3.Open(config.remote))
         return;
 
     // We're good!
@@ -74,9 +78,15 @@ Size S3Disk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
     return s3.GetObject(path, Mebibytes(256), out_buf);
 }
 
-rk_Disk::WriteResult S3Disk::WriteRaw(const char *path, Span<const uint8_t> buf, bool overwrite)
+rk_Disk::WriteResult S3Disk::WriteRaw(const char *path, Span<const uint8_t> buf, unsigned int flags)
 {
-    s3_PutInfo info = { .conditional = !overwrite };
+    s3_PutInfo info = { .conditional = !(flags & (int)WriteFlag::Overwrite) };
+
+    if (retention && (flags & (int)WriteFlag::Lockable)) {
+        info.retention = GetUnixTime() + retention;
+        info.lock = lock;
+    }
+
     s3_PutResult ret = s3.PutObject(path, buf, info);
 
     switch (ret) {
@@ -123,7 +133,7 @@ bool S3Disk::DeleteDirectory(const char *)
     return true;
 }
 
-std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *username, const char *pwd, const rk_OpenSettings &settings)
+std::unique_ptr<rk_Disk> rk_OpenS3Disk(const rk_S3Config &config, const char *username, const char *pwd, const rk_OpenSettings &settings)
 {
     std::unique_ptr<rk_Disk> disk = std::make_unique<S3Disk>(config, settings);
 

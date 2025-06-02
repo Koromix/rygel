@@ -31,7 +31,7 @@ public:
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
 
-    WriteResult WriteRaw(const char *path, Span<const uint8_t> buf, bool overwrite) override;
+    WriteResult WriteRaw(const char *path, Span<const uint8_t> buf, unsigned int flags) override;
     bool DeleteRaw(const char *path) override;
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
@@ -150,7 +150,7 @@ Size LocalDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
     return ReadFile(filename.data, Mebibytes(64), out_buf);
 }
 
-rk_Disk::WriteResult LocalDisk::WriteRaw(const char *path, Span<const uint8_t> buf, bool overwrite)
+rk_Disk::WriteResult LocalDisk::WriteRaw(const char *path, Span<const uint8_t> buf, unsigned int flags)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
@@ -200,8 +200,8 @@ rk_Disk::WriteResult LocalDisk::WriteRaw(const char *path, Span<const uint8_t> b
 
     // Finalize!
     {
-        unsigned int flags = overwrite ? (int)RenameFlag::Overwrite : 0;
-        RenameResult ret = RenameFile(tmp.data, filename.data, (int)RenameResult::AlreadyExists, flags);
+        unsigned int rename = (flags & (int)WriteFlag::Overwrite) ? (int)RenameFlag::Overwrite : 0;
+        RenameResult ret = RenameFile(tmp.data, filename.data, (int)RenameResult::AlreadyExists, rename);
 
         switch (ret) {
             case RenameResult::Success: {} break;

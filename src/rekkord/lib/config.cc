@@ -51,7 +51,7 @@ bool rk_Config::Complete(bool require_auth)
 
     switch (type) {
         case rk_DiskType::Local: return true;
-        case rk_DiskType::S3: return s3.Complete();
+        case rk_DiskType::S3: return s3.remote.Complete();
         case rk_DiskType::SFTP: return ssh.Complete();
     }
 
@@ -78,7 +78,7 @@ bool rk_Config::Validate(bool require_auth) const
 
     switch (type) {
         case rk_DiskType::Local: {} break;
-        case rk_DiskType::S3: { valid &= s3.Validate(); } break;
+        case rk_DiskType::S3: { valid &= s3.remote.Validate(); } break;
         case rk_DiskType::SFTP: {
             valid &= ssh.Validate();
 
@@ -152,7 +152,7 @@ bool rk_DecodeURL(Span<const char> url, rk_Config *out_config)
         out_config->url = DuplicateString(url, &out_config->str_alloc).ptr;
         out_config->type = rk_DiskType::S3;
 
-        return s3_DecodeURL(url, &out_config->s3);
+        return s3_DecodeURL(url, &out_config->s3.remote);
     } else if (url == "SFTP") {
         out_config->url = "SFTP";
         out_config->type = rk_DiskType::SFTP;
@@ -211,7 +211,23 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "S3") {
                 do {
-                    valid &= config.s3.SetProperty(prop.key, prop.value, root_directory);
+                    if (prop.key == "RetentionDelay") {
+                        if (ParseDuration(prop.value, &config.s3.retention)) {
+                            if (config.s3.retention < rk_S3MinimalRetention) {
+                                LogError("Retention delay is too low");
+                                valid = false;
+                            }
+                        } else {
+                            valid = false;
+                        }
+                    } else if (prop.key == "LockMode") {
+                        if (!OptionToEnum(s3_LockModeNames, prop.value, &config.s3.retention)) {
+                            LogError("Invalid lock mode '%1'", prop.value);
+                            valid = false;
+                        }
+                    } else {
+                        valid &= config.s3.remote.SetProperty(prop.key, prop.value, root_directory);
+                    }
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "SSH" || prop.section == "SFTP") {
                 do {

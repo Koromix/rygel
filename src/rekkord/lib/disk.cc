@@ -978,7 +978,7 @@ Size rk_Disk::WriteBlob(const char *path, int type, Span<const uint8_t> blob)
 
     // Write the damn thing
     {
-        WriteResult ret = WriteRaw(path, raw, false);
+        WriteResult ret = WriteRaw(path, raw, (int)WriteFlag::Lockable);
         bool overwrite = (ret == WriteResult::Success);
 
         switch (ret) {
@@ -1056,7 +1056,7 @@ bool rk_Disk::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload)
 
         sodium_bin2base64(path.end(), path.Available(), cypher.ptr + offset, len, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
 
-        if (WriteRaw(path.data, {}, true) != WriteResult::Success)
+        if (WriteRaw(path.data, {}, (int)WriteFlag::Lockable) != WriteResult::Success)
             return false;
     }
 
@@ -1448,7 +1448,7 @@ bool rk_Disk::WriteKeys(const char *path, const char *pwd, rk_UserRole role, con
     crypto_sign_ed25519_detached(data.sig, nullptr, (const uint8_t *)&data, offsetof(KeyData, sig), keyset->ckey);
 
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
-    WriteResult ret = WriteRaw(path, buf, false);
+    WriteResult ret = WriteRaw(path, buf, 0);
 
     switch (ret) {
         case WriteResult::Success: return true;
@@ -1531,7 +1531,9 @@ bool rk_Disk::WriteConfig(const char *path, Span<const uint8_t> data, bool overw
 
     Size len = offsetof(ConfigData, cypher) + crypto_sign_ed25519_BYTES + data.len;
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&config, len);
-    WriteResult ret = WriteRaw(path, buf, overwrite);
+    unsigned int flags = overwrite ? (int)WriteFlag::Overwrite : 0;
+
+    WriteResult ret = WriteRaw(path, buf, flags);
 
     switch (ret) {
         case WriteResult::Success: return true;

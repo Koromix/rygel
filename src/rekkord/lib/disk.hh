@@ -21,7 +21,7 @@
 namespace RG {
 
 struct rk_Config;
-struct s3_Config;
+struct rk_S3Config;
 struct ssh_Config;
 
 static const int rk_MasterKeySize = 32;
@@ -136,6 +136,11 @@ class rk_Disk {
     };
 
 protected:
+    enum class WriteFlag {
+        Overwrite = 1 << 0,
+        Lockable = 1 << 1
+    };
+
     enum class WriteResult {
         Success,
         AlreadyExists,
@@ -206,7 +211,7 @@ public:
     virtual Size ReadRaw(const char *path, HeapArray<uint8_t> *out_blob) = 0;
 
     // WriteResult::AlreadyExists must be silent, let the caller emit an error if relevant
-    virtual WriteResult WriteRaw(const char *path, Span<const uint8_t> buf, bool overwrite) = 0;
+    virtual WriteResult WriteRaw(const char *path, Span<const uint8_t> buf, unsigned int flags) = 0;
     virtual bool DeleteRaw(const char *path) = 0;
 
     virtual bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) = 0;
@@ -237,6 +242,6 @@ std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool authenticate);
 
 std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, const rk_OpenSettings &settings);
 std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *username, const char *pwd, const rk_OpenSettings &settings);
-std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *username, const char *pwd, const rk_OpenSettings &settings);
+std::unique_ptr<rk_Disk> rk_OpenS3Disk(const rk_S3Config &config, const char *username, const char *pwd, const rk_OpenSettings &settings);
 
 }
