@@ -97,7 +97,30 @@ function FormBuilder(state, model, base = {}) {
         let widget = makeInput(key, label, options, 'text', () => html`
             <input type="text" ?disabled=${options.disabled}
                    .value=${live(value ?? '')} placeholder=${options.placeholder ?? ''}
-                   @input=${e => setValue(key, e.target.value || undefined)} />
+                   @input=${input} />
+        `);
+
+        function input(e) {
+            let value = e.target.value || undefined;
+            setValue(key, value);
+        }
+
+        return widget;
+    };
+
+    this.textArea = function(key, label, options = {}) {
+        options = expandOptions(options, {
+            placeholder: null,
+            rows: 6
+        });
+        key = expandKey(key, options);
+
+        let value = getValue(key, 'text', options);
+
+        let widget = makeInput(key, label, options, 'text', () => html`
+            <textarea rows=${options.rows} ?disabled=${options.disabled}
+                      .value=${value || ''} placeholder=${options.placeholder || ''}
+                      @input=${input}></textarea>
         `);
 
         function input(e) {
