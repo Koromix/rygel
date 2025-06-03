@@ -353,7 +353,7 @@ Classifier options:
             PrintLn(st, "    %!..+%1%!0    %2", FmtArg(desc.name).Pad(27), desc.help);
         }
         PrintLn(st, R"(
-Dispensation modes:
+Dispense modes:
 )");
         for (const OptionDesc &desc: mco_DispenseModeOptions) {
             PrintLn(st, "    %!..+%1%!0    Algorithm %2", FmtArg(desc.name).Pad(27), desc.help);
