@@ -26,18 +26,18 @@ static const Size rk_MaxSnapshotChannelLength = 256;
 
 struct rk_SaveSettings {
     const char *channel = rk_DefaultSnapshotChannel;
-    bool follow_symlinks = false;
-    bool store_atime = false;
-    bool store_xattrs = false;
-    bool preserve_atime = false;
+    bool follow = false;
+    bool noatime = false;
+    bool atime = false;
+    bool xattrs = false;
     bool raw = false;
 };
 
 struct rk_RestoreSettings {
     bool force = false;
     bool unlink = false;
-    bool restore_owner = false;
-    bool restore_xattrs = false;
+    bool chown = false;
+    bool xattrs = false;
     bool verbose = false;
     bool fake = false;
 };

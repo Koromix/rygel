@@ -424,8 +424,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
             MemCpy(ctx->meta.xattrs.ptr, xattrs.ptr, xattrs.len * RG_SIZE(XAttrInfo));
         }
 
-        ctx->chown = settings.restore_owner;
-        ctx->xattrs = settings.restore_xattrs;
+        ctx->chown = settings.chown;
+        ctx->xattrs = settings.xattrs;
         ctx->fake = settings.fake;
     }
 
@@ -547,12 +547,12 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                     }
 
                     if (!settings.fake) {
-                        if (settings.restore_owner) {
+                        if (settings.chown) {
                             SetFileOwner(fd, entry.filename.ptr, entry.uid, entry.gid);
                         }
                         SetFileMetaData(fd, entry.filename.ptr, entry.mtime, entry.btime, entry.mode);
 
-                        if (settings.restore_xattrs) {
+                        if (settings.xattrs) {
                             WriteXAttributes(fd, entry.filename.ptr, entry.xattrs);
                         }
                     }
@@ -576,7 +576,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                         if (!CreateSymbolicLink(entry.filename.ptr, (const char *)blob.ptr, settings.force))
                             return false;
 
-                        if (settings.restore_xattrs && entry.xattrs.len) {
+                        if (settings.xattrs && entry.xattrs.len) {
                             int fd = OpenFile(entry.filename.ptr, (int)OpenFlag::Write);
                             RG_DEFER { CloseDescriptor(fd); };
 

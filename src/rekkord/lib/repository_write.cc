@@ -62,7 +62,7 @@ class PutContext {
 public:
     PutContext(rk_Disk *disk, sq_Database *db, const rk_SaveSettings &settings);
 
-    PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash, int64_t *out_subdirs = nullptr);
+    PutResult PutDirectory(const char *src_dirname, bool follow, rk_Hash *out_hash, int64_t *out_subdirs = nullptr);
     PutResult PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_size = nullptr, int64_t *out_stored = nullptr);
 
     int64_t GetSize() const { return put_size; }
@@ -128,7 +128,7 @@ PutContext::PutContext(rk_Disk *disk, sq_Database *db, const rk_SaveSettings &se
     }
 }
 
-PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash, int64_t *out_subdirs)
+PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash *out_hash, int64_t *out_subdirs)
 {
     BlockAllocator temp_alloc;
 
@@ -182,21 +182,21 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
 #if !defined(_WIN32)
 #if defined(__linux__)
-                if (settings.preserve_atime) {
-                    int flags = O_RDONLY | O_CLOEXEC | (follow_symlinks ? 0 : O_NOFOLLOW) | O_NOATIME;
+                if (settings.noatime) {
+                    int flags = O_RDONLY | O_CLOEXEC | (follow ? 0 : O_NOFOLLOW) | O_NOATIME;
                     fd = open(filename, flags);
                 }
 #endif
 
                 // Open file
                 if (fd < 0) {
-                    int flags = O_RDONLY | O_CLOEXEC | (follow_symlinks ? 0 : O_NOFOLLOW);
+                    int flags = O_RDONLY | O_CLOEXEC | (follow ? 0 : O_NOFOLLOW);
                     fd = open(filename, flags);
 
                     if (fd < 0) {
                         // We cannot open symbolic links with O_NOFOLLOW but we still care about them!
                         // Most systems return ELOOP, but FreeBSD uses EMLINK.
-                        bool ignore = !follow_symlinks && (errno == EMLINK || errno == ELOOP);
+                        bool ignore = !follow && (errno == EMLINK || errno == ELOOP);
 
                         if (!ignore) {
                             LogError("Cannot open '%1': %2", filename, strerror(errno));
@@ -206,7 +206,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 }
 
                 // Read extended attributes, best effort
-                if (settings.store_xattrs) {
+                if (settings.xattrs) {
                     xattrs.RemoveFrom(0);
                     extended.RemoveFrom(0);
 
@@ -217,7 +217,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 }
 #else
                 (void)file_type;
-                (void)follow_symlinks;
+                (void)follow;
 #endif
 
                 // Create raw entry
@@ -285,7 +285,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
                         entry->mtime = LittleEndian(file_info.mtime);
                         entry->ctime = LittleEndian(file_info.ctime);
-                        entry->atime = settings.store_atime ? LittleEndian(file_info.atime) : 0;
+                        entry->atime = settings.atime ? LittleEndian(file_info.atime) : 0;
                         entry->btime = LittleEndian(file_info.btime);
                         entry->mode = LittleEndian((uint32_t)file_info.mode);
                         entry->uid = LittleEndian(file_info.uid);
@@ -299,7 +299,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 #if defined(__linux__)
             EnumResult ret;
             {
-                int fd = settings.preserve_atime ? open(pending->dirname, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOATIME) : -1;
+                int fd = settings.noatime ? open(pending->dirname, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOATIME) : -1;
 
                 if (fd >= 0) {
                     ret = EnumerateDirectory(fd, pending->dirname, nullptr, -1, callback);
@@ -547,7 +547,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
     StreamReader st;
     {
 #if defined(__linux__)
-        int fd = settings.preserve_atime ? open(src_filename, O_RDONLY | O_CLOEXEC | O_NOATIME) : -1;
+        int fd = settings.noatime ? open(src_filename, O_RDONLY | O_CLOEXEC | O_NOATIME) : -1;
 
         if (fd >= 0) {
             st.Open(fd, src_filename);
@@ -745,7 +745,7 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
         RG_DEFER { CloseDescriptor(fd); };
 
 #if defined(__linux__)
-        fd = settings.preserve_atime ? open(filename, O_RDONLY | O_CLOEXEC | O_NOATIME) : -1;
+        fd = settings.noatime ? open(filename, O_RDONLY | O_CLOEXEC | O_NOATIME) : -1;
 #endif
 
         // Open file
@@ -760,7 +760,7 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
         if (StatFile(fd, filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
             return false;
 
-        if (settings.store_xattrs) {
+        if (settings.xattrs) {
             xattrs.RemoveFrom(0);
             extended.RemoveFrom(0);
 
@@ -812,7 +812,7 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
                 entry->kind = (int16_t)RawEntry::Kind::Directory;
 
                 int64_t subdirs = 0;
-                if (put.PutDirectory(filename, settings.follow_symlinks, &entry->hash, &subdirs) != PutResult::Success)
+                if (put.PutDirectory(filename, settings.follow, &entry->hash, &subdirs) != PutResult::Success)
                     return false;
                 entry->size = LittleEndian(subdirs);
 
@@ -846,7 +846,7 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
 
         entry->mtime = LittleEndian(file_info.mtime);
         entry->ctime = LittleEndian(file_info.ctime);
-        entry->atime = settings.store_atime ? LittleEndian(file_info.atime) : 0;
+        entry->atime = settings.atime ? LittleEndian(file_info.atime) : 0;
         entry->btime = LittleEndian(file_info.btime);
         entry->mode = LittleEndian((uint32_t)file_info.mode);
         entry->uid = LittleEndian(file_info.uid);

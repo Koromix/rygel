@@ -42,14 +42,18 @@ Options:
                                    %!D..(default: %2)%!0
         %!..+--raw%!0                      Skip snapshot object and report data OID
 
-        %!..+--follow_symlinks%!0          Follow symbolic links (instead of storing them as-is)
-        %!..+--preserve_atime%!0           Do not modify atime if possible (Linux-only)
+        %!..+--follow%!0                   Follow symbolic links (instead of storing them as-is)
+        %!..+--noatime%!0                  Do not modify atime if possible (Linux-only)
 
-        %!..+--store_atime%!0              Store file access times
-        %!..+--store_xattrs%!0             Store extended attributes on supported platforms
+    %!..+-m, --meta metadata%!0            Save additional directory/file metadata, see below
 
     %!..+-j, --threads threads%!0          Change number of threads
-                                   %!D..(default: automatic)%!0)",
+                                   %!D..(default: automatic)%!0
+
+Available metadata save options:
+
+    %!..+ATime%!0                          Store atime (access time) values
+    %!..+XAttrs%!0                         Store extended attributes and ACLs (when supported))",
                 FelixTarget, rk_DefaultSnapshotChannel);
     };
 
@@ -73,14 +77,27 @@ Options:
                 config.username = opt.current_value;
             } else if (opt.Test("-c", "--channel", OptionType::Value)) {
                 settings.channel = opt.current_value;
-            } else if (opt.Test("--follow_symlinks")) {
-                settings.follow_symlinks = true;
-            } else if (opt.Test("--store_atime")) {
-                settings.store_atime = true;
-            } else if (opt.Test("--store_xattrs")) {
-                settings.store_xattrs = true;
-            } else if (opt.Test("--preserve_atime")) {
-                settings.preserve_atime = true;
+            } else if (opt.Test("--follow")) {
+                settings.follow = true;
+            } else if (opt.Test("-m", "--meta", OptionType::Value)) {
+                Span<const char> remain = opt.current_value;
+
+                while (remain.len) {
+                    Span<const char> part = TrimStr(SplitStrAny(remain, " ,", &remain));
+
+                    if (part.len) {
+                        if (TestStrI(part, "ATime")) {
+                            settings.atime = true;
+                        } else if (TestStrI(part, "XAttrs")) {
+                            settings.xattrs = true;
+                        } else {
+                            LogError("Unknown option specified for --meta");
+                            return 1;
+                        }
+                    }
+                }
+            } else if (opt.Test("--noatime")) {
+                settings.noatime = true;
             } else if (opt.Test("--raw")) {
                 settings.raw = true;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
@@ -177,14 +194,18 @@ Options:
     %!..+-f, --force%!0                    Overwrite destination files
         %!..+--delete%!0                   Delete extraneous files from destination
 
-        %!..+--restore_owner%!0            Restore original file UID and GID
-        %!..+--restore_xattrs%!0           Restore extended file attributes
+    %!..+-m, --meta metadata%!0            Restore additional directory/file metadata, see below
 
     %!..+-v, --verbose%!0                  Show detailed actions
     %!..+-n, --dry_run%!0                  Fake file restoration
 
     %!..+-j, --threads threads%!0          Change number of threads
                                    %!D..(default: automatic)%!0
+
+Available metadata restoration options:
+
+    %!..+Owner%!0                          Restore original file owner and group (UID and GID)
+    %!..+XAttrs%!0                         Restore extended attributes and ACLs (when supported)
 
 Use an object ID (OID) or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<OID|channel>[:<path>]%!0.
 If you use a snapshot channel, rekkord will use the most recent snapshot object that matches.)", FelixTarget);
@@ -214,10 +235,23 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
                 settings.force = true;
             } else if (opt.Test("--delete")) {
                 settings.unlink = true;
-            } else if (opt.Test("--restore_owner")) {
-                settings.restore_owner = true;
-            } else if (opt.Test("--restore_xattrs")) {
-                settings.restore_xattrs = true;
+            } else if (opt.Test("-m", "--meta", OptionType::Value)) {
+                Span<const char> remain = opt.current_value;
+
+                while (remain.len) {
+                    Span<const char> part = TrimStr(SplitStrAny(remain, " ,", &remain));
+
+                    if (part.len) {
+                        if (TestStrI(part, "Owner")) {
+                            settings.chown = true;
+                        } else if (TestStrI(part, "XAttrs")) {
+                            settings.xattrs = true;
+                        } else {
+                            LogError("Unknown option specified for --meta");
+                            return 1;
+                        }
+                    }
+                }
             } else if (opt.Test("-v", "--verbose")) {
                 settings.verbose = true;
             } else if (opt.Test("-n", "--dry_run")) {
