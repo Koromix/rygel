@@ -428,7 +428,7 @@ static bool WriteACLs(int fd, const char *filename, acl_type_t type, Span<const 
             return false;
         }
     } else {
-        if (acl_set_link_np(filename, acl) < 0) {
+        if (acl_set_link_np(filename, type, acl) < 0) {
             LogError("Failed to set ACL for '%1': %2", filename, strerror(errno));
             return false;
         }
