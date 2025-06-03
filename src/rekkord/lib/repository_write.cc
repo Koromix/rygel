@@ -169,7 +169,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             // We can't use pending->entries because if does not count non-stored entities (such as pipes)
             Size children = 0;
 
-            const auto callback = [&](const char *basename, FileType) {
+            const auto callback = [&](const char *basename, FileType file_type) {
                 const char *filename = Fmt(&temp_alloc, "%1%/%2", pending->dirname, basename).ptr;
 
                 RawEntry *entry = nullptr;
@@ -211,11 +211,12 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                     extended.RemoveFrom(0);
 
                     if (!skip) [[likely]] {
-                        ReadXAttributes(fd, filename, &temp_alloc, &xattrs);
+                        ReadXAttributes(fd, filename, file_type, &temp_alloc, &xattrs);
                         PackExtended(filename, xattrs, &extended);
                     }
                 }
 #else
+                (void)file_type;
                 (void)follow_symlinks;
 #endif
 
@@ -755,11 +756,15 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
                 return false;
         }
 
+        FileInfo file_info;
+        if (StatFile(fd, filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
+            return false;
+
         if (settings.store_xattrs) {
             xattrs.RemoveFrom(0);
             extended.RemoveFrom(0);
 
-            ReadXAttributes(fd, filename, &temp_alloc, &xattrs);
+            ReadXAttributes(fd, filename, file_info.type, &temp_alloc, &xattrs);
             PackExtended(filename, xattrs, &extended);
         }
 
@@ -794,17 +799,13 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
             }
         }
 
+        entry->flags |= LittleEndian((int16_t)RawEntry::Flags::Stated);
         entry->name_len = LittleEndian((uint16_t)name.len);
         entry->extended_len = LittleEndian((uint16_t)extended.len);
         MemCpy(entry->GetName().ptr, name.ptr, name.len);
         MemCpy(entry->GetExtended().ptr, extended.ptr, extended.len);
 
         snapshot_blob.len += entry->GetSize();
-
-        FileInfo file_info;
-        if (StatFile(fd, filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
-            return false;
-        entry->flags |= LittleEndian((int16_t)RawEntry::Flags::Stated);
 
         switch (file_info.type) {
             case FileType::Directory: {

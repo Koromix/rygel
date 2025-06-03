@@ -24,7 +24,7 @@ struct XAttrInfo {
     Span<uint8_t> value;
 };
 
-bool ReadXAttributes(int fd, const char *filename, Allocator *alloc, HeapArray<XAttrInfo> *out_xattrs);
+bool ReadXAttributes(int fd, const char *filename, FileType type, Allocator *alloc, HeapArray<XAttrInfo> *out_xattrs);
 bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs);
 
 }

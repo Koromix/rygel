@@ -250,7 +250,7 @@ retry:
     return len;
 }
 
-bool ReadXAttributes(int fd, const char *filename, Allocator *alloc, HeapArray<XAttrInfo> *out_xattrs)
+bool ReadXAttributes(int fd, const char *filename, FileType, Allocator *alloc, HeapArray<XAttrInfo> *out_xattrs)
 {
     RG_DEFER_NC(err_guard, len = out_xattrs->len) { out_xattrs->RemoveFrom(len); };
 
@@ -302,9 +302,13 @@ retry:
 
             continue;
         } else if (TestStr(key, AclDefaultAttribute)) {
-            // XXX: Handle default ACL
+            Span<const char> acls = FormatACLs(filename, value, alloc);
 
-            LogDebug("Default ACLs are not supported yet");
+            if (acls.len) {
+                XAttrInfo xattr = { "rekkord.acl1d", acls.As<uint8_t>() };
+                out_xattrs->Append(xattr);
+            }
+
             continue;
         }
 
@@ -340,6 +344,18 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
 
             xattr.key = AclAccessAttribute;
             xattr.value = MakeSpan(buf, len);
+        } else if (TestStr(xattr.key, "rekkord.acl1d")) {
+            Size len = ParseACLs(xattr.value.As<const char>(), buf);
+
+            if (len < 0) {
+                success = false;
+                continue;
+            }
+            if (!len)
+                continue;
+
+            xattr.key = AclDefaultAttribute;
+            xattr.value = MakeSpan(buf, len);
         }
 
         int ret = (fd >= 0) ? fsetxattr(fd, xattr.key, xattr.value.ptr, xattr.value.len, 0)
@@ -356,11 +372,17 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
 
 #elif defined(__FreeBSD__)
 
-static Span<const char> ReadACLs(int fd, const char *filename, Allocator *alloc)
+static Span<const char> ReadACLs(int fd, const char *filename, acl_type_t type, Allocator *alloc)
 {
+    RG_ASSERT(type == ACL_TYPE_ACCESS || fd < 0);
+
     acl_t acl = (fd >= 0) ? acl_get_fd(fd)
-                          : acl_get_link_np(filename, ACL_TYPE_ACCESS);
+                          : acl_get_link_np(filename, type);
     if (!acl) {
+        // Most likely not a directory, skip silently
+        if (type == ACL_TYPE_DEFAULT && errno == EINVAL)
+            return {};
+
         LogError("Failed to open ACL entries for '%1': %2", filename, strerror(errno));
         return {};
     }
@@ -386,8 +408,10 @@ static Span<const char> ReadACLs(int fd, const char *filename, Allocator *alloc)
     return copy;
 }
 
-static bool WriteACLs(int fd, const char *filename, Span<const char> str)
+static bool WriteACLs(int fd, const char *filename, acl_type_t type, Span<const char> str)
 {
+    RG_ASSERT(type == ACL_TYPE_ACCESS || fd < 0);
+
     char buf[32768];
     CopyString(str, buf);
 
@@ -447,15 +471,28 @@ retry:
     return len;
 }
 
-bool ReadXAttributes(int fd, const char *filename, Allocator *alloc, HeapArray<XAttrInfo> *out_xattrs)
+bool ReadXAttributes(int fd, const char *filename, FileType type, Allocator *alloc, HeapArray<XAttrInfo> *out_xattrs)
 {
     RG_DEFER_NC(err_guard, len = out_xattrs->len) { out_xattrs->RemoveFrom(len); };
 
-    Span<const char> acls = ReadACLs(fd, filename, alloc);
+    // Get access ACLs
+    {
+        Span<const char> acls = ReadACLs(fd, filename, ACL_TYPE_ACCESS, alloc);
 
-    if (acls.len) {
-        XAttrInfo xattr = { "rekkord.acl1", acls.As<uint8_t>() };
-        out_xattrs->Append(xattr);
+        if (acls.len) {
+            XAttrInfo xattr = { "rekkord.acl1", acls.As<uint8_t>() };
+            out_xattrs->Append(xattr);
+        }
+    }
+
+    // Get default ACLs (only works for directories)
+    if (type == FileType::Directory) {
+        Span<const char> acls = ReadACLs(-1, filename, ACL_TYPE_DEFAULT, alloc);
+
+        if (acls.len) {
+            XAttrInfo xattr = { "rekkord.acl1d", acls.As<uint8_t>() };
+            out_xattrs->Append(xattr);
+        }
     }
 
     HeapArray<char> list;
@@ -513,7 +550,10 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
 
     for (const XAttrInfo &xattr: xattrs) {
         if (TestStr(xattr.key, "rekkord.acl1")) {
-            success &= WriteACLs(fd, filename, xattr.value.As<char>());
+            success &= WriteACLs(fd, filename, ACL_TYPE_ACCESS, xattr.value.As<char>());
+            continue;
+        } else if (TestStr(xattr.key, "rekkord.acl1d")) {
+            success &= WriteACLs(-1, filename, ACL_TYPE_DEFAULT, xattr.value.As<char>());
             continue;
         }
 
@@ -543,7 +583,7 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
 
 static std::once_flag flag;
 
-bool ReadXAttributes(int, const char *, Allocator *, HeapArray<XAttrInfo> *)
+bool ReadXAttributes(int, const char *, FileType, Allocator *, HeapArray<XAttrInfo> *)
 {
     std::call_once(flag, []() { LogError("Extended attributes (xattrs) are not implemented or supported on this platform"); });
     return false;
