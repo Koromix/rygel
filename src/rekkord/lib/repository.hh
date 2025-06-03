@@ -81,6 +81,11 @@ static const char *const rk_ObjectTypeNames[] = {
     "Unknown"
 };
 
+enum class rk_ObjectFlag {
+    Readable = 1 << 0,
+    AccessTime = 1 << 1
+};
+
 struct rk_ObjectInfo {
     rk_ObjectID oid;
 
@@ -96,7 +101,7 @@ struct rk_ObjectInfo {
     uint32_t uid;
     uint32_t gid;
     int64_t size;
-    bool readable;
+    unsigned int flags;
 
     int64_t entries; // for snapshots and directories
     int64_t storage; // for snapshots

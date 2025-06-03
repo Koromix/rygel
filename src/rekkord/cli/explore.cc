@@ -478,7 +478,7 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbo
     bool bold = (obj.type == rk_ObjectType::File || obj.type == rk_ObjectType::Link);
     char suffix = (obj.type == rk_ObjectType::Directory ? '/' : ' ');
     int align = (int)std::max(60 - indent - strlen(obj.name), (size_t)0);
-    bool size = (obj.readable && obj.type == rk_ObjectType::File);
+    bool size = (obj.flags & (int)rk_ObjectFlag::Readable) && obj.type == rk_ObjectType::File;
 
     if (bold && obj.mode) {
         PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 %!D..(0%6)%!0 %!G..%7%!0 %!Y..%8%!0",
@@ -532,7 +532,7 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
     } else {
         json->Key("name"); json->Null();
     }
-    if (obj.readable) {
+    if (obj.flags & (int)rk_ObjectFlag::Readable) {
         json->Key("object"); json->String(Fmt(buf, "%1", obj.oid).ptr);
     } else {
         json->Key("object"); json->Null();
@@ -543,7 +543,7 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
     } else {
         json->Key("mtime"); json->String(format_time(obj.mtime));
         json->Key("ctime"); json->String(format_time(obj.ctime));
-        if (obj.atime) {
+        if (obj.flags & (int)rk_ObjectFlag::AccessTime) {
             json->Key("atime"); json->String(format_time(obj.atime));
         }
         json->Key("btime"); json->String(format_time(obj.btime));
@@ -554,7 +554,7 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
         json->Key("gid"); json->Uint(obj.gid);
     }
 
-    if (obj.readable) {
+    if (obj.flags & (int)rk_ObjectFlag::Readable) {
         switch (obj.type) {
             case rk_ObjectType::Snapshot:
             case rk_ObjectType::Directory: { json->Key("children"); json->StartArray(); } break;
@@ -579,7 +579,7 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
     pugi::xml_node element = ptr->append_child(rk_ObjectTypeNames[(int)obj.type]);
 
     element.append_attribute("Name") = obj.name ? obj.name : "";
-    if (obj.readable) {
+    if (obj.flags & (int)rk_ObjectFlag::Readable) {
         element.append_attribute("Object") = Fmt(buf, "%1", obj.oid).ptr;
     } else {
         element.append_attribute("Object") = "";
@@ -590,7 +590,7 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
     } else {
         element.append_attribute("Mtime") = format_time(obj.mtime);
         element.append_attribute("Ctime") = format_time(obj.ctime);
-        if (obj.atime) {
+        if (obj.flags & (int)rk_ObjectFlag::AccessTime) {
             element.append_attribute("Atime") = format_time(obj.atime);
         }
         element.append_attribute("Btime") = format_time(obj.btime);
@@ -601,7 +601,7 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
         element.append_attribute("GID") = obj.gid;
     }
 
-    if (obj.readable) {
+    if (obj.flags & (int)rk_ObjectFlag::Readable) {
         switch (obj.type) {
             case rk_ObjectType::Snapshot:
             case rk_ObjectType::Directory: {} break;

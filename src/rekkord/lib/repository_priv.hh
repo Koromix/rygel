@@ -77,7 +77,8 @@ static_assert(RG_SIZE(DirectoryHeader) == 16);
 struct RawEntry {
     enum class Flags {
         Stated = 1 << 0,
-        Readable = 1 << 1
+        Readable = 1 << 1,
+        AccessTime = 1 << 2
     };
 
     enum class Kind {

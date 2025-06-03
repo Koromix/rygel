@@ -1102,13 +1102,16 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         obj->name = entry.basename.ptr;
         obj->mtime = entry.mtime;
         obj->ctime = entry.ctime;
-        obj->atime = entry.atime;
+        if (entry.flags & (int)RawEntry::Flags::AccessTime) {
+            obj->flags |= (int)rk_ObjectFlag::AccessTime;
+            obj->atime = entry.atime;
+        }
         obj->btime = entry.btime;
         obj->mode = entry.mode;
         obj->uid = entry.uid;
         obj->gid = entry.gid;
         obj->size = entry.size;
-        obj->readable = (entry.flags & (int)RawEntry::Flags::Readable);
+        obj->flags |= (entry.flags & (int)RawEntry::Flags::Readable) ? (int)rk_ObjectFlag::Readable : 0;
 
         if (!(entry.flags & (int)RawEntry::Flags::Readable))
             continue;
@@ -1260,7 +1263,7 @@ bool rk_ListChildren(rk_Disk *disk, const rk_ObjectID &oid, const rk_ListSetting
             obj->name = DuplicateString(header1->channel, alloc).ptr;
             obj->mtime = LittleEndian(header1->time);
             obj->size = LittleEndian(header1->size);
-            obj->readable = true;
+            obj->flags |= (int)rk_ObjectFlag::Readable;
             obj->storage = LittleEndian(header1->storage);
 
             Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));

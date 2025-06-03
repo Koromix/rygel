@@ -285,7 +285,10 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
 
                         entry->mtime = LittleEndian(file_info.mtime);
                         entry->ctime = LittleEndian(file_info.ctime);
-                        entry->atime = settings.atime ? LittleEndian(file_info.atime) : 0;
+                        if (settings.atime) {
+                            entry->flags |= LittleEndian((int16_t)RawEntry::Flags::AccessTime);
+                            entry->atime = LittleEndian(file_info.atime);
+                        }
                         entry->btime = LittleEndian(file_info.btime);
                         entry->mode = LittleEndian((uint32_t)file_info.mode);
                         entry->uid = LittleEndian(file_info.uid);
@@ -846,7 +849,10 @@ bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *co
 
         entry->mtime = LittleEndian(file_info.mtime);
         entry->ctime = LittleEndian(file_info.ctime);
-        entry->atime = settings.atime ? LittleEndian(file_info.atime) : 0;
+        if (settings.atime) {
+            entry->flags |= LittleEndian((int16_t)RawEntry::Flags::AccessTime);
+            entry->atime = LittleEndian(file_info.atime);
+        }
         entry->btime = LittleEndian(file_info.btime);
         entry->mode = LittleEndian((uint32_t)file_info.mode);
         entry->uid = LittleEndian(file_info.uid);
