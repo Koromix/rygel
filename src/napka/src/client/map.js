@@ -276,8 +276,6 @@ function completeAddress(e, func) {
                         complete_div.style.top = rect.bottom + 'px';
 
                         render(results.map(result => html`<a @click=${() => { func(e, result); closeAddress(); }}>${result.address}</a>`), complete_div);
-                    } else {
-                        throw new Error('Aucun correspondance trouvée');
                     }
                 }
             } catch (err) {
