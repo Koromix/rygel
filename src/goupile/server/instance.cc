@@ -2542,7 +2542,9 @@ bool MigrateInstance(sq_Database *db, int target)
                         int64_t sequence = sqlite3_column_int64(stmt, 1);
                         const char *hid = (const char *)sqlite3_column_text(stmt, 2);
 
-                        if (!db->Run("UPDATE rec_threads SET sequence = ?2, hid = ?3 WHERE tid = ?1", tid, sequence, hid))
+                        if (!db->Run(R"(UPDATE OR IGNORE rec_threads SET sequence = ?2,
+                                                                         hid = ?3
+                                        WHERE tid = ?1)", tid, sequence, hid))
                             return false;
                     }
                     if (!stmt.IsValid())
