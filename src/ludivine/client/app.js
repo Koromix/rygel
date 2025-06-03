@@ -1259,7 +1259,7 @@ function renderModule() {
                     } else if (progress) {
                         cls += ' draft';
                         status = progressBar(progress, total);
-                    } else {
+                    } else if (total) {
                         status = 'À compléter';
 
                         let earliest = null;
@@ -1282,6 +1282,10 @@ function renderModule() {
                         } else {
                             cls += ' draft';
                         }
+                    } else {
+                        status = 'Non disponible';
+                        cls += ' disabled';
+                        available = false;
                     }
 
                     return html`
