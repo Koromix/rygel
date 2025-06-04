@@ -246,13 +246,8 @@ bool http_Config::Validate() const
     return valid;
 }
 
-static int CreateListenSocket(const http_Config &config)
+static void AllowPortReuse(int sock)
 {
-    int sock = CreateSocket(config.sock_type, SOCK_STREAM);
-    if (sock < 0)
-        return -1;
-    RG_DEFER_N(err_guard) { CloseSocket(sock); };
-
 #if defined(SO_REUSEPORT_LB)
     int reuse = 1;
     setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &reuse, sizeof(reuse));
@@ -260,6 +255,20 @@ static int CreateListenSocket(const http_Config &config)
     int reuse = 1;
     setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse));
  #endif
+}
+
+static int CreateListenSocket(const http_Config &config, bool first)
+{
+    int sock = CreateSocket(config.sock_type, SOCK_STREAM);
+    if (sock < 0)
+        return -1;
+    RG_DEFER_N(err_guard) { CloseSocket(sock); };
+
+    if (!first) {
+        // Set SO_REUSEPORT after first connection, so that two HTTP serving processes don't end up
+        // overlapping each other.
+        AllowPortReuse(sock);
+    }
 
     switch (config.sock_type) {
         case SocketType::Dual:
@@ -272,6 +281,12 @@ static int CreateListenSocket(const http_Config &config)
             if (!BindUnixSocket(sock, config.unix_path))
                 return -1;
         } break;
+    }
+
+    if (first) {
+        // The bind succeeded, we know that no other process is using this port. Let the next sockets
+        // reuse this port.
+        AllowPortReuse(sock);
     }
 
     if (listen(sock, 200) < 0) {
@@ -329,7 +344,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     Size workers = 2 * GetCoreCount();
 
     for (Size i = 0; i < workers; i++) {
-        int listener = CreateListenSocket(config);
+        int listener = CreateListenSocket(config, !i);
         if (listener < 0)
             return false;
         listeners.Append(listener);
