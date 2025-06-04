@@ -21,7 +21,6 @@ function build(form, values) {
 
     form.intro = html`
         <p>Nous vous demandons maintenant <b>ce que vous pensez généralement</b> lorsque vous vivez des événements négatifs ou désagréables.
-        <p><i>Ce questionnaire est le plus long de l’étude SocioTrauma, nous vous sommes reconnaissants du temps que vous passez pour notre étude !</i>
     `
 
     form.part(() => {

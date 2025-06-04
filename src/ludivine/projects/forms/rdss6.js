@@ -53,11 +53,13 @@ function build(form, values, start) {
 
             form.binary("pre6", "Avez-vous reçu des réactions négatives après en avoir parlé ?")
 
-            form.slider("pre7", "Comment estimez-vous l'impact que ces réactions négatives ont eu sur vous ?", {
-                min: 0, max: 10,
-                prefix: "Aucun impact", suffix: "Impact maximum",
-                help: "Placez le curseur sur la barre avec la souris ou votre doigt"
-            })
+            if (values.pre6 == 1) {
+                form.slider("pre7", "Comment estimez-vous l'impact que ces réactions négatives ont eu sur vous ?", {
+                    min: 0, max: 10,
+                    prefix: "Aucun impact", suffix: "Impact maximum",
+                    help: "Placez le curseur sur la barre avec la souris ou votre doigt"
+                })
+            }
         }
     })
 
@@ -74,7 +76,7 @@ function build(form, values, start) {
 
         form.binary("post2", "Depuis le bilan initial, avez-vous rencontré de nouvelles personnes faisant partie du domaine judiciaire ?")
 
-        if (values.post1 == 1) {
+        if (values.post2 == 1) {
             form.slider("post2b", "Comment avez-vous perçu vos interactions avec ces nouvelles personnes ?", {
                 min: -10, max: 10,
                 prefix: "🙁", suffix: "🙂",
@@ -84,7 +86,7 @@ function build(form, values, start) {
 
         form.binary("post3", "Depuis le bilan initial, avez-vous rencontré de nouvelles personnes faisant partie du domaine de l'aide psychologique ?")
 
-        if (values.post1 == 1) {
+        if (values.post3 == 1) {
             form.slider("post3b", "Comment avez-vous perçu vos interactions avec ces nouvelles personnes ?", {
                 min: -10, max: 10,
                 prefix: "🙁", suffix: "🙂",

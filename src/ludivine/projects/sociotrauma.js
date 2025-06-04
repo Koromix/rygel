@@ -251,7 +251,7 @@ function init(build, start, values) {
                     cfs(form, values.cfs)
                     cerq(form, values.cerq)
                 }, options)
-                build.form('autres', 'Autres difficultées', (form, values) => {
+                build.form('autres', 'Autres difficultés', (form, values) => {
                     if (values.phq9 == null)
                         values.phq9 = {}
                     if (values.gad7 == null)

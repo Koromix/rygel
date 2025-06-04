@@ -46,8 +46,6 @@ function build(form, values) {
 
     form.intro = html`
         <p>Ce questionnaire interroge votre consommation d'alcool durant cette dernière année. Répondez donc en fonction de votre <b>consommation moyenne sur la dernière année</b> et non sur les dernières semaines.
-        <p>Pour votre information, nous vous rappelons que tous les verres ci-dessous contiennent la même quantité d'alcool pur et sont définis comme un « verre standard » dans ce questionnaire.
-        <p><i>Mais attention : une canette de 50cl d'une bière forte (8° ou 10°) contient l'équivalent de 4 verres standards et une bouteille de vin contient 8 verres standards.</i>
     `
 
     form.part(() => {
@@ -85,6 +83,14 @@ function build(form, values) {
             [4, "Chaque jour ou presque"]
         ])
 
+        form.output(html`
+            <div style="text-align: center; margin-top: 2em;">
+                <img src=${ASSETS['misc/verres_std']} width="583" height="273"/>
+            </div>
+        `)
+    })
+
+    form.part(() => {
         form.enumButtons("audit4", "Dans les 12 derniers mois, combien de fois avez-vous observé que vous n'étiez plus capable de vous arrêter de boire après avoir commencé ?", [
             [0, "Jamais"],
             [1, "Moins d'une fois par mois"],
@@ -92,9 +98,7 @@ function build(form, values) {
             [3, "Une fois par semaine"],
             [4, "Chaque jour ou presque"]
         ])
-    })
 
-    form.part(() => {
         form.enumButtons("audit5", "Dans les 12 derniers mois, combien de fois le fait d'avoir bu de l'alcool, vous-a-t-il empêché de faire ce qu'on attendait normalement de vous ?", [
             [0, "Jamais"],
             [1, "Moins d'une fois par mois"],
@@ -128,15 +132,15 @@ function build(form, values) {
             [3, "Une fois par semaine"],
             [4, "Chaque jour ou presque"]
         ])
-    })
 
-    form.part(() => {
         form.enumRadio("audit9", "Vous êtes-vous blessé ou avez-vous blessé quelqu'un parce que vous aviez bu ?", [
             [0, "Non"],
             [2, "Oui mais pas dans les 12 derniers mois"],
             [4, "Oui au cours des 12 derniers mois"]
         ])
+    })
 
+    form.part(() => {
         form.enumRadio("audit10", "Est-ce qu'un parent, un ami, un médecin ou un autre professionnel de santé s'est déjà préoccupé de votre consommation d'alcool et vous a conseillé de la diminuer ?", [
             [0, "Non"],
             [2, "Oui mais pas dans les 12 derniers mois"],
@@ -173,7 +177,8 @@ function build(form, values) {
     if (values.drogues1) {
         form.part(() => {
             form.number("drogues4", "Depuis combien de temps consommez-vous ces substances ?", {
-                suffix: value => value > 1 ? "années" : "année"
+                suffix: value => value > 1 ? "années" : "année",
+                help: "Si vous consommez depuis moins d'un an, mettez 0"
             })
             form.binary("drogues5", "Considérez-vous que votre consommation ait augmenté suite à l’évènement ?")
         })
@@ -186,7 +191,7 @@ function build(form, values) {
             [99, "Non applicable"]
         ], { help: "Exemples : psychotropes, antidouleurs, anxiolytiques, ou autres substances apparentées" })
 
-        if (values.automed1)
+        if (values.automed1 == 1)
             form.textArea("?automed2", "Si vous l’acceptez, pouvez-vous nous partager les raisons pour lesquelles cela vous arrive ?", { help: "Non obligatoire" })
     })
 
