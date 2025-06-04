@@ -24,21 +24,12 @@ function build(form, values) {
 
     form.part(() => {
         form.binary("c1", "Au cours du mois écoulé, avez-vous pensé qu’il vaudrait mieux que vous soyez mort(e), ou souhaité être mort(e) ?")
-    })
-
-    form.part(() => {
         form.binary("c2", "Au cours du mois écoulé, avez-vous vous faire du mal ?")
     })
 
     form.part(() => {
         form.binary("c3", "Au cours du mois écoulé, avez-vous pensé à vous faire du mal ?")
-    })
-
-    form.part(() => {
         form.binary("c4", "Au cours du mois écoulé, avez-vous réfléchi à la façon dont vous pourriez vous suicider ?")
-    })
-
-    form.part(() => {
         form.binary("c5", "Au cours du mois écoulé, avez-vous fait une tentative de suicide ?")
     })
 

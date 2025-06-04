@@ -26,14 +26,11 @@ function build(form, values) {
     form.part(() => {
         q(1, "Un sentiment de nervosité, d’anxiété ou de tension :")
         q(2, "Une incapacité à arrêter de vous inquiéter ou à contrôler vos inquiétudes :")
-    })
-
-    form.part(() => {
         q(3, "Une inquiétude excessive à propos de différentes choses :")
-        q(4, "Des difficultés à vous détendre :")
     })
 
     form.part(() => {
+        q(4, "Des difficultés à vous détendre :")
         q(5, "Une agitation telle qu’il est difficile à tenir en place :")
         q(6, "Une tendance à être facilement contrarié(e) ou irritable :")
     })

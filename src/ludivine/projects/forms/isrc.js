@@ -27,14 +27,11 @@ function build(form, values) {
     form.part(() => {
         q(2, "Mon cerveau s'est vidé :")
         q(3, "J'ai fait des choses dont je n'avais pas conscience :")
-    })
-
-    form.part(() => {
         q(4, "Les choses semblaient se dérouler très lentement :")
-        q(5, "Les choses semblaient se dérouler très rapidement :")
     })
 
     form.part(() => {
+        q(5, "Les choses semblaient se dérouler très rapidement :")
         q(6, "Ce qui se passait me semblait irréel - comme si j'étais dans un rêve ou que je regardais un film :")
         q(7, "J'avais l'impression de ne pas être là, que je ne faisais pas partie de ce qui se passait :")
     })
@@ -43,14 +40,11 @@ function build(form, values) {
     form.part(() => {
         q(8, "Je me suis senti(e) confus(e) :")
         q(9, "Je me suis senti(e) engourdi(e) - comme si je n'avais plus aucun sentiment :")
-    })
-
-    form.part(() => {
         q(10, "Des personnes comme ma famille ou mes amis semblaient être des étrangers :")
-        q(11, "Tout semblait bizarre, pas normal :")
     })
 
     form.part(() => {
+        q(11, "Tout semblait bizarre, pas normal :")
         q(12, "Par moments, je n'étais pas sûr(e) de l'endroit où je me trouvais ni de l'heure qu'il était :")
         q(13, "Il y a eu des moments où je n'ai pas ressenti de douleur, même là où j'étais blessé(e) :")
     })
@@ -71,14 +65,11 @@ function build(form, values) {
 
         q(17, "Je ne me souviens pas de certaines parties de ce qui s'est passé :")
         q(18, "Je n'arrête pas de penser à ce qui s'est passé :")
-    })
-
-    form.part(() => {
         q(19, "Je ne veux pas penser à ce qui s'est passé :")
-        q(20, "Je me sens nerveux(se) :")
     })
 
     form.part(() => {
+        q(20, "Je me sens nerveux(se) :")
         q(21, "Mes sentiments sont engourdis - je me sens 'coupé(e)' de mes émotions :")
         q(22, "Quand je pense à ce qui s'est passé, je me sens vraiment boulversé(e) :")
     })
@@ -86,14 +77,11 @@ function build(form, values) {
     form.part(() => {
         q(23, "J'essaie de ne pas me souvenir ou de ne pas penser à ce qui m'est arrivé :")
         q(24, "J'ai du mal à me concentrer ou à prêter attention :")
-    })
-
-    form.part(() => {
         q(25, "Je me sens dans l'espace ou déconnecté(e) du monde qui m'entoure :")
-        q(26, "Des images ou des sons de ce qui s'est passé me reviennent sans cesse à l'esprit :")
     })
 
     form.part(() => {
+        q(26, "Des images ou des sons de ce qui s'est passé me reviennent sans cesse à l'esprit :")
         q(27, "Je suis perturbé(e) lorsque quelque chose me rappelle ce qui s'est passé :")
         q(28, "Je me sens 'hyper' ou comme si je ne peux pas rester immobile :")
     })

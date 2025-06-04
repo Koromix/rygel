@@ -27,14 +27,11 @@ function build(form, values) {
     form.part(() => {
         q(1, "Je lui ai parlé de mon expérience :")
         q(2, "Il y a des aspects de mon expérience que je lui ai volontairement cachés :")
-    })
-
-    form.part(() => {
         q(3, "Il y a des aspects de mon expérience que je ne lui dirai pas :")
-        q(4, "J'ai l'intention de lui cacher tout ou partie de mon expérience :")
     })
 
     form.part(() => {
+        q(4, "J'ai l'intention de lui cacher tout ou partie de mon expérience :")
         q(5, "Je lui ai parlé des images, des sons et/ou des odeurs liés à mon expérience :")
         q(6, "Je lui ai parlé des détails visuels de mon expérience :")
     })
