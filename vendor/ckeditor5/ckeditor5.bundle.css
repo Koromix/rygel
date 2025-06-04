@@ -3324,11 +3324,20 @@ a.ck.ck-button.ck-link-toolbar__preview:has(.ck-icon) {
 }
 :root {
   --ck-color-selector-focused-cell-background: hsla(212, 90%, 80%, .3);
+  --ck-table-content-default-border-color: hsl(0, 0%, 83%);
 }
-.ck-widget.table td.ck-editor__nested-editable.ck-editor__nested-editable_focused,
-.ck-widget.table th.ck-editor__nested-editable.ck-editor__nested-editable_focused,
-.ck-widget.table td.ck-editor__nested-editable:focus,
-.ck-widget.table th.ck-editor__nested-editable:focus {
+.ck-widget.table table[style*="border:none"],
+.ck-widget.table table[style*="border-style:none"] {
+  outline: var(--ck-table-content-default-border-color) 1px dashed;
+}
+.ck-widget.table td.ck-editor__nested-editable,
+.ck-widget.table th.ck-editor__nested-editable {
+  outline: unset;
+}
+.ck-widget.table td.ck-editor__nested-editable.ck-editor__nested-editable_focused:not(.ck-editor__editable_selected),
+.ck-widget.table th.ck-editor__nested-editable.ck-editor__nested-editable_focused:not(.ck-editor__editable_selected),
+.ck-widget.table td.ck-editor__nested-editable:not(.ck-editor__editable_selected):focus,
+.ck-widget.table th.ck-editor__nested-editable:not(.ck-editor__editable_selected):focus {
   background: var(--ck-color-selector-focused-cell-background);
   outline: 1px solid var(--ck-color-focus-border);
   outline-offset: -1px;
@@ -3419,7 +3428,6 @@ a.ck.ck-button.ck-link-toolbar__preview:has(.ck-icon) {
 .ck.ck-editor__editable .table table th.ck-editor__editable_selected {
   position: relative;
   caret-color: transparent;
-  outline: unset;
   box-shadow: unset;
 }
 .ck.ck-editor__editable .table table td.ck-editor__editable_selected:after,
@@ -4184,8 +4192,19 @@ body.ck-fullscreen .page-break__label {
 :not(body > .ck-fullscreen__main-wrapper).ck-fullscreen__main-wrapper {
   position: absolute;
 }
+.ck-fullscreen__main-wrapper:not(body > .ck-fullscreen__main-wrapper) .ck-fullscreen__top-wrapper {
+  border-top: 1px solid var(--ck-color-base-border);
+  border-left: 1px solid var(--ck-color-base-border);
+  border-right: 1px solid var(--ck-color-base-border);
+  border-radius: var(--ck-border-radius) 0;
+}
 .ck-fullscreen__menu-bar .ck.ck-menu-bar {
   border: none;
+}
+.ck.ck-fullscreen__toolbar .ck-toolbar {
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
 }
 .ck-fullscreen__main-wrapper .ck-fullscreen__editable-wrapper {
   --ck-fullscreen-editor-top-margin: 28px;
@@ -4194,15 +4213,6 @@ body.ck-fullscreen .page-break__label {
   justify-content: flex-start;
   overflow: auto;
   max-height: 100%;
-}
-.ck-fullscreen__sidebar {
-  width: 300px;
-  margin-top: var(--ck-fullscreen-editor-top-margin);
-  margin-left: 10px;
-  flex-shrink: 0;
-}
-.ck-fullscreen__sidebar[data-ck-fullscreen=right-sidebar] {
-  margin-right: auto;
 }
 .ck-fullscreen__main-wrapper .ck-fullscreen__editable {
   margin-top: var(--ck-fullscreen-editor-top-margin);
@@ -4229,6 +4239,11 @@ body.ck-fullscreen .page-break__label {
 .ck-fullscreen__main-wrapper .ck-fullscreen__editable .ck-source-editing-area {
   width: calc(210mm + 2px);
 }
+.ck-fullscreen__sidebar {
+  width: 300px;
+  margin-top: var(--ck-fullscreen-editor-top-margin);
+  margin-left: 10px;
+}
 .ck-fullscreen__left-sidebar {
   font-family:
     Helvetica,
@@ -4245,11 +4260,12 @@ body.ck-fullscreen .page-break__label {
   display: flex;
   flex-direction: column;
 }
+.ck-fullscreen__left-sidebar > :first-child {
+  min-width: 300px;
+  padding-top: var(--ck-fullscreen-editor-top-margin);
+}
 .ck-fullscreen__left-sidebar .ck.ck-presence-list--collapsed {
   --ck-user-avatar-size: 32px;
-}
-.ck-fullscreen__left-sidebar > :first-child {
-  padding-top: var(--ck-fullscreen-editor-top-margin);
 }
 .ck-fullscreen__left-sidebar .ck-user {
   font-size: 0.85em;
@@ -4260,6 +4276,9 @@ body.ck-fullscreen .page-break__label {
 .ck-fullscreen__left-sidebar-item {
   padding: var(--ck-spacing-medium);
   margin-bottom: var(--ck-spacing-medium);
+}
+.ck-fullscreen__left-sidebar-item:first-child {
+  padding-top: 0;
 }
 .ck-fullscreen__left-sidebar-item:last-child {
   margin-bottom: 0;
@@ -4294,6 +4313,13 @@ body.ck-fullscreen .page-break__label {
 .ck-fullscreen__document-outline-wrapper {
   padding-top: 0;
   overflow-y: auto;
+}
+.ck-fullscreen__sidebar.ck-fullscreen__right-sidebar {
+  margin-top: var(--ck-fullscreen-editor-top-margin);
+  margin-right: auto;
+}
+.ck-fullscreen__sidebar.ck-fullscreen__right-sidebar > :first-child {
+  min-width: 300px;
 }
 .ck.ck-heading_heading1 .ck-button__label {
   font-size: 20px;
