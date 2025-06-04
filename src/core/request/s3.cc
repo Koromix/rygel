@@ -340,15 +340,10 @@ bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *, 
     // Reuse for performance
     HeapArray<char> query;
     HeapArray<uint8_t> xml;
-    HeapArray<char> after;
+
+    Fmt(&query, "list-type=2&prefix=%1", FmtUrlSafe(prefix));
 
     for (;;) {
-        Fmt(&query, "list-type=2&prefix=%1&start-after=%2", FmtUrlSafe(prefix), FmtUrlSafe(after));
-
-        query.RemoveFrom(0);
-        xml.RemoveFrom(0);
-        after.RemoveFrom(0);
-
         int status = RunSafe("list S3 objects", [&](CURL *curl) {
             LocalArray<curl_slist, 32> headers;
             headers.len = PrepareHeaders("GET", path, query.ptr, {}, {}, &temp_alloc, headers.data);
@@ -414,8 +409,11 @@ bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *, 
             return false;
         }
 
-        Span<const char> key = after_node->node().child("Key").text().get();
-        after.Append(key);
+        xml.RemoveFrom(0);
+        query.RemoveFrom(0);
+
+        Span<const char> after = after_node->node().child("Key").text().get();
+        Fmt(&query, "list-type=2&prefix=%1&start-after=%2", FmtUrlSafe(prefix), FmtUrlSafe(after));
     }
 
     return true;
