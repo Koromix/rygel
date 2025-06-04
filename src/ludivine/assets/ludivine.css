@@ -55,6 +55,7 @@ button { font-weight: bold; }
 .actions {
     flex-direction: row;
     justify-content: center;
+    flex-wrap: wrap;
 
     & > a { font-weight: bold; }
 }
