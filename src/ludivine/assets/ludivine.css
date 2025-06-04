@@ -52,7 +52,12 @@ button { font-weight: bold; }
     color: var(--top_color);
 }
 
-.actions > a { font-weight: bold; }
+.actions {
+    flex-direction: row;
+    justify-content: center;
+
+    & > a { font-weight: bold; }
+}
 p + .actions { margin-top: 2em; }
 
 .avatar {
