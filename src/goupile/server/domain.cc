@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DomainVersion = 110;
+const int DomainVersion = 111;
 
 const int MaxInstancesPerDomain = 1024;
 const int64_t FullSnapshotDelay = 86400 * 1000;
@@ -1779,6 +1779,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                                                              IIF(permissions & 4, 4, 0) |
                                                              IIF(permissions & 8, 8, 0) |
                                                              IIF(permissions & 16, 16, 0) |
+                                                             IIF(permissions & 32, 32, 0) |
                                                              IIF(permissions & 64, 64, 0) |
                                                              IIF(permissions & 128, 128, 0) |
                                                              IIF(permissions & 256, 256, 0) |
@@ -1790,9 +1791,21 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 110: {
+                if (version == 110) {
+                    // Give back DataSave permission to users with DataDelete to fix migration error
+
+                    bool success = db->RunMany(R"(
+                        UPDATE dom_permissions SET permissions = permissions | IIF(permissions & 80 = 80, 32, 0);
+                    )");
+                    if (!success)
+                        return false;
+                }
             } // [[fallthrough]];
 
-            static_assert(DomainVersion == 110);
+            static_assert(DomainVersion == 111);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
