@@ -2962,6 +2962,11 @@ RenameResult RenameFile(const char *src_filename, const char *dest_filename, uns
             goto sync;
         if (!IsErrnoNotSupported(errno) && errno != EINVAL)
             goto error;
+#elif defined(RENAME_EXCL)
+        if (!renamex_np(src_filename, dest_filename, RENAME_EXCL))
+            goto sync;
+        if (!IsErrnoNotSupported(errno) && errno != EINVAL)
+            goto error;
 #endif
 
         // Not atomic, but not racy
