@@ -2990,6 +2990,8 @@ RenameResult RenameFile(const char *src_filename, const char *dest_filename, uns
             errno = EEXIST;
             goto error;
         }
+        if (errno != ENOENT)
+            goto error;
         if (rename(src_filename, dest_filename) < 0)
             goto error;
     }
