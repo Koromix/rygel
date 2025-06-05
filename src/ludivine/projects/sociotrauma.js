@@ -300,7 +300,7 @@ function init(build, start, values) {
                     cses(form, values)
 
                     form.part(() => {
-                        form.enumButtons('meme', 'Est-ce que la personne à qui vous pensez est la même que celle à laquelle vous faisiez référence lors du bilan initial', [
+                        form.enumButtons('meme', 'Est-ce que la personne à qui vous pensez est la même que celle à laquelle vous faisiez référence lors du bilan initial ?', [
                             [1, 'Oui'],
                             [0, 'Non'],
                             [-1, 'Je ne me souviens plus']
