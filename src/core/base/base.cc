@@ -2943,6 +2943,12 @@ static bool SyncDirectory(Span<const char> directory)
     return true;
 }
 
+static inline bool IsErrnoNotSupported(int err)
+{
+    bool unsupported = (err == ENOSYS || err == ENOTSUP || err == EOPNOTSUPP);
+    return unsupported;
+}
+
 RenameResult RenameFile(const char *src_filename, const char *dest_filename, unsigned int silent, unsigned int flags)
 {
     RG_ASSERT(!(silent & ((int)RenameResult::Success | (int)RenameResult::OtherError)));
@@ -2954,19 +2960,33 @@ RenameResult RenameFile(const char *src_filename, const char *dest_filename, uns
 #if defined(RENAME_NOREPLACE)
         if (!renameat2(AT_FDCWD, src_filename, AT_FDCWD, dest_filename, RENAME_NOREPLACE))
             goto sync;
-        if (errno != ENOSYS && errno != EINVAL)
+        if (!IsErrnoNotSupported(errno) && errno != EINVAL)
             goto error;
 #endif
 
-        if (link(src_filename, dest_filename) < 0)
+        // Not atomic, but not racy
+        if (!link(src_filename, dest_filename)) {
+            if (unlink(src_filename) < 0) {
+                unlink(dest_filename);
+                goto error;
+            }
+            goto sync;
+        }
+#if defined(__linux__)
+        if (!IsErrnoNotSupported(errno) && errno != EINVAL && errno != EPERM)
             goto error;
-        if (unlink(src_filename) < 0) {
-            unlink(dest_filename);
+#else
+        if (!IsErrnoNotSupported(errno) && errno != EINVAL)
+            goto error;
+#endif
+
+        // Fall back to racy way...
+        if (!faccessat(AT_FDCWD, dest_filename, F_OK, AT_SYMLINK_NOFOLLOW)) {
+            errno = EEXIST;
             goto error;
         }
-
-        // Useless, but we need something to use the sync label if RENAME_NOREPLACE is not defined
-        goto sync;
+        if (rename(src_filename, dest_filename) < 0)
+            goto error;
     }
 
 sync:
