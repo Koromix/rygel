@@ -37,7 +37,7 @@ RG_INIT(RedirectLog)
                 const char **ptr = rcc_log_messages.AppendDefault(&alloc);
                 *ptr = DuplicateString(msg, alloc).ptr;
 
-                if (rcc_log_messages.len > 100) {
+                if (rcc_log_messages.count > 100) {
                     rcc_log_messages.RemoveFirst();
                     rcc_log_missing_messages = true;
                 }
@@ -66,8 +66,8 @@ void rcc_DumpWarnings()
 
 void rcc_StopWithLastError()
 {
-    if (rcc_log_messages.len) {
-        std::string error_msg = rcc_log_messages[rcc_log_messages.len - 1];
+    if (rcc_log_messages.count) {
+        std::string error_msg = rcc_log_messages[rcc_log_messages.count - 1];
         rcc_log_messages.RemoveLast();
         rcc_DumpWarnings();
         Rcpp::stop(error_msg);
