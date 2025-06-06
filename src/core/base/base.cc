@@ -2962,6 +2962,16 @@ RenameResult RenameFile(const char *src_filename, const char *dest_filename, uns
             goto sync;
         if (!IsErrnoNotSupported(errno) && errno != EINVAL)
             goto error;
+#elif defined(SYS_renameat2)
+        {
+            int dirfd = AT_FDCWD;
+            int rflags = 1; // RENAME_NOREPLACE
+
+            if (!syscall(SYS_renameat2, dirfd, src_filename, dirfd, dest_filename, rflags))
+                goto sync;
+            if (!IsErrnoNotSupported(errno) && errno != EINVAL)
+                goto error;
+        }
 #elif defined(RENAME_EXCL)
         if (!renamex_np(src_filename, dest_filename, RENAME_EXCL))
             goto sync;
