@@ -1079,6 +1079,20 @@ BENCHMARK_FUNCTION("base/HashTable")
 
         sum += ptr ? (unsigned int)*ptr : 0;
     });
+
+    RunBenchmark("std::unordered_map (remove)", iterations, [&](Size i) {
+        map1.erase(known[i]);
+    });
+
+    RunBenchmark("HashMap<Span> (remove)", iterations, [&](Size i) {
+        Span<const char> key = { known[i].c_str(), (Size)known[i].size() };
+        map2.Remove(key);
+    });
+
+    RunBenchmark("HashMap<const char *> (remove)", iterations, [&](Size i) {
+        const char *key = known[i].c_str();
+        map3.Remove(key);
+    });
 }
 
 BENCHMARK_FUNCTION("base/ParseBool")
