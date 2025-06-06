@@ -842,7 +842,7 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
     json.Key("format"); json.Int(1);
 
     json.Key("threads"); json.StartArray();
-    for (int i = 0; walker.Next() && i < 100; i++) {
+    while (walker.Next()) {
         json.StartObject();
 
         json.Key("tid"); json.String(cursor->tid);
