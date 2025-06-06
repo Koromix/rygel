@@ -2919,30 +2919,33 @@ public:
         if (!it)
             return;
 
-        Size empty_idx = it - data;
-        RG_ASSERT(!IsEmpty(empty_idx));
+        Size clear_idx = it - data;
+        RG_ASSERT(!IsEmpty(clear_idx));
 
         it->~ValueType();
         count--;
+        MarkEmpty(clear_idx);
 
         // Move following slots if needed
-        {
-            Size idx = (empty_idx + 1) & (capacity - 1);
+        for (Size idx = NextIndex(clear_idx); !IsEmpty(idx); idx = NextIndex(idx)) {
+            Size real_idx = KeyToIndex(Handler::GetKey(data[idx]));
 
-            while (!IsEmpty(idx)) {
-                Size real_idx = KeyToIndex(Handler::GetKey(data[idx]));
-
-                if (TestNewSlot(real_idx, empty_idx)) {
-                    MemMove(&data[empty_idx], &data[idx], RG_SIZE(*data));
-                    empty_idx = idx;
-                }
-
-                idx = (idx + 1) & (capacity - 1);
+            if (clear_idx <= idx) {
+                if (clear_idx < real_idx && real_idx <= idx)
+                    continue;
+            } else {
+                if (real_idx <= idx || clear_idx < real_idx)
+                    continue;
             }
+
+            MarkUsed(clear_idx);
+            MarkEmpty(idx);
+            MemMove(&data[clear_idx], &data[idx], RG_SIZE(*data));
+
+            clear_idx = idx;
         }
 
-        MarkEmpty(empty_idx);
-        new (&data[empty_idx]) ValueType();
+        new (&data[clear_idx]) ValueType();
     }
     template <typename T = KeyType>
     void Remove(const T &key) { Remove(Find(key)); }
@@ -2976,7 +2979,7 @@ private:
                 const KeyType &it_key = Handler::GetKey(data[*idx]);
                 if (Handler::TestKeys(it_key, key))
                     return &data[*idx];
-                *idx = (*idx + 1) & (capacity - 1);
+                *idx = NextIndex(*idx);
             }
             return nullptr;
         } else {
@@ -2984,7 +2987,7 @@ private:
                 const KeyType &it_key = Handler::GetKey(data[*idx]);
                 if (Handler::TestKeys(it_key, key))
                     return &data[*idx];
-                *idx = (*idx + 1) & (capacity - 1);
+                *idx = NextIndex(*idx);
             }
             return nullptr;
         }
@@ -3002,7 +3005,7 @@ private:
                     Rehash(capacity << 1);
                     idx = HashToIndex(hash);
                     while (!IsEmpty(idx)) {
-                        idx = (idx + 1) & (capacity - 1);
+                        idx = NextIndex(idx);
                     }
                 }
                 count++;
@@ -3050,7 +3053,7 @@ private:
                 if (!IsEmpty(old_used, i)) {
                     Size new_idx = KeyToIndex(Handler::GetKey(old_data[i]));
                     while (!IsEmpty(new_idx)) {
-                        new_idx = (new_idx + 1) & (capacity - 1);
+                        new_idx = NextIndex(new_idx);
                     }
                     MarkUsed(new_idx);
                     data[new_idx] = old_data[i];
@@ -3066,44 +3069,35 @@ private:
         ReleaseRaw(allocator, old_data, old_capacity * RG_SIZE(ValueType));
     }
 
-    void MarkUsed(Size idx)
+    inline void MarkUsed(Size idx)
     {
         used[idx / (RG_SIZE(size_t) * 8)] |= (1ull << (idx % (RG_SIZE(size_t) * 8)));
     }
-    void MarkEmpty(Size idx)
+    inline void MarkEmpty(Size idx)
     {
         used[idx / (RG_SIZE(size_t) * 8)] &= ~(1ull << (idx % (RG_SIZE(size_t) * 8)));
     }
 
-    bool IsEmpty(size_t *used, Size idx) const
+    inline bool IsEmpty(size_t *used, Size idx) const
     {
         bool empty = !(used[idx / (RG_SIZE(size_t) * 8)] & (1ull << (idx % (RG_SIZE(size_t) * 8))));
         return empty;
     }
-    bool IsEmpty(Size idx) const { return IsEmpty(used, idx); }
+    inline bool IsEmpty(Size idx) const { return IsEmpty(used, idx); }
 
-    Size HashToIndex(uint64_t hash) const
+    inline Size HashToIndex(uint64_t hash) const
     {
         return (Size)(hash & (uint64_t)(capacity - 1));
     }
-    Size KeyToIndex(const KeyType &key) const
+    inline Size KeyToIndex(const KeyType &key) const
     {
         uint64_t hash = Handler::HashKey(key);
         return HashToIndex(hash);
     }
 
-    // XXX: Testing all slots each time (see Remove()) is slow and stupid
-    bool TestNewSlot(Size idx, Size dest_idx) const
+    inline Size NextIndex(Size idx) const
     {
-        for (;;) {
-            if (idx == dest_idx) {
-                return true;
-            } else if (IsEmpty(idx)) {
-                return false;
-            }
-
-            idx = (idx + 1) & (capacity - 1);
-        }
+        return (idx + 1) & (capacity - 1);
     }
 };
 
