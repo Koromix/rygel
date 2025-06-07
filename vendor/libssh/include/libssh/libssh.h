@@ -60,10 +60,7 @@
   #include <sys/types.h>
 #endif /* _MSC_VER */
 
-#ifdef _WIN32
-  #include <winsock2.h>
-#else /* _WIN32 */
- #include <sys/select.h> /* for fd_set * */
+#ifndef _WIN32
  #include <netdb.h>
 #endif /* _WIN32 */
 
@@ -111,7 +108,7 @@ typedef void* ssh_gssapi_creds;
 /* Socket type */
 #ifdef _WIN32
 #ifndef socket_t
-typedef SOCKET socket_t;
+typedef unsigned int socket_t; // SOCKET
 #endif /* socket_t */
 #else /* _WIN32 */
 #ifndef socket_t
@@ -790,7 +787,7 @@ LIBSSH_API int ssh_send_ignore (ssh_session session, const char *data);
 LIBSSH_API int ssh_send_debug (ssh_session session, const char *message, int always_display);
 LIBSSH_API void ssh_gssapi_set_creds(ssh_session session, const ssh_gssapi_creds creds);
 LIBSSH_API int ssh_select(ssh_channel *channels, ssh_channel *outchannels, socket_t maxfd,
-    fd_set *readfds, struct timeval *timeout);
+    void *readfds, void *timeout);
 LIBSSH_API int ssh_service_request(ssh_session session, const char *service);
 LIBSSH_API int ssh_set_agent_channel(ssh_session session, ssh_channel channel);
 LIBSSH_API int ssh_set_agent_socket(ssh_session session, socket_t fd);

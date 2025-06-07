@@ -332,8 +332,9 @@ static int ssh_select_cb (socket_t fd, int revents, void *userdata)
  * @see select(2)
  */
 int ssh_select(ssh_channel *channels, ssh_channel *outchannels, socket_t maxfd,
-               fd_set *readfds, struct timeval *timeout)
+               void *readfds, void *timeout)
 {
+    struct timeval *tv;
     fd_set origfds;
     socket_t fd;
     size_t i, j;
@@ -343,7 +344,9 @@ int ssh_select(ssh_channel *channels, ssh_channel *outchannels, socket_t maxfd,
     ssh_event event = ssh_event_new();
     int firstround = 1;
 
-    base_tm = tm = (timeout->tv_sec * 1000) + (timeout->tv_usec / 1000);
+    tv = (struct timeval *)timeout;
+
+    base_tm = tm = (tv->tv_sec * 1000) + (tv->tv_usec / 1000);
     for (i = 0 ; channels[i] != NULL; ++i) {
         ssh_event_add_session(event, channels[i]->session);
     }
@@ -351,13 +354,13 @@ int ssh_select(ssh_channel *channels, ssh_channel *outchannels, socket_t maxfd,
     ZERO_STRUCT(origfds);
     FD_ZERO(&origfds);
     for (fd = 0; fd < maxfd ; fd++) {
-        if (FD_ISSET(fd, readfds)) {
+        if (FD_ISSET(fd, (fd_set *)readfds)) {
             ssh_event_add_fd(event, fd, POLLIN, ssh_select_cb, readfds);
             FD_SET(fd, &origfds);
         }
     }
     outchannels[0] = NULL;
-    FD_ZERO(readfds);
+    FD_ZERO((fd_set *)readfds);
     ssh_timestamp_init(&ts);
     do {
         /* Poll every channel */
@@ -383,7 +386,7 @@ int ssh_select(ssh_channel *channels, ssh_channel *outchannels, socket_t maxfd,
 
         /* watch if a user socket was triggered */
         for (fd = 0; fd < maxfd; fd++) {
-            if (FD_ISSET(fd, readfds)) {
+            if (FD_ISSET(fd, (fd_set *)readfds)) {
                 goto out;
             }
         }

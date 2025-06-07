@@ -635,25 +635,25 @@ static ssize_t ssh_socket_unbuffered_write(ssh_socket s,
 /** \internal
  * \brief returns nonzero if the current socket is in the fd_set
  */
-int ssh_socket_fd_isset(ssh_socket s, fd_set *set)
+int ssh_socket_fd_isset(ssh_socket s, void *set)
 {
     if(s->fd == SSH_INVALID_SOCKET) {
         return 0;
     }
-    return FD_ISSET(s->fd,set);
+    return FD_ISSET(s->fd,(fd_set *)set);
 }
 
 /** \internal
  * \brief sets the current fd in a fd_set and updates the max_fd
  */
 
-void ssh_socket_fd_set(ssh_socket s, fd_set *set, socket_t *max_fd)
+void ssh_socket_fd_set(ssh_socket s, void *set, socket_t *max_fd)
 {
     if (s->fd == SSH_INVALID_SOCKET) {
         return;
     }
 
-    FD_SET(s->fd,set);
+    FD_SET(s->fd,(fd_set *)set);
 
     if (s->fd >= 0 &&
         s->fd >= *max_fd &&

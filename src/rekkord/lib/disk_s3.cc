@@ -17,7 +17,6 @@
 #include "disk.hh"
 #include "config.hh"
 #include "src/core/request/s3.hh"
-#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 

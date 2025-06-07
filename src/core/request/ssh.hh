@@ -22,14 +22,6 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#if defined(_WIN32)
-    #if !defined(NOMINMAX)
-        #define NOMINMAX
-    #endif
-    #if !defined(WIN32_LEAN_AND_MEAN)
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-#endif
 #include "vendor/libssh/include/libssh/libssh.h"
 #include "vendor/libssh/include/libssh/sftp.h"
 

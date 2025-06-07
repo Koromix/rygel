@@ -34,7 +34,9 @@
 #define CHUNKSIZE 4096
 #endif
 
-#ifndef _WIN32
+#ifdef _WIN32
+# include <winsock2.h>
+#else
 # include <sys/types.h>
 # include <sys/socket.h>
 #endif

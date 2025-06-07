@@ -1,0 +1,164 @@
+diff --git a/vendor/libssh/include/libssh/libssh.h b/vendor/libssh/include/libssh/libssh.h
+index ab6432e7b..65da5328d 100644
+--- a/vendor/libssh/include/libssh/libssh.h
++++ b/vendor/libssh/include/libssh/libssh.h
+@@ -60,10 +60,7 @@
+   #include <sys/types.h>
+ #endif /* _MSC_VER */
+ 
+-#ifdef _WIN32
+-  #include <winsock2.h>
+-#else /* _WIN32 */
+- #include <sys/select.h> /* for fd_set * */
++#ifndef _WIN32
+  #include <netdb.h>
+ #endif /* _WIN32 */
+ 
+@@ -111,7 +108,7 @@ typedef void* ssh_gssapi_creds;
+ /* Socket type */
+ #ifdef _WIN32
+ #ifndef socket_t
+-typedef SOCKET socket_t;
++typedef unsigned int socket_t; // SOCKET
+ #endif /* socket_t */
+ #else /* _WIN32 */
+ #ifndef socket_t
+@@ -790,7 +787,7 @@ LIBSSH_API int ssh_send_ignore (ssh_session session, const char *data);
+ LIBSSH_API int ssh_send_debug (ssh_session session, const char *message, int always_display);
+ LIBSSH_API void ssh_gssapi_set_creds(ssh_session session, const ssh_gssapi_creds creds);
+ LIBSSH_API int ssh_select(ssh_channel *channels, ssh_channel *outchannels, socket_t maxfd,
+-    fd_set *readfds, struct timeval *timeout);
++    void *readfds, void *timeout);
+ LIBSSH_API int ssh_service_request(ssh_session session, const char *service);
+ LIBSSH_API int ssh_set_agent_channel(ssh_session session, ssh_channel channel);
+ LIBSSH_API int ssh_set_agent_socket(ssh_session session, socket_t fd);
+diff --git a/vendor/libssh/include/libssh/socket.h b/vendor/libssh/include/libssh/socket.h
+index 50e7db755..7ff7d4bdb 100644
+--- a/vendor/libssh/include/libssh/socket.h
++++ b/vendor/libssh/include/libssh/socket.h
+@@ -45,8 +45,8 @@ int ssh_socket_connect_proxyjump(ssh_socket s);
+ void ssh_socket_close(ssh_socket s);
+ int ssh_socket_write(ssh_socket s,const void *buffer, uint32_t len);
+ int ssh_socket_is_open(ssh_socket s);
+-int ssh_socket_fd_isset(ssh_socket s, fd_set *set);
+-void ssh_socket_fd_set(ssh_socket s, fd_set *set, socket_t *max_fd);
++int ssh_socket_fd_isset(ssh_socket s, void *set);
++void ssh_socket_fd_set(ssh_socket s, void *set, socket_t *max_fd);
+ void ssh_socket_set_fd_in(ssh_socket s, socket_t fd);
+ void ssh_socket_set_fd_out(ssh_socket s, socket_t fd);
+ int ssh_socket_nonblocking_flush(ssh_socket s);
+diff --git a/vendor/libssh/include/libssh/threads.h b/vendor/libssh/include/libssh/threads.h
+index 47340d17a..812ca6c87 100644
+--- a/vendor/libssh/include/libssh/threads.h
++++ b/vendor/libssh/include/libssh/threads.h
+@@ -37,9 +37,7 @@
+ 
+ #elif (defined _WIN32) || (defined _WIN64)
+ 
+-#include <windows.h>
+-#include <winbase.h>
+-#define SSH_MUTEX CRITICAL_SECTION *
++#define SSH_MUTEX void *
+ #define SSH_MUTEX_STATIC_INIT NULL
+ 
+ #else
+diff --git a/vendor/libssh/src/connect.c b/vendor/libssh/src/connect.c
+index dd3bbcf53..9f2484b42 100644
+--- a/vendor/libssh/src/connect.c
++++ b/vendor/libssh/src/connect.c
+@@ -332,8 +332,9 @@ static int ssh_select_cb (socket_t fd, int revents, void *userdata)
+  * @see select(2)
+  */
+ int ssh_select(ssh_channel *channels, ssh_channel *outchannels, socket_t maxfd,
+-               fd_set *readfds, struct timeval *timeout)
++               void *readfds, void *timeout)
+ {
++    struct timeval *tv;
+     fd_set origfds;
+     socket_t fd;
+     size_t i, j;
+@@ -343,7 +344,9 @@ int ssh_select(ssh_channel *channels, ssh_channel *outchannels, socket_t maxfd,
+     ssh_event event = ssh_event_new();
+     int firstround = 1;
+ 
+-    base_tm = tm = (timeout->tv_sec * 1000) + (timeout->tv_usec / 1000);
++    tv = (struct timeval *)timeout;
++
++    base_tm = tm = (tv->tv_sec * 1000) + (tv->tv_usec / 1000);
+     for (i = 0 ; channels[i] != NULL; ++i) {
+         ssh_event_add_session(event, channels[i]->session);
+     }
+@@ -351,13 +354,13 @@ int ssh_select(ssh_channel *channels, ssh_channel *outchannels, socket_t maxfd,
+     ZERO_STRUCT(origfds);
+     FD_ZERO(&origfds);
+     for (fd = 0; fd < maxfd ; fd++) {
+-        if (FD_ISSET(fd, readfds)) {
++        if (FD_ISSET(fd, (fd_set *)readfds)) {
+             ssh_event_add_fd(event, fd, POLLIN, ssh_select_cb, readfds);
+             FD_SET(fd, &origfds);
+         }
+     }
+     outchannels[0] = NULL;
+-    FD_ZERO(readfds);
++    FD_ZERO((fd_set *)readfds);
+     ssh_timestamp_init(&ts);
+     do {
+         /* Poll every channel */
+@@ -383,7 +386,7 @@ int ssh_select(ssh_channel *channels, ssh_channel *outchannels, socket_t maxfd,
+ 
+         /* watch if a user socket was triggered */
+         for (fd = 0; fd < maxfd; fd++) {
+-            if (FD_ISSET(fd, readfds)) {
++            if (FD_ISSET(fd, (fd_set *)readfds)) {
+                 goto out;
+             }
+         }
+diff --git a/vendor/libssh/src/connector.c b/vendor/libssh/src/connector.c
+index 9aecf6ea6..7144f464e 100644
+--- a/vendor/libssh/src/connector.c
++++ b/vendor/libssh/src/connector.c
+@@ -34,7 +34,9 @@
+ #define CHUNKSIZE 4096
+ #endif
+ 
+-#ifndef _WIN32
++#ifdef _WIN32
++# include <winsock2.h>
++#else
+ # include <sys/types.h>
+ # include <sys/socket.h>
+ #endif
+diff --git a/vendor/libssh/src/socket.c b/vendor/libssh/src/socket.c
+index 0f3f43816..8ba446a5a 100644
+--- a/vendor/libssh/src/socket.c
++++ b/vendor/libssh/src/socket.c
+@@ -635,25 +635,25 @@ static ssize_t ssh_socket_unbuffered_write(ssh_socket s,
+ /** \internal
+  * \brief returns nonzero if the current socket is in the fd_set
+  */
+-int ssh_socket_fd_isset(ssh_socket s, fd_set *set)
++int ssh_socket_fd_isset(ssh_socket s, void *set)
+ {
+     if(s->fd == SSH_INVALID_SOCKET) {
+         return 0;
+     }
+-    return FD_ISSET(s->fd,set);
++    return FD_ISSET(s->fd,(fd_set *)set);
+ }
+ 
+ /** \internal
+  * \brief sets the current fd in a fd_set and updates the max_fd
+  */
+ 
+-void ssh_socket_fd_set(ssh_socket s, fd_set *set, socket_t *max_fd)
++void ssh_socket_fd_set(ssh_socket s, void *set, socket_t *max_fd)
+ {
+     if (s->fd == SSH_INVALID_SOCKET) {
+         return;
+     }
+ 
+-    FD_SET(s->fd,set);
++    FD_SET(s->fd,(fd_set *)set);
+ 
+     if (s->fd >= 0 &&
+         s->fd >= *max_fd &&
