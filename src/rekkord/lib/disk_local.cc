@@ -28,6 +28,10 @@ public:
     LocalDisk(const char *path);
     ~LocalDisk() override;
 
+    bool CreateDirectory(const char *path) override;
+    bool DeleteDirectory(const char *path) override;
+    StatResult TestDirectory(const char *path) override;
+
     Size ReadFile(const char *path, Span<uint8_t> out_buf) override;
     Size ReadFile(const char *path, HeapArray<uint8_t> *out_buf) override;
 
@@ -36,9 +40,6 @@ public:
 
     bool ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
     StatResult TestFile(const char *path, int64_t *out_size = nullptr) override;
-
-    bool CreateDirectory(const char *path) override;
-    bool DeleteDirectory(const char *path) override;
 };
 
 LocalDisk::LocalDisk(const char *path)
@@ -58,6 +59,38 @@ LocalDisk::LocalDisk(const char *path)
 
 LocalDisk::~LocalDisk()
 {
+}
+
+bool LocalDisk::CreateDirectory(const char *path)
+{
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
+
+    return MakeDirectory(filename.data, false);
+}
+
+bool LocalDisk::DeleteDirectory(const char *path)
+{
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
+
+    return UnlinkDirectory(filename.data);
+}
+
+StatResult LocalDisk::TestDirectory(const char *path)
+{
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
+
+    FileInfo file_info;
+    StatResult ret = StatFile(filename.data, (int)StatFlag::SilentMissing, &file_info);
+
+    if (ret == StatResult::Success && file_info.type != FileType::Directory) {
+        LogError("Path '%1' is not a directory", filename);
+        return StatResult::OtherError;
+    }
+
+    return ret;
 }
 
 Size LocalDisk::ReadFile(const char *path, Span<uint8_t> out_buf)
@@ -214,22 +247,6 @@ StatResult LocalDisk::TestFile(const char *path, int64_t *out_size)
         *out_size = file_info.size;
     }
     return ret;
-}
-
-bool LocalDisk::CreateDirectory(const char *path)
-{
-    LocalArray<char, MaxPathSize + 128> filename;
-    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
-
-    return MakeDirectory(filename.data, false);
-}
-
-bool LocalDisk::DeleteDirectory(const char *path)
-{
-    LocalArray<char, MaxPathSize + 128> filename;
-    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
-
-    return UnlinkDirectory(filename.data);
 }
 
 std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path)

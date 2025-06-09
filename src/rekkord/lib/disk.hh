@@ -50,6 +50,7 @@ public:
 
     virtual bool CreateDirectory(const char *path) = 0;
     virtual bool DeleteDirectory(const char *path) = 0;
+    virtual StatResult TestDirectory(const char *path) = 0;
 
     virtual Size ReadFile(const char *path, Span<uint8_t> out_buf) = 0;
     virtual Size ReadFile(const char *path, HeapArray<uint8_t> *out_blob) = 0;

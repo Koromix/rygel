@@ -74,49 +74,72 @@ bool rk_Repository::Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users
         }
     };
 
-    if (!disk->IsEmpty()) {
-        if (disk->TestFile("rekkord") == StatResult::Success) {
-            LogError("Repository '%1' looks already initialized", disk->GetURL());
-            return false;
-        } else {
-            LogError("Directory '%1' exists and is not empty", disk->GetURL());
-            return false;
-        }
+    // Prepare main directory
+    switch (disk->TestDirectory("")) {
+        case StatResult::Success: {
+            if (!disk->IsEmpty()) {
+                if (disk->TestFile("rekkord") == StatResult::Success) {
+                    LogError("Repository '%1' looks already initialized", disk->GetURL());
+                    return false;
+                } else {
+                    LogError("Directory '%1' exists and is not empty", disk->GetURL());
+                    return false;
+                }
+            }
+        } break;
+
+        case StatResult::MissingPath: {
+            if (!disk->CreateDirectory(""))
+                return false;
+            directories.Append("");
+        } break;
+
+        case StatResult::AccessDenied:
+        case StatResult::OtherError: return false;
     }
 
-    const auto make_directory = [&](const char *dirname) {
-        if (!disk->CreateDirectory(dirname))
+    // Init subdirectories
+    {
+        std::mutex mutex;
+        Async async(&tasks);
+
+        const auto make_directory = [&](const char *dirname) {
+            async.Run([&, dirname, this] {
+                if (!disk->CreateDirectory(dirname))
+                    return false;
+
+                std::lock_guard lock(mutex);
+                directories.Append(dirname);
+
+                return true;
+            });
+        };
+
+        make_directory("keys");
+        make_directory("tags");
+        make_directory("blobs");
+        make_directory("tmp");
+
+        if (!async.Sync())
             return false;
-        directories.Append(dirname);
 
-        return true;
-    };
-
-    if (!make_directory(""))
-        return false;
-    if (!make_directory("keys"))
-        return false;
-    if (!make_directory("tags"))
-        return false;
-    if (!make_directory("blobs"))
-        return false;
-    if (!make_directory("tmp"))
-        return false;
-
-    for (char catalog: rk_BlobCatalogNames) {
-        char parent[128];
-        Fmt(parent, "blobs/%1", catalog);
-
-        if (!make_directory(parent))
-            return false;
-
-        for (int i = 0; i < 256; i++) {
-            char name[128];
-            Fmt(name, "%1/%2", parent, FmtHex(i).Pad0(-2));
-
-            if (!make_directory(name))
-                return false;
+        for (char catalog: rk_BlobCatalogNames) {
+            const char *dirname = Fmt(&temp_alloc, "blobs/%1", catalog).ptr;
+            make_directory(dirname);
         }
+
+        if (!async.Sync())
+            return false;
+
+        for (char catalog: rk_BlobCatalogNames) {
+            for (int i = 0; i < 256; i++) {
+                const char *dirname = Fmt(&temp_alloc, "blobs/%1/%2", catalog, FmtHex(i).Pad0(-2)).ptr;
+                make_directory(dirname);
+            }
+        }
+
+        if (!async.Sync())
+            return false;
     }
 
     keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));

@@ -49,6 +49,10 @@ public:
     SftpDisk(const ssh_Config &config);
     ~SftpDisk() override;
 
+    bool CreateDirectory(const char *path) override;
+    bool DeleteDirectory(const char *path) override;
+    StatResult TestDirectory(const char *path) override;
+
     Size ReadFile(const char *path, Span<uint8_t> out_buf) override;
     Size ReadFile(const char *path, HeapArray<uint8_t> *out_buf) override;
 
@@ -57,9 +61,6 @@ public:
 
     bool ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
     StatResult TestFile(const char *path, int64_t *out_size = nullptr) override;
-
-    bool CreateDirectory(const char *path) override;
-    bool DeleteDirectory(const char *path) override;
 
 private:
     bool RunSafe(const char *action, FunctionRef<RunResult(ConnectionData *conn)> func);
@@ -115,6 +116,108 @@ SftpDisk::~SftpDisk()
     for (ConnectionData *conn: connections) {
         DestroyConnection(conn);
     }
+}
+
+bool SftpDisk::CreateDirectory(const char *path)
+{
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
+
+    bool success = RunSafe("create directory", [&](ConnectionData *conn) {
+        if (sftp_mkdir(conn->sftp, filename.data, 0755) < 0) {
+            int error = sftp_get_error(conn->sftp);
+
+            if (error == SSH_FX_FILE_ALREADY_EXISTS) {
+                return RunResult::Success;
+            } else if (IsSftpErrorSpecific(error)) {
+                LogError("Failed to create directory '%1': %2", filename, sftp_GetErrorString(conn->sftp));
+                return RunResult::SpecificError;
+            } else {
+                return RunResult::OtherError;
+            }
+        }
+
+        return RunResult::Success;
+    });
+
+    return success;
+}
+
+bool SftpDisk::DeleteDirectory(const char *path)
+{
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
+
+    bool success = RunSafe("delete directory", [&](ConnectionData *conn) {
+        if (sftp_rmdir(conn->sftp, filename.data) < 0) {
+            int error = sftp_get_error(conn->sftp);
+
+            if (error == SSH_FX_NO_SUCH_FILE) {
+                return RunResult::Success;
+            } else if (IsSftpErrorSpecific(error)) {
+                LogError("Failed to delete directory '%1': %2", filename, sftp_GetErrorString(conn->sftp));
+                return RunResult::SpecificError;
+            } else {
+                return RunResult::OtherError;
+            }
+        }
+
+        return RunResult::Success;
+    });
+
+    return success;
+}
+
+StatResult SftpDisk::TestDirectory(const char *path)
+{
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
+
+    StatResult ret = StatResult::Success;
+
+    bool success = RunSafe("stat directory", [&](ConnectionData *conn) {
+        sftp_attributes attr = sftp_stat(conn->sftp, filename.data);
+        RG_DEFER { sftp_attributes_free(attr); };
+
+        if (!attr) {
+            int error = sftp_get_error(conn->sftp);
+
+            switch (error) {
+                case SSH_FX_NO_SUCH_FILE: {
+                    ret = StatResult::MissingPath;
+                    return RunResult::Success;
+                } break;
+
+                case SSH_FX_PERMISSION_DENIED: {
+                    LogError("Failed to stat file '%1': permission denied", filename);
+
+                    ret = StatResult::AccessDenied;
+                    return RunResult::Success;
+                } break;
+
+                default: {
+                    if (IsSftpErrorSpecific(error)) {
+                        LogError("Failed to stat file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
+                        return RunResult::SpecificError;
+                    } else {
+                        return RunResult::OtherError;
+                    }
+                } break;
+            }
+        }
+        if (attr->type != SSH_FILEXFER_TYPE_DIRECTORY) {
+            LogError("Path '%1' is not a directory", filename);
+
+            ret = StatResult::OtherError;
+            return RunResult::Success;
+        }
+
+        return RunResult::Success;
+    });
+    if (!success)
+        return StatResult::OtherError;
+
+    return ret;
 }
 
 Size SftpDisk::ReadFile(const char *path, Span<uint8_t> out_buf)
@@ -510,56 +613,6 @@ StatResult SftpDisk::TestFile(const char *path, int64_t *out_size)
         return StatResult::OtherError;
 
     return ret;
-}
-
-bool SftpDisk::CreateDirectory(const char *path)
-{
-    LocalArray<char, MaxPathSize + 128> filename;
-    filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
-
-    bool success = RunSafe("create directory", [&](ConnectionData *conn) {
-        if (sftp_mkdir(conn->sftp, filename.data, 0755) < 0) {
-            int error = sftp_get_error(conn->sftp);
-
-            if (error == SSH_FX_FILE_ALREADY_EXISTS) {
-                return RunResult::Success;
-            } else if (IsSftpErrorSpecific(error)) {
-                LogError("Failed to create directory '%1': %2", filename, sftp_GetErrorString(conn->sftp));
-                return RunResult::SpecificError;
-            } else {
-                return RunResult::OtherError;
-            }
-        }
-
-        return RunResult::Success;
-    });
-
-    return success;
-}
-
-bool SftpDisk::DeleteDirectory(const char *path)
-{
-    LocalArray<char, MaxPathSize + 128> filename;
-    filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
-
-    bool success = RunSafe("delete directory", [&](ConnectionData *conn) {
-        if (sftp_rmdir(conn->sftp, filename.data) < 0) {
-            int error = sftp_get_error(conn->sftp);
-
-            if (error == SSH_FX_NO_SUCH_FILE) {
-                return RunResult::Success;
-            } else if (IsSftpErrorSpecific(error)) {
-                LogError("Failed to delete directory '%1': %2", filename, sftp_GetErrorString(conn->sftp));
-                return RunResult::SpecificError;
-            } else {
-                return RunResult::OtherError;
-            }
-        }
-
-        return RunResult::Success;
-    });
-
-    return success;
 }
 
 bool SftpDisk::RunSafe(const char *action, FunctionRef<RunResult(ConnectionData *conn)> func)

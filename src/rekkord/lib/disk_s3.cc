@@ -30,6 +30,10 @@ public:
     S3Disk(const rk_S3Config &config);
     ~S3Disk() override;
 
+    bool CreateDirectory(const char *path) override;
+    bool DeleteDirectory(const char *path) override;
+    StatResult TestDirectory(const char *path) override;
+
     Size ReadFile(const char *path, Span<uint8_t> out_buf) override;
     Size ReadFile(const char *path, HeapArray<uint8_t> *out_buf) override;
 
@@ -38,9 +42,6 @@ public:
 
     bool ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
     StatResult TestFile(const char *path, int64_t *out_size) override;
-
-    bool CreateDirectory(const char *path) override;
-    bool DeleteDirectory(const char *path) override;
 };
 
 S3Disk::S3Disk(const rk_S3Config &config)
@@ -56,6 +57,24 @@ S3Disk::S3Disk(const rk_S3Config &config)
 
 S3Disk::~S3Disk()
 {
+}
+
+bool S3Disk::CreateDirectory(const char *)
+{
+    // Directories don't really exist, it's just a prefix
+    return true;
+}
+
+bool S3Disk::DeleteDirectory(const char *)
+{
+    // Directories don't really exist, it's just a prefix
+    return true;
+}
+
+StatResult S3Disk::TestDirectory(const char *)
+{
+    // Directories don't really exist, it's just a prefix
+    return StatResult::Success;
 }
 
 Size S3Disk::ReadFile(const char *path, Span<uint8_t> out_buf)
@@ -101,18 +120,6 @@ bool S3Disk::ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)
 StatResult S3Disk::TestFile(const char *path, int64_t *out_size)
 {
     return s3.HasObject(path, out_size);
-}
-
-bool S3Disk::CreateDirectory(const char *)
-{
-    // Directories don't really exist, it's just a prefix
-    return true;
-}
-
-bool S3Disk::DeleteDirectory(const char *)
-{
-    // Directories don't really exist, it's just a prefix
-    return true;
 }
 
 std::unique_ptr<rk_Disk> rk_OpenS3Disk(const rk_S3Config &config)
