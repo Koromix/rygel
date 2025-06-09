@@ -73,7 +73,7 @@ enum class s3_PutResult {
     OtherError
 };
 
-class s3_Session {
+class s3_Client {
     struct KeyValue {
         const char *key;
         const char *value;
@@ -92,8 +92,8 @@ class s3_Session {
     std::mutex share_mutexes[8];
 
 public:
-    s3_Session();
-    ~s3_Session();
+    s3_Client();
+    ~s3_Client();
 
     bool Open(const s3_Config &config);
     void Close();

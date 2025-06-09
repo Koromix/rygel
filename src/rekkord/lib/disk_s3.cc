@@ -21,7 +21,7 @@
 namespace RG {
 
 class S3Disk: public rk_Disk {
-    s3_Session s3;
+    s3_Client s3;
 
     int64_t retention;
     s3_LockMode lock;

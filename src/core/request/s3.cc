@@ -258,18 +258,18 @@ static FmtArg FormatYYYYMMDD(const TimeSpec &date)
     return arg;
 }
 
-s3_Session::s3_Session()
+s3_Client::s3_Client()
 {
     static_assert(CURL_LOCK_DATA_LAST <= RG_LEN(share_mutexes));
 
     share = curl_share_init();
 
     curl_share_setopt(share, CURLSHOPT_LOCKFUNC, +[](CURL *, curl_lock_data data, curl_lock_access, void *udata) {
-        s3_Session *s3 = (s3_Session *)udata;
+        s3_Client *s3 = (s3_Client *)udata;
         s3->share_mutexes[data].lock();
     });
     curl_share_setopt(share, CURLSHOPT_UNLOCKFUNC, +[](CURL *, curl_lock_data data, void *udata) {
-        s3_Session *s3 = (s3_Session *)udata;
+        s3_Client *s3 = (s3_Client *)udata;
         s3->share_mutexes[data].unlock();
     });
     curl_share_setopt(share, CURLSHOPT_USERDATA, this);
@@ -277,14 +277,14 @@ s3_Session::s3_Session()
     curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
 }
 
-s3_Session::~s3_Session()
+s3_Client::~s3_Client()
 {
     Close();
 
     curl_share_cleanup(share);
 }
 
-bool s3_Session::Open(const s3_Config &config)
+bool s3_Client::Open(const s3_Config &config)
 {
     RG_ASSERT(!open);
 
@@ -317,7 +317,7 @@ bool s3_Session::Open(const s3_Config &config)
     return OpenAccess();
 }
 
-void s3_Session::Close()
+void s3_Client::Close()
 {
     for (CURL *curl: connections) {
         curl_easy_cleanup(curl);
@@ -328,7 +328,7 @@ void s3_Session::Close()
     config = {};
 }
 
-bool s3_Session::ListObjects(Span<const char> prefix, FunctionRef<bool(const char *, int64_t)> func)
+bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char *, int64_t)> func)
 {
     BlockAllocator temp_alloc;
 
@@ -419,7 +419,7 @@ bool s3_Session::ListObjects(Span<const char> prefix, FunctionRef<bool(const cha
     return true;
 }
 
-Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
+Size s3_Client::GetObject(Span<const char> key, Span<uint8_t> out_buf)
 {
     BlockAllocator temp_alloc;
 
@@ -477,7 +477,7 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
     return ctx.len;
 }
 
-Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj)
+Size s3_Client::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj)
 {
     BlockAllocator temp_alloc;
 
@@ -547,7 +547,7 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     return ctx.total_len;
 }
 
-StatResult s3_Session::HasObject(Span<const char> key, int64_t *out_size)
+StatResult s3_Client::HasObject(Span<const char> key, int64_t *out_size)
 {
     BlockAllocator temp_alloc;
 
@@ -605,7 +605,7 @@ static inline const char *GetLockModeString(s3_LockMode mode)
     RG_UNREACHABLE();
 }
 
-s3_PutResult s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutInfo &info)
+s3_PutResult s3_Client::PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutInfo &info)
 {
     BlockAllocator temp_alloc;
 
@@ -677,7 +677,7 @@ s3_PutResult s3_Session::PutObject(Span<const char> key, Span<const uint8_t> dat
     }
 }
 
-bool s3_Session::DeleteObject(Span<const char> key)
+bool s3_Client::DeleteObject(Span<const char> key)
 {
     BlockAllocator temp_alloc;
 
@@ -713,7 +713,7 @@ bool s3_Session::DeleteObject(Span<const char> key)
     return true;
 }
 
-bool s3_Session::RetainObject(Span<const char> key, int64_t until, s3_LockMode mode)
+bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mode)
 {
     BlockAllocator temp_alloc;
 
@@ -769,7 +769,7 @@ bool s3_Session::RetainObject(Span<const char> key, int64_t until, s3_LockMode m
     return true;
 }
 
-bool s3_Session::OpenAccess()
+bool s3_Client::OpenAccess()
 {
     BlockAllocator temp_alloc;
 
@@ -796,7 +796,7 @@ bool s3_Session::OpenAccess()
 
             success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,
                                          +[](char *buf, size_t, size_t nmemb, void *udata) {
-                s3_Session *session = (s3_Session *)udata;
+                s3_Client *session = (s3_Client *)udata;
 
                 Span<const char> value;
                 Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
@@ -834,7 +834,7 @@ bool s3_Session::OpenAccess()
     return true;
 }
 
-bool s3_Session::DetermineRegion(const char *url)
+bool s3_Client::DetermineRegion(const char *url)
 {
     RG_ASSERT(!open);
 
@@ -856,7 +856,7 @@ bool s3_Session::DetermineRegion(const char *url)
 
         success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,
                                      +[](char *buf, size_t, size_t nmemb, void *udata) {
-            s3_Session *session = (s3_Session *)udata;
+            s3_Client *session = (s3_Client *)udata;
 
             Span<const char> value;
             Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
@@ -887,7 +887,7 @@ bool s3_Session::DetermineRegion(const char *url)
     return true;
 }
 
-CURL *s3_Session::ReserveConnection()
+CURL *s3_Client::ReserveConnection()
 {
     // Reuse existing connection
     {
@@ -907,7 +907,7 @@ CURL *s3_Session::ReserveConnection()
     return curl;
 }
 
-void s3_Session::ReleaseConnection(CURL *curl)
+void s3_Client::ReleaseConnection(CURL *curl)
 {
     if (!curl)
         return;
@@ -918,7 +918,7 @@ void s3_Session::ReleaseConnection(CURL *curl)
     connections.Append(curl);
 }
 
-int s3_Session::RunSafe(const char *action, FunctionRef<int(CURL *)> func, bool quick)
+int s3_Client::RunSafe(const char *action, FunctionRef<int(CURL *)> func, bool quick)
 {
     CURL *curl = ReserveConnection();
     if (!curl)
@@ -957,7 +957,7 @@ int s3_Session::RunSafe(const char *action, FunctionRef<int(CURL *)> func, bool 
     return -1;
 }
 
-Size s3_Session::PrepareHeaders(const char *method, const char *path, const char *query, Span<const KeyValue> kvs,
+Size s3_Client::PrepareHeaders(const char *method, const char *path, const char *query, Span<const KeyValue> kvs,
                                 Span<const uint8_t> body, Allocator *alloc, Span<curl_slist> out_headers)
 {
     int64_t now = GetUnixTime();
@@ -1039,7 +1039,7 @@ static void HmacSha256(Span<const uint8_t> key, Span<const char> message, uint8_
     return HmacSha256(key, message.As<const uint8_t>(), out_digest);
 }
 
-void s3_Session::MakeSignature(const char *method, const char *path, const char *query,
+void s3_Client::MakeSignature(const char *method, const char *path, const char *query,
                                const TimeSpec &date, const uint8_t sha256[32], uint8_t out_signature[32])
 {
     RG_ASSERT(!date.offset);
@@ -1083,7 +1083,7 @@ void s3_Session::MakeSignature(const char *method, const char *path, const char 
     }
 }
 
-Span<char> s3_Session::MakeAuthorization(const uint8_t signature[32], const TimeSpec &date, Allocator *alloc)
+Span<char> s3_Client::MakeAuthorization(const uint8_t signature[32], const TimeSpec &date, Allocator *alloc)
 {
     RG_ASSERT(!date.offset);
 
@@ -1097,7 +1097,7 @@ Span<char> s3_Session::MakeAuthorization(const uint8_t signature[32], const Time
     return buf.TrimAndLeak(1);
 }
 
-Span<const char> s3_Session::MakeURL(Span<const char> key, const char *query, Allocator *alloc, const char **out_path)
+Span<const char> s3_Client::MakeURL(Span<const char> key, const char *query, Allocator *alloc, const char **out_path)
 {
     RG_ASSERT(alloc);
 
