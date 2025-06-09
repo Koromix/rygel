@@ -48,6 +48,8 @@ struct CacheEntry {
 };
 
 static std::unique_ptr<rk_Disk> disk = nullptr;
+static std::unique_ptr<rk_Repository> repo = nullptr;
+
 static CacheEntry root = {};
 
 static CacheEntry *FindChild(CacheEntry &entry, Span<const char> name)
@@ -167,7 +169,7 @@ static bool InitRoot(const rk_ObjectID &oid)
     entries.Append(&root);
 
     HeapArray<rk_ObjectInfo> objects;
-    if (!rk_ListChildren(disk.get(), oid, {}, &temp_alloc, &objects))
+    if (!rk_ListChildren(repo.get(), oid, {}, &temp_alloc, &objects))
         return false;
 
     for (const rk_ObjectInfo &obj: objects) {
@@ -224,7 +226,7 @@ static bool CacheDirectoryChildren(CacheEntry *entry)
 
     if (!entry->directory.ready) {
         HeapArray<rk_ObjectInfo> objects;
-        if (!rk_ListChildren(disk.get(), entry->oid, {}, &entry->directory.str_alloc, &objects))
+        if (!rk_ListChildren(repo.get(), entry->oid, {}, &entry->directory.str_alloc, &objects))
             return false;
 
         entry->directory.children.Reserve(objects.len);
@@ -318,7 +320,7 @@ static int DoReadLink(const char *path, char *buf, size_t size)
         return -ENOENT;
 
     if (!entry->link.ready) {
-        entry->link.target = rk_ReadLink(disk.get(), entry->oid, &entry->parent->directory.str_alloc);
+        entry->link.target = rk_ReadLink(repo.get(), entry->oid, &entry->parent->directory.str_alloc);
         entry->link.ready = true;
     }
     if (!entry->link.target)
@@ -388,7 +390,7 @@ static int DoOpen(const char *path, fuse_file_info *fi)
     if ((fi->flags & O_ACCMODE) != O_RDONLY)
         return -EACCES;
 
-    std::unique_ptr<rk_FileHandle> handle = rk_OpenFile(disk.get(), entry->oid);
+    std::unique_ptr<rk_FileHandle> handle = rk_OpenFile(repo.get(), entry->oid);
     if (!handle)
         return -EIO;
 
@@ -550,25 +552,29 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
         }
     }
 
-    // We keep the object in a global for simplicity, but we need to destroy it at the end
+    // We keep these objects in globals for simplicity, but we need to destroy them at the end
     // of this function, before some exit functions (such as ssh_finalize) are called.
-    disk = rk_Open(config, true);
-    if (!disk)
+    disk = rk_OpenDisk(config);
+    repo = rk_OpenRepository(disk.get(), config, true);
+    if (!repo)
         return 1;
-    RG_DEFER { disk.reset(nullptr); };
+    RG_DEFER {
+        repo.reset(nullptr);
+        disk.reset(nullptr);
+    };
 
     ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
-    if (!disk->HasMode(rk_AccessMode::Read)) {
-        LogError("Cannot mount with %1 role", disk->GetRole());
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
+    if (!repo->HasMode(rk_AccessMode::Read)) {
+        LogError("Cannot mount with %1 role", repo->GetRole());
         return 1;
     }
     LogInfo();
 
     rk_ObjectID oid = {};
-    if (!rk_LocateObject(disk.get(), identifier, &oid))
+    if (!rk_LocateObject(repo.get(), identifier, &oid))
         return 1;
 
     LogInfo("Mounting %!..+%1%!0 to '%2'...", oid, mountpoint);

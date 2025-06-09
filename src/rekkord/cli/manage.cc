@@ -98,14 +98,15 @@ Options:
     if (!config.Complete(false))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
-    if (!disk)
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, false);
+    if (!repo)
         return 1;
 
     LogInfo("Repository: %!..+%1%!0", disk->GetURL());
     LogInfo();
 
-    if (disk->IsRepository()) {
+    if (repo->IsRepository()) {
         LogError("Repository is already initialized");
         return 1;
     }
@@ -161,7 +162,7 @@ Options:
     randombytes_buf(mkey.ptr, mkey.len);
 
     LogInfo("Initializing...");
-    if (!disk->Init(mkey, users))
+    if (!repo->Init(mkey, users))
         return 1;
     LogInfo();
 
@@ -278,8 +279,9 @@ Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], Fm
     if (!config.Complete(authenticate))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, authenticate);
-    if (!disk)
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, authenticate);
+    if (!repo)
         return 1;
 
     // Use master key instead of username/password
@@ -291,13 +293,13 @@ Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], Fm
         if (mkey.len < 0)
             return 1;
 
-        if (!disk->Authenticate(mkey))
+        if (!repo->Authenticate(mkey))
             return 1;
     }
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
-    if (!disk->HasMode(rk_AccessMode::Config)) {
-        LogError("Cannot create user with %1 role", disk->GetRole());
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
+    if (!repo->HasMode(rk_AccessMode::Config)) {
+        LogError("Cannot create user with %1 role", repo->GetRole());
         return 1;
     }
     LogInfo();
@@ -319,7 +321,7 @@ Available user roles: %!..+%3%!0)", FelixTarget, rk_UserRoleNames[(int)role], Fm
         }
     }
 
-    if (!disk->InitUser(username, role, pwd, force))
+    if (!repo->InitUser(username, role, pwd, force))
         return 1;
 
     LogInfo("Added user: %!..+%1%!0", username);
@@ -390,15 +392,16 @@ Options:
     if (!config.Complete(!force))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, !force);
-    if (!disk)
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, !force);
+    if (!repo)
         return 1;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     LogInfo();
 
     if (!force) {
-        if (!disk->HasMode(rk_AccessMode::Config)) {
+        if (!repo->HasMode(rk_AccessMode::Config)) {
             LogError("Refusing to delete without config access");
             return 1;
         }
@@ -408,7 +411,7 @@ Options:
         }
     }
 
-    if (!disk->DeleteUser(username))
+    if (!repo->DeleteUser(username))
         return 1;
 
     LogInfo("Deleted user: %!..+%1%!0", username);
@@ -480,8 +483,9 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
     if (!config.Complete(false))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
-    if (!disk)
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, false);
+    if (!repo)
         return 1;
 
     if (verify) {
@@ -492,15 +496,15 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
         if (mkey.len < 0)
             return 1;
 
-        if (!disk->Authenticate(mkey))
+        if (!repo->Authenticate(mkey))
             return 1;
     }
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     LogInfo();
 
     HeapArray<rk_UserInfo> users;
-    if (!disk->ListUsers(&temp_alloc, verify, &users))
+    if (!repo->ListUsers(&temp_alloc, verify, &users))
         return 1;
 
     switch (format) {

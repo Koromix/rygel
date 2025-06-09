@@ -22,27 +22,26 @@ namespace RG {
 static const int MaxPathSize = 4096 - 128;
 
 class LocalDisk: public rk_Disk {
+    BlockAllocator str_alloc;
+
 public:
-    LocalDisk(const char *path, const rk_OpenSettings &settings);
+    LocalDisk(const char *path);
     ~LocalDisk() override;
 
-    bool Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users) override;
+    Size ReadFile(const char *path, Span<uint8_t> out_buf) override;
+    Size ReadFile(const char *path, HeapArray<uint8_t> *out_buf) override;
 
-    Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
-    Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
+    rk_WriteResult WriteFile(const char *path, Span<const uint8_t> buf, unsigned int flags) override;
+    bool DeleteFile(const char *path) override;
 
-    WriteResult WriteRaw(const char *path, Span<const uint8_t> buf, unsigned int flags) override;
-    bool DeleteRaw(const char *path) override;
-
-    bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
-    StatResult TestRaw(const char *path, int64_t *out_size = nullptr) override;
+    bool ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
+    StatResult TestFile(const char *path, int64_t *out_size = nullptr) override;
 
     bool CreateDirectory(const char *path) override;
     bool DeleteDirectory(const char *path) override;
 };
 
-LocalDisk::LocalDisk(const char *path, const rk_OpenSettings &settings)
-    : rk_Disk(settings, std::min(2 * GetCoreCount(), 32))
+LocalDisk::LocalDisk(const char *path)
 {
     Span<const char> directory = NormalizePath(path, GetWorkingDirectory(), &str_alloc);
 
@@ -54,103 +53,30 @@ LocalDisk::LocalDisk(const char *path, const rk_OpenSettings &settings)
 
     // We're good!
     url = directory.ptr;
+    default_threads = std::min(2 * GetCoreCount(), 32);
 }
 
 LocalDisk::~LocalDisk()
 {
 }
 
-bool LocalDisk::Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users)
-{
-    RG_ASSERT(url);
-    RG_ASSERT(!keyset);
-
-    BlockAllocator temp_alloc;
-
-    HeapArray<const char *> directories;
-    RG_DEFER_N(err_guard) {
-        for (Size i = directories.len - 1; i >= 0; i--) {
-            const char *dirname = directories[i];
-            UnlinkDirectory(dirname);
-        }
-    };
-
-    // Create main directory
-    if (TestFile(url)) {
-        if (!IsDirectoryEmpty(url)) {
-            LogError("Directory '%1' exists and is not empty", url);
-            return false;
-        }
-    } else {
-        if (!MakeDirectory(url))
-            return false;
-        directories.Append(url);
-    }
-    if (!MakeDirectory(url, false))
-        return false;
-
-    // Init subdirectories
-    {
-        const auto make_directory = [&](const char *suffix) {
-            const char *path = Fmt(&temp_alloc, "%1%/%2", url, suffix).ptr;
-
-            if (!MakeDirectory(path))
-                return false;
-            directories.Append(path);
-
-            return true;
-        };
-
-        if (!make_directory("keys"))
-            return false;
-        if (!make_directory("tags"))
-            return false;
-        if (!make_directory("blobs"))
-            return false;
-        if (!make_directory("tmp"))
-            return false;
-
-        for (char catalog: rk_BlobCatalogNames) {
-            char parent[128];
-            Fmt(parent, "blobs/%1", catalog);
-
-            if (!make_directory(parent))
-                return false;
-
-            for (int i = 0; i < 256; i++) {
-                char name[128];
-                Fmt(name, "%1/%2", parent, FmtHex(i).Pad0(-2));
-
-                if (!make_directory(name))
-                    return false;
-            }
-        }
-    }
-
-    if (!InitDefault(mkey, users))
-        return false;
-
-    err_guard.Disable();
-    return true;
-}
-
-Size LocalDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
+Size LocalDisk::ReadFile(const char *path, Span<uint8_t> out_buf)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
-    return ReadFile(filename.data, out_buf);
+    return RG::ReadFile(filename.data, out_buf);
 }
 
-Size LocalDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
+Size LocalDisk::ReadFile(const char *path, HeapArray<uint8_t> *out_buf)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
-    return ReadFile(filename.data, Mebibytes(64), out_buf);
+    return RG::ReadFile(filename.data, Mebibytes(64), out_buf);
 }
 
-rk_Disk::WriteResult LocalDisk::WriteRaw(const char *path, Span<const uint8_t> buf, unsigned int flags)
+rk_WriteResult LocalDisk::WriteFile(const char *path, Span<const uint8_t> buf, unsigned int flags)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
@@ -171,13 +97,13 @@ rk_Disk::WriteResult LocalDisk::WriteRaw(const char *path, Span<const uint8_t> b
                 tmp.len += len;
                 break;
             } else if (ret != OpenResult::FileExists) {
-                return WriteResult::OtherError;
+                return rk_WriteResult::OtherError;
             }
         }
 
         if (fd < 0) [[unlikely]] {
             LogError("Failed to create temporary file in '%1'", tmp);
-            return WriteResult::OtherError;
+            return rk_WriteResult::OtherError;
         }
     }
 
@@ -190,9 +116,9 @@ rk_Disk::WriteResult LocalDisk::WriteRaw(const char *path, Span<const uint8_t> b
 
     // Write encrypted content
     if (!writer.Write(buf))
-        return WriteResult::OtherError;
+        return rk_WriteResult::OtherError;
     if (!writer.Close())
-        return WriteResult::OtherError;
+        return rk_WriteResult::OtherError;
 
     // File is complete
     CloseDescriptor(fd);
@@ -200,21 +126,21 @@ rk_Disk::WriteResult LocalDisk::WriteRaw(const char *path, Span<const uint8_t> b
 
     // Finalize!
     {
-        unsigned int rename = (flags & (int)WriteFlag::Overwrite) ? (int)RenameFlag::Overwrite : 0;
+        unsigned int rename = (flags & (int)rk_WriteFlag::Overwrite) ? (int)RenameFlag::Overwrite : 0;
         RenameResult ret = RenameFile(tmp.data, filename.data, (int)RenameResult::AlreadyExists, rename);
 
         switch (ret) {
             case RenameResult::Success: {} break;
-            case RenameResult::AlreadyExists: return WriteResult::AlreadyExists;
-            case RenameResult::OtherError: return WriteResult::OtherError;
+            case RenameResult::AlreadyExists: return rk_WriteResult::AlreadyExists;
+            case RenameResult::OtherError: return rk_WriteResult::OtherError;
         }
     }
 
     tmp_guard.Disable();
-    return WriteResult::Success;
+    return rk_WriteResult::Success;
 }
 
-bool LocalDisk::DeleteRaw(const char *path)
+bool LocalDisk::DeleteFile(const char *path)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
@@ -222,14 +148,17 @@ bool LocalDisk::DeleteRaw(const char *path)
     return UnlinkFile(filename.data);
 }
 
-bool LocalDisk::ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func)
+bool LocalDisk::ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func)
 {
     BlockAllocator temp_alloc;
 
     path = path ? path : "";
 
     const char *dirname0 = path[0] ? Fmt(&temp_alloc, "%1/%2", url, path).ptr : url;
-    Size url_len = strlen(url);
+    Size prefix_len = strlen(url);
+
+    if (!RG::TestFile(dirname0, FileType::Directory))
+        return true;
 
     HeapArray<const char *> pending_directories;
     pending_directories.Append(dirname0);
@@ -239,7 +168,7 @@ bool LocalDisk::ListRaw(const char *path, FunctionRef<bool(const char *, int64_t
 
         EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
             const char *filename = Fmt(&temp_alloc, "%1/%2", dirname, basename).ptr;
-            const char *path = filename + url_len + 1;
+            const char *path = filename + prefix_len + 1;
 
             switch (file_info.type) {
                 case FileType::Directory: {
@@ -268,7 +197,7 @@ bool LocalDisk::ListRaw(const char *path, FunctionRef<bool(const char *, int64_t
     return true;
 }
 
-StatResult LocalDisk::TestRaw(const char *path, int64_t *out_size)
+StatResult LocalDisk::TestFile(const char *path, int64_t *out_size)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
@@ -303,15 +232,11 @@ bool LocalDisk::DeleteDirectory(const char *path)
     return UnlinkDirectory(filename.data);
 }
 
-std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, const rk_OpenSettings &settings)
+std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path)
 {
-    std::unique_ptr<rk_Disk> disk = std::make_unique<LocalDisk>(path, settings);
-
+    std::unique_ptr<rk_Disk> disk = std::make_unique<LocalDisk>(path);
     if (!disk->GetURL())
         return nullptr;
-    if (username && !disk->Authenticate(username, pwd))
-        return nullptr;
-
     return disk;
 }
 

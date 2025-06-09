@@ -16,7 +16,7 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "disk.hh"
+#include "repository.hh"
 
 namespace RG {
 

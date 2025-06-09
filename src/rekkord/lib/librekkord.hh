@@ -18,3 +18,4 @@
 #include "config.hh"
 #include "disk.hh"
 #include "repository.hh"
+#include "tape.hh"

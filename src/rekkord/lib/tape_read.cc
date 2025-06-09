@@ -14,9 +14,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
-#include "disk.hh"
 #include "repository.hh"
-#include "repository_priv.hh"
+#include "tape.hh"
+#include "priv_tape.hh"
 #include "xattr.hh"
 
 #if defined(_WIN32)
@@ -68,7 +68,7 @@ struct FileChunk {
 };
 
 class GetContext {
-    rk_Disk *disk;
+    rk_Repository *repo;
     rk_RestoreSettings settings;
 
     ProgressHandle pg_entries { "Entries" };
@@ -84,7 +84,7 @@ class GetContext {
     std::atomic<int64_t> stat_size { 0 };
 
 public:
-    GetContext(rk_Disk *disk, const rk_RestoreSettings &settings, int64_t entries, int64_t size);
+    GetContext(rk_Repository *repo, const rk_RestoreSettings &settings, int64_t entries, int64_t size);
 
     bool ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const char *dest_dirname);
     bool ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const EntryInfo &dest);
@@ -101,8 +101,8 @@ private:
     void MakeProgress(int64_t entries, int64_t size);
 };
 
-GetContext::GetContext(rk_Disk *disk, const rk_RestoreSettings &settings, int64_t entries, int64_t size)
-    : disk(disk), settings(settings), total_entries(entries), total_size(size), tasks(disk->GetAsync())
+GetContext::GetContext(rk_Repository *repo, const rk_RestoreSettings &settings, int64_t entries, int64_t size)
+    : repo(repo), settings(settings), total_entries(entries), total_size(size), tasks(repo->GetAsync())
 {
 }
 
@@ -491,7 +491,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
             int type;
             HeapArray<uint8_t> blob;
 
-            if (!disk->ReadBlob(oid, &type, &blob))
+            if (!repo->ReadBlob(oid, &type, &blob))
                 return false;
 
             switch (entry.kind) {
@@ -663,7 +663,7 @@ int GetContext::GetFile(const rk_ObjectID &oid, bool chunked, Span<const uint8_t
                 int type;
                 HeapArray<uint8_t> blob;
 
-                if (!disk->ReadBlob(oid, &type, &blob))
+                if (!repo->ReadBlob(oid, &type, &blob))
                     return false;
                 if (type != (int)BlobType::Chunk) [[unlikely]] {
                     LogError("Blob '%1' is not a Chunk", oid);
@@ -777,12 +777,12 @@ void GetContext::MakeProgress(int64_t entries, int64_t size)
     }
 }
 
-bool rk_Restore(rk_Disk *disk, const rk_ObjectID &oid, const rk_RestoreSettings &settings, const char *dest_path, int64_t *out_size)
+bool rk_Restore(rk_Repository *repo, const rk_ObjectID &oid, const rk_RestoreSettings &settings, const char *dest_path, int64_t *out_size)
 {
     int type;
     HeapArray<uint8_t> blob;
 
-    if (!disk->ReadBlob(oid, &type, &blob))
+    if (!repo->ReadBlob(oid, &type, &blob))
         return false;
 
     switch (type) {
@@ -812,7 +812,7 @@ bool rk_Restore(rk_Disk *disk, const rk_ObjectID &oid, const rk_RestoreSettings 
                 LogInfo("Restore file %!..+%1%!0", oid);
             }
 
-            GetContext get(disk, settings, 1, file_size);
+            GetContext get(repo, settings, 1, file_size);
 
             int fd = get.GetFile(oid, chunked, blob, dest_path);
             if (!settings.fake && fd < 0)
@@ -853,7 +853,7 @@ bool rk_Restore(rk_Disk *disk, const rk_ObjectID &oid, const rk_RestoreSettings 
             }
 
             ProgressHandle progress("Restore");
-            GetContext get(disk, settings, entries, size);
+            GetContext get(repo, settings, entries, size);
 
             if (!get.ExtractEntries(blob, false, dest_path))
                 return false;
@@ -896,7 +896,7 @@ bool rk_Restore(rk_Disk *disk, const rk_ObjectID &oid, const rk_RestoreSettings 
             }
 
             ProgressHandle progress("Restore");
-            GetContext get(disk, settings, entries, size);
+            GetContext get(repo, settings, entries, size);
 
             Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
 
@@ -932,7 +932,7 @@ bool rk_Restore(rk_Disk *disk, const rk_ObjectID &oid, const rk_RestoreSettings 
     return true;
 }
 
-bool rk_ListSnapshots(rk_Disk *disk, Allocator *alloc,
+bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc,
                       HeapArray<rk_SnapshotInfo> *out_snapshots, HeapArray<rk_ChannelInfo> *out_channels)
 {
     RG_ASSERT(out_snapshots || out_channels);
@@ -951,7 +951,7 @@ bool rk_ListSnapshots(rk_Disk *disk, Allocator *alloc,
     };
 
     HeapArray<rk_TagInfo> tags;
-    if (!disk->ListTags(&temp_alloc, &tags))
+    if (!repo->ListTags(&temp_alloc, &tags))
         return false;
 
     // Decode tags
@@ -1027,7 +1027,7 @@ bool rk_ListSnapshots(rk_Disk *disk, Allocator *alloc,
 }
 
 class ListContext {
-    rk_Disk *disk;
+    rk_Repository *repo;
     rk_ListSettings settings;
 
     ProgressHandle pg_entries { "Entries" };
@@ -1036,7 +1036,7 @@ class ListContext {
     std::atomic_int64_t known_entries = 0;
 
 public:
-    ListContext(rk_Disk *disk, const rk_ListSettings &settings, int64_t entries);
+    ListContext(rk_Repository *repo, const rk_ListSettings &settings, int64_t entries);
 
     bool RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
                         Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
@@ -1045,8 +1045,8 @@ private:
     void MakeProgress(int64_t entries);
 };
 
-ListContext::ListContext(rk_Disk *disk, const rk_ListSettings &settings, int64_t entries)
-    : disk(disk), settings(settings), total_entries(entries)
+ListContext::ListContext(rk_Repository *repo, const rk_ListSettings &settings, int64_t entries)
+    : repo(repo), settings(settings), total_entries(entries)
 {
 }
 
@@ -1070,7 +1070,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         decoded.Append(entry);
     }
 
-    Async async(disk->GetAsync());
+    Async async(repo->GetAsync());
 
     struct RecurseContext {
         rk_ObjectInfo obj;
@@ -1129,7 +1129,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
                     int type;
                     HeapArray<uint8_t> blob;
 
-                    if (!disk->ReadBlob(obj->oid, &type, &blob))
+                    if (!repo->ReadBlob(obj->oid, &type, &blob))
                         return false;
 
                     switch (type) {
@@ -1190,7 +1190,7 @@ void ListContext::MakeProgress(int64_t entries)
     }
 }
 
-bool rk_ListChildren(rk_Disk *disk, const rk_ObjectID &oid, const rk_ListSettings &settings,
+bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListSettings &settings,
                      Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects)
 {
     Size prev_len = out_objects->len;
@@ -1199,7 +1199,7 @@ bool rk_ListChildren(rk_Disk *disk, const rk_ObjectID &oid, const rk_ListSetting
     int type;
     HeapArray<uint8_t> blob;
 
-    if (!disk->ReadBlob(oid, &type, &blob))
+    if (!repo->ReadBlob(oid, &type, &blob))
         return false;
 
     switch (type) {
@@ -1215,7 +1215,7 @@ bool rk_ListChildren(rk_Disk *disk, const rk_ObjectID &oid, const rk_ListSetting
             int64_t entries = LittleEndian(header->entries);
 
             ProgressHandle progress;
-            ListContext tree(disk, settings, entries);
+            ListContext tree(repo, settings, entries);
 
             if (!tree.RecurseEntries(blob, false, 0, alloc, out_objects))
                 return false;
@@ -1251,7 +1251,7 @@ bool rk_ListChildren(rk_Disk *disk, const rk_ObjectID &oid, const rk_ListSetting
             DirectoryHeader *header2 = (DirectoryHeader *)(header1 + 1);
             int64_t entries = LittleEndian(header2->entries);
 
-            ListContext tree(disk, settings, entries);
+            ListContext tree(repo, settings, entries);
 
             // Make sure snapshot channel is NUL terminated
             header1->channel[RG_SIZE(header1->channel) - 1] = 0;
@@ -1338,7 +1338,7 @@ static bool ParseOID(Span<const char> str, rk_ObjectID *out_oid)
     return true;
 }
 
-bool rk_LocateObject(rk_Disk *disk, Span<const char> identifier, rk_ObjectID *out_oid)
+bool rk_LocateObject(rk_Repository *repo, Span<const char> identifier, rk_ObjectID *out_oid)
 {
     BlockAllocator temp_alloc;
 
@@ -1352,7 +1352,7 @@ bool rk_LocateObject(rk_Disk *disk, Span<const char> identifier, rk_ObjectID *ou
 
         if (!found) {
             HeapArray<rk_SnapshotInfo> snapshots;
-            if (!rk_ListSnapshots(disk, &temp_alloc, &snapshots))
+            if (!rk_ListSnapshots(repo, &temp_alloc, &snapshots))
                 return false;
 
             for (Size i = snapshots.len - 1; i >= 0; i--) {
@@ -1381,7 +1381,7 @@ bool rk_LocateObject(rk_Disk *disk, Span<const char> identifier, rk_ObjectID *ou
         do {
             objects.RemoveFrom(0);
 
-            if (!rk_ListChildren(disk, oid, {}, &temp_alloc, &objects))
+            if (!rk_ListChildren(repo, oid, {}, &temp_alloc, &objects))
                 return false;
 
             bool match = false;
@@ -1416,12 +1416,12 @@ missing:
     return false;
 }
 
-const char *rk_ReadLink(rk_Disk *disk, const rk_ObjectID &oid, Allocator *alloc)
+const char *rk_ReadLink(rk_Repository *repo, const rk_ObjectID &oid, Allocator *alloc)
 {
     int type;
     HeapArray<uint8_t> blob;
 
-    if (!disk->ReadBlob(oid, &type, &blob))
+    if (!repo->ReadBlob(oid, &type, &blob))
         return nullptr;
     if (type != (int)BlobType::Link) {
         LogError("Expected symbolic link for '%1'", oid);
@@ -1433,7 +1433,7 @@ const char *rk_ReadLink(rk_Disk *disk, const rk_ObjectID &oid, Allocator *alloc)
 }
 
 class FileHandle: public rk_FileHandle {
-    rk_Disk *disk;
+    rk_Repository *repo;
     HeapArray<FileChunk> chunks;
 
     std::mutex buf_mutex;
@@ -1441,7 +1441,7 @@ class FileHandle: public rk_FileHandle {
     HeapArray<uint8_t> buf;
 
 public:
-    FileHandle(rk_Disk *disk) : disk(disk) {}
+    FileHandle(rk_Repository *repo) : repo(repo) {}
 
     bool Init(const rk_ObjectID &oid, Span<const uint8_t> blob);
     Size Read(int64_t offset, Span<uint8_t> out_buf) override;
@@ -1532,7 +1532,7 @@ Size FileHandle::Read(int64_t offset, Span<uint8_t> out_buf)
 
                 int type;
 
-                if (!disk->ReadBlob(oid, &type, &buf))
+                if (!repo->ReadBlob(oid, &type, &buf))
                     return false;
                 if (type != (int)BlobType::Chunk) [[unlikely]] {
                     LogError("Blob '%1' is not a Chunk", chunk.hash);
@@ -1578,17 +1578,17 @@ Size ChunkHandle::Read(int64_t offset, Span<uint8_t> out_buf)
     return copy_len;
 }
 
-std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Disk *disk, const rk_ObjectID &oid)
+std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Repository *repo, const rk_ObjectID &oid)
 {
     int type;
     HeapArray<uint8_t> blob;
 
-    if (!disk->ReadBlob(oid, &type, &blob))
+    if (!repo->ReadBlob(oid, &type, &blob))
         return nullptr;
 
     switch (type) {
         case (int)BlobType::File: {
-            std::unique_ptr<FileHandle> handle = std::make_unique<FileHandle>(disk);
+            std::unique_ptr<FileHandle> handle = std::make_unique<FileHandle>(repo);
             if (!handle->Init(oid, blob))
                 return nullptr;
             return handle;

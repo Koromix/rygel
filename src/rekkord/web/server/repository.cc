@@ -23,12 +23,6 @@
 
 namespace RG {
 
-enum class OpenError {
-    FailedConnection,
-    AuthenticationError,
-    ModeError
-};
-
 static smtp_MailContent FailureMessage = {
     "[Error] {{ TITLE }}: {{ REPOSITORY }}",
     R"(Failed to check for {{ REPOSITORY }}:\n{{ ERROR }})",
@@ -60,12 +54,12 @@ static smtp_MailContent StaleResolved = {
 static bool FillConfig(const char *url, const char *user, const char *password,
                        const HashMap<const char *, const char *> variables, rk_Config *out_repo)
 {
-    rk_Config repo;
+    rk_Config access;
 
-    if (!rk_DecodeURL(url, &repo))
+    if (!rk_DecodeURL(url, &access))
         return false;
 
-    switch (repo.type) {
+    switch (access.type) {
         case rk_DiskType::S3:
         case rk_DiskType::SFTP: {} break;
 
@@ -75,71 +69,47 @@ static bool FillConfig(const char *url, const char *user, const char *password,
         }
     }
 
-    repo.username = user;
-    repo.password = password;
+    access.username = user;
+    access.password = password;
 
-    switch (repo.type) {
+    switch (access.type) {
         case rk_DiskType::Local: { RG_UNREACHABLE(); } break;
 
         case rk_DiskType::S3: {
-            repo.s3.remote.access_id = variables.FindValue("S3_ACCESS_KEY_ID", nullptr);
-            repo.s3.remote.access_key = variables.FindValue("S3_SECRET_ACCESS_KEY", nullptr);
+            access.s3.remote.access_id = variables.FindValue("S3_ACCESS_KEY_ID", nullptr);
+            access.s3.remote.access_key = variables.FindValue("S3_SECRET_ACCESS_KEY", nullptr);
         } break;
 
         case rk_DiskType::SFTP: {
-            repo.ssh.known_hosts = false;
-            repo.ssh.password = variables.FindValue("SSH_PASSWORD", nullptr);
-            repo.ssh.key = variables.FindValue("SSH_KEY", nullptr);
-            repo.ssh.fingerprint = variables.FindValue("SSH_FINGERPRINT", nullptr);
+            access.ssh.known_hosts = false;
+            access.ssh.password = variables.FindValue("SSH_PASSWORD", nullptr);
+            access.ssh.key = variables.FindValue("SSH_KEY", nullptr);
+            access.ssh.fingerprint = variables.FindValue("SSH_FINGERPRINT", nullptr);
         } break;
     }
 
-    if (!repo.Validate(true))
+    if (!access.Validate(true))
         return false;
 
-    std::swap(*out_repo, repo);
+    std::swap(*out_repo, access);
     return true;
 }
 
-static std::unique_ptr<rk_Disk> OpenRepository(const rk_Config &repo, OpenError *out_error)
-{
-    RG_ASSERT(repo.Validate(true));
-
-    std::unique_ptr<rk_Disk> disk = rk_Open(repo, false);
-
-    if (!disk) {
-        *out_error = OpenError::FailedConnection;
-        return nullptr;
-    }
-
-    if (!disk->Authenticate(repo.username, repo.password)) {
-        *out_error = OpenError::AuthenticationError;
-        return nullptr;
-    }
-    if (disk->GetModes() != (int)rk_AccessMode::Log) {
-        LogError("Select repository user with LogOnly role and nothing else");
-        *out_error = OpenError::ModeError;
-        return nullptr;
-    }
-
-    return disk;
-}
-
-static bool ListSnapshots(const rk_Config &repo, Allocator *alloc,
+static bool ListSnapshots(const rk_Config &access, Allocator *alloc,
                           HeapArray<rk_SnapshotInfo> *out_snapshots, HeapArray<rk_ChannelInfo> *out_channels)
 {
-    OpenError error;
-    std::unique_ptr<rk_Disk> disk = OpenRepository(repo, &error);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(access);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), access, true);
 
-    if (!disk)
+    if (!repo)
         return false;
-    if (!rk_ListSnapshots(disk.get(), alloc, out_snapshots, out_channels))
+    if (!rk_ListSnapshots(repo.get(), alloc, out_snapshots, out_channels))
         return false;
 
     return true;
 }
 
-static bool CheckRepository(const rk_Config &repo, int64_t id)
+static bool CheckRepository(const rk_Config &access, int64_t id)
 {
     BlockAllocator temp_alloc;
 
@@ -162,7 +132,7 @@ static bool CheckRepository(const rk_Config &repo, int64_t id)
         });
         RG_DEFER { PopLogFilter(); };
 
-        if (!ListSnapshots(repo, &temp_alloc, &snapshots, &channels)) {
+        if (!ListSnapshots(access, &temp_alloc, &snapshots, &channels)) {
             bool success = db.Transaction([&]() {
                 if (!db.Run(R"(UPDATE repositories SET checked = ?2,
                                                        failed = ?3,
@@ -312,7 +282,7 @@ bool CheckRepositories()
         BucketArray<rk_Config> repositories;
 
         while (stmt.IsRow()) {
-            rk_Config *repo = repositories.AppendDefault();
+            rk_Config *access = repositories.AppendDefault();
 
             int64_t id = sqlite3_column_int64(stmt, 0);
             const char *url = DuplicateString((const char *)sqlite3_column_text(stmt, 1), &temp_alloc).ptr;
@@ -334,10 +304,10 @@ bool CheckRepositories()
                 variables.Set(key, value);
             } while (stmt.Step());
 
-            if (!FillConfig(url, user, password, variables, repo))
+            if (!FillConfig(url, user, password, variables, access))
                 continue;
 
-            async.Run([=]() { return CheckRepository(*repo, id); });
+            async.Run([=]() { return CheckRepository(*access, id); });
         }
         if (!stmt.IsValid())
             return false;
@@ -682,7 +652,7 @@ void HandleRepositorySave(http_IO *io)
         }
     }
 
-    rk_Config repo;
+    rk_Config access;
 
     // Check missing or invalid values
     {
@@ -702,7 +672,7 @@ void HandleRepositorySave(http_IO *io)
         }
 
         if (url) {
-            valid &= FillConfig(url, user, password, variables, &repo);
+            valid &= FillConfig(url, user, password, variables, &access);
         } else {
             LogError("Missing 'url' value");
             valid = false;
@@ -716,15 +686,20 @@ void HandleRepositorySave(http_IO *io)
 
     // Make sure it works
     {
-        OpenError error;
-        std::unique_ptr<rk_Disk> disk = OpenRepository(repo, &error);
+        std::unique_ptr<rk_Disk> disk = rk_OpenDisk(access);
+        std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), access, true);
 
         if (!disk) {
-            switch (error) {
-                case OpenError::FailedConnection: { io->SendError(404); } break;
-                case OpenError::AuthenticationError: { io->SendError(403); } break;
-                case OpenError::ModeError: { io->SendError(403); } break;
-            }
+            io->SendError(404);
+            return;
+        }
+        if (!repo) {
+            io->SendError(403);
+            return;
+        }
+        if (repo->GetModes() != (int)rk_AccessMode::Log) {
+            LogError("Select repository user with LogOnly role and nothing else");
+            io->SendError(403);
             return;
         }
     }

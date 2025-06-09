@@ -148,22 +148,23 @@ Available sort orders: %!..+%4%!0)",
     if (!config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
-    if (!disk)
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    if (!repo)
         return 1;
 
     ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
-    if (!disk->HasMode(rk_AccessMode::Log)) {
-        LogError("Cannot list snapshots with %1 role", disk->GetRole());
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
+    if (!repo->HasMode(rk_AccessMode::Log)) {
+        LogError("Cannot list snapshots with %1 role", repo->GetRole());
         return 1;
     }
     LogInfo();
 
     HeapArray<rk_SnapshotInfo> snapshots;
-    if (!rk_ListSnapshots(disk.get(), &temp_alloc, &snapshots))
+    if (!rk_ListSnapshots(repo.get(), &temp_alloc, &snapshots))
         return 1;
 
     if (channel || pattern) {
@@ -373,22 +374,23 @@ Available output formats: %!..+%3%!0)",
     if (!config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
-    if (!disk)
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    if (!repo)
         return 1;
 
     ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
-    if (!disk->HasMode(rk_AccessMode::Log)) {
-        LogError("Cannot list snapshots with %1 role", disk->GetRole());
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
+    if (!repo->HasMode(rk_AccessMode::Log)) {
+        LogError("Cannot list snapshots with %1 role", repo->GetRole());
         return 1;
     }
     LogInfo();
 
     HeapArray<rk_ChannelInfo> channels;
-    if (!rk_ListSnapshots(disk.get(), &temp_alloc, &channels))
+    if (!rk_ListSnapshots(repo.get(), &temp_alloc, &channels))
         return 1;
 
     switch (format) {
@@ -704,26 +706,27 @@ Available output formats: %!..+%3%!0)",
     if (!config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
-    if (!disk)
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    if (!repo)
         return 1;
 
     ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
-    if (!disk->HasMode(rk_AccessMode::Read)) {
-        LogError("Cannot list objects with %1 role", disk->GetRole());
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
+    if (!repo->HasMode(rk_AccessMode::Read)) {
+        LogError("Cannot list objects with %1 role", repo->GetRole());
         return 1;
     }
     LogInfo();
 
     rk_ObjectID oid = {};
-    if (!rk_LocateObject(disk.get(), identifier, &oid))
+    if (!rk_LocateObject(repo.get(), identifier, &oid))
         return 1;
 
     HeapArray<rk_ObjectInfo> objects;
-    if (!rk_ListChildren(disk.get(), oid, settings, &temp_alloc, &objects))
+    if (!rk_ListChildren(repo.get(), oid, settings, &temp_alloc, &objects))
         return 1;
 
     switch (format) {

@@ -125,19 +125,20 @@ Available metadata save options:
     if (!config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
-    if (!disk)
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    if (!repo)
         return 1;
 
     ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
-    if (!disk->HasMode(rk_AccessMode::Write)) {
-        LogError("Cannot save data with %1 role", disk->GetRole());
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
+    if (!repo->HasMode(rk_AccessMode::Write)) {
+        LogError("Cannot save data with %1 role", repo->GetRole());
         return 1;
     }
-    if (disk->HasMode(rk_AccessMode::Read)) {
+    if (repo->HasMode(rk_AccessMode::Read)) {
         LogWarning("You should prefer write-only users for this command");
     }
     LogInfo();
@@ -149,7 +150,7 @@ Available metadata save options:
     rk_ObjectID oid = {};
     int64_t total_size = 0;
     int64_t total_stored = 0;
-    if (!rk_Save(disk.get(), settings, filenames, &oid, &total_size, &total_stored))
+    if (!rk_Save(repo.get(), settings, filenames, &oid, &total_size, &total_stored))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
@@ -285,16 +286,17 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
     if (!config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
-    if (!disk)
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    if (!repo)
         return 1;
 
     ZeroSafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
-    if (!disk->HasMode(rk_AccessMode::Read)) {
-        LogError("Cannot restore data with %1 role", disk->GetRole());
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
+    if (!repo->HasMode(rk_AccessMode::Read)) {
+        LogError("Cannot restore data with %1 role", repo->GetRole());
         return 1;
     }
     LogInfo();
@@ -304,11 +306,11 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
     int64_t now = GetMonotonicTime();
 
     rk_ObjectID oid = {};
-    if (!rk_LocateObject(disk.get(), identifier, &oid))
+    if (!rk_LocateObject(repo.get(), identifier, &oid))
         return 1;
 
     int64_t file_len = 0;
-    if (!rk_Restore(disk.get(), oid, settings, dest_filename, &file_len))
+    if (!rk_Restore(repo.get(), oid, settings, dest_filename, &file_len))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;

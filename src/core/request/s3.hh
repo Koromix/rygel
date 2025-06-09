@@ -102,6 +102,7 @@ public:
     const s3_Config &GetConfig() const { return config; }
     const char *GetURL() const { return url; }
 
+    bool ListObjects(FunctionRef<bool(const char *, int64_t)> func) { return ListObjects(nullptr, func); }
     bool ListObjects(const char *prefix, FunctionRef<bool(const char *, int64_t)> func);
 
     Size GetObject(Span<const char> key, Span<uint8_t> out_buf);

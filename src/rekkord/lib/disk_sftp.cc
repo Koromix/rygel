@@ -39,13 +39,6 @@ enum class RunResult {
 static thread_local ConnectionData *thread_conn;
 
 class SftpDisk: public rk_Disk {
-    struct ListContext {
-        Async *tasks;
-
-        std::mutex mutex;
-        FunctionRef<bool(const char *, int64_t)> func;
-    };
-
     ssh_Config config;
 
     std::mutex connections_mutex;
@@ -53,19 +46,17 @@ class SftpDisk: public rk_Disk {
     HeapArray<ConnectionData *> connections;
 
 public:
-    SftpDisk(const ssh_Config &config, const rk_OpenSettings &settings);
+    SftpDisk(const ssh_Config &config);
     ~SftpDisk() override;
 
-    bool Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users) override;
+    Size ReadFile(const char *path, Span<uint8_t> out_buf) override;
+    Size ReadFile(const char *path, HeapArray<uint8_t> *out_buf) override;
 
-    Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
-    Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
+    rk_WriteResult WriteFile(const char *path, Span<const uint8_t> buf, unsigned int flags) override;
+    bool DeleteFile(const char *path) override;
 
-    WriteResult WriteRaw(const char *path, Span<const uint8_t> buf, unsigned int flags) override;
-    bool DeleteRaw(const char *path) override;
-
-    bool ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
-    StatResult TestRaw(const char *path, int64_t *out_size = nullptr) override;
+    bool ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
+    StatResult TestFile(const char *path, int64_t *out_size = nullptr) override;
 
     bool CreateDirectory(const char *path) override;
     bool DeleteDirectory(const char *path) override;
@@ -76,8 +67,6 @@ private:
     ConnectionData *ReserveConnection();
     void ReleaseConnection(ConnectionData *conn);
     void DestroyConnection(ConnectionData *conn);
-
-    bool ListRaw(ListContext *ctx, const char *path);
 };
 
 static bool IsSftpErrorSpecific(int error)
@@ -92,8 +81,7 @@ static bool IsSftpErrorSpecific(int error)
     return true;
 }
 
-SftpDisk::SftpDisk(const ssh_Config &config, const rk_OpenSettings &settings)
-    : rk_Disk(settings, std::min(4 * GetCoreCount(), 64))
+SftpDisk::SftpDisk(const ssh_Config &config)
 {
     config.Clone(&this->config);
 
@@ -115,10 +103,11 @@ SftpDisk::SftpDisk(const ssh_Config &config, const rk_OpenSettings &settings)
 
     // We're good!
     if (config.port > 0 && config.port != 22) {
-        url = Fmt(&str_alloc, "sftp://%1@%2:%3/%4", config.username, config.host, config.port, config.path ? config.path : "").ptr;
+        url = Fmt(&this->config.str_alloc, "sftp://%1@%2:%3/%4", config.username, config.host, config.port, config.path ? config.path : "").ptr;
     } else {
-        url = Fmt(&str_alloc, "sftp://%1@%2/%3", config.username, config.host, config.path ? config.path : "").ptr;
+        url = Fmt(&this->config.str_alloc, "sftp://%1@%2/%3", config.username, config.host, config.path ? config.path : "").ptr;
     }
+    default_threads = std::min(4 * GetCoreCount(), 64);
 }
 
 SftpDisk::~SftpDisk()
@@ -128,107 +117,7 @@ SftpDisk::~SftpDisk()
     }
 }
 
-bool SftpDisk::Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users)
-{
-    RG_ASSERT(url);
-    RG_ASSERT(!keyset);
-
-    BlockAllocator temp_alloc;
-
-    ConnectionData *conn = ReserveConnection();
-    if (!conn)
-        return false;
-    RG_DEFER { ReleaseConnection(conn); };
-
-    HeapArray<const char *> directories;
-    RG_DEFER_N(err_guard) {
-        for (Size i = directories.len - 1; i >= 0; i--) {
-            const char *dirname = directories[i];
-            sftp_rmdir(conn->sftp, dirname);
-        }
-    };
-
-    // Create main directory
-    {
-        sftp_dir dir = sftp_opendir(conn->sftp, config.path);
-
-        if (dir) {
-            RG_DEFER { sftp_closedir(dir); };
-
-            for (;;) {
-                sftp_attributes attr = sftp_readdir(conn->sftp, dir);
-                RG_DEFER { sftp_attributes_free(attr); };
-
-                if (!attr) {
-                    if (sftp_dir_eof(dir))
-                        break;
-
-                    LogError("Failed to enumerate directory '%1': %2", config.path, sftp_GetErrorString(conn->sftp));
-                    return false;
-                }
-
-                if (TestStr(attr->name, ".") || TestStr(attr->name, ".."))
-                    continue;
-
-                LogError("Directory '%1' exists and is not empty", config.path);
-                return false;
-            }
-        } else {
-            if (sftp_mkdir(conn->sftp, config.path, 0755) < 0) {
-                LogError("Cannot create directory '%1': %2", config.path, sftp_GetErrorString(conn->sftp));
-                return false;
-            }
-        }
-    }
-
-    // Init subdirectories
-    {
-        const auto make_directory = [&](const char *suffix) {
-            const char *path = Fmt(&temp_alloc, "%1/%2", config.path, suffix).ptr;
-
-            if (sftp_mkdir(conn->sftp, path, 0755) < 0) {
-                LogError("Cannot create directory '%1': %2", path, sftp_GetErrorString(conn->sftp));
-                return false;
-            }
-            directories.Append(path);
-
-            return true;
-        };
-
-        if (!make_directory("keys"))
-            return false;
-        if (!make_directory("tags"))
-            return false;
-        if (!make_directory("blobs"))
-            return false;
-        if (!make_directory("tmp"))
-            return false;
-
-        for (char catalog: rk_BlobCatalogNames) {
-            char parent[128];
-            Fmt(parent, "blobs/%1", catalog);
-
-            if (!make_directory(parent))
-                return false;
-
-            for (int i = 0; i < 256; i++) {
-                char name[128];
-                Fmt(name, "%1/%2", parent, FmtHex(i).Pad0(-2));
-
-                if (!make_directory(name))
-                    return false;
-            }
-        }
-    }
-
-    if (!InitDefault(mkey, users))
-        return false;
-
-    err_guard.Disable();
-    return true;
-}
-
-Size SftpDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
+Size SftpDisk::ReadFile(const char *path, Span<uint8_t> out_buf)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
@@ -284,7 +173,7 @@ Size SftpDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
     return read_len;
 }
 
-Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
+Size SftpDisk::ReadFile(const char *path, HeapArray<uint8_t> *out_buf)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
@@ -346,14 +235,14 @@ Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
     return read_len;
 }
 
-rk_Disk::WriteResult SftpDisk::WriteRaw(const char *path, Span<const uint8_t> buf, unsigned int flags)
+rk_WriteResult SftpDisk::WriteFile(const char *path, Span<const uint8_t> buf, unsigned int flags)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
 
-    bool overwrite = (flags & (int)WriteFlag::Overwrite);
+    bool overwrite = (flags & (int)rk_WriteFlag::Overwrite);
 
-    WriteResult ret = WriteResult::Success;
+    rk_WriteResult ret = rk_WriteResult::Success;
 
     bool success = RunSafe("write file", [&](ConnectionData *conn) {
         // Create temporary file
@@ -444,7 +333,7 @@ rk_Disk::WriteResult SftpDisk::WriteRaw(const char *path, Span<const uint8_t> bu
                 RG_DEFER { sftp_attributes_free(attr); };
 
                 if (attr) {
-                    ret = WriteResult::AlreadyExists;
+                    ret = rk_WriteResult::AlreadyExists;
                     return RunResult::Success;
                 }
             }
@@ -463,12 +352,12 @@ rk_Disk::WriteResult SftpDisk::WriteRaw(const char *path, Span<const uint8_t> bu
         return RunResult::Success;
     });
     if (!success)
-        return WriteResult::OtherError;
+        return rk_WriteResult::OtherError;
 
     return ret;
 }
 
-bool SftpDisk::DeleteRaw(const char *path)
+bool SftpDisk::DeleteFile(const char *path)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
@@ -493,60 +382,28 @@ bool SftpDisk::DeleteRaw(const char *path)
     return success;
 }
 
-bool SftpDisk::ListRaw(const char *path, FunctionRef<bool(const char *, int64_t)> func)
+bool SftpDisk::ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func)
 {
-    ListContext ctx = {};
-    Async tasks(GetAsync());
-
-    ctx.tasks = &tasks;
-    ctx.func = func;
-
-    return ListRaw(&ctx, path);
-}
-
-bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
-{
-    path = path ? path : "";
-
-    LocalArray<char, MaxPathSize + 128> dirname;
-    dirname.len = Fmt(dirname.data, "%1/%2", config.path, path).len;
-
-    struct FileInfo {
-        const char *filename;
-        int64_t size;
-    };
-
-    HeapArray<FileInfo> files;
     BlockAllocator temp_alloc;
 
-    bool success = RunSafe("list directory", [&](ConnectionData *conn) {
-        files.RemoveFrom(0);
-        temp_alloc.Reset();
+    path = path ? path : "";
 
-        sftp_dir dir = sftp_opendir(conn->sftp, dirname.data);
-        if (!dir) {
-            int error = sftp_get_error(conn->sftp);
+    const char *dirname0 = path[0] ? Fmt(&temp_alloc, "%1/%2", config.path, path).ptr : config.path;
+    Size prefix_len = strlen(config.path);
 
-            if (IsSftpErrorSpecific(error)) {
-                LogError("Failed to enumerate directory '%1': %2", dirname, sftp_GetErrorString(conn->sftp));
-                return RunResult::SpecificError;
-            } else {
-                return RunResult::OtherError;
-            }
-        }
-        RG_DEFER { sftp_closedir(dir); };
+    HeapArray<const char *> pending_directories;
+    pending_directories.Append(dirname0);
 
-        Async async(ctx->tasks);
+    for (Size i = 0; i < pending_directories.len; i++) {
+        const char *dirname = pending_directories[i];
 
-        for (;;) {
-            sftp_attributes attr = sftp_readdir(conn->sftp, dir);
-            RG_DEFER { sftp_attributes_free(attr); };
-
-            if (!attr) {
-                if (sftp_dir_eof(dir))
-                    break;
-
+        bool success = RunSafe("list directory", [&](ConnectionData *conn) {
+            sftp_dir dir = sftp_opendir(conn->sftp, dirname);
+            if (!dir) {
                 int error = sftp_get_error(conn->sftp);
+
+                if (!i && error == SSH_FX_NO_SUCH_FILE)
+                    return RunResult::Success;
 
                 if (IsSftpErrorSpecific(error)) {
                     LogError("Failed to enumerate directory '%1': %2", dirname, sftp_GetErrorString(conn->sftp));
@@ -555,45 +412,52 @@ bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
                     return RunResult::OtherError;
                 }
             }
+            RG_DEFER { sftp_closedir(dir); };
 
-            if (TestStr(attr->name, ".") || TestStr(attr->name, ".."))
-                continue;
+            for (;;) {
+                sftp_attributes attr = sftp_readdir(conn->sftp, dir);
+                RG_DEFER { sftp_attributes_free(attr); };
 
-            const char *filename = path[0] ? Fmt(&temp_alloc, "%1/%2", path, attr->name).ptr
-                                           : DuplicateString(attr->name, &temp_alloc).ptr;
+                if (!attr) {
+                    if (sftp_dir_eof(dir))
+                        break;
 
-            if (attr->type == SSH_FILEXFER_TYPE_DIRECTORY) {
-                if (TestStr(filename, "tmp"))
+                    int error = sftp_get_error(conn->sftp);
+
+                    if (IsSftpErrorSpecific(error)) {
+                        LogError("Failed to enumerate directory '%1': %2", dirname, sftp_GetErrorString(conn->sftp));
+                        return RunResult::SpecificError;
+                    } else {
+                        return RunResult::OtherError;
+                    }
+                }
+
+                if (TestStr(attr->name, ".") || TestStr(attr->name, ".."))
                     continue;
-                if (!ListRaw(ctx, filename))
-                    return RunResult::SpecificError;
-            } else {
-                files.Append({ filename, (int64_t)attr->size });
+
+                const char *filename = Fmt(&temp_alloc, "%1/%2", dirname, attr->name).ptr;
+                const char *path = filename + prefix_len + 1;
+
+                if (attr->type == SSH_FILEXFER_TYPE_DIRECTORY) {
+                    if (TestStr(path, "tmp"))
+                        continue;
+                    pending_directories.Append(filename);
+                } else {
+                    if (!func(path, (int64_t)attr->size))
+                        return RunResult::OtherError;
+                }
             }
-        }
 
-        if (!async.Sync())
-            return RunResult::SpecificError;
-
-        return RunResult::Success;
-    });
-    if (!success)
-        return false;
-
-    // Give collected paths to callback
-    {
-        std::lock_guard<std::mutex> lock(ctx->mutex);
-
-        for (const FileInfo &file: files) {
-            if (!ctx->func(file.filename, file.size))
-                return false;
-        }
+            return RunResult::Success;
+        });
+        if (!success)
+            return false;
     }
 
     return true;
 }
 
-StatResult SftpDisk::TestRaw(const char *path, int64_t *out_size)
+StatResult SftpDisk::TestFile(const char *path, int64_t *out_size)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
@@ -834,15 +698,11 @@ void SftpDisk::DestroyConnection(ConnectionData *conn)
     delete conn;
 }
 
-std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *username, const char *pwd, const rk_OpenSettings &settings)
+std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config)
 {
-    std::unique_ptr<rk_Disk> disk = std::make_unique<SftpDisk>(config, settings);
-
+    std::unique_ptr<rk_Disk> disk = std::make_unique<SftpDisk>(config);
     if (!disk->GetURL())
         return nullptr;
-    if (username && !disk->Authenticate(username, pwd))
-        return nullptr;
-
     return disk;
 }
 

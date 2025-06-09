@@ -16,125 +16,205 @@
 #pragma once
 
 #include "src/core/base/base.hh"
+#include "src/core/sqlite/sqlite.hh"
 
 namespace RG {
 
+struct rk_Config;
 class rk_Disk;
 
-static const char *const rk_DefaultSnapshotChannel = "default";
-static const Size rk_MaxSnapshotChannelLength = 256;
+static const int rk_MasterKeySize = 32;
 
-struct rk_SaveSettings {
-    const char *channel = rk_DefaultSnapshotChannel;
-    bool follow = false;
-    bool noatime = false;
-    bool atime = false;
-    bool xattrs = false;
-    bool raw = false;
+struct rk_Hash {
+    uint8_t hash[32];
+
+    int operator-(const rk_Hash &other) const { return memcmp(hash, other.hash, RG_SIZE(hash)); }
+
+    operator FmtArg() const { return FmtSpan(hash, FmtType::BigHex, "").Pad0(-2); }
+};
+static_assert(RG_SIZE(rk_Hash) == 32);
+
+enum class rk_BlobCatalog: int8_t {
+    Meta,
+    Raw
+};
+static const char rk_BlobCatalogNames[] = {
+    'M',
+    'R'
 };
 
-struct rk_RestoreSettings {
-    bool force = false;
-    bool unlink = false;
-    bool chown = false;
-    bool xattrs = false;
-    bool verbose = false;
-    bool fake = false;
+struct rk_ObjectID {
+    rk_BlobCatalog catalog;
+    rk_Hash hash;
+
+    bool IsValid() const
+    {
+        if ((int)catalog < 0)
+            return false; 
+        if ((int)catalog >= RG_LEN(rk_BlobCatalogNames))
+            return false;
+
+        return true;
+    }
+
+    int operator-(const rk_ObjectID &other) const { return MultiCmp((int)catalog - (int)other.catalog, hash - other.hash); }
+
+    void Format(FunctionRef<void(Span<const char>)> append) const
+    {
+        FmtArg arg = FmtSpan(hash.hash, FmtType::BigHex, "").Pad0(-2);
+        Fmt(append, "%1%2", rk_BlobCatalogNames[(int)catalog], arg);
+    }
+
+    operator FmtArg() { return FmtCustom(*this); }
+};
+static_assert(RG_SIZE(rk_ObjectID) == 33);
+
+enum class rk_AccessMode {
+    Config = 1 << 0,
+    Read = 1 << 1,
+    Write = 1 << 2,
+    Log = 1 << 3
+};
+static const char *const rk_AccessModeNames[] = {
+    "Config",
+    "Read",
+    "Write",
+    "Log"
 };
 
-struct rk_ListSettings {
-    bool recurse = false;
+enum class rk_SaltKind {
+    BlobHash = 0,
+    SplitterSeed = 1
 };
 
-struct rk_SnapshotInfo {
-    const char *tag;
+enum class rk_UserRole {
+    Admin = 0,
+    WriteOnly = 1,
+    ReadWrite = 2,
+    LogOnly = 3
+};
+static const char *const rk_UserRoleNames[] = {
+    "Admin",
+    "WriteOnly",
+    "ReadWrite",
+    "LogOnly"
+};
+
+struct rk_UserInfo {
+    const char *username;
+    rk_UserRole role;
+    const char *pwd; // NULL unless used to create users
+};
+
+struct rk_TagInfo {
+    const char *prefix;
     rk_ObjectID oid;
-
-    const char *channel;
-    int64_t time;
-    int64_t size;
-    int64_t storage;
+    Span<const uint8_t> payload;
 };
 
-struct rk_ChannelInfo {
-    const char *name;
-
-    rk_ObjectID oid;
-    int64_t time;
-    Size size;
-
-    int count;
+struct rk_KeySet {
+    uint8_t ckey[32];
+    uint8_t akey[32];
+    uint8_t dkey[32];
+    uint8_t wkey[32];
+    uint8_t lkey[32];
+    uint8_t tkey[32];
+    uint8_t skey[32];
+    uint8_t vkey[32];
 };
 
-enum class rk_ObjectType {
-    Snapshot,
-    File,
-    Directory,
-    Link,
-    Unknown
-};
-static const char *const rk_ObjectTypeNames[] = {
-    "Snapshot",
-    "File",
-    "Directory",
-    "Link",
-    "Unknown"
-};
+class rk_Repository {
+    struct IdSet {
+        uint8_t rid[16];
+        uint8_t cid[16];
+    };
 
-enum class rk_ObjectFlag {
-    Readable = 1 << 0,
-    AccessTime = 1 << 1
-};
+protected:
+    enum class WriteFlag {
+        Overwrite = 1 << 0,
+        Lockable = 1 << 1
+    };
 
-struct rk_ObjectInfo {
-    rk_ObjectID oid;
+    enum class WriteResult {
+        Success,
+        AlreadyExists,
+        OtherError
+    };
 
-    int depth;
-    rk_ObjectType type;
-    const char *name; // Can be NULL for snapshots
+    rk_Disk *disk;
+    IdSet ids;
 
-    int64_t mtime;
-    int64_t ctime;
-    int64_t atime;
-    int64_t btime;
-    uint32_t mode;
-    uint32_t uid;
-    uint32_t gid;
-    int64_t size;
-    unsigned int flags;
+    unsigned int modes = 0;
+    const char *user = nullptr;
+    const char *role = "Secure";
+    rk_KeySet *keyset = nullptr;
 
-    int64_t entries; // for snapshots and directories
-    int64_t storage; // for snapshots
+    sq_Database cache_db;
+    std::atomic_int64_t cache_commit { 0 };
+    std::mutex cache_mutex;
 
-    Size children; // for snapshots and directories
-};
+    int compression_level;
 
-class rk_FileHandle {
+    Async tasks;
+
+    BlockAllocator str_alloc;
+
 public:
-    virtual ~rk_FileHandle() {}
-    virtual Size Read(int64_t offset, Span<uint8_t> out_buf) = 0;
+    rk_Repository(rk_Disk *disk, int threads, int compression_level)
+        : disk(disk), compression_level(compression_level), tasks(threads) {}
+    ~rk_Repository() { Lock(); }
+
+    bool IsRepository();
+
+    bool Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users);
+
+    bool Authenticate(const char *username, const char *pwd);
+    bool Authenticate(Span<const uint8_t> mkey);
+    void Lock();
+
+    rk_Disk *GetDisk() const { return disk; }
+    const char *GetUser() const { return user; } // Can be NULL
+    const char *GetRole() const { return role; }
+    Async *GetAsync() { return &tasks; }
+
+    unsigned int GetModes() const { return modes; }
+    bool HasMode(rk_AccessMode mode) const { return modes & (int)mode; }
+
+    void MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const;
+
+    bool ChangeCID();
+
+    sq_Database *OpenCache(bool build);
+    bool ResetCache(bool list);
+
+    bool InitUser(const char *username, rk_UserRole role, const char *pwd, bool force);
+    bool DeleteUser(const char *username);
+    bool ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserInfo> *out_users);
+
+    bool ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t> *out_blob);
+    bool ReadBlob(const char *path, int *out_type, HeapArray<uint8_t> *out_blob);
+    Size WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob);
+    Size WriteBlob(const char *path, int type, Span<const uint8_t> blob);
+
+    bool WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload);
+    bool ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags);
+
+private:
+    bool PutCache(const char *key, int64_t size, bool overwrite);
+    bool CommitCache(bool force);
+    void CloseCache();
+
+    StatResult TestFast(const char *path, int64_t *out_size);
+
+    bool WriteKeys(const char *path, const char *pwd, rk_UserRole role, const rk_KeySet &keys);
+    bool ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, rk_KeySet *out_keys);
+
+    bool WriteConfig(const char *path, Span<const uint8_t> buf, bool overwrite);
+    bool ReadConfig(const char *path, Span<uint8_t> out_buf);
+
+    bool CheckRepository();
 };
 
-// Snapshot commands
-bool rk_Save(rk_Disk *disk, const rk_SaveSettings &settings, Span<const char *const> filenames,
-             rk_ObjectID *out_oid, int64_t *out_size = nullptr, int64_t *out_stored = nullptr);
-bool rk_Restore(rk_Disk *disk, const rk_ObjectID &oid, const rk_RestoreSettings &settings,
-                const char *dest_path, int64_t *out_size = nullptr);
-
-// Snapshot exploration
-bool rk_ListSnapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots, HeapArray<rk_ChannelInfo> *out_channels);
-static inline bool rk_ListSnapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
-    { return rk_ListSnapshots(disk, alloc, out_snapshots, nullptr); }
-static inline bool rk_ListSnapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_ChannelInfo> *out_channels)
-    { return rk_ListSnapshots(disk, alloc, nullptr, out_channels); }
-
-// List objects
-bool rk_ListChildren(rk_Disk *disk, const rk_ObjectID &oid, const rk_ListSettings &settings,
-                     Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
-bool rk_LocateObject(rk_Disk *disk, Span<const char> identifier, rk_ObjectID *out_pid);
-
-// Direct access
-const char *rk_ReadLink(rk_Disk *disk, const rk_ObjectID &oid, Allocator *alloc);
-std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Disk *disk, const rk_ObjectID &oid);
+std::unique_ptr<rk_Repository> rk_OpenRepository(rk_Disk *disk, const rk_Config &config, bool authenticate);
 
 }

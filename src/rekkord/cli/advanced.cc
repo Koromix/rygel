@@ -67,18 +67,19 @@ Options:
     if (!config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
-    if (!disk)
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    if (!repo)
         return 1;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
-    if (!disk->HasMode(rk_AccessMode::Config)) {
-        LogError("Cannot change ID with %1 role", disk->GetRole());
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
+    if (!repo->HasMode(rk_AccessMode::Config)) {
+        LogError("Cannot change ID with %1 role", repo->GetRole());
         return 1;
     }
     LogInfo();
 
-    if (!disk->ChangeCID())
+    if (!repo->ChangeCID())
         return 1;
 
     LogInfo("Changed cache ID");
@@ -138,18 +139,18 @@ Options:
     if (!config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
-    if (!disk)
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    if (!repo)
         return 1;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     LogInfo();
 
     LogInfo("Resetting cache...");
-
-    if (!disk->OpenCache(false))
+    if (!repo->OpenCache(false))
         return 1;
-    if (!disk->ResetCache(list))
+    if (!repo->ResetCache(list))
         return 1;
     LogInfo("Done");
 
@@ -205,22 +206,23 @@ Options:
     if (!config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
-    if (!disk)
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    if (!repo)
         return 1;
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), disk->GetRole());
-    if (!disk->HasMode(rk_AccessMode::Read)) {
-        LogError("Cannot migrate blobs with %1 role", disk->GetRole());
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
+    if (!repo->HasMode(rk_AccessMode::Read)) {
+        LogError("Cannot check blobs with %1 role", repo->GetRole());
         return 1;
     }
     LogInfo();
 
     LogInfo("Updating cache...");
-    sq_Database *db = disk->OpenCache(false);
+    sq_Database *db = repo->OpenCache(false);
     if (!db)
         return false;
-    if (!disk->ResetCache(true))
+    if (!repo->ResetCache(true))
         return false;
 
     LogInfo("Checking blobs...");
@@ -231,7 +233,7 @@ Options:
         ProgressHandle progress("Checking");
         std::atomic_int64_t processed { 0 };
 
-        Async async(disk->GetAsync());
+        Async async(repo->GetAsync());
 
         sq_Statement stmt;
         if (!db->Prepare("SELECT key FROM blobs WHERE checked IS NULL OR checked < ?1",
@@ -245,7 +247,7 @@ Options:
                 int type;
                 HeapArray<uint8_t> blob;
 
-                if (!disk->ReadBlob(path, &type, &blob))
+                if (!repo->ReadBlob(path, &type, &blob))
                     return false;
 
                 if (!db->Run("UPDATE objects SET checked = ?2 WHERE key = ?1", path, now))
