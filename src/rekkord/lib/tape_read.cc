@@ -35,6 +35,8 @@
 
 namespace RG {
 
+static const int64_t CheckDelay = 7 * 86400000;
+
 // Fix mess caused by windows.h
 #if defined(CreateSymbolicLink)
     #undef CreateSymbolicLink
@@ -697,7 +699,7 @@ int GetContext::GetFile(const rk_ObjectID &oid, bool chunked, Span<const uint8_t
             int64_t size = LittleEndian(entry->offset) + LittleEndian(entry->len);
 
             if (size != file_size) [[unlikely]] {
-                LogError("File size mismatch for '%1'", entry->hash);
+                LogError("File size mismatch for '%1'", oid);
                 return -1;
             }
         }
@@ -1413,6 +1415,295 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
     }
 
     out_guard.Disable();
+    return true;
+}
+
+class CheckContext {
+    rk_Repository *repo;
+    sq_Database *db;
+    int64_t mark;
+
+    ProgressHandle pg_blobs { "Blobs" };
+
+    int64_t total_blobs = 0;
+    std::atomic_int64_t checked_blobs = 0;
+
+    Async tasks;
+
+public:
+    CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, int64_t blobs);
+
+    bool CheckBlob(const rk_ObjectID &oid, int64_t *out_children = nullptr);
+    int64_t RecurseEntries(Span<const uint8_t> entries, bool allow_separators);
+
+private:
+    void MakeProgress(int64_t blobs);
+};
+
+CheckContext::CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, int64_t blobs)
+    : repo(repo), db(db), mark(mark), total_blobs(blobs), tasks(repo->GetAsync())
+{
+}
+
+bool CheckContext::CheckBlob(const rk_ObjectID &oid, int64_t *out_children)
+{
+    char key[128];
+    Fmt(key, "%1", oid);
+
+    // Ignore recently checked objects
+    {
+        sq_Statement stmt;
+        if (!db->Prepare("SELECT children FROM checks WHERE oid = ?1 AND mark >= ?2",
+                         &stmt, key, mark - CheckDelay))
+            return false;
+
+        if (stmt.Step()) {
+            int64_t children = sqlite3_column_int64(stmt, 0);
+            MakeProgress(1 + children);
+
+            if (out_children) {
+                *out_children = children;
+            }
+            return true;
+        }
+        if (!stmt.IsValid())
+            return false;
+    }
+
+    int type;
+    HeapArray<uint8_t> blob;
+
+    if (!repo->ReadBlob(oid, &type, &blob))
+        return false;
+
+    MakeProgress(1);
+
+    int64_t children = 0;
+
+    switch (type) {
+        case (int)BlobType::Chunk: {} break;
+
+        case (int)BlobType::File: {
+            int64_t file_size = 0;
+
+            if (blob.len % RG_SIZE(RawChunk) != RG_SIZE(int64_t)) {
+                LogError("Malformed file blob '%1'", oid);
+                return false;
+            }
+            blob.len -= RG_SIZE(int64_t);
+
+            // Get file length from end of stream
+            MemCpy(&file_size, blob.end(), RG_SIZE(file_size));
+            file_size = LittleEndian(file_size);
+
+            if (file_size < 0) {
+                LogError("Malformed file blob '%1'", oid);
+                return false;
+            }
+
+            Size prev_end = 0;
+
+            for (Size offset = 0; offset < blob.len; offset += RG_SIZE(RawChunk)) {
+                FileChunk chunk = {};
+
+                RawChunk entry = {};
+                MemCpy(&entry, blob.ptr + offset, RG_SIZE(entry));
+
+                chunk.offset = LittleEndian(entry.offset);
+                chunk.len = LittleEndian(entry.len);
+                chunk.hash = entry.hash;
+
+                if (prev_end > chunk.offset || chunk.len < 0) [[unlikely]] {
+                    LogError("Malformed file blob '%1'", oid);
+                    return false;
+                }
+                prev_end = chunk.offset + chunk.len;
+
+                tasks.Run([=, this]() {
+                    rk_ObjectID oid = { rk_BlobCatalog::Raw, chunk.hash };
+
+                    int type;
+                    HeapArray<uint8_t> blob;
+
+                    if (!repo->ReadBlob(oid, &type, &blob))
+                        return false;
+                    if (type != (int)BlobType::Chunk) [[unlikely]] {
+                        LogError("Blob '%1' is not a Chunk", oid);
+                        return false;
+                    }
+                    if (blob.len != chunk.len) [[unlikely]] {
+                        LogError("Chunk size mismatch for '%1'", oid);
+                        return false;
+                    }
+
+                    return true;
+                });
+
+                children++;
+            }
+
+            if (blob.len >= RG_SIZE(RawChunk) + RG_SIZE(int64_t)) {
+                const RawChunk *entry = (const RawChunk *)(blob.end() - RG_SIZE(RawChunk));
+                int64_t size = LittleEndian(entry->offset) + LittleEndian(entry->len);
+
+                if (size != file_size) [[unlikely]] {
+                    LogError("File size mismatch for '%1'", oid);
+                    return false;
+                }
+            }
+        } break;
+
+        case (int)BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
+        case (int)BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
+        case (int)BlobType::Directory: {
+            int64_t ret = RecurseEntries(blob, false);
+            if (ret < 0)
+                return false;
+            children += ret;
+        } break;
+
+        case (int)BlobType::Snapshot1: {
+            static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2));
+
+            if (blob.len <= RG_SIZE(SnapshotHeader1)) {
+                LogError("Malformed snapshot blob '%1'", oid);
+                return false;
+            }
+
+            SnapshotHeader1 *header1 = (SnapshotHeader1 *)blob.ptr;
+            SnapshotHeader2 header2 = {};
+
+            header2.time = header1->time;
+            header2.size = header1->size;
+            header2.storage = header1->storage;
+            MemCpy(header2.channel, header1->channel, RG_SIZE(header2.channel));
+
+            MemCpy(blob.ptr, &header2, RG_SIZE(SnapshotHeader2));
+        } [[fallthrough]];
+        case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot: {
+            Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
+
+            int64_t ret = RecurseEntries(dir, true);
+            if (ret < 0)
+                return false;
+            children += ret;
+        } break;
+
+        case (int)BlobType::Link: {
+            // XXX: Check that the symbolic link target looks legit?
+        } break;
+
+        default: {
+            LogError("Invalid blob type %1", type);
+            return false;
+        } break;
+    }
+
+    if (!db->Run(R"(INSERT INTO checks (oid, mark, children)
+                    VALUES (?1, ?2, ?3)
+                    ON CONFLICT DO UPDATE SET mark = excluded.mark,
+                                              children = excluded.children)",
+                 key, mark, children))
+        return false;
+
+    repo->CommitCache();
+
+    if (out_children) {
+        *out_children = children;
+    }
+    return true;
+}
+
+int64_t CheckContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separators)
+{
+    BlockAllocator temp_alloc;
+
+    if (entries.len < RG_SIZE(DirectoryHeader)) [[unlikely]] {
+        LogError("Malformed directory blob");
+        return -1;
+    }
+
+    HeapArray<EntryInfo> decoded;
+    for (Size offset = RG_SIZE(DirectoryHeader); offset < entries.len;) {
+        EntryInfo entry = {};
+
+        Size skip = DecodeEntry(entries, offset, allow_separators, &temp_alloc, &entry);
+        if (skip < 0)
+            return -1;
+        offset += skip;
+
+        if (entry.kind == (int)RawEntry::Kind::Unknown)
+            continue;
+        if (!(entry.flags & (int)RawEntry::Flags::Readable))
+            continue;
+
+        // Don't keep dangling pointers (once function returns)
+        entry.basename = {};
+        entry.xattrs = {};
+
+        decoded.Append(entry);
+    }
+
+    Async async(&tasks);
+    std::atomic_int64_t blobs = decoded.len;
+
+    for (Size i = 0; i < decoded.len; i++) {
+        const EntryInfo *entry = &decoded[i];
+
+        async.Run([&, entry, this] () {
+            rk_ObjectID oid = { KindToCatalog(entry->kind), entry->hash };
+
+            int64_t children;
+            if (!CheckBlob(oid, &children))
+                return false;
+            blobs += children;
+
+            return true;
+        });
+    }
+
+    if (!async.Sync())
+        return -1;
+
+    return blobs;
+}
+
+void CheckContext::MakeProgress(int64_t blobs)
+{
+    blobs = checked_blobs.fetch_add(blobs, std::memory_order_relaxed) + blobs;
+    pg_blobs.SetFmt(blobs, total_blobs, "%1 / %2 blobs", blobs, total_blobs);
+}
+
+bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshots)
+{
+    BlockAllocator temp_alloc;
+
+    sq_Database *db = repo->OpenCache(false);
+    if (!db)
+        return false;
+    if (!repo->ResetCache(true))
+        return false;
+
+    // Count blobs
+    int64_t blobs;
+    {
+        sq_Statement stmt;
+        if (!db->Prepare("SELECT COUNT(key) FROM blobs", &stmt))
+            return false;
+        if (!stmt.GetSingleValue(&blobs))
+            return false;
+    }
+
+    int64_t now = GetUnixTime();
+    CheckContext check(repo, db, now, blobs);
+
+    for (const rk_SnapshotInfo &snapshot: snapshots) {
+        if (!check.CheckBlob(snapshot.oid))
+            return false;
+    }
+
     return true;
 }
 

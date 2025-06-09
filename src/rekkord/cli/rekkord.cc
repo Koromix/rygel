@@ -30,6 +30,7 @@ int RunListUsers(Span<const char *> arguments);
 
 int RunSave(Span<const char *> arguments);
 int RunRestore(Span<const char *> arguments);
+int RunCheck(Span<const char *> arguments);
 
 int RunSnapshots(Span<const char *> arguments);
 int RunChannels(Span<const char *> arguments);
@@ -38,7 +39,6 @@ int RunMount(Span<const char *> arguments);
 
 int RunChangeCID(Span<const char *> arguments);
 int RunResetCache(Span<const char *> arguments);
-int RunCheckBlobs(Span<const char *> arguments);
 
 bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config)
 {
@@ -78,6 +78,7 @@ Snapshot commands:
 
     %!..+save%!0                           Store directory or file and make snapshot
     %!..+restore%!0                        Get and decrypt snapshot, directory or file
+    %!..+check%!0                          Check snapshots and blobs
 
 Exploration commands:
 
@@ -162,6 +163,8 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         return RunSave(arguments);
     } else if (TestStr(cmd, "restore")) {
         return RunRestore(arguments);
+    } else if (TestStr(cmd, "check")) {
+        return RunCheck(arguments);
     } else if (TestStr(cmd, "snapshots")) {
         return RunSnapshots(arguments);
     } else if (TestStr(cmd, "channels")) {
@@ -174,8 +177,6 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         return RunChangeCID(arguments);
     } else if (TestStr(cmd, "reset_cache")) {
         return RunResetCache(arguments);
-    } else if (TestStr(cmd, "check_blobs")) {
-        return RunCheckBlobs(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;

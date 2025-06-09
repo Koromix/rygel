@@ -186,6 +186,9 @@ public:
 
     sq_Database *OpenCache(bool build);
     bool ResetCache(bool list);
+    bool PutCache(const char *key, int64_t size);
+    bool CommitCache(bool force = false);
+    void CloseCache();
 
     bool InitUser(const char *username, rk_UserRole role, const char *pwd, bool force);
     bool DeleteUser(const char *username);
@@ -200,10 +203,6 @@ public:
     bool ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags);
 
 private:
-    bool PutCache(const char *key, int64_t size, bool overwrite);
-    bool CommitCache(bool force);
-    void CloseCache();
-
     StatResult TestFast(const char *path, int64_t *out_size);
 
     bool WriteKeys(const char *path, const char *pwd, rk_UserRole role, const rk_KeySet &keys);

@@ -18,8 +18,6 @@
 
 namespace RG {
 
-static const int64_t CheckDelay = 7 * 86400000;
-
 int RunChangeCID(Span<const char *> arguments)
 {
     // Options
@@ -155,119 +153,6 @@ Options:
     LogInfo("Done");
 
     return 0;
-}
-
-int RunCheckBlobs(Span<const char *> arguments)
-{
-    BlockAllocator temp_alloc;
-
-    // Options
-    rk_Config config;
-
-    const auto print_usage = [=](StreamWriter *st) {
-        PrintLn(st,
-R"(Usage: %!..+%1 check_blobs [-C filename] [option...]%!0
-
-Options:
-
-    %!..+-C, --config_file filename%!0     Set configuration file
-
-    %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username)", FelixTarget);
-    };
-
-    if (!FindAndLoadConfig(arguments, &config))
-        return 1;
-
-    // Parse arguments
-    {
-        OptionParser opt(arguments);
-
-        while (opt.Next()) {
-            if (opt.Test("--help")) {
-                print_usage(StdOut);
-                return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                // Already handled
-            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                if (!rk_DecodeURL(opt.current_value, &config))
-                    return 1;
-            } else if (opt.Test("-u", "--username", OptionType::Value)) {
-                config.username = opt.current_value;
-            } else {
-                opt.LogUnknownError();
-                return 1;
-            }
-        }
-
-        opt.LogUnusedArguments();
-    }
-
-    if (!config.Complete(true))
-        return 1;
-
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
-    if (!repo)
-        return 1;
-
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
-    if (!repo->HasMode(rk_AccessMode::Read)) {
-        LogError("Cannot check blobs with %1 role", repo->GetRole());
-        return 1;
-    }
-    LogInfo();
-
-    LogInfo("Updating cache...");
-    sq_Database *db = repo->OpenCache(false);
-    if (!db)
-        return 1;
-    if (!repo->ResetCache(true))
-        return 1;
-
-    LogInfo("Checking blobs...");
-    bool success;
-    {
-        int64_t now = GetUnixTime();
-
-        ProgressHandle progress("Checking");
-        std::atomic_int64_t processed { 0 };
-
-        Async async(repo->GetAsync());
-
-        sq_Statement stmt;
-        if (!db->Prepare("SELECT key FROM blobs WHERE checked IS NULL OR checked < ?1",
-                         &stmt, now - CheckDelay))
-            return 1;
-
-        while (stmt.Step()) {
-            const char *path = DuplicateString((const char *)sqlite3_column_text(stmt, 0), &temp_alloc).ptr;
-
-            async.Run([&, path] {
-                int type;
-                HeapArray<uint8_t> blob;
-
-                if (!repo->ReadBlob(path, &type, &blob))
-                    return false;
-
-                if (!db->Run("UPDATE blobs SET checked = ?2 WHERE key = ?1", path, now))
-                    return false;
-
-                int64_t done = processed.fetch_add(1, std::memory_order_relaxed) + 1;
-                progress.SetFmt("%1 checked", done);
-
-                return true;
-            });
-        }
-        if (!stmt.IsValid())
-            return 1;
-
-        success = async.Sync();
-    }
-
-    LogInfo("Done");
-
-    return !success;
 }
 
 }

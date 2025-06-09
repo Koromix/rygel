@@ -326,5 +326,78 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
     return 0;
 }
 
+int RunCheck(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    rk_Config config;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 check [-C filename] [option...]%!0
+
+Options:
+
+    %!..+-C, --config_file filename%!0     Set configuration file
+
+    %!..+-R, --repository URL%!0           Set repository URL
+    %!..+-u, --user username%!0            Set repository username)", FelixTarget);
+    };
+
+    if (!FindAndLoadConfig(arguments, &config))
+        return 1;
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
+            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
+                if (!rk_DecodeURL(opt.current_value, &config))
+                    return 1;
+            } else if (opt.Test("-u", "--username", OptionType::Value)) {
+                config.username = opt.current_value;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        opt.LogUnusedArguments();
+    }
+
+    if (!config.Complete(true))
+        return 1;
+
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    if (!repo)
+        return 1;
+
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
+    if (!repo->HasMode(rk_AccessMode::Read)) {
+        LogError("Cannot check blobs with %1 role", repo->GetRole());
+        return 1;
+    }
+    LogInfo();
+
+    HeapArray<rk_SnapshotInfo> snapshots;
+    if (!rk_ListSnapshots(repo.get(), &temp_alloc, &snapshots))
+        return 1;
+
+    LogInfo("Checking repository...");
+    if (!rk_CheckSnapshots(repo.get(), snapshots))
+        return 1;
+    LogInfo("Done");
+
+    return 0;
+}
+
 }
 

@@ -600,9 +600,25 @@ sq_Database *rk_Repository::OpenCache(bool build)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 10: {
+                    bool success = cache_db.RunMany(R"(
+                        ALTER TABLE blobs DROP COLUMN checked;
+                        ALTER TABLE blobs DROP COLUMN missing;
+
+                        CREATE TABLE checks (
+                            oid TEXT NOT NULL,
+                            mark INTEGER NOT NULL,
+                            children INTEGER NOT NULL
+                        );
+                        CREATE UNIQUE INDEX checks_o ON checks (oid);
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 10);
+                static_assert(CacheVersion == 11);
             }
 
             if (!cache_db.SetUserVersion(CacheVersion))
@@ -658,11 +674,14 @@ bool rk_Repository::ResetCache(bool list)
         return false;
     }
 
+    // We keep a transaction running so we can't use sq_Database::Transaction()
+    RG_DEFER_N(err_guard) { cache_db.RunMany("ROLLBACK; BEGIN IMMEDIATE TRANSACTION;"); };
+
     if (!cache_db.Run("DELETE FROM stats"))
         return false;
-
-    if (!cache_db.Run("UPDATE blobs SET missing = 1"))
+    if (!cache_db.Run("DELETE FROM blobs"))
         return false;
+
     if (list) {
         ProgressHandle progress("Cache");
         std::atomic_int64_t listed { 0 };
@@ -672,10 +691,9 @@ bool rk_Repository::ResetCache(bool list)
             if (!size) [[unlikely]]
                 return true;
 
-            if (!cache_db.Run(R"(INSERT INTO blobs (key, size, missing)
-                                 VALUES (?1, ?2, 0)
-                                 ON CONFLICT (key) DO UPDATE SET size = excluded.size,
-                                                                 missing = 0)",
+            if (!cache_db.Run(R"(INSERT INTO blobs (key, size)
+                                 VALUES (?1, ?2)
+                                 ON CONFLICT (key) DO UPDATE SET size = excluded.size)",
                               path, size))
                 return false;
 
@@ -687,8 +705,6 @@ bool rk_Repository::ResetCache(bool list)
         if (!success)
             return false;
     }
-    if (!cache_db.Run("DELETE FROM blobs WHERE missing = 1"))
-        return false;
 
     Span<const uint8_t> cid = ids.cid;
 
@@ -698,7 +714,66 @@ bool rk_Repository::ResetCache(bool list)
     if (!CommitCache(true))
         return false;
 
+    err_guard.Disable();
     return true;
+}
+
+bool rk_Repository::PutCache(const char *key, int64_t size)
+{
+    if (!cache_db.IsValid())
+        return true;
+
+    bool success = cache_db.Run(R"(INSERT INTO blobs (key, size)
+                                   VALUES (?1, ?2)
+                                   ON CONFLICT DO NOTHING)",
+                                key, size);
+    if (!success)
+        return false;
+
+    CommitCache();
+
+    return success;
+}
+
+bool rk_Repository::CommitCache(bool force)
+{
+    int64_t commit = cache_commit.load(std::memory_order_relaxed);
+
+    if (!cache_db.IsValid())
+        return true;
+    if (!commit)
+        return true;
+
+    int64_t now = GetMonotonicTime();
+
+    if (!force) {
+        int64_t delay = now - commit;
+        force |= (delay >= CacheDelay);
+    }
+
+    if (force) {
+        std::unique_lock lock(cache_mutex, std::try_to_lock);
+
+        if (lock.owns_lock()) {
+            if (!cache_db.RunMany("COMMIT; BEGIN IMMEDIATE TRANSACTION;"))
+                return false;
+
+            cache_commit = now;
+        }
+    }
+
+    return true;
+}
+
+void rk_Repository::CloseCache()
+{
+    if (!cache_db.IsValid())
+        return;
+
+    CommitCache(true);
+
+    cache_db.Close();
+    cache_commit = 0;
 }
 
 bool rk_Repository::InitUser(const char *username, rk_UserRole role, const char *pwd, bool force)
@@ -1110,16 +1185,14 @@ Size rk_Repository::WriteBlob(const char *path, int type, Span<const uint8_t> bl
     // Write the damn thing
     {
         rk_WriteResult ret = disk->WriteFile(path, raw, (int)rk_WriteFlag::Lockable);
-        bool overwrite = (ret == rk_WriteResult::Success);
 
         switch (ret) {
             case rk_WriteResult::Success:
             case rk_WriteResult::AlreadyExists: {} break;
-
             case rk_WriteResult::OtherError: return -1;
         }
 
-        if (!PutCache(path, raw.len, overwrite))
+        if (!PutCache(path, raw.len))
             return -1;
     }
 
@@ -1323,64 +1396,6 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
 
     out_guard.Disable();
     return true;
-}
-
-bool rk_Repository::PutCache(const char *key, int64_t size, bool overwrite)
-{
-    if (!cache_db.IsValid())
-        return true;
-
-    bool success = cache_db.Run(R"(INSERT INTO blobs (key, size, missing)
-                                   VALUES (?1, ?2, 0)
-                                   ON CONFLICT DO UPDATE SET checked = IF(?3 = 1, NULL, checked))",
-                                key, size, 0 + overwrite);
-    if (!success)
-        return false;
-
-    CommitCache(false);
-
-    return success;
-}
-
-bool rk_Repository::CommitCache(bool force)
-{
-    int64_t commit = cache_commit.load(std::memory_order_relaxed);
-
-    if (!cache_db.IsValid())
-        return true;
-    if (!commit)
-        return true;
-
-    int64_t now = GetMonotonicTime();
-
-    if (!force) {
-        int64_t delay = now - commit;
-        force |= (delay >= CacheDelay);
-    }
-
-    if (force) {
-        std::unique_lock lock(cache_mutex, std::try_to_lock);
-
-        if (lock.owns_lock()) {
-            if (!cache_db.RunMany("COMMIT; BEGIN IMMEDIATE TRANSACTION;"))
-                return false;
-
-            cache_commit = now;
-        }
-    }
-
-    return true;
-}
-
-void rk_Repository::CloseCache()
-{
-    if (!cache_db.IsValid())
-        return;
-
-    CommitCache(true);
-
-    cache_db.Close();
-    cache_commit = 0;
 }
 
 StatResult rk_Repository::TestFast(const char *path, int64_t *out_size)
