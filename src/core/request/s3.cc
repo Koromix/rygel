@@ -328,11 +328,11 @@ void s3_Session::Close()
     config = {};
 }
 
-bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *, int64_t)> func)
+bool s3_Session::ListObjects(Span<const char> prefix, FunctionRef<bool(const char *, int64_t)> func)
 {
     BlockAllocator temp_alloc;
 
-    prefix = prefix ? prefix : "";
+    prefix = TrimStrRight(prefix, '/');
 
     const char *path;
     Span<const char> url = MakeURL({}, nullptr, &temp_alloc, &path);
@@ -341,7 +341,7 @@ bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *, 
     HeapArray<char> query;
     HeapArray<uint8_t> xml;
 
-    Fmt(&query, "list-type=2&prefix=%1", FmtUrlSafe(prefix));
+    Fmt(&query, "list-type=2&prefix=%1%2", FmtUrlSafe(prefix), prefix.len ? "%2F" : "");
 
     for (;;) {
         int status = RunSafe("list S3 objects", [&](CURL *curl) {
@@ -413,7 +413,7 @@ bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *, 
         query.RemoveFrom(0);
 
         Span<const char> after = after_node->node().child("Key").text().get();
-        Fmt(&query, "list-type=2&prefix=%1&start-after=%2", FmtUrlSafe(prefix), FmtUrlSafe(after));
+        Fmt(&query, "list-type=2&prefix=%1%2&start-after=%3", FmtUrlSafe(prefix), prefix.len ? "%2F" : "", FmtUrlSafe(after));
     }
 
     return true;
