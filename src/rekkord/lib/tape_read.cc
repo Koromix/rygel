@@ -1026,6 +1026,125 @@ bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc,
     return true;
 }
 
+static inline int ParseHexadecimalChar(char c)
+{
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    } else if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    } else if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    } else {
+        return -1;
+    }
+}
+
+static bool ParseOID(Span<const char> str, rk_ObjectID *out_oid)
+{
+    if (str.len != 65)
+        return false;
+
+    // Decode prefix
+    {
+        const auto ptr = std::find(std::begin(rk_BlobCatalogNames), std::end(rk_BlobCatalogNames), str[0]);
+
+        if (ptr == std::end(rk_BlobCatalogNames))
+            return false;
+
+        out_oid->catalog = (rk_BlobCatalog)(ptr - rk_BlobCatalogNames);
+    }
+
+    for (Size i = 2, j = 0; i < 66; i += 2, j++) {
+        int high = ParseHexadecimalChar(str[i - 1]);
+        int low = ParseHexadecimalChar(str[i]);
+
+        if (high < 0 || low < 0)
+            return false;
+
+        out_oid->hash.hash[j] = (uint8_t)((high << 4) | low);
+    }
+
+    return true;
+}
+
+bool rk_LocateObject(rk_Repository *repo, Span<const char> identifier, rk_ObjectID *out_oid)
+{
+    BlockAllocator temp_alloc;
+
+    Span<const char> path;
+    Span<const char> name = TrimStrRight(SplitStr(identifier, ':', &path), "/");
+    bool has_path = (path.ptr > name.end());
+
+    rk_ObjectID oid;
+    {
+        bool found = ParseOID(name, &oid);
+
+        if (!found) {
+            HeapArray<rk_SnapshotInfo> snapshots;
+            if (!rk_ListSnapshots(repo, &temp_alloc, &snapshots))
+                return false;
+
+            for (Size i = snapshots.len - 1; i >= 0; i--) {
+                const rk_SnapshotInfo &snapshot = snapshots[i];
+
+                if (TestStr(name, snapshot.channel)) {
+                    oid = snapshot.oid;
+
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+                goto missing;
+        }
+    }
+
+    // Traverse subpath (if any)
+    if (has_path) {
+        path = TrimStrRight(path, "/");
+
+        // Reuse for performance
+        HeapArray<rk_ObjectInfo> objects;
+
+        do {
+            objects.RemoveFrom(0);
+
+            if (!rk_ListChildren(repo, oid, {}, &temp_alloc, &objects))
+                return false;
+
+            bool match = false;
+
+            for (const rk_ObjectInfo &obj: objects) {
+                Span<const char> name = obj.name;
+
+                if (obj.type == rk_ObjectType::Snapshot)
+                    continue;
+                if (!StartsWith(path, name))
+                    continue;
+                if (path.len > name.len && path[name.len] != '/')
+                    continue;
+
+                path = TrimStrLeft(path.Take(name.len, path.len - name.len), "/");
+                oid = obj.oid;
+
+                match = true;
+                break;
+            }
+
+            if (!match)
+                goto missing;
+        } while (path.len);
+    }
+
+    *out_oid = oid;
+    return true;
+
+missing:
+    LogError("Cannot find object '%1'", identifier);
+    return false;
+}
+
 class ListContext {
     rk_Repository *repo;
     rk_ListSettings settings;
@@ -1295,125 +1414,6 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
 
     out_guard.Disable();
     return true;
-}
-
-static inline int ParseHexadecimalChar(char c)
-{
-    if (c >= '0' && c <= '9') {
-        return c - '0';
-    } else if (c >= 'A' && c <= 'F') {
-        return c - 'A' + 10;
-    } else if (c >= 'a' && c <= 'f') {
-        return c - 'a' + 10;
-    } else {
-        return -1;
-    }
-}
-
-static bool ParseOID(Span<const char> str, rk_ObjectID *out_oid)
-{
-    if (str.len != 65)
-        return false;
-
-    // Decode prefix
-    {
-        const auto ptr = std::find(std::begin(rk_BlobCatalogNames), std::end(rk_BlobCatalogNames), str[0]);
-
-        if (ptr == std::end(rk_BlobCatalogNames))
-            return false;
-
-        out_oid->catalog = (rk_BlobCatalog)(ptr - rk_BlobCatalogNames);
-    }
-
-    for (Size i = 2, j = 0; i < 66; i += 2, j++) {
-        int high = ParseHexadecimalChar(str[i - 1]);
-        int low = ParseHexadecimalChar(str[i]);
-
-        if (high < 0 || low < 0)
-            return false;
-
-        out_oid->hash.hash[j] = (uint8_t)((high << 4) | low);
-    }
-
-    return true;
-}
-
-bool rk_LocateObject(rk_Repository *repo, Span<const char> identifier, rk_ObjectID *out_oid)
-{
-    BlockAllocator temp_alloc;
-
-    Span<const char> path;
-    Span<const char> name = TrimStrRight(SplitStr(identifier, ':', &path), "/");
-    bool has_path = (path.ptr > name.end());
-
-    rk_ObjectID oid;
-    {
-        bool found = ParseOID(name, &oid);
-
-        if (!found) {
-            HeapArray<rk_SnapshotInfo> snapshots;
-            if (!rk_ListSnapshots(repo, &temp_alloc, &snapshots))
-                return false;
-
-            for (Size i = snapshots.len - 1; i >= 0; i--) {
-                const rk_SnapshotInfo &snapshot = snapshots[i];
-
-                if (TestStr(name, snapshot.channel)) {
-                    oid = snapshot.oid;
-
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found)
-                goto missing;
-        }
-    }
-
-    // Traverse subpath (if any)
-    if (has_path) {
-        path = TrimStrRight(path, "/");
-
-        // Reuse for performance
-        HeapArray<rk_ObjectInfo> objects;
-
-        do {
-            objects.RemoveFrom(0);
-
-            if (!rk_ListChildren(repo, oid, {}, &temp_alloc, &objects))
-                return false;
-
-            bool match = false;
-
-            for (const rk_ObjectInfo &obj: objects) {
-                Span<const char> name = obj.name;
-
-                if (obj.type == rk_ObjectType::Snapshot)
-                    continue;
-                if (!StartsWith(path, name))
-                    continue;
-                if (path.len > name.len && path[name.len] != '/')
-                    continue;
-
-                path = TrimStrLeft(path.Take(name.len, path.len - name.len), "/");
-                oid = obj.oid;
-
-                match = true;
-                break;
-            }
-
-            if (!match)
-                goto missing;
-        } while (path.len);
-    }
-
-    *out_oid = oid;
-    return true;
-
-missing:
-    LogError("Cannot find object '%1'", identifier);
-    return false;
 }
 
 const char *rk_ReadLink(rk_Repository *repo, const rk_ObjectID &oid, Allocator *alloc)
