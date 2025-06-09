@@ -616,9 +616,17 @@ sq_Database *rk_Repository::OpenCache(bool build)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 11: {
+                    bool success = cache_db.RunMany(R"(
+                        ALTER TABLE checks DROP COLUMN children;
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 11);
+                static_assert(CacheVersion == 12);
             }
 
             if (!cache_db.SetUserVersion(CacheVersion))

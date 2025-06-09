@@ -1433,8 +1433,8 @@ class CheckContext {
 public:
     CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, int64_t blobs);
 
-    bool CheckBlob(const rk_ObjectID &oid, int64_t *out_children = nullptr);
-    int64_t RecurseEntries(Span<const uint8_t> entries, bool allow_separators);
+    bool CheckBlob(const rk_ObjectID &oid);
+    bool RecurseEntries(Span<const uint8_t> entries, bool allow_separators);
 
 private:
     void MakeProgress(int64_t blobs);
@@ -1445,7 +1445,7 @@ CheckContext::CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, i
 {
 }
 
-bool CheckContext::CheckBlob(const rk_ObjectID &oid, int64_t *out_children)
+bool CheckContext::CheckBlob(const rk_ObjectID &oid)
 {
     char key[128];
     Fmt(key, "%1", oid);
@@ -1453,19 +1453,12 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, int64_t *out_children)
     // Ignore recently checked objects
     {
         sq_Statement stmt;
-        if (!db->Prepare("SELECT children FROM checks WHERE oid = ?1 AND mark >= ?2",
+        if (!db->Prepare("SELECT oid FROM checks WHERE oid = ?1 AND mark >= ?2",
                          &stmt, key, mark - CheckDelay))
             return false;
 
-        if (stmt.Step()) {
-            int64_t children = sqlite3_column_int64(stmt, 0);
-            MakeProgress(1 + children);
-
-            if (out_children) {
-                *out_children = children;
-            }
+        if (stmt.Step())
             return true;
-        }
         if (!stmt.IsValid())
             return false;
     }
@@ -1477,8 +1470,6 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, int64_t *out_children)
         return false;
 
     MakeProgress(1);
-
-    int64_t children = 0;
 
     switch (type) {
         case (int)BlobType::Chunk: {} break;
@@ -1538,8 +1529,6 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, int64_t *out_children)
 
                     return true;
                 });
-
-                children++;
             }
 
             if (blob.len >= RG_SIZE(RawChunk) + RG_SIZE(int64_t)) {
@@ -1556,10 +1545,8 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, int64_t *out_children)
         case (int)BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
         case (int)BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
         case (int)BlobType::Directory: {
-            int64_t ret = RecurseEntries(blob, false);
-            if (ret < 0)
+            if (!RecurseEntries(blob, false))
                 return false;
-            children += ret;
         } break;
 
         case (int)BlobType::Snapshot1: {
@@ -1585,10 +1572,8 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, int64_t *out_children)
         case (int)BlobType::Snapshot: {
             Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
 
-            int64_t ret = RecurseEntries(dir, true);
-            if (ret < 0)
+            if (!RecurseEntries(dir, true))
                 return false;
-            children += ret;
         } break;
 
         case (int)BlobType::Link: {
@@ -1601,28 +1586,24 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, int64_t *out_children)
         } break;
     }
 
-    if (!db->Run(R"(INSERT INTO checks (oid, mark, children)
-                    VALUES (?1, ?2, ?3)
-                    ON CONFLICT DO UPDATE SET mark = excluded.mark,
-                                              children = excluded.children)",
-                 key, mark, children))
+    if (!db->Run(R"(INSERT INTO checks (oid, mark)
+                    VALUES (?1, ?2)
+                    ON CONFLICT DO UPDATE SET mark = excluded.mark)",
+                 key, mark))
         return false;
 
     repo->CommitCache();
 
-    if (out_children) {
-        *out_children = children;
-    }
     return true;
 }
 
-int64_t CheckContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separators)
+bool CheckContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separators)
 {
     BlockAllocator temp_alloc;
 
     if (entries.len < RG_SIZE(DirectoryHeader)) [[unlikely]] {
         LogError("Malformed directory blob");
-        return -1;
+        return false;
     }
 
     HeapArray<EntryInfo> decoded;
@@ -1631,7 +1612,7 @@ int64_t CheckContext::RecurseEntries(Span<const uint8_t> entries, bool allow_sep
 
         Size skip = DecodeEntry(entries, offset, allow_separators, &temp_alloc, &entry);
         if (skip < 0)
-            return -1;
+            return false;
         offset += skip;
 
         if (entry.kind == (int)RawEntry::Kind::Unknown)
@@ -1647,27 +1628,20 @@ int64_t CheckContext::RecurseEntries(Span<const uint8_t> entries, bool allow_sep
     }
 
     Async async(&tasks);
-    std::atomic_int64_t blobs = decoded.len;
 
     for (Size i = 0; i < decoded.len; i++) {
         const EntryInfo *entry = &decoded[i];
 
         async.Run([&, entry, this] () {
             rk_ObjectID oid = { KindToCatalog(entry->kind), entry->hash };
-
-            int64_t children;
-            if (!CheckBlob(oid, &children))
-                return false;
-            blobs += children;
-
-            return true;
+            return CheckBlob(oid);
         });
     }
 
     if (!async.Sync())
-        return -1;
+        return false;
 
-    return blobs;
+    return true;
 }
 
 void CheckContext::MakeProgress(int64_t blobs)
