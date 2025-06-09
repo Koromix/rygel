@@ -382,7 +382,7 @@ Options:
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Read)) {
-        LogError("Cannot check blobs with %1 role", repo->GetRole());
+        LogError("Cannot check repository with %1 role", repo->GetRole());
         return 1;
     }
     LogInfo();
