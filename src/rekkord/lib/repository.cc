@@ -664,6 +664,9 @@ bool rk_Repository::ResetCache(bool list)
     if (!cache_db.Run("UPDATE blobs SET missing = 1"))
         return false;
     if (list) {
+        ProgressHandle progress("Cache");
+        std::atomic_int64_t listed { 0 };
+
         bool success = disk->ListFiles("blobs", [&](const char *path, int64_t size) {
             // We never write empty blobs, something went wrong
             if (!size) [[unlikely]]
@@ -675,6 +678,9 @@ bool rk_Repository::ResetCache(bool list)
                                                                  missing = 0)",
                               path, size))
                 return false;
+
+            int64_t blobs = listed.fetch_add(1, std::memory_order_relaxed) + 1;
+            progress.SetFmt("%1 blobs", blobs);
 
             return true;
         });
