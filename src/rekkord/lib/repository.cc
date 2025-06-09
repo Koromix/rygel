@@ -698,7 +698,7 @@ bool rk_Repository::ResetCache(bool list)
                 return false;
 
             int64_t blobs = listed.fetch_add(1, std::memory_order_relaxed) + 1;
-            progress.SetFmt("%1 blobs", blobs);
+            progress.SetFmt("%1 cached", blobs);
 
             return true;
         });
