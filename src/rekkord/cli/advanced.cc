@@ -221,9 +221,9 @@ Options:
     LogInfo("Updating cache...");
     sq_Database *db = repo->OpenCache(false);
     if (!db)
-        return false;
+        return 1;
     if (!repo->ResetCache(true))
-        return false;
+        return 1;
 
     LogInfo("Checking blobs...");
     bool success;
@@ -238,7 +238,7 @@ Options:
         sq_Statement stmt;
         if (!db->Prepare("SELECT key FROM blobs WHERE checked IS NULL OR checked < ?1",
                          &stmt, now - CheckDelay))
-            return false;
+            return 1;
 
         while (stmt.Step()) {
             const char *path = DuplicateString((const char *)sqlite3_column_text(stmt, 0), &temp_alloc).ptr;
@@ -250,7 +250,7 @@ Options:
                 if (!repo->ReadBlob(path, &type, &blob))
                     return false;
 
-                if (!db->Run("UPDATE objects SET checked = ?2 WHERE key = ?1", path, now))
+                if (!db->Run("UPDATE blobs SET checked = ?2 WHERE key = ?1", path, now))
                     return false;
 
                 int64_t done = processed.fetch_add(1, std::memory_order_relaxed) + 1;
@@ -258,8 +258,6 @@ Options:
 
                 return true;
             });
-
-            return true;
         }
         if (!stmt.IsValid())
             return 1;
