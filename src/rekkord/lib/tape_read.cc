@@ -504,7 +504,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                         case (int)BlobType::Directory: {} break;
 
                         default: {
-                            LogError("Blob '%1' is not a Directory", entry.hash);
+                            LogError("Blob '%1' is not a Directory", oid);
                             return false;
                         } break;
                     }
@@ -524,7 +524,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
 
                 case (int)RawEntry::Kind::File: {
                     if (type != (int)BlobType::File && type != (int)BlobType::Chunk) {
-                        LogError("Blob '%1' is not a File", entry.hash);
+                        LogError("Blob '%1' is not a File", oid);
                         return false;
                     }
 
@@ -562,7 +562,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
 
                 case (int)RawEntry::Kind::Link: {
                     if (type != (int)BlobType::Link) {
-                        LogError("Blob '%1' is not a Link", entry.hash);
+                        LogError("Blob '%1' is not a Link", oid);
                         return false;
                     }
 
@@ -1259,7 +1259,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
                         case (int)BlobType::Directory: {} break;
 
                         default: {
-                            LogError("Blob '%1' is not a Directory", entry.hash);
+                            LogError("Blob '%1' is not a Directory", obj->oid);
                             return false;
                         } break;
                     }
@@ -1433,7 +1433,7 @@ class CheckContext {
 public:
     CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, int64_t checked, int64_t blobs);
 
-    bool CheckBlob(const rk_ObjectID &oid);
+    bool CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate);
     bool RecurseEntries(Span<const uint8_t> entries, bool allow_separators);
 
 private:
@@ -1445,7 +1445,7 @@ CheckContext::CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, i
 {
 }
 
-bool CheckContext::CheckBlob(const rk_ObjectID &oid)
+bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate)
 {
     char key[128];
     Fmt(key, "%1", oid);
@@ -1514,7 +1514,21 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid)
 
                 async.Run([=, this]() {
                     rk_ObjectID oid = { rk_BlobCatalog::Raw, chunk.hash };
-                    return CheckBlob(oid);
+
+                    bool valid = CheckBlob(oid, [&](int type, Span<const uint8_t> blob) {
+                        if (type != (int)BlobType::Chunk) [[unlikely]] {
+                            LogError("Blob '%1' is not a Chunk", oid);
+                            return false;
+                        }
+                        if (blob.len != chunk.len) [[unlikely]] {
+                            LogError("Chunk size mismatch for '%1'", oid);
+                            return false;
+                        }
+
+                        return true;
+                    });
+
+                    return valid;
                 });
             }
 
@@ -1576,6 +1590,9 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid)
         } break;
     }
 
+    if (!validate(type, blob))
+        return false;
+
     if (!db->Run(R"(INSERT INTO checks (oid, mark)
                     VALUES (?1, ?2)
                     ON CONFLICT DO UPDATE SET mark = excluded.mark)",
@@ -1624,7 +1641,39 @@ bool CheckContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separa
 
         async.Run([&, entry, this] () {
             rk_ObjectID oid = { KindToCatalog(entry->kind), entry->hash };
-            return CheckBlob(oid);
+
+            bool valid = CheckBlob(oid, [&](int type, Span<const uint8_t>) {
+                switch (entry->kind) {
+                    case (int)RawEntry::Kind::Directory: {
+                        if (type != (int)BlobType::Directory1 &&
+                                type != (int)BlobType::Directory2 &&
+                                type != (int)BlobType::Directory) {
+                            LogError("Blob '%1' is not a Directory", oid);
+                            return false;
+                        } break;
+                    } break;
+
+                    case (int)RawEntry::Kind::File: {
+                        if (type != (int)BlobType::File && type != (int)BlobType::Chunk) {
+                            LogError("Blob '%1' is not a File", oid);
+                            return false;
+                        }
+                    } break;
+
+                    case (int)RawEntry::Kind::Link: {
+                        if (type != (int)BlobType::Link && type != (int)BlobType::Chunk) {
+                            LogError("Blob '%1' is not a Link", oid);
+                            return false;
+                        }
+                    } break;
+
+                    default: { RG_UNREACHABLE(); } break;
+                }
+
+                return true;
+            });
+
+            return valid;
         });
     }
 
@@ -1672,18 +1721,30 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
     }
 
     CheckContext check(repo, db, mark, checked, blobs);
+    bool valid = true;
 
     ProgressHandle progress("Snapshots");
     progress.SetFmt((int64_t)0, snapshots.len, "0 / %1 snapshots", snapshots.len);
 
     for (Size i = 0; i < snapshots.len; i++) {
-        if (!check.CheckBlob(snapshots[i].oid))
-            return false;
+        const rk_SnapshotInfo &snapshot = snapshots[i];
+
+        valid &= check.CheckBlob(snapshot.oid, [&](int type, Span<const uint8_t>) {
+            if (type != (int)BlobType::Snapshot1 &&
+                    type != (int)BlobType::Snapshot2 &&
+                    type != (int)BlobType::Snapshot3 &&
+                    type != (int)BlobType::Snapshot) {
+                LogError("Blob '%1' is not a Snapshot", snapshot.oid);
+                return false;
+            }
+
+            return true;
+        });
 
         progress.SetFmt(i + 1, snapshots.len, "%1 / %2 snapshots", i + 1, snapshots.len);
     }
 
-    return true;
+    return valid;
 }
 
 const char *rk_ReadLink(rk_Repository *repo, const rk_ObjectID &oid, Allocator *alloc)
