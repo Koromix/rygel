@@ -1514,22 +1514,7 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid)
 
                 async.Run([=, this]() {
                     rk_ObjectID oid = { rk_BlobCatalog::Raw, chunk.hash };
-
-                    int type;
-                    HeapArray<uint8_t> blob;
-
-                    if (!repo->ReadBlob(oid, &type, &blob))
-                        return false;
-                    if (type != (int)BlobType::Chunk) [[unlikely]] {
-                        LogError("Blob '%1' is not a Chunk", oid);
-                        return false;
-                    }
-                    if (blob.len != chunk.len) [[unlikely]] {
-                        LogError("Chunk size mismatch for '%1'", oid);
-                        return false;
-                    }
-
-                    return true;
+                    return CheckBlob(oid);
                 });
             }
 
