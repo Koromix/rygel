@@ -1453,8 +1453,7 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid)
     // Ignore recently checked objects
     {
         sq_Statement stmt;
-        if (!db->Prepare("SELECT oid FROM checks WHERE oid = ?1 AND mark >= ?2",
-                         &stmt, key, mark - CheckDelay))
+        if (!db->Prepare("SELECT oid FROM checks WHERE oid = ?1", &stmt, key))
             return false;
 
         if (stmt.Step())
@@ -1660,18 +1659,23 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
     if (!repo->ResetCache(true))
         return false;
 
-    // Count blobs
+    int64_t mark = GetUnixTime();
+
+    if (!db->Run("DELETE FROM checks WHERE mark < ?1", mark - CheckDelay))
+        return false;
+
     int64_t blobs;
     {
         sq_Statement stmt;
-        if (!db->Prepare("SELECT COUNT(oid) FROM blobs", &stmt))
+        if (!db->Prepare(R"(SELECT COUNT(oid)
+                            FROM blobs
+                            WHERE oid NOT IN (SELECT oid FROM checks))", &stmt))
             return false;
         if (!stmt.GetSingleValue(&blobs))
             return false;
     }
 
-    int64_t now = GetUnixTime();
-    CheckContext check(repo, db, now, blobs);
+    CheckContext check(repo, db, mark, blobs);
 
     for (const rk_SnapshotInfo &snapshot: snapshots) {
         if (!check.CheckBlob(snapshot.oid))
