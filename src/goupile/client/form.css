@@ -184,7 +184,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     max-width: 100%;
     padding: 3px calc(4px + var(--widget_rounding) / 4);
     background: white;
-    border: 1px solid #dfdfdf;
+    border: 1px solid #ccc;
     border-width: 0.5px;
     border-radius: var(--widget_rounding);
 }
@@ -193,7 +193,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
        long options don't wreak havoc. Setting max-width: 100% here does not work correctly. */
     width: 100%;
     padding: 3px 22px 3px 4px;
-    border: 1px solid #dfdfdf;
+    border: 1px solid #ccc;
     border-width: 0.5px;
     border-radius: var(--widget_rounding);
     -webkit-appearance: none;
@@ -235,7 +235,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     margin: 2px 0 0 2px;
     padding: 0.25em 8px;
     background: white;
-    border: 1px solid #dfdfdf;
+    border: 1px solid #ccc;
     border-width: 0.5px;
     border-radius: var(--widget_rounding);
     color: black;
@@ -296,7 +296,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     width: 1.18em;
     box-sizing: border-box;
     background: white;
-    border: 1px solid #dfdfdf;
+    border: 1px solid #aaa;
     border-width: 0.5px;
     border-radius: 50%;
     z-index: 1;
@@ -346,7 +346,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     width: 1.18em;
     height: 1.18em;
     box-sizing: border-box;
-    border: 1px solid #dfdfdf;
+    border: 1px solid #aaa;
     border-width: 0.5px;
     background: white;
     content: ' ';
@@ -430,7 +430,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     background: white;
     background-image: linear-gradient(90deg, #555 var(--progress),
                                              white var(--progress));
-    border: 1px solid #dfdfdf;
+    border: 1px solid #ccc;
     border-width: 0.5px;
     border-radius: 4px;
 }
@@ -441,7 +441,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     background: white;
     background-image: linear-gradient(90deg, #555 var(--progress),
                                              white var(--progress));
-    border: 1px solid #dfdfdf;
+    border: 1px solid #ccc;
     border-width: 0.5px;
     border-radius: 4px;
 }
@@ -490,7 +490,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     position: absolute;
     top: 11px;
     height: 14px;
-    border-left: 2px solid #dfdfdf;
+    border-left: 2px solid #ccc;
     z-index: -1;
 }
 .fm_slider .label {
@@ -510,7 +510,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     top: 1px;
     width: 1.6em;
     height: 1.6em;
-    background: #dfdfdf;
+    background: #ccc;
     border: none;
     border-radius: 50%;
     color-adjust: exact !important;
