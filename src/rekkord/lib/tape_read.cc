@@ -355,6 +355,63 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
     return ptr->GetSize();
 }
 
+static int64_t DecodeChunks(const rk_ObjectID &oid, Span<const uint8_t> blob, HeapArray<FileChunk> *out_chunks)
+{
+    RG_DEFER_NC(err_guard, len = out_chunks->len) { out_chunks->RemoveFrom(len); };
+
+    int64_t file_size = -1;
+
+    if (blob.len % RG_SIZE(RawChunk) != RG_SIZE(int64_t)) {
+        LogError("Malformed file blob '%1'", oid);
+        return -1;
+    }
+    blob.len -= RG_SIZE(int64_t);
+
+    // Get file length from end of stream
+    MemCpy(&file_size, blob.end(), RG_SIZE(file_size));
+    file_size = LittleEndian(file_size);
+
+    if (file_size < 0) {
+        LogError("Malformed file blob '%1'", oid);
+        return -1;
+    }
+
+    // Check coherence
+    Size prev_end = 0;
+
+    for (Size offset = 0; offset < blob.len; offset += RG_SIZE(RawChunk)) {
+        FileChunk chunk = {};
+
+        RawChunk entry = {};
+        MemCpy(&entry, blob.ptr + offset, RG_SIZE(entry));
+
+        chunk.offset = LittleEndian(entry.offset);
+        chunk.len = LittleEndian(entry.len);
+        chunk.hash = entry.hash;
+
+        if (prev_end > chunk.offset || chunk.len < 0) [[unlikely]] {
+            LogError("Malformed file blob '%1'", oid);
+            return false;
+        }
+        prev_end = chunk.offset + chunk.len;
+
+        out_chunks->Append(chunk);
+    }
+
+    if (blob.len >= RG_SIZE(RawChunk) + RG_SIZE(int64_t)) {
+        const RawChunk *last = (const RawChunk *)(blob.end() - RG_SIZE(RawChunk));
+        int64_t size = LittleEndian(last->offset) + LittleEndian(last->len);
+
+        if (size != file_size) [[unlikely]] {
+            LogError("File size mismatch for '%1'", oid);
+            return -1;
+        }
+    }
+
+    err_guard.Disable();
+    return file_size;
+}
+
 static inline rk_BlobCatalog KindToCatalog(int kind)
 {
     switch (kind) {
@@ -619,46 +676,17 @@ int GetContext::GetFile(const rk_ObjectID &oid, bool chunked, Span<const uint8_t
     int64_t file_size = 0;
 
     if (chunked) {
-        if (file.len % RG_SIZE(RawChunk) != RG_SIZE(int64_t)) {
-            LogError("Malformed file blob '%1'", oid);
+        HeapArray<FileChunk> chunks;
+        file_size = DecodeChunks(oid, file, &chunks);
+        if (file_size < 0)
             return -1;
-        }
-        file.len -= RG_SIZE(int64_t);
-
-        // Get file length from end of stream
-        MemCpy(&file_size, file.end(), RG_SIZE(file_size));
-        file_size = LittleEndian(file_size);
-
-        if (file_size < 0) {
-            LogError("Malformed file blob '%1'", oid);
-            return -1;
-        }
 
         if (!settings.fake && !ResizeFile(fd, dest_filename, file_size))
             return -1;
 
         Async async(&tasks);
 
-        // Check coherence
-        Size prev_end = 0;
-
-        // Write unencrypted file
-        for (Size offset = 0; offset < file.len; offset += RG_SIZE(RawChunk)) {
-            FileChunk chunk = {};
-
-            RawChunk entry = {};
-            MemCpy(&entry, file.ptr + offset, RG_SIZE(entry));
-
-            chunk.offset = LittleEndian(entry.offset);
-            chunk.len = LittleEndian(entry.len);
-            chunk.hash = entry.hash;
-
-            if (prev_end > chunk.offset || chunk.len < 0) [[unlikely]] {
-                LogError("Malformed file blob '%1'", oid);
-                return false;
-            }
-            prev_end = chunk.offset + chunk.len;
-
+        for (const FileChunk &chunk: chunks) {
             async.Run([=, this]() {
                 rk_ObjectID oid = { rk_BlobCatalog::Raw, chunk.hash };
 
@@ -692,17 +720,6 @@ int GetContext::GetFile(const rk_ObjectID &oid, bool chunked, Span<const uint8_t
         // file descriptors and the appearence of slow progress.
         if (!async.SyncSoon())
             return -1;
-
-        // Check actual file size
-        if (file.len >= RG_SIZE(RawChunk) + RG_SIZE(int64_t)) {
-            const RawChunk *entry = (const RawChunk *)(file.end() - RG_SIZE(RawChunk));
-            int64_t size = LittleEndian(entry->offset) + LittleEndian(entry->len);
-
-            if (size != file_size) [[unlikely]] {
-                LogError("File size mismatch for '%1'", oid);
-                return -1;
-            }
-        }
 
         MakeProgress(1, 0);
     } else {
@@ -1474,44 +1491,14 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
         case (int)BlobType::Chunk: {} break;
 
         case (int)BlobType::File: {
-            int64_t file_size = 0;
-
-            if (blob.len % RG_SIZE(RawChunk) != RG_SIZE(int64_t)) {
-                LogError("Malformed file blob '%1'", oid);
+            HeapArray<FileChunk> chunks;
+            int64_t file_size = DecodeChunks(oid, blob, &chunks);
+            if (file_size < 0)
                 return false;
-            }
-            blob.len -= RG_SIZE(int64_t);
-
-            // Get file length from end of stream
-            MemCpy(&file_size, blob.end(), RG_SIZE(file_size));
-            file_size = LittleEndian(file_size);
-
-            if (file_size < 0) {
-                LogError("Malformed file blob '%1'", oid);
-                return false;
-            }
 
             Async async(&tasks);
 
-            // Check coherence
-            Size prev_end = 0;
-
-            for (Size offset = 0; offset < blob.len; offset += RG_SIZE(RawChunk)) {
-                FileChunk chunk = {};
-
-                RawChunk entry = {};
-                MemCpy(&entry, blob.ptr + offset, RG_SIZE(entry));
-
-                chunk.offset = LittleEndian(entry.offset);
-                chunk.len = LittleEndian(entry.len);
-                chunk.hash = entry.hash;
-
-                if (prev_end > chunk.offset || chunk.len < 0) [[unlikely]] {
-                    LogError("Malformed file blob '%1'", oid);
-                    return false;
-                }
-                prev_end = chunk.offset + chunk.len;
-
+            for (const FileChunk &chunk: chunks) {
                 async.Run([=, this]() {
                     rk_ObjectID oid = { rk_BlobCatalog::Raw, chunk.hash };
 
@@ -1530,16 +1517,6 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
 
                     return valid;
                 });
-            }
-
-            if (blob.len >= RG_SIZE(RawChunk) + RG_SIZE(int64_t)) {
-                const RawChunk *entry = (const RawChunk *)(blob.end() - RG_SIZE(RawChunk));
-                int64_t size = LittleEndian(entry->offset) + LittleEndian(entry->len);
-
-                if (size != file_size) [[unlikely]] {
-                    LogError("File size mismatch for '%1'", oid);
-                    return false;
-                }
             }
 
             if (!async.Sync())
@@ -1789,51 +1766,8 @@ public:
 
 bool FileHandle::Init(const rk_ObjectID &oid, Span<const uint8_t> blob)
 {
-    if (blob.len % RG_SIZE(RawChunk) != RG_SIZE(int64_t)) {
-        LogError("Malformed file blob '%1'", oid);
-        return false;
-    }
-    blob.len -= RG_SIZE(int64_t);
-
-    // Get file length from end of stream
-    int64_t file_size = 0;
-    MemCpy(&file_size, blob.end(), RG_SIZE(file_size));
-    file_size = LittleEndian(file_size);
-
-    // Check coherence
-    Size prev_end = 0;
-
-    for (Size offset = 0; offset < blob.len; offset += RG_SIZE(RawChunk)) {
-        FileChunk chunk = {};
-
-        RawChunk entry = {};
-        MemCpy(&entry, blob.ptr + offset, RG_SIZE(entry));
-
-        chunk.offset = LittleEndian(entry.offset);
-        chunk.len = LittleEndian(entry.len);
-        chunk.hash = entry.hash;
-
-        if (prev_end > chunk.offset || chunk.len < 0) [[unlikely]] {
-            LogError("Malformed file blob '%1'", oid);
-            return false;
-        }
-        prev_end = chunk.offset + chunk.len;
-
-        chunks.Append(chunk);
-    }
-
-    // Check actual file size
-    if (blob.len >= RG_SIZE(RawChunk) + RG_SIZE(int64_t)) {
-        const RawChunk *entry = (const RawChunk *)(blob.end() - RG_SIZE(RawChunk));
-        int64_t len = LittleEndian(entry->offset) + LittleEndian(entry->len);
-
-        if (len != file_size) [[unlikely]] {
-            LogError("File size mismatch for '%1'", entry->hash);
-            return false;
-        }
-    }
-
-    return true;
+    bool success = (DecodeChunks(oid, blob, &chunks) >= 0);
+    return success;
 }
 
 Size FileHandle::Read(int64_t offset, Span<uint8_t> out_buf)
