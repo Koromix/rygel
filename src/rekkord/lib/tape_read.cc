@@ -1491,6 +1491,9 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid)
                 return false;
             }
 
+            Async async(&tasks);
+
+            // Check coherence
             Size prev_end = 0;
 
             for (Size offset = 0; offset < blob.len; offset += RG_SIZE(RawChunk)) {
@@ -1509,7 +1512,7 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid)
                 }
                 prev_end = chunk.offset + chunk.len;
 
-                tasks.Run([=, this]() {
+                async.Run([=, this]() {
                     rk_ObjectID oid = { rk_BlobCatalog::Raw, chunk.hash };
 
                     int type;
@@ -1539,6 +1542,9 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid)
                     return false;
                 }
             }
+
+            if (!async.Sync())
+                return false;
         } break;
 
         case (int)BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
@@ -1637,10 +1643,7 @@ bool CheckContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separa
         });
     }
 
-    if (!async.Sync())
-        return false;
-
-    return true;
+    return async.Sync();
 }
 
 void CheckContext::MakeProgress(int64_t blobs)
