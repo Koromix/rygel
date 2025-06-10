@@ -1677,9 +1677,14 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
 
     CheckContext check(repo, db, mark, blobs);
 
-    for (const rk_SnapshotInfo &snapshot: snapshots) {
-        if (!check.CheckBlob(snapshot.oid))
+    ProgressHandle progress("Snapshots");
+    progress.SetFmt((int64_t)0, snapshots.len, "0 / %1 snapshots", snapshots.len);
+
+    for (Size i = 0; i < snapshots.len; i++) {
+        if (!check.CheckBlob(snapshots[i].oid))
             return false;
+
+        progress.SetFmt(i + 1, snapshots.len, "%1 / %2 snapshots", i + 1, snapshots.len);
     }
 
     return true;
