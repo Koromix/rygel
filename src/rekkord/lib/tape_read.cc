@@ -1681,26 +1681,16 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
     CheckContext check(repo, db, mark, blobs);
 
     ProgressHandle progress("Snapshots");
-    std::atomic_int64_t processed = 0;
+    progress.SetFmt((int64_t)0, snapshots.len, "0 / %1 snapshots", snapshots.len);
 
-    progress.SetFmt(processed, snapshots.len, "0 / %1 snapshots", snapshots.len);
+    for (Size i = 0; i < snapshots.len; i++) {
+        if (!check.CheckBlob(snapshots[i].oid))
+            return false;
 
-    Async async(repo->GetAsync());
-
-    for (const rk_SnapshotInfo &snapshot: snapshots) {
-        rk_ObjectID oid = snapshot.oid;
-
-        async.Run([&, oid] {
-            bool valid = check.CheckBlob(oid);
-
-            int64_t checked = processed.fetch_add(1, std::memory_order_relaxed) + 1;
-            progress.SetFmt(checked, snapshots.len, "%1 / %2 snapshots", checked, snapshots.len);
-
-            return valid;
-        });
+        progress.SetFmt(i + 1, snapshots.len, "%1 / %2 snapshots", i + 1, snapshots.len);
     }
 
-    return async.Sync();
+    return true;
 }
 
 const char *rk_ReadLink(rk_Repository *repo, const rk_ObjectID &oid, Allocator *alloc)
