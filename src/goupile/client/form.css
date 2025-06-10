@@ -281,15 +281,17 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
 .fm_radio > input + label {
     display: inline-block;
     position: relative;
+    margin-top: 0.4em;
     padding-left: calc(1.18em + 10px);
     line-height: 20px;
     cursor: pointer;
 }
+.fm_radio > label:first-of-type { margin-top: 0; }
 .fm_radio > input + label::before {
     display: inline-block;
     position: absolute;
     left: 2px;
-    top: 1px;
+    top: calc(50% - 0.58em);
     height: 1.18em;
     width: 1.18em;
     box-sizing: border-box;
@@ -306,7 +308,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     display: inline-block;
     position: absolute;
     left: 2px;
-    top: 1px;
+    top: calc(50% - 0.58em);
     height: 1.18em;
     width: 1.18em;
     box-sizing: border-box;
@@ -330,15 +332,17 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
 .fm_check > input + label {
     display: inline-block;
     position: relative;
+    margin-top: 0.4em;
     padding-left: calc(1.18em + 10px);
     line-height: 20px;
     cursor: pointer;
 }
+.fm_check > label:first-of-type { margin-top: 0; }
 .fm_check > input + label::before {
     display: inline-block;
     position: absolute;
     left: 2px;
-    top: 0.2em;
+    top: calc(50% - 0.6em);
     width: 1.18em;
     height: 1.18em;
     box-sizing: border-box;
@@ -353,7 +357,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     display: inline-block;
     position: absolute;
     left: 0.4em;
-    top: 0.35em;
+    top: calc(50% - 0.45em);
     width: 0.6em;
     height: 0.4em;
     border-left: 1px solid black;
@@ -369,15 +373,15 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
 @media (pointer: coarse) {
     .fm_radio > input + label {
         padding-left: 32px;
-        line-height: 28px;
+        line-height: 1.6em;
     }
     .fm_radio > input + label::before {
-        top: 0;
+        transform: translateY(-1px);
         width: 22px;
         height: 22px;
     }
     .fm_radio > input + label::after {
-        top: 0;
+        transform: translateY(-1px);
         width: 22px;
         height: 22px;
         border: 5px solid white;
@@ -385,16 +389,16 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
 
     .fm_check > input + label {
         padding-left: 32px;
-        line-height: 28px;
+        line-height: 1.6em;
     }
     .fm_check > input + label::before {
-        top: 0;
+        transform: translateY(-1px);
         width: 22px;
         height: 22px;
     }
     .fm_check > input + label::after {
+        transform: translateY(-1px) rotate(-45deg);
         left: 7px;
-        top: 4px;
         width: 12px;
         height: 7px;
     }
