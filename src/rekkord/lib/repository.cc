@@ -624,9 +624,23 @@ sq_Database *rk_Repository::OpenCache(bool build)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 12: {
+                    bool success = cache_db.RunMany(R"(
+                        DROP INDEX blobs_k;
+                        ALTER TABLE blobs RENAME COLUMN key TO oid;
+
+                        DELETE FROM blobs WHERE oid NOT LIKE 'blobs/%/%/%';
+                        UPDATE blobs SET oid = SUBSTR(oid, 7, 1) || SUBSTR(oid, 12);
+
+                        CREATE UNIQUE INDEX blobs_o ON blobs (oid);
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 12);
+                static_assert(CacheVersion == 13);
             }
 
             if (!cache_db.SetUserVersion(CacheVersion))
@@ -698,11 +712,22 @@ bool rk_Repository::ResetCache(bool list)
             // We never write empty blobs, something went wrong
             if (!size) [[unlikely]]
                 return true;
+            if (!StartsWith(path, "blobs/")) [[unlikely]]
+                return true;
 
-            if (!cache_db.Run(R"(INSERT INTO blobs (key, size)
-                                 VALUES (?1, ?2)
-                                 ON CONFLICT (key) DO UPDATE SET size = excluded.size)",
-                              path, size))
+            Span<const char> remain = path + 6;
+            Span<const char> catalog = SplitStr(remain, '/');
+            Span<const char> hash = SplitStrReverse(remain, '/');
+
+            if (catalog.len != 1)
+                return true;
+            if (std::find(std::begin(rk_BlobCatalogNames), std::end(rk_BlobCatalogNames), catalog[0]) == std::end(rk_BlobCatalogNames))
+                return true;
+
+            if (!cache_db.Run(R"(INSERT INTO blobs (oid, size)
+                                 VALUES (?1 || ?2, ?3)
+                                 ON CONFLICT (oid) DO UPDATE SET size = excluded.size)",
+                              catalog, hash, size))
                 return false;
 
             int64_t blobs = listed.fetch_add(1, std::memory_order_relaxed) + 1;
@@ -726,12 +751,15 @@ bool rk_Repository::ResetCache(bool list)
     return true;
 }
 
-bool rk_Repository::PutCache(const char *key, int64_t size)
+bool rk_Repository::PutCache(const rk_ObjectID &oid, int64_t size)
 {
     if (!cache_db.IsValid())
         return true;
 
-    bool success = cache_db.Run(R"(INSERT INTO blobs (key, size)
+    char key[128];
+    Fmt(key, "%1", oid);
+
+    bool success = cache_db.Run(R"(INSERT INTO blobs (oid, size)
                                    VALUES (?1, ?2)
                                    ON CONFLICT DO NOTHING)",
                                 key, size);
@@ -939,15 +967,10 @@ static int64_t PadMe(int64_t len)
 
 bool rk_Repository::ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t> *out_blob)
 {
+    RG_ASSERT(HasMode(rk_AccessMode::Read));
+
     char path[256];
     Fmt(path, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash);
-
-    return ReadBlob(path, out_type, out_blob);
-}
-
-bool rk_Repository::ReadBlob(const char *path, int *out_type, HeapArray<uint8_t> *out_blob)
-{
-    RG_ASSERT(HasMode(rk_AccessMode::Read));
 
     Size prev_len = out_blob->len;
     RG_DEFER_N(err_guard) { out_blob->RemoveFrom(prev_len); };
@@ -1040,14 +1063,6 @@ bool rk_Repository::ReadBlob(const char *path, int *out_type, HeapArray<uint8_t>
 
 Size rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob)
 {
-    char path[256];
-    Fmt(path, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash);
-
-    return WriteBlob(path, type, blob);
-}
-
-Size rk_Repository::WriteBlob(const char *path, int type, Span<const uint8_t> blob)
-{
     RG_ASSERT(HasMode(rk_AccessMode::Write));
     RG_ASSERT(type >= 0 && type < INT8_MAX);
 
@@ -1055,7 +1070,7 @@ Size rk_Repository::WriteBlob(const char *path, int type, Span<const uint8_t> bl
     {
         int64_t written = 0;
 
-        switch (TestFast(path, &written)) {
+        switch (TestFast(oid, &written)) {
             case StatResult::Success: return (Size)written;
             case StatResult::MissingPath: {} break;
 
@@ -1063,6 +1078,9 @@ Size rk_Repository::WriteBlob(const char *path, int type, Span<const uint8_t> bl
             case StatResult::OtherError: return -1;
         }
     }
+
+    char path[256];
+    Fmt(path, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash);
 
     HeapArray<uint8_t> raw;
     crypto_secretstream_xchacha20poly1305_state state;
@@ -1200,11 +1218,19 @@ Size rk_Repository::WriteBlob(const char *path, int type, Span<const uint8_t> bl
             case rk_WriteResult::OtherError: return -1;
         }
 
-        if (!PutCache(path, raw.len))
+        if (!PutCache(oid, raw.len))
             return -1;
     }
 
     return raw.len;
+}
+
+StatResult rk_Repository::TestBlob(const rk_ObjectID &oid, int64_t *out_size)
+{
+    char path[256];
+    Fmt(path, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash);
+
+    return disk->TestFile(path, out_size);
 }
 
 bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload)
@@ -1406,20 +1432,24 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
     return true;
 }
 
-StatResult rk_Repository::TestFast(const char *path, int64_t *out_size)
+StatResult rk_Repository::TestFast(const rk_ObjectID &oid, int64_t *out_size)
 {
     if (!cache_db.IsValid())
-        return disk->TestFile(path, out_size);
+        return StatResult::MissingPath;
 
     int64_t known_size = -1;
     {
+        char key[128];
+        Fmt(key, "%1", oid);
+
         sq_Statement stmt;
-        if (!cache_db.Prepare("SELECT size FROM blobs WHERE key = ?1", &stmt))
+        if (!cache_db.Prepare("SELECT size FROM blobs WHERE oid = ?1", &stmt, key))
             return StatResult::OtherError;
-        sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
         if (stmt.Step()) {
             known_size = sqlite3_column_int64(stmt, 0);
+        } else if (!stmt.IsValid()) {
+            return StatResult::OtherError;
         }
     }
 
@@ -1427,7 +1457,7 @@ StatResult rk_Repository::TestFast(const char *path, int64_t *out_size)
     if (GetRandomInt(0, 100) < 2) {
         int64_t real_size = -1;
 
-        switch (disk->TestFile(path, &real_size)) {
+        switch (TestBlob(oid, &real_size)) {
             case StatResult::Success:
             case StatResult::MissingPath: {} break;
 

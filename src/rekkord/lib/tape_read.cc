@@ -1664,7 +1664,7 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
     int64_t blobs;
     {
         sq_Statement stmt;
-        if (!db->Prepare("SELECT COUNT(key) FROM blobs", &stmt))
+        if (!db->Prepare("SELECT COUNT(oid) FROM blobs", &stmt))
             return false;
         if (!stmt.GetSingleValue(&blobs))
             return false;

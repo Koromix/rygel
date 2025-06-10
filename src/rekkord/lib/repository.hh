@@ -186,7 +186,7 @@ public:
 
     sq_Database *OpenCache(bool build);
     bool ResetCache(bool list);
-    bool PutCache(const char *key, int64_t size);
+    bool PutCache(const rk_ObjectID &oid, int64_t size);
     bool CommitCache(bool force = false);
     void CloseCache();
 
@@ -195,15 +195,14 @@ public:
     bool ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserInfo> *out_users);
 
     bool ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t> *out_blob);
-    bool ReadBlob(const char *path, int *out_type, HeapArray<uint8_t> *out_blob);
     Size WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob);
-    Size WriteBlob(const char *path, int type, Span<const uint8_t> blob);
+    StatResult TestBlob(const rk_ObjectID &oid, int64_t *out_size);
 
     bool WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload);
     bool ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags);
 
 private:
-    StatResult TestFast(const char *path, int64_t *out_size);
+    StatResult TestFast(const rk_ObjectID &oid, int64_t *out_size);
 
     bool WriteKeys(const char *path, const char *pwd, rk_UserRole role, const rk_KeySet &keys);
     bool ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, rk_KeySet *out_keys);
