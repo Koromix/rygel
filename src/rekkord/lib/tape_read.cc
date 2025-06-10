@@ -1431,7 +1431,7 @@ class CheckContext {
     Async tasks;
 
 public:
-    CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, int64_t blobs);
+    CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, int64_t checked, int64_t blobs);
 
     bool CheckBlob(const rk_ObjectID &oid);
     bool RecurseEntries(Span<const uint8_t> entries, bool allow_separators);
@@ -1440,8 +1440,8 @@ private:
     void MakeProgress(int64_t blobs);
 };
 
-CheckContext::CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, int64_t blobs)
-    : repo(repo), db(db), mark(mark), total_blobs(blobs), tasks(repo->GetAsync())
+CheckContext::CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, int64_t checked, int64_t blobs)
+    : repo(repo), db(db), mark(mark), total_blobs(blobs), checked_blobs(checked), tasks(repo->GetAsync())
 {
 }
 
@@ -1667,18 +1667,26 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
     if (!db->Run("DELETE FROM checks WHERE mark < ?1", mark - CheckDelay))
         return false;
 
+    int64_t checked;
     int64_t blobs;
     {
         sq_Statement stmt;
-        if (!db->Prepare(R"(SELECT COUNT(oid)
-                            FROM blobs
-                            WHERE oid NOT IN (SELECT oid FROM checks))", &stmt))
+        if (!db->Prepare(R"(SELECT SUM(IIF(c.oid IS NULL, 0, 1)) AS checked,
+                                   COUNT(b.oid) AS blobs
+                            FROM blobs b
+                            LEFT JOIN checks c ON (c.oid = b.oid))", &stmt))
             return false;
-        if (!stmt.GetSingleValue(&blobs))
+
+        if (stmt.Step()) {
+            checked = sqlite3_column_int64(stmt, 0);
+            blobs = sqlite3_column_int64(stmt, 1);
+        } else {
+            RG_ASSERT(!stmt.IsValid());
             return false;
+        }
     }
 
-    CheckContext check(repo, db, mark, blobs);
+    CheckContext check(repo, db, mark, checked, blobs);
 
     ProgressHandle progress("Snapshots");
     progress.SetFmt((int64_t)0, snapshots.len, "0 / %1 snapshots", snapshots.len);
