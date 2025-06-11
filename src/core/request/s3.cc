@@ -950,7 +950,7 @@ int s3_Client::RunSafe(const char *action, FunctionRef<int(CURL *)> func, bool q
 }
 
 Size s3_Client::PrepareHeaders(const char *method, const char *path, const char *query, Span<const KeyValue> kvs,
-                                Span<const uint8_t> body, Allocator *alloc, Span<curl_slist> out_headers)
+                               Span<const uint8_t> body, Allocator *alloc, Span<curl_slist> out_headers)
 {
     int64_t now = GetUnixTime();
     TimeSpec date = DecomposeTimeUTC(now);
@@ -1032,7 +1032,7 @@ static void HmacSha256(Span<const uint8_t> key, Span<const char> message, uint8_
 }
 
 void s3_Client::MakeSignature(const char *method, const char *path, const char *query,
-                               const TimeSpec &date, const uint8_t sha256[32], uint8_t out_signature[32])
+                              const TimeSpec &date, const uint8_t sha256[32], uint8_t out_signature[32])
 {
     RG_ASSERT(!date.offset);
 
