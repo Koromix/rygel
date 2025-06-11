@@ -374,6 +374,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                                     put_size += size;
                                     MakeProgress(written);
                                     *stored = written;
+                                    put_entries++;
 
                                     break;
                                 }
@@ -430,6 +431,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
 
                             put_size += target.len;
                             MakeProgress(written);
+                            put_entries++;
 
                             entry->flags |= (uint8_t)RawEntry::Flags::Readable;
 
@@ -534,10 +536,10 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
     if (!async.Sync())
         return PutResult::Error;
 
+    put_entries += pending_directories.count;
+
     const PendingDirectory &pending0 = pending_directories[0];
     RG_ASSERT(pending0.parent_idx < 0);
-
-    put_entries += 1 + pending0.entries;
 
     *out_hash = pending0.hash;
     if (out_subdirs) {
@@ -676,6 +678,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
     }
 
     put_size += file_size;
+    put_entries++;
 
     *out_hash = file_hash;
     if (out_size) {
