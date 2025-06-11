@@ -388,8 +388,6 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
         pugi::xpath_node_set contents = doc.select_nodes("/ListBucketResult/Contents");
         bool truncated = doc.select_node("/ListBucketResult/IsTruncated").node().text().as_bool();
 
-        const pugi::xpath_node *after_node = nullptr;
-
         for (const pugi::xpath_node &node: contents) {
             const char *key = node.node().child("Key").text().get();
             int64_t size = node.node().child("Size").text().as_llong();
@@ -397,23 +395,17 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
             if (key && key[0]) [[likely]] {
                 if (!func(key, size))
                     return false;
-                after_node = &node;
             }
         }
 
         if (!truncated)
             break;
 
-        if (!after_node) [[unlikely]] {
-            LogError("Unexpected XML content");
-            return false;
-        }
-
         xml.RemoveFrom(0);
         query.RemoveFrom(0);
 
-        Span<const char> after = after_node->node().child("Key").text().get();
-        Fmt(&query, "list-type=2&prefix=%1%2&start-after=%3", FmtUrlSafe(prefix), prefix.len ? "%2F" : "", FmtUrlSafe(after));
+        const char *continuation = doc.select_node("/ListBucketResult/NextContinuationToken").node().text().get();
+        Fmt(&query, "list-type=2&prefix=%1%2&continuation-token=%3", FmtUrlSafe(prefix), prefix.len ? "%2F" : "", FmtUrlSafe(continuation));
     }
 
     return true;
