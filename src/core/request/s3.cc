@@ -1037,28 +1037,6 @@ void s3_Client::MakeSignature(const char *method, const char *path, const char *
 {
     RG_ASSERT(!date.offset);
 
-    // Create canonical request
-    uint8_t canonical[32];
-    {
-        LocalArray<char, 4096> buf;
-
-        buf.len += Fmt(buf.TakeAvailable(), "%1\n%2\n%3\n", method, path, query ? query : "").len;
-        buf.len += Fmt(buf.TakeAvailable(), "host:%1\nx-amz-content-sha256:%2\nx-amz-date:%3\n\n", host, FormatSha256(sha256), FmtTimeISO(date)).len;
-        buf.len += Fmt(buf.TakeAvailable(), "host;x-amz-content-sha256;x-amz-date\n").len;
-        buf.len += Fmt(buf.TakeAvailable(), "%1", FormatSha256(sha256)).len;
-
-        crypto_hash_sha256(canonical, (const uint8_t *)buf.data, (size_t)buf.len);
-    }
-
-    // Create string to sign
-    LocalArray<char, 4096> string;
-    {
-        string.len += Fmt(string.TakeAvailable(), "AWS4-HMAC-SHA256\n").len;
-        string.len += Fmt(string.TakeAvailable(), "%1\n", FmtTimeISO(date)).len;
-        string.len += Fmt(string.TakeAvailable(), "%1/%2/s3/aws4_request\n", FormatYYYYMMDD(date), region).len;
-        string.len += Fmt(string.TakeAvailable(), "%1", FormatSha256(canonical)).len;
-    }
-
     // Get signing key
     uint8_t key[32];
     {
@@ -1089,6 +1067,25 @@ void s3_Client::MakeSignature(const char *method, const char *path, const char *
         }
     }
 
+    // Create canonical request
+    LocalArray<char, 4096> canonical;
+    canonical.len += Fmt(canonical.TakeAvailable(), "%1\n%2\n%3\n", method, path, query ? query : "").len;
+    canonical.len += Fmt(canonical.TakeAvailable(), "host:%1\nx-amz-content-sha256:%2\nx-amz-date:%3\n\n", host, FormatSha256(sha256), FmtTimeISO(date)).len;
+    canonical.len += Fmt(canonical.TakeAvailable(), "host;x-amz-content-sha256;x-amz-date\n").len;
+    canonical.len += Fmt(canonical.TakeAvailable(), "%1", FormatSha256(sha256)).len;
+
+    // Hash canonical request
+    uint8_t hash[32];
+    crypto_hash_sha256(hash, (const uint8_t *)canonical.data, (size_t)canonical.len);
+
+    // Create string to sign
+    LocalArray<char, 4096> string;
+    string.len += Fmt(string.TakeAvailable(), "AWS4-HMAC-SHA256\n").len;
+    string.len += Fmt(string.TakeAvailable(), "%1\n", FmtTimeISO(date)).len;
+    string.len += Fmt(string.TakeAvailable(), "%1/%2/s3/aws4_request\n", FormatYYYYMMDD(date), region).len;
+    string.len += Fmt(string.TakeAvailable(), "%1", FormatSha256(hash)).len;
+
+    // We've got everything we need!
     HmacSha256(key, string, out_signature);
 }
 
