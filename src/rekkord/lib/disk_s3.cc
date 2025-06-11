@@ -114,7 +114,15 @@ bool S3Disk::DeleteFile(const char *path)
 
 bool S3Disk::ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func)
 {
-    return s3.ListObjects(path, func);
+    char prefix[4096];
+
+    if (path && !EndsWith(path, "/")) {
+        Fmt(prefix, "%1/", path);
+    } else {
+        CopyString(path ? path : "", prefix);
+    }
+
+    return s3.ListObjects(prefix, func);
 }
 
 StatResult S3Disk::TestFile(const char *path, int64_t *out_size)

@@ -333,8 +333,6 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
 {
     BlockAllocator temp_alloc;
 
-    prefix = TrimStrRight(prefix, '/');
-
     const char *path;
     Span<const char> url = MakeURL({}, nullptr, &temp_alloc, &path);
 
@@ -342,7 +340,7 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
     HeapArray<char> query;
     HeapArray<uint8_t> xml;
 
-    Fmt(&query, "list-type=2&prefix=%1%2", FmtUrlSafe(prefix), prefix.len ? "%2F" : "");
+    Fmt(&query, "list-type=2&prefix=%1", FmtUrlSafe(prefix));
 
     for (;;) {
         int status = RunSafe("list S3 objects", [&](CURL *curl) {
@@ -406,7 +404,7 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
         query.RemoveFrom(0);
 
         const char *continuation = doc.select_node("/ListBucketResult/NextContinuationToken").node().text().get();
-        Fmt(&query, "continuation-token=%1&list-type=2&prefix=%2%3", FmtUrlSafe(continuation), FmtUrlSafe(prefix), prefix.len ? "%2F" : "");
+        Fmt(&query, "continuation-token=%1&list-type=2&prefix=%2", FmtUrlSafe(continuation), FmtUrlSafe(prefix));
     }
 
     return true;
