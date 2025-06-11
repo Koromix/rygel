@@ -406,7 +406,7 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
         query.RemoveFrom(0);
 
         const char *continuation = doc.select_node("/ListBucketResult/NextContinuationToken").node().text().get();
-        Fmt(&query, "list-type=2&prefix=%1%2&continuation-token=%3", FmtUrlSafe(prefix), prefix.len ? "%2F" : "", FmtUrlSafe(continuation));
+        Fmt(&query, "continuation-token=%1&list-type=2&prefix=%2%3", FmtUrlSafe(continuation), FmtUrlSafe(prefix), prefix.len ? "%2F" : "");
     }
 
     return true;
@@ -1103,12 +1103,7 @@ Span<const char> s3_Client::MakeURL(Span<const char> key, const char *query, All
     if (config.path_mode) {
         Fmt(&buf, "/%1", FmtUrlSafe(config.bucket));
     }
-    if (key.len) {
-        Fmt(&buf, "/%1", FmtUrlSafe(key, "/"));
-    }
-    if (buf.len == path_offset) {
-        Fmt(&buf, "/");
-    }
+    Fmt(&buf, "/%1", FmtUrlSafe(key, "/"));
 
     Size path_end = buf.len;
 
