@@ -65,7 +65,7 @@ function build(form, values) {
             [2, "4 ou 5"],
             [3, "7 à 9"],
             [4, "10 ou plus"]
-        ])
+        ], { help: "Consultez le guide visuel ci-dessous pour vous aider à répondre" })
 
         form.output(html`
             <div style="text-align: center; margin-top: 2em;">
@@ -81,7 +81,7 @@ function build(form, values) {
             [2, "Une fois par mois"],
             [3, "Une fois par semaine"],
             [4, "Chaque jour ou presque"]
-        ])
+        ], { help: "Consultez le guide visuel ci-dessous pour vous aider à répondre" })
 
         form.output(html`
             <div style="text-align: center; margin-top: 2em;">
