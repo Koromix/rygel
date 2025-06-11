@@ -86,6 +86,10 @@ class s3_Client {
 
     bool open = false;
 
+    std::shared_mutex sign_mutex;
+    int sign_day = 0;
+    uint8_t sign_key[32];
+
     std::mutex connections_mutex;
     HeapArray<void *> connections; // CURL
 

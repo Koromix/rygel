@@ -1059,21 +1059,37 @@ void s3_Client::MakeSignature(const char *method, const char *path, const char *
         string.len += Fmt(string.TakeAvailable(), "%1", FormatSha256(canonical)).len;
     }
 
-    // Create signature
+    // Get signing key
+    uint8_t key[32];
     {
-        Span<uint8_t> signature = MakeSpan(out_signature, 32);
+        int day = (date.year << 16) | (date.month << 8) | date.day;
+        std::shared_lock<std::shared_mutex> lock_shr(sign_mutex);
 
-        LocalArray<char, 256> secret;
-        LocalArray<char, 256> ymd;
-        secret.len = Fmt(secret.data, "AWS4%1", config.access_key).len;
-        ymd.len = Fmt(ymd.data, "%1", FormatYYYYMMDD(date)).len;
+        if (day == sign_day) {
+            MemCpy(key, sign_key, 32);
+        } else {
+            lock_shr.unlock();
 
-        HmacSha256(secret.As<uint8_t>(), ymd, out_signature);
-        HmacSha256(signature, region, out_signature);
-        HmacSha256(signature, "s3", out_signature);
-        HmacSha256(signature, "aws4_request", out_signature);
-        HmacSha256(signature, string, out_signature);
+            LocalArray<char, 256> secret;
+            LocalArray<char, 256> ymd;
+            secret.len = Fmt(secret.data, "AWS4%1", config.access_key).len;
+            ymd.len = Fmt(ymd.data, "%1", FormatYYYYMMDD(date)).len;
+
+            HmacSha256(secret.As<uint8_t>(), ymd, key);
+            HmacSha256(key, region, key);
+            HmacSha256(key, "s3", key);
+            HmacSha256(key, "aws4_request", key);
+
+            if (day > sign_day) {
+                std::lock_guard<std::shared_mutex> lock_ex(sign_mutex);
+
+                sign_day = day;
+                MemCpy(sign_key, key, 32);
+            }
+        }
     }
+
+    HmacSha256(key, string, out_signature);
 }
 
 Span<char> s3_Client::MakeAuthorization(const uint8_t signature[32], const TimeSpec &date, Allocator *alloc)
