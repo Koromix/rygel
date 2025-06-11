@@ -63,6 +63,37 @@ function build(form, values, start) {
         }
     })
 
+    form.intro = html`
+        <p>Les individus qui ont vécu un ou plusieurs événements stressants souffrent parfois de réactions différentes de celles des autres. C'est ce qui va nous intéresser dans les questions qui suivent.
+        <p>Nous souhaiterions maintenant que vous pensiez spécifiquement à la <b>personne dont vous êtes le plus proche et à qui vous avez parlé</b> de l’évènement qui vous a amené ici. Donnez-nous, sur base des énoncés suivants, votre meilleure estimation de sa réaction lorsque vous lui avez parlé cet évènement.
+    `
+
+    form.part(() => {
+        q(1, "Il ou elle semblait comprendre ce que j'ai vécu :")
+        q(2, "Il ou elle a ressenti de la sympathie envers moi pour ce qui s'est passé :")
+        q(3, "Il ou elle ne pouvait pas comprendre, n'ayant pas vécu mon expérience :")
+    })
+
+    form.part(() => {
+        q(4, "Il ou elle n'a pas compris à quel point il est difficile de poursuivre une vie quotidienne « normale » après ce qui s'est passé :")
+        q(5, "Ses réactions m'ont été utiles :")
+        q(6, "Il ou elle a trouvé que ma réaction à ces expériences était excessive :")
+    })
+
+    form.part(() => {
+        q(7, "Il ou elle a trouvé que ma réaction à ces expériences étaient excessives :")
+        q(8, "Il ou elle semblait me blâmer, douter, me juger ou me questionner sur cette expérience :")
+        q(9, "Il ou elle s'est montré(e) très compréhensif(ve) et m'a soutenu(e) lorsque nous en avons parlé :")
+    })
+
+    form.part(() => {
+        q(10, "Je pensais que lui en parler se passerait bien mais ça n'a pas été le cas :")
+    })
+
+    form.intro = html`
+        <p>Les individus qui ont vécu un ou plusieurs événements stressants souffrent parfois de <b>réactions différentes de celles des autres</b>. C'est ce qui va nous intéresser dans les questions qui suivent.
+    `
+
     form.part(() => {
         form.binary("post1", "Depuis le bilan initial, avez-vous rencontré de nouvelles personnes faisant partie du domaine médical ?")
 
@@ -108,6 +139,18 @@ function build(form, values, start) {
             form.binary("ia4", "Cela vous a-t-il apporté un soulagement ?")
         }
     })
+
+    function q(idx, label) {
+        form.enumButtons("q" + idx, label, [
+            [0, "Pas du tout d'accord"],
+            [1, "Pas d'accord"],
+            [2, "Plutôt pas d'accord"],
+            [3, "Ni d'accord ni pas d'accord"],
+            [4, "Plutôt d'accord"],
+            [5, "D'accord"],
+            [6, "Tout à fait d'accord"]
+        ])
+    }
 }
 
 export default build
