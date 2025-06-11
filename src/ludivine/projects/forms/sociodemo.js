@@ -616,10 +616,10 @@ function build(form, values) {
         form.enumRadio("situation", "Quelle est votre situation familiale ?", [
             ["C", "Célibataire"],
             ["M", adapt("Marié", "Mariée")],
-            ["L", "En union libre"],
             ["P", adapt("Pacsé", "Pacsée")],
+            ["MG", "En relation monogame"],
+            ["PG", "En relation polyamoureuse"],
             ["D", adapt("Divorcé", "Divorcée")],
-            ["S", adapt("Séparé", "Séparée")],
             ["V", adapt("Veuf", "Veuve")]
         ])
     })

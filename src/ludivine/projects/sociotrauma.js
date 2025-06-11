@@ -226,6 +226,22 @@ function init(build, start, values) {
                     if (values.positif == null)
                         values.positif = {}
 
+                    form.part(() => {
+                        form.binary('situation1', 'Votre situation familiale a-t-elle changé depuis le bilan initial ?')
+
+                        if (values.situation1) {
+                            form.enumRadio('situation2', 'Quelle est votre situation familiale actuelle ?', [
+                                ['C', 'Célibataire'],
+                                ['M', 'Marié(e)'],
+                                ['P', 'Pacsé(e)'],
+                                ['MG', 'En relation monogame'],
+                                ['PG', 'En relation polyamoureuse'],
+                                ['D', 'Divorcé(e)'],
+                                ['V', 'Veuf/veuve']
+                            ])
+                        }
+                    })
+
                     adnm20s6(form, values.adnm20)
                     nouveaus6(form, values.nouveau)
                     positif(form, values.positif, 'la fin du bilan initial')
