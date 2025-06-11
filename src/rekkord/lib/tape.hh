@@ -21,7 +21,6 @@ namespace RG {
 
 class rk_Repository;
 
-static const char *const rk_DefaultSnapshotChannel = "default";
 static const Size rk_MaxSnapshotChannelLength = 256;
 
 struct rk_RestoreSettings {
@@ -38,12 +37,10 @@ struct rk_ListSettings {
 };
 
 struct rk_SaveSettings {
-    const char *channel = rk_DefaultSnapshotChannel;
     bool follow = false;
     bool noatime = false;
     bool atime = false;
     bool xattrs = false;
-    bool raw = false;
 };
 
 struct rk_SnapshotInfo {
@@ -134,7 +131,7 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
 const char *rk_ReadLink(rk_Repository *repo, const rk_ObjectID &oid, Allocator *alloc);
 std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Repository *repo, const rk_ObjectID &oid);
 
-bool rk_Save(rk_Repository *repo, const rk_SaveSettings &settings, Span<const char *const> filenames,
-             rk_ObjectID *out_oid, int64_t *out_size = nullptr, int64_t *out_stored = nullptr);
+bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> filenames,
+             const rk_SaveSettings &settings, rk_ObjectID *out_oid, int64_t *out_size = nullptr, int64_t *out_stored = nullptr);
 
 }

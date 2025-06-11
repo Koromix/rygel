@@ -4,14 +4,11 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
-Each snapshot has a unique object ID (or OID), which is generated automatically when the snapshot is created.
-
-By default, snapshots are named with the normalized path you are backing up. You can use `-c <CHANNEL>` to use a custom channel name. Please note that there is a *maximum snapshot channel length* (256 bytes).
+Each snapshot has a channel, which is a non-unique string that you choose when you call `rekkord save`. Please note that there is a *maximum snapshot channel length* (256 bytes).
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
-rekkord save <PATH>
-rekkord save -n <NAME> <PATH1> <PATH2> ...
+rekkord save <CHANNEL> <PATH1> <PATH2> ...
 ```
 
 The command will give you the object ID (OID) of the snapshot once it finishes. You can retrieve the OID later with [rekkord snapshots](#list-snapshots).

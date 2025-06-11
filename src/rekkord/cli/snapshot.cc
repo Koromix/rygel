@@ -25,11 +25,14 @@ int RunSave(Span<const char *> arguments)
     // Options
     rk_Config config;
     rk_SaveSettings settings;
+    bool raw = false;
+    const char *channel = nullptr;
     HeapArray<const char *> filenames;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 save [-C filename] [option...] path...%!0
+R"(Usage: %!..+%1 save [-C filename] [option...] channel path...%!0
+       %!..+%1 save [-C filename] [option...] --raw path...%!0
 
 Options:
 
@@ -38,8 +41,6 @@ Options:
     %!..+-R, --repository URL%!0           Set repository URL
     %!..+-u, --user username%!0            Set repository username
 
-    %!..+-c, --channel channel%!0          Set custom snapshot channel
-                                   %!D..(default: %2)%!0
         %!..+--raw%!0                      Skip snapshot object and report data OID
 
         %!..+--follow%!0                   Follow symbolic links (instead of storing them as-is)
@@ -53,8 +54,7 @@ Options:
 Available metadata save options:
 
     %!..+ATime%!0                          Store atime (access time) values
-    %!..+XAttrs%!0                         Store extended attributes and ACLs (when supported))",
-                FelixTarget, rk_DefaultSnapshotChannel);
+    %!..+XAttrs%!0                         Store extended attributes and ACLs (when supported))", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -75,8 +75,6 @@ Available metadata save options:
                     return 1;
             } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 config.username = opt.current_value;
-            } else if (opt.Test("-c", "--channel", OptionType::Value)) {
-                settings.channel = opt.current_value;
             } else if (opt.Test("--follow")) {
                 settings.follow = true;
             } else if (opt.Test("-m", "--meta", OptionType::Value)) {
@@ -99,7 +97,7 @@ Available metadata save options:
             } else if (opt.Test("--noatime")) {
                 settings.noatime = true;
             } else if (opt.Test("--raw")) {
-                settings.raw = true;
+                raw = true;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &config.threads))
                     return 1;
@@ -113,10 +111,18 @@ Available metadata save options:
             }
         }
 
+        if (!raw) {
+            channel = opt.ConsumeNonOption();
+        }
         opt.ConsumeNonOptions(&filenames);
+
         opt.LogUnusedArguments();
     }
 
+    if (!raw && !channel) {
+        LogError("No channel provided");
+        return 1;
+    }
     if (!filenames.len) {
         LogError("No filename provided");
         return 1;
@@ -150,17 +156,17 @@ Available metadata save options:
     rk_ObjectID oid = {};
     int64_t total_size = 0;
     int64_t total_stored = 0;
-    if (!rk_Save(repo.get(), settings, filenames, &oid, &total_size, &total_stored))
+    if (!rk_Save(repo.get(), channel, filenames, settings, &oid, &total_size, &total_stored))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
 
     LogInfo();
-    if (settings.raw) {
+    if (raw) {
         LogInfo("Data OID: %!..+%1%!0", oid);
     } else {
         LogInfo("Snapshot OID: %!..+%1%!0", oid);
-        LogInfo("Snapshot channel: %!..+%1%!0", settings.channel);
+        LogInfo("Snapshot channel: %!..+%1%!0", channel);
     }
     LogInfo("Source size: %!..+%1%!0", FmtDiskSize(total_size));
     LogInfo("Total stored: %!..+%1%!0", FmtDiskSize(total_stored));

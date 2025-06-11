@@ -696,27 +696,25 @@ void PutContext::MakeProgress(int64_t delta)
     pg_stored.SetFmt("%1 stored", FmtDiskSize(stored));
 }
 
-bool rk_Save(rk_Repository *repo, const rk_SaveSettings &settings, Span<const char *const> filenames,
-             rk_ObjectID *out_oid, int64_t *out_size, int64_t *out_stored)
+bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> filenames,
+             const rk_SaveSettings &settings,  rk_ObjectID *out_oid, int64_t *out_size, int64_t *out_stored)
 {
     BlockAllocator temp_alloc;
 
     RG_ASSERT(filenames.len >= 1);
 
-    if (settings.raw) {
-        if (filenames.len != 1) {
-            LogError("Only one object can be saved up in raw mode");
-            return false;
-        }
-    } else {
-        RG_ASSERT(settings.channel);
-
-        if (!settings.channel[0]) {
+    if (channel) {
+        if (!channel[0]) {
             LogError("Snapshot channel cannot be empty");
             return false;
         }
-        if (strlen(settings.channel) > rk_MaxSnapshotChannelLength) {
-            LogError("Snapshot channel '%1' is too long (limit is %2 bytes)", settings.channel, rk_MaxSnapshotChannelLength);
+        if (strlen(channel) > rk_MaxSnapshotChannelLength) {
+            LogError("Snapshot channel '%1' is too long (limit is %2 bytes)", channel, rk_MaxSnapshotChannelLength);
+            return false;
+        }
+    } else {
+        if (filenames.len != 1) {
+            LogError("Only one object can be saved up in raw mode");
             return false;
         }
     }
@@ -867,12 +865,12 @@ bool rk_Save(rk_Repository *repo, const rk_SaveSettings &settings, Span<const ch
     int64_t total_stored = put.GetStored();
     int64_t total_entries = put.GetEntries();
 
-    if (!settings.raw) {
+    if (channel) {
         SnapshotHeader2 *header1 = (SnapshotHeader2 *)snapshot_blob.ptr;
         DirectoryHeader *header2 = (DirectoryHeader *)(header1 + 1);
 
         header1->time = LittleEndian(GetUnixTime());
-        CopyString(settings.channel, header1->channel);
+        CopyString(channel, header1->channel);
         header1->size = LittleEndian(total_size);
         header1->storage = LittleEndian(total_stored);
 
