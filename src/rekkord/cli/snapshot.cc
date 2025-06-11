@@ -182,12 +182,12 @@ int RunRestore(Span<const char *> arguments)
     // Options
     rk_Config config;
     rk_RestoreSettings settings;
-    const char *dest_filename = nullptr;
     const char *identifier = nullptr;
+    const char *dest_filename = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 restore [-C filename] [option...] -O path identifier%!0
+R"(Usage: %!..+%1 restore [-C filename] [option...] identifier destination%!0
 
 Options:
 
@@ -195,8 +195,6 @@ Options:
 
     %!..+-R, --repository URL%!0           Set repository URL
     %!..+-u, --user username%!0            Set repository username
-
-    %!..+-O, --output path%!0              Restore file or directory to path
 
     %!..+-f, --force%!0                    Overwrite destination files
         %!..+--delete%!0                   Delete extraneous files from destination
@@ -236,8 +234,6 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
                     return 1;
             } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 config.username = opt.current_value;
-            } else if (opt.Test("-O", "--output", OptionType::Value)) {
-                dest_filename = opt.current_value;
             } else if (opt.Test("-f", "--force")) {
                 settings.force = true;
             } else if (opt.Test("--delete")) {
@@ -277,6 +273,8 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
         }
 
         identifier = opt.ConsumeNonOption();
+        dest_filename = opt.ConsumeNonOption();
+
         opt.LogUnusedArguments();
     }
 

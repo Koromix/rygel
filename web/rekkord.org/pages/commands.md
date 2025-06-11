@@ -128,7 +128,7 @@ Use the `rekkord restore` command to restore the files from a snapshot onto the 
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
-rekkord restore <IDENTIFIER> -O <PATH>
+rekkord restore <IDENTIFIER> <DESTINATION>
 ```
 
 > [!TIP]
