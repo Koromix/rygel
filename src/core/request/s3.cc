@@ -956,10 +956,18 @@ Size s3_Client::PrepareHeaders(const char *method, const char *path, const char 
     int64_t now = GetUnixTime();
     TimeSpec date = DecomposeTimeUTC(now);
 
-    // Compute SHA-256 and signature
-    uint8_t signature[32];
     uint8_t sha256[32];
-    crypto_hash_sha256(sha256, body.ptr, (size_t)body.len);
+    if (body.len) {
+        crypto_hash_sha256(sha256, body.ptr, (size_t)body.len);
+    } else {
+        static const uint8_t EmptySha256[32] = { 0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14,
+                                                 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24,
+                                                 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c,
+                                                 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55 };
+        MemCpy(sha256, EmptySha256, 32);
+    }
+
+    uint8_t signature[32];
     MakeSignature(method, path, query, date, sha256, signature);
 
     Size len = 0;
