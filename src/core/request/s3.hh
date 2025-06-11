@@ -80,6 +80,7 @@ class s3_Client {
     };
 
     s3_Config config;
+    const char *host = nullptr;
     const char *url = nullptr;
     const char *region = nullptr;
 

@@ -308,11 +308,12 @@ bool s3_Client::Open(const s3_Config &config)
         this->config.region = region ? DuplicateString(region, &this->config.str_alloc).ptr : nullptr;
     }
 
-    if (config.port > 0) {
-        url = Fmt(&this->config.str_alloc, "%1://%2:%3/%4", this->config.scheme, config.host, this->config.port, config.path_mode ? config.bucket : "").ptr;
+    if (this->config.port > 0) {
+        host = Fmt(&this->config.str_alloc, "%1:%2", config.host, this->config.port).ptr;
     } else {
-        url = Fmt(&this->config.str_alloc, "%1://%2/%3", this->config.scheme, config.host, config.path_mode ? config.bucket : "").ptr;
+        host = config.host;
     }
+    url = Fmt(&this->config.str_alloc, "%1://%2/%3", this->config.scheme, host, config.path_mode ? config.bucket : "").ptr;
 
     return OpenAccess();
 }
@@ -1042,7 +1043,7 @@ void s3_Client::MakeSignature(const char *method, const char *path, const char *
         LocalArray<char, 4096> buf;
 
         buf.len += Fmt(buf.TakeAvailable(), "%1\n%2\n%3\n", method, path, query ? query : "").len;
-        buf.len += Fmt(buf.TakeAvailable(), "host:%1\nx-amz-content-sha256:%2\nx-amz-date:%3\n\n", config.host, FormatSha256(sha256), FmtTimeISO(date)).len;
+        buf.len += Fmt(buf.TakeAvailable(), "host:%1\nx-amz-content-sha256:%2\nx-amz-date:%3\n\n", host, FormatSha256(sha256), FmtTimeISO(date)).len;
         buf.len += Fmt(buf.TakeAvailable(), "host;x-amz-content-sha256;x-amz-date\n").len;
         buf.len += Fmt(buf.TakeAvailable(), "%1", FormatSha256(sha256)).len;
 
@@ -1095,10 +1096,7 @@ Span<const char> s3_Client::MakeURL(Span<const char> key, const char *query, All
 
     HeapArray<char> buf(alloc);
 
-    Fmt(&buf, "%1://%2", config.scheme, config.host);
-    if (config.port > 0) {
-        Fmt(&buf, ":%1", config.port);
-    }
+    Fmt(&buf, "%1://%2", config.scheme, host);
 
     Size path_offset = buf.len;
 
