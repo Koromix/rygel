@@ -1080,7 +1080,7 @@ static bool ParseOID(Span<const char> str, rk_ObjectID *out_oid)
         if (high < 0 || low < 0)
             return false;
 
-        out_oid->hash.hash[j] = (uint8_t)((high << 4) | low);
+        out_oid->hash.raw[j] = (uint8_t)((high << 4) | low);
     }
 
     return true;

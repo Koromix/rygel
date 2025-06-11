@@ -83,7 +83,7 @@ static void HashBlake3(BlobType type, Span<const uint8_t> buf, const uint8_t sal
     blake3_hasher hasher;
     blake3_hasher_init_keyed(&hasher, salt2);
     blake3_hasher_update(&hasher, buf.ptr, buf.len);
-    blake3_hasher_finalize(&hasher, out_hash->hash, RG_SIZE(out_hash->hash));
+    blake3_hasher_finalize(&hasher, out_hash->raw, RG_SIZE(out_hash->raw));
 }
 
 static void PackExtended(const char *filename,  Span<const XAttrInfo> xattrs, HeapArray<uint8_t> *out_extended)

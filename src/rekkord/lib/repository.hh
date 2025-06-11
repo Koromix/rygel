@@ -26,11 +26,11 @@ class rk_Disk;
 static const int rk_MasterKeySize = 32;
 
 struct rk_Hash {
-    uint8_t hash[32];
+    uint8_t raw[32];
 
-    int operator-(const rk_Hash &other) const { return memcmp(hash, other.hash, RG_SIZE(hash)); }
+    int operator-(const rk_Hash &other) const { return memcmp(raw, other.raw, RG_SIZE(raw)); }
 
-    operator FmtArg() const { return FmtSpan(hash, FmtType::BigHex, "").Pad0(-2); }
+    operator FmtArg() const { return FmtSpan(raw, FmtType::BigHex, "").Pad0(-2); }
 };
 static_assert(RG_SIZE(rk_Hash) == 32);
 
@@ -61,7 +61,7 @@ struct rk_ObjectID {
 
     void Format(FunctionRef<void(Span<const char>)> append) const
     {
-        FmtArg arg = FmtSpan(hash.hash, FmtType::BigHex, "").Pad0(-2);
+        FmtArg arg = FmtSpan(hash.raw, FmtType::BigHex, "").Pad0(-2);
         Fmt(append, "%1%2", rk_BlobCatalogNames[(int)catalog], arg);
     }
 

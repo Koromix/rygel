@@ -947,7 +947,7 @@ bool rk_Repository::ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserIn
 
 static inline FmtArg GetBlobPrefix(const rk_Hash &hash)
 {
-    uint16_t prefix = hash.hash[0];
+    uint16_t prefix = hash.raw[0];
     return FmtHex(prefix).Pad0(-2);
 }
 
