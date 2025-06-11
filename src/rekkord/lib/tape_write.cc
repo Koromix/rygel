@@ -243,11 +243,11 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                     StatResult ret = StatFile(fd, filename, &file_info);
 
                     if (ret == StatResult::Success) {
-                        entry->flags |= LittleEndian((int16_t)RawEntry::Flags::Stated);
+                        entry->flags |= (uint8_t)RawEntry::Flags::Stated;
 
                         switch (file_info.type) {
                             case FileType::Directory: {
-                                entry->kind = (int16_t)RawEntry::Kind::Directory;
+                                entry->kind = (int8_t)RawEntry::Kind::Directory;
 
                                 PendingDirectory *ptr = pending_directories.AppendDefault();
 
@@ -261,14 +261,14 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                             } break;
 
                             case FileType::File: {
-                                entry->kind = (int16_t)RawEntry::Kind::File;
+                                entry->kind = (int8_t)RawEntry::Kind::File;
                                 entry->size = LittleEndian(file_info.size);
 
                                 pending->entries++;
                             } break;
 #if !defined(_WIN32)
                             case FileType::Link: {
-                                entry->kind = (int16_t)RawEntry::Kind::Link;
+                                entry->kind = (int8_t)RawEntry::Kind::Link;
                                 pending->entries++;
                             } break;
 #endif
@@ -279,7 +279,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                             case FileType::Device:
                             case FileType::Pipe:
                             case FileType::Socket: {
-                                entry->kind = (int16_t)RawEntry::Kind::Unknown;
+                                entry->kind = (int8_t)RawEntry::Kind::Unknown;
                                 LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_info.type]);
                             } break;
                         }
@@ -287,7 +287,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                         entry->mtime = LittleEndian(file_info.mtime);
                         entry->ctime = LittleEndian(file_info.ctime);
                         if (settings.atime) {
-                            entry->flags |= LittleEndian((int16_t)RawEntry::Flags::AccessTime);
+                            entry->flags |= (uint8_t)RawEntry::Flags::AccessTime;
                             entry->atime = LittleEndian(file_info.atime);
                         }
                         entry->btime = LittleEndian(file_info.btime);
@@ -367,7 +367,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                                                                     size == entry->size) {
                                     MemCpy(&entry->hash, hash.ptr, RG_SIZE(rk_Hash));
 
-                                    entry->flags |= LittleEndian((int16_t)RawEntry::Flags::Readable);
+                                    entry->flags |= (uint8_t)RawEntry::Flags::Readable;
                                     pending->size += size;
 
                                     // Done by PutFile in theory, but we're skipping it
@@ -388,7 +388,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                             PutResult ret = PutFile(filename, &entry->hash, &file_size, stored);
 
                             if (ret == PutResult::Success) {
-                                entry->flags |= LittleEndian((int16_t)RawEntry::Flags::Readable);
+                                entry->flags |= (uint8_t)RawEntry::Flags::Readable;
                                 pending->size += file_size;
 
                                 return true;
@@ -431,7 +431,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                             put_size += target.len;
                             MakeProgress(written);
 
-                            entry->flags |= LittleEndian((int16_t)RawEntry::Flags::Readable);
+                            entry->flags |= (uint8_t)RawEntry::Flags::Readable;
 
                             return true;
                         });
@@ -468,7 +468,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
 
                 entry->hash = pending->hash;
                 if (!pending->failed) {
-                    entry->flags |= LittleEndian((int16_t)RawEntry::Flags::Readable);
+                    entry->flags |= (uint8_t)RawEntry::Flags::Readable;
                     entry->size = LittleEndian(pending->subdirs);
                 }
 
@@ -510,7 +510,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                 int flags = LittleEndian(entry->flags);
 
                 if ((flags & (int)RawEntry::Flags::Readable) &&
-                        entry->kind == (int16_t)RawEntry::Kind::File) {
+                        entry->kind == (int8_t)RawEntry::Kind::File) {
                     if (!db->Run(R"(INSERT INTO stats (path, mtime, ctime, mode, size, hash, stored)
                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
                                     ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
@@ -803,7 +803,7 @@ bool rk_Save(rk_Repository *repo, const rk_SaveSettings &settings, Span<const ch
             }
         }
 
-        entry->flags |= LittleEndian((int16_t)RawEntry::Flags::Stated);
+        entry->flags |= (uint8_t)RawEntry::Flags::Stated;
         entry->name_len = LittleEndian((uint16_t)name.len);
         entry->extended_len = LittleEndian((uint16_t)extended.len);
         MemCpy(entry->GetName().ptr, name.ptr, name.len);
@@ -813,26 +813,26 @@ bool rk_Save(rk_Repository *repo, const rk_SaveSettings &settings, Span<const ch
 
         switch (file_info.type) {
             case FileType::Directory: {
-                entry->kind = (int16_t)RawEntry::Kind::Directory;
+                entry->kind = (int8_t)RawEntry::Kind::Directory;
 
                 int64_t subdirs = 0;
                 if (put.PutDirectory(filename, settings.follow, &entry->hash, &subdirs) != PutResult::Success)
                     return false;
                 entry->size = LittleEndian(subdirs);
 
-                entry->flags |= LittleEndian((int16_t)RawEntry::Flags::Readable);
+                entry->flags |= (uint8_t)RawEntry::Flags::Readable;
 
                 // Will be changed for full (non-raw) snapshots
                 oid.catalog = rk_BlobCatalog::Meta;
             } break;
             case FileType::File: {
-                entry->kind = (int16_t)RawEntry::Kind::File;
+                entry->kind = (int8_t)RawEntry::Kind::File;
                 entry->size = LittleEndian((uint32_t)file_info.size);
 
                 if (put.PutFile(filename, &entry->hash) != PutResult::Success)
                     return false;
 
-                entry->flags |= LittleEndian((int16_t)RawEntry::Flags::Readable);
+                entry->flags |= (uint8_t)RawEntry::Flags::Readable;
 
                 // Will be changed for full (non-raw) snapshots
                 oid.catalog = rk_BlobCatalog::Raw;
@@ -851,7 +851,7 @@ bool rk_Save(rk_Repository *repo, const rk_SaveSettings &settings, Span<const ch
         entry->mtime = LittleEndian(file_info.mtime);
         entry->ctime = LittleEndian(file_info.ctime);
         if (settings.atime) {
-            entry->flags |= LittleEndian((int16_t)RawEntry::Flags::AccessTime);
+            entry->flags |= (uint8_t)RawEntry::Flags::AccessTime;
             entry->atime = LittleEndian(file_info.atime);
         }
         entry->btime = LittleEndian(file_info.btime);

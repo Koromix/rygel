@@ -237,6 +237,26 @@ static void MigrateLegacyEntries2(HeapArray<uint8_t> *blob, Size start)
     blob->Append(entries);
 }
 
+static void MigrateLegacyEntries3(HeapArray<uint8_t> *blob, Size start)
+{
+    HeapArray<uint8_t> entries;
+    Size offset = start + RG_SIZE(DirectoryHeader);
+
+    while (offset < blob->len) {
+        if (blob->len - offset < 92)
+            break;
+
+        blob->ptr[offset + 33] = blob->ptr[offset + 34];
+        MemMove(blob->ptr + offset + 34, blob->ptr + offset + 36, blob->len - offset - 36);
+        blob->len -= 2;
+
+        RawEntry *ptr = (RawEntry *)(blob->ptr + offset);
+        Size skip = ptr->GetSize();
+
+        offset += skip;
+    }
+}
+
 // Does not fill EntryInfo::filename
 static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_separators,
                         Allocator *alloc, EntryInfo *out_entry)
@@ -558,6 +578,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
                     switch (type) {
                         case (int)BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
                         case (int)BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
+                        case (int)BlobType::Directory3: { MigrateLegacyEntries3(&blob, 0); } [[fallthrough]];
                         case (int)BlobType::Directory: {} break;
 
                         default: {
@@ -845,6 +866,7 @@ bool rk_Restore(rk_Repository *repo, const rk_ObjectID &oid, const rk_RestoreSet
 
         case (int)BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
         case (int)BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
+        case (int)BlobType::Directory3: { MigrateLegacyEntries3(&blob, 0); } [[fallthrough]];
         case (int)BlobType::Directory: {
             if (!settings.fake) {
                 if (!settings.force && TestFile(dest_path, FileType::Directory)) {
@@ -887,6 +909,7 @@ bool rk_Restore(rk_Repository *repo, const rk_ObjectID &oid, const rk_RestoreSet
         case (int)BlobType::Snapshot1: { static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot4: { MigrateLegacyEntries3(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot: {
             if (!settings.fake) {
                 if (!settings.force && TestFile(dest_path, FileType::Directory)) {
@@ -1273,6 +1296,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
                     switch (type) {
                         case (int)BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
                         case (int)BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
+                        case (int)BlobType::Directory3: { MigrateLegacyEntries3(&blob, 0); } [[fallthrough]];
                         case (int)BlobType::Directory: {} break;
 
                         default: {
@@ -1343,6 +1367,7 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
     switch (type) {
         case (int)BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
         case (int)BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
+        case (int)BlobType::Directory3: { MigrateLegacyEntries3(&blob, 0); } [[fallthrough]];
         case (int)BlobType::Directory: {
             if (blob.len < RG_SIZE(DirectoryHeader)) {
                 LogError("Malformed directory blob '%1'", oid);
@@ -1379,6 +1404,7 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
         } [[fallthrough]];
         case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot4: { MigrateLegacyEntries3(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot: {
             if (blob.len < RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader)) {
                 LogError("Malformed snapshot blob '%1'", oid);
@@ -1525,6 +1551,7 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
 
         case (int)BlobType::Directory1: { MigrateLegacyEntries1(&blob, 0); } [[fallthrough]];
         case (int)BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
+        case (int)BlobType::Directory3: { MigrateLegacyEntries3(&blob, 0); } [[fallthrough]];
         case (int)BlobType::Directory: {
             if (!RecurseEntries(blob, false))
                 return false;
@@ -1550,6 +1577,7 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
         } [[fallthrough]];
         case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot4: { MigrateLegacyEntries3(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot: {
             Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
 
@@ -1624,6 +1652,7 @@ bool CheckContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separa
                     case (int)RawEntry::Kind::Directory: {
                         if (type != (int)BlobType::Directory1 &&
                                 type != (int)BlobType::Directory2 &&
+                                type != (int)BlobType::Directory3 &&
                                 type != (int)BlobType::Directory) {
                             LogError("Blob '%1' is not a Directory", oid);
                             return false;
@@ -1710,6 +1739,7 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
             if (type != (int)BlobType::Snapshot1 &&
                     type != (int)BlobType::Snapshot2 &&
                     type != (int)BlobType::Snapshot3 &&
+                    type != (int)BlobType::Snapshot4 &&
                     type != (int)BlobType::Snapshot) {
                 LogError("Blob '%1' is not a Snapshot", snapshot.oid);
                 return false;
@@ -1866,10 +1896,12 @@ std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Repository *repo, const rk_ObjectI
 
         case (int)BlobType::Directory1:
         case (int)BlobType::Directory2:
+        case (int)BlobType::Directory3:
         case (int)BlobType::Directory:
         case (int)BlobType::Snapshot1:
         case (int)BlobType::Snapshot2:
         case (int)BlobType::Snapshot3:
+        case (int)BlobType::Snapshot4:
         case (int)BlobType::Snapshot:
         case (int)BlobType::Link: {
             LogError("Expected file for '%1'", oid);

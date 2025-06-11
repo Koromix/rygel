@@ -29,8 +29,10 @@ enum class BlobType {
     Snapshot2 = 5,
     Directory2 = 6,
     Snapshot3 = 7,
-    Directory = 8,
-    Snapshot = 9
+    Directory3 = 8,
+    Snapshot4 = 9,
+    Directory = 10,
+    Snapshot = 11
 };
 static const char *const BlobTypeNames[] = {
     "Chunk",
@@ -41,6 +43,8 @@ static const char *const BlobTypeNames[] = {
     "Snapshot2",
     "Directory2",
     "Snapshot3",
+    "Directory3",
+    "Snapshot4",
     "Directory",
     "Snapshot"
 };
@@ -89,8 +93,8 @@ struct RawEntry {
     };
 
     rk_Hash hash;
-    int16_t flags; // Little Endian
-    int16_t kind; // Little Endian
+    uint8_t flags;
+    int8_t kind;
     uint16_t name_len; // Little Endian
     uint16_t extended_len; // Little Endian
     int64_t mtime; // Little Endian
@@ -111,7 +115,7 @@ struct RawEntry {
     inline Span<const uint8_t> GetExtended() const { return MakeSpan((const uint8_t *)this + RG_SIZE(RawEntry) + LittleEndian(name_len), LittleEndian(extended_len)); }
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(RawEntry) == 92);
+static_assert(RG_SIZE(RawEntry) == 90);
 
 #pragma pack(push, 1)
 struct RawChunk {
