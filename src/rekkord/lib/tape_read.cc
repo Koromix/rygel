@@ -1068,47 +1068,6 @@ bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc,
     return true;
 }
 
-static inline int ParseHexadecimalChar(char c)
-{
-    if (c >= '0' && c <= '9') {
-        return c - '0';
-    } else if (c >= 'A' && c <= 'F') {
-        return c - 'A' + 10;
-    } else if (c >= 'a' && c <= 'f') {
-        return c - 'a' + 10;
-    } else {
-        return -1;
-    }
-}
-
-static bool ParseOID(Span<const char> str, rk_ObjectID *out_oid)
-{
-    if (str.len != 65)
-        return false;
-
-    // Decode prefix
-    {
-        const auto ptr = std::find(std::begin(rk_BlobCatalogNames), std::end(rk_BlobCatalogNames), str[0]);
-
-        if (ptr == std::end(rk_BlobCatalogNames))
-            return false;
-
-        out_oid->catalog = (rk_BlobCatalog)(ptr - rk_BlobCatalogNames);
-    }
-
-    for (Size i = 2, j = 0; i < 66; i += 2, j++) {
-        int high = ParseHexadecimalChar(str[i - 1]);
-        int low = ParseHexadecimalChar(str[i]);
-
-        if (high < 0 || low < 0)
-            return false;
-
-        out_oid->hash.raw[j] = (uint8_t)((high << 4) | low);
-    }
-
-    return true;
-}
-
 bool rk_LocateObject(rk_Repository *repo, Span<const char> identifier, rk_ObjectID *out_oid)
 {
     BlockAllocator temp_alloc;
@@ -1119,7 +1078,7 @@ bool rk_LocateObject(rk_Repository *repo, Span<const char> identifier, rk_Object
 
     rk_ObjectID oid;
     {
-        bool found = ParseOID(name, &oid);
+        bool found = rk_ParseOID(name, &oid);
 
         if (!found) {
             HeapArray<rk_SnapshotInfo> snapshots;
@@ -1490,13 +1449,10 @@ CheckContext::CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, i
 
 bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate)
 {
-    char key[128];
-    Fmt(key, "%1", oid);
-
     // Ignore recently checked objects
     {
         sq_Statement stmt;
-        if (!db->Prepare("SELECT oid FROM checks WHERE oid = ?1", &stmt, key))
+        if (!db->Prepare("SELECT oid FROM checks WHERE oid = ?1", &stmt, oid.Raw()))
             return false;
 
         if (stmt.Step())
@@ -1601,7 +1557,7 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
     if (!db->Run(R"(INSERT INTO checks (oid, mark)
                     VALUES (?1, ?2)
                     ON CONFLICT DO UPDATE SET mark = excluded.mark)",
-                 key, mark))
+                 oid.Raw(), mark))
         return false;
 
     repo->CommitCache();

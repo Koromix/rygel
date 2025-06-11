@@ -67,7 +67,7 @@ struct BlobIntro {
 };
 #pragma pack(pop)
 
-static const int CacheVersion = 13;
+static const int CacheVersion = 14;
 static const int64_t CacheDelay = 5000;
 
 }

@@ -638,9 +638,45 @@ sq_Database *rk_Repository::OpenCache(bool build)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 13: {
+                    bool success = cache_db.RunMany(R"(
+                        DROP INDEX blobs_o;
+                        DROP INDEX checks_o;
+
+                        ALTER TABLE blobs RENAME TO blobs_BAK;
+                        ALTER TABLE checks RENAME TO checks_BAK;
+
+                        CREATE TABLE blobs (
+                            oid BLOB NOT NULL,
+                            size INTEGER NOT NULL
+                        );
+                        CREATE UNIQUE INDEX blobs_k ON blobs (oid);
+
+                        CREATE TABLE checks (
+                            oid BLOB NOT NULL,
+                            mark INTEGER NOT NULL
+                        );
+                        CREATE UNIQUE INDEX checks_o ON checks (oid);
+
+                        INSERT INTO blobs (oid, size)
+                            SELECT CAST(unhex('00') || unhex(SUBSTR(oid, 2)) AS BLOB), size FROM blobs_BAK WHERE oid LIKE 'M%';
+                        INSERT INTO blobs (oid, size)
+                            SELECT CAST(unhex('01') || unhex(SUBSTR(oid, 2)) AS BLOB), size FROM blobs_BAK WHERE oid LIKE 'R%';
+                        INSERT INTO checks (oid, mark)
+                            SELECT CAST(unhex('00') || unhex(SUBSTR(oid, 2)) AS BLOB), mark FROM checks_BAK WHERE oid LIKE 'M%';
+                        INSERT INTO checks (oid, mark)
+                            SELECT CAST(unhex('01') || unhex(SUBSTR(oid, 2)) AS BLOB), mark FROM checks_BAK WHERE oid LIKE 'R%';
+
+                        DROP TABLE blobs_BAK;
+                        DROP TABLE checks_BAK;
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 13);
+                static_assert(CacheVersion == 14);
             }
 
             if (!cache_db.SetUserVersion(CacheVersion))
@@ -715,19 +751,27 @@ bool rk_Repository::ResetCache(bool list)
             if (!StartsWith(path, "blobs/")) [[unlikely]]
                 return true;
 
-            Span<const char> remain = path + 6;
-            Span<const char> catalog = SplitStr(remain, '/');
-            Span<const char> hash = SplitStrReverse(remain, '/');
+            rk_ObjectID oid;
+            {
+                Span<const char> remain = path + 6;
+                Span<const char> catalog = SplitStr(remain, '/');
+                Span<const char> hash = SplitStrReverse(remain, '/');
 
-            if (catalog.len != 1)
-                return true;
-            if (std::find(std::begin(rk_BlobCatalogNames), std::end(rk_BlobCatalogNames), catalog[0]) == std::end(rk_BlobCatalogNames))
-                return true;
+                if (catalog.len != 1)
+                    return true;
+
+                char str[128];
+                str[0] = catalog[0];
+                CopyString(hash, MakeSpan(str + 1, RG_SIZE(str) - 1));
+
+                if (!rk_ParseOID(str, &oid))
+                    return true;
+            }
 
             if (!cache_db.Run(R"(INSERT INTO blobs (oid, size)
-                                 VALUES (?1 || ?2, ?3)
+                                 VALUES (?1, ?2)
                                  ON CONFLICT (oid) DO UPDATE SET size = excluded.size)",
-                              catalog, hash, size))
+                              oid.Raw(), size))
                 return false;
 
             int64_t blobs = listed.fetch_add(1, std::memory_order_relaxed) + 1;
@@ -756,13 +800,10 @@ bool rk_Repository::PutCache(const rk_ObjectID &oid, int64_t size)
     if (!cache_db.IsValid())
         return true;
 
-    char key[128];
-    Fmt(key, "%1", oid);
-
     bool success = cache_db.Run(R"(INSERT INTO blobs (oid, size)
                                    VALUES (?1, ?2)
                                    ON CONFLICT DO NOTHING)",
-                                key, size);
+                                oid.Raw(), size);
     if (!success)
         return false;
 
@@ -1439,11 +1480,8 @@ StatResult rk_Repository::TestFast(const rk_ObjectID &oid, int64_t *out_size)
 
     int64_t known_size = -1;
     {
-        char key[128];
-        Fmt(key, "%1", oid);
-
         sq_Statement stmt;
-        if (!cache_db.Prepare("SELECT size FROM blobs WHERE oid = ?1", &stmt, key))
+        if (!cache_db.Prepare("SELECT size FROM blobs WHERE oid = ?1", &stmt, oid.Raw()))
             return StatResult::OtherError;
 
         if (stmt.Step()) {
@@ -1718,6 +1756,47 @@ std::unique_ptr<rk_Repository> rk_OpenRepository(rk_Disk *disk, const rk_Config 
         return nullptr;
 
     return repo;
+}
+
+static inline int ParseHexadecimalChar(char c)
+{
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    } else if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    } else if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    } else {
+        return -1;
+    }
+}
+
+bool rk_ParseOID(Span<const char> str, rk_ObjectID *out_oid)
+{
+    if (str.len != 65)
+        return false;
+
+    // Decode prefix
+    {
+        const auto ptr = std::find(std::begin(rk_BlobCatalogNames), std::end(rk_BlobCatalogNames), str[0]);
+
+        if (ptr == std::end(rk_BlobCatalogNames))
+            return false;
+
+        out_oid->catalog = (rk_BlobCatalog)(ptr - rk_BlobCatalogNames);
+    }
+
+    for (Size i = 2, j = 0; i < 66; i += 2, j++) {
+        int high = ParseHexadecimalChar(str[i - 1]);
+        int low = ParseHexadecimalChar(str[i]);
+
+        if (high < 0 || low < 0)
+            return false;
+
+        out_oid->hash.raw[j] = (uint8_t)((high << 4) | low);
+    }
+
+    return true;
 }
 
 }

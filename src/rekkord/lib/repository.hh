@@ -66,6 +66,8 @@ struct rk_ObjectID {
     }
 
     operator FmtArg() { return FmtCustom(*this); }
+
+    Span<const uint8_t> Raw() const { return MakeSpan((const uint8_t *)this, RG_SIZE(*this)); }
 };
 static_assert(RG_SIZE(rk_ObjectID) == 33);
 
@@ -214,5 +216,8 @@ private:
 };
 
 std::unique_ptr<rk_Repository> rk_OpenRepository(rk_Disk *disk, const rk_Config &config, bool authenticate);
+
+// Does not log anything
+bool rk_ParseOID(Span<const char> str, rk_ObjectID *out_oid);
 
 }
