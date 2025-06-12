@@ -67,7 +67,7 @@ bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<c
         region = DuplicateString(value, &str_alloc).ptr;
         return true;
     } else if (key == "Bucket") {
-        bucket = value[0] ? DuplicateString(value, &str_alloc).ptr : nullptr;
+        bucket = value.len ? DuplicateString(value, &str_alloc).ptr : nullptr;
         return true;
     } else if (key == "PathMode") {
         return ParseBool(value, &path_mode);
