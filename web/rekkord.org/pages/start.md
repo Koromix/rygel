@@ -38,7 +38,7 @@ To create a repository stored on an SFTP host, create an INI file (name it how y
 
 ```ini
 [Repository]
-URL = ssh://<user>@<host>/path/to/repository
+URL = <user>@<host>:/path/to/repository
 
 [SFTP]
 Password = <SSH password>
@@ -51,7 +51,7 @@ Just like with `ssh`, you will need to validate the host fingerprint the first t
 
 ```ini
 [Repository]
-URL = ssh://foo@example.com/backup
+URL = foo@example.com:/backup
 
 [SFTP]
 KeyFile = /home/bar/.ssh/id_ed25519
