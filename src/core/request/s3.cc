@@ -235,7 +235,9 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
     out_config->scheme = scheme;
     out_config->host = host.ptr;
     out_config->port = port;
-    out_config->region = region;
+    if (!out_config->region) {
+        out_config->region = region;
+    }
     out_config->bucket = bucket;
     out_config->path_mode = path_mode;
 
