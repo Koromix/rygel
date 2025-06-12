@@ -6,6 +6,14 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.66
+
+*Released on 2025-06-12*
+
+- Improve automatic region detection (tested with Garage and R2)
+- Fix S3 signing regression after region detection
+- Fix possible off-by-one access in S3 config code
+
 ### Rekkord 0.65
 
 *Released on 2025-06-12*
