@@ -6,6 +6,28 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.65
+
+*Released on 2025-06-12*
+
+- Add `rekkord check` command to check snapshot validity
+- Change `rekkord save` syntax to always take a snapshot channel
+- Change `rekkord restore` syntax for consistency
+- Change save and restore metadata CLI options
+- Support default directory POSIX ACLs
+- Use slightly more compact directory metadata
+- Fix inaccurate number of entries in some snapshots
+- Fix ignored S3 Region config file setting
+- Fix broken FreeBSD build
+- Fix various incompatibilites with Big Endian platforms (untested)
+- Show progress bar during cache rebuild
+- Improve S3 performance by reducing SigV4 signing overhead
+- Improve SFTP repository initialization speed
+- Refactor librekkord to separate disk, repository and tape layers
+
+> [!NOTE]
+> The new directory metadata format will cause transient repository size expansion.
+
 ### Rekkord 0.64
 
 *Released on 2025-06-01*
