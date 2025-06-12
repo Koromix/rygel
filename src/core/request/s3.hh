@@ -120,7 +120,6 @@ public:
 
 private:
     bool OpenAccess();
-    bool DetermineRegion(const char *url);
 
     void *ReserveConnection(); // CURL
     void ReleaseConnection(void *curl); // CURL

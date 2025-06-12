@@ -764,28 +764,28 @@ bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mo
 
 bool s3_Client::OpenAccess()
 {
-    BlockAllocator temp_alloc;
-
     RG_ASSERT(!open);
 
-    const char *path;
-    Span<const char> url = MakeURL({}, nullptr, &temp_alloc, &path);
+    BlockAllocator temp_alloc;
 
-    if (!DetermineRegion(url.ptr))
-        return false;
+    region = config.region;
 
-    // Test access
-    int status = RunSafe("authenticate to S3 bucket", [&](CURL *curl) {
-        LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("HEAD", path, nullptr, {}, {}, &temp_alloc, headers.data);
+    // Guess region with HEAD request
+    if (!region) {
+        CURL *curl = ReserveConnection();
+        if (!curl)
+            return false;
+        RG_DEFER { ReleaseConnection(curl); };
 
-        // Set CURL options
+        Span<const char> url = MakeURL({}, nullptr, &temp_alloc);
+
+        // Garage sends back the correct region in its XML Error message, maybe others do too
+        HeapArray<uint8_t> xml;
+
         {
             bool success = true;
 
             success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
-            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
-            success &= !curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
 
             success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,
                                          +[](char *buf, size_t, size_t nmemb, void *udata) {
@@ -795,8 +795,7 @@ bool s3_Client::OpenAccess()
                 Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
                 value = TrimStr(value);
 
-                // Last chance to determine proper region
-                if (!session->config.region && TestStrI(key, "x-amz-bucket-region")) {
+                if (TestStrI(key, "x-amz-bucket-region")) {
                     session->region = DuplicateString(value, &session->config.str_alloc).ptr;
                 }
 
@@ -804,79 +803,96 @@ bool s3_Client::OpenAccess()
             });
             success &= !curl_easy_setopt(curl, CURLOPT_HEADERDATA, this);
 
-            if (!success)
-                return -CURLE_FAILED_INIT;
+            success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
+                                         +[](char *ptr, size_t, size_t nmemb, void *udata) {
+                HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
+
+                Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
+                xml->Append(buf);
+
+                return nmemb;
+            });
+            success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
+
+            if (!success) {
+                LogError("Failed to set libcurl options");
+                return false;
+            }
         }
 
-        int status = curl_Perform(curl, nullptr);
+        if (curl_Perform(curl, "S3") < 0)
+            return false;
 
-        if (status == 200 || status == 201)
-            return 200;
+        if (!region && xml.len) {
+            pugi::xml_document doc;
 
-        return status;
-    }, true);
-
-    if (status == 404) {
-        LogError("Unknown S3 bucket (error 404)");
-        return false;
-    } else if (status != 200) {
-        return false;
+            if (doc.load_buffer(xml.ptr, xml.len)) {
+                const char *str = doc.select_node("/Error/Region").node().text().get();
+                region = str[0] ? str : nullptr;
+            }
+        }
     }
 
-    open = true;
-    return true;
-}
-
-bool s3_Client::DetermineRegion(const char *url)
-{
-    RG_ASSERT(!open);
-
-    if (config.region) {
-        region = config.region;
-        return true;
+    if (!region) {
+        // Many S3-compatible services don't really care, or accept us-east-1 for compatibility
+        region = "us-east-1";
     }
 
-    CURL *curl = ReserveConnection();
-    if (!curl)
-        return false;
-    RG_DEFER { ReleaseConnection(curl); };
-
-    // Set CURL options
+    // Final authentification test
     {
-        bool success = true;
+        const char *path;
+        Span<const char> url = MakeURL({}, nullptr, &temp_alloc, &path);
 
-        success &= !curl_easy_setopt(curl, CURLOPT_URL, url);
+        int status = RunSafe("authenticate to S3 bucket", [&](CURL *curl) {
+            LocalArray<curl_slist, 32> headers;
+            headers.len = PrepareHeaders("HEAD", path, nullptr, {}, {}, &temp_alloc, headers.data);
 
-        success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,
-                                     +[](char *buf, size_t, size_t nmemb, void *udata) {
-            s3_Client *session = (s3_Client *)udata;
+            // Set CURL options
+            {
+                bool success = true;
 
-            Span<const char> value;
-            Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
-            value = TrimStr(value);
+                success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
+                success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+                success &= !curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
 
-            if (TestStrI(key, "x-amz-bucket-region")) {
-                session->region = DuplicateString(value, &session->config.str_alloc).ptr;
+                success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,
+                                             +[](char *buf, size_t, size_t nmemb, void *udata) {
+                    s3_Client *session = (s3_Client *)udata;
+
+                    Span<const char> value;
+                    Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
+                    value = TrimStr(value);
+
+                    // Last chance to determine proper region
+                    if (!session->config.region && TestStrI(key, "x-amz-bucket-region")) {
+                        session->region = DuplicateString(value, &session->config.str_alloc).ptr;
+                    }
+
+                    return nmemb;
+                });
+                success &= !curl_easy_setopt(curl, CURLOPT_HEADERDATA, this);
+
+                if (!success)
+                    return -CURLE_FAILED_INIT;
             }
 
-            return nmemb;
-        });
-        success &= !curl_easy_setopt(curl, CURLOPT_HEADERDATA, this);
+            int status = curl_Perform(curl, nullptr);
 
-        if (!success) {
-            LogError("Failed to set libcurl options");
+            if (status == 200 || status == 201)
+                return 200;
+
+            return status;
+        }, true);
+
+        if (status == 404) {
+            LogError("Unknown S3 bucket (error 404)");
+            return false;
+        } else if (status != 200) {
             return false;
         }
     }
 
-    if (curl_Perform(curl, "S3") < 0)
-        return false;
-
-    if (!region) {
-        // Many S3-compatible services don't really care about region, just pick something
-        region = "default";
-    }
-
+    open = true;
     return true;
 }
 
