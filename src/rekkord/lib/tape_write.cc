@@ -697,7 +697,7 @@ void PutContext::MakeProgress(int64_t delta)
 }
 
 bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> filenames,
-             const rk_SaveSettings &settings,  rk_ObjectID *out_oid, int64_t *out_size, int64_t *out_stored)
+             const rk_SaveSettings &settings, rk_SaveInfo *out_info)
 {
     BlockAllocator temp_alloc;
 
@@ -735,7 +735,7 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
     HeapArray<XAttrInfo> xattrs;
     HeapArray<uint8_t> extended;
 
-    rk_ObjectID oid = {};
+    rk_SaveInfo info = {};
 
     // Process snapshot entries
     for (const char *filename: filenames) {
@@ -824,7 +824,7 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
                 entry->flags |= (uint8_t)RawEntry::Flags::Readable;
 
                 // Will be changed for full (non-raw) snapshots
-                oid.catalog = rk_BlobCatalog::Meta;
+                info.oid.catalog = rk_BlobCatalog::Meta;
             } break;
             case FileType::File: {
                 entry->kind = (int8_t)RawEntry::Kind::File;
@@ -836,7 +836,7 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
                 entry->flags |= (uint8_t)RawEntry::Flags::Readable;
 
                 // Will be changed for full (non-raw) snapshots
-                oid.catalog = rk_BlobCatalog::Raw;
+                info.oid.catalog = rk_BlobCatalog::Raw;
             } break;
 
             case FileType::Link: { RG_UNREACHABLE(); } break;
@@ -861,9 +861,9 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
         entry->gid = LittleEndian(file_info.gid);
     }
 
-    int64_t total_size = put.GetSize();
-    int64_t total_stored = put.GetStored();
-    int64_t total_entries = put.GetEntries();
+    info.size = put.GetSize();
+    info.stored = put.GetStored();
+    info.entries = put.GetEntries();
 
     if (channel) {
         SnapshotHeader2 *header1 = (SnapshotHeader2 *)snapshot_blob.ptr;
@@ -871,21 +871,21 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
 
         header1->time = LittleEndian(GetUnixTime());
         CopyString(channel, header1->channel);
-        header1->size = LittleEndian(total_size);
-        header1->storage = LittleEndian(total_stored);
+        header1->size = LittleEndian(info.size);
+        header1->storage = LittleEndian(info.stored);
 
-        header2->size = LittleEndian(total_size);
-        header2->entries = LittleEndian(total_entries);
+        header2->size = LittleEndian(info.size);
+        header2->entries = LittleEndian(info.entries);
 
-        oid.catalog = rk_BlobCatalog::Meta;
-        HashBlake3(BlobType::Snapshot, snapshot_blob, salt32, &oid.hash);
+        info.oid.catalog = rk_BlobCatalog::Meta;
+        HashBlake3(BlobType::Snapshot, snapshot_blob, salt32, &info.oid.hash);
 
         // Write snapshot blob
         {
-            Size written = repo->WriteBlob(oid, (int)BlobType::Snapshot, snapshot_blob);
+            Size written = repo->WriteBlob(info.oid, (int)BlobType::Snapshot, snapshot_blob);
             if (written < 0)
                 return false;
-            total_stored += written;
+            info.stored += written;
         }
 
         // Create tag file
@@ -893,20 +893,16 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
             Size payload_len = offsetof(SnapshotHeader2, channel) + strlen(header1->channel) + 1;
             Span<const uint8_t> payload = MakeSpan((const uint8_t *)header1, payload_len);
 
-            if (!repo->WriteTag(oid, payload))
+            if (!repo->WriteTag(info.oid, payload))
                 return false;
         }
     } else {
         const RawEntry *entry0 = (const RawEntry *)(snapshot_blob.ptr + RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader));
-        oid.hash = entry0->hash;
+        info.oid.hash = entry0->hash;
     }
 
-    *out_oid = oid;
-    if (out_size) {
-        *out_size += total_size;
-    }
-    if (out_stored) {
-        *out_stored += total_stored;
+    if (out_info) {
+        *out_info = info;
     }
     return true;
 }

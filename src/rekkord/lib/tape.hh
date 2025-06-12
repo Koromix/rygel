@@ -43,6 +43,13 @@ struct rk_SaveSettings {
     bool xattrs = false;
 };
 
+struct rk_SaveInfo {
+    rk_ObjectID oid;
+    int64_t size;
+    int64_t stored;
+    int64_t entries;
+};
+
 struct rk_SnapshotInfo {
     const char *tag;
     rk_ObjectID oid;
@@ -132,6 +139,6 @@ const char *rk_ReadLink(rk_Repository *repo, const rk_ObjectID &oid, Allocator *
 std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Repository *repo, const rk_ObjectID &oid);
 
 bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> filenames,
-             const rk_SaveSettings &settings, rk_ObjectID *out_oid, int64_t *out_size = nullptr, int64_t *out_stored = nullptr);
+             const rk_SaveSettings &settings, rk_SaveInfo *out_info = nullptr);
 
 }

@@ -153,23 +153,21 @@ Available metadata save options:
 
     int64_t now = GetMonotonicTime();
 
-    rk_ObjectID oid = {};
-    int64_t total_size = 0;
-    int64_t total_stored = 0;
-    if (!rk_Save(repo.get(), channel, filenames, settings, &oid, &total_size, &total_stored))
+    rk_SaveInfo info = {};
+    if (!rk_Save(repo.get(), channel, filenames, settings, &info))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
 
     LogInfo();
     if (raw) {
-        LogInfo("Data OID: %!..+%1%!0", oid);
+        LogInfo("Data OID: %!..+%1%!0", info.oid);
     } else {
-        LogInfo("Snapshot OID: %!..+%1%!0", oid);
+        LogInfo("Snapshot OID: %!..+%1%!0", info.oid);
         LogInfo("Snapshot channel: %!..+%1%!0", channel);
     }
-    LogInfo("Source size: %!..+%1%!0", FmtDiskSize(total_size));
-    LogInfo("Total stored: %!..+%1%!0", FmtDiskSize(total_stored));
+    LogInfo("Source size: %!..+%1%!0", FmtDiskSize(info.size));
+    LogInfo("Total stored: %!..+%1%!0", FmtDiskSize(info.stored));
     LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
 
     return 0;
