@@ -674,9 +674,25 @@ sq_Database *rk_Repository::OpenCache(bool build)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 14: {
+                    bool success = cache_db.RunMany(R"(
+                        DROP INDEX checks_o;
+                        DROP TABLE checks;
+
+                        CREATE TABLE checks (
+                            oid BLOB NOT NULL,
+                            mark INTEGER NOT NULL,
+                            valid INTEGER CHECK (valid IN (0, 1)) NOT NULL
+                        );
+                        CREATE UNIQUE INDEX checks_o ON checks (oid);
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 14);
+                static_assert(CacheVersion == 15);
             }
 
             if (!cache_db.SetUserVersion(CacheVersion))

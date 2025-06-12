@@ -1435,8 +1435,12 @@ class CheckContext {
 public:
     CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, int64_t checked, int64_t blobs);
 
+    bool Check(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate);
+
     bool CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate);
     bool RecurseEntries(Span<const uint8_t> entries, bool allow_separators);
+
+    int64_t GetChecked() const { return checked_blobs; }
 
 private:
     void MakeProgress(int64_t blobs);
@@ -1447,27 +1451,55 @@ CheckContext::CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, i
 {
 }
 
-bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate)
+bool CheckContext::Check(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate)
 {
     // Ignore recently checked objects
     {
         sq_Statement stmt;
-        if (!db->Prepare("SELECT oid FROM checks WHERE oid = ?1", &stmt, oid.Raw()))
+        if (!db->Prepare("SELECT valid FROM checks WHERE oid = ?1", &stmt, oid.Raw()))
             return false;
 
-        if (stmt.Step())
-            return true;
-        if (!stmt.IsValid())
+        if (stmt.Step()) {
+            bool valid = sqlite3_column_int(stmt, 0);
+            return valid;
+        } else if (!stmt.IsValid()) {
             return false;
+        }
     }
 
+    bool valid = CheckBlob(oid, validate);
+
+    // Mark object
+    {
+        sq_Statement stmt;
+        if (!db->Prepare(R"(INSERT INTO checks (oid, mark, valid)
+                            VALUES (?1, ?2, ?3)
+                            ON CONFLICT DO NOTHING
+                            RETURNING oid)",
+                         &stmt, oid.Raw(), mark, 0 + valid))
+            return false;
+
+        if (stmt.Step()) {
+            // In some cases, a blob might get checkedm ultiple times in parallel, but
+            // at the end only one insert will succeed. Discount progress from other check calls.
+            MakeProgress(1);
+        } else if (!stmt.IsValid()) {
+            return false;
+        }
+    }
+
+    repo->CommitCache();
+
+    return valid;
+}
+
+bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate)
+{
     int type;
     HeapArray<uint8_t> blob;
 
     if (!repo->ReadBlob(oid, &type, &blob))
         return false;
-
-    MakeProgress(1);
 
     switch (type) {
         case (int)BlobType::Chunk: {} break;
@@ -1484,7 +1516,7 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
                 async.Run([=, this]() {
                     rk_ObjectID oid = { rk_BlobCatalog::Raw, chunk.hash };
 
-                    bool valid = CheckBlob(oid, [&](int type, Span<const uint8_t> blob) {
+                    bool valid = Check(oid, [&](int type, Span<const uint8_t> blob) {
                         if (type != (int)BlobType::Chunk) [[unlikely]] {
                             LogError("Blob '%1' is not a Chunk", oid);
                             return false;
@@ -1554,14 +1586,6 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
     if (!validate(type, blob))
         return false;
 
-    if (!db->Run(R"(INSERT INTO checks (oid, mark)
-                    VALUES (?1, ?2)
-                    ON CONFLICT DO UPDATE SET mark = excluded.mark)",
-                 oid.Raw(), mark))
-        return false;
-
-    repo->CommitCache();
-
     return true;
 }
 
@@ -1603,7 +1627,7 @@ bool CheckContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separa
         async.Run([&, entry, this] () {
             rk_ObjectID oid = { KindToCatalog(entry->kind), entry->hash };
 
-            bool valid = CheckBlob(oid, [&](int type, Span<const uint8_t>) {
+            bool valid = Check(oid, [&](int type, Span<const uint8_t>) {
                 switch (entry->kind) {
                     case (int)RawEntry::Kind::Directory: {
                         if (type != (int)BlobType::Directory1 &&
@@ -1691,7 +1715,7 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
     for (Size i = 0; i < snapshots.len; i++) {
         const rk_SnapshotInfo &snapshot = snapshots[i];
 
-        valid &= check.CheckBlob(snapshot.oid, [&](int type, Span<const uint8_t>) {
+        valid &= check.Check(snapshot.oid, [&](int type, Span<const uint8_t>) {
             if (type != (int)BlobType::Snapshot1 &&
                     type != (int)BlobType::Snapshot2 &&
                     type != (int)BlobType::Snapshot3 &&
