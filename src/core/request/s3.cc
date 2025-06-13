@@ -892,7 +892,7 @@ bool s3_Client::OpenAccess()
         }
     }
 
-    // Regenerate signing key because in case the region has changed
+    // Regenerate signing key in case the region has changed
     sign_day = 0;
 
     open = true;
