@@ -104,7 +104,7 @@ int curl_Perform(CURL *curl, const char *reason)
 #endif
 
     if (res != CURLE_OK) {
-        if (reason && res != CURLE_WRITE_ERROR) {
+        if (reason && res != CURLE_WRITE_ERROR && res != CURLE_ABORTED_BY_CALLBACK) {
             LogError("Failed to perform %1 call: %2", reason, curl_easy_strerror(res));
         }
         return -res;

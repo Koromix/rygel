@@ -41,7 +41,7 @@ static int RunList(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 list [option...] url [prefix])", FelixTarget);
+R"(Usage: %!..+%1 list url [prefix])", FelixTarget);
     };
 
     // Parse arguments
@@ -93,7 +93,7 @@ static int RunHas(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 has [option...] url key)", FelixTarget);
+R"(Usage: %!..+%1 has url key)", FelixTarget);
     };
 
     // Parse arguments
@@ -160,7 +160,7 @@ static int RunGet(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 get [option...] url key destination)", FelixTarget);
+R"(Usage: %!..+%1 get url key destination)", FelixTarget);
     };
 
     // Parse arguments
@@ -205,14 +205,105 @@ R"(Usage: %!..+%1 get [option...] url key destination)", FelixTarget);
     if (!writer.IsValid())
         return 1;
 
-    bool success = s3.GetObject(key, [&](Span<const uint8_t> buf) { return writer.Write(buf); });
+    const auto func = [&](Span<const uint8_t> buf) { return writer.Write(buf); };
+    bool success = s3.GetObject(key, func);
+
     if (!success)
         return 1;
-
     if (!writer.Close())
         return 1;
 
     return 0;
+}
+
+static int RunPut(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    s3_PutSettings settings = {};
+    const char *url = nullptr;
+    const char *src_filename = nullptr;
+    const char *key = nullptr;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 put [option...] url source key
+
+Options:
+
+    %!..+-t, --mimetype type%!0            Set object mimetype (Content-Type)
+
+        %!..+--conditional%!0              Ask for conditional write
+
+)", FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-t", "--mimetype", OptionType::Value)) {
+                settings.mimetype = opt.current_value;
+            } else if (opt.Test("--conditional")) {
+                settings.conditional = true;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        url = opt.ConsumeNonOption();
+        src_filename = opt.ConsumeNonOption();
+        key = opt.ConsumeNonOption();
+
+        opt.LogUnusedArguments();
+    }
+
+    if (!url) {
+        LogError("Missing S3 URL");
+        return 1;
+    }
+    if (!src_filename) {
+        LogError("Missing destination filename");
+        return 1;
+    }
+    if (!key) {
+        LogError("Missing object key");
+        return 1;
+    }
+
+    s3_Client s3;
+    if (!ConnectToS3(&s3, url))
+        return 1;
+
+    StreamReader reader(src_filename);
+    if (!reader.IsValid())
+        return 1;
+
+    int64_t size = reader.ComputeRawLen();
+    if (size < 0) {
+        LogError("Cannot send file of unknown length");
+        return 1;
+    }
+
+    const auto func = [&](Span<uint8_t> buf) { return reader.Read(buf); };
+    s3_PutResult ret = s3.PutObject(key, size, func, settings);
+
+    switch (ret) {
+        case s3_PutResult::Success: return 0;
+        case s3_PutResult::ObjectExists: {
+            LogError("");
+            return 1;
+        } break;
+        case s3_PutResult::OtherError: return 1;
+    }
+
+    RG_UNREACHABLE();
 }
 
 int Main(int argc, char **argv)
@@ -228,6 +319,7 @@ Commands:
     %!..+list%!0                           List objects
     %!..+has%!0                            Test object
     %!..+get%!0                            Get object
+    %!..+put%!0                            Put object
 
 Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)", FelixTarget);
     };
@@ -264,6 +356,8 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         return RunHas(arguments);
     } else if (TestStr(cmd, "get")) {
         return RunGet(arguments);
+    } else if (TestStr(cmd, "put")) {
+        return RunPut(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;

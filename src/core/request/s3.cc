@@ -569,7 +569,7 @@ static inline const char *GetLockModeString(s3_LockMode mode)
     RG_UNREACHABLE();
 }
 
-s3_PutResult s3_Client::PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutSettings &settings)
+s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size, FunctionRef<Size(Span<uint8_t>)> func, const s3_PutSettings &settings)
 {
     BlockAllocator temp_alloc;
 
@@ -594,8 +594,6 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, Span<const uint8_t> data
 
     int status = RunSafe("upload S3 object", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
-
-        Span<const uint8_t> remain = data;
         headers.len = PrepareHeaders("PUT", path, nullptr, kvs, &temp_alloc, headers.data);
 
         // Set CURL options
@@ -607,31 +605,23 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, Span<const uint8_t> data
             success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
 
             success &= !curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
-                Span<const uint8_t> *remain = (Span<const uint8_t> *)udata;
-                Size give = std::min((Size)(size * nmemb), remain->len);
+                FunctionRef<Size(Span<uint8_t>)> *func = (FunctionRef<Size(Span<uint8_t>)> *)udata;
+                Span<uint8_t> buf = MakeSpan((uint8_t *)ptr, (Size)(size * nmemb));
 
-                MemCpy(ptr, remain->ptr, give);
-                remain->ptr += (Size)give;
-                remain->len -= (Size)give;
+                Size ret = (*func)(buf);
+                if (ret < 0)
+                    return (size_t)CURL_READFUNC_ABORT;
 
-                return (size_t)give;
+                return (size_t)ret;
             });
-            success &= !curl_easy_setopt(curl, CURLOPT_READDATA, &remain);
-            success &= !curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)remain.len);
+            success &= !curl_easy_setopt(curl, CURLOPT_READDATA, &func);
+            success &= !curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)size);
 
             if (!success)
                 return -CURLE_FAILED_INIT;
         }
 
-        int status = curl_Perform(curl, nullptr);
-
-        // This should never happen!
-        if (status == 200 && remain.len) {
-            DeleteObject(key);
-            status = 206;
-        }
-
-        return status;
+        return curl_Perform(curl, nullptr);
     });
 
     switch (status) {
@@ -639,6 +629,21 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, Span<const uint8_t> data
         case 412: return s3_PutResult::ObjectExists;
         default: return s3_PutResult::OtherError;
     }
+}
+
+s3_PutResult s3_Client::PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutSettings &settings)
+{
+    s3_PutResult ret = PutObject(key, data.len, [&](Span<uint8_t> buf) {
+        Size give = std::min(buf.len, data.len);
+        MemCpy(buf.ptr, data.ptr, give);
+
+        data.ptr += give;
+        data.len -= give;
+
+        return give;
+    }, settings);
+
+    return ret;
 }
 
 bool s3_Client::DeleteObject(Span<const char> key)
