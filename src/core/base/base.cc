@@ -7547,7 +7547,7 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
 
     Size read_len = 0;
 
-    while (out_buf.len && !eof) {
+    while (out_buf.len) {
         Size len = 0;
 
         if (decoder) {
@@ -7572,6 +7572,9 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
             error = true;
             return -1;
         }
+
+        if (eof)
+            break;
     }
 
     read_total += read_len;
