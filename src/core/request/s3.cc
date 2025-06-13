@@ -412,7 +412,7 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
     return true;
 }
 
-Size s3_Client::GetObject(Span<const char> key, Span<uint8_t> out_buf)
+int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(Span<const uint8_t>)> func)
 {
     BlockAllocator temp_alloc;
 
@@ -421,12 +421,13 @@ Size s3_Client::GetObject(Span<const char> key, Span<uint8_t> out_buf)
 
     struct GetContext {
         Span<const char> key;
-        Span<uint8_t> out;
-        Size len;
+        FunctionRef<bool(Span<const uint8_t>)> func;
+        int64_t len;
     };
+
     GetContext ctx = {};
     ctx.key = key;
-    ctx.out = out_buf;
+    ctx.func = func;
 
     int status = RunSafe("get S3 object", [&](CURL *curl) {
         ctx.len = 0;
@@ -444,10 +445,11 @@ Size s3_Client::GetObject(Span<const char> key, Span<uint8_t> out_buf)
             success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
                                          +[](char *ptr, size_t, size_t nmemb, void *udata) {
                 GetContext *ctx = (GetContext *)udata;
+                Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
 
-                Size copy_len = std::min((Size)nmemb, ctx->out.len - ctx->len);
-                MemCpy(ctx->out.ptr + ctx->len, ptr, copy_len);
-                ctx->len += copy_len;
+                if (!ctx->func(buf))
+                    return (size_t)0;
+                ctx->len += buf.len;
 
                 return nmemb;
             });
@@ -470,74 +472,43 @@ Size s3_Client::GetObject(Span<const char> key, Span<uint8_t> out_buf)
     return ctx.len;
 }
 
+Size s3_Client::GetObject(Span<const char> key, Span<uint8_t> out_buf)
+{
+    Size prev_len = out_buf.len;
+
+    int64_t size = GetObject(key, [&](Span<const uint8_t> buf) {
+        buf.len = std::min(buf.len, out_buf.len);
+        MemCpy(out_buf.ptr, buf.ptr, buf.len);
+
+        out_buf.ptr += buf.len;
+        out_buf.len -= buf.len;
+
+        return true;
+    });
+    if (size < 0)
+        return -1;
+
+    return prev_len - out_buf.len;
+}
+
 Size s3_Client::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj)
 {
-    BlockAllocator temp_alloc;
-
     Size prev_len = out_obj->len;
     RG_DEFER_N(out_guard) { out_obj->RemoveFrom(prev_len); };
 
-    const char *path;
-    Span<const char> url = MakeURL(key, nullptr, &temp_alloc, &path);
-
-    struct GetContext {
-        Span<const char> key;
-        HeapArray<uint8_t> *out;
-        Size max_len;
-        Size total_len;
-    };
-    GetContext ctx = {};
-    ctx.key = key;
-    ctx.out = out_obj;
-    ctx.max_len = max_len;
-
-    int status = RunSafe("get S3 object", [&](CURL *curl) {
-        LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("GET", path, nullptr, {}, {}, &temp_alloc, headers.data);
-
-        ctx.out->RemoveFrom(prev_len);
-        ctx.total_len = 0;
-
-        // Set CURL options
-        {
-            bool success = true;
-
-            success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
-            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
-
-            success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
-                                         +[](char *ptr, size_t, size_t nmemb, void *udata) {
-                GetContext *ctx = (GetContext *)udata;
-
-                if (ctx->max_len >= 0 && ctx->total_len > ctx->max_len - (Size)nmemb) {
-                    LogError("S3 object '%1' is too big (max = %2)", ctx->key, FmtDiskSize(ctx->max_len));
-                    return (size_t)0;
-                }
-                ctx->total_len += (Size)nmemb;
-
-                Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
-                ctx->out->Append(buf);
-
-                return nmemb;
-            });
-            success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ctx);
-
-            if (!success)
-                return -CURLE_FAILED_INIT;
+    int64_t size = GetObject(key, [&](Span<const uint8_t> buf) {
+        if (max_len >= 0 && out_obj->len - prev_len > max_len - buf.len) {
+            LogError("S3 object '%1' is too big (max = %2)", key, FmtDiskSize(max_len));
+            return false;
         }
 
-        return curl_Perform(curl, nullptr);
+        out_obj->Append(buf);
+        return true;
     });
-
-    if (status != 200) {
-        if (status == 404) {
-            LogError("Cannot find S3 object '%1'", key);
-        }
+    if (size < 0)
         return -1;
-    }
 
-    out_guard.Disable();
-    return ctx.total_len;
+    return out_obj->len - prev_len;
 }
 
 StatResult s3_Client::HasObject(Span<const char> key, int64_t *out_size)
