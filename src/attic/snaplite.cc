@@ -393,10 +393,10 @@ Options:
 
     %!..+-S, --snapshot_dir directory%!0   Create snapshots inside this directory
 
-    %!..+-d, --duration sec%!0             Set torture duration in seconds
-                                   %!D..(default: %2 sec)%!0
-        %!..+--full_delay sec%!0           Set delay between full snapshots
-                                   %!D..(default: %3 sec)%!0
+    %!..+-d, --duration duration!0         Set torture duration
+                                   %!D..(default: %2s)%!0
+        %!..+--full_delay duration%!0      Set delay between full snapshots
+                                   %!D..(default: %3s)%!0
 
     %!..+-f, --force%!0                    Overwrite existing database file)",
                 FelixTarget, duration / 1000, full_delay / 1000);
@@ -415,21 +415,17 @@ Options:
             } else if (opt.Test("-d", "--duration", OptionType::Value)) {
                 if (!ParseDuration(opt.current_value, &duration))
                     return 1;
-                if (duration < 0 || duration > INT64_MAX / 1000) {
+                if (duration < 0 || duration > INT64_MAX) {
                     LogError("Duration value cannot be negative or too big");
                     return 1;
                 }
-
-                duration *= 1000;
             } else if (opt.Test("--full_delay", OptionType::Value)) {
                 if (!ParseDuration(opt.current_value, &full_delay))
                     return 1;
-                if (full_delay < 0 || full_delay > INT64_MAX / 1000) {
+                if (full_delay < 0 || full_delay > INT64_MAX) {
                     LogError("Full snapshot delay cannot be negative or too big");
                     return 1;
                 }
-
-                full_delay *= 1000;
             } else if (opt.Test("-f", "--force")) {
                 force = true;
             } else {
