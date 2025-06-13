@@ -89,14 +89,14 @@ Size S3Disk::ReadFile(const char *path, HeapArray<uint8_t> *out_buf)
 
 rk_WriteResult S3Disk::WriteFile(const char *path, Span<const uint8_t> buf, unsigned int flags)
 {
-    s3_PutInfo info = { .conditional = !(flags & (int)rk_WriteFlag::Overwrite) };
+    s3_PutSettings settings = { .conditional = !(flags & (int)rk_WriteFlag::Overwrite) };
 
     if (retention && (flags & (int)rk_WriteFlag::Lockable)) {
-        info.retention = GetUnixTime() + retention;
-        info.lock = lock;
+        settings.retention = GetUnixTime() + retention;
+        settings.lock = lock;
     }
 
-    s3_PutResult ret = s3.PutObject(path, buf, info);
+    s3_PutResult ret = s3.PutObject(path, buf, settings);
 
     switch (ret) {
         case s3_PutResult::Success: return rk_WriteResult::Success;

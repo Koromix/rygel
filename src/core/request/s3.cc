@@ -569,7 +569,7 @@ static inline const char *GetLockModeString(s3_LockMode mode)
     RG_UNREACHABLE();
 }
 
-s3_PutResult s3_Client::PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutInfo &info)
+s3_PutResult s3_Client::PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutSettings &settings)
 {
     BlockAllocator temp_alloc;
 
@@ -578,17 +578,17 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, Span<const uint8_t> data
 
     LocalArray<KeyValue, 8> kvs;
 
-    if (info.mimetype) {
-        kvs.Append({ "Content-Type", info.mimetype });
+    if (settings.mimetype) {
+        kvs.Append({ "Content-Type", settings.mimetype });
     }
-    if (info.conditional) {
+    if (settings.conditional) {
         kvs.Append({ "If-None-Match", "*" });
     }
-    if (info.retention) {
-        TimeSpec spec = DecomposeTimeUTC(info.retention);
+    if (settings.retention) {
+        TimeSpec spec = DecomposeTimeUTC(settings.retention);
         const char *until = Fmt(&temp_alloc, "%1", FmtTimeISO(spec)).ptr;
 
-        kvs.Append({ "x-amz-object-lock-mode", GetLockModeString(info.lock) });
+        kvs.Append({ "x-amz-object-lock-mode", GetLockModeString(settings.lock) });
         kvs.Append({ "x-amz-object-lock-retain-until-date", until });
     }
 

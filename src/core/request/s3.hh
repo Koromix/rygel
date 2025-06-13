@@ -59,7 +59,7 @@ static const char *const s3_LockModeNames[] = {
     "Compliance"
 };
 
-struct s3_PutInfo {
+struct s3_PutSettings {
     const char *mimetype = nullptr;
     bool conditional = false;
 
@@ -115,7 +115,7 @@ public:
     Size GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj);
     StatResult HasObject(Span<const char> key, int64_t *out_size = nullptr);
 
-    s3_PutResult PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutInfo &info = {});
+    s3_PutResult PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutSettings &settings = {});
     bool DeleteObject(Span<const char> key);
 
     bool RetainObject(Span<const char> key, int64_t until, s3_LockMode mode);
