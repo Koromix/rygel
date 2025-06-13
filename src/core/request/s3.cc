@@ -347,7 +347,7 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
     for (;;) {
         int status = RunSafe("list S3 objects", [&](CURL *curl) {
             LocalArray<curl_slist, 32> headers;
-            headers.len = PrepareHeaders("GET", path, query.ptr, {}, {}, &temp_alloc, headers.data);
+            headers.len = PrepareHeaders("GET", path, query.ptr, {}, &temp_alloc, headers.data);
 
             // Set CURL options
             {
@@ -433,7 +433,7 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(Span<const u
         ctx.len = 0;
 
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("GET", path, nullptr, {}, {}, &temp_alloc, headers.data);
+        headers.len = PrepareHeaders("GET", path, nullptr, {}, &temp_alloc, headers.data);
 
         // Set CURL options
         {
@@ -520,7 +520,7 @@ StatResult s3_Client::HasObject(Span<const char> key, int64_t *out_size)
 
     int status = RunSafe("test S3 object", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("HEAD", path, nullptr, {}, {}, &temp_alloc, headers.data);
+        headers.len = PrepareHeaders("HEAD", path, nullptr, {}, &temp_alloc, headers.data);
 
         // Set CURL options
         {
@@ -594,9 +594,9 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, Span<const uint8_t> data
 
     int status = RunSafe("upload S3 object", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("PUT", path, nullptr, kvs, data, &temp_alloc, headers.data);
 
         Span<const uint8_t> remain = data;
+        headers.len = PrepareHeaders("PUT", path, nullptr, kvs, &temp_alloc, headers.data);
 
         // Set CURL options
         {
@@ -650,7 +650,7 @@ bool s3_Client::DeleteObject(Span<const char> key)
 
     int status = RunSafe("delete S3 object", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("DELETE", path, nullptr, {}, {}, &temp_alloc, headers.data);
+        headers.len = PrepareHeaders("DELETE", path, nullptr, {}, &temp_alloc, headers.data);
 
         // Set CURL options
         {
@@ -696,7 +696,7 @@ bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mo
 
     int status = RunSafe("retain S3 object", [&](CURL *curl) {
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("PUT", path, "retention=", {}, body.As<const uint8_t>(), &temp_alloc, headers.data);
+        headers.len = PrepareHeaders("PUT", path, "retention=", {}, &temp_alloc, headers.data);
 
         Span<const char> remain = body;
 
@@ -816,7 +816,7 @@ bool s3_Client::OpenAccess()
 
         int status = RunSafe("authenticate to S3 bucket", [&](CURL *curl) {
             LocalArray<curl_slist, 32> headers;
-            headers.len = PrepareHeaders("HEAD", path, nullptr, {}, {}, &temp_alloc, headers.data);
+            headers.len = PrepareHeaders("HEAD", path, nullptr, {}, &temp_alloc, headers.data);
 
             // Set CURL options
             {
@@ -941,30 +941,19 @@ int s3_Client::RunSafe(const char *action, FunctionRef<int(CURL *)> func, bool q
 }
 
 Size s3_Client::PrepareHeaders(const char *method, const char *path, const char *query, Span<const KeyValue> kvs,
-                               Span<const uint8_t> body, Allocator *alloc, Span<curl_slist> out_headers)
+                               Allocator *alloc, Span<curl_slist> out_headers)
 {
     int64_t now = GetUnixTime();
     TimeSpec date = DecomposeTimeUTC(now);
 
-    uint8_t sha256[32];
-    if (body.len) {
-        crypto_hash_sha256(sha256, body.ptr, (size_t)body.len);
-    } else {
-        static const uint8_t EmptySha256[32] = { 0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14,
-                                                 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24,
-                                                 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c,
-                                                 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55 };
-        MemCpy(sha256, EmptySha256, 32);
-    }
-
     uint8_t signature[32];
-    MakeSignature(method, path, query, date, sha256, signature);
+    MakeSignature(method, path, query, date, signature);
 
     Size len = 0;
 
     out_headers[len++].data = MakeAuthorization(signature, date, alloc).ptr;
     out_headers[len++].data = Fmt(alloc, "x-amz-date: %1", FmtTimeISO(date)).ptr;
-    out_headers[len++].data = Fmt(alloc, "x-amz-content-sha256: %1", FormatSha256(sha256)).ptr;
+    out_headers[len++].data = Fmt(alloc, "x-amz-content-sha256: UNSIGNED-PAYLOAD").ptr;
 
     for (const KeyValue &kv: kvs) {
         out_headers[len++].data = Fmt(alloc, "%1: %2", kv.key, kv.value).ptr;
@@ -1030,8 +1019,7 @@ static void HmacSha256(Span<const uint8_t> key, Span<const char> message, uint8_
     return HmacSha256(key, message.As<const uint8_t>(), out_digest);
 }
 
-void s3_Client::MakeSignature(const char *method, const char *path, const char *query,
-                              const TimeSpec &date, const uint8_t sha256[32], uint8_t out_signature[32])
+void s3_Client::MakeSignature(const char *method, const char *path, const char *query, const TimeSpec &date, uint8_t out_signature[32])
 {
     RG_ASSERT(!date.offset);
 
@@ -1068,9 +1056,9 @@ void s3_Client::MakeSignature(const char *method, const char *path, const char *
     // Create canonical request
     LocalArray<char, 4096> canonical;
     canonical.len += Fmt(canonical.TakeAvailable(), "%1\n%2\n%3\n", method, path, query ? query : "").len;
-    canonical.len += Fmt(canonical.TakeAvailable(), "host:%1\nx-amz-content-sha256:%2\nx-amz-date:%3\n\n", host, FormatSha256(sha256), FmtTimeISO(date)).len;
+    canonical.len += Fmt(canonical.TakeAvailable(), "host:%1\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%2\n\n", host, FmtTimeISO(date)).len;
     canonical.len += Fmt(canonical.TakeAvailable(), "host;x-amz-content-sha256;x-amz-date\n").len;
-    canonical.len += Fmt(canonical.TakeAvailable(), "%1", FormatSha256(sha256)).len;
+    canonical.len += Fmt(canonical.TakeAvailable(), "UNSIGNED-PAYLOAD").len;
 
     // Hash canonical request
     uint8_t hash[32];
