@@ -35,7 +35,7 @@ To help you form a valid URL, here are a few examples for common S3 providers:
 | Amazon S3 (virtual-host style) | `https://<bucket>.s3.<region>.amazonaws.com`         | Yes                |
 | Amazon S3 (path style)         | `https://s3.<region>.amazonaws.com/<bucket>`         | Yes                |
 | Backblaze B2                   | `https://s3.<region>.backblazeb2.com/<bucket>`       | No                 |
-| CloudFlare R2                  | `https://<userid>.r2.cloudflarestorage.com/<bucket>` | Yes                |
+| Cloudflare R2                  | `https://<userid>.r2.cloudflarestorage.com/<bucket>` | Yes                |
 | Exoscale Object Storage        | `https://sos-<region>.exo.io/<bucket>`               | Yes                |
 | Scaleway Object Storage        | `https://<bucket>.s3.<region>.scw.cloud`             | No                 |
 
