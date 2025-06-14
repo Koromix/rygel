@@ -37,7 +37,7 @@ static inline mi_block_t* mi_page_block_at(const mi_page_t* page, void* page_sta
 }
 
 //static void mi_page_init(mi_heap_t* heap, mi_page_t* page, size_t size, mi_tld_t* tld);
-static void mi_page_extend_free(mi_heap_t* heap, mi_page_t* page);
+static bool mi_page_extend_free(mi_heap_t* heap, mi_page_t* page);
 
 #if (MI_DEBUG>=3)
 static size_t mi_page_list_count(mi_page_t* page, mi_block_t* head) {
@@ -112,7 +112,7 @@ static bool mi_page_is_valid_init(mi_page_t* page) {
   return true;
 }
 
-extern bool _mi_process_is_initialized;             // has mi_process_init been called?
+extern mi_decl_hidden bool _mi_process_is_initialized;             // has mi_process_init been called?
 
 bool _mi_page_is_valid(mi_page_t* page) {
   mi_assert_internal(mi_page_is_valid_init(page));
@@ -322,9 +322,7 @@ static mi_page_t* mi_page_fresh_alloc(mi_heap_t* heap, mi_page_queue_t* pq, size
   else if (pq != NULL) {
     mi_page_queue_push(heap, pq, page);
   }
-  mi_heap_stat_increase(heap, pages, 1);
   mi_assert_internal(pq!=NULL || mi_page_block_size(page) >= block_size);
-  mi_heap_stat_increase(heap, page_bins[mi_page_bin(page)], 1);
   mi_assert_expensive(_mi_page_is_valid(page));
   return page;
 }
@@ -394,11 +392,10 @@ void _mi_page_free(mi_page_t* page, mi_page_queue_t* pq) {
   mi_page_queue_remove(pq, page);
 
   // and free it
-  mi_heap_t* heap = page->heap;
-  mi_heap_stat_decrease(heap, page_bins[mi_page_bin(page)], 1);
+  mi_tld_t* const tld = page->heap->tld;
   mi_page_set_heap(page,NULL);
-  _mi_arenas_page_free(page);
-  _mi_arenas_collect(false, false, heap->tld);  // allow purging
+  _mi_arenas_page_free(page,tld);
+  _mi_arenas_collect(false, false, tld);  // allow purging
 }
 
 #define MI_MAX_RETIRE_SIZE    MI_LARGE_OBJ_SIZE_MAX   // should be less than size for MI_BIN_HUGE
@@ -608,14 +605,14 @@ static mi_decl_noinline void mi_page_free_list_extend( mi_page_t* const page, co
 // Note: we also experimented with "bump" allocation on the first
 // allocations but this did not speed up any benchmark (due to an
 // extra test in malloc? or cache effects?)
-static void mi_page_extend_free(mi_heap_t* heap, mi_page_t* page) {
+static bool mi_page_extend_free(mi_heap_t* heap, mi_page_t* page) {
   mi_assert_expensive(mi_page_is_valid_init(page));
   #if (MI_SECURE<3)
   mi_assert(page->free == NULL);
   mi_assert(page->local_free == NULL);
-  if (page->free != NULL) return;
+  if (page->free != NULL) return true;
   #endif
-  if (page->capacity >= page->reserved) return;
+  if (page->capacity >= page->reserved) return true;
 
   size_t page_size;
   //uint8_t* page_start =
@@ -648,7 +645,9 @@ static void mi_page_extend_free(mi_heap_t* heap, mi_page_t* page) {
     const size_t needed_commit = _mi_align_up( mi_page_slice_offset_of(page, needed_size), MI_PAGE_MIN_COMMIT_SIZE );
     if (needed_commit > page->slice_committed) {
       mi_assert_internal(((needed_commit - page->slice_committed) % _mi_os_page_size()) == 0);
-      _mi_os_commit(mi_page_slice_start(page) + page->slice_committed, needed_commit - page->slice_committed, NULL);
+      if (!_mi_os_commit(mi_page_slice_start(page) + page->slice_committed, needed_commit - page->slice_committed, NULL)) {
+        return false;
+      }
       page->slice_committed = needed_commit;
     }
   }
@@ -666,10 +665,11 @@ static void mi_page_extend_free(mi_heap_t* heap, mi_page_t* page) {
   mi_heap_stat_increase(heap, page_committed, extend * bsize);
   #endif
   mi_assert_expensive(mi_page_is_valid_init(page));
+  return true;
 }
 
 // Initialize a fresh page (that is already partially initialized)
-void _mi_page_init(mi_heap_t* heap, mi_page_t* page) {
+mi_decl_nodiscard bool _mi_page_init(mi_heap_t* heap, mi_page_t* page) {
   mi_assert(page != NULL);
   mi_page_set_heap(page, heap);
 
@@ -706,8 +706,9 @@ void _mi_page_init(mi_heap_t* heap, mi_page_t* page) {
   mi_assert_expensive(mi_page_is_valid_init(page));
 
   // initialize an initial free list
-  mi_page_extend_free(heap,page);
+  if (!mi_page_extend_free(heap,page)) return false;
   mi_assert(mi_page_immediate_available(page));
+  return true;
 }
 
 
@@ -797,9 +798,11 @@ static mi_decl_noinline mi_page_t* mi_page_queue_find_free_ex(mi_heap_t* heap, m
   if (page != NULL) {
     if (!mi_page_immediate_available(page)) {
       mi_assert_internal(mi_page_is_expandable(page));
-      mi_page_extend_free(heap, page);
+      if (!mi_page_extend_free(heap, page)) {
+        page = NULL; // failed to extend
+      }
     }
-    mi_assert_internal(mi_page_immediate_available(page));
+    mi_assert_internal(page == NULL || mi_page_immediate_available(page));
   }
 
   if (page == NULL) {

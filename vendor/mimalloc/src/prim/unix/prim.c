@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
-Copyright (c) 2018-2023, Microsoft Research, Daan Leijen
+Copyright (c) 2018-2025, Microsoft Research, Daan Leijen
 This is free software; you can redistribute it and/or modify it under the
 terms of the MIT license. A copy of the license can be found in the file
 "LICENSE" at the root of this distribution.
@@ -31,10 +31,11 @@ terms of the MIT license. A copy of the license can be found in the file
 
 #if defined(__linux__)
   #include <features.h>
-  #include <linux/prctl.h>  // PR_SET_VMA
-  //#if defined(MI_NO_THP)
-  #include <sys/prctl.h>    // THP disable
-  //#endif
+  #include <sys/prctl.h>    // THP disable, PR_SET_VMA
+  #include <sys/sysinfo.h>  // sysinfo
+  #if defined(__GLIBC__) && !defined(PR_SET_VMA)
+  #include <linux/prctl.h>
+  #endif
   #if defined(__GLIBC__)
   #include <linux/mman.h>   // linux mmap flags
   #else
@@ -49,6 +50,7 @@ terms of the MIT license. A copy of the license can be found in the file
   #if !defined(MAC_OS_X_VERSION_10_7)
   #define MAC_OS_X_VERSION_10_7   1070
   #endif
+  #include <sys/sysctl.h>
 #elif defined(__FreeBSD__) || defined(__DragonFly__)
   #include <sys/param.h>
   #if __FreeBSD_version >= 1200000
@@ -72,7 +74,6 @@ terms of the MIT license. A copy of the license can be found in the file
 
 #define MI_UNIX_LARGE_PAGE_SIZE (2*MI_MiB) // TODO: can we query the OS for this?
 
-  
 //------------------------------------------------------------------------------------
 // Use syscalls for some primitives to allow for libraries that override open/read/close etc.
 // and do allocation themselves; using syscalls prevents recursion when mimalloc is
@@ -120,43 +121,71 @@ static inline int mi_prim_access(const char *fpath, int mode) {
 
 static bool unix_detect_overcommit(void) {
   bool os_overcommit = true;
-#if defined(__linux__)
-  int fd = mi_prim_open("/proc/sys/vm/overcommit_memory", O_RDONLY);
-	if (fd >= 0) {
-    char buf[32];
-    ssize_t nread = mi_prim_read(fd, &buf, sizeof(buf));
-    mi_prim_close(fd);
-    // <https://www.kernel.org/doc/Documentation/vm/overcommit-accounting>
-    // 0: heuristic overcommit, 1: always overcommit, 2: never overcommit (ignore NORESERVE)
-    if (nread >= 1) {
-      os_overcommit = (buf[0] == '0' || buf[0] == '1');
+  #if defined(__linux__)
+    int fd = mi_prim_open("/proc/sys/vm/overcommit_memory", O_RDONLY);
+    if (fd >= 0) {
+      char buf[32];
+      ssize_t nread = mi_prim_read(fd, &buf, sizeof(buf));
+      mi_prim_close(fd);
+      // <https://www.kernel.org/doc/Documentation/vm/overcommit-accounting>
+      // 0: heuristic overcommit, 1: always overcommit, 2: never overcommit (ignore NORESERVE)
+      if (nread >= 1) {
+        os_overcommit = (buf[0] == '0' || buf[0] == '1');
+      }
     }
-  }
-#elif defined(__FreeBSD__)
-  int val = 0;
-  size_t olen = sizeof(val);
-  if (sysctlbyname("vm.overcommit", &val, &olen, NULL, 0) == 0) {
-    os_overcommit = (val != 0);
-  }
-#else
-  // default: overcommit is true
-#endif
+  #elif defined(__FreeBSD__)
+    int val = 0;
+    size_t olen = sizeof(val);
+    if (sysctlbyname("vm.overcommit", &val, &olen, NULL, 0) == 0) {
+      os_overcommit = (val != 0);
+    }
+  #else
+    // default: overcommit is true
+  #endif
   return os_overcommit;
+}
+
+// try to detect the physical memory dynamically (if possible)
+static void unix_detect_physical_memory( size_t page_size, size_t* physical_memory_in_kib ) {
+  #if defined(CTL_HW) && (defined(HW_PHYSMEM64) || defined(HW_MEMSIZE))  // freeBSD, macOS
+    MI_UNUSED(page_size);
+    int64_t physical_memory = 0;
+    size_t length = sizeof(int64_t);
+    #if defined(HW_PHYSMEM64)
+    int mib[2] = { CTL_HW, HW_PHYSMEM64 };
+    #else
+    int mib[2] = { CTL_HW, HW_MEMSIZE };
+    #endif
+    const int err = sysctl(mib, 2, &physical_memory, &length, NULL, 0);
+    if (err==0 && physical_memory > 0) {
+      const int64_t phys_in_kib = physical_memory / MI_KiB;
+      if (phys_in_kib > 0 && (uint64_t)phys_in_kib <= SIZE_MAX) {
+        *physical_memory_in_kib = (size_t)phys_in_kib;
+      }
+    }
+  #elif defined(__linux__)
+    MI_UNUSED(page_size);
+    struct sysinfo info; _mi_memzero_var(info);
+    const int err = sysinfo(&info);
+    if (err==0 && info.totalram > 0 && info.totalram <= SIZE_MAX) {
+      *physical_memory_in_kib = (size_t)info.totalram / MI_KiB;
+    }
+  #elif defined(_SC_PHYS_PAGES)  // do not use by default as it might cause allocation (by using `fopen` to parse /proc/meminfo) (issue #1100)
+    const long pphys = sysconf(_SC_PHYS_PAGES);
+    const size_t psize_in_kib = page_size / MI_KiB;
+    if (psize_in_kib > 0 && pphys > 0 && (unsigned long)pphys <= SIZE_MAX && (size_t)pphys <= (SIZE_MAX/psize_in_kib)) {
+      *physical_memory_in_kib = (size_t)pphys * psize_in_kib;
+    }
+  #endif
 }
 
 void _mi_prim_mem_init( mi_os_mem_config_t* config )
 {
   long psize = sysconf(_SC_PAGESIZE);
-  if (psize > 0) {
+  if (psize > 0 && (unsigned long)psize < SIZE_MAX) {
     config->page_size = (size_t)psize;
     config->alloc_granularity = (size_t)psize;
-    #if defined(_SC_PHYS_PAGES)
-    long pphys = sysconf(_SC_PHYS_PAGES);
-    const size_t psize_in_kib = (size_t)psize / MI_KiB;
-    if (psize_in_kib > 0 && pphys > 0 && (size_t)pphys <= (SIZE_MAX/psize_in_kib)) {
-      config->physical_memory_in_kib = (size_t)pphys * psize_in_kib;
-    }
-    #endif
+    unix_detect_physical_memory(config->page_size, &config->physical_memory_in_kib);
   }
   config->large_page_size = MI_UNIX_LARGE_PAGE_SIZE;
   config->has_overcommit = unix_detect_overcommit();
@@ -188,6 +217,7 @@ void _mi_prim_mem_init( mi_os_mem_config_t* config )
 //---------------------------------------------
 
 int _mi_prim_free(void* addr, size_t size ) {
+  if (size==0) return 0;
   bool err = (munmap(addr, size) == -1);
   return (err ? errno : 0);
 }
@@ -210,7 +240,7 @@ static int unix_madvise(void* addr, size_t size, int advice) {
 
 static void* unix_mmap_prim(void* addr, size_t size, int protect_flags, int flags, int fd) {
   void* p = mmap(addr, size, protect_flags, flags, fd, 0 /* offset */);
-  #if (defined(__linux__) && defined(PR_SET_VMA))
+  #if defined(__linux__) && defined(PR_SET_VMA)
   if (p!=MAP_FAILED && p!=NULL) {
     prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, p, size, "mimalloc");
   }
@@ -223,8 +253,8 @@ static void* unix_mmap_prim_aligned(void* addr, size_t size, size_t try_alignmen
   void* p = NULL;
   #if defined(MAP_ALIGNED)  // BSD
   if (addr == NULL && try_alignment > 1 && (try_alignment % _mi_os_page_size()) == 0) {
-    size_t idx;
-    size_t n = mi_bsr(try_alignment, &idx);
+    size_t n = 0;
+    mi_bsr(try_alignment, &n);
     if (((size_t)1 << n) == try_alignment && n >= 12 && n <= 30) {  // alignment is a power of 2 and 4096 <= alignment <= 1GiB
       p = unix_mmap_prim(addr, size, protect_flags, flags | MAP_ALIGNED(n), fd);
       if (p==MAP_FAILED || !_mi_is_aligned(p,try_alignment)) {
@@ -434,10 +464,24 @@ int _mi_prim_commit(void* start, size_t size, bool* is_zero) {
   return err;
 }
 
+int _mi_prim_reuse(void* start, size_t size) {
+  MI_UNUSED(start); MI_UNUSED(size);
+  #if defined(__APPLE__) && defined(MADV_FREE_REUSE)
+  return unix_madvise(start, size, MADV_FREE_REUSE);
+  #endif
+  return 0;
+}
+
 int _mi_prim_decommit(void* start, size_t size, bool* needs_recommit) {
   int err = 0;
-  // decommit: use MADV_DONTNEED as it decreases rss immediately (unlike MADV_FREE)
-  err = unix_madvise(start, size, MADV_DONTNEED);
+  #if defined(__APPLE__) && defined(MADV_FREE_REUSABLE)
+    // decommit on macOS: use MADV_FREE_REUSABLE as it does immediate rss accounting (issue #1097)
+    err = unix_madvise(start, size, MADV_FREE_REUSABLE);
+    if (err) { err = unix_madvise(start, size, MADV_DONTNEED); }
+  #else
+    // decommit: use MADV_DONTNEED as it decreases rss immediately (unlike MADV_FREE)
+    err = unix_madvise(start, size, MADV_DONTNEED);
+  #endif
   #if !MI_DEBUG && MI_SECURE<=2
     *needs_recommit = false;
   #else
@@ -455,14 +499,22 @@ int _mi_prim_decommit(void* start, size_t size, bool* needs_recommit) {
 }
 
 int _mi_prim_reset(void* start, size_t size) {
-  // We try to use `MADV_FREE` as that is the fastest. A drawback though is that it
+  int err = 0;
+
+  // on macOS can use MADV_FREE_REUSABLE (but we disable this for now as it seems slower)
+  #if 0 && defined(__APPLE__) && defined(MADV_FREE_REUSABLE)
+  err = unix_madvise(start, size, MADV_FREE_REUSABLE);
+  if (err==0) return 0;
+  // fall through
+  #endif
+
+  #if defined(MADV_FREE)
+  // Otherwise, we try to use `MADV_FREE` as that is the fastest. A drawback though is that it
   // will not reduce the `rss` stats in tools like `top` even though the memory is available
   // to other processes. With the default `MIMALLOC_PURGE_DECOMMITS=1` we ensure that by
   // default `MADV_DONTNEED` is used though.
-  #if defined(MADV_FREE)
   static _Atomic(size_t) advice = MI_ATOMIC_VAR_INIT(MADV_FREE);
   int oadvice = (int)mi_atomic_load_relaxed(&advice);
-  int err;
   while ((err = unix_madvise(start, size, oadvice)) != 0 && errno == EAGAIN) { errno = 0;  };
   if (err != 0 && errno == EINVAL && oadvice == MADV_FREE) {
     // if MADV_FREE is not supported, fall back to MADV_DONTNEED from now on
@@ -470,7 +522,7 @@ int _mi_prim_reset(void* start, size_t size) {
     err = unix_madvise(start, size, MADV_DONTNEED);
   }
   #else
-  int err = unix_madvise(start, size, MADV_DONTNEED);
+  err = unix_madvise(start, size, MADV_DONTNEED);
   #endif
   return err;
 }

@@ -12,8 +12,6 @@ terms of the MIT license. A copy of the license can be found in the file
 #include <stdio.h>      // stdin/stdout
 #include <stdlib.h>     // abort
 
-
-
 static long mi_max_error_count   = 16; // stop outputting errors after this (use < 0 for no limit)
 static long mi_max_warning_count = 16; // stop outputting warnings after this (use < 0 for no limit)
 
@@ -98,7 +96,15 @@ int mi_version(void) mi_attr_noexcept {
 #endif
 #endif
 
-// Static options 
+#ifndef MI_DEFAULT_PAGE_MAX_RECLAIM
+#define MI_DEFAULT_PAGE_MAX_RECLAIM  (-1)               // unlimited
+#endif
+
+#ifndef MI_DEFAULT_PAGE_CROSS_THREAD_MAX_RECLAIM
+#define MI_DEFAULT_PAGE_CROSS_THREAD_MAX_RECLAIM  32
+#endif
+
+// Static options
 static mi_option_desc_t mi_options[_mi_option_last] =
 {
   // stable options
@@ -157,14 +163,17 @@ static mi_option_desc_t mi_options[_mi_option_last] =
          MI_OPTION_UNINIT, MI_OPTION(guarded_sample_rate)},       // 1 out of N allocations in the min/max range will be guarded (=4000)
   { 0,   MI_OPTION_UNINIT, MI_OPTION(guarded_sample_seed)},
   { 10000, MI_OPTION_UNINIT, MI_OPTION(generic_collect) },        // collect heaps every N (=10000) generic allocation calls
-  { 0,   MI_OPTION_UNINIT, MI_OPTION_LEGACY(page_reclaim_on_free, abandoned_reclaim_on_free) },// reclaim abandoned pages on a free: -1 = disable completely, 0 = only reclaim into the originating heap, 1 = reclaim on free across heaps
+  { 0,   MI_OPTION_UNINIT, MI_OPTION_LEGACY(page_reclaim_on_free, abandoned_reclaim_on_free) },// reclaim abandoned (small) pages on a free: -1 = disable completely, 0 = only reclaim into the originating heap, 1 = reclaim on free across heaps
   { 2,   MI_OPTION_UNINIT, MI_OPTION(page_full_retain) },         // number of (small) pages to retain in the free page queues
   { 4,   MI_OPTION_UNINIT, MI_OPTION(page_max_candidates) },      // max search to find a best page candidate
   { 0,   MI_OPTION_UNINIT, MI_OPTION(max_vabits) },               // max virtual address space bits
   { MI_DEFAULT_PAGEMAP_COMMIT,
          MI_OPTION_UNINIT, MI_OPTION(pagemap_commit) },           // commit the full pagemap upfront?
   { 0,   MI_OPTION_UNINIT, MI_OPTION(page_commit_on_demand) },    // commit pages on-demand (2 disables this only on overcommit systems (like Linux))
-  { 16,  MI_OPTION_UNINIT, MI_OPTION(page_reclaim_max) },         // don't reclaim pages if we already own N pages (in that size class)
+  { MI_DEFAULT_PAGE_MAX_RECLAIM,
+         MI_OPTION_UNINIT, MI_OPTION(page_max_reclaim) },         // don't reclaim (small) pages of the same originating heap if we already own N pages in that size class
+  { MI_DEFAULT_PAGE_CROSS_THREAD_MAX_RECLAIM,
+         MI_OPTION_UNINIT, MI_OPTION(page_cross_thread_max_reclaim) }, // don't reclaim (small) pages across threads if we already own N pages in that size class
 };
 
 static void mi_option_init(mi_option_desc_t* desc);
@@ -396,8 +405,10 @@ void mi_register_output(mi_output_fun* out, void* arg) mi_attr_noexcept {
 // add stderr to the delayed output after the module is loaded
 static void mi_add_stderr_output(void) {
   mi_assert_internal(mi_out_default == NULL);
-  mi_out_buf_flush(&mi_out_stderr, false, NULL); // flush current contents to stderr
-  mi_out_default = &mi_out_buf_stderr;           // and add stderr to the delayed output
+  if (mi_out_default==NULL) {
+    mi_out_buf_flush(&mi_out_stderr, false, NULL); // flush current contents to stderr
+    mi_out_default = &mi_out_buf_stderr;           // and add stderr to the delayed output
+  }
 }
 
 // --------------------------------------------------------
@@ -428,14 +439,14 @@ static mi_decl_noinline void mi_recurse_exit_prim(void) {
 }
 
 static bool mi_recurse_enter(void) {
-  #if defined(__APPLE__) || defined(MI_TLS_RECURSE_GUARD)
+  #if defined(__APPLE__) || defined(__ANDROID__) || defined(MI_TLS_RECURSE_GUARD)
   if (_mi_preloading()) return false;
   #endif
   return mi_recurse_enter_prim();
 }
 
 static void mi_recurse_exit(void) {
-  #if defined(__APPLE__) || defined(MI_TLS_RECURSE_GUARD)
+  #if defined(__APPLE__) || defined(__ANDROID__) || defined(MI_TLS_RECURSE_GUARD)
   if (_mi_preloading()) return;
   #endif
   mi_recurse_exit_prim();
@@ -535,7 +546,7 @@ void _mi_warning_message(const char* fmt, ...) {
 
 
 #if MI_DEBUG
-void _mi_assert_fail(const char* assertion, const char* fname, unsigned line, const char* func ) {
+mi_decl_noreturn mi_decl_cold void _mi_assert_fail(const char* assertion, const char* fname, unsigned line, const char* func ) mi_attr_noexcept {
   _mi_fprintf(NULL, NULL, "mimalloc: assertion failed: at \"%s\":%u, %s\n  assertion: \"%s\"\n", fname, line, (func==NULL?"":func), assertion);
   abort();
 }

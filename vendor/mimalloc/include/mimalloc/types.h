@@ -50,7 +50,7 @@ terms of the MIT license. A copy of the license can be found in the file
 
 // Define MI_SECURE to enable security mitigations. Level 1 has minimal performance impact,
 // but protects most metadata with guard pages:
-//   #define MI_SECURE 1  // guard page around metadata
+//   #define MI_SECURE 1  // guard page around metadata; check pointer validity on free
 //
 // Level 2 has more performance impact but protect well against various buffer overflows
 // by surrounding all mimalloc pages with guard pages:
@@ -471,7 +471,6 @@ struct mi_heap_s {
   size_t                guarded_size_min;                    // minimal size for guarded objects
   size_t                guarded_size_max;                    // maximal size for guarded objects
   size_t                guarded_sample_rate;                 // sample rate (set to 0 to disable guarded pages)
-  size_t                guarded_sample_seed;                 // starting sample count
   size_t                guarded_sample_count;                // current sample count (counting down to 0)
   #endif
   mi_page_t*            pages_free_direct[MI_PAGES_DIRECT];  // optimize: array where every entry points a page with possibly free blocks in the corresponding queue for that size.

@@ -86,9 +86,14 @@ int main(void) {
   CHECK_BODY("malloc-nomem1") {
     result = (mi_malloc((size_t)PTRDIFF_MAX + (size_t)1) == NULL);
   };
-  CHECK_BODY("malloc-null") {
+  CHECK_BODY("malloc-free-null") {
     mi_free(NULL);
   };
+  #if MI_INTPTR_BITS > 32
+  CHECK_BODY("malloc-free-invalid-low") {
+    mi_free((void*)(MI_ZU(0x0000000003990080))); // issue #1087
+  };
+  #endif
   CHECK_BODY("calloc-overflow") {
     // use (size_t)&mi_calloc to get some number without triggering compiler warnings
     result = (mi_calloc((size_t)&mi_calloc,SIZE_MAX/1000) == NULL);
@@ -163,7 +168,7 @@ int main(void) {
     void* p = mi_malloc_aligned(4097,4096);
     size_t usable = mi_usable_size(p);
     result = (usable >= 4097 && usable < 16000);
-    printf("malloc_aligned5: usable size: %zi\n", usable);
+    fprintf(stderr, "malloc_aligned5: usable size: %zi.  ", usable);
     mi_free(p);
   };
   /*

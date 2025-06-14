@@ -16,7 +16,7 @@ terms of the MIT license. A copy of the license can be found in the file
 
 // Empty page used to initialize the small free pages array
 const mi_page_t _mi_page_empty = {
-  MI_ATOMIC_VAR_INIT(MI_PAGE_IN_FULL_QUEUE),  // xthread_id  (must set flag to catch NULL on a free)
+  MI_ATOMIC_VAR_INIT(0),  // xthread_id
   NULL,                   // free
   0,                      // used
   0,                      // capacity
@@ -132,7 +132,7 @@ mi_decl_cache_align const mi_heap_t _mi_heap_empty = {
   true,                   // can eager abandon
   0,                      // tag
   #if MI_GUARDED
-  0, 0, 0, 0, 1,          // count is 1 so we never write to it (see `internal.h:mi_heap_malloc_use_guarded`)
+  0, 0, 0, 1,          // count is 1 so we never write to it (see `internal.h:mi_heap_malloc_use_guarded`)
   #endif
   MI_SMALL_PAGES_EMPTY,
   MI_PAGE_QUEUES_EMPTY,
@@ -171,7 +171,7 @@ mi_decl_cache_align mi_heap_t heap_main = {
   true,                   // allow page abandon
   0,                      // tag
   #if MI_GUARDED
-  0, 0, 0, 0, 0,
+  0, 0, 0, 0,
   #endif
   MI_SMALL_PAGES_EMPTY,
   MI_PAGE_QUEUES_EMPTY,
@@ -193,15 +193,14 @@ mi_stats_t _mi_stats_main = { MI_STAT_VERSION, MI_STATS_NULL };
 
 #if MI_GUARDED
 mi_decl_export void mi_heap_guarded_set_sample_rate(mi_heap_t* heap, size_t sample_rate, size_t seed) {
-  heap->guarded_sample_seed = seed;
-  if (heap->guarded_sample_seed == 0) {
-    heap->guarded_sample_seed = _mi_heap_random_next(heap);
-  }
   heap->guarded_sample_rate  = sample_rate;
-  if (heap->guarded_sample_rate >= 1) {
-    heap->guarded_sample_seed = heap->guarded_sample_seed % heap->guarded_sample_rate;
+  heap->guarded_sample_count = sample_rate;  // count down samples
+  if (heap->guarded_sample_rate > 1) {
+    if (seed == 0) {
+      seed = _mi_heap_random_next(heap);
+    }
+    heap->guarded_sample_count = (seed % heap->guarded_sample_rate) + 1;  // start at random count between 1 and `sample_rate`
   }
-  heap->guarded_sample_count = 1 + heap->guarded_sample_seed;  // count down samples
 }
 
 mi_decl_export void mi_heap_guarded_set_size_bound(mi_heap_t* heap, size_t min, size_t max) {
@@ -372,7 +371,6 @@ mi_tld_t* _mi_thread_tld(void) mi_attr_noexcept {
     return heap->tld;
   }
 }
-
 
 /* -----------------------------------------------------------
   Sub process
@@ -629,7 +627,7 @@ mi_decl_nodiscard bool mi_is_redirected(void) mi_attr_noexcept {
 }
 
 // Called once by the process loader from `src/prim/prim.c`
-void _mi_process_load(void) {
+void _mi_auto_process_init(void) {
   mi_heap_main_init();
   #if defined(__APPLE__) || defined(MI_TLS_RECURSE_GUARD)
   volatile mi_heap_t* dummy = _mi_heap_default; // access TLS to allocate it before setting tls_initialized to true;
@@ -711,6 +709,7 @@ void mi_process_init(void) mi_attr_noexcept {
   _mi_verbose_message("process init: 0x%zx\n", _mi_thread_id());
 
   mi_detect_cpu_features();
+  _mi_stats_init();
   _mi_os_init();
   _mi_page_map_init();
   mi_heap_main_init();
@@ -727,7 +726,7 @@ void mi_process_init(void) mi_attr_noexcept {
   _mi_prim_thread_associate_default_heap(NULL);
   #endif
 
-  mi_stats_reset();  // only call stat reset *after* thread init (or the heap tld == NULL)
+  // mi_stats_reset();  // only call stat reset *after* thread init (or the heap tld == NULL)
   mi_track_init();
 
   if (mi_option_is_enabled(mi_option_reserve_huge_os_pages)) {
@@ -747,8 +746,8 @@ void mi_process_init(void) mi_attr_noexcept {
   }
 }
 
-// Called when the process is done (through `at_exit`)
-void mi_cdecl _mi_process_done(void) {
+// Called when the process is done (cdecl as it is used with `at_exit` on some platforms)
+void mi_cdecl mi_process_done(void) mi_attr_noexcept {
   // only shutdown if we were initialized
   if (!_mi_process_is_initialized) return;
   // ensure we are called once
@@ -780,13 +779,19 @@ void mi_cdecl _mi_process_done(void) {
     mi_heap_collect(heap, true /* force */);
     _mi_heap_unsafe_destroy_all(heap);     // forcefully release all memory held by all heaps (of this thread only!)
     _mi_arenas_unsafe_destroy_all(heap->tld);
+    _mi_page_map_unsafe_destroy(_mi_subproc_main());
   }
+  //_mi_page_map_unsafe_destroy(_mi_subproc_main());
 
   if (mi_option_is_enabled(mi_option_show_stats) || mi_option_is_enabled(mi_option_verbose)) {
-    mi_stats_print(NULL);
+    _mi_stats_print(&_mi_subproc_main()->stats, NULL, NULL);  // use always main subproc at process exit to avoid dereferencing the heap (as it may be destroyed by now)
   }
   _mi_allocator_done();
   _mi_verbose_message("process done: 0x%zx\n", tld_main.thread_id);
   os_preloading = true; // don't call the C runtime anymore
 }
 
+void mi_cdecl _mi_auto_process_done(void) mi_attr_noexcept {
+  if (_mi_option_get_fast(mi_option_destroy_on_exit)>1) return;
+  mi_process_done();
+}

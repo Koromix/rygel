@@ -8,7 +8,7 @@ terms of the MIT license. A copy of the license can be found in the file
 #ifndef MIMALLOC_H
 #define MIMALLOC_H
 
-#define MI_MALLOC_VERSION 303   // major + 2 digits minor
+#define MI_MALLOC_VERSION 315   // major + 2 digits minor
 
 // ------------------------------------------------------
 // Compiler specific attributes
@@ -153,16 +153,20 @@ mi_decl_export void mi_stats_reset(void)      mi_attr_noexcept;
 mi_decl_export void mi_stats_merge(void)      mi_attr_noexcept;
 mi_decl_export void mi_stats_print(void* out) mi_attr_noexcept;  // backward compatibility: `out` is ignored and should be NULL
 mi_decl_export void mi_stats_print_out(mi_output_fun* out, void* arg) mi_attr_noexcept;
-mi_decl_export void mi_options_print(void)    mi_attr_noexcept;
-
-mi_decl_export void mi_process_init(void)     mi_attr_noexcept;
-mi_decl_export void mi_thread_init(void)      mi_attr_noexcept;
-mi_decl_export void mi_thread_done(void)      mi_attr_noexcept;
 mi_decl_export void mi_thread_stats_print_out(mi_output_fun* out, void* arg) mi_attr_noexcept;
+mi_decl_export void mi_options_print(void)    mi_attr_noexcept;
 
 mi_decl_export void mi_process_info(size_t* elapsed_msecs, size_t* user_msecs, size_t* system_msecs,
                                     size_t* current_rss, size_t* peak_rss,
                                     size_t* current_commit, size_t* peak_commit, size_t* page_faults) mi_attr_noexcept;
+
+
+// Generally do not use the following as these are usually called automatically
+mi_decl_export void mi_process_init(void)     mi_attr_noexcept;
+mi_decl_export void mi_cdecl mi_process_done(void) mi_attr_noexcept;
+mi_decl_export void mi_thread_init(void)      mi_attr_noexcept;
+mi_decl_export void mi_thread_done(void)      mi_attr_noexcept;
+
 
 // -------------------------------------------------------------------------------------
 // Aligned allocation
@@ -411,7 +415,8 @@ typedef enum mi_option_e {
   mi_option_max_vabits,                 // max user space virtual address bits to consider (=48)
   mi_option_pagemap_commit,             // commit the full pagemap (to always catch invalid pointer uses) (=0)
   mi_option_page_commit_on_demand,      // commit page memory on-demand
-  mi_option_page_reclaim_max,           // don't reclaim pages if we already own N pages (in that size class) (=16)
+  mi_option_page_max_reclaim,           // don't reclaim pages of the same originating heap if we already own N pages (in that size class) (=-1 (unlimited))
+  mi_option_page_cross_thread_max_reclaim, // don't reclaim pages across threads if we already own N pages (in that size class) (=16)
   _mi_option_last,
   // legacy option names
   mi_option_large_os_pages = mi_option_allow_large_os_pages,
