@@ -21,12 +21,39 @@ To create a repository stored on an S3-compatible server, create an INI file (na
 
 ```ini
 [Repository]
-URL = https://<bucket>.s3.<region>.amazonaws.com/prefix/to/repository
+URL = https://<endpoint>/<bucket>
 
 [S3]
 AccessKeyID = <AWS access key ID>
 SecretKey = <AWS secret key>
 ```
+
+To help you form a valid URL, here are a few examples for common S3 providers:
+
+| Provider                       | URL                                                  | Conditional writes |
+|--------------------------------|------------------------------------------------------|--------------------|
+| Amazon S3 (virtual-host style) | `https://<bucket>.s3.<region>.amazonaws.com`         | Yes                |
+| Amazon S3 (path style)         | `https://s3.<region>.amazonaws.com/<bucket>`         | Yes                |
+| Backblaze B2                   | `https://s3.<region>.backblazeb2.com/<bucket>`       | No                 |
+| CloudFlare R2                  | `https://<userid>.r2.cloudflarestorage.com/<bucket>` | Yes                |
+| Exoscale Object Storage        | `https://sos-<region>.exo.io/<bucket>`               | Yes                |
+| Scaleway Object Storage        | `https://<bucket>.s3.<region>.scw.cloud`             | No                 |
+
+> [!NOTE]
+> Rekkord tries to use conditional PutObject operations (`If-None-Match=*` header) which is not supported by all providers.
+>
+> Some will ignore the header (such as Scaleway Object Storage), some will refuse to run (such as Backblaze B2). In the latter case, set `ConditionalWrites = No` as shown below:
+>
+> ```ini
+> # ...
+>
+> [S3]
+> KeyID = <AWS access key ID>
+> SecretKey = <AWS secret key>
+> ConditionalWrites = No
+> ```
+>
+> However, it is better to use a provider with conditional write support.
 
 You can omit the `SecretKey` value, in which case a prompt will ask you the access key.
 
