@@ -289,7 +289,7 @@ Options:
     switch (ret) {
         case s3_PutResult::Success: return 0;
         case s3_PutResult::ObjectExists: {
-            LogError("");
+            LogError("Object '%1' already exists", key);
             return 1;
         } break;
         case s3_PutResult::OtherError: return 1;
