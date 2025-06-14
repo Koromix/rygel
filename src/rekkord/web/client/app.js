@@ -814,11 +814,11 @@ async function deleteRepository(id) {
 }
 
 function detectType(url) {
+    if (url.startsWith("s3:")) {
+        return 's3';
     if (url.startsWith("http://"))
         return 's3';
     if (url.startsWith("https://"))
-        return 's3';
-    if (url.startsWith("s3://"))
         return 's3';
 
     if (url.startsWith("ssh://"))

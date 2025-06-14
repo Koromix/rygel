@@ -157,19 +157,19 @@ void s3_Config::Clone(s3_Config *out_config) const
 
 bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
 {
+    if (StartsWith(url, "s3:")) {
+        url = url.Take(3, url.len - 3);
+    }
+
     CURLU *h = curl_url();
     RG_DEFER { curl_url_cleanup(h); };
 
-    CURLUcode ret;
+    // Use CURLU to parse URL
     {
         char url0[32768];
+        CopyString(url, url0);
 
-        url.len = std::min(url.len, RG_SIZE(url0) - 1);
-        MemCpy(url0, url.ptr, url.len);
-        url0[url.len] = 0;
-
-        ret = curl_url_set(h, CURLUPART_URL, url0, CURLU_NON_SUPPORT_SCHEME);
-        if (ret != CURLUE_OK) {
+        if (CURLUcode ret = curl_url_set(h, CURLUPART_URL, url0, 0); ret != CURLUE_OK) {
             LogError("Failed to parse URL '%1': %2", url, curl_url_strerror(ret));
             return false;
         }

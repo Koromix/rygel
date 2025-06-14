@@ -94,7 +94,11 @@ bool rk_Config::Validate(bool require_auth) const
 
 static bool LooksLikeS3(Span<const char> str)
 {
-    bool ret = StartsWith(str, "http://") || StartsWith(str, "https://") || StartsWith(str, "s3://");
+    if (StartsWith(str, "s3:")) {
+        str = str.Take(3, str.len - 3);
+    }
+
+    bool ret = StartsWith(str, "http://") || StartsWith(str, "https://");
     return ret;
 }
 
