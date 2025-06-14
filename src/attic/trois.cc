@@ -298,6 +298,56 @@ Options:
     RG_UNREACHABLE();
 }
 
+static int RunDelete(Span<const char *> arguments)
+{
+    // Options
+    const char *url = nullptr;
+    const char *key = nullptr;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 delete [option...] url key)", FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        url = opt.ConsumeNonOption();
+        key = opt.ConsumeNonOption();
+
+        opt.LogUnusedArguments();
+    }
+
+    if (!url) {
+        LogError("Missing S3 URL");
+        return 1;
+    }
+    if (!key) {
+        LogError("Missing object key");
+        return 1;
+    }
+
+    s3_Client s3;
+    if (!ConnectToS3(&s3, url))
+        return 1;
+
+    if (!s3.DeleteObject(key))
+        return 1;
+
+    return 0;
+}
+
 int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
@@ -312,6 +362,7 @@ Commands:
     %!..+has%!0                            Test object
     %!..+get%!0                            Get object
     %!..+put%!0                            Put object
+    %!..+delete%!0                         Delete object
 
 Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)", FelixTarget);
     };
@@ -350,6 +401,8 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         return RunGet(arguments);
     } else if (TestStr(cmd, "put")) {
         return RunPut(arguments);
+    } else if (TestStr(cmd, "delete")) {
+        return RunDelete(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;
