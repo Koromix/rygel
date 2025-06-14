@@ -6,6 +6,20 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.67
+
+*Released on 2025-06-14*
+
+- Support disabling conditional S3 writes
+- Support *S3_DEFAULT_REGION* environment variable
+- Rename S3 access key setting
+- Simplify supported S3 URL schemes
+- Fail early for NotImplemented S3 errors
+- Fix non-working S3 LockMode setting in Rekkord
+- Fix broken compilation on Windows
+- Fix use-after-free in S3 region detection code
+- Use *UNSIGNED-PAYLOAD* to increase S3 performance
+
 ### Rekkord 0.66
 
 *Released on 2025-06-12*
