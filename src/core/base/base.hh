@@ -5438,6 +5438,8 @@ public:
 template <typename T>
 bool OptionToEnum(Span<const char *const> options, Span<const char> str, T *out_value)
 {
+    static_assert(std::is_enum<T>::value);
+
     for (Size i = 0; i < options.len; i++) {
         const char *opt = options[i];
 
@@ -5453,6 +5455,8 @@ bool OptionToEnum(Span<const char *const> options, Span<const char> str, T *out_
 template <typename T>
 bool OptionToEnum(Span<const OptionDesc> options, Span<const char> str, T *out_value)
 {
+    static_assert(std::is_enum<T>::value);
+
     for (Size i = 0; i < options.len; i++) {
         const OptionDesc &desc = options[i];
 
@@ -5468,6 +5472,8 @@ bool OptionToEnum(Span<const OptionDesc> options, Span<const char> str, T *out_v
 template <typename T>
 bool OptionToEnumI(Span<const char *const> options, Span<const char> str, T *out_value)
 {
+    static_assert(std::is_enum<T>::value);
+
     for (Size i = 0; i < options.len; i++) {
         const char *opt = options[i];
 
@@ -5483,6 +5489,8 @@ bool OptionToEnumI(Span<const char *const> options, Span<const char> str, T *out
 template <typename T>
 bool OptionToEnumI(Span<const OptionDesc> options, Span<const char> str, T *out_value)
 {
+    static_assert(std::is_enum<T>::value);
+
     for (Size i = 0; i < options.len; i++) {
         const OptionDesc &desc = options[i];
 

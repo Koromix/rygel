@@ -221,7 +221,7 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                             valid = false;
                         }
                     } else if (prop.key == "LockMode") {
-                        if (!OptionToEnum(s3_LockModeNames, prop.value, &config.s3.retention)) {
+                        if (!OptionToEnum(s3_LockModeNames, prop.value, &config.s3.lock)) {
                             LogError("Invalid lock mode '%1'", prop.value);
                             valid = false;
                         }

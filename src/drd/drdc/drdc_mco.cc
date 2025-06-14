@@ -386,10 +386,12 @@ Test options:
                     }
                 }
             } else if (opt.Test("-d", "--dispense", OptionType::Value)) {
-                if (!OptionToEnumI(mco_DispenseModeOptions, opt.current_value, &dispense_mode)) {
+                mco_DispenseMode mode;
+                if (!OptionToEnumI(mco_DispenseModeOptions, opt.current_value, &mode)) {
                     LogError("Unknown dispensation mode '%1'", opt.current_value);
                     return 1;
                 }
+                dispense_mode = (int)mode;
             } else if (opt.Test("--coeff")) {
                 apply_coefficient = true;
             } else if (opt.Test("-f", "--filter", OptionType::Value)) {
