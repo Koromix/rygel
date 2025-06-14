@@ -4,17 +4,6 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
-## Local filesystem
-
-To create a repository in a local directory, create an INI file (name it how you want) with the following configuration:
-
-```ini
-[Repository]
-URL = /path/to/repository
-```
-
-Once this is done, use [rekkord init](#initialize-repository) to create the repository.
-
 ## S3 storage
 
 To create a repository stored on an S3-compatible server, create an INI file (name it how you want) with the following configuration:
@@ -83,6 +72,17 @@ URL = foo@example.com:/backup
 [SFTP]
 KeyFile = /home/bar/.ssh/id_ed25519
 Fingerprint = SHA256:Y9pmJfkaok8t0dFJrfi8/LLUNhOYwAZGHUNGsYAiJUM
+```
+
+Once this is done, use [rekkord init](#initialize-repository) to create the repository.
+
+## Local filesystem
+
+To create a repository in a local directory, create an INI file (name it how you want) with the following configuration:
+
+```ini
+[Repository]
+URL = /path/to/repository
 ```
 
 Once this is done, use [rekkord init](#initialize-repository) to create the repository.
