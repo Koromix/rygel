@@ -23,6 +23,7 @@ namespace RG {
 class S3Disk: public rk_Disk {
     s3_Client s3;
 
+    bool conditional;
     int64_t retention;
     s3_LockMode lock;
 
@@ -45,7 +46,7 @@ public:
 };
 
 S3Disk::S3Disk(const rk_S3Config &config)
-    : retention(config.retention), lock(config.lock)
+    : conditional(config.conditional), retention(config.retention), lock(config.lock)
 {
     if (!s3.Open(config.remote))
         return;
@@ -89,7 +90,9 @@ Size S3Disk::ReadFile(const char *path, HeapArray<uint8_t> *out_buf)
 
 rk_WriteResult S3Disk::WriteFile(const char *path, Span<const uint8_t> buf, unsigned int flags)
 {
-    s3_PutSettings settings = { .conditional = !(flags & (int)rk_WriteFlag::Overwrite) };
+    s3_PutSettings settings;
+
+    settings.conditional = conditional && !(flags & (int)rk_WriteFlag::Overwrite);
 
     if (retention && (flags & (int)rk_WriteFlag::Lockable)) {
         settings.retention = GetUnixTime() + retention;
