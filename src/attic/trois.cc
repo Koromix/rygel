@@ -33,8 +33,6 @@ static bool ConnectToS3(s3_Client *s3, const char *url)
 
 static int RunList(Span<const char *> arguments)
 {
-    BlockAllocator temp_alloc;
-
     // Options
     const char *url = nullptr;
     const char *prefix = nullptr;
@@ -85,8 +83,6 @@ R"(Usage: %!..+%1 list url [prefix])", FelixTarget);
 
 static int RunHas(Span<const char *> arguments)
 {
-    BlockAllocator temp_alloc;
-
     // Options
     const char *url = nullptr;
     const char *key = nullptr;
@@ -151,8 +147,6 @@ R"(Usage: %!..+%1 has url key)", FelixTarget);
 
 static int RunGet(Span<const char *> arguments)
 {
-    BlockAllocator temp_alloc;
-
     // Options
     const char *url = nullptr;
     const char *key = nullptr;
@@ -218,8 +212,6 @@ R"(Usage: %!..+%1 get url key destination)", FelixTarget);
 
 static int RunPut(Span<const char *> arguments)
 {
-    BlockAllocator temp_alloc;
-
     // Options
     s3_PutSettings settings = {};
     const char *url = nullptr;
