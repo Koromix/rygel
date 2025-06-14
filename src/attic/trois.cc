@@ -226,9 +226,7 @@ Options:
 
     %!..+-t, --mimetype type%!0            Set object mimetype (Content-Type)
 
-        %!..+--conditional%!0              Ask for conditional write
-
-)", FelixTarget);
+        %!..+--conditional%!0              Ask for conditional write)", FelixTarget);
     };
 
     // Parse arguments
