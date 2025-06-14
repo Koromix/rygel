@@ -494,7 +494,7 @@ Size s3_Client::GetObject(Span<const char> key, Span<uint8_t> out_buf)
 Size s3_Client::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj)
 {
     Size prev_len = out_obj->len;
-    RG_DEFER_N(out_guard) { out_obj->RemoveFrom(prev_len); };
+    RG_DEFER_N(err_guard) { out_obj->RemoveFrom(prev_len); };
 
     int64_t size = GetObject(key, [&](Span<const uint8_t> buf) {
         if (max_len >= 0 && out_obj->len - prev_len > max_len - buf.len) {
@@ -508,6 +508,7 @@ Size s3_Client::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t>
     if (size < 0)
         return -1;
 
+    err_guard.Disable();
     return out_obj->len - prev_len;
 }
 
