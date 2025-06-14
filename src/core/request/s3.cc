@@ -306,8 +306,14 @@ bool s3_Client::Open(const s3_Config &config)
     }
 
     if (!this->config.region) {
-        const char *region = GetS3Env("REGION");
-        this->config.region = region ? DuplicateString(region, &this->config.str_alloc).ptr : nullptr;
+        const char *region1 = GetS3Env("REGION");
+        const char *region2 = GetS3Env("DEFAULT_REGION");
+
+        if (region1) {
+            this->config.region = DuplicateString(region1, &this->config.str_alloc).ptr;
+        } else if (region2) {
+            this->config.region = DuplicateString(region2, &this->config.str_alloc).ptr;
+        }
     }
 
     if (this->config.port > 0) {
