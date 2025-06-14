@@ -19,7 +19,7 @@ and exception handling semantics with low overhead.
 API references are available in the [doc](doc/README.md) directory.
 
 <!-- x-release-please-start-version -->
-## Current version: 8.3.1
+## Current version: 8.4.0
 <!-- x-release-please-end -->
 
 (See [CHANGELOG.md](CHANGELOG.md) for complete Changelog)
@@ -92,4 +92,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for more details on our philosophy around
 
 Licensed under [MIT](./LICENSE.md)
 
-[Node-API support matrix]: https://nodejs.org/dist/latest/docs/api/n-api.html#n_api_n_api_version_matrix
+[Node-API support matrix]: https://nodejs.org/dist/latest/docs/api/n-api.html#node-api-version-matrix

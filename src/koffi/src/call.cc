@@ -1073,7 +1073,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 out_kind = OutArgument::Kind::Array; // Whatever, just avoid unitialized warning
             } else if (value.IsArray()) {
                 Napi::Array array = value.As<Napi::Array>();
-                bool string1 = (array.Length() == 1 && ((Napi::Value)array[0u]).IsString());
+                bool string1 = (array.Length() == 1 && (array[0u].AsValue()).IsString());
 
                 if (string1 && (ref->primitive == PrimitiveKind::Int8 ||
                                 ref == instance->void_type)) {
