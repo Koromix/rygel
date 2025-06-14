@@ -130,7 +130,7 @@ You can skip the creation of these two default users with `rekkord init --skip_u
 
 # Repository users
 
-As stated before, by default Rekkord creates three users named *admin*, *data* and *write*. These are enough for simple needs.
+As stated before, by default Rekkord creates four users named *admin*, *data*, *write* and *log*. These are enough for simple needs.
 
 > [!WARNING]
 > Repository users contain the necessary encryption keys for a given role, protected by a password.
