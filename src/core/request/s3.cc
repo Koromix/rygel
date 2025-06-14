@@ -130,11 +130,11 @@ bool s3_Config::Validate() const
     }
 
     if (!access_id) {
-        LogError("Missing AWS key ID (S3_ACCESS_KEY_ID) variable");
+        LogError("Missing S3 access key ID (S3_ACCESS_KEY_ID) variable");
         return false;
     }
     if (!access_key) {
-        LogError("Missing AWS secret key (S3_SECRET_ACCESS_KEY) variable");
+        LogError("Missing S3 secret key (S3_SECRET_ACCESS_KEY) variable");
         return false;
     }
 
