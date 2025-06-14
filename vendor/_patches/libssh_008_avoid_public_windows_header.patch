@@ -162,3 +162,64 @@ index 0f3f43816..8ba446a5a 100644
  
      if (s->fd >= 0 &&
          s->fd >= *max_fd &&
+diff --git a/vendor/libssh/src/channels.c b/vendor/libssh/src/channels.c
+index 72f441020..345a37812 100644
+--- a/vendor/libssh/src/channels.c
++++ b/vendor/libssh/src/channels.c
+@@ -34,9 +34,8 @@
+ #include <sys/time.h>
+ #endif /* HAVE_SYS_TIME_H */
+ 
+-#ifndef _WIN32
+-#include <netinet/in.h>
+-#include <arpa/inet.h>
++#ifdef _WIN32
++#include <winsock2.h>
+ #endif
+ 
+ #include "libssh/priv.h"
+diff --git a/vendor/libssh/src/log.c b/vendor/libssh/src/log.c
+index bef65a84d..1c3c358b8 100644
+--- a/vendor/libssh/src/log.c
++++ b/vendor/libssh/src/log.c
+@@ -34,6 +34,10 @@
+ #endif /* HAVE_SYS_UTIME_H */
+ #include <time.h>
+ 
++#ifdef _WIN32
++#include <winsock2.h>
++#endif
++
+ #include "libssh/priv.h"
+ #include "libssh/misc.h"
+ #include "libssh/session.h"
+diff --git a/vendor/libssh/src/poll.c b/vendor/libssh/src/poll.c
+index 8f81c11c8..dee30dd1f 100644
+--- a/vendor/libssh/src/poll.c
++++ b/vendor/libssh/src/poll.c
+@@ -28,6 +28,10 @@
+ #include <errno.h>
+ #include <stdlib.h>
+ 
++#ifdef _WIN32
++#include <winsock2.h>
++#endif
++
+ #include "libssh/priv.h"
+ #include "libssh/libssh.h"
+ #include "libssh/poll.h"
+diff --git a/vendor/libssh/src/sftp.c b/vendor/libssh/src/sftp.c
+index 097604069..916593805 100644
+--- a/vendor/libssh/src/sftp.c
++++ b/vendor/libssh/src/sftp.c
+@@ -39,7 +39,9 @@
+ #include <sys/stat.h>
+ #include <limits.h>
+ 
+-#ifndef _WIN32
++#ifdef _WIN32
++#include <winsock2.h>
++#else
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+ #endif

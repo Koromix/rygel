@@ -34,6 +34,10 @@
 #endif /* HAVE_SYS_UTIME_H */
 #include <time.h>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
+
 #include "libssh/priv.h"
 #include "libssh/misc.h"
 #include "libssh/session.h"

@@ -34,9 +34,8 @@
 #include <sys/time.h>
 #endif /* HAVE_SYS_TIME_H */
 
-#ifndef _WIN32
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#ifdef _WIN32
+#include <winsock2.h>
 #endif
 
 #include "libssh/priv.h"
