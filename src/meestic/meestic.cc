@@ -578,7 +578,7 @@ Be careful, color names and most options are %!..+case-sensitive%!0.)", FelixTar
                 print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-m", "--mode", OptionType::Value)) {
-                if (!OptionToEnum(LightModeOptions, opt.current_value, &settings.mode)) {
+                if (!OptionToEnumI(LightModeOptions, opt.current_value, &settings.mode)) {
                     LogError("Invalid mode '%1'", opt.current_value);
                     return 1;
                 }
