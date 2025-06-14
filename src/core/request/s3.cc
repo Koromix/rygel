@@ -71,7 +71,7 @@ bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<c
         return true;
     } else if (key == "PathMode") {
         return ParseBool(value, &path_mode);
-    } else if (key == "KeyID") {
+    } else if (key == "AccessKeyID" || key == "KeyID") {
         access_id = DuplicateString(value, &str_alloc).ptr;
         return true;
     } else if (key == "SecretKey") {

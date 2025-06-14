@@ -24,7 +24,7 @@ To create a repository stored on an S3-compatible server, create an INI file (na
 URL = https://<bucket>.s3.<region>.amazonaws.com/prefix/to/repository
 
 [S3]
-KeyID = <AWS access key ID>
+AccessKeyID = <AWS access key ID>
 SecretKey = <AWS secret key>
 ```
 
