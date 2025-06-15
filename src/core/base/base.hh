@@ -5414,8 +5414,9 @@ public:
     OptionParser(Span<const char *> args, OptionMode mode = OptionMode::Rotate)
         : args(args), mode(mode), limit(args.len) {}
     OptionParser(int argc, char **argv, OptionMode mode = OptionMode::Rotate)
-        : args(argc > 0 ? (const char **)(argv + 1) : nullptr, std::max(0, argc - 1)),
-          mode(mode), limit(args.len) {}
+        : args((const char **)argv, argc), mode(mode), pos(1), limit(args.len) {}
+
+    Size GetPosition() const { return pos; }
 
     const char *Next();
 

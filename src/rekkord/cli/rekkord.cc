@@ -51,9 +51,7 @@ R"(Common options:
 
 rk_Config rekkord_config;
 
-static const char *config_filename = nullptr;
-
-bool HandleCommonOption(OptionParser &opt)
+bool HandleCommonOption(OptionParser &opt, bool ignore_unknown)
 {
     if (opt.Test("-C", "--config_file", OptionType::Value)) {
         // Already handled
@@ -71,17 +69,20 @@ bool HandleCommonOption(OptionParser &opt)
             LogError("Threads count cannot be < 1");
             return 1;
         }
-    } else {
+    } else if (!ignore_unknown) {
         opt.LogUnknownError();
         return false;
     }
 
-    return true;
+    return !opt.TestHasFailed();
 }
 
 int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
+
+    // Global options
+    const char *config_filename = GetEnv("REKKORD_CONFIG_FILE");
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
@@ -141,27 +142,18 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
     }
     RG_DEFER { ssh_finalize(); };
 
-    const char *cmd = argv[1];
-    Span<const char *> arguments((const char **)argv + 2, argc - 2);
-
     // Handle help and version arguments
-    if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
-        if (arguments.len && arguments[0][0] != '-') {
-            cmd = arguments[0];
-            arguments[0] = (cmd[0] == '-') ? cmd : "--help";
-        } else {
-            print_usage(StdOut);
-            return 0;
-        }
-    } else if (TestStr(cmd, "--version")) {
+    if (TestStr(argv[1], "help")) {
+        argv[1] = (char *)"--help";
+    } else if (TestStr(argv[1], "--version")) {
         PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
         PrintLn("Compiler: %1", FelixCompiler);
         return 0;
     }
 
-    // Find config filename
+    // Find config filename (if any)
     {
-        OptionParser opt(arguments, OptionMode::Skip);
+        OptionParser opt(argc, argv, OptionMode::Skip);
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
@@ -176,34 +168,81 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         }
     }
 
-#define HANDLE_COMMAND(Cmd, Func) \
-        do { \
-            if (TestStr(cmd, RG_STRINGIFY(Cmd))) { \
-                if (config_filename && !rk_LoadConfig(config_filename, &rekkord_config)) \
-                    return 1; \
-                 \
-                return Func(arguments); \
-            } \
-        } while (false)
+    if (config_filename && !rk_LoadConfig(config_filename, &rekkord_config))
+        return 1;
 
-    HANDLE_COMMAND(init, RunInit);
-    HANDLE_COMMAND(add_user, RunAddUser);
-    HANDLE_COMMAND(delete_user, RunDeleteUser);
-    HANDLE_COMMAND(list_users, RunListUsers);
-    HANDLE_COMMAND(save, RunSave);
-    HANDLE_COMMAND(restore, RunRestore);
-    HANDLE_COMMAND(check, RunCheck);
-    HANDLE_COMMAND(snapshots, RunSnapshots);
-    HANDLE_COMMAND(channels, RunChannels);
-    HANDLE_COMMAND(list, RunList);
-    HANDLE_COMMAND(mount, RunMount);
-    HANDLE_COMMAND(change_cid, RunChangeCID);
-    HANDLE_COMMAND(reset_cache, RunResetCache);
+    const char *cmd = nullptr;
+    Span<const char *> arguments = {};
 
-#undef HANDLE_COMMAND
+    // Handle common options set before command
+    {
+        OptionParser opt(argc, argv, OptionMode::Stop);
+        bool help = false;
 
-    LogError("Unknown command '%1'", cmd);
-    return 1;
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                help = true;
+                break;
+            } else if (!HandleCommonOption(opt, true)) {
+                return 1;
+            }
+        }
+
+        Size pos = opt.GetPosition();
+
+        if (help) {
+            if (pos < argc && argv[pos][0] != '-') {
+                static const char *HelpArguments[] = { "--help" };
+
+                cmd = argv[pos];
+                arguments = HelpArguments;
+            } else {
+                print_usage(StdOut);
+                return 0;
+            }
+        } else {
+            if (pos >= argc) {
+                print_usage(StdErr);
+                PrintLn(StdErr);
+                LogError("No command provided");
+                return 1;
+            }
+
+            cmd = argv[pos];
+            arguments = MakeSpan((const char **)argv + pos + 1, argc - pos - 1);
+        }
+    }
+
+    if (TestStr(cmd, "init")) {
+        return RunInit(arguments);
+    } else if (TestStr(cmd, "add_user")) {
+        return RunAddUser(arguments);
+    } else if (TestStr(cmd, "delete_user")) {
+        return RunDeleteUser(arguments);
+    } else if (TestStr(cmd, "list_users")) {
+        return RunListUsers(arguments);
+    } else if (TestStr(cmd, "save")) {
+        return RunSave(arguments);
+    } else if (TestStr(cmd, "restore")) {
+        return RunRestore(arguments);
+    } else if (TestStr(cmd, "check")) {
+        return RunCheck(arguments);
+    } else if (TestStr(cmd, "snapshots")) {
+        return RunSnapshots(arguments);
+    } else if (TestStr(cmd, "channels")) {
+        return RunChannels(arguments);
+    } else if (TestStr(cmd, "list")) {
+        return RunList(arguments);
+    } else if (TestStr(cmd, "mount")) {
+        return RunMount(arguments);
+    } else if (TestStr(cmd, "change_cid")) {
+        return RunChangeCID(arguments);
+    } else if (TestStr(cmd, "reset_cache")) {
+        return RunResetCache(arguments);
+    } else {
+        LogError("Unknown command '%1'", cmd);
+        return 1;
+    }
 }
 
 #if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__OpenBSD__)
