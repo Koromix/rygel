@@ -1302,6 +1302,9 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
 
 void ListContext::MakeProgress(int64_t entries)
 {
+    if (!settings.recurse)
+        return;
+
     entries = known_entries.fetch_add(entries, std::memory_order_relaxed) + entries;
 
     if (total_entries) {
@@ -1336,7 +1339,6 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
             DirectoryHeader *header = (DirectoryHeader *)blob.ptr;
             int64_t entries = LittleEndian(header->entries);
 
-            ProgressHandle progress;
             ListContext tree(repo, settings, entries);
 
             if (!tree.RecurseEntries(blob, false, 0, alloc, out_objects))
