@@ -31,6 +31,10 @@ static const char *const OutputFormatNames[] = {
     "XML"
 };
 
-bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config);
+extern const char *const CommonOptions;
+
+extern rk_Config rekkord_config;
+
+bool HandleCommonOption(OptionParser &opt);
 
 }

@@ -32,6 +32,11 @@ bool rk_Config::Complete(bool require_auth)
     if (!rk_DecodeURL(url, this))
         return false;
 
+    if (require_auth && key_filename) {
+        // No need for username or password in this case
+        require_auth = false;
+    }
+
     if (require_auth && !username) {
         username = GetEnv("REKKORD_USER");
         if (!username) {

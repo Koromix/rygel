@@ -20,23 +20,12 @@ namespace RG {
 
 int RunChangeCID(Span<const char *> arguments)
 {
-    // Options
-    rk_Config config;
-
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 change_cid [-C filename] [option...]%!0
-
-Options:
-
-    %!..+-C, --config_file filename%!0     Set configuration file
-
-    %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username)", FelixTarget);
+)", FelixTarget);
+        PrintLn(st, CommonOptions);
     };
-
-    if (!FindAndLoadConfig(arguments, &config))
-        return 1;
 
     // Parse arguments
     {
@@ -46,15 +35,7 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                // Already handled
-            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                if (!rk_DecodeURL(opt.current_value, &config))
-                    return 1;
-            } else if (opt.Test("-u", "--username", OptionType::Value)) {
-                config.username = opt.current_value;
-            } else {
-                opt.LogUnknownError();
+            } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
         }
@@ -62,11 +43,11 @@ Options:
         opt.LogUnusedArguments();
     }
 
-    if (!config.Complete(true))
+    if (!rekkord_config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
     if (!repo)
         return 1;
 
@@ -88,25 +69,18 @@ Options:
 int RunResetCache(Span<const char *> arguments)
 {
     // Options
-    rk_Config config;
     bool list = true;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 reset_cache [-C filename] [option...]%!0
+)", FelixTarget);
+        PrintLn(st, CommonOptions);
+        PrintLn(st, R"(
+Cache options:
 
-Options:
-
-    %!..+-C, --config_file filename%!0     Set configuration file
-
-    %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username
-
-        %!..+--clear%!0                    Skip list of existing blobs)", FelixTarget);
+        %!..+--clear%!0                    Skip list of existing blobs)");
     };
-
-    if (!FindAndLoadConfig(arguments, &config))
-        return 1;
 
     // Parse arguments
     {
@@ -116,17 +90,9 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                // Already handled
-            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                if (!rk_DecodeURL(opt.current_value, &config))
-                    return 1;
-            } else if (opt.Test("-u", "--username", OptionType::Value)) {
-                config.username = opt.current_value;
             } else if (opt.Test("--clear")) {
                 list = false;
-            } else {
-                opt.LogUnknownError();
+            } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
         }
@@ -134,11 +100,11 @@ Options:
         opt.LogUnusedArguments();
     }
 
-    if (!config.Complete(true))
+    if (!rekkord_config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
     if (!repo)
         return 1;
 

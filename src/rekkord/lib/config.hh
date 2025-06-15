@@ -42,6 +42,7 @@ struct rk_Config {
 
     const char *username = nullptr;
     const char *password = nullptr;
+    const char *key_filename = nullptr;
 
     rk_DiskType type = rk_DiskType::Local;
     rk_S3Config s3;

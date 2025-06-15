@@ -40,20 +40,41 @@ int RunMount(Span<const char *> arguments);
 int RunChangeCID(Span<const char *> arguments);
 int RunResetCache(Span<const char *> arguments);
 
-bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config)
+const char *const CommonOptions =
+R"(Common options:
+
+    %!..+-C, --config_file filename%!0     Set configuration file
+
+    %!..+-R, --repository URL%!0           Set repository URL
+    %!..+-u, --user username%!0            Set repository username
+    %!..+-K, --key_file filename%!0        Use master key instead of username/password)";
+
+rk_Config rekkord_config;
+
+static const char *config_filename = nullptr;
+
+bool HandleCommonOption(OptionParser &opt)
 {
-    OptionParser opt(arguments, OptionMode::Skip);
-
-    const char *config_filename = GetEnv("REKKORD_CONFIG_FILE");
-
-    while (opt.Next()) {
-        if (opt.Test("-C", "--config_file", OptionType::Value)) {
-            config_filename = opt.current_value;
+    if (opt.Test("-C", "--config_file", OptionType::Value)) {
+        // Already handled
+    } else if (opt.Test("-R", "--repository", OptionType::Value)) {
+        if (!rk_DecodeURL(opt.current_value, &rekkord_config))
+            return 1;
+    } else if (opt.Test("-u", "--username", OptionType::Value)) {
+        rekkord_config.username = opt.current_value;
+    } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
+        rekkord_config.key_filename = opt.current_value;
+    } else if (opt.Test("-j", "--threads", OptionType::Value)) {
+        if (!ParseInt(opt.current_value, &rekkord_config.threads))
+            return 1;
+        if (rekkord_config.threads < 1) {
+            LogError("Threads count cannot be < 1");
+            return 1;
         }
-    }
-
-    if (config_filename && !rk_LoadConfig(config_filename, out_config))
+    } else {
+        opt.LogUnknownError();
         return false;
+    }
 
     return true;
 }
@@ -62,7 +83,7 @@ int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
 
-    const auto print_usage = [](StreamWriter *st, bool advanced) {
+    const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 command [arg...]%!0
 
@@ -85,26 +106,19 @@ Exploration commands:
     %!..+snapshots%!0                      List known snapshots
     %!..+channels%!0                       Show status of snapshot channels
     %!..+list%!0                           List snapshot or directory children
-    %!..+mount%!0                          Mount repository readonly as user filesystem)", FelixTarget);
+    %!..+mount%!0                          Mount repository readonly as user filesystem
 
-        if (advanced) {
-            PrintLn(st, R"(
 Advanced commands:
 
     %!..+change_cid%!0                     Change repository cache ID (CID)
     %!..+reset_cache%!0                    Reset or rebuild local repository cache
-    %!..+check_blobs%!0                    Detect corrupt blobs)");
-        } else {
-            PrintLn(st, R"(
-Advanced and low-level commands are hidden, use %!..+rekkord --help all%!0 to reveal them.)");
-        }
+    %!..+check_blobs%!0                    Detect corrupt blobs
 
-        PrintLn(st, R"(
 Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)", FelixTarget);
     };
 
     if (argc < 2) {
-        print_usage(StdErr, false);
+        print_usage(StdErr);
         PrintLn(StdErr);
         LogError("No command provided");
         return 1;
@@ -134,15 +148,10 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
     // Handle help and version arguments
     if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
         if (arguments.len && arguments[0][0] != '-') {
-            if (TestStr(arguments[0], "all")) {
-                print_usage(StdOut, true);
-                return 0;
-            } else {
-                cmd = arguments[0];
-                arguments[0] = (cmd[0] == '-') ? cmd : "--help";
-            }
+            cmd = arguments[0];
+            arguments[0] = (cmd[0] == '-') ? cmd : "--help";
         } else {
-            print_usage(StdOut, false);
+            print_usage(StdOut);
             return 0;
         }
     } else if (TestStr(cmd, "--version")) {
@@ -151,36 +160,51 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         return 0;
     }
 
-    if (TestStr(cmd, "init")) {
-        return RunInit(arguments);
-    } else if (TestStr(cmd, "add_user")) {
-        return RunAddUser(arguments);
-    } else if (TestStr(cmd, "delete_user")) {
-        return RunDeleteUser(arguments);
-    } else if (TestStr(cmd, "list_users")) {
-        return RunListUsers(arguments);
-    } else if (TestStr(cmd, "save")) {
-        return RunSave(arguments);
-    } else if (TestStr(cmd, "restore")) {
-        return RunRestore(arguments);
-    } else if (TestStr(cmd, "check")) {
-        return RunCheck(arguments);
-    } else if (TestStr(cmd, "snapshots")) {
-        return RunSnapshots(arguments);
-    } else if (TestStr(cmd, "channels")) {
-        return RunChannels(arguments);
-    } else if (TestStr(cmd, "list")) {
-        return RunList(arguments);
-    } else if (TestStr(cmd, "mount")) {
-        return RunMount(arguments);
-    } else if (TestStr(cmd, "change_cid")) {
-        return RunChangeCID(arguments);
-    } else if (TestStr(cmd, "reset_cache")) {
-        return RunResetCache(arguments);
-    } else {
-        LogError("Unknown command '%1'", cmd);
-        return 1;
+    // Find config filename
+    {
+        OptionParser opt(arguments, OptionMode::Skip);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                // Don't try to load anything in this case
+                config_filename = nullptr;
+                break;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                config_filename = opt.current_value;
+            } else if (opt.TestHasFailed()) {
+                return 1;
+            }
+        }
     }
+
+#define HANDLE_COMMAND(Cmd, Func) \
+        do { \
+            if (TestStr(cmd, RG_STRINGIFY(Cmd))) { \
+                if (config_filename && !rk_LoadConfig(config_filename, &rekkord_config)) \
+                    return 1; \
+                 \
+                return Func(arguments); \
+            } \
+        } while (false)
+
+    HANDLE_COMMAND(init, RunInit);
+    HANDLE_COMMAND(add_user, RunAddUser);
+    HANDLE_COMMAND(delete_user, RunDeleteUser);
+    HANDLE_COMMAND(list_users, RunListUsers);
+    HANDLE_COMMAND(save, RunSave);
+    HANDLE_COMMAND(restore, RunRestore);
+    HANDLE_COMMAND(check, RunCheck);
+    HANDLE_COMMAND(snapshots, RunSnapshots);
+    HANDLE_COMMAND(channels, RunChannels);
+    HANDLE_COMMAND(list, RunList);
+    HANDLE_COMMAND(mount, RunMount);
+    HANDLE_COMMAND(change_cid, RunChangeCID);
+    HANDLE_COMMAND(reset_cache, RunResetCache);
+
+#undef HANDLE_COMMAND
+
+    LogError("Unknown command '%1'", cmd);
+    return 1;
 }
 
 #if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__OpenBSD__)

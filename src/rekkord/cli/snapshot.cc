@@ -23,7 +23,6 @@ int RunSave(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    rk_Config config;
     rk_SaveSettings settings;
     bool raw = false;
     const char *channel = nullptr;
@@ -33,13 +32,10 @@ int RunSave(Span<const char *> arguments)
         PrintLn(st,
 R"(Usage: %!..+%1 save [-C filename] [option...] channel path...%!0
        %!..+%1 save [-C filename] [option...] --raw path...%!0
-
-Options:
-
-    %!..+-C, --config_file filename%!0     Set configuration file
-
-    %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username
+)", FelixTarget);
+        PrintLn(st, CommonOptions);
+        PrintLn(st, R"(
+Save options:
 
         %!..+--raw%!0                      Skip snapshot object and report data OID
 
@@ -54,11 +50,8 @@ Options:
 Available metadata save options:
 
     %!..+ATime%!0                          Store atime (access time) values
-    %!..+XAttrs%!0                         Store extended attributes and ACLs (when supported))", FelixTarget);
+    %!..+XAttrs%!0                         Store extended attributes and ACLs (when supported))");
     };
-
-    if (!FindAndLoadConfig(arguments, &config))
-        return 1;
 
     // Parse arguments
     {
@@ -68,13 +61,6 @@ Available metadata save options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                // Already handled
-            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                if (!rk_DecodeURL(opt.current_value, &config))
-                    return 1;
-            } else if (opt.Test("-u", "--username", OptionType::Value)) {
-                config.username = opt.current_value;
             } else if (opt.Test("--follow")) {
                 settings.follow = true;
             } else if (opt.Test("-m", "--meta", OptionType::Value)) {
@@ -98,15 +84,7 @@ Available metadata save options:
                 settings.noatime = true;
             } else if (opt.Test("--raw")) {
                 raw = true;
-            } else if (opt.Test("-j", "--threads", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &config.threads))
-                    return 1;
-                if (config.threads < 1) {
-                    LogError("Threads count cannot be < 1");
-                    return 1;
-                }
-            } else {
-                opt.LogUnknownError();
+            } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
         }
@@ -128,16 +106,13 @@ Available metadata save options:
         return 1;
     }
 
-    if (!config.Complete(true))
+    if (!rekkord_config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
     if (!repo)
         return 1;
-
-    ZeroSafe((void *)config.password, strlen(config.password));
-    config.password = nullptr;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Write)) {
@@ -178,7 +153,6 @@ int RunRestore(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    rk_Config config;
     rk_RestoreSettings settings;
     const char *identifier = nullptr;
     const char *dest_filename = nullptr;
@@ -186,13 +160,10 @@ int RunRestore(Span<const char *> arguments)
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 restore [-C filename] [option...] identifier destination%!0
-
-Options:
-
-    %!..+-C, --config_file filename%!0     Set configuration file
-
-    %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username
+)", FelixTarget);
+        PrintLn(st, CommonOptions);
+        PrintLn(st, R"(
+Restore options:
 
     %!..+-f, --force%!0                    Overwrite destination files
         %!..+--delete%!0                   Delete extraneous files from destination
@@ -211,11 +182,8 @@ Available metadata restoration options:
     %!..+XAttrs%!0                         Restore extended attributes and ACLs (when supported)
 
 Use an object ID (OID) or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<OID|channel>[:<path>]%!0.
-If you use a snapshot channel, rekkord will use the most recent snapshot object that matches.)", FelixTarget);
+If you use a snapshot channel, the most recent snapshot object that matches will be used.)");
     };
-
-    if (!FindAndLoadConfig(arguments, &config))
-        return 1;
 
     // Parse arguments
     {
@@ -225,13 +193,6 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                // Already handled
-            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                if (!rk_DecodeURL(opt.current_value, &config))
-                    return 1;
-            } else if (opt.Test("-u", "--username", OptionType::Value)) {
-                config.username = opt.current_value;
             } else if (opt.Test("-f", "--force")) {
                 settings.force = true;
             } else if (opt.Test("--delete")) {
@@ -257,15 +218,7 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
                 settings.verbose = true;
             } else if (opt.Test("-n", "--dry_run")) {
                 settings.fake = true;
-            } else if (opt.Test("-j", "--threads", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &config.threads))
-                    return 1;
-                if (config.threads < 1) {
-                    LogError("Threads count cannot be < 1");
-                    return 1;
-                }
-            } else {
-                opt.LogUnknownError();
+            } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
         }
@@ -285,16 +238,13 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
         return 1;
     }
 
-    if (!config.Complete(true))
+    if (!rekkord_config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
     if (!repo)
         return 1;
-
-    ZeroSafe((void *)config.password, strlen(config.password));
-    config.password = nullptr;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Read)) {
@@ -332,23 +282,12 @@ int RunCheck(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
-    // Options
-    rk_Config config;
-
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 check [-C filename] [option...]%!0
-
-Options:
-
-    %!..+-C, --config_file filename%!0     Set configuration file
-
-    %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username)", FelixTarget);
+)", FelixTarget);
+        PrintLn(st, CommonOptions);
     };
-
-    if (!FindAndLoadConfig(arguments, &config))
-        return 1;
 
     // Parse arguments
     {
@@ -358,15 +297,7 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                // Already handled
-            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                if (!rk_DecodeURL(opt.current_value, &config))
-                    return 1;
-            } else if (opt.Test("-u", "--username", OptionType::Value)) {
-                config.username = opt.current_value;
-            } else {
-                opt.LogUnknownError();
+            } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
         }
@@ -374,11 +305,11 @@ Options:
         opt.LogUnusedArguments();
     }
 
-    if (!config.Complete(true))
+    if (!rekkord_config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
     if (!repo)
         return 1;
 

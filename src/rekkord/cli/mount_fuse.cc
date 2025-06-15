@@ -441,7 +441,6 @@ int RunMount(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    rk_Config config;
     bool foreground = false;
     bool debug = false;
     HeapArray<const char *> fuse_options;
@@ -451,16 +450,10 @@ int RunMount(Span<const char *> arguments)
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 mount [-C filename] [option...] identifier mountpoint%!0
-
-Options:
-
-    %!..+-C, --config_file filename%!0     Set configuration file
-
-    %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username
-
-    %!..+-j, --threads threads%!0          Change number of threads
-                                   %!D..(default: automatic)%!0
+)", FelixTarget);
+        PrintLn(st, CommonOptions);
+        PrintLn(st, R"(
+Mount options:
 
     %!..+-f, --foreground%!0               Run mount process in foreground
 
@@ -472,11 +465,8 @@ Options:
         %!..+--debug%!0                    Debug FUSE calls
 
 Use an object ID (OID) or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<OID|channel>[:<path>]%!0.
-If you use a snapshot channel, rekkord will use the most recent snapshot object that matches.)", FelixTarget);
+If you use a snapshot channel, the most recent snapshot object that matches will be used.)");
     };
-
-    if (!FindAndLoadConfig(arguments, &config))
-        return 1;
 
     // Parse arguments
     {
@@ -486,20 +476,6 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                // Already handled
-            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                if (!rk_DecodeURL(opt.current_value, &config))
-                    return 1;
-            } else if (opt.Test("-u", "--username", OptionType::Value)) {
-                config.username = opt.current_value;
-            } else if (opt.Test("-j", "--threads", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &config.threads))
-                    return 1;
-                if (config.threads < 1) {
-                    LogError("Threads count cannot be < 1");
-                    return 1;
-                }
             } else if (opt.Test("-f", "--foreground")) {
                 foreground = true;
             } else if (opt.Test("--debug")) {
@@ -514,8 +490,7 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
                 fuse_options.Append("allow_root");
             } else if (opt.Test("--owner_root")) {
                 fuse_options.Append("owner_root");
-            } else {
-                opt.LogUnknownError();
+            } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
         }
@@ -535,9 +510,6 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
         return 1;
     }
 
-    if (!config.Complete(true))
-        return 1;
-
     // Normalize mount point
     mountpoint = Fmt(&temp_alloc, "%1/", TrimStrRight(mountpoint, '/')).ptr;
 
@@ -552,19 +524,19 @@ If you use a snapshot channel, rekkord will use the most recent snapshot object 
         }
     }
 
+    if (!rekkord_config.Complete(true))
+        return 1;
+
     // We keep these objects in globals for simplicity, but we need to destroy them at the end
     // of this function, before some exit functions (such as ssh_finalize) are called.
-    disk = rk_OpenDisk(config);
-    repo = rk_OpenRepository(disk.get(), config, true);
+    disk = rk_OpenDisk(rekkord_config);
+    repo = rk_OpenRepository(disk.get(), rekkord_config, true);
     if (!repo)
         return 1;
     RG_DEFER {
         repo.reset(nullptr);
         disk.reset(nullptr);
     };
-
-    ZeroSafe((void *)config.password, strlen(config.password));
-    config.password = nullptr;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Read)) {

@@ -1763,13 +1763,24 @@ std::unique_ptr<rk_Repository> rk_OpenRepository(rk_Disk *disk, const rk_Config 
         return nullptr;
 
     int threads = (config.threads >= 0) ? config.threads : disk->GetDefaultThreads();
-    const char *username = authenticate ? config.username : nullptr;
-    const char *password = authenticate ? config.password : nullptr;
-
     std::unique_ptr<rk_Repository> repo = std::make_unique<rk_Repository>(disk, threads, config.compression_level);
 
-    if (authenticate && !repo->Authenticate(username, password))
-        return nullptr;
+    if (authenticate) {
+        if (config.key_filename) {
+            Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
+            RG_DEFER_C(len = mkey.len) { ReleaseSafe(mkey.ptr, len); };
+
+            mkey.len = ReadFile(config.key_filename, mkey);
+            if (mkey.len < 0)
+                return nullptr;
+
+            if (!repo->Authenticate(mkey))
+                return nullptr;
+        } else {
+            if (!repo->Authenticate(config.username, config.password))
+                return nullptr;
+        }
+    }
 
     return repo;
 }

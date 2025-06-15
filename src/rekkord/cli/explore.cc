@@ -40,7 +40,6 @@ int RunSnapshots(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    rk_Config config;
     OutputFormat format = OutputFormat::Plain;
     HeapArray<int> sorts;
     int verbose = 0;
@@ -50,33 +49,25 @@ int RunSnapshots(Span<const char *> arguments)
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 snapshots [-C filename] [option...]%!0
-
-Options:
-
-    %!..+-C, --config_file filename%!0     Set configuration file
-
-    %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username
-
-    %!..+-j, --threads threads%!0          Change number of threads
-                                   %!D..(default: automatic)%!0
+)", FelixTarget);
+        PrintLn(st, CommonOptions);
+        PrintLn(st, R"(
+Snapshot options:
 
     %!..+-f, --format format%!0            Change output format
-                                   %!D..(default: %2)%!0
+                                   %!D..(default: %1)%!0
+    %!..+-v, --verbose%!0                  Enable verbose output (plain only)
+
     %!..+-s, --sort sort%!0                Change sort order
                                    %!D..(default: Time)%!0
-    %!..+-v, --verbose%!0                  Enable verbose output (plain only)
 
     %!..+-c, --channel channel%!0          Only show snapshots for specific channel
     %!..+-p, --pattern pattern%!0          Filter snapshot channels with glob-like pattern
 
-Available output formats: %!..+%3%!0
-Available sort orders: %!..+%4%!0)",
-                FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames), FmtSpan(SortOrderNames));
+Available output formats: %!..+%2%!0
+Available sort orders: %!..+%3%!0)",
+                OutputFormatNames[(int)format], FmtSpan(OutputFormatNames), FmtSpan(SortOrderNames));
     };
-
-    if (!FindAndLoadConfig(arguments, &config))
-        return 1;
 
     // Parse arguments
     {
@@ -86,20 +77,6 @@ Available sort orders: %!..+%4%!0)",
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                // Already handled
-            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                if (!rk_DecodeURL(opt.current_value, &config))
-                    return 1;
-            } else if (opt.Test("-u", "--username", OptionType::Value)) {
-                config.username = opt.current_value;
-            } else if (opt.Test("-j", "--threads", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &config.threads))
-                    return 1;
-                if (config.threads < 1) {
-                    LogError("Threads count cannot be < 1");
-                    return 1;
-                }
             } else if (opt.Test("-f", "--format", OptionType::Value)) {
                 if (!OptionToEnumI(OutputFormatNames, opt.current_value, &format)) {
                     LogError("Unknown output format '%1'", opt.current_value);
@@ -131,8 +108,7 @@ Available sort orders: %!..+%4%!0)",
                 channel = opt.current_value;
             } else if (opt.Test("-p", "--pattern", OptionType::Value)) {
                 pattern = opt.current_value;
-            } else {
-                opt.LogUnknownError();
+            } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
         }
@@ -145,16 +121,13 @@ Available sort orders: %!..+%4%!0)",
         return 1;
     }
 
-    if (!config.Complete(true))
+    if (!rekkord_config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
     if (!repo)
         return 1;
-
-    ZeroSafe((void *)config.password, strlen(config.password));
-    config.password = nullptr;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Log)) {
@@ -304,34 +277,24 @@ int RunChannels(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    rk_Config config;
     OutputFormat format = OutputFormat::Plain;
     int verbose = 0;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 channels [-C filename] [option...]%!0
-
-Options:
-
-    %!..+-C, --config_file filename%!0     Set configuration file
-
-    %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username
-
-    %!..+-j, --threads threads%!0          Change number of threads
-                                   %!D..(default: automatic)%!0
+)", FelixTarget);
+        PrintLn(st, CommonOptions);
+        PrintLn(st, R"(
+Channel options:
 
     %!..+-f, --format format%!0            Change output format
-                                   %!D..(default: %2)%!0
+                                   %!D..(default: %1)%!0
     %!..+-v, --verbose%!0                  Enable verbose output (plain only)
 
-Available output formats: %!..+%3%!0)",
-                FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
+Available output formats: %!..+%2%!0)",
+                OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
     };
-
-    if (!FindAndLoadConfig(arguments, &config))
-        return 1;
 
     // Parse arguments
     {
@@ -341,20 +304,6 @@ Available output formats: %!..+%3%!0)",
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                // Already handled
-            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                if (!rk_DecodeURL(opt.current_value, &config))
-                    return 1;
-            } else if (opt.Test("-u", "--username", OptionType::Value)) {
-                config.username = opt.current_value;
-            } else if (opt.Test("-j", "--threads", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &config.threads))
-                    return 1;
-                if (config.threads < 1) {
-                    LogError("Threads count cannot be < 1");
-                    return 1;
-                }
             } else if (opt.Test("-f", "--format", OptionType::Value)) {
                 if (!OptionToEnumI(OutputFormatNames, opt.current_value, &format)) {
                     LogError("Unknown output format '%1'", opt.current_value);
@@ -362,8 +311,7 @@ Available output formats: %!..+%3%!0)",
                 }
             } else if (opt.Test("-v", "--verbose")) {
                 verbose++;
-            } else {
-                opt.LogUnknownError();
+            } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
         }
@@ -371,16 +319,13 @@ Available output formats: %!..+%3%!0)",
         opt.LogUnusedArguments();
     }
 
-    if (!config.Complete(true))
+    if (!rekkord_config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
     if (!repo)
         return 1;
-
-    ZeroSafe((void *)config.password, strlen(config.password));
-    config.password = nullptr;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Log)) {
@@ -621,7 +566,6 @@ int RunList(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    rk_Config config;
     rk_ListSettings settings;
     OutputFormat format = OutputFormat::Plain;
     int verbose = 0;
@@ -630,32 +574,23 @@ int RunList(Span<const char *> arguments)
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 list [-C filename] [option...] identifier%!0
+)", FelixTarget);
+        PrintLn(st, CommonOptions);
+        PrintLn(st, R"(
+List options:
 
-Options:
-
-    %!..+-C, --config_file filename%!0     Set configuration file
-
-    %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username
-
-    %!..+-j, --threads threads%!0          Change number of threads
-                                   %!D..(default: automatic)%!0
+    %!..+-f, --format format%!0            Change output format
+                                   %!D..(default: %1)%!0
+    %!..+-v, --verbose%!0                  Enable verbose output (plain only)
 
     %!..+-r, --recurse%!0                  Show entire tree of children
 
-    %!..+-f, --format format%!0            Change output format
-                                   %!D..(default: %2)%!0
-    %!..+-v, --verbose%!0                  Enable verbose output (plain only)
-
 Use an object ID (OID) or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<OID|channel>[:<path>]%!0.
-If you use a snapshot channel, rekkord will use the most recent snapshot object that matches.
+If you use a snapshot channel, the most recent snapshot object that matches will be used.
 
-Available output formats: %!..+%3%!0)",
-                FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
+Available output formats: %!..+%2%!0)",
+                OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
     };
-
-    if (!FindAndLoadConfig(arguments, &config))
-        return 1;
 
     // Parse arguments
     {
@@ -665,20 +600,6 @@ Available output formats: %!..+%3%!0)",
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                // Already handled
-            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                if (!rk_DecodeURL(opt.current_value, &config))
-                    return 1;
-            } else if (opt.Test("-u", "--username", OptionType::Value)) {
-                config.username = opt.current_value;
-            } else if (opt.Test("-j", "--threads", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &config.threads))
-                    return 1;
-                if (config.threads < 1) {
-                    LogError("Threads count cannot be < 1");
-                    return 1;
-                }
             } else if (opt.Test("-r", "--recurse")) {
                 settings.recurse = true;
             } else if (opt.Test("-f", "--format", OptionType::Value)) {
@@ -703,16 +624,13 @@ Available output formats: %!..+%3%!0)",
         return 1;
     }
 
-    if (!config.Complete(true))
+    if (!rekkord_config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), config, true);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
     if (!repo)
         return 1;
-
-    ZeroSafe((void *)config.password, strlen(config.password));
-    config.password = nullptr;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Read)) {
