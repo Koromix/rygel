@@ -112,7 +112,6 @@ Advanced commands:
 
     %!..+change_cid%!0                     Change repository cache ID (CID)
     %!..+reset_cache%!0                    Reset or rebuild local repository cache
-    %!..+check_blobs%!0                    Detect corrupt blobs
 
 Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)", FelixTarget);
     };
