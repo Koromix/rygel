@@ -4481,6 +4481,22 @@ var BarController = class extends DatasetController {
   _getStackCount(index2) {
     return this._getStacks(void 0, index2).length;
   }
+  _getAxisCount() {
+    return this._getAxis().length;
+  }
+  getFirstScaleIdForIndexAxis() {
+    const scales2 = this.chart.scales;
+    const indexScaleId = this.chart.options.indexAxis;
+    return Object.keys(scales2).filter((key) => scales2[key].axis === indexScaleId).shift();
+  }
+  _getAxis() {
+    const axis = {};
+    const firstScaleAxisId = this.getFirstScaleIdForIndexAxis();
+    for (const dataset of this.chart.data.datasets) {
+      axis[valueOrDefault(this.chart.options.indexAxis === "x" ? dataset.xAxisID : dataset.yAxisID, firstScaleAxisId)] = true;
+    }
+    return Object.keys(axis);
+  }
   _getStackIndex(datasetIndex, name, dataIndex) {
     const stacks = this._getStacks(datasetIndex, dataIndex);
     const index2 = name !== void 0 ? stacks.indexOf(name) : -1;
@@ -4571,10 +4587,13 @@ var BarController = class extends DatasetController {
     const skipNull = options.skipNull;
     const maxBarThickness = valueOrDefault(options.maxBarThickness, Infinity);
     let center, size;
+    const axisCount = this._getAxisCount();
     if (ruler.grouped) {
       const stackCount = skipNull ? this._getStackCount(index2) : ruler.stackCount;
-      const range = options.barThickness === "flex" ? computeFlexCategoryTraits(index2, ruler, options, stackCount) : computeFitCategoryTraits(index2, ruler, options, stackCount);
-      const stackIndex = this._getStackIndex(this.index, this._cachedMeta.stack, skipNull ? index2 : void 0);
+      const range = options.barThickness === "flex" ? computeFlexCategoryTraits(index2, ruler, options, stackCount * axisCount) : computeFitCategoryTraits(index2, ruler, options, stackCount * axisCount);
+      const axisID = this.chart.options.indexAxis === "x" ? this.getDataset().xAxisID : this.getDataset().yAxisID;
+      const axisNumber = this._getAxis().indexOf(valueOrDefault(axisID, this.getFirstScaleIdForIndexAxis()));
+      const stackIndex = this._getStackIndex(this.index, this._cachedMeta.stack, skipNull ? index2 : void 0) + axisNumber;
       center = range.start + range.chunk * stackIndex + range.chunk / 2;
       size = Math.min(maxBarThickness, range.chunk * range.ratio);
     } else {
@@ -8468,7 +8487,7 @@ function needContext(proxy, names2) {
   }
   return false;
 }
-var version = "4.4.9";
+var version = "4.5.0";
 var KNOWN_POSITIONS = [
   "top",
   "bottom",
@@ -9360,6 +9379,34 @@ var Chart = class {
 function invalidatePlugins() {
   return each(Chart.instances, (chart) => chart._plugins.invalidate());
 }
+function clipSelf(ctx, element, endAngle) {
+  const { startAngle, x, y, outerRadius, innerRadius, options } = element;
+  const { borderWidth, borderJoinStyle } = options;
+  const outerAngleClip = Math.min(borderWidth / outerRadius, _normalizeAngle(startAngle - endAngle));
+  ctx.beginPath();
+  ctx.arc(x, y, outerRadius - borderWidth / 2, startAngle + outerAngleClip / 2, endAngle - outerAngleClip / 2);
+  if (innerRadius > 0) {
+    const innerAngleClip = Math.min(borderWidth / innerRadius, _normalizeAngle(startAngle - endAngle));
+    ctx.arc(x, y, innerRadius + borderWidth / 2, endAngle - innerAngleClip / 2, startAngle + innerAngleClip / 2, true);
+  } else {
+    const clipWidth = Math.min(borderWidth / 2, outerRadius * _normalizeAngle(startAngle - endAngle));
+    if (borderJoinStyle === "round") {
+      ctx.arc(x, y, clipWidth, endAngle - PI / 2, startAngle + PI / 2, true);
+    } else if (borderJoinStyle === "bevel") {
+      const r = 2 * clipWidth * clipWidth;
+      const endX = -r * Math.cos(endAngle + PI / 2) + x;
+      const endY = -r * Math.sin(endAngle + PI / 2) + y;
+      const startX = r * Math.cos(startAngle + PI / 2) + x;
+      const startY = r * Math.sin(startAngle + PI / 2) + y;
+      ctx.lineTo(endX, endY);
+      ctx.lineTo(startX, startY);
+    }
+  }
+  ctx.closePath();
+  ctx.moveTo(0, 0);
+  ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.clip("evenodd");
+}
 function clipArc(ctx, element, endAngle) {
   const { startAngle, pixelMargin, x, y, outerRadius, innerRadius } = element;
   let angleMargin = pixelMargin / outerRadius;
@@ -9486,7 +9533,7 @@ function drawArc(ctx, element, offset, spacing, circular) {
 }
 function drawBorder(ctx, element, offset, spacing, circular) {
   const { fullCircles, startAngle, circumference, options } = element;
-  const { borderWidth, borderJoinStyle, borderDash, borderDashOffset } = options;
+  const { borderWidth, borderJoinStyle, borderDash, borderDashOffset, borderRadius } = options;
   const inner = options.borderAlign === "inner";
   if (!borderWidth) {
     return;
@@ -9513,6 +9560,9 @@ function drawBorder(ctx, element, offset, spacing, circular) {
   if (inner) {
     clipArc(ctx, element, endAngle);
   }
+  if (options.selfJoin && endAngle - startAngle >= PI && borderRadius === 0 && borderJoinStyle !== "miter") {
+    clipSelf(ctx, element, endAngle);
+  }
   if (!fullCircles) {
     pathArc(ctx, element, offset, spacing, endAngle, circular);
     ctx.stroke();
@@ -9531,7 +9581,8 @@ var ArcElement = class extends Element {
     offset: 0,
     spacing: 0,
     angle: void 0,
-    circular: true
+    circular: true,
+    selfJoin: false
   };
   static defaultRoutes = {
     backgroundColor: "backgroundColor"
@@ -10875,24 +10926,41 @@ function doFill(ctx, cfg) {
   const { line, target, above, below, area, scale, clip } = cfg;
   const property = line._loop ? "angle" : cfg.axis;
   ctx.save();
-  if (property === "x" && below !== above) {
-    clipVertical(ctx, target, area.top);
-    fill(ctx, {
-      line,
-      target,
-      color: above,
-      scale,
-      property,
-      clip
-    });
-    ctx.restore();
-    ctx.save();
-    clipVertical(ctx, target, area.bottom);
+  let fillColor = below;
+  if (below !== above) {
+    if (property === "x") {
+      clipVertical(ctx, target, area.top);
+      fill(ctx, {
+        line,
+        target,
+        color: above,
+        scale,
+        property,
+        clip
+      });
+      ctx.restore();
+      ctx.save();
+      clipVertical(ctx, target, area.bottom);
+    } else if (property === "y") {
+      clipHorizontal(ctx, target, area.left);
+      fill(ctx, {
+        line,
+        target,
+        color: below,
+        scale,
+        property,
+        clip
+      });
+      ctx.restore();
+      ctx.save();
+      clipHorizontal(ctx, target, area.right);
+      fillColor = above;
+    }
   }
   fill(ctx, {
     line,
     target,
-    color: below,
+    color: fillColor,
     scale,
     property,
     clip
@@ -10925,6 +10993,35 @@ function clipVertical(ctx, target, clipY) {
     }
   }
   ctx.lineTo(target.first().x, clipY);
+  ctx.closePath();
+  ctx.clip();
+}
+function clipHorizontal(ctx, target, clipX) {
+  const { segments, points } = target;
+  let first = true;
+  let lineLoop = false;
+  ctx.beginPath();
+  for (const segment of segments) {
+    const { start, end } = segment;
+    const firstPoint = points[start];
+    const lastPoint = points[_findSegmentEnd(start, end, points)];
+    if (first) {
+      ctx.moveTo(firstPoint.x, firstPoint.y);
+      first = false;
+    } else {
+      ctx.lineTo(clipX, firstPoint.y);
+      ctx.lineTo(firstPoint.x, firstPoint.y);
+    }
+    lineLoop = !!target.pathSegment(ctx, segment, {
+      move: lineLoop
+    });
+    if (lineLoop) {
+      ctx.closePath();
+    } else {
+      ctx.lineTo(clipX, lastPoint.y);
+    }
+  }
+  ctx.lineTo(clipX, target.first().y);
   ctx.closePath();
   ctx.clip();
 }
@@ -14423,16 +14520,9 @@ export {
    *)
 
 chart.js/dist/chunks/helpers.dataset.js:
-  (*!
-   * Chart.js v4.4.9
-   * https://www.chartjs.org
-   * (c) 2025 Chart.js Contributors
-   * Released under the MIT License
-   *)
-
 chart.js/dist/chart.js:
   (*!
-   * Chart.js v4.4.9
+   * Chart.js v4.5.0
    * https://www.chartjs.org
    * (c) 2025 Chart.js Contributors
    * Released under the MIT License
