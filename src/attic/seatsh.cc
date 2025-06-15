@@ -124,7 +124,7 @@ R"(Usage: %!..+%1 [option...] bin [arg...]%!0
 
 Options:
 
-    %!..+-w, --work_dir directory%!0       Change working directory
+    %!..+-W, --work_dir directory%!0       Change working directory
 
 In order for this to work, you must first install the service from an elevated command prompt:
 
@@ -140,7 +140,7 @@ In order for this to work, you must first install the service from an elevated c
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("-w", "--work_dir", OptionType::Value)) {
+            } else if (opt.Test("-W", "--work_dir", OptionType::Value)) {
                 work_dir = opt.current_value;
             } else {
                 opt.LogUnknownError();
