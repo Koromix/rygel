@@ -6,6 +6,19 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.68
+
+*Released on 2025-06-16*
+
+- Accept common options before command, such as `rekkord -R /tmp/repo init`
+- Accept authentification with master key in all commands
+- Separate common and specific options in command help texts
+- Validate OID hash against unencrypted blob content
+- Retry failed blob check without delay
+- Rewrite cache code for performance and reliability
+- Fix rare password generation bug in `rekkord init`
+- Hide progress spam from `rekkord mount` output
+
 ### Rekkord 0.67
 
 *Released on 2025-06-14*
