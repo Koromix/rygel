@@ -3961,7 +3961,6 @@ public:
         : str(str), passthrough(passthrough) {}
 
     void Format(FunctionRef<void(Span<const char>)> append) const;
-
     operator FmtArg() const { return FmtCustom(*this); }
 };
 

@@ -312,9 +312,17 @@ bool rk_Cache::PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid)
     PendingCheck check = { oid, mark, valid };
     checks.Append(check);
 
+    bool inserted;
+    known_checks.TrySet(oid, &inserted);
+
     Commit(false);
 
-    return true;
+    if (!inserted) {
+        // The check may have been committed already
+        inserted = !HasCheck(oid);
+    }
+
+    return inserted;
 }
 
 StatResult rk_Cache::GetStat(const char *path, rk_CacheStat *out_stat)
@@ -380,6 +388,11 @@ bool rk_Cache::Commit(bool force)
         blobs.RemoveFirst(i);
         checks.RemoveFirst(j);
         stats.RemoveFirst(k);
+
+        known_checks.Clear();
+        for (const PendingCheck &check: checks) {
+            known_checks.Set(check.oid);
+        }
 
         commit = now;
     };

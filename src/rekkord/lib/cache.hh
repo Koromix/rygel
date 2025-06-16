@@ -55,6 +55,7 @@ class rk_Cache {
     int64_t commit = 0;
     BucketArray<PendingBlob> blobs;
     BucketArray<PendingCheck> checks;
+    HashSet<rk_ObjectID> known_checks;
     BucketArray<PendingStat> stats;
 
 public:
@@ -78,7 +79,6 @@ public:
     void PutStat(const char *path, const rk_CacheStat &stat);
 
 private:
-    // Call with mutex locked
     bool Commit(bool force);
 };
 

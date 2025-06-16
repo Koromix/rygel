@@ -28,9 +28,19 @@ static const int rk_MasterKeySize = 32;
 struct rk_Hash {
     uint8_t raw[32];
 
+    bool operator==(const rk_Hash &other) const { return memcmp(raw, other.raw, RG_SIZE(raw)) == 0; }
+    bool operator!=(const rk_Hash &other) const { return memcmp(raw, other.raw, RG_SIZE(raw)) != 0; }
+
     int operator-(const rk_Hash &other) const { return memcmp(raw, other.raw, RG_SIZE(raw)); }
 
     operator FmtArg() const { return FmtSpan(raw, FmtType::BigHex, "").Pad0(-2); }
+
+    uint64_t Hash() const
+    {
+        uint64_t hash;
+        MemCpy(&hash, raw, RG_SIZE(hash));
+        return hash;
+    }
 };
 static_assert(RG_SIZE(rk_Hash) == 32);
 
@@ -57,6 +67,9 @@ struct rk_ObjectID {
         return true;
     }
 
+    bool operator==(const rk_ObjectID &other) const { return catalog == other.catalog && hash == other.hash; }
+    bool operator!=(const rk_ObjectID &other) const { return catalog != other.catalog || hash != other.hash; }
+
     int operator-(const rk_ObjectID &other) const { return MultiCmp((int)catalog - (int)other.catalog, hash - other.hash); }
 
     void Format(FunctionRef<void(Span<const char>)> append) const
@@ -64,8 +77,9 @@ struct rk_ObjectID {
         FmtArg arg = FmtSpan(hash.raw, FmtType::BigHex, "").Pad0(-2);
         Fmt(append, "%1%2", rk_BlobCatalogNames[(int)catalog], arg);
     }
-
     operator FmtArg() { return FmtCustom(*this); }
+
+    uint64_t Hash() const { return hash.Hash(); }
 
     Span<const uint8_t> Raw() const { return MakeSpan((const uint8_t *)this, RG_SIZE(*this)); }
 };
