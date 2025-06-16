@@ -397,20 +397,22 @@ bool rk_Cache::Commit(bool force)
         return true;
     }
 
-    std::lock_guard<std::mutex> lock(commit_mutex);
+    std::unique_lock<std::mutex> lock_commit(commit_mutex);
 
-    std::swap(pending, committing);
+    std::swap(pending, commit);
     last_commit = now;
 
     put_mutex.unlock();
 
     RG_DEFER {
-        committing.blobs.RemoveFrom(0);
-        committing.checks.RemoveFrom(0);
-        committing.stats.RemoveFrom(0);
-        committing.str_alloc.Reset();
+        commit.blobs.RemoveFrom(0);
+        commit.checks.RemoveFrom(0);
+        commit.stats.RemoveFrom(0);
+        commit.str_alloc.Reset();
 
-        std::lock_guard<std::mutex> lock(put_mutex);
+        lock_commit.unlock();
+
+        std::lock_guard<std::mutex> lock_put(put_mutex);
 
         known_checks.RemoveAll();
         for (const PendingCheck &check: pending.checks) {
@@ -419,7 +421,7 @@ bool rk_Cache::Commit(bool force)
     };
 
     bool success = write.Transaction([&]() {
-        for (const PendingBlob &blob: committing.blobs) {
+        for (const PendingBlob &blob: commit.blobs) {
             if (!write.Run(R"(INSERT INTO blobs (oid, size)
                               VALUES (?1, ?2)
                               ON CONFLICT DO NOTHING)",
@@ -427,7 +429,7 @@ bool rk_Cache::Commit(bool force)
                 return false;
         }
 
-        for (const PendingCheck &check: committing.checks) {
+        for (const PendingCheck &check: commit.checks) {
             if (!write.Run(R"(INSERT INTO checks (oid, mark, valid)
                               VALUES (?1, ?2, ?3)
                               ON CONFLICT DO NOTHING)",
@@ -435,7 +437,7 @@ bool rk_Cache::Commit(bool force)
                 return false;
         }
 
-        for (const PendingStat &stat: committing.stats) {
+        for (const PendingStat &stat: commit.stats) {
             Span<const uint8_t> hash = MakeSpan((const uint8_t *)&stat.st.hash.raw, RG_SIZE(stat.st.hash.raw));
 
             if (!write.Run(R"(INSERT INTO stats (path, mtime, ctime, mode, size, hash, stored)

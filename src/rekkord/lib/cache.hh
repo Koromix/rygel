@@ -65,7 +65,7 @@ class rk_Cache {
     PendingSet pending;
     int64_t last_commit = 0;
     std::mutex commit_mutex;
-    PendingSet committing;
+    PendingSet commit;
     HashSet<rk_ObjectID> known_checks;
 
 public:
