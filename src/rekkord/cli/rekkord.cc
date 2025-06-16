@@ -117,13 +117,6 @@ Advanced commands:
 Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)", FelixTarget);
     };
 
-    if (argc < 2) {
-        print_usage(StdErr);
-        PrintLn(StdErr);
-        LogError("No command provided");
-        return 1;
-    }
-
 #if !defined(_WIN32)
     RaiseMaximumOpenFiles(16384);
 #endif
@@ -142,74 +135,80 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
     }
     RG_DEFER { ssh_finalize(); };
 
-    // Handle help and version arguments
-    if (TestStr(argv[1], "help")) {
-        argv[1] = (char *)"--help";
-    } else if (TestStr(argv[1], "--version")) {
+    // Handle version
+    if (argc >= 2 && TestStr(argv[1], "--version")) {
         PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
         PrintLn("Compiler: %1", FelixCompiler);
         return 0;
     }
 
-    // Find config filename (if any)
+    const char *cmd = nullptr;
+    Span<const char *> arguments = {};
+
+    // Find command and config filename (if any)
     {
         OptionParser opt(argc, argv, OptionMode::Skip);
 
-        while (opt.Next()) {
-            if (opt.Test("--help")) {
-                // Don't try to load anything in this case
-                config_filename = nullptr;
+        for (;;) {
+            if (!cmd) {
+                cmd = opt.ConsumeNonOption();
+
+                if (cmd && !arguments.len) {
+                    Size pos = opt.GetPosition();
+                    arguments = MakeSpan((const char **)argv + pos, argc - pos);
+                }
+            }
+
+            if (!opt.Next())
                 break;
+
+            if (opt.Test("--help")) {
+                static const char *HelpArguments[] = { "--help" };
+                arguments = HelpArguments;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
-            } else if (opt.TestHasFailed()) {
+            } else if (!HandleCommonOption(opt, true)) {
                 return 1;
             }
         }
     }
 
-    if (config_filename && !rk_LoadConfig(config_filename, &rekkord_config))
+    if (!cmd) {
+        print_usage(StdErr);
+        PrintLn(StdErr);
+        LogError("No command provided");
         return 1;
+    }
 
-    const char *cmd = nullptr;
-    Span<const char *> arguments = {};
+    if (TestStr(cmd, "help")) {
+        if (!arguments.len || arguments[0][0] == '-') {
+            print_usage(StdOut);
+            return 0;
+        }
 
-    // Handle common options set before command
-    {
+        static const char *HelpArguments[] = { "--help" };
+
+        cmd = arguments[0];
+        arguments = HelpArguments;
+
+        config_filename = nullptr;
+    } else if (arguments.len && TestStr(arguments[0], "--help")) {
+        config_filename = nullptr;
+    }
+
+    if (config_filename) {
+        if (!rk_LoadConfig(config_filename, &rekkord_config))
+            return 1;
+
+        // Reload common options to override config file values
         OptionParser opt(argc, argv, OptionMode::Stop);
-        bool help = false;
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                help = true;
-                break;
-            } else if (!HandleCommonOption(opt, true)) {
+                // Already handled
+            } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
-        }
-
-        Size pos = opt.GetPosition();
-
-        if (help) {
-            if (pos < argc && argv[pos][0] != '-') {
-                static const char *HelpArguments[] = { "--help" };
-
-                cmd = argv[pos];
-                arguments = HelpArguments;
-            } else {
-                print_usage(StdOut);
-                return 0;
-            }
-        } else {
-            if (pos >= argc) {
-                print_usage(StdErr);
-                PrintLn(StdErr);
-                LogError("No command provided");
-                return 1;
-            }
-
-            cmd = argv[pos];
-            arguments = MakeSpan((const char **)argv + pos + 1, argc - pos - 1);
         }
     }
 
