@@ -131,18 +131,6 @@ class rk_Repository {
         uint8_t cid[16];
     };
 
-protected:
-    enum class WriteFlag {
-        Overwrite = 1 << 0,
-        Lockable = 1 << 1
-    };
-
-    enum class WriteResult {
-        Success,
-        AlreadyExists,
-        OtherError
-    };
-
     rk_Disk *disk;
     IdSet ids;
 
