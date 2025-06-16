@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "cache.hh"
 #include "repository.hh"
 #include "tape.hh"
 #include "priv_tape.hh"
@@ -1424,7 +1425,7 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
 
 class CheckContext {
     rk_Repository *repo;
-    sq_Database *db;
+    rk_Cache *cache;
     int64_t mark;
 
     ProgressHandle pg_blobs { "Blobs" };
@@ -1435,7 +1436,7 @@ class CheckContext {
     Async tasks;
 
 public:
-    CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, int64_t checked, int64_t blobs);
+    CheckContext(rk_Repository *repo, rk_Cache *cache, int64_t mark, int64_t checked, int64_t blobs);
 
     bool Check(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate);
 
@@ -1448,49 +1449,26 @@ private:
     void MakeProgress(int64_t blobs);
 };
 
-CheckContext::CheckContext(rk_Repository *repo, sq_Database *db, int64_t mark, int64_t checked, int64_t blobs)
-    : repo(repo), db(db), mark(mark), total_blobs(blobs), checked_blobs(checked), tasks(repo->GetAsync())
+CheckContext::CheckContext(rk_Repository *repo, rk_Cache *cache, int64_t mark, int64_t checked, int64_t blobs)
+    : repo(repo), cache(cache), mark(mark), total_blobs(blobs), checked_blobs(checked), tasks(repo->GetAsync())
 {
 }
 
 bool CheckContext::Check(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate)
 {
-    // Ignore recently checked objects
+    // Fast path
     {
-        sq_Statement stmt;
-        if (!db->Prepare("SELECT valid FROM checks WHERE oid = ?1", &stmt, oid.Raw()))
-            return false;
-
-        if (stmt.Step()) {
-            bool valid = sqlite3_column_int(stmt, 0);
+        bool valid;
+        if (cache->HasCheck(oid, &valid))
             return valid;
-        } else if (!stmt.IsValid()) {
-            return false;
-        }
     }
 
     bool valid = CheckBlob(oid, validate);
 
-    // Mark object
-    {
-        sq_Statement stmt;
-        if (!db->Prepare(R"(INSERT INTO checks (oid, mark, valid)
-                            VALUES (?1, ?2, ?3)
-                            ON CONFLICT DO NOTHING
-                            RETURNING oid)",
-                         &stmt, oid.Raw(), mark, 0 + valid))
-            return false;
-
-        if (stmt.Step()) {
-            // In some cases, a blob might get checkedm ultiple times in parallel, but
-            // at the end only one insert will succeed. Discount progress from other check calls.
-            MakeProgress(1);
-        } else if (!stmt.IsValid()) {
-            return false;
-        }
-    }
-
-    repo->CommitCache();
+    bool inserted;
+    if (!cache->SetCheck(oid, mark, valid, &inserted))
+        return false;
+    MakeProgress(inserted);
 
     return valid;
 }
@@ -1678,37 +1656,23 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
 {
     BlockAllocator temp_alloc;
 
-    sq_Database *db = repo->OpenCache(false);
-    if (!db)
+    rk_Cache cache;
+    if (!cache.Open(repo, false))
         return false;
-    if (!repo->ResetCache(true))
+    if (!cache.Reset(true))
         return false;
 
     int64_t mark = GetUnixTime();
 
-    if (!db->Run("DELETE FROM checks WHERE mark < ?1", mark - CheckDelay))
+    if (!cache.PruneChecks(mark - CheckDelay))
         return false;
 
     int64_t checked;
-    int64_t blobs;
-    {
-        sq_Statement stmt;
-        if (!db->Prepare(R"(SELECT SUM(IIF(c.oid IS NULL, 0, 1)) AS checked,
-                                   COUNT(b.oid) AS blobs
-                            FROM blobs b
-                            LEFT JOIN checks c ON (c.oid = b.oid))", &stmt))
-            return false;
+    int64_t blobs = cache.CountBlobs(&checked);
+    if (blobs < 0)
+        return false;
 
-        if (stmt.Step()) {
-            checked = sqlite3_column_int64(stmt, 0);
-            blobs = sqlite3_column_int64(stmt, 1);
-        } else {
-            RG_ASSERT(!stmt.IsValid());
-            return false;
-        }
-    }
-
-    CheckContext check(repo, db, mark, checked, blobs);
+    CheckContext check(repo, &cache, mark, checked, blobs);
     bool valid = true;
 
     ProgressHandle progress("Snapshots");
@@ -1732,6 +1696,9 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
 
         progress.SetFmt(i + 1, snapshots.len, "%1 / %2 snapshots", i + 1, snapshots.len);
     }
+
+    if (!cache.Close())
+        return false;
 
     return valid;
 }

@@ -14,6 +14,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "cache.hh"
+#include "disk.hh"
 #include "repository.hh"
 #include "splitter.hh"
 #include "tape.hh"
@@ -43,7 +45,7 @@ enum class PutResult {
 
 class PutContext {
     rk_Repository *repo;
-    sq_Database *db;
+    rk_Cache *cache;
     rk_SaveSettings settings;
 
     uint8_t salt32[32];
@@ -61,7 +63,7 @@ class PutContext {
     std::atomic_int big_semaphore { FileBigLimit };
 
 public:
-    PutContext(rk_Repository *repo, sq_Database *db, const rk_SaveSettings &settings);
+    PutContext(rk_Repository *repo, rk_Cache *cache, const rk_SaveSettings &settings);
 
     PutResult PutDirectory(const char *src_dirname, bool follow, rk_Hash *out_hash, int64_t *out_subdirs = nullptr);
     PutResult PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_size = nullptr, int64_t *out_stored = nullptr);
@@ -69,6 +71,8 @@ public:
     int64_t GetSize() const { return put_size; }
     int64_t GetStored() const { return put_stored; }
     int64_t GetEntries() const { return put_entries; }
+
+    int64_t WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob);
 
 private:
     void MakeProgress(int64_t written);
@@ -115,8 +119,8 @@ static void PackExtended(const char *filename,  Span<const XAttrInfo> xattrs, He
     err_guard.Disable();
 }
 
-PutContext::PutContext(rk_Repository *repo, sq_Database *db, const rk_SaveSettings &settings)
-    : repo(repo), db(db), settings(settings),
+PutContext::PutContext(rk_Repository *repo, rk_Cache *cache, const rk_SaveSettings &settings)
+    : repo(repo), cache(cache), settings(settings),
       dir_tasks(repo->GetAsync()), file_tasks(repo->GetAsync())
 {
     repo->MakeSalt(rk_SaltKind::BlobHash, salt32);
@@ -341,47 +345,29 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                     case RawEntry::Kind::Directory: {} break; // Already processed
 
                     case RawEntry::Kind::File: {
-                        // Skip file analysis if metadata is unchanged
-                        {
-                            sq_Statement stmt;
-                            if (!db->Prepare(R"(SELECT mtime, ctime, mode, size, hash, stored
-                                                FROM stats
-                                                WHERE path = ?1)", &stmt)) {
-                                success = false;
-                                break;
-                            }
-                            sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
+                        rk_CacheStat stat = {};
+                        StatResult ret = cache->GetStat(filename, &stat);
 
-                            if (stmt.Step()) {
-                                int64_t mtime = sqlite3_column_int64(stmt, 0);
-                                int64_t ctime = sqlite3_column_int64(stmt, 1);
-                                uint32_t mode = (uint32_t)sqlite3_column_int64(stmt, 2);
-                                int64_t size = sqlite3_column_int64(stmt, 3);
-                                Span<const uint8_t> hash = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 4),
-                                                                    sqlite3_column_bytes(stmt, 4));
-                                int64_t written = sqlite3_column_int64(stmt, 5);
+                        if (ret == StatResult::Success && 
+                                stat.mtime == LittleEndian(entry->mtime) &&
+                                stat.ctime == LittleEndian(entry->ctime) &&
+                                stat.mode == LittleEndian(entry->mode) &&
+                                stat.size == LittleEndian(entry->size)) {
+                            entry->hash = stat.hash;
 
-                                if (hash.len == RG_SIZE(rk_Hash) && mtime == entry->mtime &&
-                                                                    ctime == entry->ctime &&
-                                                                    mode == entry->mode &&
-                                                                    size == entry->size) {
-                                    MemCpy(&entry->hash, hash.ptr, RG_SIZE(rk_Hash));
+                            entry->flags |= (uint8_t)RawEntry::Flags::Readable;
+                            pending->size += stat.size;
 
-                                    entry->flags |= (uint8_t)RawEntry::Flags::Readable;
-                                    pending->size += size;
+                            // Done by PutFile in theory, but we're skipping it
+                            put_size += stat.size;
+                            MakeProgress(stat.stored);
+                            *stored = stat.stored;
+                            put_entries++;
 
-                                    // Done by PutFile in theory, but we're skipping it
-                                    put_size += size;
-                                    MakeProgress(written);
-                                    *stored = written;
-                                    put_entries++;
-
-                                    break;
-                                }
-                            } else if (!stmt.IsValid()) {
-                                success = false;
-                                break;
-                            }
+                            break;
+                        } else if (ret == StatResult::OtherError) {
+                            success = false;
+                            break;
                         }
 
                         async.Run([=, this]() {
@@ -425,7 +411,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                             HashBlake3(BlobType::Link, target, salt32, &entry->hash);
                             rk_ObjectID oid = { rk_BlobCatalog::Raw, entry->hash };
 
-                            Size written = repo->WriteBlob(oid, (int)BlobType::Link, target);
+                            Size written = WriteBlob(oid, (int)BlobType::Link, target);
                             if (written < 0)
                                 return false;
 
@@ -481,7 +467,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
             async.Run([pending, this]() mutable {
                 rk_ObjectID oid = { rk_BlobCatalog::Meta, pending->hash };
 
-                Size written = repo->WriteBlob(oid, (int)BlobType::Directory, pending->blob);
+                Size written = WriteBlob(oid, (int)BlobType::Directory, pending->blob);
                 if (written < 0)
                     return false;
 
@@ -513,16 +499,16 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
 
                 if ((flags & (int)RawEntry::Flags::Readable) &&
                         entry->kind == (int8_t)RawEntry::Kind::File) {
-                    if (!db->Run(R"(INSERT INTO stats (path, mtime, ctime, mode, size, hash, stored)
-                                    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-                                    ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
-                                                                     ctime = excluded.ctime,
-                                                                     mode = excluded.mode,
-                                                                     size = excluded.size,
-                                                                     hash = excluded.hash,
-                                                                     stored = excluded.stored)",
-                                 filename, entry->mtime, entry->ctime, entry->mode, entry->size,
-                                 MakeSpan((const uint8_t *)&entry->hash, RG_SIZE(entry->hash)), stored))
+                    rk_CacheStat stat = {};
+
+                    stat.mtime = LittleEndian(entry->mtime);
+                    stat.ctime = LittleEndian(entry->ctime);
+                    stat.mode = LittleEndian(entry->mode);
+                    stat.size = LittleEndian(entry->size);
+                    stat.hash = entry->hash;
+                    stat.stored = stored;
+
+                    if (!cache->PutStat(filename, stat))
                         return false;
                 }
 
@@ -623,7 +609,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
                         HashBlake3(BlobType::Chunk, chunk, salt32, &entry.hash);
                         rk_ObjectID oid = { rk_BlobCatalog::Raw, entry.hash };
 
-                        Size written = repo->WriteBlob(oid, (int)BlobType::Chunk, chunk);
+                        Size written = WriteBlob(oid, (int)BlobType::Chunk, chunk);
                         if (written < 0)
                             return false;
 
@@ -666,7 +652,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
         HashBlake3(BlobType::File, file_blob, salt32, &file_hash);
         rk_ObjectID oid = { rk_BlobCatalog::Raw, file_hash };
 
-        Size written = repo->WriteBlob(oid, (int)BlobType::File, file_blob);
+        Size written = WriteBlob(oid, (int)BlobType::File, file_blob);
         if (written < 0)
             return PutResult::Error;
 
@@ -688,6 +674,56 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
         *out_stored += file_stored;
     }
     return PutResult::Success;
+}
+
+int64_t PutContext::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob)
+{
+    int64_t size = -1;
+
+    // Skip objects that already exist
+    // Check with repository for consistency for a random subset of objects
+    switch (cache->TestBlob(oid, &size)) {
+        case StatResult::Success: {
+            bool check = (GetRandomInt(0, 100) < 2);
+
+            if (check) {
+                switch (repo->TestBlob(oid)) {
+                    case StatResult::Success: {} break;
+
+                    case StatResult::MissingPath: {
+                        cache->Reset(false);
+
+                        LogError("The local cache database was mismatched and could have resulted in missing data in the backup.");
+                        LogError("You must start over to fix this situation.");
+
+                        return -1;
+                    } break;
+
+                    case StatResult::AccessDenied:
+                    case StatResult::OtherError: return -1;
+                }
+            }
+
+            return size;
+        } break;
+
+        case StatResult::MissingPath: {} break;
+
+        case StatResult::AccessDenied:
+        case StatResult::OtherError: return -1;
+    }
+
+    switch (repo->WriteBlob(oid, type, blob, &size)) {
+        case rk_WriteResult::Success:
+        case rk_WriteResult::AlreadyExists: {} break;
+
+        case rk_WriteResult::OtherError: return -1;
+    }
+
+    if (!cache->PutBlob(oid, size))
+        return -1;
+
+    return size;
 }
 
 void PutContext::MakeProgress(int64_t delta)
@@ -719,8 +755,8 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
         }
     }
 
-    sq_Database *db = repo->OpenCache(true);
-    if (!db)
+    rk_Cache cache;
+    if (!cache.Open(repo, true))
         return false;
 
     uint8_t salt32[BLAKE3_KEY_LEN];
@@ -729,7 +765,7 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
     HeapArray<uint8_t> snapshot_blob;
     snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader));
 
-    PutContext put(repo, db, settings);
+    PutContext put(repo, &cache, settings);
 
     // Reuse for performance
     HeapArray<XAttrInfo> xattrs;
@@ -882,7 +918,7 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
 
         // Write snapshot blob
         {
-            Size written = repo->WriteBlob(info.oid, (int)BlobType::Snapshot, snapshot_blob);
+            Size written = put.WriteBlob(info.oid, (int)BlobType::Snapshot, snapshot_blob);
             if (written < 0)
                 return false;
             info.stored += written;

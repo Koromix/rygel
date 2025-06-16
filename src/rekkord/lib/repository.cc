@@ -327,8 +327,6 @@ void rk_Repository::Lock()
     ReleaseSafe(keyset, RG_SIZE(*keyset));
     keyset = nullptr;
     str_alloc.ReleaseAll();
-
-    CloseCache();
 }
 
 static bool CheckUserName(Span<const char> username)
@@ -357,6 +355,27 @@ static bool IsUserName(Span<const char> username)
     RG_DEFER_N(log_guard) { PopLogFilter(); };
 
     return CheckUserName(username);
+}
+
+void rk_Repository::MakeID(Span<uint8_t> out_id) const
+{
+    RG_ASSERT(out_id.len >= 16 && out_id.len <= 64);
+
+    Span<const char> url = disk->GetURL();
+
+    uint8_t sha512[64];
+    {
+        crypto_hash_sha512_state state;
+        crypto_hash_sha512_init(&state);
+
+        crypto_hash_sha512_update(&state, ids.rid, RG_SIZE(ids.rid));
+        crypto_hash_sha512_update(&state, (const uint8_t *)url.ptr, (size_t)url.len);
+        crypto_hash_sha512_update(&state, (const uint8_t *)&out_id.len, RG_SIZE(out_id.len));
+
+        crypto_hash_sha512_final(&state, sha512);
+    }
+
+    MemCpy(out_id.ptr, sha512, out_id.len);
 }
 
 void rk_Repository::MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const
@@ -390,483 +409,9 @@ bool rk_Repository::ChangeCID()
             return false;
     }
 
-    CloseCache();
     MemCpy(ids.cid, new_ids.cid, RG_SIZE(new_ids.cid));
 
     return true;
-}
-
-sq_Database *rk_Repository::OpenCache(bool build)
-{
-    RG_ASSERT(keyset);
-
-    CloseCache();
-
-    RG_DEFER_N(err_guard) { CloseCache(); };
-
-    uint8_t cache_id[32] = {};
-    {
-        // Combine repository URL and RID to create a secure ID
-
-        Span<const char> url = disk->GetURL();
-
-        static_assert(RG_SIZE(cache_id) == crypto_hash_sha256_BYTES);
-
-        crypto_hash_sha256_state state;
-        crypto_hash_sha256_init(&state);
-
-        crypto_hash_sha256_update(&state, ids.rid, RG_SIZE(ids.rid));
-        crypto_hash_sha256_update(&state, (const uint8_t *)url.ptr, (size_t)url.len);
-
-        crypto_hash_sha256_final(&state, cache_id);
-    }
-
-    const char *cache_dir = GetUserCachePath("rekkord", &str_alloc);
-    if (!cache_dir) {
-        LogError("Cannot find user cache path");
-        return nullptr;
-    }
-    if (!MakeDirectory(cache_dir, false))
-        return nullptr;
-
-    const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(cache_id, FmtType::SmallHex, "").Pad0(-2)).ptr;
-    LogDebug("Cache file: %1", cache_filename);
-
-    if (!cache_db.Open(cache_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-        return nullptr;
-    if (!cache_db.SetWAL(true))
-        return nullptr;
-
-    int version;
-    if (!cache_db.GetUserVersion(&version))
-        return nullptr;
-
-    if (version > CacheVersion) {
-        LogError("Cache schema is too recent (%1, expected %2)", version, CacheVersion);
-        return nullptr;
-    } else if (version < CacheVersion) {
-        bool success = cache_db.Transaction([&]() {
-            switch (version) {
-                case 0: {
-                    bool success = cache_db.RunMany(R"(
-                        CREATE TABLE objects (
-                            key TEXT NOT NULL
-                        );
-                        CREATE UNIQUE INDEX objects_k ON objects (key);
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 1: {
-                    bool success = cache_db.RunMany(R"(
-                        CREATE TABLE stats (
-                            path TEXT NOT NULL,
-                            mtime INTEGER NOT NULL,
-                            mode INTEGER NOT NULL,
-                            size INTEGER NOT NULL,
-                            id BLOB NOT NULL
-                        );
-                        CREATE UNIQUE INDEX stats_p ON stats (path);
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 2: {
-                    bool success = cache_db.RunMany(R"(
-                        ALTER TABLE stats RENAME COLUMN id TO hash;
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 3: {
-                    bool success = cache_db.RunMany(R"(
-                        DROP TABLE stats;
-
-                        CREATE TABLE stats (
-                            path TEXT NOT NULL,
-                            mtime INTEGER NOT NULL,
-                            btime INEGER NOT NULL,
-                            mode INTEGER NOT NULL,
-                            size INTEGER NOT NULL,
-                            hash BLOB NOT NULL
-                        );
-                        CREATE UNIQUE INDEX stats_p ON stats (path);
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 4: {
-                    bool success = cache_db.RunMany(R"(
-                        CREATE TABLE meta (
-                            cid BLOB
-                        );
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 5: {
-                    bool success = cache_db.RunMany(R"(
-                        DROP INDEX stats_p;
-
-                        ALTER TABLE stats RENAME TO stats_BAK;
-
-                        CREATE TABLE stats (
-                            path TEXT NOT NULL,
-                            mtime INTEGER NOT NULL,
-                            ctime INTEGER NOT NULL,
-                            btime INEGER NOT NULL,
-                            mode INTEGER NOT NULL,
-                            size INTEGER NOT NULL,
-                            hash BLOB NOT NULL
-                        );
-                        CREATE UNIQUE INDEX stats_p ON stats (path);
-
-                        INSERT INTO stats (path, mtime, ctime, btime, mode, size, hash)
-                            SELECT path, mtime, btime, btime, mode, size, hash FROM stats_BAK;
-
-                        DROP TABLE stats_BAK;
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 6: {
-                    bool success = cache_db.RunMany(R"(
-                        ALTER TABLE stats DROP COLUMN btime;
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 7: {
-                    bool success = cache_db.RunMany(R"(
-                        DROP INDEX objects_k;
-                        DROP INDEX stats_p;
-
-                        DROP TABLE objects;
-                        DROP TABLE stats;
-
-                        CREATE TABLE objects (
-                            key TEXT NOT NULL,
-                            size INTEGER NOT NULL
-                        );
-                        CREATE UNIQUE INDEX objects_k ON objects (key);
-
-                        CREATE TABLE stats (
-                            path TEXT NOT NULL,
-                            mtime INTEGER NOT NULL,
-                            ctime INTEGER NOT NULL,
-                            mode INTEGER NOT NULL,
-                            size INTEGER NOT NULL,
-                            hash BLOB NOT NULL,
-                            stored INTEGER NOT NULL
-                        );
-                        CREATE UNIQUE INDEX stats_p ON stats (path);
-
-                        UPDATE meta SET cid = NULL;
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 8: {
-                    bool success = cache_db.RunMany(R"(
-                        ALTER TABLE objects ADD COLUMN checked INTEGER;
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 9: {
-                    bool success = cache_db.RunMany(R"(
-                        CREATE TABLE blobs (
-                            key TEXT NOT NULL,
-                            size INTEGER NOT NULL,
-                            checked INTEGER,
-                            missing INTEGER CHECK (missing IN (0, 1)) NOT NULL
-                        );
-                        CREATE UNIQUE INDEX blobs_k ON blobs (key);
-
-                        INSERT INTO blobs (key, size, checked, missing)
-                            SELECT key, size, checked, 0 FROM objects;
-
-                        DROP INDEX objects_k;
-                        DROP TABLE objects;
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 10: {
-                    bool success = cache_db.RunMany(R"(
-                        ALTER TABLE blobs DROP COLUMN checked;
-                        ALTER TABLE blobs DROP COLUMN missing;
-
-                        CREATE TABLE checks (
-                            oid TEXT NOT NULL,
-                            mark INTEGER NOT NULL,
-                            children INTEGER NOT NULL
-                        );
-                        CREATE UNIQUE INDEX checks_o ON checks (oid);
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 11: {
-                    bool success = cache_db.RunMany(R"(
-                        ALTER TABLE checks DROP COLUMN children;
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 12: {
-                    bool success = cache_db.RunMany(R"(
-                        DROP INDEX blobs_k;
-                        ALTER TABLE blobs RENAME COLUMN key TO oid;
-
-                        DELETE FROM blobs WHERE oid NOT LIKE 'blobs/%/%/%';
-                        UPDATE blobs SET oid = SUBSTR(oid, 7, 1) || SUBSTR(oid, 12);
-
-                        CREATE UNIQUE INDEX blobs_o ON blobs (oid);
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 13: {
-                    bool success = cache_db.RunMany(R"(
-                        DROP INDEX blobs_o;
-                        DROP INDEX checks_o;
-
-                        ALTER TABLE blobs RENAME TO blobs_BAK;
-                        ALTER TABLE checks RENAME TO checks_BAK;
-
-                        CREATE TABLE blobs (
-                            oid BLOB NOT NULL,
-                            size INTEGER NOT NULL
-                        );
-                        CREATE UNIQUE INDEX blobs_k ON blobs (oid);
-
-                        CREATE TABLE checks (
-                            oid BLOB NOT NULL,
-                            mark INTEGER NOT NULL
-                        );
-                        CREATE UNIQUE INDEX checks_o ON checks (oid);
-
-                        INSERT INTO blobs (oid, size)
-                            SELECT CAST(unhex('00') || unhex(SUBSTR(oid, 2)) AS BLOB), size FROM blobs_BAK WHERE oid LIKE 'M%';
-                        INSERT INTO blobs (oid, size)
-                            SELECT CAST(unhex('01') || unhex(SUBSTR(oid, 2)) AS BLOB), size FROM blobs_BAK WHERE oid LIKE 'R%';
-                        INSERT INTO checks (oid, mark)
-                            SELECT CAST(unhex('00') || unhex(SUBSTR(oid, 2)) AS BLOB), mark FROM checks_BAK WHERE oid LIKE 'M%';
-                        INSERT INTO checks (oid, mark)
-                            SELECT CAST(unhex('01') || unhex(SUBSTR(oid, 2)) AS BLOB), mark FROM checks_BAK WHERE oid LIKE 'R%';
-
-                        DROP TABLE blobs_BAK;
-                        DROP TABLE checks_BAK;
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 14: {
-                    bool success = cache_db.RunMany(R"(
-                        DROP INDEX checks_o;
-                        DROP TABLE checks;
-
-                        CREATE TABLE checks (
-                            oid BLOB NOT NULL,
-                            mark INTEGER NOT NULL,
-                            valid INTEGER CHECK (valid IN (0, 1)) NOT NULL
-                        );
-                        CREATE UNIQUE INDEX checks_o ON checks (oid);
-                    )");
-                    if (!success)
-                        return false;
-                } // [[fallthrough]];
-
-                static_assert(CacheVersion == 15);
-            }
-
-            if (!cache_db.SetUserVersion(CacheVersion))
-                return false;
-
-            return true;
-        });
-
-        if (!success) {
-            cache_db.Close();
-            return nullptr;
-        }
-    }
-
-    // Check known CID against repository CID
-    {
-        sq_Statement stmt;
-        if (!cache_db.Prepare("SELECT cid FROM meta", &stmt))
-            return nullptr;
-
-        if (stmt.Step()) {
-            Span<const uint8_t> cid = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 0),
-                                               sqlite3_column_bytes(stmt, 0));
-
-            build &= (cid.len != RG_SIZE(ids.cid)) || memcmp(cid.ptr, ids.cid, RG_SIZE(ids.cid));
-        } else if (stmt.IsValid()) {
-            if (!cache_db.Run("INSERT INTO meta (cid) VALUES (NULL)"))
-                return nullptr;
-        } else {
-            return nullptr;
-        }
-    }
-
-    if (build) {
-        LogInfo("Rebuilding cache...");
-
-        if (!ResetCache(true))
-            return nullptr;
-    }
-
-    if (!cache_db.Run("BEGIN IMMEDIATE TRANSACTION"))
-        return nullptr;
-    cache_commit = GetMonotonicTime();
-
-    err_guard.Disable();
-    return &cache_db;
-}
-
-bool rk_Repository::ResetCache(bool list)
-{
-    if (!cache_db.IsValid()) {
-        LogInfo("Cannot reset closed cache");
-        return false;
-    }
-
-    // We keep a transaction running so we can't use sq_Database::Transaction()
-    RG_DEFER_N(err_guard) { cache_db.RunMany("ROLLBACK; BEGIN IMMEDIATE TRANSACTION;"); };
-
-    if (!cache_db.Run("DELETE FROM stats"))
-        return false;
-    if (!cache_db.Run("DELETE FROM blobs"))
-        return false;
-
-    if (list) {
-        ProgressHandle progress("Cache");
-        std::atomic_int64_t listed { 0 };
-
-        bool success = disk->ListFiles("blobs", [&](const char *path, int64_t size) {
-            // We never write empty blobs, something went wrong
-            if (!size) [[unlikely]]
-                return true;
-            if (!StartsWith(path, "blobs/")) [[unlikely]]
-                return true;
-
-            rk_ObjectID oid;
-            {
-                Span<const char> remain = path + 6;
-                Span<const char> catalog = SplitStr(remain, '/');
-                Span<const char> hash = SplitStrReverse(remain, '/');
-
-                if (catalog.len != 1)
-                    return true;
-
-                char str[128];
-                str[0] = catalog[0];
-                CopyString(hash, MakeSpan(str + 1, RG_SIZE(str) - 1));
-
-                if (!rk_ParseOID(str, &oid))
-                    return true;
-            }
-
-            if (!cache_db.Run(R"(INSERT INTO blobs (oid, size)
-                                 VALUES (?1, ?2)
-                                 ON CONFLICT (oid) DO UPDATE SET size = excluded.size)",
-                              oid.Raw(), size))
-                return false;
-
-            int64_t blobs = listed.fetch_add(1, std::memory_order_relaxed) + 1;
-            progress.SetFmt("%1 cached", blobs);
-
-            return true;
-        });
-        if (!success)
-            return false;
-    }
-
-    Span<const uint8_t> cid = ids.cid;
-
-    if (!cache_db.Run("UPDATE meta SET cid = ?1", cid))
-        return false;
-
-    if (!CommitCache(true))
-        return false;
-
-    err_guard.Disable();
-    return true;
-}
-
-bool rk_Repository::PutCache(const rk_ObjectID &oid, int64_t size)
-{
-    if (!cache_db.IsValid())
-        return true;
-
-    bool success = cache_db.Run(R"(INSERT INTO blobs (oid, size)
-                                   VALUES (?1, ?2)
-                                   ON CONFLICT DO NOTHING)",
-                                oid.Raw(), size);
-    if (!success)
-        return false;
-
-    CommitCache();
-
-    return success;
-}
-
-bool rk_Repository::CommitCache(bool force)
-{
-    int64_t commit = cache_commit.load(std::memory_order_relaxed);
-
-    if (!cache_db.IsValid())
-        return true;
-    if (!commit)
-        return true;
-
-    int64_t now = GetMonotonicTime();
-
-    if (!force) {
-        int64_t delay = now - commit;
-        force |= (delay >= CacheDelay);
-    }
-
-    if (force) {
-        std::unique_lock lock(cache_mutex, std::try_to_lock);
-
-        if (lock.owns_lock()) {
-            if (!cache_db.RunMany("COMMIT; BEGIN IMMEDIATE TRANSACTION;"))
-                return false;
-
-            cache_commit = now;
-        }
-    }
-
-    return true;
-}
-
-void rk_Repository::CloseCache()
-{
-    if (!cache_db.IsValid())
-        return;
-
-    CommitCache(true);
-
-    cache_db.Close();
-    cache_commit = 0;
 }
 
 bool rk_Repository::InitUser(const char *username, rk_UserRole role, const char *pwd, bool force)
@@ -1118,23 +663,10 @@ bool rk_Repository::ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<ui
     return true;
 }
 
-Size rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob)
+rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob, int64_t *out_size)
 {
     RG_ASSERT(HasMode(rk_AccessMode::Write));
     RG_ASSERT(type >= 0 && type < INT8_MAX);
-
-    // Skip objects that already exist
-    {
-        int64_t written = 0;
-
-        switch (TestFast(oid, &written)) {
-            case StatResult::Success: return (Size)written;
-            case StatResult::MissingPath: {} break;
-
-            case StatResult::AccessDenied:
-            case StatResult::OtherError: return -1;
-        }
-    }
 
     char path[256];
     Fmt(path, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash);
@@ -1153,11 +685,11 @@ Size rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8
         crypto_secretstream_xchacha20poly1305_keygen(key);
         if (crypto_secretstream_xchacha20poly1305_init_push(&state, intro.header, key) != 0) {
             LogError("Failed to initialize symmetric encryption");
-            return -1;
+            return rk_WriteResult::OtherError;
         }
         if (crypto_box_seal(intro.ekey, key, RG_SIZE(key), keyset->wkey) != 0) {
             LogError("Failed to seal symmetric key");
-            return -1;
+            return rk_WriteResult::OtherError;
         }
 
         Span<const uint8_t> buf = MakeSpan((const uint8_t *)&intro, RG_SIZE(intro));
@@ -1167,7 +699,7 @@ Size rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8
     // Initialize compression
     EncodeLZ4 lz4;
     if (!lz4.Start(compression_level))
-        return -1;
+        return rk_WriteResult::OtherError;
 
     // Encrypt blob data
     {
@@ -1184,7 +716,7 @@ Size rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8
             complete |= (frag.len < BlobSplit);
 
             if (!lz4.Append(frag))
-                return -1;
+                return rk_WriteResult::OtherError;
 
             bool success = lz4.Flush(complete, [&](Span<const uint8_t> buf) {
                 // This should rarely loop because data should compress to less
@@ -1261,25 +793,23 @@ Size rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8
                 return processed;
             });
             if (!success)
-                return -1;
+                return rk_WriteResult::OtherError;
         } while (!complete);
     }
 
-    // Write the damn thing
-    {
-        rk_WriteResult ret = disk->WriteFile(path, raw, (int)rk_WriteFlag::Lockable);
+    rk_WriteResult ret = disk->WriteFile(path, raw, (int)rk_WriteFlag::Lockable);
 
-        switch (ret) {
-            case rk_WriteResult::Success:
-            case rk_WriteResult::AlreadyExists: {} break;
-            case rk_WriteResult::OtherError: return -1;
-        }
+    switch (ret) {
+        case rk_WriteResult::Success:
+        case rk_WriteResult::AlreadyExists: {} break;
 
-        if (!PutCache(oid, raw.len))
-            return -1;
+        default: return rk_WriteResult::OtherError;
     }
 
-    return raw.len;
+    if (out_size) {
+        *out_size = raw.len;
+    }
+    return ret;
 }
 
 StatResult rk_Repository::TestBlob(const rk_ObjectID &oid, int64_t *out_size)
@@ -1487,55 +1017,6 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
 
     out_guard.Disable();
     return true;
-}
-
-StatResult rk_Repository::TestFast(const rk_ObjectID &oid, int64_t *out_size)
-{
-    if (!cache_db.IsValid())
-        return StatResult::MissingPath;
-
-    int64_t known_size = -1;
-    {
-        sq_Statement stmt;
-        if (!cache_db.Prepare("SELECT size FROM blobs WHERE oid = ?1", &stmt, oid.Raw()))
-            return StatResult::OtherError;
-
-        if (stmt.Step()) {
-            known_size = sqlite3_column_int64(stmt, 0);
-        } else if (!stmt.IsValid()) {
-            return StatResult::OtherError;
-        }
-    }
-
-    // Probabilistic check
-    if (GetRandomInt(0, 100) < 2) {
-        int64_t real_size = -1;
-
-        switch (TestBlob(oid, &real_size)) {
-            case StatResult::Success:
-            case StatResult::MissingPath: {} break;
-
-            case StatResult::AccessDenied: return StatResult::AccessDenied;
-            case StatResult::OtherError: return StatResult::OtherError;
-        }
-
-        if (known_size >= 0 && real_size < 0) {
-            ResetCache(false);
-
-            LogError("The local cache database was mismatched and could have resulted in missing data in the backup.");
-            LogError("You must start over to fix this situation.");
-
-            return StatResult::OtherError;
-        }
-    }
-
-    if (known_size < 0)
-        return StatResult::MissingPath;
-
-    if (out_size) {
-        *out_size = known_size;
-    }
-    return StatResult::Success;
 }
 
 static bool DeriveFromPassword(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])

@@ -111,10 +111,14 @@ Cache options:
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     LogInfo();
 
+    rk_Cache cache;
+    if (!cache.Open(repo.get(), false))
+        return false;
+
     LogInfo("Resetting cache...");
-    if (!repo->OpenCache(false))
+    if (!cache.Reset(list))
         return 1;
-    if (!repo->ResetCache(list))
+    if (!cache.Close())
         return 1;
     LogInfo("Done");
 

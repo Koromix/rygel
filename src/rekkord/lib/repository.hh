@@ -16,12 +16,12 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "src/core/sqlite/sqlite.hh"
 
 namespace RG {
 
 struct rk_Config;
 class rk_Disk;
+enum class rk_WriteResult;
 
 static const int rk_MasterKeySize = 32;
 
@@ -139,10 +139,6 @@ class rk_Repository {
     const char *role = "Secure";
     rk_KeySet *keyset = nullptr;
 
-    sq_Database cache_db;
-    std::atomic_int64_t cache_commit { 0 };
-    std::mutex cache_mutex;
-
     int compression_level;
 
     Async tasks;
@@ -170,30 +166,24 @@ public:
     unsigned int GetModes() const { return modes; }
     bool HasMode(rk_AccessMode mode) const { return modes & (int)mode; }
 
+    void MakeID(Span<uint8_t> out_id) const;
     void MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const;
 
+    Span<const uint8_t> GetCID() const { return ids.cid; }
     bool ChangeCID();
-
-    sq_Database *OpenCache(bool build);
-    bool ResetCache(bool list);
-    bool PutCache(const rk_ObjectID &oid, int64_t size);
-    bool CommitCache(bool force = false);
-    void CloseCache();
 
     bool InitUser(const char *username, rk_UserRole role, const char *pwd, bool force);
     bool DeleteUser(const char *username);
     bool ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserInfo> *out_users);
 
     bool ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t> *out_blob);
-    Size WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob);
-    StatResult TestBlob(const rk_ObjectID &oid, int64_t *out_size);
+    rk_WriteResult WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob, int64_t *out_size = nullptr);
+    StatResult TestBlob(const rk_ObjectID &oid, int64_t *out_size = nullptr);
 
     bool WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload);
     bool ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags);
 
 private:
-    StatResult TestFast(const rk_ObjectID &oid, int64_t *out_size);
-
     bool WriteKeys(const char *path, const char *pwd, rk_UserRole role, const rk_KeySet &keys);
     bool ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, rk_KeySet *out_keys);
 
