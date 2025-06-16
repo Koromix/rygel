@@ -1495,6 +1495,11 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
     if (!repo->ReadBlob(oid, &type, &blob))
         return false;
 
+    // Make sure hash is coherent with blob data. We need to compute the hash now, even though the error will
+    // be issued later, because blob data may change when we migrate legacy blob types.
+    rk_Hash hash;
+    HashBlake3(type, blob, salt32, &hash);
+
     switch (type) {
         case (int)BlobType::Chunk: {} break;
 
@@ -1577,15 +1582,9 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
         } break;
     }
 
-    // Make sure hash is coherent with blob data
-    {
-        rk_Hash hash;
-        HashBlake3(type, blob, salt32, &hash);
-
-        if (hash != oid.hash) {
-            LogError("Data of blob '%1' does not match OID hash", oid);
-            return false;
-        }
+    if (hash != oid.hash) {
+        LogError("Data of blob '%1' does not match OID hash", oid);
+        return false;
     }
 
     if (!validate(type, blob))
