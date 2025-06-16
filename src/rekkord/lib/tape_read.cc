@@ -19,6 +19,7 @@
 #include "tape.hh"
 #include "priv_tape.hh"
 #include "xattr.hh"
+#include "vendor/blake3/c/blake3.h"
 
 #if defined(_WIN32)
     #if !defined(NOMINMAX)
@@ -1428,6 +1429,8 @@ class CheckContext {
     rk_Cache *cache;
     int64_t mark;
 
+    uint8_t salt32[32];
+
     ProgressHandle pg_blobs { "Blobs" };
 
     int64_t total_blobs = 0;
@@ -1452,6 +1455,7 @@ private:
 CheckContext::CheckContext(rk_Repository *repo, rk_Cache *cache, int64_t mark, int64_t checked, int64_t blobs)
     : repo(repo), cache(cache), mark(mark), total_blobs(blobs), checked_blobs(checked), tasks(repo->GetAsync())
 {
+    repo->MakeSalt(rk_SaltKind::BlobHash, salt32);
 }
 
 bool CheckContext::Check(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate)
@@ -1469,6 +1473,18 @@ bool CheckContext::Check(const rk_ObjectID &oid, FunctionRef<bool(int, Span<cons
     MakeProgress(inserted);
 
     return valid;
+}
+
+static void HashBlake3(int type, Span<const uint8_t> buf, const uint8_t salt[32], rk_Hash *out_hash)
+{
+    uint8_t salt2[32];
+    MemCpy(salt2, salt, RG_SIZE(salt2));
+    salt2[31] ^= (uint8_t)type;
+
+    blake3_hasher hasher;
+    blake3_hasher_init_keyed(&hasher, salt2);
+    blake3_hasher_update(&hasher, buf.ptr, buf.len);
+    blake3_hasher_finalize(&hasher, out_hash->raw, RG_SIZE(out_hash->raw));
 }
 
 bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate)
@@ -1559,6 +1575,17 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
             LogError("Invalid blob type %1", type);
             return false;
         } break;
+    }
+
+    // Make sure hash is coherent with blob data
+    {
+        rk_Hash hash;
+        HashBlake3(type, blob, salt32, &hash);
+
+        if (hash != oid.hash) {
+            LogError("Data of blob '%1' does not match OID hash", oid);
+            return false;
+        }
     }
 
     if (!validate(type, blob))
