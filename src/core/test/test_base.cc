@@ -262,6 +262,20 @@ TEST_FUNCTION("base/FastRandom")
         TEST_EQ(rng.GetInt(1, 24097), 20133);
         TEST_EQ(rng.GetInt(1, 24097), 20881);
     }
+
+    for (int i = 4; i < 1000; i++) {
+        FastRandom rng;
+
+        for (int j = 0; j < 100000; j++) {
+            int value = rng.GetInt(0, i);
+            TEST_EX(value >= 0 && value < i, "GetInt(0, %2): %1 >= 0 && %1 < %2", value, i);
+        }
+
+        for (int j = 0; j < 100000; j++) {
+            int64_t value = rng.GetInt64(0, i);
+            TEST_EX(value >= 0 && value < i, "GetInt(0, %2): %1 >= 0 && %1 < %2", value, i);
+        }
+    }
 }
 
 TEST_FUNCTION("base/ParseBool")
