@@ -432,7 +432,8 @@ bool rk_Cache::Commit(bool force)
         for (const PendingCheck &check: commit.checks) {
             if (!write.Run(R"(INSERT INTO checks (oid, mark, valid)
                               VALUES (?1, ?2, ?3)
-                              ON CONFLICT DO NOTHING)",
+                              ON CONFLICT (oid) DO UPDATE SET mark = excluded.mark,
+                                                              valid = excluded.valid)",
                            check.oid.Raw(), check.mark, 0 + check.valid))
                 return false;
         }
