@@ -243,6 +243,14 @@ int64_t rk_Cache::CountBlobs(int64_t *out_checked)
     return blobs;
 }
 
+bool rk_Cache::PruneChecks(int64_t from)
+{
+    RG_ASSERT(repo);
+
+    bool success = db.Run("DELETE FROM checks WHERE mark < ?1", from);
+    return success;
+}
+
 StatResult rk_Cache::TestBlob(const rk_ObjectID &oid, int64_t *out_size)
 {
     RG_ASSERT(repo);
@@ -265,26 +273,6 @@ StatResult rk_Cache::TestBlob(const rk_ObjectID &oid, int64_t *out_size)
     }
 }
 
-void rk_Cache::PutBlob(const rk_ObjectID &oid, int64_t size)
-{
-    RG_ASSERT(repo);
-
-    std::lock_guard<std::mutex> lock(mutex);
-
-    PendingBlob blob = { oid, size };
-    blobs.Append(blob);
-
-    Commit(false);
-}
-
-bool rk_Cache::PruneChecks(int64_t from)
-{
-    RG_ASSERT(repo);
-
-    bool success = db.Run("DELETE FROM checks WHERE mark < ?1", from);
-    return success;
-}
-
 bool rk_Cache::HasCheck(const rk_ObjectID &oid, bool *out_valid)
 {
     RG_ASSERT(repo);
@@ -301,28 +289,6 @@ bool rk_Cache::HasCheck(const rk_ObjectID &oid, bool *out_valid)
         *out_valid = valid;
     }
     return true;
-}
-
-bool rk_Cache::PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid)
-{
-    RG_ASSERT(repo);
-
-    std::lock_guard<std::mutex> lock(mutex);
-
-    PendingCheck check = { oid, mark, valid };
-    checks.Append(check);
-
-    bool inserted;
-    known_checks.TrySet(oid, &inserted);
-
-    Commit(false);
-
-    if (!inserted) {
-        // The check may have been committed already
-        inserted = !HasCheck(oid);
-    }
-
-    return inserted;
 }
 
 StatResult rk_Cache::GetStat(const char *path, rk_CacheStat *out_stat)
@@ -357,6 +323,40 @@ StatResult rk_Cache::GetStat(const char *path, rk_CacheStat *out_stat)
     } else {
         return StatResult::OtherError;
     }
+}
+
+void rk_Cache::PutBlob(const rk_ObjectID &oid, int64_t size)
+{
+    RG_ASSERT(repo);
+
+    std::lock_guard<std::mutex> lock(mutex);
+
+    PendingBlob blob = { oid, size };
+    blobs.Append(blob);
+
+    Commit(false);
+}
+
+bool rk_Cache::PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid)
+{
+    RG_ASSERT(repo);
+
+    std::lock_guard<std::mutex> lock(mutex);
+
+    PendingCheck check = { oid, mark, valid };
+    checks.Append(check);
+
+    bool inserted;
+    known_checks.TrySet(oid, &inserted);
+
+    Commit(false);
+
+    if (!inserted) {
+        // The check may have been committed already
+        inserted = !HasCheck(oid);
+    }
+
+    return inserted;
 }
 
 void rk_Cache::PutStat(const char *path, const rk_CacheStat &stat)

@@ -67,15 +67,14 @@ public:
     bool Reset(bool list);
 
     int64_t CountBlobs(int64_t *out_checked = nullptr);
+    bool PruneChecks(int64_t from);
 
     StatResult TestBlob(const rk_ObjectID &oid, int64_t *out_size = nullptr);
-    void PutBlob(const rk_ObjectID &oid, int64_t size);
-
-    bool PruneChecks(int64_t from);
     bool HasCheck(const rk_ObjectID &oid, bool *out_valid = nullptr);
-    bool PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid);
-
     StatResult GetStat(const char *path, rk_CacheStat *out_stat);
+
+    void PutBlob(const rk_ObjectID &oid, int64_t size);
+    bool PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid);
     void PutStat(const char *path, const rk_CacheStat &stat);
 
 private:
