@@ -6,6 +6,13 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.69
+
+*Released on 2025-06-16*
+
+- Fix erroneous hash mismatch bug with legacy blob types
+- Fix stale check mark and validity values
+
 ### Rekkord 0.68
 
 *Released on 2025-06-16*
