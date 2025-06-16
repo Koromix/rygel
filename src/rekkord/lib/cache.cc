@@ -21,7 +21,7 @@
 namespace RG {
 
 static const int CacheVersion = 1;
-static const int64_t CacheDelay = 5000;
+static const int64_t CommitDelay = 5000;
 
 bool rk_Cache::Open(rk_Repository *repo, bool build)
 {
@@ -148,10 +148,15 @@ bool rk_Cache::Open(rk_Repository *repo, bool build)
 
 bool rk_Cache::Close()
 {
+    if (!repo)
+        return true;
+
+    bool success = Commit(true);
+
     db.Close();
     repo = nullptr;
 
-    return true;
+    return success;
 }
 
 bool rk_Cache::Reset(bool list)
@@ -260,25 +265,30 @@ StatResult rk_Cache::TestBlob(const rk_ObjectID &oid, int64_t *out_size)
     }
 }
 
-bool rk_Cache::PutBlob(const rk_ObjectID &oid, int64_t size)
+void rk_Cache::PutBlob(const rk_ObjectID &oid, int64_t size)
 {
     RG_ASSERT(repo);
 
-    bool success = db.Run(R"(INSERT INTO blobs (oid, size)
-                             VALUES (?1, ?2)
-                             ON CONFLICT DO NOTHING)",
-                          oid.Raw(), size);
-    return success;
+    std::lock_guard<std::mutex> lock(mutex);
+
+    PendingBlob blob = { oid, size };
+    blobs.Append(blob);
+
+    Commit(false);
 }
 
 bool rk_Cache::PruneChecks(int64_t from)
 {
+    RG_ASSERT(repo);
+
     bool success = db.Run("DELETE FROM checks WHERE mark < ?1", from);
     return success;
 }
 
 bool rk_Cache::HasCheck(const rk_ObjectID &oid, bool *out_valid)
 {
+    RG_ASSERT(repo);
+
     sq_Statement stmt;
     if (!db.Prepare("SELECT valid FROM checks WHERE oid = ?1", &stmt, oid.Raw()))
         return false;
@@ -293,26 +303,24 @@ bool rk_Cache::HasCheck(const rk_ObjectID &oid, bool *out_valid)
     return true;
 }
 
-bool rk_Cache::SetCheck(const rk_ObjectID &oid, int64_t mark, bool valid, bool *out_inserted)
+bool rk_Cache::PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid)
 {
-    sq_Statement stmt;
-    if (!db.Prepare(R"(INSERT INTO checks (oid, mark, valid)
-                       VALUES (?1, ?2, ?3)
-                       ON CONFLICT DO NOTHING
-                       RETURNING oid)",
-                    &stmt, oid.Raw(), mark, 0 + valid))
-        return false;
-    if (!stmt.Run())
-        return false;
+    RG_ASSERT(repo);
 
-    if (out_inserted) {
-        *out_inserted = stmt.IsRow();
-    }
+    std::lock_guard<std::mutex> lock(mutex);
+
+    PendingCheck check = { oid, mark, valid };
+    checks.Append(check);
+
+    Commit(false);
+
     return true;
 }
 
 StatResult rk_Cache::GetStat(const char *path, rk_CacheStat *out_stat)
 {
+    RG_ASSERT(repo);
+
     sq_Statement stmt;
     if (!db.Prepare(R"(SELECT mtime, ctime, mode, size, hash, stored
                        FROM stats
@@ -343,18 +351,76 @@ StatResult rk_Cache::GetStat(const char *path, rk_CacheStat *out_stat)
     }
 }
 
-bool rk_Cache::PutStat(const char *path, const rk_CacheStat &stat)
+void rk_Cache::PutStat(const char *path, const rk_CacheStat &stat)
 {
-    bool success = db.Run(R"(INSERT INTO stats (path, mtime, ctime, mode, size, hash, stored)
-                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-                             ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
-                                                              ctime = excluded.ctime,
-                                                              mode = excluded.mode,
-                                                              size = excluded.size,
-                                                              hash = excluded.hash,
-                                                              stored = excluded.stored)",
-                          path, stat.mtime, stat.ctime, stat.mode, stat.size,
-                          MakeSpan((const uint8_t *)&stat.hash.raw, RG_SIZE(stat.hash.raw)), stat.stored);
+    RG_ASSERT(repo);
+
+    std::lock_guard<std::mutex> lock(mutex);
+
+    Allocator *alloc;
+    PendingStat *ptr = stats.AppendDefault(&alloc);
+
+    ptr->path = DuplicateString(path, alloc).ptr;
+    ptr->st = stat;
+
+    Commit(false);
+}
+
+bool rk_Cache::Commit(bool force)
+{
+    RG_ASSERT(repo);
+
+    int64_t now = GetMonotonicTime();
+    Size i = 0, j = 0, k = 0;
+
+    if (!force && now - commit < CommitDelay)
+        return true;
+
+    RG_DEFER {
+        blobs.RemoveFirst(i);
+        checks.RemoveFirst(j);
+        stats.RemoveFirst(k);
+
+        commit = now;
+    };
+
+    bool success = db.Transaction([&]() {
+        for (const PendingBlob &blob: blobs) {
+            if (!db.Run(R"(INSERT INTO blobs (oid, size)
+                           VALUES (?1, ?2)
+                           ON CONFLICT DO NOTHING)",
+                        blob.oid.Raw(), blob.size))
+                return false;
+            i++;
+        }
+
+        for (const PendingCheck &check: checks) {
+            if (!db.Run(R"(INSERT INTO checks (oid, mark, valid)
+                           VALUES (?1, ?2, ?3)
+                           ON CONFLICT DO NOTHING)",
+                        check.oid.Raw(), check.mark, 0 + check.valid))
+                return false;
+            j++;
+        }
+
+        for (const PendingStat &stat: stats) {
+            if (!db.Run(R"(INSERT INTO stats (path, mtime, ctime, mode, size, hash, stored)
+                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                           ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
+                                                            ctime = excluded.ctime,
+                                                            mode = excluded.mode,
+                                                            size = excluded.size,
+                                                            hash = excluded.hash,
+                                                            stored = excluded.stored)",
+                        stat.path, stat.st.mtime, stat.st.ctime, stat.st.mode, stat.st.size,
+                        MakeSpan((const uint8_t *)&stat.st.hash.raw, RG_SIZE(stat.st.hash.raw)), stat.st.stored))
+                return false;
+            k++;
+        }
+
+        return true;
+    });
+
     return success;
 }
 

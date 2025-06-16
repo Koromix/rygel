@@ -1465,9 +1465,7 @@ bool CheckContext::Check(const rk_ObjectID &oid, FunctionRef<bool(int, Span<cons
 
     bool valid = CheckBlob(oid, validate);
 
-    bool inserted;
-    if (!cache->SetCheck(oid, mark, valid, &inserted))
-        return false;
+    bool inserted = cache->PutCheck(oid, mark, valid);
     MakeProgress(inserted);
 
     return valid;

@@ -508,8 +508,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                     stat.hash = entry->hash;
                     stat.stored = stored;
 
-                    if (!cache->PutStat(filename, stat))
-                        return false;
+                    cache->PutStat(filename, stat);
                 }
 
                 offset += entry->GetSize();
@@ -720,8 +719,7 @@ int64_t PutContext::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8
         case rk_WriteResult::OtherError: return -1;
     }
 
-    if (!cache->PutBlob(oid, size))
-        return -1;
+    cache->PutBlob(oid, size);
 
     return size;
 }

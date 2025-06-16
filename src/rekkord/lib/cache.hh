@@ -32,8 +32,30 @@ struct rk_CacheStat {
 };
 
 class rk_Cache {
+    struct PendingBlob {
+        rk_ObjectID oid;
+        int64_t size;
+    };
+
+    struct PendingCheck {
+        rk_ObjectID oid;
+        int64_t mark;
+        bool valid;
+    };
+
+    struct PendingStat {
+        const char *path;
+        rk_CacheStat st;
+    };
+
     rk_Repository *repo = nullptr;
     sq_Database db;
+
+    std::mutex mutex;
+    int64_t commit = 0;
+    BucketArray<PendingBlob> blobs;
+    BucketArray<PendingCheck> checks;
+    BucketArray<PendingStat> stats;
 
 public:
     ~rk_Cache() { Close(); }
@@ -46,14 +68,18 @@ public:
     int64_t CountBlobs(int64_t *out_checked = nullptr);
 
     StatResult TestBlob(const rk_ObjectID &oid, int64_t *out_size = nullptr);
-    bool PutBlob(const rk_ObjectID &oid, int64_t size);
+    void PutBlob(const rk_ObjectID &oid, int64_t size);
 
     bool PruneChecks(int64_t from);
-    bool HasCheck(const rk_ObjectID &oid, bool *out_valdi = nullptr);
-    bool SetCheck(const rk_ObjectID &oid, int64_t mark, bool valid, bool *out_inserted = nullptr);
+    bool HasCheck(const rk_ObjectID &oid, bool *out_valid = nullptr);
+    bool PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid);
 
     StatResult GetStat(const char *path, rk_CacheStat *out_stat);
-    bool PutStat(const char *path, const rk_CacheStat &stat);
+    void PutStat(const char *path, const rk_CacheStat &stat);
+
+private:
+    // Call with mutex locked
+    bool Commit(bool force);
 };
 
 }
