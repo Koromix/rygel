@@ -72,13 +72,15 @@ bool rk_Config::Validate(bool require_auth) const
         valid = false;
     }
 
-    if (require_auth && !username) {
-        LogError("Missing repository username");
-        valid = false;
-    }
-    if (require_auth && !password) {
-        LogError("Missing repository password");
-        valid = false;
+    if (require_auth && !key_filename) {
+        if (!username) {
+            LogError("Missing repository username");
+            valid = false;
+        }
+        if (!password) {
+            LogError("Missing repository password");
+            valid = false;
+        }
     }
 
     switch (type) {

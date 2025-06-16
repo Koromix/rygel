@@ -48,17 +48,25 @@ class rk_Cache {
         rk_CacheStat st;
     };
 
+    struct PendingSet {
+        HeapArray<PendingBlob> blobs;
+        HeapArray<PendingCheck> checks;
+        HeapArray<PendingStat> stats;
+
+        BlockAllocator str_alloc;
+    };
+
     rk_Repository *repo = nullptr;
 
     sq_Database main;
     sq_Database write;
 
-    std::mutex mutex;
-    int64_t commit = 0;
-    BucketArray<PendingBlob, 512> blobs;
-    BucketArray<PendingCheck, 512> checks;
+    std::mutex put_mutex;
+    PendingSet pending;
+    int64_t last_commit = 0;
+    std::mutex commit_mutex;
+    PendingSet committing;
     HashSet<rk_ObjectID> known_checks;
-    BucketArray<PendingStat, 512> stats;
 
 public:
     ~rk_Cache() { Close(); }
@@ -73,7 +81,7 @@ public:
 
     StatResult TestBlob(const rk_ObjectID &oid, int64_t *out_size = nullptr);
     bool HasCheck(const rk_ObjectID &oid, bool *out_valid = nullptr);
-    StatResult GetStat(const char *path, rk_CacheStat *out_stat);
+    StatResult GetStat(const char *path, rk_CacheStat *st);
 
     void PutBlob(const rk_ObjectID &oid, int64_t size);
     bool PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid);

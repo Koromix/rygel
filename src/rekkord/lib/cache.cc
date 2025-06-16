@@ -154,6 +154,9 @@ bool rk_Cache::Close()
     if (!repo)
         return true;
 
+    // Can't use lock_guard, see Commit()
+    put_mutex.lock();
+
     bool success = Commit(true);
 
     main.Close();
@@ -335,10 +338,11 @@ void rk_Cache::PutBlob(const rk_ObjectID &oid, int64_t size)
 {
     RG_ASSERT(repo);
 
-    std::lock_guard<std::mutex> lock(mutex);
+    // Can't use lock_guard, see Commit()
+    put_mutex.lock();
 
     PendingBlob blob = { oid, size };
-    blobs.Append(blob);
+    pending.blobs.Append(blob);
 
     Commit(false);
 }
@@ -347,10 +351,11 @@ bool rk_Cache::PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid)
 {
     RG_ASSERT(repo);
 
-    std::lock_guard<std::mutex> lock(mutex);
+    // Can't use lock_guard, see Commit()
+    put_mutex.lock();
 
     PendingCheck check = { oid, mark, valid };
-    checks.Append(check);
+    pending.checks.Append(check);
 
     bool inserted;
     known_checks.TrySet(oid, &inserted);
@@ -365,64 +370,72 @@ bool rk_Cache::PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid)
     return inserted;
 }
 
-void rk_Cache::PutStat(const char *path, const rk_CacheStat &stat)
+void rk_Cache::PutStat(const char *path, const rk_CacheStat &st)
 {
     RG_ASSERT(repo);
 
-    std::lock_guard<std::mutex> lock(mutex);
+    // Can't use lock_guard, see Commit()
+    put_mutex.lock();
 
-    Allocator *alloc;
-    PendingStat *ptr = stats.AppendDefault(&alloc);
+    path = DuplicateString(path, &pending.str_alloc).ptr;
 
-    ptr->path = DuplicateString(path, alloc).ptr;
-    ptr->st = stat;
+    PendingStat stat = { path, st };
+    pending.stats.Append(stat);
 
     Commit(false);
 }
 
+// Call with put_mutex locked, but don't use a guard because this method releases the lock!
 bool rk_Cache::Commit(bool force)
 {
     RG_ASSERT(repo);
 
     int64_t now = GetMonotonicTime();
-    Size i = 0, j = 0, k = 0;
 
-    if (!force && now - commit < CommitDelay)
+    if (!force && now - last_commit < CommitDelay) {
+        put_mutex.unlock();
         return true;
+    }
+
+    std::lock_guard<std::mutex> lock(commit_mutex);
+
+    std::swap(pending, committing);
+    last_commit = now;
+
+    put_mutex.unlock();
 
     RG_DEFER {
-        blobs.RemoveFirst(i);
-        checks.RemoveFirst(j);
-        stats.RemoveFirst(k);
+        committing.blobs.RemoveFrom(0);
+        committing.checks.RemoveFrom(0);
+        committing.stats.RemoveFrom(0);
+        committing.str_alloc.Reset();
 
-        known_checks.Clear();
-        for (const PendingCheck &check: checks) {
+        std::lock_guard<std::mutex> lock(put_mutex);
+
+        known_checks.RemoveAll();
+        for (const PendingCheck &check: pending.checks) {
             known_checks.Set(check.oid);
         }
-
-        commit = now;
     };
 
     bool success = write.Transaction([&]() {
-        for (const PendingBlob &blob: blobs) {
+        for (const PendingBlob &blob: committing.blobs) {
             if (!write.Run(R"(INSERT INTO blobs (oid, size)
                               VALUES (?1, ?2)
                               ON CONFLICT DO NOTHING)",
                            blob.oid.Raw(), blob.size))
                 return false;
-            i++;
         }
 
-        for (const PendingCheck &check: checks) {
+        for (const PendingCheck &check: committing.checks) {
             if (!write.Run(R"(INSERT INTO checks (oid, mark, valid)
                               VALUES (?1, ?2, ?3)
                               ON CONFLICT DO NOTHING)",
                            check.oid.Raw(), check.mark, 0 + check.valid))
                 return false;
-            j++;
         }
 
-        for (const PendingStat &stat: stats) {
+        for (const PendingStat &stat: committing.stats) {
             Span<const uint8_t> hash = MakeSpan((const uint8_t *)&stat.st.hash.raw, RG_SIZE(stat.st.hash.raw));
 
             if (!write.Run(R"(INSERT INTO stats (path, mtime, ctime, mode, size, hash, stored)
@@ -435,7 +448,6 @@ bool rk_Cache::Commit(bool force)
                                                                stored = excluded.stored)",
                            stat.path, stat.st.mtime, stat.st.ctime, stat.st.mode, stat.st.size, hash, stat.st.stored))
                 return false;
-            k++;
         }
 
         return true;
