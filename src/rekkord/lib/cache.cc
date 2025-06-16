@@ -172,8 +172,6 @@ bool rk_Cache::Reset(bool list)
             return false;
         if (!main.Run("DELETE FROM blobs"))
             return false;
-        if (!main.Run("DELETE FROM checks"))
-            return false;
 
         if (list) {
             rk_Disk *disk = repo->GetDisk();
