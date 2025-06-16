@@ -143,7 +143,6 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
 
         const char *dirname = nullptr;
         HeapArray<uint8_t> blob;
-        HeapArray<int64_t> stored;
         bool failed = false;
 
         std::atomic_int64_t size { 0 };
@@ -331,13 +330,9 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                 }
             }
 
-            // Don't reallocate
-            pending->stored.Reserve(children);
-
             // Process data entries (file, links)
             for (Size offset = RG_SIZE(DirectoryHeader); offset < pending->blob.len;) {
                 RawEntry *entry = (RawEntry *)(pending->blob.ptr + offset);
-                int64_t *stored = pending->stored.AppendDefault();
 
                 const char *filename = Fmt(&temp_alloc, "%1%/%2", pending->dirname, entry->GetName()).ptr;
 
@@ -361,7 +356,6 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                             // Done by PutFile in theory, but we're skipping it
                             put_size += stat.size;
                             MakeProgress(stat.stored);
-                            *stored = stat.stored;
                             put_entries++;
 
                             break;
@@ -372,11 +366,24 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
 
                         async.Run([=, this]() {
                             int64_t file_size = 0;
-                            PutResult ret = PutFile(filename, &entry->hash, &file_size, stored);
+                            int64_t written = 0;
+
+                            PutResult ret = PutFile(filename, &entry->hash, &file_size, &written);
 
                             if (ret == PutResult::Success) {
                                 entry->flags |= (uint8_t)RawEntry::Flags::Readable;
                                 pending->size += file_size;
+
+                                rk_CacheStat stat = {};
+
+                                stat.mtime = LittleEndian(entry->mtime);
+                                stat.ctime = LittleEndian(entry->ctime);
+                                stat.mode = LittleEndian(entry->mode);
+                                stat.size = LittleEndian(entry->size);
+                                stat.hash = entry->hash;
+                                stat.stored = written;
+
+                                cache->PutStat(filename, stat);
 
                                 return true;
                             } else {
@@ -440,83 +447,42 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
         return PutResult::Error;
 
     // Finalize and upload directory blobs
-    async.Run([&]() {
-        for (Size i = pending_directories.count - 1; i >= 0; i--) {
-            PendingDirectory *pending = &pending_directories[i];
-            DirectoryHeader *header = (DirectoryHeader *)pending->blob.ptr;
+    for (Size i = pending_directories.count - 1; i >= 0; i--) {
+        PendingDirectory *pending = &pending_directories[i];
+        DirectoryHeader *header = (DirectoryHeader *)pending->blob.ptr;
 
-            header->size = LittleEndian(pending->size.load());
-            header->entries = LittleEndian(pending->entries);
+        header->size = LittleEndian(pending->size.load());
+        header->entries = LittleEndian(pending->entries);
 
-            HashBlake3(BlobType::Directory, pending->blob, salt32, &pending->hash);
+        HashBlake3(BlobType::Directory, pending->blob, salt32, &pending->hash);
 
-            if (pending->parent_idx >= 0) {
-                PendingDirectory *parent = &pending_directories[pending->parent_idx];
-                RawEntry *entry = (RawEntry *)(parent->blob.ptr + pending->parent_entry);
+        if (pending->parent_idx >= 0) {
+            PendingDirectory *parent = &pending_directories[pending->parent_idx];
+            RawEntry *entry = (RawEntry *)(parent->blob.ptr + pending->parent_entry);
 
-                entry->hash = pending->hash;
-                if (!pending->failed) {
-                    entry->flags |= (uint8_t)RawEntry::Flags::Readable;
-                    entry->size = LittleEndian(pending->subdirs);
-                }
-
-                parent->size += pending->size;
-                parent->entries += pending->entries;
+            entry->hash = pending->hash;
+            if (!pending->failed) {
+                entry->flags |= (uint8_t)RawEntry::Flags::Readable;
+                entry->size = LittleEndian(pending->subdirs);
             }
 
-            async.Run([pending, this]() mutable {
-                rk_ObjectID oid = { rk_BlobCatalog::Meta, pending->hash };
-
-                Size written = WriteBlob(oid, (int)BlobType::Directory, pending->blob);
-                if (written < 0)
-                    return false;
-
-                put_size += pending->blob.len;
-                MakeProgress(written);
-
-                return true;
-            });
+            parent->size += pending->size;
+            parent->entries += pending->entries;
         }
 
-        return true;
-    });
+        async.Run([pending, this]() mutable {
+            rk_ObjectID oid = { rk_BlobCatalog::Meta, pending->hash };
 
-    // Update cached stats
-    async.Run([&]() {
-        for (const PendingDirectory &pending: pending_directories) {
-            if (pending.failed)
-                continue;
+            Size written = WriteBlob(oid, (int)BlobType::Directory, pending->blob);
+            if (written < 0)
+                return false;
 
-            Size limit = pending.blob.len - RG_SIZE(int64_t);
-            Size idx = 0;
+            put_size += pending->blob.len;
+            MakeProgress(written);
 
-            for (Size offset = RG_SIZE(DirectoryHeader); offset < limit;) {
-                RawEntry *entry = (RawEntry *)(pending.blob.ptr + offset);
-                int64_t stored = pending.stored[idx++];
-
-                const char *filename = Fmt(&temp_alloc, "%1%/%2", pending.dirname, entry->GetName()).ptr;
-                int flags = LittleEndian(entry->flags);
-
-                if ((flags & (int)RawEntry::Flags::Readable) &&
-                        entry->kind == (int8_t)RawEntry::Kind::File) {
-                    rk_CacheStat stat = {};
-
-                    stat.mtime = LittleEndian(entry->mtime);
-                    stat.ctime = LittleEndian(entry->ctime);
-                    stat.mode = LittleEndian(entry->mode);
-                    stat.size = LittleEndian(entry->size);
-                    stat.hash = entry->hash;
-                    stat.stored = stored;
-
-                    cache->PutStat(filename, stat);
-                }
-
-                offset += entry->GetSize();
-            }
-        }
-
-        return true;
-    });
+            return true;
+        });
+    }
 
     if (!async.Sync())
         return PutResult::Error;
