@@ -53,10 +53,10 @@ class rk_Cache {
 
     std::mutex mutex;
     int64_t commit = 0;
-    BucketArray<PendingBlob> blobs;
-    BucketArray<PendingCheck> checks;
+    BucketArray<PendingBlob, 512> blobs;
+    BucketArray<PendingCheck, 512> checks;
     HashSet<rk_ObjectID> known_checks;
-    BucketArray<PendingStat> stats;
+    BucketArray<PendingStat, 512> stats;
 
 public:
     ~rk_Cache() { Close(); }
