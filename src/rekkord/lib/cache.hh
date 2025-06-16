@@ -49,7 +49,9 @@ class rk_Cache {
     };
 
     rk_Repository *repo = nullptr;
-    sq_Database db;
+
+    sq_Database main;
+    sq_Database write;
 
     std::mutex mutex;
     int64_t commit = 0;

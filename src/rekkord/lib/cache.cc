@@ -25,7 +25,9 @@ static const int64_t CommitDelay = 5000;
 
 bool rk_Cache::Open(rk_Repository *repo, bool build)
 {
-    RG_ASSERT(!db.IsValid());
+    RG_ASSERT(!repo);
+    RG_ASSERT(!main.IsValid());
+    RG_ASSERT(!write.IsValid());
 
     BlockAllocator temp_alloc;
 
@@ -33,7 +35,7 @@ bool rk_Cache::Open(rk_Repository *repo, bool build)
 
     this->repo = repo;
 
-    // Open database
+    const char *filename;
     {
         uint8_t id[32];
         repo->MakeID(id);
@@ -46,27 +48,27 @@ bool rk_Cache::Open(rk_Repository *repo, bool build)
         if (!MakeDirectory(dirname, false))
             return false;
 
-        const char *filename = Fmt(&temp_alloc, "%1%/%2.db", dirname, FmtSpan(id, FmtType::SmallHex, "").Pad0(-2)).ptr;
+        filename = Fmt(&temp_alloc, "%1%/%2.db", dirname, FmtSpan(id, FmtType::SmallHex, "").Pad0(-2)).ptr;
         LogDebug("Cache file: %1", filename);
-
-        if (!db.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-            return false;
-        if (!db.SetWAL(true))
-            return false;
     }
 
+    if (!main.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        return false;
+    if (!main.SetWAL(true))
+        return false;
+
     int version;
-    if (!db.GetUserVersion(&version))
+    if (!main.GetUserVersion(&version))
         return false;
 
     if (version > CacheVersion) {
         LogError("Cache schema is too recent (%1, expected %2)", version, CacheVersion);
         return false;
     } else if (version < CacheVersion) {
-        bool success = db.Transaction([&]() {
+        bool success = main.Transaction([&]() {
             switch (version) {
                 case 0: {
-                    bool success = db.RunMany(R"(
+                    bool success = main.RunMany(R"(
                         CREATE TABLE meta (
                             cid BLOB
                         );
@@ -102,22 +104,20 @@ bool rk_Cache::Open(rk_Repository *repo, bool build)
                 static_assert(CacheVersion == 1);
             }
 
-            if (!db.SetUserVersion(CacheVersion))
+            if (!main.SetUserVersion(CacheVersion))
                 return false;
 
             return true;
         });
 
-        if (!success) {
-            db.Close();
+        if (!success)
             return false;
-        }
     }
 
     // Check known CID against repository CID
     {
         sq_Statement stmt;
-        if (!db.Prepare("SELECT cid FROM meta", &stmt))
+        if (!main.Prepare("SELECT cid FROM meta", &stmt))
             return false;
 
         if (stmt.Step()) {
@@ -127,7 +127,7 @@ bool rk_Cache::Open(rk_Repository *repo, bool build)
 
             build &= (cid1 != cid2);
         } else if (stmt.IsValid()) {
-            if (!db.Run("INSERT INTO meta (cid) VALUES (NULL)"))
+            if (!main.Run("INSERT INTO meta (cid) VALUES (NULL)"))
                 return false;
         } else {
             return false;
@@ -137,10 +137,13 @@ bool rk_Cache::Open(rk_Repository *repo, bool build)
     if (build) {
         LogInfo("Rebuilding cache...");
 
-        bool success = db.Transaction([&]() { return Reset(true); });
+        bool success = main.Transaction([&]() { return Reset(true); });
         if (!success)
             return false;
     }
+
+    if (!write.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        return false;
 
     err_guard.Disable();
     return true;
@@ -153,7 +156,8 @@ bool rk_Cache::Close()
 
     bool success = Commit(true);
 
-    db.Close();
+    main.Close();
+    write.Close();
     repo = nullptr;
 
     return success;
@@ -163,71 +167,75 @@ bool rk_Cache::Reset(bool list)
 {
     RG_ASSERT(repo);
 
-    if (!db.Run("DELETE FROM stats"))
-        return false;
-    if (!db.Run("DELETE FROM blobs"))
-        return false;
-    if (!db.Run("DELETE FROM checks"))
-        return false;
-
-    if (list) {
-        rk_Disk *disk = repo->GetDisk();
-
-        ProgressHandle progress("Cache");
-        std::atomic_int64_t listed { 0 };
-
-        bool success = disk->ListFiles("blobs", [&](const char *path, int64_t size) {
-            // We never write empty blobs, something went wrong
-            if (!size) [[unlikely]]
-                return true;
-            if (!StartsWith(path, "blobs/")) [[unlikely]]
-                return true;
-
-            rk_ObjectID oid;
-            {
-                Span<const char> remain = path + 6;
-                Span<const char> catalog = SplitStr(remain, '/');
-                Span<const char> hash = SplitStrReverse(remain, '/');
-
-                if (catalog.len != 1)
-                    return true;
-
-                char str[128];
-                str[0] = catalog[0];
-                CopyString(hash, MakeSpan(str + 1, RG_SIZE(str) - 1));
-
-                if (!rk_ParseOID(str, &oid))
-                    return true;
-            }
-
-            if (!db.Run(R"(INSERT INTO blobs (oid, size)
-                           VALUES (?1, ?2)
-                           ON CONFLICT (oid) DO UPDATE SET size = excluded.size)",
-                        oid.Raw(), size))
-                return false;
-
-            int64_t blobs = listed.fetch_add(1, std::memory_order_relaxed) + 1;
-            progress.SetFmt("%1 cached", blobs);
-
-            return true;
-        });
-        if (!success)
+    bool success = main.Transaction([&]() {
+        if (!main.Run("DELETE FROM stats"))
             return false;
-    }
+        if (!main.Run("DELETE FROM blobs"))
+            return false;
+        if (!main.Run("DELETE FROM checks"))
+            return false;
 
-    if (!db.Run("UPDATE meta SET cid = ?1", repo->GetCID()))
-        return false;
+        if (list) {
+            rk_Disk *disk = repo->GetDisk();
 
-    return true;
+            ProgressHandle progress("Cache");
+            std::atomic_int64_t listed { 0 };
+
+            bool success = disk->ListFiles("blobs", [&](const char *path, int64_t size) {
+                // We never write empty blobs, something went wrong
+                if (!size) [[unlikely]]
+                    return true;
+                if (!StartsWith(path, "blobs/")) [[unlikely]]
+                    return true;
+
+                rk_ObjectID oid;
+                {
+                    Span<const char> remain = path + 6;
+                    Span<const char> catalog = SplitStr(remain, '/');
+                    Span<const char> hash = SplitStrReverse(remain, '/');
+
+                    if (catalog.len != 1)
+                        return true;
+
+                    char str[128];
+                    str[0] = catalog[0];
+                    CopyString(hash, MakeSpan(str + 1, RG_SIZE(str) - 1));
+
+                    if (!rk_ParseOID(str, &oid))
+                        return true;
+                }
+
+                if (!main.Run(R"(INSERT INTO blobs (oid, size)
+                                 VALUES (?1, ?2)
+                                 ON CONFLICT (oid) DO UPDATE SET size = excluded.size)",
+                              oid.Raw(), size))
+                    return false;
+
+                int64_t blobs = listed.fetch_add(1, std::memory_order_relaxed) + 1;
+                progress.SetFmt("%1 cached", blobs);
+
+                return true;
+            });
+            if (!success)
+                return false;
+        }
+
+        if (!main.Run("UPDATE meta SET cid = ?1", repo->GetCID()))
+            return false;
+
+        return true;
+    });
+
+    return success;
 }
 
 int64_t rk_Cache::CountBlobs(int64_t *out_checked)
 {
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT COUNT(b.oid) AS blobs,
-                              SUM(IIF(c.oid IS NULL, 0, 1)) AS checked
-                       FROM blobs b
-                       LEFT JOIN checks c ON (c.oid = b.oid))", &stmt))
+    if (!main.Prepare(R"(SELECT COUNT(b.oid) AS blobs,
+                                SUM(IIF(c.oid IS NULL, 0, 1)) AS checked
+                         FROM blobs b
+                         LEFT JOIN checks c ON (c.oid = b.oid))", &stmt))
         return -1;
     if (!stmt.Step()) {
         RG_ASSERT(!stmt.IsValid());
@@ -247,7 +255,7 @@ bool rk_Cache::PruneChecks(int64_t from)
 {
     RG_ASSERT(repo);
 
-    bool success = db.Run("DELETE FROM checks WHERE mark < ?1", from);
+    bool success = main.Run("DELETE FROM checks WHERE mark < ?1", from);
     return success;
 }
 
@@ -256,7 +264,7 @@ StatResult rk_Cache::TestBlob(const rk_ObjectID &oid, int64_t *out_size)
     RG_ASSERT(repo);
 
     sq_Statement stmt;
-    if (!db.Prepare("SELECT size FROM blobs WHERE oid = ?1", &stmt, oid.Raw()))
+    if (!main.Prepare("SELECT size FROM blobs WHERE oid = ?1", &stmt, oid.Raw()))
         return StatResult::OtherError;
 
     if (stmt.Step()) {
@@ -278,7 +286,7 @@ bool rk_Cache::HasCheck(const rk_ObjectID &oid, bool *out_valid)
     RG_ASSERT(repo);
 
     sq_Statement stmt;
-    if (!db.Prepare("SELECT valid FROM checks WHERE oid = ?1", &stmt, oid.Raw()))
+    if (!main.Prepare("SELECT valid FROM checks WHERE oid = ?1", &stmt, oid.Raw()))
         return false;
     if (!stmt.Step())
         return false;
@@ -296,9 +304,9 @@ StatResult rk_Cache::GetStat(const char *path, rk_CacheStat *out_stat)
     RG_ASSERT(repo);
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT mtime, ctime, mode, size, hash, stored
-                       FROM stats
-                       WHERE path = ?1)", &stmt, path))
+    if (!main.Prepare(R"(SELECT mtime, ctime, mode, size, hash, stored
+                         FROM stats
+                         WHERE path = ?1)", &stmt, path))
         return StatResult::OtherError;
 
     if (stmt.Step()) {
@@ -397,36 +405,37 @@ bool rk_Cache::Commit(bool force)
         commit = now;
     };
 
-    bool success = db.Transaction([&]() {
+    bool success = write.Transaction([&]() {
         for (const PendingBlob &blob: blobs) {
-            if (!db.Run(R"(INSERT INTO blobs (oid, size)
-                           VALUES (?1, ?2)
-                           ON CONFLICT DO NOTHING)",
-                        blob.oid.Raw(), blob.size))
+            if (!write.Run(R"(INSERT INTO blobs (oid, size)
+                              VALUES (?1, ?2)
+                              ON CONFLICT DO NOTHING)",
+                           blob.oid.Raw(), blob.size))
                 return false;
             i++;
         }
 
         for (const PendingCheck &check: checks) {
-            if (!db.Run(R"(INSERT INTO checks (oid, mark, valid)
-                           VALUES (?1, ?2, ?3)
-                           ON CONFLICT DO NOTHING)",
-                        check.oid.Raw(), check.mark, 0 + check.valid))
+            if (!write.Run(R"(INSERT INTO checks (oid, mark, valid)
+                              VALUES (?1, ?2, ?3)
+                              ON CONFLICT DO NOTHING)",
+                           check.oid.Raw(), check.mark, 0 + check.valid))
                 return false;
             j++;
         }
 
         for (const PendingStat &stat: stats) {
-            if (!db.Run(R"(INSERT INTO stats (path, mtime, ctime, mode, size, hash, stored)
-                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-                           ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
-                                                            ctime = excluded.ctime,
-                                                            mode = excluded.mode,
-                                                            size = excluded.size,
-                                                            hash = excluded.hash,
-                                                            stored = excluded.stored)",
-                        stat.path, stat.st.mtime, stat.st.ctime, stat.st.mode, stat.st.size,
-                        MakeSpan((const uint8_t *)&stat.st.hash.raw, RG_SIZE(stat.st.hash.raw)), stat.st.stored))
+            Span<const uint8_t> hash = MakeSpan((const uint8_t *)&stat.st.hash.raw, RG_SIZE(stat.st.hash.raw));
+
+            if (!write.Run(R"(INSERT INTO stats (path, mtime, ctime, mode, size, hash, stored)
+                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                              ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
+                                                               ctime = excluded.ctime,
+                                                               mode = excluded.mode,
+                                                               size = excluded.size,
+                                                               hash = excluded.hash,
+                                                               stored = excluded.stored)",
+                           stat.path, stat.st.mtime, stat.st.ctime, stat.st.mode, stat.st.size, hash, stat.st.stored))
                 return false;
             k++;
         }
