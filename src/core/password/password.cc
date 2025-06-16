@@ -411,7 +411,7 @@ bool pwd_GeneratePassword(unsigned int flags, Span<char> out_password)
 
             // Avoid '-' in first position, to avoid problems when used in command-lines
             while (out_password[0] == '-') {
-                int idx = GetRandomInt(0, RG_SIZE(SpecialChars));
+                int idx = GetRandomInt(0, strlen(SpecialChars));
                 out_password[0] = SpecialChars[idx];
             }
 
