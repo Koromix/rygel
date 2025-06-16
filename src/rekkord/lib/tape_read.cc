@@ -1463,8 +1463,8 @@ bool CheckContext::Check(const rk_ObjectID &oid, FunctionRef<bool(int, Span<cons
     // Fast path
     {
         bool valid;
-        if (cache->HasCheck(oid, &valid))
-            return valid;
+        if (cache->HasCheck(oid, &valid) && valid)
+            return true;
     }
 
     bool valid = CheckBlob(oid, validate);
