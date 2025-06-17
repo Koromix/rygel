@@ -720,46 +720,46 @@ async function configureRepository(repo) {
                 <div class="main">
                     <label>
                         <span>Name</span>
-                        <input name="name" required value=${repo.name} />
+                        <input type="text" name="name" required value=${repo.name} />
                     </label>
                     <div class="section">Repository</div>
                     <label>
                         <span>URL</span>
-                        <input name="url" required value=${url}
+                        <input type="text" name="url" required value=${url}
                                @input=${e => { url = e.target.value; render(); }} />
                     </label>
                     <label>
                         <span>User</span>
-                        <input name="user" required value=${repo.user} />
+                        <input type="text" name="user" required value=${repo.user} />
                     </label>
                     <label>
                         <span>Password</span>
-                        <input name="password" required value=${repo.password} />
+                        <input type="password" name="password" required value=${repo.password} />
                     </label>
                     ${type == 's3' ? html`
                         <div class="section">S3</div>
                         <label>
                             <span>Key ID</span>
-                            <input name="S3_ACCESS_KEY_ID" required value=${repo.variables.S3_ACCESS_KEY_ID ?? ''}>
+                            <input type="text" name="S3_ACCESS_KEY_ID" required value=${repo.variables.S3_ACCESS_KEY_ID ?? ''}>
                         </label>
                         <label>
                             <span>Secret access key</span>
-                            <input name="S3_SECRET_ACCESS_KEY" required value=${repo.variables.S3_SECRET_ACCESS_KEY ?? ''}>
+                            <input type="password" name="S3_SECRET_ACCESS_KEY" required value=${repo.variables.S3_SECRET_ACCESS_KEY ?? ''}>
                         </label>
                     ` : ''}
                     ${type == 'ssh' ? html`
                         <div class="section">SFTP</div>
                         <label>
                             <span>Password</span>
-                            <input name="SSH_PASSWORD" value=${repo.variables.SSH_PASSWORD ?? ''}>
+                            <input type="password" name="SSH_PASSWORD" value=${repo.variables.SSH_PASSWORD ?? ''}>
                         </label>
                         <label>
                             <span>Key</span>
-                            <input name="SSH_KEY" value=${repo.variables.SSH_KEY ?? ''}>
+                            <input type="text" name="SSH_KEY" value=${repo.variables.SSH_KEY ?? ''}>
                         </label>
                         <label>
                             <span>Fingerprint</span>
-                            <input name="SSH_FINGERPRINT" value=${repo.variables.SSH_FINGERPRINT ?? ''}>
+                            <input type="text" name="SSH_FINGERPRINT" value=${repo.variables.SSH_FINGERPRINT ?? ''}>
                         </label>
                     ` : ''}
                 </div>
