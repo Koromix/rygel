@@ -892,7 +892,7 @@ int s3_Client::RunSafe(const char *action, FunctionRef<int(CURL *)> func, bool q
 
         if (status == 200 || status == 404 || status == 412)
             return status;
-        if (status == 501)
+        if (status > 0 && status != 409 && status != 500 && status != 502 && status != 503 && status != 504)
             break;
 
         // Connection may be busted for some reason, start from scratch
