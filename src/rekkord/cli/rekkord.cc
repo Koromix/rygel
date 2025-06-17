@@ -51,6 +51,9 @@ R"(Common options:
 
 rk_Config rekkord_config;
 
+static const char *DefaultConfigName = "rekkord.ini";
+static const char *DefaultConfigEnv = "REKKORD_CONFIG_FILE";
+
 bool HandleCommonOption(OptionParser &opt, bool ignore_unknown)
 {
     if (opt.Test("-C", "--config_file", OptionType::Value)) {
@@ -82,7 +85,7 @@ int Main(int argc, char **argv)
     RG_CRITICAL(argc >= 1, "First argument is missing");
 
     // Global options
-    const char *config_filename = GetEnv("REKKORD_CONFIG_FILE");
+    const char *config_filename = nullptr;
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
@@ -178,6 +181,12 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         PrintLn(StdErr);
         LogError("No command provided");
         return 1;
+    }
+
+    if (const char *str = GetEnv(DefaultConfigEnv); str) {
+        config_filename = str;
+    } else if (TestFile(DefaultConfigName)) {
+        config_filename = DefaultConfigName;
     }
 
     if (TestStr(cmd, "help")) {
