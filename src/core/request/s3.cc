@@ -877,6 +877,23 @@ void s3_Client::ReleaseConnection(CURL *curl)
     connections.Append(curl);
 }
 
+static inline bool ShouldRetry(int status)
+{
+    if (status == 409) // Transient conflict
+        return true;
+
+    if (status == 500) // Internal server error
+        return true;
+    if (status == 502) // Gateway error
+        return true;
+    if (status == 503) // Slow down
+        return true;
+    if (status == 504) // Gateway timeout
+        return true;
+
+    return false;
+}
+
 int s3_Client::RunSafe(const char *action, FunctionRef<int(CURL *)> func, bool quick)
 {
     CURL *curl = ReserveConnection();
@@ -892,7 +909,7 @@ int s3_Client::RunSafe(const char *action, FunctionRef<int(CURL *)> func, bool q
 
         if (status == 200 || status == 404 || status == 412)
             return status;
-        if (status > 0 && status != 409 && status != 500 && status != 502 && status != 503 && status != 504)
+        if (status > 0 && !ShouldRetry(status))
             break;
 
         // Connection may be busted for some reason, start from scratch
