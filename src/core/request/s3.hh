@@ -28,12 +28,11 @@ struct curl_slist;
 namespace RG {
 
 struct s3_Config {
-    const char *scheme = nullptr;
+    const char *scheme = "https";
     const char *host = nullptr;
     int port = -1;
     const char *region = nullptr; // Can be NULL
-    const char *bucket = nullptr;
-    bool path_mode = false;
+    const char *root = "/";
 
     const char *access_id = nullptr;
     const char *access_key = nullptr;

@@ -56,7 +56,7 @@ static const char *GetS3Env(const char *name)
 
 bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char>)
 {
-    if (key == "Location") {
+    if (key == "Location" || key == "Endpoint") {
         return s3_DecodeURL(value, this);
     } else if (key == "Host") {
         host = DuplicateString(value, &str_alloc).ptr;
@@ -66,11 +66,13 @@ bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<c
     } else if (key == "Region") {
         region = DuplicateString(value, &str_alloc).ptr;
         return true;
-    } else if (key == "Bucket") {
-        bucket = value.len ? DuplicateString(value, &str_alloc).ptr : nullptr;
+    } else if (key == "Root" || key == "Bucket") {
+        if (StartsWith(value, "/")) {
+            root = DuplicateString(value, &str_alloc).ptr;
+        } else {
+            root = Fmt(&str_alloc, "/%1", value).ptr;
+        }
         return true;
-    } else if (key == "PathMode") {
-        return ParseBool(value, &path_mode);
     } else if (key == "AccessKeyID" || key == "KeyID") {
         access_id = DuplicateString(value, &str_alloc).ptr;
         return true;
@@ -109,11 +111,8 @@ bool s3_Config::Validate() const
 {
     bool valid = true;
 
-    if (!scheme) {
-        LogError("Missing S3 protocol");
-        valid = false;
-    } else if (!TestStr(scheme, "http") && !TestStr(scheme, "https") && !TestStr(scheme, "s3")) {
-        LogError("Invalid S3 protocol '%1'", scheme);
+    if (!TestStr(scheme, "http") && !TestStr(scheme, "https")) {
+        LogError("Invalid S3 scheme '%1'", scheme);
         valid = false;
     }
     if (!host) {
@@ -124,8 +123,8 @@ bool s3_Config::Validate() const
         LogError("Invalid S3 port");
         valid = false;
     }
-    if (!bucket) {
-        LogError("Missing S3 bucket");
+    if (!root || root[0] != '/') {
+        LogError("Missing or invalid S3 root");
         valid = false;
     }
 
@@ -149,8 +148,7 @@ void s3_Config::Clone(s3_Config *out_config) const
     out_config->host = host ? DuplicateString(host, &out_config->str_alloc).ptr : nullptr;
     out_config->port = port;
     out_config->region = region ? DuplicateString(region, &out_config->str_alloc).ptr : nullptr;
-    out_config->bucket = bucket ? DuplicateString(bucket, &out_config->str_alloc).ptr : nullptr;
-    out_config->path_mode = path_mode;
+    out_config->root = root ? DuplicateString(root, &out_config->str_alloc).ptr : nullptr;
     out_config->access_id = access_id ? DuplicateString(access_id, &out_config->str_alloc).ptr : nullptr;
     out_config->access_key = access_key ? DuplicateString(access_key, &out_config->str_alloc).ptr : nullptr;
 }
@@ -180,49 +178,19 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
     int port = curl_GetUrlPartInt(h, CURLUPART_PORT);
     const char *path = curl_GetUrlPartStr(h, CURLUPART_PATH, &out_config->str_alloc).ptr;
 
-    const char *bucket = nullptr;
-    bool path_mode = false;
+    const char *root = DuplicateString(path, &out_config->str_alloc).ptr;
+
     const char *region = nullptr;
-
-    // Extract bucket name from path (if any)
-    if (path && !TestStr(path, "/")) {
-        Span<const char> remain;
-        Span<const char> name = SplitStr(path + 1, '/', &remain);
-
-        if (remain.len) {
-            LogError("Too many parts in S3 URL '%1'", url);
-            return false;
-        }
-
-        bucket = DuplicateString(name, &out_config->str_alloc).ptr;
-        path_mode = true;
-    }
-
-    // Extract bucket and region from host name
     {
         Span<const char> remain = host;
 
-        if (!StartsWith(remain, "s3.")) {
-            Span<const char> part = SplitStr(remain, ".s3.", &remain);
-
-            if (remain.len) {
-                if (path_mode) {
-                    LogError("Duplicate bucket name in S3 URL '%1'", url);
-                    return false;
-                }
-
-                bucket = DuplicateString(part, &out_config->str_alloc).ptr;
-
-                remain.ptr -= 3;
-                remain.len += 3;
-            }
+        if (StartsWith(remain, "s3.")) {
+            remain = remain.Take(3, remain.len - 3);
+        } else {
+            SplitStr(remain, ".s3.", &remain);
         }
 
-        if (!region) {
-            if (StartsWith(remain, "s3.")) {
-                SplitStr(remain, '.', &remain);
-            }
-
+        if (remain.len) {
             Size dots = (Size)std::count_if(remain.begin(), remain.end(), [](char c) { return c == '.'; });
 
             if (dots >= 2) {
@@ -238,8 +206,7 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
     if (!out_config->region) {
         out_config->region = region;
     }
-    out_config->bucket = bucket;
-    out_config->path_mode = path_mode;
+    out_config->root = root;
 
     return true;
 }
@@ -296,9 +263,6 @@ bool s3_Client::Open(const s3_Config &config)
     config.Clone(&this->config);
 
     // Skip explicit port when not needed
-    if (TestStr(config.scheme, "s3")) {
-        this->config.scheme = "https";
-    }
     if (config.port == 80 && TestStr(config.scheme, "http")) {
         this->config.port = -1;
     } else if (config.port == 443 && TestStr(config.scheme, "https")) {
@@ -321,7 +285,7 @@ bool s3_Client::Open(const s3_Config &config)
     } else {
         host = config.host;
     }
-    url = Fmt(&this->config.str_alloc, "%1://%2/%3", this->config.scheme, host, config.path_mode ? config.bucket : "").ptr;
+    url = Fmt(&this->config.str_alloc, "%1://%2%3", this->config.scheme, host, config.root).ptr;
 
     return OpenAccess();
 }
@@ -753,7 +717,7 @@ bool s3_Client::OpenAccess()
 
     region = config.region;
 
-    // Guess region with HEAD request
+    // Try to guess region with anonymous GET request
     if (!region) {
         CURL *curl = ReserveConnection();
         if (!curl)
@@ -821,7 +785,7 @@ bool s3_Client::OpenAccess()
         region = "us-east-1";
     }
 
-    // Final authentification test
+    // Authentification test, adjust region if needed
     {
         const char *path;
         Span<const char> url = MakeURL({}, nullptr, &temp_alloc, &path);
@@ -1112,14 +1076,13 @@ Span<const char> s3_Client::MakeURL(Span<const char> key, const char *query, All
     Fmt(&buf, "%1://%2", config.scheme, host);
 
     Size path_offset = buf.len;
-
-    if (config.path_mode) {
-        Fmt(&buf, "/%1", FmtUrlSafe(config.bucket));
+    Fmt(&buf, "%1", FmtUrlSafe(config.root, "/"));
+    if (key.len) {
+        bool separate = (config.root[1] && key.len);
+        Fmt(&buf, "%1%2", separate ? "/" : "", FmtUrlSafe(key, "/"));
     }
-    Fmt(&buf, "/%1", FmtUrlSafe(key, "/"));
 
     Size path_end = buf.len;
-
     if (query) {
         Fmt(&buf, "?%1", query);
     }
