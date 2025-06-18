@@ -19,7 +19,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-#if __riscv_xlen == 64
+#if __riscv_xlen == 64 || defined(__loongarch64)
 
 #include "src/core/base/base.hh"
 #include "ffi.hh"
@@ -97,7 +97,7 @@ static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int vec_avail)
     gpr_avail = std::min(2, gpr_avail);
     vec_avail = std::min(2, vec_avail);
 
-#if defined(__riscv_float_abi_double)
+#if defined(__riscv_float_abi_double) || defined(__loongarch64)
     if (param->type->primitive != PrimitiveKind::Union) {
         int gpr_count = 0;
         int vec_count = 0;
