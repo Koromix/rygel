@@ -84,10 +84,17 @@ int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
 
-    // Global options
-    const char *config_filename = nullptr;
+    BlockAllocator temp_alloc;
 
-    const auto print_usage = [](StreamWriter *st) {
+    // Global options
+    HeapArray<const char *> config_filenames;
+    const char *config_filename = FindConfigFile(DefaultConfigName, &temp_alloc, &config_filenames);
+
+    if (const char *str = GetEnv(DefaultConfigEnv); str) {
+        config_filename = str;
+    }
+
+    const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 command [arg...]%!0
 
@@ -117,7 +124,14 @@ Advanced commands:
     %!..+change_cid%!0                     Change repository cache ID (CID)
     %!..+reset_cache%!0                    Reset or rebuild local repository cache
 
-Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)", FelixTarget);
+Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
+
+Most commands try to load the configuration file if it exists. Unless the path is explicitly defined, the first of the following config files will be used:
+)", FelixTarget);
+
+        for (const char *filename: config_filenames) {
+            PrintLn(st, "    %!..+%1%!0", filename);
+        }
     };
 
 #if !defined(_WIN32)
@@ -181,12 +195,6 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         PrintLn(StdErr);
         LogError("No command provided");
         return 1;
-    }
-
-    if (const char *str = GetEnv(DefaultConfigEnv); str) {
-        config_filename = str;
-    } else if (TestFile(DefaultConfigName)) {
-        config_filename = DefaultConfigName;
     }
 
     if (TestStr(cmd, "help")) {
