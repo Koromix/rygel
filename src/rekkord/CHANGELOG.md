@@ -6,6 +6,15 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.70
+
+*Released on 2025-06-18*
+
+- Try to load `rekkord.ini` from standard paths
+- Drop confusing default user *write*
+- Simplify manual S3 configuration
+- Clean up S3 retry conditions
+
 ### Rekkord 0.69
 
 *Released on 2025-06-16*
