@@ -123,7 +123,7 @@ extern StreamReader *const StdIn;
 extern StreamWriter *const StdOut;
 extern StreamWriter *const StdErr;
 
-#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(_M_ARM64) || __riscv_xlen == 64
+#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(_M_ARM64) || __riscv_xlen == 64 || defined(__loongarch64)
     typedef int64_t Size;
     #define RG_SIZE_MAX INT64_MAX
 #elif defined(_WIN32) || defined(__APPLE__) || defined(__unix__)
@@ -222,6 +222,8 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
     #define RG_DEBUG_BREAK() __asm__ __volatile__(".inst 0xe7f001f0")
 #elif defined(__riscv)
     #define RG_DEBUG_BREAK() __asm__ __volatile__("ebreak")
+#elif defined(__loongarch64)
+    #define RG_DEBUG_BREAK() __asm__ __volatile__("break 1")
 #endif
 
 #if defined(_MSC_VER) || __EXCEPTIONS
