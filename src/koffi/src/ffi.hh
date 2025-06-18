@@ -200,6 +200,12 @@ struct ParameterInfo {
     int8_t vec_count;
     bool gpr_first; // Only for structs
     int8_t reg_size[2];
+#elif defined(__loongarch64)
+    bool use_memory;
+    int8_t gpr_count;
+    int8_t vec_count;
+    bool gpr_first; // Only for structs
+    int8_t reg_size[2];
 #endif
 };
 
