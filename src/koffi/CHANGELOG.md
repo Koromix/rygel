@@ -5,6 +5,15 @@
 
 ## Koffi 2
 
+### Koffi 2.12
+
+#### Koffi 2.12.0
+
+*Released on 2025-06-19*
+
+- Support LoongArch64 architecture (thanks to [wjh-la](https://github.com/wjh-la))
+- Fix wrong path for RISC-V 64 prebuild
+
 ### Koffi 2.11
 
 #### Koffi 2.11.0
