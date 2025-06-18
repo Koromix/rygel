@@ -382,5 +382,29 @@
                 "Test SQLite": "node test/sqlite.js"
             }
         }
+    },
+
+    "linux_loong64": {
+        "title": "Linux LoongArch64",
+
+        "info": {
+            "arch": "loong64",
+            "machine": "debian_loong64",
+            "directory": "/home/debian/luigi",
+            "build": "node ../cnoke/cnoke.js"
+        },
+
+        "test": {
+            "build": "node ../cnoke/cnoke.js -d test",
+            "commands": {
+                "Test Sync": "node test/sync.js",
+                "Test Union": "node test/union.js",
+                "Test Async": "node test/async.js",
+                "Test Callbacks": "node test/callbacks.js",
+                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test SQLite": "node test/sqlite.js",
+                "Test POSIX": "node test/posix.js"
+            }
+        }
     }
 }

@@ -15,6 +15,7 @@ x86_64 (AMD64)     | ✅      | ✅            | ✅
 ARM32 LE [^2]      | ⬜️      | ✅            | 🟨
 ARM64 (AArch64) LE | ✅      | ✅            | 🟨
 RISC-V 64 [^3]     | ⬜️      | ✅            | 🟨
+LoongArch64        | ⬜️      | ✅            | 🟨
 
 <div class="legend">✅ Yes | 🟨 Probably | ⬜️ Not applicable</div>
 
@@ -25,6 +26,7 @@ x86_64 (AMD64)     | ✅    | ✅          | ✅
 ARM32 LE [^2]      | ⬜️    | 🟨          | 🟨
 ARM64 (AArch64) LE | ✅    | ✅          | 🟨
 RISC-V 64 [^3]     | ⬜️    | 🟨          | 🟨
+LoongArch64        | ⬜️    | 🟨          | 🟨
 
 <div class="legend">✅ Yes | 🟨 Probably | ⬜️ Not applicable</div>
 
