@@ -1,7 +1,6 @@
 {
   "dependencies": {
     "ffi-napi": "^4.0.3",
-    "ffi-rs": "^1.2.10",
     "raylib": "^0.14.0",
     "ref-napi": "^3.0.3",
     "ref-struct-di": "^1.1.1"
