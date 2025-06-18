@@ -39,10 +39,11 @@ bool rk_Config::Complete(bool require_auth)
 
     if (require_auth && !username) {
         username = GetEnv("REKKORD_USER");
-        if (!username) {
-            username = "write";
-            LogWarning("Rekkord username is not set, using '%1'", username);
+        if (!username && FileIsVt100(STDERR_FILENO)) {
+            username = Prompt("Repository user: ", &str_alloc);
         }
+        if (!username)
+            return false;
     }
 
     if (require_auth && !password) {
