@@ -214,7 +214,16 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "Settings") {
                 do {
-                    if (prop.key == "CompressionLevel") {
+                    if (prop.key == "Threads") {
+                        if (ParseInt(prop.value, &config.threads)) {
+                            if (config.threads < 1) {
+                                LogError("Threads count cannot be < 1");
+                                valid = false;
+                            }
+                        } else {
+                            valid = false;
+                        }
+                    } else if (prop.key == "CompressionLevel") {
                         valid &= ParseInt(prop.value, &config.compression_level);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
