@@ -283,7 +283,7 @@ bool s3_Client::Open(const s3_Config &config)
     if (this->config.port > 0) {
         host = Fmt(&this->config.str_alloc, "%1:%2", config.host, this->config.port).ptr;
     } else {
-        host = config.host;
+        host = this->config.host;
     }
     url = Fmt(&this->config.str_alloc, "%1://%2%3", this->config.scheme, host, config.root).ptr;
 
