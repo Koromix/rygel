@@ -62,7 +62,7 @@ struct s3_PutSettings {
     const char *mimetype = nullptr;
     bool conditional = false;
 
-    int64_t retention = 0;
+    int64_t retain = 0;
     s3_LockMode lock = s3_LockMode::Governance;
 };
 

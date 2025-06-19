@@ -24,9 +24,9 @@ struct rk_Config;
 struct rk_S3Config;
 struct ssh_Config;
 
-enum class rk_WriteFlag {
-    Overwrite = 1 << 0,
-    Lockable = 1 << 1
+struct rk_WriteSettings {
+    bool overwrite = false;
+    int64_t retain = 0;
 };
 
 enum class rk_WriteResult {
@@ -56,8 +56,9 @@ public:
     virtual Size ReadFile(const char *path, HeapArray<uint8_t> *out_blob) = 0;
 
     // WriteResult::AlreadyExists must be silent, let the caller emit an error if relevant
-    virtual rk_WriteResult WriteFile(const char *path, Span<const uint8_t> buf, unsigned int flags) = 0;
+    virtual rk_WriteResult WriteFile(const char *path, Span<const uint8_t> buf, const rk_WriteSettings &settings = {}) = 0;
     virtual bool DeleteFile(const char *path) = 0;
+    virtual bool RetainFile(const char *path, int64_t until) = 0;
 
     bool ListFiles(FunctionRef<bool(const char *, int64_t)> func) { return ListFiles(nullptr, func); }
     virtual bool ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func) = 0;

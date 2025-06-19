@@ -56,8 +56,9 @@ public:
     Size ReadFile(const char *path, Span<uint8_t> out_buf) override;
     Size ReadFile(const char *path, HeapArray<uint8_t> *out_buf) override;
 
-    rk_WriteResult WriteFile(const char *path, Span<const uint8_t> buf, unsigned int flags) override;
+    rk_WriteResult WriteFile(const char *path, Span<const uint8_t> buf, const rk_WriteSettings &settings = {}) override;
     bool DeleteFile(const char *path) override;
+    bool RetainFile(const char *path, int64_t until) override;
 
     bool ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
     StatResult TestFile(const char *path, int64_t *out_size = nullptr) override;
@@ -338,12 +339,10 @@ Size SftpDisk::ReadFile(const char *path, HeapArray<uint8_t> *out_buf)
     return read_len;
 }
 
-rk_WriteResult SftpDisk::WriteFile(const char *path, Span<const uint8_t> buf, unsigned int flags)
+rk_WriteResult SftpDisk::WriteFile(const char *path, Span<const uint8_t> buf, const rk_WriteSettings &settings)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
-
-    bool overwrite = (flags & (int)rk_WriteFlag::Overwrite);
 
     rk_WriteResult ret = rk_WriteResult::Success;
 
@@ -427,8 +426,8 @@ rk_WriteResult SftpDisk::WriteFile(const char *path, Span<const uint8_t> buf, un
         sftp_close(file);
         file = nullptr;
 
-        if (sftp_rename2(conn->sftp, tmp.data, filename.data, overwrite) < 0) {
-            if (!overwrite) {
+        if (sftp_rename2(conn->sftp, tmp.data, filename.data, settings.overwrite) < 0) {
+            if (!settings.overwrite) {
                 // Atomic rename is not supported by older SSH servers, and the error code is unhelpful (Generic failure)...
                 // So we need to stat the path to emulate EEXIST.
 
@@ -483,6 +482,12 @@ bool SftpDisk::DeleteFile(const char *path)
     });
 
     return success;
+}
+
+bool SftpDisk::RetainFile(const char *, int64_t)
+{
+    LogError("Cannot retain files with SFTP backend");
+    return false;
 }
 
 bool SftpDisk::ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func)

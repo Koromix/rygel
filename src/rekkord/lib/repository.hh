@@ -154,14 +154,14 @@ class rk_Repository {
     rk_KeySet *keyset = nullptr;
 
     int compression_level;
+    int64_t retain;
 
     Async tasks;
 
     BlockAllocator str_alloc;
 
 public:
-    rk_Repository(rk_Disk *disk, int threads, int compression_level)
-        : disk(disk), compression_level(compression_level), tasks(threads) {}
+    rk_Repository(rk_Disk *disk, const rk_Config &config);
     ~rk_Repository() { Lock(); }
 
     bool IsRepository();
@@ -192,6 +192,7 @@ public:
 
     bool ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t> *out_blob);
     rk_WriteResult WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob, int64_t *out_size = nullptr);
+    bool RetainBlob(const rk_ObjectID &oid);
     StatResult TestBlob(const rk_ObjectID &oid, int64_t *out_size = nullptr);
 
     bool WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload);

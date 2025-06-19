@@ -1590,6 +1590,9 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
     if (!validate(type, blob))
         return false;
 
+    if (!repo->RetainBlob(oid))
+        return false;
+
     return true;
 }
 

@@ -540,7 +540,8 @@ static inline const char *GetLockModeString(s3_LockMode mode)
     RG_UNREACHABLE();
 }
 
-s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size, FunctionRef<Size(Span<uint8_t>)> func, const s3_PutSettings &settings)
+s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size, FunctionRef<Size(Span<uint8_t>)> func,
+                                  const s3_PutSettings &settings)
 {
     BlockAllocator temp_alloc;
 
@@ -555,8 +556,8 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size, FunctionRe
     if (settings.conditional) {
         kvs.Append({ "If-None-Match", "*" });
     }
-    if (settings.retention) {
-        TimeSpec spec = DecomposeTimeUTC(settings.retention);
+    if (settings.retain) {
+        TimeSpec spec = DecomposeTimeUTC(settings.retain);
         const char *until = Fmt(&temp_alloc, "%1", FmtTimeISO(spec)).ptr;
 
         kvs.Append({ "x-amz-object-lock-mode", GetLockModeString(settings.lock) });

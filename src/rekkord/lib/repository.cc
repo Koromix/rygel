@@ -42,6 +42,12 @@ static void SeedSigningPair(uint8_t sk[32], uint8_t pk[32])
     crypto_scalarmult_ed25519_base(pk, pk);
 }
 
+rk_Repository::rk_Repository(rk_Disk *disk, const rk_Config &config)
+    : disk(disk), compression_level(config.compression_level), retain(config.retain),
+      tasks(config.threads > 0 ? config.threads : disk->GetDefaultThreads())
+{
+}
+
 bool rk_Repository::IsRepository()
 {
     StatResult ret = disk->TestFile("rekkord");
@@ -797,7 +803,8 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
         } while (!complete);
     }
 
-    rk_WriteResult ret = disk->WriteFile(path, raw, (int)rk_WriteFlag::Lockable);
+    rk_WriteSettings settings = { .retain = retain };
+    rk_WriteResult ret = disk->WriteFile(path, raw, settings);
 
     switch (ret) {
         case rk_WriteResult::Success:
@@ -810,6 +817,17 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
         *out_size = raw.len;
     }
     return ret;
+}
+
+bool rk_Repository::RetainBlob(const rk_ObjectID &oid)
+{
+    if (!retain)
+        return true;
+
+    char path[256];
+    Fmt(path, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash);
+
+    return disk->RetainFile(path, retain);
 }
 
 StatResult rk_Repository::TestBlob(const rk_ObjectID &oid, int64_t *out_size)
@@ -880,7 +898,10 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
 
         sodium_bin2base64(path.end(), path.Available(), cypher.ptr + offset, len, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
 
-        if (disk->WriteFile(path.data, {}, (int)rk_WriteFlag::Lockable) != rk_WriteResult::Success)
+        rk_WriteSettings settings = { .retain = retain };
+        rk_WriteResult ret = disk->WriteFile(path.data, {}, settings);
+
+        if (ret != rk_WriteResult::Success)
             return false;
     }
 
@@ -1092,7 +1113,7 @@ bool rk_Repository::WriteKeys(const char *path, const char *pwd, rk_UserRole rol
     crypto_sign_ed25519_detached(data.sig, nullptr, (const uint8_t *)&data, offsetof(KeyData, sig), keyset->ckey);
 
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
-    rk_WriteResult ret = disk->WriteFile(path, buf, 0);
+    rk_WriteResult ret = disk->WriteFile(path, buf);
 
     switch (ret) {
         case rk_WriteResult::Success: return true;
@@ -1175,9 +1196,9 @@ bool rk_Repository::WriteConfig(const char *path, Span<const uint8_t> data, bool
 
     Size len = offsetof(ConfigData, cypher) + crypto_sign_ed25519_BYTES + data.len;
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&config, len);
-    unsigned int flags = overwrite ? (int)rk_WriteFlag::Overwrite : 0;
 
-    rk_WriteResult ret = disk->WriteFile(path, buf, flags);
+    rk_WriteSettings settings = { .overwrite = overwrite };
+    rk_WriteResult ret = disk->WriteFile(path, buf, settings);
 
     switch (ret) {
         case rk_WriteResult::Success: return true;
@@ -1243,8 +1264,7 @@ std::unique_ptr<rk_Repository> rk_OpenRepository(rk_Disk *disk, const rk_Config 
     if (!config.Validate(authenticate))
         return nullptr;
 
-    int threads = (config.threads >= 0) ? config.threads : disk->GetDefaultThreads();
-    std::unique_ptr<rk_Repository> repo = std::make_unique<rk_Repository>(disk, threads, config.compression_level);
+    std::unique_ptr<rk_Repository> repo = std::make_unique<rk_Repository>(disk, config);
 
     if (authenticate) {
         if (config.key_filename) {

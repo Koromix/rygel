@@ -84,6 +84,23 @@ bool rk_Config::Validate(bool require_auth) const
         }
     }
 
+    if (retain) {
+        if (safety) {
+            if (retain < rk_MinimalRetention) {
+                LogError("Retain duration is too low, disable DurationSafety to override");
+                valid = false;
+            } else if (retain > rk_MaximalRetention) {
+                LogError("Retain duration is too high, disable DurationSafety to override");
+                valid = false;
+            }
+        }
+
+        if (type != rk_DiskType::S3) {
+            LogError("Retain locks are only supported with S3 providers");
+            valid = false;
+        }
+    }
+
     switch (type) {
         case rk_DiskType::Local: {} break;
         case rk_DiskType::S3: { valid &= s3.remote.Validate(); } break;
@@ -230,19 +247,30 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
-            } else if (prop.section == "S3") {
+            } else if (prop.section == "Protection") {
                 do {
-                    if (prop.key == "ConditionalWrites") {
-                        valid &= ParseBool(prop.value, &config.s3.conditional);
-                    } else if (prop.key == "RetentionDelay") {
-                        if (ParseDuration(prop.value, &config.s3.retention)) {
-                            if (config.s3.retention < rk_S3MinimalRetention) {
-                                LogError("Retention delay is too low");
+                    if (prop.key == "RetainDuration") {
+                        if (prop.value == "Disabled") {
+                            config.retain = 0;
+                        } else if (ParseDuration(prop.value, &config.retain)) {
+                            if (config.retain < 0) {
+                                LogError("Retain duration cannot be negative");
                                 valid = false;
                             }
                         } else {
                             valid = false;
                         }
+                    } else if (prop.key == "DurationSafety") {
+                        valid &= ParseBool(prop.value, &config.safety);
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "S3") {
+                do {
+                    if (prop.key == "ConditionalWrites") {
+                        valid &= ParseBool(prop.value, &config.s3.conditional);
                     } else if (prop.key == "LockMode") {
                         if (!OptionToEnumI(s3_LockModeNames, prop.value, &config.s3.lock)) {
                             LogError("Invalid lock mode '%1'", prop.value);

@@ -31,11 +31,11 @@ struct rk_S3Config {
     s3_Config remote;
 
     bool conditional = true;
-    int64_t retention = 0;
     s3_LockMode lock = s3_LockMode::Governance;
 };
 
-static const int64_t rk_S3MinimalRetention = 7 * 86400000ll; // 7 days
+static const int64_t rk_MinimalRetention = 14 * 86400000ll; // 14 days
+static const int64_t rk_MaximalRetention = 100 * 86400000ll; // 100 days
 
 struct rk_Config {
     const char *url = nullptr;
@@ -47,6 +47,9 @@ struct rk_Config {
     rk_DiskType type = rk_DiskType::Local;
     rk_S3Config s3;
     ssh_Config ssh;
+
+    int64_t retain = 0;
+    bool safety = true;
 
     int threads = -1;
     int compression_level = 6;

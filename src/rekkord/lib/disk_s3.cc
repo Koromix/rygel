@@ -24,7 +24,6 @@ class S3Disk: public rk_Disk {
     s3_Client s3;
 
     bool conditional;
-    int64_t retention;
     s3_LockMode lock;
 
 public:
@@ -38,15 +37,16 @@ public:
     Size ReadFile(const char *path, Span<uint8_t> out_buf) override;
     Size ReadFile(const char *path, HeapArray<uint8_t> *out_buf) override;
 
-    rk_WriteResult WriteFile(const char *path, Span<const uint8_t> buf, unsigned int flags) override;
+    rk_WriteResult WriteFile(const char *path, Span<const uint8_t> buf, const rk_WriteSettings &settings = {}) override;
     bool DeleteFile(const char *path) override;
+    bool RetainFile(const char *path, int64_t until) override;
 
     bool ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
     StatResult TestFile(const char *path, int64_t *out_size) override;
 };
 
 S3Disk::S3Disk(const rk_S3Config &config)
-    : conditional(config.conditional), retention(config.retention), lock(config.lock)
+    : conditional(config.conditional), lock(config.lock)
 {
     if (!s3.Open(config.remote))
         return;
@@ -88,18 +88,18 @@ Size S3Disk::ReadFile(const char *path, HeapArray<uint8_t> *out_buf)
     return s3.GetObject(path, Mebibytes(256), out_buf);
 }
 
-rk_WriteResult S3Disk::WriteFile(const char *path, Span<const uint8_t> buf, unsigned int flags)
+rk_WriteResult S3Disk::WriteFile(const char *path, Span<const uint8_t> buf, const rk_WriteSettings &settings)
 {
-    s3_PutSettings settings;
+    s3_PutSettings put;
 
-    settings.conditional = conditional && !(flags & (int)rk_WriteFlag::Overwrite);
+    put.conditional = conditional && settings.overwrite;
 
-    if (retention && (flags & (int)rk_WriteFlag::Lockable)) {
-        settings.retention = GetUnixTime() + retention;
-        settings.lock = lock;
+    if (settings.retain) {
+        put.retain = GetUnixTime() + settings.retain;
+        put.lock = lock;
     }
 
-    s3_PutResult ret = s3.PutObject(path, buf, settings);
+    s3_PutResult ret = s3.PutObject(path, buf, put);
 
     switch (ret) {
         case s3_PutResult::Success: return rk_WriteResult::Success;
@@ -113,6 +113,11 @@ rk_WriteResult S3Disk::WriteFile(const char *path, Span<const uint8_t> buf, unsi
 bool S3Disk::DeleteFile(const char *path)
 {
     return s3.DeleteObject(path);
+}
+
+bool S3Disk::RetainFile(const char *path, int64_t until)
+{
+    return s3.RetainObject(path, until, lock);
 }
 
 bool S3Disk::ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func)

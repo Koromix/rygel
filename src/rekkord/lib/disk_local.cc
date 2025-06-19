@@ -35,8 +35,9 @@ public:
     Size ReadFile(const char *path, Span<uint8_t> out_buf) override;
     Size ReadFile(const char *path, HeapArray<uint8_t> *out_buf) override;
 
-    rk_WriteResult WriteFile(const char *path, Span<const uint8_t> buf, unsigned int flags) override;
+    rk_WriteResult WriteFile(const char *path, Span<const uint8_t> buf, const rk_WriteSettings &settings = {}) override;
     bool DeleteFile(const char *path) override;
+    bool RetainFile(const char *path, int64_t until) override;
 
     bool ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
     StatResult TestFile(const char *path, int64_t *out_size = nullptr) override;
@@ -109,7 +110,7 @@ Size LocalDisk::ReadFile(const char *path, HeapArray<uint8_t> *out_buf)
     return RG::ReadFile(filename.data, Mebibytes(64), out_buf);
 }
 
-rk_WriteResult LocalDisk::WriteFile(const char *path, Span<const uint8_t> buf, unsigned int flags)
+rk_WriteResult LocalDisk::WriteFile(const char *path, Span<const uint8_t> buf, const rk_WriteSettings &settings)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
@@ -159,8 +160,8 @@ rk_WriteResult LocalDisk::WriteFile(const char *path, Span<const uint8_t> buf, u
 
     // Finalize!
     {
-        unsigned int rename = (flags & (int)rk_WriteFlag::Overwrite) ? (int)RenameFlag::Overwrite : 0;
-        RenameResult ret = RenameFile(tmp.data, filename.data, (int)RenameResult::AlreadyExists, rename);
+        unsigned int flags = settings.overwrite ? (int)RenameFlag::Overwrite : 0;
+        RenameResult ret = RenameFile(tmp.data, filename.data, (int)RenameResult::AlreadyExists, flags);
 
         switch (ret) {
             case RenameResult::Success: {} break;
@@ -179,6 +180,12 @@ bool LocalDisk::DeleteFile(const char *path)
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
     return UnlinkFile(filename.data);
+}
+
+bool LocalDisk::RetainFile(const char *, int64_t)
+{
+    LogError("Cannot retain files with local backend");
+    return false;
 }
 
 bool LocalDisk::ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func)
