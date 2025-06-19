@@ -305,15 +305,18 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
 {
     BlockAllocator temp_alloc;
 
-    char query[4096];
-    Fmt(query, "list-type=2&prefix=%1", FmtUrlSafe(prefix));
-
     // Reuse for performance
+    HeapArray<char> query;
     HeapArray<uint8_t> xml;
+
+    Fmt(&query, "list-type=2&prefix=%1", FmtUrlSafe(prefix));
 
     for (;;) {
         int status = RunSafe("list S3 objects", [&](CURL *curl) {
-            PrepareRequest(curl, "GET", {}, query, {}, &temp_alloc);
+            int64_t now = GetUnixTime();
+            TimeSpec date = DecomposeTimeUTC(now);
+
+            PrepareRequest(curl, date, "GET", {}, query, &temp_alloc);
 
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
                 HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
@@ -356,10 +359,11 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
         if (!truncated)
             break;
 
+        query.RemoveFrom(0);
         xml.RemoveFrom(0);
 
         const char *continuation = doc.select_node("/ListBucketResult/NextContinuationToken").node().text().get();
-        Fmt(query, "continuation-token=%1&list-type=2&prefix=%2", FmtUrlSafe(continuation), FmtUrlSafe(prefix));
+        Fmt(&query, "continuation-token=%1&list-type=2&prefix=%2", FmtUrlSafe(continuation), FmtUrlSafe(prefix));
     }
 
     return true;
@@ -376,11 +380,15 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(Span<const u
     };
 
     GetContext ctx = {};
+
     ctx.key = key;
     ctx.func = func;
 
     int status = RunSafe("get S3 object", [&](CURL *curl) {
-        PrepareRequest(curl, "GET", key, {}, {}, &temp_alloc);
+        int64_t now = GetUnixTime();
+        TimeSpec date = DecomposeTimeUTC(now);
+
+        PrepareRequest(curl, date, "GET", key, {}, &temp_alloc);
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
             GetContext *ctx = (GetContext *)udata;
@@ -452,7 +460,10 @@ StatResult s3_Client::HasObject(Span<const char> key, int64_t *out_size)
     BlockAllocator temp_alloc;
 
     int status = RunSafe("test S3 object", [&](CURL *curl) {
-        PrepareRequest(curl, "HEAD", key, {}, {}, &temp_alloc);
+        int64_t now = GetUnixTime();
+        TimeSpec date = DecomposeTimeUTC(now);
+
+        PrepareRequest(curl, date, "HEAD", key, {}, &temp_alloc);
 
         curl_easy_setopt(curl, CURLOPT_NOBODY, 1L); // HEAD
 
@@ -496,24 +507,32 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size, FunctionRe
 {
     BlockAllocator temp_alloc;
 
-    LocalArray<KeyValue, 8> kvs;
-
-    if (settings.mimetype) {
-        kvs.Append({ "Content-Type", settings.mimetype });
-    }
-    if (settings.conditional) {
-        kvs.Append({ "If-None-Match", "*" });
-    }
-    if (settings.retain) {
-        TimeSpec spec = DecomposeTimeUTC(settings.retain);
-        const char *until = Fmt(&temp_alloc, "%1", FmtTimeISO(spec)).ptr;
-
-        kvs.Append({ "x-amz-object-lock-mode", GetLockModeString(settings.lock) });
-        kvs.Append({ "x-amz-object-lock-retain-until-date", until });
-    }
-
     int status = RunSafe("upload S3 object", [&](CURL *curl) {
-        PrepareRequest(curl, "PUT", key, {}, kvs, &temp_alloc);
+        LocalArray<KeyValue, 8> kvs;
+
+        int64_t now = GetUnixTime();
+        TimeSpec date = DecomposeTimeUTC(now);
+
+        if (settings.mimetype) {
+            kvs.Append({ "content-type", settings.mimetype });
+        }
+        if (settings.conditional) {
+            kvs.Append({ "if-none-match", "*" });
+        }
+
+        // PrepareRequest() does not try to mess with custom headers, to avoid sorting issues
+        kvs.Append({ "x-amz-content-sha256", "UNSIGNED-PAYLOAD" });
+        kvs.Append({ "x-amz-date", Fmt(&temp_alloc, "%1", FmtTimeISO(date)).ptr });
+
+        if (settings.retain) {
+            TimeSpec spec = DecomposeTimeUTC(settings.retain);
+            const char *until = Fmt(&temp_alloc, "%1", FmtTimeISO(spec)).ptr;
+
+            kvs.Append({ "x-amz-object-lock-mode", GetLockModeString(settings.lock) });
+            kvs.Append({ "x-amz-object-lock-retain-until-date", until });
+        }
+
+        PrepareRequest(curl, date, "PUT", key, {}, kvs, &temp_alloc);
 
         curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L); // PUT
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
@@ -559,9 +578,12 @@ bool s3_Client::DeleteObject(Span<const char> key)
     BlockAllocator temp_alloc;
 
     int status = RunSafe("delete S3 object", [&](CURL *curl) {
-        PrepareRequest(curl, "DELETE", key, {}, {}, &temp_alloc);
+        int64_t now = GetUnixTime();
+        TimeSpec date = DecomposeTimeUTC(now);
 
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+        PrepareRequest(curl, date, "DELETE", key, {}, &temp_alloc);
+
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE"); // DELETE (duh)
 
         int status = curl_Perform(curl, nullptr);
 
@@ -591,7 +613,10 @@ bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mo
     Span<const char> body = Fmt(&temp_alloc, xml, FmtTimeISO(spec), GetLockModeString(mode));
 
     int status = RunSafe("retain S3 object", [&](CURL *curl) {
-        PrepareRequest(curl, "PUT", key, "retention=", {}, &temp_alloc);
+        int64_t now = GetUnixTime();
+        TimeSpec date = DecomposeTimeUTC(now);
+
+        PrepareRequest(curl, date, "PUT", key, "retention=", &temp_alloc);
 
         Span<const char> remain = body;
 
@@ -681,7 +706,10 @@ bool s3_Client::OpenAccess()
     // Authentification test, adjust region if needed
     {
         int status = RunSafe("authenticate to S3 bucket", [&](CURL *curl) {
-            PrepareRequest(curl, "HEAD", {}, {}, {}, &temp_alloc);
+            int64_t now = GetUnixTime();
+            TimeSpec date = DecomposeTimeUTC(now);
+
+            PrepareRequest(curl, date, "HEAD", {}, {}, &temp_alloc);
 
             curl_easy_setopt(curl, CURLOPT_NOBODY, 1L); // HEAD
             curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, +[](char *buf, size_t, size_t nmemb, void *udata) {
@@ -812,12 +840,20 @@ int s3_Client::RunSafe(const char *action, FunctionRef<int(CURL *)> func, bool q
     return -1;
 }
 
-void s3_Client::PrepareRequest(CURL *curl, const char *method, Span<const char> key, Span<const char> query,
-                               Span<const KeyValue> kvs, Allocator *alloc)
+void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *method, Span<const char> key,
+                               Span<const char> query, Allocator *alloc)
 {
-    int64_t now = GetUnixTime();
-    TimeSpec date = DecomposeTimeUTC(now);
+    const KeyValue kvs[] = {
+        { "x-amz-content-sha256", "UNSIGNED-PAYLOAD" },
+        { "x-amz-date", Fmt(alloc, "%1", FmtTimeISO(date)).ptr }
+    };
 
+    return PrepareRequest(curl, date, method, key, query, kvs, alloc);
+}
+
+void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *method, Span<const char> key,
+                               Span<const char> query, Span<const KeyValue> kvs, Allocator *alloc)
+{
     Span<const char> url;
     Span<const char> path;
     {
@@ -835,7 +871,7 @@ void s3_Client::PrepareRequest(CURL *curl, const char *method, Span<const char> 
         Size path_end = buf.len;
         Fmt(&buf, "%1%2", query.len ? "?" : "", query);
 
-        url = buf.TrimAndLeak(1);
+        url = buf.Leak();
         path = MakeSpan(url.ptr + path_offset, path_end - path_offset);
     }
 
@@ -843,13 +879,15 @@ void s3_Client::PrepareRequest(CURL *curl, const char *method, Span<const char> 
     {
         HeapArray<curl_slist> list(alloc);
 
+        // Avoid reallocation if possible
         list.Reserve(32);
-        list.Append({ (char *)MakeAuthorization(date, method, path, query, alloc), nullptr });
-        list.Append({ Fmt(alloc, "x-amz-date: %1", FmtTimeISO(date)).ptr, nullptr });
-        list.Append({ Fmt(alloc, "x-amz-content-sha256: UNSIGNED-PAYLOAD").ptr, nullptr });
+
+        const char *authorization = MakeAuthorization(date, method, path, query, kvs, alloc);
+        list.Append({ (char *)authorization, nullptr });
 
         for (const KeyValue &kv: kvs) {
-            list.Append({ Fmt(alloc, "%1: %2", kv.key, kv.value).ptr, nullptr });
+            const char *header = Fmt(alloc, "%1: %2", FmtUrlSafe(kv.key), FmtUrlSafe(kv.value)).ptr;
+            list.Append({ (char *)header, nullptr });
         }
 
         for (Size i = 0; i < list.len - 1; i++) {
@@ -863,7 +901,7 @@ void s3_Client::PrepareRequest(CURL *curl, const char *method, Span<const char> 
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.ptr);
 }
 
-static void HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uint8_t out_digest[32])
+static void HmacSha256(Span<const uint8_t> key, Span<const char> message, uint8_t out_digest[32])
 {
     static_assert(crypto_hash_sha256_BYTES == 32);
 
@@ -889,7 +927,7 @@ static void HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uin
         }
 
         crypto_hash_sha256_update(&state, padded_key, RG_SIZE(padded_key));
-        crypto_hash_sha256_update(&state, message.ptr, (size_t)message.len);
+        crypto_hash_sha256_update(&state, (const uint8_t *)message.ptr, (size_t)message.len);
         crypto_hash_sha256_final(&state, inner_hash);
     }
 
@@ -909,15 +947,11 @@ static void HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uin
     }
 }
 
-static void HmacSha256(Span<const uint8_t> key, Span<const char> message, uint8_t out_digest[32])
-{
-    return HmacSha256(key, message.As<const uint8_t>(), out_digest);
-}
-
-const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *method,
-                                         Span<const char> path, Span<const char> query, Allocator *alloc)
+const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *method, Span<const char> path,
+                                         Span<const char> query, Span<const KeyValue> kvs, Allocator *alloc)
 {
     RG_ASSERT(!date.offset);
+    RG_ASSERT(std::is_sorted(kvs.begin(), kvs.end(), [](const KeyValue &kv1, const KeyValue &kv2) { return CmpStr(kv1.key, kv2.key) < 0; }));
 
     // Get signing key
     uint8_t key[32];
@@ -955,9 +989,15 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
         HeapArray<char> buf(alloc);
 
         Fmt(&buf, "%1\n%2\n%3\n", method, path, query);
-        Fmt(&buf, "host:%1\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%2\n\n", host, FmtTimeISO(date));
-        Fmt(&buf, "host;x-amz-content-sha256;x-amz-date\n");
-        Fmt(&buf, "UNSIGNED-PAYLOAD");
+        Fmt(&buf, "host:%1\n", host);
+        for (const KeyValue &kv: kvs) {
+            Fmt(&buf, "%1:%2\n", FmtUrlSafe(kv.key), FmtUrlSafe(kv.value));
+        }
+        Fmt(&buf, "\nhost");
+        for (const KeyValue &kv: kvs) {
+            Fmt(&buf, ";%1", FmtUrlSafe(kv.key));
+        }
+        Fmt(&buf, "\nUNSIGNED-PAYLOAD");
 
         canonical = buf.Leak();
     }
@@ -988,41 +1028,16 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
 
         Fmt(&buf, "Authorization: AWS4-HMAC-SHA256 ");
         Fmt(&buf, "Credential=%1/%2/%3/s3/aws4_request, ", config.access_id, FormatYYYYMMDD(date), region);
-        Fmt(&buf, "SignedHeaders=host;x-amz-content-sha256;x-amz-date, ");
-        Fmt(&buf, "Signature=%1", FormatSha256(signature));
+        Fmt(&buf, "SignedHeaders=host");
+        for (const KeyValue &kv: kvs) {
+            Fmt(&buf, ";%1", FmtUrlSafe(kv.key));
+        }
+        Fmt(&buf, ", Signature=%1", FormatSha256(signature));
 
         authorization = buf.Leak();
     }
 
     return authorization.ptr;
-}
-
-Span<const char> s3_Client::MakeURL(Span<const char> key, const char *query, Allocator *alloc, const char **out_path)
-{
-    RG_ASSERT(alloc);
-
-    HeapArray<char> buf(alloc);
-
-    Fmt(&buf, "%1://%2", config.scheme, host);
-
-    Size path_offset = buf.len;
-    Fmt(&buf, "%1", FmtUrlSafe(config.root, "/"));
-    if (key.len) {
-        bool separate = (config.root[1] && key.len);
-        Fmt(&buf, "%1%2", separate ? "/" : "", FmtUrlSafe(key, "/"));
-    }
-
-    Size path_end = buf.len;
-    if (query) {
-        Fmt(&buf, "?%1", query);
-    }
-
-    if (out_path) {
-        Span<const char> path = MakeSpan(buf.ptr + path_offset, path_end - path_offset);
-        *out_path = (path_end < buf.len) ? DuplicateString(path, alloc).ptr : path.ptr;
-    }
-
-    return buf.TrimAndLeak(1);
 }
 
 }
