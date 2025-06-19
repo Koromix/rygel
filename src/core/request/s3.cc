@@ -942,12 +942,9 @@ Size s3_Client::PrepareHeaders(const char *method, const char *path, const char 
     int64_t now = GetUnixTime();
     TimeSpec date = DecomposeTimeUTC(now);
 
-    uint8_t signature[32];
-    MakeSignature(method, path, query, date, signature);
-
     Size len = 0;
 
-    out_headers[len++].data = MakeAuthorization(signature, date, alloc).ptr;
+    out_headers[len++].data = (char *)MakeAuthorization(date, method, path, query, alloc);
     out_headers[len++].data = Fmt(alloc, "x-amz-date: %1", FmtTimeISO(date)).ptr;
     out_headers[len++].data = Fmt(alloc, "x-amz-content-sha256: UNSIGNED-PAYLOAD").ptr;
 
@@ -1015,7 +1012,7 @@ static void HmacSha256(Span<const uint8_t> key, Span<const char> message, uint8_
     return HmacSha256(key, message.As<const uint8_t>(), out_digest);
 }
 
-void s3_Client::MakeSignature(const char *method, const char *path, const char *query, const TimeSpec &date, uint8_t out_signature[32])
+const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *method, const char *path, const char *query, Allocator *alloc)
 {
     RG_ASSERT(!date.offset);
 
@@ -1050,39 +1047,51 @@ void s3_Client::MakeSignature(const char *method, const char *path, const char *
     }
 
     // Create canonical request
-    LocalArray<char, 4096> canonical;
-    canonical.len += Fmt(canonical.TakeAvailable(), "%1\n%2\n%3\n", method, path, query ? query : "").len;
-    canonical.len += Fmt(canonical.TakeAvailable(), "host:%1\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%2\n\n", host, FmtTimeISO(date)).len;
-    canonical.len += Fmt(canonical.TakeAvailable(), "host;x-amz-content-sha256;x-amz-date\n").len;
-    canonical.len += Fmt(canonical.TakeAvailable(), "UNSIGNED-PAYLOAD").len;
+    Span<const char> canonical;
+    {
+        HeapArray<char> buf(alloc);
 
-    // Hash canonical request
-    uint8_t hash[32];
-    crypto_hash_sha256(hash, (const uint8_t *)canonical.data, (size_t)canonical.len);
+        Fmt(&buf, "%1\n%2\n%3\n", method, path, query ? query : "");
+        Fmt(&buf, "host:%1\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%2\n\n", host, FmtTimeISO(date));
+        Fmt(&buf, "host;x-amz-content-sha256;x-amz-date\n");
+        Fmt(&buf, "UNSIGNED-PAYLOAD");
+
+        canonical = buf.Leak();
+    }
 
     // Create string to sign
-    LocalArray<char, 4096> string;
-    string.len += Fmt(string.TakeAvailable(), "AWS4-HMAC-SHA256\n").len;
-    string.len += Fmt(string.TakeAvailable(), "%1\n", FmtTimeISO(date)).len;
-    string.len += Fmt(string.TakeAvailable(), "%1/%2/s3/aws4_request\n", FormatYYYYMMDD(date), region).len;
-    string.len += Fmt(string.TakeAvailable(), "%1", FormatSha256(hash)).len;
+    Span<const char> string;
+    {
+        HeapArray<char> buf(alloc);
 
-    // We've got everything we need!
-    HmacSha256(key, string, out_signature);
-}
+        uint8_t hash[32];
+        crypto_hash_sha256(hash, (const uint8_t *)canonical.ptr, (size_t)canonical.len);
 
-Span<char> s3_Client::MakeAuthorization(const uint8_t signature[32], const TimeSpec &date, Allocator *alloc)
-{
-    RG_ASSERT(!date.offset);
+        Fmt(&buf, "AWS4-HMAC-SHA256\n");
+        Fmt(&buf, "%1\n", FmtTimeISO(date));
+        Fmt(&buf, "%1/%2/s3/aws4_request\n", FormatYYYYMMDD(date), region);
+        Fmt(&buf, "%1", FormatSha256(hash));
 
-    HeapArray<char> buf(alloc);
+        string = buf.Leak();
+    }
 
-    Fmt(&buf, "Authorization: AWS4-HMAC-SHA256 ");
-    Fmt(&buf, "Credential=%1/%2/%3/s3/aws4_request, ", config.access_id, FormatYYYYMMDD(date), region);
-    Fmt(&buf, "SignedHeaders=host;x-amz-content-sha256;x-amz-date, ");
-    Fmt(&buf, "Signature=%1", FormatSha256(signature));
+    // Create authorization header
+    Span<char> authorization;
+    {
+        uint8_t signature[32];
+        HmacSha256(key, string, signature);
 
-    return buf.TrimAndLeak(1);
+        HeapArray<char> buf(alloc);
+
+        Fmt(&buf, "Authorization: AWS4-HMAC-SHA256 ");
+        Fmt(&buf, "Credential=%1/%2/%3/s3/aws4_request, ", config.access_id, FormatYYYYMMDD(date), region);
+        Fmt(&buf, "SignedHeaders=host;x-amz-content-sha256;x-amz-date, ");
+        Fmt(&buf, "Signature=%1", FormatSha256(signature));
+
+        authorization = buf.Leak();
+    }
+
+    return authorization.ptr;
 }
 
 Span<const char> s3_Client::MakeURL(Span<const char> key, const char *query, Allocator *alloc, const char **out_path)

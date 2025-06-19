@@ -130,8 +130,7 @@ private:
 
     Size PrepareHeaders(const char *method, const char *path, const char *query, Span<const KeyValue> kvs,
                         Allocator *alloc, Span<curl_slist> out_headers);
-    void MakeSignature(const char *method, const char *path, const char *query, const TimeSpec &date, uint8_t out_signature[32]);
-    Span<char> MakeAuthorization(const uint8_t signature[32], const TimeSpec &date, Allocator *alloc);
+    const char *MakeAuthorization(const TimeSpec &date, const char *method, const char *path, const char *query, Allocator *alloc);
 
     Span<const char> MakeURL(Span<const char> key, const char *query, Allocator *alloc, const char **out_path = nullptr);
 };
