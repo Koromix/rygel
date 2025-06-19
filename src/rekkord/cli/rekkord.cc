@@ -124,14 +124,15 @@ Advanced commands:
     %!..+change_cid%!0                     Change repository cache ID (CID)
     %!..+reset_cache%!0                    Reset or rebuild local repository cache
 
-Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
-
-Most commands try to load the configuration file if it exists. Unless the path is explicitly defined, the first of the following config files will be used:
+Most commands try to find a configuration file if one exists. Unless the path is explicitly defined, the first of the following config files will be used:
 )", FelixTarget);
 
         for (const char *filename: config_filenames) {
             PrintLn(st, "    %!..+%1%!0", filename);
         }
+
+        PrintLn(st, R"(
+Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)", FelixTarget);
     };
 
 #if !defined(_WIN32)
