@@ -191,10 +191,14 @@ Most commands try to load the configuration file if it exists. Unless the path i
     }
 
     if (!cmd) {
-        print_usage(StdErr);
-        PrintLn(StdErr);
-        LogError("No command provided");
-        return 1;
+        if (arguments.len && TestStr(arguments[0], "--help")) {
+            cmd = "help";
+        } else {
+            print_usage(StdErr);
+            PrintLn(StdErr);
+            LogError("No command provided");
+            return 1;
+        }
     }
 
     if (TestStr(cmd, "help")) {
