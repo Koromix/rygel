@@ -335,6 +335,12 @@ function decode_elf_header(buf) {
                 case 2: { header.e_machine = 'riscv64'; } break;
             }
         } break;
+        case 248: {
+            switch (buf[4]) {
+                case 1: { header.e_machine = 'loong32'; } break;
+                case 2: { header.e_machine = 'loong64'; } break;
+            }
+        } break;
         default: throw new Error('Unknown ELF machine type');
     }
 
