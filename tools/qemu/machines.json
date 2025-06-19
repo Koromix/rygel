@@ -299,12 +299,12 @@
 
         "qemu": {
             "binary": "qemu-system-loong64",
-            "arguments": ["-m", "2G", "-smp", 2, "-bios", "QEMU_EFI.fd", "-kernel", "vmlinuz-6.12.32-loong64", "-initrd", "initrd.img-6.12.32-loong64", "-append", "root=/dev/vda2 console=ttyS0", "-drive", "file=disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22214-:22", "-device", "e1000,netdev=mynet", "-vnc", "127.0.0.1:25"],
+            "arguments": ["-m", "2G", "-smp", 2, "-bios", "QEMU_EFI.fd", "-kernel", "vmlinuz-6.12.32-loong64", "-initrd", "initrd.img-6.12.32-loong64", "-append", "root=/dev/vda2 console=ttyS0", "-drive", "file=disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22215-:22", "-device", "e1000,netdev=mynet", "-vnc", "127.0.0.1:25"],
             "version": 1,
 
             "disk": "disk.qcow2",
 
-            "ssh_port": 22214,
+            "ssh_port": 22215,
             "vnc_port": 5925,
 
             "username": "debian",
