@@ -84,6 +84,7 @@ enum class HostArchitecture {
     ARM32,
     ARM64,
     RISCV64,
+    Loong64,
     Web32,
     Unknown
 };
@@ -93,6 +94,7 @@ static const char *const HostArchitectureNames[] = {
     "ARM32",
     "ARM64",
     "RISCV64",
+    "Loong64",
     "Web32",
     "Unknown"
 };
@@ -107,6 +109,8 @@ static const char *const HostArchitectureNames[] = {
     static const HostArchitecture NativeArchitecture = HostArchitecture::ARM64;
 #elif __riscv_xlen == 64
     static const HostArchitecture NativeArchitecture = HostArchitecture::RISCV64;
+#elif defined(__loongarch64)
+    static const HostArchitecture NativeArchitecture = HostArchitecture::Loong64;
 #else
     #error Unsupported architecture
 #endif

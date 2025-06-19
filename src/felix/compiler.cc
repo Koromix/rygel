@@ -139,6 +139,8 @@ static HostArchitecture ParseTarget(Span<const char> output)
                 return HostArchitecture::ARM32;
             } else if (StartsWith(value, "riscv64-")) {
                 return HostArchitecture::RISCV64;
+            } else if (StartsWith(value, "loongarch64-")) {
+                return HostArchitecture::Loong64;
             } else if (StartsWith(value, "wasm32-")) {
                 return HostArchitecture::Web32;
             } else {
@@ -257,6 +259,7 @@ public:
 
                     case HostArchitecture::ARM64:
                     case HostArchitecture::RISCV64:
+                    case HostArchitecture::Loong64:
                     case HostArchitecture::ARM32:
                     case HostArchitecture::Web32: {
                         LogError("Cannot use Clang (Windows) to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
@@ -275,6 +278,7 @@ public:
                     case HostArchitecture::x86_64: { prefix = "x86_64"; } break;
                     case HostArchitecture::ARM64: { prefix = "aarch64"; } break;
                     case HostArchitecture::RISCV64: { prefix = "riscv64"; } break;
+                    case HostArchitecture::Loong64: { prefix = "loongarch64"; } break;
                     case HostArchitecture::Web32: { prefix = "wasm32"; } break;
 
                     case HostArchitecture::ARM32: {
@@ -613,7 +617,8 @@ public:
 
             case HostArchitecture::ARM32:
             case HostArchitecture::ARM64:
-            case HostArchitecture::RISCV64: {} break;
+            case HostArchitecture::RISCV64:
+            case HostArchitecture::Loong64: {} break;
 
             case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
         }
@@ -1311,6 +1316,7 @@ public:
             case HostArchitecture::ARM32:
             case HostArchitecture::ARM64:
             case HostArchitecture::RISCV64:
+            case HostArchitecture::Loong64:
             case HostArchitecture::Web32: {} break;
 
             case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
@@ -1679,6 +1685,7 @@ public:
 
                 case HostArchitecture::ARM32:
                 case HostArchitecture::RISCV64:
+                case HostArchitecture::Loong64:
                 case HostArchitecture::Web32:
                 case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
             }
@@ -1929,6 +1936,7 @@ public:
 
             case HostArchitecture::ARM32:
             case HostArchitecture::RISCV64:
+            case HostArchitecture::Loong64:
             case HostArchitecture::Web32:
             case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
         }
@@ -2756,6 +2764,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                     case HostArchitecture::x86_64: { ccs.Append("x86_64-linux-gnu-gcc"); } break;
                     case HostArchitecture::ARM64: { ccs.Append("aarch64-linux-gnu-gcc"); } break;
                     case HostArchitecture::RISCV64: { ccs.Append("riscv64-linux-gnu-gcc"); }  break;
+                    case HostArchitecture::Loong64: { ccs.Append("loongarch64-linux-gnu-gcc"); } break;
 
                     case HostArchitecture::ARM32:
                     case HostArchitecture::Web32:
@@ -2878,6 +2887,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
 
                 case HostArchitecture::ARM64:
                 case HostArchitecture::RISCV64:
+                case HostArchitecture::Loong64:
                 case HostArchitecture::ARM32:
                 case HostArchitecture::Web32: {
                     LogError("Cannot use MinGW to cross-build for '%1'", HostArchitectureNames[(int)spec.architecture]);
@@ -2907,6 +2917,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                 case HostArchitecture::x86_64: { spec.cc = "x86_64-linux-gnu-gcc"; } break;
                 case HostArchitecture::ARM64: { spec.cc = "aarch64-linux-gnu-gcc"; } break;
                 case HostArchitecture::RISCV64: { spec.cc = "riscv64-linux-gnu-gcc"; }  break;
+                case HostArchitecture::Loong64: { spec.cc = "loongarch64-linux-gnu-gcc"; }  break;
 
                 case HostArchitecture::ARM32:
                 case HostArchitecture::Web32: {
@@ -2934,6 +2945,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                 case HostArchitecture::x86_64:
                 case HostArchitecture::ARM64:
                 case HostArchitecture::RISCV64: {} break;
+                case HostArchitecture::Loong64: {} break;
 
                 case HostArchitecture::ARM32:
                 case HostArchitecture::Web32: {
