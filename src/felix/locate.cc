@@ -122,6 +122,7 @@ static bool LocateSdkQmake(const Compiler *compiler, Allocator *alloc, const cha
                     case HostArchitecture::Unknown:
                     case HostArchitecture::ARM32:
                     case HostArchitecture::RISCV64:
+                    case HostArchitecture::Loong64:
                     case HostArchitecture::Web32: { matches = false; } break;
                 }
             }
@@ -159,6 +160,7 @@ static const char *GetGnuArchitectureString(HostArchitecture architecture)
         case HostArchitecture::ARM32: return "armv7";
         case HostArchitecture::ARM64: return "aarch64";
         case HostArchitecture::RISCV64: return "riscv64gc";
+        case HostArchitecture::Loong64: return "loongarch64";
         case HostArchitecture::Web32: return "web";
     }
 
