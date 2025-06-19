@@ -2870,17 +2870,17 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
 
             switch (spec.architecture) {
                 case HostArchitecture::x86: {
-                    if (TestFile("i686-mingw-w64-gcc")) {
+                    if (FindExecutableInPath("i686-mingw-w64-gcc")) {
                         spec.cc = "i686-mingw-w64-gcc";
-                    } else if (TestFile("i686-w64-mingw32-gcc")) {
+                    } else if (FindExecutableInPath("i686-w64-mingw32-gcc")) {
                         spec.cc = "i686-w64-mingw32-gcc";
                     }
                 } break;
 
                 case HostArchitecture::x86_64: {
-                    if (TestFile("x86_64-mingw-w64-gcc")) {
+                    if (FindExecutableInPath("x86_64-mingw-w64-gcc")) {
                         spec.cc = "x86_64-mingw-w64-gcc";
-                    } else if (TestFile("x86_64-w64-mingw32-gcc")) {
+                    } else if (FindExecutableInPath("x86_64-w64-mingw32-gcc")) {
                         spec.cc = "x86_64-w64-mingw32-gcc";
                     }
                 } break;
