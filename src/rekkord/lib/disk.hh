@@ -58,7 +58,7 @@ public:
     // WriteResult::AlreadyExists must be silent, let the caller emit an error if relevant
     virtual rk_WriteResult WriteFile(const char *path, Span<const uint8_t> buf, const rk_WriteSettings &settings = {}) = 0;
     virtual bool DeleteFile(const char *path) = 0;
-    virtual bool RetainFile(const char *path, int64_t until) = 0;
+    virtual bool RetainFile(const char *path, int64_t retain) = 0;
 
     bool ListFiles(FunctionRef<bool(const char *, int64_t)> func) { return ListFiles(nullptr, func); }
     virtual bool ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func) = 0;

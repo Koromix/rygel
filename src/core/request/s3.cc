@@ -305,18 +305,23 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
 {
     BlockAllocator temp_alloc;
 
-    // Reuse for performance
-    HeapArray<char> query;
-    HeapArray<uint8_t> xml;
+    char continuation[1024] = {};
 
-    Fmt(&query, "list-type=2&prefix=%1", FmtUrlSafe(prefix));
+    KeyValue params[] = {
+        { "continuation-token", continuation },
+        { "list-type", "2" },
+        { "prefix", prefix.len ? DuplicateString(prefix, &temp_alloc).ptr : "" }
+    };
+
+    // Reuse for performance
+    HeapArray<uint8_t> xml;
 
     for (;;) {
         int status = RunSafe("list S3 objects", [&](CURL *curl) {
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
-            PrepareRequest(curl, date, "GET", {}, query, &temp_alloc);
+            PrepareRequest(curl, date, "GET", {}, params, &temp_alloc);
 
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
                 HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
@@ -359,11 +364,10 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
         if (!truncated)
             break;
 
-        query.RemoveFrom(0);
         xml.RemoveFrom(0);
 
-        const char *continuation = doc.select_node("/ListBucketResult/NextContinuationToken").node().text().get();
-        Fmt(&query, "continuation-token=%1&list-type=2&prefix=%2", FmtUrlSafe(continuation), FmtUrlSafe(prefix));
+        const char *token = doc.select_node("/ListBucketResult/NextContinuationToken").node().text().get();
+        CopyString(token, continuation);
     }
 
     return true;
@@ -508,31 +512,31 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size, FunctionRe
     BlockAllocator temp_alloc;
 
     int status = RunSafe("upload S3 object", [&](CURL *curl) {
-        LocalArray<KeyValue, 8> kvs;
+        LocalArray<KeyValue, 8> headers;
 
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
         if (settings.mimetype) {
-            kvs.Append({ "content-type", settings.mimetype });
+            headers.Append({ "content-type", settings.mimetype });
         }
         if (settings.conditional) {
-            kvs.Append({ "if-none-match", "*" });
+            headers.Append({ "if-none-match", "*" });
         }
 
         // PrepareRequest() does not try to mess with custom headers, to avoid sorting issues
-        kvs.Append({ "x-amz-content-sha256", "UNSIGNED-PAYLOAD" });
-        kvs.Append({ "x-amz-date", Fmt(&temp_alloc, "%1", FmtTimeISO(date)).ptr });
+        headers.Append({ "x-amz-content-sha256", "UNSIGNED-PAYLOAD" });
+        headers.Append({ "x-amz-date", Fmt(&temp_alloc, "%1", FmtTimeISO(date)).ptr });
 
         if (settings.retain) {
             TimeSpec spec = DecomposeTimeUTC(settings.retain);
             const char *until = Fmt(&temp_alloc, "%1", FmtTimeISO(spec)).ptr;
 
-            kvs.Append({ "x-amz-object-lock-mode", GetLockModeString(settings.lock) });
-            kvs.Append({ "x-amz-object-lock-retain-until-date", until });
+            headers.Append({ "x-amz-object-lock-mode", GetLockModeString(settings.lock) });
+            headers.Append({ "x-amz-object-lock-retain-until-date", until });
         }
 
-        PrepareRequest(curl, date, "PUT", key, {}, kvs, &temp_alloc);
+        PrepareRequest(curl, date, "PUT", key, {}, headers, &temp_alloc);
 
         curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L); // PUT
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
@@ -616,7 +620,8 @@ bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mo
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
-        PrepareRequest(curl, date, "PUT", key, "retention=", &temp_alloc);
+        const KeyValue params[] = {{ "retention", nullptr }};
+        PrepareRequest(curl, date, "PUT", key, params, &temp_alloc);
 
         Span<const char> remain = body;
 
@@ -841,18 +846,18 @@ int s3_Client::RunSafe(const char *action, FunctionRef<int(CURL *)> func, bool q
 }
 
 void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *method, Span<const char> key,
-                               Span<const char> query, Allocator *alloc)
+                               Span<const KeyValue> params, Allocator *alloc)
 {
-    const KeyValue kvs[] = {
+    const KeyValue headers[] = {
         { "x-amz-content-sha256", "UNSIGNED-PAYLOAD" },
         { "x-amz-date", Fmt(alloc, "%1", FmtTimeISO(date)).ptr }
     };
 
-    return PrepareRequest(curl, date, method, key, query, kvs, alloc);
+    return PrepareRequest(curl, date, method, key, params, headers, alloc);
 }
 
 void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *method, Span<const char> key,
-                               Span<const char> query, Span<const KeyValue> kvs, Allocator *alloc)
+                               Span<const KeyValue> params, Span<const KeyValue> headers, Allocator *alloc)
 {
     Span<const char> url;
     Span<const char> path;
@@ -862,6 +867,7 @@ void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *met
         Fmt(&buf, "%1://%2", config.scheme, host);
 
         Size path_offset = buf.len;
+
         Fmt(&buf, "%1", FmtUrlSafe(config.root, "/"));
         if (key.len) {
             bool separate = (config.root[1] && key.len);
@@ -869,36 +875,44 @@ void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *met
         }
 
         Size path_end = buf.len;
-        Fmt(&buf, "%1%2", query.len ? "?" : "", query);
+
+        if (params.len) {
+            Fmt(&buf, "?%1%2%3", FmtUrlSafe(params[0].key), params[0].value ? "=" : "", FmtUrlSafe(params[0].value));
+            for (Size i = 1; i < params.len; i++) {
+                const KeyValue &param = params[i];
+                Fmt(&buf, "&%1%2%3", FmtUrlSafe(param.key), param.value ? "=" : "", FmtUrlSafe(param.value));
+            }
+        }
 
         url = buf.Leak();
         path = MakeSpan(url.ptr + path_offset, path_end - path_offset);
     }
 
-    Span<curl_slist> headers;
+    Span<curl_slist> header;
     {
         HeapArray<curl_slist> list(alloc);
 
         // Avoid reallocation if possible
         list.Reserve(32);
 
-        const char *authorization = MakeAuthorization(date, method, path, query, kvs, alloc);
+        const char *authorization = MakeAuthorization(date, method, path, params, headers, alloc);
         list.Append({ (char *)authorization, nullptr });
 
-        for (const KeyValue &kv: kvs) {
-            const char *header = Fmt(alloc, "%1: %2", FmtUrlSafe(kv.key), FmtUrlSafe(kv.value)).ptr;
-            list.Append({ (char *)header, nullptr });
+        for (const KeyValue &header: headers) {
+            const char *str = Fmt(alloc, "%1: %2", FmtUrlSafe(header.key), FmtUrlSafe(header.value)).ptr;
+            list.Append({ (char *)str, nullptr });
         }
 
         for (Size i = 0; i < list.len - 1; i++) {
             list.ptr[i].next = list.ptr + i + 1;
         }
+        list.ptr[list.len - 1].next = nullptr;
 
-        headers = list.Leak();
+        header = list.Leak();
     }
 
     curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.ptr);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header.ptr);
 }
 
 static void HmacSha256(Span<const uint8_t> key, Span<const char> message, uint8_t out_digest[32])
@@ -948,10 +962,11 @@ static void HmacSha256(Span<const uint8_t> key, Span<const char> message, uint8_
 }
 
 const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *method, Span<const char> path,
-                                         Span<const char> query, Span<const KeyValue> kvs, Allocator *alloc)
+                                         Span<const KeyValue> params, Span<const KeyValue> headers, Allocator *alloc)
 {
     RG_ASSERT(!date.offset);
-    RG_ASSERT(std::is_sorted(kvs.begin(), kvs.end(), [](const KeyValue &kv1, const KeyValue &kv2) { return CmpStr(kv1.key, kv2.key) < 0; }));
+    RG_ASSERT(std::is_sorted(params.begin(), params.end(), [](const KeyValue &kv1, const KeyValue &kv2) { return CmpStr(kv1.key, kv2.key) < 0; }));
+    RG_ASSERT(std::is_sorted(headers.begin(), headers.end(), [](const KeyValue &kv1, const KeyValue &kv2) { return CmpStr(kv1.key, kv2.key) < 0; }));
 
     // Get signing key
     uint8_t key[32];
@@ -988,14 +1003,21 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
     {
         HeapArray<char> buf(alloc);
 
-        Fmt(&buf, "%1\n%2\n%3\n", method, path, query);
-        Fmt(&buf, "host:%1\n", host);
-        for (const KeyValue &kv: kvs) {
-            Fmt(&buf, "%1:%2\n", FmtUrlSafe(kv.key), FmtUrlSafe(kv.value));
+        Fmt(&buf, "%1\n%2\n", method, path);
+        if (params.len) {
+            Fmt(&buf, "%1=%2", FmtUrlSafe(params[0].key), FmtUrlSafe(params[0].value));
+            for (Size i = 1; i < params.len; i++) {
+                const KeyValue &param = params[i];
+                Fmt(&buf, "&%1=%2", FmtUrlSafe(param.key), FmtUrlSafe(param.value));
+            }
+        }
+        Fmt(&buf, "\nhost:%1\n", host);
+        for (const KeyValue &header: headers) {
+            Fmt(&buf, "%1:%2\n", FmtUrlSafe(header.key), FmtUrlSafe(header.value));
         }
         Fmt(&buf, "\nhost");
-        for (const KeyValue &kv: kvs) {
-            Fmt(&buf, ";%1", FmtUrlSafe(kv.key));
+        for (const KeyValue &header: headers) {
+            Fmt(&buf, ";%1", FmtUrlSafe(header.key));
         }
         Fmt(&buf, "\nUNSIGNED-PAYLOAD");
 
@@ -1029,8 +1051,8 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
         Fmt(&buf, "Authorization: AWS4-HMAC-SHA256 ");
         Fmt(&buf, "Credential=%1/%2/%3/s3/aws4_request, ", config.access_id, FormatYYYYMMDD(date), region);
         Fmt(&buf, "SignedHeaders=host");
-        for (const KeyValue &kv: kvs) {
-            Fmt(&buf, ";%1", FmtUrlSafe(kv.key));
+        for (const KeyValue &header: headers) {
+            Fmt(&buf, ";%1", FmtUrlSafe(header.key));
         }
         Fmt(&buf, ", Signature=%1", FormatSha256(signature));
 

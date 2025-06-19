@@ -115,8 +115,9 @@ bool S3Disk::DeleteFile(const char *path)
     return s3.DeleteObject(path);
 }
 
-bool S3Disk::RetainFile(const char *path, int64_t until)
+bool S3Disk::RetainFile(const char *path, int64_t retain)
 {
+    int64_t until = GetUnixTime() + retain;
     return s3.RetainObject(path, until, lock);
 }
 

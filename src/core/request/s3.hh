@@ -129,12 +129,12 @@ private:
     int RunSafe(const char *action, FunctionRef<int(void *)> func, bool quick = false);
 
     void PrepareRequest(void *curl, const TimeSpec &date, const char *method, Span<const char> key,
-                        Span<const char> query, Allocator *alloc);
+                        Span<const KeyValue> params, Allocator *alloc);
     void PrepareRequest(void *curl, const TimeSpec &date, const char *method, Span<const char> key,
-                        Span<const char> query, Span<const KeyValue> kvs, Allocator *alloc);
+                        Span<const KeyValue> params, Span<const KeyValue> headers, Allocator *alloc);
 
     const char *MakeAuthorization(const TimeSpec &date, const char *method, Span<const char> path,
-                                  Span<const char> query, Span<const KeyValue> kvs, Allocator *alloc);
+                                  Span<const KeyValue> params, Span<const KeyValue> kvs, Allocator *alloc);
 };
 
 }
