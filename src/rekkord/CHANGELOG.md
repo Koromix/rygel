@@ -6,6 +6,18 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.71
+
+*Released on 2025-06-20*
+
+- Extend object locks during repository checks
+- Fix PutObjectRetention signing errors with some S3 providers
+- Allow changing number of threads through config file
+- Reorder some sections in main help text
+- Fix possible use-after-free in S3 code
+- Fix noisy error message when running `rekkord --help`
+- Fix bogus assertion in cache code
+
 ### Rekkord 0.70
 
 *Released on 2025-06-18*
