@@ -25,7 +25,7 @@ static const int64_t CommitDelay = 5000;
 
 bool rk_Cache::Open(rk_Repository *repo, bool build)
 {
-    RG_ASSERT(!repo);
+    RG_ASSERT(!this->repo);
     RG_ASSERT(!main.IsValid());
     RG_ASSERT(!write.IsValid());
 
