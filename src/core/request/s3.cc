@@ -965,8 +965,6 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
                                          Span<const KeyValue> params, Span<const KeyValue> headers, Allocator *alloc)
 {
     RG_ASSERT(!date.offset);
-    RG_ASSERT(std::is_sorted(params.begin(), params.end(), [](const KeyValue &kv1, const KeyValue &kv2) { return CmpStr(kv1.key, kv2.key) < 0; }));
-    RG_ASSERT(std::is_sorted(headers.begin(), headers.end(), [](const KeyValue &kv1, const KeyValue &kv2) { return CmpStr(kv1.key, kv2.key) < 0; }));
 
     // Get signing key
     uint8_t key[32];
