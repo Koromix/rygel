@@ -305,41 +305,25 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
 {
     BlockAllocator temp_alloc;
 
-    const char *path;
-    Span<const char> url = MakeURL({}, nullptr, &temp_alloc, &path);
+    char query[4096];
+    Fmt(query, "list-type=2&prefix=%1", FmtUrlSafe(prefix));
 
     // Reuse for performance
-    HeapArray<char> query;
     HeapArray<uint8_t> xml;
-
-    Fmt(&query, "list-type=2&prefix=%1", FmtUrlSafe(prefix));
 
     for (;;) {
         int status = RunSafe("list S3 objects", [&](CURL *curl) {
-            LocalArray<curl_slist, 32> headers;
-            headers.len = PrepareHeaders("GET", path, query.ptr, {}, &temp_alloc, headers.data);
+            PrepareRequest(curl, "GET", {}, query, {}, &temp_alloc);
 
-            // Set CURL options
-            {
-                bool success = true;
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
+                HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
 
-                success &= !curl_easy_setopt(curl, CURLOPT_URL, Fmt(&temp_alloc, "%1?%2", url, query).ptr);
-                success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+                Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
+                xml->Append(buf);
 
-                success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
-                                             +[](char *ptr, size_t, size_t nmemb, void *udata) {
-                    HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
-
-                    Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
-                    xml->Append(buf);
-
-                    return nmemb;
-                });
-                success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
-
-                if (!success)
-                    return -CURLE_FAILED_INIT;
-            }
+                return nmemb;
+            });
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
 
             return curl_Perform(curl, nullptr);
         });
@@ -373,10 +357,9 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
             break;
 
         xml.RemoveFrom(0);
-        query.RemoveFrom(0);
 
         const char *continuation = doc.select_node("/ListBucketResult/NextContinuationToken").node().text().get();
-        Fmt(&query, "continuation-token=%1&list-type=2&prefix=%2", FmtUrlSafe(continuation), FmtUrlSafe(prefix));
+        Fmt(query, "continuation-token=%1&list-type=2&prefix=%2", FmtUrlSafe(continuation), FmtUrlSafe(prefix));
     }
 
     return true;
@@ -385,9 +368,6 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
 int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(Span<const uint8_t>)> func)
 {
     BlockAllocator temp_alloc;
-
-    const char *path;
-    Span<const char> url = MakeURL(key, nullptr, &temp_alloc, &path);
 
     struct GetContext {
         Span<const char> key;
@@ -400,34 +380,19 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(Span<const u
     ctx.func = func;
 
     int status = RunSafe("get S3 object", [&](CURL *curl) {
-        ctx.len = 0;
+        PrepareRequest(curl, "GET", key, {}, {}, &temp_alloc);
 
-        LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("GET", path, nullptr, {}, &temp_alloc, headers.data);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
+            GetContext *ctx = (GetContext *)udata;
+            Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
 
-        // Set CURL options
-        {
-            bool success = true;
+            if (!ctx->func(buf))
+                return (size_t)0;
+            ctx->len += buf.len;
 
-            success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
-            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
-
-            success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
-                                         +[](char *ptr, size_t, size_t nmemb, void *udata) {
-                GetContext *ctx = (GetContext *)udata;
-                Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
-
-                if (!ctx->func(buf))
-                    return (size_t)0;
-                ctx->len += buf.len;
-
-                return nmemb;
-            });
-            success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ctx);
-
-            if (!success)
-                return -CURLE_FAILED_INIT;
-        }
+            return nmemb;
+        });
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ctx);
 
         return curl_Perform(curl, nullptr);
     });
@@ -486,24 +451,10 @@ StatResult s3_Client::HasObject(Span<const char> key, int64_t *out_size)
 {
     BlockAllocator temp_alloc;
 
-    const char *path;
-    Span<const char> url = MakeURL(key, nullptr, &temp_alloc, &path);
-
     int status = RunSafe("test S3 object", [&](CURL *curl) {
-        LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("HEAD", path, nullptr, {}, &temp_alloc, headers.data);
+        PrepareRequest(curl, "HEAD", key, {}, {}, &temp_alloc);
 
-        // Set CURL options
-        {
-            bool success = true;
-
-            success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
-            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
-            success &= !curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
-
-            if (!success)
-                return -CURLE_FAILED_INIT;
-        }
+        curl_easy_setopt(curl, CURLOPT_NOBODY, 1L); // HEAD
 
         int ret = curl_Perform(curl, nullptr);
 
@@ -545,9 +496,6 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size, FunctionRe
 {
     BlockAllocator temp_alloc;
 
-    const char *path;
-    Span<const char> url = MakeURL(key, nullptr, &temp_alloc, &path);
-
     LocalArray<KeyValue, 8> kvs;
 
     if (settings.mimetype) {
@@ -565,33 +513,21 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size, FunctionRe
     }
 
     int status = RunSafe("upload S3 object", [&](CURL *curl) {
-        LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("PUT", path, nullptr, kvs, &temp_alloc, headers.data);
+        PrepareRequest(curl, "PUT", key, {}, kvs, &temp_alloc);
 
-        // Set CURL options
-        {
-            bool success = true;
+        curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L); // PUT
+        curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
+            FunctionRef<Size(Span<uint8_t>)> *func = (FunctionRef<Size(Span<uint8_t>)> *)udata;
+            Span<uint8_t> buf = MakeSpan((uint8_t *)ptr, (Size)(size * nmemb));
 
-            success &= !curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L); // PUT
-            success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
-            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+            Size ret = (*func)(buf);
+            if (ret < 0)
+                return (size_t)CURL_READFUNC_ABORT;
 
-            success &= !curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
-                FunctionRef<Size(Span<uint8_t>)> *func = (FunctionRef<Size(Span<uint8_t>)> *)udata;
-                Span<uint8_t> buf = MakeSpan((uint8_t *)ptr, (Size)(size * nmemb));
-
-                Size ret = (*func)(buf);
-                if (ret < 0)
-                    return (size_t)CURL_READFUNC_ABORT;
-
-                return (size_t)ret;
-            });
-            success &= !curl_easy_setopt(curl, CURLOPT_READDATA, &func);
-            success &= !curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)size);
-
-            if (!success)
-                return -CURLE_FAILED_INIT;
-        }
+            return (size_t)ret;
+        });
+        curl_easy_setopt(curl, CURLOPT_READDATA, &func);
+        curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)size);
 
         return curl_Perform(curl, nullptr);
     });
@@ -622,24 +558,10 @@ bool s3_Client::DeleteObject(Span<const char> key)
 {
     BlockAllocator temp_alloc;
 
-    const char *path;
-    Span<const char> url = MakeURL(key, nullptr, &temp_alloc, &path);
-
     int status = RunSafe("delete S3 object", [&](CURL *curl) {
-        LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("DELETE", path, nullptr, {}, &temp_alloc, headers.data);
+        PrepareRequest(curl, "DELETE", key, {}, {}, &temp_alloc);
 
-        // Set CURL options
-        {
-            bool success = true;
-
-            success &= !curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-            success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
-            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
-
-            if (!success)
-                return -CURLE_FAILED_INIT;
-        }
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
 
         int status = curl_Perform(curl, nullptr);
 
@@ -658,9 +580,6 @@ bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mo
 {
     BlockAllocator temp_alloc;
 
-    const char *path;
-    Span<const char> url = MakeURL(key, "retention", &temp_alloc, &path);
-
     static const char *xml = R"(<?xml version="1.0" encoding="UTF-8"?>
 <Retention xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
   <RetainUntilDate>%1</RetainUntilDate>
@@ -672,35 +591,23 @@ bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mo
     Span<const char> body = Fmt(&temp_alloc, xml, FmtTimeISO(spec), GetLockModeString(mode));
 
     int status = RunSafe("retain S3 object", [&](CURL *curl) {
-        LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("PUT", path, "retention=", {}, &temp_alloc, headers.data);
+        PrepareRequest(curl, "PUT", key, "retention=", {}, &temp_alloc);
 
         Span<const char> remain = body;
 
-        // Set CURL options
-        {
-            bool success = true;
+        curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L); // PUT
+        curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
+            Span<const char> *remain = (Span<const char> *)udata;
+            Size give = std::min((Size)(size * nmemb), remain->len);
 
-            success &= !curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L); // PUT
-            success &= !curl_easy_setopt(curl, CURLOPT_URL, url);
-            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+            MemCpy(ptr, remain->ptr, give);
+            remain->ptr += (Size)give;
+            remain->len -= (Size)give;
 
-            success &= !curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
-                Span<const char> *remain = (Span<const char> *)udata;
-                Size give = std::min((Size)(size * nmemb), remain->len);
-
-                MemCpy(ptr, remain->ptr, give);
-                remain->ptr += (Size)give;
-                remain->len -= (Size)give;
-
-                return (size_t)give;
-            });
-            success &= !curl_easy_setopt(curl, CURLOPT_READDATA, &remain);
-            success &= !curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)remain.len);
-
-            if (!success)
-                return -CURLE_FAILED_INIT;
-        }
+            return (size_t)give;
+        });
+        curl_easy_setopt(curl, CURLOPT_READDATA, &remain);
+        curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)remain.len);
 
         return curl_Perform(curl, nullptr);
     });
@@ -725,48 +632,33 @@ bool s3_Client::OpenAccess()
             return false;
         RG_DEFER { ReleaseConnection(curl); };
 
-        Span<const char> url = MakeURL({}, nullptr, &temp_alloc);
-
         // Garage sends back the correct region in its XML Error message, maybe others do too
         HeapArray<uint8_t> xml;
 
-        {
-            bool success = true;
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, +[](char *buf, size_t, size_t nmemb, void *udata) {
+            s3_Client *session = (s3_Client *)udata;
 
-            success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
+            Span<const char> value;
+            Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
+            value = TrimStr(value);
 
-            success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,
-                                         +[](char *buf, size_t, size_t nmemb, void *udata) {
-                s3_Client *session = (s3_Client *)udata;
-
-                Span<const char> value;
-                Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
-                value = TrimStr(value);
-
-                if (TestStrI(key, "x-amz-bucket-region")) {
-                    session->region = DuplicateString(value, &session->config.str_alloc).ptr;
-                }
-
-                return nmemb;
-            });
-            success &= !curl_easy_setopt(curl, CURLOPT_HEADERDATA, this);
-
-            success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
-                                         +[](char *ptr, size_t, size_t nmemb, void *udata) {
-                HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
-
-                Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
-                xml->Append(buf);
-
-                return nmemb;
-            });
-            success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
-
-            if (!success) {
-                LogError("Failed to set libcurl options");
-                return false;
+            if (TestStrI(key, "x-amz-bucket-region")) {
+                session->region = DuplicateString(value, &session->config.str_alloc).ptr;
             }
-        }
+
+            return nmemb;
+        });
+        curl_easy_setopt(curl, CURLOPT_HEADERDATA, this);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
+            HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
+
+            Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
+            xml->Append(buf);
+
+            return nmemb;
+        });
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
 
         if (curl_Perform(curl, "S3") < 0)
             return false;
@@ -788,41 +680,25 @@ bool s3_Client::OpenAccess()
 
     // Authentification test, adjust region if needed
     {
-        const char *path;
-        Span<const char> url = MakeURL({}, nullptr, &temp_alloc, &path);
-
         int status = RunSafe("authenticate to S3 bucket", [&](CURL *curl) {
-            LocalArray<curl_slist, 32> headers;
-            headers.len = PrepareHeaders("HEAD", path, nullptr, {}, &temp_alloc, headers.data);
+            PrepareRequest(curl, "HEAD", {}, {}, {}, &temp_alloc);
 
-            // Set CURL options
-            {
-                bool success = true;
+            curl_easy_setopt(curl, CURLOPT_NOBODY, 1L); // HEAD
+            curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, +[](char *buf, size_t, size_t nmemb, void *udata) {
+                s3_Client *session = (s3_Client *)udata;
 
-                success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
-                success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
-                success &= !curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+                Span<const char> value;
+                Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
+                value = TrimStr(value);
 
-                success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,
-                                             +[](char *buf, size_t, size_t nmemb, void *udata) {
-                    s3_Client *session = (s3_Client *)udata;
+                // Last chance to determine proper region
+                if (!session->config.region && TestStrI(key, "x-amz-bucket-region")) {
+                    session->region = DuplicateString(value, &session->config.str_alloc).ptr;
+                }
 
-                    Span<const char> value;
-                    Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
-                    value = TrimStr(value);
-
-                    // Last chance to determine proper region
-                    if (!session->config.region && TestStrI(key, "x-amz-bucket-region")) {
-                        session->region = DuplicateString(value, &session->config.str_alloc).ptr;
-                    }
-
-                    return nmemb;
-                });
-                success &= !curl_easy_setopt(curl, CURLOPT_HEADERDATA, this);
-
-                if (!success)
-                    return -CURLE_FAILED_INIT;
-            }
+                return nmemb;
+            });
+            curl_easy_setopt(curl, CURLOPT_HEADERDATA, this);
 
             int status = curl_Perform(curl, nullptr);
 
@@ -936,29 +812,55 @@ int s3_Client::RunSafe(const char *action, FunctionRef<int(CURL *)> func, bool q
     return -1;
 }
 
-Size s3_Client::PrepareHeaders(const char *method, const char *path, const char *query, Span<const KeyValue> kvs,
-                               Allocator *alloc, Span<curl_slist> out_headers)
+void s3_Client::PrepareRequest(CURL *curl, const char *method, Span<const char> key, Span<const char> query,
+                               Span<const KeyValue> kvs, Allocator *alloc)
 {
     int64_t now = GetUnixTime();
     TimeSpec date = DecomposeTimeUTC(now);
 
-    Size len = 0;
+    Span<const char> url;
+    Span<const char> path;
+    {
+        HeapArray<char> buf(alloc);
 
-    out_headers[len++].data = (char *)MakeAuthorization(date, method, path, query, alloc);
-    out_headers[len++].data = Fmt(alloc, "x-amz-date: %1", FmtTimeISO(date)).ptr;
-    out_headers[len++].data = Fmt(alloc, "x-amz-content-sha256: UNSIGNED-PAYLOAD").ptr;
+        Fmt(&buf, "%1://%2", config.scheme, host);
 
-    for (const KeyValue &kv: kvs) {
-        out_headers[len++].data = Fmt(alloc, "%1: %2", kv.key, kv.value).ptr;
+        Size path_offset = buf.len;
+        Fmt(&buf, "%1", FmtUrlSafe(config.root, "/"));
+        if (key.len) {
+            bool separate = (config.root[1] && key.len);
+            Fmt(&buf, "%1%2", separate ? "/" : "", FmtUrlSafe(key, "/"));
+        }
+
+        Size path_end = buf.len;
+        Fmt(&buf, "%1%2", query.len ? "?" : "", query);
+
+        url = buf.TrimAndLeak(1);
+        path = MakeSpan(url.ptr + path_offset, path_end - path_offset);
     }
 
-    // Link request headers
-    for (Size i = 0; i < len - 1; i++) {
-        out_headers.ptr[i].next = out_headers.ptr + i + 1;
-    }
-    out_headers[len - 1].next = nullptr;
+    Span<curl_slist> headers;
+    {
+        HeapArray<curl_slist> list(alloc);
 
-    return len;
+        list.Reserve(32);
+        list.Append({ (char *)MakeAuthorization(date, method, path, query, alloc), nullptr });
+        list.Append({ Fmt(alloc, "x-amz-date: %1", FmtTimeISO(date)).ptr, nullptr });
+        list.Append({ Fmt(alloc, "x-amz-content-sha256: UNSIGNED-PAYLOAD").ptr, nullptr });
+
+        for (const KeyValue &kv: kvs) {
+            list.Append({ Fmt(alloc, "%1: %2", kv.key, kv.value).ptr, nullptr });
+        }
+
+        for (Size i = 0; i < list.len - 1; i++) {
+            list.ptr[i].next = list.ptr + i + 1;
+        }
+
+        headers = list.Leak();
+    }
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.ptr);
 }
 
 static void HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uint8_t out_digest[32])
@@ -1012,7 +914,8 @@ static void HmacSha256(Span<const uint8_t> key, Span<const char> message, uint8_
     return HmacSha256(key, message.As<const uint8_t>(), out_digest);
 }
 
-const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *method, const char *path, const char *query, Allocator *alloc)
+const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *method,
+                                         Span<const char> path, Span<const char> query, Allocator *alloc)
 {
     RG_ASSERT(!date.offset);
 
@@ -1051,7 +954,7 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
     {
         HeapArray<char> buf(alloc);
 
-        Fmt(&buf, "%1\n%2\n%3\n", method, path, query ? query : "");
+        Fmt(&buf, "%1\n%2\n%3\n", method, path, query);
         Fmt(&buf, "host:%1\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%2\n\n", host, FmtTimeISO(date));
         Fmt(&buf, "host;x-amz-content-sha256;x-amz-date\n");
         Fmt(&buf, "UNSIGNED-PAYLOAD");

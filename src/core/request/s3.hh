@@ -128,9 +128,10 @@ private:
 
     int RunSafe(const char *action, FunctionRef<int(void *)> func, bool quick = false);
 
-    Size PrepareHeaders(const char *method, const char *path, const char *query, Span<const KeyValue> kvs,
-                        Allocator *alloc, Span<curl_slist> out_headers);
-    const char *MakeAuthorization(const TimeSpec &date, const char *method, const char *path, const char *query, Allocator *alloc);
+    void PrepareRequest(void *curl, const char *method, Span<const char> key, Span<const char> query,
+                        Span<const KeyValue> kvs, Allocator *alloc);
+    const char *MakeAuthorization(const TimeSpec &date, const char *method,
+                                  Span<const char> path, Span<const char> query, Allocator *alloc);
 
     Span<const char> MakeURL(Span<const char> key, const char *query, Allocator *alloc, const char **out_path = nullptr);
 };
