@@ -1747,12 +1747,18 @@ const char *rk_ReadLink(rk_Repository *repo, const rk_ObjectID &oid, Allocator *
 }
 
 class FileHandle: public rk_FileHandle {
+    struct Buffer {
+        std::mutex mutex;
+        Size idx;
+        HeapArray<uint8_t> data;
+    };
+
     rk_Repository *repo;
     HeapArray<FileChunk> chunks;
 
-    std::mutex buf_mutex;
-    Size buf_idx = -1;
-    HeapArray<uint8_t> buf;
+    std::mutex mutex;
+    Buffer buffers[4];
+    int discard = 0;
 
 public:
     FileHandle(rk_Repository *repo) : repo(repo) {}
@@ -1772,8 +1778,14 @@ public:
 
 bool FileHandle::Init(const rk_ObjectID &oid, Span<const uint8_t> blob)
 {
-    bool success = (DecodeChunks(oid, blob, &chunks) >= 0);
-    return success;
+    if (DecodeChunks(oid, blob, &chunks) < 0)
+        return false;
+
+    for (Buffer &buf: buffers) {
+        buf.idx = -1;
+    }
+
+    return true;
 }
 
 Size FileHandle::Read(int64_t offset, Span<uint8_t> out_buf)
@@ -1792,33 +1804,59 @@ Size FileHandle::Read(int64_t offset, Span<uint8_t> out_buf)
         Size copy_offset = offset - chunk.offset;
         Size copy_len = (Size)std::min(chunk.len - copy_offset, (int64_t)out_buf.len);
 
-        // Load blob and copy
+        Buffer *buf = nullptr;
         {
-            std::lock_guard<std::mutex> lock(buf_mutex);
+            std::lock_guard<std::mutex> lock(mutex);
 
-            if (buf_idx != idx) {
-                buf.RemoveFrom(0);
+            for (Size i = 0; i < RG_LEN(buffers); i++) {
+                if (buffers[i].idx == idx) {
+                    buf = &buffers[i];
+                    buf->mutex.lock();
 
-                rk_ObjectID oid = { rk_BlobCatalog::Raw, chunk.hash };
-
-                int type;
-
-                if (!repo->ReadBlob(oid, &type, &buf))
-                    return false;
-                if (type != (int)BlobType::Chunk) [[unlikely]] {
-                    LogError("Blob '%1' is not a Chunk", chunk.hash);
-                    return false;
+                    break;
                 }
-                if (buf.len != chunk.len) [[unlikely]] {
-                    LogError("Chunk size mismatch for '%1'", chunk.hash);
-                    return false;
-                }
-
-                buf_idx = idx;
             }
 
-            MemCpy(out_buf.ptr, buf.ptr + copy_offset, copy_len);
+            if (!buf) {
+                buf = &buffers[discard];
+                discard = (discard + 1) % RG_LEN(buffers);
+
+                buf->mutex.lock();
+
+                buf->idx = idx;
+                buf->data.RemoveFrom(0);
+            }
         }
+
+        RG_DEFER { buf->mutex.unlock(); };
+
+        if (!buf->data.len) {
+            // This happens if a previous request has failed on this exact buffer
+            if (buf->idx < 0) [[unlikely]] {
+                LogError("Failed to read chunk");
+                return false;
+            }
+
+            RG_DEFER_N(err_guard) { buf->idx = -1; };
+
+            rk_ObjectID oid = { rk_BlobCatalog::Raw, chunk.hash };
+            int type;
+
+            if (!repo->ReadBlob(oid, &type, &buf->data))
+                return false;
+            if (type != (int)BlobType::Chunk) [[unlikely]] {
+                LogError("Blob '%1' is not a Chunk", chunk.hash);
+                return false;
+            }
+            if (buf->data.len != chunk.len) [[unlikely]] {
+                LogError("Chunk size mismatch for '%1'", chunk.hash);
+                return false;
+            }
+
+            err_guard.Disable();
+        }
+
+        MemCpy(out_buf.ptr, buf->data.ptr + copy_offset, copy_len);
 
         offset += copy_len;
         out_buf.ptr += copy_len;

@@ -282,7 +282,7 @@ static int ResolveEntry(const char *path, const CacheEntry **out_ptr)
     return ResolveEntry(path, (CacheEntry **)out_ptr);
 }
 
-static void *DoInit(fuse_conn_info *, fuse_config *cfg)
+static void *DoInit(fuse_conn_info *conn, fuse_config *cfg)
 {
     cfg->kernel_cache = 1;
     cfg->nullpath_ok = 1;
@@ -290,6 +290,10 @@ static void *DoInit(fuse_conn_info *, fuse_config *cfg)
     cfg->entry_timeout = 3600.0;
     cfg->attr_timeout = 3600.0;
     cfg->negative_timeout = 3600.0;
+
+    conn->max_read = Mebibytes(4);
+    conn->max_background = 4 * GetCoreCount();
+    conn->max_readahead = Mebibytes(4);
 
     return nullptr;
 }
@@ -553,6 +557,10 @@ If you use a snapshot channel, the most recent snapshot object that matches will
     if (!InitRoot(oid))
         return 1;
     LogInfo("Ready");
+
+    // This option needs to be specified twice for some reason
+    const char *max_read = Fmt(&temp_alloc, "max_read=%1", Mebibytes(4)).ptr;
+    fuse_options.Append(max_read);
 
     // Run fuse main
     {
