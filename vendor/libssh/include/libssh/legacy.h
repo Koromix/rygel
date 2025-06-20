@@ -28,6 +28,11 @@
 #ifndef LEGACY_H_
 #define LEGACY_H_
 
+#if defined(__OpenBSD__)
+// Hack to fix function type mismatch error
+#include <sys/time.h>
+#endif
+
 typedef struct ssh_private_key_struct* ssh_private_key;
 typedef struct ssh_public_key_struct* ssh_public_key;
 

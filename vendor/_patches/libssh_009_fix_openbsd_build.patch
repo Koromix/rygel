@@ -1,0 +1,16 @@
+diff --git a/vendor/libssh/include/libssh/legacy.h b/vendor/libssh/include/libssh/legacy.h
+index 38bef4dac..0fd9f3008 100644
+--- a/vendor/libssh/include/libssh/legacy.h
++++ b/vendor/libssh/include/libssh/legacy.h
+@@ -28,6 +28,11 @@
+ #ifndef LEGACY_H_
+ #define LEGACY_H_
+ 
++#if defined(__OpenBSD__)
++// Hack to fix function type mismatch error
++#include <sys/time.h>
++#endif
++
+ typedef struct ssh_private_key_struct* ssh_private_key;
+ typedef struct ssh_public_key_struct* ssh_public_key;
+ 
