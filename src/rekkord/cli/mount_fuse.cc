@@ -18,7 +18,11 @@
 
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 
-#include "vendor/libfuse/include/fuse.h"
+#if defined(__OpenBSD__)
+    #include <fuse.h>
+#else
+    #include "vendor/libfuse/include/fuse.h"
+#endif
 
 namespace RG {
 
@@ -282,6 +286,7 @@ static int ResolveEntry(const char *path, const CacheEntry **out_ptr)
     return ResolveEntry(path, (CacheEntry **)out_ptr);
 }
 
+#if !defined(__OpenBSD__)
 static void *DoInit(fuse_conn_info *conn, fuse_config *cfg)
 {
     cfg->kernel_cache = 1;
@@ -297,8 +302,13 @@ static void *DoInit(fuse_conn_info *conn, fuse_config *cfg)
 
     return nullptr;
 }
+#endif
 
+#if defined(__OpenBSD__)
+static int DoGetAttr(const char *path, struct stat *stbuf)
+#else
 static int DoGetAttr(const char *path, struct stat *stbuf, fuse_file_info *)
+#endif
 {
     const CacheEntry *entry;
     if (int error = ResolveEntry(path, &entry); error < 0) {
@@ -362,13 +372,23 @@ static int DoReleaseDir(const char *, fuse_file_info *fi)
     return 0;
 }
 
+#if defined(__OpenBSD__)
+static int DoReadDir(const char *, void *buf, fuse_fill_dir_t filler,
+                     off_t, fuse_file_info *fi)
+#else
 static int DoReadDir(const char *, void *buf, fuse_fill_dir_t filler,
                      off_t, fuse_file_info *fi, fuse_readdir_flags)
+#endif
 {
     const CacheEntry *entry = (const CacheEntry *)fi->fh;
 
-#define FILL(Name, StPtr) \
-        filler(buf, (Name), (StPtr), 0, (fuse_fill_dir_flags)FUSE_FILL_DIR_PLUS)
+#if defined(__OpenBSD__)
+    #define FILL(Name, StPtr) \
+            filler(buf, (Name), (StPtr), 0)
+#else
+    #define FILL(Name, StPtr) \
+            filler(buf, (Name), (StPtr), 0, (fuse_fill_dir_flags)FUSE_FILL_DIR_PLUS)
+#endif
 
     FILL(".", &entry->sb);
     FILL("..", &entry->parent->sb);
@@ -435,7 +455,9 @@ static const struct fuse_operations FuseOperations = {
     .opendir = DoOpenDir,
     .readdir = DoReadDir,
     .releasedir = DoReleaseDir,
+#if !defined(__OpenBSD__)
     .init = DoInit
+#endif
 };
 
 #pragma GCC diagnostic pop
@@ -558,9 +580,11 @@ If you use a snapshot channel, the most recent snapshot object that matches will
         return 1;
     LogInfo("Ready");
 
+#if !defined(__OpenBSD__)
     // This option needs to be specified twice for some reason
     const char *max_read = Fmt(&temp_alloc, "max_read=%1", Mebibytes(4)).ptr;
     fuse_options.Append(max_read);
+#endif
 
     // Run fuse main
     {
