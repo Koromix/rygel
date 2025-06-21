@@ -92,7 +92,7 @@ rk_WriteResult S3Disk::WriteFile(const char *path, Span<const uint8_t> buf, cons
 {
     s3_PutSettings put;
 
-    put.conditional = conditional && settings.overwrite;
+    put.conditional = conditional && !settings.overwrite;
 
     if (settings.retain) {
         put.retain = GetUnixTime() + settings.retain;
