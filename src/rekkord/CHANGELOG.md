@@ -6,6 +6,15 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.72
+
+*Released on 2025-06-21*
+
+- Fix broken use of conditional S3 writes (regression)
+- Improve S3 compatibility with some S3 providers
+- Improve FUSE file read performance for random reads
+- Fix OpenBSD build
+
 ### Rekkord 0.71
 
 *Released on 2025-06-20*
