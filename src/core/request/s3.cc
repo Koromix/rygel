@@ -518,10 +518,10 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size, FunctionRe
         TimeSpec date = DecomposeTimeUTC(now);
 
         if (settings.mimetype) {
-            headers.Append({ "content-type", settings.mimetype });
+            headers.Append({ "Content-Type", settings.mimetype });
         }
         if (settings.conditional) {
-            headers.Append({ "if-none-match", "*" });
+            headers.Append({ "If-None-Match", "*" });
         }
 
         // PrepareRequest() does not try to mess with custom headers, to avoid sorting issues
@@ -899,7 +899,7 @@ void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *met
         list.Append({ (char *)authorization, nullptr });
 
         for (const KeyValue &header: headers) {
-            const char *str = Fmt(alloc, "%1: %2", FmtUrlSafe(header.key), FmtUrlSafe(header.value)).ptr;
+            const char *str = Fmt(alloc, "%1: %2", header.key, FmtUrlSafe(header.value)).ptr;
             list.Append({ (char *)str, nullptr });
         }
 
@@ -1011,11 +1011,11 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
         }
         Fmt(&buf, "\nhost:%1\n", host);
         for (const KeyValue &header: headers) {
-            Fmt(&buf, "%1:%2\n", FmtUrlSafe(header.key), FmtUrlSafe(header.value));
+            Fmt(&buf, "%1:%2\n", FmtLowerAscii(header.key), FmtUrlSafe(header.value));
         }
         Fmt(&buf, "\nhost");
         for (const KeyValue &header: headers) {
-            Fmt(&buf, ";%1", FmtUrlSafe(header.key));
+            Fmt(&buf, ";%1", FmtLowerAscii(header.key));
         }
         Fmt(&buf, "\nUNSIGNED-PAYLOAD");
 
@@ -1050,7 +1050,7 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
         Fmt(&buf, "Credential=%1/%2/%3/s3/aws4_request, ", config.access_id, FormatYYYYMMDD(date), region);
         Fmt(&buf, "SignedHeaders=host");
         for (const KeyValue &header: headers) {
-            Fmt(&buf, ";%1", FmtUrlSafe(header.key));
+            Fmt(&buf, ";%1", FmtLowerAscii(header.key));
         }
         Fmt(&buf, ", Signature=%1", FormatSha256(signature));
 

@@ -1825,6 +1825,22 @@ void PrintLn()
     StdOut->Write('\n');
 }
 
+void FmtUpperAscii::Format(FunctionRef<void(Span<const char>)> append) const
+{
+    for (char c: str) {
+        c = UpperAscii(c);
+        append((char)c);
+    }
+}
+
+void FmtLowerAscii::Format(FunctionRef<void(Span<const char>)> append) const
+{
+    for (char c: str) {
+        c = LowerAscii(c);
+        append((char)c);
+    }
+}
+
 void FmtUrlSafe::Format(FunctionRef<void(Span<const char>)> append) const
 {
     static const char literals[] = "0123456789ABCDEF";

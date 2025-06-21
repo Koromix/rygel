@@ -3954,6 +3954,26 @@ FmtArg FmtSpan(T (&arr)[N], FmtType type, const char *sep = ", ") { return FmtSp
 template <typename T, Size N>
 FmtArg FmtSpan(T (&arr)[N], const char *sep = ", ") { return FmtSpan(MakeSpan(arr), sep); }
 
+class FmtUpperAscii {
+    Span<const char> str;
+
+public:
+    FmtUpperAscii(Span<const char> str) : str(str) {}
+
+    void Format(FunctionRef<void(Span<const char>)> append) const;
+    operator FmtArg() const { return FmtCustom(*this); }
+};
+
+class FmtLowerAscii {
+    Span<const char> str;
+
+public:
+    FmtLowerAscii(Span<const char> str) : str(str) {}
+
+    void Format(FunctionRef<void(Span<const char>)> append) const;
+    operator FmtArg() const { return FmtCustom(*this); }
+};
+
 class FmtUrlSafe {
     Span<const char> str;
     const char *passthrough;
