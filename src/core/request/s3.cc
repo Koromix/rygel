@@ -899,7 +899,7 @@ void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *met
         list.Append({ (char *)authorization, nullptr });
 
         for (const KeyValue &header: headers) {
-            const char *str = Fmt(alloc, "%1: %2", header.key, FmtUrlSafe(header.value)).ptr;
+            const char *str = Fmt(alloc, "%1: %2", header.key, FmtUrlSafe(header.value, "*$")).ptr;
             list.Append({ (char *)str, nullptr });
         }
 
@@ -1011,7 +1011,7 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
         }
         Fmt(&buf, "\nhost:%1\n", host);
         for (const KeyValue &header: headers) {
-            Fmt(&buf, "%1:%2\n", FmtLowerAscii(header.key), FmtUrlSafe(header.value));
+            Fmt(&buf, "%1:%2\n", FmtLowerAscii(header.key), FmtUrlSafe(header.value, "*$"));
         }
         Fmt(&buf, "\nhost");
         for (const KeyValue &header: headers) {
