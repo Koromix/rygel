@@ -624,7 +624,7 @@ static void HandleInstanceRequest(http_IO *io)
 
         Fmt(&buf, "%1/?", request.path);
         for (const http_KeyValue &value: request.values) {
-            Fmt(&buf, "%1=%2&", FmtUrlSafe(value.key), FmtUrlSafe(value.value));
+            Fmt(&buf, "%1=%2&", FmtUrlSafe(value.key, "-._~"), FmtUrlSafe(value.value, "-._~"));
         }
         buf.ptr[buf.len - 1] = 0;
 

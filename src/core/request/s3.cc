@@ -868,19 +868,21 @@ void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *met
 
         Size path_offset = buf.len;
 
-        Fmt(&buf, "%1", FmtUrlSafe(config.root, "/"));
+        Fmt(&buf, "%1", FmtUrlSafe(config.root, "-._~/"));
         if (key.len) {
             bool separate = (config.root[1] && key.len);
-            Fmt(&buf, "%1%2", separate ? "/" : "", FmtUrlSafe(key, "/"));
+            Fmt(&buf, "%1%2", separate ? "/" : "", FmtUrlSafe(key, "-._~/"));
         }
 
         Size path_end = buf.len;
 
         if (params.len) {
-            Fmt(&buf, "?%1%2%3", FmtUrlSafe(params[0].key), params[0].value ? "=" : "", FmtUrlSafe(params[0].value));
+            Fmt(&buf, "?%1%2%3", FmtUrlSafe(params[0].key, "-._~"),
+                                 params[0].value ? "=" : "", FmtUrlSafe(params[0].value, "-._~"));
             for (Size i = 1; i < params.len; i++) {
                 const KeyValue &param = params[i];
-                Fmt(&buf, "&%1%2%3", FmtUrlSafe(param.key), param.value ? "=" : "", FmtUrlSafe(param.value));
+                Fmt(&buf, "&%1%2%3", FmtUrlSafe(param.key, "-._~"),
+                                     param.value ? "=" : "", FmtUrlSafe(param.value, "-._~"));
             }
         }
 
@@ -899,7 +901,7 @@ void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *met
         list.Append({ (char *)authorization, nullptr });
 
         for (const KeyValue &header: headers) {
-            const char *str = Fmt(alloc, "%1: %2", header.key, FmtUrlSafe(header.value, "*$")).ptr;
+            const char *str = Fmt(alloc, "%1: %2", header.key, FmtUrlSafe(header.value, "-._~*$")).ptr;
             list.Append({ (char *)str, nullptr });
         }
 
@@ -1003,15 +1005,15 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
 
         Fmt(&buf, "%1\n%2\n", method, path);
         if (params.len) {
-            Fmt(&buf, "%1=%2", FmtUrlSafe(params[0].key), FmtUrlSafe(params[0].value));
+            Fmt(&buf, "%1=%2", FmtUrlSafe(params[0].key, "-._~"), FmtUrlSafe(params[0].value, "-._~"));
             for (Size i = 1; i < params.len; i++) {
                 const KeyValue &param = params[i];
-                Fmt(&buf, "&%1=%2", FmtUrlSafe(param.key), FmtUrlSafe(param.value));
+                Fmt(&buf, "&%1=%2", FmtUrlSafe(param.key, "-._~"), FmtUrlSafe(param.value, "-._~"));
             }
         }
         Fmt(&buf, "\nhost:%1\n", host);
         for (const KeyValue &header: headers) {
-            Fmt(&buf, "%1:%2\n", FmtLowerAscii(header.key), FmtUrlSafe(header.value, "*$"));
+            Fmt(&buf, "%1:%2\n", FmtLowerAscii(header.key), FmtUrlSafe(header.value, "-._~*$"));
         }
         Fmt(&buf, "\nhost");
         for (const KeyValue &header: headers) {

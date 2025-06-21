@@ -129,13 +129,13 @@ const char *pwd_GenerateHotpUrl(const char *label, const char *username, const c
     if (!pwd_CheckSecret(secret))
         return nullptr;
 
-    Fmt(&buf, "otpauth://totp/%1", FmtUrlSafe(label, "@"));
+    Fmt(&buf, "otpauth://totp/%1", FmtUrlSafe(label, "-._~@"));
     if (username) {
-        Fmt(&buf, ":%1", FmtUrlSafe(username, "@"));
+        Fmt(&buf, ":%1", FmtUrlSafe(username, "-._~@"));
     }
     Fmt(&buf, "?algorithm=%1&secret=%2&digits=%3", pwd_HotpAlgorithmNames[(int)algo], secret, digits);
     if (issuer) {
-        Fmt(&buf, "&issuer=%1", FmtUrlSafe(issuer, "@"));
+        Fmt(&buf, "&issuer=%1", FmtUrlSafe(issuer, "-._~@"));
     }
 
     const char *url = buf.TrimAndLeak(1).ptr;

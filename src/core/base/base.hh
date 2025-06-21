@@ -3979,7 +3979,7 @@ class FmtUrlSafe {
     const char *passthrough;
 
 public:
-    FmtUrlSafe(Span<const char> str, const char *passthrough = "")
+    FmtUrlSafe(Span<const char> str, const char *passthrough)
         : str(str), passthrough(passthrough) {}
 
     void Format(FunctionRef<void(Span<const char>)> append) const;

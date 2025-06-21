@@ -1846,9 +1846,7 @@ void FmtUrlSafe::Format(FunctionRef<void(Span<const char>)> append) const
     static const char literals[] = "0123456789ABCDEF";
 
     for (char c: str) {
-        if (IsAsciiAlphaOrDigit(c) || c == '-' || c == '.' || c == '_' || c == '~') {
-            append((char)c);
-        } else if (strchr(passthrough, c)) {
+        if (IsAsciiAlphaOrDigit(c) || strchr(passthrough, c)) {
             append((char)c);
         } else {
             char encoded[3];
