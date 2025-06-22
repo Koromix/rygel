@@ -142,7 +142,7 @@ Available metadata save options:
         LogInfo("Snapshot channel: %!..+%1%!0", channel);
     }
     LogInfo("Source size: %!..+%1%!0", FmtDiskSize(info.size));
-    LogInfo("Total stored: %!..+%1%!0", FmtDiskSize(info.stored));
+    LogInfo("Total stored: %!..+%1%!0 (added %2)", FmtDiskSize(info.stored), FmtDiskSize(info.added));
     LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
 
     return 0;

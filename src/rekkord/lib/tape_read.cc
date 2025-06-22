@@ -198,6 +198,38 @@ static void SetFileOwner(int fd, const char *filename, uint32_t uid, uint32_t gi
 
 #endif
 
+static void MigrateLegacySnapshot1(HeapArray<uint8_t> *blob)
+{
+    if (blob->len < RG_SIZE(SnapshotHeader1))
+        return;
+
+    SnapshotHeader1 *header1 = (SnapshotHeader1 *)blob->ptr;
+    SnapshotHeader2 header2 = {};
+
+    header2.time = header1->time;
+    header2.size = header1->size;
+    header2.stored = header1->stored;
+    MemCpy(header2.channel, header1->channel, RG_SIZE(header2.channel));
+
+    MemCpy(blob->ptr, &header2, RG_SIZE(SnapshotHeader2));
+}
+
+static void MigrateLegacySnapshot2(HeapArray<uint8_t> *blob)
+{
+    if (blob->len < RG_SIZE(SnapshotHeader2))
+        return;
+
+    Size from = offsetof(SnapshotHeader2, channel);
+    Size to = offsetof(SnapshotHeader3, channel);
+
+    blob->Grow(to - from);
+
+    SnapshotHeader3 *header = (SnapshotHeader3 *)blob->ptr;
+
+    MemMove(blob->ptr + to, blob->ptr + from, blob->len - from);
+    header->added = 0;
+}
+
 static void MigrateLegacyEntries1(HeapArray<uint8_t> *blob, Size start)
 {
     if (blob->len < RG_SIZE(int64_t))
@@ -908,10 +940,11 @@ bool rk_Restore(rk_Repository *repo, const rk_ObjectID &oid, const rk_RestoreSet
             }
         } break;
 
-        case (int)BlobType::Snapshot1: { static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot1: { MigrateLegacySnapshot1(&blob); } [[fallthrough]];
         case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot4: { MigrateLegacyEntries3(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot5: { MigrateLegacySnapshot2(&blob); } [[fallthrough]];
         case (int)BlobType::Snapshot: {
             if (!settings.fake) {
                 if (!settings.force && TestFile(dest_path, FileType::Directory)) {
@@ -1003,13 +1036,13 @@ bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc,
         HashMap<const char *, Size> map;
 
         for (const rk_TagInfo &tag: tags) {
-            if (tag.payload.len < (Size)offsetof(SnapshotHeader2, channel) + 1 ||
-                    tag.payload.len > RG_SIZE(SnapshotHeader2)) {
+            if (tag.payload.len < (Size)offsetof(SnapshotHeader3, channel) + 1 ||
+                    tag.payload.len > RG_SIZE(SnapshotHeader3)) {
                 LogError("Malformed snapshot tag (ignoring)");
                 continue;
             }
 
-            SnapshotHeader2 header = {};
+            SnapshotHeader3 header = {};
             MemCpy(&header, tag.payload.ptr, tag.payload.len);
             header.channel[RG_SIZE(header.channel) - 1] = 0;
 
@@ -1024,7 +1057,8 @@ bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc,
                 snapshot.channel = DuplicateString(name, alloc).ptr;
                 snapshot.time = LittleEndian(header.time);
                 snapshot.size = LittleEndian(header.size);
-                snapshot.storage = LittleEndian(header.storage);
+                snapshot.stored = LittleEndian(header.stored);
+                snapshot.added = LittleEndian(header.added);
 
                 out_snapshots->Append(snapshot);
             }
@@ -1347,27 +1381,11 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
                 return false;
         } break;
 
-        case (int)BlobType::Snapshot1: {
-            static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2));
-
-            if (blob.len <= RG_SIZE(SnapshotHeader1)) {
-                LogError("Malformed snapshot blob '%1'", oid);
-                return false;
-            }
-
-            SnapshotHeader1 *header1 = (SnapshotHeader1 *)blob.ptr;
-            SnapshotHeader2 header2 = {};
-
-            header2.time = header1->time;
-            header2.size = header1->size;
-            header2.storage = header1->storage;
-            MemCpy(header2.channel, header1->channel, RG_SIZE(header2.channel));
-
-            MemCpy(blob.ptr, &header2, RG_SIZE(SnapshotHeader2));
-        } [[fallthrough]];
+        case (int)BlobType::Snapshot1: { MigrateLegacySnapshot1(&blob); } [[fallthrough]];
         case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot4: { MigrateLegacyEntries3(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot5: { MigrateLegacySnapshot2(&blob); } [[fallthrough]];
         case (int)BlobType::Snapshot: {
             if (blob.len < RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader)) {
                 LogError("Malformed snapshot blob '%1'", oid);
@@ -1391,7 +1409,7 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
             obj->mtime = LittleEndian(header1->time);
             obj->size = LittleEndian(header1->size);
             obj->flags |= (int)rk_ObjectFlag::Readable;
-            obj->storage = LittleEndian(header1->storage);
+            obj->stored = LittleEndian(header1->stored);
 
             Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
 
@@ -1544,27 +1562,11 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
                 return false;
         } break;
 
-        case (int)BlobType::Snapshot1: {
-            static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2));
-
-            if (blob.len <= RG_SIZE(SnapshotHeader1)) {
-                LogError("Malformed snapshot blob '%1'", oid);
-                return false;
-            }
-
-            SnapshotHeader1 *header1 = (SnapshotHeader1 *)blob.ptr;
-            SnapshotHeader2 header2 = {};
-
-            header2.time = header1->time;
-            header2.size = header1->size;
-            header2.storage = header1->storage;
-            MemCpy(header2.channel, header1->channel, RG_SIZE(header2.channel));
-
-            MemCpy(blob.ptr, &header2, RG_SIZE(SnapshotHeader2));
-        } [[fallthrough]];
+        case (int)BlobType::Snapshot1: { MigrateLegacySnapshot1(&blob); } [[fallthrough]];
         case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot4: { MigrateLegacyEntries3(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot5: { MigrateLegacySnapshot2(&blob); } [[fallthrough]];
         case (int)BlobType::Snapshot: {
             Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
 
@@ -1916,6 +1918,7 @@ std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Repository *repo, const rk_ObjectI
         case (int)BlobType::Snapshot2:
         case (int)BlobType::Snapshot3:
         case (int)BlobType::Snapshot4:
+        case (int)BlobType::Snapshot5:
         case (int)BlobType::Snapshot:
         case (int)BlobType::Link: {
             LogError("Expected file for '%1'", oid);

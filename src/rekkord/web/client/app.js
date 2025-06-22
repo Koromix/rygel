@@ -846,15 +846,15 @@ async function runChannel(repo, channel) {
             data: [],
             fill: false
         };
-        let storage = {
-            label: 'Storage',
+        let stored = {
+            label: 'Stored',
             data: [],
             fill: false
         };
 
         for (let snapshot of snapshots) {
             size.data.push({ x: snapshot.time, y: snapshot.size });
-            storage.data.push({ x: snapshot.time, y: snapshot.storage });
+            stored.data.push({ x: snapshot.time, y: snapshot.stored });
         }
 
         let ctx = canvas.getContext('2d');
@@ -862,7 +862,7 @@ async function runChannel(repo, channel) {
         new Chart(ctx, {
             type: 'line',
             data: {
-                datasets: [size, storage]
+                datasets: [size, stored]
             },
             options: {
                 responsive: true,
@@ -917,13 +917,15 @@ async function runChannel(repo, channel) {
                             <col></col>
                             <col></col>
                             <col></col>
+                            <col></col>
                         </colgroup>
                         <thead>
                             <tr>
                                 ${UI.tableHeader('snapshots', 'time', 'Timestamp')}
                                 ${UI.tableHeader('snapshots', 'oid', 'Object')}
                                 ${UI.tableHeader('snapshots', 'size', 'Size')}
-                                ${UI.tableHeader('snapshots', 'storage', 'Storage')}
+                                ${UI.tableHeader('snapshots', 'stored', 'Stored')}
+                                ${UI.tableHeader('snapshots', 'added', 'Added')}
                             </tr>
                         </thead>
                         <tbody>
@@ -932,10 +934,11 @@ async function runChannel(repo, channel) {
                                     <td>${(new Date(snapshot.time)).toLocaleString()}</td>
                                     <td><span class="sub">${snapshot.oid}</span></td>
                                     <td style="text-align: right;">${formatSize(snapshot.size)}</td>
-                                    <td style="text-align: right;">${formatSize(snapshot.storage)}</td>
+                                    <td style="text-align: right;">${formatSize(snapshot.stored)}</td>
+                                    <td style="text-align: right;">${formatSize(snapshot.added)}</td>
                                 </tr>
                             `)}
-                            ${!snapshots.length ? html`<tr><td colspan="4" style="text-align: center;">No snapshot</td></tr>` : ''}
+                            ${!snapshots.length ? html`<tr><td colspan="5" style="text-align: center;">No snapshot</td></tr>` : ''}
                         </tbody>
                     </table>
                 </div>

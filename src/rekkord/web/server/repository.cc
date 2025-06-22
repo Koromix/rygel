@@ -165,13 +165,15 @@ static bool CheckRepository(const rk_Config &access, int64_t id)
             char oid[128];
             Fmt(oid, "%1", snapshot.oid);
 
-            if (!db.Run(R"(INSERT INTO snapshots (repository, oid, channel, timestamp, size, storage)
-                           VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            if (!db.Run(R"(INSERT INTO snapshots (repository, oid, channel, timestamp, size, stored, added)
+                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
                            ON CONFLICT DO UPDATE SET channel = excluded.channel,
                                                      timestamp = excluded.timestamp,
                                                      size = excluded.size,
-                                                     storage = excluded.storage)",
-                        id, oid, snapshot.channel, snapshot.time, snapshot.size, snapshot.storage))
+                                                     stored = excluded.stored,
+                                                     added = excluded.added)",
+                        id, oid, snapshot.channel, snapshot.time,
+                        snapshot.size, snapshot.stored, snapshot.added))
                 return false;
         }
 
@@ -821,7 +823,7 @@ void HandleRepositorySnapshots(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT s.oid, s.timestamp, s.size, s.storage
+    if (!db.Prepare(R"(SELECT s.oid, s.timestamp, s.size, s.stored, s.added
                        FROM snapshots s
                        INNER JOIN repositories r ON (r.id = s.repository)
                        WHERE r.owner = ?1 AND r.id = ?2 AND
@@ -839,13 +841,15 @@ void HandleRepositorySnapshots(http_IO *io)
         const char *oid = (const char *)sqlite3_column_text(stmt, 0);
         int64_t time = sqlite3_column_int64(stmt, 1);
         int64_t size = sqlite3_column_int64(stmt, 2);
-        int64_t storage = sqlite3_column_int64(stmt, 3);
+        int64_t stored = sqlite3_column_int64(stmt, 3);
+        int64_t added = sqlite3_column_int64(stmt, 4);
 
         json.StartObject();
         json.Key("oid"); json.String(oid);
         json.Key("time"); json.Int64(time);
         json.Key("size"); json.Int64(size);
-        json.Key("storage"); json.Int64(storage);
+        json.Key("stored"); json.Int64(stored);
+        json.Key("added"); json.Int64(added);
         json.EndObject();
     }
     if (!stmt.IsValid())

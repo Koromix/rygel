@@ -55,6 +55,7 @@ class PutContext {
 
     std::atomic_int64_t put_size { 0 };
     std::atomic_int64_t put_stored { 0 };
+    std::atomic_int64_t put_written { 0 };
     std::atomic_int64_t put_entries { 0 };
 
     Async dir_tasks;
@@ -70,12 +71,13 @@ public:
 
     int64_t GetSize() const { return put_size; }
     int64_t GetStored() const { return put_stored; }
+    int64_t GetWritten() const { return put_written; }
     int64_t GetEntries() const { return put_entries; }
 
     int64_t WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob);
 
 private:
-    void MakeProgress(int64_t written);
+    void MakeProgress(int64_t stored);
 };
 
 static void HashBlake3(BlobType type, Span<const uint8_t> buf, const uint8_t salt[32], rk_Hash *out_hash)
@@ -354,9 +356,9 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                             pending->size += stat.size;
 
                             // Done by PutFile in theory, but we're skipping it
-                            put_size += stat.size;
                             MakeProgress(stat.stored);
-                            put_entries++;
+                            put_size.fetch_add(stat.size, std::memory_order_relaxed);
+                            put_entries.fetch_add(1, std::memory_order_relaxed);
 
                             break;
                         } else if (ret == StatResult::OtherError) {
@@ -418,13 +420,10 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                             HashBlake3(BlobType::Link, target, salt32, &entry->hash);
                             rk_ObjectID oid = { rk_BlobCatalog::Raw, entry->hash };
 
-                            Size written = WriteBlob(oid, (int)BlobType::Link, target);
-                            if (written < 0)
+                            if (WriteBlob(oid, (int)BlobType::Link, target) < 0)
                                 return false;
 
-                            put_size += target.len;
-                            MakeProgress(written);
-                            put_entries++;
+                            put_entries.fetch_add(1, std::memory_order_relaxed);
 
                             entry->flags |= (uint8_t)RawEntry::Flags::Readable;
 
@@ -473,12 +472,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
         async.Run([pending, this]() mutable {
             rk_ObjectID oid = { rk_BlobCatalog::Meta, pending->hash };
 
-            Size written = WriteBlob(oid, (int)BlobType::Directory, pending->blob);
-            if (written < 0)
+            if (WriteBlob(oid, (int)BlobType::Directory, pending->blob) < 0)
                 return false;
-
-            put_size += pending->blob.len;
-            MakeProgress(written);
 
             return true;
         });
@@ -487,7 +482,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
     if (!async.Sync())
         return PutResult::Error;
 
-    put_entries += pending_directories.count;
+    put_entries.fetch_add(pending_directories.count, std::memory_order_relaxed);
 
     const PendingDirectory &pending0 = pending_directories[0];
     RG_ASSERT(pending0.parent_idx < 0);
@@ -574,11 +569,10 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
                         HashBlake3(BlobType::Chunk, chunk, salt32, &entry.hash);
                         rk_ObjectID oid = { rk_BlobCatalog::Raw, entry.hash };
 
-                        Size written = WriteBlob(oid, (int)BlobType::Chunk, chunk);
+                        int64_t written = WriteBlob(oid, (int)BlobType::Chunk, chunk);
                         if (written < 0)
                             return false;
 
-                        MakeProgress(written);
                         file_stored += written;
 
                         MemCpy(file_blob.ptr + idx * RG_SIZE(entry), &entry, RG_SIZE(entry));
@@ -617,19 +611,18 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
         HashBlake3(BlobType::File, file_blob, salt32, &file_hash);
         rk_ObjectID oid = { rk_BlobCatalog::Raw, file_hash };
 
-        Size written = WriteBlob(oid, (int)BlobType::File, file_blob);
+        int64_t written = WriteBlob(oid, (int)BlobType::File, file_blob);
         if (written < 0)
             return PutResult::Error;
 
-        MakeProgress(written);
         file_stored += written;
     } else {
         const RawChunk *entry0 = (const RawChunk *)file_blob.ptr;
         file_hash = entry0->hash;
     }
 
-    put_size += file_size;
-    put_entries++;
+    put_size.fetch_add(file_size, std::memory_order_relaxed);
+    put_entries.fetch_add(1, std::memory_order_relaxed);
 
     *out_hash = file_hash;
     if (out_size) {
@@ -669,6 +662,8 @@ int64_t PutContext::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8
                 }
             }
 
+            MakeProgress(size);
+
             return size;
         } break;
 
@@ -679,8 +674,8 @@ int64_t PutContext::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8
     }
 
     switch (repo->WriteBlob(oid, type, blob, &size)) {
-        case rk_WriteResult::Success:
-        case rk_WriteResult::AlreadyExists: {} break;
+        case rk_WriteResult::Success: { put_written.fetch_add(size, std::memory_order_relaxed); } [[fallthrough]];
+        case rk_WriteResult::AlreadyExists: { MakeProgress(size); } break;
 
         case rk_WriteResult::OtherError: return -1;
     }
@@ -690,9 +685,9 @@ int64_t PutContext::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8
     return size;
 }
 
-void PutContext::MakeProgress(int64_t delta)
+void PutContext::MakeProgress(int64_t stored)
 {
-    int64_t stored = put_stored.fetch_add(delta, std::memory_order_relaxed) + delta;
+    stored = put_stored.fetch_add(stored, std::memory_order_relaxed) + stored;
     pg_stored.SetFmt("%1 stored", FmtDiskSize(stored));
 }
 
@@ -727,7 +722,7 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
     repo->MakeSalt(rk_SaltKind::BlobHash, salt32);
 
     HeapArray<uint8_t> snapshot_blob;
-    snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader));
+    snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader3) + RG_SIZE(DirectoryHeader));
 
     PutContext put(repo, &cache, settings);
 
@@ -863,16 +858,18 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
 
     info.size = put.GetSize();
     info.stored = put.GetStored();
+    info.added = put.GetWritten();
     info.entries = put.GetEntries();
 
     if (channel) {
-        SnapshotHeader2 *header1 = (SnapshotHeader2 *)snapshot_blob.ptr;
+        SnapshotHeader3 *header1 = (SnapshotHeader3 *)snapshot_blob.ptr;
         DirectoryHeader *header2 = (DirectoryHeader *)(header1 + 1);
 
         header1->time = LittleEndian(GetUnixTime());
         CopyString(channel, header1->channel);
         header1->size = LittleEndian(info.size);
-        header1->storage = LittleEndian(info.stored);
+        header1->stored = LittleEndian(info.stored);
+        header1->added = LittleEndian(info.added);
 
         header2->size = LittleEndian(info.size);
         header2->entries = LittleEndian(info.entries);
@@ -882,22 +879,23 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
 
         // Write snapshot blob
         {
-            Size written = put.WriteBlob(info.oid, (int)BlobType::Snapshot, snapshot_blob);
+            int64_t written = put.WriteBlob(info.oid, (int)BlobType::Snapshot, snapshot_blob);
             if (written < 0)
                 return false;
             info.stored += written;
+            info.added += written;
         }
 
         // Create tag file
         {
-            Size payload_len = offsetof(SnapshotHeader2, channel) + strlen(header1->channel) + 1;
+            Size payload_len = offsetof(SnapshotHeader3, channel) + strlen(header1->channel) + 1;
             Span<const uint8_t> payload = MakeSpan((const uint8_t *)header1, payload_len);
 
             if (!repo->WriteTag(info.oid, payload))
                 return false;
         }
     } else {
-        const RawEntry *entry0 = (const RawEntry *)(snapshot_blob.ptr + RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader));
+        const RawEntry *entry0 = (const RawEntry *)(snapshot_blob.ptr + RG_SIZE(SnapshotHeader3) + RG_SIZE(DirectoryHeader));
         info.oid.hash = entry0->hash;
     }
 

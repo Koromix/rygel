@@ -47,6 +47,7 @@ struct rk_SaveInfo {
     rk_ObjectID oid;
     int64_t size;
     int64_t stored;
+    int64_t added;
     int64_t entries;
 };
 
@@ -57,7 +58,8 @@ struct rk_SnapshotInfo {
     const char *channel;
     int64_t time;
     int64_t size;
-    int64_t storage;
+    int64_t stored;
+    int64_t added;
 };
 
 struct rk_ChannelInfo {
@@ -108,7 +110,7 @@ struct rk_ObjectInfo {
     unsigned int flags;
 
     int64_t entries; // for snapshots and directories
-    int64_t storage; // for snapshots
+    int64_t stored; // for snapshots
 
     Size children; // for snapshots and directories
 };

@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 12;
+const int DatabaseVersion = 13;
 
 bool MigrateDatabase(sq_Database *db)
 {
@@ -292,7 +292,7 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
-                } [[fallthrough]];
+            } [[fallthrough]];
 
             case 11: {
                 bool success = db->RunMany(R"(
@@ -301,9 +301,38 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
-                } // [[fallthrough]];
+            } [[fallthrough]];
 
-            static_assert(DatabaseVersion == 12);
+            case 12: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX snapshots_c;
+                    DROP INDEX IF EXISTS snapshots_ro;
+                    DROP INDEX IF EXISTS snapshots_rh;
+
+                    ALTER TABLE snapshots RENAME TO snapshots_BAK;
+
+                    CREATE TABLE snapshots (
+                        repository INTEGER REFERENCES repositories (id) ON DELETE CASCADE,
+                        oid TEXT NOT NULL,
+                        channel TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        size INTEGER NOT NULL,
+                        stored INTEGER NOT NULL,
+                        added INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX snapshots_ro ON snapshots (repository, oid);
+                    CREATE INDEX snapshots_c ON snapshots (channel);
+
+                    INSERT INTO snapshots (repository, oid, channel, timestamp, size, stored, added)
+                        SELECT repository, oid, channel, timestamp, size, storage, 0 FROM snapshots_BAK;
+
+                    DROP TABLE snapshots_BAK;
+                )");
+                if (!success)
+                    return false;
+            } // [[fallthrough]];
+
+            static_assert(DatabaseVersion == 13);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

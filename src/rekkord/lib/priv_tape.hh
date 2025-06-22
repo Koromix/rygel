@@ -32,7 +32,8 @@ enum class BlobType {
     Directory3 = 8,
     Snapshot4 = 9,
     Directory = 10,
-    Snapshot = 11
+    Snapshot5 = 11,
+    Snapshot = 12
 };
 static const char *const BlobTypeNames[] = {
     "Chunk",
@@ -46,6 +47,7 @@ static const char *const BlobTypeNames[] = {
     "Directory3",
     "Snapshot4",
     "Directory",
+    "Snapshot5",
     "Snapshot"
 };
 
@@ -54,7 +56,7 @@ struct SnapshotHeader1 {
     char channel[512];
     int64_t time; // Little Endian
     int64_t size; // Little Endian
-    int64_t storage; // Little Endian
+    int64_t stored; // Little Endian
 };
 #pragma pack(pop)
 static_assert(RG_SIZE(SnapshotHeader1) == 536);
@@ -63,11 +65,22 @@ static_assert(RG_SIZE(SnapshotHeader1) == 536);
 struct SnapshotHeader2 {
     int64_t time; // Little Endian
     int64_t size; // Little Endian
-    int64_t storage; // Little Endian
+    int64_t stored; // Little Endian
     char channel[512];
 };
 #pragma pack(pop)
 static_assert(RG_SIZE(SnapshotHeader2) == 536);
+
+#pragma pack(push, 1)
+struct SnapshotHeader3 {
+    int64_t time; // Little Endian
+    int64_t size; // Little Endian
+    int64_t stored; // Little Endian
+    int64_t added; // Little Endian
+    char channel[512];
+};
+#pragma pack(pop)
+static_assert(RG_SIZE(SnapshotHeader3) == 544);
 
 #pragma pack(push, 1)
 struct DirectoryHeader {
