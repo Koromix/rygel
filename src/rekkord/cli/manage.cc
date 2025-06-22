@@ -167,9 +167,9 @@ Options:
             const rk_UserInfo &user = users[i];
 
             if (show_pwds[i]) {
-                LogInfo("%1 %2 user password: %!..+%3%!0", i ? "       " : "Default", FmtArg(user.username).Pad(-align), user.pwd);
+                LogInfo("%1 %2 password: %!..+%3%!0", i ? "       " : "Default", FmtArg(user.username).Pad(-align), user.pwd);
             } else {
-                LogInfo("%1 %2 user password: %!D..(hidden)%!0", i ? "       " : "Default", FmtArg(user.username).Pad(-align));
+                LogInfo("%1 %2 password: %!D..(hidden)%!0", i ? "       " : "Default", FmtArg(user.username).Pad(-align));
             }
         }
 
