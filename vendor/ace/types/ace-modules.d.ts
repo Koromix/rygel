@@ -375,7 +375,7 @@ declare module "ace-builds-internal/config" {
             string
         ], onLoad: (module: any) => void) => void;
         setModuleLoader: (moduleName: any, onLoad: any) => void;
-        version: "1.41.0";
+        version: "1.43.0";
     };
     export = _exports;
 }
@@ -817,22 +817,25 @@ declare module "ace-builds-internal/css/editor-css" {
 }
 declare module "ace-builds-internal/layer/decorators" {
     export class Decorator {
-        constructor(parent: any, renderer: any);
-        parentEl: any;
-        canvas: HTMLCanvasElement;
-        renderer: any;
+        constructor(scrollbarV: import("ace-builds").Ace.VScrollbar, renderer: import("ace-builds-internal/virtual_renderer").VirtualRenderer);
+        renderer: import("ace-builds-internal/virtual_renderer").VirtualRenderer;
         pixelRatio: number;
-        maxHeight: any;
-        lineHeight: any;
+        maxHeight: number;
+        lineHeight: number;
         minDecorationHeight: number;
         halfMinDecorationHeight: number;
         colors: {};
-        compensateFoldRows(row: any): number;
-        compensateLineWidgets(row: any): number;
+        canvas: HTMLCanvasElement;
+        setScrollBarV(scrollbarV: any): void;
+        scrollbarV: any;
+        getVerticalOffsetForRow(row: any): number;
         setDimensions(config: any): void;
         canvasHeight: any;
-        heightRatio: number;
         canvasWidth: any;
+        heightRatio: number;
+        setZoneWidth(): void;
+        oneZoneWidth: any;
+        destroy(): void;
     }
 }
 declare module "ace-builds-internal/virtual_renderer" {
@@ -1560,7 +1563,76 @@ declare module "ace-builds-internal/clipboard" {
 }
 declare module "ace-builds-internal/keyboard/textinput" {
     export function $setUserAgentForTests(_isMobile: any, _isIOS: any): void;
-    export var TextInput: any;
+    export class TextInput {
+        constructor(parentNode: HTMLElement, host: import("ace-builds-internal/editor").Editor);
+        host: import("ace-builds-internal/editor").Editor;
+        text: HTMLTextAreaElement & {
+            msGetInputContext?: () => {
+                compositionStartOffset: number;
+            };
+            getInputContext?: () => {
+                compositionStartOffset: number;
+            };
+        };
+        copied: boolean | string;
+        pasted: boolean;
+        inComposition: (boolean | any) & {
+            context?: any;
+            useTextareaForIME?: boolean;
+            selectionStart?: number;
+            markerRange?: any;
+        };
+        sendingText: boolean;
+        tempStyle: string;
+        commandMode: boolean;
+        ignoreFocusEvents: boolean;
+        lastValue: string;
+        lastSelectionStart: number;
+        lastSelectionEnd: number;
+        lastRestoreEnd: number;
+        rowStart: number;
+        rowEnd: number;
+        numberOfExtraLines: number;
+        resetSelection: (value: any) => void;
+        inputHandler: any;
+        afterContextMenu: boolean;
+        syncComposition: any;
+        onContextMenuClose(): void;
+        closeTimeout: number;
+        setHost(newHost: import("ace-builds-internal/editor").Editor): void;
+        /**
+         * Sets the number of extra lines in the textarea to improve screen reader compatibility.
+         * Extra lines can help screen readers perform better when reading text.
+         *
+         * @param {number} number - The number of extra lines to add. Must be non-negative.
+         */
+        setNumberOfExtraLines(number: number): void;
+        setAriaLabel(): void;
+        setAriaOptions(options: import("ace-builds").Ace.TextInputAriaOptions): void;
+        focus(): void;
+        blur(): void;
+        isFocused(): boolean;
+        setInputHandler(cb: any): void;
+        getInputHandler(): any;
+        getElement(): HTMLTextAreaElement & {
+            msGetInputContext?: () => {
+                compositionStartOffset: number;
+            };
+            getInputContext?: () => {
+                compositionStartOffset: number;
+            };
+        };
+        /**
+         * allows to ignore composition (used by vim keyboard handler in the normal mode)
+         * this is useful on mac, where with some keyboard layouts (e.g swedish) ^ starts composition
+         */
+        setCommandMode(value: boolean): void;
+        setReadOnly(readOnly: any): void;
+        setCopyWithEmptySelection(value: any): void;
+        onContextMenu(e: any): void;
+        moveToMouse(e: any, bringToFront: boolean): void;
+        destroy(): void;
+    }
 }
 declare module "ace-builds-internal/mouse/mouse_event" {
     export class MouseEvent {
@@ -2047,7 +2119,7 @@ declare module "ace-builds-internal/editor" {
         };
         renderer: VirtualRenderer;
         commands: CommandManager;
-        textInput: any;
+        textInput: TextInput;
         keyBinding: KeyBinding;
         startOperation(commandEvent: any): void;
         /**
@@ -2162,7 +2234,7 @@ declare module "ace-builds-internal/editor" {
          * Returns the string of text currently highlighted.
          **/
         getCopyText(): string;
-        execCommand(command: string | string[], args?: any): boolean;
+        execCommand(command: string | string[] | import("ace-builds").Ace.Command, args?: any): boolean;
         /**
          * Inserts `text` into wherever the cursor is pointing.
          * @param {String} text The new text to add
@@ -2706,6 +2778,7 @@ declare module "ace-builds-internal/editor" {
     export type SearchOptions = import("ace-builds").Ace.SearchOptions;
     import { EditSession } from "ace-builds-internal/edit_session";
     import { CommandManager } from "ace-builds-internal/commands/command_manager";
+    import { TextInput } from "ace-builds-internal/keyboard/textinput";
     import { MouseHandler } from "ace-builds-internal/mouse/mouse_handler";
     import { KeyBinding } from "ace-builds-internal/keyboard/keybinding";
     import { Search } from "ace-builds-internal/search";
@@ -3317,6 +3390,49 @@ declare module "ace-builds-internal/autocomplete" {
         completions: Ace.FilteredList;
     }
 }
+declare module "ace-builds-internal/marker_group" {
+    export type EditSession = import("ace-builds-internal/edit_session").EditSession;
+    export type MarkerGroupItem = {
+        range: import("ace-builds-internal/range").Range;
+        className: string;
+    };
+    export type LayerConfig = import("ace-builds").Ace.LayerConfig;
+    export type Marker = import("ace-builds-internal/layer/marker").Marker;
+    export class MarkerGroup {
+        /**
+         * @param {{markerType: "fullLine" | "line" | undefined}} [options] Options controlling the behvaiour of the marker.
+         * User `markerType` to control how the markers which are part of this group will be rendered:
+         * - `undefined`: uses `text` type markers where only text characters within the range will be highlighted.
+         * - `fullLine`: will fully highlight all the rows within the range, including the characters before and after the range on the respective rows.
+         * - `line`: will fully highlight the lines within the range but will only cover the characters between the start and end of the range.
+         */
+        constructor(session: EditSession, options?: {
+            markerType: "fullLine" | "line" | undefined;
+        });
+        markerType: "line" | "fullLine";
+        markers: import("ace-builds").Ace.MarkerGroupItem[];
+        session: EditSession;
+        /**
+         * Finds the first marker containing pos
+         */
+        getMarkerAtPosition(pos: import("ace-builds").Ace.Point): import("ace-builds").Ace.MarkerGroupItem | undefined;
+        /**
+         * Comparator for Array.sort function, which sorts marker definitions by their positions
+         *
+         * @param {MarkerGroupItem} a first marker.
+         * @param {MarkerGroupItem} b second marker.
+         * @returns {number} negative number if a should be before b, positive number if b should be before a, 0 otherwise.
+         */
+        markersComparator(a: MarkerGroupItem, b: MarkerGroupItem): number;
+        /**
+         * Sets marker definitions to be rendered. Limits the number of markers at MAX_MARKERS.
+         * @param {MarkerGroupItem[]} markers an array of marker definitions.
+         */
+        setMarkers(markers: MarkerGroupItem[]): void;
+        update(html: any, markerLayer: Marker, session: EditSession, config: LayerConfig): void;
+        MAX_MARKERS: number;
+    }
+}
 declare module "ace-builds-internal/autocomplete/text_completer" {
     export function getCompletions(editor: any, session: any, pos: any, prefix: any, callback: any): void;
 }
@@ -3421,48 +3537,23 @@ declare module "ace-builds-internal/occur" {
     import { Search } from "ace-builds-internal/search";
     import { EditSession } from "ace-builds-internal/edit_session";
 }
-declare module "ace-builds-internal/marker_group" {
-    export type EditSession = import("ace-builds-internal/edit_session").EditSession;
-    export type MarkerGroupItem = {
-        range: import("ace-builds-internal/range").Range;
-        className: string;
-    };
-    export type LayerConfig = import("ace-builds").Ace.LayerConfig;
-    export type Marker = import("ace-builds-internal/layer/marker").Marker;
-    export class MarkerGroup {
-        /**
-         * @param {{markerType: "fullLine" | "line" | undefined}} [options] Options controlling the behvaiour of the marker.
-         * User `markerType` to control how the markers which are part of this group will be rendered:
-         * - `undefined`: uses `text` type markers where only text characters within the range will be highlighted.
-         * - `fullLine`: will fully highlight all the rows within the range, including the characters before and after the range on the respective rows.
-         * - `line`: will fully highlight the lines within the range but will only cover the characters between the start and end of the range.
-         */
-        constructor(session: EditSession, options?: {
-            markerType: "fullLine" | "line" | undefined;
-        });
-        markerType: "line" | "fullLine";
-        markers: import("ace-builds").Ace.MarkerGroupItem[];
-        session: EditSession;
-        /**
-         * Finds the first marker containing pos
-         */
-        getMarkerAtPosition(pos: import("ace-builds").Ace.Point): import("ace-builds").Ace.MarkerGroupItem | undefined;
-        /**
-         * Comparator for Array.sort function, which sorts marker definitions by their positions
-         *
-         * @param {MarkerGroupItem} a first marker.
-         * @param {MarkerGroupItem} b second marker.
-         * @returns {number} negative number if a should be before b, positive number if b should be before a, 0 otherwise.
-         */
-        markersComparator(a: MarkerGroupItem, b: MarkerGroupItem): number;
-        /**
-         * Sets marker definitions to be rendered. Limits the number of markers at MAX_MARKERS.
-         * @param {MarkerGroupItem[]} markers an array of marker definitions.
-         */
-        setMarkers(markers: MarkerGroupItem[]): void;
-        update(html: any, markerLayer: Marker, session: EditSession, config: LayerConfig): void;
-        MAX_MARKERS: number;
-    }
+declare module "ace-builds-internal/mouse/multi_select_handler" {
+    export function onMouseDown(e: any): any;
+}
+declare module "ace-builds-internal/commands/multi_select_commands" {
+    export const defaultCommands: import("ace-builds").Ace.Command[];
+    export const multiSelectCommands: import("ace-builds").Ace.Command[];
+    export const keyboardHandler: HashHandler;
+    import { HashHandler } from "ace-builds-internal/keyboard/hash_handler";
+}
+declare module "ace-builds-internal/multi_select" {
+    export const commands: import("ace-builds").Ace.Command[];
+    export const onSessionChange: (e: any) => void;
+    export type Anchor = import("ace-builds-internal/anchor").Anchor;
+    export type Point = import("ace-builds").Ace.Point;
+    export type ScreenCoordinates = import("ace-builds").Ace.ScreenCoordinates;
+    export function MultiSelect(editor: Editor): void;
+    import { Editor } from "ace-builds-internal/editor";
 }
 declare module "ace-builds-internal/edit_session/fold" {
     export class Fold extends RangeList {
@@ -4715,24 +4806,6 @@ declare module "ace-builds-internal/placeholder" {
     }
     export interface PlaceHolder extends Ace.EventEmitter<Ace.PlaceHolderEvents> {
     }
-}
-declare module "ace-builds-internal/mouse/multi_select_handler" {
-    export function onMouseDown(e: any): any;
-}
-declare module "ace-builds-internal/commands/multi_select_commands" {
-    export const defaultCommands: import("ace-builds").Ace.Command[];
-    export const multiSelectCommands: import("ace-builds").Ace.Command[];
-    export const keyboardHandler: HashHandler;
-    import { HashHandler } from "ace-builds-internal/keyboard/hash_handler";
-}
-declare module "ace-builds-internal/multi_select" {
-    export const commands: import("ace-builds").Ace.Command[];
-    export const onSessionChange: (e: any) => void;
-    export type Anchor = import("ace-builds-internal/anchor").Anchor;
-    export type Point = import("ace-builds").Ace.Point;
-    export type ScreenCoordinates = import("ace-builds").Ace.ScreenCoordinates;
-    export function MultiSelect(editor: Editor): void;
-    import { Editor } from "ace-builds-internal/editor";
 }
 declare module "ace-builds-internal/commands/occur_commands" {
     export namespace occurStartCommand {

@@ -1320,7 +1320,7 @@ var reportErrorIfPathIsNotConfigured = function () {
         reportErrorIfPathIsNotConfigured = function () { };
     }
 };
-exports.version = "1.41.0";
+exports.version = "1.43.0";
 
 });
 
@@ -2074,620 +2074,128 @@ var MODS = KEYS.KEY_MODS;
 var isIOS = useragent.isIOS;
 var valueResetRegex = isIOS ? /\s/ : /\n/;
 var isMobile = useragent.isMobile;
-var TextInput;
-TextInput = function (/**@type{HTMLTextAreaElement} */ parentNode, /**@type{import("../editor").Editor} */ host) {
-    var text = dom.createElement("textarea");
-    text.className = "ace_text-input";
-    text.setAttribute("wrap", "off");
-    text.setAttribute("autocorrect", "off");
-    text.setAttribute("autocapitalize", "off");
-    text.setAttribute("spellcheck", "false");
-    text.style.opacity = "0";
-    parentNode.insertBefore(text, parentNode.firstChild);
-    this.setHost = function (newHost) {
-        host = newHost;
-    }; var copied = false;
-    var pasted = false;
-    var inComposition = false;
-    var sendingText = false;
-    var tempStyle = '';
-    if (!isMobile)
-        text.style.fontSize = "1px";
-    var commandMode = false;
-    var ignoreFocusEvents = false;
-    var lastValue = "";
-    var lastSelectionStart = 0;
-    var lastSelectionEnd = 0;
-    var lastRestoreEnd = 0;
-    var rowStart = Number.MAX_SAFE_INTEGER;
-    var rowEnd = Number.MIN_SAFE_INTEGER;
-    var numberOfExtraLines = 0;
-    try {
-        var isFocused = document.activeElement === text;
-    }
-    catch (e) { }
-    this.setNumberOfExtraLines = function (/**@type{number}*/ number) {
-        rowStart = Number.MAX_SAFE_INTEGER;
-        rowEnd = Number.MIN_SAFE_INTEGER;
-        if (number < 0) {
-            numberOfExtraLines = 0;
-            return;
-        }
-        numberOfExtraLines = number;
-    };
-    this.setAriaLabel = function () {
-        var ariaLabel = "";
-        if (host.$textInputAriaLabel) {
-            ariaLabel += "".concat(host.$textInputAriaLabel, ", ");
-        }
-        if (host.session) {
-            var row = host.session.selection.cursor.row;
-            ariaLabel += nls("text-input.aria-label", "Cursor at row $0", [row + 1]);
-        }
-        text.setAttribute("aria-label", ariaLabel);
-    };
-    this.setAriaOptions = function (options) {
-        if (options.activeDescendant) {
-            text.setAttribute("aria-haspopup", "true");
-            text.setAttribute("aria-autocomplete", options.inline ? "both" : "list");
-            text.setAttribute("aria-activedescendant", options.activeDescendant);
-        }
-        else {
-            text.setAttribute("aria-haspopup", "false");
-            text.setAttribute("aria-autocomplete", "both");
-            text.removeAttribute("aria-activedescendant");
-        }
-        if (options.role) {
-            text.setAttribute("role", options.role);
-        }
-        if (options.setLabel) {
-            text.setAttribute("aria-roledescription", nls("text-input.aria-roledescription", "editor"));
-            this.setAriaLabel();
-        }
-    };
-    this.setAriaOptions({ role: "textbox" });
-    event.addListener(text, "blur", function (e) {
-        if (ignoreFocusEvents)
-            return;
-        host.onBlur(e);
-        isFocused = false;
-    }, host);
-    event.addListener(text, "focus", function (e) {
-        if (ignoreFocusEvents)
-            return;
-        isFocused = true;
-        if (useragent.isEdge) {
-            try {
-                if (!document.hasFocus())
-                    return;
-            }
-            catch (e) { }
-        }
-        host.onFocus(e);
-        if (useragent.isEdge)
-            setTimeout(resetSelection);
-        else
-            resetSelection();
-    }, host);
-    this.$focusScroll = false;
-    this.focus = function () {
-        this.setAriaOptions({
-            setLabel: host.renderer.enableKeyboardAccessibility
-        });
-        if (tempStyle || HAS_FOCUS_ARGS || this.$focusScroll == "browser")
-            return text.focus({ preventScroll: true });
-        var top = text.style.top;
-        text.style.position = "fixed";
-        text.style.top = "0px";
+var TextInput = /** @class */ (function () {
+    function TextInput(parentNode, host) {
+        var _this = this;
+        this.host = host;
+        this.text = dom.createElement("textarea");
+        this.text.className = "ace_text-input";
+        this.text.setAttribute("wrap", "off");
+        this.text.setAttribute("autocorrect", "off");
+        this.text.setAttribute("autocapitalize", "off");
+        this.text.setAttribute("spellcheck", "false");
+        this.text.style.opacity = "0";
+        parentNode.insertBefore(this.text, parentNode.firstChild); this.copied = false;
+        this.pasted = false;
+        this.inComposition = false;
+        this.sendingText = false;
+        this.tempStyle = '';
+        if (!isMobile)
+            this.text.style.fontSize = "1px";
+        this.commandMode = false;
+        this.ignoreFocusEvents = false;
+        this.lastValue = "";
+        this.lastSelectionStart = 0;
+        this.lastSelectionEnd = 0;
+        this.lastRestoreEnd = 0;
+        this.rowStart = Number.MAX_SAFE_INTEGER;
+        this.rowEnd = Number.MIN_SAFE_INTEGER;
+        this.numberOfExtraLines = 0;
         try {
-            var isTransformed = text.getBoundingClientRect().top != 0;
+            this.$isFocused = document.activeElement === this.text;
         }
         catch (e) {
-            return;
         }
-        var ancestors = [];
-        if (isTransformed) {
-            var t = text.parentElement;
-            while (t && t.nodeType == 1) {
-                ancestors.push(t);
-                t.setAttribute("ace_nocontext", "true");
-                if (!t.parentElement && t.getRootNode)
-                    t = t.getRootNode()["host"];
-                else
-                    t = t.parentElement;
-            }
-        }
-        text.focus({ preventScroll: true });
-        if (isTransformed) {
-            ancestors.forEach(function (p) {
-                p.removeAttribute("ace_nocontext");
-            });
-        }
-        setTimeout(function () {
-            text.style.position = "";
-            if (text.style.top == "0px")
-                text.style.top = top;
-        }, 0);
-    };
-    this.blur = function () {
-        text.blur();
-    };
-    this.isFocused = function () {
-        return isFocused;
-    };
-    host.on("beforeEndOperation", function () {
-        var curOp = host.curOp;
-        var commandName = curOp && curOp.command && curOp.command.name;
-        if (commandName == "insertstring")
-            return;
-        var isUserAction = commandName && (curOp.docChanged || curOp.selectionChanged);
-        if (inComposition && isUserAction) {
-            lastValue = text.value = "";
-            onCompositionEnd();
-        }
-        resetSelection();
-    });
-    host.on("changeSelection", this.setAriaLabel);
-    var positionToSelection = function (row, column) {
-        var selection = column;
-        for (var i = 1; i <= row - rowStart && i < 2 * numberOfExtraLines + 1; i++) {
-            selection += host.session.getLine(row - i).length + 1;
-        }
-        return selection;
-    };
-    var resetSelection = isIOS
-        ? function (value) {
-            if (!isFocused || (copied && !value) || sendingText)
+        this.cancelComposition = this.cancelComposition.bind(this);
+        this.setAriaOptions({ role: "textbox" });
+        event.addListener(this.text, "blur", function (e) {
+            if (_this.ignoreFocusEvents)
                 return;
-            if (!value)
-                value = "";
-            var newValue = "\n ab" + value + "cde fg\n";
-            if (newValue != text.value)
-                text.value = lastValue = newValue;
-            var selectionStart = 4;
-            var selectionEnd = 4 + (value.length || (host.selection.isEmpty() ? 0 : 1));
-            if (lastSelectionStart != selectionStart || lastSelectionEnd != selectionEnd) {
-                text.setSelectionRange(selectionStart, selectionEnd);
-            }
-            lastSelectionStart = selectionStart;
-            lastSelectionEnd = selectionEnd;
-        }
-        : function () {
-            if (inComposition || sendingText)
-                return;
-            if (!isFocused && !afterContextMenu)
-                return;
-            inComposition = true;
-            var selectionStart = 0;
-            var selectionEnd = 0;
-            var line = "";
-            if (host.session) {
-                var selection = host.selection;
-                var range = selection.getRange();
-                var row = selection.cursor.row;
-                if (row === rowEnd + 1) {
-                    rowStart = rowEnd + 1;
-                    rowEnd = rowStart + 2 * numberOfExtraLines;
-                }
-                else if (row === rowStart - 1) {
-                    rowEnd = rowStart - 1;
-                    rowStart = rowEnd - 2 * numberOfExtraLines;
-                }
-                else if (row < rowStart - 1 || row > rowEnd + 1) {
-                    rowStart = row > numberOfExtraLines ? row - numberOfExtraLines : 0;
-                    rowEnd = row > numberOfExtraLines ? row + numberOfExtraLines : 2 * numberOfExtraLines;
-                }
-                var lines = [];
-                for (var i = rowStart; i <= rowEnd; i++) {
-                    lines.push(host.session.getLine(i));
-                }
-                line = lines.join('\n');
-                selectionStart = positionToSelection(range.start.row, range.start.column);
-                selectionEnd = positionToSelection(range.end.row, range.end.column);
-                if (range.start.row < rowStart) {
-                    var prevLine = host.session.getLine(rowStart - 1);
-                    selectionStart = range.start.row < rowStart - 1 ? 0 : selectionStart;
-                    selectionEnd += prevLine.length + 1;
-                    line = prevLine + "\n" + line;
-                }
-                else if (range.end.row > rowEnd) {
-                    var nextLine = host.session.getLine(rowEnd + 1);
-                    selectionEnd = range.end.row > rowEnd + 1 ? nextLine.length : range.end.column;
-                    selectionEnd += line.length + 1;
-                    line = line + "\n" + nextLine;
-                }
-                else if (isMobile && row > 0) {
-                    line = "\n" + line;
-                    selectionEnd += 1;
-                    selectionStart += 1;
-                }
-                if (line.length > MAX_LINE_LENGTH) {
-                    if (selectionStart < MAX_LINE_LENGTH && selectionEnd < MAX_LINE_LENGTH) {
-                        line = line.slice(0, MAX_LINE_LENGTH);
-                    }
-                    else {
-                        line = "\n";
-                        if (selectionStart == selectionEnd) {
-                            selectionStart = selectionEnd = 0;
-                        }
-                        else {
-                            selectionStart = 0;
-                            selectionEnd = 1;
-                        }
-                    }
-                }
-                var newValue = line + "\n\n";
-                if (newValue != lastValue) {
-                    text.value = lastValue = newValue;
-                    lastSelectionStart = lastSelectionEnd = newValue.length;
-                }
-            }
-            if (afterContextMenu) {
-                lastSelectionStart = text.selectionStart;
-                lastSelectionEnd = text.selectionEnd;
-            }
-            if (lastSelectionEnd != selectionEnd
-                || lastSelectionStart != selectionStart
-                || text.selectionEnd != lastSelectionEnd // on ie edge selectionEnd changes silently after the initialization
-            ) {
-                try {
-                    text.setSelectionRange(selectionStart, selectionEnd);
-                    lastSelectionStart = selectionStart;
-                    lastSelectionEnd = selectionEnd;
-                }
-                catch (e) { }
-            }
-            inComposition = false;
-        };
-    this.resetSelection = resetSelection;
-    if (isFocused)
-        host.onFocus();
-    var isAllSelected = function (text) {
-        return text.selectionStart === 0 && text.selectionEnd >= lastValue.length
-            && text.value === lastValue && lastValue
-            && text.selectionEnd !== lastSelectionEnd;
-    };
-    var onSelect = function (e) {
-        if (inComposition)
-            return;
-        if (copied) {
-            copied = false;
-        }
-        else if (isAllSelected(text)) {
-            host.selectAll();
-            resetSelection();
-        }
-        else if (isMobile && text.selectionStart != lastSelectionStart) {
-            resetSelection();
-        }
-    };
-    var inputHandler = null;
-    this.setInputHandler = function (cb) { inputHandler = cb; };
-    this.getInputHandler = function () { return inputHandler; };
-    var afterContextMenu = false;
-    var sendText = function (value, fromInput) {
-        if (afterContextMenu)
-            afterContextMenu = false;
-        if (pasted) {
-            resetSelection();
-            if (value)
-                host.onPaste(value);
-            pasted = false;
-            return "";
-        }
-        else {
-            var selectionStart = text.selectionStart;
-            var selectionEnd = text.selectionEnd;
-            var extendLeft = lastSelectionStart;
-            var extendRight = lastValue.length - lastSelectionEnd;
-            var inserted = value;
-            var restoreStart = value.length - selectionStart;
-            var restoreEnd = value.length - selectionEnd;
-            var i = 0;
-            while (extendLeft > 0 && lastValue[i] == value[i]) {
-                i++;
-                extendLeft--;
-            }
-            inserted = inserted.slice(i);
-            i = 1;
-            while (extendRight > 0 && lastValue.length - i > lastSelectionStart - 1 && lastValue[lastValue.length - i] == value[value.length - i]) {
-                i++;
-                extendRight--;
-            }
-            restoreStart -= i - 1;
-            restoreEnd -= i - 1;
-            var endIndex = inserted.length - i + 1;
-            if (endIndex < 0) {
-                extendLeft = -endIndex;
-                endIndex = 0;
-            }
-            inserted = inserted.slice(0, endIndex);
-            if (!fromInput && !inserted && !restoreStart && !extendLeft && !extendRight && !restoreEnd)
-                return "";
-            sendingText = true;
-            var shouldReset = false;
-            if (useragent.isAndroid && inserted == ". ") {
-                inserted = "  ";
-                shouldReset = true;
-            }
-            if (inserted && !extendLeft && !extendRight && !restoreStart && !restoreEnd || commandMode) {
-                host.onTextInput(inserted);
-            }
-            else {
-                host.onTextInput(inserted, {
-                    extendLeft: extendLeft,
-                    extendRight: extendRight,
-                    restoreStart: restoreStart,
-                    restoreEnd: restoreEnd
-                });
-            }
-            sendingText = false;
-            lastValue = value;
-            lastSelectionStart = selectionStart;
-            lastSelectionEnd = selectionEnd;
-            lastRestoreEnd = restoreEnd;
-            return shouldReset ? "\n" : inserted;
-        }
-    };
-    var onInput = function (e) {
-        if (inComposition)
-            return onCompositionUpdate();
-        if (e && e.inputType) {
-            if (e.inputType == "historyUndo")
-                return host.execCommand("undo");
-            if (e.inputType == "historyRedo")
-                return host.execCommand("redo");
-        }
-        var data = text.value;
-        var inserted = sendText(data, true);
-        if (data.length > MAX_LINE_LENGTH + 100
-            || valueResetRegex.test(inserted)
-            || isMobile && lastSelectionStart < 1 && lastSelectionStart == lastSelectionEnd) {
-            resetSelection();
-        }
-    };
-    var handleClipboardData = function (e, data, forceIEMime) {
-        var clipboardData = e.clipboardData || window["clipboardData"];
-        if (!clipboardData || BROKEN_SETDATA)
-            return;
-        var mime = USE_IE_MIME_TYPE || forceIEMime ? "Text" : "text/plain";
-        try {
-            if (data) {
-                return clipboardData.setData(mime, data) !== false;
-            }
-            else {
-                return clipboardData.getData(mime);
-            }
-        }
-        catch (e) {
-            if (!forceIEMime)
-                return handleClipboardData(e, data, true);
-        }
-    };
-    var doCopy = function (e, isCut) {
-        var data = host.getCopyText();
-        if (!data)
-            return event.preventDefault(e);
-        if (handleClipboardData(e, data)) {
-            if (isIOS) {
-                resetSelection(data);
-                copied = data;
-                setTimeout(function () {
-                    copied = false;
-                }, 10);
-            }
-            isCut ? host.onCut() : host.onCopy();
-            event.preventDefault(e);
-        }
-        else {
-            copied = true;
-            text.value = data;
-            text.select();
-            setTimeout(function () {
-                copied = false;
-                resetSelection();
-                isCut ? host.onCut() : host.onCopy();
-            });
-        }
-    };
-    var onCut = function (e) {
-        doCopy(e, true);
-    };
-    var onCopy = function (e) {
-        doCopy(e, false);
-    };
-    var onPaste = function (e) {
-        var data = handleClipboardData(e);
-        if (clipboard.pasteCancelled())
-            return;
-        if (typeof data == "string") {
-            if (data)
-                host.onPaste(data, e);
-            if (useragent.isIE)
-                setTimeout(resetSelection);
-            event.preventDefault(e);
-        }
-        else {
-            text.value = "";
-            pasted = true;
-        }
-    };
-    event.addCommandKeyListener(text, function (e, hashId, keyCode) {
-        if (inComposition)
-            return;
-        return host.onCommandKey(e, hashId, keyCode);
-    }, host);
-    event.addListener(text, "select", onSelect, host);
-    event.addListener(text, "input", onInput, host);
-    event.addListener(text, "cut", onCut, host);
-    event.addListener(text, "copy", onCopy, host);
-    event.addListener(text, "paste", onPaste, host);
-    if (!('oncut' in text) || !('oncopy' in text) || !('onpaste' in text)) {
-        event.addListener(parentNode, "keydown", function (e) {
-            if ((useragent.isMac && !e.metaKey) || !e.ctrlKey)
-                return;
-            switch (e.keyCode) {
-                case 67:
-                    onCopy(e);
-                    break;
-                case 86:
-                    onPaste(e);
-                    break;
-                case 88:
-                    onCut(e);
-                    break;
-            }
+            host.onBlur(e);
+            _this.$isFocused = false;
         }, host);
-    }
-    var onCompositionStart = function (e) {
-        if (inComposition || !host.onCompositionStart || host.$readOnly)
-            return;
-        inComposition = {};
-        if (commandMode)
-            return;
-        if (e.data)
-            inComposition.useTextareaForIME = false;
-        setTimeout(onCompositionUpdate, 0);
-        host._signal("compositionStart");
-        host.on("mousedown", cancelComposition);
-        var range = host.getSelectionRange();
-        range.end.row = range.start.row;
-        range.end.column = range.start.column;
-        inComposition.markerRange = range;
-        inComposition.selectionStart = lastSelectionStart;
-        host.onCompositionStart(inComposition);
-        if (inComposition.useTextareaForIME) {
-            lastValue = text.value = "";
-            lastSelectionStart = 0;
-            lastSelectionEnd = 0;
-        }
-        else {
-            if (text.msGetInputContext)
-                inComposition.context = text.msGetInputContext();
-            if (text.getInputContext)
-                inComposition.context = text.getInputContext();
-        }
-    };
-    var onCompositionUpdate = function () {
-        if (!inComposition || !host.onCompositionUpdate || host.$readOnly)
-            return;
-        if (commandMode)
-            return cancelComposition();
-        if (inComposition.useTextareaForIME) {
-            host.onCompositionUpdate(text.value);
-        }
-        else {
-            var data = text.value;
-            sendText(data);
-            if (inComposition.markerRange) {
-                if (inComposition.context) {
-                    inComposition.markerRange.start.column = inComposition.selectionStart
-                        = inComposition.context.compositionStartOffset;
+        event.addListener(this.text, "focus", function (e) {
+            if (_this.ignoreFocusEvents)
+                return;
+            _this.$isFocused = true;
+            if (useragent.isEdge) {
+                try {
+                    if (!document.hasFocus())
+                        return;
                 }
-                inComposition.markerRange.end.column = inComposition.markerRange.start.column
-                    + lastSelectionEnd - inComposition.selectionStart + lastRestoreEnd;
+                catch (e) {
+                }
             }
-        }
-    };
-    var onCompositionEnd = function (e) {
-        if (!host.onCompositionEnd || host.$readOnly)
-            return;
-        inComposition = false;
-        host.onCompositionEnd();
-        host.off("mousedown", cancelComposition);
-        if (e)
-            onInput();
-    };
-    function cancelComposition() {
-        ignoreFocusEvents = true;
-        text.blur();
-        text.focus();
-        ignoreFocusEvents = false;
-    }
-    var syncComposition = lang.delayedCall(onCompositionUpdate, 50).schedule.bind(null, null);
-    function onKeyup(e) {
-        if (e.keyCode == 27 && text.value.length < text.selectionStart) {
-            if (!inComposition)
-                lastValue = text.value;
-            lastSelectionStart = lastSelectionEnd = -1;
-            resetSelection();
-        }
-        syncComposition();
-    }
-    event.addListener(text, "compositionstart", onCompositionStart, host);
-    event.addListener(text, "compositionupdate", onCompositionUpdate, host);
-    event.addListener(text, "keyup", onKeyup, host);
-    event.addListener(text, "keydown", syncComposition, host);
-    event.addListener(text, "compositionend", onCompositionEnd, host);
-    this.getElement = function () {
-        return text;
-    };
-    this.setCommandMode = function (value) {
-        commandMode = value;
-        text.readOnly = false;
-    };
-    this.setReadOnly = function (readOnly) {
-        if (!commandMode)
-            text.readOnly = readOnly;
-    };
-    this.setCopyWithEmptySelection = function (value) {
-    };
-    this.onContextMenu = function (e) {
-        afterContextMenu = true;
-        resetSelection();
-        host._emit("nativecontextmenu", { target: host, domEvent: e });
-        this.moveToMouse(e, true);
-    };
-    this.moveToMouse = function (e, bringToFront) {
-        if (!tempStyle)
-            tempStyle = text.style.cssText;
-        text.style.cssText = (bringToFront ? "z-index:100000;" : "")
-            + (useragent.isIE ? "opacity:0.1;" : "")
-            + "text-indent: -" + (lastSelectionStart + lastSelectionEnd) * host.renderer.characterWidth * 0.5 + "px;";
-        var rect = host.container.getBoundingClientRect();
-        var style = dom.computedStyle(host.container);
-        var top = rect.top + (parseInt(style.borderTopWidth) || 0);
-        var left = rect.left + (parseInt(style.borderLeftWidth) || 0);
-        var maxTop = rect.bottom - top - text.clientHeight - 2;
-        var move = function (e) {
-            dom.translate(text, e.clientX - left - 2, Math.min(e.clientY - top - 2, maxTop));
-        };
-        move(e);
-        if (e.type != "mousedown")
-            return;
-        host.renderer.$isMousePressed = true;
-        clearTimeout(closeTimeout);
-        if (useragent.isWin)
-            event.capture(host.container, move, onContextMenuClose);
-    };
-    this.onContextMenuClose = onContextMenuClose;
-    var closeTimeout;
-    function onContextMenuClose() {
-        clearTimeout(closeTimeout);
-        closeTimeout = setTimeout(function () {
-            if (tempStyle) {
-                text.style.cssText = tempStyle;
-                tempStyle = '';
+            host.onFocus(e);
+            if (useragent.isEdge)
+                setTimeout(_this.resetSelection.bind(_this));
+            else
+                _this.resetSelection();
+        }, host); this.$focusScroll = false;
+        host.on("beforeEndOperation", function () {
+            var curOp = host.curOp;
+            var commandName = curOp && curOp.command && curOp.command.name;
+            if (commandName == "insertstring")
+                return;
+            var isUserAction = commandName && (curOp.docChanged || curOp.selectionChanged);
+            if (_this.inComposition && isUserAction) {
+                _this.lastValue = _this.text.value = "";
+                _this.onCompositionEnd();
             }
-            host.renderer.$isMousePressed = false;
-            if (host.renderer.$keepTextAreaAtCursor)
-                host.renderer.$moveTextAreaToCursor();
-        }, 0);
+            _this.resetSelection();
+        });
+        host.on("changeSelection", this.setAriaLabel.bind(this));
+        this.resetSelection = isIOS ? this.$resetSelectionIOS : this.$resetSelection;
+        if (this.$isFocused)
+            host.onFocus();
+        this.inputHandler = null;
+        this.afterContextMenu = false;
+        event.addCommandKeyListener(this.text, function (e, hashId, keyCode) {
+            if (_this.inComposition)
+                return;
+            return host.onCommandKey(e, hashId, keyCode);
+        }, host);
+        event.addListener(this.text, "select", this.onSelect.bind(this), host);
+        event.addListener(this.text, "input", this.onInput.bind(this), host);
+        event.addListener(this.text, "cut", this.onCut.bind(this), host);
+        event.addListener(this.text, "copy", this.onCopy.bind(this), host);
+        event.addListener(this.text, "paste", this.onPaste.bind(this), host);
+        if (!('oncut' in this.text) || !('oncopy' in this.text) || !('onpaste' in this.text)) {
+            event.addListener(parentNode, "keydown", function (e) {
+                if ((useragent.isMac && !e.metaKey) || !e.ctrlKey)
+                    return;
+                switch (e.keyCode) {
+                    case 67:
+                        _this.onCopy(e);
+                        break;
+                    case 86:
+                        _this.onPaste(e);
+                        break;
+                    case 88:
+                        _this.onCut(e);
+                        break;
+                }
+            }, host);
+        }
+        this.syncComposition = lang.delayedCall(this.onCompositionUpdate.bind(this), 50).schedule.bind(null, null); //TODO: check this
+        event.addListener(this.text, "compositionstart", this.onCompositionStart.bind(this), host);
+        event.addListener(this.text, "compositionupdate", this.onCompositionUpdate.bind(this), host);
+        event.addListener(this.text, "keyup", this.onKeyup.bind(this), host);
+        event.addListener(this.text, "keydown", this.syncComposition.bind(this), host);
+        event.addListener(this.text, "compositionend", this.onCompositionEnd.bind(this), host);
+        this.closeTimeout;
+        event.addListener(this.text, "mouseup", this.$onContextMenu.bind(this), host);
+        event.addListener(this.text, "mousedown", function (e) {
+            e.preventDefault();
+            _this.onContextMenuClose();
+        }, host);
+        event.addListener(host.renderer.scroller, "contextmenu", this.$onContextMenu.bind(this), host);
+        event.addListener(this.text, "contextmenu", this.$onContextMenu.bind(this), host);
+        if (isIOS)
+            this.addIosSelectionHandler(parentNode, host, this.text);
     }
-    var onContextMenu = function (e) {
-        host.textInput.onContextMenu(e);
-        onContextMenuClose();
-    };
-    event.addListener(text, "mouseup", onContextMenu, host);
-    event.addListener(text, "mousedown", function (e) {
-        e.preventDefault();
-        onContextMenuClose();
-    }, host);
-    event.addListener(host.renderer.scroller, "contextmenu", onContextMenu, host);
-    event.addListener(text, "contextmenu", onContextMenu, host);
-    if (isIOS)
-        addIosSelectionHandler(parentNode, host, text);
-    function addIosSelectionHandler(parentNode, host, text) {
+    TextInput.prototype.addIosSelectionHandler = function (parentNode, host, text) {
+        var _this = this;
         var typingResetTimeout = null;
         var typing = false;
         text.addEventListener("keydown", function (e) {
@@ -2703,9 +2211,9 @@ TextInput = function (/**@type{HTMLTextAreaElement} */ parentNode, /**@type{impo
         var detectArrowKeys = function (e) {
             if (document.activeElement !== text)
                 return;
-            if (typing || inComposition || host.$mouseHandler.isMousePressed)
+            if (typing || _this.inComposition || host.$mouseHandler.isMousePressed)
                 return;
-            if (copied) {
+            if (_this.copied) {
                 return;
             }
             var selectionStart = text.selectionStart;
@@ -2718,30 +2226,26 @@ TextInput = function (/**@type{HTMLTextAreaElement} */ parentNode, /**@type{impo
             else if (selectionStart == 1) {
                 key = KEYS.home;
             }
-            else if (selectionEnd > lastSelectionEnd && lastValue[selectionEnd] == "\n") {
+            else if (selectionEnd > _this.lastSelectionEnd && _this.lastValue[selectionEnd] == "\n") {
                 key = KEYS.end;
             }
-            else if (selectionStart < lastSelectionStart && lastValue[selectionStart - 1] == " ") {
+            else if (selectionStart < _this.lastSelectionStart && _this.lastValue[selectionStart - 1] == " ") {
                 key = KEYS.left;
                 modifier = MODS.option;
             }
-            else if (selectionStart < lastSelectionStart
-                || (selectionStart == lastSelectionStart
-                    && lastSelectionEnd != lastSelectionStart
-                    && selectionStart == selectionEnd)) {
+            else if (selectionStart < _this.lastSelectionStart || (selectionStart == _this.lastSelectionStart
+                && _this.lastSelectionEnd != _this.lastSelectionStart && selectionStart == selectionEnd)) {
                 key = KEYS.left;
             }
-            else if (selectionEnd > lastSelectionEnd && lastValue.slice(0, selectionEnd).split("\n").length > 2) {
+            else if (selectionEnd > _this.lastSelectionEnd && _this.lastValue.slice(0, selectionEnd).split("\n").length > 2) {
                 key = KEYS.down;
             }
-            else if (selectionEnd > lastSelectionEnd && lastValue[selectionEnd - 1] == " ") {
+            else if (selectionEnd > _this.lastSelectionEnd && _this.lastValue[selectionEnd - 1] == " ") {
                 key = KEYS.right;
                 modifier = MODS.option;
             }
-            else if (selectionEnd > lastSelectionEnd
-                || (selectionEnd == lastSelectionEnd
-                    && lastSelectionEnd != lastSelectionStart
-                    && selectionStart == selectionEnd)) {
+            else if (selectionEnd > _this.lastSelectionEnd || (selectionEnd == _this.lastSelectionEnd
+                && _this.lastSelectionEnd != _this.lastSelectionStart && selectionStart == selectionEnd)) {
                 key = KEYS.right;
             }
             if (selectionStart !== selectionEnd)
@@ -2754,21 +2258,530 @@ TextInput = function (/**@type{HTMLTextAreaElement} */ parentNode, /**@type{impo
                     if (command)
                         host.execCommand(command);
                 }
-                lastSelectionStart = selectionStart;
-                lastSelectionEnd = selectionEnd;
-                resetSelection("");
+                _this.lastSelectionStart = selectionStart;
+                _this.lastSelectionEnd = selectionEnd;
+                _this.resetSelection("");
             }
         };
         document.addEventListener("selectionchange", detectArrowKeys);
         host.on("destroy", function () {
             document.removeEventListener("selectionchange", detectArrowKeys);
         });
-    }
-    this.destroy = function () {
-        if (text.parentElement)
-            text.parentElement.removeChild(text);
     };
-};
+    TextInput.prototype.onContextMenuClose = function () {
+        var _this = this;
+        clearTimeout(this.closeTimeout);
+        this.closeTimeout = setTimeout(function () {
+            if (_this.tempStyle) {
+                _this.text.style.cssText = _this.tempStyle;
+                _this.tempStyle = '';
+            }
+            _this.host.renderer.$isMousePressed = false;
+            if (_this.host.renderer.$keepTextAreaAtCursor)
+                _this.host.renderer.$moveTextAreaToCursor();
+        }, 0);
+    };
+    TextInput.prototype.$onContextMenu = function (e) {
+        this.host.textInput.onContextMenu(e);
+        this.onContextMenuClose();
+    };
+    TextInput.prototype.onKeyup = function (e) {
+        if (e.keyCode == 27 && this.text.value.length < this.text.selectionStart) {
+            if (!this.inComposition)
+                this.lastValue = this.text.value;
+            this.lastSelectionStart = this.lastSelectionEnd = -1;
+            this.resetSelection();
+        }
+        this.syncComposition();
+    };
+    TextInput.prototype.cancelComposition = function () {
+        this.ignoreFocusEvents = true;
+        this.text.blur();
+        this.text.focus();
+        this.ignoreFocusEvents = false;
+    };
+    TextInput.prototype.onCompositionStart = function (e) {
+        if (this.inComposition || !this.host.onCompositionStart || this.host.$readOnly)
+            return;
+        this.inComposition = {};
+        if (this.commandMode)
+            return;
+        if (e.data)
+            this.inComposition.useTextareaForIME = false;
+        setTimeout(this.onCompositionUpdate.bind(this), 0);
+        this.host._signal("compositionStart");
+        this.host.on("mousedown", this.cancelComposition); //TODO:
+        var range = this.host.getSelectionRange();
+        range.end.row = range.start.row;
+        range.end.column = range.start.column;
+        this.inComposition.markerRange = range;
+        this.inComposition.selectionStart = this.lastSelectionStart;
+        this.host.onCompositionStart(this.inComposition);
+        if (this.inComposition.useTextareaForIME) {
+            this.lastValue = this.text.value = "";
+            this.lastSelectionStart = 0;
+            this.lastSelectionEnd = 0;
+        }
+        else {
+            if (this.text.msGetInputContext)
+                this.inComposition.context = this.text.msGetInputContext();
+            if (this.text.getInputContext)
+                this.inComposition.context = this.text.getInputContext();
+        }
+    };
+    TextInput.prototype.onCompositionUpdate = function () {
+        if (!this.inComposition || !this.host.onCompositionUpdate || this.host.$readOnly)
+            return;
+        if (this.commandMode)
+            return this.cancelComposition();
+        if (this.inComposition.useTextareaForIME) {
+            this.host.onCompositionUpdate(this.text.value);
+        }
+        else {
+            var data = this.text.value;
+            this.sendText(data);
+            if (this.inComposition.markerRange) {
+                if (this.inComposition.context) {
+                    this.inComposition.markerRange.start.column = this.inComposition.selectionStart = this.inComposition.context.compositionStartOffset;
+                }
+                this.inComposition.markerRange.end.column = this.inComposition.markerRange.start.column
+                    + this.lastSelectionEnd - this.inComposition.selectionStart + this.lastRestoreEnd;
+            }
+        }
+    };
+    TextInput.prototype.onCompositionEnd = function (e) {
+        if (!this.host.onCompositionEnd || this.host.$readOnly)
+            return;
+        this.inComposition = false;
+        this.host.onCompositionEnd();
+        this.host.off("mousedown", this.cancelComposition);
+        if (e)
+            this.onInput();
+    };
+    TextInput.prototype.onCut = function (e) {
+        this.doCopy(e, true);
+    };
+    TextInput.prototype.onCopy = function (e) {
+        this.doCopy(e, false);
+    };
+    TextInput.prototype.onPaste = function (e) {
+        var data = this.handleClipboardData(e);
+        if (clipboard.pasteCancelled())
+            return;
+        if (typeof data == "string") {
+            if (data)
+                this.host.onPaste(data, e);
+            if (useragent.isIE)
+                setTimeout(this.resetSelection);
+            event.preventDefault(e);
+        }
+        else {
+            this.text.value = "";
+            this.pasted = true;
+        }
+    };
+    TextInput.prototype.doCopy = function (e, isCut) {
+        var _this = this;
+        var data = this.host.getCopyText();
+        if (!data)
+            return event.preventDefault(e);
+        if (this.handleClipboardData(e, data)) {
+            if (isIOS) {
+                this.resetSelection(data);
+                this.copied = data;
+                setTimeout(function () {
+                    _this.copied = false;
+                }, 10);
+            }
+            isCut ? this.host.onCut() : this.host.onCopy();
+            event.preventDefault(e);
+        }
+        else {
+            this.copied = true;
+            this.text.value = data;
+            this.text.select();
+            setTimeout(function () {
+                _this.copied = false;
+                _this.resetSelection();
+                isCut ? _this.host.onCut() : _this.host.onCopy();
+            });
+        }
+    };
+    TextInput.prototype.handleClipboardData = function (e, data, forceIEMime) {
+        var clipboardData = e.clipboardData || window["clipboardData"];
+        if (!clipboardData || BROKEN_SETDATA)
+            return;
+        var mime = USE_IE_MIME_TYPE || forceIEMime ? "Text" : "text/plain";
+        try {
+            if (data) {
+                return clipboardData.setData(mime, data) !== false;
+            }
+            else {
+                return clipboardData.getData(mime);
+            }
+        }
+        catch (e) {
+            if (!forceIEMime)
+                return this.handleClipboardData(e, data, true);
+        }
+    };
+    TextInput.prototype.onInput = function (e) {
+        if (this.inComposition)
+            return this.onCompositionUpdate();
+        if (e && e.inputType) {
+            if (e.inputType == "historyUndo")
+                return this.host.execCommand("undo");
+            if (e.inputType == "historyRedo")
+                return this.host.execCommand("redo");
+        }
+        var data = this.text.value;
+        var inserted = this.sendText(data, true);
+        if (data.length > MAX_LINE_LENGTH + 100 || valueResetRegex.test(inserted) || isMobile && this.lastSelectionStart
+            < 1 && this.lastSelectionStart == this.lastSelectionEnd) {
+            this.resetSelection();
+        }
+    };
+    TextInput.prototype.sendText = function (value, fromInput) {
+        if (this.afterContextMenu)
+            this.afterContextMenu = false;
+        if (this.pasted) {
+            this.resetSelection();
+            if (value)
+                this.host.onPaste(value);
+            this.pasted = false;
+            return "";
+        }
+        else {
+            var selectionStart = this.text.selectionStart;
+            var selectionEnd = this.text.selectionEnd;
+            var extendLeft = this.lastSelectionStart;
+            var extendRight = this.lastValue.length - this.lastSelectionEnd;
+            var inserted = value;
+            var restoreStart = value.length - selectionStart;
+            var restoreEnd = value.length - selectionEnd;
+            var i = 0;
+            while (extendLeft > 0 && this.lastValue[i] == value[i]) {
+                i++;
+                extendLeft--;
+            }
+            inserted = inserted.slice(i);
+            i = 1;
+            while (extendRight > 0 && this.lastValue.length - i > this.lastSelectionStart - 1
+                && this.lastValue[this.lastValue.length - i] == value[value.length - i]) {
+                i++;
+                extendRight--;
+            }
+            restoreStart -= i - 1;
+            restoreEnd -= i - 1;
+            var endIndex = inserted.length - i + 1;
+            if (endIndex < 0) {
+                extendLeft = -endIndex;
+                endIndex = 0;
+            }
+            inserted = inserted.slice(0, endIndex);
+            if (!fromInput && !inserted && !restoreStart && !extendLeft && !extendRight && !restoreEnd)
+                return "";
+            this.sendingText = true;
+            var shouldReset = false;
+            if (useragent.isAndroid && inserted == ". ") {
+                inserted = "  ";
+                shouldReset = true;
+            }
+            if (inserted && !extendLeft && !extendRight && !restoreStart && !restoreEnd || this.commandMode) {
+                this.host.onTextInput(inserted);
+            }
+            else {
+                this.host.onTextInput(inserted, {
+                    extendLeft: extendLeft,
+                    extendRight: extendRight,
+                    restoreStart: restoreStart,
+                    restoreEnd: restoreEnd
+                });
+            }
+            this.sendingText = false;
+            this.lastValue = value;
+            this.lastSelectionStart = selectionStart;
+            this.lastSelectionEnd = selectionEnd;
+            this.lastRestoreEnd = restoreEnd;
+            return shouldReset ? "\n" : inserted;
+        }
+    };
+    TextInput.prototype.onSelect = function (e) {
+        var _this = this;
+        if (this.inComposition)
+            return;
+        var isAllSelected = function (text) {
+            return text.selectionStart === 0 && text.selectionEnd >= _this.lastValue.length && text.value
+                === _this.lastValue && _this.lastValue && text.selectionEnd !== _this.lastSelectionEnd;
+        };
+        if (this.copied) {
+            this.copied = false;
+        }
+        else if (isAllSelected(this.text)) {
+            this.host.selectAll();
+            this.resetSelection();
+        }
+        else if (isMobile && this.text.selectionStart != this.lastSelectionStart) {
+            this.resetSelection();
+        }
+    };
+    TextInput.prototype.$resetSelectionIOS = function (value) {
+        if (!this.$isFocused || (this.copied && !value) || this.sendingText)
+            return;
+        if (!value)
+            value = "";
+        var newValue = "\n ab" + value + "cde fg\n";
+        if (newValue != this.text.value)
+            this.text.value = this.lastValue = newValue;
+        var selectionStart = 4;
+        var selectionEnd = 4 + (value.length || (this.host.selection.isEmpty() ? 0 : 1));
+        if (this.lastSelectionStart != selectionStart || this.lastSelectionEnd != selectionEnd) {
+            this.text.setSelectionRange(selectionStart, selectionEnd);
+        }
+        this.lastSelectionStart = selectionStart;
+        this.lastSelectionEnd = selectionEnd;
+    };
+    TextInput.prototype.$resetSelection = function () {
+        var _this = this;
+        if (this.inComposition || this.sendingText)
+            return;
+        if (!this.$isFocused && !this.afterContextMenu)
+            return;
+        this.inComposition = true;
+        var selectionStart = 0;
+        var selectionEnd = 0;
+        var line = "";
+        var positionToSelection = function (row, column) {
+            var selection = column;
+            for (var i = 1; i <= row - _this.rowStart && i < 2 * _this.numberOfExtraLines + 1; i++) {
+                selection += _this.host.session.getLine(row - i).length + 1;
+            }
+            return selection;
+        };
+        if (this.host.session) {
+            var selection = this.host.selection;
+            var range = selection.getRange();
+            var row = selection.cursor.row;
+            if (row === this.rowEnd + 1) {
+                this.rowStart = this.rowEnd + 1;
+                this.rowEnd = this.rowStart + 2 * this.numberOfExtraLines;
+            }
+            else if (row === this.rowStart - 1) {
+                this.rowEnd = this.rowStart - 1;
+                this.rowStart = this.rowEnd - 2 * this.numberOfExtraLines;
+            }
+            else if (row < this.rowStart - 1 || row > this.rowEnd + 1) {
+                this.rowStart = row > this.numberOfExtraLines ? row - this.numberOfExtraLines : 0;
+                this.rowEnd = row > this.numberOfExtraLines ? row + this.numberOfExtraLines : 2
+                    * this.numberOfExtraLines;
+            }
+            var lines = [];
+            for (var i = this.rowStart; i <= this.rowEnd; i++) {
+                lines.push(this.host.session.getLine(i));
+            }
+            line = lines.join('\n');
+            selectionStart = positionToSelection(range.start.row, range.start.column);
+            selectionEnd = positionToSelection(range.end.row, range.end.column);
+            if (range.start.row < this.rowStart) {
+                var prevLine = this.host.session.getLine(this.rowStart - 1);
+                selectionStart = range.start.row < this.rowStart - 1 ? 0 : selectionStart;
+                selectionEnd += prevLine.length + 1;
+                line = prevLine + "\n" + line;
+            }
+            else if (range.end.row > this.rowEnd) {
+                var nextLine = this.host.session.getLine(this.rowEnd + 1);
+                selectionEnd = range.end.row > this.rowEnd + 1 ? nextLine.length : range.end.column;
+                selectionEnd += line.length + 1;
+                line = line + "\n" + nextLine;
+            }
+            else if (isMobile && row > 0) {
+                line = "\n" + line;
+                selectionEnd += 1;
+                selectionStart += 1;
+            }
+            if (line.length > MAX_LINE_LENGTH) {
+                if (selectionStart < MAX_LINE_LENGTH && selectionEnd < MAX_LINE_LENGTH) {
+                    line = line.slice(0, MAX_LINE_LENGTH);
+                }
+                else {
+                    line = "\n";
+                    if (selectionStart == selectionEnd) {
+                        selectionStart = selectionEnd = 0;
+                    }
+                    else {
+                        selectionStart = 0;
+                        selectionEnd = 1;
+                    }
+                }
+            }
+            var newValue = line + "\n\n";
+            if (newValue != this.lastValue) {
+                this.text.value = this.lastValue = newValue;
+                this.lastSelectionStart = this.lastSelectionEnd = newValue.length;
+            }
+        }
+        if (this.afterContextMenu) {
+            this.lastSelectionStart = this.text.selectionStart;
+            this.lastSelectionEnd = this.text.selectionEnd;
+        }
+        if (this.lastSelectionEnd != selectionEnd || this.lastSelectionStart != selectionStart || this.text.selectionEnd
+            != this.lastSelectionEnd // on ie edge selectionEnd changes silently after the initialization
+        ) {
+            try {
+                this.text.setSelectionRange(selectionStart, selectionEnd);
+                this.lastSelectionStart = selectionStart;
+                this.lastSelectionEnd = selectionEnd;
+            }
+            catch (e) {
+            }
+        }
+        this.inComposition = false;
+    };
+    TextInput.prototype.setHost = function (newHost) {
+        this.host = newHost;
+    };
+    TextInput.prototype.setNumberOfExtraLines = function (number) {
+        this.rowStart = Number.MAX_SAFE_INTEGER;
+        this.rowEnd = Number.MIN_SAFE_INTEGER;
+        if (number < 0) {
+            this.numberOfExtraLines = 0;
+            return;
+        }
+        this.numberOfExtraLines = number;
+    };
+    TextInput.prototype.setAriaLabel = function () {
+        var ariaLabel = "";
+        if (this.host.$textInputAriaLabel) {
+            ariaLabel += "".concat(this.host.$textInputAriaLabel, ", ");
+        }
+        if (this.host.session) {
+            var row = this.host.session.selection.cursor.row;
+            ariaLabel += nls("text-input.aria-label", "Cursor at row $0", [row + 1]);
+        }
+        this.text.setAttribute("aria-label", ariaLabel);
+    };
+    TextInput.prototype.setAriaOptions = function (options) {
+        if (options.activeDescendant) {
+            this.text.setAttribute("aria-haspopup", "true");
+            this.text.setAttribute("aria-autocomplete", options.inline ? "both" : "list");
+            this.text.setAttribute("aria-activedescendant", options.activeDescendant);
+        }
+        else {
+            this.text.setAttribute("aria-haspopup", "false");
+            this.text.setAttribute("aria-autocomplete", "both");
+            this.text.removeAttribute("aria-activedescendant");
+        }
+        if (options.role) {
+            this.text.setAttribute("role", options.role);
+        }
+        if (options.setLabel) {
+            this.text.setAttribute("aria-roledescription", nls("text-input.aria-roledescription", "editor"));
+            this.setAriaLabel();
+        }
+    };
+    TextInput.prototype.focus = function () {
+        var _this = this;
+        this.setAriaOptions({
+            setLabel: this.host.renderer.enableKeyboardAccessibility
+        });
+        if (this.tempStyle || HAS_FOCUS_ARGS || this.$focusScroll == "browser")
+            return this.text.focus({ preventScroll: true });
+        var top = this.text.style.top;
+        this.text.style.position = "fixed";
+        this.text.style.top = "0px";
+        try {
+            var isTransformed = this.text.getBoundingClientRect().top != 0;
+        }
+        catch (e) {
+            return;
+        }
+        var ancestors = [];
+        if (isTransformed) {
+            var t = this.text.parentElement;
+            while (t && t.nodeType == 1) {
+                ancestors.push(t);
+                t.setAttribute("ace_nocontext", "true");
+                if (!t.parentElement && t.getRootNode)
+                    t = t.getRootNode()["host"];
+                else
+                    t = t.parentElement;
+            }
+        }
+        this.text.focus({ preventScroll: true });
+        if (isTransformed) {
+            ancestors.forEach(function (p) {
+                p.removeAttribute("ace_nocontext");
+            });
+        }
+        setTimeout(function () {
+            _this.text.style.position = "";
+            if (_this.text.style.top == "0px")
+                _this.text.style.top = top;
+        }, 0);
+    };
+    TextInput.prototype.blur = function () {
+        this.text.blur();
+    };
+    TextInput.prototype.isFocused = function () {
+        return this.$isFocused;
+    };
+    TextInput.prototype.setInputHandler = function (cb) {
+        this.inputHandler = cb;
+    };
+    TextInput.prototype.getInputHandler = function () {
+        return this.inputHandler;
+    };
+    TextInput.prototype.getElement = function () {
+        return this.text;
+    };
+    TextInput.prototype.setCommandMode = function (value) {
+        this.commandMode = value;
+        this.text.readOnly = false;
+    };
+    TextInput.prototype.setReadOnly = function (readOnly) {
+        if (!this.commandMode)
+            this.text.readOnly = readOnly;
+    };
+    TextInput.prototype.setCopyWithEmptySelection = function (value) {
+    };
+    TextInput.prototype.onContextMenu = function (e) {
+        this.afterContextMenu = true;
+        this.resetSelection();
+        this.host._emit("nativecontextmenu", {
+            target: this.host,
+            domEvent: e
+        });
+        this.moveToMouse(e, true);
+    };
+    TextInput.prototype.moveToMouse = function (e, bringToFront) {
+        var _this = this;
+        if (!this.tempStyle)
+            this.tempStyle = this.text.style.cssText;
+        this.text.style.cssText = (bringToFront ? "z-index:100000;" : "") + (useragent.isIE ? "opacity:0.1;" : "")
+            + "text-indent: -" + (this.lastSelectionStart + this.lastSelectionEnd) * this.host.renderer.characterWidth
+            * 0.5 + "px;";
+        var rect = this.host.container.getBoundingClientRect();
+        var style = dom.computedStyle(this.host.container);
+        var top = rect.top + (parseInt(style.borderTopWidth) || 0);
+        var left = rect.left + (parseInt(style.borderLeftWidth) || 0);
+        var maxTop = rect.bottom - top - this.text.clientHeight - 2;
+        var move = function (e) {
+            dom.translate(_this.text, e.clientX - left - 2, Math.min(e.clientY - top - 2, maxTop));
+        };
+        move(e);
+        if (e.type != "mousedown")
+            return;
+        this.host.renderer.$isMousePressed = true;
+        clearTimeout(this.closeTimeout);
+        if (useragent.isWin)
+            event.capture(this.host.container, move, this.onContextMenuClose.bind(this));
+    };
+    TextInput.prototype.destroy = function () {
+        if (this.text.parentElement)
+            this.text.parentElement.removeChild(this.text);
+    };
+    return TextInput;
+}());
 exports.TextInput = TextInput;
 exports.$setUserAgentForTests = function (_isMobile, _isIOS) {
     isMobile = _isMobile;
@@ -4484,6 +4497,7 @@ var MouseHandler = /** @class */ (function () {
         var renderer = this.editor.renderer;
         renderer.$isMousePressed = true;
         var self = this;
+        var continueCapture = true;
         var onMouseMove = function (e) {
             if (!e)
                 return;
@@ -4497,9 +4511,9 @@ var MouseHandler = /** @class */ (function () {
         };
         var onCaptureEnd = function (e) {
             editor.off("beforeEndOperation", onOperationEnd);
-            clearInterval(timerId);
+            continueCapture = false;
             if (editor.session)
-                onCaptureInterval();
+                onCaptureUpdate();
             self[self.state + "End"] && self[self.state + "End"](e);
             self.state = "";
             self.isMousePressed = renderer.$isMousePressed = false;
@@ -4509,9 +4523,15 @@ var MouseHandler = /** @class */ (function () {
             e && self.onMouseEvent("mouseup", e);
             editor.endOperation();
         };
-        var onCaptureInterval = function () {
+        var onCaptureUpdate = function () {
             self[self.state] && self[self.state]();
             self.$mouseMoved = false;
+        };
+        var onCaptureInterval = function () {
+            if (continueCapture) {
+                onCaptureUpdate();
+                event.nextFrame(onCaptureInterval);
+            }
         };
         if (useragent.isOldIE && ev.domEvent.type == "dblclick") {
             return setTimeout(function () { onCaptureEnd(ev); });
@@ -4529,7 +4549,7 @@ var MouseHandler = /** @class */ (function () {
         editor.startOperation({ command: { name: "mouse" } });
         self.$onCaptureMouseMove = onMouseMove;
         self.releaseMouse = event.capture(this.editor.container, onMouseMove, onCaptureEnd);
-        var timerId = setInterval(onCaptureInterval, 20);
+        onCaptureInterval();
     };
     MouseHandler.prototype.cancelContextMenu = function () {
         var stop = function (e) {
@@ -18568,7 +18588,7 @@ for (var i = 1; i < 16; i++) {
 }
 styles.join("\\n")
 */
-module.exports = "\n.ace_br1 {border-top-left-radius    : 3px;}\n.ace_br2 {border-top-right-radius   : 3px;}\n.ace_br3 {border-top-left-radius    : 3px; border-top-right-radius:    3px;}\n.ace_br4 {border-bottom-right-radius: 3px;}\n.ace_br5 {border-top-left-radius    : 3px; border-bottom-right-radius: 3px;}\n.ace_br6 {border-top-right-radius   : 3px; border-bottom-right-radius: 3px;}\n.ace_br7 {border-top-left-radius    : 3px; border-top-right-radius:    3px; border-bottom-right-radius: 3px;}\n.ace_br8 {border-bottom-left-radius : 3px;}\n.ace_br9 {border-top-left-radius    : 3px; border-bottom-left-radius:  3px;}\n.ace_br10{border-top-right-radius   : 3px; border-bottom-left-radius:  3px;}\n.ace_br11{border-top-left-radius    : 3px; border-top-right-radius:    3px; border-bottom-left-radius:  3px;}\n.ace_br12{border-bottom-right-radius: 3px; border-bottom-left-radius:  3px;}\n.ace_br13{border-top-left-radius    : 3px; border-bottom-right-radius: 3px; border-bottom-left-radius:  3px;}\n.ace_br14{border-top-right-radius   : 3px; border-bottom-right-radius: 3px; border-bottom-left-radius:  3px;}\n.ace_br15{border-top-left-radius    : 3px; border-top-right-radius:    3px; border-bottom-right-radius: 3px; border-bottom-left-radius: 3px;}\n\n\n.ace_editor {\n    position: relative;\n    overflow: hidden;\n    padding: 0;\n    font: 12px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;\n    direction: ltr;\n    text-align: left;\n    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);\n    forced-color-adjust: none;\n}\n\n.ace_scroller {\n    position: absolute;\n    overflow: hidden;\n    top: 0;\n    bottom: 0;\n    background-color: inherit;\n    -ms-user-select: none;\n    -moz-user-select: none;\n    -webkit-user-select: none;\n    user-select: none;\n    cursor: text;\n}\n\n.ace_content {\n    position: absolute;\n    box-sizing: border-box;\n    min-width: 100%;\n    contain: style size layout;\n    font-variant-ligatures: no-common-ligatures;\n}\n.ace_invisible {\n    font-variant-ligatures: none;\n}\n\n.ace_keyboard-focus:focus {\n    box-shadow: inset 0 0 0 2px #5E9ED6;\n    outline: none;\n}\n\n.ace_dragging .ace_scroller:before{\n    position: absolute;\n    top: 0;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    content: '';\n    background: rgba(250, 250, 250, 0.01);\n    z-index: 1000;\n}\n.ace_dragging.ace_dark .ace_scroller:before{\n    background: rgba(0, 0, 0, 0.01);\n}\n\n.ace_gutter {\n    position: absolute;\n    overflow : hidden;\n    width: auto;\n    top: 0;\n    bottom: 0;\n    left: 0;\n    cursor: default;\n    z-index: 4;\n    -ms-user-select: none;\n    -moz-user-select: none;\n    -webkit-user-select: none;\n    user-select: none;\n    contain: style size layout;\n}\n\n.ace_gutter-active-line {\n    position: absolute;\n    left: 0;\n    right: 0;\n}\n\n.ace_scroller.ace_scroll-left:after {\n    content: \"\";\n    position: absolute;\n    top: 0;\n    right: 0;\n    bottom: 0;\n    left: 0;\n    box-shadow: 17px 0 16px -16px rgba(0, 0, 0, 0.4) inset;\n    pointer-events: none;\n}\n\n.ace_gutter-cell, .ace_gutter-cell_svg-icons {\n    position: absolute;\n    top: 0;\n    left: 0;\n    right: 0;\n    padding-left: 19px;\n    padding-right: 6px;\n    background-repeat: no-repeat;\n}\n\n.ace_gutter-cell_svg-icons .ace_gutter_annotation {\n    margin-left: -14px;\n    float: left;\n}\n\n.ace_gutter-cell .ace_gutter_annotation {\n    margin-left: -19px;\n    float: left;\n}\n\n.ace_gutter-cell.ace_error, .ace_icon.ace_error, .ace_icon.ace_error_fold, .ace_gutter-cell.ace_security, .ace_icon.ace_security, .ace_icon.ace_security_fold {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABOFBMVEX/////////QRswFAb/Ui4wFAYwFAYwFAaWGAfDRymzOSH/PxswFAb/SiUwFAYwFAbUPRvjQiDllog5HhHdRybsTi3/Tyv9Tir+Syj/UC3////XurebMBIwFAb/RSHbPx/gUzfdwL3kzMivKBAwFAbbvbnhPx66NhowFAYwFAaZJg8wFAaxKBDZurf/RB6mMxb/SCMwFAYwFAbxQB3+RB4wFAb/Qhy4Oh+4QifbNRcwFAYwFAYwFAb/QRzdNhgwFAYwFAbav7v/Uy7oaE68MBK5LxLewr/r2NXewLswFAaxJw4wFAbkPRy2PyYwFAaxKhLm1tMwFAazPiQwFAaUGAb/QBrfOx3bvrv/VC/maE4wFAbRPBq6MRO8Qynew8Dp2tjfwb0wFAbx6eju5+by6uns4uH9/f36+vr/GkHjAAAAYnRSTlMAGt+64rnWu/bo8eAA4InH3+DwoN7j4eLi4xP99Nfg4+b+/u9B/eDs1MD1mO7+4PHg2MXa347g7vDizMLN4eG+Pv7i5evs/v79yu7S3/DV7/498Yv24eH+4ufQ3Ozu/v7+y13sRqwAAADLSURBVHjaZc/XDsFgGIBhtDrshlitmk2IrbHFqL2pvXf/+78DPokj7+Fz9qpU/9UXJIlhmPaTaQ6QPaz0mm+5gwkgovcV6GZzd5JtCQwgsxoHOvJO15kleRLAnMgHFIESUEPmawB9ngmelTtipwwfASilxOLyiV5UVUyVAfbG0cCPHig+GBkzAENHS0AstVF6bacZIOzgLmxsHbt2OecNgJC83JERmePUYq8ARGkJx6XtFsdddBQgZE2nPR6CICZhawjA4Fb/chv+399kfR+MMMDGOQAAAABJRU5ErkJggg==\");\n    background-repeat: no-repeat;\n    background-position: 2px center;\n}\n\n.ace_gutter-cell.ace_warning, .ace_icon.ace_warning, .ace_icon.ace_warning_fold {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAmVBMVEX///8AAAD///8AAAAAAABPSzb/5sAAAAB/blH/73z/ulkAAAAAAAD85pkAAAAAAAACAgP/vGz/rkDerGbGrV7/pkQICAf////e0IsAAAD/oED/qTvhrnUAAAD/yHD/njcAAADuv2r/nz//oTj/p064oGf/zHAAAAA9Nir/tFIAAAD/tlTiuWf/tkIAAACynXEAAAAAAAAtIRW7zBpBAAAAM3RSTlMAABR1m7RXO8Ln31Z36zT+neXe5OzooRDfn+TZ4p3h2hTf4t3k3ucyrN1K5+Xaks52Sfs9CXgrAAAAjklEQVR42o3PbQ+CIBQFYEwboPhSYgoYunIqqLn6/z8uYdH8Vmdnu9vz4WwXgN/xTPRD2+sgOcZjsge/whXZgUaYYvT8QnuJaUrjrHUQreGczuEafQCO/SJTufTbroWsPgsllVhq3wJEk2jUSzX3CUEDJC84707djRc5MTAQxoLgupWRwW6UB5fS++NV8AbOZgnsC7BpEAAAAABJRU5ErkJggg==\");\n    background-repeat: no-repeat;\n    background-position: 2px center;\n}\n\n.ace_gutter-cell.ace_info, .ace_icon.ace_info, .ace_gutter-cell.ace_hint, .ace_icon.ace_hint {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAAAAAA6mKC9AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAAJ0Uk5TAAB2k804AAAAPklEQVQY02NgIB68QuO3tiLznjAwpKTgNyDbMegwisCHZUETUZV0ZqOquBpXj2rtnpSJT1AEnnRmL2OgGgAAIKkRQap2htgAAAAASUVORK5CYII=\");\n    background-repeat: no-repeat;\n    background-position: 2px center;\n}\n\n.ace_dark .ace_gutter-cell.ace_info, .ace_dark .ace_icon.ace_info, .ace_dark .ace_gutter-cell.ace_hint, .ace_dark .ace_icon.ace_hint {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAJFBMVEUAAAChoaGAgIAqKiq+vr6tra1ZWVmUlJSbm5s8PDxubm56enrdgzg3AAAAAXRSTlMAQObYZgAAAClJREFUeNpjYMAPdsMYHegyJZFQBlsUlMFVCWUYKkAZMxZAGdxlDMQBAG+TBP4B6RyJAAAAAElFTkSuQmCC\");\n}\n\n.ace_icon_svg.ace_error {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAxNiI+CjxnIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlPSJyZWQiIHNoYXBlLXJlbmRlcmluZz0iZ2VvbWV0cmljUHJlY2lzaW9uIj4KPGNpcmNsZSBmaWxsPSJub25lIiBjeD0iOCIgY3k9IjgiIHI9IjciIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPGxpbmUgeDE9IjExIiB5MT0iNSIgeDI9IjUiIHkyPSIxMSIvPgo8bGluZSB4MT0iMTEiIHkxPSIxMSIgeDI9IjUiIHkyPSI1Ii8+CjwvZz4KPC9zdmc+\");\n    background-color: crimson;\n}\n.ace_icon_svg.ace_security {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAgMTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgICA8ZyBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZT0iZGFya29yYW5nZSIgZmlsbD0ibm9uZSIgc2hhcGUtcmVuZGVyaW5nPSJnZW9tZXRyaWNQcmVjaXNpb24iPgogICAgICAgIDxwYXRoIGNsYXNzPSJzdHJva2UtbGluZWpvaW4tcm91bmQiIGQ9Ik04IDE0LjgzMDdDOCAxNC44MzA3IDIgMTIuOTA0NyAyIDguMDg5OTJWMy4yNjU0OEM1LjMxIDMuMjY1NDggNy45ODk5OSAxLjM0OTE4IDcuOTg5OTkgMS4zNDkxOEM3Ljk4OTk5IDEuMzQ5MTggMTAuNjkgMy4yNjU0OCAxNCAzLjI2NTQ4VjguMDg5OTJDMTQgMTIuOTA0NyA4IDE0LjgzMDcgOCAxNC44MzA3WiIvPgogICAgICAgIDxwYXRoIGQ9Ik0yIDguMDg5OTJWMy4yNjU0OEM1LjMxIDMuMjY1NDggNy45ODk5OSAxLjM0OTE4IDcuOTg5OTkgMS4zNDkxOCIvPgogICAgICAgIDxwYXRoIGQ9Ik0xMy45OSA4LjA4OTkyVjMuMjY1NDhDMTAuNjggMy4yNjU0OCA4IDEuMzQ5MTggOCAxLjM0OTE4Ii8+CiAgICAgICAgPHBhdGggY2xhc3M9InN0cm9rZS1saW5lam9pbi1yb3VuZCIgZD0iTTggNFY5Ii8+CiAgICAgICAgPHBhdGggY2xhc3M9InN0cm9rZS1saW5lam9pbi1yb3VuZCIgZD0iTTggMTBWMTIiLz4KICAgIDwvZz4KPC9zdmc+\");\n    background-color: crimson;\n}\n.ace_icon_svg.ace_warning {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAxNiI+CjxnIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlPSJkYXJrb3JhbmdlIiBzaGFwZS1yZW5kZXJpbmc9Imdlb21ldHJpY1ByZWNpc2lvbiI+Cjxwb2x5Z29uIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiIHBvaW50cz0iOCAxIDE1IDE1IDEgMTUgOCAxIi8+CjxyZWN0IHg9IjgiIHk9IjEyIiB3aWR0aD0iMC4wMSIgaGVpZ2h0PSIwLjAxIi8+CjxsaW5lIHgxPSI4IiB5MT0iNiIgeDI9IjgiIHkyPSIxMCIvPgo8L2c+Cjwvc3ZnPg==\");\n    background-color: darkorange;\n}\n.ace_icon_svg.ace_info {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAxNiI+CjxnIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlPSJibHVlIiBzaGFwZS1yZW5kZXJpbmc9Imdlb21ldHJpY1ByZWNpc2lvbiI+CjxjaXJjbGUgZmlsbD0ibm9uZSIgY3g9IjgiIGN5PSI4IiByPSI3IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjxwb2x5bGluZSBwb2ludHM9IjggMTEgOCA4Ii8+Cjxwb2x5bGluZSBwb2ludHM9IjkgOCA2IDgiLz4KPGxpbmUgeDE9IjEwIiB5MT0iMTEiIHgyPSI2IiB5Mj0iMTEiLz4KPHJlY3QgeD0iOCIgeT0iNSIgd2lkdGg9IjAuMDEiIGhlaWdodD0iMC4wMSIvPgo8L2c+Cjwvc3ZnPg==\");\n    background-color: royalblue;\n}\n.ace_icon_svg.ace_hint {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAgMTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgICA8ZyBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZT0ic2lsdmVyIiBmaWxsPSJub25lIiBzaGFwZS1yZW5kZXJpbmc9Imdlb21ldHJpY1ByZWNpc2lvbiI+CiAgICAgICAgPHBhdGggY2xhc3M9InN0cm9rZS1saW5lam9pbi1yb3VuZCIgZD0iTTYgMTRIMTAiLz4KICAgICAgICA8cGF0aCBkPSJNOCAxMUg5QzkgOS40NzAwMiAxMiA4LjU0MDAyIDEyIDUuNzYwMDJDMTIuMDIgNC40MDAwMiAxMS4zOSAzLjM2MDAyIDEwLjQzIDIuNjcwMDJDOSAxLjY0MDAyIDcuMDAwMDEgMS42NDAwMiA1LjU3MDAxIDIuNjcwMDJDNC42MTAwMSAzLjM2MDAyIDMuOTggNC40MDAwMiA0IDUuNzYwMDJDNCA4LjU0MDAyIDcuMDAwMDEgOS40NzAwMiA3LjAwMDAxIDExSDhaIi8+CiAgICA8L2c+Cjwvc3ZnPg==\");\n    background-color: silver;\n}\n\n.ace_icon_svg.ace_error_fold {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAxNiIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0ibSAxOC45Mjk4NTEsNy44Mjk4MDc2IGMgMC4xNDYzNTMsNi4zMzc0NjA0IC02LjMyMzE0Nyw3Ljc3Nzg0NDQgLTcuNDc3OTEyLDcuNzc3ODQ0NCAtMi4xMDcyNzI2LC0wLjEyODc1IDUuMTE3Njc4LDAuMzU2MjQ5IDUuMDUxNjk4LC03Ljg3MDA2MTggLTAuNjA0NjcyLC04LjAwMzk3MzQ5IC03LjA3NzI3MDYsLTcuNTYzMTE4OSAtNC44NTczLC03LjQzMDM5NTU2IDEuNjA2LC0wLjExNTE0MjI1IDYuODk3NDg1LDEuMjYyNTQ1OTYgNy4yODM1MTQsNy41MjI2MTI5NiB6IiBmaWxsPSJjcmltc29uIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibSA4LjExNDc1NjIsMi4wNTI5ODI4IGMgMy4zNDkxNjk4LDAgNi4wNjQxMzI4LDIuNjc2ODYyNyA2LjA2NDEzMjgsNS45Nzg5NTMgMCwzLjMwMjExMjIgLTIuNzE0OTYzLDUuOTc4OTIwMiAtNi4wNjQxMzI4LDUuOTc4OTIwMiAtMy4zNDkxNDczLDAgLTYuMDY0MTc3MiwtMi42NzY4MDggLTYuMDY0MTc3MiwtNS45Nzg5MjAyIDAuMDA1MzksLTMuMjk5ODg2MSAyLjcxNzI2NTYsLTUuOTczNjQwOCA2LjA2NDE3NzIsLTUuOTc4OTUzIHogbSAwLC0xLjczNTgyNzE5IGMgLTQuMzIxNDgzNiwwIC03LjgyNDc0MDM4LDMuNDU0MDE4NDkgLTcuODI0NzQwMzgsNy43MTQ3ODAxOSAwLDQuMjYwNzI4MiAzLjUwMzI1Njc4LDcuNzE0NzQ1MiA3LjgyNDc0MDM4LDcuNzE0NzQ1MiA0LjMyMTQ0OTgsMCA3LjgyNDY5OTgsLTMuNDU0MDE3IDcuODI0Njk5OCwtNy43MTQ3NDUyIDAsLTIuMDQ2MDkxNCAtMC44MjQzOTIsLTQuMDA4MzY3MiAtMi4yOTE3NTYsLTUuNDU1MTc0NiBDIDEyLjE4MDIyNSwxLjEyOTk2NDggMTAuMTkwMDEzLDAuMzE3MTU1NjEgOC4xMTQ3NTYyLDAuMzE3MTU1NjEgWiBNIDYuOTM3NDU2Myw4LjI0MDU5ODUgNC42NzE4Njg1LDEwLjQ4NTg1MiA2LjAwODY4MTQsMTEuODc2NzI4IDguMzE3MDAzNSw5LjYwMDc5MTEgMTAuNjI1MzM3LDExLjg3NjcyOCAxMS45NjIxMzgsMTAuNDg1ODUyIDkuNjk2NTUwOCw4LjI0MDU5ODUgMTEuOTYyMTM4LDYuMDA2ODA2NiAxMC41NzMyNDYsNC42Mzc0MzM1IDguMzE3MDAzNSw2Ljg3MzQyOTcgNi4wNjA3NjA3LDQuNjM3NDMzNSA0LjY3MTg2ODUsNi4wMDY4MDY2IFoiIGZpbGw9ImNyaW1zb24iIHN0cm9rZS13aWR0aD0iMiIvPgo8L3N2Zz4=\");\n    background-color: crimson;\n}\n.ace_icon_svg.ace_security_fold {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,CjxzdmcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2aWV3Qm94PSIwIDAgMTcgMTQiIGZpbGw9Im5vbmUiPgogICAgPHBhdGggZD0iTTEwLjAwMDEgMTMuNjk5MkMxMC4wMDAxIDEzLjY5OTIgMTEuOTI0MSAxMy40NzYzIDEzIDEyLjY5OTJDMTQuNDEzOSAxMS42NzgxIDE2IDEwLjUgMTYuMTI1MSA2LjgxMTI2VjIuNTg5ODdDMTYuMTI1MSAyLjU0NzY4IDE2LjEyMjEgMi41MDYxOSAxNi4xMTY0IDIuNDY1NTlWMS43MTQ4NUgxNS4yNDE0TDE1LjIzMDcgMS43MTQ4NEwxNC42MjUxIDEuNjk5MjJWNi44MTEyM0MxNC42MjUxIDguNTEwNjEgMTQuNjI1MSA5LjQ2NDYxIDEyLjc4MjQgMTEuNzIxQzEyLjE1ODYgMTIuNDg0OCAxMC4wMDAxIDEzLjY5OTIgMTAuMDAwMSAxMy42OTkyWiIgZmlsbD0iY3JpbXNvbiIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgICA8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0iTTcuMzM2MDkgMC4zNjc0NzVDNy4wMzIxNCAwLjE1MjY1MiA2LjYyNTQ4IDAuMTUzNjE0IDYuMzIyNTMgMC4zNjk5OTdMNi4zMDg2OSAwLjM3OTU1NEM2LjI5NTUzIDAuMzg4NTg4IDYuMjczODggMC40MDMyNjYgNi4yNDQxNyAwLjQyMjc4OUM2LjE4NDcxIDAuNDYxODYgNi4wOTMyMSAwLjUyMDE3MSA1Ljk3MzEzIDAuNTkxMzczQzUuNzMyNTEgMC43MzQwNTkgNS4zNzk5IDAuOTI2ODY0IDQuOTQyNzkgMS4xMjAwOUM0LjA2MTQ0IDEuNTA5NyAyLjg3NTQxIDEuODgzNzcgMS41ODk4NCAxLjg4Mzc3SDAuNzE0ODQ0VjIuNzU4NzdWNi45ODAxNUMwLjcxNDg0NCA5LjQ5Mzc0IDIuMjg4NjYgMTEuMTk3MyAzLjcwMjU0IDEyLjIxODVDNC40MTg0NSAxMi43MzU1IDUuMTI4NzQgMTMuMTA1MyA1LjY1NzMzIDEzLjM0NTdDNS45MjI4NCAxMy40NjY0IDYuMTQ1NjYgMTMuNTU1OSA2LjMwNDY1IDEzLjYxNjFDNi4zODQyMyAxMy42NDYyIDYuNDQ4MDUgMTMuNjY5IDYuNDkzNDkgMTMuNjg0OEM2LjUxNjIyIDEzLjY5MjcgNi41MzQzOCAxMy42OTg5IDYuNTQ3NjQgMTMuNzAzM0w2LjU2MzgyIDEzLjcwODdMNi41NjkwOCAxMy43MTA0TDYuNTcwOTkgMTMuNzExTDYuODM5ODQgMTMuNzUzM0w2LjU3MjQyIDEzLjcxMTVDNi43NDYzMyAxMy43NjczIDYuOTMzMzUgMTMuNzY3MyA3LjEwNzI3IDEzLjcxMTVMNy4xMDg3IDEzLjcxMUw3LjExMDYxIDEzLjcxMDRMNy4xMTU4NyAxMy43MDg3TDcuMTMyMDUgMTMuNzAzM0M3LjE0NTMxIDEzLjY5ODkgNy4xNjM0NiAxMy42OTI3IDcuMTg2MTkgMTMuNjg0OEM3LjIzMTY0IDEzLjY2OSA3LjI5NTQ2IDEzLjY0NjIgNy4zNzUwMyAxMy42MTYxQzcuNTM0MDMgMTMuNTU1OSA3Ljc1Njg1IDEzLjQ2NjQgOC4wMjIzNiAxMy4zNDU3QzguNTUwOTUgMTMuMTA1MyA5LjI2MTIzIDEyLjczNTUgOS45NzcxNSAxMi4yMTg1QzExLjM5MSAxMS4xOTczIDEyLjk2NDggOS40OTM3NyAxMi45NjQ4IDYuOTgwMThWMi43NTg4QzEyLjk2NDggMi43MTY2IDEyLjk2MTkgMi42NzUxMSAxMi45NTYxIDIuNjM0NTFWMS44ODM3N0gxMi4wODExQzEyLjA3NzUgMS44ODM3NyAxMi4wNzQgMS44ODM3NyAxMi4wNzA0IDEuODgzNzdDMTAuNzk3OSAxLjg4MDA0IDkuNjE5NjIgMS41MTEwMiA4LjczODk0IDEuMTI0ODZDOC43MzUzNCAxLjEyMzI3IDguNzMxNzQgMS4xMjE2OCA4LjcyODE0IDEuMTIwMDlDOC4yOTEwMyAwLjkyNjg2NCA3LjkzODQyIDAuNzM0MDU5IDcuNjk3NzkgMC41OTEzNzNDNy41Nzc3MiAwLjUyMDE3MSA3LjQ4NjIyIDAuNDYxODYgNy40MjY3NiAwLjQyMjc4OUM3LjM5NzA1IDAuNDAzMjY2IDcuMzc1MzkgMC4zODg1ODggNy4zNjIyNCAwLjM3OTU1NEw3LjM0ODk2IDAuMzcwMzVDNy4zNDg5NiAwLjM3MDM1IDcuMzQ4NDcgMC4zNzAwMiA3LjM0NTYzIDAuMzc0MDU0TDcuMzM3NzkgMC4zNjg2NTlMNy4zMzYwOSAwLjM2NzQ3NVpNOC4wMzQ3MSAyLjcyNjkxQzguODYwNCAzLjA5MDYzIDkuOTYwNjYgMy40NjMwOSAxMS4yMDYxIDMuNTg5MDdWNi45ODAxNUgxMS4yMTQ4QzExLjIxNDggOC42Nzk1MyAxMC4xNjM3IDkuOTI1MDcgOC45NTI1NCAxMC43OTk4QzguMzU1OTUgMTEuMjMwNiA3Ljc1Mzc0IDExLjU0NTQgNy4yOTc5NiAxMS43NTI3QzcuMTE2NzEgMTEuODM1MSA2Ljk2MDYyIDExLjg5OTYgNi44Mzk4NCAxMS45NDY5QzYuNzE5MDYgMTEuODk5NiA2LjU2Mjk3IDExLjgzNTEgNi4zODE3MyAxMS43NTI3QzUuOTI1OTUgMTEuNTQ1NCA1LjMyMzczIDExLjIzMDYgNC43MjcxNSAxMC43OTk4QzMuNTE2MDMgOS45MjUwNyAyLjQ2NDg0IDguNjc5NTUgMi40NjQ4NCA2Ljk4MDE4VjMuNTg5MDlDMy43MTczOCAzLjQ2MjM5IDQuODIzMDggMy4wODYzOSA1LjY1MDMzIDIuNzIwNzFDNi4xNDIyOCAyLjUwMzI0IDYuNTQ0ODUgMi4yODUzNyA2LjgzMjU0IDIuMTE2MjRDNy4xMjE4MSAyLjI4NTM1IDcuNTI3IDIuNTAzNTIgOC4wMjE5NiAyLjcyMTMxQzguMDI2MiAyLjcyMzE3IDguMDMwNDUgMi43MjUwNCA4LjAzNDcxIDIuNzI2OTFaTTUuOTY0ODQgMy40MDE0N1Y3Ljc3NjQ3SDcuNzE0ODRWMy40MDE0N0g1Ljk2NDg0Wk01Ljk2NDg0IDEwLjQwMTVWOC42NTE0N0g3LjcxNDg0VjEwLjQwMTVINS45NjQ4NFoiIGZpbGw9ImNyaW1zb24iIHN0cm9rZS13aWR0aD0iMiIvPgo8L3N2Zz4=\");\n    background-color: crimson;\n}\n.ace_icon_svg.ace_warning_fold {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAyMCAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0xNC43NzY5IDE0LjczMzdMOC42NTE5MiAyLjQ4MzY5QzguMzI5NDYgMS44Mzg3NyA3LjQwOTEzIDEuODM4NzcgNy4wODY2NyAyLjQ4MzY5TDAuOTYxNjY5IDE0LjczMzdDMC42NzA3NzUgMTUuMzE1NSAxLjA5MzgzIDE2IDEuNzQ0MjkgMTZIMTMuOTk0M0MxNC42NDQ4IDE2IDE1LjA2NzggMTUuMzE1NSAxNC43NzY5IDE0LjczMzdaTTMuMTYwMDcgMTQuMjVMNy44NjkyOSA0LjgzMTU2TDEyLjU3ODUgMTQuMjVIMy4xNjAwN1pNOC43NDQyOSAxMS42MjVWMTMuMzc1SDYuOTk0MjlWMTEuNjI1SDguNzQ0MjlaTTYuOTk0MjkgMTAuNzVWNy4yNUg4Ljc0NDI5VjEwLjc1SDYuOTk0MjlaIiBmaWxsPSIjRUM3MjExIi8+CjxwYXRoIGQ9Ik0xMS4xOTkxIDIuOTUyMzhDMTAuODgwOSAyLjMxNDY3IDEwLjM1MzcgMS44MDUyNiA5LjcwNTUgMS41MDlMMTEuMDQxIDEuMDY5NzhDMTEuNjg4MyAwLjk0OTgxNCAxMi4zMzcgMS4yNzI2MyAxMi42MzE3IDEuODYxNDFMMTcuNjEzNiAxMS44MTYxQzE4LjM1MjcgMTMuMjkyOSAxNy41OTM4IDE1LjA4MDQgMTYuMDE4IDE1LjU3NDVDMTYuNDA0NCAxNC40NTA3IDE2LjMyMzEgMTMuMjE4OCAxNS43OTI0IDEyLjE1NTVMMTEuMTk5MSAyLjk1MjM4WiIgZmlsbD0iI0VDNzIxMSIvPgo8L3N2Zz4=\");\n    background-color: darkorange;\n}\n\n.ace_scrollbar {\n    contain: strict;\n    position: absolute;\n    right: 0;\n    bottom: 0;\n    z-index: 6;\n}\n\n.ace_scrollbar-inner {\n    position: absolute;\n    cursor: text;\n    left: 0;\n    top: 0;\n}\n\n.ace_scrollbar-v{\n    overflow-x: hidden;\n    overflow-y: scroll;\n    top: 0;\n}\n\n.ace_scrollbar-h {\n    overflow-x: scroll;\n    overflow-y: hidden;\n    left: 0;\n}\n\n.ace_print-margin {\n    position: absolute;\n    height: 100%;\n}\n\n.ace_text-input {\n    position: absolute;\n    z-index: 0;\n    width: 0.5em;\n    height: 1em;\n    opacity: 0;\n    background: transparent;\n    -moz-appearance: none;\n    appearance: none;\n    border: none;\n    resize: none;\n    outline: none;\n    overflow: hidden;\n    font: inherit;\n    padding: 0 1px;\n    margin: 0 -1px;\n    contain: strict;\n    -ms-user-select: text;\n    -moz-user-select: text;\n    -webkit-user-select: text;\n    user-select: text;\n    /*with `pre-line` chrome inserts &nbsp; instead of space*/\n    white-space: pre!important;\n}\n.ace_text-input.ace_composition {\n    background: transparent;\n    color: inherit;\n    z-index: 1000;\n    opacity: 1;\n}\n.ace_composition_placeholder { color: transparent }\n.ace_composition_marker { \n    border-bottom: 1px solid;\n    position: absolute;\n    border-radius: 0;\n    margin-top: 1px;\n}\n\n[ace_nocontext=true] {\n    transform: none!important;\n    filter: none!important;\n    clip-path: none!important;\n    mask : none!important;\n    contain: none!important;\n    perspective: none!important;\n    mix-blend-mode: initial!important;\n    z-index: auto;\n}\n\n.ace_layer {\n    z-index: 1;\n    position: absolute;\n    overflow: hidden;\n    /* workaround for chrome bug https://github.com/ajaxorg/ace/issues/2312*/\n    word-wrap: normal;\n    white-space: pre;\n    height: 100%;\n    width: 100%;\n    box-sizing: border-box;\n    /* setting pointer-events: auto; on node under the mouse, which changes\n        during scroll, will break mouse wheel scrolling in Safari */\n    pointer-events: none;\n}\n\n.ace_gutter-layer {\n    position: relative;\n    width: auto;\n    text-align: right;\n    pointer-events: auto;\n    height: 1000000px;\n    contain: style size layout;\n}\n\n.ace_text-layer {\n    font: inherit !important;\n    position: absolute;\n    height: 1000000px;\n    width: 1000000px;\n    contain: style size layout;\n}\n\n.ace_text-layer > .ace_line, .ace_text-layer > .ace_line_group {\n    contain: style size layout;\n    position: absolute;\n    top: 0;\n    left: 0;\n    right: 0;\n}\n\n.ace_hidpi .ace_text-layer,\n.ace_hidpi .ace_gutter-layer,\n.ace_hidpi .ace_content,\n.ace_hidpi .ace_gutter {\n    contain: strict;\n}\n.ace_hidpi .ace_text-layer > .ace_line, \n.ace_hidpi .ace_text-layer > .ace_line_group {\n    contain: strict;\n}\n\n.ace_cjk {\n    display: inline-block;\n    text-align: center;\n}\n\n.ace_cursor-layer {\n    z-index: 4;\n}\n\n.ace_cursor {\n    z-index: 4;\n    position: absolute;\n    box-sizing: border-box;\n    border-left: 2px solid;\n    /* workaround for smooth cursor repaintng whole screen in chrome */\n    transform: translatez(0);\n}\n\n.ace_multiselect .ace_cursor {\n    border-left-width: 1px;\n}\n\n.ace_slim-cursors .ace_cursor {\n    border-left-width: 1px;\n}\n\n.ace_overwrite-cursors .ace_cursor {\n    border-left-width: 0;\n    border-bottom: 1px solid;\n}\n\n.ace_hidden-cursors .ace_cursor {\n    opacity: 0.2;\n}\n\n.ace_hasPlaceholder .ace_hidden-cursors .ace_cursor {\n    opacity: 0;\n}\n\n.ace_smooth-blinking .ace_cursor {\n    transition: opacity 0.18s;\n}\n\n.ace_animate-blinking .ace_cursor {\n    animation-duration: 1000ms;\n    animation-timing-function: step-end;\n    animation-name: blink-ace-animate;\n    animation-iteration-count: infinite;\n}\n\n.ace_animate-blinking.ace_smooth-blinking .ace_cursor {\n    animation-duration: 1000ms;\n    animation-timing-function: ease-in-out;\n    animation-name: blink-ace-animate-smooth;\n}\n    \n@keyframes blink-ace-animate {\n    from, to { opacity: 1; }\n    60% { opacity: 0; }\n}\n\n@keyframes blink-ace-animate-smooth {\n    from, to { opacity: 1; }\n    45% { opacity: 1; }\n    60% { opacity: 0; }\n    85% { opacity: 0; }\n}\n\n.ace_marker-layer .ace_step, .ace_marker-layer .ace_stack {\n    position: absolute;\n    z-index: 3;\n}\n\n.ace_marker-layer .ace_selection {\n    position: absolute;\n    z-index: 5;\n}\n\n.ace_marker-layer .ace_bracket {\n    position: absolute;\n    z-index: 6;\n}\n\n.ace_marker-layer .ace_error_bracket {\n    position: absolute;\n    border-bottom: 1px solid #DE5555;\n    border-radius: 0;\n}\n\n.ace_marker-layer .ace_active-line {\n    position: absolute;\n    z-index: 2;\n}\n\n.ace_marker-layer .ace_selected-word {\n    position: absolute;\n    z-index: 4;\n    box-sizing: border-box;\n}\n\n.ace_line .ace_fold {\n    box-sizing: border-box;\n\n    display: inline-block;\n    height: 11px;\n    margin-top: -2px;\n    vertical-align: middle;\n\n    background-image:\n        url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAJCAYAAADU6McMAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAJpJREFUeNpi/P//PwOlgAXGYGRklAVSokD8GmjwY1wasKljQpYACtpCFeADcHVQfQyMQAwzwAZI3wJKvCLkfKBaMSClBlR7BOQikCFGQEErIH0VqkabiGCAqwUadAzZJRxQr/0gwiXIal8zQQPnNVTgJ1TdawL0T5gBIP1MUJNhBv2HKoQHHjqNrA4WO4zY0glyNKLT2KIfIMAAQsdgGiXvgnYAAAAASUVORK5CYII=\"),\n        url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAA3CAYAAADNNiA5AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAACJJREFUeNpi+P//fxgTAwPDBxDxD078RSX+YeEyDFMCIMAAI3INmXiwf2YAAAAASUVORK5CYII=\");\n    background-repeat: no-repeat, repeat-x;\n    background-position: center center, top left;\n    color: transparent;\n\n    border: 1px solid black;\n    border-radius: 2px;\n\n    cursor: pointer;\n    pointer-events: auto;\n}\n\n.ace_dark .ace_fold {\n}\n\n.ace_fold:hover{\n    background-image:\n        url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAJCAYAAADU6McMAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAJpJREFUeNpi/P//PwOlgAXGYGRklAVSokD8GmjwY1wasKljQpYACtpCFeADcHVQfQyMQAwzwAZI3wJKvCLkfKBaMSClBlR7BOQikCFGQEErIH0VqkabiGCAqwUadAzZJRxQr/0gwiXIal8zQQPnNVTgJ1TdawL0T5gBIP1MUJNhBv2HKoQHHjqNrA4WO4zY0glyNKLT2KIfIMAAQsdgGiXvgnYAAAAASUVORK5CYII=\"),\n        url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAA3CAYAAADNNiA5AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAACBJREFUeNpi+P//fz4TAwPDZxDxD5X4i5fLMEwJgAADAEPVDbjNw87ZAAAAAElFTkSuQmCC\");\n}\n\n.ace_tooltip {\n    background-color: #f5f5f5;\n    border: 1px solid gray;\n    border-radius: 1px;\n    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);\n    color: black;\n    padding: 3px 4px;\n    position: fixed;\n    z-index: 999999;\n    box-sizing: border-box;\n    cursor: default;\n    white-space: pre-wrap;\n    word-wrap: break-word;\n    line-height: normal;\n    font-style: normal;\n    font-weight: normal;\n    letter-spacing: normal;\n    pointer-events: none;\n    overflow: auto;\n    max-width: min(33em, 66vw);\n    overscroll-behavior: contain;\n}\n.ace_tooltip pre {\n    white-space: pre-wrap;\n}\n\n.ace_tooltip.ace_dark {\n    background-color: #636363;\n    color: #fff;\n}\n\n.ace_tooltip:focus {\n    outline: 1px solid #5E9ED6;\n}\n\n.ace_icon {\n    display: inline-block;\n    width: 18px;\n    vertical-align: top;\n}\n\n.ace_icon_svg {\n    display: inline-block;\n    width: 12px;\n    vertical-align: top;\n    -webkit-mask-repeat: no-repeat;\n    -webkit-mask-size: 12px;\n    -webkit-mask-position: center;\n}\n\n.ace_folding-enabled > .ace_gutter-cell, .ace_folding-enabled > .ace_gutter-cell_svg-icons {\n    padding-right: 13px;\n}\n\n.ace_fold-widget, .ace_custom-widget {\n    box-sizing: border-box;\n\n    margin: 0 -12px 0 1px;\n    display: none;\n    width: 11px;\n    vertical-align: top;\n\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAANElEQVR42mWKsQ0AMAzC8ixLlrzQjzmBiEjp0A6WwBCSPgKAXoLkqSot7nN3yMwR7pZ32NzpKkVoDBUxKAAAAABJRU5ErkJggg==\");\n    background-repeat: no-repeat;\n    background-position: center;\n\n    border-radius: 3px;\n    \n    border: 1px solid transparent;\n    cursor: pointer;\n}\n\n.ace_custom-widget {\n    background: none;\n}\n\n.ace_folding-enabled .ace_fold-widget {\n    display: inline-block;   \n}\n\n.ace_fold-widget.ace_end {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAANElEQVR42m3HwQkAMAhD0YzsRchFKI7sAikeWkrxwScEB0nh5e7KTPWimZki4tYfVbX+MNl4pyZXejUO1QAAAABJRU5ErkJggg==\");\n}\n\n.ace_fold-widget.ace_closed {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAAGCAYAAAAG5SQMAAAAOUlEQVR42jXKwQkAMAgDwKwqKD4EwQ26sSOkVWjgIIHAzPiCgaqiqnJHZnKICBERHN194O5b9vbLuAVRL+l0YWnZAAAAAElFTkSuQmCCXA==\");\n}\n\n.ace_fold-widget:hover {\n    border: 1px solid rgba(0, 0, 0, 0.3);\n    background-color: rgba(255, 255, 255, 0.2);\n    box-shadow: 0 1px 1px rgba(255, 255, 255, 0.7);\n}\n\n.ace_fold-widget:active {\n    border: 1px solid rgba(0, 0, 0, 0.4);\n    background-color: rgba(0, 0, 0, 0.05);\n    box-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);\n}\n/**\n * Dark version for fold widgets\n */\n.ace_dark .ace_fold-widget {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHklEQVQIW2P4//8/AzoGEQ7oGCaLLAhWiSwB146BAQCSTPYocqT0AAAAAElFTkSuQmCC\");\n}\n.ace_dark .ace_fold-widget.ace_end {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAH0lEQVQIW2P4//8/AxQ7wNjIAjDMgC4AxjCVKBirIAAF0kz2rlhxpAAAAABJRU5ErkJggg==\");\n}\n.ace_dark .ace_fold-widget.ace_closed {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAAFCAYAAACAcVaiAAAAHElEQVQIW2P4//+/AxAzgDADlOOAznHAKgPWAwARji8UIDTfQQAAAABJRU5ErkJggg==\");\n}\n.ace_dark .ace_fold-widget:hover {\n    box-shadow: 0 1px 1px rgba(255, 255, 255, 0.2);\n    background-color: rgba(255, 255, 255, 0.1);\n}\n.ace_dark .ace_fold-widget:active {\n    box-shadow: 0 1px 1px rgba(255, 255, 255, 0.2);\n}\n\n.ace_inline_button {\n    border: 1px solid lightgray;\n    display: inline-block;\n    margin: -1px 8px;\n    padding: 0 5px;\n    pointer-events: auto;\n    cursor: pointer;\n}\n.ace_inline_button:hover {\n    border-color: gray;\n    background: rgba(200,200,200,0.2);\n    display: inline-block;\n    pointer-events: auto;\n}\n\n.ace_fold-widget.ace_invalid {\n    background-color: #FFB4B4;\n    border-color: #DE5555;\n}\n\n.ace_fade-fold-widgets .ace_fold-widget {\n    transition: opacity 0.4s ease 0.05s;\n    opacity: 0;\n}\n\n.ace_fade-fold-widgets:hover .ace_fold-widget {\n    transition: opacity 0.05s ease 0.05s;\n    opacity:1;\n}\n\n.ace_underline {\n    text-decoration: underline;\n}\n\n.ace_bold {\n    font-weight: bold;\n}\n\n.ace_nobold .ace_bold {\n    font-weight: normal;\n}\n\n.ace_italic {\n    font-style: italic;\n}\n\n\n.ace_error-marker {\n    background-color: rgba(255, 0, 0,0.2);\n    position: absolute;\n    z-index: 9;\n}\n\n.ace_highlight-marker {\n    background-color: rgba(255, 255, 0,0.2);\n    position: absolute;\n    z-index: 8;\n}\n\n.ace_mobile-menu {\n    position: absolute;\n    line-height: 1.5;\n    border-radius: 4px;\n    -ms-user-select: none;\n    -moz-user-select: none;\n    -webkit-user-select: none;\n    user-select: none;\n    background: white;\n    box-shadow: 1px 3px 2px grey;\n    border: 1px solid #dcdcdc;\n    color: black;\n}\n.ace_dark > .ace_mobile-menu {\n    background: #333;\n    color: #ccc;\n    box-shadow: 1px 3px 2px grey;\n    border: 1px solid #444;\n\n}\n.ace_mobile-button {\n    padding: 2px;\n    cursor: pointer;\n    overflow: hidden;\n}\n.ace_mobile-button:hover {\n    background-color: #eee;\n    opacity:1;\n}\n.ace_mobile-button:active {\n    background-color: #ddd;\n}\n\n.ace_placeholder {\n    position: relative;\n    font-family: arial;\n    transform: scale(0.9);\n    transform-origin: left;\n    white-space: pre;\n    opacity: 0.7;\n    margin: 0 10px;\n    z-index: 1;\n}\n\n.ace_ghost_text {\n    opacity: 0.5;\n    font-style: italic;\n}\n\n.ace_ghost_text_container > div {\n    white-space: pre;\n}\n\n.ghost_text_line_wrapped::after {\n    content: \"\u21A9\";\n    position: absolute;\n}\n\n.ace_lineWidgetContainer.ace_ghost_text {\n    margin: 0px 4px\n}\n\n.ace_screenreader-only {\n    position:absolute;\n    left:-10000px;\n    top:auto;\n    width:1px;\n    height:1px;\n    overflow:hidden;\n}\n\n.ace_hidden_token {\n    display: none;\n}";
+module.exports = "\n.ace_br1 {border-top-left-radius    : 3px;}\n.ace_br2 {border-top-right-radius   : 3px;}\n.ace_br3 {border-top-left-radius    : 3px; border-top-right-radius:    3px;}\n.ace_br4 {border-bottom-right-radius: 3px;}\n.ace_br5 {border-top-left-radius    : 3px; border-bottom-right-radius: 3px;}\n.ace_br6 {border-top-right-radius   : 3px; border-bottom-right-radius: 3px;}\n.ace_br7 {border-top-left-radius    : 3px; border-top-right-radius:    3px; border-bottom-right-radius: 3px;}\n.ace_br8 {border-bottom-left-radius : 3px;}\n.ace_br9 {border-top-left-radius    : 3px; border-bottom-left-radius:  3px;}\n.ace_br10{border-top-right-radius   : 3px; border-bottom-left-radius:  3px;}\n.ace_br11{border-top-left-radius    : 3px; border-top-right-radius:    3px; border-bottom-left-radius:  3px;}\n.ace_br12{border-bottom-right-radius: 3px; border-bottom-left-radius:  3px;}\n.ace_br13{border-top-left-radius    : 3px; border-bottom-right-radius: 3px; border-bottom-left-radius:  3px;}\n.ace_br14{border-top-right-radius   : 3px; border-bottom-right-radius: 3px; border-bottom-left-radius:  3px;}\n.ace_br15{border-top-left-radius    : 3px; border-top-right-radius:    3px; border-bottom-right-radius: 3px; border-bottom-left-radius: 3px;}\n\n\n.ace_editor {\n    position: relative;\n    overflow: hidden;\n    padding: 0;\n    font: 12px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;\n    direction: ltr;\n    text-align: left;\n    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);\n    forced-color-adjust: none;\n}\n\n.ace_scroller {\n    position: absolute;\n    overflow: hidden;\n    top: 0;\n    bottom: 0;\n    background-color: inherit;\n    -ms-user-select: none;\n    -moz-user-select: none;\n    -webkit-user-select: none;\n    user-select: none;\n    cursor: text;\n}\n\n.ace_content {\n    position: absolute;\n    box-sizing: border-box;\n    min-width: 100%;\n    contain: style size layout;\n    font-variant-ligatures: no-common-ligatures;\n}\n.ace_invisible {\n    font-variant-ligatures: none;\n}\n\n.ace_keyboard-focus:focus {\n    box-shadow: inset 0 0 0 2px #5E9ED6;\n    outline: none;\n}\n\n.ace_dragging .ace_scroller:before{\n    position: absolute;\n    top: 0;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    content: '';\n    background: rgba(250, 250, 250, 0.01);\n    z-index: 1000;\n}\n.ace_dragging.ace_dark .ace_scroller:before{\n    background: rgba(0, 0, 0, 0.01);\n}\n\n.ace_gutter {\n    position: absolute;\n    overflow : hidden;\n    width: auto;\n    top: 0;\n    bottom: 0;\n    left: 0;\n    cursor: default;\n    z-index: 4;\n    -ms-user-select: none;\n    -moz-user-select: none;\n    -webkit-user-select: none;\n    user-select: none;\n    contain: style size layout;\n}\n\n.ace_gutter-active-line {\n    position: absolute;\n    left: 0;\n    right: 0;\n}\n\n.ace_scroller.ace_scroll-left:after {\n    content: \"\";\n    position: absolute;\n    top: 0;\n    right: 0;\n    bottom: 0;\n    left: 0;\n    box-shadow: 17px 0 16px -16px rgba(0, 0, 0, 0.4) inset;\n    pointer-events: none;\n}\n\n.ace_gutter-cell, .ace_gutter-cell_svg-icons {\n    position: absolute;\n    top: 0;\n    left: 0;\n    right: 0;\n    padding-left: 19px;\n    padding-right: 6px;\n    background-repeat: no-repeat;\n}\n\n.ace_gutter-cell_svg-icons .ace_gutter_annotation {\n    margin-left: -14px;\n    float: left;\n}\n\n.ace_gutter-cell .ace_gutter_annotation {\n    margin-left: -19px;\n    float: left;\n}\n\n.ace_gutter-cell.ace_error, .ace_icon.ace_error, .ace_icon.ace_error_fold, .ace_gutter-cell.ace_security, .ace_icon.ace_security, .ace_icon.ace_security_fold {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABOFBMVEX/////////QRswFAb/Ui4wFAYwFAYwFAaWGAfDRymzOSH/PxswFAb/SiUwFAYwFAbUPRvjQiDllog5HhHdRybsTi3/Tyv9Tir+Syj/UC3////XurebMBIwFAb/RSHbPx/gUzfdwL3kzMivKBAwFAbbvbnhPx66NhowFAYwFAaZJg8wFAaxKBDZurf/RB6mMxb/SCMwFAYwFAbxQB3+RB4wFAb/Qhy4Oh+4QifbNRcwFAYwFAYwFAb/QRzdNhgwFAYwFAbav7v/Uy7oaE68MBK5LxLewr/r2NXewLswFAaxJw4wFAbkPRy2PyYwFAaxKhLm1tMwFAazPiQwFAaUGAb/QBrfOx3bvrv/VC/maE4wFAbRPBq6MRO8Qynew8Dp2tjfwb0wFAbx6eju5+by6uns4uH9/f36+vr/GkHjAAAAYnRSTlMAGt+64rnWu/bo8eAA4InH3+DwoN7j4eLi4xP99Nfg4+b+/u9B/eDs1MD1mO7+4PHg2MXa347g7vDizMLN4eG+Pv7i5evs/v79yu7S3/DV7/498Yv24eH+4ufQ3Ozu/v7+y13sRqwAAADLSURBVHjaZc/XDsFgGIBhtDrshlitmk2IrbHFqL2pvXf/+78DPokj7+Fz9qpU/9UXJIlhmPaTaQ6QPaz0mm+5gwkgovcV6GZzd5JtCQwgsxoHOvJO15kleRLAnMgHFIESUEPmawB9ngmelTtipwwfASilxOLyiV5UVUyVAfbG0cCPHig+GBkzAENHS0AstVF6bacZIOzgLmxsHbt2OecNgJC83JERmePUYq8ARGkJx6XtFsdddBQgZE2nPR6CICZhawjA4Fb/chv+399kfR+MMMDGOQAAAABJRU5ErkJggg==\");\n    background-repeat: no-repeat;\n    background-position: 2px center;\n}\n\n.ace_gutter-cell.ace_warning, .ace_icon.ace_warning, .ace_icon.ace_warning_fold {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAmVBMVEX///8AAAD///8AAAAAAABPSzb/5sAAAAB/blH/73z/ulkAAAAAAAD85pkAAAAAAAACAgP/vGz/rkDerGbGrV7/pkQICAf////e0IsAAAD/oED/qTvhrnUAAAD/yHD/njcAAADuv2r/nz//oTj/p064oGf/zHAAAAA9Nir/tFIAAAD/tlTiuWf/tkIAAACynXEAAAAAAAAtIRW7zBpBAAAAM3RSTlMAABR1m7RXO8Ln31Z36zT+neXe5OzooRDfn+TZ4p3h2hTf4t3k3ucyrN1K5+Xaks52Sfs9CXgrAAAAjklEQVR42o3PbQ+CIBQFYEwboPhSYgoYunIqqLn6/z8uYdH8Vmdnu9vz4WwXgN/xTPRD2+sgOcZjsge/whXZgUaYYvT8QnuJaUrjrHUQreGczuEafQCO/SJTufTbroWsPgsllVhq3wJEk2jUSzX3CUEDJC84707djRc5MTAQxoLgupWRwW6UB5fS++NV8AbOZgnsC7BpEAAAAABJRU5ErkJggg==\");\n    background-repeat: no-repeat;\n    background-position: 2px center;\n}\n\n.ace_gutter-cell.ace_info, .ace_icon.ace_info, .ace_gutter-cell.ace_hint, .ace_icon.ace_hint {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAAAAAA6mKC9AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAAJ0Uk5TAAB2k804AAAAPklEQVQY02NgIB68QuO3tiLznjAwpKTgNyDbMegwisCHZUETUZV0ZqOquBpXj2rtnpSJT1AEnnRmL2OgGgAAIKkRQap2htgAAAAASUVORK5CYII=\");\n    background-repeat: no-repeat;\n    background-position: 2px center;\n}\n\n.ace_dark .ace_gutter-cell.ace_info, .ace_dark .ace_icon.ace_info, .ace_dark .ace_gutter-cell.ace_hint, .ace_dark .ace_icon.ace_hint {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAJFBMVEUAAAChoaGAgIAqKiq+vr6tra1ZWVmUlJSbm5s8PDxubm56enrdgzg3AAAAAXRSTlMAQObYZgAAAClJREFUeNpjYMAPdsMYHegyJZFQBlsUlMFVCWUYKkAZMxZAGdxlDMQBAG+TBP4B6RyJAAAAAElFTkSuQmCC\");\n}\n\n.ace_icon_svg.ace_error {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAxNiI+CjxnIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlPSJyZWQiIHNoYXBlLXJlbmRlcmluZz0iZ2VvbWV0cmljUHJlY2lzaW9uIj4KPGNpcmNsZSBmaWxsPSJub25lIiBjeD0iOCIgY3k9IjgiIHI9IjciIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPGxpbmUgeDE9IjExIiB5MT0iNSIgeDI9IjUiIHkyPSIxMSIvPgo8bGluZSB4MT0iMTEiIHkxPSIxMSIgeDI9IjUiIHkyPSI1Ii8+CjwvZz4KPC9zdmc+\");\n    background-color: crimson;\n}\n.ace_icon_svg.ace_security {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAgMTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgICA8ZyBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZT0iZGFya29yYW5nZSIgZmlsbD0ibm9uZSIgc2hhcGUtcmVuZGVyaW5nPSJnZW9tZXRyaWNQcmVjaXNpb24iPgogICAgICAgIDxwYXRoIGNsYXNzPSJzdHJva2UtbGluZWpvaW4tcm91bmQiIGQ9Ik04IDE0LjgzMDdDOCAxNC44MzA3IDIgMTIuOTA0NyAyIDguMDg5OTJWMy4yNjU0OEM1LjMxIDMuMjY1NDggNy45ODk5OSAxLjM0OTE4IDcuOTg5OTkgMS4zNDkxOEM3Ljk4OTk5IDEuMzQ5MTggMTAuNjkgMy4yNjU0OCAxNCAzLjI2NTQ4VjguMDg5OTJDMTQgMTIuOTA0NyA4IDE0LjgzMDcgOCAxNC44MzA3WiIvPgogICAgICAgIDxwYXRoIGQ9Ik0yIDguMDg5OTJWMy4yNjU0OEM1LjMxIDMuMjY1NDggNy45ODk5OSAxLjM0OTE4IDcuOTg5OTkgMS4zNDkxOCIvPgogICAgICAgIDxwYXRoIGQ9Ik0xMy45OSA4LjA4OTkyVjMuMjY1NDhDMTAuNjggMy4yNjU0OCA4IDEuMzQ5MTggOCAxLjM0OTE4Ii8+CiAgICAgICAgPHBhdGggY2xhc3M9InN0cm9rZS1saW5lam9pbi1yb3VuZCIgZD0iTTggNFY5Ii8+CiAgICAgICAgPHBhdGggY2xhc3M9InN0cm9rZS1saW5lam9pbi1yb3VuZCIgZD0iTTggMTBWMTIiLz4KICAgIDwvZz4KPC9zdmc+\");\n    background-color: crimson;\n}\n.ace_icon_svg.ace_warning {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAxNiI+CjxnIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlPSJkYXJrb3JhbmdlIiBzaGFwZS1yZW5kZXJpbmc9Imdlb21ldHJpY1ByZWNpc2lvbiI+Cjxwb2x5Z29uIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiIHBvaW50cz0iOCAxIDE1IDE1IDEgMTUgOCAxIi8+CjxyZWN0IHg9IjgiIHk9IjEyIiB3aWR0aD0iMC4wMSIgaGVpZ2h0PSIwLjAxIi8+CjxsaW5lIHgxPSI4IiB5MT0iNiIgeDI9IjgiIHkyPSIxMCIvPgo8L2c+Cjwvc3ZnPg==\");\n    background-color: darkorange;\n}\n.ace_icon_svg.ace_info {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAxNiI+CjxnIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlPSJibHVlIiBzaGFwZS1yZW5kZXJpbmc9Imdlb21ldHJpY1ByZWNpc2lvbiI+CjxjaXJjbGUgZmlsbD0ibm9uZSIgY3g9IjgiIGN5PSI4IiByPSI3IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjxwb2x5bGluZSBwb2ludHM9IjggMTEgOCA4Ii8+Cjxwb2x5bGluZSBwb2ludHM9IjkgOCA2IDgiLz4KPGxpbmUgeDE9IjEwIiB5MT0iMTEiIHgyPSI2IiB5Mj0iMTEiLz4KPHJlY3QgeD0iOCIgeT0iNSIgd2lkdGg9IjAuMDEiIGhlaWdodD0iMC4wMSIvPgo8L2c+Cjwvc3ZnPg==\");\n    background-color: royalblue;\n}\n.ace_icon_svg.ace_hint {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAgMTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgICA8ZyBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZT0ic2lsdmVyIiBmaWxsPSJub25lIiBzaGFwZS1yZW5kZXJpbmc9Imdlb21ldHJpY1ByZWNpc2lvbiI+CiAgICAgICAgPHBhdGggY2xhc3M9InN0cm9rZS1saW5lam9pbi1yb3VuZCIgZD0iTTYgMTRIMTAiLz4KICAgICAgICA8cGF0aCBkPSJNOCAxMUg5QzkgOS40NzAwMiAxMiA4LjU0MDAyIDEyIDUuNzYwMDJDMTIuMDIgNC40MDAwMiAxMS4zOSAzLjM2MDAyIDEwLjQzIDIuNjcwMDJDOSAxLjY0MDAyIDcuMDAwMDEgMS42NDAwMiA1LjU3MDAxIDIuNjcwMDJDNC42MTAwMSAzLjM2MDAyIDMuOTggNC40MDAwMiA0IDUuNzYwMDJDNCA4LjU0MDAyIDcuMDAwMDEgOS40NzAwMiA3LjAwMDAxIDExSDhaIi8+CiAgICA8L2c+Cjwvc3ZnPg==\");\n    background-color: silver;\n}\n\n.ace_icon_svg.ace_error_fold {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAxNiIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0ibSAxOC45Mjk4NTEsNy44Mjk4MDc2IGMgMC4xNDYzNTMsNi4zMzc0NjA0IC02LjMyMzE0Nyw3Ljc3Nzg0NDQgLTcuNDc3OTEyLDcuNzc3ODQ0NCAtMi4xMDcyNzI2LC0wLjEyODc1IDUuMTE3Njc4LDAuMzU2MjQ5IDUuMDUxNjk4LC03Ljg3MDA2MTggLTAuNjA0NjcyLC04LjAwMzk3MzQ5IC03LjA3NzI3MDYsLTcuNTYzMTE4OSAtNC44NTczLC03LjQzMDM5NTU2IDEuNjA2LC0wLjExNTE0MjI1IDYuODk3NDg1LDEuMjYyNTQ1OTYgNy4yODM1MTQsNy41MjI2MTI5NiB6IiBmaWxsPSJjcmltc29uIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0ibSA4LjExNDc1NjIsMi4wNTI5ODI4IGMgMy4zNDkxNjk4LDAgNi4wNjQxMzI4LDIuNjc2ODYyNyA2LjA2NDEzMjgsNS45Nzg5NTMgMCwzLjMwMjExMjIgLTIuNzE0OTYzLDUuOTc4OTIwMiAtNi4wNjQxMzI4LDUuOTc4OTIwMiAtMy4zNDkxNDczLDAgLTYuMDY0MTc3MiwtMi42NzY4MDggLTYuMDY0MTc3MiwtNS45Nzg5MjAyIDAuMDA1MzksLTMuMjk5ODg2MSAyLjcxNzI2NTYsLTUuOTczNjQwOCA2LjA2NDE3NzIsLTUuOTc4OTUzIHogbSAwLC0xLjczNTgyNzE5IGMgLTQuMzIxNDgzNiwwIC03LjgyNDc0MDM4LDMuNDU0MDE4NDkgLTcuODI0NzQwMzgsNy43MTQ3ODAxOSAwLDQuMjYwNzI4MiAzLjUwMzI1Njc4LDcuNzE0NzQ1MiA3LjgyNDc0MDM4LDcuNzE0NzQ1MiA0LjMyMTQ0OTgsMCA3LjgyNDY5OTgsLTMuNDU0MDE3IDcuODI0Njk5OCwtNy43MTQ3NDUyIDAsLTIuMDQ2MDkxNCAtMC44MjQzOTIsLTQuMDA4MzY3MiAtMi4yOTE3NTYsLTUuNDU1MTc0NiBDIDEyLjE4MDIyNSwxLjEyOTk2NDggMTAuMTkwMDEzLDAuMzE3MTU1NjEgOC4xMTQ3NTYyLDAuMzE3MTU1NjEgWiBNIDYuOTM3NDU2Myw4LjI0MDU5ODUgNC42NzE4Njg1LDEwLjQ4NTg1MiA2LjAwODY4MTQsMTEuODc2NzI4IDguMzE3MDAzNSw5LjYwMDc5MTEgMTAuNjI1MzM3LDExLjg3NjcyOCAxMS45NjIxMzgsMTAuNDg1ODUyIDkuNjk2NTUwOCw4LjI0MDU5ODUgMTEuOTYyMTM4LDYuMDA2ODA2NiAxMC41NzMyNDYsNC42Mzc0MzM1IDguMzE3MDAzNSw2Ljg3MzQyOTcgNi4wNjA3NjA3LDQuNjM3NDMzNSA0LjY3MTg2ODUsNi4wMDY4MDY2IFoiIGZpbGw9ImNyaW1zb24iIHN0cm9rZS13aWR0aD0iMiIvPgo8L3N2Zz4=\");\n    background-color: crimson;\n}\n.ace_icon_svg.ace_security_fold {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,CjxzdmcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2aWV3Qm94PSIwIDAgMTcgMTQiIGZpbGw9Im5vbmUiPgogICAgPHBhdGggZD0iTTEwLjAwMDEgMTMuNjk5MkMxMC4wMDAxIDEzLjY5OTIgMTEuOTI0MSAxMy40NzYzIDEzIDEyLjY5OTJDMTQuNDEzOSAxMS42NzgxIDE2IDEwLjUgMTYuMTI1MSA2LjgxMTI2VjIuNTg5ODdDMTYuMTI1MSAyLjU0NzY4IDE2LjEyMjEgMi41MDYxOSAxNi4xMTY0IDIuNDY1NTlWMS43MTQ4NUgxNS4yNDE0TDE1LjIzMDcgMS43MTQ4NEwxNC42MjUxIDEuNjk5MjJWNi44MTEyM0MxNC42MjUxIDguNTEwNjEgMTQuNjI1MSA5LjQ2NDYxIDEyLjc4MjQgMTEuNzIxQzEyLjE1ODYgMTIuNDg0OCAxMC4wMDAxIDEzLjY5OTIgMTAuMDAwMSAxMy42OTkyWiIgZmlsbD0iY3JpbXNvbiIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgICA8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0iTTcuMzM2MDkgMC4zNjc0NzVDNy4wMzIxNCAwLjE1MjY1MiA2LjYyNTQ4IDAuMTUzNjE0IDYuMzIyNTMgMC4zNjk5OTdMNi4zMDg2OSAwLjM3OTU1NEM2LjI5NTUzIDAuMzg4NTg4IDYuMjczODggMC40MDMyNjYgNi4yNDQxNyAwLjQyMjc4OUM2LjE4NDcxIDAuNDYxODYgNi4wOTMyMSAwLjUyMDE3MSA1Ljk3MzEzIDAuNTkxMzczQzUuNzMyNTEgMC43MzQwNTkgNS4zNzk5IDAuOTI2ODY0IDQuOTQyNzkgMS4xMjAwOUM0LjA2MTQ0IDEuNTA5NyAyLjg3NTQxIDEuODgzNzcgMS41ODk4NCAxLjg4Mzc3SDAuNzE0ODQ0VjIuNzU4NzdWNi45ODAxNUMwLjcxNDg0NCA5LjQ5Mzc0IDIuMjg4NjYgMTEuMTk3MyAzLjcwMjU0IDEyLjIxODVDNC40MTg0NSAxMi43MzU1IDUuMTI4NzQgMTMuMTA1MyA1LjY1NzMzIDEzLjM0NTdDNS45MjI4NCAxMy40NjY0IDYuMTQ1NjYgMTMuNTU1OSA2LjMwNDY1IDEzLjYxNjFDNi4zODQyMyAxMy42NDYyIDYuNDQ4MDUgMTMuNjY5IDYuNDkzNDkgMTMuNjg0OEM2LjUxNjIyIDEzLjY5MjcgNi41MzQzOCAxMy42OTg5IDYuNTQ3NjQgMTMuNzAzM0w2LjU2MzgyIDEzLjcwODdMNi41NjkwOCAxMy43MTA0TDYuNTcwOTkgMTMuNzExTDYuODM5ODQgMTMuNzUzM0w2LjU3MjQyIDEzLjcxMTVDNi43NDYzMyAxMy43NjczIDYuOTMzMzUgMTMuNzY3MyA3LjEwNzI3IDEzLjcxMTVMNy4xMDg3IDEzLjcxMUw3LjExMDYxIDEzLjcxMDRMNy4xMTU4NyAxMy43MDg3TDcuMTMyMDUgMTMuNzAzM0M3LjE0NTMxIDEzLjY5ODkgNy4xNjM0NiAxMy42OTI3IDcuMTg2MTkgMTMuNjg0OEM3LjIzMTY0IDEzLjY2OSA3LjI5NTQ2IDEzLjY0NjIgNy4zNzUwMyAxMy42MTYxQzcuNTM0MDMgMTMuNTU1OSA3Ljc1Njg1IDEzLjQ2NjQgOC4wMjIzNiAxMy4zNDU3QzguNTUwOTUgMTMuMTA1MyA5LjI2MTIzIDEyLjczNTUgOS45NzcxNSAxMi4yMTg1QzExLjM5MSAxMS4xOTczIDEyLjk2NDggOS40OTM3NyAxMi45NjQ4IDYuOTgwMThWMi43NTg4QzEyLjk2NDggMi43MTY2IDEyLjk2MTkgMi42NzUxMSAxMi45NTYxIDIuNjM0NTFWMS44ODM3N0gxMi4wODExQzEyLjA3NzUgMS44ODM3NyAxMi4wNzQgMS44ODM3NyAxMi4wNzA0IDEuODgzNzdDMTAuNzk3OSAxLjg4MDA0IDkuNjE5NjIgMS41MTEwMiA4LjczODk0IDEuMTI0ODZDOC43MzUzNCAxLjEyMzI3IDguNzMxNzQgMS4xMjE2OCA4LjcyODE0IDEuMTIwMDlDOC4yOTEwMyAwLjkyNjg2NCA3LjkzODQyIDAuNzM0MDU5IDcuNjk3NzkgMC41OTEzNzNDNy41Nzc3MiAwLjUyMDE3MSA3LjQ4NjIyIDAuNDYxODYgNy40MjY3NiAwLjQyMjc4OUM3LjM5NzA1IDAuNDAzMjY2IDcuMzc1MzkgMC4zODg1ODggNy4zNjIyNCAwLjM3OTU1NEw3LjM0ODk2IDAuMzcwMzVDNy4zNDg5NiAwLjM3MDM1IDcuMzQ4NDcgMC4zNzAwMiA3LjM0NTYzIDAuMzc0MDU0TDcuMzM3NzkgMC4zNjg2NTlMNy4zMzYwOSAwLjM2NzQ3NVpNOC4wMzQ3MSAyLjcyNjkxQzguODYwNCAzLjA5MDYzIDkuOTYwNjYgMy40NjMwOSAxMS4yMDYxIDMuNTg5MDdWNi45ODAxNUgxMS4yMTQ4QzExLjIxNDggOC42Nzk1MyAxMC4xNjM3IDkuOTI1MDcgOC45NTI1NCAxMC43OTk4QzguMzU1OTUgMTEuMjMwNiA3Ljc1Mzc0IDExLjU0NTQgNy4yOTc5NiAxMS43NTI3QzcuMTE2NzEgMTEuODM1MSA2Ljk2MDYyIDExLjg5OTYgNi44Mzk4NCAxMS45NDY5QzYuNzE5MDYgMTEuODk5NiA2LjU2Mjk3IDExLjgzNTEgNi4zODE3MyAxMS43NTI3QzUuOTI1OTUgMTEuNTQ1NCA1LjMyMzczIDExLjIzMDYgNC43MjcxNSAxMC43OTk4QzMuNTE2MDMgOS45MjUwNyAyLjQ2NDg0IDguNjc5NTUgMi40NjQ4NCA2Ljk4MDE4VjMuNTg5MDlDMy43MTczOCAzLjQ2MjM5IDQuODIzMDggMy4wODYzOSA1LjY1MDMzIDIuNzIwNzFDNi4xNDIyOCAyLjUwMzI0IDYuNTQ0ODUgMi4yODUzNyA2LjgzMjU0IDIuMTE2MjRDNy4xMjE4MSAyLjI4NTM1IDcuNTI3IDIuNTAzNTIgOC4wMjE5NiAyLjcyMTMxQzguMDI2MiAyLjcyMzE3IDguMDMwNDUgMi43MjUwNCA4LjAzNDcxIDIuNzI2OTFaTTUuOTY0ODQgMy40MDE0N1Y3Ljc3NjQ3SDcuNzE0ODRWMy40MDE0N0g1Ljk2NDg0Wk01Ljk2NDg0IDEwLjQwMTVWOC42NTE0N0g3LjcxNDg0VjEwLjQwMTVINS45NjQ4NFoiIGZpbGw9ImNyaW1zb24iIHN0cm9rZS13aWR0aD0iMiIvPgo8L3N2Zz4=\");\n    background-color: crimson;\n}\n.ace_icon_svg.ace_warning_fold {\n    -webkit-mask-image: url(\"data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAyMCAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0xNC43NzY5IDE0LjczMzdMOC42NTE5MiAyLjQ4MzY5QzguMzI5NDYgMS44Mzg3NyA3LjQwOTEzIDEuODM4NzcgNy4wODY2NyAyLjQ4MzY5TDAuOTYxNjY5IDE0LjczMzdDMC42NzA3NzUgMTUuMzE1NSAxLjA5MzgzIDE2IDEuNzQ0MjkgMTZIMTMuOTk0M0MxNC42NDQ4IDE2IDE1LjA2NzggMTUuMzE1NSAxNC43NzY5IDE0LjczMzdaTTMuMTYwMDcgMTQuMjVMNy44NjkyOSA0LjgzMTU2TDEyLjU3ODUgMTQuMjVIMy4xNjAwN1pNOC43NDQyOSAxMS42MjVWMTMuMzc1SDYuOTk0MjlWMTEuNjI1SDguNzQ0MjlaTTYuOTk0MjkgMTAuNzVWNy4yNUg4Ljc0NDI5VjEwLjc1SDYuOTk0MjlaIiBmaWxsPSIjRUM3MjExIi8+CjxwYXRoIGQ9Ik0xMS4xOTkxIDIuOTUyMzhDMTAuODgwOSAyLjMxNDY3IDEwLjM1MzcgMS44MDUyNiA5LjcwNTUgMS41MDlMMTEuMDQxIDEuMDY5NzhDMTEuNjg4MyAwLjk0OTgxNCAxMi4zMzcgMS4yNzI2MyAxMi42MzE3IDEuODYxNDFMMTcuNjEzNiAxMS44MTYxQzE4LjM1MjcgMTMuMjkyOSAxNy41OTM4IDE1LjA4MDQgMTYuMDE4IDE1LjU3NDVDMTYuNDA0NCAxNC40NTA3IDE2LjMyMzEgMTMuMjE4OCAxNS43OTI0IDEyLjE1NTVMMTEuMTk5MSAyLjk1MjM4WiIgZmlsbD0iI0VDNzIxMSIvPgo8L3N2Zz4=\");\n    background-color: darkorange;\n}\n\n.ace_scrollbar {\n    contain: strict;\n    position: absolute;\n    right: 0;\n    bottom: 0;\n    z-index: 6;\n}\n\n.ace_scrollbar-inner {\n    position: absolute;\n    cursor: text;\n    left: 0;\n    top: 0;\n}\n\n.ace_scrollbar-v{\n    overflow-x: hidden;\n    overflow-y: scroll;\n    top: 0;\n}\n\n.ace_scrollbar-h {\n    overflow-x: scroll;\n    overflow-y: hidden;\n    left: 0;\n}\n\n.ace_print-margin {\n    position: absolute;\n    height: 100%;\n}\n\n.ace_text-input {\n    position: absolute;\n    z-index: 0;\n    width: 0.5em;\n    height: 1em;\n    opacity: 0;\n    background: transparent;\n    -moz-appearance: none;\n    appearance: none;\n    border: none;\n    resize: none;\n    outline: none;\n    overflow: hidden;\n    font: inherit;\n    padding: 0 1px;\n    margin: 0 -1px;\n    contain: strict;\n    -ms-user-select: text;\n    -moz-user-select: text;\n    -webkit-user-select: text;\n    user-select: text;\n    /*with `pre-line` chrome inserts &nbsp; instead of space*/\n    white-space: pre!important;\n}\n.ace_text-input.ace_composition {\n    background: transparent;\n    color: inherit;\n    z-index: 1000;\n    opacity: 1;\n}\n.ace_composition_placeholder { color: transparent }\n.ace_composition_marker { \n    border-bottom: 1px solid;\n    position: absolute;\n    border-radius: 0;\n    margin-top: 1px;\n}\n\n[ace_nocontext=true] {\n    transform: none!important;\n    filter: none!important;\n    clip-path: none!important;\n    mask : none!important;\n    contain: none!important;\n    perspective: none!important;\n    mix-blend-mode: initial!important;\n    z-index: auto;\n}\n\n.ace_layer {\n    z-index: 1;\n    position: absolute;\n    overflow: hidden;\n    /* workaround for chrome bug https://github.com/ajaxorg/ace/issues/2312*/\n    word-wrap: normal;\n    white-space: pre;\n    height: 100%;\n    width: 100%;\n    box-sizing: border-box;\n    /* setting pointer-events: auto; on node under the mouse, which changes\n        during scroll, will break mouse wheel scrolling in Safari */\n    pointer-events: none;\n}\n\n.ace_gutter-layer {\n    position: relative;\n    width: auto;\n    text-align: right;\n    pointer-events: auto;\n    height: 1000000px;\n    contain: style size layout;\n}\n\n.ace_text-layer {\n    font: inherit !important;\n    position: absolute;\n    height: 1000000px;\n    width: 1000000px;\n    contain: style size layout;\n}\n\n.ace_text-layer > .ace_line, .ace_text-layer > .ace_line_group {\n    contain: style size layout;\n    position: absolute;\n    top: 0;\n    left: 0;\n    right: 0;\n}\n\n.ace_hidpi .ace_text-layer,\n.ace_hidpi .ace_gutter-layer,\n.ace_hidpi .ace_content,\n.ace_hidpi .ace_gutter {\n    contain: strict;\n}\n.ace_hidpi .ace_text-layer > .ace_line, \n.ace_hidpi .ace_text-layer > .ace_line_group {\n    contain: strict;\n}\n\n.ace_cjk {\n    display: inline-block;\n    text-align: center;\n}\n\n.ace_cursor-layer {\n    z-index: 4;\n}\n\n.ace_cursor {\n    z-index: 4;\n    position: absolute;\n    box-sizing: border-box;\n    border-left: 2px solid;\n    /* workaround for smooth cursor repaintng whole screen in chrome */\n    transform: translatez(0);\n}\n\n.ace_multiselect .ace_cursor {\n    border-left-width: 1px;\n}\n\n.ace_slim-cursors .ace_cursor {\n    border-left-width: 1px;\n}\n\n.ace_overwrite-cursors .ace_cursor {\n    border-left-width: 0;\n    border-bottom: 1px solid;\n}\n\n.ace_hidden-cursors .ace_cursor {\n    opacity: 0.2;\n}\n\n.ace_hasPlaceholder .ace_hidden-cursors .ace_cursor {\n    opacity: 0;\n}\n\n.ace_smooth-blinking .ace_cursor {\n    transition: opacity 0.18s;\n}\n\n.ace_animate-blinking .ace_cursor {\n    animation-duration: 1000ms;\n    animation-timing-function: step-end;\n    animation-name: blink-ace-animate;\n    animation-iteration-count: infinite;\n}\n\n.ace_animate-blinking.ace_smooth-blinking .ace_cursor {\n    animation-duration: 1000ms;\n    animation-timing-function: ease-in-out;\n    animation-name: blink-ace-animate-smooth;\n}\n    \n@keyframes blink-ace-animate {\n    from, to { opacity: 1; }\n    60% { opacity: 0; }\n}\n\n@keyframes blink-ace-animate-smooth {\n    from, to { opacity: 1; }\n    45% { opacity: 1; }\n    60% { opacity: 0; }\n    85% { opacity: 0; }\n}\n\n.ace_marker-layer .ace_step, .ace_marker-layer .ace_stack {\n    position: absolute;\n    z-index: 3;\n}\n\n.ace_marker-layer .ace_selection {\n    position: absolute;\n    z-index: 5;\n}\n\n.ace_marker-layer .ace_bracket {\n    position: absolute;\n    z-index: 6;\n}\n\n.ace_marker-layer .ace_error_bracket {\n    position: absolute;\n    border-bottom: 1px solid #DE5555;\n    border-radius: 0;\n}\n\n.ace_marker-layer .ace_active-line {\n    position: absolute;\n    z-index: 2;\n}\n\n.ace_marker-layer .ace_selected-word {\n    position: absolute;\n    z-index: 4;\n    box-sizing: border-box;\n}\n\n.ace_line .ace_fold {\n    box-sizing: border-box;\n\n    display: inline-block;\n    height: 11px;\n    margin-top: -2px;\n    vertical-align: middle;\n\n    background-image:\n        url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAJCAYAAADU6McMAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAJpJREFUeNpi/P//PwOlgAXGYGRklAVSokD8GmjwY1wasKljQpYACtpCFeADcHVQfQyMQAwzwAZI3wJKvCLkfKBaMSClBlR7BOQikCFGQEErIH0VqkabiGCAqwUadAzZJRxQr/0gwiXIal8zQQPnNVTgJ1TdawL0T5gBIP1MUJNhBv2HKoQHHjqNrA4WO4zY0glyNKLT2KIfIMAAQsdgGiXvgnYAAAAASUVORK5CYII=\"),\n        url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAA3CAYAAADNNiA5AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAACJJREFUeNpi+P//fxgTAwPDBxDxD078RSX+YeEyDFMCIMAAI3INmXiwf2YAAAAASUVORK5CYII=\");\n    background-repeat: no-repeat, repeat-x;\n    background-position: center center, top left;\n    color: transparent;\n\n    border: 1px solid black;\n    border-radius: 2px;\n\n    cursor: pointer;\n    pointer-events: auto;\n}\n\n.ace_dark .ace_fold {\n}\n\n.ace_fold:hover{\n    background-image:\n        url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAJCAYAAADU6McMAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAJpJREFUeNpi/P//PwOlgAXGYGRklAVSokD8GmjwY1wasKljQpYACtpCFeADcHVQfQyMQAwzwAZI3wJKvCLkfKBaMSClBlR7BOQikCFGQEErIH0VqkabiGCAqwUadAzZJRxQr/0gwiXIal8zQQPnNVTgJ1TdawL0T5gBIP1MUJNhBv2HKoQHHjqNrA4WO4zY0glyNKLT2KIfIMAAQsdgGiXvgnYAAAAASUVORK5CYII=\"),\n        url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAA3CAYAAADNNiA5AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAACBJREFUeNpi+P//fz4TAwPDZxDxD5X4i5fLMEwJgAADAEPVDbjNw87ZAAAAAElFTkSuQmCC\");\n}\n\n.ace_tooltip {\n    background-color: #f5f5f5;\n    border: 1px solid gray;\n    border-radius: 1px;\n    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);\n    color: black;\n    padding: 3px 4px;\n    position: fixed;\n    z-index: 999999;\n    box-sizing: border-box;\n    cursor: default;\n    white-space: pre-wrap;\n    word-wrap: break-word;\n    line-height: normal;\n    font-style: normal;\n    font-weight: normal;\n    letter-spacing: normal;\n    pointer-events: none;\n    overflow: auto;\n    max-width: min(33em, 66vw);\n    overscroll-behavior: contain;\n}\n.ace_tooltip pre {\n    white-space: pre-wrap;\n}\n\n.ace_tooltip.ace_dark {\n    background-color: #636363;\n    color: #fff;\n}\n\n.ace_tooltip:focus {\n    outline: 1px solid #5E9ED6;\n}\n\n.ace_icon {\n    display: inline-block;\n    width: 18px;\n    vertical-align: top;\n}\n\n.ace_icon_svg {\n    display: inline-block;\n    width: 12px;\n    vertical-align: top;\n    -webkit-mask-repeat: no-repeat;\n    -webkit-mask-size: 12px;\n    -webkit-mask-position: center;\n}\n\n.ace_folding-enabled > .ace_gutter-cell, .ace_folding-enabled > .ace_gutter-cell_svg-icons {\n    padding-right: 13px;\n}\n\n.ace_fold-widget, .ace_custom-widget {\n    box-sizing: border-box;\n\n    margin: 0 -12px 0 1px;\n    display: none;\n    width: 11px;\n    vertical-align: top;\n\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAANElEQVR42mWKsQ0AMAzC8ixLlrzQjzmBiEjp0A6WwBCSPgKAXoLkqSot7nN3yMwR7pZ32NzpKkVoDBUxKAAAAABJRU5ErkJggg==\");\n    background-repeat: no-repeat;\n    background-position: center;\n\n    border-radius: 3px;\n    \n    border: 1px solid transparent;\n    cursor: pointer;\n    pointer-events: auto;\n}\n\n.ace_custom-widget {\n    background: none;\n}\n\n.ace_folding-enabled .ace_fold-widget {\n    display: inline-block;   \n}\n\n.ace_fold-widget.ace_end {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAANElEQVR42m3HwQkAMAhD0YzsRchFKI7sAikeWkrxwScEB0nh5e7KTPWimZki4tYfVbX+MNl4pyZXejUO1QAAAABJRU5ErkJggg==\");\n}\n\n.ace_fold-widget.ace_closed {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAAGCAYAAAAG5SQMAAAAOUlEQVR42jXKwQkAMAgDwKwqKD4EwQ26sSOkVWjgIIHAzPiCgaqiqnJHZnKICBERHN194O5b9vbLuAVRL+l0YWnZAAAAAElFTkSuQmCCXA==\");\n}\n\n.ace_fold-widget:hover {\n    border: 1px solid rgba(0, 0, 0, 0.3);\n    background-color: rgba(255, 255, 255, 0.2);\n    box-shadow: 0 1px 1px rgba(255, 255, 255, 0.7);\n}\n\n.ace_fold-widget:active {\n    border: 1px solid rgba(0, 0, 0, 0.4);\n    background-color: rgba(0, 0, 0, 0.05);\n    box-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);\n}\n/**\n * Dark version for fold widgets\n */\n.ace_dark .ace_fold-widget {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHklEQVQIW2P4//8/AzoGEQ7oGCaLLAhWiSwB146BAQCSTPYocqT0AAAAAElFTkSuQmCC\");\n}\n.ace_dark .ace_fold-widget.ace_end {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAH0lEQVQIW2P4//8/AxQ7wNjIAjDMgC4AxjCVKBirIAAF0kz2rlhxpAAAAABJRU5ErkJggg==\");\n}\n.ace_dark .ace_fold-widget.ace_closed {\n    background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAAFCAYAAACAcVaiAAAAHElEQVQIW2P4//+/AxAzgDADlOOAznHAKgPWAwARji8UIDTfQQAAAABJRU5ErkJggg==\");\n}\n.ace_dark .ace_fold-widget:hover {\n    box-shadow: 0 1px 1px rgba(255, 255, 255, 0.2);\n    background-color: rgba(255, 255, 255, 0.1);\n}\n.ace_dark .ace_fold-widget:active {\n    box-shadow: 0 1px 1px rgba(255, 255, 255, 0.2);\n}\n\n.ace_inline_button {\n    border: 1px solid lightgray;\n    display: inline-block;\n    margin: -1px 8px;\n    padding: 0 5px;\n    pointer-events: auto;\n    cursor: pointer;\n}\n.ace_inline_button:hover {\n    border-color: gray;\n    background: rgba(200,200,200,0.2);\n    display: inline-block;\n    pointer-events: auto;\n}\n\n.ace_fold-widget.ace_invalid {\n    background-color: #FFB4B4;\n    border-color: #DE5555;\n}\n\n.ace_fade-fold-widgets .ace_fold-widget {\n    transition: opacity 0.4s ease 0.05s;\n    opacity: 0;\n}\n\n.ace_fade-fold-widgets:hover .ace_fold-widget {\n    transition: opacity 0.05s ease 0.05s;\n    opacity:1;\n}\n\n.ace_underline {\n    text-decoration: underline;\n}\n\n.ace_bold {\n    font-weight: bold;\n}\n\n.ace_nobold .ace_bold {\n    font-weight: normal;\n}\n\n.ace_italic {\n    font-style: italic;\n}\n\n\n.ace_error-marker {\n    background-color: rgba(255, 0, 0,0.2);\n    position: absolute;\n    z-index: 9;\n}\n\n.ace_highlight-marker {\n    background-color: rgba(255, 255, 0,0.2);\n    position: absolute;\n    z-index: 8;\n}\n\n.ace_mobile-menu {\n    position: absolute;\n    line-height: 1.5;\n    border-radius: 4px;\n    -ms-user-select: none;\n    -moz-user-select: none;\n    -webkit-user-select: none;\n    user-select: none;\n    background: white;\n    box-shadow: 1px 3px 2px grey;\n    border: 1px solid #dcdcdc;\n    color: black;\n}\n.ace_dark > .ace_mobile-menu {\n    background: #333;\n    color: #ccc;\n    box-shadow: 1px 3px 2px grey;\n    border: 1px solid #444;\n\n}\n.ace_mobile-button {\n    padding: 2px;\n    cursor: pointer;\n    overflow: hidden;\n}\n.ace_mobile-button:hover {\n    background-color: #eee;\n    opacity:1;\n}\n.ace_mobile-button:active {\n    background-color: #ddd;\n}\n\n.ace_placeholder {\n    position: relative;\n    font-family: arial;\n    transform: scale(0.9);\n    transform-origin: left;\n    white-space: pre;\n    opacity: 0.7;\n    margin: 0 10px;\n    z-index: 1;\n}\n\n.ace_ghost_text {\n    opacity: 0.5;\n    font-style: italic;\n}\n\n.ace_ghost_text_container > div {\n    white-space: pre;\n}\n\n.ghost_text_line_wrapped::after {\n    content: \"\u21A9\";\n    position: absolute;\n}\n\n.ace_lineWidgetContainer.ace_ghost_text {\n    margin: 0px 4px\n}\n\n.ace_screenreader-only {\n    position:absolute;\n    left:-10000px;\n    top:auto;\n    width:1px;\n    height:1px;\n    overflow:hidden;\n}\n\n.ace_hidden_token {\n    display: none;\n}";
 
 });
 
@@ -18577,34 +18597,43 @@ var dom = require("../lib/dom");
 var oop = require("../lib/oop");
 var EventEmitter = require("../lib/event_emitter").EventEmitter;
 var Decorator = /** @class */ (function () {
-    function Decorator(parent, renderer) {
-        this.parentEl = parent;
-        this.canvas = dom.createElement("canvas");
+    function Decorator(scrollbarV, renderer) {
         this.renderer = renderer;
         this.pixelRatio = 1;
         this.maxHeight = renderer.layerConfig.maxHeight;
         this.lineHeight = renderer.layerConfig.lineHeight;
         this.minDecorationHeight = (2 * this.pixelRatio) | 0;
         this.halfMinDecorationHeight = (this.minDecorationHeight / 2) | 0;
-        this.canvas.style.top = 0 + "px";
-        this.canvas.style.right = 0 + "px";
-        this.canvas.style.zIndex = 7 + "px";
-        this.canvas.style.position = "absolute";
         this.colors = {};
         this.colors.dark = {
             "error": "rgba(255, 18, 18, 1)",
             "warning": "rgba(18, 136, 18, 1)",
-            "info": "rgba(18, 18, 136, 1)"
+            "info": "rgba(18, 18, 136, 1)",
         };
         this.colors.light = {
             "error": "rgb(255,51,51)",
             "warning": "rgb(32,133,72)",
-            "info": "rgb(35,68,138)"
+            "info": "rgb(35,68,138)",
         };
-        this.setDimensions();
-        parent.element.appendChild(this.canvas);
+        this.setScrollBarV(scrollbarV);
     }
+    Decorator.prototype.$createCanvas = function () {
+        this.canvas = dom.createElement("canvas");
+        this.canvas.style.top = 0 + "px";
+        this.canvas.style.right = 0 + "px";
+        this.canvas.style.zIndex = "7";
+        this.canvas.style.position = "absolute";
+    };
+    Decorator.prototype.setScrollBarV = function (scrollbarV) {
+        this.$createCanvas();
+        this.scrollbarV = scrollbarV;
+        scrollbarV.element.appendChild(this.canvas);
+        this.setDimensions();
+    };
     Decorator.prototype.$updateDecorators = function (config) {
+        if (typeof this.canvas.getContext !== "function") {
+            return;
+        }
         var colors = (this.renderer.theme.isDark === true) ? this.colors.dark : this.colors.light;
         this.setDimensions(config);
         var ctx = this.canvas.getContext("2d");
@@ -18624,86 +18653,66 @@ var Decorator = /** @class */ (function () {
                 "error": 3
             };
             annotations.forEach(function (item) {
-                item.priority = priorities[item.type] || null;
+                item["priority"] = priorities[item.type] || null;
             });
             annotations = annotations.sort(compare);
             for (var i = 0; i < annotations.length; i++) {
                 var row = annotations[i].row;
-                var compensateFold = this.compensateFoldRows(row);
-                var currentY = Math.round((row - compensateFold) * this.lineHeight * this.heightRatio);
-                var y1 = Math.round(((row - compensateFold) * this.lineHeight * this.heightRatio));
-                var y2 = Math.round((((row - compensateFold) * this.lineHeight + this.lineHeight) * this.heightRatio));
-                var height = y2 - y1;
-                if (height < this.minDecorationHeight) {
-                    var yCenter = ((y1 + y2) / 2) | 0;
-                    if (yCenter < this.halfMinDecorationHeight) {
-                        yCenter = this.halfMinDecorationHeight;
-                    }
-                    else if (yCenter + this.halfMinDecorationHeight > this.canvasHeight) {
-                        yCenter = this.canvasHeight - this.halfMinDecorationHeight;
-                    }
-                    y1 = Math.round(yCenter - this.halfMinDecorationHeight);
-                    y2 = Math.round(yCenter + this.halfMinDecorationHeight);
+                var offset1 = this.getVerticalOffsetForRow(row);
+                var offset2 = offset1 + this.lineHeight;
+                var y1 = Math.round(this.heightRatio * offset1);
+                var y2 = Math.round(this.heightRatio * offset2);
+                var ycenter = Math.round((y1 + y2) / 2);
+                var halfHeight = (y2 - ycenter);
+                if (halfHeight < this.halfMinDecorationHeight) {
+                    halfHeight = this.halfMinDecorationHeight;
                 }
+                if (ycenter - halfHeight < 0) {
+                    ycenter = halfHeight;
+                }
+                if (ycenter + halfHeight > this.canvasHeight) {
+                    ycenter = this.canvasHeight - halfHeight;
+                }
+                var from = ycenter - halfHeight;
+                var to = ycenter + halfHeight;
+                var zoneHeight = to - from;
                 ctx.fillStyle = colors[annotations[i].type] || null;
-                ctx.fillRect(0, currentY, this.canvasWidth, y2 - y1);
+                ctx.fillRect(0, from, Math.round(this.oneZoneWidth - 1), zoneHeight);
             }
         }
         var cursor = this.renderer.session.selection.getCursor();
         if (cursor) {
-            var compensateFold = this.compensateFoldRows(cursor.row);
-            var currentY = Math.round((cursor.row - compensateFold) * this.lineHeight * this.heightRatio);
+            var currentY = Math.round(this.getVerticalOffsetForRow(cursor.row) * this.heightRatio);
             ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
             ctx.fillRect(0, currentY, this.canvasWidth, 2);
         }
     };
-    Decorator.prototype.compensateFoldRows = function (row) {
-        var foldData = this.renderer.session.$foldData;
-        var compensateFold = 0;
-        if (foldData && foldData.length > 0) {
-            for (var j = 0; j < foldData.length; j++) {
-                if (row > foldData[j].start.row && row < foldData[j].end.row) {
-                    compensateFold += row - foldData[j].start.row;
-                }
-                else if (row >= foldData[j].end.row) {
-                    compensateFold += foldData[j].end.row - foldData[j].start.row;
-                }
-            }
-        }
-        return compensateFold;
-    };
-    Decorator.prototype.compensateLineWidgets = function (row) {
-        var widgetManager = this.renderer.session.widgetManager;
-        if (widgetManager) {
-            var delta_1 = 0;
-            widgetManager.lineWidgets.forEach(function (el, index) {
-                if (row > index) {
-                    delta_1 += el.rowCount || 0;
-                }
-            });
-            return delta_1 - 1;
-        }
-        return 0;
+    Decorator.prototype.getVerticalOffsetForRow = function (row) {
+        row = row | 0;
+        var offset = this.renderer.session.documentToScreenRow(row, 0) * this.lineHeight;
+        return offset;
     };
     Decorator.prototype.setDimensions = function (config) {
-        if (config) {
-            this.maxHeight = config.maxHeight;
-            this.lineHeight = config.lineHeight;
-            this.canvasHeight = config.height;
-            if (this.maxHeight < this.canvasHeight) {
-                this.heightRatio = 1;
-            }
-            else {
-                this.heightRatio = this.canvasHeight / this.maxHeight;
-            }
+        config = config || this.renderer.layerConfig;
+        this.maxHeight = config.maxHeight;
+        this.lineHeight = config.lineHeight;
+        this.canvasHeight = config.height;
+        this.canvasWidth = this.scrollbarV.width || this.canvasWidth;
+        this.setZoneWidth();
+        this.canvas.width = this.canvasWidth;
+        this.canvas.height = this.canvasHeight;
+        if (this.maxHeight < this.canvasHeight) {
+            this.heightRatio = 1;
         }
         else {
-            this.canvasHeight = this.parentEl.parent.scrollHeight || this.canvasHeight;
-            this.canvasWidth = this.parentEl.width || this.canvasWidth;
             this.heightRatio = this.canvasHeight / this.maxHeight;
-            this.canvas.width = this.canvasWidth;
-            this.canvas.height = this.canvasHeight;
         }
+    };
+    Decorator.prototype.setZoneWidth = function () {
+        this.oneZoneWidth = this.canvasWidth;
+    };
+    Decorator.prototype.destroy = function () {
+        this.canvas.parentNode.removeChild(this.canvas);
     };
     return Decorator;
 }());
@@ -19429,6 +19438,10 @@ var VirtualRenderer = /** @class */ (function () {
         minHeight = size.scrollerHeight + session.getRowLength(lastRow) * lineHeight +
             firstRowHeight;
         offset = this.scrollTop - firstRowScreen * lineHeight;
+        if (offset < 0 && firstRowScreen > 0) {
+            firstRowScreen = Math.max(0, firstRowScreen + Math.floor(offset / lineHeight));
+            offset = this.scrollTop - firstRowScreen * lineHeight;
+        }
         var changes = 0;
         if (this.layerConfig.width != longestLine || hScrollChanged)
             changes = this.CHANGE_H_SCROLL;
@@ -19989,9 +20002,6 @@ var VirtualRenderer = /** @class */ (function () {
         this.$horizScroll = this.$vScroll = null;
         this.scrollBarV.element.remove();
         this.scrollBarH.element.remove();
-        if (this.$scrollDecorator) {
-            delete this.$scrollDecorator;
-        }
         if (val === true) {
             this.scrollBarV = new VScrollBarCustom(this.container, this);
             this.scrollBarH = new HScrollBarCustom(this.container, this);
@@ -20005,8 +20015,14 @@ var VirtualRenderer = /** @class */ (function () {
                 if (!_self.$scrollAnimation)
                     _self.session.setScrollLeft(e.data - _self.scrollMargin.left);
             });
-            this.$scrollDecorator = new Decorator(this.scrollBarV, this);
-            this.$scrollDecorator.$updateDecorators();
+            if (!this.$scrollDecorator) {
+                this.$scrollDecorator = new Decorator(this.scrollBarV, this);
+                this.$scrollDecorator.$updateDecorators();
+            }
+            else {
+                this.$scrollDecorator.setScrollBarV(this.scrollBarV);
+                this.$scrollDecorator.$updateDecorators();
+            }
         }
         else {
             this.scrollBarV = new VScrollBar(this.container, this);
@@ -21681,7 +21697,16 @@ var FoldMode = exports.FoldMode = function () { };
 
 });
 
-define("ace/ext/error_marker",["require","exports","module","ace/lib/dom","ace/range","ace/config"], function(require, exports, module){"use strict";
+define("ace/ext/error_marker",["require","exports","module","ace/lib/dom","ace/range","ace/config"], function(require, exports, module){/**
+ * ## Error Marker extension
+ *
+ * Provides inline error display functionality for Ace editor. Creates visual error markers that appear as tooltips
+ * below editor lines containing annotations (errors, warnings, info). Enables navigation between error locations with
+ * keyboard shortcuts and displays context-sensitive messages with proper styling based on annotation severity.
+ *
+ * @module
+ */
+"use strict";
 var dom = require("../lib/dom");
 var Range = require("../range").Range;
 var nls = require("../config").nls;
