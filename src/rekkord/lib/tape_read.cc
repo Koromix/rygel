@@ -1272,8 +1272,9 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
 
     int type;
     HeapArray<uint8_t> blob;
+    int64_t size;
 
-    if (!repo->ReadBlob(oid, &type, &blob))
+    if (!repo->ReadBlob(oid, &type, &blob, &size))
         return false;
 
     switch (type) {
@@ -1323,7 +1324,8 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
             obj->mtime = LittleEndian(header1->time);
             obj->size = LittleEndian(header1->size);
             obj->flags |= (int)rk_ObjectFlag::Readable;
-            obj->stored = LittleEndian(header1->stored);
+            obj->stored = LittleEndian(header1->stored) + size;
+            obj->added = LittleEndian(header1->added) + size;
 
             Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader3), blob.len - RG_SIZE(SnapshotHeader3));
 

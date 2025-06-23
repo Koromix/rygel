@@ -194,7 +194,7 @@ public:
     bool DeleteUser(const char *username);
     bool ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserInfo> *out_users);
 
-    bool ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t> *out_blob);
+    bool ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t> *out_blob, int64_t *out_size = nullptr);
     rk_WriteResult WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob, int64_t *out_size = nullptr);
     bool RetainBlob(const rk_ObjectID &oid);
     StatResult TestBlob(const rk_ObjectID &oid, int64_t *out_size = nullptr);

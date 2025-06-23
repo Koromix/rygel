@@ -886,6 +886,11 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
             info.added += written;
         }
 
+        // Make it accurate before storing it in the snapshot tag. For the snapshot object itself,
+        // the values will be fixed when the object/blob gets read.
+        header1->stored = LittleEndian(info.stored);
+        header1->added = LittleEndian(info.added);
+
         // Create tag file
         {
             Size payload_len = offsetof(SnapshotHeader3, channel) + strlen(header1->channel) + 1;

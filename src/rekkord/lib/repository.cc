@@ -576,7 +576,7 @@ static int64_t PadMe(int64_t len)
     return (int64_t)padding;
 }
 
-bool rk_Repository::ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t> *out_blob)
+bool rk_Repository::ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t> *out_blob, int64_t *out_size)
 {
     RG_ASSERT(HasMode(rk_AccessMode::Read));
 
@@ -668,6 +668,10 @@ bool rk_Repository::ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<ui
     }
 
     *out_type = type;
+    if (out_size) {
+        *out_size = raw.len;
+    }
+
     err_guard.Disable();
     return true;
 }

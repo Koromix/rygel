@@ -111,6 +111,7 @@ struct rk_ObjectInfo {
 
     int64_t entries; // for snapshots and directories
     int64_t stored; // for snapshots
+    int64_t added; // for snapshots
 
     Size children; // for snapshots and directories
 };
