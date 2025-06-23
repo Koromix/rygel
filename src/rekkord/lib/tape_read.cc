@@ -1325,7 +1325,7 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
             obj->size = LittleEndian(header1->size);
             obj->flags |= (int)rk_ObjectFlag::Readable;
             obj->stored = LittleEndian(header1->stored) + size;
-            obj->added = LittleEndian(header1->added) + size;
+            obj->added = LittleEndian(header1->added) + (type >= (int)BlobType::Snapshot ? size : 0);
 
             Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader3), blob.len - RG_SIZE(SnapshotHeader3));
 
