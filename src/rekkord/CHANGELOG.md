@@ -6,6 +6,19 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.73
+
+*Released on 2025-06-23*
+
+- Use new tamper-resistant snapshot tags
+- Compute and record additional storage size in snapshots
+- Improve accuracy of per-snapshot storage values
+- Report snapshot-specific values in `rekkord list`
+- Adjust log text from `rekkord init`
+
+> [!WARNING]
+> The snapshot tag format has changed, but you can use `rekkord migrate_tags` to migrate snapshot tags made with previous versions.
+
 ### Rekkord 0.72
 
 *Released on 2025-06-21*
