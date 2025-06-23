@@ -45,9 +45,11 @@ void MigrateLegacySnapshot2(HeapArray<uint8_t> *blob)
 
     blob->Grow(to - from);
 
-    SnapshotHeader3 *header = (SnapshotHeader3 *)blob->ptr;
-
     MemMove(blob->ptr + to, blob->ptr + from, blob->len - from);
+    blob->len += to - from;
+
+    // This field did not exist before
+    SnapshotHeader3 *header = (SnapshotHeader3 *)blob->ptr;
     header->added = 0;
 }
 
