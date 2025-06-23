@@ -129,6 +129,9 @@ bool rk_Repository::Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users
         if (!async.Sync())
             return false;
 
+        make_directory("tags/M");
+        make_directory("tags/P");
+
         for (char catalog: rk_BlobCatalogNames) {
             const char *dirname = Fmt(&temp_alloc, "blobs/%1", catalog).ptr;
             make_directory(dirname);
@@ -840,66 +843,92 @@ StatResult rk_Repository::TestBlob(const rk_ObjectID &oid, int64_t *out_size)
 
 bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload)
 {
-    // Accounting for the ID and order value, and base64 encoding, each filename must fit into 255 characters
+    // Accounting for the prefix, order value, encryption and base64 overhead, that's what remains per fragment
     const Size MaxFragmentSize = 160;
 
     RG_ASSERT(HasMode(rk_AccessMode::Write));
 
     BlockAllocator temp_alloc;
 
-    uint8_t prefix[16] = {};
-    TagIntro intro = {};
+    Size fragments = (payload.len + MaxFragmentSize - 1) / MaxFragmentSize;
 
-    // Prepare tag data
-    randombytes_buf(prefix, RG_SIZE(prefix));
-    intro.version = TagVersion;
-    intro.oid = oid;
+    // Sanity check
+    if (fragments >= 5) {
+        LogError("Excessive tag data size");
+        return false;
+    }
 
-    // Encrypt tag
-    HeapArray<uint8_t> cypher(&temp_alloc);
+    char prefix[RG_SIZE(TagIntro::prefix) + 1];
+    uint8_t key[RG_SIZE(TagIntro::key)];
+    Fmt(prefix, "%1", FmtRandom(RG_SIZE(prefix) - 1));
+    randombytes_buf(key, RG_SIZE(key));
+
+    HeapArray<const char *> paths;
+
+    // Create main tag path
     {
-        HeapArray<uint8_t> src(&temp_alloc);
+        TagIntro intro = {};
 
-        src.Append(MakeSpan((const uint8_t *)&intro, RG_SIZE(intro)));
-        src.Append(payload);
+        intro.version = TagVersion;
+        intro.oid = oid;
+        MemCpy(intro.prefix, prefix, RG_SIZE(intro.prefix));
+        MemCpy(intro.key, key, RG_SIZE(key));
+        intro.count = (int8_t)fragments;
 
-        Size cypher_len = src.len + crypto_box_SEALBYTES;
-        cypher.Reserve(cypher_len);
+        uint8_t cypher[RG_SIZE(intro) + crypto_box_SEALBYTES + crypto_sign_BYTES];
 
-        if (crypto_box_seal(cypher.ptr, src.ptr, (size_t)src.len, keyset->tkey) != 0) {
+        if (crypto_box_seal(cypher, (const uint8_t *)&intro, RG_SIZE(intro), keyset->tkey) != 0) {
             LogError("Failed to seal tag payload");
             return false;
         }
 
-        cypher.len = src.len + crypto_box_SEALBYTES;
+        // Sign it to avoid tampering by users without write access
+        crypto_sign_ed25519_detached(std::end(cypher) - crypto_sign_BYTES, nullptr, cypher,
+                                     RG_SIZE(cypher) - crypto_sign_BYTES, keyset->skey);
+
+        HeapArray<char> buf(&temp_alloc);
+        buf.Reserve(512);
+
+        Fmt(&buf, "tags/M/");
+        sodium_bin2base64(buf.end(), buf.Available(), cypher, RG_SIZE(cypher), sodium_base64_VARIANT_URLSAFE_NO_PADDING);
+        buf.len += sodium_base64_encoded_len(RG_SIZE(cypher), sodium_base64_VARIANT_URLSAFE_NO_PADDING) - 1;
+
+        Span<const char> path = buf.Leak();
+        paths.Append(path.ptr);
     }
 
-    // Sign it to avoid tampering
-    {
-        cypher.Reserve(crypto_sign_BYTES);
-        crypto_sign_ed25519_detached(cypher.end(), nullptr, cypher.ptr, cypher.len, keyset->skey);
-        cypher.len += crypto_sign_BYTES;
+    // Encrypt payload
+    for (uint8_t i = 0; payload.len; i++) {
+        Size frag_len = std::min(payload.len, MaxFragmentSize);
+
+        uint8_t cypher[MaxFragmentSize + crypto_secretbox_MACBYTES];
+        uint8_t nonce[24] = {};
+
+        nonce[23] = i;
+
+        if (crypto_secretbox_easy(cypher, payload.ptr, frag_len, nonce, key) != 0) {
+            LogError("Failed to encrypt tag payload");
+            return false;
+        }
+
+        HeapArray<char> buf(&temp_alloc);
+        buf.Reserve(512);
+
+        Fmt(&buf, "tags/P/%1_%2_", prefix, FmtArg(i).Pad0(-2));
+        sodium_bin2base64(buf.end(), buf.Available(), cypher, frag_len + crypto_secretbox_MACBYTES, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
+        buf.len += sodium_base64_encoded_len(frag_len + crypto_secretbox_MACBYTES, sodium_base64_VARIANT_URLSAFE_NO_PADDING) - 1;
+
+        Span<const char> path = buf.Leak();
+        paths.Append(path.ptr);
+
+        payload.ptr += frag_len;
+        payload.len -= frag_len;
     }
 
-    // How many files do we need to generate?
-    int fragments = (cypher.len + MaxFragmentSize - 1) / MaxFragmentSize;
-
-    if (fragments >= 100) {
-        LogError("Excessive tag payload size");
-        return false;
-    }
-
-    for (int i = 0; i < fragments; i++) {
-        Size offset = i * MaxFragmentSize;
-        Size len = std::min(offset + MaxFragmentSize, cypher.len) - offset;
-
-        LocalArray<char, 512> path;
-        path.len = Fmt(path.data, "tags/%1_%2_", FmtSpan(prefix, FmtType::BigHex, "").Pad0(-2), FmtArg(i).Pad0(-2)).len;
-
-        sodium_bin2base64(path.end(), path.Available(), cypher.ptr + offset, len, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
-
+    // Create tag files
+    for (const char *path: paths) {
         rk_WriteSettings settings = { .retain = retain };
-        rk_WriteResult ret = disk->WriteFile(path.data, {}, settings);
+        rk_WriteResult ret = disk->WriteFile(path, {}, settings);
 
         if (ret != rk_WriteResult::Success)
             return false;
@@ -912,14 +941,22 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
 {
     RG_ASSERT(HasMode(rk_AccessMode::Log));
 
-    Size start_len = out_tags->len;
-    RG_DEFER_N(out_guard) { out_tags->RemoveFrom(start_len); };
+    BlockAllocator temp_alloc;
 
-    HeapArray<Span<const char>> filenames;
+    Size start_len = out_tags->len;
+    RG_DEFER_N(err_guard) { out_tags->RemoveFrom(start_len); };
+
+    HeapArray<Span<const char>> mains;
+    HeapArray<Span<const char>> fragments;
     {
         bool success = disk->ListFiles("tags", [&](const char *path, int64_t) {
-            Span<const char> filename = DuplicateString(path, alloc);
-            filenames.Append(filename);
+            if (StartsWith(path, "tags/M/")) {
+                Span<const char> filename = DuplicateString(path + 7, alloc);
+                mains.Append(filename);
+            } else if (StartsWith(path, "tags/P/")) {
+                Span<const char> filename = DuplicateString(path + 7, &temp_alloc);
+                fragments.Append(filename);
+            }
 
             return true;
         });
@@ -927,116 +964,130 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
             return false;
     }
 
-    std::sort(filenames.begin(), filenames.end(),
+    std::sort(fragments.begin(), fragments.end(),
               [](Span<const char> filename1, Span<const char> filename2) {
         return CmpStr(filename1, filename2) < 0;
     });
 
-    Size offset = 0;
-
-    while (offset < filenames.len) {
+    for (Span<const char> main: mains) {
         rk_TagInfo tag = {};
 
-        Size end = offset + 1;
-        RG_DEFER { offset = end; };
-
-        // Extract common ID
-        Span<const char> prefix = {};
+        LocalArray<uint8_t, 255> cypher;
         {
-            Span<const char> filename = filenames[offset];
-            Span<const char> basename = SplitStrReverse(filenames[offset], '/');
+            size_t len = 0;
+            sodium_base642bin(cypher.data, RG_SIZE(cypher.data), main.ptr, main.len, nullptr,
+                              &len, nullptr, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
 
-            if (basename.len <= 36 || basename[32] != '_' || basename[35] != '_') {
-                LogError("Malformed tag file '%1'", filename);
+            if (len != RG_SIZE(TagIntro) + crypto_box_SEALBYTES + crypto_sign_BYTES) {
+                LogError("Invalid tag cypher length");
                 continue;
             }
 
-            prefix = basename.Take(0, 32);
-        }
-
-        // How many fragments?
-        while (end < filenames.len) {
-            Span<const char> basename = SplitStrReverse(filenames[end], '/');
-
-            // Error will be issued in next loop iteration
-            if (basename.len <= 36 || basename[32] != '_' || basename[35] != '_')
-                break;
-            if (!StartsWith(basename, prefix))
-                break;
-
-            end++;
-        }
-
-        // Reassemble fragments
-        HeapArray<uint8_t> cypher;
-        for (Size i = offset; i < end; i++) {
-            Span<const char> basename = SplitStrReverse(filenames[i], '/');
-            Span<const char> base64 = basename.Take(36, basename.len - 36);
-
-            cypher.Grow(base64.len);
-
-            size_t len = 0;
-            sodium_base642bin(cypher.end(), base64.len, base64.ptr, base64.len, nullptr,
-                              &len, nullptr, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
-            cypher.len += (Size)len;
-        }
-
-        if (cypher.len < (Size)crypto_box_SEALBYTES + RG_SIZE(TagIntro) + (Size)crypto_sign_BYTES) {
-            LogError("Truncated cypher in tag");
-            continue;
+            cypher.len = (Size)len;
         }
 
         // Check signature first to detect tampering
         {
-            Span<const uint8_t> msg = MakeSpan(cypher.ptr, cypher.len - crypto_sign_BYTES);
+            Span<const uint8_t> msg = cypher.Take(0, cypher.len - crypto_sign_BYTES);
             const uint8_t *sig = msg.end();
 
             if (crypto_sign_ed25519_verify_detached(sig, msg.ptr, msg.len, keyset->vkey)) {
-                LogError("Invalid signature for tag '%1'", prefix);
+                LogError("Invalid signature for tag '%1'", main);
                 continue;
             }
         }
 
-        Size src_len = cypher.len - crypto_box_SEALBYTES - crypto_sign_BYTES;
-        Span<uint8_t> src = AllocateSpan<uint8_t>(alloc, src_len);
-
-        // Get payload back at least
-        if (crypto_box_seal_open(src.ptr, cypher.ptr, cypher.len - crypto_sign_BYTES, keyset->tkey, keyset->lkey) != 0) {
-            LogError("Failed to unseal tag data from '%1'", prefix);
+        TagIntro intro;
+        if (crypto_box_seal_open((uint8_t *)&intro, cypher.data, cypher.len - crypto_sign_BYTES, keyset->tkey, keyset->lkey) != 0) {
+            LogError("Failed to unseal tag data from '%1'", main);
+            continue;
+        }
+        if (intro.version != TagVersion) {
+            LogError("Unexpected tag version %1 (expected %2) in '%3'", intro.version, TagVersion, main);
             continue;
         }
 
-        TagIntro intro = {};
-        MemCpy(&intro, src.ptr, RG_SIZE(intro));
-
-        if (intro.version == TagVersion) {
-            src = src.Take(RG_SIZE(intro), src.len - RG_SIZE(intro));
-        } else if (intro.version == 2) {
-            MemMove((uint8_t *)&intro.oid + 1, (const uint8_t *)&intro.oid, RG_SIZE(rk_Hash));
-            intro.oid.catalog = rk_BlobCatalog::Meta;
-
-            Span<uint8_t> copy = AllocateSpan<uint8_t>(alloc, src.len - RG_SIZE(TagIntro) + 1);
-            MemCpy(copy.ptr, src.ptr + RG_SIZE(TagIntro) - 1, copy.len);
-
-            src = copy;
-        } else {
-            LogError("Unexpected tag version %1 (expected %2) in '%3'", intro.version, TagVersion, prefix);
-            continue;
-        }
-
-        if (!intro.oid.IsValid()) {
-            LogError("Invalid tag OID in '%1'", prefix);
-            continue;
-        }
-
-        tag.prefix = DuplicateString(prefix, alloc).ptr;
+        tag.name = main.ptr;
+        tag.prefix = DuplicateString(MakeSpan(intro.prefix, RG_SIZE(intro.prefix)), alloc).ptr;
         tag.oid = intro.oid;
-        tag.payload = src;
+
+        // Stash key and count in payload to make it available for next step
+        tag.payload = AllocateSpan<uint8_t>(&temp_alloc, RG_SIZE(intro.key));
+        MemCpy((uint8_t *)tag.payload.ptr, intro.key, RG_SIZE(intro.key));
+        tag.payload.len = intro.count;
 
         out_tags->Append(tag);
     }
 
-    out_guard.Disable();
+    Size j = start_len;
+    for (Size i = start_len; i < out_tags->len; i++) {
+        rk_TagInfo &tag = (*out_tags)[i];
+
+        (*out_tags)[j] = tag;
+
+        // Find relevant fragment names
+        Span<const char> *first = std::lower_bound(fragments.begin(), fragments.end(), tag.prefix,
+                                                  [](Span<const char> name, const char *prefix) {
+            return CmpStr(name, prefix) < 0;
+        });
+        Size idx = first - fragments.ptr;
+
+        HeapArray<uint8_t> payload(alloc);
+        {
+            int count = 0;
+
+            for (Size k = idx; k < fragments.len; k++) {
+                Span<const char> frag = fragments[k];
+
+                if (frag.len <= 14 || frag[10] != '_' || frag[13] != '_')
+                    continue;
+                if (!StartsWith(frag, tag.prefix))
+                    break;
+
+                uint8_t nonce[24] = {};
+                if (!ParseInt(frag.Take(11, 2), &nonce[23], (int)ParseFlag::End))
+                    continue;
+                if (nonce[23] != count)
+                    continue;
+
+                LocalArray<uint8_t, 255> cypher;
+                {
+                    size_t len = 0;
+                    sodium_base642bin(cypher.data, RG_SIZE(cypher.data), frag.ptr + 14, frag.len - 14, nullptr,
+                                      &len, nullptr, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
+
+                    if (len < crypto_secretbox_MACBYTES)
+                        continue;
+
+                    cypher.len = (Size)len;
+                }
+
+                payload.Grow(255);
+
+                const uint8_t *key = tag.payload.ptr;
+                if (crypto_secretbox_open_easy(payload.end(), cypher.data, cypher.len, nonce, key) != 0)
+                    continue;
+                payload.len += cypher.len - crypto_secretbox_MACBYTES;
+
+                count++;
+            }
+
+            if (!count) {
+                LogError("Cannot find fragment for tag '%1'", tag.name);
+                continue;
+            } else if (count != tag.payload.len) {
+                LogError("Mismatch between tag and fragments of '%1'", tag.name);
+                continue;
+            }
+
+            tag.payload = payload.TrimAndLeak();
+        }
+
+        j++;
+    }
+    out_tags->len = j;
+
+    err_guard.Disable();
     return true;
 }
 

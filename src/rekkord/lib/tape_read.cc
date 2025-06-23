@@ -1052,7 +1052,7 @@ bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc,
             if (out_snapshots) {
                 rk_SnapshotInfo snapshot = {};
 
-                snapshot.tag = DuplicateString(tag.prefix, alloc).ptr;
+                snapshot.tag = DuplicateString(tag.name, alloc).ptr;
                 snapshot.oid = tag.oid;
                 snapshot.channel = DuplicateString(name, alloc).ptr;
                 snapshot.time = LittleEndian(header.time);

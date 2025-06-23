@@ -123,6 +123,7 @@ struct rk_UserInfo {
 };
 
 struct rk_TagInfo {
+    const char *name;
     const char *prefix;
     rk_ObjectID oid;
     Span<const uint8_t> payload;

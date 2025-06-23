@@ -23,7 +23,7 @@ namespace RG {
 static const char *const DerivationContext = "REKKORD0";
 static const int MaxKeys = 24;
 static const int ConfigVersion = 2;
-static const int TagVersion = 3;
+static const int TagVersion = 1;
 static const int BlobVersion = 7;
 static const Size BlobSplit = Kibibytes(32);
 
@@ -55,6 +55,9 @@ struct ConfigData {
 struct TagIntro {
     int8_t version;
     rk_ObjectID oid;
+    char prefix[10];
+    uint8_t key[32];
+    int8_t count;
 };
 #pragma pack(pop)
 
