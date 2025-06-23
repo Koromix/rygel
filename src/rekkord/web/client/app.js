@@ -841,20 +841,17 @@ async function runChannel(repo, channel) {
     let canvas = document.createElement('canvas');
 
     if (snapshots.length >= 2) {
-        let size = {
-            label: 'Size',
-            data: [],
-            fill: false
-        };
-        let stored = {
-            label: 'Stored',
-            data: [],
-            fill: false
+        let sets = {
+            size: { label: 'Size', data: [], fill: false },
+            stored: { label: 'Stored', data: [], fill: false },
+            added: { label: 'Added', data: [], fill: false }
         };
 
         for (let snapshot of snapshots) {
-            size.data.push({ x: snapshot.time, y: snapshot.size });
-            stored.data.push({ x: snapshot.time, y: snapshot.stored });
+            sets.size.data.push({ x: snapshot.time, y: snapshot.size });
+            sets.stored.data.push({ x: snapshot.time, y: snapshot.stored });
+            if (snapshot.added != null)
+                sets.added.data.push({ x: snapshot.time, y: snapshot.added });
         }
 
         let ctx = canvas.getContext('2d');
@@ -862,7 +859,7 @@ async function runChannel(repo, channel) {
         new Chart(ctx, {
             type: 'line',
             data: {
-                datasets: [size, stored]
+                datasets: Object.values(sets)
             },
             options: {
                 responsive: true,
@@ -935,7 +932,10 @@ async function runChannel(repo, channel) {
                                     <td><span class="sub">${snapshot.oid}</span></td>
                                     <td style="text-align: right;">${formatSize(snapshot.size)}</td>
                                     <td style="text-align: right;">${formatSize(snapshot.stored)}</td>
-                                    <td style="text-align: right;">${formatSize(snapshot.added)}</td>
+                                    <td style="text-align: right;">
+                                        ${snapshot.added != null ? formatSize(snapshot.added) : ''}
+                                        ${snapshot.added == null ? html`<span class="sub">(unknown)</span>` : ''}
+                                    </td>
                                 </tr>
                             `)}
                             ${!snapshots.length ? html`<tr><td colspan="5" style="text-align: center;">No snapshot</td></tr>` : ''}

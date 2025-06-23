@@ -849,7 +849,11 @@ void HandleRepositorySnapshots(http_IO *io)
         json.Key("time"); json.Int64(time);
         json.Key("size"); json.Int64(size);
         json.Key("stored"); json.Int64(stored);
-        json.Key("added"); json.Int64(added);
+        if (added) {
+            json.Key("added"); json.Int64(added);
+        } else {
+            json.Key("added"); json.Null();
+        }
         json.EndObject();
     }
     if (!stmt.IsValid())
