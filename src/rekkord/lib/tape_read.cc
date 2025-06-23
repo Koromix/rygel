@@ -959,12 +959,12 @@ bool rk_Restore(rk_Repository *repo, const rk_ObjectID &oid, const rk_RestoreSet
             }
 
             // There must be at least one entry
-            if (blob.len <= RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader)) {
+            if (blob.len <= RG_SIZE(SnapshotHeader3) + RG_SIZE(DirectoryHeader)) {
                 LogError("Malformed snapshot blob '%1'", oid);
                 return false;
             }
 
-            DirectoryHeader *header = (DirectoryHeader *)(blob.ptr + RG_SIZE(SnapshotHeader2));
+            DirectoryHeader *header = (DirectoryHeader *)(blob.ptr + RG_SIZE(SnapshotHeader3));
             int64_t entries = LittleEndian(header->entries);
             int64_t size = LittleEndian(header->size);
 
@@ -975,7 +975,7 @@ bool rk_Restore(rk_Repository *repo, const rk_ObjectID &oid, const rk_RestoreSet
             ProgressHandle progress("Restore");
             GetContext get(repo, settings, entries, size);
 
-            Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
+            Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader3), blob.len - RG_SIZE(SnapshotHeader3));
 
             if (!get.ExtractEntries(dir, true, dest_path))
                 return false;
@@ -1387,12 +1387,12 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
         case (int)BlobType::Snapshot4: { MigrateLegacyEntries3(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot5: { MigrateLegacySnapshot2(&blob); } [[fallthrough]];
         case (int)BlobType::Snapshot: {
-            if (blob.len < RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader)) {
+            if (blob.len < RG_SIZE(SnapshotHeader3) + RG_SIZE(DirectoryHeader)) {
                 LogError("Malformed snapshot blob '%1'", oid);
                 return false;
             }
 
-            SnapshotHeader2 *header1 = (SnapshotHeader2 *)blob.ptr;
+            SnapshotHeader3 *header1 = (SnapshotHeader3 *)blob.ptr;
             DirectoryHeader *header2 = (DirectoryHeader *)(header1 + 1);
             int64_t entries = LittleEndian(header2->entries);
 
@@ -1411,7 +1411,7 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
             obj->flags |= (int)rk_ObjectFlag::Readable;
             obj->stored = LittleEndian(header1->stored);
 
-            Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
+            Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader3), blob.len - RG_SIZE(SnapshotHeader3));
 
             if (!tree.RecurseEntries(dir, true, 1, alloc, out_objects))
                 return false;
@@ -1568,7 +1568,7 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
         case (int)BlobType::Snapshot4: { MigrateLegacyEntries3(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot5: { MigrateLegacySnapshot2(&blob); } [[fallthrough]];
         case (int)BlobType::Snapshot: {
-            Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
+            Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader3), blob.len - RG_SIZE(SnapshotHeader3));
 
             if (!RecurseEntries(dir, true))
                 return false;
