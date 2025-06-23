@@ -457,14 +457,17 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbo
 
     if (verbose >= 1) {
         PrintLn("%1    + OID: %!..+%2%!0", FmtArg(" ").Repeat(indent), obj.oid);
-    }
-    if (obj.type != rk_ObjectType::Snapshot) {
-        if (verbose >= 1) {
+
+        if (obj.type == rk_ObjectType::Snapshot) {
+            PrintLn("%1    + Stored: %!..+%2%!0", FmtArg(" ").Repeat(indent), FmtDiskSize(obj.stored));
+            PrintLn("%1    + Added: %!..+%2%!0", FmtArg(" ").Repeat(indent), FmtDiskSize(obj.added));
+        } else {
             PrintLn("%1    + UID/GID: %!..+%2:%3%!0", FmtArg(" ").Repeat(indent), obj.uid, obj.gid);
-        }
-        if (verbose > 1) {
-            TimeSpec bspec = DecomposeTimeUTC(obj.btime);
-            PrintLn("%1    + Birth time: %!..+%2%!0", FmtArg(" ").Repeat(indent), FmtTimeNice(bspec));
+
+            if (verbose > 1) {
+               TimeSpec bspec = DecomposeTimeUTC(obj.btime);
+                PrintLn("%1    + Birth time: %!..+%2%!0", FmtArg(" ").Repeat(indent), FmtTimeNice(bspec));
+            }
         }
     }
 }
@@ -493,6 +496,8 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
 
     if (obj.type == rk_ObjectType::Snapshot) {
         json->Key("time"); json->String(format_time(obj.mtime));
+        json->Key("stored"); json->Int64(obj.stored);
+        json->Key("added"); json->Int64(obj.added);
     } else {
         json->Key("mtime"); json->String(format_time(obj.mtime));
         json->Key("ctime"); json->String(format_time(obj.ctime));
@@ -540,6 +545,8 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
 
     if (obj.type == rk_ObjectType::Snapshot) {
         element.append_attribute("Time") = format_time(obj.mtime);
+        element.append_attribute("Stored") = obj.stored;
+        element.append_attribute("Added") = obj.added;
     } else {
         element.append_attribute("Mtime") = format_time(obj.mtime);
         element.append_attribute("Ctime") = format_time(obj.ctime);
