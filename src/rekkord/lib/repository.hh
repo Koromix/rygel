@@ -178,6 +178,9 @@ public:
     const char *GetRole() const { return role; }
     Async *GetAsync() { return &tasks; }
 
+    // You should not need this, but if you do, be careful!
+    const rk_KeySet *GetKeySet() const { return keyset; }
+
     unsigned int GetModes() const { return modes; }
     bool HasMode(rk_AccessMode mode) const { return modes & (int)mode; }
 
