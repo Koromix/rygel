@@ -24,9 +24,9 @@ Lors de l'inscription d'un participant, le client Javascript gènère plusieurs 
 - **RID** (research ID) : identifiant aléatoire de type UUIDv4
 - **VKEY** (vault key) : clé aléatoire de chiffrement de 32 octets utilisé pour une base SQLite en chiffrement AES 256 (mode CBC)
 
-Le client génère également une clé aléatoire **TKEY**, avec laquelle il chiffre les 3 informations sus-citées (VID, RID, VKEY) pour former un **token** chiffré (XSalsa20-Poly1305).
+Le client génère également une clé aléatoire **TKEY**, avec laquelle il chiffre les 3 informations sus-citées (VID, RID, VKEY) pour former un **token chiffré** (XSalsa20-Poly1305).
 
-Ces informations sont transmises au serveur via une requête POST contenant *l'adresse e-mail du participant, le VID, le RID, le token et la TKEY*.
+Ces informations sont transmises au serveur via une requête POST contenant *l'adresse e-mail du participant, le VID, le RID, le token chiffré et la TKEY*.
 
 <div class="columns">
     <img src="{{ ASSET ../assets/architecture/signup.svg }}" width="800" height="550" alt=""/>
@@ -41,7 +41,7 @@ Le serveur vérifie qu'aucun compte n'existe pour l'adresse mail fournie, puis i
 Il envoie par la suite un courriel de connexion à l'utilisateur contenant un lien magique (*magic link*) qui contient deux informations :
 
 - **UID** : identifiant utilisateur aléatoire de type UUIDv4
-- **TKEY** : clé permettant de déchiffrer le token utilisateur qui a été envoyée par le client
+- **TKEY** : clé permettant de déchiffrer le token chiffré qui a été envoyée par le client
 
 Une fois le courriel de connexion envoyé, le serveur **n'enregistre pas la TKEY** qui n'existe donc que dans le mail de connexion initial. Cette architecture permet de découpler le compte utilisateur (*UID*), le coffre-fort chiffré (*VID*) et les données de recherche (*RID*) puisque seul le token chiffré permet de lier un UID au VID et au RID. Ce token ne peut être lu qu'avec la *TKEY* qui est présente dans le mail de connexion, et n'est pas connue par le serveur
 
