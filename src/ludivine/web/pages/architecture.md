@@ -1,9 +1,20 @@
 # Architecture de données
 
-L'architecture de données du logiciel [Ludivine](https://codeberg.org/Koromix/ludivine), qui sous-tend la plateforme Lignes de Vie, a été conçu selon deux principes fondateurs :
+L'architecture de données du logiciel [Ludivine](https://codeberg.org/Koromix/ludivine), qui sous-tend la plateforme Lignes de Vie, a été conçue selon deux principes fondateurs :
 
 - Utiliser un chiffrement de bout-en-bout (*end-to-end*) pour toutes les données qui n'ont pas vocation à être utilisées pour la recherche.
 - Maintenir une séparation nette entre les données identifiantes (mail), les données privées (avatar, journal de bord, etc.) et les données de recherche.
+
+Les données sont donc stockées dans des tables distinctes, et aucune clé disponible sur le serveur ne permet de les relier. Seul le client, connecté à son compte, est capable de faire le lien entre les différentes tables et les identifiants correspondant.
+
+| Type                           | Table        | Identifiant    | Données                             | Chiffrement  |
+|--------------------------------|--------------|----------------|-------------------------------------|------------- |
+| Utilisateurs                   | users        | UID *(UUIDv4)* | Mail, token chiffré                 | Clair        |
+| Coffre-forts chiffrés (vaults) | vaults       | VID *(UUIDv4)* | Profil, réponses complètes, journal | End-to-end   |
+| Recherche                      | participants | RID *(UUIDv4)* | Réponses anonymisées                | Clair        |
+| Évènements                     | events       | UID *(UUIDv4)* | Rappels pour suivi longitudinal     | Clair        |
+
+Les différents identifiants et le token chiffré (qui permet de les relier) sont créés lors de l'inscription, selon un processus décrit ci-dessous.
 
 ## Inscription
 
