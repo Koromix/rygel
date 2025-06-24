@@ -5,7 +5,7 @@ L'architecture de données du logiciel [Ludivine](https://codeberg.org/Koromix/l
 - Utiliser un chiffrement de bout-en-bout (*end-to-end*) pour toutes les données qui n'ont pas vocation à être utilisées pour la recherche.
 - Maintenir une séparation nette entre les données identifiantes (mail), les données privées (avatar, journal de bord, etc.) et les données de recherche.
 
-Les données sont donc stockées dans des tables distinctes, et aucune clé disponible sur le serveur ne permet de les relier. Seul le client, connecté à son compte, est capable de faire le lien entre les différentes tables et les identifiants correspondant.
+Les données sont donc stockées dans des tables distinctes, et aucune clé disponible sur le serveur ne permet de les relier. Seul le client, connecté à son compte, est capable de faire le lien entre les différentes tables et les identifiants correspondants.
 
 | Type                           | Table        | Identifiant    | Données                             | Chiffrement  |
 |--------------------------------|--------------|----------------|-------------------------------------|------------- |
@@ -18,7 +18,7 @@ Les différents identifiants et le token chiffré (qui permet de les relier) son
 
 ## Inscription
 
-Lors de l'inscription d'un participant, le client Javascript gènère plusieurs informations :
+Lors de l'inscription d'un participant, le client Javascript génère plusieurs informations :
 
 - **VID** (vault ID) : identifiant aléatoire de type [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random))
 - **RID** (research ID) : identifiant aléatoire de type UUIDv4
@@ -35,15 +35,15 @@ Ces informations sont transmises au serveur via une requête POST contenant *l'a
 Le serveur vérifie qu'aucun compte n'existe pour l'adresse mail fournie, puis il effectue les actions suivantes :
 
 - Création d'une ligne utilisateur (user) indexée par un UID aléatoire (généré par le serveur), contenant le mail et le token chiffré
-- Création d'une ligne de coffre-fort (vault) correspondant au VID généré
-- Création d'une ligne de participant (research) correspondant au RID généré
+- Création d'une ligne de coffre-fort (vault) correspondant au VID généré par le client
+- Création d'une ligne de participant (research) correspondant au RID généré par le client
 
 Il envoie par la suite un courriel de connexion à l'utilisateur contenant un lien magique (*magic link*) qui contient deux informations :
 
 - **UID** : identifiant utilisateur aléatoire de type UUIDv4
 - **TKEY** : clé permettant de déchiffrer le token chiffré qui a été envoyée par le client
 
-Une fois le courriel de connexion envoyé, le serveur **n'enregistre pas la TKEY** qui n'existe donc que dans le mail de connexion initial. Cette architecture permet de découpler le compte utilisateur (*UID*), le coffre-fort chiffré (*VID*) et les données de recherche (*RID*) puisque seul le token chiffré permet de lier un UID au VID et au RID. Ce token ne peut être lu qu'avec la *TKEY* qui est présente dans le mail de connexion, et n'est pas connue par le serveur
+Une fois le courriel de connexion envoyé, le serveur **n'enregistre pas la TKEY** qui n'existe donc que dans le mail de connexion initial. Cette architecture permet de découpler le compte utilisateur (*UID*), le coffre-fort chiffré (*VID*) et les données de recherche (*RID*) puisque seul le token chiffré permet de lier un UID au VID et au RID. Ce token ne peut être lu qu'avec la *TKEY* qui est présente dans le mail de connexion, et n'est pas connue par le serveur.
 
 > [!IMPORTANT]
 > Ceci implique qu'en cas de perte du mail de connexion, il n'est **pas possible de relier un utilisateur** (*UID ou mail*) à son coffre-fort (*VID*) ou bien à ses données de recherche (*RID*) !
