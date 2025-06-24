@@ -40,8 +40,9 @@ const EXTENSIONS = [
     '.jpg',
     '.webm',
     '.ogg',
-    '.mp3'
-]
+    '.mp3',
+    '.svg'
+];
 
 main();
 
