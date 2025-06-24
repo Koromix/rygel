@@ -16,6 +16,10 @@ Les données sont donc stockées dans des tables distinctes, et aucune clé disp
 
 Les différents identifiants et le token chiffré (qui permet de les relier) sont créés lors de l'inscription, selon un processus décrit ci-dessous.
 
+> [!NOTE]
+> Lorsque c'est nécessaire, les identifiants sont transmis au serveur via le corps de requête ou via un header dédié, mais jamais dans via les URL, que ce soit dans le path ou via la query string.
+> Cela diminue le risque de corréler les identifiants via les journaux de requête, par exemple via les logs NGINX.
+
 ## Inscription
 
 Lors de l'inscription d'un participant, le client Javascript génère plusieurs informations :
