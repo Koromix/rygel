@@ -87,7 +87,7 @@ Le serveur gère 3 flux de données par utilisateur :
 Chacun de ces flux a son propre identifiant (VID, RID, UID) et seul le client est en mesure de faire le lien entre ces identifiants, qui sont contenus dans le *token chiffré*.
 
 <div class="columns">
-    <img src="{{ ASSET ../assets/architecture/data.svg }}" width="800" height="547" alt=""/>
+    <img src="{{ ASSET ../assets/architecture/data.svg }}" width="800" height="543" alt=""/>
 </div>
 
 > [!IMPORTANT]
