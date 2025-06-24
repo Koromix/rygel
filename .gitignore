@@ -28,8 +28,16 @@ package-lock.json
 /src/staks/dist/*
 
 /src/drd/drdR/R/
-/src/drd/drdR/src/
+/src/drd/drdR/src/*.o
+/src/drd/drdR/src/*.so
+/src/drd/drdR/src/*.dll
 /src/drd/drdR_*
+
+/src/heimdall/R/R/
+/src/heimdall/R/src/*.o
+/src/heimdall/R/src/*.so
+/src/heimdall/R/src/*.dll
+/src/heimdall/R/heimdallR_*
 
 /src/tytools/libhs/bin/
 

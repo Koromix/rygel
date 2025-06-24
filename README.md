@@ -2,6 +2,7 @@
 
 Most projects are licensed under the [GPL 3.0 license](https://www.gnu.org/licenses/gpl-3.0.html), with a few exceptions listed below.
 
+<<<<<<< HEAD
 | Project    | Description                                                                      | Build tool | Quality  | License   |
 | ---------- | -------------------------------------------------------------------------------- | ---------- | -------- | --------- |
 | *blikk*    | Embeddable beginner-friendly language with static types, fast compilation        | Felix      | **WIP**  | GPL 3     |
@@ -10,6 +11,7 @@ Most projects are licensed under the [GPL 3.0 license](https://www.gnu.org/licen
 | *drd*      | Alternative PMSI MCO classifier, subprojects: libdrd, drdc and drdR              | Felix/R    | **Good** | GPL 3     |
 | *felix*    | Small build system made specifically for this repository                         | Felix      | **Good** | GPL 3     |
 | *goupile*  | Programmable electronic data capture application                                 | Felix      | **WIP**  | GPL 3     |
+| *heimdall* | Medical timeline visualization (proof-of-concept)                          | Felix/R    | **POC**  | AGPL 3   |
 | *hodler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)                     | Felix      | **Good** | GPL 3     |
 | *jumbll*   | Backup media files to multiple disjoint disks                                    | Felix      | **Good** | GPL 3     |
 | *koffi*    | Fast and simple C FFI (foreign function interface) for Node.js                   | Node.js    | **Good** | MIT       |
