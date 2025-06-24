@@ -54,13 +54,13 @@ Une fois le courriel de connexion envoyé, le serveur **n'enregistre pas la TKEY
 
 ## Connexion
 
-Pour se connecter, l'utilisateur utilise le **lien magique** (*magic link*) présent dans le mail de connexion. Cet lien contient deux informations essentielles dans la partie hash (#) :
+Pour se connecter, l'utilisateur utilise le **lien magique** (*magic link*) présent dans le mail de connexion. Cet lien contient deux informations essentielles, cachées dans l'identificateur de fragment de l'URL (*#*)  :
 
 - **UID** : identifiant utilisateur de type UUIDv4
 - **TKEY** : clé de déchiffrement du token chiffré de l'utilisateur
 
 > [!NOTE]
-> L'utilisation de la *partie hash de l'URL (#)* permet d'éviter l'envoi de ces paramètres au serveur lors de la requête GET générée par l'ouverture du lien. Ainsi, en dehors de l'envoi du mail initial au moment de l'inscription, la *TKEY* ne transite jamais par le serveur !
+> L'utilisation de l'*identificateur de fragment de l'URL (#)* permet d'éviter l'envoi de ces paramètres au serveur lors de la requête GET générée par l'ouverture du lien. Ainsi, en dehors de l'envoi du mail initial au moment de l'inscription, la *TKEY* ne transite jamais par le serveur !
 
 Le client Javascript transmet la valeur *UID* au serveur (1), qui répond en envoyant le *token chiffré* (2). Le client utilise la *TKEY* (3b) pour déchiffrer le token et récupérer 3 valeurs :
 
