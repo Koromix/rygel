@@ -8,7 +8,6 @@ OBJNAME=$3
 TOKENLABEL=$3 # yeah. The same as object label
 LOADPUBLIC=$4
 LIBSOFTHSM_PATH=$5
-P11_KIT_CLIENT=$6
 shift 5
 
 PUBKEY="$PRIVKEY.pub"
@@ -86,55 +85,6 @@ if [ $ret -ne 0 ]; then
 fi
 echo "$out"
 
-# Skip the p11-kit if not needed
-if [ -z "$P11_KIT_CLIENT" ]; then
-    exit 0
-fi
-
-# when creating more keys, we need to restart the p11-kit
-# so it can pick up the new keys
-if [ -h "$TESTDIR/p11-kit-server.socket" ]; then
-    kill -9 "$(cat "$TESTDIR/p11-kit-server.pid")"
-    rm "$TESTDIR/p11-kit-server.socket"
-fi
-
-# p11-kit complains if there is no runtime directory
-if [ -z "$XDG_RUNTIME_DIR" ]; then
-    export XDG_RUNTIME_DIR=$PWD
-fi
-
-# Start the p11-kit server
-cmd="p11-kit server --provider $LIBSOFTHSM_PATH pkcs11:"
-echo "$cmd"
-out=$(eval "$cmd")
-ret=$?
-if [ $ret -ne 0 ]; then
-    echo "Starting p11-kit server failed"
-    echo "$out"
-    exit 1
-fi
-eval "$out"
-
-# Symlink the p11-kit-server socket to "known place"
-P11_KIT_SERVER_ADDRESS_PATH=${P11_KIT_SERVER_ADDRESS:10}
-cmd="ln -s $P11_KIT_SERVER_ADDRESS_PATH $TESTDIR/p11-kit-server.socket"
-echo "$cmd"
-out=$(eval "$cmd")
-
-# Save the PID for the C code to clean up
-cmd="echo $P11_KIT_SERVER_PID > $TESTDIR/p11-kit-server.pid"
-echo "$cmd"
-out=$(eval "$cmd")
-
-cmd="pkcs11-tool -O --login --pin=1234 --module=$P11_KIT_CLIENT --token-label=$TOKENLABEL"
-echo "$cmd"
-out=$(eval "$cmd")
-ret=$?
-echo "$out"
-if [ $ret -ne 0 ]; then
-    echo "Failed to list keys through p11-kit remoting"
-    echo "$out"
-    exit 1
-fi
+pkcs11-tool -M --login --pin=1234 --module="$LIBSOFTHSM_PATH" --token-label="$TOKENLABEL"
 
 exit 0

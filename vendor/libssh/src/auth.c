@@ -195,8 +195,9 @@ static int ssh_userauth_get_response(ssh_session session)
  *
  * This banner should be shown to user prior to authentication
  */
-SSH_PACKET_CALLBACK(ssh_packet_userauth_banner) {
-    ssh_string banner;
+SSH_PACKET_CALLBACK(ssh_packet_userauth_banner)
+{
+    ssh_string banner = NULL;
     (void)type;
     (void)user;
 
@@ -521,6 +522,17 @@ int ssh_userauth_try_publickey(ssh_session session,
             return SSH_AUTH_ERROR;
     }
 
+    /* Note, that this is intentionally before checking the signature type
+     * compatibility to make sure the possible EXT_INFO packet is processed,
+     * extensions recorded and the right signature type is used below
+     */
+    rc = ssh_userauth_request_service(session);
+    if (rc == SSH_AGAIN) {
+        return SSH_AUTH_AGAIN;
+    } else if (rc == SSH_ERROR) {
+        return SSH_AUTH_ERROR;
+    }
+
     /* Check if the given public key algorithm is allowed */
     sig_type_c = ssh_key_get_signature_algorithm(session, pubkey->type);
     if (sig_type_c == NULL) {
@@ -542,13 +554,6 @@ int ssh_userauth_try_publickey(ssh_session session,
                       "The '%s' key type of size %d is not allowed by "
                       "RSA_MIN_SIZE", sig_type_c, ssh_key_size(pubkey));
         return SSH_AUTH_DENIED;
-    }
-
-    rc = ssh_userauth_request_service(session);
-    if (rc == SSH_AGAIN) {
-        return SSH_AUTH_AGAIN;
-    } else if (rc == SSH_ERROR) {
-        return SSH_AUTH_ERROR;
     }
 
     /* public key */
@@ -652,6 +657,17 @@ int ssh_userauth_publickey(ssh_session session,
             return SSH_AUTH_ERROR;
     }
 
+    /* Note, that this is intentionally before checking the signature type
+     * compatibility to make sure the possible EXT_INFO packet is processed,
+     * extensions recorded and the right signature type is used below
+     */
+    rc = ssh_userauth_request_service(session);
+    if (rc == SSH_AGAIN) {
+        return SSH_AUTH_AGAIN;
+    } else if (rc == SSH_ERROR) {
+        return SSH_AUTH_ERROR;
+    }
+
     /* Cert auth requires presenting the cert type name (*-cert@openssh.com) */
     key_type = privkey->cert != NULL ? privkey->cert_type : privkey->type;
 
@@ -676,13 +692,6 @@ int ssh_userauth_publickey(ssh_session session,
                       "The '%s' key type of size %d is not allowed by "
                       "RSA_MIN_SIZE", sig_type_c, ssh_key_size(privkey));
         return SSH_AUTH_DENIED;
-    }
-
-    rc = ssh_userauth_request_service(session);
-    if (rc == SSH_AGAIN) {
-        return SSH_AUTH_AGAIN;
-    } else if (rc == SSH_ERROR) {
-        return SSH_AUTH_ERROR;
     }
 
     /* get public key or cert */
@@ -769,6 +778,10 @@ static int ssh_userauth_agent_publickey(ssh_session session,
         return SSH_ERROR;
     }
 
+    /* Note, that this is intentionally before checking the signature type
+     * compatibility to make sure the possible EXT_INFO packet is processed,
+     * extensions recorded and the right signature type is used below
+     */
     rc = ssh_userauth_request_service(session);
     if (rc == SSH_AGAIN) {
         return SSH_AUTH_AGAIN;
@@ -1682,7 +1695,7 @@ int ssh_userauth_agent_pubkey(ssh_session session,
                               const char *username,
                               ssh_public_key publickey)
 {
-    ssh_key key;
+    ssh_key key = NULL;
     int rc;
 
     key = ssh_key_new();

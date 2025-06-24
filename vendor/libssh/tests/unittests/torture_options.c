@@ -1032,7 +1032,7 @@ static void torture_options_config_match(void **state)
     fclose(config);
 
     rv = ssh_options_parse_config(session, "test_config");
-    assert_ssh_return_code_equal(session, rv, SSH_ERROR);
+    assert_ssh_return_code_equal(session, rv, SSH_OK);
 
     /* The Match all keyword needs to be the only one (start) */
     torture_reset_config(session);

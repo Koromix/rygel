@@ -344,7 +344,7 @@ enum ssh_digest_e ssh_key_hash_from_name(const char *name)
  */
 int ssh_key_algorithm_allowed(ssh_session session, const char *type)
 {
-    const char *allowed_list;
+    const char *allowed_list = NULL;
 
     if (session->client) {
         allowed_list = session->opts.pubkey_accepted_types;
@@ -711,7 +711,7 @@ int ssh_key_cmp(const ssh_key k1,
 
 ssh_signature ssh_signature_new(void)
 {
-    struct ssh_signature_struct *sig;
+    struct ssh_signature_struct *sig = NULL;
 
     sig = malloc(sizeof(struct ssh_signature_struct));
     if (sig == NULL) {
@@ -799,7 +799,7 @@ int ssh_pki_import_privkey_base64(const char *b64_key,
                                   void *auth_data,
                                   ssh_key *pkey)
 {
-    ssh_key key;
+    ssh_key key = NULL;
     char *openssh_header = NULL;
 
     if (b64_key == NULL || pkey == NULL) {
@@ -979,8 +979,8 @@ int ssh_pki_import_privkey_file(const char *filename,
                                 void *auth_data,
                                 ssh_key *pkey) {
     struct stat sb;
-    char *key_buf;
-    FILE *file;
+    char *key_buf = NULL;
+    FILE *file = NULL;
     off_t size;
     int rc;
     char err_msg[SSH_ERRNO_MSG_MAX] = {0};
@@ -1180,8 +1180,8 @@ ssh_pki_export_privkey_file(const ssh_key privkey,
 /* temporary function to migrate seamlessly to ssh_key */
 ssh_public_key ssh_pki_convert_key_to_publickey(const ssh_key key)
 {
-    ssh_public_key pub;
-    ssh_key tmp;
+    ssh_public_key pub = NULL;
+    ssh_key tmp = NULL;
 
     if (key == NULL) {
         return NULL;
@@ -1219,7 +1219,7 @@ ssh_public_key ssh_pki_convert_key_to_publickey(const ssh_key key)
 
 ssh_private_key ssh_pki_convert_key_to_privatekey(const ssh_key key)
 {
-    ssh_private_key privkey;
+    ssh_private_key privkey = NULL;
 
     privkey = calloc(1, sizeof(struct ssh_private_key_struct));
     if (privkey == NULL) {
@@ -1536,9 +1536,9 @@ static int pki_import_cert_buffer(ssh_buffer buffer,
                                   enum ssh_keytypes_e type,
                                   ssh_key *pkey)
 {
-    ssh_buffer cert;
-    ssh_string tmp_s;
-    const char *type_c;
+    ssh_buffer cert = NULL;
+    ssh_string tmp_s = NULL;
+    const char *type_c = NULL;
     ssh_key key = NULL;
     int rc;
 
@@ -2105,7 +2105,7 @@ error:
 int ssh_pki_export_privkey_to_pubkey(const ssh_key privkey,
                                      ssh_key *pkey)
 {
-    ssh_key pubkey;
+    ssh_key pubkey = NULL;
 
     if (privkey == NULL || !ssh_key_is_private(privkey)) {
         return SSH_ERROR;
@@ -2143,7 +2143,7 @@ int ssh_pki_export_privkey_to_pubkey(const ssh_key privkey,
 int ssh_pki_export_pubkey_blob(const ssh_key key,
                                ssh_string *pblob)
 {
-    ssh_string blob;
+    ssh_string blob = NULL;
 
     if (key == NULL) {
         return SSH_OK;
@@ -2178,7 +2178,7 @@ int ssh_pki_export_pubkey_blob(const ssh_key key,
 int ssh_pki_export_privkey_blob(const ssh_key key,
                                 ssh_string *pblob)
 {
-    ssh_string blob;
+    ssh_string blob = NULL;
 
     if (key == NULL) {
         return SSH_OK;
@@ -2208,8 +2208,8 @@ int ssh_pki_export_privkey_blob(const ssh_key key,
 int ssh_pki_export_pubkey_base64(const ssh_key key,
                                  char **b64_key)
 {
-    ssh_string key_blob;
-    unsigned char *b64;
+    ssh_string key_blob = NULL;
+    unsigned char *b64 = NULL;
 
     if (key == NULL || b64_key == NULL) {
         return SSH_ERROR;
@@ -2248,9 +2248,9 @@ int ssh_pki_export_pubkey_file(const ssh_key key,
 {
     char key_buf[MAX_LINE_SIZE];
     char host[256];
-    char *b64_key;
-    char *user;
-    FILE *fp;
+    char *b64_key = NULL;
+    char *user = NULL;
+    FILE *fp = NULL;
     int rc;
 
     if (key == NULL || filename == NULL || *filename == '\0') {
@@ -2311,7 +2311,7 @@ int ssh_pki_export_pubkey_file(const ssh_key key,
  * @returns SSH_OK on success, SSH_ERROR otherwise.
  **/
 int ssh_pki_copy_cert_to_privkey(const ssh_key certkey, ssh_key privkey) {
-  ssh_buffer cert_buffer;
+  ssh_buffer cert_buffer = NULL;
   int rc, cmp;
 
   if (certkey == NULL || privkey == NULL) {
@@ -2352,7 +2352,7 @@ int ssh_pki_export_signature_blob(const ssh_signature sig,
                                   ssh_string *sig_blob)
 {
     ssh_buffer buf = NULL;
-    ssh_string str;
+    ssh_string str = NULL;
     int rc;
 
     if (sig == NULL || sig_blob == NULL) {
@@ -2416,7 +2416,7 @@ int ssh_pki_import_signature_blob(const ssh_string sig_blob,
     enum ssh_keytypes_e type;
     enum ssh_digest_e hash_type;
     ssh_string algorithm = NULL, blob = NULL;
-    ssh_buffer buf;
+    ssh_buffer buf = NULL;
     const char *alg = NULL;
     uint8_t flags = 0;
     uint32_t counter = 0;
@@ -2637,10 +2637,14 @@ int ssh_pki_signature_verify(ssh_session session,
             return SSH_ERROR;
         }
 
-        rc = ssh_buffer_pack(sk_buffer, "PbdP",
-                             SHA256_DIGEST_LEN, application_hash,
-                             sig->sk_flags, sig->sk_counter,
-                             SHA256_DIGEST_LEN, input_hash);
+        rc = ssh_buffer_pack(sk_buffer,
+                             "PbdP",
+                             (size_t)SHA256_DIGEST_LEN,
+                             application_hash,
+                             sig->sk_flags,
+                             sig->sk_counter,
+                             (size_t)SHA256_DIGEST_LEN,
+                             input_hash);
         if (rc != SSH_OK) {
             SSH_BUFFER_FREE(sk_buffer);
             explicit_bzero(input_hash, SHA256_DIGEST_LEN);
@@ -2734,7 +2738,8 @@ ssh_string ssh_pki_do_sign(ssh_session session,
     rc = ssh_buffer_pack(sign_input,
                          "SP",
                          session_id,
-                         ssh_buffer_get_len(sigbuf), ssh_buffer_get(sigbuf));
+                         (size_t)ssh_buffer_get_len(sigbuf),
+                         ssh_buffer_get(sigbuf));
     if (rc != SSH_OK) {
         goto end;
     }
@@ -2767,9 +2772,9 @@ ssh_string ssh_pki_do_sign_agent(ssh_session session,
                                  const ssh_key pubkey)
 {
     struct ssh_crypto_struct *crypto = NULL;
-    ssh_string session_id;
-    ssh_string sig_blob;
-    ssh_buffer sig_buf;
+    ssh_string session_id = NULL;
+    ssh_string sig_blob = NULL;
+    ssh_buffer sig_buf = NULL;
     int rc;
 
     crypto = ssh_packet_get_current_crypto(session, SSH_DIRECTION_BOTH);

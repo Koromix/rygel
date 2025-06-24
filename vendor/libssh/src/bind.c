@@ -74,7 +74,7 @@
 static socket_t bind_socket(ssh_bind sshbind, const char *hostname,
     int port) {
     char port_c[6];
-    struct addrinfo *ai;
+    struct addrinfo *ai = NULL;
     struct addrinfo hints;
     int opt = 1;
     socket_t s;
@@ -132,8 +132,9 @@ static socket_t bind_socket(ssh_bind sshbind, const char *hostname,
     return s;
 }
 
-ssh_bind ssh_bind_new(void) {
-    ssh_bind ptr;
+ssh_bind ssh_bind_new(void)
+{
+    ssh_bind ptr = NULL;
 
     ptr = calloc(1, sizeof(struct ssh_bind_struct));
     if (ptr == NULL) {
@@ -218,7 +219,7 @@ static int ssh_bind_import_keys(ssh_bind sshbind) {
 }
 
 int ssh_bind_listen(ssh_bind sshbind) {
-    const char *host;
+    const char *host = NULL;
     socket_t fd;
     int rc;
 
@@ -462,7 +463,7 @@ int ssh_bind_accept_fd(ssh_bind sshbind, ssh_session session, socket_t fd)
                 return SSH_ERROR;
             }
         } else {
-            char *p;
+            char *p = NULL;
             /* If something was set to the session prior to calling this
              * function, keep only what is allowed by the options set in
              * sshbind */

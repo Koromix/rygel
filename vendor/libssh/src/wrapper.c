@@ -38,10 +38,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef WITH_ZLIB
-#include "miniz.h"
-#endif
-
 #include "libssh/priv.h"
 #include "libssh/session.h"
 #include "libssh/crypto.h"
@@ -152,7 +148,7 @@ static void cipher_free(struct ssh_cipher_struct *cipher) {
 
 struct ssh_crypto_struct *crypto_new(void)
 {
-    struct ssh_crypto_struct *crypto;
+    struct ssh_crypto_struct *crypto = NULL;
 
     crypto = calloc(1, sizeof(struct ssh_crypto_struct));
     if (crypto == NULL) {
@@ -198,17 +194,7 @@ void crypto_free(struct ssh_crypto_struct *crypto)
         explicit_bzero(crypto->secret_hash, crypto->digest_len);
         SAFE_FREE(crypto->secret_hash);
     }
-#ifdef WITH_ZLIB
-    if (crypto->compress_out_ctx) {
-        deflateEnd(crypto->compress_out_ctx);
-    }
-    SAFE_FREE(crypto->compress_out_ctx);
-
-    if (crypto->compress_in_ctx) {
-        inflateEnd(crypto->compress_in_ctx);
-    }
-    SAFE_FREE(crypto->compress_in_ctx);
-#endif /* WITH_ZLIB */
+    compress_cleanup(crypto);
     SAFE_FREE(crypto->encryptIV);
     SAFE_FREE(crypto->decryptIV);
     SAFE_FREE(crypto->encryptMAC);

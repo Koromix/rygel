@@ -133,7 +133,7 @@ cipher_init(struct ssh_cipher_struct *cipher,
             void *IV)
 {
     const mbedtls_cipher_info_t *cipher_info = NULL;
-    mbedtls_cipher_context_t *ctx;
+    mbedtls_cipher_context_t *ctx = NULL;
     size_t key_bitlen = 0;
     size_t iv_size = 0;
     int rc;

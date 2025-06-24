@@ -424,6 +424,7 @@ static void torture_server_no_more_sessions(void **state)
     assert_int_equal(rc, SSH_ERROR);
 
     /* Free the unused channel */
+    ssh_channel_close(channels[1]);
     ssh_channel_free(channels[1]);
 
     /* Close and free open channel */

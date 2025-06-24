@@ -1,6 +1,29 @@
 CHANGELOG
 =========
 
+version 0.11.2 (released 2025-06-24)
+ * Security:
+   * CVE-2025-4877 - Write beyond bounds in binary to base64 conversion
+   * CVE-2025-4878 - Use of uninitialized variable in privatekey_from_file()
+   * CVE-2025-5318 - Likely read beyond bounds in sftp server handle management
+   * CVE-2025-5351 - Double free in functions exporting keys
+   * CVE-2025-5372 - ssh_kdf() returns a success code on certain failures
+   * CVE-2025-5449 - Likely read beyond bounds in sftp server message decoding
+   * CVE-2025-5987 - Invalid return code for chacha20 poly1305 with OpenSSL
+ * Compatibility
+   * Fixed compatibility with CPM.cmake
+   * Compatibility with OpenSSH 10.0
+   * Tests compatibility with new Dropbear releases
+   * Removed p11-kit remoting from the pkcs11 testsuite
+ * Bugfixes
+   * Implement missing packet filter for DH GEX
+   * Properly process the SSH2_MSG_DEBUG message
+   * Allow escaping quotes in quoted arguments to ssh configuration
+   * Do not fail with unknown match keywords in ssh configuration
+   * Process packets before selecting signature algorithm during authentication
+   * Do not fail hard when the SFTP status message is not sent by noncompliant
+     servers
+
 version 0.11.1 (released 2024-08-30)
  * Fixed default TTY modes that are set when stdin is not connected to tty (#270)
  * Fixed zlib cleanup procedure, which could crash on i386

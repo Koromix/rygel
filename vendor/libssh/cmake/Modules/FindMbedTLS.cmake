@@ -110,3 +110,32 @@ endif (MBEDTLS_VERSION)
 
 # show the MBEDTLS_INCLUDE_DIRS and MBEDTLS_LIBRARIES variables only in the advanced view
 mark_as_advanced(MBEDTLS_INCLUDE_DIR MBEDTLS_LIBRARIES)
+
+if(MBEDTLS_FOUND)
+  if(NOT TARGET MbedTLS::mbedcrypto)
+      add_library(MbedTLS::mbedcrypto UNKNOWN IMPORTED)
+      set_target_properties(MbedTLS::mbedcrypto PROPERTIES
+                            INTERFACE_INCLUDE_DIRECTORIES "${MBEDTLS_INCLUDE_DIR}"
+                            INTERFACE_LINK_LIBRARIES MbedTLS::mbedcrypto
+                            IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+                            IMPORTED_LOCATION "${MBEDTLS_CRYPTO_LIBRARY}")
+  endif()
+
+  if(NOT TARGET MbedTLS::mbedx509)
+      add_library(MbedTLS::mbedx509 UNKNOWN IMPORTED)
+      set_target_properties(MbedTLS::mbedx509 PROPERTIES
+                            INTERFACE_INCLUDE_DIRECTORIES "${MBEDTLS_INCLUDE_DIR}"
+                            INTERFACE_LINK_LIBRARIES MbedTLS::mbedx509
+                            IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+                            IMPORTED_LOCATION "${MBEDTLS_X509_LIBRARY}")
+  endif()
+
+  if(NOT TARGET MbedTLS::mbedtls)
+      add_library(MbedTLS::mbedtls UNKNOWN IMPORTED)
+      set_target_properties(MbedTLS::mbedtls PROPERTIES
+                            INTERFACE_INCLUDE_DIRECTORIES "${MBEDTLS_INCLUDE_DIR}"
+                            INTERFACE_LINK_LIBRARIES MbedTLS::mbedtls
+                            IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+                            IMPORTED_LOCATION "${MBEDTLS_LIBRARY}")
+  endif()
+endif()

@@ -168,7 +168,7 @@ int ssh_kdf(struct ssh_crypto_struct *crypto,
             uint8_t key_type, unsigned char *output,
             size_t requested_len)
 {
-    int rc = -1;
+    int ret = SSH_ERROR, rv;
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
     EVP_KDF_CTX *ctx = EVP_KDF_CTX_new_id(EVP_KDF_SSHKDF);
 #else
@@ -202,81 +202,86 @@ int ssh_kdf(struct ssh_crypto_struct *crypto,
     }
 
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
-    rc = EVP_KDF_ctrl(ctx, EVP_KDF_CTRL_SET_MD,
+    rv = EVP_KDF_ctrl(ctx,
+                      EVP_KDF_CTRL_SET_MD,
                       sshkdf_digest_to_md(crypto->digest_type));
-    if (rc != 1) {
+    if (rv != 1) {
         goto out;
     }
-    rc = EVP_KDF_ctrl(ctx, EVP_KDF_CTRL_SET_KEY, key, key_len);
-    if (rc != 1) {
+    rv = EVP_KDF_ctrl(ctx, EVP_KDF_CTRL_SET_KEY, key, key_len);
+    if (rv != 1) {
         goto out;
     }
-    rc = EVP_KDF_ctrl(ctx, EVP_KDF_CTRL_SET_SSHKDF_XCGHASH,
-                      crypto->secret_hash, crypto->digest_len);
-    if (rc != 1) {
+    rv = EVP_KDF_ctrl(ctx,
+                      EVP_KDF_CTRL_SET_SSHKDF_XCGHASH,
+                      crypto->secret_hash,
+                      crypto->digest_len);
+    if (rv != 1) {
         goto out;
     }
-    rc = EVP_KDF_ctrl(ctx, EVP_KDF_CTRL_SET_SSHKDF_TYPE, key_type);
-    if (rc != 1) {
+    rv = EVP_KDF_ctrl(ctx, EVP_KDF_CTRL_SET_SSHKDF_TYPE, key_type);
+    if (rv != 1) {
         goto out;
     }
-    rc = EVP_KDF_ctrl(ctx, EVP_KDF_CTRL_SET_SSHKDF_SESSION_ID,
-                      crypto->session_id, crypto->session_id_len);
-    if (rc != 1) {
+    rv = EVP_KDF_ctrl(ctx,
+                      EVP_KDF_CTRL_SET_SSHKDF_SESSION_ID,
+                      crypto->session_id,
+                      crypto->session_id_len);
+    if (rv != 1) {
         goto out;
     }
-    rc = EVP_KDF_derive(ctx, output, requested_len);
-    if (rc != 1) {
+    rv = EVP_KDF_derive(ctx, output, requested_len);
+    if (rv != 1) {
         goto out;
     }
 #else
-    rc = OSSL_PARAM_BLD_push_utf8_string(param_bld, OSSL_KDF_PARAM_DIGEST,
-                                         md, strlen(md));
-    if (rc != 1) {
-        rc = -1;
+    rv = OSSL_PARAM_BLD_push_utf8_string(param_bld,
+                                         OSSL_KDF_PARAM_DIGEST,
+                                         md,
+                                         strlen(md));
+    if (rv != 1) {
         goto out;
     }
-    rc = OSSL_PARAM_BLD_push_octet_string(param_bld, OSSL_KDF_PARAM_KEY,
-                                          key, key_len);
-    if (rc != 1) {
-        rc = -1;
+    rv = OSSL_PARAM_BLD_push_octet_string(param_bld,
+                                          OSSL_KDF_PARAM_KEY,
+                                          key,
+                                          key_len);
+    if (rv != 1) {
         goto out;
     }
-    rc = OSSL_PARAM_BLD_push_octet_string(param_bld,
+    rv = OSSL_PARAM_BLD_push_octet_string(param_bld,
                                           OSSL_KDF_PARAM_SSHKDF_XCGHASH,
                                           crypto->secret_hash,
                                           crypto->digest_len);
-    if (rc != 1) {
-        rc = -1;
+    if (rv != 1) {
         goto out;
     }
-    rc = OSSL_PARAM_BLD_push_octet_string(param_bld,
+    rv = OSSL_PARAM_BLD_push_octet_string(param_bld,
                                           OSSL_KDF_PARAM_SSHKDF_SESSION_ID,
                                           crypto->session_id,
                                           crypto->session_id_len);
-    if (rc != 1) {
-        rc = -1;
+    if (rv != 1) {
         goto out;
     }
-    rc = OSSL_PARAM_BLD_push_utf8_string(param_bld, OSSL_KDF_PARAM_SSHKDF_TYPE,
-                                         (const char*)&key_type, 1);
-    if (rc != 1) {
-        rc = -1;
+    rv = OSSL_PARAM_BLD_push_utf8_string(param_bld,
+                                         OSSL_KDF_PARAM_SSHKDF_TYPE,
+                                         (const char *)&key_type,
+                                         1);
+    if (rv != 1) {
         goto out;
     }
 
     params = OSSL_PARAM_BLD_to_param(param_bld);
     if (params == NULL) {
-        rc = -1;
         goto out;
     }
 
-    rc = EVP_KDF_derive(ctx, output, requested_len, params);
-    if (rc != 1) {
-        rc = -1;
+    rv = EVP_KDF_derive(ctx, output, requested_len, params);
+    if (rv != 1) {
         goto out;
     }
 #endif /* OPENSSL_VERSION_NUMBER */
+    ret = SSH_OK;
 
 out:
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
@@ -284,8 +289,8 @@ out:
     OSSL_PARAM_free(params);
 #endif
     EVP_KDF_CTX_free(ctx);
-    if (rc < 0) {
-        return rc;
+    if (ret < 0) {
+        return ret;
     }
     return 0;
 }
@@ -794,9 +799,9 @@ chacha20_poly1305_set_key(struct ssh_cipher_struct *cipher,
         SSH_LOG(SSH_LOG_TRACE, "EVP_CIPHER_CTX_new failed");
         goto out;
     }
-    ret = EVP_EncryptInit_ex(ctx->header_evp, EVP_chacha20(), NULL,
+    rv = EVP_EncryptInit_ex(ctx->header_evp, EVP_chacha20(), NULL,
                              u8key + CHACHA20_KEYLEN, NULL);
-    if (ret != 1) {
+    if (rv != 1) {
         SSH_LOG(SSH_LOG_TRACE, "EVP_CipherInit failed");
         goto out;
     }

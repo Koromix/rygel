@@ -521,7 +521,7 @@ static void ssh_message_queue(ssh_session session, ssh_message message)
  */
 ssh_message ssh_message_pop_head(ssh_session session){
   ssh_message msg=NULL;
-  struct ssh_iterator *i;
+  struct ssh_iterator *i = NULL;
   if(session->ssh_message_list == NULL)
     return NULL;
   i=ssh_list_get_iterator(session->ssh_message_list);
@@ -535,7 +535,7 @@ ssh_message ssh_message_pop_head(ssh_session session){
 /* Returns 1 if there is a message available */
 static int ssh_message_termination(void *s){
   ssh_session session = s;
-  struct ssh_iterator *it;
+  struct ssh_iterator *it = NULL;
   if(session->session_state == SSH_SESSION_STATE_ERROR)
     return 1;
   it = ssh_list_get_iterator(session->ssh_message_list);
@@ -736,7 +736,7 @@ static ssh_buffer ssh_msg_userauth_build_digest(ssh_session session,
                                                 ssh_string algo)
 {
     struct ssh_crypto_struct *crypto = NULL;
-    ssh_buffer buffer;
+    ssh_buffer buffer = NULL;
     ssh_string str=NULL;
     int rc;
 
@@ -757,8 +757,9 @@ static ssh_buffer ssh_msg_userauth_build_digest(ssh_session session,
 
     rc = ssh_buffer_pack(buffer,
                          "dPbsssbsS",
-                         crypto->session_id_len, /* session ID string */
-                         crypto->session_id_len, crypto->session_id,
+                         (uint32_t)crypto->session_id_len, /* session ID string */
+                         crypto->session_id_len,
+                         crypto->session_id,
                          SSH2_MSG_USERAUTH_REQUEST, /* type */
                          msg->auth_request.username,
                          service,
@@ -975,9 +976,9 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request){
 #ifdef WITH_GSSAPI
   if (strcmp(method, "gssapi-with-mic") == 0) {
      uint32_t n_oid;
-     ssh_string *oids;
-     ssh_string oid;
-     char *hexa;
+     ssh_string *oids = NULL;
+     ssh_string oid = NULL;
+     char *hexa = NULL;
      int i;
      ssh_buffer_get_u32(packet, &n_oid);
      n_oid=ntohl(n_oid);
@@ -1061,7 +1062,7 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_info_response){
 SSH_PACKET_CALLBACK(ssh_packet_userauth_info_response){
   uint32_t nanswers;
   uint32_t i;
-  ssh_string tmp;
+  ssh_string tmp = NULL;
   int rc;
 
   ssh_message msg = NULL;
@@ -1301,7 +1302,7 @@ end:
  * @returns             SSH_OK on success, SSH_ERROR if an error occurred.
  */
 int ssh_message_channel_request_open_reply_accept_channel(ssh_message msg, ssh_channel chan) {
-    ssh_session session;
+    ssh_session session = NULL;
     int rc;
 
     if (msg == NULL) {
@@ -1352,7 +1353,7 @@ int ssh_message_channel_request_open_reply_accept_channel(ssh_message msg, ssh_c
  * @returns NULL in case of error
  */
 ssh_channel ssh_message_channel_request_open_reply_accept(ssh_message msg) {
-	ssh_channel chan;
+	ssh_channel chan = NULL;
 	int rc;
 
 	if (msg == NULL) {

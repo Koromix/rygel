@@ -245,7 +245,7 @@ int pki_ed25519_private_key_to_blob(ssh_buffer buffer, const ssh_key privkey)
  */
 ssh_string pki_ed25519_signature_to_blob(ssh_signature sig)
 {
-    ssh_string sig_blob;
+    ssh_string sig_blob = NULL;
     int rc;
 
 #ifdef HAVE_LIBCRYPTO

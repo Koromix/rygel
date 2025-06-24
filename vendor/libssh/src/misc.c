@@ -401,7 +401,7 @@ int ssh_is_ipaddr(const char *str)
 
 char *ssh_lowercase(const char* str)
 {
-  char *new, *p;
+  char *new = NULL, *p = NULL;
 
   if (str == NULL) {
     return NULL;
@@ -455,7 +455,7 @@ char *ssh_hostport(const char *host, int port)
 char *ssh_get_hexa(const unsigned char *what, size_t len)
 {
     const char h[] = "0123456789abcdef";
-    char *hexa;
+    char *hexa = NULL;
     size_t i;
     size_t hlen = len * 3;
 
@@ -725,7 +725,7 @@ struct ssh_list *ssh_list_new(void)
 
 void ssh_list_free(struct ssh_list *list)
 {
-    struct ssh_iterator *ptr, *next;
+    struct ssh_iterator *ptr = NULL, *next = NULL;
     if (!list)
         return;
     ptr = list->root;
@@ -746,7 +746,7 @@ struct ssh_iterator *ssh_list_get_iterator(const struct ssh_list *list)
 
 struct ssh_iterator *ssh_list_find(const struct ssh_list *list, void *value)
 {
-    struct ssh_iterator *it;
+    struct ssh_iterator *it = NULL;
 
     for (it = ssh_list_get_iterator(list); it != NULL ; it = it->next)
         if (it->data == value)
@@ -836,7 +836,7 @@ int ssh_list_prepend(struct ssh_list *list, const void *data)
 
 void ssh_list_remove(struct ssh_list *list, struct ssh_iterator *iterator)
 {
-  struct ssh_iterator *ptr, *prev;
+  struct ssh_iterator *ptr = NULL, *prev = NULL;
 
   if (list == NULL) {
       return;
@@ -977,7 +977,7 @@ char *ssh_dirname (const char *path)
 char *ssh_basename (const char *path)
 {
   char *new = NULL;
-  const char *s;
+  const char *s = NULL;
   size_t len;
 
   if (path == NULL || *path == '\0') {
@@ -1115,8 +1115,8 @@ int ssh_mkdirs(const char *pathname, mode_t mode)
  */
 char *ssh_path_expand_tilde(const char *d)
 {
-    char *h = NULL, *r;
-    const char *p;
+    char *h = NULL, *r = NULL;
+    const char *p = NULL;
     size_t ld;
     size_t lh = 0;
 
@@ -1131,7 +1131,7 @@ char *ssh_path_expand_tilde(const char *d)
 #ifdef _WIN32
         return strdup(d);
 #else
-        struct passwd *pw;
+        struct passwd *pw = NULL;
         size_t s = p - d;
         char u[128];
 
@@ -1192,7 +1192,7 @@ char *ssh_path_expand_escape(ssh_session session, const char *s)
     char *buf = NULL;
     char *r = NULL;
     char *x = NULL;
-    const char *p;
+    const char *p = NULL;
     size_t i, l;
 
     r = ssh_path_expand_tilde(s);
@@ -1345,8 +1345,8 @@ char *ssh_path_expand_escape(ssh_session session, const char *s)
  */
 int ssh_analyze_banner(ssh_session session, int server)
 {
-    const char *banner;
-    const char *openssh;
+    const char *banner = NULL;
+    const char *openssh = NULL;
 
     if (server) {
         banner = session->clientbanner;
@@ -1397,6 +1397,7 @@ int ssh_analyze_banner(ssh_session session, int server)
         char *tmp = NULL;
         unsigned long int major = 0UL;
         unsigned long int minor = 0UL;
+        int off = 0;
 
         /*
          * The banner is typical:
@@ -1416,8 +1417,9 @@ int ssh_analyze_banner(ssh_session session, int server)
             }
 
             errno = 0;
-            minor = strtoul(openssh + 10, &tmp, 10);
-            if ((tmp == (openssh + 10)) ||
+            off = major >= 10 ? 11 : 10;
+            minor = strtoul(openssh + off, &tmp, 10);
+            if ((tmp == (openssh + off)) ||
                 ((errno == ERANGE) && (major == ULONG_MAX)) ||
                 ((errno != 0) && (major == 0)) ||
                 (minor > 100)) {

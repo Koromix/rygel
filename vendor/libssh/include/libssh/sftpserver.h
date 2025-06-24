@@ -29,6 +29,10 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+
+#include "libssh/libssh.h"
+#include "libssh/sftp.h"
+
 /**
  * @defgroup libssh_sftp_server The libssh SFTP server API
  *

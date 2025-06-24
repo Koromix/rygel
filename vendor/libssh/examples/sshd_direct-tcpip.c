@@ -361,7 +361,7 @@ my_fd_data_function(UNUSED_PARAM(socket_t fd),
 {
     struct event_fd_data_struct *event_fd_data = (struct event_fd_data_struct *)userdata;
     ssh_channel channel = event_fd_data->channel;
-    ssh_session session;
+    ssh_session session = NULL;
     int len, i, wr;
     char buf[BUF_SIZE];
     int blocking;
@@ -455,8 +455,8 @@ open_tcp_socket(ssh_message msg)
 {
     struct sockaddr_in sin;
     int forwardsock = -1;
-    struct hostent *host;
-    const char *dest_hostname;
+    struct hostent *host = NULL;
+    const char *dest_hostname = NULL;
     int dest_port;
 
     forwardsock = socket(AF_INET, SOCK_STREAM, 0);
@@ -499,8 +499,8 @@ message_callback(UNUSED_PARAM(ssh_session session),
                  UNUSED_PARAM(void *userdata))
 {
     ssh_channel channel;
-    int socket_fd, *pFd;
-    struct ssh_channel_callbacks_struct *cb_chan;
+    int socket_fd, *pFd = NULL;
+    struct ssh_channel_callbacks_struct *cb_chan = NULL;
     struct event_fd_data_struct *event_fd_data;
 
     _ssh_log(SSH_LOG_PACKET, "=== message_callback", "Message type: %d",
@@ -655,8 +655,8 @@ static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
 int
 main(int argc, char **argv)
 {
-    ssh_session session;
-    ssh_bind sshbind;
+    ssh_session session = NULL;
+    ssh_bind sshbind = NULL;
     struct ssh_server_callbacks_struct cb = {
         .userdata = NULL,
         .auth_password_function = auth_password,

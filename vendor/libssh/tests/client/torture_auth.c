@@ -1247,6 +1247,38 @@ static void torture_auth_pubkey_rsa_key_size_nonblocking(void **state)
     SSH_KEY_FREE(privkey);
 }
 
+static void torture_auth_pubkey_skip_none(void **state)
+{
+    struct torture_state *s = *state;
+    ssh_session session = s->ssh.session;
+    char bob_ssh_key[1024];
+    ssh_key privkey = NULL;
+    struct passwd *pwd = NULL;
+    int rc;
+
+    pwd = getpwnam("bob");
+    assert_non_null(pwd);
+
+    snprintf(bob_ssh_key, sizeof(bob_ssh_key), "%s/.ssh/id_rsa", pwd->pw_dir);
+
+    /* Authenticate as alice with bob his pubkey */
+    rc = ssh_options_set(session, SSH_OPTIONS_USER, TORTURE_SSH_USER_ALICE);
+    assert_int_equal(rc, SSH_OK);
+
+    rc = ssh_connect(session);
+    assert_int_equal(rc, SSH_OK);
+
+    /* Skip the ssh_userauth_none() here */
+
+    rc = ssh_pki_import_privkey_file(bob_ssh_key, NULL, NULL, NULL, &privkey);
+    assert_int_equal(rc, SSH_OK);
+
+    rc = ssh_userauth_publickey(session, NULL, privkey);
+    assert_int_equal(rc, SSH_AUTH_SUCCESS);
+
+    SSH_KEY_FREE(privkey);
+}
+
 int torture_run_tests(void) {
     int rc;
     struct CMUnitTest tests[] = {
@@ -1332,6 +1364,9 @@ int torture_run_tests(void) {
                                         pubkey_setup,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_auth_pubkey_rsa_key_size_nonblocking,
+                                        pubkey_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_auth_pubkey_skip_none,
                                         pubkey_setup,
                                         session_teardown),
     };

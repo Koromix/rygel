@@ -29,6 +29,9 @@
 #include "libssh/priv.h"
 #include "libssh/buffer.h"
 
+/* Do not allow encoding more than 256MB of data */
+#define BASE64_MAX_INPUT_LEN 256 * 1024 * 1024
+
 static
 const uint8_t alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                          "abcdefghijklmnopqrstuvwxyz"
@@ -278,7 +281,15 @@ uint8_t *bin_to_base64(const uint8_t *source, size_t len)
 {
     uint8_t *base64 = NULL;
     uint8_t *ptr = NULL;
-    size_t flen = len + (3 - (len % 3)); /* round to upper 3 multiple */
+    size_t flen = 0;
+
+    /* Set the artificial upper limit for the input. Otherwise on 32b arch, the
+     * following line could overflow for sizes larger than SIZE_MAX / 4 */
+    if (len > BASE64_MAX_INPUT_LEN) {
+        return NULL;
+    }
+
+    flen = len + (3 - (len % 3)); /* round to upper 3 multiple */
     flen = (4 * flen) / 3 + 1;
 
     base64 = malloc(flen);

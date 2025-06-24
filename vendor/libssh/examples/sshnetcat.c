@@ -39,7 +39,7 @@ clients must be made or how a client should react.
 #define BUF_SIZE 4096
 #endif
 
-char *host;
+char *host = NULL;
 const char *desthost="localhost";
 const char *port="22";
 
@@ -193,7 +193,7 @@ static void forwarding(ssh_session session){
 
 static int client(ssh_session session){
   int auth=0;
-  char *banner;
+  char *banner = NULL;
   int state;
 
   if (ssh_options_set(session, SSH_OPTIONS_HOST ,host) < 0)
@@ -246,7 +246,7 @@ void cleanup_pcap(void)
 #endif
 
 int main(int argc, char **argv){
-    ssh_session session;
+    ssh_session session = NULL;
 
     session = ssh_new();
 

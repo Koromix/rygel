@@ -159,7 +159,7 @@ ssh_gssapi_handle_userauth(ssh_session session, const char *user,
     gss_name_t server_name; /* local server fqdn */
     OM_uint32 maj_stat, min_stat;
     size_t i;
-    char *ptr;
+    char *ptr = NULL;
     gss_OID_set supported; /* oids supported by server */
     gss_OID_set both_supported; /* oids supported by both client and server */
     gss_OID_set selected; /* oid selected for authentication */
@@ -313,7 +313,7 @@ ssh_gssapi_name_to_char(gss_name_t name)
 {
     gss_buffer_desc buffer;
     OM_uint32 maj_stat, min_stat;
-    char *ptr;
+    char *ptr = NULL;
     maj_stat = gss_display_name(&min_stat, name, &buffer, NULL);
     ssh_gssapi_log_error(SSH_LOG_DEBUG,
                          "converting name",
@@ -331,9 +331,10 @@ ssh_gssapi_name_to_char(gss_name_t name)
 
 }
 
-SSH_PACKET_CALLBACK(ssh_packet_userauth_gssapi_token_server){
-    ssh_string token;
-    char *hexa;
+SSH_PACKET_CALLBACK(ssh_packet_userauth_gssapi_token_server)
+{
+    ssh_string token = NULL;
+    char *hexa = NULL;
     OM_uint32 maj_stat, min_stat;
     gss_buffer_desc input_token, output_token = GSS_C_EMPTY_BUFFER;
     gss_name_t client_name = GSS_C_NO_NAME;
@@ -357,7 +358,7 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_gssapi_token_server){
     }
 
     if (ssh_callbacks_exists(session->server_callbacks, gssapi_accept_sec_ctx_function)){
-        ssh_string out_token=NULL;
+        ssh_string out_token = NULL;
         rc = session->server_callbacks->gssapi_accept_sec_ctx_function(session,
                 token, &out_token, session->server_callbacks->userdata);
         if (rc == SSH_ERROR){
@@ -473,7 +474,7 @@ static ssh_buffer ssh_gssapi_build_mic(ssh_session session)
 
 SSH_PACKET_CALLBACK(ssh_packet_userauth_gssapi_mic)
 {
-    ssh_string mic_token;
+    ssh_string mic_token = NULL;
     OM_uint32 maj_stat, min_stat;
     gss_buffer_desc mic_buf = GSS_C_EMPTY_BUFFER;
     gss_buffer_desc mic_token_buf = GSS_C_EMPTY_BUFFER;
@@ -635,7 +636,7 @@ static int ssh_gssapi_match(ssh_session session, gss_OID_set *valid_oids)
     gss_name_t client_id = GSS_C_NO_NAME;
     gss_OID oid;
     unsigned int i;
-    char *ptr;
+    char *ptr = NULL;
     int ret;
 
     if (session->gssapi->client.client_deleg_creds == NULL) {
@@ -837,11 +838,11 @@ static gss_OID ssh_gssapi_oid_from_string(ssh_string oid_s)
 
 SSH_PACKET_CALLBACK(ssh_packet_userauth_gssapi_response){
     int rc;
-    ssh_string oid_s;
+    ssh_string oid_s = NULL;
     gss_uint32 maj_stat, min_stat;
     gss_buffer_desc input_token = GSS_C_EMPTY_BUFFER;
     gss_buffer_desc output_token = GSS_C_EMPTY_BUFFER;
-    char *hexa;
+    char *hexa = NULL;
     (void)type;
     (void)user;
 
@@ -956,10 +957,11 @@ static int ssh_gssapi_send_mic(ssh_session session)
     return ssh_packet_send(session);
 }
 
-SSH_PACKET_CALLBACK(ssh_packet_userauth_gssapi_token_client){
+SSH_PACKET_CALLBACK(ssh_packet_userauth_gssapi_token_client)
+{
     int rc;
-    ssh_string token;
-    char *hexa;
+    ssh_string token = NULL;
+    char *hexa = NULL;
     OM_uint32 maj_stat, min_stat;
     gss_buffer_desc input_token, output_token = GSS_C_EMPTY_BUFFER;
     (void)user;

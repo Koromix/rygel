@@ -100,9 +100,10 @@ add_subdirectory(unittests)
 find_program(SSH_EXECUTABLE NAMES ssh)
 if (SSH_EXECUTABLE)
     execute_process(COMMAND ${SSH_EXECUTABLE} -V ERROR_VARIABLE OPENSSH_VERSION_STR)
-    string(REGEX REPLACE "^.*OpenSSH_([0-9]).[0-9].*$" "\\1" OPENSSH_VERSION_MAJOR "${OPENSSH_VERSION_STR}")
-    string(REGEX REPLACE "^.*OpenSSH_[0-9].([0-9]).*$" "\\1" OPENSSH_VERSION_MINOR "${OPENSSH_VERSION_STR}")
+    string(REGEX REPLACE "^.*OpenSSH_([0-9]+).[0-9].*$" "\\1" OPENSSH_VERSION_MAJOR "${OPENSSH_VERSION_STR}")
+    string(REGEX REPLACE "^.*OpenSSH_[0-9]+.([0-9]).*$" "\\1" OPENSSH_VERSION_MINOR "${OPENSSH_VERSION_STR}")
     set(OPENSSH_VERSION "${OPENSSH_VERSION_MAJOR}.${OPENSSH_VERSION_MINOR}")
+    add_definitions(-DOPENSSH_VERSION_MAJOR=${OPENSSH_VERSION_MAJOR} -DOPENSSH_VERSION_MINOR=${OPENSSH_VERSION_MINOR})
     if("${OPENSSH_VERSION}" VERSION_LESS "6.3")
         # ssh - Q was introduced in 6.3
         message("Version less than 6.3, hardcoding cipher list")
@@ -170,6 +171,20 @@ find_program(SSHD_EXECUTABLE
                 /usr/sbin
                 /usr/local/sbin)
 
+if (WITH_PKCS11_URI)
+    find_package(softhsm)
+    if (NOT SOFTHSM_FOUND)
+        message(SEND_ERROR "Could not find softhsm module!")
+    endif (NOT SOFTHSM_FOUND)
+    find_library(PKCS11SPY
+        NAMES
+            pkcs11-spy.so
+    )
+
+    #Copy the script to setup PKCS11 tokens
+    file(COPY pkcs11/setup-softhsm-tokens.sh DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/pkcs11 FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+endif (WITH_PKCS11_URI)
+
 if (CLIENT_TESTING OR SERVER_TESTING)
     find_package(socket_wrapper 1.1.5 REQUIRED)
     find_package(nss_wrapper 1.1.2 REQUIRED)
@@ -187,35 +202,6 @@ if (CLIENT_TESTING OR SERVER_TESTING)
                     /bin
                     /usr/bin
                     /usr/local/bin)
-
-    if (WITH_PKCS11_URI)
-        find_package(softhsm)
-        if (NOT SOFTHSM_FOUND)
-            message(SEND_ERROR "Could not find softhsm module!")
-        endif (NOT SOFTHSM_FOUND)
-        find_library(PKCS11SPY
-            NAMES
-                pkcs11-spy.so
-        )
-        if (WITH_PKCS11_PROVIDER)
-            find_package(PkgConfig)
-            if (PKG_CONFIG_FOUND)
-                pkg_check_modules(P11_KIT p11-kit-1)
-                if (P11_KIT_FOUND)
-                    pkg_get_variable(P11_MODULE_PATH p11-kit-1 p11_module_path)
-                    set(P11_KIT_CLIENT ${P11_MODULE_PATH}/p11-kit-client.so)
-                endif (P11_KIT_FOUND)
-            endif (PKG_CONFIG_FOUND)
-        endif (WITH_PKCS11_PROVIDER)
-    endif (WITH_PKCS11_URI)
-
-    find_program(SSH_EXECUTABLE NAMES ssh)
-    if (SSH_EXECUTABLE)
-        execute_process(COMMAND ${SSH_EXECUTABLE} -V ERROR_VARIABLE OPENSSH_VERSION_STR)
-        string(REGEX REPLACE "^.*OpenSSH_([0-9]).[0-9].*$" "\\1" OPENSSH_VERSION_MAJOR "${OPENSSH_VERSION_STR}")
-        string(REGEX REPLACE "^.*OpenSSH_[0-9].([0-9]).*$" "\\1" OPENSSH_VERSION_MINOR "${OPENSSH_VERSION_STR}")
-        add_definitions(-DOPENSSH_VERSION_MAJOR=${OPENSSH_VERSION_MAJOR} -DOPENSSH_VERSION_MINOR=${OPENSSH_VERSION_MINOR})
-    endif()
 
     set(LOCAL_USER "nobody")
     set(LOCAL_UID "65533")
@@ -336,11 +322,6 @@ if (CLIENT_TESTING OR SERVER_TESTING)
     file(COPY keys/certauth/id_rsa-cert.pub DESTINATION
         ${CMAKE_CURRENT_BINARY_DIR}/home/doe/.ssh/ FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
 endif ()
-
-if (WITH_PKCS11_URI)
-    #Copy the script to setup PKCS11 tokens
-    file(COPY pkcs11/setup-softhsm-tokens.sh DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/pkcs11 FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
-endif (WITH_PKCS11_URI)
 
 file(COPY gss/kdcsetup.sh DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/gss FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
 

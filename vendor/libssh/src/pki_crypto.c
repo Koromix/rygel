@@ -338,7 +338,7 @@ int pki_pubkey_build_ecdsa(ssh_key key, int nid, ssh_string e)
     int ok;
 #else
     const char *group_name = OSSL_EC_curve_nid2name(nid);
-    OSSL_PARAM_BLD *param_bld;
+    OSSL_PARAM_BLD *param_bld = NULL;
 #endif /* OPENSSL_VERSION_NUMBER */
 
     key->ecdsa_nid = nid;
@@ -1632,6 +1632,7 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
             bignum_safe_free(bn);
             bignum_safe_free(be);
             OSSL_PARAM_free(params);
+            params = NULL;
 #endif /* OPENSSL_VERSION_NUMBER */
             break;
         }
@@ -1665,7 +1666,7 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
                 EC_GROUP *group = NULL;
                 EC_POINT *point = NULL;
-                const void *pubkey;
+                const void *pubkey = NULL;
                 size_t pubkey_len;
                 OSSL_PARAM *locate_param = NULL;
 #else
@@ -1803,6 +1804,7 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
                 bignum_safe_free(bd);
                 OSSL_PARAM_free(params);
+                params = NULL;
 #endif /* OPENSSL_VERSION_NUMBER */
                 break;
             }
@@ -1871,7 +1873,7 @@ static ssh_string pki_ecdsa_signature_to_blob(const ssh_signature sig)
     const unsigned char *raw_sig_data = NULL;
     size_t raw_sig_len;
 
-    ECDSA_SIG *ecdsa_sig;
+    ECDSA_SIG *ecdsa_sig = NULL;
 
     int rc;
 
@@ -2060,8 +2062,8 @@ static int pki_signature_from_ecdsa_blob(UNUSED_PARAM(const ssh_key pubkey),
     ECDSA_SIG *ecdsa_sig = NULL;
     BIGNUM *pr = NULL, *ps = NULL;
 
-    ssh_string r;
-    ssh_string s;
+    ssh_string r = NULL;
+    ssh_string s = NULL;
 
     ssh_buffer buf = NULL;
     uint32_t rlen;
@@ -2077,6 +2079,9 @@ static int pki_signature_from_ecdsa_blob(UNUSED_PARAM(const ssh_key pubkey),
     if (buf == NULL) {
         return SSH_ERROR;
     }
+
+    /* The buffer will contain sensitive information. Make sure it is erased */
+    ssh_buffer_set_secure(buf);
 
     rc = ssh_buffer_add_data(buf,
                              ssh_string_data(sig_blob),

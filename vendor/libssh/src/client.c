@@ -785,7 +785,7 @@ ssh_session_set_disconnect_message(ssh_session session, const char *message)
 void
 ssh_disconnect(ssh_session session)
 {
-    struct ssh_iterator *it;
+    struct ssh_iterator *it = NULL;
     int rc;
 
     if (session == NULL) {
@@ -895,7 +895,7 @@ error:
  */
 const char *ssh_copyright(void)
 {
-    return SSH_STRINGIFY(LIBSSH_VERSION) " (c) 2003-2024 "
+    return SSH_STRINGIFY(LIBSSH_VERSION) " (c) 2003-2025 "
            "Aris Adamantiadis, Andreas Schneider "
            "and libssh contributors. "
            "Distributed under the LGPL, please refer to COPYING "

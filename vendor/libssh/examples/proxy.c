@@ -35,8 +35,8 @@ clients must be made or how a client should react.
 static int authenticated=0;
 static int tries = 0;
 static int error = 0;
-static ssh_channel chan=NULL;
-static char *username;
+static ssh_channel chan = NULL;
+static char *username = NULL;
 static ssh_gssapi_creds client_creds = NULL;
 
 static int auth_password(ssh_session session, const char *user,
@@ -204,11 +204,12 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
 static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
 #endif /* HAVE_ARGP_H */
 
-int main(int argc, char **argv){
-    ssh_session session;
-    ssh_bind sshbind;
-    ssh_event mainloop;
-    ssh_session client_session;
+int main(int argc, char **argv)
+{
+    ssh_session session = NULL;
+    ssh_bind sshbind = NULL;
+    ssh_event mainloop = NULL;
+    ssh_session client_session = NULL;
 
     struct ssh_server_callbacks_struct cb = {
         .userdata = NULL,
@@ -219,7 +220,7 @@ int main(int argc, char **argv){
 
     char buf[BUF_SIZE];
     char host[128]="";
-    char *ptr;
+    char *ptr = NULL;
     int i,r, rc;
 
     sshbind=ssh_bind_new();
@@ -336,4 +337,3 @@ int main(int argc, char **argv){
     ssh_finalize();
     return 0;
 }
-

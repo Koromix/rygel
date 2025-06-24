@@ -58,6 +58,7 @@ extern "C" {
 SSH_PACKET_CALLBACK(ssh_packet_unimplemented);
 SSH_PACKET_CALLBACK(ssh_packet_disconnect_callback);
 SSH_PACKET_CALLBACK(ssh_packet_ignore_callback);
+SSH_PACKET_CALLBACK(ssh_packet_debug_callback);
 SSH_PACKET_CALLBACK(ssh_packet_dh_reply);
 SSH_PACKET_CALLBACK(ssh_packet_newkeys);
 SSH_PACKET_CALLBACK(ssh_packet_service_accept);

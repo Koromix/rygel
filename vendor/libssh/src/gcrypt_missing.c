@@ -47,7 +47,7 @@ int ssh_gcry_dec2bn(bignum *bn, const char *data) {
 
 char *ssh_gcry_bn2dec(bignum bn) {
   bignum bndup, num, ten;
-  char *ret;
+  char *ret = NULL;
   int count, count2;
   int size, rsize;
   char decnum;

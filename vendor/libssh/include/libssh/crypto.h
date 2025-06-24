@@ -227,6 +227,8 @@ int secure_memcmp(const void *s1, const void *s2, size_t n);
 ENGINE *pki_get_engine(void);
 #endif /* HAVE_LIBCRYPTO */
 
+void compress_cleanup(struct ssh_crypto_struct *crypto);
+
 #ifdef __cplusplus
 }
 #endif

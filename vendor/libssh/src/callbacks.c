@@ -122,7 +122,7 @@ int ssh_add_channel_callbacks(ssh_channel channel, ssh_channel_callbacks cb)
 
 int ssh_remove_channel_callbacks(ssh_channel channel, ssh_channel_callbacks cb)
 {
-    struct ssh_iterator *it;
+    struct ssh_iterator *it = NULL;
 
     if (channel == NULL || channel->callbacks == NULL){
         return SSH_ERROR;

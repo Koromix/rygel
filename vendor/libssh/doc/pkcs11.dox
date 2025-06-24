@@ -81,10 +81,6 @@ We recommend the users to provide a specific PKCS #11 URI so that it matches onl
 If the engine discovers multiple slots that could potentially contain the private keys referenced
 by the provided PKCS #11 URI, the engine will not try to authenticate.
 
-For testing, the SoftHSM PKCS#11 library is used. But it has some issues with
-OpenSSL initialization/cleanup when used with OpenSSL 3.0 so we are using it
-indirectly through a p11-kit remoting as described in the following article:
-
-https://p11-glue.github.io/p11-glue/p11-kit/manual/remoting.html
+For testing, the SoftHSM PKCS#11 library is used.
 
 */

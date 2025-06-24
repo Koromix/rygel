@@ -70,6 +70,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <poll.h>
 #include <pthread.h>
 #include <stddef.h>
@@ -231,7 +232,7 @@ static void _logging_callback(int priority, const char *function,
 
     milliseconds = _current_timestamp();
 
-    fprintf(fp, "[%s.%jd, %d] %s: %s\n", buf, milliseconds, priority,
+    fprintf(fp, "[%s.%" PRId64 ", %d] %s: %s\n", buf, milliseconds, priority,
             function, buffer);
     fclose(fp);
 }

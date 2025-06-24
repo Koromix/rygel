@@ -174,8 +174,8 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
 static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
 #endif /* HAVE_ARGP_H */
 
-static const char *name;
-static const char *instruction;
+static const char *name = NULL;
+static const char *instruction = NULL;
 static const char *prompts[2];
 static char echo[] = { 1, 0 };
 
@@ -279,11 +279,12 @@ static int authenticate(ssh_session session) {
     return 0;
 }
 
-int main(int argc, char **argv){
-    ssh_session session;
-    ssh_bind sshbind;
-    ssh_message message;
-    ssh_channel chan=0;
+int main(int argc, char **argv)
+{
+    ssh_session session = NULL;
+    ssh_bind sshbind = NULL;
+    ssh_message message = NULL;
+    ssh_channel chan = NULL;
     char buf[BUF_SIZE];
     int auth=0;
     int shell=0;
@@ -411,4 +412,3 @@ int main(int argc, char **argv){
     ssh_finalize();
     return 0;
 }
-

@@ -444,7 +444,7 @@ SSH_PACKET_CALLBACK(ssh_packet_server_ecdh_init)
     ssh_string q_c_string = NULL;
     ssh_string q_s_string = NULL;
     /* SSH host keys (rsa, ed25519 and ecdsa) */
-    ssh_key privkey;
+    ssh_key privkey = NULL;
     enum ssh_digest_e digest = SSH_DIGEST_AUTO;
     ssh_string sig_blob = NULL;
     ssh_string pubkey_blob = NULL;

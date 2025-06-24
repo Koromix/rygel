@@ -39,8 +39,8 @@
  */
 char *ssh_config_get_cmd(char **str)
 {
-    register char *c;
-    char *r;
+    register char *c = NULL;
+    char *r = NULL;
 
     /* Ignore leading spaces */
     for (c = *str; *c; c++) {
@@ -67,7 +67,7 @@ out:
  */
 char *ssh_config_get_token(char **str)
 {
-    register char *c;
+    register char *c = NULL;
     bool had_equal = false;
     char *r = NULL;
 
@@ -82,6 +82,13 @@ char *ssh_config_get_token(char **str)
     if (*c == '\"') {
         for (r = ++c; *c; c++) {
             if (*c == '\"' || *c == '\n') {
+                if (*c == '\"' && r != c && *(c - 1) == '\\') {
+                    /* Escaped quote: Move the remaining one char left */
+                    int remaining_len = strlen(c);
+                    memmove(c - 1, c, remaining_len);
+                    c[remaining_len - 1] = '\0';
+                    continue;
+                }
                 *c = '\0';
                 c++;
                 break;
@@ -116,7 +123,7 @@ out:
 
 long ssh_config_get_long(char **str, long notfound)
 {
-    char *p, *endp;
+    char *p = NULL, *endp = NULL;
     long i;
 
     p = ssh_config_get_token(str);
@@ -133,7 +140,7 @@ long ssh_config_get_long(char **str, long notfound)
 
 const char *ssh_config_get_str_tok(char **str, const char *def)
 {
-    char *p;
+    char *p = NULL;
 
     p = ssh_config_get_token(str);
     if (p && *p) {
@@ -145,7 +152,7 @@ const char *ssh_config_get_str_tok(char **str, const char *def)
 
 int ssh_config_get_yesno(char **str, int notfound)
 {
-    const char *p;
+    const char *p = NULL;
 
     p = ssh_config_get_str_tok(str, NULL);
     if (p == NULL) {

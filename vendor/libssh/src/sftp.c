@@ -363,10 +363,10 @@ int
 sftp_decode_channel_data_to_packet(sftp_session sftp, void *data, uint32_t len)
 {
     sftp_packet packet = sftp->read_packet;
-    int nread;
-    int payload_len;
-    unsigned int data_offset;
-    int to_read, rc;
+    size_t nread;
+    size_t payload_len;
+    size_t data_offset;
+    size_t to_read, rc;
 
     if (packet->sftp == NULL) {
         packet->sftp = sftp;
@@ -382,7 +382,7 @@ sftp_decode_channel_data_to_packet(sftp_session sftp, void *data, uint32_t len)
     packet->type = PULL_BE_U8(data, 4);
 
     /* We should check the legality of payload length */
-    if (payload_len + sizeof(uint32_t) > len || payload_len < 0) {
+    if (payload_len > len - sizeof(uint32_t) || payload_len < sizeof(uint8_t)) {
         return SSH_ERROR;
     }
 
@@ -401,10 +401,12 @@ sftp_decode_channel_data_to_packet(sftp_session sftp, void *data, uint32_t len)
     }
 
     /*
-     * We should return how many bytes we decoded, including packet length header
-     * and the payload length.
+     * We should return how many bytes we decoded, including packet length
+     * header and the payload length.
+     * This can't overflow as we pulled this from unit32_t and checked this fits
+     * into the buffer's max size of 0x10000000 (256MB).
      */
-    return payload_len + sizeof(uint32_t);
+    return (int)(payload_len + sizeof(uint32_t));
 }
 
 /* Get the last sftp error */

@@ -130,27 +130,22 @@ static void torture_path_expand_tilde_win(void **state) {
 #else /* _WIN32 */
 
 static void torture_path_expand_tilde_unix(void **state) {
-    char h[256];
-    char *d;
-    char *user;
-    char *home;
+    char h[256] = {0};
+    char *d = NULL;
+    char *user = NULL;
+    char *home = NULL;
+    struct passwd *pw = NULL;
 
     (void) state;
 
-    user = getenv("USER");
-    if (user == NULL){
-        user = getenv("LOGNAME");
-    }
-    /* in certain CIs there no such variables */
-    if (!user){
-        struct passwd *pw = getpwuid(getuid());
-        if (pw){
-            user = pw->pw_name;
-        }
-    }
+    pw = getpwuid(getuid());
+    assert_non_null(pw);
 
-    home = getenv("HOME");
+    user = pw->pw_name;
+    assert_non_null(user);
+    home = pw->pw_dir;
     assert_non_null(home);
+
     snprintf(h, 256 - 1, "%s/.ssh", home);
 
     d = ssh_path_expand_tilde("~/.ssh");
@@ -229,7 +224,7 @@ static void torture_timeout_elapsed(void **state){
 
     assert_true(ssh_timeout_elapsed(&ts,25));
     assert_false(ssh_timeout_elapsed(&ts,30000));
-    assert_false(ssh_timeout_elapsed(&ts,75));
+    assert_false(ssh_timeout_elapsed(&ts,300));
     assert_true(ssh_timeout_elapsed(&ts,0));
     assert_false(ssh_timeout_elapsed(&ts,-1));
 }
@@ -241,7 +236,7 @@ static void torture_timeout_update(void **state){
     usleep(50000);
     assert_int_equal(ssh_timeout_update(&ts,25), 0);
     assert_in_range(ssh_timeout_update(&ts,30000),29000,29960);
-    assert_in_range(ssh_timeout_update(&ts,75),1,40);
+    assert_in_range(ssh_timeout_update(&ts,500),1,460);
     assert_int_equal(ssh_timeout_update(&ts,0),0);
     assert_int_equal(ssh_timeout_update(&ts,-1),-1);
 }
@@ -339,6 +334,7 @@ static void torture_ssh_analyze_banner(void **state) {
     assert_server_banner_accepted("SSH-2.0-OpenSSH");
     assert_int_equal(0, session->openssh);
 
+
     /* OpenSSH banners: big enough to extract major and minor versions */
     assert_client_banner_accepted("SSH-2.0-OpenSSH_5.9p1");
     assert_int_equal(SSH_VERSION_INT(5, 9, 0), session->openssh);
@@ -377,6 +373,10 @@ static void torture_ssh_analyze_banner(void **state) {
     assert_int_equal(0, session->openssh);
     assert_server_banner_accepted("SSH-2.0-OpenSSH-keyscan");
     assert_int_equal(0, session->openssh);
+
+    /* OpenSSH banners: Double digit in major version */
+    assert_server_banner_accepted("SSH-2.0-OpenSSH_10.0p1");
+    assert_int_equal(SSH_VERSION_INT(10, 0, 0), session->openssh);
 
     ssh_free(session);
 }

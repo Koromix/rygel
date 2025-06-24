@@ -48,7 +48,7 @@
 
 static LIBSSH_THREAD int ssh_log_level;
 static LIBSSH_THREAD ssh_logging_callback ssh_log_cb;
-static LIBSSH_THREAD void *ssh_log_userdata;
+static LIBSSH_THREAD void *ssh_log_userdata = NULL;
 
 /**
  * @defgroup libssh_log The SSH logging functions

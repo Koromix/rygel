@@ -200,7 +200,7 @@ local_parse_file(ssh_bind bind,
                  uint8_t *seen,
                  unsigned int depth)
 {
-    FILE *f;
+    FILE *f = NULL;
     char line[MAX_LINE_SIZE] = {0};
     unsigned int count = 0;
     int rv;
@@ -626,7 +626,7 @@ int ssh_bind_config_parse_file(ssh_bind bind, const char *filename)
 {
     char line[MAX_LINE_SIZE] = {0};
     unsigned int count = 0;
-    FILE *f;
+    FILE *f = NULL;
     uint32_t parser_flags;
     int rv;
 

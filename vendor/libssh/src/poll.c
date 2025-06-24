@@ -564,8 +564,8 @@ void ssh_poll_ctx_free(ssh_poll_ctx ctx)
 
 static int ssh_poll_ctx_resize(ssh_poll_ctx ctx, size_t new_size)
 {
-  ssh_poll_handle *pollptrs;
-  ssh_pollfd_t *pollfds;
+  ssh_poll_handle *pollptrs = NULL;
+  ssh_pollfd_t *pollfds = NULL;
 
   pollptrs = realloc(ctx->pollptrs, sizeof(ssh_poll_handle) * new_size);
   if (pollptrs == NULL) {
@@ -866,7 +866,7 @@ ssh_event_add_fd(ssh_event event, socket_t fd, short events,
                  ssh_event_callback cb, void *userdata)
 {
     ssh_poll_handle p;
-    struct ssh_event_fd_wrapper *pw;
+    struct ssh_event_fd_wrapper *pw = NULL;
 
     if(event == NULL || event->ctx == NULL || cb == NULL
                                            || fd == SSH_INVALID_SOCKET) {
@@ -936,7 +936,7 @@ int ssh_event_add_session(ssh_event event, ssh_session session)
 {
     ssh_poll_handle p;
 #ifdef WITH_SERVER
-    struct ssh_iterator *iterator;
+    struct ssh_iterator *iterator = NULL;
 #endif
 
     if(event == NULL || event->ctx == NULL || session == NULL) {
@@ -1083,7 +1083,7 @@ int ssh_event_remove_session(ssh_event event, ssh_session session)
     register size_t i, used;
     int rc = SSH_ERROR;
 #ifdef WITH_SERVER
-    struct ssh_iterator *iterator;
+    struct ssh_iterator *iterator = NULL;
 #endif
 
     if (event == NULL || event->ctx == NULL || session == NULL) {

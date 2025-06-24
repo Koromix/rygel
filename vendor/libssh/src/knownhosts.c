@@ -61,7 +61,7 @@ static int hash_hostname(const char *name,
                          size_t *hash_size)
 {
     int rc;
-    HMACCTX mac_ctx;
+    HMACCTX mac_ctx = NULL;
 
     mac_ctx = hmac_init(salt, salt_size, SSH_HMAC_SHA1);
     if (mac_ctx == NULL) {
@@ -81,8 +81,8 @@ static int hash_hostname(const char *name,
 
 static int match_hashed_hostname(const char *host, const char *hashed_host)
 {
-    char *hashed;
-    char *b64_hash;
+    char *hashed = NULL;
+    char *b64_hash = NULL;
     ssh_buffer salt = NULL;
     ssh_buffer hash = NULL;
     unsigned char hashed_buf[256] = {0};
@@ -229,7 +229,7 @@ static int ssh_known_hosts_read_entries(const char *match,
     char line[MAX_LINE_SIZE];
     size_t lineno = 0;
     size_t len = 0;
-    FILE *fp;
+    FILE *fp = NULL;
     int rc;
 
     fp = fopen(filename, "r");
@@ -288,7 +288,7 @@ static int ssh_known_hosts_read_entries(const char *match,
         for (it = ssh_list_get_iterator(*entries);
              it != NULL;
              it = it->next) {
-            struct ssh_knownhosts_entry *entry2;
+            struct ssh_knownhosts_entry *entry2 = NULL;
             int cmp;
             entry2 = ssh_iterator_value(struct ssh_knownhosts_entry *, it);
             cmp = ssh_known_hosts_entries_compare(entry, entry2);
@@ -312,8 +312,8 @@ error:
 
 static char *ssh_session_get_host_port(ssh_session session)
 {
-    char *host_port;
-    char *host;
+    char *host_port = NULL;
+    char *host = NULL;
 
     if (session->opts.host == NULL) {
         ssh_set_error(session,
@@ -530,7 +530,7 @@ char *ssh_known_hosts_get_algorithms_names(ssh_session session)
     char *host_port = NULL;
     size_t count;
     bool needcomma = false;
-    char *names;
+    char *names = NULL;
 
     int rc;
 
@@ -638,7 +638,7 @@ int ssh_known_hosts_parse_line(const char *hostname,
 {
     struct ssh_knownhosts_entry *e = NULL;
     char *known_host = NULL;
-    char *p;
+    char *p = NULL;
     char *save_tok = NULL;
     enum ssh_keytypes_e key_type;
     int match = 0;

@@ -79,8 +79,8 @@ static struct ssh_tokens_st *ssh_get_knownhost_line(FILE **file,
                                                     const char **found_type)
 {
     char buffer[MAX_LINE_SIZE] = {0};
-    char *ptr;
-    struct ssh_tokens_st *tokens;
+    char *ptr = NULL;
+    struct ssh_tokens_st *tokens = NULL;
 
     if (*file == NULL) {
         *file = fopen(filename,"r");
@@ -149,7 +149,7 @@ static struct ssh_tokens_st *ssh_get_knownhost_line(FILE **file,
 static int check_public_key(ssh_session session, char **tokens) {
   ssh_string pubkey_blob = NULL;
   ssh_buffer pubkey_buffer;
-  char *pubkey_64;
+  char *pubkey_64 = NULL;
   int rc;
 
     /* ssh-rsa, ssh-ed25519, .. */
@@ -202,14 +202,14 @@ static int match_hashed_host(const char *host, const char *sourcehash)
   /* Openssh hash structure :
    * |1|base64 encoded salt|base64 encoded hash
    * hash is produced that way :
-   * hash := HMAC_SHA1_direct(key=salt,data=host)
+   * hash := HMAC_SHA1(key=salt,data=host)
    */
   unsigned char buffer[256] = {0};
-  ssh_buffer salt;
-  ssh_buffer hash;
-  HMACCTX mac;
-  char *source;
-  char *b64hash;
+  ssh_buffer salt = NULL;
+  ssh_buffer hash = NULL;
+  HMACCTX mac = NULL;
+  char *source = NULL;
+  char *b64hash = NULL;
   int match, rc;
   size_t size;
 
@@ -304,14 +304,14 @@ static int match_hashed_host(const char *host, const char *sourcehash)
 int ssh_is_server_known(ssh_session session)
 {
     FILE *file = NULL;
-    char *host;
-    char *hostport;
-    const char *type;
+    char *host = NULL;
+    char *hostport = NULL;
+    const char *type = NULL;
     int match;
     int i = 0;
-    char *files[3];
+    char *files[3] = {0};
 
-    struct ssh_tokens_st *tokens;
+    struct ssh_tokens_st *tokens = NULL;
 
     int ret = SSH_SERVER_NOT_KNOWN;
 
@@ -443,12 +443,13 @@ int ssh_is_server_known(ssh_session session)
  * @deprecated Please use ssh_session_export_known_hosts_entry()
  * @brief This function is deprecated.
  */
-char * ssh_dump_knownhost(ssh_session session) {
+char *ssh_dump_knownhost(ssh_session session)
+{
     ssh_key server_pubkey = NULL;
-    char *host;
-    char *hostport;
-    char *buffer;
-    char *b64_key;
+    char *host = NULL;
+    char *hostport = NULL;
+    char *buffer = NULL;
+    char *b64_key = NULL;
     int rc;
 
     if (session->opts.host == NULL) {
@@ -513,9 +514,9 @@ char * ssh_dump_knownhost(ssh_session session) {
  */
 int ssh_write_knownhost(ssh_session session)
 {
-    FILE *file;
+    FILE *file = NULL;
     char *buffer = NULL;
-    char *dir;
+    char *dir = NULL;
     int rc;
 
     if (session->opts.knownhosts == NULL) {

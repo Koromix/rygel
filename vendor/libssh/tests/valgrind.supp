@@ -286,6 +286,9 @@
    fun:main
 }
 
+## libkrb5
+# krb5_mcc_generate_new allocates a hashtab on a static global variable
+# It doesn't get freed.
 {
    Reachable memory from libkrb5
    Memcheck:Leak
@@ -293,22 +296,5 @@
    fun:malloc
    fun:k5_hashtab_create
    ...
-   fun:krb5_cc_new_unique
-   ...
-   fun:gss_accept_sec_context
-   fun:ssh_packet_userauth_gssapi_token_server
-   ...
-   fun:ssh_packet_process
-   fun:ssh_packet_socket_callback
-   fun:ssh_socket_pollcallback
-   fun:ssh_poll_ctx_dopoll
-   ...
-   fun:default_handle_session_cb
-   fun:run_server
-   fun:fork_run_server
-   fun:setup_callback_server
-   ...
-   fun:_cmocka_run_group_tests
-   fun:torture_run_tests
-   fun:main
+   fun:krb5_mcc_generate_new*
 }

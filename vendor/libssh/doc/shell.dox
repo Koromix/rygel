@@ -26,7 +26,7 @@ The code sample below achieves these tasks:
 @code
 int shell_session(ssh_session session)
 {
-  ssh_channel channel;
+  ssh_channel channel = NULL;
   int rc;
 
   channel = ssh_channel_new(session);

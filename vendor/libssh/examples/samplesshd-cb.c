@@ -244,10 +244,11 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
 static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
 #endif /* HAVE_ARGP_H */
 
-int main(int argc, char **argv){
-    ssh_session session;
-    ssh_bind sshbind;
-    ssh_event mainloop;
+int main(int argc, char **argv)
+{
+    ssh_session session = NULL;
+    ssh_bind sshbind = NULL;
+    ssh_event mainloop = NULL;
     struct ssh_server_callbacks_struct cb = {
         .userdata = NULL,
         .auth_none_function = auth_none,
@@ -339,4 +340,3 @@ int main(int argc, char **argv){
     ssh_finalize();
     return 0;
 }
-

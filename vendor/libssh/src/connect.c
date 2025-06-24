@@ -189,8 +189,8 @@ socket_t ssh_connect_host_nonblocking(ssh_session session, const char *host,
         }
 
         if (bind_addr) {
-            struct addrinfo *bind_ai;
-            struct addrinfo *bind_itr;
+            struct addrinfo *bind_ai = NULL;
+            struct addrinfo *bind_itr = NULL;
 
             SSH_LOG(SSH_LOG_PACKET, "Resolving %s", bind_addr);
 

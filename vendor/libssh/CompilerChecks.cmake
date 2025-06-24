@@ -92,9 +92,12 @@ if (UNIX)
     endif (WITH_STACK_PROTECTOR_STRONG)
 
     if (NOT WINDOWS AND NOT CYGWIN)
-        check_c_compiler_flag_ssp("-fstack-clash-protection" WITH_STACK_CLASH_PROTECTION)
-        if (WITH_STACK_CLASH_PROTECTION)
-            list(APPEND SUPPORTED_COMPILER_FLAGS "-fstack-clash-protection")
+        # apple m* chips do not support this option
+        if (NOT ${CMAKE_SYSTEM_PROCESSOR} STREQUAL arm64)
+            check_c_compiler_flag_ssp("-fstack-clash-protection" WITH_STACK_CLASH_PROTECTION)
+            if (WITH_STACK_CLASH_PROTECTION)
+                list(APPEND SUPPORTED_COMPILER_FLAGS "-fstack-clash-protection")
+            endif()
         endif()
     endif()
 

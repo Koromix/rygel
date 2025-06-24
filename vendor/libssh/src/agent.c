@@ -422,8 +422,9 @@ ssh_key ssh_agent_get_first_ident(struct ssh_session_struct *session,
 
 /* caller has to free comment */
 ssh_key ssh_agent_get_next_ident(struct ssh_session_struct *session,
-    char **comment) {
-    struct ssh_key_struct *key;
+                                 char **comment)
+{
+    struct ssh_key_struct *key = NULL;
     struct ssh_string_struct *blob = NULL;
     struct ssh_string_struct *tmp = NULL;
     int rc;
@@ -492,10 +493,10 @@ ssh_string ssh_agent_sign_data(ssh_session session,
                                const ssh_key pubkey,
                                struct ssh_buffer_struct *data)
 {
-    ssh_buffer request;
-    ssh_buffer reply;
-    ssh_string key_blob;
-    ssh_string sig_blob;
+    ssh_buffer request = NULL;
+    ssh_buffer reply = NULL;
+    ssh_string key_blob = NULL;
+    ssh_string sig_blob = NULL;
     unsigned int type = 0;
     unsigned int flags = 0;
     uint32_t dlen;

@@ -211,7 +211,7 @@ local_parse_file(ssh_session session,
                  unsigned int depth,
                  bool global)
 {
-    FILE *f;
+    FILE *f = NULL;
     char line[MAX_LINE_SIZE] = {0};
     unsigned int count = 0;
     int rv;
@@ -894,9 +894,11 @@ ssh_config_parse_line(ssh_session session,
                 /* Here we match only one argument */
                 p = ssh_config_get_str_tok(&s, NULL);
                 if (p == NULL || p[0] == '\0') {
-                    ssh_set_error(session, SSH_FATAL,
-                                  "line %d: ERROR - Match user keyword "
-                                  "requires argument", count);
+                    ssh_set_error(session,
+                                  SSH_FATAL,
+                                  "line %d: ERROR - Match localuser keyword "
+                                  "requires argument",
+                                  count);
                     SAFE_FREE(x);
                     return -1;
                 }
@@ -1008,17 +1010,17 @@ ssh_config_parse_line(ssh_session session,
 
             case MATCH_UNKNOWN:
             default:
-                ssh_set_error(session, SSH_FATAL,
-                              "ERROR - Unknown argument '%s' for Match keyword", p);
-                SAFE_FREE(x);
-                return -1;
+                SSH_LOG(SSH_LOG_WARN,
+                        "Unknown argument '%s' for Match keyword. Not matching",
+                        p);
+                result = 0;
+                break;
             }
         } while (p != NULL && p[0] != '\0');
         if (args == 0) {
-            ssh_set_error(session, SSH_FATAL,
-                          "ERROR - Match keyword requires an argument");
-            SAFE_FREE(x);
-            return -1;
+            SSH_LOG(SSH_LOG_WARN,
+                    "ERROR - Match keyword requires an argument. Not matching");
+            result = 0;
         }
         *parsing = result;
         break;
@@ -1460,7 +1462,7 @@ int ssh_config_parse_file(ssh_session session, const char *filename)
 {
     char line[MAX_LINE_SIZE] = {0};
     unsigned int count = 0;
-    FILE *f;
+    FILE *f = NULL;
     int parsing, rv;
     bool global = 0;
 

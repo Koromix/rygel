@@ -150,7 +150,7 @@ static ssh_string asn1_get_int(ssh_buffer buffer) {
 
 static ssh_string asn1_get_bit_string(ssh_buffer buffer)
 {
-    ssh_string str;
+    ssh_string str = NULL;
     unsigned char type;
     uint32_t size;
     unsigned char unused, last, *p = NULL;
@@ -1694,9 +1694,9 @@ ssh_string pki_signature_to_blob(const ssh_signature sig)
         case SSH_KEYTYPE_ECDSA_P521:
 #ifdef HAVE_GCRYPT_ECC
             {
-                ssh_string R;
-                ssh_string S;
-                ssh_buffer b;
+                ssh_string R = NULL;
+                ssh_string S = NULL;
+                ssh_buffer b = NULL;
 
                 b = ssh_buffer_new();
                 if (b == NULL) {
@@ -1837,8 +1837,8 @@ ssh_signature pki_signature_from_blob(const ssh_key pubkey,
         case SSH_KEYTYPE_SK_ECDSA:
 #ifdef HAVE_GCRYPT_ECC
             { /* build ecdsa siganature */
-                ssh_buffer b;
-                ssh_string r, s;
+                ssh_buffer b = NULL;
+                ssh_string r = NULL, s = NULL;
                 uint32_t rlen;
 
                 b = ssh_buffer_new();
@@ -1846,6 +1846,8 @@ ssh_signature pki_signature_from_blob(const ssh_key pubkey,
                     ssh_signature_free(sig);
                     return NULL;
                 }
+                /* The buffer will contain sensitive information. */
+                ssh_buffer_set_secure(b);
 
                 rc = ssh_buffer_add_data(b,
                                          ssh_string_data(sig_blob),

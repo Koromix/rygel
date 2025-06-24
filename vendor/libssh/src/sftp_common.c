@@ -894,12 +894,8 @@ sftp_status_message parse_status_msg(sftp_message msg)
                            &status->langmsg);
 
     if (rc != SSH_OK && msg->sftp->version >= 3) {
-        /* These are mandatory from version 3 */
-        SAFE_FREE(status);
-        ssh_set_error(msg->sftp->session, SSH_FATAL,
-                      "Invalid SSH_FXP_STATUS message");
-        sftp_set_error(msg->sftp, SSH_FX_FAILURE);
-        return NULL;
+        SSH_LOG(SSH_LOG_WARN,
+                "Invalid SSH_FXP_STATUS message. Missing error message.");
     }
 
     if (status->errormsg == NULL)

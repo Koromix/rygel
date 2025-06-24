@@ -52,6 +52,7 @@ extern LIBSSH_THREAD int ssh_log_level;
 #define LIBSSH_TEST_NONEWLINEEND "libssh_test_NoNewLineEnd.tmp"
 #define LIBSSH_TEST_NONEWLINEONELINE "libssh_test_NoNewLineOneline.tmp"
 #define LIBSSH_TEST_RECURSIVE_INCLUDE "libssh_test_recursive_include.tmp"
+#define LIBSSH_TESTCONFIG_MATCH_COMPLEX "libssh_test_match_complex.tmp"
 
 #define LIBSSH_TESTCONFIG_STRING1 \
     "User "USERNAME"\nInclude "LIBSSH_TESTCONFIG2"\n\n"
@@ -235,6 +236,13 @@ extern LIBSSH_THREAD int ssh_log_level;
 #define LIBSSH_TEST_RECURSIVE_INCLUDE_STRING \
     "Include " LIBSSH_TEST_RECURSIVE_INCLUDE
 
+/* Complex match cases */
+#define LIBSSH_TESTCONFIG_MATCH_COMPLEX_STRING \
+    "Match originalhost \"Foo,Bar\" exec \"[ \\\"$(ps h o comm p $(ps h o ppid p $PPID))\\\" != \\\"rsync\\\" ]\"\n" \
+    "Match exec \"[ \\\"$(ps h o comm p $(ps h o ppid p $PPID))\\\" != \\\"rsync\\\" ]\"\n" \
+    "\tForwardAgent yes\n" \
+    "\tHostName complex-match\n"
+
 /**
  * @brief helper function loading configuration from either file or string
  */
@@ -284,6 +292,7 @@ static int setup_config_files(void **state)
     unlink(LIBSSH_TEST_PUBKEYALGORITHMS);
     unlink(LIBSSH_TEST_NONEWLINEEND);
     unlink(LIBSSH_TEST_NONEWLINEONELINE);
+    unlink(LIBSSH_TESTCONFIG_MATCH_COMPLEX);
 
     torture_write_file(LIBSSH_TESTCONFIG1,
                        LIBSSH_TESTCONFIG_STRING1);
@@ -349,6 +358,10 @@ static int setup_config_files(void **state)
     torture_write_file(LIBSSH_TEST_NONEWLINEONELINE,
                        LIBSSH_TEST_NONEWLINEONELINE_STRING);
 
+    /* Match complex combinations */
+    torture_write_file(LIBSSH_TESTCONFIG_MATCH_COMPLEX,
+                       LIBSSH_TESTCONFIG_MATCH_COMPLEX_STRING);
+
     return 0;
 }
 
@@ -374,6 +387,9 @@ static int teardown_config_files(void **state)
     unlink(LIBSSH_TESTCONFIG17);
     unlink(LIBSSH_TEST_PUBKEYTYPES);
     unlink(LIBSSH_TEST_PUBKEYALGORITHMS);
+    unlink(LIBSSH_TEST_NONEWLINEEND);
+    unlink(LIBSSH_TEST_NONEWLINEONELINE);
+    unlink(LIBSSH_TESTCONFIG_MATCH_COMPLEX);
 
     return 0;
 }
@@ -943,7 +959,9 @@ static void torture_config_match(void **state,
         string = config;
     }
     torture_reset_config(session);
-    _parse_config(session, file, string, SSH_ERROR);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "unmatched");
+    _parse_config(session, file, string, SSH_OK);
+    assert_string_equal(session->opts.host, "unmatched");
 
     /* Missing argument to unsupported option originalhost */
     config = "Match originalhost\n"
@@ -999,6 +1017,36 @@ static void torture_config_match(void **state,
     }
     torture_reset_config(session);
     _parse_config(session, file, string, SSH_ERROR);
+
+    /* Unknown argument to Match keyword */
+    config = "Match tagged tag_name\n"
+             "\tHostName never-matched.com\n"
+             "Match all\n"
+             "\tHostName config-host.com\n";
+    if (file != NULL) {
+        torture_write_file(file, config);
+    } else {
+        string = config;
+    }
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "example.com");
+    _parse_config(session, file, string, SSH_OK);
+    assert_string_equal(session->opts.host, "config-host.com");
+
+    /* Missing argument to Match keyword */
+    config = "Match\n"
+             "\tHostName never-matched.com\n"
+             "Match all\n"
+             "\tHostName config-host.com\n";
+    if (file != NULL) {
+        torture_write_file(file, config);
+    } else {
+        string = config;
+    }
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "example.com");
+    _parse_config(session, file, string, SSH_OK);
+    assert_string_equal(session->opts.host, "config-host.com");
 }
 
 /**
@@ -2088,6 +2136,7 @@ static void torture_config_parser_get_cmd(void **state)
  *  * Strip leading whitespace
  *  * Return first token separated by whitespace or equal sign,
  *    respecting quotes!
+ *  * Correctly treat escaped quotes inside of quotes.
  */
 static void torture_config_parser_get_token(void **state)
 {
@@ -2260,6 +2309,28 @@ static void torture_config_parser_get_token(void **state)
     tok = ssh_config_get_token(&p);
     assert_string_equal(tok, "value");
     assert_int_equal(*p, '\0');
+
+    /* Escaped quotes */
+    strncpy(data, " \"value with \\\"escaped\\\" quotes\"   \n", sizeof(data));
+    p = data;
+    tok = ssh_config_get_token(&p);
+    assert_string_equal(tok, "value with \"escaped\" quotes");
+    assert_int_equal(*p, '\0');
+
+    strncpy(data, "\\\"value with \\\"escaped\\\" quotes\\\"\n", sizeof(data));
+    p = data;
+    tok = ssh_config_get_token(&p);
+    assert_string_equal(tok, "\\\"value");
+    assert_int_equal(*p, 'w');
+    tok = ssh_config_get_token(&p);
+    assert_string_equal(tok, "with");
+    assert_int_equal(*p, '\\');
+    tok = ssh_config_get_token(&p);
+    assert_string_equal(tok, "\\\"escaped\\\"");
+    assert_int_equal(*p, 'q');
+    tok = ssh_config_get_token(&p);
+    assert_string_equal(tok, "quotes\\\"");
+    assert_int_equal(*p, '\0');
 }
 
 /* match_pattern() sanity tests
@@ -2392,24 +2463,14 @@ static void torture_config_make_absolute_int(void **state, bool no_sshdir_fails)
     ssh_session session = *state;
     char *result = NULL;
 #ifndef _WIN32
-    char h[256];
-    char *user;
-    char *home;
-
-    user = getenv("USER");
-    if (user == NULL) {
-        user = getenv("LOGNAME");
-    }
-
-    /* in certain CIs there no such variables */
-    if (!user) {
-        struct passwd *pw = getpwuid(getuid());
-        if (pw){
-            user = pw->pw_name;
-        }
-    }
-
-    home = getenv("HOME");
+    char h[256] = {0};
+    char *user = NULL;
+    char *home = NULL;
+    struct passwd *pw = getpwuid(getuid());
+    assert_non_null(pw);
+    user = pw->pw_name;
+    assert_non_null(user);
+    home = pw->pw_dir;
     assert_non_null(home);
 #endif
 
@@ -2530,6 +2591,30 @@ static void torture_config_parse_uri(void **state)
     assert_int_equal(rc, SSH_ERROR);
 }
 
+/* Complex ssh match configurations
+ */
+static void torture_config_match_complex(void **state)
+{
+    ssh_session session = *state;
+    char *v = NULL;
+    int ret;
+
+    ssh_options_set(session, SSH_OPTIONS_HOST, "Bar");
+
+    _parse_config(session, LIBSSH_TESTCONFIG_MATCH_COMPLEX, NULL, SSH_OK);
+
+    /* Test the variable presence */
+    ret = ssh_options_get(session, SSH_OPTIONS_HOST, &v);
+    assert_return_code(ret, errno);
+    assert_non_null(v);
+#ifndef WITH_EXEC
+    assert_string_equal(session->opts.host, "Bar");
+#else
+    assert_string_equal(v, "complex-match");
+#endif
+    ssh_string_free_char(v);
+}
+
 int torture_run_tests(void)
 {
     int rc;
@@ -2623,6 +2708,8 @@ int torture_run_tests(void)
         cmocka_unit_test_setup_teardown(torture_config_make_absolute_no_sshdir,
                                         setup_no_sshdir, teardown),
         cmocka_unit_test_setup_teardown(torture_config_parse_uri,
+                                        setup, teardown),
+        cmocka_unit_test_setup_teardown(torture_config_match_complex,
                                         setup, teardown),
     };
 

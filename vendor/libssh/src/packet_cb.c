@@ -92,7 +92,7 @@ SSH_PACKET_CALLBACK(ssh_packet_disconnect_callback)
 /**
  * @internal
  *
- * @brief Handle a SSH_IGNORE and SSH_DEBUG packet.
+ * @brief Handle a SSH_IGNORE packet.
  */
 SSH_PACKET_CALLBACK(ssh_packet_ignore_callback)
 {
@@ -101,11 +101,37 @@ SSH_PACKET_CALLBACK(ssh_packet_ignore_callback)
     (void)type;
     (void)packet;
 
-    SSH_LOG(SSH_LOG_DEBUG,
-            "Received %s packet",
-            type == SSH2_MSG_IGNORE ? "SSH_MSG_IGNORE" : "SSH_MSG_DEBUG");
+    SSH_LOG(SSH_LOG_DEBUG, "Received SSH_MSG_IGNORE packet");
 
-    /* TODO: handle a graceful disconnect */
+    return SSH_PACKET_USED;
+}
+
+/**
+ * @internal
+ *
+ * @brief Handle a SSH_DEBUG packet.
+ */
+SSH_PACKET_CALLBACK(ssh_packet_debug_callback)
+{
+    uint8_t always_display = -1;
+    char *message = NULL;
+    int rc;
+
+    (void)session; /* unused */
+    (void)type;
+    (void)user;
+
+    rc = ssh_buffer_unpack(packet, "bs", &always_display, &message);
+    if (rc != SSH_OK) {
+        SSH_LOG(SSH_LOG_PACKET, "Error reading debug message");
+        return SSH_PACKET_USED;
+    }
+    SSH_LOG(SSH_LOG_DEBUG,
+            "Received SSH_MSG_DEBUG packet with message %s%s",
+            message,
+            always_display != 0 ? " (always display)" : "");
+    SAFE_FREE(message);
+
     return SSH_PACKET_USED;
 }
 

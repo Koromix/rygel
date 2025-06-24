@@ -1195,9 +1195,9 @@ ssh_string pki_signature_to_blob(const ssh_signature sig)
         case SSH_KEYTYPE_ECDSA_P256:
         case SSH_KEYTYPE_ECDSA_P384:
         case SSH_KEYTYPE_ECDSA_P521: {
-            ssh_string r;
-            ssh_string s;
-            ssh_buffer b;
+            ssh_string r = NULL;
+            ssh_string s = NULL;
+            ssh_buffer b = NULL;
             int rc;
 
             b = ssh_buffer_new();
@@ -1351,9 +1351,9 @@ ssh_signature pki_signature_from_blob(const ssh_key pubkey,
         case SSH_KEYTYPE_ECDSA_P384:
         case SSH_KEYTYPE_ECDSA_P521:
         case SSH_KEYTYPE_SK_ECDSA: {
-            ssh_buffer b;
-            ssh_string r;
-            ssh_string s;
+            ssh_buffer b = NULL;
+            ssh_string r = NULL;
+            ssh_string s = NULL;
             size_t rlen;
 
             b = ssh_buffer_new();

@@ -125,12 +125,14 @@ int run_server(struct server_state_st *state)
         if (fd == -1) {
             fprintf(stderr, "dup2 of log file to stderr failed: %s\n",
                     strerror(errno));
+            fclose(f);
             goto out;
         }
         fd = dup2(fileno(f), STDOUT_FILENO);
         if (fd == -1) {
             fprintf(stderr, "dup2 of log file to stdout failed: %s\n",
                     strerror(errno));
+            fclose(f);
             goto out;
         }
         fclose(f);

@@ -404,7 +404,7 @@ done:
  */
 int ssh_dh_init_common(struct ssh_crypto_struct *crypto)
 {
-    struct dh_ctx *ctx;
+    struct dh_ctx *ctx = NULL;
     int rc;
 
     ctx = calloc(1, sizeof(*ctx));

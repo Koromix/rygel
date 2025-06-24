@@ -48,7 +48,7 @@ int ssh_auth_list(ssh_session session) {
 int ssh_userauth_offer_pubkey(ssh_session session, const char *username,
     int type, ssh_string publickey)
 {
-    ssh_key key;
+    ssh_key key = NULL;
     int rc;
 
     (void) type; /* unused */
@@ -70,7 +70,7 @@ int ssh_userauth_pubkey(ssh_session session,
                         ssh_string publickey,
                         ssh_private_key privatekey)
 {
-    ssh_key key;
+    ssh_key key = NULL;
     int rc;
 
     (void) publickey; /* unused */
@@ -376,10 +376,11 @@ void publickey_free(ssh_public_key key) {
   SAFE_FREE(key);
 }
 
-ssh_public_key publickey_from_privatekey(ssh_private_key prv) {
-    struct ssh_public_key_struct *p;
-    ssh_key privkey;
-    ssh_key pubkey;
+ssh_public_key publickey_from_privatekey(ssh_private_key prv)
+{
+    struct ssh_public_key_struct *p = NULL;
+    ssh_key privkey = NULL;
+    ssh_key pubkey = NULL;
     int rc;
 
     privkey = ssh_key_new();
@@ -423,8 +424,8 @@ ssh_private_key privatekey_from_file(ssh_session session,
                                      const char *passphrase) {
     ssh_auth_callback auth_fn = NULL;
     void *auth_data = NULL;
-    ssh_private_key privkey;
-    ssh_key key;
+    ssh_private_key privkey = NULL;
+    ssh_key key = NULL;
     int rc;
 
     (void) type; /* unused */
@@ -440,7 +441,7 @@ ssh_private_key privatekey_from_file(ssh_session session,
                                      auth_fn,
                                      auth_data,
                                      &key);
-    if (rc == SSH_ERROR) {
+    if (rc != SSH_OK) {
         return NULL;
     }
 
@@ -492,7 +493,7 @@ void privatekey_free(ssh_private_key prv) {
 
 ssh_string publickey_from_file(ssh_session session, const char *filename,
     int *type) {
-    ssh_key key;
+    ssh_key key = NULL;
     ssh_string key_str = NULL;
     int rc;
 
@@ -525,9 +526,10 @@ int ssh_type_from_name(const char *name) {
     return ssh_key_type_from_name(name);
 }
 
-ssh_public_key publickey_from_string(ssh_session session, ssh_string pubkey_s) {
-    struct ssh_public_key_struct *pubkey;
-    ssh_key key;
+ssh_public_key publickey_from_string(ssh_session session, ssh_string pubkey_s)
+{
+    struct ssh_public_key_struct *pubkey = NULL;
+    ssh_key key = NULL;
     int rc;
 
     (void) session; /* unused */
@@ -562,9 +564,10 @@ ssh_public_key publickey_from_string(ssh_session session, ssh_string pubkey_s) {
     return pubkey;
 }
 
-ssh_string publickey_to_string(ssh_public_key pubkey) {
-    ssh_key key;
-    ssh_string key_blob;
+ssh_string publickey_to_string(ssh_public_key pubkey)
+{
+    ssh_key key = NULL;
+    ssh_string key_blob = NULL;
     int rc;
 
     if (pubkey == NULL) {
@@ -609,11 +612,11 @@ int ssh_publickey_to_file(ssh_session session,
                           ssh_string pubkey,
                           int type)
 {
-    FILE *fp;
-    char *user;
+    FILE *fp = NULL;
+    char *user = NULL;
     char buffer[1024];
     char host[256];
-    unsigned char *pubkey_64;
+    unsigned char *pubkey_64 = NULL;
     size_t len;
     int rc;
     if(session==NULL)
@@ -680,9 +683,9 @@ int ssh_try_publickey_from_file(ssh_session session,
                                 const char *keyfile,
                                 ssh_string *publickey,
                                 int *type) {
-    char *pubkey_file;
+    char *pubkey_file = NULL;
     size_t len;
-    ssh_string pubkey_string;
+    ssh_string pubkey_string = NULL;
     int pubkey_type;
 
     if (session == NULL || keyfile == NULL || publickey == NULL || type == NULL) {

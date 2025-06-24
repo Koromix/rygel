@@ -384,6 +384,7 @@ void explicit_bzero(void *s, size_t n);
  */
 #define discard_const_p(type, ptr) ((type *)discard_const(ptr))
 
+#ifndef __VA_NARG__
 /**
  * Get the argument count of variadic arguments
  */
@@ -415,6 +416,7 @@ void explicit_bzero(void *s, size_t n);
         29, 28, 27, 26, 25, 24, 23, 22, 21, 20, \
         19, 18, 17, 16, 15, 14, 13, 12, 11, 10, \
          9,  8,  7,  6,  5,  4,  3,  2,  1,  0
+#endif
 
 #define CLOSE_SOCKET(s) do { if ((s) != SSH_INVALID_SOCKET) { _XCLOSESOCKET(s); (s) = SSH_INVALID_SOCKET;} } while(0)
 

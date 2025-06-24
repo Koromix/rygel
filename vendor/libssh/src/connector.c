@@ -629,8 +629,9 @@ error:
     return rc;
 }
 
-int ssh_connector_remove_event(ssh_connector connector) {
-    ssh_session session;
+int ssh_connector_remove_event(ssh_connector connector)
+{
+    ssh_session session = NULL;
 
     if (connector->in_poll != NULL) {
         ssh_event_remove_poll(connector->event, connector->in_poll);

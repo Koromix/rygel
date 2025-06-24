@@ -1385,70 +1385,48 @@ void torture_setup_tokens(const char *temp_dir,
 {
     char token_setup_start_cmd[1024] = {0};
     char socket_path[1204] = {0};
-#ifndef WITH_PKCS11_PROVIDER
     char conf_path[1024] = {0};
-#endif /* WITH_PKCS11_PROVIDER */
+#ifdef WITH_PKCS11_PROVIDER
     char *env = NULL;
+#endif /* WITH_PKCS11_PROVIDER */
     int rc;
 
     rc = snprintf(token_setup_start_cmd,
                   sizeof(token_setup_start_cmd),
-                  "%s/tests/pkcs11/setup-softhsm-tokens.sh %s %s %s %s %s %s",
+                  "%s/tests/pkcs11/setup-softhsm-tokens.sh %s %s %s %s %s",
                   BINARYDIR,
                   temp_dir,
                   filename,
                   object_name,
                   load_public,
-                  SOFTHSM2_LIBRARY,
-#ifdef WITH_PKCS11_PROVIDER
-                  P11_KIT_CLIENT
-#else
-                  ""
-#endif /* WITH_PKCS11_PROVIDER */
-    );
+                  SOFTHSM2_LIBRARY);
     assert_int_not_equal(rc, sizeof(token_setup_start_cmd));
 
     rc = system(token_setup_start_cmd);
     assert_return_code(rc, errno);
 
 #ifdef WITH_PKCS11_PROVIDER
-    rc = snprintf(socket_path,
-                  sizeof(socket_path),
-                  "unix:path=%s/p11-kit-server.socket",
-                  temp_dir);
-    assert_int_not_equal(rc, sizeof(socket_path));
-    setenv("P11_KIT_SERVER_ADDRESS", socket_path, 1);
+    setenv("PKCS11_PROVIDER_MODULE", SOFTHSM2_LIBRARY, 1);
 
-    setenv("PKCS11_PROVIDER_MODULE", P11_KIT_CLIENT, 1);
     /* This is useful for debugging PKCS#11 calls */
-
     env = getenv("TORTURE_PKCS11");
     if (env != NULL && env[0] != '\0') {
 #ifdef PKCS11SPY
-        setenv("PKCS11SPY", P11_KIT_CLIENT, 1);
+        setenv("PKCS11SPY", SOFTHSM2_LIBRARY, 1);
         setenv("PKCS11_PROVIDER_MODULE", PKCS11SPY, 1);
 #else
         fprintf(stderr, "[ TORTURE  ] >>> pkcs11-spy not found\n");
 #endif /* PKCS11SPY */
     }
-#else
-    (void)env;
+#endif /* WITH_PKCS11_PROVIDER */
 
     snprintf(conf_path, sizeof(conf_path), "%s/softhsm.conf", temp_dir);
     setenv("SOFTHSM2_CONF", conf_path, 1);
-#endif /* WITH_PKCS11_PROVIDER */
 }
 
 void torture_cleanup_tokens(const char *temp_dir)
 {
-#ifdef WITH_PKCS11_PROVIDER
-    char pidfile[1024] = {0};
-
-    snprintf(pidfile, sizeof(pidfile), "%s/p11-kit-server.pid", temp_dir);
-    torture_terminate_process(pidfile);
-#else
     unsetenv("SOFTHSM2_CONF");
-#endif /* WITH_PKCS11_PROVIDER */
 }
 #endif /* WITH_PKCS11_URI */
 

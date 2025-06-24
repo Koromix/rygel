@@ -53,7 +53,7 @@ static struct termios terminal;
 
 static char *pcap_file = NULL;
 
-static char *proxycommand;
+static char *proxycommand = NULL;
 
 static int auth_callback(const char *prompt,
                          char *buf,
@@ -251,7 +251,7 @@ static void select_loop(ssh_session session,ssh_channel channel)
 
 static void shell(ssh_session session)
 {
-    ssh_channel channel;
+    ssh_channel channel = NULL;
     struct termios terminal_local;
     int interactive=isatty(0);
 
@@ -339,7 +339,7 @@ static void batch_shell(ssh_session session)
 static int client(ssh_session session)
 {
     int auth = 0;
-    char *banner;
+    char *banner = NULL;
     int state;
 
     if (user) {
@@ -423,7 +423,7 @@ static void cleanup_pcap(void)
 
 int main(int argc, char **argv)
 {
-    ssh_session session;
+    ssh_session session = NULL;
 
     ssh_init();
     session = ssh_new();

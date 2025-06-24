@@ -277,10 +277,10 @@ static int session_setup(void **state)
 static int session_setup_sftp(void **state)
 {
     struct test_server_st *tss = *state;
-    struct torture_state *s;
-    struct torture_sftp *tsftp;
-    ssh_session session;
-    sftp_session sftp;
+    struct torture_state *s = NULL;
+    struct torture_sftp *tsftp = NULL;
+    ssh_session session = NULL;
+    sftp_session sftp = NULL;
     int rc;
 
     assert_non_null(tss);
@@ -398,7 +398,6 @@ static void torture_server_establish_sftp(void **state)
 
     /* init sftp session */
     tsftp = s->ssh.tsftp;
-    sftp = tsftp->sftp;
 
     printf("in establish before sftp_new\n");
     sftp = sftp_new(session);
@@ -453,8 +452,6 @@ static void torture_server_test_sftp_function(void **state)
     /* Using the default password for the server */
     rc = ssh_userauth_password(session, NULL, SSHD_DEFAULT_PASSWORD);
     assert_int_equal(rc, SSH_AUTH_SUCCESS);
-
-    rv_str = ssh_get_issue_banner(session);
 
     /* init sftp session */
     tsftp = s->ssh.tsftp;
@@ -1060,6 +1057,50 @@ torture_server_sftp_setstat(void **state)
     sftp_attributes_free(tmp_attr);
 }
 
+/* The max number of handles is 256 in sftpserver.h -- keep in sync! */
+#define SFTP_HANDLES 256
+static void torture_server_sftp_handles_exhaustion(void **state)
+{
+    struct test_server_st *tss = *state;
+    struct torture_state *s = NULL;
+    struct torture_sftp *tsftp = NULL;
+    char name[128] = {0};
+    sftp_file handle, handles[SFTP_HANDLES] = {0};
+    sftp_session sftp = NULL;
+    int rc;
+
+    assert_non_null(tss);
+
+    s = tss->state;
+    assert_non_null(s);
+
+    tsftp = s->ssh.tsftp;
+    assert_non_null(tsftp);
+
+    sftp = tsftp->sftp;
+    assert_non_null(sftp);
+
+    /* Occupy all handles */
+    for (int i = 0; i < SFTP_HANDLES; i++) {
+        snprintf(name, sizeof(name), "%s/fn%d", tsftp->testdir, i);
+        handles[i] = sftp_open(sftp, name, O_WRONLY | O_CREAT, 0700);
+        assert_non_null(handles[i]);
+    }
+
+    /* Next handle should fail, but not crash or OOB */
+    snprintf(name, sizeof(name), "%s/failfn", tsftp->testdir);
+    handle = sftp_open(sftp, name, O_WRONLY | O_CREAT, 0700);
+    assert_null(handle);
+
+    /* cleanup */
+    for (int i = 0; i < SFTP_HANDLES; i++) {
+        snprintf(name, sizeof(name), "%s/fn%d", tsftp->testdir, i);
+        rc = sftp_close(handles[i]);
+        assert_int_equal(rc, SSH_OK);
+    }
+}
+
+
 int torture_run_tests(void) {
     int rc;
     struct CMUnitTest tests[] = {
@@ -1085,6 +1126,9 @@ int torture_run_tests(void) {
                                         session_setup_sftp,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_server_sftp_setstat,
+                                        session_setup_sftp,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_server_sftp_handles_exhaustion,
                                         session_setup_sftp,
                                         session_teardown),
     };
