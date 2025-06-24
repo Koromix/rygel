@@ -23,9 +23,9 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
-     inkscape:zoom="3.1027204"
-     inkscape:cx="276.37037"
-     inkscape:cy="565.79381"
+     inkscape:zoom="1.0969773"
+     inkscape:cx="516.87486"
+     inkscape:cy="666.83238"
      inkscape:window-width="1920"
      inkscape:window-height="1008"
      inkscape:window-x="0"
@@ -475,28 +475,35 @@
        x="171.58211"
        y="58.276409">UID</tspan></text>
   <rect
-     style="fill:#eba17e;fill-opacity:1;stroke-width:2.89753"
+     style="fill:#2d8261;fill-opacity:1;stroke-width:2.89753"
      id="rect4677"
      width="61.901955"
      height="35.548912"
      x="383.45944"
      y="32.263821" />
   <rect
-     style="fill:#eba17e;fill-opacity:1;stroke-width:3.88669"
+     style="fill:#2d8261;fill-opacity:1;stroke-width:3.88669"
      id="rect4677-5"
      width="84.726402"
      height="46.731922"
      x="371.41147"
      y="144.3654" />
   <rect
-     style="fill:#eba17e;fill-opacity:1;stroke-width:2.84204"
+     style="fill:#2d8261;fill-opacity:1;stroke-width:2.84204"
      id="rect4677-5-6"
      width="64.283882"
      height="32.933281"
      x="382.1275"
      y="297.80795" />
   <rect
-     style="fill:#eba17e;fill-opacity:1;stroke-width:4.63787"
+     style="fill:#2d8261;fill-opacity:1;stroke-width:3.05055"
+     id="rect4677-5-6-3"
+     width="74.062614"
+     height="32.933281"
+     x="154.0768"
+     y="369.70862" />
+  <rect
+     style="fill:#2d8261;fill-opacity:1;stroke-width:4.63787"
      id="rect4677-5-6-2"
      width="112.15727"
      height="50.267128"
@@ -510,12 +517,12 @@
      x="-0.14940386"
      y="300.59244" />
   <rect
-     style="fill:#eba17e;fill-opacity:1;stroke-width:6.06699"
+     style="fill:#eba17e;fill-opacity:1;stroke-width:5.62351"
      id="rect4677-5-6-2-1"
-     width="158.08696"
+     width="135.82008"
      height="61.027519"
-     x="126.05982"
-     y="479.98758" />
+     x="130.86595"
+     y="480.01157" />
   <text
      xml:space="preserve"
      style="font-size:24px;line-height:0;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#ffffff;stroke-width:0.75"
@@ -584,28 +591,28 @@
   <text
      xml:space="preserve"
      style="font-size:20px;line-height:0.7;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#ffffff;stroke-width:0.75"
-     x="204.42949"
-     y="503.16107"
+     x="199.31364"
+     y="504.22427"
      id="text4452"><tspan
        sodipodi:role="line"
        id="tspan4450"
        style="font-size:20px;font-family:sans-serif;fill:#ffffff;stroke-width:0.75"
-       x="204.42949"
-       y="503.16107">données client</tspan><tspan
+       x="199.31364"
+       y="504.22427">Client</tspan><tspan
        sodipodi:role="line"
        style="font-size:10px;font-family:sans-serif;fill:#ffffff;stroke-width:0.75"
-       x="204.42949"
-       y="517.16107"
+       x="199.31364"
+       y="518.22424"
        id="tspan4466">[avatar, journal,</tspan><tspan
        sodipodi:role="line"
        style="font-size:10px;font-family:sans-serif;fill:#ffffff;stroke-width:0.75"
-       x="204.42949"
-       y="531.16107"
+       x="199.31364"
+       y="532.22424"
        id="tspan2240">échéances, réponses]</tspan><tspan
        sodipodi:role="line"
        style="font-size:10px;font-family:sans-serif;fill:#ffffff;stroke-width:0.75"
-       x="204.42949"
-       y="545.16107"
+       x="199.31364"
+       y="546.22424"
        id="tspan4456" /></text>
   <text
      xml:space="preserve"
@@ -642,13 +649,13 @@
        y="322.89539">VID</tspan></text>
   <text
      xml:space="preserve"
-     style="font-size:24px;line-height:0.2;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke-width:0.75"
+     style="font-size:24px;line-height:0.2;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke-width:0.75"
      x="191.82156"
      y="394.44489"
      id="text5098-3"><tspan
        sodipodi:role="line"
        id="tspan5096-6"
-       style="font-size:24px;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke-width:0.75"
+       style="font-size:24px;font-family:sans-serif;fill:#ffffff;fill-opacity:1;stroke-width:0.75"
        x="191.82156"
        y="394.44489">VKEY</tspan></text>
   <text

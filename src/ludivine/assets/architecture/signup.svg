@@ -23,9 +23,9 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
-     inkscape:zoom="0.5484887"
-     inkscape:cx="296.26864"
-     inkscape:cy="531.46036"
+     inkscape:zoom="0.77568016"
+     inkscape:cx="451.8615"
+     inkscape:cy="301.02613"
      inkscape:window-width="1560"
      inkscape:window-height="928"
      inkscape:window-x="0"
@@ -446,13 +446,15 @@
   <g
      clip-path="url(#54dfafb843)"
      id="g453"
-     transform="translate(-13.864251,-23.493332)">
+     transform="translate(-13.864251,-23.493332)"
+     style="fill:#2d8261;fill-opacity:1">
     <path
        fill="#eba17e"
        d="M 22.507812,461.56641 V 83.265625 H 107.53516 V 461.56641 Z m 0,0"
        fill-opacity="1"
        fill-rule="nonzero"
-       id="path451" />
+       id="path451"
+       style="fill:#2d8261;fill-opacity:1" />
   </g>
   <g
      fill="#000000"

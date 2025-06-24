@@ -72,7 +72,10 @@ Le client Javascript transmet la valeur *UID* au serveur (1), qui répond en env
     <img src="{{ ASSET ../assets/architecture/login.svg }}" width="800" height="587" alt=""/>
 </div>
 
-Le client demande alors au serveur de lui envoyer le coffre-fort/vault **VID** (4). S'il existe, il s'agit d'une base de données SQLite3 chiffrée (SQLCipher AES 256 bit), la clé de chiffrement étant la **VKEY**. Cette base est stockée et lue côté client, la clé VKEY ne quitte jamais la machine client. Le serveur se content d'envoyer au client la dernière version de la base chiffrée (5). Le client ouvre cette base SQLite à l'aide de la clé VKEY (6b).
+Le client demande alors au serveur de lui envoyer le coffre-fort/vault correspondant au **VID récupéré dans le token** (4). S'il existe, il s'agit d'une base de données SQLite3 chiffrée (SQLCipher AES 256 bit), la clé de chiffrement étant la **VKEY**. Cette base est stockée et lue côté client, la clé VKEY ne quitte jamais la machine client. Le serveur se content d'envoyer au client la dernière version de la base chiffrée (5). Le client ouvre cette base SQLite à l'aide de la clé VKEY (6b).
+
+> [!NOTE]
+> Lors de la première connexion, le serveur ne possède pas de *vault* et retourne une erreur 404. La responsabilité de générer ce coffre-fort revient au client. C'est également le client qui effectue les opérations de migration du schéma de données SQLite en cas de besoin (par exemple après une mise à jour).
 
 Chaque modification du coffre-fort est répliquée vers le serveur sous forme chiffrée. Le serveur ne connait pas la VKEY et ne peut donc pas lire le coffre-fort, qui existe sous forme de base SQLite chiffrée.
 
