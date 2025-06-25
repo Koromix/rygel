@@ -317,7 +317,7 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
     HeapArray<uint8_t> xml;
 
     for (;;) {
-        int status = RunSafe("list S3 objects", [&](CURL *curl) {
+        int status = RunSafe("list S3 objects", 5, [&](CURL *curl) {
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
@@ -388,7 +388,7 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(Span<const u
     ctx.key = key;
     ctx.func = func;
 
-    int status = RunSafe("get S3 object", [&](CURL *curl) {
+    int status = RunSafe("get S3 object", 5, 404, [&](CURL *curl) {
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
@@ -463,7 +463,7 @@ StatResult s3_Client::HasObject(Span<const char> key, int64_t *out_size)
 {
     BlockAllocator temp_alloc;
 
-    int status = RunSafe("test S3 object", [&](CURL *curl) {
+    int status = RunSafe("test S3 object", 5, 404, [&](CURL *curl) {
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
@@ -485,10 +485,6 @@ StatResult s3_Client::HasObject(Span<const char> key, int64_t *out_size)
     switch (status) {
         case 200: return StatResult::Success;
         case 404: return StatResult::MissingPath;
-        case 403: {
-            LogError("Failed to stat object '%1': permission denied", key);
-            return StatResult::AccessDenied;
-        } break;
         default: {
             LogError("Failed to stat object '%1': error %2", key, status);
             return StatResult::OtherError;
@@ -511,7 +507,7 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size, FunctionRe
 {
     BlockAllocator temp_alloc;
 
-    int status = RunSafe("upload S3 object", [&](CURL *curl) {
+    int status = RunSafe("upload S3 object", 5, 412, [&](CURL *curl) {
         LocalArray<KeyValue, 8> headers;
 
         int64_t now = GetUnixTime();
@@ -581,7 +577,7 @@ bool s3_Client::DeleteObject(Span<const char> key)
 {
     BlockAllocator temp_alloc;
 
-    int status = RunSafe("delete S3 object", [&](CURL *curl) {
+    int status = RunSafe("delete S3 object", 5, 204, [&](CURL *curl) {
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
@@ -589,14 +585,9 @@ bool s3_Client::DeleteObject(Span<const char> key)
 
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE"); // DELETE (duh)
 
-        int status = curl_Perform(curl, nullptr);
-
-        if (status == 200 || status == 204)
-            return 200;
-
-        return status;
+        return curl_Perform(curl, nullptr);
     });
-    if (status != 200)
+    if (status != 200 && status != 204)
         return false;
 
     return true;
@@ -616,7 +607,7 @@ bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mo
     TimeSpec spec = DecomposeTimeUTC(until);
     Span<const char> body = Fmt(&temp_alloc, xml, FmtTimeISO(spec), GetLockModeString(mode));
 
-    int status = RunSafe("retain S3 object", [&](CURL *curl) {
+    int status = RunSafe("retain S3 object", 5, [&](CURL *curl) {
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
@@ -710,7 +701,7 @@ bool s3_Client::OpenAccess()
 
     // Authentification test, adjust region if needed
     {
-        int status = RunSafe("authenticate to S3 bucket", [&](CURL *curl) {
+        int status = RunSafe("authenticate to S3 bucket", 3, 404, [&](CURL *curl) {
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
@@ -739,7 +730,7 @@ bool s3_Client::OpenAccess()
                 return 200;
 
             return status;
-        }, true);
+        });
 
         if (status == 404) {
             LogError("Unknown S3 bucket (error 404)");
@@ -804,20 +795,19 @@ static inline bool ShouldRetry(int status)
     return false;
 }
 
-int s3_Client::RunSafe(const char *action, FunctionRef<int(CURL *)> func, bool quick)
+int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<int(CURL *)> func)
 {
     CURL *curl = ReserveConnection();
     if (!curl)
         return false;
     RG_DEFER { ReleaseConnection(curl); };
 
-    int tries = quick ? 3 : 9;
     int status = 0;
 
     for (int i = 0; i < tries; i++) {
         status = func(curl);
 
-        if (status == 200 || status == 404 || status == 412)
+        if (status == 200 || status == expect)
             return status;
         if (status > 0 && !ShouldRetry(status))
             break;
