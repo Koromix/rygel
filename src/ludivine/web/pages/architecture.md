@@ -20,13 +20,15 @@ Les différents identifiants et le token chiffré (qui permet de les relier) son
 > Lorsque c'est nécessaire, les identifiants sont transmis au serveur via le corps de requête ou via un header dédié, mais jamais via les URL, que ce soit dans le chemin ou dans la chaîne de requête (*query string*).
 > Cela diminue le risque de retrouver voire de corréler des identifiants via les journaux de requête HTTP, par exemple via les logs NGINX.
 
+Le coffre-fort chiffré (ou vault) est une base SQLite chiffrée, avec AES-256 en mode CBC (SQLCipher). Elle est exclusivement manipulée par le client Javascript, le serveur n'est pas en possession de la clé de chiffrement.
+
 ## Inscription
 
 Lors de l'inscription d'un participant, le client Javascript génère plusieurs informations :
 
 - **VID** (vault ID) : identifiant aléatoire de type [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random))
 - **RID** (research ID) : identifiant aléatoire de type UUIDv4
-- **VKEY** (vault key) : clé aléatoire de chiffrement de 32 octets utilisé pour une base SQLite en chiffrement AES 256 (mode CBC)
+- **VKEY** (vault key) : clé aléatoire de chiffrement de 32 octets utilisé pour une base SQLite en chiffrement AES-256 (mode CBC)
 
 Le client génère également une clé aléatoire **TKEY**, avec laquelle il chiffre les 3 informations sus-citées (VID, RID, VKEY) pour former un **token chiffré** (XSalsa20-Poly1305).
 
@@ -72,7 +74,7 @@ Le client Javascript transmet la valeur *UID* au serveur (1), qui répond en env
     <img src="{{ ASSET ../assets/architecture/login.svg }}" width="800" height="572" alt=""/>
 </div>
 
-Le client demande alors au serveur de lui envoyer le coffre-fort/vault correspondant au **VID récupéré dans le token** (4). S'il existe, il s'agit d'une base de données SQLite3 chiffrée (SQLCipher AES 256 bit), la clé de chiffrement étant la **VKEY**. Cette base est stockée et lue côté client, la clé VKEY ne quitte jamais la machine client. Le serveur se content d'envoyer au client la dernière version de la base chiffrée (5). Le client ouvre cette base SQLite à l'aide de la clé VKEY (6b).
+Le client demande alors au serveur de lui envoyer le coffre-fort/vault correspondant au **VID récupéré dans le token** (4). S'il existe, il s'agit d'une base de données SQLite3 chiffrée (SQLCipher AES-256 bit), la clé de chiffrement étant la **VKEY**. Cette base est stockée et lue côté client, la clé VKEY ne quitte jamais la machine client. Le serveur se content d'envoyer au client la dernière version de la base chiffrée (5). Le client ouvre cette base SQLite à l'aide de la clé VKEY (6b).
 
 > [!NOTE]
 > Lors de la première connexion, le serveur ne possède pas de *vault* et retourne une erreur 404. La responsabilité de générer ce coffre-fort revient au client. C'est également le client qui effectue les opérations de migration du schéma de données SQLite en cas de besoin (par exemple après une mise à jour).
