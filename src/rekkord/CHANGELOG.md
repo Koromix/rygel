@@ -6,6 +6,13 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.74
+
+*Released on 2025-06-26*
+
+- Fix "Blob is not a Snapshot" error during repository check
+- Avoid unreadable progress output when not run in VT-100 terminal
+
 ### Rekkord 0.73
 
 *Released on 2025-06-23*
