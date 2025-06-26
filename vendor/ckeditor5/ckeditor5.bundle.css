@@ -5788,7 +5788,10 @@ div.ck.ck-balloon-panel.ck-mention-balloon {
   border: 1px solid hsl(0, 0%, 75%);
 }
 @media print {
-  .ck-content figure.table > table {
+  .ck-content figure.table:not(.layout-table):has(> table) {
+    display: block;
+  }
+  .ck-content figure.table:not(.layout-table) > table {
     height: initial;
   }
 }
