@@ -2132,7 +2132,7 @@ static void RunProgressThread()
     // Reuse for performance
     HeapArray<ProgressInfo> bars;
 
-    int delay = StdErr->IsVt100() ? 400 : 10000;
+    int delay = StdErr->IsVt100() ? 400 : 4000;
 
     for (;;) {
         // Need to run still?
@@ -2315,47 +2315,52 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
         return;
     }
 
-    // Don't blow up stack size
-    static LocalArray<char, 65536> buf;
-    buf.Clear();
-
-    bool vt100 = StdErr->IsVt100();
     Size count = bars.len;
     Size rows = std::min((Size)20, bars.len);
 
     bars = bars.Take(0, rows);
 
-    for (const ProgressInfo &bar: bars) {
-        if (bar.determinate) {
-            int64_t range = bar.max - bar.min;
-            int64_t delta = bar.value - bar.min;
+    if (StdErr->IsVt100()) {
+        // Don't blow up stack size
+        static LocalArray<char, 65536> buf;
+        buf.Clear();
 
-            int progress = (int)(100 * delta / range);
-            int size = progress / 4;
+        for (const ProgressInfo &bar: bars) {
+            if (bar.determinate) {
+                int64_t range = bar.max - bar.min;
+                int64_t delta = bar.value - bar.min;
 
-            buf.len += Fmt(buf.TakeAvailable(), vt100, "%!..+[%1%2]%!0  %3\n", FmtArg('=').Repeat(size), FmtArg(' ').Repeat(25 - size), bar.text).len;
-        } else {
-            int progress = (int)(frame % 44);
-            int before = (progress > 22) ? (44 - progress) : progress;
-            int after = std::max(22 - before, 0);
+                int progress = (int)(100 * delta / range);
+                int size = progress / 4;
 
-            buf.len += Fmt(buf.TakeAvailable(), vt100, "%!..+[%1===%2]%!0  %3\n", FmtArg(' ').Repeat(before), FmtArg(' ').Repeat(after), bar.text).len;
+                buf.len += Fmt(buf.TakeAvailable(), true, "%!..+[%1%2]%!0  %3\n", FmtArg('=').Repeat(size), FmtArg(' ').Repeat(25 - size), bar.text).len;
+            } else {
+                int progress = (int)(frame % 44);
+                int before = (progress > 22) ? (44 - progress) : progress;
+                int after = std::max(22 - before, 0);
+
+                buf.len += Fmt(buf.TakeAvailable(), true, "%!..+[%1===%2]%!0  %3\n", FmtArg(' ').Repeat(before), FmtArg(' ').Repeat(after), bar.text).len;
+            }
         }
-    }
 
-    if (count > bars.len) {
-        buf.len += Fmt(buf.TakeAvailable(), vt100, "%!D..... and %1 more tasks%!0\n", count - bars.len).len;
-        rows++;
-    }
-    buf.len--;
+        if (count > bars.len) {
+            buf.len += Fmt(buf.TakeAvailable(), true, "%!D..... and %1 more tasks%!0\n", count - bars.len).len;
+            rows++;
+        }
+        buf.len--;
 
-    StdErr->Write(buf);
-    StdErr->Flush();
+        StdErr->Write(buf);
+        StdErr->Flush();
 
-    if (rows > 1) {
-        Print(StdErr, "\r\x1B[%1F\x1B[%2M", rows - 1, rows);
+        if (rows > 1) {
+            Print(StdErr, "\r\x1B[%1F\x1B[%2M", rows - 1, rows);
+        } else {
+            Print(StdErr, "\r\x1B[%1M", rows);
+        }
     } else {
-        Print(StdErr, "\r\x1B[%1M", rows);
+        for (const ProgressInfo &bar: bars) {
+            PrintLn(StdErr, "%1", bar.text);
+        }
     }
 
     frame++;
