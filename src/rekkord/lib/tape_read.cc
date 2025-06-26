@@ -1631,6 +1631,7 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
                     type != (int)BlobType::Snapshot2 &&
                     type != (int)BlobType::Snapshot3 &&
                     type != (int)BlobType::Snapshot4 &&
+                    type != (int)BlobType::Snapshot5 &&
                     type != (int)BlobType::Snapshot) {
                 LogError("Blob '%1' is not a Snapshot", snapshot.oid);
                 return false;
