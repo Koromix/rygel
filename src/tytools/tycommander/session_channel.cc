@@ -25,8 +25,8 @@
 typedef BOOL WINAPI ProcessIdToSessionId_func(DWORD dwProcessId, DWORD *pSessionId);
 
 static ProcessIdToSessionId_func *ProcessIdToSessionId_ =
-    reinterpret_cast<ProcessIdToSessionId_func *>(GetProcAddress(GetModuleHandle(L"kernel32.dll"),
-                                                                 "ProcessIdToSessionId"));
+    reinterpret_cast<ProcessIdToSessionId_func *>(
+    reinterpret_cast<void *>(GetProcAddress(GetModuleHandle(L"kernel32.dll"), "ProcessIdToSessionId")));
 #endif
 
 using namespace std;

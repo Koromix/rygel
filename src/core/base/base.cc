@@ -4081,7 +4081,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
                 FunctionRef<void(int64_t, int64_t)> progress)
 {
     static NtCopyFileChunkFunc *NtCopyFileChunk =
-        (NtCopyFileChunkFunc *)GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtCopyFileChunk");
+        (NtCopyFileChunkFunc *)(void *)GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtCopyFileChunk");
 
     int64_t max = size;
     progress(0, max);
@@ -4105,7 +4105,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
 
             if (status) {
                 static RtlNtStatusToDosErrorFunc *RtlNtStatusToDosError =
-                    (RtlNtStatusToDosErrorFunc *)GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlNtStatusToDosError");
+                    (RtlNtStatusToDosErrorFunc *)(void *)GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlNtStatusToDosError");
 
                 unsigned long err = RtlNtStatusToDosError(status);
                 LogError("Failed to copy '%1' to '%2': %2", GetWin32ErrorString(err));
@@ -8530,7 +8530,7 @@ bool ReloadAssets()
     }
     RG_DEFER { FreeLibrary(h); };
 
-    lib_assets = (const Span<const AssetInfo> *)GetProcAddress(h, "EmbedAssets");
+    lib_assets = (const Span<const AssetInfo> *)(void *)GetProcAddress(h, "EmbedAssets");
 #else
     void *h = dlopen(assets_filename, RTLD_LAZY | RTLD_LOCAL);
     if (!h) {

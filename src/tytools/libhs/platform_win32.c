@@ -88,7 +88,7 @@ uint32_t hs_win32_version(void)
         info.dwOSVersionInfoSize = sizeof(info);
 
         RtlGetVersion_func *RtlGetVersion =
-            (RtlGetVersion_func *)GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlGetVersion");
+            (RtlGetVersion_func *)(void *)GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlGetVersion");
         RtlGetVersion(&info);
 
         version = info.dwMajorVersion * 100 + info.dwMinorVersion;

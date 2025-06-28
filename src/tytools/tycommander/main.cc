@@ -31,11 +31,11 @@ using namespace std;
 static void make_minidump(EXCEPTION_POINTERS *ex)
 {
     auto MiniDumpWriteDump_ =
-        reinterpret_cast<decltype(MiniDumpWriteDump) *>(GetProcAddress(LoadLibraryW(L"dbghelp"),
-                                                                       "MiniDumpWriteDump"));
+        reinterpret_cast<decltype(MiniDumpWriteDump) *>(
+        reinterpret_cast<void *>(GetProcAddress(LoadLibraryW(L"dbghelp"), "MiniDumpWriteDump")));
     auto SHGetFolderPathA_ =
-        reinterpret_cast<decltype(SHGetFolderPathA) *>(GetProcAddress(LoadLibraryW(L"shell32"),
-                                                                      "SHGetFolderPathA"));
+        reinterpret_cast<decltype(SHGetFolderPathA) *>(
+        reinterpret_cast<void *>(GetProcAddress(LoadLibraryW(L"shell32"), "SHGetFolderPathA")));
     if (!MiniDumpWriteDump_ || !SHGetFolderPathA_)
         return;
 

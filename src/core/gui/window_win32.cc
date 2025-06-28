@@ -364,7 +364,7 @@ static bool InitWGL(const char *application_name)
 
 #define IMPORT_WGL_FUNCTION(Name) \
         do { \
-            Name = (decltype(Name))wglGetProcAddress(#Name); \
+            Name = (decltype(Name))(void *)wglGetProcAddress(#Name); \
             if (!Name) { \
                 LogError("Required WGL function '%1' is not available",  #Name); \
                 return false; \
