@@ -246,7 +246,7 @@ bool http_Config::Validate() const
     return valid;
 }
 
-static void AllowPortReuse(int sock)
+static void AllowPortReuse([[maybe_unused]] int sock)
 {
 #if defined(SO_REUSEPORT_LB)
     int reuse = 1;
