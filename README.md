@@ -15,6 +15,7 @@ Most projects are licensed under the [GPL 3.0 license](https://www.gnu.org/licen
 | *hodler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)                     | Felix      | **Good** | GPL 3     |
 | *jumbll*   | Backup media files to multiple disjoint disks                                    | Felix      | **Good** | GPL 3     |
 | *koffi*    | Fast and simple C FFI (foreign function interface) for Node.js                   | Node.js    | **Good** | MIT       |
+| *ludivine* | Platform underlying the Lignes de Vie project (https://ldv-recherche.fr)         | Felix      | **Good** | GPL 3     |
 | *meestic*  | Control the keyboard lighting on MSI Delta 15 laptops                            | Felix      | **Good** | GPL 3     |
 | *napka*    | List and map of mental healthcare resources in France                            | Node.js    | **WIP**  | GPL 3     |
 | *rekkord*  | Backup tool with deduplication and asymmetric encryption                         | Felix      | **WIP**  | GPL 3     |
