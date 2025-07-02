@@ -72,6 +72,11 @@ enum class s3_PutResult {
     OtherError
 };
 
+struct s3_ObjectInfo {
+    int64_t size;
+    char version[256];
+};
+
 class s3_Client {
     struct KeyValue {
         const char *key;
@@ -109,10 +114,10 @@ public:
     bool ListObjects(FunctionRef<bool(const char *, int64_t)> func) { return ListObjects(nullptr, func); }
     bool ListObjects(Span<const char> prefix, FunctionRef<bool(const char *, int64_t)> func);
 
-    int64_t GetObject(Span<const char> key, FunctionRef<bool(Span<const uint8_t>)> func);
-    Size GetObject(Span<const char> key, Span<uint8_t> out_buf);
-    Size GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj);
-    StatResult HasObject(Span<const char> key, int64_t *out_size = nullptr);
+    int64_t GetObject(Span<const char> key, FunctionRef<bool(Span<const uint8_t>)> func, s3_ObjectInfo *out_info = nullptr);
+    Size GetObject(Span<const char> key, Span<uint8_t> out_buf, s3_ObjectInfo *out_info = nullptr);
+    Size GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj, s3_ObjectInfo *out_info = nullptr);
+    StatResult HeadObject(Span<const char> key, s3_ObjectInfo *out_info = nullptr);
 
     s3_PutResult PutObject(Span<const char> key, int64_t size, FunctionRef<Size(Span<uint8_t>)> func, const s3_PutSettings &settings = {});
     s3_PutResult PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutSettings &settings = {});

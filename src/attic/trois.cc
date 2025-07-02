@@ -81,7 +81,7 @@ R"(Usage: %!..+%1 list url [prefix])", FelixTarget);
     return 0;
 }
 
-static int RunHas(Span<const char *> arguments)
+static int RunHead(Span<const char *> arguments)
 {
     // Options
     const char *url = nullptr;
@@ -89,7 +89,7 @@ static int RunHas(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 has url key)", FelixTarget);
+R"(Usage: %!..+%1 head url key)", FelixTarget);
     };
 
     // Parse arguments
@@ -125,12 +125,15 @@ R"(Usage: %!..+%1 has url key)", FelixTarget);
     if (!ConnectToS3(&s3, url))
         return 1;
 
-    int64_t size = 0;
-    StatResult ret = s3.HasObject(key, &size);
+    s3_ObjectInfo info = {};
+    StatResult ret = s3.HeadObject(key, &info);
 
     switch (ret) {
         case StatResult::Success: {
-            PrintLn("Object exists: %!..+%1%!0", FmtDiskSize(size));
+            PrintLn("Object exists: %!..+%1%!0", FmtDiskSize(info.size));
+            if (info.version[0]) {
+                PrintLn("Version ID: %!D..%1%!0", info.version);
+            }
             return 0;
         } break;
         case StatResult::MissingPath: {
@@ -200,12 +203,19 @@ R"(Usage: %!..+%1 get url key destination)", FelixTarget);
         return 1;
 
     const auto func = [&](Span<const uint8_t> buf) { return writer.Write(buf); };
-    bool success = s3.GetObject(key, func);
+
+    s3_ObjectInfo info = {};
+    bool success = s3.GetObject(key, func, &info);
 
     if (!success)
         return 1;
     if (!writer.Close())
         return 1;
+
+    PrintLn("Size: %!..+%1%!0", FmtDiskSize(info.size));
+    if (info.version[0]) {
+        PrintLn("Version ID: %!D..%1%!0", info.version);
+    }
 
     return 0;
 }
@@ -357,7 +367,7 @@ R"(Usage: %!..+%1 command [arg...]%!0
 Commands:
 
     %!..+list%!0                           List objects
-    %!..+has%!0                            Test object
+    %!..+head%!0                           Test object
     %!..+get%!0                            Get object
     %!..+put%!0                            Put object
     %!..+delete%!0                         Delete object
@@ -393,8 +403,8 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
     // Execute relevant command
     if (TestStr(cmd, "list")) {
         return RunList(arguments);
-    } else if (TestStr(cmd, "has")) {
-        return RunHas(arguments);
+    } else if (TestStr(cmd, "head")) {
+        return RunHead(arguments);
     } else if (TestStr(cmd, "get")) {
         return RunGet(arguments);
     } else if (TestStr(cmd, "put")) {

@@ -373,7 +373,7 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
     return true;
 }
 
-int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(Span<const uint8_t>)> func)
+int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(Span<const uint8_t>)> func, s3_ObjectInfo *out_info)
 {
     BlockAllocator temp_alloc;
 
@@ -393,6 +393,25 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(Span<const u
         TimeSpec date = DecomposeTimeUTC(now);
 
         PrepareRequest(curl, date, "GET", key, {}, &temp_alloc);
+
+        if (out_info) {
+            MemSet(out_info->version, 0, RG_SIZE(out_info->version));
+
+            curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, +[](char *buf, size_t, size_t nmemb, void *udata) {
+                s3_ObjectInfo *out_info = (s3_ObjectInfo *)udata;
+
+                Span<const char> value;
+                Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
+                value = TrimStr(value);
+
+                if (TestStrI(key, "x-amz-version-id")) {
+                    CopyString(value, out_info->version);
+                }
+
+                return nmemb;
+            });
+            curl_easy_setopt(curl, CURLOPT_HEADERDATA, out_info);
+        }
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
             GetContext *ctx = (GetContext *)udata;
@@ -416,10 +435,14 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(Span<const u
         return -1;
     }
 
+    if (out_info) {
+        out_info->size = ctx.len;
+    }
+
     return ctx.len;
 }
 
-Size s3_Client::GetObject(Span<const char> key, Span<uint8_t> out_buf)
+Size s3_Client::GetObject(Span<const char> key, Span<uint8_t> out_buf, s3_ObjectInfo *out_info)
 {
     Size prev_len = out_buf.len;
 
@@ -431,14 +454,14 @@ Size s3_Client::GetObject(Span<const char> key, Span<uint8_t> out_buf)
         out_buf.len -= buf.len;
 
         return true;
-    });
+    }, out_info);
     if (size < 0)
         return -1;
 
     return prev_len - out_buf.len;
 }
 
-Size s3_Client::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj)
+Size s3_Client::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj, s3_ObjectInfo *out_info)
 {
     Size prev_len = out_obj->len;
     RG_DEFER_N(err_guard) { out_obj->RemoveFrom(prev_len); };
@@ -451,7 +474,7 @@ Size s3_Client::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t>
 
         out_obj->Append(buf);
         return true;
-    });
+    }, out_info);
     if (size < 0)
         return -1;
 
@@ -459,7 +482,7 @@ Size s3_Client::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t>
     return out_obj->len - prev_len;
 }
 
-StatResult s3_Client::HasObject(Span<const char> key, int64_t *out_size)
+StatResult s3_Client::HeadObject(Span<const char> key, s3_ObjectInfo *out_info)
 {
     BlockAllocator temp_alloc;
 
@@ -471,12 +494,31 @@ StatResult s3_Client::HasObject(Span<const char> key, int64_t *out_size)
 
         curl_easy_setopt(curl, CURLOPT_NOBODY, 1L); // HEAD
 
+        if (out_info) {
+            MemSet(out_info->version, 0, RG_SIZE(out_info->version));
+
+            curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, +[](char *buf, size_t, size_t nmemb, void *udata) {
+                s3_ObjectInfo *out_info = (s3_ObjectInfo *)udata;
+
+                Span<const char> value;
+                Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
+                value = TrimStr(value);
+
+                if (TestStrI(key, "x-amz-version-id")) {
+                    CopyString(value, out_info->version);
+                }
+
+                return nmemb;
+            });
+            curl_easy_setopt(curl, CURLOPT_HEADERDATA, out_info);
+        }
+
         int ret = curl_Perform(curl, nullptr);
 
-        if (out_size && ret == 200) {
+        if (out_info && ret == 200) {
             curl_off_t length = 0;
             curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &length);
-            *out_size = (int64_t)length;
+            out_info->size = (int64_t)length;
         }
 
         return ret;

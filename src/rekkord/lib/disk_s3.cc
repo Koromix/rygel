@@ -136,7 +136,15 @@ bool S3Disk::ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)
 
 StatResult S3Disk::TestFile(const char *path, int64_t *out_size)
 {
-    return s3.HasObject(path, out_size);
+    if (out_size) {
+        s3_ObjectInfo info = {};
+        StatResult ret = s3.HeadObject(path, &info);
+
+        *out_size = info.size;
+        return ret;
+    } else {
+        return s3.HeadObject(path);
+    }
 }
 
 std::unique_ptr<rk_Disk> rk_OpenS3Disk(const rk_S3Config &config)
