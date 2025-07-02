@@ -26,7 +26,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 131;
+const int InstanceVersion = 132;
 const int LegacyVersion = 60;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
@@ -2899,9 +2899,24 @@ bool MigrateInstance(sq_Database *db, int target)
                     if (!success)
                         return false;
                 }
+            } [[fallthrough]];
+
+            case 131: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE rec_publics (
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid) DEFERRABLE INITIALLY DEFERRED,
+                        eid TEXT NOT NULL REFERENCES rec_entries (eid) DEFERRABLE INITIALLY DEFERRED,
+                        key TEXT NOT NULL,
+                        path TEXT NOT NULL
+                    );
+                    CREATE INDEX rec_publics_t ON rec_publics (tid);
+                    CREATE INDEX rec_publics_e ON rec_publics (eid);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 131);
+            static_assert(InstanceVersion == 132);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

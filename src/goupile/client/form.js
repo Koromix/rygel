@@ -1710,6 +1710,8 @@ instead of:
         for (;;) {
             if (name[0] == '*') {
                 options.mandatory = true;
+            } else if (name[0] == '+') {
+                options.public = true;
             } else {
                 break;
             }
@@ -1955,7 +1957,8 @@ instead of:
 
         let variable = {
             type: intf.type,
-            label: intf.label
+            label: intf.label,
+            public: !!intf.options.public
         };
 
         if (props != null) {

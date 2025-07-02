@@ -2292,7 +2292,8 @@ async function saveRecord(tid, entry, raw, meta, draft) {
         data: raw,
         tags: null,
         constraints: meta.constraints,
-        counters: meta.counters
+        counters: meta.counters,
+        publics: []
     };
 
     // Gather global list of tags for this record entry
@@ -2307,6 +2308,12 @@ async function saveRecord(tid, entry, raw, meta, draft) {
         if (draft)
             tags.add('draft');
         frag.tags = Array.from(tags);
+    }
+
+    // Gather list of public variables
+    for (let key in raw) {
+        if (raw[key].$n?.variable?.public)
+            frag.publics.push(key);
     }
 
     await records.save(tid, entry, frag, ENV.version, meta.signup, route.page.claim);

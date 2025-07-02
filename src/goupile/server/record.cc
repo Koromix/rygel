@@ -100,11 +100,6 @@ struct FragmentInfo {
     HeapArray<const char *> tags;
 };
 
-struct BlobInfo {
-    const char *name = nullptr;
-    const char *sha256 = nullptr;
-};
-
 struct CounterInfo {
     const char *key = nullptr;
     int max = 0;
@@ -120,6 +115,11 @@ struct SignupInfo {
     const char *subject = nullptr;
     Span<const char> html = nullptr;
     Span<const char> text = nullptr;
+};
+
+struct BlobInfo {
+    const char *name = nullptr;
+    const char *sha256 = nullptr;
 };
 
 static bool CheckTag(Span<const char> tag)
@@ -1149,6 +1149,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     FragmentInfo fragment = {};
     HeapArray<DataConstraint> constraints;
     HeapArray<CounterInfo> counters;
+    HeapArray<const char *> publics;
     SignupInfo signup = {};
     HeapArray<BlobInfo> blobs;
     bool claim = true;
@@ -1278,6 +1279,14 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
                     counters.Append(counter);
                 }
+            } else if (key == "publics") {
+                parser.ParseArray();
+                while (parser.InArray()) {
+                    const char *key = nullptr;
+                    parser.ParseString(&key);
+
+                    publics.Append(key);
+                }
             } else if (key == "signup") {
                 switch (parser.PeekToken()) {
                     case json_TokenType::Null: {
@@ -1364,6 +1373,10 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 LogError("Counter maximum must be between 1 and 64");
                 valid = false;
             }
+        }
+
+        for (const char *key: publics) {
+            valid &= CheckKey(key);
         }
 
         if (signup.enable) {
@@ -1651,6 +1664,16 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                                       VALUES (?1, ?2)
                                       ON CONFLICT DO UPDATE SET state = excluded.state)",
                                    counter.key, state))
+                return false;
+        }
+
+        // Update publics
+        if (!instance->db->Run("DELETE FROM rec_publics WHERE eid = ?1", fragment.eid))
+            return false;
+        for (const char *key: publics) {
+            if (!instance->db->Run(R"(INSERT INTO rec_publics (tid, eid, key, path)
+                                      VALUES (?1, ?2, ?3, '$.' || replace(?4, '.', '.$v.') || '.$v'))",
+                                   tid, fragment.eid, key, key))
                 return false;
         }
 
@@ -1961,6 +1984,78 @@ void HandleRecordLock(http_IO *io, InstanceHolder *instance)
 void HandleRecordUnlock(http_IO *io, InstanceHolder *instance)
 {
     HandleLock(io, instance, false);
+}
+
+void HandleRecordPublic(http_IO *io, InstanceHolder *instance)
+{
+    const http_RequestInfo &request = io->Request();
+
+    if (!instance->config.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!session->HasPermission(instance, UserPermission::DataRead) &&
+            !session->HasPermission(instance, UserPermission::DataSave)) {
+        LogError("User is not allowed to read public values");
+        io->SendError(403);
+        return;
+    }
+
+    const char *store = request.GetQueryValue("store");
+    if (!store) {
+        LogError("Missing 'store' parameter");
+        io->SendError(422);
+        return;
+    }
+
+    sq_Statement stmt;
+    if (!instance->db->Prepare(R"(SELECT e.rowid, p.key, json_quote(json_extract(e.data, p.path))
+                                  FROM rec_entries e
+                                  INNER JOIN rec_publics p ON (p.eid = e.eid)
+                                  WHERE e.store = ?1 AND e.deleted = 0
+                                  ORDER BY e.rowid)", &stmt, store))
+        return;
+
+    // Export data
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartArray();
+    if (stmt.Step()) {
+        do {
+            int64_t e = sqlite3_column_int64(stmt, 0);
+
+            json.StartObject();
+
+            do {
+                const char *key = (const char *)sqlite3_column_text(stmt, 1);
+                const char *value = (const char *)sqlite3_column_text(stmt, 2);
+
+                if (value) {
+                    json.Key(key); json.Raw(value);
+                } else {
+                    json.Key(key); json.Null();
+                }
+            } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == e);
+
+            json.EndObject();
+        } while (stmt.IsRow());
+    }
+    if (!stmt.IsValid())
+        return;
+    json.EndArray();
+
+    json.Finish();
 }
 
 void HandleBlobGet(http_IO *io, InstanceHolder *instance)

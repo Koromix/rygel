@@ -48,6 +48,7 @@ function DataRemote() {
             tags: frag.tags,
             constraints: frag.constraints,
             counters: frag.counters,
+            publics: frag.publics,
             signup: signup,
 
             claim: claim
