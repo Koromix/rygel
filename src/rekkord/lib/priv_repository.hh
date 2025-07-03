@@ -31,7 +31,7 @@ enum class MasterDerivation {
     ConfigKey = 0,
     DataKey = 1,
     LogKey = 2,
-    SignKey = 3
+    NeutralKey = 3
 };
 
 #pragma pack(push, 1)
@@ -39,7 +39,7 @@ struct KeyData {
     uint8_t salt[16];
     uint8_t nonce[24];
     int8_t role;
-    uint8_t cypher[16 + MaxKeys * 32];
+    uint8_t cypher[16 + 32 + MaxKeys * 32];
     uint8_t sig[64];
 };
 #pragma pack(pop)

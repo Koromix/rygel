@@ -36,7 +36,7 @@ static_assert(crypto_sign_ed25519_SEEDBYTES == 32);
 static_assert(crypto_sign_ed25519_BYTES == 64);
 static_assert(crypto_kdf_blake2b_KEYBYTES == crypto_box_PUBLICKEYBYTES);
 
-static void SeedSigningPair(uint8_t sk[32], uint8_t pk[32])
+static void SeedSigningPair(const uint8_t sk[32], uint8_t pk[32])
 {
     crypto_hash_sha512(pk, sk, 32);
     crypto_scalarmult_ed25519_base(pk, pk);
@@ -159,11 +159,11 @@ bool rk_Repository::Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users
     crypto_kdf_blake2b_derive_from_key(keyset->ckey, RG_SIZE(keyset->ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
     crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
     crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(keyset->skey, RG_SIZE(keyset->skey), (int)MasterDerivation::SignKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(keyset->nkey, RG_SIZE(keyset->nkey), (int)MasterDerivation::NeutralKey, DerivationContext, mkey.ptr);
     SeedSigningPair(keyset->ckey, keyset->akey);
     crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
     crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-    SeedSigningPair(keyset->skey, keyset->vkey);
+    MemCpy(keyset->skey, keyset->nkey, RG_SIZE(keyset->skey));
 
     // Generate unique repository IDs
     {
@@ -182,8 +182,11 @@ bool rk_Repository::Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users
     for (const rk_UserInfo &user: users) {
         RG_ASSERT(user.pwd);
 
+        rk_KeySet keys = *keyset;
+        randombytes_buf(keys.skey, RG_SIZE(keys.skey));
+
         const char *filename = Fmt(&temp_alloc, "keys/%1", user.username).ptr;
-        if (!WriteKeys(filename, user.pwd, user.role, *keyset))
+        if (!WriteKeys(filename, user.pwd, user.role, keys))
             return false;
         files.Append(filename);
     }
@@ -234,7 +237,6 @@ bool rk_Repository::Authenticate(const char *username, const char *pwd)
                 SeedSigningPair(keyset->ckey, keyset->akey);
                 crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
                 crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-                SeedSigningPair(keyset->skey, keyset->vkey);
             } break;
 
             case rk_UserRole::WriteOnly: {
@@ -243,7 +245,6 @@ bool rk_Repository::Authenticate(const char *username, const char *pwd)
                 ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
                 ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
                 ZeroSafe(keyset->lkey, RG_SIZE(keyset->lkey));
-                SeedSigningPair(keyset->skey, keyset->vkey);
             } break;
 
             case rk_UserRole::ReadWrite: {
@@ -254,7 +255,6 @@ bool rk_Repository::Authenticate(const char *username, const char *pwd)
                 ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
                 crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
                 crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-                SeedSigningPair(keyset->skey, keyset->vkey);
             } break;
 
             case rk_UserRole::LogOnly: {
@@ -264,7 +264,6 @@ bool rk_Repository::Authenticate(const char *username, const char *pwd)
                 ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
                 ZeroSafe(keyset->wkey, RG_SIZE(keyset->wkey));
                 crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-                ZeroSafe(keyset->skey, RG_SIZE(keyset->skey));
             } break;
         }
 
@@ -306,11 +305,11 @@ bool rk_Repository::Authenticate(Span<const uint8_t> mkey)
     crypto_kdf_blake2b_derive_from_key(keyset->ckey, RG_SIZE(keyset->ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
     crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
     crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(keyset->skey, RG_SIZE(keyset->skey), (int)MasterDerivation::SignKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(keyset->nkey, RG_SIZE(keyset->nkey), (int)MasterDerivation::NeutralKey, DerivationContext, mkey.ptr);
     SeedSigningPair(keyset->ckey, keyset->akey);
     crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
     crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-    SeedSigningPair(keyset->skey, keyset->vkey);
+    MemCpy(keyset->skey, keyset->nkey, RG_SIZE(keyset->skey));
 
     user = nullptr;
 
@@ -423,7 +422,7 @@ bool rk_Repository::ChangeCID()
     return true;
 }
 
-bool rk_Repository::InitUser(const char *username, rk_UserRole role, const char *pwd, bool force)
+bool rk_Repository::InitUser(const char *username, rk_UserRole role, const char *pwd)
 {
     RG_ASSERT(HasMode(rk_AccessMode::Config));
     RG_ASSERT(pwd);
@@ -444,17 +443,14 @@ bool rk_Repository::InitUser(const char *username, rk_UserRole role, const char 
     }
 
     if (exists) {
-        if (force) {
-            LogWarning("Overwriting existing user '%1'", username);
-        } else {
-            LogError("User '%1' already exists", username);
-            return false;
-        }
+        LogError("User '%1' already exists", username);
+        return false;
     }
 
-    disk->DeleteFile(filename);
+    rk_KeySet keys = *keyset;
+    randombytes_buf(keys.skey, RG_SIZE(keys.skey));
 
-    if (!WriteKeys(filename, pwd, role, *keyset))
+    if (!WriteKeys(filename, pwd, role, keys))
         return false;
 
     return true;
@@ -886,7 +882,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
             return false;
         }
 
-        // Sign it to avoid tampering by users without write access
+        // Sign it to avoid tampering by other users
         crypto_sign_ed25519_detached(std::end(cypher) - crypto_sign_BYTES, nullptr, cypher,
                                      RG_SIZE(cypher) - crypto_sign_BYTES, keyset->skey);
 
@@ -988,17 +984,6 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
             }
 
             cypher.len = (Size)len;
-        }
-
-        // Check signature first to detect tampering
-        {
-            Span<const uint8_t> msg = cypher.Take(0, cypher.len - crypto_sign_BYTES);
-            const uint8_t *sig = msg.end();
-
-            if (crypto_sign_ed25519_verify_detached(sig, msg.ptr, msg.len, keyset->vkey)) {
-                LogError("Invalid signature for tag '%1'", main);
-                continue;
-            }
         }
 
         TagIntro intro;
@@ -1126,34 +1111,39 @@ bool rk_Repository::WriteKeys(const char *path, const char *pwd, rk_UserRole rol
     randombytes_buf(data.nonce, RG_SIZE(data.nonce));
     data.role = (int8_t)role;
 
+    // Write public user key
+    SeedSigningPair(keys.skey, payload);
+
     // Pick relevant subset of keys
-    switch (role) {
-        case rk_UserRole::Admin: {
-            MemCpy(payload + offsetof(rk_KeySet, ckey), keys.ckey, RG_SIZE(keys.ckey));
-            MemCpy(payload + offsetof(rk_KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
-            MemCpy(payload + offsetof(rk_KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
-            MemCpy(payload + offsetof(rk_KeySet, skey), keys.skey, RG_SIZE(keys.skey));
-        } break;
+    {
+        uint8_t *dest = payload + 32;
 
-        case rk_UserRole::WriteOnly: {
-            MemCpy(payload + offsetof(rk_KeySet, akey), keys.akey, RG_SIZE(keys.akey));
-            MemCpy(payload + offsetof(rk_KeySet, wkey), keys.wkey, RG_SIZE(keys.wkey));
-            MemCpy(payload + offsetof(rk_KeySet, tkey), keys.tkey, RG_SIZE(keys.tkey));
-            MemCpy(payload + offsetof(rk_KeySet, skey), keys.skey, RG_SIZE(keys.skey));
-        } break;
+        switch (role) {
+            case rk_UserRole::Admin: {
+                MemCpy(dest + offsetof(rk_KeySet, ckey), keys.ckey, RG_SIZE(keys.ckey));
+                MemCpy(dest + offsetof(rk_KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
+                MemCpy(dest + offsetof(rk_KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
+            } break;
 
-        case rk_UserRole::ReadWrite: {
-            MemCpy(payload + offsetof(rk_KeySet, akey), keys.akey, RG_SIZE(keys.akey));
-            MemCpy(payload + offsetof(rk_KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
-            MemCpy(payload + offsetof(rk_KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
-            MemCpy(payload + offsetof(rk_KeySet, skey), keys.skey, RG_SIZE(keys.skey));
-        } break;
+            case rk_UserRole::WriteOnly: {
+                MemCpy(dest + offsetof(rk_KeySet, akey), keys.akey, RG_SIZE(keys.akey));
+                MemCpy(dest + offsetof(rk_KeySet, wkey), keys.wkey, RG_SIZE(keys.wkey));
+                MemCpy(dest + offsetof(rk_KeySet, tkey), keys.tkey, RG_SIZE(keys.tkey));
+            } break;
 
-        case rk_UserRole::LogOnly: {
-            MemCpy(payload + offsetof(rk_KeySet, akey), keys.akey, RG_SIZE(keys.akey));
-            MemCpy(payload + offsetof(rk_KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
-            MemCpy(payload + offsetof(rk_KeySet, vkey), keys.vkey, RG_SIZE(keys.vkey));
-        } break;
+            case rk_UserRole::ReadWrite: {
+                MemCpy(dest + offsetof(rk_KeySet, akey), keys.akey, RG_SIZE(keys.akey));
+                MemCpy(dest + offsetof(rk_KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
+                MemCpy(dest + offsetof(rk_KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
+            } break;
+
+            case rk_UserRole::LogOnly: {
+                MemCpy(dest + offsetof(rk_KeySet, akey), keys.akey, RG_SIZE(keys.akey));
+                MemCpy(dest + offsetof(rk_KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
+            } break;
+        }
+
+        MemCpy(dest + offsetof(rk_KeySet, skey), keys.skey, RG_SIZE(keys.skey));
     }
 
     // Encrypt payload
@@ -1201,7 +1191,7 @@ bool rk_Repository::ReadKeys(const char *path, const char *pwd, rk_UserRole *out
 
         if (len != buf.len) {
             if (len >= 0) {
-                LogError("Truncated keys in '%1'", path);
+                LogError("Malformed keys in '%1'", path);
             }
             return false;
         }
@@ -1221,7 +1211,7 @@ bool rk_Repository::ReadKeys(const char *path, const char *pwd, rk_UserRole *out
 
     if (!DecodeRole(data.role, out_role))
         return false;
-    MemCpy(out_keys, payload, RG_SIZE(*out_keys));
+    MemCpy(out_keys, payload + 32, RG_SIZE(*out_keys));
 
 #if 0
     PrintLn("ckey = %1", FmtSpan(out_keys->ckey, FmtType::BigHex, "").Pad0(-2));
@@ -1230,8 +1220,8 @@ bool rk_Repository::ReadKeys(const char *path, const char *pwd, rk_UserRole *out
     PrintLn("wkey = %1", FmtSpan(out_keys->wkey, FmtType::BigHex, "").Pad0(-2));
     PrintLn("lkey = %1", FmtSpan(out_keys->lkey, FmtType::BigHex, "").Pad0(-2));
     PrintLn("tkey = %1", FmtSpan(out_keys->tkey, FmtType::BigHex, "").Pad0(-2));
+    PrintLn("nkey = %1", FmtSpan(out_keys->nkey, FmtType::BigHex, "").Pad0(-2));    
     PrintLn("skey = %1", FmtSpan(out_keys->skey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("vkey = %1", FmtSpan(out_keys->vkey, FmtType::BigHex, "").Pad0(-2));
 #endif
 
     return true;

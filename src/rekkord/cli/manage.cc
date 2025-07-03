@@ -193,7 +193,6 @@ int RunAddUser(Span<const char *> arguments)
     // Options
     rk_UserRole role = rk_UserRole::WriteOnly;
     const char *pwd = nullptr;
-    bool force = false;
     const char *username = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -207,8 +206,6 @@ User options:
     %!..+-r, --role role%!0                User role (see below)
                                    %!D..(default: %1)%!0
         %!..+--password password%!0        Set password explicitly
-
-    %!..+-f, --force%!0                    Overwrite existing user %!D..(if any)%!0
 
 Available user roles: %!..+%2%!0)", rk_UserRoleNames[(int)role], FmtSpan(rk_UserRoleNames));
     };
@@ -228,8 +225,6 @@ Available user roles: %!..+%2%!0)", rk_UserRoleNames[(int)role], FmtSpan(rk_User
                 }
             } else if (opt.Test("--password", OptionType::Value)) {
                 pwd = opt.current_value;
-            } else if (opt.Test("-f", "--force")) {
-                force = true;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
@@ -276,7 +271,7 @@ Available user roles: %!..+%2%!0)", rk_UserRoleNames[(int)role], FmtSpan(rk_User
         }
     }
 
-    if (!repo->InitUser(username, role, pwd, force))
+    if (!repo->InitUser(username, role, pwd))
         return 1;
 
     LogInfo("Added user: %!..+%1%!0", username);

@@ -136,8 +136,8 @@ struct rk_KeySet {
     uint8_t wkey[32];
     uint8_t lkey[32];
     uint8_t tkey[32];
+    uint8_t nkey[32];
     uint8_t skey[32];
-    uint8_t vkey[32];
 };
 
 class rk_Repository {
@@ -187,7 +187,7 @@ public:
     Span<const uint8_t> GetCID() const { return ids.cid; }
     bool ChangeCID();
 
-    bool InitUser(const char *username, rk_UserRole role, const char *pwd, bool force);
+    bool InitUser(const char *username, rk_UserRole role, const char *pwd);
     bool DeleteUser(const char *username);
     bool ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserInfo> *out_users);
 
