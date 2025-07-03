@@ -167,7 +167,7 @@ public:
 
     bool IsRepository();
 
-    bool Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users);
+    bool Init(Span<const uint8_t> mkey);
 
     bool Authenticate(const char *username, const char *pwd);
     bool Authenticate(Span<const uint8_t> mkey);

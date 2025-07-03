@@ -54,7 +54,7 @@ bool rk_Repository::IsRepository()
     return (ret == StatResult::Success);
 }
 
-bool rk_Repository::Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users)
+bool rk_Repository::Init(Span<const uint8_t> mkey)
 {
     RG_ASSERT(!keyset);
 
@@ -176,19 +176,6 @@ bool rk_Repository::Init(Span<const uint8_t> mkey, Span<const rk_UserInfo> users
         if (!WriteConfig("rekkord", buf, true))
             return false;
         files.Append("rekkord");
-    }
-
-    // Write key files
-    for (const rk_UserInfo &user: users) {
-        RG_ASSERT(user.pwd);
-
-        rk_KeySet keys = *keyset;
-        randombytes_buf(keys.skey, RG_SIZE(keys.skey));
-
-        const char *filename = Fmt(&temp_alloc, "keys/%1", user.username).ptr;
-        if (!WriteKeys(filename, user.pwd, user.role, keys))
-            return false;
-        files.Append(filename);
     }
 
     err_guard.Disable();

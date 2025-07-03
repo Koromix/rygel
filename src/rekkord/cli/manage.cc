@@ -47,7 +47,6 @@ int RunInit(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    bool create_users = true;
     const char *key_filename = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -60,8 +59,6 @@ Options:
 
     %!..+-R, --repository filename%!0      Set repository URL
 
-        %!..+--skip_users%!0               Omit default users
-
     %!..+-K, --key_file filename%!0        Set explicit master key export file)", FelixTarget);
     };
 
@@ -73,8 +70,6 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("--skip_users")) {
-                create_users = false;
             } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
                 key_filename = opt.current_value;
             } else if (!HandleCommonOption(opt)) {
@@ -117,64 +112,15 @@ Options:
         return 1;
     }
 
-    LocalArray<rk_UserInfo, RG_LEN(DefaultUsers)> users;
-    LocalArray<bool, RG_LEN(DefaultUsers)> show_pwds;
-
-    // Generate repository passwords
-    if (create_users) {
-        for (rk_UserInfo user: DefaultUsers) {
-            bool show_pwd = false;
-
-            char prompt[256];
-            Fmt(prompt, "User '%1' password (leave empty to autogenerate): ", user.username);
-
-            user.pwd = Prompt(prompt, nullptr, "*", &temp_alloc);
-            if (!user.pwd)
-                return 1;
-
-            if (!user.pwd[0]) {
-                Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
-                if (!GeneratePassword(buf))
-                   return 1;
-
-                user.pwd = buf.ptr;
-                show_pwd = true;
-            }
-
-            users.Append(user);
-            show_pwds.Append(show_pwd);
-        }
-    }
-
     Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
     RG_DEFER { ReleaseSafe(mkey.ptr, mkey.len); };
 
     randombytes_buf(mkey.ptr, mkey.len);
 
     LogInfo("Initializing...");
-    if (!repo->Init(mkey, users))
+    if (!repo->Init(mkey))
         return 1;
     LogInfo();
-
-    if (users.len) {
-        int align = 0;
-
-        for (const rk_UserInfo &user: users) {
-            align = std::max(align, (int)strlen(user.username));
-        }
-
-        for (Size i = 0; i < users.len; i++) {
-            const rk_UserInfo &user = users[i];
-
-            if (show_pwds[i]) {
-                LogInfo("%1 %2 password: %!..+%3%!0", i ? "       " : "Default", FmtArg(user.username).Pad(-align), user.pwd);
-            } else {
-                LogInfo("%1 %2 password: %!D..(hidden)%!0", i ? "       " : "Default", FmtArg(user.username).Pad(-align));
-            }
-        }
-
-        LogInfo();
-    }
 
     // Continue even if it fails, an error will be shown regardless
     if (WriteFile(mkey, key_filename, (int)StreamWriterFlag::NoBuffer)) {
