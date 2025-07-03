@@ -32,27 +32,30 @@ bool rk_Config::Complete(bool require_auth)
     if (!rk_DecodeURL(url, this))
         return false;
 
-    if (require_auth && key_filename) {
-        // No need for username or password in this case
-        require_auth = false;
-    }
-
-    if (require_auth && !username) {
-        username = GetEnv("REKKORD_USER");
-        if (!username && FileIsVt100(STDERR_FILENO)) {
-            username = Prompt("Repository user: ", &str_alloc);
+    if (require_auth) {
+        if (!key_filename) {
+            key_filename = GetEnv("REKKORD_KEYFILE");
         }
-        if (!username)
-            return false;
-    }
 
-    if (require_auth && !password) {
-        password = GetEnv("REKKORD_PASSWORD");
-        if (!password && FileIsVt100(STDERR_FILENO)) {
-            password = Prompt("Repository password: ", nullptr, "*", &str_alloc);
+        if (!key_filename) {
+            if (!username) {
+                username = GetEnv("REKKORD_USER");
+                if (!username && FileIsVt100(STDERR_FILENO)) {
+                    username = Prompt("Repository user: ", &str_alloc);
+                }
+                if (!username)
+                    return false;
+            }
+
+            if (!password) {
+                password = GetEnv("REKKORD_PASSWORD");
+                if (!password && FileIsVt100(STDERR_FILENO)) {
+                    password = Prompt("Repository password: ", nullptr, "*", &str_alloc);
+                }
+                if (!password)
+                    return false;
+            }
         }
-        if (!password)
-            return false;
     }
 
     switch (type) {
@@ -219,6 +222,8 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                 do {
                     if (prop.key == "URL") {
                         valid &= rk_DecodeURL(prop.value, &config);
+                    } else if (prop.key == "KeyFile") {
+                        config.key_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "User") {
                         config.username = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "Password") {
