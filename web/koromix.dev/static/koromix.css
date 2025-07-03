@@ -37,18 +37,6 @@ html {
     & > div { flex: 1; }
 }
 
-#hire {
-    display: block;
-    position: absolute;
-    right: 16px;
-    top: 57px;
-    padding: 2px 8px;
-    background: #ee0a0a;
-    border-radius: 6px;
-    font-size: 0.8em;
-    color: white;
-}
-
 .illustrations {
     display: flex;
     margin: 2em;
@@ -68,14 +56,6 @@ html {
         object-fit: contain;
     }
     & > div { flex: 1; }
-}
-
-@media screen and (max-width: 1300px) {
-    #hire {
-        position: fixed;
-        right: 16px;
-        top: 19px;
-    }
 }
 
 @media screen and (max-width: 960px) {
