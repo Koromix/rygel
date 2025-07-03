@@ -403,21 +403,8 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             } break;
             case PrimitiveKind::Callback: {
                 void *ptr;
-
-                if (value.IsFunction()) {
-                    Napi::Function func = value.As<Napi::Function>();
-
-                    ptr = ReserveTrampoline(param.type->ref.proto, func);
-                    if (!ptr) [[unlikely]]
-                        return false;
-                } else if (CheckValueTag(instance, value, param.type->ref.marker)) {
-                    ptr = value.As<Napi::External<void>>().Data();
-                } else if (IsNullOrUndefined(value)) {
-                    ptr = nullptr;
-                } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), param.type->name);
+                if (!PushCallback(value, param.type, &ptr)) [[unlikely]]
                     return false;
-                }
 
                 *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
             } break;

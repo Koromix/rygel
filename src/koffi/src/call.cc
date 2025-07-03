@@ -743,22 +743,8 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::Callback: {
                 void *ptr;
-
-                if (value.IsFunction()) {
-                    Napi::Function func = value.As<Napi::Function>();
-
-                    ptr = ReserveTrampoline(member.type->ref.proto, func);
-                    if (!ptr) [[unlikely]]
-                        return false;
-                } else if (CheckValueTag(instance, value, member.type->ref.marker)) {
-                    Napi::External<void> external = value.As<Napi::External<void>>();
-                    ptr = external.Data();
-                } else if (IsNullOrUndefined(value)) {
-                    ptr = nullptr;
-                } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), member.type->name);
+                if (!PushCallback(value, member.type, &ptr))
                     return false;
-                }
 
                 *(void **)dest = ptr;
             } break;
@@ -991,22 +977,8 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
                 uint8_t *dest = origin + offset;
 
                 void *ptr;
-
-                if (value.IsFunction()) {
-                    Napi::Function func = value.As<Napi::Function>();
-
-                    ptr = ReserveTrampoline(ref->ref.proto, func);
-                    if (!ptr) [[unlikely]]
-                        return false;
-                } else if (CheckValueTag(instance, value, ref->ref.marker)) {
-                    Napi::External<void> external = value.As<Napi::External<void>>();
-                    ptr = external.Data();
-                } else if (IsNullOrUndefined(value)) {
-                    ptr = nullptr;
-                } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), ref->name);
+                if (!PushCallback(value, ref, &ptr))
                     return false;
-                }
 
                 *(void **)dest = ptr;
 
@@ -1268,6 +1240,41 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
 
         default: {} break;
     }
+
+unexpected:
+    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), type->name);
+    return false;
+}
+
+bool CallData::PushCallback(Napi::Value value, const TypeInfo *type, void **out_ptr)
+{
+    if (value.IsFunction()) {
+        Napi::Function func = value.As<Napi::Function>();
+
+        void *ptr = ReserveTrampoline(type->ref.proto, func);
+        if (!ptr) [[unlikely]]
+            return false;
+
+        *out_ptr = ptr;
+    } else if (CheckValueTag(instance, value, type->ref.marker)) {
+        *out_ptr = value.As<Napi::External<void>>().Data();
+    } else if (CheckValueTag(instance, value, &CastMarker)) {
+        Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
+        ValueCast *cast = external.Data();
+
+        value = cast->ref.Value();
+
+        if (!value.IsExternal() || cast->type != type)
+            goto unexpected;
+
+        *out_ptr = value.As<Napi::External<void>>().Data();
+    } else if (IsNullOrUndefined(value)) {
+        *out_ptr = nullptr;
+    } else {
+        goto unexpected;
+    }
+
+    return true;
 
 unexpected:
     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), type->name);
