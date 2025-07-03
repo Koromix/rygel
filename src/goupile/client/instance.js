@@ -785,7 +785,7 @@ async function runExportCreateDialog(e) {
     });
 
     async function create(sequence, anchor) {
-        let progress = Log.progress('Sauvegarde des modifications');
+        let progress = Log.progress('Export en cours');
 
         try {
             let export_id = await createExport(sequence, anchor);
