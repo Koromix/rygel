@@ -103,34 +103,31 @@ This command will initialize the repository with a random 256-bit master key.
 After initialization, the **master key** is exported to a binary file, named `master.key` by default (in the current directory). You can change the export file with the `--key_file <file>` option.
 
 > [!IMPORTANT]
-> You should **store this master key in a secure place**, it can be used to reset user accounts and passwords (see below). It cannot be recreated if you lose the file.
-> However, if it leaks, everyone will be able to decrypt your snapshots!
+> You should **store this master key in a secure place**. It cannot be recreated if you lose the file. If it leaks, everyone will be able to decrypt or edit your snapshots!
 
 Rekkord uses **multiple encryption keys** which are derived from this master key:
 
 - The *config key (ckey)* is paired with an *access key (akey)* to sign config files and user key files
 - The *data key (dkey)* is paired with a *write key (wkey)* for data encryption (snapshot information, directory metadata, file content)
 - The *log key (lkey)* is paired with a *tag key (tkey)*, to manage snapshots and record snapshot information
-- The *sign key (skey)* is paired with a *verify key (vkey)* to detect tampering with tags
 
-Rekkord repositories support multiple user accounts. By default, four user accounts are created:
+For simple use cases, you can simply use the master key for everything. However, we recommend that you create separate users, for two reasons:
 
-- *admin*: This user has the keys necessary to manage users and access data
-- *data*: This user has the keys necessary for read-write access to stored data
-- *write*: This user can only write new data but cannot read historical data or list existing snapshots
-- *log*: This user can only list exisiting snapshots
-
-You will need one or the other to use other rekkord commands. Please store these passwords securely.
-
-> [!IMPORTANT]
-> You can reset any account or password (including the default one) **as long as you have the master key** file.
-> As mentioned previously, this one, you must not lose or leak!
-
-You can skip the creation of these two default users with `rekkord init --skip_users`, in which case you will have to create at least one user yourself with the [help of the master key](#repository-users).
+- Each user can have a restricted role: *Admin, ReadWrite, WriteOnly or LogOnly*
+- Snapshots are signed with each user-specific signing key, this can be used to detect cross-server tampering during repository checks
 
 # Repository users
 
-As stated before, by default Rekkord creates four users named *admin*, *data*, *write* and *log*. These are enough for simple needs.
+User roles are used to restrict the set of possible actions each user can do, as shown in the table below.
+
+| Role      | Permissions                            |
+|-----------|----------------------------------------|
+| Admin     | Manage users, read and write snapshots |
+| ReadWrite | Read and write snapshots               |
+| WriteOnly | Create snapshots                       |
+| LogOnly   | List snapshots                         |
+
+In addition, each user has its own key pair with which snapshots are signed.
 
 > [!WARNING]
 > Repository users contain the necessary encryption keys for a given role, protected by a password.
@@ -139,21 +136,21 @@ As stated before, by default Rekkord creates four users named *admin*, *data*, *
 
 Use the following commands to manage repository users:
 
-- *rekkord add_user*
-- *rekkord delete_user*
-- *rekkord list_users*
+- `rekkord add_user name -r role`
+- `rekkord delete_user name`
+- `rekkord list_users`
 
-To create a new user, you must either use an existing user with the necessary keys (a user with write-only role cannot create a user with read-write role), or use the master key file created by `rekkord init`.
+To create a new user, you must either use the master key file (created by `rekkord init`) or use an existing user with the *Admin* role.
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
 
-# Use existing user to create new user
-export REKKORD_USER=full
-rekkord add_user joe -r ReadWrite
-
-# Or use the master key file
+# Use the master key file
 rekkord add_user -K master.key john -r ReadWrite
+
+# Or use existing user to create new user
+export REKKORD_USER=admin
+rekkord add_user joe -r ReadWrite
 ```
 
 Most Rekkord commands require you to specify the user, you can do this in one of two ways:
