@@ -181,7 +181,13 @@ async function walkThreads(export_id) {
             // Skip undocumented keys
             keys = keys.filter(key => {
                 let notes = Data.annotate(obj, key);
-                return notes.variable != null;
+
+                if (!Util.isPodObject(notes.variable))
+                    return false;
+                if (!Object.keys(notes.variable).length)
+                    return false;
+
+                return true;
             });
 
             for (let i = 0; i < keys.length; i++) {
