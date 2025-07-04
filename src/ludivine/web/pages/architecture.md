@@ -35,7 +35,7 @@ Le client génère également une clé aléatoire **TKEY**, avec laquelle il chi
 Ces informations sont transmises au serveur via une requête POST contenant *l'adresse e-mail du participant, le VID, le RID, le token chiffré et la TKEY*.
 
 <div class="columns">
-    <img src="{{ ASSET ../assets/architecture/signup.svg }}" width="800" height="550" alt=""/>
+    <img src="{{ ASSET ../assets/architecture/fr/signup.svg }}" width="800" height="550" alt=""/>
 </div>
 
 Le serveur vérifie qu'aucun compte n'existe pour l'adresse mail fournie, puis il effectue les actions suivantes :
@@ -71,7 +71,7 @@ Le client Javascript transmet la valeur *UID* au serveur (1), qui répond en env
 - **VKEY** : clé aléatoire de chiffrement de 32 octets pour accéder au coffre-fort
 
 <div class="columns">
-    <img src="{{ ASSET ../assets/architecture/login.svg }}" width="800" height="572" alt=""/>
+    <img src="{{ ASSET ../assets/architecture/fr/login.svg }}" width="800" height="572" alt=""/>
 </div>
 
 Le client demande alors au serveur de lui envoyer le coffre-fort/vault correspondant au **VID récupéré dans le token** (4). S'il existe, il s'agit d'une base de données SQLite3 chiffrée (SQLCipher AES-256 bit), la clé de chiffrement étant la **VKEY**. Cette base est stockée et lue côté client, la clé VKEY ne quitte jamais la machine client. Le serveur se content d'envoyer au client la dernière version de la base chiffrée (5). Le client ouvre cette base SQLite à l'aide de la clé VKEY (6b).
@@ -92,7 +92,7 @@ Le serveur gère 3 flux de données par utilisateur :
 Chacun de ces flux a son propre identifiant (VID, RID, UID) et seul le client est en mesure de faire le lien entre ces identifiants, qui sont contenus dans le *token chiffré*.
 
 <div class="columns">
-    <img src="{{ ASSET ../assets/architecture/data.svg }}" width="800" height="543" alt=""/>
+    <img src="{{ ASSET ../assets/architecture/fr/data.svg }}" width="800" height="543" alt=""/>
 </div>
 
 > [!IMPORTANT]
