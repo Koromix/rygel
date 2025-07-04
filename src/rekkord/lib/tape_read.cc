@@ -97,8 +97,8 @@ class GetContext {
 public:
     GetContext(rk_Repository *repo, const rk_RestoreSettings &settings, int64_t entries, int64_t size);
 
-    bool ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const char *dest_dirname);
-    bool ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const EntryInfo &dest);
+    bool ExtractEntries(Span<const uint8_t> blob, bool allow_separators, const char *dest_dirname);
+    bool ExtractEntries(Span<const uint8_t> blob, bool allow_separators, const EntryInfo &dest);
 
     int GetFile(const rk_ObjectID &oid, bool chunked, Span<const uint8_t> file, const char *dest_filename);
 
@@ -206,12 +206,12 @@ static void SetFileOwner(int fd, const char *filename, uint32_t uid, uint32_t gi
 #endif
 
 // Does not fill EntryInfo::filename
-static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_separators,
+static Size DecodeEntry(Span<const uint8_t> blob, Size offset, bool allow_separators,
                         Allocator *alloc, EntryInfo *out_entry)
 {
-    RawEntry *ptr = (RawEntry *)(entries.ptr + offset);
+    RawEntry *ptr = (RawEntry *)(blob.ptr + offset);
 
-    if (entries.len - offset < ptr->GetSize()) {
+    if (blob.len - offset < ptr->GetSize()) {
         LogError("Malformed entry in directory blob");
         return -1;
     }
@@ -323,6 +323,27 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
     return ptr->GetSize();
 }
 
+// Does not fill EntryInfo::filename
+static bool DecodeEntries(Span<const uint8_t> blob, Size offset, bool allow_separators,
+                          Allocator *alloc, HeapArray<EntryInfo> *out_entries)
+{
+    RG_DEFER_NC(err_guard, len = out_entries->len) { out_entries->RemoveFrom(len); };
+
+    while (offset < blob.len) {
+        EntryInfo entry = {};
+
+        Size skip = DecodeEntry(blob, offset, allow_separators, alloc, &entry);
+        if (skip < 0)
+            return false;
+        offset += skip;
+
+        out_entries->Append(entry);
+    }
+
+    err_guard.Disable();
+    return true;
+}
+
 static int64_t DecodeChunks(const rk_ObjectID &oid, Span<const uint8_t> blob, HeapArray<FileChunk> *out_chunks)
 {
     RG_DEFER_NC(err_guard, len = out_chunks->len) { out_chunks->RemoveFrom(len); };
@@ -388,7 +409,7 @@ static inline rk_BlobCatalog KindToCatalog(int kind)
     }
 }
 
-bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const char *dest_dirname)
+bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators, const char *dest_dirname)
 {
     EntryInfo dest = {};
 
@@ -397,14 +418,14 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
     }
     dest.filename = TrimStrRight(dest_dirname, RG_PATH_SEPARATORS);
 
-    return ExtractEntries(entries, allow_separators, dest);
+    return ExtractEntries(blob, allow_separators, dest);
 }
 
-bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const EntryInfo &dest)
+bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators, const EntryInfo &dest)
 {
     // XXX: Make sure each path does not clobber a previous one
 
-    if (entries.len < RG_SIZE(DirectoryHeader)) [[unlikely]] {
+    if (blob.len < RG_SIZE(DirectoryHeader)) [[unlikely]] {
         LogError("Malformed directory blob");
         return false;
     }
@@ -456,25 +477,29 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separato
         ctx->fake = settings.fake;
     }
 
-    for (Size offset = RG_SIZE(DirectoryHeader); offset < entries.len;) {
-        EntryInfo entry = {};
+    if (!DecodeEntries(blob, RG_SIZE(DirectoryHeader), allow_separators, &ctx->temp_alloc, &ctx->entries))
+        return false;
 
-        Size skip = DecodeEntry(entries, offset, allow_separators, &ctx->temp_alloc, &entry);
-        if (skip < 0)
-            return false;
-        offset += skip;
+    // Filter out invalid entries
+    {
+        Size j = 0;
+        for (Size i = 0; i < ctx->entries.len; i++) {
+            EntryInfo &entry = ctx->entries[i];
+            ctx->entries[j] = entry;
 
-        if (entry.kind == (int)RawEntry::Kind::Unknown)
-            continue;
-        if (!(entry.flags & (int)RawEntry::Flags::Readable))
-            continue;
+            if (entry.kind == (int)RawEntry::Kind::Unknown)
+                continue;
+            if (!(entry.flags & (int)RawEntry::Flags::Readable))
+                continue;
 
-        entry.filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry.basename).ptr;
+            entry.filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry.basename).ptr;
 
-        if (!settings.fake && allow_separators && !EnsureDirectoryExists(entry.filename.ptr))
-            return false;
+            if (!settings.fake && allow_separators && !EnsureDirectoryExists(entry.filename.ptr))
+                return false;
 
-        ctx->entries.Append(entry);
+            j++;
+        }
+        ctx->entries.len = j;
     }
 
     if (settings.unlink) {
@@ -1108,7 +1133,7 @@ class ListContext {
 public:
     ListContext(rk_Repository *repo, const rk_ListSettings &settings, int64_t entries);
 
-    bool RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
+    Size RecurseEntries(Span<const uint8_t> blob, bool allow_separators, int depth,
                         Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
 
 private:
@@ -1120,25 +1145,17 @@ ListContext::ListContext(rk_Repository *repo, const rk_ListSettings &settings, i
 {
 }
 
-bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
+Size ListContext::RecurseEntries(Span<const uint8_t> blob, bool allow_separators, int depth,
                                  Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects)
 {
-    if (entries.len < RG_SIZE(DirectoryHeader)) [[unlikely]] {
+    if (blob.len < RG_SIZE(DirectoryHeader)) [[unlikely]] {
         LogError("Malformed directory blob");
-        return false;
+        return -1;
     }
 
-    HeapArray<EntryInfo> decoded;
-    for (Size offset = RG_SIZE(DirectoryHeader); offset < entries.len;) {
-        EntryInfo entry = {};
-
-        Size skip = DecodeEntry(entries, offset, allow_separators, alloc, &entry);
-        if (skip < 0)
-            return false;
-        offset += skip;
-
-        decoded.Append(entry);
-    }
+    HeapArray<EntryInfo> entries;
+    if (!DecodeEntries(blob, RG_SIZE(DirectoryHeader), allow_separators, alloc, &entries))
+        return -1;
 
     Async async(repo->GetAsync());
 
@@ -1150,13 +1167,12 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
     };
 
     HeapArray<RecurseContext> contexts;
-    contexts.AppendDefault(decoded.len);
+    contexts.AppendDefault(entries.len);
 
     MakeProgress(0);
 
-    for (Size i = 0; i < decoded.len; i++) {
-        const EntryInfo &entry = decoded[i];
-
+    for (Size i = 0; i < entries.len; i++) {
+        const EntryInfo &entry = entries[i];
         rk_ObjectInfo *obj = &contexts[i].obj;
 
         obj->oid = { KindToCatalog(entry.kind), entry.hash };
@@ -1214,12 +1230,10 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
                         } break;
                     }
 
-                    if (!RecurseEntries(blob, false, depth + 1, &ctx->str_alloc, &ctx->children))
+                    Size children = RecurseEntries(blob, false, depth + 1, &ctx->str_alloc, &ctx->children);
+                    if (children < 0)
                         return false;
-
-                    for (const rk_ObjectInfo &child: ctx->children) {
-                        obj->children += (child.depth == depth + 1);
-                    }
+                    obj->children = children;
 
                     MakeProgress(1);
 
@@ -1236,7 +1250,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
     }
 
     if (!async.Sync())
-        return false;
+        return -1;
 
     for (const RecurseContext &ctx: contexts) {
         out_objects->Append(ctx.obj);
@@ -1247,7 +1261,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         }
     }
 
-    return true;
+    return entries.len;
 }
 
 void ListContext::MakeProgress(int64_t entries)
@@ -1329,16 +1343,13 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
 
             Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader3), blob.len - RG_SIZE(SnapshotHeader3));
 
-            if (!tree.RecurseEntries(dir, true, 1, alloc, out_objects))
+            Size children = tree.RecurseEntries(dir, true, 1, alloc, out_objects);
+            if (children < 0)
                 return false;
 
             // Reacquire correct pointer (array may have moved)
             obj = &(*out_objects)[prev_len];
-
-            for (Size i = prev_len; i < out_objects->len; i++) {
-                const rk_ObjectInfo &child = (*out_objects)[i];
-                obj->children += (child.depth == 1);
-            }
+            obj->children = children;
         } break;
 
         case (int)BlobType::Chunk:
@@ -1378,7 +1389,7 @@ public:
     bool Check(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate);
 
     bool CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate);
-    bool RecurseEntries(Span<const uint8_t> entries, bool allow_separators);
+    bool RecurseEntries(Span<const uint8_t> blob, bool allow_separators);
 
     int64_t GetChecked() const { return checked_blobs; }
 
@@ -1514,40 +1525,40 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
     return true;
 }
 
-bool CheckContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separators)
+bool CheckContext::RecurseEntries(Span<const uint8_t> blob, bool allow_separators)
 {
     BlockAllocator temp_alloc;
 
-    if (entries.len < RG_SIZE(DirectoryHeader)) [[unlikely]] {
+    if (blob.len < RG_SIZE(DirectoryHeader)) [[unlikely]] {
         LogError("Malformed directory blob");
         return false;
     }
 
-    HeapArray<EntryInfo> decoded;
-    for (Size offset = RG_SIZE(DirectoryHeader); offset < entries.len;) {
-        EntryInfo entry = {};
+    HeapArray<EntryInfo> entries;
+    if (!DecodeEntries(blob, RG_SIZE(DirectoryHeader), allow_separators, &temp_alloc, &entries))
+        return false;
 
-        Size skip = DecodeEntry(entries, offset, allow_separators, &temp_alloc, &entry);
-        if (skip < 0)
-            return false;
-        offset += skip;
+    // Filter out invalid entries
+    {
+        Size j = 0;
+        for (Size i = 0; i < entries.len; i++) {
+            EntryInfo &entry = entries[i];
+            entries[j] = entry;
 
-        if (entry.kind == (int)RawEntry::Kind::Unknown)
-            continue;
-        if (!(entry.flags & (int)RawEntry::Flags::Readable))
-            continue;
+            if (entry.kind == (int)RawEntry::Kind::Unknown)
+                continue;
+            if (!(entry.flags & (int)RawEntry::Flags::Readable))
+                continue;
 
-        // Don't keep dangling pointers (once function returns)
-        entry.basename = {};
-        entry.xattrs = {};
-
-        decoded.Append(entry);
+            j++;
+        }
+        entries.len = j;
     }
 
     Async async(&tasks);
 
-    for (Size i = 0; i < decoded.len; i++) {
-        const EntryInfo *entry = &decoded[i];
+    for (Size i = 0; i < entries.len; i++) {
+        const EntryInfo *entry = &entries[i];
 
         async.Run([&, entry, this] () {
             rk_ObjectID oid = { KindToCatalog(entry->kind), entry->hash };
