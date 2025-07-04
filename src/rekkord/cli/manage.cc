@@ -22,13 +22,6 @@
 
 namespace RG {
 
-static const rk_UserInfo DefaultUsers[] = {
-    { "admin", rk_UserRole::Admin, nullptr },
-    { "data", rk_UserRole::ReadWrite, nullptr },
-    { "write", rk_UserRole::WriteOnly, nullptr },
-    { "log", rk_UserRole::LogOnly, nullptr }
-};
-
 static bool GeneratePassword(Span<char> out_pwd)
 {
     RG_ASSERT(out_pwd.len >= 33);
