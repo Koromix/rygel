@@ -299,8 +299,6 @@ retry:
                 XAttrInfo xattr = { "rekkord.acl1", acls.As<uint8_t>() };
                 out_xattrs->Append(xattr);
             }
-
-            continue;
         } else if (TestStr(key, AclDefaultAttribute)) {
             Span<const char> acls = FormatACLs(filename, value, alloc);
 
@@ -308,14 +306,12 @@ retry:
                 XAttrInfo xattr = { "rekkord.acl1d", acls.As<uint8_t>() };
                 out_xattrs->Append(xattr);
             }
+        } else {
+            xattr.key = key.ptr;
+            xattr.value = value.TrimAndLeak();
 
-            continue;
+            out_xattrs->Append(xattr);
         }
-
-        xattr.key = key.ptr;
-        xattr.value = value.TrimAndLeak();
-
-        out_xattrs->Append(xattr);
     }
 
     list.Leak();
