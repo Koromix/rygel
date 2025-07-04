@@ -630,12 +630,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
                             return false;
 
                         if (settings.xattrs && entry.xattrs.len) {
-                            int fd = OpenFile(entry.filename.ptr, (int)OpenFlag::Write);
-                            RG_DEFER { CloseDescriptor(fd); };
-
-                            if (fd >= 0) {
-                                WriteXAttributes(fd, entry.filename.ptr, entry.xattrs);
-                            }
+                            WriteXAttributes(-1, entry.filename.ptr, entry.xattrs);
                         }
                     }
 
