@@ -7,6 +7,12 @@
 
 ### Koffi 2.12
 
+#### Koffi 2.12.1
+
+*Released on 2025-07-05*
+
+- Fix type errors when casting function pointers
+
 #### Koffi 2.12.0
 
 *Released on 2025-06-19*
