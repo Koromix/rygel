@@ -26,6 +26,9 @@
 
 namespace RG {
 
+static const char *AclAccessKey = "rk.acl1";
+static const char *AclDefaultKey = "rk.acl1d";
+
 #if defined(__linux__)
 
 static const char *AclAccessAttribute = "system.posix_acl_access";
@@ -296,14 +299,14 @@ retry:
             Span<const char> acls = FormatACLs(filename, value, alloc);
 
             if (acls.len) {
-                XAttrInfo xattr = { "rekkord.acl1", acls.As<uint8_t>() };
+                XAttrInfo xattr = { AclAccessKey, acls.As<uint8_t>() };
                 out_xattrs->Append(xattr);
             }
         } else if (TestStr(key, AclDefaultAttribute)) {
             Span<const char> acls = FormatACLs(filename, value, alloc);
 
             if (acls.len) {
-                XAttrInfo xattr = { "rekkord.acl1d", acls.As<uint8_t>() };
+                XAttrInfo xattr = { AclDefaultKey, acls.As<uint8_t>() };
                 out_xattrs->Append(xattr);
             }
         } else {
@@ -328,7 +331,7 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
     uint8_t buf[16384];
 
     for (XAttrInfo xattr: xattrs) {
-        if (TestStr(xattr.key, "rekkord.acl1")) {
+        if (TestStr(xattr.key, AclAccessKey)) {
             Size len = ParseACLs(xattr.value.As<const char>(), buf);
 
             if (len < 0) {
@@ -340,7 +343,7 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
 
             xattr.key = AclAccessAttribute;
             xattr.value = MakeSpan(buf, len);
-        } else if (TestStr(xattr.key, "rekkord.acl1d")) {
+        } else if (TestStr(xattr.key, AclDefaultKey)) {
             Size len = ParseACLs(xattr.value.As<const char>(), buf);
 
             if (len < 0) {
@@ -476,7 +479,7 @@ bool ReadXAttributes(int fd, const char *filename, FileType type, Allocator *all
         Span<const char> acls = ReadACLs(fd, filename, ACL_TYPE_ACCESS, alloc);
 
         if (acls.len) {
-            XAttrInfo xattr = { "rekkord.acl1", acls.As<uint8_t>() };
+            XAttrInfo xattr = { AclAccessKey, acls.As<uint8_t>() };
             out_xattrs->Append(xattr);
         }
     }
@@ -486,7 +489,7 @@ bool ReadXAttributes(int fd, const char *filename, FileType type, Allocator *all
         Span<const char> acls = ReadACLs(-1, filename, ACL_TYPE_DEFAULT, alloc);
 
         if (acls.len) {
-            XAttrInfo xattr = { "rekkord.acl1d", acls.As<uint8_t>() };
+            XAttrInfo xattr = { AclDefaultKey, acls.As<uint8_t>() };
             out_xattrs->Append(xattr);
         }
     }
@@ -545,10 +548,10 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
     bool success = true;
 
     for (const XAttrInfo &xattr: xattrs) {
-        if (TestStr(xattr.key, "rekkord.acl1")) {
+        if (TestStr(xattr.key, AclAccessKey)) {
             success &= WriteACLs(fd, filename, ACL_TYPE_ACCESS, xattr.value.As<char>());
             continue;
-        } else if (TestStr(xattr.key, "rekkord.acl1d")) {
+        } else if (TestStr(xattr.key, AclDefaultKey)) {
             success &= WriteACLs(-1, filename, ACL_TYPE_DEFAULT, xattr.value.As<char>());
             continue;
         }
