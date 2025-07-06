@@ -167,6 +167,7 @@ bool rk_Repository::Init(Span<const uint8_t> mkey)
     crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
     crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
     MemCpy(keyset->skey, keyset->nkey, RG_SIZE(keyset->skey));
+    SeedSigningPair(keyset->skey, keyset->pkey);
 
     // Generate unique repository IDs
     {
@@ -217,46 +218,6 @@ bool rk_Repository::Authenticate(const char *username, const char *pwd)
         if (!ReadKeys(filename, pwd, &role, keyset))
             return false;
 
-        switch (role) {
-            case rk_UserRole::Admin: {
-                modes = (int)rk_AccessMode::Config |
-                        (int)rk_AccessMode::Read |
-                        (int)rk_AccessMode::Write |
-                        (int)rk_AccessMode::Log;
-
-                SeedSigningPair(keyset->ckey, keyset->akey);
-                crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
-                crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-            } break;
-
-            case rk_UserRole::WriteOnly: {
-                modes = (int)rk_AccessMode::Write;
-
-                ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
-                ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
-                ZeroSafe(keyset->lkey, RG_SIZE(keyset->lkey));
-            } break;
-
-            case rk_UserRole::ReadWrite: {
-                modes = (int)rk_AccessMode::Read |
-                        (int)rk_AccessMode::Write |
-                        (int)rk_AccessMode::Log;
-
-                ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
-                crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
-                crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-            } break;
-
-            case rk_UserRole::LogOnly: {
-                modes = (int)rk_AccessMode::Log;
-
-                ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
-                ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
-                ZeroSafe(keyset->wkey, RG_SIZE(keyset->wkey));
-                crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-            } break;
-        }
-
         this->role = rk_UserRoleNames[(int)role];
         this->user = DuplicateString(username, &str_alloc).ptr;
     }
@@ -300,6 +261,7 @@ bool rk_Repository::Authenticate(Span<const uint8_t> mkey)
     crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
     crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
     MemCpy(keyset->skey, keyset->nkey, RG_SIZE(keyset->skey));
+    SeedSigningPair(keyset->skey, keyset->pkey);
 
     user = nullptr;
 
@@ -1205,9 +1167,54 @@ bool rk_Repository::ReadKeys(const char *path, const char *pwd, rk_UserRole *out
         }
     }
 
-    if (!DecodeRole(data.role, out_role))
+    rk_UserRole role;
+    if (!DecodeRole(data.role, &role))
         return false;
+
+    *out_role = role;
     MemCpy(out_keys, payload + 32, RG_SIZE(*out_keys));
+
+    switch (role) {
+        case rk_UserRole::Admin: {
+            modes = (int)rk_AccessMode::Config |
+                    (int)rk_AccessMode::Read |
+                    (int)rk_AccessMode::Write |
+                    (int)rk_AccessMode::Log;
+
+            SeedSigningPair(keyset->ckey, keyset->akey);
+            crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
+            crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
+        } break;
+
+        case rk_UserRole::WriteOnly: {
+            modes = (int)rk_AccessMode::Write;
+
+            ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
+            ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
+            ZeroSafe(keyset->lkey, RG_SIZE(keyset->lkey));
+        } break;
+
+        case rk_UserRole::ReadWrite: {
+            modes = (int)rk_AccessMode::Read |
+                    (int)rk_AccessMode::Write |
+                    (int)rk_AccessMode::Log;
+
+            ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
+            crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
+            crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
+        } break;
+
+        case rk_UserRole::LogOnly: {
+            modes = (int)rk_AccessMode::Log;
+
+            ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
+            ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
+            ZeroSafe(keyset->wkey, RG_SIZE(keyset->wkey));
+            crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
+        } break;
+    }
+
+    SeedSigningPair(keyset->skey, keyset->pkey);
 
 #if 0
     PrintLn("ckey = %1", FmtSpan(out_keys->ckey, FmtType::BigHex, "").Pad0(-2));
@@ -1218,12 +1225,10 @@ bool rk_Repository::ReadKeys(const char *path, const char *pwd, rk_UserRole *out
     PrintLn("tkey = %1", FmtSpan(out_keys->tkey, FmtType::BigHex, "").Pad0(-2));
     PrintLn("nkey = %1", FmtSpan(out_keys->nkey, FmtType::BigHex, "").Pad0(-2));
     PrintLn("skey = %1", FmtSpan(out_keys->skey, FmtType::BigHex, "").Pad0(-2));
+    PrintLn("pkey = %1", FmtSpan(out_keys->pkey, FmtType::BigHex, "").Pad0(-2));
 
-    uint8_t pkey[32];
-    SeedSigningPair(out_keys->skey, pkey);
-
-    PrintLn("public1 = %1", FmtSpan(MakeSpan(payload, 32), FmtType::BigHex, "").Pad0(-2));
-    PrintLn("public2 = %1", FmtSpan(pkey, FmtType::BigHex, "").Pad0(-2));
+    Span<const uint8_t> pub = MakeSpan(payload, 32);
+    PrintLn("public = %1", FmtSpan(pub, FmtType::BigHex, "").Pad0(-2));
 #endif
 
     return true;

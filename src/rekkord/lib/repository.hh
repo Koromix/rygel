@@ -138,6 +138,7 @@ struct rk_KeySet {
     uint8_t tkey[32];
     uint8_t nkey[32];
     uint8_t skey[32];
+    uint8_t pkey[32];
 };
 
 class rk_Repository {
