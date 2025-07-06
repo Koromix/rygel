@@ -15,6 +15,7 @@
 - Directly set master key filename with `Repository.KeyFile` INI setting
 - Switch to per-user public signing key pairs
 - Fix xattrs being restored on symlink target instead of link itself
+- Use smaller virtual ACL xattr keys
 - Protect memory containing key derived from user password
 - Fix small stack overflow bug
 - Remove `rekkord migrate_tags` command
