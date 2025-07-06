@@ -153,7 +153,7 @@ bool rk_Repository::Init(Span<const uint8_t> mkey)
 
     keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
     modes = UINT_MAX;
-    role = "Admin";
+    role = "Master";
 
     // Derive encryption keys
     crypto_kdf_blake2b_derive_from_key(keyset->ckey, RG_SIZE(keyset->ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
