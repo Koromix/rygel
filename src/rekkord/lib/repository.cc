@@ -38,8 +38,11 @@ static_assert(crypto_kdf_blake2b_KEYBYTES == crypto_box_PUBLICKEYBYTES);
 
 static void SeedSigningPair(const uint8_t sk[32], uint8_t pk[32])
 {
-    crypto_hash_sha512(pk, sk, 32);
-    crypto_scalarmult_ed25519_base(pk, pk);
+    uint8_t hash[64];
+    RG_DEFER { ZeroSafe(hash, RG_SIZE(hash)); };
+
+    crypto_hash_sha512(hash, sk, 32);
+    crypto_scalarmult_ed25519_base(pk, hash);
 }
 
 rk_Repository::rk_Repository(rk_Disk *disk, const rk_Config &config)
