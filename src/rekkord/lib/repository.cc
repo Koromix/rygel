@@ -509,7 +509,7 @@ bool rk_Repository::ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserIn
 
             if (len != buf.len) {
                 if (len >= 0) {
-                    LogError("Truncated keys in '%1'", path);
+                    LogError("Malformed keys in '%1'", path);
                 }
 
                 return true;
