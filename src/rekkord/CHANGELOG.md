@@ -21,7 +21,7 @@
 - Remove `rekkord migrate_tags` command
 
 > [!WARNING]
-> Existing users are not migrated automatically. Use `rekkord migrate_user -K master.key username` to migrate an existing user.
+> The user keyfile format has changed, and existing users are not migrated automatically. Use `rekkord migrate_user -K master.key username` to migrate an existing user.
 
 ### Rekkord 0.74
 
