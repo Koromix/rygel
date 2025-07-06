@@ -18,13 +18,6 @@
 
 namespace RG {
 
-#pragma pack(push, 1)
-struct OldTagIntro {
-    int8_t version;
-    rk_ObjectID oid;
-};
-#pragma pack(pop)
-
 int RunChangeCID(Span<const char *> arguments)
 {
     const auto print_usage = [=](StreamWriter *st) {
