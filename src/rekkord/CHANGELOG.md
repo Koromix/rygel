@@ -6,6 +6,22 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.75
+
+*Released on 2025-07-06*
+
+- Remove default repository users created by `rekkord init`
+- Directly set master key filename with `REKKORD_KEYFILE` environment variable
+- Directly set master key filename with `Repository.KeyFile` INI setting
+- Switch to per-user public signing key pairs
+- Fix xattrs being restored on symlink target instead of link itself
+- Protect memory containing key derived from user password
+- Fix small stack overflow bug
+- Remove `rekkord migrate_tags` command
+
+> [!WARNING]
+> Existing users are not migrated automatically. Use `rekkord migrate_user -K master.key username` to migrate an existing user.
+
 ### Rekkord 0.74
 
 *Released on 2025-06-26*
