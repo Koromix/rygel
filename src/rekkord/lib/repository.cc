@@ -1138,7 +1138,9 @@ bool rk_Repository::WriteKeys(const char *path, const char *pwd, rk_UserRole rol
 
     // Encrypt payload
     {
-        uint8_t key[32];
+        uint8_t *key = (uint8_t *)AllocateSafe(32);
+        RG_DEFER { ReleaseSafe(key, 32); };
+
         if (!DeriveFromPassword(pwd, data.salt, key))
             return false;
         crypto_secretbox_easy(data.cypher, payload, PayloadSize, data.nonce, key);
@@ -1191,7 +1193,9 @@ bool rk_Repository::ReadKeys(const char *path, const char *pwd, rk_UserRole *out
 
     // Decrypt payload
     {
-        uint8_t key[32];
+        uint8_t *key = (uint8_t *)AllocateSafe(32);
+        RG_DEFER { ReleaseSafe(key, 32); };
+
         if (!DeriveFromPassword(pwd, data.salt, key))
             return false;
 
@@ -1212,8 +1216,14 @@ bool rk_Repository::ReadKeys(const char *path, const char *pwd, rk_UserRole *out
     PrintLn("wkey = %1", FmtSpan(out_keys->wkey, FmtType::BigHex, "").Pad0(-2));
     PrintLn("lkey = %1", FmtSpan(out_keys->lkey, FmtType::BigHex, "").Pad0(-2));
     PrintLn("tkey = %1", FmtSpan(out_keys->tkey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("nkey = %1", FmtSpan(out_keys->nkey, FmtType::BigHex, "").Pad0(-2));    
+    PrintLn("nkey = %1", FmtSpan(out_keys->nkey, FmtType::BigHex, "").Pad0(-2));
     PrintLn("skey = %1", FmtSpan(out_keys->skey, FmtType::BigHex, "").Pad0(-2));
+
+    uint8_t pkey[32];
+    SeedSigningPair(out_keys->skey, pkey);
+
+    PrintLn("public1 = %1", FmtSpan(MakeSpan(payload, 32), FmtType::BigHex, "").Pad0(-2));
+    PrintLn("public2 = %1", FmtSpan(pkey, FmtType::BigHex, "").Pad0(-2));
 #endif
 
     return true;
