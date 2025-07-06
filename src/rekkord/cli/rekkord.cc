@@ -39,6 +39,7 @@ int RunMount(Span<const char *> arguments);
 
 int RunChangeCID(Span<const char *> arguments);
 int RunResetCache(Span<const char *> arguments);
+int RunMigrateUser(Span<const char *> arguments);
 
 const char *const CommonOptions =
 R"(Common options:
@@ -123,6 +124,7 @@ Advanced commands:
 
     %!..+change_cid%!0                     Change repository cache ID (CID)
     %!..+reset_cache%!0                    Reset or rebuild local repository cache
+    %!..+migrate_user%!0                   Migrate user made by Rekkord ≤ 0.74
 
 Most commands try to find a configuration file if one exists. Unless the path is explicitly defined, the first of the following config files will be used:
 )", FelixTarget);
@@ -260,6 +262,8 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         return RunChangeCID(arguments);
     } else if (TestStr(cmd, "reset_cache")) {
         return RunResetCache(arguments);
+    } else if (TestStr(cmd, "migrate_user")) {
+        return RunMigrateUser(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;

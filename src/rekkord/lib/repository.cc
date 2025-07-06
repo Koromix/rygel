@@ -1177,7 +1177,9 @@ bool rk_Repository::ReadKeys(const char *path, const char *pwd, rk_UserRole *out
         Size len = disk->ReadFile(path, buf);
 
         if (len != buf.len) {
-            if (len >= 0) {
+            if (len == 889) {
+                LogError("This looks like a user made with Rekkord ≤ 0.74, use %!..+rekkord migrate_user -K master.key username%!0");
+            } else if (len >= 0) {
                 LogError("Malformed keys in '%1'", path);
             }
             return false;
