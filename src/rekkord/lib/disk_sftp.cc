@@ -109,7 +109,7 @@ SftpDisk::SftpDisk(const ssh_Config &config)
     } else {
         url = Fmt(&this->config.str_alloc, "sftp://%1@%2/%3", config.username, config.host, config.path ? config.path : "").ptr;
     }
-    default_threads = std::min(4 * GetCoreCount(), 64);
+    default_threads = std::min(8 * GetCoreCount(), 64);
 }
 
 SftpDisk::~SftpDisk()

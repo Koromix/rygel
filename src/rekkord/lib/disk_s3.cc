@@ -53,7 +53,7 @@ S3Disk::S3Disk(const rk_S3Config &config)
 
     // We're good!
     url = s3.GetURL();
-    default_threads = std::min(4 * GetCoreCount(), 64);
+    default_threads = std::min(8 * GetCoreCount(), 64);
 }
 
 S3Disk::~S3Disk()
