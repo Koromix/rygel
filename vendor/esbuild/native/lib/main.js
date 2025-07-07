@@ -641,8 +641,8 @@ function createChannel(streamIn) {
     if (isFirstPacket) {
       isFirstPacket = false;
       let binaryVersion = String.fromCharCode(...bytes);
-      if (binaryVersion !== "0.25.5") {
-        throw new Error(`Cannot start service: Host version "${"0.25.5"}" does not match binary version ${quote(binaryVersion)}`);
+      if (binaryVersion !== "0.25.6") {
+        throw new Error(`Cannot start service: Host version "${"0.25.6"}" does not match binary version ${quote(binaryVersion)}`);
       }
       return;
     }
@@ -984,11 +984,13 @@ function buildOrContextImpl(callName, buildKey, sendRequest, sendResponse, refs,
         watch: (options2 = {}) => new Promise((resolve, reject) => {
           if (!streamIn.hasFS) throw new Error(`Cannot use the "watch" API in this environment`);
           const keys = {};
+          const delay = getFlag(options2, keys, "delay", mustBeInteger);
           checkForInvalidFlags(options2, keys, `in watch() call`);
           const request2 = {
             command: "watch",
             key: buildKey
           };
+          if (delay) request2.delay = delay;
           sendRequest(refs, request2, (error2) => {
             if (error2) reject(new Error(error2));
             else resolve(void 0);
@@ -1625,7 +1627,8 @@ var knownUnixlikePackages = {
 };
 var knownWebAssemblyFallbackPackages = {
   "android arm LE": "@esbuild/android-arm",
-  "android x64 LE": "@esbuild/android-x64"
+  "android x64 LE": "@esbuild/android-x64",
+  "openharmony arm64 LE": "@esbuild/openharmony-arm64"
 };
 function pkgAndSubpathForCurrentPlatform() {
   let pkg;
@@ -1765,7 +1768,7 @@ for your current platform.`);
         "node_modules",
         ".cache",
         "esbuild",
-        `pnpapi-${pkg.replace("/", "-")}-${"0.25.5"}-${path.basename(subpath)}`
+        `pnpapi-${pkg.replace("/", "-")}-${"0.25.6"}-${path.basename(subpath)}`
       );
       if (!fs.existsSync(binTargetPath)) {
         fs.mkdirSync(path.dirname(binTargetPath), { recursive: true });
@@ -1800,7 +1803,7 @@ if (process.env.ESBUILD_WORKER_THREADS !== "0") {
   }
 }
 var _a;
-var isInternalWorkerThread = ((_a = worker_threads == null ? void 0 : worker_threads.workerData) == null ? void 0 : _a.esbuildVersion) === "0.25.5";
+var isInternalWorkerThread = ((_a = worker_threads == null ? void 0 : worker_threads.workerData) == null ? void 0 : _a.esbuildVersion) === "0.25.6";
 var esbuildCommandAndArgs = () => {
   if ((!ESBUILD_BINARY_PATH || false) && (path2.basename(__filename) !== "main.js" || path2.basename(__dirname) !== "lib")) {
     throw new Error(
@@ -1867,7 +1870,7 @@ var fsAsync = {
     }
   }
 };
-var version = "0.25.5";
+var version = "0.25.6";
 var build = (options) => ensureServiceIsRunning().build(options);
 var context = (buildOptions) => ensureServiceIsRunning().context(buildOptions);
 var transform = (input, options) => ensureServiceIsRunning().transform(input, options);
@@ -1970,7 +1973,7 @@ var stopService;
 var ensureServiceIsRunning = () => {
   if (longLivedService) return longLivedService;
   let [command, args] = esbuildCommandAndArgs();
-  let child = child_process.spawn(command, args.concat(`--service=${"0.25.5"}`, "--ping"), {
+  let child = child_process.spawn(command, args.concat(`--service=${"0.25.6"}`, "--ping"), {
     windowsHide: true,
     stdio: ["pipe", "pipe", "inherit"],
     cwd: defaultWD
@@ -2074,7 +2077,7 @@ var runServiceSync = (callback) => {
     esbuild: node_exports
   });
   callback(service);
-  let stdout = child_process.execFileSync(command, args.concat(`--service=${"0.25.5"}`), {
+  let stdout = child_process.execFileSync(command, args.concat(`--service=${"0.25.6"}`), {
     cwd: defaultWD,
     windowsHide: true,
     input: stdin,
@@ -2094,7 +2097,7 @@ var workerThreadService = null;
 var startWorkerThreadService = (worker_threads2) => {
   let { port1: mainPort, port2: workerPort } = new worker_threads2.MessageChannel();
   let worker = new worker_threads2.Worker(__filename, {
-    workerData: { workerPort, defaultWD, esbuildVersion: "0.25.5" },
+    workerData: { workerPort, defaultWD, esbuildVersion: "0.25.6" },
     transferList: [workerPort],
     // From node's documentation: https://nodejs.org/api/worker_threads.html
     //
