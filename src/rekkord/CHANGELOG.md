@@ -6,6 +6,13 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.77
+
+*Released on 2025-07-07*
+
+- Fix possible NULL dereference in `rekkord delete_user`
+- Remove user migration command
+
 ### Rekkord 0.76
 
 *Released on 2025-07-06*
@@ -21,7 +28,7 @@
 - Remove `rekkord migrate_tags` command
 
 > [!WARNING]
-> The user keyfile format has changed, and existing users are not migrated automatically. Use `rekkord migrate_user -K master.key username` to migrate an existing user.
+> This is a breaking change, and there no migration path is provided. A new repository must be used.
 
 ### Rekkord 0.74
 
