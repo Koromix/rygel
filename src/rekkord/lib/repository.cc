@@ -213,10 +213,21 @@ bool rk_Repository::Authenticate(const char *username, const char *pwd)
     // Open disk and determine mode
     {
         rk_UserRole role;
-        LocalArray<uint8_t[32], MaxKeys> keys;
 
         if (!ReadKeys(filename, pwd, &role, keyset))
             return false;
+
+        switch (role) {
+            case rk_UserRole::Admin: { modes = (int)rk_AccessMode::Config |
+                                               (int)rk_AccessMode::Read |
+                                               (int)rk_AccessMode::Write |
+                                               (int)rk_AccessMode::Log; } break;
+            case rk_UserRole::WriteOnly: { modes = (int)rk_AccessMode::Write; } break;
+            case rk_UserRole::ReadWrite: { modes = (int)rk_AccessMode::Read |
+                                                   (int)rk_AccessMode::Write |
+                                                   (int)rk_AccessMode::Log; } break;
+            case rk_UserRole::LogOnly: { modes = (int)rk_AccessMode::Log; } break;
+        }
 
         this->role = rk_UserRoleNames[(int)role];
         this->user = DuplicateString(username, &str_alloc).ptr;
@@ -1176,37 +1187,24 @@ bool rk_Repository::ReadKeys(const char *path, const char *pwd, rk_UserRole *out
 
     switch (role) {
         case rk_UserRole::Admin: {
-            modes = (int)rk_AccessMode::Config |
-                    (int)rk_AccessMode::Read |
-                    (int)rk_AccessMode::Write |
-                    (int)rk_AccessMode::Log;
-
             SeedSigningPair(keyset->ckey, keyset->akey);
             crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
             crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
         } break;
 
         case rk_UserRole::WriteOnly: {
-            modes = (int)rk_AccessMode::Write;
-
             ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
             ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
             ZeroSafe(keyset->lkey, RG_SIZE(keyset->lkey));
         } break;
 
         case rk_UserRole::ReadWrite: {
-            modes = (int)rk_AccessMode::Read |
-                    (int)rk_AccessMode::Write |
-                    (int)rk_AccessMode::Log;
-
             ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
             crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
             crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
         } break;
 
         case rk_UserRole::LogOnly: {
-            modes = (int)rk_AccessMode::Log;
-
             ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
             ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
             ZeroSafe(keyset->wkey, RG_SIZE(keyset->wkey));
