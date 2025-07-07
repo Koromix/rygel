@@ -165,7 +165,8 @@ function ApplicationBuilder(app) {
             current_store = {
                 key: key,
                 title: title,
-                url: ENV.urls.instance + key
+                url: ENV.urls.instance + key,
+                many: null
             };
 
             app.stores.push(current_store);
@@ -224,6 +225,13 @@ function ApplicationBuilder(app) {
             current_store = prev_store;
             options_stack = prev_options;
         }
+    };
+
+    this.many = function(key, title, plural, func = null, options = null) {
+        self.form(key, title, func, options);
+
+        let store = app.stores[app.stores.length - 1];
+        store.many = plural;
     };
 
     this.shortcut = function(label, options = {}, func = null) {

@@ -1815,6 +1815,21 @@ function contextualizeURL(url, thread) {
     return url;
 }
 
+function mapEntries(entries) {
+    let obj = {};
+
+    for (let entry of entries) {
+        let prev = obj[entry.store];
+
+        entry.siblings = prev?.siblings ?? [];
+        entry.siblings.push(entry);
+
+        obj[entry.store] = entry;
+    }
+
+    return obj;
+}
+
 async function run(push_history = true) {
     await data_mutex.run(async () => {
         // Fetch and build page code for page panel
@@ -1859,9 +1874,7 @@ async function run(push_history = true) {
                     let max_mtime = 0;
                     let tags = new Set;
 
-                    for (let store in thread.entries) {
-                        let entry = thread.entries[store];
-
+                    for (let entry of thread.entries) {
                         for (let tag of entry.tags)
                             tags.add(tag);
 
@@ -1878,7 +1891,7 @@ async function run(push_history = true) {
                         locked: thread.locked,
                         ctime: new Date(min_ctime),
                         mtime: new Date(max_mtime),
-                        entries: thread.entries,
+                        entries: mapEntries(thread.entries),
                         tags: Array.from(tags)
                     };
                 });
@@ -2149,13 +2162,13 @@ async function openRecord(tid, anchor, page) {
             counters: {},
             saved: false,
             locked: false,
-            entries: {}
+            entries: []
         };
     }
 
     // Initialize entry data
     if (page.store != null) {
-        new_entry = new_thread.entries[page.store.key];
+        new_entry = new_thread.entries.findLast(entry => entry.store == page.store.key);
 
         if (new_entry == null) {
             let now = (new Date).valueOf();
@@ -2172,11 +2185,10 @@ async function openRecord(tid, anchor, page) {
                 data: {}
             };
 
-            new_thread.entries[page.store.key] = new_entry;
+            new_thread.entries.push(new_entry);
         }
 
-        for (let store in new_thread.entries) {
-            let entry = new_thread.entries[store];
+        for (let entry of new_thread.entries) {
             let [raw, obj] = Data.wrap(entry.data);
 
             if (entry == new_entry) {
@@ -2186,6 +2198,8 @@ async function openRecord(tid, anchor, page) {
 
             entry.data = obj;
         }
+
+        new_thread.entries = mapEntries(new_thread.entries);
     } else {
         new_raw = null;
         new_state = new FormState;

@@ -27,10 +27,8 @@ function DataRemote() {
         });
         let thread = await Net.get(url);
 
-        for (let store in thread.entries) {
-            let entry = thread.entries[store];
+        for (let entry of thread.entries)
             entry.data = restore(tid, entry.data);
-        }
 
         return thread;
     };

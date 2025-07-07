@@ -437,9 +437,9 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
         json.Key("saved"); json.Bool(true);
         json.Key("locked"); json.Bool(cursor->locked);
 
-        json.Key("entries"); json.StartObject();
+        json.Key("entries"); json.StartArray();
         do {
-            json.Key(cursor->store); json.StartObject();
+            json.StartObject();
 
             json.Key("store"); json.String(cursor->store);
             json.Key("eid"); json.String(cursor->eid);
@@ -460,7 +460,7 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
 
             json.EndObject();
         } while (walker.NextInThread());
-        json.EndObject();
+        json.EndArray();
 
         json.EndObject();
     }
@@ -575,9 +575,9 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
         json.Key("saved"); json.Bool(true);
         json.Key("locked"); json.Bool(cursor->locked);
 
-        json.Key("entries"); json.StartObject();
+        json.Key("entries"); json.StartArray();
         do {
-            json.Key(cursor->store); json.StartObject();
+            json.StartObject();
 
             json.Key("store"); json.String(cursor->store);
             json.Key("eid"); json.String(cursor->eid);
@@ -600,7 +600,7 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
 
             json.EndObject();
         } while (walker.NextInThread());
-        json.EndObject();
+        json.EndArray();
     }
     if (!walker.IsValid())
         return;
