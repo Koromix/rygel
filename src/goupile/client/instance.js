@@ -14,7 +14,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, svg } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, LruMap, Mutex, LocalDate, LocalTime } from '../../web/core/base.js';
+import { Util, Log, Net, LruMap, Mutex,
+         LocalDate, LocalTime, FileReference } from '../../web/core/base.js';
 import * as Data from '../../web/core/data.js';
 import * as mixer from '../../web/core/mixer.js';
 import * as goupile from './goupile.js';

@@ -13,7 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { Util, Log, Net, LocalDate, LocalTime } from '../../web/core/base.js';
+import { Util, Log, Net,
+         LocalDate, LocalTime, FileReference } from '../../web/core/base.js';
 import * as Data from '../../web/core/data.js';
 
 function DataRemote() {
@@ -28,13 +29,16 @@ function DataRemote() {
 
         for (let store in thread.entries) {
             let entry = thread.entries[store];
-            entry.data = restore(entry.data);
+            entry.data = restore(tid, entry.data);
         }
 
         return thread;
     };
 
     this.save = async function(tid, entry, frag, fs, signup, claim) {
+        let blobs = [];
+        let data = await preserve(frag.data, blobs);
+
         await Net.post(ENV.urls.instance + 'api/records/save', {
             tid: tid,
 
@@ -44,11 +48,12 @@ function DataRemote() {
             fs: fs,
 
             summary: frag.summary,
-            data: preserve(frag.data),
+            data: data,
             tags: frag.tags,
             constraints: frag.constraints,
             counters: frag.counters,
             publics: frag.publics,
+            blobs: blobs,
             signup: signup,
 
             claim: claim
@@ -68,7 +73,7 @@ function DataRemote() {
     };
 }
 
-function preserve(obj) {
+async function preserve(obj, blobs) {
     if (Util.isPodObject(obj)) {
         obj = Object.assign({}, obj);
 
@@ -77,13 +82,34 @@ function preserve(obj) {
 
             wrap = {
                 $n: Object.assign({}, wrap.$n),
-                $v: preserve(wrap.$v)
+                $v: await preserve(wrap.$v, blobs)
             };
 
             if (wrap.$v instanceof LocalDate) {
                 wrap.$n.special = 'LocalDate';
             } else if (wrap.$v instanceof LocalTime) {
                 wrap.$n.special = 'LocalTime';
+            } else if (wrap.$v instanceof File) {
+                let file = wrap.$v;
+
+                let response = await Net.fetch(ENV.urls.instance + 'api/records/blob', {
+                    method: 'POST',
+                    body: file
+                });
+                if (!response.ok) {
+                    let err = await Net.readError(response);
+                    throw new Error(err);
+                }
+
+                let json = await response.json();
+                let sha256 = json.sha256;
+
+                wrap.$v = { sha256: sha256, name: file.name };
+                wrap.$n.special = 'File';
+
+                blobs.push(wrap.$v);
+            } else if (wrap.$v instanceof FileReference) {
+                wrap.$n.special = 'File';
             } else {
                 delete wrap.$n.special;
             }
@@ -99,7 +125,7 @@ function preserve(obj) {
     }
 }
 
-function restore(obj) {
+function restore(tid, obj) {
     if (Util.isPodObject(obj)) {
         obj = Object.assign({}, obj);
 
@@ -111,13 +137,18 @@ function restore(obj) {
 
             wrap = {
                 $n: Object.assign({}, wrap.$n ?? {}),
-                $v: preserve(wrap.$v)
+                $v: restore(tid, wrap.$v)
             };
 
             if (wrap.$n.special == 'LocalDate') {
                 wrap.$v = LocalDate.parse(wrap.$v);
             } else if (wrap.$n?.special == 'LocalTime') {
                 wrap.$v = LocalTime.parse(wrap.$v);
+            } else if (wrap.$n?.special == 'File') {
+                let ref = wrap.$v;
+                let url = ENV.urls.instance + `blobs/${tid}/${ref.sha256}/download`;
+
+                wrap.$v = new FileReference(ref.sha256, ref.name, url);
             }
             delete wrap.$n.special;
 

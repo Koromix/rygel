@@ -51,7 +51,7 @@ static void AddMimeTypeHeader(http_IO *io, const char *filename)
     }
 }
 
-bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const char *filename, int64_t max_age)
+bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const char *filename, bool download, int64_t max_age)
 {
     const http_RequestInfo &request = io->Request();
 
@@ -105,6 +105,11 @@ bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const 
     }
     src_len = sqlite3_blob_bytes(src_blob);
     RG_DEFER { sqlite3_blob_close(src_blob); };
+
+    if (download) {
+        const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1\"", FmtUrlSafe(filename, "")).ptr;
+        io->AddHeader("Content-Disposition", disposition);
+    }
 
     // Fast path (small objects)
     if (dest_encoding == src_encoding && src_len <= 65536) {
@@ -573,7 +578,7 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
     }
 
     int64_t max_age = (explicit_version && fs_version > 0) ? (28ll * 86400000) : 0;
-    ServeFile(io, instance, sha256, filename.ptr, max_age);
+    ServeFile(io, instance, sha256, filename.ptr, false, max_age);
 
     return true;
 }

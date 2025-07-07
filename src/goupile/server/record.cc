@@ -118,8 +118,8 @@ struct SignupInfo {
 };
 
 struct BlobInfo {
-    const char *name = nullptr;
     const char *sha256 = nullptr;
+    const char *name = nullptr;
 };
 
 static bool CheckTag(Span<const char> tag)
@@ -1326,12 +1326,25 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                     } break;
                 }
             } else if (key == "blobs") {
-                parser.ParseObject();
-                while (parser.InObject()) {
+                parser.ParseArray();
+                while (parser.InArray()) {
                     BlobInfo blob = {};
 
-                    parser.ParseKey(&blob.name);
-                    parser.ParseString(&blob.sha256);
+                    parser.ParseObject();
+                    while (parser.InObject()) {
+                        Span<const char> key = {};
+                        parser.ParseKey(&key);
+
+                        if (key == "sha256") {
+                            parser.ParseString(&blob.sha256);
+                        } else if (key == "name") {
+                            parser.ParseString(&blob.name);
+                        } else {
+                            LogError("Unexpected key '%1'", key);
+                            io->SendError(422);
+                            return;
+                        }
+                    }
 
                     blobs.Append(blob);
                 }
@@ -1395,12 +1408,12 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         }
 
         for (const BlobInfo &blob: blobs) {
+            valid &= CheckSha256(blob.sha256);
+
             if (!blob.name || !blob.name[0] || PathIsAbsolute(blob.name) || PathContainsDotDot(blob.name)) {
                 LogError("Invalid blob filename");
                 valid = false;
             }
-
-            valid &= CheckSha256(blob.sha256);
         }
 
         if (!valid) {
@@ -1679,9 +1692,9 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
         // Insert blobs
         for (const BlobInfo &blob: blobs) {
-            if (!instance->db->Run(R"(INSERT INTO rec_files (tid, eid, anchor, name, sha256)
+            if (!instance->db->Run(R"(INSERT INTO rec_files (tid, eid, anchor, sha256, name)
                                       VALUES (?1, ?2, ?3, ?4, ?5))",
-                                   tid, fragment.eid, new_anchor, blob.name, blob.sha256)) {
+                                   tid, fragment.eid, new_anchor, blob.sha256, blob.name)) {
                 if (sqlite3_extended_errcode(*instance->db) == SQLITE_CONSTRAINT_FOREIGNKEY) {
                     LogError("Blob '%1' does not exist", blob.sha256);
                     io->SendError(409);
@@ -2086,51 +2099,59 @@ void HandleBlobGet(http_IO *io, InstanceHolder *instance)
     RG_ASSERT(StartsWith(url, "/blobs/"));
 
     Span<const char> tid;
-    Span<const char> name;
+    const char *sha256;
+    bool download;
     {
         Span<const char> remain = url + 7;
 
         tid = SplitStr(remain, '/', &remain);
-        name = SplitStr(remain, '/', &remain);
 
         if (!CheckULID(tid)) {
             io->SendError(422);
             return;
+        }
+
+        if (EndsWith(remain, "/download")) {
+            sha256 = DuplicateString(remain.Take(0, remain.len - 9), io->Allocator()).ptr;
+            download = true;
+        } else {
+            sha256 = remain.ptr;
+            download = false;
         }
     }
 
     // Get filename and check permission
     sq_Statement stmt;
     if (stamp->HasPermission(UserPermission::DataRead)) {
-        if (!instance->db->Prepare(R"(SELECT f.sha256
+        if (!instance->db->Prepare(R"(SELECT f.name
                                       FROM rec_files f
                                       INNER JOIN rec_entries e ON (e.eid = f.eid AND e.anchor = f.anchor)
-                                      WHERE f.tid = ?1 AND name = ?2)",
-                                   &stmt, tid, name))
+                                      WHERE f.tid = ?1 AND f.sha256 = ?2)",
+                                   &stmt, tid, sha256))
             return;
     } else {
-        if (!instance->db->Prepare(R"(SELECT f.sha256
+        if (!instance->db->Prepare(R"(SELECT f.name
                                       FROM rec_files f
                                       INNER JOIN rec_entries e ON (e.eid = f.eid AND e.anchor = f.anchor)
                                       INNER JOIN ins_claims c ON (c.tid = e.tid)
-                                      WHERE f.tid = ?1 AND f.name = ?2 AND c.userid = ?3)",
-                                   &stmt, tid, name, session->userid))
+                                      WHERE f.tid = ?1 AND f.sha256 = ?2 AND c.userid = ?3)",
+                                   &stmt, tid, sha256, session->userid))
             return;
     }
 
     // Not allowed or file does not exist
     if (!stmt.Step()) {
         if (stmt.IsValid()) {
-            LogError("File '%1' does not exist", name);
+            LogError("File '%1' does not exist", sha256);
             io->SendError(404);
         }
         return;
     }
 
-    const char *sha256 = (const char *)sqlite3_column_text(stmt, 0);
+    const char *name = (const char *)sqlite3_column_text(stmt, 0);
     int64_t max_age = 28ll * 86400000;
 
-    ServeFile(io, instance, sha256, name.ptr, max_age);
+    ServeFile(io, instance, sha256, name, download, max_age);
 }
 
 void HandleBlobPost(http_IO *io, InstanceHolder *instance)

@@ -15,7 +15,8 @@
 
 import { render, html, svg,
          directive, Directive, noChange, nothing } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, Mutex, LocalDate, LocalTime } from '../../web/core/base.js';
+import { Util, Log, Net, Mutex,
+         LocalDate, LocalTime, FileReference } from '../../web/core/base.js';
 import * as Data from '../../web/core/data.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
@@ -1115,7 +1116,7 @@ function FormBuilder(state, model, options = {}) {
         key = decodeKey(key, options);
 
         let value = readValue(key, options, value => {
-            if (!(value instanceof File))
+            if (!(value instanceof File) && !(value instanceof FileReference))
                 value = undefined;
 
             return value;
@@ -1128,11 +1129,9 @@ function FormBuilder(state, model, options = {}) {
                 if (value === noChange || value === nothing)
                     return value;
 
-                let el = part.element;
-
                 if (value == null) {
                     part.element.value = '';
-                } else if (value !== el.files) {
+                } else if (value !== part.element.files) {
                     part.element.files = value;
                 }
 
@@ -1145,13 +1144,31 @@ function FormBuilder(state, model, options = {}) {
         }
         let set_files = directive(SetFiles);
 
+        let is_file = (value instanceof File);
+        let is_ref = (value instanceof FileReference);
+
         let render = (intf, id) => renderWrappedWidget(intf, html`
             ${makeLabel(intf)}
-            <input id=${id} type="file" size="${options.size || 30}"
-                   placeholder=${options.placeholder || ''}
-                   ?disabled=${options.disabled} ?readonly=${options.readonly}
-                   @input=${e => handleFileInput(e, key)}
-                   ${set_files(key.retain.file_lists.get(key.name))} />
+            <div id="${id}" class="fm_file">
+                <span>
+                    ${value == null ? html`<i>${options.placeholder || ''}</i>` : ''}
+                    ${is_file ? html`<i>Envoyer :</i> ${value.name}` : ''}
+                    ${is_ref ? html`<i>Document :</i> ${value.name} (<a href=${value.url} download>télécharger</a>)` : ''}
+                </span>
+                <div>
+                    <button type="button" ?disabled=${options.disabled || options.readonly}
+                            @click=${e => e.currentTarget.parentNode.parentNode.querySelector('[type=file]').click() }>
+                        ${value != null ? 'Remplacer' : 'Parcourir'}
+                    </button>
+                    ${value != null ? html`
+                        <button type="button" ?disabled=${options.disabled || options.readonly}
+                                @click=${e => clearFileInput(e, key)}>Supprimer</button>
+                    ` : ''}
+                </div>
+                <input type="file" ?disabled=${options.disabled}
+                       @input=${e => handleFileInput(e, key)}
+                       ${set_files(key.retain.file_lists.get(key.name))} />
+            </div>
         `);
 
         let intf = makeWidget('file', makeID(key), label, render, options);
@@ -1167,6 +1184,14 @@ function FormBuilder(state, model, options = {}) {
 
         key.retain.file_lists.set(key.name, e.target.files);
         updateValue(key, e.target.files[0] || undefined);
+    }
+
+    function clearFileInput(e, key) {
+        if (!isModifiable(key))
+            return;
+
+        key.retain.file_lists.delete(key.name);
+        updateValue(key, undefined);
     }
 
     this.calc = function(key, label, value, options = {}) {

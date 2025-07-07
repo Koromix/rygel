@@ -270,6 +270,10 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     cursor: inherit;
 }
 
+.fm_file > span { display: block; }
+.fm_file > div { margin: 0.5em 0; }
+.fm_file > input { display: none; }
+
 /* -------------------- Nice radio and checkboxes -------------------- */
 
 .fm_radio { display: inline-block; }

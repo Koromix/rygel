@@ -644,7 +644,9 @@ static void HandleInstanceRequest(http_IO *io)
         return;
 
     // Try static assets
-    if (request.method == http_RequestMethod::Get && !StartsWith(instance_url, "/api/")) {
+    if (request.method == http_RequestMethod::Get &&
+            !StartsWith(instance_url, "/api/") &&
+            !StartsWith(instance_url, "/blobs/")) {
         if (!GetPathExtension(instance_url).len) {
             instance_url = "/";
         }

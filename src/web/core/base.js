@@ -1620,6 +1620,16 @@ LocalTime.now = function() {
     return new LocalTime(hours, minutes, seconds);
 };
 
+// ------------------------------------------------------------------------
+// Misc
+// ------------------------------------------------------------------------
+
+function FileReference(sha256, name, url = null) {
+    this.sha256 = sha256;
+    this.name = name;
+    this.url = url;
+};
+
 export {
     Util,
     Log,
@@ -1634,5 +1644,6 @@ export {
     BTree,
 
     LocalDate,
-    LocalTime
+    LocalTime,
+    FileReference
 }
