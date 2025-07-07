@@ -285,7 +285,7 @@ Please note that deleting users only requires the ability to delete objects from
             LogError("Refusing to delete without config access");
             return 1;
         }
-        if (TestStr(username, rekkord_config.username)) {
+        if (rekkord_config.username && TestStr(username, rekkord_config.username)) {
             LogError("Cannot delete yourself (unless --force is used)");
             return 1;
         }
