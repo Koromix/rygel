@@ -2,7 +2,6 @@
 
 Most projects are licensed under the [GPL 3.0 license](https://www.gnu.org/licenses/gpl-3.0.html), with a few exceptions listed below.
 
-<<<<<<< HEAD
 | Project    | Description                                                                      | Build tool | Quality  | License   |
 | ---------- | -------------------------------------------------------------------------------- | ---------- | -------- | --------- |
 | *blikk*    | Embeddable beginner-friendly language with static types, fast compilation        | Felix      | **WIP**  | GPL 3     |
