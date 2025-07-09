@@ -21,7 +21,9 @@
 namespace RG {
 
 void HandleRegister(http_IO *io);
-void HandleLogin(http_IO *io);
+void HandleToken(http_IO *io);
+void HandleProtect(http_IO *io);
+void HandlePassword(http_IO *io);
 
 void HandleDownload(http_IO *io);
 void HandleUpload(http_IO *io);

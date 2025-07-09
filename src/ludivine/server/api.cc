@@ -18,6 +18,7 @@
 #include "src/core/wrap/qrcode.hh"
 #include "ludivine.hh"
 #include "mail.hh"
+#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 
@@ -309,7 +310,193 @@ void HandleRegister(http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleLogin(http_IO *io)
+void HandleProtect(http_IO *io)
+{
+    // Parse input data
+    const char *uid = nullptr;
+    const char *password = nullptr;
+    const char *token = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "uid") {
+                parser.ParseString(&uid);
+            } else if (key == "password") {
+                parser.ParseString(&password);
+            } else if (key == "token") {
+                parser.PassThrough(&token);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check missing or invalid values
+    {
+        bool valid = true;
+
+        if (!uid || !IsUUIDValid(uid)) {
+            LogError("Missing or invalid UID");
+            valid = false;
+        }
+        if (!password) {
+            LogError("Missing or invalid password");
+            valid = false;
+        }
+        if (!token) {
+            LogError("Missing or invalid token");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Make sure user exists
+    int64_t user = 0;
+    {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT id FROM users WHERE uid = uuid_blob(?1)", &stmt, uid))
+            return;
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Unknown user UID");
+                io->SendError(404);
+            }
+            return;
+        }
+
+        user = sqlite3_column_int64(stmt, 0);
+    }
+
+    char hash[256];
+    if (crypto_pwhash_str(hash, password, strlen(password),
+                          crypto_pwhash_OPSLIMIT_INTERACTIVE, crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
+        LogError("Failed to hash password");
+        return;
+    }
+
+    if (!db.Run(R"(INSERT INTO passwords (user, hash, token)
+                   VALUES (?1, ?2, ?3)
+                   ON CONFLICT DO UPDATE SET hash = excluded.hash,
+                                             token = excluded.token)",
+                user, hash, token))
+        return;
+
+    io->SendText(200, token, "application/json");
+}
+
+void HandlePassword(http_IO *io)
+{
+    // Parse input data
+    const char *mail = nullptr;
+    const char *password = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "mail") {
+                parser.ParseString(&mail);
+            } else if (key == "password") {
+                parser.ParseString(&password);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check missing or invalid values
+    {
+        bool valid = true;
+
+        if (!mail || !IsMailValid(mail)) {
+            LogError("Missing or invalid mail address");
+            valid = false;
+        }
+        if (!password) {
+            LogError("Missing password");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // We use this to extend/fix the response delay in case of error
+    int64_t start = GetMonotonicTime();
+
+    sq_Statement stmt;
+    if (!db.Prepare(R"(SELECT uuid_str(u.uid), p.hash, p.token
+                       FROM users u
+                       INNER JOIN passwords p ON (p.user = u.id)
+                       WHERE u.mail = ?1)", &stmt, mail))
+        return;
+    stmt.Run();
+
+    // Validate password if user exists
+    if (stmt.IsRow()) {
+        const char *uid = (const char *)sqlite3_column_text(stmt, 0);
+        const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
+        const char *token = (const char *)sqlite3_column_text(stmt, 2);
+
+        if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
+            http_JsonPageBuilder json;
+            if (!json.Init(io))
+                return;
+
+            json.StartObject();
+            json.Key("uid"); json.String(uid);
+            json.Key("token"); json.Raw(token);
+            json.EndObject();
+
+            json.Finish();
+            return;
+        }
+    }
+
+    // Enforce constant delay if authentification fails
+    if (stmt.IsValid()) {
+        int64_t safety = std::max(2000 - GetMonotonicTime() + start, (int64_t)0);
+        WaitDelay(safety);
+
+        LogError("Invalid username or password");
+        io->SendError(403);
+    }
+}
+
+void HandleToken(http_IO *io)
 {
     // Parse input data
     const char *uid = nullptr;

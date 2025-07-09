@@ -385,8 +385,12 @@ static void HandleRequest(http_IO *io)
     if (StartsWith(request.path, "/api/")) {
         if (TestStr(request.path, "/api/register") && request.method == http_RequestMethod::Post) {
             HandleRegister(io);
-        } else if (TestStr(request.path, "/api/login") && request.method == http_RequestMethod::Post) {
-            HandleLogin(io);
+        } else if (TestStr(request.path, "/api/token") && request.method == http_RequestMethod::Post) {
+            HandleToken(io);
+        } else if (TestStr(request.path, "/api/protect") && request.method == http_RequestMethod::Post) {
+            HandleProtect(io);
+        } else if (TestStr(request.path, "/api/password") && request.method == http_RequestMethod::Post) {
+            HandlePassword(io);
         } else if (TestStr(request.path, "/api/download") && request.method == http_RequestMethod::Get) {
             HandleDownload(io);
         } else if (TestStr(request.path, "/api/upload") && request.method == http_RequestMethod::Put) {

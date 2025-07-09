@@ -186,7 +186,7 @@ async function start() {
             tkey = Hex.toBytes(tkey);
             registration = parseInt(registration, 10);
 
-            await login(uid, tkey, registration);
+            await loginMagic(uid, tkey, registration);
         }
 
         let url = window.location.pathname + window.location.search;
@@ -253,31 +253,88 @@ function initChannel() {
     channel.postMessage({ message: 'app' });
 }
 
-async function login(uid, tkey, registration) {
+async function loginMagic(uid, tkey, registration) {
     let vkey = new Uint8Array(32);
     crypto.getRandomValues(vkey);
 
-    let session = {
+    let init = {
         vid: crypto.randomUUID(),
         vkey: Hex.toHex(vkey),
         rid: crypto.randomUUID()
     };
-    let token = encrypt(session, tkey);
 
     // Retrieve existing token (or create it if none is set) and session
-    token = await Net.post('/api/login', {
+    let token = await Net.post('/api/token', {
         uid: uid,
-        token: token,
-        vid: session.vid,
-        rid: session.rid,
+        token: encrypt(init, tkey),
+        vid: init.vid,
+        rid: init.rid,
         registration: registration
     });
-    session = {
+
+    let session = {
         uid: uid,
         ...decrypt(token, tkey)
     };
 
     await open(session);
+}
+
+function encrypt(obj, key) {
+    let nonce = new Uint8Array(24);
+    crypto.getRandomValues(nonce);
+
+    let json = JSON.stringify(obj, (k, v) => v != null ? v : null);
+    let message = (new TextEncoder()).encode(json);
+    let box = nacl.secretbox(message, nonce, key);
+
+    let enc = {
+        nonce: Base64.toBase64(nonce),
+        box: Base64.toBase64(box)
+    };
+
+    return enc;
+}
+
+function decrypt(enc, key) {
+    let nonce = Base64.toBytes(enc.nonce);
+    let box = Base64.toBytes(enc.box);
+
+    let message = nacl.secretbox.open(box, nonce, key);
+    if (message == null)
+        throw new Error('Failed to decrypt message: wrong key?');
+
+    let json = (new TextDecoder()).decode(message);
+    let obj = JSON.parse(json);
+
+    return obj;
+}
+
+async function loginPassword(mail, password) {
+    let key0 = await deriveKey(password, 'login');
+    let key1 = await deriveKey(password, 'token');
+
+    let login = await Net.post('/api/password', {
+        mail: mail,
+        password: Base64.toBase64(key0)
+    });
+
+    let session = {
+        uid: login.uid,
+        ...decrypt(login.token, key1)
+    };
+
+    await open(session);
+}
+
+async function deriveKey(password, salt) {
+    password = (new TextEncoder).encode(password);
+    salt = (new TextEncoder).encode(salt);
+
+    let key = await crypto.subtle.importKey('raw', password, { name: 'PBKDF2' }, false, ['deriveBits']);
+    let derived = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, key, 256);
+
+    return new Uint8Array(derived);
 }
 
 async function open(obj) {
@@ -317,36 +374,6 @@ async function logout() {
     window.location.href = '/';
 
     poisoned = true;
-}
-
-function encrypt(obj, key) {
-    let nonce = new Uint8Array(24);
-    crypto.getRandomValues(nonce);
-
-    let json = JSON.stringify(obj, (k, v) => v != null ? v : null);
-    let message = (new TextEncoder()).encode(json);
-    let box = nacl.secretbox(message, nonce, key);
-
-    let enc = {
-        nonce: Base64.toBase64(nonce),
-        box: Base64.toBase64(box)
-    };
-
-    return enc;
-}
-
-function decrypt(enc, key) {
-    let nonce = Base64.toBytes(enc.nonce);
-    let box = Base64.toBytes(enc.box);
-
-    let message = nacl.secretbox.open(box, nonce, key);
-    if (message == null)
-        throw new Error('Failed to decrypt message: wrong key?');
-
-    let json = (new TextDecoder()).decode(message);
-    let obj = JSON.parse(json);
-
-    return obj;
 }
 
 // ------------------------------------------------------------------------
@@ -1004,6 +1031,58 @@ function addToCalendar(e, evt) {
 function isLogged() {
     let logged = (db != null);
     return logged;
+}
+
+async function changePassword() {
+    await UI.dialog({
+        run: (render, close) => {
+            return html`
+                <div class="tabbar">
+                    <a class="active">Mot de passe</a>
+                </div>
+
+                <div class="tab">
+                    <div class="box">
+                        <label>
+                            <span>Nouveau mot de passe</span>
+                            <input type="password" name="password1" placeholder="mot de passe" />
+                        </label>
+                        <label>
+                            <input type="password" name="password2" placeholder="confirmation" />
+                        </label>
+                        <div class="actions">
+                            <button type="submit">Confirmer le mot de passe</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        },
+
+        submit: async (elements) => {
+            let password1 = elements.password1.value.trim();
+            let password2 = elements.password2.value.trim();
+
+            if (!password1 || !password2)
+                throw new Error('Password is missing');
+            if (password2 != password1)
+                throw new Error('Passwords do not match');
+
+            let key0 = await deriveKey(password1, 'login');
+            let key1 = await deriveKey(password1, 'token');
+
+            let obj = {
+                vid: session.vid,
+                vkey: session.vkey,
+                rid: session.rid
+            };
+
+            await Net.post('/api/protect', {
+                uid: session.uid,
+                password: Base64.toBase64(key0),
+                token: encrypt(obj, key1)
+            });
+        }
+    });
 }
 
 async function changePicture() {
