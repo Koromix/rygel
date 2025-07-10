@@ -49,14 +49,6 @@ typedef unsigned short int u16;
 # include SHELL_STRINGIFY(SQLITE_CUSTOM_INCLUDE)
 #endif
 
-#if SQLITE3MC_USE_MINIZ != 0 && !defined(SQLITE_ENABLE_COMPRESS)
-#include "miniz.c"
-#ifdef SQLITE_HAVE_ZLIB
-#undef SQLITE_HAVE_ZLIB
-#endif
-#define SQLITE_HAVE_ZLIB 1
-#endif
-
 /*
 ** Determine if we are dealing with WinRT, which provides only a subset of
 ** the full Win32 API.
@@ -2336,7 +2328,6 @@ int sqlite3PcacheTraceDeactivate(void){
 }
 
 /************************* End ../ext/misc/pcachetrace.c ********************/
-#ifndef SQLITE_OMIT_SHELL_SHATHREE
 /************************* Begin ../ext/misc/shathree.c ******************/
 /*
 ** 2017-03-08
@@ -3194,7 +3185,6 @@ int sqlite3_shathree_init(
 }
 
 /************************* End ../ext/misc/shathree.c ********************/
-#endif
 /************************* Begin ../ext/misc/sha1.c ******************/
 /*
 ** 2017-01-27
@@ -6185,7 +6175,6 @@ int sqlite3_ieee_init(
 }
 
 /************************* End ../ext/misc/ieee754.c ********************/
-#ifndef SQLITE_OMIT_SHELL_SERIES
 /************************* Begin ../ext/misc/series.c ******************/
 /*
 ** 2015-08-18, 2023-04-28
@@ -7057,8 +7046,6 @@ int sqlite3_series_init(
 }
 
 /************************* End ../ext/misc/series.c ********************/
-#endif
-#ifndef SQLITE_OMIT_SHELL_REGEXP
 /************************* Begin ../ext/misc/regexp.c ******************/
 /*
 ** 2012-11-13
@@ -7944,7 +7931,6 @@ int sqlite3_regexp_init(
 }
 
 /************************* End ../ext/misc/regexp.c ********************/
-#endif
 #ifndef SQLITE_SHELL_FIDDLE
 /************************* Begin ../ext/misc/fileio.c ******************/
 /*
@@ -10252,7 +10238,7 @@ SQLITE_EXTENSION_INIT1
 #  include <stdint.h>
 #endif
 
-#include "zlibwrap.h"
+#include <zlib.h>
 
 /* When used as part of the CLI, the sqlite3_stdio.h module will have
 ** been included before this one. In that case use the sqlite3_stdio.h
@@ -12484,7 +12470,7 @@ int sqlite3_zipfile_init(
 */
 /* #include "sqlite3ext.h" */
 SQLITE_EXTENSION_INIT1
-#include "zlibwrap.h"
+#include <zlib.h>
 #include <assert.h>
 
 /*
@@ -26058,22 +26044,16 @@ static void open_db(ShellState *p, int openFlags){
     sqlite3_enable_load_extension(p->db, 1);
 #endif
     sqlite3_sha_init(p->db, 0, 0);
-#ifndef SQLITE_OMIT_SHELL_SHATHREE
     sqlite3_shathree_init(p->db, 0, 0);
-#endif
     sqlite3_uint_init(p->db, 0, 0);
     sqlite3_stmtrand_init(p->db, 0, 0);
     sqlite3_decimal_init(p->db, 0, 0);
     sqlite3_percentile_init(p->db, 0, 0);
     sqlite3_base64_init(p->db, 0, 0);
     sqlite3_base85_init(p->db, 0, 0);
-#ifndef SQLITE_OMIT_SHELL_REGEXP
     sqlite3_regexp_init(p->db, 0, 0);
-#endif
     sqlite3_ieee_init(p->db, 0, 0);
-#ifndef SQLITE_OMIT_SHELL_SERIES
     sqlite3_series_init(p->db, 0, 0);
-#endif
 #ifndef SQLITE_SHELL_FIDDLE
     sqlite3_fileio_init(p->db, 0, 0);
     sqlite3_completion_init(p->db, 0, 0);
@@ -32371,8 +32351,6 @@ static int do_meta_command(char *zLine, ShellState *p){
     char *zPtrSz = sizeof(void*)==8 ? "64-bit" : "32-bit";
     sqlite3_fprintf(p->out, "SQLite %s %s\n" /*extra-version-info*/,
           sqlite3_libversion(), sqlite3_sourceid());
-    extern const char* sqlite3mc_version();
-    sqlite3_fprintf(p->out, "%s\n", sqlite3mc_version());
 #if SQLITE_HAVE_ZLIB
     sqlite3_fprintf(p->out, "zlib version %s\n", zlibVersion());
 #endif
@@ -33816,12 +33794,10 @@ int SQLITE_CDECL wmain(int argc, wchar_t **wargv){
       char *zHome;
       char *zHistory;
       int nHistory;
-      extern const char* sqlite3mc_version();
       sqlite3_fprintf(stdout,
-            "SQLite version %s %.19s" /*extra-version-info*/
-            " (%s)\n" /*SQLite3-Multiple-Ciphers-version-info*/
+            "SQLite version %s %.19s\n" /*extra-version-info*/
             "Enter \".help\" for usage hints.\n",
-            sqlite3_libversion(), sqlite3_sourceid(), sqlite3mc_version());
+            sqlite3_libversion(), sqlite3_sourceid());
       if( warnInmemoryDb ){
         sputz(stdout, "Connected to a ");
         printBold("transient in-memory database");
