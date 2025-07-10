@@ -39,6 +39,7 @@ Save options:
 
         %!..+--raw%!0                      Skip snapshot object and report data OID
 
+        %!..+--force%!0                    Check all files even if mtime/size match previous backup
         %!..+--follow%!0                   Follow symbolic links (instead of storing them as-is)
         %!..+--noatime%!0                  Do not modify atime if possible (Linux-only)
 
@@ -61,6 +62,8 @@ Available metadata save options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("--force")) {
+                settings.skip = false;
             } else if (opt.Test("--follow")) {
                 settings.follow = true;
             } else if (opt.Test("-m", "--meta", OptionType::Value)) {

@@ -37,6 +37,7 @@ struct rk_ListSettings {
 };
 
 struct rk_SaveSettings {
+    bool skip = true;
     bool follow = false;
     bool noatime = false;
     bool atime = false;

@@ -342,28 +342,30 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                     case RawEntry::Kind::Directory: {} break; // Already processed
 
                     case RawEntry::Kind::File: {
-                        rk_CacheStat stat = {};
-                        StatResult ret = cache->GetStat(filename, &stat);
+                        if (settings.skip) {
+                            rk_CacheStat stat = {};
+                            StatResult ret = cache->GetStat(filename, &stat);
 
-                        if (ret == StatResult::Success && 
-                                stat.mtime == LittleEndian(entry->mtime) &&
-                                stat.ctime == LittleEndian(entry->ctime) &&
-                                stat.mode == LittleEndian(entry->mode) &&
-                                stat.size == LittleEndian(entry->size)) {
-                            entry->hash = stat.hash;
+                            if (ret == StatResult::Success && 
+                                    stat.mtime == LittleEndian(entry->mtime) &&
+                                    stat.ctime == LittleEndian(entry->ctime) &&
+                                    stat.mode == LittleEndian(entry->mode) &&
+                                    stat.size == LittleEndian(entry->size)) {
+                                entry->hash = stat.hash;
 
-                            entry->flags |= (uint8_t)RawEntry::Flags::Readable;
-                            pending->size += stat.size;
+                                entry->flags |= (uint8_t)RawEntry::Flags::Readable;
+                                pending->size += stat.size;
 
-                            // Done by PutFile in theory, but we're skipping it
-                            MakeProgress(stat.stored);
-                            put_size.fetch_add(stat.size, std::memory_order_relaxed);
-                            put_entries.fetch_add(1, std::memory_order_relaxed);
+                                // Done by PutFile in theory, but we're skipping it
+                                MakeProgress(stat.stored);
+                                put_size.fetch_add(stat.size, std::memory_order_relaxed);
+                                put_entries.fetch_add(1, std::memory_order_relaxed);
 
-                            break;
-                        } else if (ret == StatResult::OtherError) {
-                            success = false;
-                            break;
+                                break;
+                            } else if (ret == StatResult::OtherError) {
+                                success = false;
+                                break;
+                            }
                         }
 
                         async.Run([=, this]() {
