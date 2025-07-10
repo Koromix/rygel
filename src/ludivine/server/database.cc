@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 15;
+static const int DatabaseVersion = 15;
 
 bool MigrateDatabase(sq_Database *db, const char *vault_directory)
 {
