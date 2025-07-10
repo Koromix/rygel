@@ -266,7 +266,7 @@ async function loginMagic(uid, tkey, registration) {
     // Retrieve existing token (or create it if none is set) and session
     let token = await Net.post('/api/token', {
         uid: uid,
-        token: encrypt(init, tkey),
+        init: encrypt(init, tkey),
         vid: init.vid,
         rid: init.rid,
         registration: registration

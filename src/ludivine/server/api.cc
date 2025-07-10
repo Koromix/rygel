@@ -263,8 +263,8 @@ void HandleRegister(http_IO *io)
         FillRandomSafe(tkey);
 
         if (!db.Run(R"(INSERT INTO users (uid, mail, registration)
-                       VALUES (?1, ?2, 1)
-                       ON CONFLICT (mail) DO UPDATE SET registration = registration + IIF(token IS NULL, 1, 0))",
+                       VALUES (?1, ?2, -1)
+                       ON CONFLICT (mail) DO UPDATE SET registration = registration - IIF(registration < 0, 1, 0))",
                     (Span<const uint8_t>)uid, mail))
             return;
     }
@@ -275,7 +275,7 @@ void HandleRegister(http_IO *io)
     {
         sq_Statement stmt;
 
-        if (!db.Prepare(R"(SELECT IIF(token IS NULL, 1, 0), uuid_str(uid), registration
+        if (!db.Prepare(R"(SELECT IIF(registration < 0, 1, 0), uuid_str(uid), abs(registration)
                            FROM users
                            WHERE mail = ?1)",
                         &stmt, mail))
@@ -393,8 +393,8 @@ void HandleProtect(http_IO *io)
         return;
     }
 
-    if (!db.Run(R"(INSERT INTO passwords (user, hash, token)
-                   VALUES (?1, ?2, ?3)
+    if (!db.Run(R"(INSERT INTO tokens (user, type, password_hash, token)
+                   VALUES (?1, 'password', ?2, ?3)
                    ON CONFLICT DO UPDATE SET hash = excluded.hash,
                                              token = excluded.token)",
                 user, hash, token))
@@ -458,20 +458,20 @@ void HandlePassword(http_IO *io)
     int64_t start = GetMonotonicTime();
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT uuid_str(u.uid), p.hash, p.token
+    if (!db.Prepare(R"(SELECT uuid_str(u.uid), t.password_hash, t.token
                        FROM users u
-                       INNER JOIN passwords p ON (p.user = u.id)
-                       WHERE u.mail = ?1)", &stmt, mail))
+                       INNER JOIN tokens t ON (t.user = u.id)
+                       WHERE u.mail = ?1 AND t.type = 'password')", &stmt, mail))
         return;
     stmt.Run();
 
     // Validate password if user exists
     if (stmt.IsRow()) {
         const char *uid = (const char *)sqlite3_column_text(stmt, 0);
-        const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
+        const char *hash = (const char *)sqlite3_column_text(stmt, 1);
         const char *token = (const char *)sqlite3_column_text(stmt, 2);
 
-        if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
+        if (hash && crypto_pwhash_str_verify(hash, password, strlen(password)) == 0) {
             http_JsonPageBuilder json;
             if (!json.Init(io))
                 return;
@@ -517,7 +517,7 @@ void HandleToken(http_IO *io)
 
             if (key == "uid") {
                 parser.ParseString(&uid);
-            } else if (key == "token") {
+            } else if (key == "init") {
                 parser.PassThrough(&token);
             } else if (key == "vid") {
                 parser.ParseString(&vid);
@@ -572,7 +572,10 @@ void HandleToken(http_IO *io)
     {
         sq_Statement stmt;
 
-        if (!db.Prepare("SELECT id, token, registration FROM users WHERE uid = uuid_blob(?1)",
+        if (!db.Prepare(R"(SELECT u.id, abs(u.registration), t.token
+                           FROM users u
+                           LEFT JOIN tokens t ON (t.user = u.id AND t.type = 'mail')
+                           WHERE u.uid = uuid_blob(?1))",
                         &stmt, uid))
             return;
 
@@ -584,9 +587,9 @@ void HandleToken(http_IO *io)
             return;
         }
 
-        int64_t id = sqlite3_column_int64(stmt, 0);
-        bool exists = (sqlite3_column_type(stmt, 1) != SQLITE_NULL);
-        int count = sqlite3_column_int(stmt, 2);
+        int64_t user = sqlite3_column_int64(stmt, 0);
+        int count = sqlite3_column_int(stmt, 1);
+        bool exists = (sqlite3_column_type(stmt, 2) != SQLITE_NULL);
 
         if (registration != count) {
             LogError("Please use most recent login mail");
@@ -595,11 +598,15 @@ void HandleToken(http_IO *io)
         }
 
         if (exists) {
-            token = (const char *)sqlite3_column_text(stmt, 1);
+            token = (const char *)sqlite3_column_text(stmt, 2);
             token = DuplicateString(token, io->Allocator()).ptr;
         } else {
             bool success = db.Transaction([&]() {
-                if (!db.Run("UPDATE users SET token = ?2 WHERE id = ?1", id, token))
+                if (!db.Run("UPDATE users SET registration = ?2 WHERE id = ?1", user, registration))
+                    return false;
+                if (!db.Run(R"(INSERT INTO tokens (user, type, token)
+                               VALUES (?1, 'mail', ?2)
+                               ON CONFLICT DO UPDATE SET token = excluded.token)", user, token))
                     return false;
 
                 if (!db.Run("INSERT INTO vaults (vid, generation) VALUES (uuid_blob(?1), 0)", vid))
