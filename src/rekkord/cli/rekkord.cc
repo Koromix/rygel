@@ -47,7 +47,10 @@ R"(Common options:
 
     %!..+-R, --repository URL%!0           Set repository URL
     %!..+-u, --user username%!0            Set repository username
-    %!..+-K, --key_file filename%!0        Use master key instead of username/password)";
+    %!..+-K, --key_file filename%!0        Use master key instead of username/password
+
+    %!..+-j, --threads threads%!0          Change number of threads
+                                   %!D..(default: automatic)%!0)";
 
 rk_Config rekkord_config;
 

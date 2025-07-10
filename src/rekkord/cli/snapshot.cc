@@ -39,14 +39,11 @@ Save options:
 
         %!..+--raw%!0                      Skip snapshot object and report data OID
 
-        %!..+--force%!0                    Check all files even if mtime/size match previous backup
+    %!..+-f, --force%!0                    Check all files even if mtime/size match previous backup
         %!..+--follow%!0                   Follow symbolic links (instead of storing them as-is)
         %!..+--noatime%!0                  Do not modify atime if possible (Linux-only)
 
     %!..+-m, --meta metadata%!0            Save additional directory/file metadata, see below
-
-    %!..+-j, --threads threads%!0          Change number of threads
-                                   %!D..(default: automatic)%!0
 
 Available metadata save options:
 
@@ -62,10 +59,14 @@ Available metadata save options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("--force")) {
+            } else if (opt.Test("--raw")) {
+                raw = true;
+            } else if (opt.Test("-f", "--force")) {
                 settings.skip = false;
             } else if (opt.Test("--follow")) {
                 settings.follow = true;
+            } else if (opt.Test("--noatime")) {
+                settings.noatime = true;
             } else if (opt.Test("-m", "--meta", OptionType::Value)) {
                 Span<const char> remain = opt.current_value;
 
@@ -83,10 +84,6 @@ Available metadata save options:
                         }
                     }
                 }
-            } else if (opt.Test("--noatime")) {
-                settings.noatime = true;
-            } else if (opt.Test("--raw")) {
-                raw = true;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
@@ -175,9 +172,6 @@ Restore options:
 
     %!..+-v, --verbose%!0                  Show detailed actions
     %!..+-n, --dry_run%!0                  Fake file restoration
-
-    %!..+-j, --threads threads%!0          Change number of threads
-                                   %!D..(default: automatic)%!0
 
 Available metadata restoration options:
 
