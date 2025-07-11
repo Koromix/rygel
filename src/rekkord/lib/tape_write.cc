@@ -383,7 +383,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                                 stat.mtime = LittleEndian(entry->mtime);
                                 stat.ctime = LittleEndian(entry->ctime);
                                 stat.mode = LittleEndian(entry->mode);
-                                stat.size = LittleEndian(entry->size);
+                                stat.size = LittleEndian(file_size);
                                 stat.hash = entry->hash;
                                 stat.stored = written;
 
