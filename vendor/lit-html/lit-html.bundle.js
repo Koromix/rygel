@@ -202,7 +202,7 @@ var init_lit_html = __esm({
         e6 < i6.length && (this._$AR(s4 && s4._$AB.nextSibling, e6), i6.length = e6);
       }
       _$AR(t4 = this._$AA.nextSibling, i6) {
-        for (this._$AP?.(false, true, i6); t4 && t4 !== this._$AB; ) {
+        for (this._$AP?.(false, true, i6); t4 !== this._$AB; ) {
           const i7 = t4.nextSibling;
           t4.remove(), t4 = i7;
         }
@@ -281,7 +281,7 @@ var init_lit_html = __esm({
     };
     W = { M: e, P: h, A: o, C: 1, L: V, R: M, D: u, V: S, I: k, H: R, N: I, U: L, B: H, F: z };
     Z = t.litHtmlPolyfillSupport;
-    Z?.(N, k), (t.litHtmlVersions ??= []).push("3.3.0");
+    Z?.(N, k), (t.litHtmlVersions ??= []).push("3.3.1");
     j = (t4, i6, s4) => {
       const e6 = s4?.renderBefore ?? i6;
       let h5 = e6._$litPart$;
