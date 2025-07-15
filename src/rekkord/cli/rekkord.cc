@@ -188,7 +188,7 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
                 arguments = HelpArguments;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
-            } else if (!HandleCommonOption(opt, true)) {
+            } else if (!HandleCommonOption(opt, cmd)) {
                 return 1;
             }
         }
