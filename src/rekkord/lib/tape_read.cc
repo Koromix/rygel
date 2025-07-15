@@ -1301,7 +1301,7 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
 
             ListContext tree(repo, settings, entries);
 
-            if (!tree.RecurseEntries(blob, false, 0, alloc, out_objects))
+            if (tree.RecurseEntries(blob, false, 0, alloc, out_objects) < 0)
                 return false;
         } break;
 
