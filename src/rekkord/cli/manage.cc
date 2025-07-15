@@ -63,8 +63,6 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
-                key_filename = opt.current_value;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
@@ -72,6 +70,9 @@ Options:
 
         opt.LogUnusedArguments();
     }
+
+    // Reuse common -K option even if we use it slightly differently
+    key_filename = rekkord_config.key_filename;
 
     if (!rekkord_config.Complete(false))
         return 1;
