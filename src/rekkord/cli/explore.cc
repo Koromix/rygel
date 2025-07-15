@@ -91,7 +91,7 @@ Available sort orders: %!..+%3%!0)",
                     Span<const char> part = TrimStr(SplitStrAny(remain, " ,", &remain));
 
                     if (part.len) {
-                        bool ascending = (part[0] != '!');
+                        bool ascending = (part[0] != '~');
                         Span<const char> name = part.Take(!ascending, part.len - !ascending);
                         SortOrder order;
 
