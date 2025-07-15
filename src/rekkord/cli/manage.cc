@@ -41,6 +41,7 @@ int RunInit(Span<const char *> arguments)
 
     // Options
     const char *key_filename = nullptr;
+    bool generate_key = true;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -52,7 +53,8 @@ Options:
 
     %!..+-R, --repository filename%!0      Set repository URL
 
-    %!..+-K, --key_file filename%!0        Set explicit master key export file)", FelixTarget);
+    %!..+-K, --key_file filename%!0        Set explicit master key export file
+        %!..+--reuse_key%!0                Load master key from existing file)", FelixTarget);
     };
 
     // Parse arguments
@@ -63,6 +65,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("--reuse_key")) {
+                generate_key = false;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
@@ -76,6 +80,10 @@ Options:
 
     if (!rekkord_config.Complete(false))
         return 1;
+    if (!key_filename && !generate_key) {
+        LogError("Missing master key filename");
+        return 1;
+    }
 
     std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
     std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, false);
@@ -101,26 +109,43 @@ Options:
         }
     }
 
-    if (TestFile(key_filename)) {
-        LogError("Master key export file '%1' already exists", key_filename);
-        return 1;
-    }
-
-    Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
+    Span<uint8_t> mkey = {};
     RG_DEFER { ReleaseSafe(mkey.ptr, mkey.len); };
 
-    randombytes_buf(mkey.ptr, mkey.len);
+    if (generate_key) {
+        if (TestFile(key_filename)) {
+            LogError("Master key export file '%1' already exists", key_filename);
+            return 1;
+        }
+
+        mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
+        randombytes_buf(mkey.ptr, mkey.len);
+    } else {
+        mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize + 1);
+        mkey.len = ReadFile(key_filename, mkey);
+
+        if (mkey.len < 0)
+            return 1;
+        if (mkey.len != rk_MasterKeySize) {
+            LogError("Unexpected master key size in '%1'", key_filename);
+            return 1;
+        }
+    }
 
     LogInfo("Initializing...");
     if (!repo->Init(mkey))
         return 1;
-    LogInfo();
 
-    // Continue even if it fails, an error will be shown regardless
-    if (WriteFile(mkey, key_filename, (int)StreamWriterFlag::NoBuffer)) {
+    if (generate_key) {
+        if (!WriteFile(mkey, key_filename, (int)StreamWriterFlag::NoBuffer))
+            return 1;
+
+        LogInfo();
         LogInfo("Wrote master key: %!..+%1%!0", key_filename);
         LogInfo();
         LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even if the default accounts are lost or deleted.");
+    } else {
+        LogInfo("Done");
     }
 
     return 0;
