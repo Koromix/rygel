@@ -1,8 +1,8 @@
 diff --git a/vendor/sqlite3mc/sqlite3mc.c b/vendor/sqlite3mc/sqlite3mc.c
-index 081f32f06..7813fbdc2 100644
+index e168527401..4fb52f2f3e 100644
 --- a/vendor/sqlite3mc/sqlite3mc.c
 +++ b/vendor/sqlite3mc/sqlite3mc.c
-@@ -278418,14 +278418,9 @@ SQLITE_PRIVATE void RijndaelDecrypt(Rijndael* rijndael, UINT8 a[16], UINT8 b[16]
+@@ -280539,14 +280539,9 @@ SQLITE_PRIVATE void RijndaelDecrypt(Rijndael* rijndael, UINT8 a[16], UINT8 b[16]
  #define AES_HARDWARE_NI    1
  #define AES_HARDWARE_NEON  2
  
@@ -18,7 +18,7 @@ index 081f32f06..7813fbdc2 100644
  
  #if __has_attribute(target) && __has_include(<wmmintrin.h>) && (defined(__x86_64__) || defined(__i386))
  #define HAS_AES_HARDWARE AES_HARDWARE_NI
-@@ -278477,13 +278472,6 @@ SQLITE_PRIVATE void RijndaelDecrypt(Rijndael* rijndael, UINT8 a[16], UINT8 b[16]
+@@ -280598,13 +280593,6 @@ SQLITE_PRIVATE void RijndaelDecrypt(Rijndael* rijndael, UINT8 a[16], UINT8 b[16]
  
  #endif
  
@@ -29,10 +29,10 @@ index 081f32f06..7813fbdc2 100644
 -
 -#endif /* SQLITE3MC_OMIT_AES_HARDWARE_SUPPORT */
 -
- 
- #if HAS_AES_HARDWARE != AES_HARDWARE_NONE
- /* --- Implementation of common data and functions for any AES hardware --- */
-@@ -278547,6 +278535,9 @@ toUint32FromLE(const void* buffer)
+ #if defined(__GNUC__)
+ #pragma GCC push_options
+ #endif
+@@ -280671,6 +280659,9 @@ toUint32FromLE(const void* buffer)
  
  #include <cpuid.h>
  
@@ -42,7 +42,7 @@ index 081f32f06..7813fbdc2 100644
  static int
  aesHardwareCheck()
  {
-@@ -278561,6 +278552,9 @@ aesHardwareCheck()
+@@ -280685,6 +280676,9 @@ aesHardwareCheck()
  
  #include <intrin.h>
  
@@ -52,8 +52,8 @@ index 081f32f06..7813fbdc2 100644
  static int
  aesHardwareCheck()
  {
-@@ -278575,7 +278569,7 @@ aesHardwareCheck()
- #include <smmintrin.h>
+@@ -280707,7 +280701,7 @@ aesHardwareCheck()
+ #endif
  
  SQLITE3MC_FUNC_ISA("sse4.2,aes")
 -static int
@@ -61,7 +61,7 @@ index 081f32f06..7813fbdc2 100644
  aesGenKeyEncryptInternal(const unsigned char* userKey, const int bits, __m128i* keyData)
  {
    int rc = 0;
-@@ -278629,7 +278623,7 @@ aesGenKeyEncryptInternal(const unsigned char* userKey, const int bits, __m128i*
+@@ -280761,7 +280755,7 @@ aesGenKeyEncryptInternal(const unsigned char* userKey, const int bits, __m128i*
  }
  
  SQLITE3MC_FUNC_ISA("sse4.2,aes")
@@ -70,7 +70,7 @@ index 081f32f06..7813fbdc2 100644
  aesGenKeyEncrypt(const unsigned char* userKey, const int bits, unsigned char* keyData)
  {
    int numberOfRounds = (bits == 128) ? 10 : (bits == 192) ? 12 : (bits == 256) ? 14 : 0;
-@@ -278652,7 +278646,7 @@ aesGenKeyEncrypt(const unsigned char* userKey, const int bits, unsigned char* ke
+@@ -280784,7 +280778,7 @@ aesGenKeyEncrypt(const unsigned char* userKey, const int bits, unsigned char* ke
  }
  
  SQLITE3MC_FUNC_ISA("sse4.2,aes")
@@ -79,7 +79,7 @@ index 081f32f06..7813fbdc2 100644
  aesGenKeyDecrypt(const unsigned char* userKey, const int bits, unsigned char* keyData)
  {
    int numberOfRounds = (bits == 128) ? 10 : (bits == 192) ? 12 : (bits == 256) ? 14 : 0;
-@@ -278687,7 +278681,7 @@ aesGenKeyDecrypt(const unsigned char* userKey, const int bits, unsigned char* ke
+@@ -280819,7 +280813,7 @@ aesGenKeyDecrypt(const unsigned char* userKey, const int bits, unsigned char* ke
  */
  
  SQLITE3MC_FUNC_ISA("sse4.2,aes")
@@ -88,7 +88,7 @@ index 081f32f06..7813fbdc2 100644
  aesEncryptCBC(const unsigned char* in,
                unsigned char* out,
                unsigned char ivec[16],
-@@ -278755,7 +278749,7 @@ aesEncryptCBC(const unsigned char* in,
+@@ -280887,7 +280881,7 @@ aesEncryptCBC(const unsigned char* in,
  ** AES CBC CTS decryption
  */
  SQLITE3MC_FUNC_ISA("sse4.2,aes")
@@ -97,7 +97,7 @@ index 081f32f06..7813fbdc2 100644
  aesDecryptCBC(const unsigned char* in,
                unsigned char* out,
                unsigned char ivec[16],
-@@ -278845,18 +278839,7 @@ aesDecryptCBC(const unsigned char* in,
+@@ -280977,18 +280971,7 @@ aesDecryptCBC(const unsigned char* in,
  #elif HAS_AES_HARDWARE == AES_HARDWARE_NEON
  /* --- Implementation for AES-NEON --- */
  
