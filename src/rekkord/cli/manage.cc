@@ -109,7 +109,7 @@ Options:
         }
     }
 
-    Span<uint8_t> mkey = {};
+    Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
     RG_DEFER { ReleaseSafe(mkey.ptr, mkey.len); };
 
     if (generate_key) {
@@ -118,18 +118,22 @@ Options:
             return 1;
         }
 
-        mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
         randombytes_buf(mkey.ptr, mkey.len);
     } else {
-        mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize + 1);
-        mkey.len = ReadFile(key_filename, mkey);
+        // Use separate buffer to make sure file has correct size
+        Span<uint8_t> buf = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize + 1), rk_MasterKeySize + 1);
+        RG_DEFER { ReleaseSafe(buf.ptr, buf.len); };
 
-        if (mkey.len < 0)
+        Size len = ReadFile(key_filename, buf);
+
+        if (len < 0)
             return 1;
-        if (mkey.len != rk_MasterKeySize) {
+        if (len != mkey.len) {
             LogError("Unexpected master key size in '%1'", key_filename);
             return 1;
         }
+
+        MemCpy(mkey.ptr, buf.ptr, mkey.len);
     }
 
     LogInfo("Initializing...");
