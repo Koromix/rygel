@@ -3,48 +3,15 @@
 > [!NOTE]
 > Consult the [migration guide](migration) to migrate between major Koffi versions.
 
-## Koffi 3
-
-### Koffi 3.0
-
-#### Koffi 3.0.0
-
-**Main changes:**
-
-- Stop automatic conversion of string pointers to JS strings
-- Drop disposable types, which were mainly useful to handle heap-allocated strings
-- Replace use of externals with proper type objects:
-  * Access type information directly on type variables without `koffi.introspect()`
-- Replace use of externals with proper pointer objects:
-  * Get pointer type with `pointer.type`
-  * Get pointer address with `pointer.address` or `koffi.address(ptr)`
-  * Read from C memory with `pointer.read()` or `koffi.read(ptr, type)`
-  * Write to C memory with `pointer.write(value)` or `koffi.write(ptr, type, value)`
-  * Call functions with `pointer.call(...)` or `koffi.call(func, type, ...)`
-  * Make or cast pointers with `new koffi.Pointer(address, type)`
-
-**Other changes:**
-
-- Add `koffi.enumeration()` to create [enum types](input#enum-types)
-
-**Newly deprecated functions:**
-
-- Deprecate `koffi.resolve()` function, replace with `koffi.type()`
-- Deprecate `koffi.introspect()` function, replace with `koffi.type()`
-- Deprecate `koffi.decode()` function, replace with `pointer.read()` method (or `koffi.read()`)
-- Deprecate `koffi.encode()` function, replace with `pointer.write()` method (or `koffi.write()`)
-
-**Removed deprecated functions:**
-
-- Drop koffi.cdecl/stdcall/fastcall/thiscall() functions in favor of new [syntax for calling convention](functions#calling-conventions)
-- Remove `koffi.callback()` long replaced with `koffi.proto()`
-- Remove `koffi.handle()` long replaced with `koffi.opaque()`
-
-Consult the [migration guide](migration) for more information.
-
 ## Koffi 2
 
 ### Koffi 2.12
+
+#### Koffi 2.12.1
+
+*Released on 2025-07-05*
+
+- Fix type errors when casting function pointers
 
 #### Koffi 2.12.0
 
@@ -962,7 +929,7 @@ This entry documents changes since version 1.1.0.
 - Make sure we have a redzone below the stack for all architectures
 - Use slower allocation for big objects instead of failing
 
-## Todo list
+# Todo list
 
 The following features and improvements are planned, not necessarily in that order:
 

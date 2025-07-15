@@ -40,8 +40,10 @@ static const Size MaxParameters = 64;
 static const Size MaxTrampolines = 8192;
 
 enum class PrimitiveKind {
-    Void,
+    // Void is explictly not first so that it is not 0, for reasons related to N-API type tags.
+    // Look at TypeInfo definition for more information!
     Bool,
+    Void,
     Int8,
     UInt8,
     Int16,
@@ -69,8 +71,8 @@ enum class PrimitiveKind {
     Callback
 };
 static const char *const PrimitiveKindNames[] = {
-    "Void",
     "Bool",
+    "Void",
     "Int8",
     "UInt8",
     "Int16",
@@ -103,6 +105,8 @@ struct RecordMember;
 struct FunctionInfo;
 class CallData;
 
+typedef void DisposeFunc (Napi::Env env, const TypeInfo *type, const void *ptr);
+
 enum class TypeFlag {
     IsIncomplete = 1 << 0,
     HasTypedArray = 1 << 1,
@@ -123,14 +127,25 @@ static const char *const ArrayHintNames[] = {
 struct TypeInfo {
     const char *name;
 
-    PrimitiveKind primitive;
+    // Make sure primitie ends up as the upper N-API tag value when we cast TypeInfo pointers to
+    // napi_type_tag pointers. Yes, I want to do this. We don't do strict aliasing here.
+    // N.B. Some node versions don't like when one of the two tag values is 0, so make sure
+    // this does not happen! It would happen if primitive is 0 and size is 0. To avoid this
+    // situation, PrimitiveKind::Void (the only type with size 0) is explictly not 0.
+    alignas(8) PrimitiveKind primitive;
     int32_t size;
     int16_t align;
     uint16_t flags;
 
+    DisposeFunc *dispose;
+    Napi::FunctionReference dispose_ref;
+
     HeapArray<RecordMember> members; // Record only
-    const TypeInfo *ref; // Pointer, array or callback
-    const FunctionInfo *proto; // Prototype or callback only
+    union {
+        const void *marker;
+        const TypeInfo *type; // Pointer or array
+        const FunctionInfo *proto; // Callback only
+    } ref;
     ArrayHint hint; // Array only
 
     mutable Napi::FunctionReference construct; // Union only
@@ -224,6 +239,7 @@ struct FunctionInfo {
 
     ParameterInfo ret;
     HeapArray<ParameterInfo> parameters;
+    int8_t required_parameters;
     int8_t out_parameters;
     bool variadic;
 
@@ -274,8 +290,7 @@ struct InstanceData {
     const TypeInfo *str16_type;
     const TypeInfo *str32_type;
 
-    Napi::FunctionReference construct_type;
-    Napi::FunctionReference construct_ptr;
+    Napi::Symbol active_symbol;
 
     std::mutex memories_mutex;
     LocalArray<InstanceMemory *, 9> memories;
@@ -284,14 +299,11 @@ struct InstanceData {
     std::thread::id main_thread_id;
     napi_threadsafe_function broker = nullptr;
 
-    int last_errno = 0;
-#if defined(_WIN32)
-    uint32_t last_error_win32 = 0;
-#endif
-
 #if defined(_WIN32)
     void *main_stack_max;
     void *main_stack_min;
+
+    uint32_t last_error = 0;
 #endif
 
     BucketArray<BlockAllocator> encode_allocators;
@@ -310,6 +322,10 @@ struct InstanceData {
         int max_temporaries = DefaultMaxAsyncCalls - DefaultResidentAsyncPools;
         Size max_type_size = DefaultMaxTypeSize;
     } config;
+
+    struct {
+        int64_t disposed = 0;
+    } stats;
 };
 static_assert(DefaultResidentAsyncPools <= RG_LEN(InstanceData::memories.data) - 1);
 static_assert(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);
@@ -345,11 +361,8 @@ static_assert(MaxTrampolines <= INT16_MAX);
 extern SharedData shared;
 
 Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info);
-Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info);
 Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info);
-Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info);
 Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info);
-Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info);
 
 bool InitAsyncBroker(Napi::Env env, InstanceData *instance);
 

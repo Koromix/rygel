@@ -25,7 +25,14 @@ const koffi = require('../../koffi');
 const assert = require('assert');
 const path = require('path');
 const util = require('util');
-const pkg = require('./package.json');
+const { cnoke } = require('./package.json');
+
+// We need to change this on Windows because the DLL CRT might
+// not (probably not) match the one used by Node.js!
+let free_ptr = koffi.free;
+
+const StrFree = koffi.disposable('str_free', koffi.types.str, ptr => free_ptr(ptr));
+const Str16Free = koffi.disposable('str16_free', 'str16', ptr => free_ptr(ptr));
 
 const BFG = koffi.struct('BFG', {
     a: 'int8_t',
@@ -74,7 +81,7 @@ async function main() {
 }
 
 async function test() {
-    const lib_filename = path.join(__dirname, pkg.cnoke.output, 'callbacks' + koffi.extension);
+    const lib_filename = path.join(__dirname, cnoke.output, 'callbacks' + koffi.extension);
     const lib = koffi.load(lib_filename);
 
     const CallFree = lib.func('void CallFree(void *ptr)');
@@ -93,9 +100,11 @@ async function test() {
     const CallQSort = lib.func('void CallQSort(_Inout_ void *base, size_t nmemb, size_t size, void *cb)');
     const CallMeChar = lib.func('int CallMeChar(CharCallback *func)');
     const GetMinusOne1 = lib.func('int8_t GetMinusOne1(void)');
-    const FmtRepeat = lib.func('const char *FmtRepeat(RepeatCallback *cb)');
+    const FmtRepeat = lib.func('str_free FmtRepeat(RepeatCallback *cb)');
     const SetIdle = lib.func('void SetIdle(void *env, IdleCallback *cb)');
     const TriggerIdle = lib.func('void TriggerIdle(void)');
+
+    free_ptr = CallFree;
 
     // Start with test of callback inside async function to make sure the async broker is registered,
     // and avoid regression (see issue #74).
@@ -257,13 +266,11 @@ async function test() {
         let array = ['foo', 'bar', '123', 'foobar'];
 
         CallQSort(koffi.as(array, 'char **'), array.length, koffi.sizeof('void *'), koffi.as((ptr1, ptr2) => {
-            let str1 = koffi.read(ptr1, 'char ***').read();
-            let str2 = koffi.read(ptr2, 'char ***').read();
+            let str1 = koffi.decode(ptr1, 'char *');
+            let str2 = koffi.decode(ptr2, 'char *');
 
             return str1.localeCompare(str2);
         }, 'SortCallback *'));
-
-        array = array.map(str => koffi.decode(str, 'char', -1));
 
         assert.deepEqual(array, ['123', 'bar', 'foo', 'foobar']);
     }
@@ -323,13 +330,10 @@ async function test() {
 
     // Test callback encoding with a string
     {
-        let ptr = FmtRepeat((count, str) => {
+        assert.equal(FmtRepeat((count, str) => {
             koffi.encode(count, 'int', 3);
             koffi.encode(str, 'const char *', 'Hello');
-        });
-
-        check_text(ptr, 'HelloHelloHello');
-        CallFree(ptr);
+        }), 'HelloHelloHello');
     }
 
     // Run callback from event loop, on main thread
@@ -346,9 +350,4 @@ async function test() {
 
         SetIdle(koffi.node.env, null);
     }
-}
-
-function check_text(ptr, expect) {
-    let str = koffi.decode(ptr, 'char', -1);
-    assert.equal(str, expect);
 }

@@ -24,7 +24,7 @@
 const koffi = require('../../koffi');
 const assert = require('assert');
 const path = require('path');
-const pkg = require('./package.json');
+const { cnoke } = require('./package.json');
 
 const PackedBFG = koffi.pack('PackedBFG', {
     a: 'int8_t',
@@ -54,7 +54,7 @@ async function main() {
 }
 
 async function test() {
-    const lib_filename = path.join(__dirname, pkg.cnoke.output, 'async' + koffi.extension);
+    const lib_filename = path.join(__dirname, cnoke.output, 'async' + koffi.extension);
     const lib = koffi.load(lib_filename);
 
     const ConcatenateToInt1 = lib.func('ConcatenateToInt1', 'int64_t', Array(12).fill('int8_t'));
@@ -113,7 +113,7 @@ async function test() {
             let p = new Promise((resolve, reject) => {
                 try {
                     let ptr = GetBinaryIntFunction(type);
-                    let func = koffi.read(ptr, 'BinaryIntFunc *');
+                    let func = koffi.decode(ptr, BinaryIntFunc);
 
                     func.async(a, b, (err, res) => {
                         assert.equal(res, expected);

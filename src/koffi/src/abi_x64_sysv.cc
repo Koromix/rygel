@@ -162,13 +162,12 @@ static Size ClassifyType(const TypeInfo *type, Size offset, Span<RegisterClass> 
                 return 1;
             }
 
-            const TypeInfo *ref = type->ref;
-            Size len = type->size / ref->size;
+            Size len = type->size / type->ref.type->size;
 
             for (Size i = 0; i < len; i++) {
                 Size start = offset / 8;
-                ClassifyType(ref, offset % 8, classes.Take(start, classes.len - start));
-                offset += ref->size;
+                ClassifyType(type->ref.type, offset % 8, classes.Take(start, classes.len - start));
+                offset += type->ref.type->size;
             }
 
             return (offset + 7) / 8;
@@ -263,7 +262,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 #define PUSH_INTEGER(CType) \
         do { \
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(value)); \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
              \
@@ -273,7 +272,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 #define PUSH_INTEGER_SWAP(CType) \
         do { \
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(value)); \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
              \
@@ -293,7 +292,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
             case PrimitiveKind::Bool: {
                 if (!value.IsBoolean()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argmument %2, expected boolean", GetValueType(value));
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argmument %2, expected boolean", GetValueType(instance, value));
                     return false;
                 }
 
@@ -345,7 +344,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
                 if (!IsObject(value)) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(value));
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                     return false;
                 }
 
@@ -383,19 +382,19 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
                 if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(value));
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
                 float f = GetNumber<float>(value);
                 uint64_t *ptr = (param.xmm_count ? xmm_ptr : args_ptr)++;
 
-                MemSet((uint8_t *)ptr + 4, 0, 4);
+                memset((uint8_t *)ptr + 4, 0, 4);
                 *(float *)ptr = f;
             } break;
             case PrimitiveKind::Float64: {
                 if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(value));
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -424,9 +423,6 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
 void CallData::Execute(const FunctionInfo *func, void *native)
 {
-    errno = instance->last_errno;
-    RG_DEFER { instance->last_errno = errno; };
-
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
             auto ret = (func->forward_fp ? ForwardCallX ## Suffix(native, new_sp, &old_sp) \
@@ -461,16 +457,16 @@ void CallData::Execute(const FunctionInfo *func, void *native)
         case PrimitiveKind::Union: {
             if (func->ret.gpr_first && !func->ret.xmm_count) {
                 RaxRdxRet ret = PERFORM_CALL(GG);
-                MemCpy(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
             } else if (func->ret.gpr_first) {
                 RaxXmm0Ret ret = PERFORM_CALL(GD);
-                MemCpy(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
             } else if (func->ret.xmm_count == 2) {
                 Xmm0Xmm1Ret ret = PERFORM_CALL(DD);
-                MemCpy(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
             } else {
                 Xmm0RaxRet ret = PERFORM_CALL(DG);
-                MemCpy(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
             }
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
@@ -485,7 +481,13 @@ void CallData::Execute(const FunctionInfo *func, void *native)
 
 Napi::Value CallData::Complete(const FunctionInfo *func)
 {
-    RG_DEFER { PopOutArguments(); };
+    RG_DEFER {
+       PopOutArguments();
+
+        if (func->ret.type->dispose) {
+            func->ret.type->dispose(env, func->ret.type, result.ptr);
+        }
+    };
 
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Void: return env.Undefined();
@@ -504,13 +506,19 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
         case PrimitiveKind::Int64S: return NewBigInt(env, ReverseBytes(result.i64));
         case PrimitiveKind::UInt64: return NewBigInt(env, result.u64);
         case PrimitiveKind::UInt64S: return NewBigInt(env, ReverseBytes(result.u64));
-        case PrimitiveKind::String:
-        case PrimitiveKind::String16:
-        case PrimitiveKind::String32:
+        case PrimitiveKind::String: return result.ptr ? Napi::String::New(env, (const char *)result.ptr) : env.Null();
+        case PrimitiveKind::String16: return result.ptr ? Napi::String::New(env, (const char16_t *)result.ptr) : env.Null();
+        case PrimitiveKind::String32: return result.ptr ? MakeStringFromUTF32(env, (const char32_t *)result.ptr) : env.Null();
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: {
-            Napi::Value wrapper = WrapPointer(env, instance, func->ret.type, result.ptr);
-            return wrapper;
+            if (result.ptr) {
+                Napi::External<void> external = Napi::External<void>::New(env, result.ptr);
+                SetValueTag(instance, external, func->ret.type->ref.marker);
+
+                return external;
+            } else {
+                return env.Null();
+            }
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
@@ -547,7 +555,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
     uint8_t *return_ptr = proto->ret.use_memory ? (uint8_t *)gpr_ptr[0] : nullptr;
     gpr_ptr += proto->ret.use_memory;
 
-    RG_DEFER_N(err_guard) { MemSet(out_reg, 0, RG_SIZE(*out_reg)); };
+    RG_DEFER_N(err_guard) { memset(out_reg, 0, RG_SIZE(*out_reg)); };
 
     if (trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
@@ -665,12 +673,20 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
                 Napi::Value arg = str ? Napi::String::New(env, str) : env.Null();
                 arguments.Append(arg);
+
+                if (param.type->dispose) {
+                    param.type->dispose(env, param.type, str);
+                }
             } break;
             case PrimitiveKind::String16: {
                 const char16_t *str16 = *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
                 Napi::Value arg = str16 ? Napi::String::New(env, str16) : env.Null();
                 arguments.Append(arg);
+
+                if (param.type->dispose) {
+                    param.type->dispose(env, param.type, str16);
+                }
             } break;
             case PrimitiveKind::String32: {
                 const char32_t *str32 = *(const char32_t **)((param.gpr_count ? gpr_ptr : args_ptr)++);
@@ -682,8 +698,18 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             case PrimitiveKind::Callback: {
                 void *ptr2 = *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value wrapper = WrapPointer(env, instance, param.type, ptr2);
-                arguments.Append(wrapper);
+                if (ptr2) {
+                    Napi::External<void> external = Napi::External<void>::New(env, ptr2);
+                    SetValueTag(instance, external, param.type->ref.marker);
+
+                    arguments.Append(external);
+                } else {
+                    arguments.Append(env.Null());
+                }
+
+                if (param.type->dispose) {
+                    param.type->dispose(env, param.type, ptr2);
+                }
             } break;
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
@@ -755,7 +781,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 #define RETURN_INTEGER(CType) \
         do { \
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(value)); \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
              \
@@ -765,7 +791,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 #define RETURN_INTEGER_SWAP(CType) \
         do { \
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(value)); \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
              \
@@ -778,7 +804,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
         case PrimitiveKind::Void: {} break;
         case PrimitiveKind::Bool: {
             if (!value.IsBoolean()) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
                 return;
             }
 
@@ -821,23 +847,22 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             out_reg->rax = (uint64_t)str32;
         } break;
         case PrimitiveKind::Pointer: {
-            const TypeInfo *ref = type->ref;
-            uint8_t *ptr = nullptr;
+            uint8_t *ptr;
 
-            if (CheckPointerType(instance, value, type)) {
-                ptr = (uint8_t *)UnwrapPointer(value);
-            } else if (IsObject(value) && (ref->primitive == PrimitiveKind::Record ||
-                                           ref->primitive == PrimitiveKind::Union)) {
+            if (CheckValueTag(instance, value, type->ref.marker)) {
+                ptr = value.As<Napi::External<uint8_t>>().Data();
+            } else if (IsObject(value) && (type->ref.type->primitive == PrimitiveKind::Record ||
+                                           type->ref.type->primitive == PrimitiveKind::Union)) {
                 Napi::Object obj = value.As<Napi::Object>();
 
-                ptr = AllocHeap(ref->size, 16);
+                ptr = AllocHeap(type->ref.type->size, 16);
 
-                if (!PushObject(obj, ref, ptr))
+                if (!PushObject(obj, type->ref.type, ptr))
                     return;
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
             } else {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(value), type->name);
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), type->name);
                 return;
             }
 
@@ -846,7 +871,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             if (!IsObject(value)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                 return;
             }
 
@@ -864,35 +889,35 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                     return;
 
                 if (proto->ret.gpr_first && !proto->ret.xmm_count) {
-                    MemCpy(&out_reg->rax, buf + 0, 8);
-                    MemCpy(&out_reg->rdx, buf + 8, 8);
+                    memcpy(&out_reg->rax, buf + 0, 8);
+                    memcpy(&out_reg->rdx, buf + 8, 8);
                 } else if (proto->ret.gpr_first) {
-                    MemCpy(&out_reg->rax, buf + 0, 8);
-                    MemCpy(&out_reg->xmm0, buf + 8, 8);
+                    memcpy(&out_reg->rax, buf + 0, 8);
+                    memcpy(&out_reg->xmm0, buf + 8, 8);
                 } else if (proto->ret.xmm_count == 2) {
-                    MemCpy(&out_reg->xmm0, buf + 0, 8);
-                    MemCpy(&out_reg->xmm1, buf + 8, 8);
+                    memcpy(&out_reg->xmm0, buf + 0, 8);
+                    memcpy(&out_reg->xmm1, buf + 8, 8);
                 } else {
-                    MemCpy(&out_reg->xmm0, buf + 0, 8);
-                    MemCpy(&out_reg->rax, buf + 8, 8);
+                    memcpy(&out_reg->xmm0, buf + 0, 8);
+                    memcpy(&out_reg->rax, buf + 8, 8);
                 }
             }
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: {
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                 return;
             }
 
             float f = GetNumber<float>(value);
 
-            MemSet((uint8_t *)&out_reg->xmm0 + 4, 0, 4);
-            MemCpy(&out_reg->xmm0, &f, 4);
+            memset((uint8_t *)&out_reg->xmm0 + 4, 0, 4);
+            memcpy(&out_reg->xmm0, &f, 4);
         } break;
         case PrimitiveKind::Float64: {
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                 return;
             }
 
@@ -905,15 +930,15 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             if (value.IsFunction()) {
                 Napi::Function func2 = value.As<Napi::Function>();
 
-                ptr = ReserveTrampoline(type->proto, func2);
+                ptr = ReserveTrampoline(type->ref.proto, func2);
                 if (!ptr) [[unlikely]]
                     return;
-            } else if (CheckPointerType(instance, value, type)) {
-                ptr = UnwrapPointer(value);
+            } else if (CheckValueTag(instance, value, type->ref.marker)) {
+                ptr = value.As<Napi::External<void>>().Data();
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
             } else {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(value), type->name);
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), type->name);
                 return;
             }
 

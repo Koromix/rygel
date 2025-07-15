@@ -27,7 +27,7 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const pkg = require('./package.json');
+const { cnoke } = require('./package.json');
 
 const sqlite3 = koffi.opaque('sqlite3');
 const sqlite3_stmt = koffi.opaque('sqlite3_stmt');
@@ -45,7 +45,7 @@ async function main() {
 }
 
 async function test() {
-    let lib_filename = path.join(__dirname, pkg.cnoke.output, 'sqlite3' + koffi.extension);
+    let lib_filename = path.join(__dirname, cnoke.output, 'sqlite3' + koffi.extension);
     let lib = koffi.load(lib_filename);
 
     const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['str', koffi.out(koffi.pointer(sqlite3, 2)), 'int', 'str']);
@@ -108,14 +108,16 @@ async function test() {
             assert.equal(sqlite3_step(stmt), SQLITE_ROW);
 
             assert.equal(sqlite3_column_int(stmt, 0), i + 1);
-            check_text(sqlite3_column_text(stmt, 1), it[0]);
+            assert.equal(sqlite3_column_text(stmt, 1), it[0]);
             assert.equal(sqlite3_column_int(stmt, 2), it[1]);
-            check_text(sqlite3_column_text(stmt, 3), it[2]);
+            assert.equal(sqlite3_column_text(stmt, 3), it[2]);
         }
         assert.equal(sqlite3_step(stmt), SQLITE_DONE);
 
-        assert.equal(typeof stmt.address, 'bigint');
-        assert.equal(sqlite3_finalize(stmt.address), 0);
+        let stmt_raw = koffi.address(stmt);
+
+        assert.equal(typeof stmt_raw, 'bigint');
+        assert.equal(sqlite3_finalize(stmt_raw), 0);
     } finally {
         sqlite3_close_v2(db);
         fs.unlinkSync(filename);
@@ -146,9 +148,4 @@ async function create_temporary_file(prefix) {
                 throw err;
         }
     }
-}
-
-function check_text(ptr, expect) {
-    let str = ptr.read();
-    assert.equal(str, expect);
 }

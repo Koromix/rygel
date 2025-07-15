@@ -21,7 +21,6 @@
 
 #if defined(_WIN32)
 
-#include "src/core/base/base.hh"
 #include "util.hh"
 #include "win32.hh"
 
@@ -75,7 +74,6 @@ HANDLE LoadWindowsLibrary(Napi::Env env, Span<const char> path)
 
     Span<wchar_t> filename_w = AllocateSpan<wchar_t>(&temp_alloc, path.len + 1);
 
-    // First naive try with path as-is
     if (ConvertUtf8ToWin32Wide(path, filename_w) < 0) {
         ThrowError<Napi::Error>(env, "Invalid path string");
         return nullptr;
@@ -83,20 +81,18 @@ HANDLE LoadWindowsLibrary(Napi::Env env, Span<const char> path)
 
     HMODULE module = LoadLibraryW(filename_w.ptr);
 
-    // If the native load has failed, try to load the DLL with an additional
-    // search path for its dependencies, the DLL directory itself.
     if (!module) {
         DWORD flags = LOAD_LIBRARY_SEARCH_DEFAULT_DIRS | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR;
 
-        Span<const char> fullname = NormalizePath(path, GetWorkingDirectory(), &temp_alloc);
-        Span<wchar_t> fullname_w = AllocateSpan<wchar_t>(&temp_alloc, fullname.len + 1);
+        Span<const char> filename = NormalizePath(path, GetWorkingDirectory(), &temp_alloc);
+        Span<wchar_t> filename_w = AllocateSpan<wchar_t>(&temp_alloc, filename.len + 1);
 
-        if (ConvertUtf8ToWin32Wide(fullname, fullname_w) < 0) {
+        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0) {
             ThrowError<Napi::Error>(env, "Invalid path string");
             return nullptr;
         }
 
-        module = LoadLibraryExW(fullname_w.ptr, nullptr, flags);
+        module = LoadLibraryExW(filename_w.ptr, nullptr, flags);
     }
 
     if (!module) {
@@ -200,42 +196,6 @@ int GetDllMachine(const wchar_t *filename)
     RG_DEFER { CloseHandle(h); };
 
     return GetFileMachine(h, true);
-}
-
-void TebManipulator::AdjustStack(void *base, void *limit)
-{
-    RG_ASSERT(!active);
-
-    ExceptionList = teb->ExceptionList;
-    StackBase = teb->StackBase;
-    StackLimit = teb->StackLimit;
-    DeallocationStack = teb->DeallocationStack;
-    GuaranteedStackBytes = teb->GuaranteedStackBytes;
-    SameTebFlags = teb->SameTebFlags;
-
-    teb->ExceptionList = (void *)-1;
-    teb->StackBase = base;
-    teb->StackLimit = limit;
-    teb->DeallocationStack = limit;
-    teb->GuaranteedStackBytes = 0;
-    teb->SameTebFlags &= ~0x200; // Skip SEHOP check
-
-    active = true;
-}
-
-void TebManipulator::RestoreStack()
-{
-    if (!active)
-        return;
-
-    teb->ExceptionList = ExceptionList;
-    teb->StackBase = StackBase;
-    teb->StackLimit = StackLimit;
-    teb->DeallocationStack = DeallocationStack;
-    teb->GuaranteedStackBytes = GuaranteedStackBytes;
-    teb->SameTebFlags = SameTebFlags;
-
-    active = false;
 }
 
 }

@@ -126,6 +126,7 @@ public:
     bool PushStringArray(Napi::Value value, const TypeInfo *type, uint8_t *origin);
     bool PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr);
     bool PushCallback(Napi::Value value, const TypeInfo *type, void **out_ptr);
+    Size PushIndirectString(Napi::Array array, const TypeInfo *ref, uint8_t **out_ptr);
 
     void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
 
@@ -136,8 +137,6 @@ private:
     bool AllocStack(Size size, Size align, T **out_ptr);
     template <typename T = uint8_t>
     T *AllocHeap(Size size, Size align);
-
-    const TypeInfo *MakeTemporaryArrayType(const TypeInfo *ref, Size len, ArrayHint hint);
 
     void PopOutArguments();
 };
@@ -155,7 +154,7 @@ inline bool CallData::AllocStack(Size size, Size align, T **out_ptr)
     }
 
 #if defined(RG_DEBUG)
-    MemSet(ptr, 0, delta);
+    memset(ptr, 0, delta);
 #endif
 
     mem->stack.len -= delta;
@@ -172,7 +171,7 @@ inline T *CallData::AllocHeap(Size size, Size align)
 
     if (size < 4096 && delta <= mem->heap.len) [[likely]] {
 #if defined(RG_DEBUG)
-        MemSet(mem->heap.ptr, 0, delta);
+        memset(mem->heap.ptr, 0, (size_t)delta);
 #endif
 
         mem->heap.ptr += delta;

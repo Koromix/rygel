@@ -15,7 +15,7 @@ git clone https://codeberg.org/Koromix/rygel
 cd rygel
 ```
 
-As said before, this is a monorepository containing multiple projects, hence the name.
+As said before, this is a monorepository containg multiple projects, hence the name.
 
 ## Windows
 
@@ -81,32 +81,42 @@ Note that the machine disk content may change each time the machine runs, so the
 And now you can run the tests with:
 
 ```sh
-cd src/koffi
-
-node tools/koffi.js test # Several options are available, use --help
-node tools/koffi.js stop # Stop running machines
+node qemu.js test # Several options are available, use --help
 ```
 
 And be patient, this can be pretty slow for emulated machines. The Linux machines have and use ccache to build Koffi, so subsequent build steps will get much more tolerable.
 
-Started machines remain up until you stop them. You can start them manually with `node tools/koffi.js start` if you prefer.
+By default, machines are started and stopped for each test. But you can start the machines ahead of time and run the tests multiple times instead:
+
+```sh
+node qemu.js start # Start the machines
+node qemu.js test # Test (without shutting down)
+node qemu.js test # Test again
+node qemu.js stop # Stop everything
+```
 
 You can also restrict the test to a subset of machines:
 
 ```sh
-node tools/koffi.js test debian_x64 debian_i386
+# Full test cycle
+node qemu.js test debian_x64 debian_i386
+
+# Separate start, test, shutdown
+node qemu.js start debian_x64 debian_i386
+node qemu.js test debian_x64 debian_i386
+node qemu.js stop
 ```
 
 Finally, you can join a running machine with SSH with the following shortcut, if you need to do some debugging or any other manual procedure:
 
 ```sh
-node tools/koffi.js ssh debian_i386
+node qemu.js ssh debian_i386
 ```
 
 Each machine is configured to run a VNC server available locally, which you can use to access the display, using KRDC or any other compatible viewer. Use the `info` command to get the VNC port.
 
 ```sh
-node tools/koffi.js info debian_x64
+node qemu.js info debian_x64
 ```
 
 # Making a release
@@ -114,20 +124,17 @@ node tools/koffi.js info debian_x64
 First, you must update the code in three steps:
 
 - Change the version numbers in `package.json` (version and stable for stable releases)
-- Add an entry to `CHANGELOG.md` to summarize the changes since last release
+- Add an entry to `CHANGELOG` to summarize the changes since last release
 - Commit theses changes with the message *Bump Koffi to X.Y.Z*
 
 Once this is done, you can publish a new release with the following commands:
 
 ```sh
-cd src/koffi
-node tools/koffi.js test # If not done before
-node tools/koffi.js build
+node tools/qemu.js test # If not done before
+node tools/qemu.js build
 
-cd ../../bin/Koffi/package
+cd build/dist
 npm publish
-
-node tools/koffi.js stop
 ```
 
 Some platforms are emulated so this can take a few minutes until the pre-built binaries are ready. Go grab a cup of coffee, come back and execute the `npm publish` command!

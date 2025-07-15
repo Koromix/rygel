@@ -82,9 +82,9 @@ struct TEB {
     char _pad4[162];
     uint16_t SameTebFlags;
 };
-static_assert(offsetof(TEB, DeallocationStack) == 0x1478);
-static_assert(offsetof(TEB, GuaranteedStackBytes) == 0x1748);
-static_assert(offsetof(TEB, SameTebFlags) == 0x17EE);
+static_assert(RG_OFFSET_OF(TEB, DeallocationStack) == 0x1478);
+static_assert(RG_OFFSET_OF(TEB, GuaranteedStackBytes) == 0x1748);
+static_assert(RG_OFFSET_OF(TEB, SameTebFlags) == 0x17EE);
 
 #else
 
@@ -101,9 +101,9 @@ struct TEB {
     char _pad4[78];
     uint16_t SameTebFlags;
 };
-static_assert(offsetof(TEB, DeallocationStack) == 0xE0C);
-static_assert(offsetof(TEB, GuaranteedStackBytes) == 0x0F78);
-static_assert(offsetof(TEB, SameTebFlags) == 0xFCA);
+static_assert(RG_OFFSET_OF(TEB, DeallocationStack) == 0xE0C);
+static_assert(RG_OFFSET_OF(TEB, GuaranteedStackBytes) == 0x0F78);
+static_assert(RG_OFFSET_OF(TEB, SameTebFlags) == 0xFCA);
 
 #endif
 
@@ -119,28 +119,6 @@ static inline TEB *GetTEB()
 
     return teb;
 }
-
-class TebManipulator {
-    TEB *teb;
-
-    bool active = false;
-
-    void *ExceptionList;
-    void *StackBase;
-    void *StackLimit;
-    void *DeallocationStack;
-    uint32_t GuaranteedStackBytes;
-    uint16_t SameTebFlags;
-
-public:
-    TebManipulator() : teb(GetTEB()) {}
-    ~TebManipulator() { RG_ASSERT(!active); }
-
-    void AdjustStack(void *base, void *limit);
-    void RestoreStack();
-
-    TEB *operator->() { return teb; }
-};
 
 extern const HashMap<int, const char *> WindowsMachineNames;
 

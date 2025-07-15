@@ -1097,6 +1097,7 @@ public:
 };
 
 Allocator *GetDefaultAllocator();
+Allocator *GetNullAllocator();
 
 static inline void *AllocateRaw(Allocator *alloc, Size size, unsigned int flags = 0)
 {

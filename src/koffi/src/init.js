@@ -97,63 +97,20 @@ function wrap(native) {
     let obj = {
         ...native,
 
-        call: util.deprecate((ptr, type, ...args) => {
-            ptr = new native.Pointer(ptr, native.pointer(type));
-            return ptr.call(...args);
-        }, 'The koffi.call() function is deprecated, use pointer.call() method instead', 'KOFFI009'),
+        // Deprecated functions
+        handle: util.deprecate(native.opaque, 'The koffi.handle() function was deprecated in Koffi 2.1, use koffi.opaque() instead', 'KOFFI001'),
+        callback: util.deprecate(native.proto, 'The koffi.callback() function was deprecated in Koffi 2.4, use koffi.proto() instead', 'KOFFI002')
+    };
 
-        decode: util.deprecate((ptr, offset, type, len) => {
-            if (typeof offset != 'number' && typeof offset != 'bigint')  {
-                len = type;
-                type = offset;
-                offset = 0;
-            }
+    obj.load = (...args) => {
+        let lib = native.load(...args);
 
-            type = native.type(type);
-            if (len != null && type.primitive != 'String'
-                            && type.primitive != 'String16'
-                            && type.primitive != 'String32'
-                            && type.primitive != 'Prototype') {
-                if (len < 0)
-                    len = null;
-                type = native.array(type, len);
-            }
-            type = native.pointer(type);
+        lib.cdecl = util.deprecate((...args) => lib.func('__cdecl', ...args), 'The koffi.cdecl() function was deprecated in Koffi 2.7, use koffi.func(...) instead', 'KOFFI003');
+        lib.stdcall = util.deprecate((...args) => lib.func('__stdcall', ...args), 'The koffi.stdcall() function was deprecated in Koffi 2.7, use koffi.func("__stdcall", ...) instead', 'KOFFI004');
+        lib.fastcall = util.deprecate((...args) => lib.func('__fastcall', ...args), 'The koffi.fastcall() function was deprecated in Koffi 2.7, use koffi.func("__fastcall", ...) instead', 'KOFFI005');
+        lib.thiscall = util.deprecate((...args) => lib.func('__thiscall', ...args), 'The koffi.thiscall() function was deprecated in Koffi 2.7, use koffi.func("__thiscall", ...) instead', 'KOFFI006');
 
-            if (offset)
-                ptr = new native.Pointer(native.address(ptr) + BigInt(offset), type);
-
-            return native.read(ptr, type);
-        }, 'The koffi.decode() function is deprecated, use pointer.read() or koffi.read() instead', 'KOFFI011'),
-
-        encode: util.deprecate((ptr, offset, type, value, len) => {
-            if (typeof offset != 'number' && typeof offset != 'bigint')  {
-                len = value;
-                value = type;
-                type = offset;
-                offset = 0;
-            }
-
-            type = native.type(type);
-            if (len != null && type.primitive != 'String'
-                            && type.primitive != 'String16'
-                            && type.primitive != 'String32'
-                            && type.primitive != 'Prototype') {
-                if (len < 0)
-                    len = null;
-                type = native.array(type, len);
-            }
-            type = native.pointer(type);
-
-            if (offset)
-                ptr = new native.Pointer(native.address(ptr) + BigInt(offset), type);
-
-            return native.write(ptr, type, value);
-        }, 'The koffi.encode() function is deprecated, use pointer.write() or koffi.write() instead', 'KOFFI012'),
-
-        resolve: util.deprecate(native.type, 'The koffi.resolve() function is deprecated, use koffi.type() instead', 'KOFFI009'),
-        introspect: util.deprecate(native.type, 'The koffi.introspect() function is deprecated, use koffi.type() instead', 'KOFFI010')
-
+        return lib;
     };
 
     return obj;

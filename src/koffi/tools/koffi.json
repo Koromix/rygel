@@ -361,29 +361,6 @@
         }
     },
 
-    "musl_arm64": {
-        "title": "Linux (musl) ARM64",
-
-        "info": {
-            "arch": "arm64",
-            "machine": "alpine_arm64",
-            "directory": "/home/alpine/luigi",
-            "build": "node ../cnoke/cnoke.js"
-        },
-
-        "test": {
-            "build": "node ../cnoke/cnoke.js -d test",
-            "commands": {
-                "Test Sync": "node test/sync.js",
-                "Test Union": "node test/union.js",
-                "Test Async": "node test/async.js",
-                "Test Callbacks": "node test/callbacks.js",
-                "Test Raylib": "xvfb-run node test/raylib.js",
-                "Test SQLite": "node test/sqlite.js"
-            }
-        }
-    },
-
     "linux_loong64": {
         "title": "Linux LoongArch64",
 

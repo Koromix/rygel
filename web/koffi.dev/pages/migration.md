@@ -1,6 +1,4 @@
-# Migration guide
-
-## Koffi 1.x to 2.x
+# Koffi 1.x to 2.x
 
 The API was changed in 2.x in a few ways, in order to reduce some excessively "magic" behavior and reduce the syntax differences between C and the C-like prototypes.
 
@@ -10,7 +8,7 @@ You may need to change your code if you use:
 - Opaque types
 - `koffi.introspect()`
 
-### Callback type changes
+## Callback type changes
 
 In Koffi 1.x, callbacks were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer. Now, you must use them through a pointer: `void CallIt(CallbackType func)` in Koffi 1.x becomes `void CallIt(CallbackType *func)` in version 2.0 and newer.
 
@@ -63,7 +61,10 @@ console.log(ret);
 
 Koffi 1.x only supported [transient callbacks](callbacks#javascript-callbacks), you must use Koffi 2.x for registered callbacks.
 
-### Opaque type changes
+> [!NOTE]
+> The function `koffi.proto()` was introduced in Koffi 2.4, it was called `koffi.callback()` in earlier versions.
+
+## Opaque type changes
 
 In Koffi 1.x, opaque handles were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer. Now, in Koffi 2.0, you must use them through a pointer, and use an array for output parameters.
 
@@ -141,7 +142,7 @@ db = ptr[0];
 sqlite3_close_v2(db);
 ```
 
-### New koffi.introspect()
+## New koffi.introspect()
 
 In Koffi 1.x, `koffi.introspect()` would only work with struct types, and return the object passed to `koffi.struct()` to initialize the type. Now this function works with all types.
 

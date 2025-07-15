@@ -25,7 +25,7 @@ const koffi = require('../../koffi');
 const assert = require('assert');
 const path = require('path');
 const util = require('util');
-const pkg = require('./package.json');
+const { cnoke } = require('./package.json');
 
 const CallThroughFunc1 = koffi.proto('int __stdcall CallThroughFunc1(int)');
 const CallThroughFunc2 = koffi.proto('__stdcall', 'CallThroughFunc2', 'int', ['int']);
@@ -43,7 +43,7 @@ async function main() {
 }
 
 async function test() {
-    let root_dir = path.join(__dirname, pkg.cnoke.output);
+    let root_dir = path.join(__dirname, cnoke.output);
 
     let lib1 = koffi.load(root_dir + '/posix1.so', { global: true });
     assert.throws(() => koffi.load(root_dir + '/posix2.so'));

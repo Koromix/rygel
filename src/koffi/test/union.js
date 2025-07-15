@@ -25,7 +25,7 @@ const koffi = require('../../koffi');
 const assert = require('assert');
 const path = require('path');
 const util = require('util');
-const pkg = require('./package.json');
+const { cnoke } = require('./package.json');
 
 // Make sure Koffi only uses object own properties, and ignores prototype properties
 Object.defineProperty(globalThis.Object.prototype, 'stuff', {
@@ -70,7 +70,7 @@ async function main() {
 }
 
 async function test() {
-    let lib_filename = path.join(__dirname, pkg.cnoke.output, 'union' + koffi.extension);
+    let lib_filename = path.join(__dirname, cnoke.output, 'union' + koffi.extension);
     let lib = koffi.load(lib_filename);
 
     const MakeSingleU = lib.func('SingleU MakeSingleU(float f)');

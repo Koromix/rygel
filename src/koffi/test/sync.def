@@ -1,3 +1,3 @@
-LIBRARY SYNC
+LIBRARY MISC
 EXPORTS
     ReturnBigString @1

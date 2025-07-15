@@ -6,11 +6,12 @@ Koffi is a **fast and easy-to-use C FFI module for Node.js**, featuring:
 * Support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value
 * Javascript functions can be used as C callbacks (since 1.2.0)
 * Well-tested code base for [popular OS/architecture combinations](platforms)
-* Compatible with [Node.js](https://nodejs.org/) version 16 or more recent
+
+Koffi requires a recent [Node.js](https://nodejs.org/) version with N-API version 8 support, see [this page](platforms) for more information.
+
+The source code is available here: https://github.com/Koromix/rygel/ (in the *src/koffi* subdirectory).
 
 New releases are frequent, look at the [changelog](changelog) for more information.
-
-Look at the [contribution page](contributing) to report bugs, request features and access the source code.
 
 # License
 

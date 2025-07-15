@@ -73,7 +73,7 @@ for (let hwnd = null;;) {
             continue;
         }
 
-        title = koffi.read(buf, koffi.array('char', length));
+        title = koffi.decode(buf, 'char', length);
     }
 
     console.log({ PID: pid, Title: title });
@@ -112,7 +112,7 @@ console.log(tv);
 
 ### Win32 struct example
 
-Many Win32 functions that use struct outputs require you to set a size member (often named `cbSize`) beforehand. These functions won't work with `_Out_` because the size value must be copied from JS to C, use `_Inout_` in this case.
+Many Win32 functions that use struct outputs require you to set a size member (often named `cbSize`). These functions won't work with `_Out_` because the size value must be copied from JS to C, use `_Inout_` in this case.
 
 ```js
 // ES6 syntax: import koffi from 'koffi';
@@ -161,6 +161,8 @@ sqlite3_close_v2(db);
 
 ## String buffer example
 
+*New in Koffi 2.2*
+
 This example calls a C function to concatenate two strings to a pre-allocated string buffer. Since JS strings are immutable, you must pass an array with a single string instead.
 
 ```c
@@ -206,9 +208,11 @@ In most cases, you can use buffers and typed arrays to provide output buffers. T
 
 ## Transient pointers
 
+*New in Koffi 2.3*
+
 You can use buffers and typed arrays for output (and input/output) pointer parameters. Simply pass the buffer as an argument and the native function will receive a pointer to its contents.
 
-Once the native function returns, you can decode the content with `koffi.read(pointer, type)` as in the following example:
+Once the native function returns, you can decode the content with `koffi.decode(value, type)` as in the following example:
 
 ```js
 // ES6 syntax: import koffi from 'koffi';
@@ -229,12 +233,12 @@ let vec2 = null;
 
 // Copy the vector in a convoluted way through memcpy
 {
-    let src = koffi.as(vec1, koffi.pointer(Vec3)); // You could also use 'Vec3 *' as the type instead of koffi.pointer(Vec3)
+    let src = koffi.as(vec1, 'Vec3 *');
     let dest = Buffer.allocUnsafe(koffi.sizeof(Vec3));
 
     memcpy(dest, src, koffi.sizeof(Vec3));
 
-    vec2 = koffi.read(dest, koffi.pointer(Vec3));
+    vec2 = koffi.decode(dest, Vec3);
 }
 
 // CHange vector1, leaving copy alone
@@ -244,15 +248,17 @@ console.log(vec1); // { x: 3, y: 2, z: 1 }
 console.log(vec2); // { x: 1, y: 2, z: 3 }
 ```
 
-See [reading variables](memory#read-c-values) for more information about the read function.
+See [decoding variables](variables#decode-to-js-values) for more information about the decode function.
 
 ## Stable pointers
 
+*New in Koffi 2.8*
+
 In some cases, the native code may need to change the output buffer at a later time, maybe during a later call or from another thread.
 
-In this case, it is **not safe to use buffers or typed arrays**!
+In this case, it is **not safe to use buffers or typed arrays**! 
 
-However, you can use `koffi.alloc(type, len)` to allocate memory and get a pointer that won't move, and can be safely used at any time by the native code. Use [koffi.read()](memory#read-c-values) to read data from the pointer when needed.
+However, you can use `koffi.alloc(type, len)` to allocate memory and get a pointer that won't move, and can be safely used at any time by the native code. Use [koffi.decode()](variables#decode-to-js-values) to read data from the pointer when needed.
 
 The example below sets up some memory to be used as an output buffer where a concatenation function appends a string on each call.
 
@@ -292,8 +298,8 @@ let output = koffi.alloc('char', 64);
 reset_buffer(output, 64);
 
 append_str('Hello');
-console.log(output.read()); // Prints Hello
+console.log(koffi.decode(output, 'char', -1)); // Prints Hello
 
 append_str(' World!');
-console.log(output.read()); // Prints Hello World!
+console.log(koffi.decode(output, 'char', -1)); // Prints Hello World!
 ```

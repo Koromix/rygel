@@ -228,10 +228,23 @@ protected:
     }
 };
 
+class NullAllocator: public Allocator {
+protected:
+    void *Allocate(Size, unsigned int) override { RG_UNREACHABLE(); }
+    void *Resize(void *, Size, Size, unsigned int) override { RG_UNREACHABLE(); }
+    void Release(const void *, Size) override {}
+};
+
 Allocator *GetDefaultAllocator()
 {
     static Allocator *default_allocator = new RG_DEFAULT_ALLOCATOR;
     return default_allocator;
+}
+
+Allocator *GetNullAllocator()
+{
+    static Allocator *null_allocator = new NullAllocator;
+    return null_allocator;
 }
 
 LinkedAllocator& LinkedAllocator::operator=(LinkedAllocator &&other)

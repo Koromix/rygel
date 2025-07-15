@@ -37,7 +37,6 @@
     #define NOMINMAX
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
-    #include <direct.h>
 #else
     #include <unistd.h>
     #include <errno.h>
@@ -188,12 +187,6 @@ typedef struct BufferInfo {
     int len;
     uint8_t *ptr;
 } BufferInfo;
-
-typedef enum Enum1 { Enum1_A = 0, Enum1_B = 42 } Enum1;
-typedef enum Enum2 { Enum2_A = -1, Enum2_B = 2147483647 } Enum2;
-typedef enum Enum3 { Enum3_A = -1, Enum3_B = 2147483648u } Enum3;
-typedef enum Enum4 { Enum4_A = 0, Enum4_B = 2147483648u } Enum4;
-typedef enum Enum5 { Enum5_A = 0, Enum5_B = 9223372036854775808ull } Enum5;
 
 typedef struct OpaqueStruct {
     int a;
@@ -490,9 +483,9 @@ EXPORT PackedBFG FASTCALL MakePackedBFG(int x, double y, PackedBFG *p, const cha
 EXPORT void MakePolymorphBFG(int type, int x, double y, const char *str, void *p)
 {
     if (type == 0) {
-        MakeBFG((BFG *)p, x, y, str);
+        MakeBFG(p, x, y, str);
     } else if (type == 1) {
-        MakePackedBFG(x, y, (PackedBFG *)p, str);
+        MakePackedBFG(x, y, p, str);
     }
 }
 
@@ -855,10 +848,10 @@ EXPORT void UpperToInternalBuffer(const char *str, char **ptr)
 
 EXPORT int ComputeLengthUntilNul(const void *ptr)
 {
-    return (int)strlen((const char *)ptr);
+    return (int)strlen(ptr);
 }
 
-static size_t WideStringLength(const char16_t *str16)
+static size_t StringLength16(const char16_t *str16)
 {
     size_t len = 0;
 
@@ -869,9 +862,9 @@ static size_t WideStringLength(const char16_t *str16)
     return len;
 }
 
-EXPORT int ComputeLengthUntilNulWide(const int16_t *ptr)
+EXPORT int ComputeLengthUntilNul16(const int16_t *ptr)
 {
-    return (int)WideStringLength((const char16_t *)ptr);
+    return (int)StringLength16((const char16_t *)ptr);
 }
 
 EXPORT void ReverseStringVoid(void *ptr)
@@ -889,7 +882,7 @@ EXPORT void ReverseStringVoid(void *ptr)
 EXPORT void ReverseString16Void(void *ptr)
 {
     char16_t *str16 = (char16_t *)ptr;
-    size_t len = WideStringLength(str16);
+    size_t len = StringLength16(ptr);
 
     for (size_t i = 0; i < len / 2; i++) {
         char16_t tmp = str16[i];
@@ -1065,28 +1058,10 @@ EXPORT bool ReturnBool(int cond)
     return ret;
 }
 
-EXPORT int ReturnEnumValue(Enum1 e)
+EXPORT int ComputeWideLength(const wchar_t *str)
 {
-    return (int)e;
+    return (int)wcslen(str);
 }
-
-#define GET_ENUM_PRIMITIVE(EnumType) \
-    (sizeof(EnumType) == 1 && (EnumType)-1 < 0 ? "Int8" : \
-     sizeof(EnumType) == 1 ? "UInt8" : \
-     sizeof(EnumType) == 2 && (EnumType)-1 < 0 ? "Int16" : \
-     sizeof(EnumType) == 2 ? "UInt16" : \
-     sizeof(EnumType) == 4 && (EnumType)-1 < 0 ? "Int32" : \
-     sizeof(EnumType) == 4 ? "UInt32" : \
-     sizeof(EnumType) == 8 && (EnumType)-1 < 0 ? "Int64" : \
-     sizeof(EnumType) == 8 ? "UInt64" : NULL)
-
-EXPORT const char *GetEnumPrimitive1() { return GET_ENUM_PRIMITIVE(Enum1); }
-EXPORT const char *GetEnumPrimitive2() { return GET_ENUM_PRIMITIVE(Enum2); }
-EXPORT const char *GetEnumPrimitive3() { return GET_ENUM_PRIMITIVE(Enum3); }
-EXPORT const char *GetEnumPrimitive4() { return GET_ENUM_PRIMITIVE(Enum4); }
-EXPORT const char *GetEnumPrimitive5() { return GET_ENUM_PRIMITIVE(Enum5); }
-
-#undef GET_ENUM_PRIMITIVE
 
 EXPORT void FillOpaqueStruct(unsigned int value, OpaqueStruct *opaque)
 {

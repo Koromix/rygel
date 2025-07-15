@@ -29,48 +29,13 @@
 namespace RG {
 
 extern const napi_type_tag TypeInfoMarker;
-extern const napi_type_tag DirectionMarker;
-extern const napi_type_tag PointerMarker;
 extern const napi_type_tag CastMarker;
-extern const napi_type_tag UnionObjectMarker;
+extern const napi_type_tag MagicUnionMarker;
 
-class TypeObject: public Napi::ObjectWrap<TypeObject> {
+class MagicUnion: public Napi::ObjectWrap<MagicUnion> {
     const TypeInfo *type;
 
-public:
-    static Napi::Function InitClass(Napi::Env env);
-
-    TypeObject(const Napi::CallbackInfo &info);
-
-    const TypeInfo *GetType() const { return type; }
-};
-
-class PointerObject: public Napi::ObjectWrap<PointerObject> {
-    void *ptr;
-    const TypeInfo *type;
-
-public:
-    static Napi::Function InitClass(Napi::Env env);
-
-    PointerObject(const Napi::CallbackInfo &info);
-
-    void *GetPointer() const { return ptr; }
-    const TypeInfo *GetType() const { return type; }
-
-    Napi::Value Inspect(const Napi::CallbackInfo &info);
-
-    Napi::Value GetAddress(const Napi::CallbackInfo &info);
-    Napi::Value GetType(const Napi::CallbackInfo &info);
-
-    Napi::Value Call(const Napi::CallbackInfo &info);
-    Napi::Value Read(const Napi::CallbackInfo &info);
-    Napi::Value Write(const Napi::CallbackInfo &info);
-};
-
-class UnionObject: public Napi::ObjectWrap<UnionObject> {
-    const TypeInfo *type;
-
-    Napi::Reference<Napi::Symbol> active_symbol;
+    napi_value active_symbol;
     Size active_idx = -1;
 
     HeapArray<uint8_t> raw;
@@ -78,7 +43,7 @@ class UnionObject: public Napi::ObjectWrap<UnionObject> {
 public:
     static Napi::Function InitClass(Napi::Env env, const TypeInfo *type);
 
-    UnionObject(const Napi::CallbackInfo &info);
+    MagicUnion(const Napi::CallbackInfo &info);
 
     const TypeInfo *GetType() { return type; }
     const RecordMember *GetMember() const { return (active_idx >= 0) ? &type->members[active_idx] : nullptr; }
@@ -94,9 +59,6 @@ private:
 template <typename T, typename... Args>
 void ThrowError(Napi::Env env, const char *msg, Args... args)
 {
-    if (env.IsExceptionPending()) [[unlikely]]
-        return;
-
     char buf[1024];
     Fmt(buf, msg, args...);
 
@@ -118,16 +80,6 @@ static inline bool IsFloat(const TypeInfo *type)
     return fp;
 }
 
-static inline bool IsPointer(const TypeInfo *type)
-{
-    bool ptr = (type->primitive == PrimitiveKind::Pointer ||
-                type->primitive == PrimitiveKind::String ||
-                type->primitive == PrimitiveKind::String16 ||
-                type->primitive == PrimitiveKind::String32 ||
-                type->primitive == PrimitiveKind::Callback);
-    return ptr;
-}
-
 static inline bool IsRegularSize(Size size, Size max)
 {
     bool regular = (size <= max && !(size & (size - 1)));
@@ -141,22 +93,17 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
 const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);
 const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint);
 
-Napi::Object FinalizeType(Napi::Env env, InstanceData *instance, const TypeInfo *type);
+Napi::External<TypeInfo> WrapType(Napi::Env env, InstanceData *instance, const TypeInfo *type);
 
 bool CanPassType(const TypeInfo *type, int directions);
 bool CanReturnType(const TypeInfo *type);
 bool CanStoreType(const TypeInfo *type);
 
 // Can be slow, only use for error messages
-const char *GetValueType(Napi::Value value);
+const char *GetValueType(const InstanceData *instance, Napi::Value value);
 
-void SetValueTag(Napi::Value value, const napi_type_tag *tag);
-bool CheckValueTag(Napi::Value value, const napi_type_tag *tag);
-
-bool CheckPointerType(const InstanceData *instance, Napi::Value value, const TypeInfo *expect);
-Napi::Value WrapPointer(Napi::Env env, const InstanceData *instance, const TypeInfo *type, void *ptr);
-void *UnwrapPointer(Napi::Value value);
-bool GetPointerValue(Napi::Value value, void **out_ptr);
+void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
+bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
 
 static inline bool IsNullOrUndefined(Napi::Value value)
 {
@@ -254,11 +201,11 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
 void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref);
 void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *ref);
 
-Napi::Value Decode(Napi::Value value, const TypeInfo *type);
-Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type);
+Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const Size *len = nullptr);
+Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, const Size *len = nullptr);
 
-bool Encode(Napi::Value ref, Napi::Value value, const TypeInfo *type);
-bool Encode(Napi::Env env, uint8_t *ptr, Napi::Value value, const TypeInfo *type);
+bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
+bool Encode(Napi::Env env, uint8_t *ptr, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
 
 static inline Napi::Value NewBigInt(Napi::Env env, int64_t value)
 {
@@ -293,7 +240,6 @@ static inline Napi::Array GetOwnPropertyNames(Napi::Object obj)
     return Napi::Array(env, result);
 }
 
-Napi::Object DescribeFunction(Napi::Env env, const FunctionInfo *func);
 Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func);
 
 bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);

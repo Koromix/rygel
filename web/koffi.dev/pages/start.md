@@ -50,7 +50,7 @@ const tm = koffi.struct('tm', {
     tm_sec: 'int',
     tm_min: 'int',
     tm_hour: 'int',
-    tm_mday: 'int',
+    tmay: 'int',
     tm_mon: 'int',
     tm_year: 'int',
     tm_wday: 'int',

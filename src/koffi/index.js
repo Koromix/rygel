@@ -38,8 +38,8 @@ try {
         case 'linux_armhf': { native = require('./build/koffi/linux_armhf/koffi.node'); } break;
         case 'linux_arm64': { native = require('./build/koffi/linux_arm64/koffi.node'); } break;
         case 'linux_ia32': { native = require('./build/koffi/linux_ia32/koffi.node'); } break;
-        case 'linux_riscv64d': { native = require('./build/koffi/linux_riscv64d/koffi.node'); } break;
         case 'linux_loong64': { native = require('./build/koffi/linux_loong64/koffi.node'); } break;
+        case 'linux_riscv64d': { native = require('./build/koffi/linux_riscv64d/koffi.node'); } break;
         case 'linux_x64': { native = require('./build/koffi/linux_x64/koffi.node'); } break;
         case 'openbsd_ia32': { native = require('./build/koffi/openbsd_ia32/koffi.node'); } break;
         case 'openbsd_x64': { native = require('./build/koffi/openbsd_x64/koffi.node'); } break;

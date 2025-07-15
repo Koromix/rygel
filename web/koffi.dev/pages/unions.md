@@ -1,5 +1,7 @@
 # Union definition
 
+*New in Koffi 2.5*
+
 You can declare unions with a syntax similar to structs, but with the `koffi.union()` function. This function takes two arguments: the first one is the name of the type, and the second one is an object containing the union member names and types. You can omit the first argument to declare an anonymous union.
 
 The following example illustrates how to declare the same union in C and in JS with Koffi:

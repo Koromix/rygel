@@ -25,7 +25,15 @@ const koffi = require('../../koffi');
 const assert = require('assert');
 const path = require('path');
 const util = require('util');
-const pkg = require('./package.json');
+const { cnoke } = require('./package.json');
+
+// We need to change this on Windows because the DLL CRT might
+// not (probably not) match the one used by Node.js!
+let free_ptr = koffi.free;
+
+const StrFree = koffi.disposable('str_free', koffi.types.str, ptr => free_ptr(ptr));
+const Str16Free = koffi.disposable('str16_free', 'str16', ptr => free_ptr(ptr));
+const WideStrFree = koffi.disposable('wstr_free', 'wchar_t *', ptr => free_ptr(ptr));
 
 const Pack1 = koffi.struct('Pack1', {
     a: 'int'
@@ -152,9 +160,6 @@ const BufferInfo = koffi.struct('BufferInfo', {
 const BinaryIntFunc = koffi.proto('int BinaryIntFunc(int a, int b)');
 const VariadicIntFunc = koffi.proto('int VariadicIntFunc(int n, ...)');
 
-const Enum1 = koffi.enumeration('Enum1', { A: 0, B: 42 });
-const Enum2 = koffi.enumeration('Enum2', { A: -1, B: 2147483647 });
-
 const OpaqueStruct = koffi.opaque('OpaqueStruct');
 
 main();
@@ -170,7 +175,7 @@ async function main() {
 }
 
 async function test() {
-    let lib_filename = path.join(__dirname, pkg.cnoke.output, 'sync' + koffi.extension);
+    let lib_filename = path.join(__dirname, cnoke.output, 'sync' + koffi.extension);
     let lib = koffi.load(lib_filename);
 
     const CallFree = lib.func('void CallFree(void *ptr)');
@@ -180,10 +185,10 @@ async function test() {
     const GetMinusOne8 = lib.func('int64_t GetMinusOne8(void *dummy)');
     const FillPack1 = lib.func('FillPack1', 'void', ['int', koffi.out(koffi.pointer(Pack1))]);
     const RetPack1 = lib.func('RetPack1', Pack1, ['int']);
-    const AddPack1 = lib.func('__fastcall', 'AddPack1', 'void', ['int', koffi.inout(koffi.pointer(Pack1))]);
+    const AddPack1 = lib.fastcall('AddPack1', 'void', ['int', koffi.inout(koffi.pointer(Pack1))]);
     const FillPack2 = lib.func('FillPack2', 'void', ['int', 'int', koffi.out(koffi.pointer(Pack2))]);
     const RetPack2 = lib.func('RetPack2', Pack2, ['int', 'int']);
-    const AddPack2 = lib.func('__fastcall', 'AddPack2', 'void', ['int', 'int', koffi.inout(koffi.pointer(Pack2))]);
+    const AddPack2 = lib.fastcall('AddPack2', 'void', ['int', 'int', koffi.inout(koffi.pointer(Pack2))]);
     const FillPack3 = lib.func('FillPack3', 'void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]);
     const RetPack3 = lib.func('RetPack3', Pack3, ['int', 'int', 'int']);
     const AddPack3 = lib.func('__fastcall', 'AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
@@ -207,13 +212,13 @@ async function test() {
     const MakePackedBFG = lib.func('AliasBFG __fastcall MakePackedBFG(int x, double y, _Out_ PackedBFG *p, const char *str)');
     const MakePolymorphBFG = lib.func('void MakePolymorphBFG(int type, int x, double y, const char *str, _Out_ void *p)');
     const ReturnBigString = process.platform == 'win32' ?
-                            lib.func('__stdcall', 1, 'str', ['str']) :
-                            lib.func('str __stdcall ReturnBigString(const char *str)');
-    const PrintFmt = lib.func('const char *PrintFmt(const char *fmt, ...)');
-    const PrintFmtWide = lib.func('const wchar_t *PrintFmtWide(const wchar_t *fmt, ...)');
-    const Concat16 = lib.func('const char16_t *Concat16(const char16_t *str1, const char16_t *str2)');
-    const Concat16Out1 = lib.func('void Concat16Out(const char16_t *str1, const char16_t *str2, _Out_ const string16 *)');
-    const Concat16Out2 = lib.func('Concat16Out', 'void', [koffi.pointer('char16_t'), koffi.pointer('char16_t'), koffi.out(koffi.pointer('char16_t', 2))]);
+                            lib.stdcall(1, koffi.disposable('str', CallFree), ['str']) :
+                            lib.func('const char *! __stdcall ReturnBigString(const char *str)');
+    const PrintFmt = lib.func('str_free PrintFmt(const char *fmt, ...)');
+    const PrintFmtWide = lib.func('wstr_free PrintFmtWide(const wchar_t *fmt, ...)');
+    const Concat16 = lib.func('str16_free Concat16(const char16_t *str1, const char16_t *str2)');
+    const Concat16Out1 = lib.func('void Concat16Out(const char16_t *str1, const char16_t *str2, _Out_ const str16_free *)');
+    const Concat16Out2 = lib.func('Concat16Out', 'void', [koffi.pointer('char16_t'), koffi.pointer('char16_t'), koffi.out(koffi.pointer(Str16Free))]);
     const ReturnFixedStr = lib.func('FixedString ReturnFixedStr(FixedString str)');
     const ReturnFixedStr2 = lib.func('FixedString2 ReturnFixedStr(FixedString2 str)');
     const ReturnFixedWide = lib.func('FixedWide ReturnFixedWide(FixedWide str)');
@@ -262,8 +267,7 @@ async function test() {
     const ChangeDirectory = lib.func('void ChangeDirectory(const char *dirname)');
     const ComputeLengthUntilNulV = lib.func('int ComputeLengthUntilNul(void *ptr)');
     const ComputeLengthUntilNulB = lib.func('int ComputeLengthUntilNul(int8_t *ptr)');
-    const ComputeLengthUntilNulWide = lib.func('int ComputeLengthUntilNulWide(int16_t *ptr)');
-    const ReverseStringChar = lib.func('void ReverseStringVoid(_Inout_ char *ptr)');
+    const ComputeLengthUntilNul16 = lib.func('int ComputeLengthUntilNul16(int16_t *ptr)');
     const ReverseStringVoid = lib.func('void ReverseStringVoid(_Inout_ void *ptr)');
     const ReverseString16Void = lib.func('void ReverseString16Void(_Inout_ void *ptr)');
     const GetBinaryIntFunction = lib.func('BinaryIntFunc *GetBinaryIntFunction(const char *name)');
@@ -278,7 +282,7 @@ async function test() {
     const IfElseStr = lib.func('const char *IfElseStr(const char *a, const char *b, bool cond)');
     const sym_int = lib.symbol('sym_int', 'int');
     const sym_str = lib.symbol('sym_str', 'const char *');
-    const sym_int3 = lib.symbol('sym_int3', 'int[3]');
+    const sym_int3 = lib.symbol('sym_int3', 'int [ 3 ]');
     const GetSymbolInt = lib.func('int GetSymbolInt()');
     const GetSymbolStr = lib.func('const char *GetSymbolStr()');
     const GetSymbolInt3 = lib.func('void GetSymbolInt3(_Out_ int *out)');
@@ -287,13 +291,10 @@ async function test() {
     const WriteConfigure32 = lib.func('void WriteConfigure32(char32_t *buf, int size)');
     const WriteString32 = lib.func('void WriteString32(const char32_t *str)');
     const ReturnBool = lib.func('bool ReturnBool(int value)');
-    const ReturnEnumValue = lib.func('int ReturnEnumValue(Enum1 e)');
-    const GetEnumPrimitive1 = lib.func('const char *GetEnumPrimitive1()');
-    const GetEnumPrimitive2 = lib.func('const char *GetEnumPrimitive2()');
-    const GetEnumPrimitive3 = lib.func('const char *GetEnumPrimitive3()');
-    const GetEnumPrimitive4 = lib.func('const char *GetEnumPrimitive4()');
-    const GetEnumPrimitive5 = lib.func('const char *GetEnumPrimitive5()');
+    const ComputeWideLength = lib.func('int ComputeWideLength(const wchar_t *str)');
     const FillOpaqueStruct = lib.func('void FillOpaqueStruct(unsigned int value, _Out_ OpaqueStruct *opaque)');
+
+    free_ptr = CallFree;
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -389,9 +390,9 @@ async function test() {
         assert.equal(ConcatenateToInt1(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687);
         assert.equal(ConcatenateToInt4(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687);
         assert.equal(ConcatenateToInt8(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687);
-        check_text(ConcatenateToStr1(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
-        check_text(ConcatenateToStr4(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
-        check_text(ConcatenateToStr8(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
+        assert.equal(ConcatenateToStr1(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
+        assert.equal(ConcatenateToStr4(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
+        assert.equal(ConcatenateToStr8(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
     }
 
     // Big struct
@@ -424,50 +425,55 @@ async function test() {
     // Big string
     {
         let str = 'fooBAR!'.repeat(1024 * 1024);
-        let ptr = ReturnBigString(str);
-
-        check_text(ptr, str);
-        CallFree(ptr);
+        assert.equal(ReturnBigString(str), str);
     }
 
     // Variadic
     {
-        let ptr = PrintFmt('foo %d %g %s', 'int', 200, 'double', 1.5, 'str', 'BAR');
+        let disposed = koffi.stats().disposed;
 
-        check_text(ptr, 'foo 200 1.5 BAR');
-        CallFree(ptr);
+        let str = PrintFmt('foo %d %g %s', 'int', 200, 'double', 1.5, 'str', 'BAR');
+        assert.equal(str, 'foo 200 1.5 BAR');
+
+        assert.equal(koffi.stats().disposed, disposed + 1);
     }
 
     // Variadic with wchar_t!
     if (detect_glibc() || process.platform == 'win32') {
-        let fmt = (process.platform == 'win32') ? 'foo %d %g %S %s' : 'foo %d %g %s %ls';
-        let ptr = PrintFmtWide(fmt, 'int', 200, 'double', 1.5, 'str', 'BAR', 'wchar_t *', '\u{1F600} ><');
+        let disposed = koffi.stats().disposed;
 
-        let str = ptr.read();
+        let fmt = (process.platform == 'win32') ? 'foo %d %g %S %s' : 'foo %d %g %s %ls';
+        let str = PrintFmtWide(fmt, 'int', 200, 'double', 1.5, 'str', 'BAR', 'wchar_t *', '\u{1F600} ><');
         assert.equal(str, 'foo 200 1.5 BAR \u{1F600} ><');
 
-        CallFree(ptr);
+        assert.equal(koffi.stats().disposed, disposed + 1);
     }
 
     // UTF-16LE strings
     {
-        let ptr = Concat16('Hello ', 'World!');
+        let disposed = koffi.stats().disposed;
 
-        check_text16(ptr, 'Hello World!');
-        CallFree(ptr);
+        let ret = koffi.introspect(Concat16.info.result);
+        assert.ok(ret.disposable);
+
+        let str = Concat16('Hello ', 'World!');
+        assert.equal(str, 'Hello World!');
+
+        assert.equal(koffi.stats().disposed, disposed + 1);
     }
 
     // Test output disposable type parsed with '!'
     {
+        let disposed = koffi.stats().disposed;
         let ptr = [null];
 
         Concat16Out1('Hello ', 'World...', ptr);
-        check_text16(ptr[0], 'Hello World...');
-        CallFree(ptr[0]);
+        assert.equal(ptr[0], 'Hello World...');
 
         Concat16Out2('Hello ', 'World...', ptr);
-        check_text16(ptr[0], 'Hello World...');
-        CallFree(ptr[0]);
+        assert.equal(ptr[0], 'Hello World...');
+
+        assert.equal(koffi.stats().disposed, disposed + 2);
     }
 
     // String to/from fixed-size buffers
@@ -546,9 +552,9 @@ async function test() {
 
     // Test struct strings
     {
-        check_text(ThroughStr({ str: 'Hello', str16: null }), 'Hello');
+        assert.equal(ThroughStr({ str: 'Hello', str16: null }), 'Hello');
         assert.equal(ThroughStr({ str: null, str16: 'Hello' }), null);
-        check_text16(ThroughStr16({ str: null, str16: 'World!' }), 'World!');
+        assert.equal(ThroughStr16({ str: null, str16: 'World!' }), 'World!');
         assert.equal(ThroughStr16({ str: 'World!', str16: null }), null);
     }
 
@@ -661,11 +667,11 @@ async function test() {
         let ptr2 = [null];
 
         UpperToInternalBuffer1('HeLlO WoRlD', ptr1);
-        check_text(ptr1[0], 'HELLO WORLD');
-
         UpperToInternalBuffer2('BoNjOuR MoNdE', ptr2);
-        check_text(ptr2[0], 'BONJOUR MONDE');
-        check_text(ptr1[0], 'BONJOUR MONDE');
+
+        assert.equal(ptr1[0], 'HELLO WORLD')
+        assert.ok(util.types.isExternal(ptr2[0]));
+        assert.equal(koffi.decode(ptr2[0], 'char', -1), 'BONJOUR MONDE');
 
         let view = Buffer.from(koffi.view(ptr2[0], 7));
         assert.equal(view.toString(), 'BONJOUR');
@@ -685,15 +691,14 @@ async function test() {
             PackFloat3(20.0, 30.0, 40.0, koffi.as(ptr1, type));
             PackFloat3(i * 2, -30.0, -31.0, ptr2);
 
-            assert.deepEqual(koffi.read(ptr1[0], 'Float3 *'), { a: 20.0, b: Float32Array.from([30.0, 40.0])});
-            assert.deepEqual(koffi.read(ptr1[0].buffer, 'Float3 *'), { a: 20.0, b: Float32Array.from([30.0, 40.0])});
+            assert.deepEqual(koffi.decode(ptr1[0], 'Float3'), { a: 20.0, b: Float32Array.from([30.0, 40.0])});
+            assert.deepEqual(koffi.decode(ptr1[0].buffer, 'Float3'), { a: 20.0, b: Float32Array.from([30.0, 40.0])});
 
             assert.ok(ptr2 instanceof Buffer);
-            assert.deepEqual(koffi.read(ptr2, 'Float3 *'), { a: i * 2, b: Float32Array.from([-30.0, -31.0])});
-            assert.deepEqual(koffi.read(ptr2.buffer, 'Float3 *'), { a: 0, b: Float32Array.from([-30.0, -31.0])});
+            assert.deepEqual(koffi.decode(ptr2, 'Float3'), { a: i * 2, b: Float32Array.from([-30.0, -31.0])});
+            assert.deepEqual(koffi.decode(ptr2.buffer, 'Float3'), { a: 0, b: Float32Array.from([-30.0, -31.0])});
 
-            assert.deepEqual(koffi.read(ptr2, koffi.pointer(koffi.array('float', 3))), Float32Array.from([i * 2, -30.0, -31.0]));
-            assert.deepEqual(koffi.read(ptr2, 'float[3] *'), Float32Array.from([i * 2, -30.0, -31.0]));
+            assert.deepEqual(koffi.decode(ptr2, 'float', 3), Float32Array.from([i * 2, -30.0, -31.0]));
         }
     }
 
@@ -705,8 +710,8 @@ async function test() {
         AddPack3(2, 42, -5, array1);
         AddPack3(2, 42, -5, array2.buffer);
 
-        assert.deepEqual(koffi.read(array1, 'Pack3 *'), { a: 14, b: 87, c: -7 });
-        assert.deepEqual(koffi.read(array2, 'Pack3 *'), { a: -10, b: -3, c: -3 });
+        assert.deepEqual(koffi.decode(array1, 'Pack3'), { a: 14, b: 87, c: -7 });
+        assert.deepEqual(koffi.decode(array2, 'Pack3'), { a: -10, b: -3, c: -3 });
     }
 
     // Test errno
@@ -718,39 +723,37 @@ async function test() {
         assert.equal(koffi.errno(), koffi.os.errno.ENOENT);
     }
 
+    // Support null in koffi.address()
+    assert.strictEqual(koffi.address(null), 0n);
+
     // Test polymorphic input string arguments
     assert.equal(ComputeLengthUntilNulV(koffi.as([1, 2, 42, 0], 'int8_t *')), 3);
     assert.equal(ComputeLengthUntilNulV('Hello World!'), 12);
     assert.equal(ComputeLengthUntilNulB([1, 42, 0]), 2);
     assert.equal(ComputeLengthUntilNulB('Hello..'), 7);
-    assert.equal(ComputeLengthUntilNulWide([0xAAAA, 0xAAAA, 42, 0]), 3);
-    assert.equal(ComputeLengthUntilNulWide('ẹỊ¢a'), 4);
+    assert.equal(ComputeLengthUntilNul16([0xAAAA, 0xAAAA, 42, 0]), 3);
+    assert.equal(ComputeLengthUntilNul16('ẹỊ¢a'), 4);
 
     // Test input/output strings with polymorphic arguments
     {
         let ptr = ['Hello World!'];
 
-        ReverseStringChar(ptr);
-        assert.equal(ptr[0], '!dlroW olleH');
-
         ReverseStringVoid(ptr);
-        assert.equal(ptr[0], 'Hello World!');
+        assert.equal(ptr[0], '!dlroW olleH');
 
         ReverseStringVoid(koffi.as(ptr, 'char *'));
-        assert.equal(ptr[0], '!dlroW olleH');
+        assert.equal(ptr[0], 'Hello World!');
 
         ReverseString16Void(koffi.as(ptr, 'char16_t *'))
-        assert.equal(ptr[0], 'Hello World!');
+        assert.equal(ptr[0], '!dlroW olleH');
     }
 
     // Call function pointers directly
     assert.equal(koffi.call(GetBinaryIntFunction('add'), BinaryIntFunc, 4, 5), 9);
     assert.equal(koffi.call(GetBinaryIntFunction('substract'), 'BinaryIntFunc', 4, 5), -1);
-    assert.equal(GetBinaryIntFunction('multiply').call(3, 8), 24);
-    assert.equal(GetBinaryIntFunction('divide').call(100, 2), 50);
+    assert.equal(koffi.call(GetBinaryIntFunction('multiply'), BinaryIntFunc, 3, 8), 24);
+    assert.equal(koffi.call(GetBinaryIntFunction('divide'), BinaryIntFunc, 100, 2), 50);
     assert.equal(GetBinaryIntFunction('missing'), null);
-    assert.equal(koffi.address(GetBinaryIntFunction('missing')), null);
-    assert.ok(koffi.address(GetBinaryIntFunction('divide')) > 0n);
 
     // Call decoded function pointers
     {
@@ -771,7 +774,7 @@ async function test() {
     assert.equal(koffi.call(GetVariadicIntFunction('add'), VariadicIntFunc, 3, 'int', 4, 'int', 5, 'int', 12), 21);
     assert.equal(koffi.call(GetVariadicIntFunction('multiply'), VariadicIntFunc, 1, 'int', 2, 'int', 21), 2);
     assert.equal(koffi.call(GetVariadicIntFunction('multiply'), VariadicIntFunc, 2, 'int', 2, 'int', 21), 42);
-    assert.equal(GetVariadicIntFunction('missing'), null);
+    assert.equal(GetBinaryIntFunction('missing'), null);
 
     // Communicate through raw buffers
     {
@@ -813,15 +816,10 @@ async function test() {
     // Decode non-UTF-8 string
     {
         let ptr = GetLatin1String();
+        let array = koffi.decode(ptr, 'uint8_t', -1);
+        let str = Buffer.from(array.buffer).toString('latin1');
 
-        let array1 = koffi.read(ptr, 'uint8_t[] *');
-        let str1 = Buffer.from(array1.buffer).toString('latin1');
-
-        let array2 = koffi.read(ptr, koffi.pointer(koffi.array('uint8_t', null)));
-        let str2 = Buffer.from(array2.buffer).toString('latin1');
-
-        assert.equal(str1, 'Microsoft®²');
-        assert.equal(str2, 'Microsoft®²');
+        assert.equal(str, 'Microsoft®²');
     }
 
     // Test boolean parameters
@@ -831,22 +829,18 @@ async function test() {
     assert.equal(BoolToMask12(false, true, true, false, false, false, false, true, false, false, true, true), 0b011000010011);
     assert.equal(IfElseInt(true, 42, 24), 42);
     assert.equal(IfElseInt(false, 42, 24), 24);
-    check_text(IfElseStr('foo', 'bar', true), 'foo');
-    check_text(IfElseStr('FIRST', 'SECOND', false), 'SECOND');
+    assert.equal(IfElseStr("foo", "bar", true), "foo");
+    assert.equal(IfElseStr("FIRST", "SECOND", false), "SECOND");
 
     // Encode variables
     {
-        sym_int.write(12);
-        sym_str.write('I think...');
-        sym_str.write('I can encode!');
-        koffi.write(sym_int3, 'int[3] *', [4, 2, 42]);
+        koffi.encode(sym_int, 'int', 12);
+        koffi.encode(sym_str, 'const char *', 'I think...');
+        koffi.encode(sym_str, 'const char *', 'I can encode!');
+        koffi.encode(sym_int3, 'int', [4, 2, 42], 3);
 
-        assert.equal(sym_int.read(), 12);
-        assert.equal(koffi.read(sym_int, 'int *'), 12);
         assert.equal(GetSymbolInt(), 12);
-        check_text(GetSymbolStr(), 'I can encode!');
-        assert.equal(sym_str.read(), 'I can encode!');
-        assert.equal(koffi.read(sym_str, 'const char **'), 'I can encode!');
+        assert.equal(GetSymbolStr(), 'I can encode!');
 
         let out3 = [0, 0, 0];
         GetSymbolInt3(out3);
@@ -873,21 +867,10 @@ async function test() {
 
     // Check various array type errors
     assert.throws(() => lib.func('int[3] WhoCares()'), /Array types decay to pointers/);
+    assert.throws(() => koffi.struct('JohnDoe', { a: 'int[3]!' }), /Cannot create disposable type for non-pointer/);
+    assert.throws(() => koffi.struct('JaneDoe', { a: 'int!' }), /Cannot create disposable type for non-pointer/);
     assert.throws(() => lib.func('void WhoKnows(const char *ptr, int[5] arg)'), /Array types decay to pointers/);
     assert.throws(() => lib.func('void NoBody(const char *ptr, int arg[5])'), /Array types decay to pointers/);
-
-    // Test Pointer constructor
-    {
-        function check_pointer(ptr, address, type) {
-            assert.equal(ptr.address, address);
-            assert.equal(ptr.type.name, type);
-        }
-
-        check_pointer(new koffi.Pointer(18n, 'BinaryIntFunc *'), 18n, 'BinaryIntFunc *');
-        assert.throws(() => new koffi.Pointer(null, 'BinaryIntFunc *'), /Cannot make null Pointer object/);
-        assert.ok(GetBinaryIntFunction('divide').address > 0n);
-        assert.equal(GetBinaryIntFunction('divide').type.name, 'BinaryIntFunc *');
-    }
 
     // Allocate buffer and write in later call (char16_t variant)
     {
@@ -931,34 +914,16 @@ async function test() {
     assert.equal(ReturnBool(-2), true);
     assert.equal(ReturnBool(0xFFFFFE), true);
 
-    // Test enums with implicit types
-    {
-        assert.equal(ReturnEnumValue(Enum1.values.A), 0);
-        assert.equal(ReturnEnumValue(Enum1.values.B), 42);
-        check_text(GetEnumPrimitive1(), Enum1.primitive);
-        check_text(GetEnumPrimitive2(), Enum2.primitive);
-
-        if (process.platform != 'win32') {
-            const Enum3 = koffi.enumeration('Enum3', { A: -1, B: 2147483648 });
-            const Enum4 = koffi.enumeration('Enum4', { A: 0, B: 2147483648 });
-            const Enum5 = koffi.enumeration('Enum5', { A: 0, B: 9223372036854775808n });
-
-            check_text(GetEnumPrimitive3(), Enum3.primitive);
-            check_text(GetEnumPrimitive4(), Enum4.primitive);
-            check_text(GetEnumPrimitive5(), Enum5.primitive);
-        } else {
-            assert.throws(() => koffi.enumeration('Enum3', { A: -1, B: 2147483648 }), /Cannot find storage type wide enough for enum values/);
-            assert.throws(() => koffi.enumeration('Enum4', { A: 0, B: 2147483648 }), /Cannot find storage type wide enough for enum values/);
-            assert.throws(() => koffi.enumeration('Enum5', { A: 0, B: 9223372036854775808n }), /Cannot find storage type wide enough for enum values/);
-        }
-    }
-
-    // Test enums with explicit storage
-    assert.equal(koffi.enumeration({}, 'uint64_t').primitive, 'UInt64');
-    assert.equal(koffi.enumeration({}, 'int').primitive, 'Int32');
-    assert.equal(koffi.enumeration('EnumX', {}, 'uint64_t').primitive, 'UInt64');
-    assert.equal(koffi.enumeration('EnumY', {}, 'short').primitive, 'Int16');
-    assert.throws(() => koffi.enumeration({}, 'float'), /Expected integer type for underlying enum storage type/);
+    // Check wchar_t encoding
+    assert.equal(ComputeWideLength("00000000"), 8);
+    assert.equal(ComputeWideLength("000000000"), 9);
+    assert.equal(ComputeWideLength("0000000000"), 10);
+    assert.equal(ComputeWideLength("00000000000"), 11);
+    assert.equal(ComputeWideLength("000000000000"), 12);
+    assert.equal(ComputeWideLength("0000000000000"), 13);
+    assert.equal(ComputeWideLength("00000000000000"), 14);
+    assert.equal(ComputeWideLength("000000000000000"), 15);
+    assert.equal(ComputeWideLength("0000000000000000"), 16);
 
     // Redefine opaque type to concrete struct
     {
@@ -977,30 +942,6 @@ async function test() {
     }
 
     lib.unload();
-}
-
-function check_text(ptr, expect) {
-    if (ptr == null) {
-        asset.equal(ptr, null);
-        return;
-    }
-
-    let typed = new koffi.Pointer(ptr, 'const char *');
-    let str = typed.read();
-
-    assert.equal(str, expect);
-}
-
-function check_text16(ptr, expect) {
-     if (ptr == null) {
-        asset.equal(ptr, null);
-        return;
-    }
-
-    let typed = new koffi.Pointer(ptr, 'const char16_t *');
-    let str = typed.read();
-
-    assert.equal(str, expect);
 }
 
 function detect_glibc() {

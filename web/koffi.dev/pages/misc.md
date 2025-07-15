@@ -1,8 +1,19 @@
 # Types
 
-## Definition
+## Introspection
 
-The type object returned after a new type has been made (struct, pointer, etc.) can be introspected with various information about the type: name, primitive, size, alignment, members (record types), reference type (array, pointer) and length (array), signature (prototypes).
+*New in Koffi 2.0: `koffi.resolve()`, new in Koffi 2.2: `koffi.offsetof()`*
+
+> [!NOTE]
+> The value returned by `introspect()` has **changed in version 2.0 and in version 2.2**.
+>
+> In Koffi 1.x, it could only be used with struct types and returned the object passed to koffi.struct() with the member names and types.
+>
+> Starting in Koffi 2.2, each record member is exposed as an object containing the name, the type and the offset within the record.
+>
+> Consult the [migration guide](migration) for more information.
+
+Use `koffi.introspect(type)` to get detailed information about a type: name, primitive, size, alignment, members (record types), reference type (array, pointer) and length (array).
 
 ```js
 const FoobarType = koffi.struct('FoobarType', {
@@ -11,18 +22,18 @@ const FoobarType = koffi.struct('FoobarType', {
     c: 'double'
 });
 
-console.log(FoobarType);
+console.log(koffi.introspect(FoobarType));
 
 // Expected result on 64-bit machines:
-// Type {
+// {
 //     name: 'FoobarType',
 //     primitive: 'Record',
 //     size: 24,
 //     alignment: 8,
 //     members: {
-//         a: { name: 'a', type: [Type], offset: 0 },
-//         b: { name: 'b', type: [Type], offset: 8 },
-//         c: { name: 'c', type: [Type], offset: 16 }
+//         a: { name: 'a', type: [External: 4b28a60], offset: 0 },
+//         b: { name: 'b', type: [External: 4b292e0], offset: 8 },
+//         c: { name: 'c', type: [External: 4b29260], offset: 16 }
 //     }
 // }
 ```
@@ -32,25 +43,25 @@ Koffi also exposes a few more utility functions to get a subset of this informat
 - `koffi.sizeof(type)` to get the size of a type
 - `koffi.alignof(type)` to get the alignment of a type
 - `koffi.offsetof(type, member_name)` to get the offset of a record member
-- `koffi.type(type)` to get the resolved type object from a type string
-
-> [!NOTE]
-> The function `koffi.type()` was introduced in Koffi 3.0 to replace `koffi.resolve()`, which does not exist anymore.
+- `koffi.resolve(type)` to get the resolved type object from a type string
 
 Just like before, you can refer to primitive types by their name or through `koffi.types`:
 
 ```js
-// These three lines do the same:
+// These two lines do the same:
 console.log(koffi.sizeof('long'));
 console.log(koffi.sizeof(koffi.types.long));
-console.log(koffi.types.long.size);
 ```
 
 ## Aliases
 
+*New in Koffi 2.0*
+
 You can alias a type with `koffi.alias(name, type)`. Aliased types are completely equivalent.
 
 ## Circular references
+
+*New in Koffi 2.10.0*
 
 In some cases, composite types can point to each other and thus depend on each other. This can also happen when a function takes a pointer to a struct that also contains a function pointer.
 
@@ -119,9 +130,13 @@ max_type_size        | 64 MiB  | Maximum size of Koffi types (for arrays and str
 
 # Usage statistics
 
+*New in Koffi 2.3.2*
+
 You can use `koffi.stats()` to get a few statistics related to Koffi.
 
 # POSIX error codes
+
+*New in Koffi 2.3.14*
 
 You can use `koffi.errno()` to get the current errno value, and `koffi.errno(value)` to change it.
 
@@ -144,6 +159,8 @@ console.log('close() with invalid FD is POSIX compliant!');
 ```
 
 # Reset internal state
+
+*New in Koffi 2.5.19*
 
 You can use `koffi.reset()` to clear some Koffi internal state such as:
 

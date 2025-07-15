@@ -25,7 +25,7 @@ const koffi = require('../../koffi');
 const assert = require('assert');
 const path = require('path');
 const util = require('util');
-const pkg = require('./package.json');
+const { cnoke } = require('./package.json');
 
 const CallThroughFunc1 = koffi.proto('int __stdcall CallThroughFunc1(int)');
 const CallThroughFunc2 = koffi.proto('__stdcall', 'CallThroughFunc2', 'int', ['int']);
@@ -46,13 +46,13 @@ async function test() {
     // Test relative path because on Windows this uses a different code path
     process.chdir(__dirname);
 
-    let lib_filename = pkg.cnoke.output + '/win32.dll';
+    let lib_filename = cnoke.output + '/win32.dll';
     let lib = koffi.load(lib_filename);
 
     let kernel32 = koffi.load('kernel32.dll');
 
-    const DivideBySafe1 = lib.func('DivideBySafe1', 'int', ['int', 'int']);
-    const DivideBySafe2 = lib.func('DivideBySafe2', 'int', ['int', 'int']);
+    const DivideBySafe1 = lib.cdecl('DivideBySafe1', 'int', ['int', 'int']);
+    const DivideBySafe2 = lib.cdecl('DivideBySafe2', 'int', ['int', 'int']);
     const CallThrough1 = lib.func('int CallThrough(CallThroughFunc1 *func, int value)');
     const CallThrough2 = lib.func('int CallThrough(CallThroughFunc2 *func, int value)');
 

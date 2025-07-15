@@ -20,7 +20,6 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include "src/core/base/base.hh"
-#include "src/core/unicode/xid.hh"
 #include "ffi.hh"
 #include "parser.hh"
 
@@ -82,6 +81,8 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
     }
     Consume(")");
 
+    out_func->required_parameters = (int8_t)out_func->parameters.len;
+
     Match(";");
     if (offset < tokens.len) {
         MarkError("Unexpected token '%1' after prototype", tokens[offset]);
@@ -97,9 +98,9 @@ void PrototypeParser::Tokenize(const char *str)
 
         if (IsAsciiWhite(c)) {
             continue;
-        } else if (IsXidStart(c)) {
+        } else if (IsAsciiAlpha(c) || c == '_') {
             Size j = i;
-            while (str[++j] && IsXidContinue(str[j]));
+            while (str[++j] && (IsAsciiAlphaOrDigit(str[j]) || str[j] == '_'));
 
             Span<const char> tok = MakeSpan(str + i, j - i);
             tokens.Append(tok);
@@ -141,6 +142,7 @@ const TypeInfo *PrototypeParser::ParseType(int *out_directions)
     while (++offset < tokens.len && IsIdentifier(tokens[offset]));
     offset--;
     while (++offset < tokens.len && (tokens[offset] == '*' ||
+                                     tokens[offset] == '!' ||
                                      tokens[offset] == "const"));
     if (offset < tokens.len && tokens[offset] == "[") [[unlikely]] {
         MarkError("Array types decay to pointers in prototypes (C standard), use pointers");

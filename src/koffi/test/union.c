@@ -106,5 +106,5 @@ EXPORT void MakeMultiUIndirect(float a, float b, MultiU *out)
     out->f2[1] = b;
 }
 
-EXPORT float GetMultiDouble(MultiU u) { return (float)u.d; }
-EXPORT float GetMultiUnsigned(MultiU u) { return (float)u.u; }
+EXPORT float GetMultiDouble(MultiU u) { return u.d; }
+EXPORT float GetMultiUnsigned(MultiU u) { return u.u; }

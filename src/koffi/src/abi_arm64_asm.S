@@ -236,7 +236,3 @@ SYMBOL(CallSwitchStack):
 # ----------------------------
 
 #include "trampolines/gnu.inc"
-
-#if defined(__ELF__)
-.section .note.GNU-stack, "", %progbits
-#endif
