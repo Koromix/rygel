@@ -6,6 +6,20 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.78
+
+*Released on 2025-07-15*
+
+- Fix `rekkord mount` I/O error when listing empty directories
+- Add *--reuse_key* option to `rekkord init`
+- Add *--force* option to `rekkord save`
+- Increase S3 and SFTP concurrency
+- Fix ignored unknown option when passed before command
+- Fix ignored key path when specified before init
+- Change prefix character to reverse sort in `rekkord snapshots`
+- Cache computed/stored file size instead of stat info
+- Reorganize some options in rekkord help texts
+
 ### Rekkord 0.77
 
 *Released on 2025-07-07*
