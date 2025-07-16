@@ -7,6 +7,17 @@
 
 ### Koffi 2.12
 
+#### Koffi 2.12.2
+
+*Released on 2025-07-16*
+
+- Validate identifiers against Unicode XID table
+- Skip struct and union members with placeholder name '\_'
+- Add Koffi prebuild for Linux (musl) ARM64
+
+> [!NOTE]
+> The Koffi 3 codebase has been put aside, and some of it will be progressively integrated into Koffi 2 over the following months.
+
 #### Koffi 2.12.1
 
 *Released on 2025-07-05*
