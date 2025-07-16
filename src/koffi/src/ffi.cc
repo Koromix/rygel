@@ -353,6 +353,9 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
             return env.Null();
         }
 
+        if (TestStr(member.name, "_"))
+            continue;
+
         if (!IsNameValid(member.name)) {
             ThrowError<Napi::Error>(env, "Invalid member name '%1'", member.name);
             return env.Null();
@@ -507,6 +510,9 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         align = align ? align : member.type->align;
         size = std::max(size, member.type->size);
         type->align = std::max(type->align, align);
+
+        if (TestStr(member.name, "_"))
+            continue;
 
         if (!IsNameValid(member.name)) {
             ThrowError<Napi::Error>(env, "Invalid member name '%1'", member.name);

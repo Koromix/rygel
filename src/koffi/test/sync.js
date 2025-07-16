@@ -154,6 +154,7 @@ const BigText = koffi.struct('BigText', {
 
 const BufferInfo = koffi.struct('BufferInfo', {
     len: 'int',
+    _: 'int', // dummy
     ptr: 'uint8_t *'
 });
 
@@ -780,6 +781,11 @@ async function test() {
     {
         let buf1 = { len: 6, ptr: new Uint8Array(8) };
         let buf2 = { len: 10, ptr: new Uint8Array(10) };
+
+        assert.deepEqual(koffi.introspect(BufferInfo).members, {
+            len: { name: 'len', type: koffi.resolve('int'), offset: 0 },
+            ptr: { name: 'ptr', type: koffi.resolve('uint8_t *'), offset: 8 }
+        });
 
         FillBufferDirect(buf1, 42);
         FillBufferIndirect(buf2, 24);

@@ -185,6 +185,7 @@ typedef struct Vec2 {
 
 typedef struct BufferInfo {
     int len;
+    int dummy;
     uint8_t *ptr;
 } BufferInfo;
 
