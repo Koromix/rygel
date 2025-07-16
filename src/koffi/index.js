@@ -52,11 +52,7 @@ try {
 
     try {
         switch (triplet) {
-            case 'linux_armhf': { native = require('./build/koffi/musl_armhf/koffi.node'); } break;
             case 'linux_arm64': { native = require('./build/koffi/musl_arm64/koffi.node'); } break;
-            case 'linux_ia32': { native = require('./build/koffi/musl_ia32/koffi.node'); } break;
-            case 'linux_loong64': { native = require('./build/koffi/musl_loong64/koffi.node'); } break;
-            case 'linux_riscv64d': { native = require('./build/koffi/musl_riscv64d/koffi.node'); } break;
             case 'linux_x64': { native = require('./build/koffi/musl_x64/koffi.node'); } break;
         }
     } catch {
