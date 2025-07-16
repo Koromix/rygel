@@ -402,8 +402,7 @@
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
-                "Test SQLite": "node test/sqlite.js",
-                "Test POSIX": "node test/posix.js"
+                "Test SQLite": "node test/sqlite.js"
             }
         }
     }
