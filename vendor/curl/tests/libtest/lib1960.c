@@ -9,7 +9,7 @@
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
- * are also available at https://curl.haxx.se/docs/copyright.html.
+ * are also available at https://curl.se/docs/copyright.html.
  *
  * You may opt to use, copy, modify, merge, publish, distribute and/or sell
  * copies of the Software, and permit persons to whom the Software is
@@ -21,15 +21,12 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "test.h"
+#include "first.h"
 
 #ifdef HAVE_INET_PTON
 
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
 #endif
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
@@ -75,7 +72,7 @@ static int sockopt_cb(void *clientp,
 
 
 /* Expected args: URL IP PORT */
-CURLcode test(char *URL)
+static CURLcode test_lib1960(char *URL)
 {
   CURL *curl = NULL;
   CURLcode res = TEST_ERR_MAJOR_BAD;
@@ -147,7 +144,7 @@ test_cleanup:
   return res;
 }
 #else
-CURLcode test(char *URL)
+static CURLcode test_lib1960(char *URL)
 {
   (void)URL;
   curl_mprintf("lacks inet_pton\n");

@@ -21,10 +21,8 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-
-#include "test.h"
-#include "testutil.h"
 #include "testtrace.h"
+
 #include "memdebug.h"
 
 struct libtest_trace_cfg libtest_debug_config;
@@ -32,9 +30,9 @@ struct libtest_trace_cfg libtest_debug_config;
 static time_t epoch_offset; /* for test time tracing */
 static int    known_offset; /* for test time tracing */
 
-static
-void libtest_debug_dump(const char *timebuf, const char *text, FILE *stream,
-                        const unsigned char *ptr, size_t size, int nohex)
+static void libtest_debug_dump(const char *timebuf, const char *text,
+                               FILE *stream, const unsigned char *ptr,
+                               size_t size, int nohex)
 {
   size_t i;
   size_t c;
@@ -90,10 +88,8 @@ int libtest_debug_cb(CURL *handle, curl_infotype type,
 {
   struct libtest_trace_cfg *trace_cfg = userp;
   const char *text;
-  struct timeval tv;
   char timebuf[20];
   char *timestr;
-  time_t secs;
 
   (void)handle;
 
@@ -102,12 +98,15 @@ int libtest_debug_cb(CURL *handle, curl_infotype type,
 
   if(trace_cfg->tracetime) {
     struct tm *now;
-    tv = tutil_tvnow();
+    struct curltime tv;
+    time_t secs;
+    tv = curlx_now();
     if(!known_offset) {
       epoch_offset = time(NULL) - tv.tv_sec;
       known_offset = 1;
     }
     secs = epoch_offset + tv.tv_sec;
+    /* !checksrc! disable BANNEDFUNC 1 */
     now = localtime(&secs);  /* not thread safe but we don't care */
     curl_msnprintf(timebuf, sizeof(timebuf), "%02d:%02d:%02d.%06ld ",
                    now->tm_hour, now->tm_min, now->tm_sec, (long)tv.tv_usec);

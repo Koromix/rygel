@@ -21,15 +21,14 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "test.h"
+#include "first.h"
 
-#include "testutil.h"
-#include "warnless.h"
 #include "memdebug.h"
 
-#define EXCESSIVE 10*1000*1000
-CURLcode test(char *URL)
+static CURLcode test_lib1559(char *URL)
 {
+  static const int EXCESSIVE = 10*1000*1000;
+
   CURLcode res = CURLE_OK;
   CURL *curl = NULL;
   char *longurl = NULL;

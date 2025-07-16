@@ -21,10 +21,11 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "test.h"
+#include "first.h"
+
 #include "memdebug.h"
 
-CURLcode test(char *URL)
+static CURLcode test_lib661(char *URL)
 {
    CURLcode res;
    CURL *curl = NULL;
@@ -153,7 +154,6 @@ CURLcode test(char *URL)
    test_setopt(curl, CURLOPT_FTP_FILEMETHOD, (long) CURLFTPMETHOD_NOCWD);
    test_setopt(curl, CURLOPT_QUOTE, slist);
    res = curl_easy_perform(curl);
-
 
 test_cleanup:
 

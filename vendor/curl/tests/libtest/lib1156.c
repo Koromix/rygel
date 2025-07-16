@@ -21,7 +21,7 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "test.h"
+#include "first.h"
 
 /*
   Check range/resume returned error codes and data presence.
@@ -131,7 +131,7 @@ test_cleanup:
 /* for debugging: */
 /* #define SINGLETEST 9 */
 
-CURLcode test(char *URL)
+static CURLcode test_lib1156(char *URL)
 {
   CURLcode res;
   CURL *curl;

@@ -21,7 +21,7 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "server_setup.h"
+#include "first.h"
 
 /*
  * curl's test suite Real Time Streaming Protocol (RTSP) server.
@@ -29,32 +29,9 @@
  * This source file was started based on curl's HTTP test suite server.
  */
 
-#ifndef UNDER_CE
-#include <signal.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#ifdef HAVE_NETINET_IN6_H
-#include <netinet/in6.h>
-#endif
-#ifdef HAVE_ARPA_INET_H
-#include <arpa/inet.h>
-#endif
-#ifdef HAVE_NETDB_H
-#include <netdb.h>
-#endif
 #ifdef HAVE_NETINET_TCP_H
 #include <netinet/tcp.h> /* for TCP_NODELAY */
 #endif
-
-#include <curlx.h> /* from the private lib dir */
-#include "getpart.h"
-#include "util.h"
-#include "server_sockaddr.h"
-
-/* include memdebug.h last */
-#include <memdebug.h>
 
 #undef REQBUFSIZ
 #define REQBUFSIZ 150000
@@ -966,13 +943,13 @@ static int rtspd_send_doc(curl_socket_t sock, struct rtspd_httprequest *req)
           quarters = num * 4;
           while(quarters > 0) {
             quarters--;
-            res = wait_ms(250);
+            res = curlx_wait_ms(250);
             if(got_exit_signal)
               break;
             if(res) {
               /* should not happen */
               error = SOCKERRNO;
-              logmsg("wait_ms() failed with error (%d) %s",
+              logmsg("curlx_wait_ms() failed with error (%d) %s",
                      error, sstrerror(error));
               break;
             }
@@ -1000,7 +977,7 @@ static int rtspd_send_doc(curl_socket_t sock, struct rtspd_httprequest *req)
 }
 
 
-int main(int argc, char *argv[])
+static int test_rtspd(int argc, char *argv[])
 {
   srvr_sockaddr_union_t me;
   curl_socket_t sock = CURL_SOCKET_BAD;
@@ -1150,7 +1127,7 @@ int main(int argc, char *argv[])
     rc = bind(sock, &me.sa, sizeof(me.sa6));
   }
 #endif /* USE_IPV6 */
-  if(0 != rc) {
+  if(rc) {
     error = SOCKERRNO;
     logmsg("Error binding socket on port %hu (%d) %s",
            port, error, sstrerror(error));
@@ -1204,7 +1181,7 @@ int main(int argc, char *argv[])
 
   /* start accepting connections */
   rc = listen(sock, 5);
-  if(0 != rc) {
+  if(rc) {
     error = SOCKERRNO;
     logmsg("listen() failed with error (%d) %s",
            error, sstrerror(error));

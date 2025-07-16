@@ -21,22 +21,14 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "curlcheck.h"
+#include "unitcheck.h"
 
 #include "http_aws_sigv4.h"
-#include "dynbuf.h"
 
-static CURLcode unit_setup(void)
+static CURLcode test_unit1979(char *arg)
 {
-  return CURLE_OK;
-}
+  UNITTEST_BEGIN_SIMPLE
 
-static void unit_stop(void)
-{
-}
-
-UNITTEST_START
-{
 #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_AWS)
   struct testcase {
     const char *testname;
@@ -140,5 +132,6 @@ UNITTEST_START
     curlx_dyn_free(&canonical_path);
   }
 #endif /* !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_AWS) */
+
+  UNITTEST_END_SIMPLE
 }
-UNITTEST_STOP

@@ -21,6 +21,8 @@
 # SPDX-License-Identifier: curl
 #
 ###########################################################################
+# Shared between CMakeLists.txt and Makefile.am
+
 CERTCONFIG_CA = \
   test-ca.cnf \
   test-ca.prm
@@ -31,7 +33,8 @@ CERTCONFIGS = \
   test-localhost0h.prm \
   test-localhost-san-first.prm \
   test-localhost-san-last.prm \
-  test-client-cert.prm
+  test-client-cert.prm \
+  test-client-eku-only.prm
 
 GENERATEDCERTS = \
   test-ca.cacert \

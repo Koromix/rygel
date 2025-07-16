@@ -21,7 +21,7 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "test.h"
+#include "first.h"
 
 /*
   Based on a bug report recipe by Rene Bernhardt in
@@ -38,7 +38,7 @@
 
 #include "memdebug.h"
 
-CURLcode test(char *URL)
+static CURLcode test_lib590(char *URL)
 {
   CURLcode res;
   CURL *curl;

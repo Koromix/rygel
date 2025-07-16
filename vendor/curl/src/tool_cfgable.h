@@ -73,8 +73,7 @@ struct State {
   char *uploadfile;
   curl_off_t infilenum; /* number of files to upload */
   curl_off_t up;        /* upload file counter within a single upload glob */
-  curl_off_t urlnum;    /* how many iterations this single URL has with ranges
-                           etc */
+  curl_off_t urlnum;    /* how many iterations this URL has with ranges etc */
   curl_off_t li;
 };
 
@@ -218,7 +217,7 @@ struct OperationConfig {
   long retry_delay;         /* delay between retries (in seconds) */
   long retry_maxtime;       /* maximum time to keep retrying */
 
-  long mime_options;        /* Mime option flags. */
+  unsigned long mime_options; /* Mime option flags. */
   long tftp_blksize;        /* TFTP BLKSIZE option */
   long alivetime;           /* keepalive-time */
   long alivecnt;            /* keepalive-cnt */
@@ -330,7 +329,6 @@ struct OperationConfig {
   BIT(proxy_ssl_auto_client_cert); /* proxy version of ssl_auto_client_cert */
   BIT(noalpn);                    /* enable/disable TLS ALPN extension */
   BIT(abstract_unix_socket);      /* path to an abstract Unix domain socket */
-  BIT(falsestart);
   BIT(path_as_is);
   BIT(suppress_connect_headers);  /* suppress proxy CONNECT response headers
                                      from user callbacks */
@@ -378,7 +376,7 @@ struct GlobalConfig {
   BIT(isatty);                    /* Updated internally if output is a tty */
 };
 
-void config_init(struct OperationConfig *config);
+struct OperationConfig *config_alloc(struct GlobalConfig *global);
 void config_free(struct OperationConfig *config);
 
 #endif /* HEADER_CURL_TOOL_CFGABLE_H */

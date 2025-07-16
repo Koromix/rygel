@@ -28,16 +28,12 @@
 #include <fcntl.h>
 #endif
 
-#include <sys/stat.h>
-
-#include <curlx.h>
-
 #include "tool_cfgable.h"
 #include "tool_msgs.h"
 #include "tool_cb_wrt.h"
 #include "tool_operate.h"
 
-#include <memdebug.h> /* keep this as LAST include */
+#include "memdebug.h" /* keep this as LAST include */
 
 #ifdef _WIN32
 #define OPENMODE S_IREAD | S_IWRITE
@@ -156,14 +152,13 @@ size_t tool_write_cb(char *buffer, size_t sz, size_t nmemb, void *userdata)
 
   if(config->show_headers) {
     if(bytes > (size_t)CURL_MAX_HTTP_HEADER) {
-      warnf(config->global, "Header data size exceeds single call write "
-            "limit");
+      warnf(config->global, "Header data size exceeds write limit");
       return CURL_WRITEFUNC_ERROR;
     }
   }
   else {
     if(bytes > (size_t)CURL_MAX_WRITE_SIZE) {
-      warnf(config->global, "Data size exceeds single call write limit");
+      warnf(config->global, "Data size exceeds write limit");
       return CURL_WRITEFUNC_ERROR;
     }
   }

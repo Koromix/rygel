@@ -24,11 +24,11 @@
 
 /* Test suppressing the If-Modified-Since header */
 
-#include "test.h"
+#include "first.h"
 
 #include "memdebug.h"
 
-CURLcode test(char *URL)
+static CURLcode test_lib1593(char *URL)
 {
   struct curl_slist *header = NULL;
   long unmet;

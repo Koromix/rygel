@@ -62,7 +62,6 @@
 
  4. FTP
  4.1 HOST
- 4.4 Support CURLOPT_PREQUOTE for directories listings
  4.6 GSSAPI via Windows SSPI
  4.7 STAT for LIST without data connection
  4.8 Passive transfer could try other IP addresses
@@ -238,7 +237,7 @@
  See https://github.com/curl/curl/issues/4915 and lib1541.c
 
  The share interface offers CURL_LOCK_DATA_HSTS to have multiple easy handle
- share a HSTS cache, but this is not thread-safe.
+ share an HSTS cache, but this is not thread-safe.
 
 1.5 get rid of PATH_MAX
 
@@ -555,13 +554,6 @@
 
  https://datatracker.ietf.org/doc/html/rfc7151
 
-4.4 Support CURLOPT_PREQUOTE for directions listings
-
- The lack of support is mostly an oversight and requires the FTP state machine
- to get updated to get fixed.
-
- https://github.com/curl/curl/issues/8602
-
 4.6 GSSAPI via Windows SSPI
 
  In addition to currently supporting the SASL GSSAPI mechanism (Kerberos V5)
@@ -752,7 +744,7 @@
 
 11.1 File listing support
 
- Add support for listing the contents of a SMB share. The output should
+ Add support for listing the contents of an SMB share. The output should
  probably be the same as/similar to FTP.
 
 11.2 Honor file timestamps

@@ -202,7 +202,7 @@ sub logmsg {
         if(!$line) {
             next;
         }
-        if ($is_wsl) {
+        if($is_wsl) {
             # use \r\n for WSL shell
             $line =~ s/\r?\n$/\r\n/g;
         }
@@ -303,9 +303,9 @@ delete $ENV{'CURL_CA_BUNDLE'} if($ENV{'CURL_CA_BUNDLE'});
 
 # provide defaults from our config file for ENV vars not explicitly
 # set by the caller
-if (open(my $fd, "<", "config")) {
+if(open(my $fd, "<", "config")) {
     while(my $line = <$fd>) {
-        next if ($line =~ /^#/);
+        next if($line =~ /^#/);
         chomp $line;
         my ($name, $val) = split(/\s*:\s*/, $line, 2);
         $ENV{$name} = $val if(!$ENV{$name});
@@ -315,10 +315,10 @@ if (open(my $fd, "<", "config")) {
 
 # Check if we have nghttpx available and if it talks http/3
 my $nghttpx_h3 = 0;
-if (!$ENV{"NGHTTPX"}) {
+if(!$ENV{"NGHTTPX"}) {
     $ENV{"NGHTTPX"} = checktestcmd("nghttpx");
 }
-if ($ENV{"NGHTTPX"}) {
+if($ENV{"NGHTTPX"}) {
     my $cmd = "\"$ENV{'NGHTTPX'}\" -v 2>$dev_null";
     my $nghttpx_version=join(' ', `$cmd`);
     $nghttpx_h3 = $nghttpx_version =~ /nghttp3\//;
@@ -545,82 +545,71 @@ sub checksystemfeatures {
             $curl =~ s/^(.*)(libcurl.*)/$1/g || die "Failure determining curl binary version";
 
             $libcurl = $2;
-            if($curl =~ /linux|bsd|solaris/) {
-                # system support LD_PRELOAD; may be disabled later
-                $feature{"ld_preload"} = 1;
-            }
             if($curl =~ /win32|Windows|windows|mingw(32|64)/) {
                 # This is a Windows MinGW build or native build, we need to use
                 # Windows-style path.
                 $pwd = sys_native_current_path();
                 $feature{"win32"} = 1;
             }
-            if ($libcurl =~ /\sschannel\b/i) {
+            if($libcurl =~ /\sschannel\b/i) {
                 $feature{"Schannel"} = 1;
                 $feature{"SSLpinning"} = 1;
             }
-            elsif ($libcurl =~ /\sopenssl\b/i) {
+            elsif($libcurl =~ /\sopenssl\b/i) {
                 $feature{"OpenSSL"} = 1;
                 $feature{"SSLpinning"} = 1;
             }
-            elsif ($libcurl =~ /\sgnutls\b/i) {
+            elsif($libcurl =~ /\sgnutls\b/i) {
                 $feature{"GnuTLS"} = 1;
                 $feature{"SSLpinning"} = 1;
             }
-            elsif ($libcurl =~ /\srustls-ffi\b/i) {
+            elsif($libcurl =~ /\srustls-ffi\b/i) {
                 $feature{"rustls"} = 1;
             }
-            elsif ($libcurl =~ /\swolfssl\b/i) {
+            elsif($libcurl =~ /\swolfssl\b/i) {
                 $feature{"wolfssl"} = 1;
                 $feature{"SSLpinning"} = 1;
             }
-            elsif ($libcurl =~ /\sbearssl\b/i) {
-                $feature{"bearssl"} = 1;
-            }
-            elsif ($libcurl =~ /\ssecuretransport\b/i) {
-                $feature{"sectransp"} = 1;
-                $feature{"SSLpinning"} = 1;
-            }
-            elsif ($libcurl =~ /\s(BoringSSL|AWS-LC)\b/i) {
+            elsif($libcurl =~ /\s(BoringSSL|AWS-LC)\b/i) {
                 # OpenSSL compatible API
                 $feature{"OpenSSL"} = 1;
                 $feature{"SSLpinning"} = 1;
             }
-            elsif ($libcurl =~ /\slibressl\b/i) {
+            elsif($libcurl =~ /\slibressl\b/i) {
                 # OpenSSL compatible API
                 $feature{"OpenSSL"} = 1;
                 $feature{"SSLpinning"} = 1;
             }
-            elsif ($libcurl =~ /\squictls\b/i) {
+            elsif($libcurl =~ /\squictls\b/i) {
                 # OpenSSL compatible API
                 $feature{"OpenSSL"} = 1;
                 $feature{"SSLpinning"} = 1;
             }
-            elsif ($libcurl =~ /\smbedTLS\b/i) {
+            elsif($libcurl =~ /\smbedTLS\b/i) {
                 $feature{"mbedtls"} = 1;
                 $feature{"SSLpinning"} = 1;
             }
-            if ($libcurl =~ /ares/i) {
+            if($libcurl =~ /ares/i) {
                 $feature{"c-ares"} = 1;
                 $resolver="c-ares";
             }
-            if ($libcurl =~ /nghttp2/i) {
+            if($libcurl =~ /nghttp2/i) {
                 # nghttp2 supports h2c
                 $feature{"h2c"} = 1;
             }
-            if ($libcurl =~ /AppleIDN/) {
+            if($libcurl =~ /AppleIDN/) {
                 $feature{"AppleIDN"} = 1;
             }
-            if ($libcurl =~ /WinIDN/) {
+            if($libcurl =~ /WinIDN/) {
                 $feature{"WinIDN"} = 1;
             }
-            if ($libcurl =~ /libidn2/) {
+            if($libcurl =~ /libidn2/) {
                 $feature{"libidn2"} = 1;
             }
-            if ($libcurl =~ /libssh2/i) {
+            if($libcurl =~ /libssh2/i) {
                 $feature{"libssh2"} = 1;
             }
-            if ($libcurl =~ /libssh\/([0-9.]*)\//i) {
+            if($libcurl =~ /libssh\/([0-9.]*)\//i) {
                 $feature{"libssh"} = 1;
                 if($1 =~ /(\d+)\.(\d+).(\d+)/) {
                     my $v = $1 * 100 + $2 * 10 + $3;
@@ -630,7 +619,7 @@ sub checksystemfeatures {
                     }
                 }
             }
-            if ($libcurl =~ /wolfssh/i) {
+            if($libcurl =~ /wolfssh/i) {
                 $feature{"wolfssh"} = 1;
             }
         }
@@ -745,11 +734,11 @@ sub checksystemfeatures {
         logmsg "unable to get curl's version, further details are:\n";
         logmsg "issued command: \n";
         logmsg "$versioncmd \n";
-        if ($versretval == -1) {
+        if($versretval == -1) {
             logmsg "command failed with: \n";
             logmsg "$versnoexec \n";
         }
-        elsif ($versretval & 127) {
+        elsif($versretval & 127) {
             logmsg sprintf("command died with signal %d, and %s coredump.\n",
                            ($versretval & 127), ($versretval & 128)?"a":"no");
         }
@@ -773,9 +762,6 @@ sub checksystemfeatures {
         }
         close($conf);
     }
-
-    # allow this feature only if debug mode is disabled
-    $feature{"ld_preload"} = $feature{"ld_preload"} && !$feature{"Debug"};
 
     if($feature{"IPv6"}) {
         # client has IPv6 support
@@ -830,13 +816,15 @@ sub checksystemfeatures {
     }
     # 'socks' was once here but is now removed
 
-    $has_shared = `sh $CURLCONFIG --built-shared`;
-    chomp $has_shared;
-    $has_shared = $has_shared eq "yes";
-
-    if(!$feature{"TrackMemory"} && $torture) {
-        die "can't run torture tests since curl was built without ".
-            "TrackMemory feature (--enable-curldebug)";
+    if($torture) {
+        if(!$feature{"TrackMemory"}) {
+            die "can't run torture tests since curl was built without ".
+                "TrackMemory feature (--enable-curldebug)";
+        }
+        if($feature{"threaded-resolver"} && !$valgrind) {
+            die "can't run torture tests since curl was built with the ".
+                "threaded resolver, and we aren't running with valgrind";
+        }
     }
 
     my $hostname=join(' ', runclientoutput("hostname"));
@@ -871,23 +859,20 @@ sub checksystemfeatures {
         # Only show if not the default for now
         logmsg "* Jobs: $jobs\n";
     }
+    # Disable memory tracking when using threaded resolver
     if($feature{"TrackMemory"} && $feature{"threaded-resolver"}) {
         logmsg("*\n",
                "*** DISABLES TrackMemory (memory tracking) when using threaded resolver\n",
                "*\n");
+        $feature{"TrackMemory"} = 0;
     }
 
-    logmsg sprintf("* Env: %s%s%s%s%s", $valgrind?"Valgrind ":"",
+    logmsg sprintf("* Env: %s%s%s%s", $valgrind?"Valgrind ":"",
                    $run_duphandle?"test-duphandle ":"",
                    $run_event_based?"event-based ":"",
-                   $bundle?"bundle ":"",
                    $nghttpx_h3);
     logmsg sprintf("%s\n", $libtool?"Libtool ":"");
     logmsg ("* Seed: $randseed\n");
-
-    # Disable memory tracking when using threaded resolver
-    $feature{"TrackMemory"} = $feature{"TrackMemory"} && !$feature{"threaded-resolver"};
-
 }
 
 #######################################################################
@@ -956,7 +941,7 @@ sub timestampskippedevents {
 sub citest_starttestrun {
     if(azure_check_environment()) {
         $AZURE_RUN_ID = azure_create_test_run($ACURL);
-        logmsg "Azure Run ID: $AZURE_RUN_ID\n" if ($verbose);
+        logmsg "Azure Run ID: $AZURE_RUN_ID\n" if($verbose);
     }
     # Appveyor doesn't require anything here
 }
@@ -1136,25 +1121,25 @@ sub singletest_shouldrun {
             my $match;
             for my $k (@info_keywords) {
                 chomp $k;
-                if ($disabled_keywords{lc($k)}) {
-                    if ($k =~ /^feat:/) {
+                if($disabled_keywords{lc($k)}) {
+                    if($k =~ /^feat:/) {
                         $why = "disabled by feature";
                     }
                     else {
                         $why = "disabled by keyword";
                     }
                 }
-                elsif ($enabled_keywords{lc($k)}) {
+                elsif($enabled_keywords{lc($k)}) {
                     $match = 1;
                 }
-                if ($ignored_keywords{lc($k)}) {
+                if($ignored_keywords{lc($k)}) {
                     logmsg "Warning: test$testnum result is ignored due to $k\n";
                     $errorreturncode = 2;
                 }
             }
 
             if(!$why && !$match && %enabled_keywords) {
-                if (grep { /^feat:/ } keys %enabled_keywords) {
+                if(grep { /^feat:/ } keys %enabled_keywords) {
                     $why = "disabled by missing feature";
                 }
                 else {
@@ -1164,24 +1149,24 @@ sub singletest_shouldrun {
         }
     }
 
-    if (!$why && defined $custom_skip_reasons{test}{$testnum}) {
+    if(!$why && defined $custom_skip_reasons{test}{$testnum}) {
         $why = $custom_skip_reasons{test}{$testnum};
     }
 
-    if (!$why && defined $custom_skip_reasons{tool}) {
+    if(!$why && defined $custom_skip_reasons{tool}) {
         foreach my $tool (getpart("client", "tool")) {
             foreach my $tool_skip_pattern (keys %{$custom_skip_reasons{tool}}) {
-                if ($tool =~ /$tool_skip_pattern/i) {
+                if($tool =~ /$tool_skip_pattern/i) {
                     $why = $custom_skip_reasons{tool}{$tool_skip_pattern};
                 }
             }
         }
     }
 
-    if (!$why && defined $custom_skip_reasons{keyword}) {
+    if(!$why && defined $custom_skip_reasons{keyword}) {
         foreach my $keyword (@info_keywords) {
             foreach my $keyword_skip_pattern (keys %{$custom_skip_reasons{keyword}}) {
-                if ($keyword =~ /$keyword_skip_pattern/i) {
+                if($keyword =~ /$keyword_skip_pattern/i) {
                     $why = $custom_skip_reasons{keyword}{$keyword_skip_pattern};
                 }
             }
@@ -1240,7 +1225,7 @@ sub singletest_check {
     my ($runnerid, $testnum, $cmdres, $CURLOUT, $tool, $usedvalgrind)=@_;
 
     # Skip all the verification on torture tests
-    if ($torture) {
+    if($torture) {
         # timestamp test result verification end
         $timevrfyend{$testnum} = Time::HiRes::time();
         return -2;
@@ -1262,7 +1247,7 @@ sub singletest_check {
     my %hash = getpartattr("verify", "stdout");
 
     my $loadfile = $hash{'loadfile'};
-    if ($loadfile) {
+    if($loadfile) {
         open(my $tmp, "<", "$loadfile") || die "Cannot open file $loadfile: $!";
         @validstdout = <$tmp>;
         close($tmp);
@@ -1271,7 +1256,7 @@ sub singletest_check {
         s/\r\n/\n/g for @validstdout;
     }
 
-    if (@validstdout) {
+    if(@validstdout) {
         # verify redirected stdout
         my @actual = loadarray(stdoutfilename($logdir, $testnum));
 
@@ -1317,7 +1302,7 @@ sub singletest_check {
     }
 
     my @validstderr = getpart("verify", "stderr");
-    if (@validstderr) {
+    if(@validstderr) {
         # verify redirected stderr
         my @actual = loadarray(stderrfilename($logdir, $testnum));
 
@@ -1427,7 +1412,7 @@ sub singletest_check {
 
     my %replyattr = getpartattr("reply", "data");
     my @reply;
-    if (partexists("reply", "datacheck")) {
+    if(partexists("reply", "datacheck")) {
         for my $partsuffix (('', '1', '2', '3', '4')) {
             my @replycheckpart = getpart("reply", "datacheck".$partsuffix);
             if(@replycheckpart) {
@@ -1478,7 +1463,7 @@ sub singletest_check {
             normalize_text(\@out);
         }
         $res = compare($runnerid, $testnum, $testname, "data", \@out, \@reply);
-        if ($res) {
+        if($res) {
             return -1;
         }
         $ok .= "d";
@@ -1519,7 +1504,7 @@ sub singletest_check {
         }
 
         $res = compare($runnerid, $testnum, $testname, "upload", \@out, \@upload);
-        if ($res) {
+        if($res) {
             return -1;
         }
         $ok .= "u";
@@ -1583,7 +1568,7 @@ sub singletest_check {
             if(!$filename) {
                 logmsg " $testnum: IGNORED: section verify=>file$partsuffix ".
                        "has no name attribute\n";
-                if (runnerac_stopservers($runnerid)) {
+                if(runnerac_stopservers($runnerid)) {
                     logmsg "ERROR: runner $runnerid seems to have died\n";
                 } else {
 
@@ -1713,6 +1698,48 @@ sub singletest_check {
             else {
                 $ok .= "m";
             }
+            my @more=`$memanalyze -v "$logdir/$MEMDUMP"`;
+            my $allocs;
+            my $max = 0;
+            for(@more) {
+                if(/^Allocations: (\d+)/) {
+                    $allocs = $1;
+                }
+                elsif(/^Maximum allocated: (\d+)/) {
+                    $max = $1;
+                }
+            }
+            my @limits = getpart("verify", "limits");
+            my $lim_allocs = 1000; # high default values
+            my $lim_max = 1000000;
+            for(@limits) {
+                if(/^Allocations: (\d+)/i) {
+                    $lim_allocs = $1;
+                }
+                elsif(/^Maximum allocated: (\d+)/i) {
+                    $lim_max = $1;
+                }
+            }
+            logmsg "did $allocs allocations, $lim_allocs allowed\n"
+                if($verbose);
+
+            logmsg "allocated $max maximum, $lim_max allowed\n"
+                if($verbose);
+
+            if($allocs > $lim_allocs) {
+                logmsg "\n** TOO MANY ALLOCS\n";
+                logmsg "$lim_allocs allocations allowed, did $allocs\n";
+                # timestamp test result verification end
+                $timevrfyend{$testnum} = Time::HiRes::time();
+                return -1;
+            }
+            if($max > $lim_max) {
+                logmsg "\n** TOO MUCH TOTAL ALLOCATION\n";
+                logmsg "$lim_max maximum allocation allowed, did $max\n";
+                # timestamp test result verification end
+                $timevrfyend{$testnum} = Time::HiRes::time();
+                return -1;
+            }
         }
     }
     else {
@@ -1723,10 +1750,10 @@ sub singletest_check {
     if(@notexists) {
         # a list of directory entries that must not exist
         my $err;
-        while (@notexists) {
+        while(@notexists) {
             my $fname = shift @notexists;
             chomp $fname;
-            if (-e $fname) {
+            if(-e $fname) {
                 logmsg "Found '$fname' when not supposed to exist.\n";
                 $err++;
             }
@@ -2221,16 +2248,16 @@ my $number=0;
 my $fromnum=-1;
 my @testthis;
 while(@ARGV) {
-    if ($ARGV[0] eq "-v") {
+    if($ARGV[0] eq "-v") {
         # verbose output
         $verbose=1;
     }
-    elsif ($ARGV[0] eq "-c") {
+    elsif($ARGV[0] eq "-c") {
         # use this path to curl instead of default
         $DBGCURL=$CURL=$ARGV[1];
         shift @ARGV;
     }
-    elsif ($ARGV[0] eq "-vc") {
+    elsif($ARGV[0] eq "-vc") {
         # use this path to a curl used to verify servers
 
         # Particularly useful when you introduce a crashing bug somewhere in
@@ -2240,12 +2267,12 @@ while(@ARGV) {
         $VCURL=shell_quote($ARGV[1]);
         shift @ARGV;
     }
-    elsif ($ARGV[0] eq "-ac") {
+    elsif($ARGV[0] eq "-ac") {
         # use this curl only to talk to APIs (currently only CI test APIs)
         $ACURL=shell_quote($ARGV[1]);
         shift @ARGV;
     }
-    elsif ($ARGV[0] eq "-d") {
+    elsif($ARGV[0] eq "-d") {
         # have the servers display protocol output
         $debugprotocol=1;
     }
@@ -2267,7 +2294,7 @@ while(@ARGV) {
         my $exclude_file = $ARGV[0];
         open(my $fd, "<", $exclude_file) or die "Couldn't open '$exclude_file': $!";
         while(my $line = <$fd>) {
-            next if ($line =~ /^#/);
+            next if($line =~ /^#/);
             chomp $line;
             my ($type, $patterns, $skip_reason) = split(/\s*:\s*/, $line, 3);
 
@@ -2283,15 +2310,15 @@ while(@ARGV) {
         }
         close($fd);
     }
-    elsif ($ARGV[0] eq "-g") {
+    elsif($ARGV[0] eq "-g") {
         # run this test with gdb
         $gdbthis=1;
     }
-    elsif ($ARGV[0] eq "-gl") {
+    elsif($ARGV[0] eq "-gl") {
         # run this test with lldb
         $gdbthis=2;
     }
-    elsif ($ARGV[0] eq "-gw") {
+    elsif($ARGV[0] eq "-gw") {
         # run this test with windowed gdb
         $gdbthis=1;
         $gdbxwin=1;
@@ -2313,7 +2340,7 @@ while(@ARGV) {
         # disable the valgrind debuginfod functionality
         $no_debuginfod = 1;
     }
-    elsif ($ARGV[0] eq "-R") {
+    elsif($ARGV[0] eq "-R") {
         # execute in scrambled order
         $scrambleorder=1;
     }
@@ -2350,7 +2377,7 @@ while(@ARGV) {
     }
     elsif($ARGV[0] eq "-o") {
         shift @ARGV;
-        if ($ARGV[0] =~ /^(\w+)=([\w.:\/\[\]-]+)$/) {
+        if($ARGV[0] =~ /^(\w+)=([\w.:\/\[\]-]+)$/) {
             my ($variable, $value) = ($1, $2);
             eval "\$$variable='$value'" or die "Failed to set \$$variable to $value: $@";
         } else {
@@ -2505,15 +2532,6 @@ EOHELP
     shift @ARGV;
 }
 
-# Detect a test bundle build.
-# Do not look for 'tunits' and 'units' because not all configurations build them.
-if(-e $LIBDIR . "libtests" . exe_ext('TOOL') &&
-   -e $SRVDIR . "servers" . exe_ext('SRV')) {
-    # use test bundles
-    $bundle=1;
-    $ENV{'CURL_TEST_BUNDLES'} = 1;
-}
-
 delete $ENV{'DEBUGINFOD_URLS'} if($ENV{'DEBUGINFOD_URLS'} && $no_debuginfod);
 
 if(!$randseed) {
@@ -2552,7 +2570,7 @@ if($valgrind) {
         # (this happened in 2003, so we could probably don't need to care about
         # that old version any longer and just delete this check)
         runclient("valgrind --help 2>&1 | grep -- --tool >$dev_null 2>&1");
-        if (($? >> 8)) {
+        if(($? >> 8)) {
             $valgrind_tool="";
         }
         open(my $curlh, "<", "$CURL");
@@ -2579,7 +2597,7 @@ if($valgrind) {
     }
 }
 
-if ($gdbthis) {
+if($gdbthis) {
     # open the executable curl and read the first 4 bytes of it
     open(my $check, "<", "$CURL");
     my $c;
@@ -2679,7 +2697,7 @@ sub disabledtests {
                     # fail hard to make user notice
                     exit 1;
                 }
-                logmsg "DISABLED: test $n\n" if ($verbose);
+                logmsg "DISABLED: test $n\n" if($verbose);
             }
             else {
                 print STDERR "$file: rubbish content: $t\n";
@@ -2697,7 +2715,7 @@ sub disabledtests {
 # If 'all' tests are requested, find out all test numbers
 #
 
-if ( $TESTCASES eq "all") {
+if($TESTCASES eq "all") {
     # Get all commands and find out their test numbers
     opendir(DIR, $TESTDIR) || die "can't opendir $TESTDIR: $!";
     my @cmds = grep { /^test([0-9]+)$/ && -f "$TESTDIR/$_" } readdir(DIR);
@@ -2724,7 +2742,7 @@ if ( $TESTCASES eq "all") {
 else {
     my $verified="";
     for(split(" ", $TESTCASES)) {
-        if (-e "$TESTDIR/test$_") {
+        if(-e "$TESTDIR/test$_") {
             $verified.="$_ ";
         }
     }
@@ -2774,7 +2792,7 @@ sub displaylogcontent {
             $string =~ tr/\n//;
             for my $line (split(m/\n/, $string)) {
                 $line =~ s/\s*\!$//;
-                if ($truncate) {
+                if($truncate) {
                     push @tail, " $line\n";
                 } else {
                     logmsg " $line\n";
@@ -2926,7 +2944,7 @@ else {
     $retry_left = $retry;
 }
 
-while () {
+while() {
     # check the abort flag
     if($globalabort) {
         logmsg singletest_dumplogs();

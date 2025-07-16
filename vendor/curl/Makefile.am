@@ -32,7 +32,6 @@ CMAKE_DIST =                                    \
  CMake/curl-config.cmake.in                     \
  CMake/CurlSymbolHiding.cmake                   \
  CMake/CurlTests.c                              \
- CMake/FindBearSSL.cmake                        \
  CMake/FindBrotli.cmake                         \
  CMake/FindCares.cmake                          \
  CMake/FindGSS.cmake                            \
@@ -66,10 +65,7 @@ CMAKE_DIST =                                    \
  tests/cmake/test.c                             \
  tests/cmake/test.sh
 
-VC_DIST = projects/README.md                           \
- projects/build-openssl.bat                            \
- projects/checksrc.bat                                 \
- projects/generate.bat
+VC_DIST = projects/README.md projects/generate.bat
 
 WINBUILD_DIST = winbuild/README.md \
  winbuild/MakefileBuild.vc winbuild/Makefile.vc winbuild/makedebug.bat

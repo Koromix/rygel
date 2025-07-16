@@ -27,13 +27,16 @@
 #include "tool_formparse.h"
 #include "tool_paramhlp.h"
 #include "tool_main.h"
-#include <curlx.h>
-#include <memdebug.h> /* keep this as LAST include */
+#include "memdebug.h" /* keep this as LAST include */
 
-void config_init(struct OperationConfig *config)
+struct OperationConfig *config_alloc(struct GlobalConfig *global)
 {
-  memset(config, 0, sizeof(struct OperationConfig));
+  struct OperationConfig *config =
+    calloc(1, sizeof(struct OperationConfig));
+  if(!config)
+    return NULL;
 
+  config->global = global;
   config->use_httpget = FALSE;
   config->create_dirs = FALSE;
   config->maxredirs = DEFAULT_MAXREDIRS;
@@ -47,6 +50,7 @@ void config_init(struct OperationConfig *config)
   config->file_clobber_mode = CLOBBER_DEFAULT;
   config->upload_flags = CURLULFLAG_SEEN;
   curlx_dyn_init(&config->postdata, MAX_FILE2MEMORY);
+  return config;
 }
 
 static void free_config_fields(struct OperationConfig *config)

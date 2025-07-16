@@ -27,8 +27,6 @@
 #include <unistd.h>
 #endif
 
-#include <curlx.h>
-
 #include "tool_cfgable.h"
 #include "tool_doswin.h"
 #include "tool_msgs.h"
@@ -37,7 +35,7 @@
 #include "tool_operate.h"
 #include "tool_libinfo.h"
 
-#include <memdebug.h> /* keep this as LAST include */
+#include "memdebug.h" /* keep this as LAST include */
 
 static char *parse_filename(const char *ptr, size_t len);
 
@@ -101,7 +99,7 @@ size_t tool_header_cb(char *ptr, size_t size, size_t nmemb, void *userdata)
 
 #ifdef DEBUGBUILD
   if(size * nmemb > (size_t)CURL_MAX_HTTP_HEADER) {
-    warnf(per->config->global, "Header data exceeds single call write limit");
+    warnf(per->config->global, "Header data exceeds write limit");
     return CURL_WRITEFUNC_ERROR;
   }
 #endif
@@ -248,7 +246,7 @@ size_t tool_header_cb(char *ptr, size_t size, size_t nmemb, void *userdata)
       if(hdrcbdata->honor_cd_filename &&
          hdrcbdata->config->show_headers) {
         /* still awaiting the Content-Disposition header, store the header in
-           memory. Since it is not zero terminated, we need an extra dance. */
+           memory. Since it is not null-terminated, we need an extra dance. */
         char *clone = aprintf("%.*s", (int)cb, str);
         if(clone) {
           struct curl_slist *old = hdrcbdata->headlist;
@@ -440,7 +438,7 @@ void write_linked_location(CURL *curl, const char *location, size_t loclen,
   if(!u)
     goto locout;
 
-  /* Create a NUL-terminated and whitespace-stripped copy of Location: */
+  /* Create a null-terminated and whitespace-stripped copy of Location: */
   copyloc = malloc(llen + 1);
   if(!copyloc)
     goto locout;

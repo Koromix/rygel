@@ -317,6 +317,8 @@ typedef enum {
 #define ARG_TYPEMASK 0x03
 #define ARGTYPE(x) ((x) & ARG_TYPEMASK)
 
+#define ARG_DEPR 0x10 /* deprecated option */
+#define ARG_CLEAR 0x20 /* clear cmdline argument */
 #define ARG_TLS 0x40 /* requires TLS support */
 #define ARG_NO 0x80 /* set if the option is documented as --no-* */
 
@@ -347,7 +349,6 @@ typedef enum {
   PARAM_NEXT_OPERATION,
   PARAM_NO_PREFIX,
   PARAM_NUMBER_TOO_LARGE,
-  PARAM_NO_NOT_BOOLEAN,
   PARAM_CONTDISP_RESUME_FROM, /* --continue-at and --remote-header-name */
   PARAM_READ_ERROR,
   PARAM_EXPAND_ERROR, /* --expand problem */
@@ -363,11 +364,8 @@ const struct LongShort *findlongopt(const char *opt);
 const struct LongShort *findshortopt(char letter);
 
 ParameterError getparameter(const char *flag, const char *nextarg,
-                            argv_item_t cleararg1,
-                            argv_item_t cleararg2,
                             bool *usedarg,
-                            struct GlobalConfig *global,
-                            struct OperationConfig *operation);
+                            struct OperationConfig *config);
 
 #ifdef UNITTESTS
 void parse_cert_parameter(const char *cert_parameter,
@@ -375,7 +373,7 @@ void parse_cert_parameter(const char *cert_parameter,
                           char **passphrase);
 #endif
 
-ParameterError parse_args(struct GlobalConfig *config, int argc,
+ParameterError parse_args(struct GlobalConfig *global, int argc,
                           argv_item_t argv[]);
 
 #if defined(UNICODE) && defined(_WIN32) && !defined(UNDER_CE)

@@ -23,16 +23,13 @@
  ***************************************************************************/
 #include "tool_setup.h"
 
-#include <curlx.h>
-
 #include "tool_cfgable.h"
 #include "tool_msgs.h"
-#include "tool_binmode.h"
 #include "tool_getparam.h"
 #include "tool_paramhlp.h"
 #include "tool_formparse.h"
 
-#include <memdebug.h> /* keep this as LAST include */
+#include "memdebug.h" /* keep this as LAST include */
 
 /* tool_mime functions. */
 static struct tool_mime *tool_mime_new(struct tool_mime *parent,
@@ -133,7 +130,7 @@ static struct tool_mime *tool_mime_new_filedata(struct tool_mime *parent,
     curl_off_t origin;
     struct_stat sbuf;
 
-    CURL_SET_BINMODE(stdin);
+    CURLX_SET_BINMODE(stdin);
     origin = ftell(stdin);
     /* If stdin is a regular file, do not buffer data but read it
        when needed. */
@@ -226,9 +223,9 @@ size_t tool_mime_stdin_read(char *buffer,
       nitems = fread(buffer, 1, nitems, stdin);
       if(ferror(stdin)) {
         /* Show error only once. */
-        if(sip->config) {
-          warnf(sip->config, "stdin: %s", strerror(errno));
-          sip->config = NULL;
+        if(sip->global) {
+          warnf(sip->global, "stdin: %s", strerror(errno));
+          sip->global = NULL;
         }
         return CURL_READFUNC_ABORT;
       }
@@ -826,7 +823,7 @@ int formparse(struct OperationConfig *config,
           goto fail;
         part->headers = headers;
         headers = NULL;
-        part->config = config->global;
+        part->global = config->global;
         if(res == CURLE_READ_ERROR) {
             /* An error occurred while reading stdin: if read has started,
                issue the error now. Else, delay it until processed by
@@ -862,7 +859,7 @@ int formparse(struct OperationConfig *config,
           goto fail;
         part->headers = headers;
         headers = NULL;
-        part->config = config->global;
+        part->global = config->global;
         if(res == CURLE_READ_ERROR) {
             /* An error occurred while reading stdin: if read has started,
                issue the error now. Else, delay it until processed by

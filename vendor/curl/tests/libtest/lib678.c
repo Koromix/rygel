@@ -21,10 +21,8 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "test.h"
+#include "first.h"
 
-#include "testutil.h"
-#include "warnless.h"
 #include "memdebug.h"
 
 static int loadfile(const char *filename, void **filedata, size_t *filesize)
@@ -97,7 +95,7 @@ static CURLcode test_cert_blob(const char *url, const char *cafile)
   return code;
 }
 
-CURLcode test(char *URL)
+static CURLcode test_lib678(char *URL)
 {
   CURLcode res = CURLE_OK;
   curl_global_init(CURL_GLOBAL_DEFAULT);

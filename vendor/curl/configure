@@ -952,16 +952,10 @@ HAVE_LIBZ_FALSE
 HAVE_LIBZ_TRUE
 HAVE_LIBZ
 PKGCONFIG
-USE_TEST_BUNDLES_FALSE
-USE_TEST_BUNDLES_TRUE
 USE_UNITY_FALSE
 USE_UNITY_TRUE
 HAVE_WINDRES_FALSE
 HAVE_WINDRES_TRUE
-DOING_CYGWIN_FALSE
-DOING_CYGWIN_TRUE
-ENABLE_SERVER_DEBUG_FALSE
-ENABLE_SERVER_DEBUG_TRUE
 BUILD_UNITTESTS_FALSE
 BUILD_UNITTESTS_TRUE
 CURL_WERROR_FALSE
@@ -1140,14 +1134,12 @@ enable_ssls_export
 enable_code_coverage
 enable_dependency_tracking
 with_schannel
-with_secure_transport
 with_amissl
 with_ssl
 with_openssl
 with_gnutls
 with_mbedtls
 with_wolfssl
-with_bearssl
 with_rustls
 with_test_nghttpx
 with_test_caddy
@@ -1163,9 +1155,7 @@ with_aix_soname
 with_gnu_ld
 with_sysroot
 enable_libtool_lock
-enable_server_debug
 enable_unity
-enable_test_bundles
 enable_http
 enable_ftp
 enable_file
@@ -1190,8 +1180,6 @@ enable_libgcc
 with_zlib
 with_brotli
 with_zstd
-with_ldap_lib
-with_lber_lib
 enable_ipv6
 with_gssapi_includes
 with_gssapi_libs
@@ -1210,6 +1198,9 @@ with_libmetalink
 with_libssh2
 with_libssh
 with_wolfssh
+with_ldap_lib
+with_lber_lib
+with_ldap
 with_librtmp
 enable_versioned_symbols
 enable_windows_unicode
@@ -1929,12 +1920,8 @@ Optional Features:
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
-  --enable-server-debug   Enable debug options for test servers
-  --disable-server-debug  Disable debug options for test servers
   --enable-unity          Enable unity mode
   --disable-unity         Disable unity (default)
-  --enable-test-bundles   Enable test bundles
-  --disable-test-bundles  Disable test bundles (default)
   --enable-http           Enable HTTP support
   --disable-http          Disable HTTP support
   --enable-ftp            Enable FTP support
@@ -2066,7 +2053,6 @@ Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-schannel         enable Windows native SSL/TLS
-  --with-secure-transport enable Apple OS native SSL/TLS
   --with-amissl           enable Amiga native SSL/TLS (AmiSSL)
   --with-ssl=PATH         old version of --with-openssl
   --without-ssl           build without any TLS library
@@ -2080,8 +2066,6 @@ Optional Packages:
                           installation root
   --with-wolfssl=PATH     where to look for wolfSSL, PATH points to the
                           installation root (default: system lib default)
-  --with-bearssl=PATH     where to look for BearSSL, PATH points to the
-                          installation root
   --with-rustls=PATH      where to look for Rustls, PATH points to the
                           installation root
   --with-test-nghttpx=PATH
@@ -2109,8 +2093,6 @@ Optional Packages:
                           PKG_CONFIG_PATH environment variable instead of
                           using this option
   --without-zstd          disable libzstd
-  --with-ldap-lib=libname Specify name of ldap lib file
-  --with-lber-lib=libname Specify name of lber lib file
   --with-gssapi-includes=DIR
                           Specify location of GSS-API headers
   --with-gssapi-libs=DIR  Specify location of GSS-API libs
@@ -2155,6 +2137,12 @@ Optional Packages:
                           PKG_CONFIG_PATH environment variable instead of
                           using this option
   --with-wolfssh          enable wolfssh
+  --with-ldap-lib=libname Specify name of ldap lib file
+  --with-lber-lib=libname Specify name of lber lib file
+  --with-ldap=PATH        Where to look for LDAP, PATH points to the LDAP
+                          installation; when possible, set the PKG_CONFIG_PATH
+                          environment variable instead of using this option
+  --without-ldap          disable LDAP
   --with-librtmp=PATH     Where to look for librtmp, PATH points to the
                           LIBRTMP installation; when possible, set the
                           PKG_CONFIG_PATH environment variable instead of
@@ -6703,7 +6691,7 @@ printf "%s\n" "$CURLVERSION" >&6; }
 VERSIONNUM=`$SED -ne 's/^#define LIBCURL_VERSION_NUM 0x\([0-9A-Fa-f]*\).*/\1/p' ${srcdir}/include/curl/curlver.h`
 
 
-    curl_ssl_msg="no      (--with-{openssl,gnutls,mbedtls,wolfssl,schannel,secure-transport,amissl,bearssl,rustls} )"
+    curl_ssl_msg="no      (--with-{openssl,gnutls,mbedtls,wolfssl,schannel,amissl,rustls} )"
     curl_ssh_msg="no      (--with-{libssh,libssh2})"
    curl_zlib_msg="no      (--with-zlib)"
  curl_brotli_msg="no      (--with-brotli)"
@@ -6760,18 +6748,6 @@ if test ${with_schannel+y}
 then :
   withval=$with_schannel; OPT_SCHANNEL=$withval
   TLSCHOICE="schannel"
-fi
-
-
-OPT_SECURETRANSPORT=no
-
-# Check whether --with-secure-transport was given.
-if test ${with_secure_transport+y}
-then :
-  withval=$with_secure_transport;
-  OPT_SECURETRANSPORT=$withval
-  TLSCHOICE="${TLSCHOICE:+$TLSCHOICE, }Secure-Transport"
-
 fi
 
 
@@ -6855,20 +6831,6 @@ then :
   OPT_WOLFSSL=$withval
   if test X"$withval" != Xno; then
     TLSCHOICE="${TLSCHOICE:+$TLSCHOICE, }wolfSSL"
-  fi
-
-fi
-
-
-OPT_BEARSSL=no
-
-# Check whether --with-bearssl was given.
-if test ${with_bearssl+y}
-then :
-  withval=$with_bearssl;
-  OPT_BEARSSL=$withval
-  if test X"$withval" != Xno; then
-    TLSCHOICE="${TLSCHOICE:+$TLSCHOICE, }BearSSL"
   fi
 
 fi
@@ -7289,13 +7251,11 @@ if test -z "$TLSCHOICE"; then
 Select from these:
 
   --with-amissl
-  --with-bearssl
   --with-gnutls
   --with-mbedtls
   --with-openssl (also works for BoringSSL and LibreSSL)
   --with-rustls
   --with-schannel
-  --with-secure-transport
   --with-wolfssl
 " "$LINENO" 5
   fi
@@ -12036,7 +11996,7 @@ fi
 if test "x$xc_lt_want_enable_shared" = 'xyes' &&
   test "x$xc_lt_want_enable_static" = 'xyes'; then
   case $host_os in # (
-    pw32* | cegcc* | os2* | aix*)
+    cegcc* | os2* | aix*)
       xc_lt_want_enable_static='no'
       ;;
   esac
@@ -16845,7 +16805,7 @@ elif test "x$allow_undefined_flag" = 'xunsupported'; then
   xc_lt_shlib_use_no_undefined='yes'
 fi
 case $host_os in # (
-  cygwin* | mingw* | pw32* | cegcc* | os2* | aix*)
+  cygwin* | mingw* | cegcc* | os2* | aix*)
     xc_lt_shlib_use_no_undefined='yes'
     ;;
 esac
@@ -21557,36 +21517,10 @@ fi
 # In order to detect support of sendmmsg() and accept4(), we need to escape the POSIX
 # jail by defining _GNU_SOURCE or <sys/socket.h> will not expose it.
 case $host_os in
-  linux*|cygwin*|msys*)
+  *linux*|cygwin*|msys*)
     CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
     ;;
 esac
-
-OPT_SERVER_DEBUG="default"
-# Check whether --enable-server-debug was given.
-if test ${enable_server_debug+y}
-then :
-  enableval=$enable_server_debug; OPT_SERVER_DEBUG=$enableval
-fi
-
-case "$OPT_SERVER_DEBUG" in
-  no)
-        want_server_debug="no"
-    ;;
-  *)
-        want_server_debug="no"
-    ;;
-esac
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $want_server_debug" >&5
-printf "%s\n" "$want_server_debug" >&6; }
- if test x$want_server_debug = xyes; then
-  ENABLE_SERVER_DEBUG_TRUE=
-  ENABLE_SERVER_DEBUG_FALSE='#'
-else
-  ENABLE_SERVER_DEBUG_TRUE='#'
-  ENABLE_SERVER_DEBUG_FALSE=
-fi
-
 
 
 
@@ -21742,14 +21676,6 @@ curl_cv_cygwin='no'
 case $host_os in
   cygwin*|msys*) curl_cv_cygwin='yes';;
 esac
- if test "x$curl_cv_cygwin" = xyes; then
-  DOING_CYGWIN_TRUE=
-  DOING_CYGWIN_FALSE='#'
-else
-  DOING_CYGWIN_TRUE='#'
-  DOING_CYGWIN_FALSE=
-fi
-
 
  if test "$curl_cv_native_windows" = "yes" && test -n "${RC}"; then
   HAVE_WINDRES_TRUE=
@@ -21798,40 +21724,6 @@ fi
 else
   USE_UNITY_TRUE='#'
   USE_UNITY_FALSE=
-fi
-
-
-
-want_test_bundles='no'
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to build tests into single-binary bundles" >&5
-printf %s "checking whether to build tests into single-binary bundles... " >&6; }
-# Check whether --enable-test-bundles was given.
-if test ${enable_test_bundles+y}
-then :
-  enableval=$enable_test_bundles;  case "$enableval" in
-  yes)
-    want_test_bundles='yes'
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
-    ;;
-  *)
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-    ;;
-  esac
-else $as_nop
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-
-fi
-
-
- if test "$want_test_bundles" = 'yes'; then
-  USE_TEST_BUNDLES_TRUE=
-  USE_TEST_BUNDLES_FALSE='#'
-else
-  USE_TEST_BUNDLES_TRUE='#'
-  USE_TEST_BUNDLES_FALSE=
 fi
 
 
@@ -22744,6 +22636,9 @@ fi
 if test "$HAVE_GETHOSTBYNAME" != "1" -o "$curl_cv_winuwp" = "yes"; then
   if test "$curl_cv_native_windows" = "yes"; then
         winsock_LIB="-lws2_32"
+    if test "$curl_cv_winuwp" != "yes"; then
+      winsock_LIB="$winsock_LIB -liphlpapi"
+    fi
     if test ! -z "$winsock_LIB"; then
       my_ac_save_LIBS=$LIBS
       LIBS="$winsock_LIB $LIBS"
@@ -23108,12 +23003,6 @@ then :
   printf "%s\n" "#define HAVE_SYS_TYPES_H 1" >>confdefs.h
 
 fi
-ac_fn_c_check_header_compile "$LINENO" "sys/time.h" "ac_cv_header_sys_time_h" "$ac_includes_default"
-if test "x$ac_cv_header_sys_time_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_TIME_H 1" >>confdefs.h
-
-fi
 
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for monotonic clock_gettime" >&5
 printf %s "checking for monotonic clock_gettime... " >&6; }
@@ -23126,7 +23015,7 @@ printf %s "checking for monotonic clock_gettime... " >&6; }
       #ifdef HAVE_SYS_TYPES_H
       #include <sys/types.h>
       #endif
-      #ifdef HAVE_SYS_TIME_H
+      #ifndef _WIN32
       #include <sys/time.h>
       #endif
       #include <time.h>
@@ -23183,7 +23072,7 @@ printf %s "checking for clock_gettime in libraries... " >&6; }
             #ifdef HAVE_SYS_TYPES_H
             #include <sys/types.h>
             #endif
-            #ifdef HAVE_SYS_TIME_H
+            #ifndef _WIN32
             #include <sys/time.h>
             #endif
             #include <time.h>
@@ -23264,7 +23153,7 @@ else $as_nop
           #ifdef HAVE_SYS_TYPES_H
           #include <sys/types.h>
           #endif
-          #ifdef HAVE_SYS_TIME_H
+          #ifndef _WIN32
           #include <sys/time.h>
           #endif
           #include <time.h>
@@ -23321,7 +23210,7 @@ else $as_nop
           #ifdef HAVE_SYS_TYPES_H
           #include <sys/types.h>
           #endif
-          #ifdef HAVE_SYS_TIME_H
+          #ifndef _WIN32
           #include <sys/time.h>
           #endif
           #include <time.h>
@@ -23382,12 +23271,6 @@ then :
   printf "%s\n" "#define HAVE_SYS_TYPES_H 1" >>confdefs.h
 
 fi
-ac_fn_c_check_header_compile "$LINENO" "sys/time.h" "ac_cv_header_sys_time_h" "$ac_includes_default"
-if test "x$ac_cv_header_sys_time_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_TIME_H 1" >>confdefs.h
-
-fi
 
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for raw monotonic clock_gettime" >&5
 printf %s "checking for raw monotonic clock_gettime... " >&6; }
@@ -23399,7 +23282,7 @@ printf %s "checking for raw monotonic clock_gettime... " >&6; }
       #ifdef HAVE_SYS_TYPES_H
       #include <sys/types.h>
       #endif
-      #ifdef HAVE_SYS_TIME_H
+      #ifndef _WIN32
       #include <sys/time.h>
       #endif
       #include <time.h>
@@ -23933,9 +23816,152 @@ printf "%s\n" "found" >&6; }
         LD_BROTLI=`$PKGCONFIG --libs-only-L libbrotlidec`
         CPP_BROTLI=`$PKGCONFIG --cflags-only-I libbrotlidec`
         version=`$PKGCONFIG --modversion libbrotlidec`
-        DIR_BROTLI=`echo $LD_BROTLI | $SED -e 's/^-L//'`
       fi
 
+
+  if test -n "$PKG_CONFIG"; then
+    PKGCONFIG="$PKG_CONFIG"
+  else
+    if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
+set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_PKGCONFIG+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  case $PKGCONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKGCONFIG="$PKGCONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_PKGCONFIG="$as_dir$ac_word$ac_exec_ext"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PKGCONFIG=$ac_cv_path_PKGCONFIG
+if test -n "$PKGCONFIG"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $PKGCONFIG" >&5
+printf "%s\n" "$PKGCONFIG" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_path_PKGCONFIG"; then
+  ac_pt_PKGCONFIG=$PKGCONFIG
+  # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_ac_pt_PKGCONFIG+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  case $ac_pt_PKGCONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_PKGCONFIG="$ac_pt_PKGCONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_PKGCONFIG="$as_dir$ac_word$ac_exec_ext"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_PKGCONFIG=$ac_cv_path_ac_pt_PKGCONFIG
+if test -n "$ac_pt_PKGCONFIG"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKGCONFIG" >&5
+printf "%s\n" "$ac_pt_PKGCONFIG" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+  if test "x$ac_pt_PKGCONFIG" = x; then
+    PKGCONFIG="no"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+printf "%s\n" "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    PKGCONFIG=$ac_pt_PKGCONFIG
+  fi
+else
+  PKGCONFIG="$ac_cv_path_PKGCONFIG"
+fi
+
+  fi
+
+  if test "x$PKGCONFIG" != "xno"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for libbrotlicommon options with pkg-config" >&5
+printf %s "checking for libbrotlicommon options with pkg-config... " >&6; }
+        itexists=`
+  if test -n ""; then
+    PKG_CONFIG_LIBDIR=""
+    export PKG_CONFIG_LIBDIR
+  fi
+       $PKGCONFIG --exists libbrotlicommon >/dev/null 2>&1 && echo 1`
+
+    if test -z "$itexists"; then
+                  PKGCONFIG="no"
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+    else
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: found" >&5
+printf "%s\n" "found" >&6; }
+    fi
+  fi
+
+
+      if test "$PKGCONFIG" != "no"; then
+        LIB_BROTLI="$LIB_BROTLI `$PKGCONFIG --libs-only-l libbrotlicommon`"
+        LD_BROTLI="$LD_BROTLI `$PKGCONFIG --libs-only-L libbrotlicommon`"
+        CPP_BROTLI="$CPP_BROTLI `$PKGCONFIG --cflags-only-I libbrotlicommon`"
+      fi
+
+      DIR_BROTLI=`echo $LD_BROTLI | $SED -e 's/^-L//'`
       ;;
     off)
             ;;
@@ -23945,7 +23971,7 @@ printf "%s\n" "found" >&6; }
   esac
 
     if test -n "$PREFIX_BROTLI"; then
-    LIB_BROTLI="-lbrotlidec"
+    LIB_BROTLI="-lbrotlidec -lbrotlicommon"
     LD_BROTLI=-L${PREFIX_BROTLI}/lib$libsuff
     CPP_BROTLI=-I${PREFIX_BROTLI}/include
     DIR_BROTLI=${PREFIX_BROTLI}/lib$libsuff
@@ -24303,577 +24329,6 @@ printf "%s\n" "$as_me: Added $DIR_ZSTD to CURL_LIBRARY_PATH" >&6;}
     CPPFLAGS=$CLEANCPPFLAGS
     LIBS=$CLEANLIBS
   fi
-fi
-
-
-LDAPLIBNAME=""
-
-# Check whether --with-ldap-lib was given.
-if test ${with_ldap_lib+y}
-then :
-  withval=$with_ldap_lib; LDAPLIBNAME="$withval"
-fi
-
-
-LBERLIBNAME=""
-
-# Check whether --with-lber-lib was given.
-if test ${with_lber_lib+y}
-then :
-  withval=$with_lber_lib; LBERLIBNAME="$withval"
-fi
-
-
-if test x$CURL_DISABLE_LDAP != x1; then
-
-
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for lber.h" >&5
-printf %s "checking for lber.h... " >&6; }
-if test ${curl_cv_header_lber_h+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-        #undef inline
-        #ifdef _WIN32
-        #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-        #endif
-        #include <windows.h>
-        #else
-        #ifdef HAVE_SYS_TYPES_H
-        #include <sys/types.h>
-        #endif
-        #endif
-        #ifndef NULL
-        #define NULL (void *)0
-        #endif
-        #include <lber.h>
-
-int main(void)
-{
-
-        BerValue *bvp = NULL;
-        BerElement *bep = ber_init(bvp);
-        ber_free(bep, 1);
-
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-
-      curl_cv_header_lber_h="yes"
-
-else $as_nop
-
-      curl_cv_header_lber_h="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $curl_cv_header_lber_h" >&5
-printf "%s\n" "$curl_cv_header_lber_h" >&6; }
-  if test "$curl_cv_header_lber_h" = "yes"; then
-
-printf "%s\n" "#define HAVE_LBER_H 1" >>confdefs.h
-
-    #
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-        #undef inline
-        #ifdef _WIN32
-        #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-        #endif
-        #include <windows.h>
-        #else
-        #ifdef HAVE_SYS_TYPES_H
-        #include <sys/types.h>
-        #endif
-        #endif
-        #ifndef NULL
-        #define NULL (void *)0
-        #endif
-        #ifndef LDAP_DEPRECATED
-        #define LDAP_DEPRECATED 1
-        #endif
-        #include <ldap.h>
-
-int main(void)
-{
-
-        BerValue *bvp = NULL;
-        BerElement *bep = ber_init(bvp);
-        ber_free(bep, 1);
-
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-
-      curl_cv_need_header_lber_h="no"
-
-else $as_nop
-
-      curl_cv_need_header_lber_h="yes"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-    #
-    case "$curl_cv_need_header_lber_h" in
-      yes)
-
-printf "%s\n" "#define NEED_LBER_H 1" >>confdefs.h
-
-        ;;
-    esac
-  fi
-
-
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ldap.h" >&5
-printf %s "checking for ldap.h... " >&6; }
-if test ${curl_cv_header_ldap_h+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-        #undef inline
-        #ifdef _WIN32
-        #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-        #endif
-        #include <windows.h>
-        #else
-        #ifdef HAVE_SYS_TYPES_H
-        #include <sys/types.h>
-        #endif
-        #endif
-        #ifndef LDAP_DEPRECATED
-        #define LDAP_DEPRECATED 1
-        #endif
-        #ifdef NEED_LBER_H
-        #include <lber.h>
-        #endif
-        #include <ldap.h>
-
-int main(void)
-{
-
-        LDAP *ldp = ldap_init("0.0.0.0", LDAP_PORT);
-        int res = ldap_unbind(ldp);
-        (void)res;
-
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-
-      curl_cv_header_ldap_h="yes"
-
-else $as_nop
-
-      curl_cv_header_ldap_h="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $curl_cv_header_ldap_h" >&5
-printf "%s\n" "$curl_cv_header_ldap_h" >&6; }
-  case "$curl_cv_header_ldap_h" in
-    yes)
-
-printf "%s\n" "#define HAVE_LDAP_H 1" >>confdefs.h
-
-      ;;
-  esac
-
-
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ldap_ssl.h" >&5
-printf %s "checking for ldap_ssl.h... " >&6; }
-if test ${curl_cv_header_ldap_ssl_h+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-        #undef inline
-        #ifdef _WIN32
-        #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-        #endif
-        #include <windows.h>
-        #else
-        #ifdef HAVE_SYS_TYPES_H
-        #include <sys/types.h>
-        #endif
-        #endif
-        #ifndef LDAP_DEPRECATED
-        #define LDAP_DEPRECATED 1
-        #endif
-        #ifdef NEED_LBER_H
-        #include <lber.h>
-        #endif
-        #ifdef HAVE_LDAP_H
-        #include <ldap.h>
-        #endif
-        #include <ldap_ssl.h>
-
-int main(void)
-{
-
-        LDAP *ldp = ldapssl_init("0.0.0.0", LDAPS_PORT, 1);
-        (void)ldp;
-
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-
-      curl_cv_header_ldap_ssl_h="yes"
-
-else $as_nop
-
-      curl_cv_header_ldap_ssl_h="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $curl_cv_header_ldap_ssl_h" >&5
-printf "%s\n" "$curl_cv_header_ldap_ssl_h" >&6; }
-  case "$curl_cv_header_ldap_ssl_h" in
-    yes)
-
-printf "%s\n" "#define HAVE_LDAP_SSL_H 1" >>confdefs.h
-
-      ;;
-  esac
-
-
-  if test -z "$LDAPLIBNAME"; then
-    if test "$curl_cv_native_windows" = "yes" -a "$curl_cv_winuwp" != "yes"; then
-            LDAPLIBNAME="wldap32"
-      LBERLIBNAME="no"
-    fi
-  fi
-
-  if test "$LDAPLIBNAME"; then
-    as_ac_Lib=`printf "%s\n" "ac_cv_lib_"$LDAPLIBNAME"""_ldap_init" | $as_tr_sh`
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ldap_init in -l\"$LDAPLIBNAME\"" >&5
-printf %s "checking for ldap_init in -l\"$LDAPLIBNAME\"... " >&6; }
-if eval test \${$as_ac_Lib+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-l"$LDAPLIBNAME"  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#ifdef __cplusplus
-extern "C"
-#endif
-char ldap_init ();
-int main(void)
-{
-return ldap_init ();
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  eval "$as_ac_Lib=yes"
-else $as_nop
-  eval "$as_ac_Lib=no"
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-eval ac_res=\$$as_ac_Lib
-	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
-printf "%s\n" "$ac_res" >&6; }
-if eval test \"x\$"$as_ac_Lib"\" = x"yes"
-then :
-  cat >>confdefs.h <<_ACEOF
-#define `printf "%s\n" "HAVE_LIB"$LDAPLIBNAME"" | $as_tr_cpp` 1
-_ACEOF
-
-  LIBS="-l"$LDAPLIBNAME" $LIBS"
-
-else $as_nop
-
-      if test -n "$ldap_askedfor"; then
-        as_fn_error $? "couldn't detect the LDAP libraries" "$LINENO" 5
-      fi
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: \"$LDAPLIBNAME\" is not an LDAP library: LDAP disabled" >&5
-printf "%s\n" "$as_me: WARNING: \"$LDAPLIBNAME\" is not an LDAP library: LDAP disabled" >&2;}
-
-printf "%s\n" "#define CURL_DISABLE_LDAP 1" >>confdefs.h
-
-      CURL_DISABLE_LDAP=1
-
-printf "%s\n" "#define CURL_DISABLE_LDAPS 1" >>confdefs.h
-
-      CURL_DISABLE_LDAPS=1
-
-
-fi
-
-  else
-
-    #
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for LDAP libraries" >&5
-printf %s "checking for LDAP libraries... " >&6; }
-  #
-  u_libs=""
-  #
-
-  #
-  curl_cv_save_LIBS="$LIBS"
-  curl_cv_ldap_LIBS="unknown"
-  #
-  for x_nlibs in '' "$u_libs" \
-    '-lldap' \
-    '-lldap -llber' \
-    '-llber -lldap' \
-    '-lldapssl -lldapx -lldapsdk' \
-    '-lldapsdk -lldapx -lldapssl' \
-    '-lldap -llber -lssl -lcrypto'; do
-
-    if test "$curl_cv_ldap_LIBS" = "unknown"; then
-      if test -z "$x_nlibs"; then
-        LIBS="$curl_cv_save_LIBS"
-      else
-        LIBS="$x_nlibs $curl_cv_save_LIBS"
-      fi
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-          #undef inline
-          #ifdef _WIN32
-          #ifndef WIN32_LEAN_AND_MEAN
-          #define WIN32_LEAN_AND_MEAN
-          #endif
-          #include <windows.h>
-          #else
-          #ifdef HAVE_SYS_TYPES_H
-          #include <sys/types.h>
-          #endif
-          #endif
-          #ifndef NULL
-          #define NULL (void *)0
-          #endif
-          #ifndef LDAP_DEPRECATED
-          #define LDAP_DEPRECATED 1
-          #endif
-          #ifdef NEED_LBER_H
-          #include <lber.h>
-          #endif
-          #ifdef HAVE_LDAP_H
-          #include <ldap.h>
-          #endif
-
-int main(void)
-{
-
-          BerValue *bvp = NULL;
-          BerElement *bep = ber_init(bvp);
-          LDAP *ldp = ldap_init("0.0.0.0", LDAP_PORT);
-          int res = ldap_unbind(ldp);
-          ber_free(bep, 1);
-          (void)res;
-
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-
-        curl_cv_ldap_LIBS="$x_nlibs"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-    fi
-  done
-  #
-  LIBS="$curl_cv_save_LIBS"
-  #
-  case X-"$curl_cv_ldap_LIBS" in
-    X-unknown)
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: cannot find LDAP libraries" >&5
-printf "%s\n" "cannot find LDAP libraries" >&6; }
-      ;;
-    X-)
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no additional lib required" >&5
-printf "%s\n" "no additional lib required" >&6; }
-      ;;
-    *)
-      if test -z "$curl_cv_save_LIBS"; then
-        LIBS="$curl_cv_ldap_LIBS"
-      else
-        LIBS="$curl_cv_ldap_LIBS $curl_cv_save_LIBS"
-      fi
-      # FIXME: Enable when ldap was detected via pkg-config
-      if false; then
-        LIBCURL_PC_REQUIRES_PRIVATE="ldap $LIBCURL_PC_REQUIRES_PRIVATE"
-      fi
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $curl_cv_ldap_LIBS" >&5
-printf "%s\n" "$curl_cv_ldap_LIBS" >&6; }
-      ;;
-  esac
-  #
-
-    case X-"$curl_cv_ldap_LIBS" in
-      X-unknown)
-        if test -n "$ldap_askedfor"; then
-          as_fn_error $? "couldn't detect the LDAP libraries" "$LINENO" 5
-        fi
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: Cannot find libraries for LDAP support: LDAP disabled" >&5
-printf "%s\n" "$as_me: WARNING: Cannot find libraries for LDAP support: LDAP disabled" >&2;}
-
-printf "%s\n" "#define CURL_DISABLE_LDAP 1" >>confdefs.h
-
-        CURL_DISABLE_LDAP=1
-
-printf "%s\n" "#define CURL_DISABLE_LDAPS 1" >>confdefs.h
-
-        CURL_DISABLE_LDAPS=1
-        ;;
-    esac
-  fi
-fi
-
-if test x$CURL_DISABLE_LDAP != x1; then
-
-  if test "$LBERLIBNAME"; then
-            if test "$LBERLIBNAME" != "no"; then
-      as_ac_Lib=`printf "%s\n" "ac_cv_lib_"$LBERLIBNAME"""_ber_free" | $as_tr_sh`
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ber_free in -l\"$LBERLIBNAME\"" >&5
-printf %s "checking for ber_free in -l\"$LBERLIBNAME\"... " >&6; }
-if eval test \${$as_ac_Lib+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-l"$LBERLIBNAME"  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#ifdef __cplusplus
-extern "C"
-#endif
-char ber_free ();
-int main(void)
-{
-return ber_free ();
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  eval "$as_ac_Lib=yes"
-else $as_nop
-  eval "$as_ac_Lib=no"
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-eval ac_res=\$$as_ac_Lib
-	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
-printf "%s\n" "$ac_res" >&6; }
-if eval test \"x\$"$as_ac_Lib"\" = x"yes"
-then :
-  cat >>confdefs.h <<_ACEOF
-#define `printf "%s\n" "HAVE_LIB"$LBERLIBNAME"" | $as_tr_cpp` 1
-_ACEOF
-
-  LIBS="-l"$LBERLIBNAME" $LIBS"
-
-else $as_nop
-
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: \"$LBERLIBNAME\" is not an LBER library: LDAP disabled" >&5
-printf "%s\n" "$as_me: WARNING: \"$LBERLIBNAME\" is not an LBER library: LDAP disabled" >&2;}
-
-printf "%s\n" "#define CURL_DISABLE_LDAP 1" >>confdefs.h
-
-        CURL_DISABLE_LDAP=1
-
-printf "%s\n" "#define CURL_DISABLE_LDAPS 1" >>confdefs.h
-
-        CURL_DISABLE_LDAPS=1
-
-
-fi
-
-    fi
-  fi
-fi
-
-if test x$CURL_DISABLE_LDAP != x1; then
-  ac_fn_c_check_func "$LINENO" "ldap_url_parse" "ac_cv_func_ldap_url_parse"
-if test "x$ac_cv_func_ldap_url_parse" = xyes
-then :
-  printf "%s\n" "#define HAVE_LDAP_URL_PARSE 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "ldap_init_fd" "ac_cv_func_ldap_init_fd"
-if test "x$ac_cv_func_ldap_init_fd" = xyes
-then :
-  printf "%s\n" "#define HAVE_LDAP_INIT_FD 1" >>confdefs.h
-
-fi
-
-
-  if test "$LDAPLIBNAME" = "wldap32"; then
-    curl_ldap_msg="enabled (winldap)"
-
-printf "%s\n" "#define USE_WIN32_LDAP 1" >>confdefs.h
-
-  else
-    if test "x$ac_cv_func_ldap_init_fd" = "xyes"; then
-      curl_ldap_msg="enabled (OpenLDAP)"
-
-printf "%s\n" "#define USE_OPENLDAP 1" >>confdefs.h
-
-      USE_OPENLDAP=1
-    else
-      curl_ldap_msg="enabled (ancient OpenLDAP)"
-    fi
-  fi
-fi
-
-if test x$CURL_DISABLE_LDAPS != x1; then
-  curl_ldaps_msg="enabled"
 fi
 
 
@@ -25986,7 +25441,7 @@ esac
 printf %s "checking whether to enable Windows native SSL/TLS... " >&6; }
 if test "x$OPT_SCHANNEL" != xno; then
   ssl_msg=
-  if test "x$OPT_SCHANNEL" != "xno"  &&
+  if test "x$OPT_SCHANNEL" != "xno" &&
      test "x$curl_cv_native_windows" = "xyes"; then
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
@@ -26011,34 +25466,6 @@ else
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
 fi
-
-
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to enable Secure Transport" >&5
-printf %s "checking whether to enable Secure Transport... " >&6; }
-if test "x$OPT_SECURETRANSPORT" != xno; then
-  if test "x$OPT_SECURETRANSPORT" != "xno" &&
-     (test "x$cross_compiling" != "xno" || test -d "/System/Library/Frameworks/Security.framework"); then
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
-
-printf "%s\n" "#define USE_SECTRANSP 1" >>confdefs.h
-
-    ssl_msg="Secure Transport"
-    test secure-transport != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
-    SECURETRANSPORT_ENABLED=1
-    SECURETRANSPORT_LDFLAGS='-framework CoreFoundation -framework CoreServices -framework Security'
-    LDFLAGS="$LDFLAGS $SECURETRANSPORT_LDFLAGS"
-    LDFLAGSPC="$LDFLAGSPC $SECURETRANSPORT_LDFLAGS"
-  else
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-  fi
-  test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
-else
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-fi
-
 
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to enable Amiga native SSL/TLS (AmiSSL v5)" >&5
@@ -27992,163 +27419,6 @@ fi
 
 
 
-if test "x$OPT_BEARSSL" != xno; then
-  _cppflags=$CPPFLAGS
-  _ldflags=$LDFLAGS
-  _ldflagspc=$LDFLAGSPC
-  ssl_msg=
-
-  if test X"$OPT_BEARSSL" != Xno; then
-
-    if test "$OPT_BEARSSL" = "yes"; then
-      OPT_BEARSSL=""
-    fi
-
-    if test -z "$OPT_BEARSSL" ; then
-
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for br_ssl_client_init_full in -lbearssl" >&5
-printf %s "checking for br_ssl_client_init_full in -lbearssl... " >&6; }
-if test ${ac_cv_lib_bearssl_br_ssl_client_init_full+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lbearssl -lbearssl $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#ifdef __cplusplus
-extern "C"
-#endif
-char br_ssl_client_init_full ();
-int main(void)
-{
-return br_ssl_client_init_full ();
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_lib_bearssl_br_ssl_client_init_full=yes
-else $as_nop
-  ac_cv_lib_bearssl_br_ssl_client_init_full=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_bearssl_br_ssl_client_init_full" >&5
-printf "%s\n" "$ac_cv_lib_bearssl_br_ssl_client_init_full" >&6; }
-if test "x$ac_cv_lib_bearssl_br_ssl_client_init_full" = xyes
-then :
-
-
-printf "%s\n" "#define USE_BEARSSL 1" >>confdefs.h
-
-        BEARSSL_ENABLED=1
-        USE_BEARSSL="yes"
-        ssl_msg="BearSSL"
-        test bearssl != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
-
-fi
-
-    fi
-
-    addld=""
-    addlib=""
-    addcflags=""
-    bearssllib=""
-
-    if test "x$USE_BEARSSL" != "xyes"; then
-            addld=-L$OPT_BEARSSL/lib$libsuff
-      addcflags=-I$OPT_BEARSSL/include
-      bearssllib=$OPT_BEARSSL/lib$libsuff
-
-      LDFLAGS="$LDFLAGS $addld"
-      LDFLAGSPC="$LDFLAGSPC $addld"
-      if test "$addcflags" != "-I/usr/include"; then
-        CPPFLAGS="$CPPFLAGS $addcflags"
-      fi
-
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for br_ssl_client_init_full in -lbearssl" >&5
-printf %s "checking for br_ssl_client_init_full in -lbearssl... " >&6; }
-if test ${ac_cv_lib_bearssl_br_ssl_client_init_full+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lbearssl -lbearssl $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#ifdef __cplusplus
-extern "C"
-#endif
-char br_ssl_client_init_full ();
-int main(void)
-{
-return br_ssl_client_init_full ();
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_lib_bearssl_br_ssl_client_init_full=yes
-else $as_nop
-  ac_cv_lib_bearssl_br_ssl_client_init_full=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_bearssl_br_ssl_client_init_full" >&5
-printf "%s\n" "$ac_cv_lib_bearssl_br_ssl_client_init_full" >&6; }
-if test "x$ac_cv_lib_bearssl_br_ssl_client_init_full" = xyes
-then :
-
-
-printf "%s\n" "#define USE_BEARSSL 1" >>confdefs.h
-
-        BEARSSL_ENABLED=1
-        USE_BEARSSL="yes"
-        ssl_msg="BearSSL"
-        test bearssl != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
-
-else $as_nop
-
-          CPPFLAGS=$_cppflags
-          LDFLAGS=$_ldflags
-          LDFLAGSPC=$_ldflagspc
-
-fi
-
-    fi
-
-    if test "x$USE_BEARSSL" = "xyes"; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: detected BearSSL" >&5
-printf "%s\n" "$as_me: detected BearSSL" >&6;}
-      check_for_ca_bundle=1
-
-      LIBS="-lbearssl $LIBS"
-
-      if test -n "$bearssllib"; then
-                                        if test "x$cross_compiling" != "xyes"; then
-          CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$bearssllib"
-          export CURL_LIBRARY_PATH
-          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Added $bearssllib to CURL_LIBRARY_PATH" >&5
-printf "%s\n" "$as_me: Added $bearssllib to CURL_LIBRARY_PATH" >&6;}
-        fi
-      fi
-    fi
-
-  fi
-  test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
-fi
-
-
-
 if test "x$OPT_RUSTLS" != xno; then
   ssl_msg=
 
@@ -28502,10 +27772,10 @@ if test "x$curl_cv_native_windows" = "xyes" -a "$curl_cv_wince" = 'no'; then
   LIBS="-lbcrypt $LIBS"
 fi
 
-case "x$SSL_DISABLED$OPENSSL_ENABLED$GNUTLS_ENABLED$MBEDTLS_ENABLED$WOLFSSL_ENABLED$SCHANNEL_ENABLED$SECURETRANSPORT_ENABLED$BEARSSL_ENABLED$RUSTLS_ENABLED" in
+case "x$SSL_DISABLED$OPENSSL_ENABLED$GNUTLS_ENABLED$MBEDTLS_ENABLED$WOLFSSL_ENABLED$SCHANNEL_ENABLED$RUSTLS_ENABLED" in
   x)
     as_fn_error $? "TLS not detected, you will not be able to use HTTPS, FTPS, NTLM and more.
-Use --with-openssl, --with-gnutls, --with-wolfssl, --with-mbedtls, --with-schannel, --with-secure-transport, --with-amissl, --with-bearssl or --with-rustls to address this." "$LINENO" 5
+Use --with-openssl, --with-gnutls, --with-wolfssl, --with-mbedtls, --with-schannel, --with-amissl or --with-rustls to address this." "$LINENO" 5
     ;;
   x1)
     # one SSL backend is enabled
@@ -28518,7 +27788,7 @@ printf "%s\n" "$as_me: built with one SSL backend" >&6;}
     ;;
   xD*)
     as_fn_error $? "--without-ssl has been set together with an explicit option to use an ssl library
-(e.g. --with-openssl, --with-gnutls, --with-wolfssl, --with-mbedtls, --with-schannel, --with-secure-transport, --with-amissl, --with-bearssl, --with-rustls).
+(e.g. --with-openssl, --with-gnutls, --with-wolfssl, --with-mbedtls, --with-schannel, --with-amissl, --with-rustls).
 Since these are conflicting parameters, verify which is the desired one and drop the other." "$LINENO" 5
     ;;
   *)
@@ -29772,6 +29042,725 @@ done
 fi
 
 
+LDAPLIBNAME=""
+
+# Check whether --with-ldap-lib was given.
+if test ${with_ldap_lib+y}
+then :
+  withval=$with_ldap_lib; LDAPLIBNAME="$withval"
+fi
+
+
+LBERLIBNAME=""
+
+# Check whether --with-lber-lib was given.
+if test ${with_lber_lib+y}
+then :
+  withval=$with_lber_lib; LBERLIBNAME="$withval"
+fi
+
+
+clean_LDAP_CPPFLAGS=$CPPFLAGS
+clean_LDAP_LDFLAGS=$LDFLAGS
+clean_LDAP_LIBS=$LIBS
+OPT_LDAP=off
+
+# Check whether --with-ldap was given.
+if test ${with_ldap+y}
+then :
+  withval=$with_ldap; OPT_LDAP=$withval
+fi
+
+
+case "$OPT_LDAP" in
+  no)
+        want_ldap="no"
+    ;;
+  yes)
+        want_ldap="yes"
+    ;;
+  off)
+        want_ldap="default"
+    ;;
+  *)
+        want_ldap="yes"
+    if test -d "$OPT_LDAP/lib$libsuff"; then
+      LDFLAGS="$LDFLAGS -L$OPT_LDAP/lib$libsuff"
+      DIR_LDAP="$OPT_LDAP/lib$libsuff"
+    elif test -d "$OPT_LDAP/lib"; then
+      LDFLAGS="$LDFLAGS -L$OPT_LDAP/lib"
+      DIR_LDAP="$OPT_LDAP/lib"
+    fi
+    if test -d "$OPT_LDAP/include"; then
+      CPPFLAGS="$CPPFLAGS -I$OPT_LDAP/include"
+    fi
+    ldap_askedfor="yes"
+    ;;
+esac
+
+if test x$CURL_DISABLE_LDAP != x1 && test "$want_ldap" != "no"; then
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for lber.h" >&5
+printf %s "checking for lber.h... " >&6; }
+if test ${curl_cv_header_lber_h+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+        #undef inline
+        #ifdef _WIN32
+        #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+        #endif
+        #include <windows.h>
+        #else
+        #ifdef HAVE_SYS_TYPES_H
+        #include <sys/types.h>
+        #endif
+        #endif
+        #ifndef NULL
+        #define NULL (void *)0
+        #endif
+        #include <lber.h>
+
+int main(void)
+{
+
+        BerValue *bvp = NULL;
+        BerElement *bep = ber_init(bvp);
+        ber_free(bep, 1);
+
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+
+      curl_cv_header_lber_h="yes"
+
+else $as_nop
+
+      curl_cv_header_lber_h="no"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $curl_cv_header_lber_h" >&5
+printf "%s\n" "$curl_cv_header_lber_h" >&6; }
+  if test "$curl_cv_header_lber_h" = "yes"; then
+
+printf "%s\n" "#define HAVE_LBER_H 1" >>confdefs.h
+
+    #
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+        #undef inline
+        #ifdef _WIN32
+        #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+        #endif
+        #include <windows.h>
+        #else
+        #ifdef HAVE_SYS_TYPES_H
+        #include <sys/types.h>
+        #endif
+        #endif
+        #ifndef NULL
+        #define NULL (void *)0
+        #endif
+        #ifndef LDAP_DEPRECATED
+        #define LDAP_DEPRECATED 1
+        #endif
+        #include <ldap.h>
+
+int main(void)
+{
+
+        BerValue *bvp = NULL;
+        BerElement *bep = ber_init(bvp);
+        ber_free(bep, 1);
+
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+
+      curl_cv_need_header_lber_h="no"
+
+else $as_nop
+
+      curl_cv_need_header_lber_h="yes"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+    #
+    case "$curl_cv_need_header_lber_h" in
+      yes)
+
+printf "%s\n" "#define NEED_LBER_H 1" >>confdefs.h
+
+        ;;
+    esac
+  fi
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ldap.h" >&5
+printf %s "checking for ldap.h... " >&6; }
+if test ${curl_cv_header_ldap_h+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+        #undef inline
+        #ifdef _WIN32
+        #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+        #endif
+        #include <windows.h>
+        #else
+        #ifdef HAVE_SYS_TYPES_H
+        #include <sys/types.h>
+        #endif
+        #endif
+        #ifndef LDAP_DEPRECATED
+        #define LDAP_DEPRECATED 1
+        #endif
+        #ifdef NEED_LBER_H
+        #include <lber.h>
+        #endif
+        #include <ldap.h>
+
+int main(void)
+{
+
+        LDAP *ldp = ldap_init("0.0.0.0", LDAP_PORT);
+        int res = ldap_unbind(ldp);
+        (void)res;
+
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+
+      curl_cv_header_ldap_h="yes"
+
+else $as_nop
+
+      curl_cv_header_ldap_h="no"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $curl_cv_header_ldap_h" >&5
+printf "%s\n" "$curl_cv_header_ldap_h" >&6; }
+  case "$curl_cv_header_ldap_h" in
+    yes)
+
+printf "%s\n" "#define HAVE_LDAP_H 1" >>confdefs.h
+
+      ;;
+  esac
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ldap_ssl.h" >&5
+printf %s "checking for ldap_ssl.h... " >&6; }
+if test ${curl_cv_header_ldap_ssl_h+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+        #undef inline
+        #ifdef _WIN32
+        #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+        #endif
+        #include <windows.h>
+        #else
+        #ifdef HAVE_SYS_TYPES_H
+        #include <sys/types.h>
+        #endif
+        #endif
+        #ifndef LDAP_DEPRECATED
+        #define LDAP_DEPRECATED 1
+        #endif
+        #ifdef NEED_LBER_H
+        #include <lber.h>
+        #endif
+        #ifdef HAVE_LDAP_H
+        #include <ldap.h>
+        #endif
+        #include <ldap_ssl.h>
+
+int main(void)
+{
+
+        LDAP *ldp = ldapssl_init("0.0.0.0", LDAPS_PORT, 1);
+        (void)ldp;
+
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+
+      curl_cv_header_ldap_ssl_h="yes"
+
+else $as_nop
+
+      curl_cv_header_ldap_ssl_h="no"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $curl_cv_header_ldap_ssl_h" >&5
+printf "%s\n" "$curl_cv_header_ldap_ssl_h" >&6; }
+  case "$curl_cv_header_ldap_ssl_h" in
+    yes)
+
+printf "%s\n" "#define HAVE_LDAP_SSL_H 1" >>confdefs.h
+
+      ;;
+  esac
+
+
+  if test -z "$LDAPLIBNAME"; then
+    if test "$curl_cv_native_windows" = "yes" -a "$curl_cv_winuwp" != "yes"; then
+            LDAPLIBNAME="wldap32"
+      LBERLIBNAME="no"
+    fi
+  fi
+
+  if test "$LDAPLIBNAME"; then
+        if test "$LBERLIBNAME" -a "$LBERLIBNAME" != "no"; then
+            as_ac_Lib=`printf "%s\n" "ac_cv_lib_"$LDAPLIBNAME"""_ldap_init" | $as_tr_sh`
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ldap_init in -l\"$LDAPLIBNAME\"" >&5
+printf %s "checking for ldap_init in -l\"$LDAPLIBNAME\"... " >&6; }
+if eval test \${$as_ac_Lib+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-l"$LDAPLIBNAME"  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+#ifdef __cplusplus
+extern "C"
+#endif
+char ldap_init ();
+int main(void)
+{
+return ldap_init ();
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  eval "$as_ac_Lib=yes"
+else $as_nop
+  eval "$as_ac_Lib=no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+eval ac_res=\$$as_ac_Lib
+	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+printf "%s\n" "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_Lib"\" = x"yes"
+then :
+  ldap_lib_ok=yes
+else $as_nop
+  ldap_lib_ok=no
+fi
+
+      if test "$ldap_lib_ok" = "no"; then
+                as_ac_Lib=`printf "%s\n" "ac_cv_lib_"$LDAPLIBNAME"""_ldap_unbind" | $as_tr_sh`
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ldap_unbind in -l\"$LDAPLIBNAME\"" >&5
+printf %s "checking for ldap_unbind in -l\"$LDAPLIBNAME\"... " >&6; }
+if eval test \${$as_ac_Lib+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-l"$LDAPLIBNAME" -l$LBERLIBNAME $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+#ifdef __cplusplus
+extern "C"
+#endif
+char ldap_unbind ();
+int main(void)
+{
+return ldap_unbind ();
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  eval "$as_ac_Lib=yes"
+else $as_nop
+  eval "$as_ac_Lib=no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+eval ac_res=\$$as_ac_Lib
+	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+printf "%s\n" "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_Lib"\" = x"yes"
+then :
+  ldap_lib_ok=yes
+else $as_nop
+  ldap_lib_ok=no
+fi
+
+        if test "$ldap_lib_ok" = "yes"; then
+                    LIBS="-l$LDAPLIBNAME -l$LBERLIBNAME $LIBS"
+        fi
+      else
+                LIBS="-l$LDAPLIBNAME $LIBS"
+      fi
+    else
+            as_ac_Lib=`printf "%s\n" "ac_cv_lib_"$LDAPLIBNAME"""_ldap_init" | $as_tr_sh`
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ldap_init in -l\"$LDAPLIBNAME\"" >&5
+printf %s "checking for ldap_init in -l\"$LDAPLIBNAME\"... " >&6; }
+if eval test \${$as_ac_Lib+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-l"$LDAPLIBNAME"  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+#ifdef __cplusplus
+extern "C"
+#endif
+char ldap_init ();
+int main(void)
+{
+return ldap_init ();
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  eval "$as_ac_Lib=yes"
+else $as_nop
+  eval "$as_ac_Lib=no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+eval ac_res=\$$as_ac_Lib
+	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+printf "%s\n" "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_Lib"\" = x"yes"
+then :
+  ldap_lib_ok=yes; LIBS="-l$LDAPLIBNAME $LIBS"
+else $as_nop
+  ldap_lib_ok=no
+fi
+
+    fi
+
+    if test "$ldap_lib_ok" = "no"; then
+      if test -n "$ldap_askedfor"; then
+        as_fn_error $? "couldn't detect the LDAP libraries" "$LINENO" 5
+      fi
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: \"$LDAPLIBNAME\" is not an LDAP library: LDAP disabled" >&5
+printf "%s\n" "$as_me: WARNING: \"$LDAPLIBNAME\" is not an LDAP library: LDAP disabled" >&2;}
+
+printf "%s\n" "#define CURL_DISABLE_LDAP 1" >>confdefs.h
+
+      CURL_DISABLE_LDAP=1
+
+printf "%s\n" "#define CURL_DISABLE_LDAPS 1" >>confdefs.h
+
+      CURL_DISABLE_LDAPS=1
+            CPPFLAGS=$clean_LDAP_CPPFLAGS
+      LDFLAGS=$clean_LDAP_LDFLAGS
+      LIBS=$clean_LDAP_LIBS
+    fi
+  else
+
+    #
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for LDAP libraries" >&5
+printf %s "checking for LDAP libraries... " >&6; }
+  #
+  u_libs=""
+  #
+
+  #
+  curl_cv_save_LIBS="$LIBS"
+  curl_cv_ldap_LIBS="unknown"
+  #
+  for x_nlibs in '' "$u_libs" \
+    '-lldap' \
+    '-lldap -llber' \
+    '-llber -lldap' \
+    '-lldapssl -lldapx -lldapsdk' \
+    '-lldapsdk -lldapx -lldapssl' \
+    '-lldap -llber -lssl -lcrypto'; do
+
+    if test "$curl_cv_ldap_LIBS" = "unknown"; then
+      if test -z "$x_nlibs"; then
+        LIBS="$curl_cv_save_LIBS"
+      else
+        LIBS="$x_nlibs $curl_cv_save_LIBS"
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+          #undef inline
+          #ifdef _WIN32
+          #ifndef WIN32_LEAN_AND_MEAN
+          #define WIN32_LEAN_AND_MEAN
+          #endif
+          #include <windows.h>
+          #else
+          #ifdef HAVE_SYS_TYPES_H
+          #include <sys/types.h>
+          #endif
+          #endif
+          #ifndef NULL
+          #define NULL (void *)0
+          #endif
+          #ifndef LDAP_DEPRECATED
+          #define LDAP_DEPRECATED 1
+          #endif
+          #ifdef NEED_LBER_H
+          #include <lber.h>
+          #endif
+          #ifdef HAVE_LDAP_H
+          #include <ldap.h>
+          #endif
+
+int main(void)
+{
+
+          BerValue *bvp = NULL;
+          BerElement *bep = ber_init(bvp);
+          LDAP *ldp = ldap_init("0.0.0.0", LDAP_PORT);
+          int res = ldap_unbind(ldp);
+          ber_free(bep, 1);
+          (void)res;
+
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+
+        curl_cv_ldap_LIBS="$x_nlibs"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+    fi
+  done
+  #
+  LIBS="$curl_cv_save_LIBS"
+  #
+  case X-"$curl_cv_ldap_LIBS" in
+    X-unknown)
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: cannot find LDAP libraries" >&5
+printf "%s\n" "cannot find LDAP libraries" >&6; }
+      ;;
+    X-)
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no additional lib required" >&5
+printf "%s\n" "no additional lib required" >&6; }
+      ;;
+    *)
+      if test -z "$curl_cv_save_LIBS"; then
+        LIBS="$curl_cv_ldap_LIBS"
+      else
+        LIBS="$curl_cv_ldap_LIBS $curl_cv_save_LIBS"
+      fi
+      # FIXME: Enable when ldap was detected via pkg-config
+      if false; then
+        LIBCURL_PC_REQUIRES_PRIVATE="ldap $LIBCURL_PC_REQUIRES_PRIVATE"
+      fi
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $curl_cv_ldap_LIBS" >&5
+printf "%s\n" "$curl_cv_ldap_LIBS" >&6; }
+      ;;
+  esac
+  #
+
+    case X-"$curl_cv_ldap_LIBS" in
+      X-unknown)
+        if test -n "$ldap_askedfor"; then
+          as_fn_error $? "couldn't detect the LDAP libraries" "$LINENO" 5
+        fi
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: Cannot find libraries for LDAP support: LDAP disabled" >&5
+printf "%s\n" "$as_me: WARNING: Cannot find libraries for LDAP support: LDAP disabled" >&2;}
+
+printf "%s\n" "#define CURL_DISABLE_LDAP 1" >>confdefs.h
+
+        CURL_DISABLE_LDAP=1
+
+printf "%s\n" "#define CURL_DISABLE_LDAPS 1" >>confdefs.h
+
+        CURL_DISABLE_LDAPS=1
+                CPPFLAGS=$clean_LDAP_CPPFLAGS
+        LDFLAGS=$clean_LDAP_LDFLAGS
+        LIBS=$clean_LDAP_LIBS
+        ;;
+    esac
+  fi
+fi
+
+if test x$CURL_DISABLE_LDAP != x1; then
+    if test -n "$DIR_LDAP"; then
+
+    if test "x$cross_compiling" != "xyes"; then
+      CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$DIR_LDAP"
+      export CURL_LIBRARY_PATH
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Added $DIR_LDAP to CURL_LIBRARY_PATH" >&5
+printf "%s\n" "$as_me: Added $DIR_LDAP to CURL_LIBRARY_PATH" >&6;}
+    fi
+  fi
+
+  if test "$LBERLIBNAME"; then
+                if test "$LBERLIBNAME" != "no" -a "$ldap_lib_ok" != "yes"; then
+      as_ac_Lib=`printf "%s\n" "ac_cv_lib_"$LBERLIBNAME"""_ber_free" | $as_tr_sh`
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ber_free in -l\"$LBERLIBNAME\"" >&5
+printf %s "checking for ber_free in -l\"$LBERLIBNAME\"... " >&6; }
+if eval test \${$as_ac_Lib+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-l"$LBERLIBNAME"  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+#ifdef __cplusplus
+extern "C"
+#endif
+char ber_free ();
+int main(void)
+{
+return ber_free ();
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  eval "$as_ac_Lib=yes"
+else $as_nop
+  eval "$as_ac_Lib=no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+eval ac_res=\$$as_ac_Lib
+	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+printf "%s\n" "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_Lib"\" = x"yes"
+then :
+  cat >>confdefs.h <<_ACEOF
+#define `printf "%s\n" "HAVE_LIB"$LBERLIBNAME"" | $as_tr_cpp` 1
+_ACEOF
+
+  LIBS="-l"$LBERLIBNAME" $LIBS"
+
+else $as_nop
+
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: \"$LBERLIBNAME\" is not an LBER library: LDAP disabled" >&5
+printf "%s\n" "$as_me: WARNING: \"$LBERLIBNAME\" is not an LBER library: LDAP disabled" >&2;}
+
+printf "%s\n" "#define CURL_DISABLE_LDAP 1" >>confdefs.h
+
+        CURL_DISABLE_LDAP=1
+
+printf "%s\n" "#define CURL_DISABLE_LDAPS 1" >>confdefs.h
+
+        CURL_DISABLE_LDAPS=1
+                CPPFLAGS=$clean_LDAP_CPPFLAGS
+        LDFLAGS=$clean_LDAP_LDFLAGS
+        LIBS=$clean_LDAP_LIBS
+
+
+fi
+
+    fi
+  fi
+fi
+
+if test x$CURL_DISABLE_LDAP != x1; then
+  ac_fn_c_check_func "$LINENO" "ldap_url_parse" "ac_cv_func_ldap_url_parse"
+if test "x$ac_cv_func_ldap_url_parse" = xyes
+then :
+  printf "%s\n" "#define HAVE_LDAP_URL_PARSE 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "ldap_init_fd" "ac_cv_func_ldap_init_fd"
+if test "x$ac_cv_func_ldap_init_fd" = xyes
+then :
+  printf "%s\n" "#define HAVE_LDAP_INIT_FD 1" >>confdefs.h
+
+fi
+
+
+  if test "$LDAPLIBNAME" = "wldap32"; then
+    curl_ldap_msg="enabled (winldap)"
+
+printf "%s\n" "#define USE_WIN32_LDAP 1" >>confdefs.h
+
+  else
+    if test "x$ac_cv_func_ldap_init_fd" = "xyes"; then
+      curl_ldap_msg="enabled (OpenLDAP)"
+
+printf "%s\n" "#define USE_OPENLDAP 1" >>confdefs.h
+
+      USE_OPENLDAP=1
+    else
+      curl_ldap_msg="enabled (ancient OpenLDAP)"
+    fi
+  fi
+fi
+
+if test x$CURL_DISABLE_LDAPS != x1; then
+  curl_ldaps_msg="enabled"
+fi
+
+
 OPT_LIBRTMP=off
 
 # Check whether --with-librtmp was given.
@@ -30060,8 +30049,6 @@ printf "%s\n" "yes" >&6; }
         versioned_symbols_flavour="OPENSSL_"
       elif test "x$MBEDTLS_ENABLED" = "x1"; then
         versioned_symbols_flavour="MBEDTLS_"
-      elif test "x$BEARSSL_ENABLED" = "x1"; then
-        versioned_symbols_flavour="BEARSSL_"
       elif test "x$WOLFSSL_ENABLED" = "x1"; then
         versioned_symbols_flavour="WOLFSSL_"
       elif test "x$GNUTLS_ENABLED" = "x1"; then
@@ -33918,7 +33905,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/types.h" "ac_cv_header_sys_types_h" 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -33926,7 +33913,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/types.h" "ac_cv_header_sys_types_h" 
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -33946,45 +33933,12 @@ then :
   printf "%s\n" "#define HAVE_SYS_TYPES_H 1" >>confdefs.h
 
 fi
-ac_fn_c_check_header_compile "$LINENO" "sys/time.h" "ac_cv_header_sys_time_h" "
-#include <stdlib.h>
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_SELECT_H
-#include <sys/select.h>
-#elif defined(HAVE_UNISTD_H)
-#include <unistd.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#ifdef HAVE_NETINET_IN6_H
-#include <netinet/in6.h>  /* is this really required to detect other headers? */
-#endif
-#ifdef HAVE_SYS_UN_H
-#include <sys/un.h>  /* is this really required to detect other headers? */
-#endif
-
-
-"
-if test "x$ac_cv_header_sys_time_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_TIME_H 1" >>confdefs.h
-
-fi
 ac_fn_c_check_header_compile "$LINENO" "sys/select.h" "ac_cv_header_sys_select_h" "
 #include <stdlib.h>
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -33992,7 +33946,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/select.h" "ac_cv_header_sys_select_h
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34012,45 +33966,12 @@ then :
   printf "%s\n" "#define HAVE_SYS_SELECT_H 1" >>confdefs.h
 
 fi
-ac_fn_c_check_header_compile "$LINENO" "sys/socket.h" "ac_cv_header_sys_socket_h" "
-#include <stdlib.h>
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_SELECT_H
-#include <sys/select.h>
-#elif defined(HAVE_UNISTD_H)
-#include <unistd.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#ifdef HAVE_NETINET_IN6_H
-#include <netinet/in6.h>  /* is this really required to detect other headers? */
-#endif
-#ifdef HAVE_SYS_UN_H
-#include <sys/un.h>  /* is this really required to detect other headers? */
-#endif
-
-
-"
-if test "x$ac_cv_header_sys_socket_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_SOCKET_H 1" >>confdefs.h
-
-fi
 ac_fn_c_check_header_compile "$LINENO" "sys/ioctl.h" "ac_cv_header_sys_ioctl_h" "
 #include <stdlib.h>
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34058,7 +33979,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/ioctl.h" "ac_cv_header_sys_ioctl_h" 
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34083,7 +34004,7 @@ ac_fn_c_check_header_compile "$LINENO" "unistd.h" "ac_cv_header_unistd_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34091,7 +34012,7 @@ ac_fn_c_check_header_compile "$LINENO" "unistd.h" "ac_cv_header_unistd_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34116,7 +34037,7 @@ ac_fn_c_check_header_compile "$LINENO" "arpa/inet.h" "ac_cv_header_arpa_inet_h" 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34124,7 +34045,7 @@ ac_fn_c_check_header_compile "$LINENO" "arpa/inet.h" "ac_cv_header_arpa_inet_h" 
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34149,7 +34070,7 @@ ac_fn_c_check_header_compile "$LINENO" "net/if.h" "ac_cv_header_net_if_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34157,7 +34078,7 @@ ac_fn_c_check_header_compile "$LINENO" "net/if.h" "ac_cv_header_net_if_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34182,7 +34103,7 @@ ac_fn_c_check_header_compile "$LINENO" "netinet/in.h" "ac_cv_header_netinet_in_h
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34190,7 +34111,7 @@ ac_fn_c_check_header_compile "$LINENO" "netinet/in.h" "ac_cv_header_netinet_in_h
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34215,7 +34136,7 @@ ac_fn_c_check_header_compile "$LINENO" "netinet/in6.h" "ac_cv_header_netinet_in6
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34223,7 +34144,7 @@ ac_fn_c_check_header_compile "$LINENO" "netinet/in6.h" "ac_cv_header_netinet_in6
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34248,7 +34169,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/un.h" "ac_cv_header_sys_un_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34256,7 +34177,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/un.h" "ac_cv_header_sys_un_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34281,7 +34202,7 @@ ac_fn_c_check_header_compile "$LINENO" "linux/tcp.h" "ac_cv_header_linux_tcp_h" 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34289,7 +34210,7 @@ ac_fn_c_check_header_compile "$LINENO" "linux/tcp.h" "ac_cv_header_linux_tcp_h" 
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34314,7 +34235,7 @@ ac_fn_c_check_header_compile "$LINENO" "netinet/tcp.h" "ac_cv_header_netinet_tcp
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34322,7 +34243,7 @@ ac_fn_c_check_header_compile "$LINENO" "netinet/tcp.h" "ac_cv_header_netinet_tcp
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34347,7 +34268,7 @@ ac_fn_c_check_header_compile "$LINENO" "netinet/udp.h" "ac_cv_header_netinet_udp
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34355,7 +34276,7 @@ ac_fn_c_check_header_compile "$LINENO" "netinet/udp.h" "ac_cv_header_netinet_udp
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34380,7 +34301,7 @@ ac_fn_c_check_header_compile "$LINENO" "netdb.h" "ac_cv_header_netdb_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34388,7 +34309,7 @@ ac_fn_c_check_header_compile "$LINENO" "netdb.h" "ac_cv_header_netdb_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34413,7 +34334,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/sockio.h" "ac_cv_header_sys_sockio_h
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34421,7 +34342,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/sockio.h" "ac_cv_header_sys_sockio_h
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34441,45 +34362,12 @@ then :
   printf "%s\n" "#define HAVE_SYS_SOCKIO_H 1" >>confdefs.h
 
 fi
-ac_fn_c_check_header_compile "$LINENO" "sys/stat.h" "ac_cv_header_sys_stat_h" "
-#include <stdlib.h>
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_SELECT_H
-#include <sys/select.h>
-#elif defined(HAVE_UNISTD_H)
-#include <unistd.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#ifdef HAVE_NETINET_IN6_H
-#include <netinet/in6.h>  /* is this really required to detect other headers? */
-#endif
-#ifdef HAVE_SYS_UN_H
-#include <sys/un.h>  /* is this really required to detect other headers? */
-#endif
-
-
-"
-if test "x$ac_cv_header_sys_stat_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_STAT_H 1" >>confdefs.h
-
-fi
 ac_fn_c_check_header_compile "$LINENO" "sys/param.h" "ac_cv_header_sys_param_h" "
 #include <stdlib.h>
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34487,7 +34375,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/param.h" "ac_cv_header_sys_param_h" 
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34512,7 +34400,7 @@ ac_fn_c_check_header_compile "$LINENO" "termios.h" "ac_cv_header_termios_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34520,7 +34408,7 @@ ac_fn_c_check_header_compile "$LINENO" "termios.h" "ac_cv_header_termios_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34545,7 +34433,7 @@ ac_fn_c_check_header_compile "$LINENO" "termio.h" "ac_cv_header_termio_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34553,7 +34441,7 @@ ac_fn_c_check_header_compile "$LINENO" "termio.h" "ac_cv_header_termio_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34578,7 +34466,7 @@ ac_fn_c_check_header_compile "$LINENO" "fcntl.h" "ac_cv_header_fcntl_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34586,7 +34474,7 @@ ac_fn_c_check_header_compile "$LINENO" "fcntl.h" "ac_cv_header_fcntl_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34611,7 +34499,7 @@ ac_fn_c_check_header_compile "$LINENO" "io.h" "ac_cv_header_io_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34619,7 +34507,7 @@ ac_fn_c_check_header_compile "$LINENO" "io.h" "ac_cv_header_io_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34644,7 +34532,7 @@ ac_fn_c_check_header_compile "$LINENO" "pwd.h" "ac_cv_header_pwd_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34652,7 +34540,7 @@ ac_fn_c_check_header_compile "$LINENO" "pwd.h" "ac_cv_header_pwd_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34677,7 +34565,7 @@ ac_fn_c_check_header_compile "$LINENO" "utime.h" "ac_cv_header_utime_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34685,7 +34573,7 @@ ac_fn_c_check_header_compile "$LINENO" "utime.h" "ac_cv_header_utime_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34710,7 +34598,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/utime.h" "ac_cv_header_sys_utime_h" 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34718,7 +34606,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/utime.h" "ac_cv_header_sys_utime_h" 
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34743,7 +34631,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/poll.h" "ac_cv_header_sys_poll_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34751,7 +34639,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/poll.h" "ac_cv_header_sys_poll_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34776,7 +34664,7 @@ ac_fn_c_check_header_compile "$LINENO" "poll.h" "ac_cv_header_poll_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34784,7 +34672,7 @@ ac_fn_c_check_header_compile "$LINENO" "poll.h" "ac_cv_header_poll_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34809,7 +34697,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/resource.h" "ac_cv_header_sys_resour
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34817,7 +34705,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/resource.h" "ac_cv_header_sys_resour
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34842,7 +34730,7 @@ ac_fn_c_check_header_compile "$LINENO" "libgen.h" "ac_cv_header_libgen_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34850,7 +34738,7 @@ ac_fn_c_check_header_compile "$LINENO" "libgen.h" "ac_cv_header_libgen_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34875,7 +34763,7 @@ ac_fn_c_check_header_compile "$LINENO" "locale.h" "ac_cv_header_locale_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34883,7 +34771,7 @@ ac_fn_c_check_header_compile "$LINENO" "locale.h" "ac_cv_header_locale_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34908,7 +34796,7 @@ ac_fn_c_check_header_compile "$LINENO" "stdbool.h" "ac_cv_header_stdbool_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34916,7 +34804,7 @@ ac_fn_c_check_header_compile "$LINENO" "stdbool.h" "ac_cv_header_stdbool_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34941,7 +34829,7 @@ ac_fn_c_check_header_compile "$LINENO" "stdint.h" "ac_cv_header_stdint_h" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34949,7 +34837,7 @@ ac_fn_c_check_header_compile "$LINENO" "stdint.h" "ac_cv_header_stdint_h" "
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -34974,7 +34862,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/filio.h" "ac_cv_header_sys_filio_h" 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -34982,7 +34870,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/filio.h" "ac_cv_header_sys_filio_h" 
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -35007,7 +34895,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/eventfd.h" "ac_cv_header_sys_eventfd
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
@@ -35015,7 +34903,7 @@ ac_fn_c_check_header_compile "$LINENO" "sys/eventfd.h" "ac_cv_header_sys_eventfd
 #elif defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -35137,18 +35025,6 @@ then :
   printf "%s\n" "#define HAVE_SYS_TYPES_H 1" >>confdefs.h
 
 fi
-ac_fn_c_check_header_compile "$LINENO" "sys/time.h" "ac_cv_header_sys_time_h" "$ac_includes_default"
-if test "x$ac_cv_header_sys_time_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_TIME_H 1" >>confdefs.h
-
-fi
-ac_fn_c_check_header_compile "$LINENO" "sys/socket.h" "ac_cv_header_sys_socket_h" "$ac_includes_default"
-if test "x$ac_cv_header_sys_socket_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_SOCKET_H 1" >>confdefs.h
-
-fi
 
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for struct timeval" >&5
 printf %s "checking for struct timeval... " >&6; }
@@ -35167,17 +35043,14 @@ else $as_nop
         #define WIN32_LEAN_AND_MEAN
         #endif
         #include <winsock2.h>
+        #else
+        #include <sys/socket.h>
+        #include <sys/time.h>
         #endif
         #ifdef HAVE_SYS_TYPES_H
         #include <sys/types.h>
         #endif
-        #ifdef HAVE_SYS_TIME_H
-        #include <sys/time.h>
-        #endif
         #include <time.h>
-        #ifdef HAVE_SYS_SOCKET_H
-        #include <sys/socket.h>
-        #endif
 
 int main(void)
 {
@@ -35725,7 +35598,7 @@ fi
 
 # check for sa_family_t
 ac_fn_c_check_type "$LINENO" "sa_family_t" "ac_cv_type_sa_family_t" "
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 
@@ -35744,8 +35617,7 @@ else $as_nop
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <winsock2.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
+#else
 #include <sys/socket.h>
 #endif
 
@@ -35766,7 +35638,7 @@ ac_fn_c_check_type "$LINENO" "suseconds_t" "ac_cv_type_suseconds_t" "
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#ifndef _WIN32
 #include <sys/time.h>
 #endif
 
@@ -35883,9 +35755,7 @@ esac
      #ifdef HAVE_SYS_TYPES_H
      #include <sys/types.h>
      #endif
-     #ifdef HAVE_SYS_SOCKET_H
      #include <sys/socket.h>
-     #endif
      #ifdef HAVE_NETINET_IN_H
      #include <netinet/in.h>
      #endif
@@ -35911,12 +35781,6 @@ then :
   printf "%s\n" "#define HAVE_SYS_SELECT_H 1" >>confdefs.h
 
 fi
-ac_fn_c_check_header_compile "$LINENO" "sys/socket.h" "ac_cv_header_sys_socket_h" "$ac_includes_default"
-if test "x$ac_cv_header_sys_socket_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_SOCKET_H 1" >>confdefs.h
-
-fi
 
   #
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for select" >&5
@@ -35931,12 +35795,12 @@ printf %s "checking for select... " >&6; }
       #define WIN32_LEAN_AND_MEAN
       #endif
       #include <winsock2.h>
+      #else
+      #include <sys/socket.h>
+      #include <sys/time.h>
       #endif
       #ifdef HAVE_SYS_TYPES_H
       #include <sys/types.h>
-      #endif
-      #ifdef HAVE_SYS_TIME_H
-      #include <sys/time.h>
       #endif
       #include <time.h>
       #ifndef _WIN32
@@ -35944,9 +35808,6 @@ printf %s "checking for select... " >&6; }
       #include <sys/select.h>
       #elif defined(HAVE_UNISTD_H)
       #include <unistd.h>
-      #endif
-      #ifdef HAVE_SYS_SOCKET_H
-      #include <sys/socket.h>
       #endif
       $curl_includes_bsdsocket
       #endif
@@ -35992,12 +35853,6 @@ then :
   printf "%s\n" "#define HAVE_SYS_TYPES_H 1" >>confdefs.h
 
 fi
-ac_fn_c_check_header_compile "$LINENO" "sys/socket.h" "ac_cv_header_sys_socket_h" "$ac_includes_default"
-if test "x$ac_cv_header_sys_socket_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_SOCKET_H 1" >>confdefs.h
-
-fi
 
   #
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for recv" >&5
@@ -36017,9 +35872,7 @@ printf %s "checking for recv... " >&6; }
       #ifdef HAVE_SYS_TYPES_H
       #include <sys/types.h>
       #endif
-      #ifdef HAVE_SYS_SOCKET_H
       #include <sys/socket.h>
-      #endif
       #endif
 
 int main(void)
@@ -36064,12 +35917,6 @@ then :
   printf "%s\n" "#define HAVE_SYS_TYPES_H 1" >>confdefs.h
 
 fi
-ac_fn_c_check_header_compile "$LINENO" "sys/socket.h" "ac_cv_header_sys_socket_h" "$ac_includes_default"
-if test "x$ac_cv_header_sys_socket_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_SOCKET_H 1" >>confdefs.h
-
-fi
 
   #
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for send" >&5
@@ -36089,9 +35936,7 @@ printf %s "checking for send... " >&6; }
       #ifdef HAVE_SYS_TYPES_H
       #include <sys/types.h>
       #endif
-      #ifdef HAVE_SYS_SOCKET_H
       #include <sys/socket.h>
-      #endif
       #endif
 
 int main(void)
@@ -36137,12 +35982,6 @@ then :
   printf "%s\n" "#define HAVE_SYS_TYPES_H 1" >>confdefs.h
 
 fi
-ac_fn_c_check_header_compile "$LINENO" "sys/socket.h" "ac_cv_header_sys_socket_h" "$ac_includes_default"
-if test "x$ac_cv_header_sys_socket_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_SOCKET_H 1" >>confdefs.h
-
-fi
 
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for MSG_NOSIGNAL" >&5
 printf %s "checking for MSG_NOSIGNAL... " >&6; }
@@ -36165,9 +36004,7 @@ else $as_nop
         #ifdef HAVE_SYS_TYPES_H
         #include <sys/types.h>
         #endif
-        #ifdef HAVE_SYS_SOCKET_H
         #include <sys/socket.h>
-        #endif
         #endif
 
 int main(void)
@@ -36727,7 +36564,7 @@ curl_includes_sys_socket="\
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #  include <sys/socket.h>
 #endif
 /* includes end */"
@@ -36736,13 +36573,6 @@ curl_includes_sys_socket="\
 if test "x$ac_cv_header_sys_types_h" = xyes
 then :
   printf "%s\n" "#define HAVE_SYS_TYPES_H 1" >>confdefs.h
-
-fi
-ac_fn_c_check_header_compile "$LINENO" "sys/socket.h" "ac_cv_header_sys_socket_h" "$curl_includes_sys_socket
-"
-if test "x$ac_cv_header_sys_socket_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_SOCKET_H 1" >>confdefs.h
 
 fi
 
@@ -38579,7 +38409,7 @@ curl_includes_ifaddrs="\
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #  include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
@@ -38594,13 +38424,6 @@ curl_includes_ifaddrs="\
 if test "x$ac_cv_header_sys_types_h" = xyes
 then :
   printf "%s\n" "#define HAVE_SYS_TYPES_H 1" >>confdefs.h
-
-fi
-ac_fn_c_check_header_compile "$LINENO" "sys/socket.h" "ac_cv_header_sys_socket_h" "$curl_includes_ifaddrs
-"
-if test "x$ac_cv_header_sys_socket_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_SOCKET_H 1" >>confdefs.h
 
 fi
 ac_fn_c_check_header_compile "$LINENO" "netinet/in.h" "ac_cv_header_netinet_in_h" "$curl_includes_ifaddrs
@@ -39178,7 +39001,7 @@ curl_includes_time="\
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
+#if !defined(_WIN32) || defined(__MINGW32__)
 #  include <sys/time.h>
 #endif
 #include <time.h>
@@ -39188,13 +39011,6 @@ curl_includes_time="\
 if test "x$ac_cv_header_sys_types_h" = xyes
 then :
   printf "%s\n" "#define HAVE_SYS_TYPES_H 1" >>confdefs.h
-
-fi
-ac_fn_c_check_header_compile "$LINENO" "sys/time.h" "ac_cv_header_sys_time_h" "$curl_includes_time
-"
-if test "x$ac_cv_header_sys_time_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_TIME_H 1" >>confdefs.h
 
 fi
 
@@ -39474,7 +39290,7 @@ curl_includes_stropts="\
 #ifdef HAVE_UNISTD_H
 #  include <unistd.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
+#ifndef _WIN32
 #  include <sys/socket.h>
 #endif
 #ifdef HAVE_SYS_IOCTL_H
@@ -39496,13 +39312,6 @@ ac_fn_c_check_header_compile "$LINENO" "unistd.h" "ac_cv_header_unistd_h" "$curl
 if test "x$ac_cv_header_unistd_h" = xyes
 then :
   printf "%s\n" "#define HAVE_UNISTD_H 1" >>confdefs.h
-
-fi
-ac_fn_c_check_header_compile "$LINENO" "sys/socket.h" "ac_cv_header_sys_socket_h" "$curl_includes_stropts
-"
-if test "x$ac_cv_header_sys_socket_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_SOCKET_H 1" >>confdefs.h
 
 fi
 ac_fn_c_check_header_compile "$LINENO" "sys/ioctl.h" "ac_cv_header_sys_ioctl_h" "$curl_includes_stropts
@@ -42086,6 +41895,12 @@ then :
   printf "%s\n" "#define HAVE_GETTIMEOFDAY 1" >>confdefs.h
 
 fi
+ac_fn_c_check_func "$LINENO" "if_nametoindex" "ac_cv_func_if_nametoindex"
+if test "x$ac_cv_func_if_nametoindex" = xyes
+then :
+  printf "%s\n" "#define HAVE_IF_NAMETOINDEX 1" >>confdefs.h
+
+fi
 ac_fn_c_check_func "$LINENO" "mach_absolute_time" "ac_cv_func_mach_absolute_time"
 if test "x$ac_cv_func_mach_absolute_time" = xyes
 then :
@@ -42155,13 +41970,7 @@ fi
 
 
 if test "$curl_cv_native_windows" != 'yes'; then
-  ac_fn_c_check_func "$LINENO" "if_nametoindex" "ac_cv_func_if_nametoindex"
-if test "x$ac_cv_func_if_nametoindex" = xyes
-then :
-  printf "%s\n" "#define HAVE_IF_NAMETOINDEX 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "realpath" "ac_cv_func_realpath"
+  ac_fn_c_check_func "$LINENO" "realpath" "ac_cv_func_realpath"
 if test "x$ac_cv_func_realpath" = xyes
 then :
   printf "%s\n" "#define HAVE_REALPATH 1" >>confdefs.h
@@ -42180,9 +41989,6 @@ curl_includes_arpa_inet="\
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
-#  include <sys/socket.h>
-#endif
 #ifdef HAVE_NETINET_IN_H
 #  include <netinet/in.h>
 #endif
@@ -42192,6 +41998,8 @@ curl_includes_arpa_inet="\
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#else
+#include <sys/socket.h>
 #endif
 /* includes end */"
   ac_fn_c_check_header_compile "$LINENO" "sys/types.h" "ac_cv_header_sys_types_h" "$curl_includes_arpa_inet
@@ -42199,13 +42007,6 @@ curl_includes_arpa_inet="\
 if test "x$ac_cv_header_sys_types_h" = xyes
 then :
   printf "%s\n" "#define HAVE_SYS_TYPES_H 1" >>confdefs.h
-
-fi
-ac_fn_c_check_header_compile "$LINENO" "sys/socket.h" "ac_cv_header_sys_socket_h" "$curl_includes_arpa_inet
-"
-if test "x$ac_cv_header_sys_socket_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_SOCKET_H 1" >>confdefs.h
 
 fi
 ac_fn_c_check_header_compile "$LINENO" "netinet/in.h" "ac_cv_header_netinet_in_h" "$curl_includes_arpa_inet
@@ -44304,6 +44105,10 @@ printf "%s\n" "no" >&6; }
 fi
 
 
+if test "x$USE_WINDOWS_SSPI" = "x1"; then
+  LIBS="-lsecur32 $LIBS"
+fi
+
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to enable basic authentication method" >&5
 printf %s "checking whether to enable basic authentication method... " >&6; }
 # Check whether --enable-basic-auth was given.
@@ -45314,7 +45119,6 @@ use_curl_ntlm_core=no
 if test "x$CURL_DISABLE_NTLM" != "x1"; then
   if test "x$OPENSSL_ENABLED" = "x1" -o "x$MBEDTLS_ENABLED" = "x1" \
       -o "x$GNUTLS_ENABLED" = "x1" \
-      -o "x$SECURETRANSPORT_ENABLED" = "x1" \
       -o "x$USE_WIN32_CRYPTO" = "x1" \
       -o "x$HAVE_WOLFSSL_DES_ECB_ENCRYPT" = "x1"; then
     use_curl_ntlm_core=yes
@@ -45352,9 +45156,7 @@ if test "x$CURL_DISABLE_HTTP" != "x1"; then
   if test "x$https_proxy" != "xno"; then
     if test "x$OPENSSL_ENABLED" = "x1" \
         -o "x$GNUTLS_ENABLED" = "x1" \
-        -o "x$SECURETRANSPORT_ENABLED" = "x1" \
         -o "x$RUSTLS_ENABLED" = "x1" \
-        -o "x$BEARSSL_ENABLED" = "x1" \
         -o "x$SCHANNEL_ENABLED" = "x1" \
         -o "x$GNUTLS_ENABLED" = "x1" \
         -o "x$MBEDTLS_ENABLED" = "x1"; then
@@ -45476,7 +45278,7 @@ if test "x$CURL_DISABLE_LDAP" != "x1"; then
   SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS LDAP"
   if test "x$CURL_DISABLE_LDAPS" != "x1"; then
     if (test "x$USE_OPENLDAP" = "x1" && test "x$SSL_ENABLED" = "x1") ||
-      (test "x$USE_OPENLDAP" != "x1"  && test "x$HAVE_LDAP_SSL" = "x1"); then
+      (test "x$USE_OPENLDAP" != "x1" && test "x$HAVE_LDAP_SSL" = "x1"); then
       SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS LDAPS"
     fi
   fi
@@ -45751,7 +45553,7 @@ fi
 
 
 
-ac_config_files="$ac_config_files Makefile docs/Makefile docs/examples/Makefile docs/libcurl/Makefile docs/libcurl/opts/Makefile docs/cmdline-opts/Makefile include/Makefile include/curl/Makefile src/Makefile lib/Makefile scripts/Makefile lib/libcurl.vers tests/Makefile tests/config tests/configurehelp.pm tests/certs/Makefile tests/data/Makefile tests/server/Makefile tests/libtest/Makefile tests/unit/Makefile tests/tunit/Makefile tests/http/config.ini tests/http/Makefile tests/http/clients/Makefile packages/Makefile packages/vms/Makefile curl-config libcurl.pc"
+ac_config_files="$ac_config_files Makefile docs/Makefile docs/examples/Makefile docs/libcurl/Makefile docs/libcurl/opts/Makefile docs/cmdline-opts/Makefile include/Makefile include/curl/Makefile src/Makefile lib/Makefile scripts/Makefile lib/libcurl.vers tests/Makefile tests/config tests/configurehelp.pm tests/certs/Makefile tests/data/Makefile tests/server/Makefile tests/libtest/Makefile tests/unit/Makefile tests/tunit/Makefile tests/client/Makefile tests/http/config.ini tests/http/Makefile packages/Makefile packages/vms/Makefile curl-config libcurl.pc"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -45930,24 +45732,12 @@ if test -z "${BUILD_UNITTESTS_TRUE}" && test -z "${BUILD_UNITTESTS_FALSE}"; then
   as_fn_error $? "conditional \"BUILD_UNITTESTS\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${ENABLE_SERVER_DEBUG_TRUE}" && test -z "${ENABLE_SERVER_DEBUG_FALSE}"; then
-  as_fn_error $? "conditional \"ENABLE_SERVER_DEBUG\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${DOING_CYGWIN_TRUE}" && test -z "${DOING_CYGWIN_FALSE}"; then
-  as_fn_error $? "conditional \"DOING_CYGWIN\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
 if test -z "${HAVE_WINDRES_TRUE}" && test -z "${HAVE_WINDRES_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_WINDRES\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${USE_UNITY_TRUE}" && test -z "${USE_UNITY_FALSE}"; then
   as_fn_error $? "conditional \"USE_UNITY\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${USE_TEST_BUNDLES_TRUE}" && test -z "${USE_TEST_BUNDLES_FALSE}"; then
-  as_fn_error $? "conditional \"USE_TEST_BUNDLES\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${DOING_NATIVE_WINDOWS_TRUE}" && test -z "${DOING_NATIVE_WINDOWS_FALSE}"; then
@@ -46974,9 +46764,9 @@ do
     "tests/libtest/Makefile") CONFIG_FILES="$CONFIG_FILES tests/libtest/Makefile" ;;
     "tests/unit/Makefile") CONFIG_FILES="$CONFIG_FILES tests/unit/Makefile" ;;
     "tests/tunit/Makefile") CONFIG_FILES="$CONFIG_FILES tests/tunit/Makefile" ;;
+    "tests/client/Makefile") CONFIG_FILES="$CONFIG_FILES tests/client/Makefile" ;;
     "tests/http/config.ini") CONFIG_FILES="$CONFIG_FILES tests/http/config.ini" ;;
     "tests/http/Makefile") CONFIG_FILES="$CONFIG_FILES tests/http/Makefile" ;;
-    "tests/http/clients/Makefile") CONFIG_FILES="$CONFIG_FILES tests/http/clients/Makefile" ;;
     "packages/Makefile") CONFIG_FILES="$CONFIG_FILES packages/Makefile" ;;
     "packages/vms/Makefile") CONFIG_FILES="$CONFIG_FILES packages/vms/Makefile" ;;
     "curl-config") CONFIG_FILES="$CONFIG_FILES curl-config" ;;
@@ -48512,15 +48302,6 @@ printf "%s\n" "$as_me: Configured to build curl/libcurl:
   Protocols:        ${SUPPORT_PROTOCOLS_LOWER}
   Features:         ${SUPPORT_FEATURES}
 " >&6;}
-
-# grep -o would simplify this, but is nonportable
-non13=`echo "$TLSCHOICE" | $AWK '{split("bearssl secure-transport", a); for (i in a) if(match(tolower($0), a[i])) print a[i];}'`
-if test -n "$non13"; then
-  for a in $non13; do
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: $a is enabled for TLS but it does not support TLS 1.3" >&5
-printf "%s\n" "$as_me: WARNING: $a is enabled for TLS but it does not support TLS 1.3" >&2;}
-  done
-fi
 
 if test -n "$experimental"; then
   for a in $experimental; do

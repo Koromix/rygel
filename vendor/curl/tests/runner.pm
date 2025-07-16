@@ -38,6 +38,8 @@ use strict;
 use warnings;
 use 5.006;
 
+use File::Basename;
+
 BEGIN {
     use base qw(Exporter);
 
@@ -249,7 +251,7 @@ sub runner_init {
 #######################################################################
 # Loop to execute incoming IPC calls until the shutdown call
 sub event_loop {
-    while () {
+    while() {
         if(ipcrecv()) {
             last;
         }
@@ -502,19 +504,6 @@ sub torture {
         unlink("$LOGDIR/$MEMDUMP");
 
         my $cmd = $testcmd;
-        if($valgrind && !$gdbthis) {
-            my @valgrindoption = getpart("verify", "valgrind");
-            if((!@valgrindoption) || ($valgrindoption[0] !~ /disable/)) {
-                my $valgrindcmd = shell_quote($valgrind) . " ";
-                $valgrindcmd .= "$valgrind_tool " if($valgrind_tool);
-                $valgrindcmd .= "--quiet --leak-check=yes ";
-                $valgrindcmd .= "--suppressions=$srcdir/valgrind.supp ";
-                # $valgrindcmd .= "--gen-suppressions=all ";
-                $valgrindcmd .= "--num-callers=16 ";
-                $valgrindcmd .= "${valgrind_logfile}=$LOGDIR/valgrind$testnum";
-                $cmd = "$valgrindcmd $testcmd";
-            }
-        }
         logmsg "*** Function number $limit is now set to fail ***\n" if($gdbthis);
 
         my $ret = 0;
@@ -620,7 +609,7 @@ sub singletest_startservers {
 
     my $why;
     my $error;
-    if (!$listonly) {
+    if(!$listonly) {
         my @what = getpart("client", "server");
         if(!$what[0]) {
             warn "Test case $testnum has no server(s) specified";
@@ -683,17 +672,6 @@ sub singletest_setenv {
             if($content =~ /^=(.*)/) {
                 # assign it
                 $content = $1;
-
-                if($var =~ /^LD_PRELOAD/) {
-                    if(exe_ext('TOOL') && (exe_ext('TOOL') eq '.exe')) {
-                        logmsg "Skipping LD_PRELOAD due to lack of OS support\n" if($verbose);
-                        next;
-                    }
-                    if($feature{"Debug"} || !$has_shared) {
-                        logmsg "Skipping LD_PRELOAD due to no release shared build\n" if($verbose);
-                        next;
-                    }
-                }
                 $ENV{$var} = "$content";
                 logmsg "setenv $var = $content\n" if($verbose);
             }
@@ -701,7 +679,6 @@ sub singletest_setenv {
                 # remove it
                 delete $ENV{$var} if($ENV{$var});
             }
-
         }
     }
     if($proxy_address) {
@@ -763,11 +740,19 @@ sub singletest_prepare {
     unlink("$LOGDIR/$SERVERIN");
     unlink("$LOGDIR/$PROXYIN");
 
-    # if this section exists, it might be FTP server instructions:
-    my @ftpservercmd = getpart("reply", "servercmd");
-    push @ftpservercmd, "Testnum $testnum\n";
+    # if this section exists, it might be server instructions:
+    my @servercmd = getpart("reply", "servercmd");
+    push @servercmd, "Testnum $testnum\n";
     # write the instructions to file
-    writearray("$LOGDIR/$SERVERCMD", \@ftpservercmd);
+    writearray("$LOGDIR/$SERVERCMD", \@servercmd);
+
+    # if this section exists, it might be DNS instructions:
+    my @dnscmd = getpart("reply", "dns");
+    # write the instructions to file
+    writearray("$LOGDIR/$DNSCMD", \@dnscmd);
+
+    # provide an environment variable
+    $ENV{'CURL_TESTNUM'} = $testnum;
 
     # create (possibly-empty) files before starting the test
     for my $partsuffix (('', '1', '2', '3', '4')) {
@@ -782,9 +767,7 @@ sub singletest_prepare {
             my $fileContent = join('', @inputfile);
 
             # make directories if needed
-            my $path = $filename;
-            # cut off the file name part
-            $path =~ s/^(.*)\/[^\/]*/$1/;
+            my $path = dirname($filename);
             my @ldparts = split(/\//, $LOGDIR);
             my $nparts = @ldparts;
             my @parts = split(/\//, $path);
@@ -796,7 +779,7 @@ sub singletest_prepare {
                     mkdir $d; # 0777
                 }
             }
-            if (open(my $outfile, ">", "$filename")) {
+            if(open(my $outfile, ">", "$filename")) {
                 binmode $outfile; # for crapage systems, use binary
                 if($fileattr{'nonewline'}) {
                     # cut off the final newline
@@ -837,7 +820,7 @@ sub singletest_run {
     my %cmdhash = getpartattr("client", "command");
     if((!$cmdhash{'option'}) || ($cmdhash{'option'} !~ /no-output/)) {
         #We may slap on --output!
-        if (!partexists("verify", "stdout") ||
+        if(!partexists("verify", "stdout") ||
                 ($cmdhash{'option'} && $cmdhash{'option'} =~ /force-output/)) {
             $out=" --output $CURLOUT ";
         }
@@ -904,7 +887,7 @@ sub singletest_run {
             }
         }
         $cmdargs .= $cmd;
-        if ($proxy_address) {
+        if($proxy_address) {
             $cmdargs .= " --proxy $proxy_address ";
         }
     }
@@ -919,21 +902,15 @@ sub singletest_run {
         }
 
         if($tool =~ /^lib/) {
-            if($bundle) {
-                $tool = "libtests" . exe_ext('TOOL');
-            }
+            $tool = "libtests" . exe_ext('TOOL');
             $CMDLINE=$LIBDIR . $tool;
         }
         elsif($tool =~ /^tool/) {
-            if($bundle) {
-                $tool = "tunits" . exe_ext('TOOL')
-            }
+            $tool = "tunits" . exe_ext('TOOL');
             $CMDLINE=$TUNITDIR . $tool;
         }
         elsif($tool =~ /^unit/) {
-            if($bundle) {
-                $tool = "units" . exe_ext('TOOL')
-            }
+            $tool = "units" . exe_ext('TOOL');
             $CMDLINE=$UNITDIR . $tool;
         }
 
@@ -944,13 +921,11 @@ sub singletest_run {
 
         $CMDLINE=exerunner() . $CMDLINE;
 
-        if($bundle) {
-            if($gdbthis) {
-                $cmdargs =" $tool_name$cmdargs";
-            }
-            else {
-                $CMDLINE.=" $tool_name";
-            }
+        if($gdbthis) {
+            $cmdargs =" $tool_name$cmdargs";
+        }
+        else {
+            $CMDLINE.=" $tool_name";
         }
 
         $DBGCURL=$CMDLINE;
@@ -1040,7 +1015,7 @@ sub singletest_run {
     $$testtimings{"timetoolini"} = Time::HiRes::time();
 
     # run the command line we built
-    if ($torture) {
+    if($torture) {
         $cmdres = torture($CMDLINE,
                           $testnum,
                           "$gdb --directory $LIBDIR " . shell_quote($DBGCURL) . " -x $LOGDIR/gdbcmd");
@@ -1222,7 +1197,7 @@ sub runner_test_preprocess {
 
         ###############################################################
         # Check that the test environment is fine to run this test case
-        if (!$listonly) {
+        if(!$listonly) {
             $why = singletest_precheck($testnum);
             $error = -1;
         }

@@ -28,7 +28,7 @@
  * of 42 (CURLE_ABORTED_BY_CALLBACK).
  */
 
-#include "test.h"
+#include "first.h"
 
 #include "memdebug.h"
 
@@ -47,7 +47,7 @@ static int progressKiller(void *arg,
   return 1;
 }
 
-CURLcode test(char *URL)
+static CURLcode test_lib1513(char *URL)
 {
   CURL *curl;
   CURLcode res = CURLE_OK;

@@ -21,7 +21,7 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "server_setup.h"
+#include "first.h"
 
 /* Purpose
  *
@@ -33,23 +33,7 @@
  *
  */
 
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#ifdef _XOPEN_SOURCE_EXTENDED
-/* This define is "almost" required to build on HP-UX 11 */
-#include <arpa/inet.h>
-#endif
-#ifdef HAVE_NETDB_H
-#include <netdb.h>
-#endif
-
-#include "util.h"
-
-/* include memdebug.h last */
-#include <memdebug.h>
-
-int main(int argc, char *argv[])
+static int test_resolve(int argc, char *argv[])
 {
   int arg = 1;
   const char *host = NULL;

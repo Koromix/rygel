@@ -30,20 +30,12 @@
  * that this test will assume to be present!
  */
 
-#include "test.h"
+#include "first.h"
 #if defined(USE_LIBIDN2) || defined(USE_WIN32_IDN) || defined(USE_APPLE_IDN)
 #define USE_IDN
 #endif
 
-#include "testutil.h"
-#include "warnless.h"
 #include "memdebug.h" /* LAST include file */
-
-struct part {
-  CURLUPart part;
-  const char *name;
-};
-
 
 static int checkparts(CURLU *u, const char *in, const char *wanted,
                       unsigned int getflags)
@@ -53,6 +45,12 @@ static int checkparts(CURLU *u, const char *in, const char *wanted,
   char buf[256];
   char *bufp = &buf[0];
   size_t len = sizeof(buf);
+
+  struct part {
+    CURLUPart part;
+    const char *name;
+  };
+
   struct part parts[] = {
     {CURLUPART_SCHEME, "scheme"},
     {CURLUPART_USER, "user"},
@@ -244,14 +242,14 @@ static const struct testcase get_parts_list[] ={
   {"https://"
    "%e2%84%82%e1%b5%a4%e2%93%87%e2%84%92%e3%80%82%f0%9d%90%92%f0%9f%84%b4",
    "https | [11] | [12] | [13] | "
-   "%e2%84%82%e1%b5%a4%e2%93%87%e2%84%92%e3%80%82%f0%9d%90%92%f0%9f%84%b4 "
+   "%E2%84%82%E1%B5%A4%E2%93%87%E2%84%92%E3%80%82%F0%9D%90%92%F0%9F%84%B4 "
    "| [15] | / | [16] | [17]",
    0, CURLU_URLENCODE, CURLUE_OK},
   {"https://"
    "\xe2\x84\x82\xe1\xb5\xa4\xe2\x93\x87\xe2\x84\x92"
    "\xe3\x80\x82\xf0\x9d\x90\x92\xf0\x9f\x84\xb4",
    "https | [11] | [12] | [13] | "
-   "%e2%84%82%e1%b5%a4%e2%93%87%e2%84%92%e3%80%82%f0%9d%90%92%f0%9f%84%b4 "
+   "%E2%84%82%E1%B5%A4%E2%93%87%E2%84%92%E3%80%82%F0%9D%90%92%F0%9F%84%B4 "
    "| [15] | / | [16] | [17]",
    0, CURLU_URLENCODE, CURLUE_OK},
   {"https://user@example.net?he l lo",
@@ -653,7 +651,7 @@ static const struct urltestcase get_url_list[] = {
   {"http://example.com%2F127.0.0.1/", "", 0, 0, CURLUE_BAD_HOSTNAME},
   {"https://%41", "https://A/", 0, 0, CURLUE_OK},
   {"https://%20", "", 0, 0, CURLUE_BAD_HOSTNAME},
-  {"https://%41%0d", "", 0, 0, CURLUE_BAD_HOSTNAME},
+  {"https://%41%0D", "", 0, 0, CURLUE_BAD_HOSTNAME},
   {"https://%25", "", 0, 0, CURLUE_BAD_HOSTNAME},
   {"https://_%c0_", "https://_\xC0_/", 0, 0, CURLUE_OK},
   {"https://_%c0_", "https://_%C0_/", 0, CURLU_URLENCODE, CURLUE_OK},
@@ -915,11 +913,11 @@ static const struct setcase set_parts_list[] = {
    0, 0, CURLUE_OK, CURLUE_OK},
   {"https://example.com/",
    "path=one\ntwo,",
-   "https://example.com/one%0atwo",
+   "https://example.com/one%0Atwo",
    0, CURLU_URLENCODE, CURLUE_OK, CURLUE_OK},
   {"https://example.com/",
    "path=one\rtwo,",
-   "https://example.com/one%0dtwo",
+   "https://example.com/one%0Dtwo",
    0, CURLU_URLENCODE, CURLUE_OK, CURLUE_OK},
   {"https://example.com/",
    "host=%43url.se,",
@@ -1003,7 +1001,7 @@ static const struct setcase set_parts_list[] = {
 
   {"https://example.com/",
    "query=Al2cO3tDkcDZ3EWE5Lh+LX8TPHs,", /* contains '+' */
-   "https://example.com/?Al2cO3tDkcDZ3EWE5Lh%2bLX8TPHs",
+   "https://example.com/?Al2cO3tDkcDZ3EWE5Lh%2BLX8TPHs",
    CURLU_URLDECODE, /* decode on get */
    CURLU_URLENCODE, /* encode on set */
    CURLUE_OK, CURLUE_OK},
@@ -1065,7 +1063,7 @@ static const struct setcase set_parts_list[] = {
    0, 0, CURLUE_OK, CURLUE_OK},
   {NULL,
    "scheme=https,user=   @:,host=foobar,",
-   "https://%20%20%20%40%3a@foobar/",
+   "https://%20%20%20%40%3A@foobar/",
    0, CURLU_URLENCODE, CURLUE_OK, CURLUE_OK},
   /* Setting a host name with spaces is not OK: */
   {NULL,
@@ -1078,7 +1076,7 @@ static const struct setcase set_parts_list[] = {
    0, CURLU_URLENCODE, CURLUE_OK, CURLUE_OK},
   {NULL,
    "scheme=https,host=foobar,path=\xc3\xa4\xc3\xb6\xc3\xbc,",
-   "https://foobar/%c3%a4%c3%b6%c3%bc",
+   "https://foobar/%C3%A4%C3%B6%C3%BC",
    0, CURLU_URLENCODE, CURLUE_OK, CURLUE_OK},
   {"imap://user:secret;opt@host/",
    "options=updated,scheme=imaps,password=p4ssw0rd,",
@@ -1600,7 +1598,7 @@ static int get_parts(void)
 static const struct querycase append_list[] = {
   {"HTTP://test/?s", "name=joe\x02", "http://test/?s&name=joe%02",
    0, CURLU_URLENCODE, CURLUE_OK},
-  {"HTTP://test/?size=2#f", "name=joe=", "http://test/?size=2&name=joe%3d#f",
+  {"HTTP://test/?size=2#f", "name=joe=", "http://test/?size=2&name=joe%3D#f",
    0, CURLU_URLENCODE, CURLUE_OK},
   {"HTTP://test/?size=2#f", "name=joe doe",
    "http://test/?size=2&name=joe+doe#f",
@@ -1839,7 +1837,7 @@ static int get_nothing(void)
     rc = curl_url_get(u, CURLUPART_ZONEID, &p, 0);
     if(rc != CURLUE_NO_ZONEID)
       curl_mfprintf(stderr, "unexpected return code %u on line %u\n", (int)rc,
-              __LINE__);
+                    __LINE__);
 
     curl_url_cleanup(u);
   }
@@ -1902,11 +1900,11 @@ static char bigpart[120000];
  */
 static int huge(void)
 {
-  const char *smallpart = "c";
+  static const char *smallpart = "c";
   int i;
   CURLU *urlp = curl_url();
   CURLUcode rc;
-  CURLUPart part[]= {
+  CURLUPart part[] = {
     CURLUPART_SCHEME,
     CURLUPART_USER,
     CURLUPART_PASSWORD,
@@ -1956,7 +1954,7 @@ static int huge(void)
 
 static int urldup(void)
 {
-  const char *url[] = {
+  static const char *url[] = {
     "http://"
     "user:pwd@"
     "[2a04:4e42:e00::347%25eth0]"
@@ -2018,7 +2016,7 @@ err:
   return 1;
 }
 
-CURLcode test(char *URL)
+static CURLcode test_lib1560(char *URL)
 {
   (void)URL; /* not used */
 
