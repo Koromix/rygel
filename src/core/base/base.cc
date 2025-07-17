@@ -6184,10 +6184,12 @@ bool ParseSize(Span<const char> str, int64_t *out_size, unsigned int flags, Span
     if (__builtin_mul_overflow(size, multiplier, &size) || size > INT64_MAX) [[unlikely]]
         goto overflow;
 #else
-    uint64_t total = size * multiplier;
-    if ((size && total / size != multiplier) || total > INT64_MAX) [[unlikely]]
-        goto overflow;
-    size = (int64_t)total;
+    {
+        uint64_t total = size * multiplier;
+        if ((size && total / size != multiplier) || total > INT64_MAX) [[unlikely]]
+            goto overflow;
+        size = (int64_t)total;
+    }
 #endif
 
     *out_size = (int64_t)size;
@@ -6240,10 +6242,12 @@ bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int fla
     if (__builtin_mul_overflow(duration, multiplier, &duration)) [[unlikely]]
         goto overflow;
 #else
-    uint64_t total = duration * multiplier;
-    if ((duration && total / duration != (uint64_t)multiplier) || total > INT64_MAX) [[unlikely]]
-        goto overflow;
-    duration = (int64_t)total;
+    {
+        uint64_t total = duration * multiplier;
+        if ((duration && total / duration != (uint64_t)multiplier) || total > INT64_MAX) [[unlikely]]
+            goto overflow;
+        duration = (int64_t)total;
+    }
 #endif
 
     *out_duration = duration;
