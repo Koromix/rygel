@@ -331,7 +331,7 @@
             "username": "alpine",
             "password": "alpine",
 
-            "shutdown": "sudo poweroff"
+            "shutdown": "doas poweroff"
         }
     }
 }
