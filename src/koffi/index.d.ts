@@ -140,7 +140,7 @@ export function view(ref: any, len: number): ArrayBuffer;
 
 export function sizeof(type: TypeSpec): number;
 export function alignof(type: TypeSpec): number;
-export function offsetof(type: TypeSpec): number;
+export function offsetof(type: TypeSpec, member_name?: string): number;
 export function resolve(type: TypeSpec): IKoffiCType;
 export function introspect(type: TypeSpec): TypeInfo;
 
