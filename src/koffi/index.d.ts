@@ -136,6 +136,7 @@ export function encode(ref: any, type: TypeSpec, value: any, len: number): void;
 export function encode(ref: any, offset: number, type: TypeSpec): void;
 export function encode(ref: any, offset: number, type: TypeSpec, value: any): void;
 export function encode(ref: any, offset: number, type: TypeSpec, value: any, len: number): void;
+export function view(ref: any, len: number): ArrayBuffer;
 
 export function sizeof(type: TypeSpec): number;
 export function alignof(type: TypeSpec): number;
