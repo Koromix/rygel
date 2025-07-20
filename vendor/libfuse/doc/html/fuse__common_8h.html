@@ -177,6 +177,14 @@ Functions</h2></td></tr>
 <tr class="separator:a15830cd29289a75894e21f6a3ff573fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aeb674bbc11074c4fe520b952d6bfdd30" id="r_aeb674bbc11074c4fe520b952d6bfdd30"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="fuse__common_8h.html#aeb674bbc11074c4fe520b952d6bfdd30">fuse_remove_signal_handlers</a> (struct fuse_session *se)</td></tr>
 <tr class="separator:aeb674bbc11074c4fe520b952d6bfdd30"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2051128e455a60d49dc9b6c55fc0e4a1" id="r_a2051128e455a60d49dc9b6c55fc0e4a1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="fuse__common_8h.html#a2051128e455a60d49dc9b6c55fc0e4a1">fuse_set_feature_flag</a> (struct <a class="el" href="structfuse__conn__info.html">fuse_conn_info</a> *conn, uint64_t flag)</td></tr>
+<tr class="separator:a2051128e455a60d49dc9b6c55fc0e4a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a10f4cae131ab44bac126923635a03543" id="r_a10f4cae131ab44bac126923635a03543"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="fuse__common_8h.html#a10f4cae131ab44bac126923635a03543">fuse_unset_feature_flag</a> (struct <a class="el" href="structfuse__conn__info.html">fuse_conn_info</a> *conn, uint64_t flag)</td></tr>
+<tr class="separator:a10f4cae131ab44bac126923635a03543"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab56c60f07f805f678bec129f663db908" id="r_ab56c60f07f805f678bec129f663db908"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="fuse__common_8h.html#ab56c60f07f805f678bec129f663db908">fuse_get_feature_flag</a> (struct <a class="el" href="structfuse__conn__info.html">fuse_conn_info</a> *conn, uint64_t flag)</td></tr>
+<tr class="separator:ab56c60f07f805f678bec129f663db908"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a135fdd589d761bdaefb030d44852cfe6" id="r_a135fdd589d761bdaefb030d44852cfe6"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="fuse__common_8h.html#a135fdd589d761bdaefb030d44852cfe6">fuse_convert_to_conn_want_ext</a> (struct <a class="el" href="structfuse__conn__info.html">fuse_conn_info</a> *conn)</td></tr>
+<tr class="separator:a135fdd589d761bdaefb030d44852cfe6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
 <a id="aabcf6528f7433d511f98dca35669bdd4" name="aabcf6528f7433d511f98dca35669bdd4"></a>
@@ -908,6 +916,27 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a135fdd589d761bdaefb030d44852cfe6" name="a135fdd589d761bdaefb030d44852cfe6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a135fdd589d761bdaefb030d44852cfe6">&#9670;&#160;</a></span>fuse_convert_to_conn_want_ext()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int fuse_convert_to_conn_want_ext </td>
+          <td>(</td>
+          <td class="paramtype">struct <a class="el" href="structfuse__conn__info.html">fuse_conn_info</a> *&#160;</td>
+          <td class="paramname"><em>conn</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Get the wanted capability flags, converting from old format if necessary </p>
+
+<p class="definition">Definition at line <a class="el" href="fuse__lowlevel_8c_source.html#l02000">2000</a> of file <a class="el" href="fuse__lowlevel_8c_source.html">fuse_lowlevel.c</a>.</p>
+
+</div>
+</div>
 <a id="af1857d2209952f49a762aff39f3cd8bd" name="af1857d2209952f49a762aff39f3cd8bd"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af1857d2209952f49a762aff39f3cd8bd">&#9670;&#160;</a></span>fuse_daemonize()</h2>
 
@@ -933,6 +962,45 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on failure </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="helper_8c_source.html#l00253">253</a> of file <a class="el" href="helper_8c_source.html">helper.c</a>.</p>
+
+</div>
+</div>
+<a id="ab56c60f07f805f678bec129f663db908" name="ab56c60f07f805f678bec129f663db908"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab56c60f07f805f678bec129f663db908">&#9670;&#160;</a></span>fuse_get_feature_flag()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool fuse_get_feature_flag </td>
+          <td>(</td>
+          <td class="paramtype">struct <a class="el" href="structfuse__conn__info.html">fuse_conn_info</a> *&#160;</td>
+          <td class="paramname"><em>conn</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>flag</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Get the value of a feature flag in the want_ext field of <a class="el" href="structfuse__conn__info.html">fuse_conn_info</a>.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">conn</td><td>connection information </td></tr>
+    <tr><td class="paramname">flag</td><td>feature flag to be checked </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true if the flag is set, false otherwise </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="fuse__lowlevel_8c_source.html#l02061">2061</a> of file <a class="el" href="fuse__lowlevel_8c_source.html">fuse_lowlevel.c</a>.</p>
 
 </div>
 </div>
@@ -964,7 +1032,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>parsed options </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="helper_8c_source.html#l00459">459</a> of file <a class="el" href="helper_8c_source.html">helper.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="helper_8c_source.html#l00466">466</a> of file <a class="el" href="helper_8c_source.html">helper.c</a>.</p>
 
 </div>
 </div>
@@ -986,7 +1054,7 @@ Functions</h2></td></tr>
 <p>Get the full package version string of the library</p>
 <dl class="section return"><dt>Returns</dt><dd>the package version </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="fuse_8c_source.html#l05236">5236</a> of file <a class="el" href="fuse_8c_source.html">fuse.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="fuse_8c_source.html#l05211">5211</a> of file <a class="el" href="fuse_8c_source.html">fuse.c</a>.</p>
 
 </div>
 </div>
@@ -1013,7 +1081,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="fuse__lowlevel_8c_source.html#l01907">1907</a> of file <a class="el" href="fuse__lowlevel_8c_source.html">fuse_lowlevel.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="fuse__lowlevel_8c_source.html#l01903">1903</a> of file <a class="el" href="fuse__lowlevel_8c_source.html">fuse_lowlevel.c</a>.</p>
 
 </div>
 </div>
@@ -1077,6 +1145,45 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a2051128e455a60d49dc9b6c55fc0e4a1" name="a2051128e455a60d49dc9b6c55fc0e4a1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2051128e455a60d49dc9b6c55fc0e4a1">&#9670;&#160;</a></span>fuse_set_feature_flag()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool fuse_set_feature_flag </td>
+          <td>(</td>
+          <td class="paramtype">struct <a class="el" href="structfuse__conn__info.html">fuse_conn_info</a> *&#160;</td>
+          <td class="paramname"><em>conn</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>flag</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Config operations. These APIs are introduced in version 312 (FUSE_MAKE_VERSION(3, 12)). Using them in earlier versions will result in errors. Set a feature flag in the want_ext field of <a class="el" href="structfuse__conn__info.html">fuse_conn_info</a>.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">conn</td><td>connection information </td></tr>
+    <tr><td class="paramname">flag</td><td>feature flag to be set </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true if the flag was set, false if the flag is not supported </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="fuse__lowlevel_8c_source.html#l02035">2035</a> of file <a class="el" href="fuse__lowlevel_8c_source.html">fuse_lowlevel.c</a>.</p>
+
+</div>
+</div>
 <a id="a292dccc3c7b1799cb054efa2ba0c774b" name="a292dccc3c7b1799cb054efa2ba0c774b"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a292dccc3c7b1799cb054efa2ba0c774b">&#9670;&#160;</a></span>fuse_set_signal_handlers()</h2>
 
@@ -1108,6 +1215,44 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a10f4cae131ab44bac126923635a03543" name="a10f4cae131ab44bac126923635a03543"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a10f4cae131ab44bac126923635a03543">&#9670;&#160;</a></span>fuse_unset_feature_flag()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void fuse_unset_feature_flag </td>
+          <td>(</td>
+          <td class="paramtype">struct <a class="el" href="structfuse__conn__info.html">fuse_conn_info</a> *&#160;</td>
+          <td class="paramname"><em>conn</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>flag</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Unset a feature flag in the want_ext field of <a class="el" href="structfuse__conn__info.html">fuse_conn_info</a>.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">conn</td><td>connection information </td></tr>
+    <tr><td class="paramname">flag</td><td>feature flag to be unset </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="fuse__lowlevel_8c_source.html#l02050">2050</a> of file <a class="el" href="fuse__lowlevel_8c_source.html">fuse_lowlevel.c</a>.</p>
+
+</div>
+</div>
 <a id="ae04b2f721003f5540c71be65396c53c8" name="ae04b2f721003f5540c71be65396c53c8"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ae04b2f721003f5540c71be65396c53c8">&#9670;&#160;</a></span>fuse_version()</h2>
 
@@ -1126,7 +1271,7 @@ Functions</h2></td></tr>
 <p>Get the version of the library</p>
 <dl class="section return"><dt>Returns</dt><dd>the version </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="fuse_8c_source.html#l05231">5231</a> of file <a class="el" href="fuse_8c_source.html">fuse.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="fuse_8c_source.html#l05206">5206</a> of file <a class="el" href="fuse_8c_source.html">fuse.c</a>.</p>
 
 </div>
 </div>

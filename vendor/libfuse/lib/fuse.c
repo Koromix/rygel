@@ -92,10 +92,6 @@ struct node_table {
 	size_t split;
 };
 
-#define container_of(ptr, type, member) ({                              \
-			const typeof( ((type *)0)->member ) *__mptr = (ptr); \
-			(type *)( (char *)__mptr - offsetof(type,member) );})
-
 #define list_entry(ptr, type, member)           \
 	container_of(ptr, type, member)
 
@@ -2615,29 +2611,8 @@ void fuse_fs_init(struct fuse_fs *fs, struct fuse_conn_info *conn,
 		fuse_unset_feature_flag(conn, FUSE_CAP_POSIX_LOCKS);
 	if (!fs->op.flock)
 		fuse_unset_feature_flag(conn, FUSE_CAP_FLOCK_LOCKS);
-	if (fs->op.init) {
-		uint64_t want_ext_default = conn->want_ext;
-		uint32_t want_default = fuse_lower_32_bits(conn->want_ext);
-		int rc;
-
-		conn->want = want_default;
+	if (fs->op.init)
 		fs->user_data = fs->op.init(conn, cfg);
-
-		rc = convert_to_conn_want_ext(conn, want_ext_default,
-					      want_default);
-
-		if (rc != 0) {
-			/*
-			 * This is a grave developer error, but
-			 * we cannot return an error here, as the function
-			 * signature does not allow it.
-			 */
-			fuse_log(
-				FUSE_LOG_ERR,
-				"fuse: Aborting due to invalid conn want flags.\n");
-			_exit(EXIT_FAILURE);
-		}
-	}
 }
 
 static int fuse_init_intr_signal(int signum, int *installed);

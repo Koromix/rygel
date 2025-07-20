@@ -44,10 +44,6 @@
 #define PARAM(inarg) (((char *)(inarg)) + sizeof(*(inarg)))
 #define OFFSET_MAX 0x7fffffffffffffffLL
 
-#define container_of(ptr, type, member) ({				\
-			const typeof( ((type *)0)->member ) *__mptr = (ptr); \
-			(type *)( (char *)__mptr - offsetof(type,member) );})
-
 struct fuse_pollhandle {
 	uint64_t kh;
 	struct fuse_session *se;
@@ -1998,6 +1994,77 @@ static bool want_flags_valid(uint64_t capable, uint64_t want)
 	return true;
 }
 
+/**
+ * Get the wanted capability flags, converting from old format if necessary
+ */
+int fuse_convert_to_conn_want_ext(struct fuse_conn_info *conn)
+{
+	struct fuse_session *se = container_of(conn, struct fuse_session, conn);
+
+	/*
+	 * Convert want to want_ext if necessary.
+	 * For the high level interface this function might be called
+	 * twice, once from the high level interface and once from the
+	 * low level interface. Both, with different want_ext_default and
+	 * want_default values. In order to suppress a failure for the
+	 * second call, we check if the lower 32 bits of want_ext are
+	 * already set to the value of want.
+	 */
+	if (conn->want != se->conn_want &&
+	    fuse_lower_32_bits(conn->want_ext) != conn->want) {
+		if (conn->want_ext != se->conn_want_ext) {
+			fuse_log(FUSE_LOG_ERR,
+				"%s: Both conn->want_ext and conn->want are set.\n"
+				"want=%x, want_ext=%lx, se->want=%lx se->want_ext=%lx\n",
+				__func__, conn->want, conn->want_ext,
+				se->conn_want, se->conn_want_ext);
+			return -EINVAL;
+		}
+
+		/* high bits from want_ext, low bits from want */
+		conn->want_ext = fuse_higher_32_bits(conn->want_ext) |
+				 conn->want;
+	}
+
+	/* ensure there won't be a second conversion */
+	conn->want = fuse_lower_32_bits(conn->want_ext);
+
+	return 0;
+}
+
+bool fuse_set_feature_flag(struct fuse_conn_info *conn,
+					 uint64_t flag)
+{
+	struct fuse_session *se = container_of(conn, struct fuse_session, conn);
+
+	if (conn->capable_ext & flag) {
+		conn->want_ext |= flag;
+		se->conn_want_ext |= flag;
+		conn->want  |= flag;
+		se->conn_want |= flag;
+		return true;
+	}
+	return false;
+}
+
+void fuse_unset_feature_flag(struct fuse_conn_info *conn,
+					 uint64_t flag)
+{
+	struct fuse_session *se = container_of(conn, struct fuse_session, conn);
+
+	conn->want_ext &= ~flag;
+	se->conn_want_ext &= ~flag;
+	conn->want  &= ~flag;
+	se->conn_want &= ~flag;
+}
+
+bool fuse_get_feature_flag(struct fuse_conn_info *conn,
+					     uint64_t flag)
+{
+	return conn->capable_ext & flag ? true : false;
+}
+
+
 /* Prevent bogus data races (bogus since "init" is called before
  * multi-threading becomes relevant */
 static __attribute__((no_sanitize("thread")))
@@ -2158,13 +2225,8 @@ void do_init(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
 
 	se->got_init = 1;
 	if (se->op.init) {
-		uint64_t want_ext_default = se->conn.want_ext;
-		uint32_t want_default = fuse_lower_32_bits(se->conn.want_ext);
-		int rc;
-
 		// Apply the first 32 bits of capable_ext to capable
 		se->conn.capable = fuse_lower_32_bits(se->conn.capable_ext);
-		se->conn.want = want_default;
 
 		se->op.init(se->userdata, &se->conn);
 
@@ -2173,14 +2235,7 @@ void do_init(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
 		 * se->conn.want_ext
 		 * Userspace might still use conn.want - we need to convert it
 		 */
-		rc = convert_to_conn_want_ext(&se->conn, want_ext_default,
-					      want_default);
-		if (rc != 0) {
-			fuse_reply_err(req, EPROTO);
-			se->error = -EPROTO;
-			fuse_session_exit(se);
-			return;
-		}
+		fuse_convert_to_conn_want_ext(&se->conn);
 	}
 
 	if (!want_flags_valid(se->conn.capable_ext, se->conn.want_ext)) {
@@ -2323,9 +2378,13 @@ void do_init(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
 static void do_destroy(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
 {
 	struct fuse_session *se = req->se;
+	char *mountpoint;
 
 	(void) nodeid;
 	(void) inarg;
+
+	mountpoint = atomic_exchange(&se->mountpoint, NULL);
+	free(mountpoint);
 
 	se->got_destroy = 1;
 	se->got_init = 0;
@@ -3411,12 +3470,20 @@ int fuse_session_custom_io_30(struct fuse_session *se,
 			offsetof(struct fuse_custom_io, clone_fd), fd);
 }
 
-int fuse_session_mount(struct fuse_session *se, const char *mountpoint)
+int fuse_session_mount(struct fuse_session *se, const char *_mountpoint)
 {
 	int fd;
+	char *mountpoint;
 
-	if (mountpoint == NULL) {
+	if (_mountpoint == NULL) {
 		fuse_log(FUSE_LOG_ERR, "Invalid null-ptr mountpoint!\n");
+		return -1;
+	}
+
+	mountpoint = strdup(_mountpoint);
+	if (mountpoint == NULL) {
+		fuse_log(FUSE_LOG_ERR, "Failed to allocate memory for mountpoint. Error: %s\n",
+			strerror(errno));
 		return -1;
 	}
 
@@ -3442,7 +3509,7 @@ int fuse_session_mount(struct fuse_session *se, const char *mountpoint)
 			fuse_log(FUSE_LOG_ERR,
 				"fuse: Invalid file descriptor /dev/fd/%u\n",
 				fd);
-			return -1;
+			goto error_out;
 		}
 		se->fd = fd;
 		return 0;
@@ -3451,18 +3518,16 @@ int fuse_session_mount(struct fuse_session *se, const char *mountpoint)
 	/* Open channel */
 	fd = fuse_kern_mount(mountpoint, se->mo);
 	if (fd == -1)
-		return -1;
+		goto error_out;
 	se->fd = fd;
 
 	/* Save mountpoint */
-	se->mountpoint = strdup(mountpoint);
-	if (se->mountpoint == NULL)
-		goto error_out;
+	se->mountpoint = mountpoint;
 
 	return 0;
 
 error_out:
-	fuse_kern_unmount(mountpoint, fd);
+	free(mountpoint);
 	return -1;
 }
 
@@ -3474,10 +3539,11 @@ int fuse_session_fd(struct fuse_session *se)
 void fuse_session_unmount(struct fuse_session *se)
 {
 	if (se->mountpoint != NULL) {
-		fuse_kern_unmount(se->mountpoint, se->fd);
+		char *mountpoint = atomic_exchange(&se->mountpoint, NULL);
+
+		fuse_kern_unmount(mountpoint, se->fd);
 		se->fd = -1;
-		free(se->mountpoint);
-		se->mountpoint = NULL;
+		free(mountpoint);
 	}
 }
 
