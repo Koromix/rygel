@@ -202,7 +202,12 @@ R"(Usage: %!..+%1 get url key destination)", FelixTarget);
     if (!writer.IsValid())
         return 1;
 
-    const auto func = [&](Span<const uint8_t> buf) { return writer.Write(buf); };
+    const auto func = [&](int64_t offset, Span<const uint8_t> buf) {
+        if (!offset && !writer.Rewind())
+            return false;
+
+        return writer.Write(buf);
+    };
 
     s3_ObjectInfo info = {};
     bool success = s3.GetObject(key, func, &info);
@@ -291,7 +296,13 @@ Options:
         return 1;
     }
 
-    const auto func = [&](Span<uint8_t> buf) { return reader.Read(buf); };
+    const auto func = [&](int64_t offset, Span<uint8_t> buf) {
+        if (!offset && !reader.Rewind())
+            return (Size)-1;
+
+        return reader.Read(buf);
+    };
+
     s3_PutResult ret = s3.PutObject(key, size, func, settings);
 
     switch (ret) {

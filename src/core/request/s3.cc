@@ -373,26 +373,30 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
     return true;
 }
 
-int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(Span<const uint8_t>)> func, s3_ObjectInfo *out_info)
+int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(int64_t, Span<const uint8_t>)> func, s3_ObjectInfo *out_info)
 {
     BlockAllocator temp_alloc;
 
     struct GetContext {
         Span<const char> key;
-        FunctionRef<bool(Span<const uint8_t>)> func;
-        int64_t len;
+        FunctionRef<bool(int64_t, Span<const uint8_t>)> func;
+        int64_t offset;
     };
 
-    GetContext ctx = {};
+    GetContext ctx;
 
     ctx.key = key;
     ctx.func = func;
+    ctx.offset = 0;
 
     int status = RunSafe("get S3 object", 5, 404, [&](CURL *curl) {
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
         PrepareRequest(curl, date, "GET", key, {}, &temp_alloc);
+
+        // Handle restart
+        ctx.offset = 0;
 
         if (out_info) {
             MemSet(out_info->version, 0, RG_SIZE(out_info->version));
@@ -417,9 +421,9 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(Span<const u
             GetContext *ctx = (GetContext *)udata;
             Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
 
-            if (!ctx->func(buf))
+            if (!ctx->func(ctx->offset, buf))
                 return (size_t)0;
-            ctx->len += buf.len;
+            ctx->offset += buf.len;
 
             return nmemb;
         });
@@ -436,37 +440,32 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(Span<const u
     }
 
     if (out_info) {
-        out_info->size = ctx.len;
+        out_info->size = ctx.offset;
     }
-
-    return ctx.len;
+    return ctx.offset;
 }
 
 Size s3_Client::GetObject(Span<const char> key, Span<uint8_t> out_buf, s3_ObjectInfo *out_info)
 {
-    Size prev_len = out_buf.len;
-
-    int64_t size = GetObject(key, [&](Span<const uint8_t> buf) {
-        buf.len = std::min(buf.len, out_buf.len);
-        MemCpy(out_buf.ptr, buf.ptr, buf.len);
-
-        out_buf.ptr += buf.len;
-        out_buf.len -= buf.len;
+    int64_t size = GetObject(key, [&](int64_t offset, Span<const uint8_t> buf) {
+        Size copy_len = (Size)std::clamp(out_buf.len - offset, (int64_t)0, (int64_t)buf.len);
+        MemCpy(out_buf.ptr + (Size)offset, buf.ptr, copy_len);
 
         return true;
     }, out_info);
-    if (size < 0)
-        return -1;
 
-    return prev_len - out_buf.len;
+    Size copied = (Size)std::min(size, (int64_t)out_buf.len);
+    return (Size)copied;
 }
 
 Size s3_Client::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj, s3_ObjectInfo *out_info)
 {
-    Size prev_len = out_obj->len;
+    int64_t prev_len = out_obj->len;
     RG_DEFER_N(err_guard) { out_obj->RemoveFrom(prev_len); };
 
-    int64_t size = GetObject(key, [&](Span<const uint8_t> buf) {
+    int64_t size = GetObject(key, [&](int64_t offset, Span<const uint8_t> buf) {
+        out_obj->len = offset ? out_obj->len : prev_len;
+
         if (max_len >= 0 && out_obj->len - prev_len > max_len - buf.len) {
             LogError("S3 object '%1' is too big (max = %2)", key, FmtDiskSize(max_len));
             return false;
@@ -544,10 +543,20 @@ static inline const char *GetLockModeString(s3_LockMode mode)
     RG_UNREACHABLE();
 }
 
-s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size, FunctionRef<Size(Span<uint8_t>)> func,
-                                  const s3_PutSettings &settings)
+s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
+                                  FunctionRef<Size(int64_t offset, Span<uint8_t>)> func, const s3_PutSettings &settings)
 {
     BlockAllocator temp_alloc;
+
+    struct PutContext {
+        FunctionRef<Size(int64_t offset, Span<uint8_t>)> func;
+        int64_t offset;
+    };
+
+    PutContext ctx;
+
+    ctx.func = func;
+    ctx.offset = 0;
 
     int status = RunSafe("upload S3 object", 5, 412, [&](CURL *curl) {
         LocalArray<KeyValue, 8> headers;
@@ -576,18 +585,22 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size, FunctionRe
 
         PrepareRequest(curl, date, "PUT", key, {}, headers, &temp_alloc);
 
+        // Handle restart
+        ctx.offset = 0;
+
         curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L); // PUT
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
-            FunctionRef<Size(Span<uint8_t>)> *func = (FunctionRef<Size(Span<uint8_t>)> *)udata;
+            PutContext *ctx = (PutContext *)udata;
             Span<uint8_t> buf = MakeSpan((uint8_t *)ptr, (Size)(size * nmemb));
 
-            Size ret = (*func)(buf);
+            Size ret = ctx->func(ctx->offset, buf);
             if (ret < 0)
                 return (size_t)CURL_READFUNC_ABORT;
+            ctx->offset += ret;
 
             return (size_t)ret;
         });
-        curl_easy_setopt(curl, CURLOPT_READDATA, &func);
+        curl_easy_setopt(curl, CURLOPT_READDATA, &ctx);
         curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)size);
 
         return curl_Perform(curl, nullptr);
@@ -602,14 +615,11 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size, FunctionRe
 
 s3_PutResult s3_Client::PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutSettings &settings)
 {
-    s3_PutResult ret = PutObject(key, data.len, [&](Span<uint8_t> buf) {
-        Size give = std::min(buf.len, data.len);
-        MemCpy(buf.ptr, data.ptr, give);
+    s3_PutResult ret = PutObject(key, data.len, [&](int64_t offset, Span<uint8_t> buf) {
+        Size copy_len = std::min(buf.len, data.len - (Size)offset);
+        MemCpy(buf.ptr, data.ptr + (Size)offset, copy_len);
 
-        data.ptr += give;
-        data.len -= give;
-
-        return give;
+        return copy_len;
     }, settings);
 
     return ret;
