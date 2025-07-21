@@ -5192,6 +5192,9 @@ public:
               CompressionSpeed compression_speed = CompressionSpeed::Default);
     bool Close() { return Close(false); }
 
+    // File-specific
+    bool Rewind();
+
     // For compressed streams, Flush may not be complete and only Close() can finalize the file.
     // Thread safe method
     bool Flush();

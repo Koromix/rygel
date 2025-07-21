@@ -7994,6 +7994,59 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
     return true;
 }
 
+bool StreamWriter::Rewind()
+{
+    if (error) [[unlikely]]
+        return false;
+
+    if (encoder) [[unlikely]] {
+        LogError("Cannot rewind stream with encoder");
+        return false;
+    }
+
+    switch (dest.type) {
+        case DestinationType::Memory: { dest.u.mem.memory->RemoveFrom(dest.u.mem.start); } break;
+
+        case DestinationType::LineFile:
+        case DestinationType::BufferedFile:
+        case DestinationType::DirectFile: {
+            if (lseek(dest.u.file.fd, 0, SEEK_SET) < 0) {
+                LogError("Failed to rewind '%1': %2", filename, strerror(errno));
+                error = true;
+                return false;
+            }
+
+#if defined(_WIN32)
+            HANDLE h = (HANDLE)_get_osfhandle(dest.u.file.fd);
+
+            if (!SetEndOfFile(h)) {
+                LogError("Failed to truncate '%1': %2", filename, GetWin32ErrorString());
+                error = true;
+                return false;
+            }
+#else
+            if (ftruncate(dest.u.file.fd, 0) < 0) {
+                LogError("Failed to truncate '%1': %2", filename, strerror(errno));
+                error = true;
+                return false;
+            }
+#endif
+
+            dest.u.file.buf_used = 0;
+        } break;
+
+        case DestinationType::Function: {
+            LogError("Cannot rewind stream '%1'", filename);
+            error = true;
+            return false;
+        } break;
+    }
+
+    raw_written = 0;
+
+    return true;
+}
+
 bool StreamWriter::Flush()
 {
 #if !defined(__wasm__)
