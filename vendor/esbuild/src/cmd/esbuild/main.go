@@ -54,9 +54,10 @@ var helpText = func(colors logger.Colors) string {
                         safari11, edge16, node10, ie9, opera45, default esnext)
   --watch               Watch mode: rebuild on file system changes (stops when
                         stdin is closed, use "--watch=forever" to ignore stdin)
-  --watch-delay=...     How many milliseconds to wait before watch mode rebuilds
 
 ` + colors.Bold + `Advanced options:` + colors.Reset + `
+  --abs-paths=...           Emit absolute instead of relative paths in these
+                            situations (code | log | metafile)
   --allow-overwrite         Allow output files to overwrite input files
   --analyze                 Print a report about the contents of the bundle
                             (use "--analyze=verbose" for a detailed report)
@@ -131,6 +132,7 @@ var helpText = func(colors logger.Colors) string {
   --tsconfig=...            Use this tsconfig.json file instead of other ones
   --tsconfig-raw=...        Override all tsconfig.json files with this string
   --version                 Print the current version (` + esbuildVersion + `) and exit
+  --watch-delay=...         Wait before watch mode rebuilds (in milliseconds)
 
 ` + colors.Bold + `Examples:` + colors.Reset + `
   ` + colors.Dim + `# Produces dist/entry_point.js and dist/entry_point.js.map` + colors.Reset + `

@@ -335,6 +335,7 @@ function pushCommonFlags(flags, options, keys) {
   let keepNames = getFlag(options, keys, "keepNames", mustBeBoolean);
   let platform = getFlag(options, keys, "platform", mustBeString);
   let tsconfigRaw = getFlag(options, keys, "tsconfigRaw", mustBeStringOrObject);
+  let absPaths = getFlag(options, keys, "absPaths", mustBeArrayOfStrings);
   if (legalComments) flags.push(`--legal-comments=${legalComments}`);
   if (sourceRoot !== void 0) flags.push(`--source-root=${sourceRoot}`);
   if (sourcesContent !== void 0) flags.push(`--sources-content=${sourcesContent}`);
@@ -353,6 +354,7 @@ function pushCommonFlags(flags, options, keys) {
   if (ignoreAnnotations) flags.push(`--ignore-annotations`);
   if (drop) for (let what of drop) flags.push(`--drop:${validateStringValue(what, "drop")}`);
   if (dropLabels) flags.push(`--drop-labels=${validateAndJoinStringArray(dropLabels, "drop label")}`);
+  if (absPaths) flags.push(`--abs-paths=${validateAndJoinStringArray(absPaths, "abs paths")}`);
   if (mangleProps) flags.push(`--mangle-props=${jsRegExpToGoRegExp(mangleProps)}`);
   if (reserveProps) flags.push(`--reserve-props=${jsRegExpToGoRegExp(reserveProps)}`);
   if (mangleQuoted !== void 0) flags.push(`--mangle-quoted=${mangleQuoted}`);
@@ -641,8 +643,8 @@ function createChannel(streamIn) {
     if (isFirstPacket) {
       isFirstPacket = false;
       let binaryVersion = String.fromCharCode(...bytes);
-      if (binaryVersion !== "0.25.6") {
-        throw new Error(`Cannot start service: Host version "${"0.25.6"}" does not match binary version ${quote(binaryVersion)}`);
+      if (binaryVersion !== "0.25.8") {
+        throw new Error(`Cannot start service: Host version "${"0.25.8"}" does not match binary version ${quote(binaryVersion)}`);
       }
       return;
     }
@@ -1768,7 +1770,7 @@ for your current platform.`);
         "node_modules",
         ".cache",
         "esbuild",
-        `pnpapi-${pkg.replace("/", "-")}-${"0.25.6"}-${path.basename(subpath)}`
+        `pnpapi-${pkg.replace("/", "-")}-${"0.25.8"}-${path.basename(subpath)}`
       );
       if (!fs.existsSync(binTargetPath)) {
         fs.mkdirSync(path.dirname(binTargetPath), { recursive: true });
@@ -1803,7 +1805,7 @@ if (process.env.ESBUILD_WORKER_THREADS !== "0") {
   }
 }
 var _a;
-var isInternalWorkerThread = ((_a = worker_threads == null ? void 0 : worker_threads.workerData) == null ? void 0 : _a.esbuildVersion) === "0.25.6";
+var isInternalWorkerThread = ((_a = worker_threads == null ? void 0 : worker_threads.workerData) == null ? void 0 : _a.esbuildVersion) === "0.25.8";
 var esbuildCommandAndArgs = () => {
   if ((!ESBUILD_BINARY_PATH || false) && (path2.basename(__filename) !== "main.js" || path2.basename(__dirname) !== "lib")) {
     throw new Error(
@@ -1870,7 +1872,7 @@ var fsAsync = {
     }
   }
 };
-var version = "0.25.6";
+var version = "0.25.8";
 var build = (options) => ensureServiceIsRunning().build(options);
 var context = (buildOptions) => ensureServiceIsRunning().context(buildOptions);
 var transform = (input, options) => ensureServiceIsRunning().transform(input, options);
@@ -1973,7 +1975,7 @@ var stopService;
 var ensureServiceIsRunning = () => {
   if (longLivedService) return longLivedService;
   let [command, args] = esbuildCommandAndArgs();
-  let child = child_process.spawn(command, args.concat(`--service=${"0.25.6"}`, "--ping"), {
+  let child = child_process.spawn(command, args.concat(`--service=${"0.25.8"}`, "--ping"), {
     windowsHide: true,
     stdio: ["pipe", "pipe", "inherit"],
     cwd: defaultWD
@@ -2077,7 +2079,7 @@ var runServiceSync = (callback) => {
     esbuild: node_exports
   });
   callback(service);
-  let stdout = child_process.execFileSync(command, args.concat(`--service=${"0.25.6"}`), {
+  let stdout = child_process.execFileSync(command, args.concat(`--service=${"0.25.8"}`), {
     cwd: defaultWD,
     windowsHide: true,
     input: stdin,
@@ -2097,7 +2099,7 @@ var workerThreadService = null;
 var startWorkerThreadService = (worker_threads2) => {
   let { port1: mainPort, port2: workerPort } = new worker_threads2.MessageChannel();
   let worker = new worker_threads2.Worker(__filename, {
-    workerData: { workerPort, defaultWD, esbuildVersion: "0.25.6" },
+    workerData: { workerPort, defaultWD, esbuildVersion: "0.25.8" },
     transferList: [workerPort],
     // From node's documentation: https://nodejs.org/api/worker_threads.html
     //

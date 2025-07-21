@@ -3113,6 +3113,30 @@ func TestImport(t *testing.T) {
 
 	// String import alias with "import * as"
 	expectParseError(t, "import * as '' from 'foo'", "<stdin>: ERROR: Expected identifier but found \"''\"\n")
+
+	// See: https://github.com/tc39/proposal-defer-import-eval
+	expectPrinted(t, "import defer from 'bar'", "import defer from \"bar\";\n")
+	expectPrinted(t, "import defer, { foo } from 'bar'", "import defer, { foo } from \"bar\";\n")
+	expectPrinted(t, "import defer * as foo from 'bar'", "import defer * as foo from \"bar\";\n")
+	expectPrinted(t, "import.defer('foo')", "import.defer(\"foo\");\n")
+	expectParseError(t, "import defer 'bar'", "<stdin>: ERROR: Expected \"from\" but found \"'bar'\"\n")
+	expectParseError(t, "import defer foo from 'bar'", "<stdin>: ERROR: Expected \"from\" but found \"foo\"\n")
+	expectParseError(t, "import defer { foo } from 'bar'", "<stdin>: ERROR: Expected \"from\" but found \"{\"\n")
+	expectParseErrorTarget(t, 6, "import defer * as foo from 'bar'", "<stdin>: ERROR: Deferred imports are not available in the configured target environment\n")
+	expectParseErrorTarget(t, 6, "import.defer('foo')", "<stdin>: ERROR: Deferred imports are not available in the configured target environment\n")
+
+	// See: https://github.com/tc39/proposal-source-phase-imports
+	expectPrinted(t, "import source from 'bar'", "import source from \"bar\";\n")
+	expectPrinted(t, "import source, { foo } from 'bar'", "import source, { foo } from \"bar\";\n")
+	expectPrinted(t, "import source foo from 'bar'", "import source foo from \"bar\";\n")
+	expectPrinted(t, "import source from from 'bar'", "import source from from \"bar\";\n")
+	expectPrinted(t, "import source source from 'bar'", "import source source from \"bar\";\n")
+	expectPrinted(t, "import.source('foo')", "import.source(\"foo\");\n")
+	expectParseError(t, "import source 'bar'", "<stdin>: ERROR: Expected \"from\" but found \"'bar'\"\n")
+	expectParseError(t, "import source * as foo from 'bar'", "<stdin>: ERROR: Expected \"from\" but found \"*\"\n")
+	expectParseError(t, "import source { foo } from 'bar'", "<stdin>: ERROR: Expected \"from\" but found \"{\"\n")
+	expectParseErrorTarget(t, 6, "import source foo from 'bar'", "<stdin>: ERROR: Source phase imports are not available in the configured target environment\n")
+	expectParseErrorTarget(t, 6, "import.source('foo')", "<stdin>: ERROR: Source phase imports are not available in the configured target environment\n")
 }
 
 func TestExport(t *testing.T) {
@@ -4823,7 +4847,7 @@ func TestMangleUnaryConstantFolding(t *testing.T) {
 func TestMangleBinaryConstantFolding(t *testing.T) {
 	expectPrintedNormalAndMangle(t, "x = 3 + 6", "x = 3 + 6;\n", "x = 9;\n")
 	expectPrintedNormalAndMangle(t, "x = 3 - 6", "x = 3 - 6;\n", "x = -3;\n")
-	expectPrintedNormalAndMangle(t, "x = 3 * 6", "x = 3 * 6;\n", "x = 3 * 6;\n")
+	expectPrintedNormalAndMangle(t, "x = 3 * 6", "x = 3 * 6;\n", "x = 18;\n")
 	expectPrintedNormalAndMangle(t, "x = 3 / 6", "x = 3 / 6;\n", "x = 3 / 6;\n")
 	expectPrintedNormalAndMangle(t, "x = 3 % 6", "x = 3 % 6;\n", "x = 3 % 6;\n")
 	expectPrintedNormalAndMangle(t, "x = 3 ** 6", "x = 3 ** 6;\n", "x = 3 ** 6;\n")
@@ -6045,10 +6069,10 @@ func TestPreserveOptionalChainParentheses(t *testing.T) {
 }
 
 func TestPrivateIdentifiers(t *testing.T) {
-	expectParseError(t, "#foo", "<stdin>: ERROR: Unexpected \"#foo\"\n")
-	expectParseError(t, "#foo in this", "<stdin>: ERROR: Unexpected \"#foo\"\n")
-	expectParseError(t, "this.#foo", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseError(t, "this?.#foo", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
+	expectParseError(t, "#foo", "<stdin>: ERROR: Expected \"in\" but found end of file\n")
+	expectParseError(t, "#foo in this", "<stdin>: ERROR: Private name \"#foo\" must be declared in an enclosing class\n")
+	expectParseError(t, "this.#foo", "<stdin>: ERROR: Private name \"#foo\" must be declared in an enclosing class\n")
+	expectParseError(t, "this?.#foo", "<stdin>: ERROR: Private name \"#foo\" must be declared in an enclosing class\n")
 	expectParseError(t, "({ #foo: 1 })", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
 	expectParseError(t, "class Foo { x = { #foo: 1 } }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
 	expectParseError(t, "class Foo { x = #foo }", "<stdin>: ERROR: Expected \"in\" but found \"}\"\n")

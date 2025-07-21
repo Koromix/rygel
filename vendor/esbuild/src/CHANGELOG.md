@@ -1,5 +1,97 @@
 # Changelog
 
+## 0.25.8
+
+* Fix another TypeScript parsing edge case ([#4248](https://github.com/evanw/esbuild/issues/4248))
+
+    This fixes a regression with a change in the previous release that tries to more accurately parse TypeScript arrow functions inside the `?:` operator. The regression specifically involves parsing an arrow function containing a `#private` identifier inside the middle of a `?:` ternary operator inside a class body. This was fixed by propagating private identifier state into the parser clone used to speculatively parse the arrow function body. Here is an example of some affected code:
+
+    ```ts
+    class CachedDict {
+      #has = (a: string) => dict.has(a);
+      has = window
+        ? (word: string): boolean => this.#has(word)
+        : this.#has;
+    }
+    ```
+
+* Fix a regression with the parsing of source phase imports
+
+    The change in the previous release to parse [source phase imports](https://github.com/tc39/proposal-source-phase-imports) failed to properly handle the following cases:
+
+    ```ts
+    import source from 'bar'
+    import source from from 'bar'
+    import source type foo from 'bar'
+    ```
+
+    Parsing for these cases should now be fixed. The first case was incorrectly treated as a syntax error because esbuild was expecting the second case. And the last case was previously allowed but is now forbidden. TypeScript hasn't added this feature yet so it remains to be seen whether the last case will be allowed, but it's safer to disallow it for now. At least Babel doesn't allow the last case when parsing TypeScript, and Babel was involved with the source phase import specification.
+
+## 0.25.7
+
+* Parse and print JavaScript imports with an explicit phase ([#4238](https://github.com/evanw/esbuild/issues/4238))
+
+    This release adds basic syntax support for the `defer` and `source` import phases in JavaScript:
+
+    * `defer`
+
+        This is a [stage 3 proposal](https://github.com/tc39/proposal-defer-import-eval) for an upcoming JavaScript feature that will provide one way to eagerly load but lazily initialize imported modules. The imported module is automatically initialized on first use. Support for this syntax will also be part of the upcoming release of [TypeScript 5.9](https://devblogs.microsoft.com/typescript/announcing-typescript-5-9-beta/#support-for-import-defer). The syntax looks like this:
+
+        ```js
+        import defer * as foo from "<specifier>";
+        const bar = await import.defer("<specifier>");
+        ```
+
+        Note that this feature deliberately cannot be used with the syntax `import defer foo from "<specifier>"` or `import defer { foo } from "<specifier>"`.
+
+    * `source`
+
+        This is a [stage 3 proposal](https://github.com/tc39/proposal-source-phase-imports) for an upcoming JavaScript feature that will provide another way to eagerly load but lazily initialize imported modules. The imported module is returned in an uninitialized state. Support for this syntax may or may not be a part of TypeScript 5.9 (see [this issue](https://github.com/microsoft/TypeScript/issues/61216) for details). The syntax looks like this:
+
+        ```js
+        import source foo from "<specifier>";
+        const bar = await import.source("<specifier>");
+        ```
+
+        Note that this feature deliberately cannot be used with the syntax `import defer * as foo from "<specifier>"` or `import defer { foo } from "<specifier>"`.
+
+    This change only adds support for this syntax. These imports cannot currently be bundled by esbuild. To use these new features with esbuild's bundler, the imported paths must be external to the bundle and the output format must be set to `esm`.
+
+* Support optionally emitting absolute paths instead of relative paths ([#338](https://github.com/evanw/esbuild/issues/338), [#2082](https://github.com/evanw/esbuild/issues/2082), [#3023](https://github.com/evanw/esbuild/issues/3023))
+
+    This release introduces the `--abs-paths=` feature which takes a comma-separated list of situations where esbuild should use absolute paths instead of relative paths. There are currently three supported situations: `code` (comments and string literals), `log` (log message text and location info), and `metafile` (the JSON build metadata).
+
+    Using absolute paths instead of relative paths is not the default behavior because it means that the build results are no longer machine-independent (which means builds are no longer reproducible). Absolute paths can be useful when used with certain terminal emulators that allow you to click on absolute paths in the terminal text and/or when esbuild is being automatically invoked from several different directories within the same script.
+
+* Fix a TypeScript parsing edge case ([#4241](https://github.com/evanw/esbuild/issues/4241))
+
+    This release fixes an edge case with parsing an arrow function in TypeScript with a return type that's in the middle of a `?:` ternary operator. For example:
+
+    ```ts
+    x = a ? (b) : c => d;
+    y = a ? (b) : c => d : e;
+    ```
+
+    The `:` token in the value assigned to `x` pairs with the `?` token, so it's not the start of a return type annotation. However, the first `:` token in the value assigned to `y` is the start of a return type annotation because after parsing the arrow function body, it turns out there's another `:` token that can be used to pair with the `?` token. This case is notable as it's the first TypeScript edge case that esbuild has needed a backtracking parser to parse. It has been addressed by a quick hack (cloning the whole parser) as it's a rare edge case and esbuild doesn't otherwise need a backtracking parser. Hopefully this is sufficient and doesn't cause any issues.
+
+* Inline small constant strings when minifying
+
+    Previously esbuild's minifier didn't inline string constants because strings can be arbitrarily long, and this isn't necessarily a size win if the string is used more than once. Starting with this release, esbuild will now inline string constants when the length of the string is three code units or less. For example:
+
+    ```js
+    // Original code
+    const foo = 'foo'
+    console.log({ [foo]: true })
+
+    // Old output (with --minify --bundle --format=esm)
+    var o="foo";console.log({[o]:!0});
+
+    // New output (with --minify --bundle --format=esm)
+    console.log({foo:!0});
+    ```
+
+    Note that esbuild's constant inlining only happens in very restrictive scenarios to avoid issues with TDZ handling. This change doesn't change when esbuild's constant inlining happens. It only expands the scope of it to include certain string literals in addition to numeric and boolean literals.
+
 ## 0.25.6
 
 * Fix a memory leak when `cancel()` is used on a build context ([#4231](https://github.com/evanw/esbuild/issues/4231))
