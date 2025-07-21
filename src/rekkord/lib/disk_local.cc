@@ -160,7 +160,7 @@ rk_WriteResult LocalDisk::WriteFile(const char *path, Span<const uint8_t> buf, c
 
     // Finalize!
     {
-        unsigned int flags = settings.overwrite ? (int)RenameFlag::Overwrite : 0;
+        unsigned int flags = settings.conditional ? 0 : (int)RenameFlag::Overwrite;
         RenameResult ret = RenameFile(tmp.data, filename.data, (int)RenameResult::AlreadyExists, flags);
 
         switch (ret) {

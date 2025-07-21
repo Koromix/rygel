@@ -274,9 +274,7 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "S3") {
                 do {
-                    if (prop.key == "ConditionalWrites") {
-                        valid &= ParseBool(prop.value, &config.s3.conditional);
-                    } else if (prop.key == "LockMode") {
+                    if (prop.key == "LockMode") {
                         if (!OptionToEnumI(s3_LockModeNames, prop.value, &config.s3.lock)) {
                             LogError("Invalid lock mode '%1'", prop.value);
                             valid = false;

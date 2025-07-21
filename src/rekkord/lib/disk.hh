@@ -25,7 +25,7 @@ struct rk_S3Config;
 struct ssh_Config;
 
 struct rk_WriteSettings {
-    bool overwrite = false;
+    bool conditional = false;
     int64_t retain = 0;
 };
 

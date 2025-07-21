@@ -426,8 +426,8 @@ rk_WriteResult SftpDisk::WriteFile(const char *path, Span<const uint8_t> buf, co
         sftp_close(file);
         file = nullptr;
 
-        if (sftp_rename2(conn->sftp, tmp.data, filename.data, settings.overwrite) < 0) {
-            if (!settings.overwrite) {
+        if (sftp_rename2(conn->sftp, tmp.data, filename.data, !settings.conditional) < 0) {
+            if (settings.conditional) {
                 // Atomic rename is not supported by older SSH servers, and the error code is unhelpful (Generic failure)...
                 // So we need to stat the path to emulate EEXIST.
 

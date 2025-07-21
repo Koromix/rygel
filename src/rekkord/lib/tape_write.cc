@@ -717,8 +717,14 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
     }
 
     rk_Cache cache;
-    if (!cache.Open(repo, true))
-        return false;
+    {
+        bool cw;
+
+        if (!repo->TestConditionalWrites(&cw))
+            return false;
+        if (!cache.Open(repo, !cw))
+            return false;
+    }
 
     uint8_t salt32[BLAKE3_KEY_LEN];
     repo->MakeSalt(rk_SaltKind::BlobHash, salt32);

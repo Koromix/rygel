@@ -23,7 +23,6 @@ namespace RG {
 class S3Disk: public rk_Disk {
     s3_Client s3;
 
-    bool conditional;
     s3_LockMode lock;
 
 public:
@@ -46,7 +45,7 @@ public:
 };
 
 S3Disk::S3Disk(const rk_S3Config &config)
-    : conditional(config.conditional), lock(config.lock)
+    : lock(config.lock)
 {
     if (!s3.Open(config.remote))
         return;
@@ -92,7 +91,7 @@ rk_WriteResult S3Disk::WriteFile(const char *path, Span<const uint8_t> buf, cons
 {
     s3_PutSettings put;
 
-    put.conditional = conditional && !settings.overwrite;
+    put.conditional = settings.conditional;
 
     if (settings.retain) {
         put.retain = GetUnixTime() + settings.retain;

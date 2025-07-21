@@ -182,6 +182,11 @@ bool rk_Repository::Init(Span<const uint8_t> mkey)
         files.Append("rekkord");
     }
 
+    // Dummy file for conditional write support test
+    if (disk->WriteFile("cw", {}) != rk_WriteResult::Success)
+        return false;
+    files.Append("cw");
+
     err_guard.Disable();
     return true;
 }
@@ -769,7 +774,7 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
         } while (!complete);
     }
 
-    rk_WriteSettings settings = { .retain = retain };
+    rk_WriteSettings settings = { .conditional = HasConditionalWrites(), .retain = retain };
     rk_WriteResult ret = disk->WriteFile(path, raw, settings);
 
     switch (ret) {
@@ -890,7 +895,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
 
     // Create tag files
     for (const char *path: paths) {
-        rk_WriteSettings settings = { .retain = retain };
+        rk_WriteSettings settings = { .conditional = HasConditionalWrites(), .retain = retain };
         rk_WriteResult ret = disk->WriteFile(path, {}, settings);
 
         if (ret != rk_WriteResult::Success)
@@ -1043,6 +1048,33 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
     return true;
 }
 
+bool rk_Repository::TestConditionalWrites(bool *out_cw)
+{
+    if (!cw_tested) {
+        std::lock_guard<std::mutex> lock(cw_mutex);
+
+        if (!cw_tested) {
+            rk_WriteResult ret = disk->WriteFile("cw", {}, { .conditional = true });
+
+            switch (ret) {
+                case rk_WriteResult::Success: {
+                    LogWarning("This repository does not seem to support conditional writes");
+                    cw_support = false;
+                } break;
+                case rk_WriteResult::AlreadyExists: { cw_support = true; } break;
+                case rk_WriteResult::OtherError: return false;
+            }
+        }
+
+        cw_tested = true;
+    }
+
+    if (out_cw) {
+        *out_cw = cw_support;
+    }
+    return true;
+}
+
 static bool DeriveFromPassword(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])
 {
     static_assert(crypto_pwhash_SALTBYTES == 16);
@@ -1123,7 +1155,9 @@ bool rk_Repository::WriteKeys(const char *path, const char *pwd, rk_UserRole rol
     crypto_sign_ed25519_detached(data.sig, nullptr, (const uint8_t *)&data, offsetof(KeyData, sig), keyset->ckey);
 
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
-    rk_WriteResult ret = disk->WriteFile(path, buf);
+
+    rk_WriteSettings settings = { .conditional = HasConditionalWrites() };
+    rk_WriteResult ret = disk->WriteFile(path, buf, settings);
 
     switch (ret) {
         case rk_WriteResult::Success: return true;
@@ -1237,6 +1271,18 @@ bool rk_Repository::WriteConfig(const char *path, Span<const uint8_t> data, bool
     RG_ASSERT(HasMode(rk_AccessMode::Config));
     RG_ASSERT(data.len + crypto_sign_ed25519_BYTES <= RG_SIZE(ConfigData::cypher));
 
+    if (!overwrite && !HasConditionalWrites()) {
+        switch (disk->TestFile(path)) {
+            case StatResult::Success: {
+                LogError("Config file '%1' already exists", path);
+                return false;
+            } break;
+            case StatResult::MissingPath: { overwrite = true; } break;
+            case StatResult::AccessDenied:
+            case StatResult::OtherError: return false;
+        }
+    }
+
     ConfigData config = {};
 
     config.version = ConfigVersion;
@@ -1247,7 +1293,7 @@ bool rk_Repository::WriteConfig(const char *path, Span<const uint8_t> data, bool
     Size len = offsetof(ConfigData, cypher) + crypto_sign_ed25519_BYTES + data.len;
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&config, len);
 
-    rk_WriteSettings settings = { .overwrite = overwrite };
+    rk_WriteSettings settings = { .conditional = !overwrite };
     rk_WriteResult ret = disk->WriteFile(path, buf, settings);
 
     switch (ret) {
@@ -1304,6 +1350,13 @@ bool rk_Repository::CheckRepository()
     }
 
     RG_UNREACHABLE();
+}
+
+bool rk_Repository::HasConditionalWrites()
+{
+    bool cw = false;
+    TestConditionalWrites(&cw);
+    return cw;
 }
 
 std::unique_ptr<rk_Repository> rk_OpenRepository(rk_Disk *disk, const rk_Config &config, bool authenticate)

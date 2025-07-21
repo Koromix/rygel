@@ -160,6 +160,10 @@ class rk_Repository {
 
     Async tasks;
 
+    std::atomic_bool cw_tested = false;
+    std::mutex cw_mutex;
+    bool cw_support;
+
     BlockAllocator str_alloc;
 
 public:
@@ -200,6 +204,8 @@ public:
     bool WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload);
     bool ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags);
 
+    bool TestConditionalWrites(bool *out_cw = nullptr);
+
 private:
     bool WriteKeys(const char *path, const char *pwd, rk_UserRole role, const rk_KeySet &keys);
     bool ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, rk_KeySet *out_keys);
@@ -208,6 +214,8 @@ private:
     bool ReadConfig(const char *path, Span<uint8_t> out_buf);
 
     bool CheckRepository();
+
+    bool HasConditionalWrites();
 };
 
 std::unique_ptr<rk_Repository> rk_OpenRepository(rk_Disk *disk, const rk_Config &config, bool authenticate);

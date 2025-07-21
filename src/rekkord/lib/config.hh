@@ -29,8 +29,6 @@ enum class rk_DiskType {
 
 struct rk_S3Config {
     s3_Config remote;
-
-    bool conditional = true;
     s3_LockMode lock = s3_LockMode::Governance;
 };
 
