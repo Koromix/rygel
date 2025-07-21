@@ -7555,6 +7555,8 @@ bool StreamReader::Rewind()
     }
 
     source.eof = false;
+    raw_len = -1;
+    raw_read = 0;
     eof = false;
 
     return true;
