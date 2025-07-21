@@ -3,6 +3,7 @@
 #define PACKAGE_VERSION "3.17.2"
 
 #if defined(__linux__)
+    #define HAVE_CLOSE_RANGE
     #define HAVE_COPY_FILE_RANGE
     #define HAVE_FALLOCATE
     #define HAVE_FDATASYNC
@@ -20,6 +21,7 @@
     #define HAVE_UTIMENSAT
     #define HAVE_VMSPLICE
 #elif defined(__FreeBSD__)
+    // #define HAVE_CLOSE_RANGE
     #define HAVE_COPY_FILE_RANGE
     // #define HAVE_FALLOCATE
     #define HAVE_FDATASYNC
@@ -37,6 +39,7 @@
     #define HAVE_UTIMENSAT
     // #define HAVE_VMSPLICE
 #elif defined(__OpenBSD__)
+    // #define HAVE_CLOSE_RANGE
     // #define HAVE_COPY_FILE_RANGE
     // #define HAVE_FALLOCATE
     #define HAVE_FDATASYNC
