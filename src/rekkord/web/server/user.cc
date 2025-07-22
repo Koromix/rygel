@@ -157,6 +157,18 @@ static bool IsMailValid(const char *mail)
     return true;
 }
 
+static bool IsNameValid(Span<const char> name)
+{
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || strchr("-_.", c); };
+
+    if (!name.len)
+        return false;
+    if (!std::all_of(name.begin(), name.end(), test_char))
+        return false;
+
+    return true;
+}
+
 static Span<const char> PatchText(Span<const char> text, const char *mail, const char *url, Allocator *alloc)
 {
     Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
@@ -1077,6 +1089,248 @@ void HandlePictureDelete(http_IO *io)
 
     const char *response = Fmt(io->Allocator(), "{ \"picture\": %1 }", session->picture.load()).ptr;
     io->SendText(200, response, "application/json");
+}
+
+void HandleKeyList(http_IO *io)
+{
+    RetainPtr<SessionInfo> session = sessions.Find(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+
+    sq_Statement stmt;
+    if (!db.Prepare(R"(SELECT k.id, r.id, r.name, k.title, k.key
+                       FROM keys k
+                       INNER JOIN repositories r ON (r.id = k.repository)
+                       WHERE k.user = ?1)", &stmt, session->userid))
+        return;
+
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartArray();
+    while (stmt.Step()) {
+        int64_t id = sqlite3_column_int64(stmt, 0);
+        int64_t repository = sqlite3_column_int64(stmt, 1);
+        const char *name = (const char *)sqlite3_column_text(stmt, 2);
+        const char *title = (const char *)sqlite3_column_text(stmt, 3);
+        const char *key = (const char *)sqlite3_column_text(stmt, 4);
+
+        json.StartObject();
+
+        json.Key("id"); json.Int64(id);
+        json.Key("repository"); json.StartObject();
+            json.Key("id"); json.Int64(repository);
+            json.Key("name"); json.String(name);
+        json.EndObject();
+        json.Key("title"); json.String(title);
+        json.Key("key"); json.String(key);
+
+        json.EndObject();
+    }
+    if (!stmt.IsValid())
+        return;
+    json.EndArray();
+
+    json.Finish();
+}
+
+void HandleKeyCreate(http_IO *io)
+{
+    RetainPtr<SessionInfo> session = sessions.Find(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+
+    // Parse input data
+    int64_t repository = -1;
+    const char *title = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "repository") {
+                parser.ParseInt(&repository);
+            } else if (key == "title") {
+                parser.ParseString(&title);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check missing or invalid values
+    {
+        bool valid = true;
+
+        if (repository <= 0) {
+            LogError("Missing or invalid repository ID");
+            valid = false;
+        }
+        if (!IsNameValid(title)) {
+            LogError("Missing or invalid key title");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Make sure repository exists and user owns it
+    {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT id FROM repositories WHERE id = ?1 AND user = ?2",
+                        &stmt, repository, session->userid))
+            return;
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Unknown repository ID %1", repository);
+                io->SendError(404);
+            }
+            return;
+        }
+    }
+
+    char key[17];
+    char password[33];
+    {
+        unsigned int flags = (int)pwd_GenerateFlag::Uppers |
+                             (int)pwd_GenerateFlag::Lowers |
+                             (int)pwd_GenerateFlag::Digits;
+
+        pwd_GeneratePassword(flags, key);
+        pwd_GeneratePassword(flags, password);
+    }
+
+    char hash[crypto_pwhash_STRBYTES];
+    if (crypto_pwhash_str(hash, password, strlen(password),
+                          crypto_pwhash_OPSLIMIT_INTERACTIVE, crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
+        LogError("Failed to hash password");
+        return;
+    }
+
+    // Insert new key into database
+    bool success = db.Transaction([&]() {
+        if (!db.Run(R"(INSERT INTO keys (repository, title, key, hash)
+                       VALUES (?1, ?2, ?3, ?4)
+                       RETURNING id)", repository, title, key, hash)) {
+            if (sqlite3_extended_errcode(db) == SQLITE_CONSTRAINT_FOREIGNKEY) {
+                LogError("Unknown repository ID %1", repository);
+                io->SendError(404);
+            }
+
+            return false;
+        }
+
+        return true;
+    });
+    if (!success)
+        return;
+
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartObject();
+    json.Key("key"); json.String(key);
+    json.Key("password"); json.String(password);
+    json.EndObject();
+
+    json.Finish();
+}
+
+void HandleKeyDelete(http_IO *io)
+{
+    RetainPtr<SessionInfo> session = sessions.Find(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+
+    // Parse input data
+    int64_t id = -1;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "id") {
+                parser.ParseInt(&id);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check missing or invalid values
+    {
+        bool valid = true;
+
+        if (id <= 0) {
+            LogError("Missing or invalid key ID");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    sq_Statement stmt;
+    if (!db.Prepare(R"(DELETE FROM keys
+                       WHERE id = ?1 AND
+                             id IN (SELECT k.id FROM keys k
+                                    INNER JOIN repositories r ON (r.id = k.repository)
+                                    WHERE r.user = ?2)
+                       RETURNING id)", &stmt, id, session->userid))
+        return;
+    if (!stmt.Step()) {
+        if (stmt.IsValid()) {
+            LogError("Unknown key ID %1", id);
+            io->SendError(404);
+        }
+        return;
+    }
+
+    io->SendText(200, "{}", "application/json");
 }
 
 }

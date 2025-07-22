@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 13;
+const int DatabaseVersion = 14;
 
 bool MigrateDatabase(sq_Database *db)
 {
@@ -330,9 +330,23 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 13: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE keys (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        repository INTEGER REFERENCES repositories (id) ON DELETE CASCADE,
+                        title TEXT NOT NULL,
+                        key TEXT NOT NULL,
+                        hash TEXT NOT NULL
+                    );
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 13);
+            static_assert(DatabaseVersion == 14);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

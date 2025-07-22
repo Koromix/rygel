@@ -46,4 +46,8 @@ void HandlePictureGet(http_IO *io);
 void HandlePictureSave(http_IO *io);
 void HandlePictureDelete(http_IO *io);
 
+void HandleKeyList(http_IO *io);
+void HandleKeyCreate(http_IO *io);
+void HandleKeyDelete(http_IO *io);
+
 }
