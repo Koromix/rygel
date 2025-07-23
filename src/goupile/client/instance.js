@@ -53,6 +53,7 @@ let form_raw = null;
 let form_state = null;
 let form_model = null;
 let form_builder = null;
+let form_cache = null;
 
 let autosave_timer = null;
 
@@ -884,6 +885,7 @@ async function renderPage() {
 
         await func({
             app: app,
+            cache: form_cache,
             form: builder,
             page: route.page,
             meta: new MetaInterface(app, route.page, form_thread, meta),
@@ -1397,7 +1399,7 @@ async function handleFileChange(filename) {
     buffer.sha256 = sha256;
 
     try {
-        let build = await buildScript(buffer.code, ['app', 'form', 'meta', 'page', 'thread', 'values']);
+        let build = await buildScript(buffer.code, ['app', 'cache', 'form', 'meta', 'page', 'thread', 'values']);
         code_builds.set(buffer.sha256, build);
 
         triggerError(filename, null);
@@ -1839,7 +1841,7 @@ async function run(push_history = true) {
 
             if (build == null) {
                 try {
-                    build = await buildScript(buffer.code, ['app', 'form', 'meta', 'page', 'thread', 'values']);
+                    build = await buildScript(buffer.code, ['app', 'cache', 'form', 'meta', 'page', 'thread', 'values']);
                     code_builds.set(buffer.sha256, build);
                 } catch (err) {
                     triggerError(route.page.filename, err);
@@ -2258,6 +2260,7 @@ async function openRecord(tid, anchor, page) {
     form_entry = new_entry;
     form_raw = new_raw;
     form_state = new_state;
+    form_cache = {};
 
     form_model = null;
     form_builder = null;
