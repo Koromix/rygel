@@ -621,15 +621,19 @@ async function runDashboard() {
 }
 
 async function runRepository() {
-    try {
-        let url = Util.pasteURL('/api/repository/get', { id: route.repository });
-        cache.repository = await Net.cache('repository', url);
-    } catch (err) {
-        if (!(err instanceof HttpError))
-            throw err;
-        if (err.status != 404 && err.status != 422)
-            throw err;
+    if (route.repository != null) {
+        try {
+            let url = Util.pasteURL('/api/repository/get', { id: route.repository });
+            cache.repository = await Net.cache('repository', url);
+        } catch (err) {
+            if (!(err instanceof HttpError))
+                throw err;
+            if (err.status != 404 && err.status != 422)
+                throw err;
 
+            cache.repository = null;
+        }
+    } else {
         cache.repository = null;
     }
 
@@ -811,6 +815,9 @@ async function configureRepository(repo) {
 async function deleteRepository(id) {
     await Net.post('/api/repository/delete', { id: id });
     Net.invalidate('repositories');
+
+    if (route.repository == id)
+        route.repository = null;
 }
 
 function detectType(url) {
