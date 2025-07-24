@@ -886,7 +886,7 @@ async function configureKeys(repo) {
                                         ${full == null ? html`<td class="missing">Cannot retrieve old API key</td>` : ''}
                                         <td class="right">
                                             <button type="button" class="small"
-                                                    @click=${UI.insist(e => delete_key(key.id))}><img src=${ASSETS['ui/delete']} alt="Delete" /></button>
+                                                    @click=${UI.confirm(`Delete API key ${key.title}`, e => delete_key(key.id))}><img src=${ASSETS['ui/delete']} alt="Delete" /></button>
                                         </td>
                                     </tr>
                                 `;
