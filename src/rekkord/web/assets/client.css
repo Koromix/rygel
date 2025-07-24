@@ -83,7 +83,7 @@ p + .actions { margin-top: 2em; }
 
 button {
     font-weight: normal !important;
-    color: var(--color);
+    color: var(--color) !important;
     --color: white;
 }
 button.secondary {
