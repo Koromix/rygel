@@ -661,6 +661,7 @@ async function runRepository() {
                         <div class="sub">${cache.repository.url}</div>
                     </div>
                     <button type="button" @click=${UI.wrap(e => configureRepository(cache.repository))}>Configure</button>
+                    <button type="button" @click=${UI.wrap(e => configureKeys(cache.repository))}>API keys</button>
                 </div>
 
                 <div class="box">
@@ -774,7 +775,7 @@ async function configureRepository(repo) {
                                 @click=${UI.confirm('Delete repository', e => deleteRepository(repo.id).then(close))}>Delete</button>
                         <div style="flex: 1;"></div>
                     ` : ''}
-                    <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>Cancel</button>
                     <button type="submit">${ptr != null ? 'Save' : 'Create'}</button>
                 </div>
             `
@@ -836,6 +837,129 @@ function detectType(url) {
         return 'ssh';
 
     return null;
+}
+
+async function configureKeys(repo) {
+    let url = Util.pasteURL('/api/key/list', { repository: repo.id });
+    let keys = await Net.get(url);
+
+    let secrets = new Map;
+
+    await UI.dialog({
+        run: (render, close) => {
+            return html`
+                <div class="title">
+                    API keys for ${repo.name}
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                </div>
+
+                <div class="main">
+                    <table style="table-layout: fixed;">
+                        <colgroup>
+                            <col style="width: 180px;"></col>
+                            <col style="width: 500px;"></col>
+                            <col style="width: 60px;"/>
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Key</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${keys.map(key => {
+                                let secret = secrets.get(key.id);
+                                let full = (secret != null) ? `${key.key}/${secret}` : null;
+
+                                return html`
+                                    <tr>
+                                        <td>${key.title}</td>
+                                        ${full != null ? html`
+                                            <td>
+                                                <button type="button" class="small"
+                                                        @click=${UI.wrap(e => writeClipboard('API key', full))}>Copy</button>
+                                                <span class="sub">${full}</span>
+                                            </td>
+                                        ` : ''}
+                                        ${full == null ? html`<td class="missing">Cannot retrieve old API key</td>` : ''}
+                                        <td class="right">
+                                            <button type="button" class="small"
+                                                    @click=${UI.insist(e => delete_key(key.id))}><img src=${ASSETS['ui/delete']} alt="Delete" /></button>
+                                        </td>
+                                    </tr>
+                                `;
+                            })}
+                            ${!keys.length ? html`<tr><td colspan="3" style="text-align: center;">No API key</td></tr>` : ''}
+                        </tbody>
+                    </table>
+                    ${secrets.size ? html`<div style="color: red; font-style: italic; text-align: center">Please copy the new keys, you won't be able to retrieve them later</div>` : ''}
+
+                    <div class="actions">
+                        <button type="button" @click=${UI.wrap(add_key)}>Create API key</button>
+                    </div>
+                </div>
+            `;
+
+            async function add_key() {
+                let key = await createKey(repo);
+
+                secrets.set(key.id, key.secret);
+                keys = await Net.get(url);
+
+                render();
+            }
+
+            async function delete_key(id) {
+                await deleteKey(id);
+
+                secrets.delete(id);
+                keys = await Net.get(url);
+
+                render();
+            }
+        }
+    });
+}
+
+async function createKey(repo) {
+    let key = await UI.dialog({
+        run: (render, close) => html`
+            <div class="title">
+                Create API key for ${repo.name}
+                <div style="flex: 1;"></div>
+                <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+            </div>
+
+            <div class="main">
+                <label>
+                    <span>Title</span>
+                    <input name="title" type="text" required />
+                </label>
+            </div>
+
+            <div class="footer">
+                <button type="button" class="secondary" @click=${UI.insist(close)}>Cancel</button>
+                <button type="submit">Create</button>
+            </div>
+        `,
+
+        submit: async (elements) => {
+            let key = await Net.post('/api/key/create', {
+                repository: repo.id,
+                title: elements.title.value
+            });
+
+            return key;
+        }
+    });
+
+    return key;
+}
+
+async function deleteKey(id) {
+    await Net.post('/api/key/delete', { id: id });
 }
 
 async function runChannel(repo, channel) {
@@ -1032,6 +1156,13 @@ async function changePicture() {
     });
 
     await run({}, false);
+}
+
+async function writeClipboard(label, text) {
+    await navigator.clipboard.writeText(text);
+
+    let msg = `${label} copied to clipboard`;
+    Log.info(msg);
 }
 
 export {

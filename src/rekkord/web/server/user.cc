@@ -327,7 +327,7 @@ bool PruneTokens()
 
 RetainPtr<const SessionInfo> GetNormalSession(http_IO *io)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(io);
+    RetainPtr<const SessionInfo> session = sessions.Find(io);
     return session;
 }
 
@@ -352,14 +352,15 @@ static void ExportSession(const SessionInfo *session, http_IO *io)
 
 void HandleUserSession(http_IO *io)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(io);
+    RetainPtr<const SessionInfo> session = sessions.Find(io);
     ExportSession(session.GetRaw(), io);
 }
 
 void HandleUserPing(http_IO *io)
 {
     // Do this to renew session and clear invalid session cookies
-    GetNormalSession(io);
+    sessions.Find(io);
+
     io->SendText(200, "{}", "application/json");
 }
 
@@ -752,7 +753,7 @@ invalid:
 
 void HandleUserPassword(http_IO *io)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(io);
+    RetainPtr<const SessionInfo> session = sessions.Find(io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -905,7 +906,7 @@ void HandlePictureGet(http_IO *io)
 
         explicit_user = true;
     } else {
-        RetainPtr<SessionInfo> session = sessions.Find(io);
+        RetainPtr<const SessionInfo> session = sessions.Find(io);
 
         if (!session) {
             LogError("User is not logged in");
@@ -1093,7 +1094,8 @@ void HandlePictureDelete(http_IO *io)
 
 void HandleKeyList(http_IO *io)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = sessions.Find(io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1101,11 +1103,22 @@ void HandleKeyList(http_IO *io)
         return;
     }
 
+    int64_t repository = -1;
+    {
+        const char *str = request.GetQueryValue("repository");
+
+        if (!str || !ParseInt(str, &repository, (int)ParseFlag::End)) {
+            LogError("Missing or invalid repository ID");
+            io->SendError(422);
+            return;
+        }
+    }
+
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT k.id, r.id, r.name, k.title, k.key
+    if (!db.Prepare(R"(SELECT k.id, k.title, k.key
                        FROM keys k
                        INNER JOIN repositories r ON (r.id = k.repository)
-                       WHERE k.user = ?1)", &stmt, session->userid))
+                       WHERE r.owner = ?1)", &stmt, session->userid))
         return;
 
     http_JsonPageBuilder json;
@@ -1115,18 +1128,12 @@ void HandleKeyList(http_IO *io)
     json.StartArray();
     while (stmt.Step()) {
         int64_t id = sqlite3_column_int64(stmt, 0);
-        int64_t repository = sqlite3_column_int64(stmt, 1);
-        const char *name = (const char *)sqlite3_column_text(stmt, 2);
-        const char *title = (const char *)sqlite3_column_text(stmt, 3);
-        const char *key = (const char *)sqlite3_column_text(stmt, 4);
+        const char *title = (const char *)sqlite3_column_text(stmt, 1);
+        const char *key = (const char *)sqlite3_column_text(stmt, 2);
 
         json.StartObject();
 
         json.Key("id"); json.Int64(id);
-        json.Key("repository"); json.StartObject();
-            json.Key("id"); json.Int64(repository);
-            json.Key("name"); json.String(name);
-        json.EndObject();
         json.Key("title"); json.String(title);
         json.Key("key"); json.String(key);
 
@@ -1201,13 +1208,13 @@ void HandleKeyCreate(http_IO *io)
     // Make sure repository exists and user owns it
     {
         sq_Statement stmt;
-        if (!db.Prepare("SELECT id FROM repositories WHERE id = ?1 AND user = ?2",
+        if (!db.Prepare("SELECT id FROM repositories WHERE id = ?1 AND owner = ?2",
                         &stmt, repository, session->userid))
             return;
 
         if (!stmt.Step()) {
             if (stmt.IsValid()) {
-                LogError("Unknown repository ID %1", repository);
+                LogError("Unknown repository ID %1 (%2)", repository, session->userid);
                 io->SendError(404);
             }
             return;
@@ -1215,28 +1222,35 @@ void HandleKeyCreate(http_IO *io)
     }
 
     char key[17];
-    char password[33];
+    char secret[33];
     {
         unsigned int flags = (int)pwd_GenerateFlag::Uppers |
                              (int)pwd_GenerateFlag::Lowers |
                              (int)pwd_GenerateFlag::Digits;
 
         pwd_GeneratePassword(flags, key);
-        pwd_GeneratePassword(flags, password);
+        pwd_GeneratePassword(flags, secret);
     }
 
     char hash[crypto_pwhash_STRBYTES];
-    if (crypto_pwhash_str(hash, password, strlen(password),
+    if (crypto_pwhash_str(hash, secret, strlen(secret),
                           crypto_pwhash_OPSLIMIT_INTERACTIVE, crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
-        LogError("Failed to hash password");
+        LogError("Failed to hash secret");
         return;
     }
 
+    int64_t id = -1;
+
     // Insert new key into database
     bool success = db.Transaction([&]() {
-        if (!db.Run(R"(INSERT INTO keys (repository, title, key, hash)
-                       VALUES (?1, ?2, ?3, ?4)
-                       RETURNING id)", repository, title, key, hash)) {
+        sq_Statement stmt;
+        if (!db.Prepare(R"(INSERT INTO keys (repository, title, key, hash)
+                           VALUES (?1, ?2, ?3, ?4)
+                           RETURNING id)", &stmt, repository, title, key, hash))
+            return false;
+        if (!stmt.Step()) {
+            RG_ASSERT(!stmt.IsValid());
+
             if (sqlite3_extended_errcode(db) == SQLITE_CONSTRAINT_FOREIGNKEY) {
                 LogError("Unknown repository ID %1", repository);
                 io->SendError(404);
@@ -1245,6 +1259,7 @@ void HandleKeyCreate(http_IO *io)
             return false;
         }
 
+        id = sqlite3_column_int64(stmt, 0);
         return true;
     });
     if (!success)
@@ -1255,8 +1270,9 @@ void HandleKeyCreate(http_IO *io)
         return;
 
     json.StartObject();
+    json.Key("id"); json.Int64(id);
     json.Key("key"); json.String(key);
-    json.Key("password"); json.String(password);
+    json.Key("secret"); json.String(secret);
     json.EndObject();
 
     json.Finish();
@@ -1319,7 +1335,7 @@ void HandleKeyDelete(http_IO *io)
                        WHERE id = ?1 AND
                              id IN (SELECT k.id FROM keys k
                                     INNER JOIN repositories r ON (r.id = k.repository)
-                                    WHERE r.user = ?2)
+                                    WHERE r.owner = ?2)
                        RETURNING id)", &stmt, id, session->userid))
         return;
     if (!stmt.Step()) {
