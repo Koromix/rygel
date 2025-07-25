@@ -878,12 +878,12 @@ void HandleRepositorySnapshots(http_IO *io)
 
 void HandleRepositoryUpdate(http_IO *io)
 {
-    int64_t now = GetUnixTime();
-    int64_t repository = ValidateApiKey(io);
-
-    if (repository < 0)
+    if (!ValidateApiKey(io))
         return;
 
+    int64_t now = GetUnixTime();
+
+    int64_t repository = -1;
     HeapArray<rk_SnapshotInfo> snapshots;
     {
         StreamReader st;
@@ -891,33 +891,47 @@ void HandleRepositoryUpdate(http_IO *io)
             return;
         json_Parser parser(&st, io->Allocator());
 
-        parser.ParseArray();
-        while (parser.InArray()) {
-            rk_SnapshotInfo snapshot = {};
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+            if (key == "repository") {
+                parser.ParseInt(&repository);
+            } else if (key == "snapshots")  {
+                parser.ParseArray();
+                while (parser.InArray()) {
+                    rk_SnapshotInfo snapshot = {};
 
-                if (key == "channel") {
-                    parser.ParseString(&snapshot.channel);
-                } else if (key == "time") {
-                    parser.ParseInt(&snapshot.time);
-                } else if (key == "size") {
-                    parser.ParseInt(&snapshot.size);
-                } else if (key == "stored") {
-                    parser.ParseInt(&snapshot.stored);
-                } else if (key == "added") {
-                    parser.ParseInt(&snapshot.added);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->SendError(422);
-                    return;
+                    parser.ParseObject();
+                    while (parser.InObject()) {
+                        Span<const char> key = {};
+                        parser.ParseKey(&key);
+
+                        if (key == "channel") {
+                            parser.ParseString(&snapshot.channel);
+                        } else if (key == "time") {
+                            parser.ParseInt(&snapshot.time);
+                        } else if (key == "size") {
+                            parser.ParseInt(&snapshot.size);
+                        } else if (key == "stored") {
+                            parser.ParseInt(&snapshot.stored);
+                        } else if (key == "added") {
+                            parser.ParseInt(&snapshot.added);
+                        } else if (parser.IsValid()) {
+                            LogError("Unexpected key '%1'", key);
+                            io->SendError(422);
+                            return;
+                        }
+                    }
+
+                    snapshots.Append(snapshot);
                 }
+            } else {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
             }
-
-            snapshots.Append(snapshot);
         }
         if (!parser.IsValid()) {
             io->SendError(422);

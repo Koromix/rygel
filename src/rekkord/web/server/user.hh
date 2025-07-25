@@ -31,7 +31,7 @@ struct SessionInfo: public RetainObject<SessionInfo> {
 bool PruneTokens();
 
 RetainPtr<const SessionInfo> GetNormalSession(http_IO *io);
-int64_t ValidateApiKey(http_IO *io);
+bool ValidateApiKey(http_IO *io);
 
 void HandleUserSession(http_IO *io);
 void HandleUserPing(http_IO *io);

@@ -331,7 +331,7 @@ RetainPtr<const SessionInfo> GetNormalSession(http_IO *io)
     return session;
 }
 
-int64_t ValidateApiKey(http_IO *io)
+bool ValidateApiKey(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
     const char *key = request.GetHeaderValue("X-Api-Key");
@@ -339,7 +339,7 @@ int64_t ValidateApiKey(http_IO *io)
     if (!key) {
         LogError("Missing API key");
         io->SendError(401);
-        return -1;
+        return false;
     }
 
     // We use this to extend/fix the response delay in case of error
@@ -348,23 +348,21 @@ int64_t ValidateApiKey(http_IO *io)
     Span<const char> secret;
     Span<const char> id = SplitStr(key, '/', &secret);
 
-    int64_t repository;
     const char *hash;
     {
         sq_Statement stmt;
-        if (!db.Prepare("SELECT repository, hash FROM keys WHERE key = ?1", &stmt, id))
-            return -1;
+        if (!db.Prepare("SELECT hash FROM keys WHERE key = ?1", &stmt, id))
+            return false;
 
         if (!stmt.Step()) {
             if (stmt.IsValid()) {
                 LogError("Invalid API key");
                 io->SendError(403);
             }
-            return -1;
+            return false;
         }
 
-        repository = sqlite3_column_int64(stmt, 0);
-        hash = (const char *)sqlite3_column_text(stmt, 1);
+        hash = (const char *)sqlite3_column_text(stmt, 0);
     }
 
     if (crypto_pwhash_str_verify(hash, secret.ptr, (size_t)secret.len) < 0) {
@@ -373,10 +371,10 @@ int64_t ValidateApiKey(http_IO *io)
 
         LogError("Invalid API key");
         io->SendError(403);
-        return -1;
+        return false;
     }
 
-    return repository;
+    return true;
 }
 
 static void ExportSession(const SessionInfo *session, http_IO *io)
@@ -1142,7 +1140,6 @@ void HandlePictureDelete(http_IO *io)
 
 void HandleKeyList(http_IO *io)
 {
-    const http_RequestInfo &request = io->Request();
     RetainPtr<const SessionInfo> session = sessions.Find(io);
 
     if (!session) {
@@ -1151,22 +1148,8 @@ void HandleKeyList(http_IO *io)
         return;
     }
 
-    int64_t repository = -1;
-    {
-        const char *str = request.GetQueryValue("repository");
-
-        if (!str || !ParseInt(str, &repository, (int)ParseFlag::End)) {
-            LogError("Missing or invalid repository ID");
-            io->SendError(422);
-            return;
-        }
-    }
-
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT k.id, k.title, k.key
-                       FROM keys k
-                       INNER JOIN repositories r ON (r.id = k.repository)
-                       WHERE r.owner = ?1)", &stmt, session->userid))
+    if (!db.Prepare(R"(SELECT id, title, key FROM keys WHERE owner = ?1)", &stmt, session->userid))
         return;
 
     http_JsonPageBuilder json;
@@ -1205,7 +1188,6 @@ void HandleKeyCreate(http_IO *io)
     }
 
     // Parse input data
-    int64_t repository = -1;
     const char *title = nullptr;
     {
         StreamReader st;
@@ -1218,9 +1200,7 @@ void HandleKeyCreate(http_IO *io)
             Span<const char> key = {};
             parser.ParseKey(&key);
 
-            if (key == "repository") {
-                parser.ParseInt(&repository);
-            } else if (key == "title") {
+            if (key == "title") {
                 parser.ParseString(&title);
             } else if (parser.IsValid()) {
                 LogError("Unexpected key '%1'", key);
@@ -1238,10 +1218,6 @@ void HandleKeyCreate(http_IO *io)
     {
         bool valid = true;
 
-        if (repository <= 0) {
-            LogError("Missing or invalid repository ID");
-            valid = false;
-        }
         if (!IsNameValid(title)) {
             LogError("Missing or invalid key title");
             valid = false;
@@ -1249,22 +1225,6 @@ void HandleKeyCreate(http_IO *io)
 
         if (!valid) {
             io->SendError(422);
-            return;
-        }
-    }
-
-    // Make sure repository exists and user owns it
-    {
-        sq_Statement stmt;
-        if (!db.Prepare("SELECT id FROM repositories WHERE id = ?1 AND owner = ?2",
-                        &stmt, repository, session->userid))
-            return;
-
-        if (!stmt.Step()) {
-            if (stmt.IsValid()) {
-                LogError("Unknown repository ID %1 (%2)", repository, session->userid);
-                io->SendError(404);
-            }
             return;
         }
     }
@@ -1292,18 +1252,12 @@ void HandleKeyCreate(http_IO *io)
     // Insert new key into database
     bool success = db.Transaction([&]() {
         sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO keys (repository, title, key, hash)
+        if (!db.Prepare(R"(INSERT INTO keys (owner, title, key, hash)
                            VALUES (?1, ?2, ?3, ?4)
-                           RETURNING id)", &stmt, repository, title, key, hash))
+                           RETURNING id)", &stmt, session->userid, title, key, hash))
             return false;
         if (!stmt.Step()) {
             RG_ASSERT(!stmt.IsValid());
-
-            if (sqlite3_extended_errcode(db) == SQLITE_CONSTRAINT_FOREIGNKEY) {
-                LogError("Unknown repository ID %1", repository);
-                io->SendError(404);
-            }
-
             return false;
         }
 
@@ -1380,10 +1334,7 @@ void HandleKeyDelete(http_IO *io)
 
     sq_Statement stmt;
     if (!db.Prepare(R"(DELETE FROM keys
-                       WHERE id = ?1 AND
-                             id IN (SELECT k.id FROM keys k
-                                    INNER JOIN repositories r ON (r.id = k.repository)
-                                    WHERE r.owner = ?2)
+                       WHERE id = ?1 AND owner = ?2
                        RETURNING id)", &stmt, id, session->userid))
         return;
     if (!stmt.Step()) {
