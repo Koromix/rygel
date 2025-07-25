@@ -69,7 +69,7 @@ R"(Usage: %!..+%1 change_cid [-C filename] [option...]%!0
 int RunResetCache(Span<const char *> arguments)
 {
     // Options
-    bool list = true;
+    bool list = false;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -79,7 +79,7 @@ R"(Usage: %!..+%1 reset_cache [-C filename] [option...]%!0
         PrintLn(st, R"(
 Cache options:
 
-        %!..+--clear%!0                    Skip list of existing blobs)");
+        %!..+--list%!0                     List existing blobs)");
     };
 
     // Parse arguments
@@ -90,8 +90,8 @@ Cache options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("--clear")) {
-                list = false;
+            } else if (opt.Test("--list")) {
+                list = true;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
