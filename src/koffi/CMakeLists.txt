@@ -77,7 +77,6 @@ set(KOFFI_SRC
     src/util.cc
     src/win32.cc
     ../../src/core/base/base.cc
-    ../../src/core/unicode/xid.cc
 )
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     # CMAKE_SYSTEM_PROCESSOR is wrong on Windows ARM64

@@ -20,6 +20,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include "base.hh"
+#include "unicode.inc"
 
 #if __has_include("vendor/dragonbox/include/dragonbox/dragonbox.h")
     #include "vendor/dragonbox/include/dragonbox/dragonbox.h"
@@ -9787,12 +9788,18 @@ error:
 
 int ConsolePrompter::ComputeWidth(Span<const char> str)
 {
+    Size i = 0;
     int width = 0;
 
-    for (char c: str) {
-        // XXX: For now we assume all codepoints take a single column,
-        // we need to use something like wcwidth() instead.
-        width += ((uint8_t)c >= 32 && !((c & 0xC0) == 0x80));
+    while (i < str.len) {
+        int32_t uc;
+        Size bytes = DecodeUtf8(str, i, &uc);
+
+        if (!bytes) [[unlikely]]
+            return false;
+
+        i += bytes;
+        width += ComputeCharacterWidth(uc);
     }
 
     return width;
@@ -9909,6 +9916,60 @@ bool CanCompressFile(const char *filename)
         return false;
 
     return true;
+}
+
+// ------------------------------------------------------------------------
+// Unicode
+// ------------------------------------------------------------------------
+
+static bool TestUnicodeTable(Span<const int32_t> table, int32_t uc)
+{
+    RG_ASSERT(table.len > 0);
+    RG_ASSERT(table.len % 2 == 0);
+
+    auto it = std::upper_bound(table.begin(), table.end(), uc,
+                               [](int32_t uc, int32_t x) { return uc < x; });
+    Size idx = it - table.ptr;
+
+    // Each pair of value in table represents a valid interval
+    return idx & 0x1;
+}
+
+int ComputeCharacterWidth(int32_t uc)
+{
+    if (uc < 32)
+        return 0;
+
+    if (TestUnicodeTable(WcWidthNull, uc))
+        return 0;
+    if (TestUnicodeTable(WcWidthWide, uc))
+        return 2;
+
+    return 1;
+}
+
+bool IsXidStart(int32_t uc)
+{
+    if (IsAsciiAlpha(uc))
+        return true;
+    if (uc == '_')
+        return true;
+    if (TestUnicodeTable(XidStartTable, uc))
+        return true;
+
+    return false;
+}
+
+bool IsXidContinue(int32_t uc)
+{
+    if (IsAsciiAlphaOrDigit(uc))
+        return true;
+    if (uc == '_')
+        return true;
+    if (TestUnicodeTable(XidContinueTable, uc))
+        return true;
+
+    return false;
 }
 
 }

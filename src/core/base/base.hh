@@ -5663,4 +5663,13 @@ const char *GetMimeType(Span<const char> extension, const char *default_typ = "a
 
 bool CanCompressFile(const char *filename);
 
+// ------------------------------------------------------------------------
+// Unicode
+// ------------------------------------------------------------------------
+
+int ComputeCharacterWidth(int32_t uc);
+
+bool IsXidStart(int32_t uc);
+bool IsXidContinue(int32_t uc);
+
 }

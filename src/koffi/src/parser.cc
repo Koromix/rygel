@@ -20,7 +20,6 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include "src/core/base/base.hh"
-#include "src/core/unicode/xid.hh"
 #include "ffi.hh"
 #include "parser.hh"
 
