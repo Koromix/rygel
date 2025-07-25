@@ -112,51 +112,8 @@ static bool ListSnapshots(const rk_Config &access, Allocator *alloc,
     return true;
 }
 
-static bool CheckRepository(const rk_Config &access, int64_t id)
+static bool UpdateSnapshots(int64_t id, int64_t now, Span<const rk_SnapshotInfo> snapshots, Span<const rk_ChannelInfo> channels)
 {
-    BlockAllocator temp_alloc;
-
-    int64_t now = GetUnixTime();
-
-    HeapArray<rk_SnapshotInfo> snapshots;
-    HeapArray<rk_ChannelInfo> channels;
-
-    // Fetch snapshots
-    {
-        const char *last_err = nullptr;
-
-        // Keep last error message
-        PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-            if (level == LogLevel::Error) {
-                last_err = DuplicateString(msg, &temp_alloc).ptr;
-            }
-
-            func(level, ctx, msg);
-        });
-        RG_DEFER { PopLogFilter(); };
-
-        if (!ListSnapshots(access, &temp_alloc, &snapshots, &channels)) {
-            bool success = db.Transaction([&]() {
-                if (!db.Run(R"(UPDATE repositories SET checked = ?2,
-                                                       failed = ?3,
-                                                       errors = errors + 1
-                               WHERE id = ?1)", id, now, last_err))
-                    return false;
-
-                if (!db.Run(R"(INSERT INTO failures (repository, timestamp, message, resolved)
-                               VALUES (?1, ?2, ?3, 0)
-                               ON CONFLICT DO UPDATE SET resolved = 0)", id, now, last_err))
-                    return false;
-
-                return true;
-            });
-            if (!success)
-                return false;
-
-            return true;
-        }
-    }
-
     bool success = db.Transaction([&]() {
         if (!db.Run(R"(UPDATE failures SET resolved = 1,
                                            sent = NULL
@@ -217,6 +174,57 @@ static bool CheckRepository(const rk_Config &access, int64_t id)
         return true;
     });
     if (!success)
+        return false;
+
+    return true;
+}
+
+static bool CheckRepository(const rk_Config &access, int64_t id)
+{
+    BlockAllocator temp_alloc;
+
+    int64_t now = GetUnixTime();
+
+    HeapArray<rk_SnapshotInfo> snapshots;
+    HeapArray<rk_ChannelInfo> channels;
+
+    // Fetch snapshots
+    {
+        const char *last_err = nullptr;
+
+        // Keep last error message
+        PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+            if (level == LogLevel::Error) {
+                last_err = DuplicateString(msg, &temp_alloc).ptr;
+            }
+
+            func(level, ctx, msg);
+        });
+        RG_DEFER { PopLogFilter(); };
+
+        if (!ListSnapshots(access, &temp_alloc, &snapshots, &channels)) {
+            bool success = db.Transaction([&]() {
+                if (!db.Run(R"(UPDATE repositories SET checked = ?2,
+                                                       failed = ?3,
+                                                       errors = errors + 1
+                               WHERE id = ?1)", id, now, last_err))
+                    return false;
+
+                if (!db.Run(R"(INSERT INTO failures (repository, timestamp, message, resolved)
+                               VALUES (?1, ?2, ?3, 0)
+                               ON CONFLICT DO UPDATE SET resolved = 0)", id, now, last_err))
+                    return false;
+
+                return true;
+            });
+            if (!success)
+                return false;
+
+            return true;
+        }
+    }
+
+    if (!UpdateSnapshots(id, now, snapshots, channels))
         return false;
 
     return true;
@@ -866,6 +874,81 @@ void HandleRepositorySnapshots(http_IO *io)
     json.EndArray();
 
     json.Finish();
+}
+
+void HandleRepositoryUpdate(http_IO *io)
+{
+    int64_t now = GetUnixTime();
+    int64_t repository = ValidateApiKey(io);
+
+    if (repository < 0)
+        return;
+
+    HeapArray<rk_SnapshotInfo> snapshots;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(4), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseArray();
+        while (parser.InArray()) {
+            rk_SnapshotInfo snapshot = {};
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "channel") {
+                    parser.ParseString(&snapshot.channel);
+                } else if (key == "time") {
+                    parser.ParseInt(&snapshot.time);
+                } else if (key == "size") {
+                    parser.ParseInt(&snapshot.size);
+                } else if (key == "stored") {
+                    parser.ParseInt(&snapshot.stored);
+                } else if (key == "added") {
+                    parser.ParseInt(&snapshot.added);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->SendError(422);
+                    return;
+                }
+            }
+
+            snapshots.Append(snapshot);
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check missing or invalid values
+    {
+        bool valid = true;
+
+        for (const rk_SnapshotInfo &snapshot: snapshots) {
+            if (!snapshot.channel || snapshot.size < 0 || snapshot.stored < 0 || snapshot.added < 0) {
+                LogError("Invalid snapshot data");
+                valid = false;
+            }
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    HeapArray<rk_ChannelInfo> channels;
+    rk_ListChannels(snapshots, io->Allocator(), &channels);
+
+    if (!UpdateSnapshots(repository, now, snapshots, channels))
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 }

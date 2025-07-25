@@ -400,6 +400,8 @@ static void HandleRequest(http_IO *io)
             HandleRepositoryDelete(io);
         } else if (TestStr(request.path, "/api/repository/snapshots") && request.method == http_RequestMethod::Get) {
             HandleRepositorySnapshots(io);
+        } else if (TestStr(request.path, "/api/repository/update") && request.method == http_RequestMethod::Post) {
+            HandleRepositoryUpdate(io);
         } else {
             io->SendError(404);
         }
