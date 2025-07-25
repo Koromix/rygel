@@ -741,7 +741,8 @@ void HandleRepositorySave(http_IO *io)
     if (!success)
         return;
 
-    io->SendText(200, "{}", "application/json");
+    const char *json = Fmt(io->Allocator(), "{\"id\": %1}", id).ptr;
+    io->SendText(200, json, "application/json");
 }
 
 void HandleRepositoryDelete(http_IO *io)

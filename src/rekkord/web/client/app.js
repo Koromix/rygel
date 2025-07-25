@@ -805,10 +805,13 @@ async function configureRepository(repo) {
                 obj.variables[name] = value.trim() || null;
             }
 
-            await Net.post('/api/repository/save', obj);
+            let json = await Net.post('/api/repository/save', obj);
 
             Net.invalidate('repositories');
             Net.invalidate('repository');
+
+            let url = makeURL({ mode: 'repository', repository: json.id });
+            await go(url);
         }
     });
 }
