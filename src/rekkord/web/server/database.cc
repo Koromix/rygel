@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 15;
+const int DatabaseVersion = 16;
 
 bool MigrateDatabase(sq_Database *db)
 {
@@ -367,9 +367,17 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 15: {
+                bool success = db->RunMany(R"(
+                    CREATE UNIQUE INDEX keys_k ON keys (key);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 15);
+            static_assert(DatabaseVersion == 16);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

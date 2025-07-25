@@ -1229,7 +1229,7 @@ void HandleKeyCreate(http_IO *io)
         }
     }
 
-    char key[17];
+    char key[33];
     char secret[33];
     {
         unsigned int flags = (int)pwd_GenerateFlag::Uppers |
