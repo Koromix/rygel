@@ -103,8 +103,11 @@ static bool ListSnapshots(const rk_Config &access, Allocator *alloc,
 
     if (!repo)
         return false;
-    if (!rk_ListSnapshots(repo.get(), alloc, out_snapshots, out_channels))
+
+    Size prev_snapshots = out_snapshots->len;
+    if (!rk_ListSnapshots(repo.get(), alloc, out_snapshots))
         return false;
+    rk_ListChannels(out_snapshots->Take(prev_snapshots, out_snapshots->len - prev_snapshots), alloc, out_channels);
 
     return true;
 }

@@ -943,23 +943,12 @@ bool rk_Restore(rk_Repository *repo, const rk_ObjectID &oid, const rk_RestoreSet
     return true;
 }
 
-bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc,
-                      HeapArray<rk_SnapshotInfo> *out_snapshots, HeapArray<rk_ChannelInfo> *out_channels)
+bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
 {
-    RG_ASSERT(out_snapshots || out_channels);
-
     BlockAllocator temp_alloc;
 
     Size prev_snapshots = out_snapshots ? out_snapshots->len : 0;
-    Size prev_channels = out_channels ? out_channels->len : 0;
-    RG_DEFER_N(err_guard) {
-        if (out_snapshots) {
-            out_snapshots->RemoveFrom(prev_snapshots);
-        }
-        if (out_channels) {
-            out_channels->RemoveFrom(prev_channels);
-        }
-    };
+    RG_DEFER_N(err_guard) { out_snapshots->RemoveFrom(prev_snapshots); };
 
     HeapArray<rk_TagInfo> tags;
     if (!repo->ListTags(&temp_alloc, &tags))
@@ -970,6 +959,8 @@ bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc,
         HashMap<const char *, Size> map;
 
         for (const rk_TagInfo &tag: tags) {
+            rk_SnapshotInfo snapshot = {};
+
             if (tag.payload.len < (Size)offsetof(SnapshotHeader3, channel) + 1 ||
                     tag.payload.len > RG_SIZE(SnapshotHeader3)) {
                 LogError("Malformed snapshot tag (ignoring)");
@@ -980,63 +971,73 @@ bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc,
             MemCpy(&header, tag.payload.ptr, tag.payload.len);
             header.channel[RG_SIZE(header.channel) - 1] = 0;
 
-            const char *name = DuplicateString(header.channel, &temp_alloc).ptr;
-            int64_t time = LittleEndian(header.time);
+            snapshot.tag = DuplicateString(tag.name, alloc).ptr;
+            snapshot.oid = tag.oid;
+            snapshot.channel = DuplicateString(header.channel, alloc).ptr;
+            snapshot.time = LittleEndian(header.time);
+            snapshot.size = LittleEndian(header.size);
+            snapshot.stored = LittleEndian(header.stored);
+            snapshot.added = LittleEndian(header.added);
 
-            if (out_snapshots) {
-                rk_SnapshotInfo snapshot = {};
-
-                snapshot.tag = DuplicateString(tag.name, alloc).ptr;
-                snapshot.oid = tag.oid;
-                snapshot.channel = DuplicateString(name, alloc).ptr;
-                snapshot.time = LittleEndian(header.time);
-                snapshot.size = LittleEndian(header.size);
-                snapshot.stored = LittleEndian(header.stored);
-                snapshot.added = LittleEndian(header.added);
-
-                out_snapshots->Append(snapshot);
-            }
-
-            if (out_channels) {
-                Size *ptr = map.TrySet(name, -1);
-                Size idx = *ptr;
-
-                if (idx < 0) {
-                    rk_ChannelInfo channel = {};
-
-                    channel.name = DuplicateString(name, alloc).ptr;
-
-                    idx = out_channels->len;
-                    *ptr = idx;
-
-                    out_channels->Append(channel);
-                }
-
-                rk_ChannelInfo *channel = &(*out_channels)[idx];
-
-                if (time > channel->time) {
-                    channel->oid = tag.oid;
-                    channel->time = time;
-                    channel->size = LittleEndian(header.size);
-                }
-
-                channel->count++;
-            }
+            out_snapshots->Append(snapshot);
         }
     }
 
-    if (out_snapshots) {
-        std::sort(out_snapshots->begin() + prev_snapshots, out_snapshots->end(),
-                  [](const rk_SnapshotInfo &snapshot1, const rk_SnapshotInfo &snapshot2) { return snapshot1.time < snapshot2.time; });
-    }
-    if (out_channels) {
-        std::sort(out_channels->begin() + prev_channels, out_channels->end(),
-                  [](const rk_ChannelInfo &channel1, const rk_ChannelInfo &channel2) { return CmpStr(channel1.name, channel2.name) < 0; });
-    }
+    std::sort(out_snapshots->begin() + prev_snapshots, out_snapshots->end(),
+              [](const rk_SnapshotInfo &snapshot1, const rk_SnapshotInfo &snapshot2) { return snapshot1.time < snapshot2.time; });
 
     err_guard.Disable();
     return true;
 }
+
+void rk_ListChannels(Span<const rk_SnapshotInfo> snapshots, Allocator *alloc, HeapArray<rk_ChannelInfo> *out_channels)
+{
+    Size prev_channels = out_channels->len;
+
+    HashMap<const char *, Size> map;
+
+    for (const rk_SnapshotInfo &snapshot: snapshots) {
+        Size *ptr = map.TrySet(snapshot.channel, -1);
+        Size idx = *ptr;
+
+        if (idx < 0) {
+            rk_ChannelInfo channel = {};
+
+            channel.name = DuplicateString(snapshot.channel, alloc).ptr;
+
+            idx = out_channels->len;
+            *ptr = idx;
+
+            out_channels->Append(channel);
+        }
+
+        rk_ChannelInfo *channel = &(*out_channels)[idx];
+
+        if (snapshot.time > channel->time) {
+            channel->oid = snapshot.oid;
+            channel->time = snapshot.time;
+            channel->size = snapshot.size;
+        }
+
+        channel->count++;
+    }
+
+    std::sort(out_channels->begin() + prev_channels, out_channels->end(),
+              [](const rk_ChannelInfo &channel1, const rk_ChannelInfo &channel2) { return CmpStr(channel1.name, channel2.name) < 0; });
+}
+
+bool rk_ListChannels(rk_Repository *repo, Allocator *alloc, HeapArray<rk_ChannelInfo> *out_channels)
+{
+    BlockAllocator temp_alloc;
+
+    HeapArray<rk_SnapshotInfo> snapshots;
+    if (!rk_ListSnapshots(repo, &temp_alloc, &snapshots))
+        return false;
+
+    rk_ListChannels(snapshots, alloc, out_channels);
+
+    return true;
+ }
 
 bool rk_LocateObject(rk_Repository *repo, Span<const char> identifier, rk_ObjectID *out_oid)
 {

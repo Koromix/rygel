@@ -341,7 +341,7 @@ Available output formats: %!..+%2%!0)",
     LogInfo();
 
     HeapArray<rk_ChannelInfo> channels;
-    if (!rk_ListSnapshots(repo.get(), &temp_alloc, &channels))
+    if (!rk_ListChannels(repo.get(), &temp_alloc, &channels))
         return 1;
 
     switch (format) {

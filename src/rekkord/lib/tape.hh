@@ -126,11 +126,10 @@ public:
 bool rk_Restore(rk_Repository *repo, const rk_ObjectID &oid, const rk_RestoreSettings &settings,
                 const char *dest_path, int64_t *out_size = nullptr);
 
-bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots, HeapArray<rk_ChannelInfo> *out_channels);
-static inline bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
-    { return rk_ListSnapshots(repo, alloc, out_snapshots, nullptr); }
-static inline bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc, HeapArray<rk_ChannelInfo> *out_channels)
-    { return rk_ListSnapshots(repo, alloc, nullptr, out_channels); }
+bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
+
+void rk_ListChannels(Span<const rk_SnapshotInfo> snapshots, Allocator *alloc, HeapArray<rk_ChannelInfo> *out_channels);
+bool rk_ListChannels(rk_Repository *repo, Allocator *alloc, HeapArray<rk_ChannelInfo> *out_channels);
 
 bool rk_LocateObject(rk_Repository *repo, Span<const char> identifier, rk_ObjectID *out_pid);
 
