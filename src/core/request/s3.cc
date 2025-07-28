@@ -356,7 +356,7 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
-            PrepareRequest(curl, date, "GET", false, {}, params, &temp_alloc);
+            PrepareRequest(curl, date, "GET", {}, params, &temp_alloc);
 
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
                 HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
@@ -413,6 +413,10 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(int64_t, Spa
 {
     BlockAllocator temp_alloc;
 
+    if (config.prefix) {
+        key = Fmt(&temp_alloc, "%1/%2", config.prefix, key);
+    }
+
     struct GetContext {
         Span<const char> key;
         FunctionRef<bool(int64_t, Span<const uint8_t>)> func;
@@ -429,7 +433,7 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(int64_t, Spa
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
-        PrepareRequest(curl, date, "GET", true, key, {}, &temp_alloc);
+        PrepareRequest(curl, date, "GET", key, {}, &temp_alloc);
 
         // Handle restart
         ctx.offset = 0;
@@ -521,11 +525,15 @@ StatResult s3_Client::HeadObject(Span<const char> key, s3_ObjectInfo *out_info)
 {
     BlockAllocator temp_alloc;
 
+    if (config.prefix) {
+        key = Fmt(&temp_alloc, "%1/%2", config.prefix, key);
+    }
+
     int status = RunSafe("test S3 object", 5, 404, [&](CURL *curl) {
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
-        PrepareRequest(curl, date, "HEAD", true, key, {}, &temp_alloc);
+        PrepareRequest(curl, date, "HEAD", key, {}, &temp_alloc);
 
         curl_easy_setopt(curl, CURLOPT_NOBODY, 1L); // HEAD
 
@@ -584,6 +592,10 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
 {
     BlockAllocator temp_alloc;
 
+    if (config.prefix) {
+        key = Fmt(&temp_alloc, "%1/%2", config.prefix, key);
+    }
+
     struct PutContext {
         FunctionRef<Size(int64_t offset, Span<uint8_t>)> func;
         int64_t offset;
@@ -619,7 +631,7 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
             headers.Append({ "x-amz-object-lock-retain-until-date", until });
         }
 
-        PrepareRequest(curl, date, "PUT", true, key, {}, headers, &temp_alloc);
+        PrepareRequest(curl, date, "PUT", key, {}, headers, &temp_alloc);
 
         // Handle restart
         ctx.offset = 0;
@@ -665,11 +677,15 @@ bool s3_Client::DeleteObject(Span<const char> key)
 {
     BlockAllocator temp_alloc;
 
+    if (config.prefix) {
+        key = Fmt(&temp_alloc, "%1/%2", config.prefix, key);
+    }
+
     int status = RunSafe("delete S3 object", 5, 204, [&](CURL *curl) {
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
-        PrepareRequest(curl, date, "DELETE", true, key, {}, &temp_alloc);
+        PrepareRequest(curl, date, "DELETE", key, {}, &temp_alloc);
 
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE"); // DELETE (duh)
 
@@ -684,6 +700,10 @@ bool s3_Client::DeleteObject(Span<const char> key)
 bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mode)
 {
     BlockAllocator temp_alloc;
+
+    if (config.prefix) {
+        key = Fmt(&temp_alloc, "%1/%2", config.prefix, key);
+    }
 
     static const char *xml = R"(<?xml version="1.0" encoding="UTF-8"?>
 <Retention xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
@@ -700,7 +720,7 @@ bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mo
         TimeSpec date = DecomposeTimeUTC(now);
 
         const KeyValue params[] = {{ "retention", nullptr }};
-        PrepareRequest(curl, date, "PUT", true, key, params, &temp_alloc);
+        PrepareRequest(curl, date, "PUT", key, params, &temp_alloc);
 
         Span<const char> remain = body;
 
@@ -793,7 +813,7 @@ bool s3_Client::OpenAccess()
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
-            PrepareRequest(curl, date, "HEAD", false, {}, {}, &temp_alloc);
+            PrepareRequest(curl, date, "HEAD", {}, {}, &temp_alloc);
 
             curl_easy_setopt(curl, CURLOPT_NOBODY, 1L); // HEAD
             curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, +[](char *buf, size_t, size_t nmemb, void *udata) {
@@ -923,20 +943,19 @@ int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<in
     return -1;
 }
 
-void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *method, bool prefix,
-                               Span<const char> key, Span<const KeyValue> params, Allocator *alloc)
+void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *method, Span<const char> key,
+                               Span<const KeyValue> params, Allocator *alloc)
 {
     const KeyValue headers[] = {
         { "x-amz-content-sha256", "UNSIGNED-PAYLOAD" },
         { "x-amz-date", Fmt(alloc, "%1", FmtTimeISO(date)).ptr }
     };
 
-    PrepareRequest(curl, date, method, prefix, key, params, headers, alloc);
+    PrepareRequest(curl, date, method, key, params, headers, alloc);
 }
 
-void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *method, bool prefix,
-                               Span<const char> key, Span<const KeyValue> params,
-                               Span<const KeyValue> headers, Allocator *alloc)
+void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *method, Span<const char> key,
+                               Span<const KeyValue> params, Span<const KeyValue> headers, Allocator *alloc)
 {
     Span<const char> url;
     Span<const char> path;
@@ -949,10 +968,6 @@ void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *met
 
         if (config.bucket) {
             Fmt(&buf, "/%1", FmtUrlSafe(config.bucket, "-._~"));
-        }
-        if (prefix) {
-            bool separate = (buf[buf.len - 1] != '/');
-            Fmt(&buf, "%1%2", separate ? "/" : "", FmtUrlSafe(config.prefix, "-._~/"));
         }
         if (key.len) {
             bool separate = (buf[buf.len - 1] != '/');

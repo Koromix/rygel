@@ -135,11 +135,10 @@ private:
     int RunSafe(const char *action, int tries, int expect, FunctionRef<int(void *)> func);
     int RunSafe(const char *action, int tries, FunctionRef<int(void *)> func) { return RunSafe(action, tries, 0, func); }
 
-    void PrepareRequest(void *curl, const TimeSpec &date, const char *method, bool prefix,
-                        Span<const char> key, Span<const KeyValue> params, Allocator *alloc);
-    void PrepareRequest(void *curl, const TimeSpec &date, const char *method, bool prefix,
-                        Span<const char> key, Span<const KeyValue> params,
-                        Span<const KeyValue> headers, Allocator *alloc);
+    void PrepareRequest(void *curl, const TimeSpec &date, const char *method, Span<const char> key,
+                        Span<const KeyValue> params, Allocator *alloc);
+    void PrepareRequest(void *curl, const TimeSpec &date, const char *method, Span<const char> key,
+                        Span<const KeyValue> params, Span<const KeyValue> headers, Allocator *alloc);
 
     const char *MakeAuthorization(const TimeSpec &date, const char *method, Span<const char> path,
                                   Span<const KeyValue> params, Span<const KeyValue> kvs, Allocator *alloc);
