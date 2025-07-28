@@ -6,6 +6,15 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.80
+
+*Released on 2025-07-28*
+
+- Support non-root Rekkord S3 repositories
+- Automatically detect S3 conditional write support
+- Properly handle PutObject/GetObject request restarts
+- Default to simple clear without list in `rekkord reset_cache`
+
 ### Rekkord 0.79
 
 *Released on 2025-07-15*
