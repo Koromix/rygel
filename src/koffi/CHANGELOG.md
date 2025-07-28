@@ -7,6 +7,16 @@
 
 ### Koffi 2.12
 
+#### Koffi 2.12.3
+
+*Released on 2025-07-28*
+
+- Add missing TypeScript overloads for struct redefinition
+- Add missing TypeScript member parameter in `koffi.offsetof()`
+- Add missing TypeScript declaration for `koffi.view()`
+- Add primitive type names to TypeScript
+- Simplify TypeScript module declaration
+
 #### Koffi 2.12.2
 
 *Released on 2025-07-16*
