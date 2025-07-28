@@ -29,6 +29,10 @@
 #include <errno.h>
 #include <stdio.h>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
+
 #include <libssh/priv.h>
 #include <libssh/session.h>
 #include <libssh/server.h>

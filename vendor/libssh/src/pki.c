@@ -43,6 +43,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
+
 #include "libssh/libssh.h"
 #include "libssh/session.h"
 #include "libssh/priv.h"

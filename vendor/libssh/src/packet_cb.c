@@ -27,6 +27,9 @@
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
 
 #include "libssh/priv.h"
 #include "libssh/buffer.h"

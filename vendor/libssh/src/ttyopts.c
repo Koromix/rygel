@@ -27,6 +27,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
+
 #include <libssh/priv.h>
 #include <string.h>
 
