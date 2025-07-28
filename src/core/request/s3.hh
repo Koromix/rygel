@@ -32,7 +32,8 @@ struct s3_Config {
     const char *host = nullptr;
     int port = -1;
     const char *region = nullptr; // Can be NULL
-    const char *root = "/";
+    const char *bucket = nullptr;
+    const char *prefix = nullptr;
 
     const char *access_id = nullptr;
     const char *access_key = nullptr;
@@ -134,10 +135,11 @@ private:
     int RunSafe(const char *action, int tries, int expect, FunctionRef<int(void *)> func);
     int RunSafe(const char *action, int tries, FunctionRef<int(void *)> func) { return RunSafe(action, tries, 0, func); }
 
-    void PrepareRequest(void *curl, const TimeSpec &date, const char *method, Span<const char> key,
-                        Span<const KeyValue> params, Allocator *alloc);
-    void PrepareRequest(void *curl, const TimeSpec &date, const char *method, Span<const char> key,
-                        Span<const KeyValue> params, Span<const KeyValue> headers, Allocator *alloc);
+    void PrepareRequest(void *curl, const TimeSpec &date, const char *method, bool prefix,
+                        Span<const char> key, Span<const KeyValue> params, Allocator *alloc);
+    void PrepareRequest(void *curl, const TimeSpec &date, const char *method, bool prefix,
+                        Span<const char> key, Span<const KeyValue> params,
+                        Span<const KeyValue> headers, Allocator *alloc);
 
     const char *MakeAuthorization(const TimeSpec &date, const char *method, Span<const char> path,
                                   Span<const KeyValue> params, Span<const KeyValue> kvs, Allocator *alloc);

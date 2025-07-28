@@ -66,12 +66,11 @@ bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<c
     } else if (key == "Region") {
         region = DuplicateString(value, &str_alloc).ptr;
         return true;
-    } else if (key == "Root" || key == "Bucket") {
-        if (StartsWith(value, "/")) {
-            root = DuplicateString(value, &str_alloc).ptr;
-        } else {
-            root = Fmt(&str_alloc, "/%1", value).ptr;
-        }
+    } else if (key == "Bucket") {
+        bucket = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "Prefix") {
+        prefix = DuplicateString(value, &str_alloc).ptr;
         return true;
     } else if (key == "AccessKeyID" || key == "KeyID") {
         access_id = DuplicateString(value, &str_alloc).ptr;
@@ -123,8 +122,12 @@ bool s3_Config::Validate() const
         LogError("Invalid S3 port");
         valid = false;
     }
-    if (!root || root[0] != '/') {
-        LogError("Missing or invalid S3 root");
+    if (bucket && !bucket[0]) {
+        LogError("Empty S3 bucket name");
+        valid = false;
+    }
+    if (prefix && !prefix[0]) {
+        LogError("Empty S3 prefix");
         valid = false;
     }
 
@@ -148,7 +151,8 @@ void s3_Config::Clone(s3_Config *out_config) const
     out_config->host = host ? DuplicateString(host, &out_config->str_alloc).ptr : nullptr;
     out_config->port = port;
     out_config->region = region ? DuplicateString(region, &out_config->str_alloc).ptr : nullptr;
-    out_config->root = root ? DuplicateString(root, &out_config->str_alloc).ptr : nullptr;
+    out_config->bucket = bucket ? DuplicateString(bucket, &out_config->str_alloc).ptr : nullptr;
+    out_config->prefix = prefix ? DuplicateString(prefix, &out_config->str_alloc).ptr : nullptr;
     out_config->access_id = access_id ? DuplicateString(access_id, &out_config->str_alloc).ptr : nullptr;
     out_config->access_key = access_key ? DuplicateString(access_key, &out_config->str_alloc).ptr : nullptr;
 }
@@ -176,11 +180,12 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
     const char *scheme = curl_GetUrlPartStr(h, CURLUPART_SCHEME, &out_config->str_alloc).ptr;
     Span<const char> host = curl_GetUrlPartStr(h, CURLUPART_HOST, &out_config->str_alloc);
     int port = curl_GetUrlPartInt(h, CURLUPART_PORT);
-    const char *path = curl_GetUrlPartStr(h, CURLUPART_PATH, &out_config->str_alloc).ptr;
 
-    const char *root = DuplicateString(path, &out_config->str_alloc).ptr;
+    const char *path = curl_GetUrlPartStr(h, CURLUPART_PATH, &out_config->str_alloc).ptr;
+    RG_ASSERT(path[0] == '/');
 
     const char *region = nullptr;
+    bool virtual_mode = false;
     {
         Span<const char> remain = host;
 
@@ -188,6 +193,7 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
             remain = remain.Take(3, remain.len - 3);
         } else {
             SplitStr(remain, ".s3.", &remain);
+            virtual_mode = remain.len;
         }
 
         if (remain.len) {
@@ -200,13 +206,31 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
         }
     }
 
+    const char *bucket = nullptr;
+    const char *prefix = nullptr;
+
+    if (virtual_mode) {
+        prefix = path[1] ? path + 1 : nullptr;
+    } else {
+        bucket = path + 1;
+        prefix = strchr(bucket, '/');
+
+        if (prefix) {
+            char *ptr = (char *)prefix++;
+            ptr[0] = 0;
+
+            prefix = prefix[0] ? prefix : nullptr;
+        }
+    }
+
     out_config->scheme = scheme;
     out_config->host = host.ptr;
     out_config->port = port;
     if (!out_config->region) {
         out_config->region = region;
     }
-    out_config->root = root;
+    out_config->bucket = bucket;
+    out_config->prefix = prefix;
 
     return true;
 }
@@ -285,7 +309,9 @@ bool s3_Client::Open(const s3_Config &config)
     } else {
         host = this->config.host;
     }
-    url = Fmt(&this->config.str_alloc, "%1://%2%3", this->config.scheme, host, config.root).ptr;
+    url = Fmt(&this->config.str_alloc, "%1://%2%3%4%5%6", this->config.scheme, host,
+              config.bucket ? "/" : "", config.bucket ? config.bucket : "",
+              config.prefix ? "/" : "", config.prefix ? config.prefix : "").ptr;
 
     return OpenAccess();
 }
@@ -305,12 +331,21 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
 {
     BlockAllocator temp_alloc;
 
+    Size skip_len = 0;
     char continuation[1024] = {};
+
+    if (config.prefix) {
+        skip_len = strlen(config.prefix) + 1;
+        prefix = Fmt(&temp_alloc, "%1/%2", config.prefix, prefix).ptr;
+    } else {
+        // curl needs a C string
+        prefix = DuplicateString(prefix, &temp_alloc);
+    }
 
     KeyValue params[] = {
         { "continuation-token", continuation },
         { "list-type", "2" },
-        { "prefix", prefix.len ? DuplicateString(prefix, &temp_alloc).ptr : "" }
+        { "prefix", prefix.ptr }
     };
 
     // Reuse for performance
@@ -321,7 +356,7 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
-            PrepareRequest(curl, date, "GET", {}, params, &temp_alloc);
+            PrepareRequest(curl, date, "GET", false, {}, params, &temp_alloc);
 
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
                 HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
@@ -352,13 +387,14 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
         bool truncated = doc.select_node("/ListBucketResult/IsTruncated").node().text().as_bool();
 
         for (const pugi::xpath_node &node: contents) {
-            const char *key = node.node().child("Key").text().get();
+            Span<const char> key = node.node().child("Key").text().get();
             int64_t size = node.node().child("Size").text().as_llong();
 
-            if (key && key[0]) [[likely]] {
-                if (!func(key, size))
-                    return false;
-            }
+            if (key.len <= skip_len) [[unlikely]]
+                continue;
+
+            if (!func(key.ptr + skip_len, size))
+                return false;
         }
 
         if (!truncated)
@@ -393,7 +429,7 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(int64_t, Spa
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
-        PrepareRequest(curl, date, "GET", key, {}, &temp_alloc);
+        PrepareRequest(curl, date, "GET", true, key, {}, &temp_alloc);
 
         // Handle restart
         ctx.offset = 0;
@@ -489,7 +525,7 @@ StatResult s3_Client::HeadObject(Span<const char> key, s3_ObjectInfo *out_info)
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
-        PrepareRequest(curl, date, "HEAD", key, {}, &temp_alloc);
+        PrepareRequest(curl, date, "HEAD", true, key, {}, &temp_alloc);
 
         curl_easy_setopt(curl, CURLOPT_NOBODY, 1L); // HEAD
 
@@ -583,7 +619,7 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
             headers.Append({ "x-amz-object-lock-retain-until-date", until });
         }
 
-        PrepareRequest(curl, date, "PUT", key, {}, headers, &temp_alloc);
+        PrepareRequest(curl, date, "PUT", true, key, {}, headers, &temp_alloc);
 
         // Handle restart
         ctx.offset = 0;
@@ -633,7 +669,7 @@ bool s3_Client::DeleteObject(Span<const char> key)
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
-        PrepareRequest(curl, date, "DELETE", key, {}, &temp_alloc);
+        PrepareRequest(curl, date, "DELETE", true, key, {}, &temp_alloc);
 
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE"); // DELETE (duh)
 
@@ -664,7 +700,7 @@ bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mo
         TimeSpec date = DecomposeTimeUTC(now);
 
         const KeyValue params[] = {{ "retention", nullptr }};
-        PrepareRequest(curl, date, "PUT", key, params, &temp_alloc);
+        PrepareRequest(curl, date, "PUT", true, key, params, &temp_alloc);
 
         Span<const char> remain = body;
 
@@ -757,7 +793,7 @@ bool s3_Client::OpenAccess()
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
-            PrepareRequest(curl, date, "HEAD", {}, {}, &temp_alloc);
+            PrepareRequest(curl, date, "HEAD", false, {}, {}, &temp_alloc);
 
             curl_easy_setopt(curl, CURLOPT_NOBODY, 1L); // HEAD
             curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, +[](char *buf, size_t, size_t nmemb, void *udata) {
@@ -887,19 +923,20 @@ int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<in
     return -1;
 }
 
-void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *method, Span<const char> key,
-                               Span<const KeyValue> params, Allocator *alloc)
+void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *method, bool prefix,
+                               Span<const char> key, Span<const KeyValue> params, Allocator *alloc)
 {
     const KeyValue headers[] = {
         { "x-amz-content-sha256", "UNSIGNED-PAYLOAD" },
         { "x-amz-date", Fmt(alloc, "%1", FmtTimeISO(date)).ptr }
     };
 
-    return PrepareRequest(curl, date, method, key, params, headers, alloc);
+    PrepareRequest(curl, date, method, prefix, key, params, headers, alloc);
 }
 
-void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *method, Span<const char> key,
-                               Span<const KeyValue> params, Span<const KeyValue> headers, Allocator *alloc)
+void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *method, bool prefix,
+                               Span<const char> key, Span<const KeyValue> params,
+                               Span<const KeyValue> headers, Allocator *alloc)
 {
     Span<const char> url;
     Span<const char> path;
@@ -910,9 +947,15 @@ void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *met
 
         Size path_offset = buf.len;
 
-        Fmt(&buf, "%1", FmtUrlSafe(config.root, "-._~/"));
+        if (config.bucket) {
+            Fmt(&buf, "/%1", FmtUrlSafe(config.bucket, "-._~"));
+        }
+        if (prefix) {
+            bool separate = (buf[buf.len - 1] != '/');
+            Fmt(&buf, "%1%2", separate ? "/" : "", FmtUrlSafe(config.prefix, "-._~/"));
+        }
         if (key.len) {
-            bool separate = (config.root[1] && key.len);
+            bool separate = (buf[buf.len - 1] != '/');
             Fmt(&buf, "%1%2", separate ? "/" : "", FmtUrlSafe(key, "-._~/"));
         }
 
