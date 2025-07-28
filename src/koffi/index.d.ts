@@ -83,11 +83,14 @@ export interface IKoffiLib {
 }
 
 export function struct(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+export function struct(ref: IKoffiCType, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 export function struct(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 export function pack(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+export function pack(ref: IKoffiCType, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 export function pack(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 
 export function union(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+export function union(ref: IKoffiCType, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 export function union(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 
 export class Union {
