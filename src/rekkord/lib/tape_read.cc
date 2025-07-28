@@ -1628,7 +1628,7 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
     bool valid = true;
 
     ProgressHandle progress("Snapshots");
-    progress.SetFmt((int64_t)0, snapshots.len, "0 / %1 snapshots", snapshots.len);
+    progress.SetFmt((int64_t)0, (int64_t)snapshots.len, "0 / %1 snapshots", snapshots.len);
 
     for (Size i = 0; i < snapshots.len; i++) {
         const rk_SnapshotInfo &snapshot = snapshots[i];
