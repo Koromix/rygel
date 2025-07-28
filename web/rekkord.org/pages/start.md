@@ -29,20 +29,9 @@ To help you form a valid URL, here are a few examples for common S3 providers:
 | Scaleway Object Storage        | `https://<bucket>.s3.<region>.scw.cloud`             | No                 |
 
 > [!NOTE]
-> Rekkord tries to use conditional PutObject operations (`If-None-Match=*` header) which is not supported by all providers.
+> Rekkord may issue ListObjects API calls to reduce blob overwrites on hosts without conditional write support, which may incur additional cost.
 >
-> Some will ignore the header (such as Scaleway Object Storage), some will refuse to run (such as Backblaze B2). In the latter case, set `ConditionalWrites = No` as shown below:
->
-> ```ini
-> # ...
->
-> [S3]
-> KeyID = <AWS access key ID>
-> SecretKey = <AWS secret key>
-> ConditionalWrites = No
-> ```
->
-> However, it is better to use a provider with conditional write support.
+> It is recommended to use a provider **with support for conditional writes**!
 
 You can omit the `SecretKey` value, in which case a prompt will ask you the access key.
 
