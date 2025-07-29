@@ -1844,9 +1844,11 @@ void HandleInstanceList(http_IO *io)
     HashSet<const char *> allowed_masters;
     if (!session->IsRoot()) {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare("SELECT instance FROM dom_permissions WHERE userid = ?1", &stmt))
+        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
+                                     WHERE userid = ?1 AND permissions & ?2)", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, session->userid);
+        sqlite3_bind_int(stmt, 2, (int)UserPermission::BuildAdmin);
 
         while (stmt.Step()) {
             const char *instance_key = (const char *)sqlite3_column_text(stmt, 0);
