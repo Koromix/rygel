@@ -24,9 +24,26 @@ struct rk_Config;
 struct rk_S3Config;
 struct ssh_Config;
 
+enum class rk_ChecksumType {
+    None,
+    CRC32,
+    CRC64nvme
+};
+static const char *const rk_ChecksumTypeNames[] = {
+    "None",
+    "CRC32",
+    "CRC64nvme"
+};
+
 struct rk_WriteSettings {
     bool conditional = false;
     int64_t retain = 0;
+
+    rk_ChecksumType checksum = rk_ChecksumType::None;
+    union {
+        uint32_t crc32;
+        uint64_t crc64nvme;
+    } hash = {};
 };
 
 enum class rk_WriteResult {
@@ -63,6 +80,8 @@ public:
     bool ListFiles(FunctionRef<bool(const char *, int64_t)> func) { return ListFiles(nullptr, func); }
     virtual bool ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func) = 0;
     virtual StatResult TestFile(const char *path, int64_t *out_size = nullptr) = 0;
+
+    virtual rk_ChecksumType GetChecksumType() = 0;
 };
 
 std::unique_ptr<rk_Disk> rk_OpenDisk(const rk_Config &config);

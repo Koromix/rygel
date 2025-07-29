@@ -19,6 +19,9 @@
 #include "lz4.hh"
 #include "repository.hh"
 #include "priv_repository.hh"
+#include "src/core/crc/crc.hh"
+#define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
+#include "vendor/miniz/miniz.h"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
@@ -774,7 +777,24 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
         } while (!complete);
     }
 
-    rk_WriteSettings settings = { .conditional = HasConditionalWrites(), .retain = retain };
+    rk_WriteSettings settings = {};
+
+    settings.conditional = HasConditionalWrites();
+    settings.retain = retain;
+
+    switch (disk->GetChecksumType()) {
+        case rk_ChecksumType::None: {} break;
+
+        case rk_ChecksumType::CRC32: {
+            settings.checksum = rk_ChecksumType::CRC32;
+            settings.hash.crc32 = mz_crc32(MZ_CRC32_INIT, raw.ptr, raw.len);
+        } break;
+        case rk_ChecksumType::CRC64nvme: {
+            settings.checksum = rk_ChecksumType::CRC64nvme;
+            settings.hash.crc64nvme = CRC64nvme(0, raw);
+        } break;
+    }
+
     rk_WriteResult ret = disk->WriteFile(path, raw, settings);
 
     switch (ret) {

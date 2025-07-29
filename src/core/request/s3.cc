@@ -607,7 +607,7 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
     ctx.offset = 0;
 
     int status = RunSafe("upload S3 object", 5, 412, [&](CURL *curl) {
-        LocalArray<KeyValue, 8> headers;
+        LocalArray<KeyValue, 16> headers;
 
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
@@ -617,6 +617,55 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
         }
         if (settings.conditional) {
             headers.Append({ "If-None-Match", "*" });
+        }
+
+        if (settings.checksum != s3_ChecksumType::None) {
+            const char *header = nullptr;
+            LocalArray<uint8_t, 32> hash;
+
+            switch (settings.checksum) {
+                case s3_ChecksumType::None: { RG_UNREACHABLE(); } break;
+
+                case s3_ChecksumType::CRC32: {
+                    header = "x-amz-checksum-crc32";
+
+                    uint32_t le = BigEndian(settings.hash.crc32);
+                    MemCpy(hash.data, &le, 4);
+                    hash.len = 4;
+                } break;
+                case s3_ChecksumType::CRC32C: {
+                    header = "x-amz-checksum-crc32c";
+
+                    uint32_t le = BigEndian(settings.hash.crc32c);
+                    MemCpy(hash.data, &le, 4);
+                    hash.len = 4;
+                } break;
+                case s3_ChecksumType::CRC64nvme: {
+                    header = "x-amz-checksum-crc64nvme";
+
+                    uint64_t le = BigEndian(settings.hash.crc64nvme);
+                    MemCpy(hash.data, &le, 8);
+                    hash.len = 8;
+                } break;
+                case s3_ChecksumType::SHA1: {
+                    header = "x-amz-checksum-sha1";
+
+                    MemCpy(hash.data, settings.hash.sha1, 20);
+                    hash.len = 20;
+                } break;
+                case s3_ChecksumType::SHA256: {
+                    header = "x-amz-checksum-sha256";
+
+                    MemCpy(hash.data, settings.hash.sha256, 32);
+                    hash.len = 32;
+                } break;
+            }
+
+            Span<char> base64 = AllocateSpan<char>(&temp_alloc, 128);
+            sodium_bin2base64(base64.ptr, base64.len, hash.data, hash.len, sodium_base64_VARIANT_ORIGINAL);
+
+            headers.Append({ header, base64.ptr });
+            headers.Append({"x-amz-checksum-type", "FULL_OBJECT" });
         }
 
         // PrepareRequest() does not try to mess with custom headers, to avoid sorting issues
@@ -1001,7 +1050,7 @@ void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *met
         list.Append({ (char *)authorization, nullptr });
 
         for (const KeyValue &header: headers) {
-            const char *str = Fmt(alloc, "%1: %2", header.key, FmtUrlSafe(header.value, "-._~*$")).ptr;
+            const char *str = Fmt(alloc, "%1: %2", header.key, FmtUrlSafe(header.value, "-._~*$+/=")).ptr;
             list.Append({ (char *)str, nullptr });
         }
 
@@ -1113,7 +1162,7 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
         }
         Fmt(&buf, "\nhost:%1\n", host);
         for (const KeyValue &header: headers) {
-            Fmt(&buf, "%1:%2\n", FmtLowerAscii(header.key), FmtUrlSafe(header.value, "-._~*$"));
+            Fmt(&buf, "%1:%2\n", FmtLowerAscii(header.key), FmtUrlSafe(header.value, "-._~*$+/="));
         }
         Fmt(&buf, "\nhost");
         for (const KeyValue &header: headers) {

@@ -24,10 +24,13 @@ class S3Disk: public rk_Disk {
     s3_Client s3;
 
     s3_LockMode lock;
+    rk_ChecksumType checksum;
 
 public:
     S3Disk(const rk_S3Config &config);
     ~S3Disk() override;
+
+    rk_ChecksumType GetChecksumType() override;
 
     bool CreateDirectory(const char *path) override;
     bool DeleteDirectory(const char *path) override;
@@ -45,7 +48,7 @@ public:
 };
 
 S3Disk::S3Disk(const rk_S3Config &config)
-    : lock(config.lock)
+    : lock(config.lock), checksum(config.checksum)
 {
     if (!s3.Open(config.remote))
         return;
@@ -57,6 +60,11 @@ S3Disk::S3Disk(const rk_S3Config &config)
 
 S3Disk::~S3Disk()
 {
+}
+
+rk_ChecksumType S3Disk::GetChecksumType()
+{
+    return checksum;
 }
 
 bool S3Disk::CreateDirectory(const char *)
@@ -96,6 +104,19 @@ rk_WriteResult S3Disk::WriteFile(const char *path, Span<const uint8_t> buf, cons
     if (settings.retain) {
         put.retain = GetUnixTime() + settings.retain;
         put.lock = lock;
+    }
+
+    switch (settings.checksum) {
+        case rk_ChecksumType::None: {} break;
+
+        case rk_ChecksumType::CRC32: {
+            put.checksum = s3_ChecksumType::CRC32;
+            put.hash.crc32 = settings.hash.crc32;
+        } break;
+        case rk_ChecksumType::CRC64nvme: {
+            put.checksum = s3_ChecksumType::CRC64nvme;
+            put.hash.crc64nvme = settings.hash.crc64nvme;
+        } break;
     }
 
     s3_PutResult ret = s3.PutObject(path, buf, put);

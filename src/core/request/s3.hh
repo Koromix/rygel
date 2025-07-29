@@ -59,12 +59,30 @@ static const char *const s3_LockModeNames[] = {
     "Compliance"
 };
 
+enum class s3_ChecksumType {
+    None,
+    CRC32,
+    CRC32C,
+    CRC64nvme,
+    SHA1,
+    SHA256
+};
+
 struct s3_PutSettings {
     const char *mimetype = nullptr;
     bool conditional = false;
 
     int64_t retain = 0;
     s3_LockMode lock = s3_LockMode::Governance;
+
+    s3_ChecksumType checksum = s3_ChecksumType::None;
+    union {
+        uint32_t crc32;
+        uint32_t crc32c;
+        uint64_t crc64nvme;
+        uint8_t sha1[20];
+        uint8_t sha256[32];
+    } hash;
 };
 
 enum class s3_PutResult {

@@ -279,6 +279,11 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                             LogError("Invalid lock mode '%1'", prop.value);
                             valid = false;
                         }
+                    } else if (prop.key == "ChecksumType") {
+                        if (!OptionToEnumI(rk_ChecksumTypeNames, prop.value, &config.s3.checksum)) {
+                            LogError("Invalid checksum type '%1'", prop.value);
+                            valid = false;
+                        }
                     } else {
                         valid &= config.s3.remote.SetProperty(prop.key, prop.value, root_directory);
                     }

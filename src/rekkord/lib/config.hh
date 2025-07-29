@@ -18,6 +18,7 @@
 #include "src/core/base/base.hh"
 #include "src/core/request/s3.hh"
 #include "src/core/request/ssh.hh"
+#include "disk.hh"
 
 namespace RG {
 
@@ -29,7 +30,9 @@ enum class rk_DiskType {
 
 struct rk_S3Config {
     s3_Config remote;
+
     s3_LockMode lock = s3_LockMode::Governance;
+    rk_ChecksumType checksum = rk_ChecksumType::CRC64nvme;
 };
 
 static const int64_t rk_MinimalRetention = 14 * 86400000ll; // 14 days

@@ -28,6 +28,8 @@ public:
     LocalDisk(const char *path);
     ~LocalDisk() override;
 
+    rk_ChecksumType GetChecksumType() override;
+
     bool CreateDirectory(const char *path) override;
     bool DeleteDirectory(const char *path) override;
     StatResult TestDirectory(const char *path) override;
@@ -60,6 +62,11 @@ LocalDisk::LocalDisk(const char *path)
 
 LocalDisk::~LocalDisk()
 {
+}
+
+rk_ChecksumType LocalDisk::GetChecksumType()
+{
+    return rk_ChecksumType::None;
 }
 
 bool LocalDisk::CreateDirectory(const char *path)

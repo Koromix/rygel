@@ -49,6 +49,8 @@ public:
     SftpDisk(const ssh_Config &config);
     ~SftpDisk() override;
 
+    rk_ChecksumType GetChecksumType() override;
+
     bool CreateDirectory(const char *path) override;
     bool DeleteDirectory(const char *path) override;
     StatResult TestDirectory(const char *path) override;
@@ -117,6 +119,11 @@ SftpDisk::~SftpDisk()
     for (ConnectionData *conn: connections) {
         DestroyConnection(conn);
     }
+}
+
+rk_ChecksumType SftpDisk::GetChecksumType()
+{
+    return rk_ChecksumType::None;
 }
 
 bool SftpDisk::CreateDirectory(const char *path)
