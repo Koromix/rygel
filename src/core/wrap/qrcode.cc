@@ -22,8 +22,6 @@
 #include "src/core/base/base.hh"
 #include "qrcode.hh"
 #include "vendor/qrcodegen/qrcodegen.h"
-#define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
-#include "vendor/miniz/miniz.h"
 
 namespace RG {
 
@@ -127,9 +125,9 @@ static bool GeneratePNG(const uint8_t qr[qrcodegen_BUFFER_LEN_MAX], int border, 
         ihdr.filter = 0;
         ihdr.interlace = 0;
 
-        uint32_t crc32 = MZ_CRC32_INIT;
-        crc32 = mz_crc32(crc32, (const uint8_t *)&chunk + 4, RG_SIZE(chunk) - 4);
-        crc32 = mz_crc32(crc32, (const uint8_t *)&ihdr, RG_SIZE(ihdr));
+        uint32_t crc32 = 0;
+        crc32 = CRC32(crc32, MakeSpan((const uint8_t *)&chunk + 4, RG_SIZE(chunk) - 4));
+        crc32 = CRC32(crc32, MakeSpan((const uint8_t *)&ihdr, RG_SIZE(ihdr)));
         crc32 = BigEndian(crc32);
 
         out_st->Write(MakeSpan((const uint8_t *)&chunk, RG_SIZE(chunk)));
@@ -170,8 +168,8 @@ static bool GeneratePNG(const uint8_t qr[qrcodegen_BUFFER_LEN_MAX], int border, 
             MemCpy(ptr, &len, RG_SIZE(len));
         }
 
-        uint32_t crc32 = MZ_CRC32_INIT;
-        crc32 = mz_crc32(crc32, (const uint8_t *)idat.ptr + 4, idat.len - 4);
+        uint32_t crc32 = 0;
+        crc32 = CRC32(crc32, MakeSpan((const uint8_t *)idat.ptr + 4, idat.len - 4));
         crc32 = BigEndian(crc32);
 
         out_st->Write(idat);

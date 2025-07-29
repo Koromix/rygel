@@ -87,7 +87,7 @@ static void WriteTables(StreamWriter *writer, const char *name, uint64_t poly)
     for (int table = 0; table < 16; table++) {
         int count = table * 8 + 8;
 
-        Print(writer, "static uint64_t %1%2[256] = {", name, table);
+        Print(writer, "static const uint64_t %1%2[256] = {", name, table);
         for (int i = 0; i < 256; i++) {
             uint64_t value = (uint64_t)ReverseBits8((uint8_t)i) << 56;
             for (int j = 0; j < count; j++) {

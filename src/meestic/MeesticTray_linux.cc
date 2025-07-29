@@ -22,8 +22,6 @@
 #include "vendor/basu/src/systemd/sd-bus.h"
 #include "vendor/stb/stb_image.h"
 #include "vendor/stb/stb_image_resize2.h"
-#define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
-#include "vendor/miniz/miniz.h"
 
 #include <poll.h>
 #include <sys/types.h>
@@ -147,8 +145,9 @@ static void GeneratePNG(const uint8_t *data, int32_t width, int32_t height, Heap
         out_png->Append(MakeSpan((const uint8_t *)&ihdr, RG_SIZE(ihdr)));
 
         // Chunk CRC-32
-        uint32_t crc = BigEndian((uint32_t)mz_crc32(MZ_CRC32_INIT, out_png->ptr + chunk_pos + 4, RG_SIZE(ihdr) + 4));
-        out_png->Append(MakeSpan((const uint8_t *)&crc, 4));
+        Span<const uint8_t> span = MakeSpan(out_png->ptr + chunk_pos + 4, RG_SIZE(ihdr) + 4);
+        uint32_t crc32 = BigEndian((uint32_t)CRC32(0, span));
+        out_png->Append(MakeSpan((const uint8_t *)&crc32, 4));
     }
 
     // Write image data (IDAT)
@@ -178,8 +177,9 @@ static void GeneratePNG(const uint8_t *data, int32_t width, int32_t height, Heap
         }
 
         // Chunk CRC-32
-        uint32_t crc = BigEndian((uint32_t)mz_crc32(MZ_CRC32_INIT, out_png->ptr + chunk_pos + 4, out_png->len - chunk_pos - 4));
-        out_png->Append(MakeSpan((const uint8_t *)&crc, 4));
+        Span<const uint8_t> span = MakeSpan(out_png->ptr + chunk_pos + 4, out_png->len - chunk_pos - 4);
+        uint32_t crc32 = BigEndian((uint32_t)CRC32(0, span));
+        out_png->Append(MakeSpan((const uint8_t *)&crc32, 4));
     }
 
     // End image (IEND)

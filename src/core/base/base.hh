@@ -5672,4 +5672,12 @@ int ComputeCharacterWidth(int32_t uc);
 bool IsXidStart(int32_t uc);
 bool IsXidContinue(int32_t uc);
 
+// ------------------------------------------------------------------------
+// CRC
+// ------------------------------------------------------------------------
+
+uint32_t CRC32(uint32_t state, Span<const uint8_t> buf);
+uint64_t CRC64xz(uint64_t state, Span<const uint8_t> buf);
+uint64_t CRC64nvme(uint64_t state, Span<const uint8_t> buf);
+
 }
