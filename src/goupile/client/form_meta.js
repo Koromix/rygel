@@ -77,7 +77,7 @@ function MetaInterface(app, page, thread, meta) {
         return value;
     };
 
-    this.randomize = function(key, max = 2, secret = true) {
+    this.randomize = function(key, max = 2, secret = false) {
         if (!key)
             throw new Error('')
         if (max < 2 || max > 32)
