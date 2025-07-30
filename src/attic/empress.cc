@@ -23,11 +23,17 @@ namespace RG {
 static const Span<const char *const> AvailableAlgorithms = MakeSpan(CompressionTypeNames + 1, RG_LEN(CompressionTypeNames) - 1);
 
 enum class HashAlgorithm {
+    CRC32,
+    CRC64xz,
+    CRC64nvme,
     Sha256,
     Sha512,
     Blake3
 };
 static const char *const HashAlgorithmNames[] = {
+    "CRC32",
+    "CRC64xz",
+    "CRC64nvme",
     "Sha256",
     "Sha512",
     "Blake3"
@@ -500,19 +506,59 @@ static Size HashFile(StreamReader *reader, HashAlgorithm algorithm, Span<uint8_t
     buf.Reserve(Mebibytes(4));
     buf.len = Mebibytes(4);
 
+#define PROCESS(Code) \
+        do { \
+            Size read = reader->Read(buf); \
+            if (read < 0) \
+                return -1; \
+            Span<const uint8_t> bytes = buf.Take(0, read); \
+            Code; \
+        } while (!reader->IsEOF())
+
     switch (algorithm) {
+        case HashAlgorithm::CRC32: {
+            RG_ASSERT(out_hash.len >= 4);
+
+            uint32_t crc32 = 0;
+            PROCESS({ crc32 = CRC32(crc32, bytes); });
+
+            crc32 = BigEndian(crc32);
+            MemCpy(out_hash.ptr, &crc32, RG_SIZE(crc32));
+
+            return 4;
+        } break;
+
+        case HashAlgorithm::CRC64xz: {
+            RG_ASSERT(out_hash.len >= 8);
+
+            uint64_t crc64 = 0;
+            PROCESS({ crc64 = CRC64xz(crc64, bytes); });
+
+            crc64 = BigEndian(crc64);
+            MemCpy(out_hash.ptr, &crc64, RG_SIZE(crc64));
+
+            return 8;
+        } break;
+
+        case HashAlgorithm::CRC64nvme: {
+            RG_ASSERT(out_hash.len >= 8);
+
+            uint64_t crc64 = 0;
+            PROCESS({ crc64 = CRC64nvme(crc64, bytes); });
+
+            crc64 = BigEndian(crc64);
+            MemCpy(out_hash.ptr, &crc64, RG_SIZE(crc64));
+
+            return 8;
+        } break;
+
         case HashAlgorithm::Sha256: {
             RG_ASSERT(out_hash.len >= 32);
 
             crypto_hash_sha256_state state;
             crypto_hash_sha256_init(&state);
 
-            do {
-                Size bytes = reader->Read(buf);
-                if (bytes < 0)
-                    return -1;
-                crypto_hash_sha256_update(&state, buf.ptr, (unsigned long long)bytes);
-            } while (!reader->IsEOF());
+            PROCESS({ crypto_hash_sha256_update(&state, bytes.ptr, (unsigned long long)bytes.len); });
 
             crypto_hash_sha256_final(&state, out_hash.ptr);
             return 32;
@@ -524,12 +570,7 @@ static Size HashFile(StreamReader *reader, HashAlgorithm algorithm, Span<uint8_t
             crypto_hash_sha512_state state;
             crypto_hash_sha512_init(&state);
 
-            do {
-                Size bytes = reader->Read(buf);
-                if (bytes < 0)
-                    return -1;
-                crypto_hash_sha512_update(&state, buf.ptr, (unsigned long long)bytes);
-            } while (!reader->IsEOF());
+            PROCESS({ crypto_hash_sha512_update(&state, bytes.ptr, (unsigned long long)bytes.len); });
 
             crypto_hash_sha512_final(&state, out_hash.ptr);
             return 64;
@@ -541,17 +582,14 @@ static Size HashFile(StreamReader *reader, HashAlgorithm algorithm, Span<uint8_t
             blake3_hasher state;
             blake3_hasher_init(&state);
 
-            do {
-                Size bytes = reader->Read(buf);
-                if (bytes < 0)
-                    return -1;
-                blake3_hasher_update(&state, buf.ptr, (size_t)bytes);
-            } while (!reader->IsEOF());
+            PROCESS({ blake3_hasher_update(&state, bytes.ptr, (size_t)bytes.len); });
 
             blake3_hasher_finalize(&state, out_hash.ptr, 32);
             return 32;
         } break;
     }
+
+#undef PROCESS
 
     RG_UNREACHABLE();
 }
