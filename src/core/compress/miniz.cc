@@ -43,7 +43,7 @@ class MinizDecompressor: public StreamDecoder {
     Size out_len = 0;
 
     // For gzip support
-    uint32_t crc32 = MZ_CRC32_INIT;
+    uint32_t crc32 = 0;
     Size uncompressed_size = 0;
 
 public:
@@ -111,7 +111,7 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
             if (in_len - header_len < 2)
                 goto truncated_error;
 
-            uint16_t crc16 = (uint16_t)mz_crc32(MZ_CRC32_INIT, in_buf, (size_t)header_len);
+            uint16_t crc16 = (uint16_t)CRC32(0, MakeSpan(in_buf, header_len));
             uint16_t expected = ((uint16_t)in_buf[header_len + 1] << 8) | in_buf[header_len];
 
             if (crc16 != expected) {
@@ -172,7 +172,7 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
                                                        &out_arg, flags);
 
                 if (is_gzip) {
-                    crc32 = (uint32_t)mz_crc32(crc32, out_buf + out_len, out_arg);
+                    crc32 = (uint32_t)CRC32(crc32, MakeSpan(out_buf + out_len, (Size)out_arg));
                     uncompressed_size += (Size)out_arg;
                 }
 
@@ -231,7 +231,7 @@ class MinizCompressor: public StreamEncoder {
 
     // Gzip support
     bool is_gzip = false;
-    uint32_t crc32 = MZ_CRC32_INIT;
+    uint32_t crc32 = 0;
     Size uncompressed_size = 0;
 
     // Used to buffer small writes
@@ -313,7 +313,7 @@ bool MinizCompressor::Write(Span<const uint8_t> buf)
 bool MinizCompressor::WriteDeflate(Span<const uint8_t> buf)
 {
     if (is_gzip) {
-        crc32 = (uint32_t)mz_crc32(crc32, buf.ptr, (size_t)buf.len);
+        crc32 = CRC32(crc32, buf);
         uncompressed_size += buf.len;
     }
 
