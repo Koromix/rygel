@@ -5659,7 +5659,7 @@ bool PromptYN(const char *prompt, bool *out_value);
 // Mime types
 // ------------------------------------------------------------------------
 
-const char *GetMimeType(Span<const char> extension, const char *default_typ = "application/octet-stream");
+const char *GetMimeType(Span<const char> extension, const char *default_type = "application/octet-stream");
 
 bool CanCompressFile(const char *filename);
 
