@@ -5677,6 +5677,7 @@ bool IsXidContinue(int32_t uc);
 // ------------------------------------------------------------------------
 
 uint32_t CRC32(uint32_t state, Span<const uint8_t> buf);
+
 uint64_t CRC64xz(uint64_t state, Span<const uint8_t> buf);
 uint64_t CRC64nvme(uint64_t state, Span<const uint8_t> buf);
 
