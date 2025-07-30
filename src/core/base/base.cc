@@ -9996,6 +9996,25 @@ uint32_t CRC32(uint32_t state, Span<const uint8_t> buf)
     return ~state;
 }
 
+uint32_t CRC32C(uint32_t state, Span<const uint8_t> buf)
+{
+    state = ~state;
+
+    Size right = buf.len & (RG_SIZE_MAX - 3);
+
+    for (Size i = 0; i < right; i += 4) {
+        state = (state >> 8) ^ Crc32CTable[(state ^ buf[i + 0]) & 0xFF];
+        state = (state >> 8) ^ Crc32CTable[(state ^ buf[i + 1]) & 0xFF];
+        state = (state >> 8) ^ Crc32CTable[(state ^ buf[i + 2]) & 0xFF];
+        state = (state >> 8) ^ Crc32CTable[(state ^ buf[i + 3]) & 0xFF];
+    }
+    for (Size i = right; i < buf.len; i++) {
+        state = (state >> 8) ^ Crc32CTable[(state ^ buf[i]) & 0xFF];
+    }
+
+    return ~state;
+}
+
 static uint64_t XzUpdate1(uint64_t state, uint8_t byte)
 {
     uint64_t ret = (state >> 8) ^ Crc64XzTable0[byte ^ (uint8_t)state];

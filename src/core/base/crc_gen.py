@@ -28,6 +28,7 @@ import os
 import argparse
 
 CRC32_POLY = 0xEDB88320
+CRC32C_POLY = 0x82F63B78
 CRC64_XZ_POLY = 0xC96C5795D7870F42
 CRC64_NVME_POLY = 0x9A6C9329AC4BC9B5
 
@@ -101,6 +102,7 @@ namespace RG {{
 ''')
 
         write_crc32_table(f, 'Crc32Table', CRC32_POLY)
+        write_crc32_table(f, 'Crc32CTable', CRC32C_POLY)
         write_crc64_tables(f, 'Crc64XzTable', CRC64_XZ_POLY)
         write_crc64_tables(f, 'Crc64NvmeTable', CRC64_NVME_POLY)
 

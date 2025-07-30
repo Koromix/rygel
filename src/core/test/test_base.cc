@@ -1182,6 +1182,26 @@ TEST_FUNCTION("crc/CRC32")
 #undef TEST_CRC
 }
 
+TEST_FUNCTION("crc/CRC32C")
+{
+#define TEST_CRC(Str, Expected) \
+        do { \
+            Span<const char> span = (Str); \
+            TEST_EQ(CRC32C(0, span.As<const uint8_t>()), (Expected)); \
+        } while (false)
+
+    TEST_CRC("", 0u);
+    TEST_CRC("123456789", 0xE3069283);
+    TEST_CRC("Lorem ipsum dolor sit amet, consectetur adipiscing elit. In suscipit lacinia odio, ut maximus lorem aliquet vel. "
+             "Fusce lacus sapien, interdum nec laoreet at, pretium vel tortor. Nunc id urna eget augue maximus pharetra vitae et quam. "
+             "Suspendisse potenti. Praesent vitae maximus magna. Nunc tempor metus ipsum, eu venenatis metus cursus in. "
+             "Donec rutrum sem a arcu pulvinar tristique. Nulla facilisi. Sed eu fringilla augue. Mauris tempus bibendum massa, eu euismod justo convallis eget. "
+             "Morbi sit amet facilisis nunc, et pharetra nunc. Nullam gravida mi vitae mauris viverra, non accumsan ante egestas. "
+             "Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas.", 0x8B4AC0B7);
+
+#undef TEST_CRC
+}
+
 TEST_FUNCTION("crc/CRC64xz")
 {
 #define TEST_CRC(Str, Expected) \

@@ -24,6 +24,7 @@ static const Span<const char *const> AvailableAlgorithms = MakeSpan(CompressionT
 
 enum class HashAlgorithm {
     CRC32,
+    CRC32C,
     CRC64xz,
     CRC64nvme,
     Sha256,
@@ -32,6 +33,7 @@ enum class HashAlgorithm {
 };
 static const char *const HashAlgorithmNames[] = {
     "CRC32",
+    "CRC32C",
     "CRC64xz",
     "CRC64nvme",
     "Sha256",
@@ -521,6 +523,18 @@ static Size HashFile(StreamReader *reader, HashAlgorithm algorithm, Span<uint8_t
 
             uint32_t crc32 = 0;
             PROCESS({ crc32 = CRC32(crc32, bytes); });
+
+            crc32 = BigEndian(crc32);
+            MemCpy(out_hash.ptr, &crc32, RG_SIZE(crc32));
+
+            return 4;
+        } break;
+
+        case HashAlgorithm::CRC32C: {
+            RG_ASSERT(out_hash.len >= 4);
+
+            uint32_t crc32 = 0;
+            PROCESS({ crc32 = CRC32C(crc32, bytes); });
 
             crc32 = BigEndian(crc32);
             MemCpy(out_hash.ptr, &crc32, RG_SIZE(crc32));
