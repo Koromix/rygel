@@ -27,12 +27,18 @@ struct ssh_Config;
 enum class rk_ChecksumType {
     None,
     CRC32,
-    CRC64nvme
+    CRC32C,
+    CRC64nvme,
+    SHA1,
+    SHA256
 };
 static const char *const rk_ChecksumTypeNames[] = {
     "None",
     "CRC32",
-    "CRC64nvme"
+    "CRC32C",
+    "CRC64nvme",
+    "SHA1",
+    "SHA256"
 };
 
 struct rk_WriteSettings {
@@ -42,7 +48,10 @@ struct rk_WriteSettings {
     rk_ChecksumType checksum = rk_ChecksumType::None;
     union {
         uint32_t crc32;
+        uint32_t crc32c;
         uint64_t crc64nvme;
+        uint8_t sha1[20];
+        uint8_t sha256[32];
     } hash = {};
 };
 

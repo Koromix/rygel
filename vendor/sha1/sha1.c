@@ -198,12 +198,12 @@ void SHA1Init(
 void SHA1Update(
     SHA1_CTX * context,
     const unsigned char *data,
-    uint32_t len
+    size_t len
 )
 {
-    uint32_t i;
+    size_t i;
 
-    uint32_t j;
+    size_t j;
 
     j = context->count[0];
     if ((context->count[0] += len << 3) < j)
@@ -280,15 +280,13 @@ void SHA1Final(
 }
 
 void SHA1(
-    char *hash_out,
-    const char *str,
-    uint32_t len)
+    unsigned char digest[20],
+    const unsigned char *data,
+    size_t len)
 {
     SHA1_CTX ctx;
-    unsigned int ii;
 
     SHA1Init(&ctx);
-    for (ii=0; ii<len; ii+=1)
-        SHA1Update(&ctx, (const unsigned char*)str + ii, 1);
-    SHA1Final((unsigned char *)hash_out, &ctx);
+    SHA1Update(&ctx, data, len);
+    SHA1Final(digest, &ctx);
 }

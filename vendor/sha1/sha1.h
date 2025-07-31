@@ -32,7 +32,7 @@ void SHA1Init(
 void SHA1Update(
     SHA1_CTX * context,
     const unsigned char *data,
-    uint32_t len
+    size_t len
     );
 
 void SHA1Final(
@@ -41,9 +41,9 @@ void SHA1Final(
     );
 
 void SHA1(
-    char *hash_out,
-    const char *str,
-    uint32_t len);
+    unsigned char digest[20],
+    const unsigned char *data,
+    size_t len);
 
 #if defined(__cplusplus)
 }

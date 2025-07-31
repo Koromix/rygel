@@ -150,7 +150,7 @@ static Size HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8
 
     // Hash and/or pad key
     if (key.len > RG_SIZE(padded_key)) {
-        SHA1((char *)padded_key, (const char *)key.ptr, (uint32_t)key.len);
+        SHA1(padded_key, key.ptr, (size_t)key.len);
         MemSet(padded_key + 20, 0, RG_SIZE(padded_key) - 20);
     } else {
         MemCpy(padded_key, key.ptr, key.len);

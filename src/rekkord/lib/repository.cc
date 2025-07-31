@@ -20,6 +20,7 @@
 #include "repository.hh"
 #include "priv_repository.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
+#include "vendor/sha1/sha1.h"
 
 namespace RG {
 
@@ -779,17 +780,16 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
     settings.conditional = HasConditionalWrites();
     settings.retain = retain;
 
-    switch (disk->GetChecksumType()) {
+    settings.checksum = disk->GetChecksumType();
+
+    switch (settings.checksum) {
         case rk_ChecksumType::None: {} break;
 
-        case rk_ChecksumType::CRC32: {
-            settings.checksum = rk_ChecksumType::CRC32;
-            settings.hash.crc32 = CRC32(0, raw);
-        } break;
-        case rk_ChecksumType::CRC64nvme: {
-            settings.checksum = rk_ChecksumType::CRC64nvme;
-            settings.hash.crc64nvme = CRC64nvme(0, raw);
-        } break;
+        case rk_ChecksumType::CRC32: { settings.hash.crc32 = CRC32(0, raw); } break;
+        case rk_ChecksumType::CRC32C: { settings.hash.crc32c = CRC32C(0, raw); } break;
+        case rk_ChecksumType::CRC64nvme: { settings.hash.crc64nvme = CRC64nvme(0, raw); } break;
+        case rk_ChecksumType::SHA1: { SHA1(settings.hash.sha1, raw.ptr, (size_t)raw.len); } break;
+        case rk_ChecksumType::SHA256: { crypto_hash_sha256(settings.hash.sha256, raw.ptr, (size_t)raw.len); } break;
     }
 
     rk_WriteResult ret = disk->WriteFile(path, raw, settings);

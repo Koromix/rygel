@@ -113,9 +113,21 @@ rk_WriteResult S3Disk::WriteFile(const char *path, Span<const uint8_t> buf, cons
             put.checksum = s3_ChecksumType::CRC32;
             put.hash.crc32 = settings.hash.crc32;
         } break;
+        case rk_ChecksumType::CRC32C: {
+            put.checksum = s3_ChecksumType::CRC32C;
+            put.hash.crc32c = settings.hash.crc32c;
+        } break;
         case rk_ChecksumType::CRC64nvme: {
             put.checksum = s3_ChecksumType::CRC64nvme;
             put.hash.crc64nvme = settings.hash.crc64nvme;
+        } break;
+        case rk_ChecksumType::SHA1: {
+            put.checksum = s3_ChecksumType::SHA1;
+            MemCpy(put.hash.sha1, settings.hash.sha1, 20);
+        } break;
+        case rk_ChecksumType::SHA256: {
+            put.checksum = s3_ChecksumType::SHA256;
+            MemCpy(put.hash.sha256, settings.hash.sha256, 32);
         } break;
     }
 
