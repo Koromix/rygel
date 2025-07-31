@@ -15,6 +15,7 @@
 
 #include "src/core/base/base.hh"
 #include "vendor/blake3/c/blake3.h"
+#include "vendor/sha1/sha1.h"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
@@ -27,18 +28,20 @@ enum class HashAlgorithm {
     CRC32C,
     CRC64xz,
     CRC64nvme,
-    Sha256,
-    Sha512,
-    Blake3
+    SHA1,
+    SHA256,
+    SHA512,
+    BLAKE3
 };
 static const char *const HashAlgorithmNames[] = {
     "CRC32",
     "CRC32C",
     "CRC64xz",
     "CRC64nvme",
-    "Sha256",
-    "Sha512",
-    "Blake3"
+    "SHA1",
+    "SHA256",
+    "SHA512",
+    "BLAKE3"
 };
 
 static int RunCompress(Span<const char *> arguments)
@@ -566,7 +569,19 @@ static Size HashFile(StreamReader *reader, HashAlgorithm algorithm, Span<uint8_t
             return 8;
         } break;
 
-        case HashAlgorithm::Sha256: {
+        case HashAlgorithm::SHA1: {
+            RG_ASSERT(out_hash.len >= 32);
+
+            SHA1_CTX ctx;
+            SHA1Init(&ctx);
+
+            PROCESS({ SHA1Update(&ctx, bytes.ptr, (size_t)bytes.len); });
+
+            SHA1Final(out_hash.ptr, &ctx);
+            return 20;
+        } break;
+
+        case HashAlgorithm::SHA256: {
             RG_ASSERT(out_hash.len >= 32);
 
             crypto_hash_sha256_state state;
@@ -578,7 +593,7 @@ static Size HashFile(StreamReader *reader, HashAlgorithm algorithm, Span<uint8_t
             return 32;
         } break;
 
-        case HashAlgorithm::Sha512: {
+        case HashAlgorithm::SHA512: {
             RG_ASSERT(out_hash.len >= 64);
 
             crypto_hash_sha512_state state;
@@ -590,7 +605,7 @@ static Size HashFile(StreamReader *reader, HashAlgorithm algorithm, Span<uint8_t
             return 64;
         } break;
 
-        case HashAlgorithm::Blake3: {
+        case HashAlgorithm::BLAKE3: {
             RG_ASSERT(out_hash.len >= 32);
 
             blake3_hasher state;
@@ -614,7 +629,7 @@ static int RunHash(Span<const char *> arguments)
 
     // Options
     HeapArray<const char *> src_filenames;
-    HashAlgorithm algorithm = HashAlgorithm::Sha256;
+    HashAlgorithm algorithm = HashAlgorithm::SHA256;
     bool brief = false;
 
     const auto print_usage = [=](StreamWriter *st) {
