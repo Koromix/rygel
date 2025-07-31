@@ -135,6 +135,17 @@
 
 namespace RG {
 
+// glibc < 2.27 doesn't define copy_file_range
+#if defined(SYS_copy_file_range)
+ssize_t copy_file_range(int fd_in, loff_t *off_in,
+                           int fd_out, loff_t *off_out,
+                           size_t len, unsigned int flags) {
+    return syscall(SYS_copy_file_range, fd_in, off_in,
+                   fd_out, off_out, len, flags);
+}
+#endif
+
+
 // ------------------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------------------
@@ -4482,7 +4493,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
 
         while (size) {
             size_t count = (size_t)std::min(size, (int64_t)Mebibytes(64));
-            ssize_t ret = copy_file_range(src_fd, (off_t *)&src_offset, dest_fd, (off_t *)&dest_offset, count, 0);
+            ssize_t ret = RG::copy_file_range(src_fd, (off_t *)&src_offset, dest_fd, (off_t *)&dest_offset, count, 0);
 
             if (ret < 0) {
                 if (first && errno == EXDEV)
