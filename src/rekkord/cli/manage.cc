@@ -18,9 +18,25 @@
 #include "src/core/wrap/xml.hh"
 #include "rekkord.hh"
 #include "src/core/password/password.hh"
+#include "src/core/request/curl.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
+
+static const char *BaseConfig =
+R"([Repository]
+URL = %1
+# User =
+# Password =
+
+[Settings]
+# Threads = 
+# CompressionLevel =
+
+[Protection]
+# RetainDuration =
+# DurationSafety = On
+)";
 
 static bool GeneratePassword(Span<char> out_pwd)
 {
@@ -33,6 +49,227 @@ static bool GeneratePassword(Span<char> out_pwd)
                          (int)pwd_GenerateFlag::Specials;
 
     return pwd_GeneratePassword(flags, out_pwd);
+}
+
+static const char *PromptNonEmpty(const char *object, const char *default_value, Allocator *alloc)
+{
+    char prompt[128];
+    Fmt(prompt, "%1: ", object);
+
+    const char *ret = Prompt(prompt, default_value, nullptr, alloc);
+
+    if (!ret)
+        return nullptr;
+    if (!ret[0]) {
+        LogError("Cannot use empty %1", FmtLowerAscii(object));
+        return nullptr;
+    }
+
+    return ret;
+}
+
+static const char *PromptNonEmpty(const char *object, Allocator *alloc)
+{
+    return PromptNonEmpty(object, nullptr, alloc);
+}
+
+static bool CheckEndpoint(const char *url)
+{
+    CURLU *h = curl_url();
+    RG_DEFER { curl_url_cleanup(h); };
+
+    // Parse URL
+    {
+        CURLUcode ret = curl_url_set(h, CURLUPART_URL, url, 0);
+        if (ret == CURLUE_OUT_OF_MEMORY)
+            RG_BAD_ALLOC();
+        if (ret != CURLUE_OK) {
+            LogError("Malformed endpoint URL '%1'", url);
+            return false;
+        }
+    }
+
+    char *path = nullptr;
+    if (curl_url_get(h, CURLUPART_PATH, &path, 0) == CURLUE_OUT_OF_MEMORY)
+        RG_BAD_ALLOC();
+    RG_DEFER { curl_free(path); };
+
+    if (path && !TestStr(path, "/")) {
+        LogError("Endpoint URL must not include path");
+        return false;
+    }
+
+    return true;
+}
+
+int RunConfig(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    const char *config_filename = nullptr;
+    bool force = false;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 config [-C filename] [option...]%!0
+
+Options:
+
+    %!..+-C, --config_file filename%!0     Set configuration file
+
+    %!..+-f, --force%!0                    Overwrite existing config file)", FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                config_filename = opt.current_value;
+            } else if (opt.Test("-f", "--force")) {
+                force = true;
+            } else if (!HandleCommonOption(opt)) {
+                return 1;
+            }
+        }
+
+        opt.LogUnusedArguments();
+    }
+
+    if (!config_filename) {
+        config_filename = PromptNonEmpty("Config filename", "rekkord.ini", &temp_alloc);
+        if (!config_filename)
+            return 1;
+    }
+    if (!force && TestFile(config_filename)) {
+        LogError("Config file '%1' already exists", config_filename);
+        return 1;
+    }
+
+    // Prompt for repository type
+    rk_DiskType type;
+    {
+        Size idx = PromptEnum("Repository type: ", rk_DiskTypeNames);
+        if (idx < 0)
+            return 1;
+        type = (rk_DiskType)idx;
+    }
+
+    HeapArray<char> config;
+
+    switch (type) {
+        case rk_DiskType::Local: {
+            const char *url = PromptNonEmpty("Repository path", &temp_alloc);
+            if (!url)
+                return 1;
+            Fmt(&config, BaseConfig, url);
+        } break;
+
+        case rk_DiskType::S3: {
+            const char *endpoint = nullptr;
+            const char *bucket = nullptr;
+            const char *key_id = nullptr;
+            const char *secret_key = nullptr;
+
+            endpoint = PromptNonEmpty("S3 endpoint URL", &temp_alloc);
+            if (!endpoint || !CheckEndpoint(endpoint))
+                return 1;
+            bucket = PromptNonEmpty("Bucket name", &temp_alloc);
+            if (!bucket)
+                return 1;
+            key_id = PromptNonEmpty("S3 access key ID", &temp_alloc);
+            if (!key_id)
+                return 1;
+            secret_key = PromptNonEmpty("S3 secret key", &temp_alloc);
+            if (!secret_key)
+                return 1;
+
+            const char *url = Fmt(&temp_alloc, "s3:%1/%2", TrimStrRight(endpoint, '/'), bucket).ptr;
+            Fmt(&config, BaseConfig, url);
+
+            Fmt(&config, "\n[S3]\n");
+            if (key_id) {
+                Fmt(&config, "KeyID = %1\n", key_id);
+            }
+            if (secret_key) {
+                Fmt(&config, "SecretKey = %1\n", secret_key);
+            }
+        } break;
+
+        case rk_DiskType::SFTP: {
+            const char *host = nullptr;
+            const char *username = nullptr;
+            const char *password = nullptr;
+            const char *keyfile = nullptr;
+            const char *path = nullptr;
+            const char *fingerprint = nullptr;
+
+            bool use_password;
+            bool use_keyfile;
+            {
+                Size ret = PromptEnum("SSH authentication mode: ", {
+                    "Password",
+                    "Keyfile"
+                });
+                if (ret < 0)
+                    return 1;
+                use_password = (ret == 0);
+                use_keyfile = (ret == 1);
+            }
+
+            host = PromptNonEmpty("SSH host", &temp_alloc);
+            if (!host)
+                return 1;
+            username = PromptNonEmpty("SSH user", &temp_alloc);
+            if (!username)
+                return 1;
+            if (use_password) {
+                password = PromptNonEmpty("SSH password", &temp_alloc);
+                if (!password)
+                    return 1;
+            }
+            if (use_keyfile) {
+                keyfile = PromptNonEmpty("SSH keyfile", &temp_alloc);
+                if (!keyfile)
+                    return 1;
+            }
+            path = PromptNonEmpty("SSH path", &temp_alloc);
+            if (!path)
+                return 1;
+            fingerprint = Prompt("Host fingerprint (optional): ", &temp_alloc);
+            if (!fingerprint)
+                return 1;
+
+            const char *url = Fmt(&temp_alloc, "ssh://%1@%2/%3", username, host, path).ptr;
+            Fmt(&config, BaseConfig, url);
+
+            Fmt(&config, "\n[SFTP]\n");
+            if (password) {
+                Fmt(&config, "Password = %1\n", password);
+            }
+            if (keyfile) {
+                Fmt(&config, "KeyFile = %1\n", password);
+            }
+            if (fingerprint[0]) {
+                Fmt(&config, "Fingerprint = %1\n", fingerprint);
+            }
+        } break;
+    }
+
+    // Write final config
+    {
+        unsigned int flags = (int)StreamWriterFlag::Atomic | (force ? 0 : (int)StreamWriterFlag::Exclusive);
+
+        if (!WriteFile(config.Take(), config_filename, flags))
+            return 1;
+    }
+
+    return 0;
 }
 
 int RunInit(Span<const char *> arguments)

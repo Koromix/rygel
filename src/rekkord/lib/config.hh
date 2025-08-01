@@ -27,6 +27,11 @@ enum class rk_DiskType {
     S3,
     SFTP
 };
+static const char *const rk_DiskTypeNames[] = {
+    "Local",
+    "S3",
+    "SFTP"
+};
 
 struct rk_S3Config {
     s3_Config remote;

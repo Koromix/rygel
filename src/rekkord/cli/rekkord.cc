@@ -23,6 +23,7 @@
 
 namespace RG {
 
+int RunConfig(Span<const char *> arguments);
 int RunInit(Span<const char *> arguments);
 int RunAddUser(Span<const char *> arguments);
 int RunDeleteUser(Span<const char *> arguments);
@@ -103,6 +104,7 @@ R"(Usage: %!..+%1 command [arg...]%!0
 
 Management commands:
 
+    %!..+config%!0                         Run simple wizard to create basic config file
     %!..+init%!0                           Init new backup repository
 
     %!..+add_user%!0                       Add user
@@ -221,52 +223,48 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         config_filename = nullptr;
     }
 
-    if (config_filename) {
-        if (!rk_LoadConfig(config_filename, &rekkord_config))
-            return 1;
+#define HANDLE_COMMAND(Cmd, Func, ReadConfig) \
+        do { \
+            if (TestStr(cmd, RG_STRINGIFY(Cmd))) { \
+                if ((ReadConfig) && config_filename) { \
+                    if (!rk_LoadConfig(config_filename, &rekkord_config)) \
+                        return 1; \
+                     \
+                    /* Reload common options to override config file values */ \
+                    OptionParser opt(argc, argv, OptionMode::Stop); \
+                     \
+                    while (opt.Next()) { \
+                        if (opt.Test("--help")) { \
+                            /* Already handled */ \
+                        } else if (!HandleCommonOption(opt)) { \
+                            return 1; \
+                        } \
+                    } \
+                } \
+                 \
+                return Func(arguments); \
+            } \
+        } while (false)
 
-        // Reload common options to override config file values
-        OptionParser opt(argc, argv, OptionMode::Stop);
+    HANDLE_COMMAND(config, RunConfig, false);
+    HANDLE_COMMAND(init, RunInit, true);
+    HANDLE_COMMAND(add_user, RunAddUser, true);
+    HANDLE_COMMAND(delete_user, RunDeleteUser, true);
+    HANDLE_COMMAND(list_users, RunListUsers, true);
+    HANDLE_COMMAND(save, RunSave, true);
+    HANDLE_COMMAND(restore, RunRestore, true);
+    HANDLE_COMMAND(check, RunCheck, true);
+    HANDLE_COMMAND(snapshots, RunSnapshots, true);
+    HANDLE_COMMAND(channels, RunChannels, true);
+    HANDLE_COMMAND(list, RunList, true);
+    HANDLE_COMMAND(mount, RunMount, true);
+    HANDLE_COMMAND(change_cid, RunChangeCID, true);
+    HANDLE_COMMAND(reset_cache, RunResetCache, true);
 
-        while (opt.Next()) {
-            if (opt.Test("--help")) {
-                // Already handled
-            } else if (!HandleCommonOption(opt)) {
-                return 1;
-            }
-        }
-    }
+#undef HANDLE_COMMAND
 
-    if (TestStr(cmd, "init")) {
-        return RunInit(arguments);
-    } else if (TestStr(cmd, "add_user")) {
-        return RunAddUser(arguments);
-    } else if (TestStr(cmd, "delete_user")) {
-        return RunDeleteUser(arguments);
-    } else if (TestStr(cmd, "list_users")) {
-        return RunListUsers(arguments);
-    } else if (TestStr(cmd, "save")) {
-        return RunSave(arguments);
-    } else if (TestStr(cmd, "restore")) {
-        return RunRestore(arguments);
-    } else if (TestStr(cmd, "check")) {
-        return RunCheck(arguments);
-    } else if (TestStr(cmd, "snapshots")) {
-        return RunSnapshots(arguments);
-    } else if (TestStr(cmd, "channels")) {
-        return RunChannels(arguments);
-    } else if (TestStr(cmd, "list")) {
-        return RunList(arguments);
-    } else if (TestStr(cmd, "mount")) {
-        return RunMount(arguments);
-    } else if (TestStr(cmd, "change_cid")) {
-        return RunChangeCID(arguments);
-    } else if (TestStr(cmd, "reset_cache")) {
-        return RunResetCache(arguments);
-    } else {
-        LogError("Unknown command '%1'", cmd);
-        return 1;
-    }
+    LogError("Unknown command '%1'", cmd);
+    return 1;
 }
 
 #if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__OpenBSD__)
