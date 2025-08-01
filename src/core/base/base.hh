@@ -5593,6 +5593,11 @@ bool OptionToFlagI(Span<const OptionDesc> options, Span<const char> str, T *out_
 // Console prompter (simplified readline)
 // ------------------------------------------------------------------------
 
+struct PromptChoice {
+    char c;
+    const char *str;
+};
+
 class ConsolePrompter {
     int prompt_columns = 0;
 
@@ -5620,15 +5625,16 @@ public:
     ConsolePrompter();
 
     bool Read(Span<const char> *out_str = nullptr);
-    bool ReadYN(bool *out_value);
+    Size ReadEnum(Span<const PromptChoice> choices);
 
     void Commit();
 
 private:
     bool ReadRaw(Span<const char> *out_str);
-    bool ReadRawYN(bool *out_value);
     bool ReadBuffered(Span<const char> *out_str);
-    bool ReadBufferedYN(bool *out_value);
+
+    Size ReadRawEnum(Span<const PromptChoice> choices);
+    Size ReadBufferedEnum(Span<const PromptChoice> choices);
 
     void ChangeEntry(Size new_idx);
 
@@ -5638,6 +5644,8 @@ private:
     Size FindBackward(Size offset, const char *chars);
 
     void Delete(Size start, Size end);
+
+    void FormatChoices(Span<const PromptChoice> choices, Size idx);
 
     void RenderRaw();
     void RenderBuffered();
@@ -5653,7 +5661,9 @@ private:
 const char *Prompt(const char *prompt, const char *default_value, const char *mask, Allocator *alloc);
 static inline const char *Prompt(const char *prompt, Allocator *alloc)
     { return Prompt(prompt, nullptr, nullptr, alloc); }
-bool PromptYN(const char *prompt, bool *out_value);
+
+Size PromptEnum(const char *prompt, Span<const PromptChoice> choices);
+Size PromptEnum(const char *prompt, Span<const char *const> strings);
 
 // ------------------------------------------------------------------------
 // Mime types

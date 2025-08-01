@@ -272,8 +272,12 @@ ssh_session ssh_Connect(const ssh_Config &config)
                 LogInfo("The server is unknown, public key hash: %!..+%1%!0", base64);
 
                 bool trust = false;
-                if (!PromptYN("Do you trust the host key?", &trust))
-                    return nullptr;
+                {
+                    Size idx = PromptEnum("Do you trust the host key?", {{'y', "Y"}, {'n', "N"}});
+                    if (idx < 0)
+                        return nullptr;
+                    trust = !idx;
+                }
                 if (!trust) {
                     LogError("Cannot trust server, refusing to continue");
                     return nullptr;

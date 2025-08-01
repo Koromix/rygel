@@ -9114,7 +9114,7 @@ bool ConsolePrompter::Read(Span<const char> *out_str)
     }
 }
 
-bool ConsolePrompter::ReadYN(bool *out_value)
+Size ConsolePrompter::ReadEnum(Span<const PromptChoice> choices)
 {
 #if !defined(_WIN32) && !defined(__wasm__)
     struct sigaction old_sa;
@@ -9128,9 +9128,9 @@ bool ConsolePrompter::ReadYN(bool *out_value)
             DisableRawMode();
         };
 
-        return ReadRawYN(out_value);
+        return ReadRawEnum(choices);
     } else {
-        return ReadBufferedYN(out_value);
+        return ReadBufferedEnum(choices);
     }
 }
 
@@ -9157,8 +9157,8 @@ bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
     StdErr->Flush();
 
     prompt_columns = ComputeWidth(prompt);
-
     str_offset = str.len;
+
     RenderRaw();
 
     int32_t uc;
@@ -9381,18 +9381,15 @@ bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
     return true;
 }
 
-bool ConsolePrompter::ReadRawYN(bool *out_value)
+Size ConsolePrompter::ReadRawEnum(Span<const PromptChoice> choices)
 {
-    const char *yn = "[Y/N]";
-
     StdErr->Flush();
 
-    prompt_columns = ComputeWidth(prompt) + ComputeWidth(yn) + 1;
+    Size value = 0;
 
-    str.RemoveFrom(0);
-    str_offset = 0;
+    prompt_columns = 0;
+    FormatChoices(choices, value);
     RenderRaw();
-    Print(StdErr, "%!D..%1%!0 ", yn);
 
     int32_t uc;
     while ((uc = ReadChar()) >= 0) {
@@ -9403,6 +9400,38 @@ bool ConsolePrompter::ReadRawYN(bool *out_value)
         }
 
         switch (uc) {
+            case 0x1B: {
+                LocalArray<char, 16> buf;
+
+                const auto match_escape = [&](const char *seq) {
+                    RG_ASSERT(strlen(seq) < RG_SIZE(buf.data));
+
+                    for (Size i = 0; seq[i]; i++) {
+                        if (i >= buf.len) {
+                            uc = ReadChar();
+
+                            if (uc >= 128) {
+                                // Got some kind of non-ASCII character, make sure nothing else matches
+                                buf.Append(0);
+                                return false;
+                            }
+
+                            buf.Append((char)uc);
+                        }
+                        if (buf[i] != seq[i])
+                            return false;
+                    }
+
+                    return true;
+                };
+
+                if (match_escape("[A")) { // Up
+                    fake_input = "\x10";
+                } else if (match_escape("[B")) { // Down
+                    fake_input = "\x0E";
+                }
+            } break;
+
             case 0x3: { // Ctrl-C
                 StdErr->Write("\r\n");
                 StdErr->Flush();
@@ -9413,21 +9442,37 @@ bool ConsolePrompter::ReadRawYN(bool *out_value)
                 return false;
             } break;
 
-            case 'Y':
-            case 'y': {
-                StdErr->Write("Y\n");
-                StdErr->Flush();
-
-                *out_value = true;
-                return true;
+            case 0xE: { // Down
+                if (value + 1 < choices.len) {
+                    FormatChoices(choices, ++value);
+                    RenderRaw();
+                }
             } break;
-            case 'N':
-            case 'n': {
-                StdErr->Write("N\n");
+            case 0x10: { // Up
+                if (value > 0) {
+                    FormatChoices(choices, --value);
+                    RenderRaw();
+                }
+            } break;
+
+            default: {
+                const auto it = std::find_if(choices.begin(), choices.end(), [&](const PromptChoice &choice) { return choice.c == uc; });
+                if (it == choices.end())
+                    break;
+                value = it - choices.begin();
+            } [[fallthrough]];
+
+            case '\r':
+            case '\n': {
+                str.RemoveFrom(0);
+                str.Append(choices[value].str);
+                str_offset = str.len;
+                RenderRaw();
+
+                StdErr->Write("\r\n");
                 StdErr->Flush();
 
-                *out_value = false;
-                return true;
+                return value;
             } break;
         }
     }
@@ -9461,41 +9506,40 @@ bool ConsolePrompter::ReadBuffered(Span<const char> *out_str)
     return false;
 }
 
-bool ConsolePrompter::ReadBufferedYN(bool *out_value)
+Size ConsolePrompter::ReadBufferedEnum(Span<const PromptChoice> choices)
 {
-    const char *yn = "[Yes/No]";
+    const Span<const char> prefix = "Input your choice: ";
 
-    prompt_columns = ComputeWidth(prompt) + ComputeWidth(yn) + 1;
+    prompt_columns = 0;
+    FormatChoices(choices, 0);
+    RenderBuffered();
 
-    while (!StdIn->IsEOF()) {
-        str.RemoveFrom(0);
-        str_offset = 0;
-        RenderBuffered();
-        Print(StdErr, "%1 ", yn);
+    Print(StdErr, "\n%1", prefix);
+    StdErr->Flush();
 
-        for (;;) {
-            uint8_t c = 0;
-            if (StdIn->Read(1, &c) < 0)
-                return false;
+    do {
+        uint8_t c = 0;
+        if (StdIn->Read(1, &c) < 0)
+            return false;
 
-            if (c == '\n') {
-                if (TestStrI(str, "y") || TestStrI(str, "yes")) {
-                    *out_value = true;
-                    return true;
-                } else if (TestStrI(str, "n") || TestStrI(str, "no")) {
-                    *out_value = false;
-                    return true;
-                } else {
-                    break;
-                }
-            } else if (c >= 32 || c == '\t') {
-                str.Append((char)c);
-            }
+        if (c == '\n') {
+            Span<const char> end = SplitStrReverse(str, '\n');
+
+            Size value;
+            if (ParseInt(end, &value, (int)ParseFlag::End) && value >= 1 && value <= choices.len)
+                return value - 1;
+
+            str.RemoveFrom(end.ptr - str.ptr);
+
+            StdErr->Write(prefix);
+            StdErr->Flush();
+        } else if (c >= '0' && c <= '9') {
+            str.Append((char)c);
         }
-    }
+    } while (!StdIn->IsEOF());
 
     // EOF
-    return false;
+    return -1;
 }
 
 void ConsolePrompter::ChangeEntry(Size new_idx)
@@ -9579,6 +9623,27 @@ void ConsolePrompter::Delete(Size start, Size end)
     }
 }
 
+void ConsolePrompter::FormatChoices(Span<const PromptChoice> choices, Size idx)
+{
+    Size align = 0;
+
+    for (const PromptChoice &choice: choices) {
+        align = std::max(align, (Size)strlen(choice.str));
+    }
+
+    str.RemoveFrom(0);
+    str.Append('\n');
+    for (Size i = 0; i < choices.len; i++) {
+        const PromptChoice &choice = choices[i];
+
+        Fmt(&str, "  [%1] %2  ", choice.c, FmtArg(choice.str).Pad(align));
+        if (i == idx) {
+            str_offset = str.len;
+        }
+        str.Append('\n');
+    }
+}
+
 void ConsolePrompter::RenderRaw()
 {
     columns = GetConsoleSize().x;
@@ -9611,7 +9676,7 @@ void ConsolePrompter::RenderRaw()
             int width = mask ? mask_columns : ComputeWidth(str.Take(i, bytes));
 
             if (x2 + width >= columns || str[i] == '\n') {
-                FmtArg prefix = FmtArg(str[i] == '\n' ? '.' : ' ').Repeat(prompt_columns - 1);
+                FmtArg prefix = FmtArg(' ').Repeat(prompt_columns - 1);
                 Print(StdErr, "\x1B[0K\r\n%!D.+%1%!0 %!..+", prefix);
 
                 x2 = prompt_columns;
@@ -9655,8 +9720,10 @@ void ConsolePrompter::RenderBuffered()
     Print(StdErr, "%1%2", prompt, line);
     while (remain.len) {
         line = SplitStr(remain, '\n', &remain);
-        Print(StdErr, "\n%1 %2", FmtArg('.').Repeat(prompt_columns - 1), line);
+        Print(StdErr, "\n%1%2", FmtArg(' ').Repeat(prompt_columns), line);
     }
+
+    StdErr->Flush();
 }
 
 Vec2<int> ConsolePrompter::GetConsoleSize()
@@ -9862,12 +9929,29 @@ const char *Prompt(const char *prompt, const char *default_value, const char *ma
     return str;
 }
 
-bool PromptYN(const char *prompt, bool *out_value)
+Size PromptEnum(const char *prompt, Span<const PromptChoice> choices)
 {
     ConsolePrompter prompter;
     prompter.prompt = prompt;
 
-    return prompter.ReadYN(out_value);
+    return prompter.ReadEnum(choices);
+}
+
+Size PromptEnum(const char *prompt, Span<const char *const> strings)
+{
+    static const char literals[] = "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    RG_ASSERT(strings.len <= RG_LEN(literals));
+
+    HeapArray<PromptChoice> choices;
+
+    for (Size i = 0; i < strings.len; i++) {
+        const char *str = strings[i];
+        PromptChoice choice = { literals[i], str };
+
+        choices.Append(choice);
+    }
+
+    return PromptEnum(prompt, choices);
 }
 
 // ------------------------------------------------------------------------
