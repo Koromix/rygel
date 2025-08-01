@@ -253,7 +253,7 @@ Options:
                 Fmt(&config, "Password = %1\n", password);
             }
             if (keyfile) {
-                Fmt(&config, "KeyFile = %1\n", password);
+                Fmt(&config, "KeyFile = %1\n", keyfile);
             }
             if (fingerprint[0]) {
                 Fmt(&config, "Fingerprint = %1\n", fingerprint);
