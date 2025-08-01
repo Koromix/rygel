@@ -102,7 +102,7 @@ static bool CheckEndpoint(const char *url)
     return true;
 }
 
-int RunConfig(Span<const char *> arguments)
+int RunSetup(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
@@ -112,7 +112,7 @@ int RunConfig(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 config [-C filename] [option...]%!0
+R"(Usage: %!..+%1 setup [-C filename] [option...]%!0
 
 Options:
 

@@ -23,7 +23,7 @@
 
 namespace RG {
 
-int RunConfig(Span<const char *> arguments);
+int RunSetup(Span<const char *> arguments);
 int RunInit(Span<const char *> arguments);
 int RunAddUser(Span<const char *> arguments);
 int RunDeleteUser(Span<const char *> arguments);
@@ -104,7 +104,7 @@ R"(Usage: %!..+%1 command [arg...]%!0
 
 Management commands:
 
-    %!..+config%!0                         Run simple wizard to create basic config file
+    %!..+setup%!0                          Run simple wizard to create basic config file
     %!..+init%!0                           Init new backup repository
 
     %!..+add_user%!0                       Add user
@@ -246,7 +246,7 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
             } \
         } while (false)
 
-    HANDLE_COMMAND(config, RunConfig, false);
+    HANDLE_COMMAND(setup, RunSetup, false);
     HANDLE_COMMAND(init, RunInit, true);
     HANDLE_COMMAND(add_user, RunAddUser, true);
     HANDLE_COMMAND(delete_user, RunDeleteUser, true);
