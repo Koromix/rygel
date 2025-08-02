@@ -9462,7 +9462,8 @@ Size ConsolePrompter::ReadRawEnum(Span<const PromptChoice> choices, Size value)
             } break;
 
             default: {
-                const auto it = std::find_if(choices.begin(), choices.end(), [&](const PromptChoice &choice) { return choice.c == uc; });
+                const auto it = std::find_if(choices.begin(), choices.end(),
+                                             [&](const PromptChoice &choice) { return choice.c == uc; });
                 if (it == choices.end())
                     break;
                 value = it - choices.begin();
@@ -9514,7 +9515,7 @@ bool ConsolePrompter::ReadBuffered(Span<const char> *out_str)
 
 Size ConsolePrompter::ReadBufferedEnum(Span<const PromptChoice> choices)
 {
-    const Span<const char> prefix = "Input your choice: ";
+    static const Span<const char> prefix = "Input your choice: ";
 
     prompt_columns = 0;
     FormatChoices(choices, 0);
@@ -9529,21 +9530,20 @@ Size ConsolePrompter::ReadBufferedEnum(Span<const PromptChoice> choices)
             return -1;
 
         if (c == '\n') {
-            Span<const char> end = SplitStrReverse(str, '\n');
+            Span<const char> end = TrimStr(SplitStrReverse(str, '\n'));
 
-            Size value;
-            if (ParseInt(end, &value, (int)ParseFlag::End)) {
-                value = value - 1;
-
-                if (value >= 0 && value < choices.len)
-                    return value;
+            if (end.len == 1) {
+                const auto it = std::find_if(choices.begin(), choices.end(),
+                                             [&](const PromptChoice &choice) { return choice.c == end[0]; });
+                if (it != choices.end())
+                    return it - choices.ptr;
             }
 
             str.RemoveFrom(end.ptr - str.ptr);
 
             StdErr->Write(prefix);
             StdErr->Flush();
-        } else if (c >= '0' && c <= '9') {
+        } else if (c >= 32 || c == '\t') {
             str.Append((char)c);
         }
     } while (!StdIn->IsEOF());
@@ -9941,6 +9941,19 @@ const char *Prompt(const char *prompt, const char *default_value, const char *ma
 
 Size PromptEnum(const char *prompt, Span<const PromptChoice> choices, Size value)
 {
+#if defined(RG_DEBUG)
+    {
+        HashSet<char> keys;
+
+        for (const PromptChoice &choice: choices) {
+            keys.Set(choice.c);
+        }
+
+        bool duplicates = (keys.table.count < choices.len);
+        RG_ASSERT(!duplicates);
+    }
+#endif
+
     ConsolePrompter prompter;
     prompter.prompt = prompt;
 
