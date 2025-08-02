@@ -4627,8 +4627,12 @@ const char *GetUserCachePath(const char *name, Allocator *alloc); // Can return 
 const char *GetSystemConfigPath(const char *name, Allocator *alloc);
 const char *GetTemporaryDirectory();
 
-const char *FindConfigFile(Span<const char *const> names, Allocator *alloc,
-                           HeapArray<const char *> *out_possibilities = nullptr);
+enum class FindConfigFlag {
+    IgnoreAppDir = 1 << 0
+};
+
+const char *FindConfigFile(Span<const char *const> names, unsigned int flags,
+                           Allocator *alloc, HeapArray<const char *> *out_possibilities = nullptr);
 
 const char *CreateUniqueFile(Span<const char> directory, const char *prefix, const char *extension,
                              Allocator *alloc, int *out_fd = nullptr);

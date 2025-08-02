@@ -31,6 +31,9 @@ static const char *const OutputFormatNames[] = {
     "XML"
 };
 
+extern const char *const DefaultConfigName;
+extern const char *const DefaultConfigEnv;
+
 extern const char *const CommonOptions;
 
 extern rk_Config rekkord_config;

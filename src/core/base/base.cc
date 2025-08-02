@@ -5995,8 +5995,8 @@ const char *GetTemporaryDirectory()
 
 #endif
 
-const char *FindConfigFile(Span<const char *const> names, Allocator *alloc,
-                           HeapArray<const char *> *out_possibilities)
+const char *FindConfigFile(Span<const char *const> names, unsigned int flags,
+                           Allocator *alloc, HeapArray<const char *> *out_possibilities)
 {
     decltype(GetUserConfigPath) *funcs[] = {
         [](const char *name, Allocator *alloc) {
@@ -6012,8 +6012,13 @@ const char *FindConfigFile(Span<const char *const> names, Allocator *alloc,
     };
 
     const char *filename = nullptr;
+    Size start = 0;
 
-    for (const auto &func: funcs) {
+    start += !!(flags & (int)FindConfigFlag::IgnoreAppDir);
+
+    for (Size i = start; i < RG_LEN(funcs); i++) {
+        const auto func = funcs[i];
+
         for (const char *name: names) {
             const char *path = func(name, alloc);
 

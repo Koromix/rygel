@@ -51,12 +51,12 @@ static bool GeneratePassword(Span<char> out_pwd)
     return pwd_GeneratePassword(flags, out_pwd);
 }
 
-static const char *PromptNonEmpty(const char *object, const char *default_value, Allocator *alloc)
+static const char *PromptNonEmpty(const char *object, Allocator *alloc)
 {
     char prompt[128];
     Fmt(prompt, "%1: ", object);
 
-    const char *ret = Prompt(prompt, default_value, nullptr, alloc);
+    const char *ret = Prompt(prompt, alloc);
 
     if (!ret)
         return nullptr;
@@ -66,11 +66,6 @@ static const char *PromptNonEmpty(const char *object, const char *default_value,
     }
 
     return ret;
-}
-
-static const char *PromptNonEmpty(const char *object, Allocator *alloc)
-{
-    return PromptNonEmpty(object, nullptr, alloc);
 }
 
 static bool CheckEndpoint(const char *url)
@@ -142,14 +137,32 @@ Options:
     }
 
     if (!config_filename) {
-        config_filename = PromptNonEmpty("Config filename", "rekkord.ini", &temp_alloc);
-        if (!config_filename)
+        HeapArray<const char *> choices;
+        FindConfigFile(DefaultConfigName, (int)FindConfigFlag::IgnoreAppDir, &temp_alloc, &choices);
+        choices.Append("Custom path");
+
+        Size idx = PromptEnum("Config file: ", choices);
+        if (idx < 0)
+            return 1;
+
+        if (idx == choices.len - 1) {
+            config_filename = PromptNonEmpty("Custom config filename", &temp_alloc);
+            if (!config_filename)
+                return 1;
+        } else {
+            config_filename = choices[idx];
+        }
+    }
+
+    if (!force && TestFile(config_filename)) {
+        Size idx = PromptEnum("Do you want to overwrite existing config file? ", {{'y', "Yes"}, {'n', "No"}}, 1);
+        if (idx < 0 || idx)
             return 1;
     }
-    if (!force && TestFile(config_filename)) {
-        LogError("Config file '%1' already exists", config_filename);
+
+    StreamWriter st(config_filename, (int)StreamWriterFlag::Atomic);
+    if (!st.IsValid())
         return 1;
-    }
 
     // Prompt for repository type
     rk_DiskType type;
@@ -160,14 +173,12 @@ Options:
         type = (rk_DiskType)idx;
     }
 
-    HeapArray<char> config;
-
     switch (type) {
         case rk_DiskType::Local: {
             const char *url = PromptNonEmpty("Repository path", &temp_alloc);
             if (!url)
                 return 1;
-            Fmt(&config, BaseConfig, url);
+            Print(&st, BaseConfig, url);
         } break;
 
         case rk_DiskType::S3: {
@@ -190,14 +201,15 @@ Options:
                 return 1;
 
             const char *url = Fmt(&temp_alloc, "s3:%1/%2", TrimStrRight(endpoint, '/'), bucket).ptr;
-            Fmt(&config, BaseConfig, url);
+            Print(&st, BaseConfig, url);
 
-            Fmt(&config, "\n[S3]\n");
+            PrintLn(&st);
+            PrintLn(&st, "[S3]");
             if (key_id) {
-                Fmt(&config, "KeyID = %1\n", key_id);
+                PrintLn(&st, "KeyID = %1", key_id);
             }
             if (secret_key) {
-                Fmt(&config, "SecretKey = %1\n", secret_key);
+                PrintLn(&st, "SecretKey = %1", secret_key);
             }
         } break;
 
@@ -246,28 +258,24 @@ Options:
                 return 1;
 
             const char *url = Fmt(&temp_alloc, "ssh://%1@%2/%3", username, host, path).ptr;
-            Fmt(&config, BaseConfig, url);
+            Print(&st, BaseConfig, url);
 
-            Fmt(&config, "\n[SFTP]\n");
+            PrintLn(&st);
+            PrintLn(&st, "[SFTP]");
             if (password) {
-                Fmt(&config, "Password = %1\n", password);
+                PrintLn(&st, "Password = %1", password);
             }
             if (keyfile) {
-                Fmt(&config, "KeyFile = %1\n", keyfile);
+                PrintLn(&st, "KeyFile = %1", keyfile);
             }
             if (fingerprint[0]) {
-                Fmt(&config, "Fingerprint = %1\n", fingerprint);
+                PrintLn(&st, "Fingerprint = %1", fingerprint);
             }
         } break;
     }
 
-    // Write final config
-    {
-        unsigned int flags = (int)StreamWriterFlag::Atomic | (force ? 0 : (int)StreamWriterFlag::Exclusive);
-
-        if (!WriteFile(config.Take(), config_filename, flags))
-            return 1;
-    }
+    if (!st.Close())
+        return 1;
 
     return 0;
 }

@@ -41,6 +41,9 @@ int RunMount(Span<const char *> arguments);
 int RunChangeCID(Span<const char *> arguments);
 int RunResetCache(Span<const char *> arguments);
 
+const char *const DefaultConfigName = "rekkord.ini";
+const char *const DefaultConfigEnv = "REKKORD_CONFIG_FILE";
+
 const char *const CommonOptions =
 R"(Common options:
 
@@ -54,9 +57,6 @@ R"(Common options:
                                    %!D..(default: automatic)%!0)";
 
 rk_Config rekkord_config;
-
-static const char *DefaultConfigName = "rekkord.ini";
-static const char *DefaultConfigEnv = "REKKORD_CONFIG_FILE";
 
 bool HandleCommonOption(OptionParser &opt, bool ignore_unknown)
 {
@@ -92,7 +92,7 @@ int Main(int argc, char **argv)
 
     // Global options
     HeapArray<const char *> config_filenames;
-    const char *config_filename = FindConfigFile(DefaultConfigName, &temp_alloc, &config_filenames);
+    const char *config_filename = FindConfigFile(DefaultConfigName, 0, &temp_alloc, &config_filenames);
 
     if (const char *str = GetEnv(DefaultConfigEnv); str) {
         config_filename = str;
