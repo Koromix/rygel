@@ -51,12 +51,12 @@ static bool GeneratePassword(Span<char> out_pwd)
     return pwd_GeneratePassword(flags, out_pwd);
 }
 
-static const char *PromptNonEmpty(const char *object, Allocator *alloc)
+static const char *PromptNonEmpty(const char *object, const char *mask, Allocator *alloc)
 {
     char prompt[128];
     Fmt(prompt, "%1: ", object);
 
-    const char *ret = Prompt(prompt, alloc);
+    const char *ret = Prompt(prompt, nullptr, mask, alloc);
 
     if (!ret)
         return nullptr;
@@ -146,7 +146,7 @@ Options:
             return 1;
 
         if (idx == choices.len - 1) {
-            config_filename = PromptNonEmpty("Custom config filename", &temp_alloc);
+            config_filename = PromptNonEmpty("Custom config filename", nullptr, &temp_alloc);
             if (!config_filename)
                 return 1;
         } else {
@@ -175,7 +175,7 @@ Options:
 
     switch (type) {
         case rk_DiskType::Local: {
-            const char *url = PromptNonEmpty("Repository path", &temp_alloc);
+            const char *url = PromptNonEmpty("Repository path", nullptr, &temp_alloc);
             if (!url)
                 return 1;
             Print(&st, BaseConfig, url);
@@ -187,16 +187,16 @@ Options:
             const char *key_id = nullptr;
             const char *secret_key = nullptr;
 
-            endpoint = PromptNonEmpty("S3 endpoint URL", &temp_alloc);
+            endpoint = PromptNonEmpty("S3 endpoint URL", nullptr, &temp_alloc);
             if (!endpoint || !CheckEndpoint(endpoint))
                 return 1;
-            bucket = PromptNonEmpty("Bucket name", &temp_alloc);
+            bucket = PromptNonEmpty("Bucket name", nullptr, &temp_alloc);
             if (!bucket)
                 return 1;
-            key_id = PromptNonEmpty("S3 access key ID", &temp_alloc);
+            key_id = PromptNonEmpty("S3 access key ID", nullptr, &temp_alloc);
             if (!key_id)
                 return 1;
-            secret_key = PromptNonEmpty("S3 secret key", &temp_alloc);
+            secret_key = PromptNonEmpty("S3 secret key", "*", &temp_alloc);
             if (!secret_key)
                 return 1;
 
@@ -234,23 +234,23 @@ Options:
                 use_keyfile = (ret == 1);
             }
 
-            host = PromptNonEmpty("SSH host", &temp_alloc);
+            host = PromptNonEmpty("SSH host", nullptr, &temp_alloc);
             if (!host)
                 return 1;
-            username = PromptNonEmpty("SSH user", &temp_alloc);
+            username = PromptNonEmpty("SSH user", nullptr, &temp_alloc);
             if (!username)
                 return 1;
             if (use_password) {
-                password = PromptNonEmpty("SSH password", &temp_alloc);
+                password = PromptNonEmpty("SSH password", "*", &temp_alloc);
                 if (!password)
                     return 1;
             }
             if (use_keyfile) {
-                keyfile = PromptNonEmpty("SSH keyfile", &temp_alloc);
+                keyfile = PromptNonEmpty("SSH keyfile", nullptr, &temp_alloc);
                 if (!keyfile)
                     return 1;
             }
-            path = PromptNonEmpty("SSH path", &temp_alloc);
+            path = PromptNonEmpty("SSH path", nullptr, &temp_alloc);
             if (!path)
                 return 1;
             fingerprint = Prompt("Host fingerprint (optional): ", &temp_alloc);
