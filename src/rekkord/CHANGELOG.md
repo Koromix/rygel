@@ -6,13 +6,14 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
-### Rekkord 0.81
+### Rekkord 0.82
 
-*Released on 2025-08-01*
+*Released on 2025-08-02*
 
 - Add `rekkord setup` for basic wizard-like repository config
 - Send object checksum in PutObject requests
 - Fix Rekkord build error on 32-bit platforms
+- Rename SSH setting *KeyFile* to *Keyfile*
 
 ### Rekkord 0.80
 
