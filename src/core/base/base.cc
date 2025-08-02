@@ -9437,13 +9437,14 @@ Size ConsolePrompter::ReadRawEnum(Span<const PromptChoice> choices, Size value)
                 }
             } break;
 
-            case 0x3: { // Ctrl-C
-                StdErr->Write("\r\n");
+            case 0x3:   // Ctrl-C
+            case 0x4: { // Ctrl-D
+                if (rows > y) {
+                    Print(StdErr, "\x1B[%1B", rows - y);
+                }
+                StdErr->Write("\r");
                 StdErr->Flush();
 
-                return -1;
-            } break;
-            case 0x4: { // Ctrl-D
                 return -1;
             } break;
 
