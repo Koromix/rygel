@@ -273,7 +273,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
 
                 bool trust = false;
                 {
-                    Size idx = PromptEnum("Do you trust the host key?", {{'y', "Y"}, {'n', "N"}});
+                    Size idx = PromptEnum("Do you trust the host key? ", {{'y', "Yes"}, {'n', "No"}}, 1);
                     if (idx < 0)
                         return nullptr;
                     trust = !idx;
