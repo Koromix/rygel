@@ -5625,7 +5625,7 @@ public:
     ConsolePrompter();
 
     bool Read(Span<const char> *out_str = nullptr);
-    Size ReadEnum(Span<const PromptChoice> choices);
+    Size ReadEnum(Span<const PromptChoice> choices, Size value = 0);
 
     void Commit();
 
@@ -5633,7 +5633,7 @@ private:
     bool ReadRaw(Span<const char> *out_str);
     bool ReadBuffered(Span<const char> *out_str);
 
-    Size ReadRawEnum(Span<const PromptChoice> choices);
+    Size ReadRawEnum(Span<const PromptChoice> choices, Size value);
     Size ReadBufferedEnum(Span<const PromptChoice> choices);
 
     void ChangeEntry(Size new_idx);
@@ -5645,7 +5645,7 @@ private:
 
     void Delete(Size start, Size end);
 
-    void FormatChoices(Span<const PromptChoice> choices, Size idx);
+    void FormatChoices(Span<const PromptChoice> choices, Size value);
 
     void RenderRaw();
     void RenderBuffered();
@@ -5662,8 +5662,8 @@ const char *Prompt(const char *prompt, const char *default_value, const char *ma
 static inline const char *Prompt(const char *prompt, Allocator *alloc)
     { return Prompt(prompt, nullptr, nullptr, alloc); }
 
-Size PromptEnum(const char *prompt, Span<const PromptChoice> choices);
-Size PromptEnum(const char *prompt, Span<const char *const> strings);
+Size PromptEnum(const char *prompt, Span<const PromptChoice> choices, Size value = 0);
+Size PromptEnum(const char *prompt, Span<const char *const> strings, Size value = 0);
 
 // ------------------------------------------------------------------------
 // Mime types

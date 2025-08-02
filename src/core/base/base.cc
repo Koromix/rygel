@@ -9114,8 +9114,10 @@ bool ConsolePrompter::Read(Span<const char> *out_str)
     }
 }
 
-Size ConsolePrompter::ReadEnum(Span<const PromptChoice> choices)
+Size ConsolePrompter::ReadEnum(Span<const PromptChoice> choices, Size value)
 {
+    RG_ASSERT(value < choices.len);
+
 #if !defined(_WIN32) && !defined(__wasm__)
     struct sigaction old_sa;
     IgnoreSigWinch(&old_sa);
@@ -9128,7 +9130,7 @@ Size ConsolePrompter::ReadEnum(Span<const PromptChoice> choices)
             DisableRawMode();
         };
 
-        return ReadRawEnum(choices);
+        return ReadRawEnum(choices, value);
     } else {
         return ReadBufferedEnum(choices);
     }
@@ -9381,11 +9383,9 @@ bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
     return true;
 }
 
-Size ConsolePrompter::ReadRawEnum(Span<const PromptChoice> choices)
+Size ConsolePrompter::ReadRawEnum(Span<const PromptChoice> choices, Size value)
 {
     StdErr->Flush();
-
-    Size value = 0;
 
     prompt_columns = 0;
     FormatChoices(choices, value);
@@ -9436,10 +9436,10 @@ Size ConsolePrompter::ReadRawEnum(Span<const PromptChoice> choices)
                 StdErr->Write("\r\n");
                 StdErr->Flush();
 
-                return false;
+                return -1;
             } break;
             case 0x4: { // Ctrl-D
-                return false;
+                return -1;
             } break;
 
             case 0xE: { // Down
@@ -9477,7 +9477,7 @@ Size ConsolePrompter::ReadRawEnum(Span<const PromptChoice> choices)
         }
     }
 
-    return false;
+    return -1;
 }
 
 bool ConsolePrompter::ReadBuffered(Span<const char> *out_str)
@@ -9520,14 +9520,18 @@ Size ConsolePrompter::ReadBufferedEnum(Span<const PromptChoice> choices)
     do {
         uint8_t c = 0;
         if (StdIn->Read(1, &c) < 0)
-            return false;
+            return -1;
 
         if (c == '\n') {
             Span<const char> end = SplitStrReverse(str, '\n');
 
             Size value;
-            if (ParseInt(end, &value, (int)ParseFlag::End) && value >= 1 && value <= choices.len)
-                return value - 1;
+            if (ParseInt(end, &value, (int)ParseFlag::End)) {
+                value = value - 1;
+
+                if (value >= 0 && value < choices.len)
+                    return value;
+            }
 
             str.RemoveFrom(end.ptr - str.ptr);
 
@@ -9623,7 +9627,7 @@ void ConsolePrompter::Delete(Size start, Size end)
     }
 }
 
-void ConsolePrompter::FormatChoices(Span<const PromptChoice> choices, Size idx)
+void ConsolePrompter::FormatChoices(Span<const PromptChoice> choices, Size value)
 {
     Size align = 0;
 
@@ -9637,7 +9641,7 @@ void ConsolePrompter::FormatChoices(Span<const PromptChoice> choices, Size idx)
         const PromptChoice &choice = choices[i];
 
         Fmt(&str, "  [%1] %2  ", choice.c, FmtArg(choice.str).Pad(align));
-        if (i == idx) {
+        if (i == value) {
             str_offset = str.len;
         }
         str.Append('\n');
@@ -9929,15 +9933,15 @@ const char *Prompt(const char *prompt, const char *default_value, const char *ma
     return str;
 }
 
-Size PromptEnum(const char *prompt, Span<const PromptChoice> choices)
+Size PromptEnum(const char *prompt, Span<const PromptChoice> choices, Size value)
 {
     ConsolePrompter prompter;
     prompter.prompt = prompt;
 
-    return prompter.ReadEnum(choices);
+    return prompter.ReadEnum(choices, value);
 }
 
-Size PromptEnum(const char *prompt, Span<const char *const> strings)
+Size PromptEnum(const char *prompt, Span<const char *const> strings, Size value)
 {
     static const char literals[] = "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     RG_ASSERT(strings.len <= RG_LEN(literals));
@@ -9951,7 +9955,7 @@ Size PromptEnum(const char *prompt, Span<const char *const> strings)
         choices.Append(choice);
     }
 
-    return PromptEnum(prompt, choices);
+    return PromptEnum(prompt, choices, value);
 }
 
 // ------------------------------------------------------------------------
