@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html, noChange } from '../../node_modules/lit/html.js';
-import { directive, Directive } from '../../node_modules/lit/directive.js';
+import { render, html, noChange,
+         directive, Directive } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 
 let T = {};

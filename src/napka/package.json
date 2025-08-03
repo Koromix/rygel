@@ -19,7 +19,6 @@
         "esbuild": "^0.24.0",
         "express": "^4.21.1",
         "express-session": "^1.18.1",
-        "lit": "^3.2.1",
         "markdown-it": "^14.1.0",
         "mime": "^4.0.4",
         "node-fetch": "^3.3.2",

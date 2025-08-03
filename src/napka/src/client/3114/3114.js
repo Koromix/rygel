@@ -13,9 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
-import { render, html } from '../../../node_modules/lit/html.js';
-import { unsafeHTML } from '../../../node_modules/lit/directives/unsafe-html.js';
+import { render, html, unsafeHTML } from '../../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net } from '../../../../web/core/base.js';
 import * as parse from '../../lib/parse.js';
 import { start, zoom, refreshMap, makeField, makeEdit, updateEntry, deleteEntry,
