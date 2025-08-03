@@ -37,7 +37,7 @@ var init_lit_html = __esm({
   "node_modules/lit-html/lit-html.js"() {
     t = globalThis;
     i = t.trustedTypes;
-    s = i ? i.createPolicy("lit-html", { createHTML: (t4) => t4 }) : void 0;
+    s = i?.createPolicy?.("lit-html", { createHTML: (t4) => t4 }) ?? void 0;
     e = "$lit$";
     h = `lit$${Math.random().toFixed(9).slice(2)}$`;
     o = "?" + h;
