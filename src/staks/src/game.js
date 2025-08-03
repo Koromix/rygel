@@ -753,14 +753,13 @@ function drawHelp() {
 }
 
 function drawArea(x, y, width, height) {
-    // Support older browsers without roundRect()
-    ctx.beginPath();
-    ctx.moveTo(x + width / 2, y);
-    ctx.arcTo(x + width, y, x + width, y + height / 2, AREA_RADIUS);
-    ctx.arcTo(x + width, y + height, x + width / 2, y + height, AREA_RADIUS);
-    ctx.arcTo(x, y + height, x, y + height / 2, AREA_RADIUS);
-    ctx.arcTo(x, y, x + width / 2, y, AREA_RADIUS);
-    ctx.closePath();
+    if (ctx.roundRect != null) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, height, AREA_RADIUS);
+    } else {
+        ctx.beginPath();
+        ctx.rect(x, y, width, height);
+    }
 
     ctx.save();
 
