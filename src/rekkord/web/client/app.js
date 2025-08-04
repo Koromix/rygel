@@ -355,13 +355,14 @@ async function runConfirm() {
             <div class="box" style="align-items: center;">
                 <div class="header">Create password</div>
 
-                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
+                <form @submit=${UI.wrap(submit)}>
                     ${error == null ? html`
                         <label>
                             <span>Choose password</span>
                             <input type="password" name="password1" style="width: 20em;" placeholder="password" />
                         </label>
                         <label>
+                            <span>Confirm</span>
                             <input type="password" name="password2" style="width: 20em;" placeholder="confirm" />
                         </label>
                         <div class="actions">
@@ -509,13 +510,14 @@ async function runReset() {
             <div class="box" style="align-items: center;">
                 <div class="header">Recover account</div>
 
-                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
+                <form @submit=${UI.wrap(submit)}>
                     ${error == null ? html`
                         <label>
                             <span>New password</span>
                             <input type="password" name="password1" style="width: 20em;" placeholder="password" />
                         </label>
                         <label>
+                            <span>Confirm</span>
                             <input type="password" name="password2" style="width: 20em;" placeholder="confirm" />
                         </label>
                         <div class="actions">
