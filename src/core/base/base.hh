@@ -3975,6 +3975,16 @@ public:
     operator FmtArg() const { return FmtCustom(*this); }
 };
 
+class FmtEscape {
+    Span<const char> str;
+
+public:
+    FmtEscape(Span<const char> str) : str(str) {}
+
+    void Format(FunctionRef<void(Span<const char>)> append) const;
+    operator FmtArg() const { return FmtCustom(*this); }
+};
+
 class FmtUrlSafe {
     Span<const char> str;
     const char *passthrough;

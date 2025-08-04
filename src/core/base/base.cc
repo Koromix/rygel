@@ -1856,6 +1856,34 @@ void FmtLowerAscii::Format(FunctionRef<void(Span<const char>)> append) const
     }
 }
 
+void FmtEscape::Format(FunctionRef<void(Span<const char>)> append) const
+{
+    static const char literals[] = "0123456789ABCDEF";
+
+    for (char c: str) {
+        if (c >= 32 && (unsigned int)c < 128) {
+            append(c);
+        } else {
+            switch (c) {
+                case '\t': { append('\t'); } break;
+                case '\r': { append("\r"); } break;
+                case '\n': { append("\n"); } break;
+
+                default: {
+                    char encoded[3];
+
+                    encoded[0] = '\\';
+                    encoded[1] = literals[((uint8_t)c >> 4) & 0xF];
+                    encoded[2] = literals[((uint8_t)c >> 0) & 0xF];
+
+                    Span<const char> buf = MakeSpan(encoded, 3);
+                    append(buf);
+                } break;
+            }
+        }
+    }
+}
+
 void FmtUrlSafe::Format(FunctionRef<void(Span<const char>)> append) const
 {
     static const char literals[] = "0123456789ABCDEF";

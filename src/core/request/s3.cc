@@ -959,9 +959,27 @@ int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<in
         return false;
     RG_DEFER { ReleaseConnection(curl); };
 
+    LocalArray<char, 16384> log;
     int status = 0;
 
+    const auto write = +[](char *ptr, size_t, size_t nmemb, void *udata) {
+        LocalArray<char, 16384> *log = (LocalArray<char, 16384> *)udata;
+
+        // Avoid stack overflow
+        nmemb = std::min(nmemb, (size_t)log->Available());
+
+        Span<const char> buf = MakeSpan(ptr, (Size)nmemb);
+        log->Append(buf);
+
+        return nmemb;
+    };
+
     for (int i = 0; i < tries; i++) {
+        log.RemoveFrom(0);
+
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &log);
+
         status = func(curl);
 
         if (status == 200 || status == expect)
@@ -985,6 +1003,8 @@ int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<in
 
     if (status < 0) {
         LogError("Failed to perform S3 call: %1", curl_easy_strerror((CURLcode)-status));
+    } else if (log.len) {
+        LogError("Failed to %1 with status %2: %3", action, status, FmtEscape(log.Take()));
     } else {
         LogError("Failed to %1 with status %2", action, status);
     }
