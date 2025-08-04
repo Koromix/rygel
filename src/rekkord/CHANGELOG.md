@@ -10,7 +10,7 @@
 
 *Released on 2025-08-04*
 
-- Log detailed error S3 payloads
+- Log detailed S3 error payloads
 - Reverse SSH setting *Keyfile* to *KeyFile* casing
 
 ### Rekkord 0.82
