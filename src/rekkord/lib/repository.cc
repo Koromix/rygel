@@ -657,7 +657,7 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
         BlobIntro intro = {};
 
         intro.version = BlobVersion;
-        intro.type = type;
+        intro.type = (int8_t)type;
 
         uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
         crypto_secretstream_xchacha20poly1305_keygen(key);

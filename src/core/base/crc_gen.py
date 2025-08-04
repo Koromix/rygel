@@ -54,7 +54,7 @@ LICENSE_HEADER = """// Copyright (C) 2025  Niels Martignène <niels.martignene@p
 // OTHER DEALINGS IN THE SOFTWARE."""
 
 def write_crc32_table(f, name, poly):
-    f.write(f'static const uint64_t {name}[256] = {{')
+    f.write(f'static const uint32_t {name}[256] = {{')
     for i in range(0, 256):
         value = i
         for j in range(0, 8):

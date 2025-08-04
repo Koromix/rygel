@@ -9682,10 +9682,10 @@ void ConsolePrompter::Delete(Size start, Size end)
 
 void ConsolePrompter::FormatChoices(Span<const PromptChoice> choices, Size value)
 {
-    Size align = 0;
+    int align = 0;
 
     for (const PromptChoice &choice: choices) {
-        align = std::max(align, (Size)strlen(choice.str));
+        align = std::max(align, (int)strlen(choice.str));
     }
 
     str.RemoveFrom(0);
