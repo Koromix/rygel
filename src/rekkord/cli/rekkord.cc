@@ -41,6 +41,7 @@ int RunMount(Span<const char *> arguments);
 int RunChangeCID(Span<const char *> arguments);
 int RunResetCache(Span<const char *> arguments);
 
+const char *const DefaultConfigDirectory = "rekkord";
 const char *const DefaultConfigName = "rekkord.ini";
 const char *const DefaultConfigEnv = "REKKORD_CONFIG_FILE";
 
@@ -92,7 +93,7 @@ int Main(int argc, char **argv)
 
     // Global options
     HeapArray<const char *> config_filenames;
-    const char *config_filename = FindConfigFile(DefaultConfigName, 0, &temp_alloc, &config_filenames);
+    const char *config_filename = FindConfigFile(DefaultConfigDirectory, DefaultConfigName, &temp_alloc, &config_filenames);
 
     if (const char *str = GetEnv(DefaultConfigEnv); str) {
         config_filename = str;

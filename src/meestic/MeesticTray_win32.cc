@@ -323,7 +323,7 @@ int Main(int argc, char **argv)
 
     // Default config filename
     HeapArray<const char *> config_filenames;
-    const char *config_filename = FindConfigFile({ "MeesticTray.ini", "MeesticGui.ini" }, 0, &temp_alloc, &config_filenames);
+    const char *config_filename = FindConfigFile({ "MeesticTray.ini", "MeesticGui.ini" }, &temp_alloc, &config_filenames);
 
     const auto print_usage = [=]() {
         HeapArray<char> help;

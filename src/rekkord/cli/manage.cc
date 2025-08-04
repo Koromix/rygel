@@ -146,7 +146,12 @@ Options:
 
     if (!config_filename) {
         HeapArray<const char *> choices;
-        FindConfigFile(DefaultConfigName, (int)FindConfigFlag::IgnoreAppDir, &temp_alloc, &choices);
+        FindConfigFile(DefaultConfigDirectory, DefaultConfigName, &temp_alloc, &choices);
+
+        choices.len--;
+        for (Size i = 0; i < choices.len; i++) {
+            choices[i] = choices.ptr[i + 1];
+        }
         choices.Append("Custom path");
 
         Size idx = PromptEnum("Config file: ", choices);
@@ -162,6 +167,7 @@ Options:
         }
     }
 
+    const char *key_path;
     const char *key_filename;
     {
         Span<const char> dirname;
@@ -174,11 +180,12 @@ Options:
             prefix = basename;
         }
 
-        key_filename = Fmt(&temp_alloc, "%1.key", prefix).ptr;
-
-        key_filename = PromptNonEmpty("Master key filename", key_filename, nullptr, &temp_alloc);
-        if (!key_filename)
+        key_path = Fmt(&temp_alloc, "%1.key", prefix).ptr;
+        key_path = PromptNonEmpty("Master key filename", key_path, nullptr, &temp_alloc);
+        if (!key_path)
             return 1;
+
+        key_filename = NormalizePath(key_path, dirname, &temp_alloc).ptr;
     }
 
     if (!force) {
@@ -193,6 +200,9 @@ Options:
                 return 1;
         }
     }
+
+    if (!EnsureDirectoryExists(config_filename))
+        return 1;
 
     StreamWriter st(config_filename, (int)StreamWriterFlag::Atomic);
     if (!st.IsValid())
@@ -212,7 +222,7 @@ Options:
             const char *url = PromptNonEmpty("Repository path", &temp_alloc);
             if (!url)
                 return 1;
-            Print(&st, BaseConfig, url, SplitStrReverseAny(key_filename, RG_PATH_SEPARATORS));
+            Print(&st, BaseConfig, url, key_path);
         } break;
 
         case rk_DiskType::S3: {
@@ -235,7 +245,7 @@ Options:
                 return 1;
 
             const char *url = Fmt(&temp_alloc, "s3:%1/%2", TrimStrRight(endpoint, '/'), bucket).ptr;
-            Print(&st, BaseConfig, url, SplitStrReverseAny(key_filename, RG_PATH_SEPARATORS));
+            Print(&st, BaseConfig, url, key_path);
 
             PrintLn(&st);
             PrintLn(&st, "[S3]");
@@ -292,7 +302,7 @@ Options:
                 return 1;
 
             const char *url = Fmt(&temp_alloc, "ssh://%1@%2/%3", username, host, path).ptr;
-            Print(&st, BaseConfig, url, SplitStrReverseAny(key_filename, RG_PATH_SEPARATORS));
+            Print(&st, BaseConfig, url, key_path);
 
             PrintLn(&st);
             PrintLn(&st, "[SFTP]");
@@ -310,18 +320,15 @@ Options:
 
     // Generate master key file
     {
-        Span<const char> dirname = GetPathDirectory(config_filename);
-        const char *filename = NormalizePath(key_filename, dirname, &temp_alloc).ptr;
-
         Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
         RG_DEFER { ReleaseSafe(mkey.ptr, mkey.len); };
 
         randombytes_buf(mkey.ptr, mkey.len);
 
-        if (!WriteFile(mkey, filename, (int)StreamWriterFlag::NoBuffer))
+        if (!WriteFile(mkey, key_filename, (int)StreamWriterFlag::NoBuffer))
             return 1;
 #if !defined(_WIN32)
-        chmod(filename, 0600);
+        chmod(key_filename, 0600);
 #endif
     }
 

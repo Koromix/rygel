@@ -31,6 +31,7 @@ static const char *const OutputFormatNames[] = {
     "XML"
 };
 
+extern const char *const DefaultConfigDirectory;
 extern const char *const DefaultConfigName;
 extern const char *const DefaultConfigEnv;
 

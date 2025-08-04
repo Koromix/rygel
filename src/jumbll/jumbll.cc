@@ -1959,7 +1959,7 @@ int Main(int argc, char **argv)
 
     // Options
     HeapArray<const char *> config_filenames;
-    const char *config_filename = FindConfigFile("jumbll.ini", 0, &config.str_alloc, &config_filenames);
+    const char *config_filename = FindConfigFile("jumbll.ini", &config.str_alloc, &config_filenames);
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,

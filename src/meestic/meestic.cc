@@ -318,7 +318,7 @@ static int RunDaemon(Span<const char *> arguments)
 
     // Default config filename
     HeapArray<const char *> config_filenames;
-    const char *config_filename = FindConfigFile("meestic.ini", 0, &temp_alloc, &config_filenames);
+    const char *config_filename = FindConfigFile("meestic.ini", &temp_alloc, &config_filenames);
     const char *socket_filename = "/run/meestic.sock";
     bool sandbox = true;
 

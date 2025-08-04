@@ -6024,16 +6024,12 @@ const char *GetTemporaryDirectory()
 
 #endif
 
-const char *FindConfigFile(Span<const char *const> names, unsigned int flags,
+const char *FindConfigFile(const char *directory, Span<const char *const> names,
                            Allocator *alloc, HeapArray<const char *> *out_possibilities)
 {
-    decltype(GetUserConfigPath) *funcs[] = {
-        [](const char *name, Allocator *alloc) {
-            Span<const char> dir = GetApplicationDirectory();
+    RG_ASSERT(!directory || directory[0]);
 
-            const char *filename = Fmt(alloc, "%1%/%2", dir, name).ptr;
-            return filename;
-        },
+    const decltype(GetUserConfigPath) *funcs[] = {
         GetUserConfigPath,
 #if !defined(_WIN32)
         GetSystemConfigPath
@@ -6041,25 +6037,47 @@ const char *FindConfigFile(Span<const char *const> names, unsigned int flags,
     };
 
     const char *filename = nullptr;
-    Size start = 0;
 
-    start += !!(flags & (int)FindConfigFlag::IgnoreAppDir);
+    // Try application directory
+    for (const char *name: names) {
+        Span<const char> dir = GetApplicationDirectory();
+        const char *path = Fmt(alloc, "%1%/%2", dir, name).ptr;
 
-    for (Size i = start; i < RG_LEN(funcs); i++) {
-        const auto func = funcs[i];
+        if (!filename && TestFile(path, FileType::File)) {
+            filename = path;
+        }
+        if (out_possibilities) {
+            out_possibilities->Append(path);
+        }
+    }
+
+    LocalArray<const char *, 8> tests;
+    {
+        RG_ASSERT(names.len <= tests.Available());
 
         for (const char *name: names) {
-            const char *path = func(name, alloc);
+            if (directory) {
+                const char *test = Fmt(alloc, "%1%/%2", directory, name).ptr;
+                tests.Append(test);
+            } else {
+                tests.Append(name);
+            }
+        }
+    }
+
+    // Try standard paths
+    for (const auto &func: funcs) {
+        for (const char *test: tests) {
+            const char *path = func(test, alloc);
 
             if (!path)
                 continue;
 
-            if (TestFile(path, FileType::File)) {
+            if (!filename && TestFile(path, FileType::File)) {
                 filename = path;
             }
             if (out_possibilities) {
                 out_possibilities->Append(path);
-                break;
             }
         }
     }

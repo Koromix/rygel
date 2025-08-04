@@ -4641,8 +4641,11 @@ enum class FindConfigFlag {
     IgnoreAppDir = 1 << 0
 };
 
-const char *FindConfigFile(Span<const char *const> names, unsigned int flags,
+const char *FindConfigFile(const char *directory, Span<const char *const> names,
                            Allocator *alloc, HeapArray<const char *> *out_possibilities = nullptr);
+static inline const char *FindConfigFile(Span<const char *const> names, Allocator *alloc,
+                                         HeapArray<const char *> *out_possibilities = nullptr)
+    { return FindConfigFile(nullptr, names, alloc, out_possibilities); }
 
 const char *CreateUniqueFile(Span<const char> directory, const char *prefix, const char *extension,
                              Allocator *alloc, int *out_fd = nullptr);
