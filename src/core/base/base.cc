@@ -1870,13 +1870,14 @@ void FmtEscape::Format(FunctionRef<void(Span<const char>)> append) const
                 case '\n': { append("\n"); } break;
 
                 default: {
-                    char encoded[3];
+                    char encoded[4];
 
                     encoded[0] = '\\';
-                    encoded[1] = literals[((uint8_t)c >> 4) & 0xF];
-                    encoded[2] = literals[((uint8_t)c >> 0) & 0xF];
+                    encoded[1] = 'x';
+                    encoded[2] = literals[((uint8_t)c >> 4) & 0xF];
+                    encoded[3] = literals[((uint8_t)c >> 0) & 0xF];
 
-                    Span<const char> buf = MakeSpan(encoded, 3);
+                    Span<const char> buf = MakeSpan(encoded, 4);
                     append(buf);
                 } break;
             }
