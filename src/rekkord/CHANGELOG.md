@@ -6,6 +6,14 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.85
+
+*Released on 2025-08-04*
+
+- Fix regression with virtual-style S3 URLs
+- Fix checksum header error on Scaleway S3
+- Add *--from* option to `rekkord save`
+
 ### Rekkord 0.84
 
 *Released on 2025-08-04*
