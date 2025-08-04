@@ -164,6 +164,9 @@ Options:
                 return 1;
         } else {
             config_filename = choices[idx];
+
+            if (!EnsureDirectoryExists(config_filename))
+                return 1;
         }
     }
 
@@ -200,9 +203,6 @@ Options:
                 return 1;
         }
     }
-
-    if (!EnsureDirectoryExists(config_filename))
-        return 1;
 
     StreamWriter st(config_filename, (int)StreamWriterFlag::Atomic);
     if (!st.IsValid())
