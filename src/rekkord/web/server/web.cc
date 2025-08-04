@@ -545,6 +545,11 @@ Options:
     if (!daemon.Bind(config.http))
         return 1;
 
+#if defined(__linux__)
+    if (!NotifySystemd())
+        return 1;
+#endif
+
     // Apply sandbox
     if (sandbox) {
         LogInfo("Init sandbox");
@@ -569,11 +574,6 @@ Options:
         if (!ApplySandbox(reveal_paths, mask_files))
             return 1;
     }
-
-#if defined(__linux__)
-    if (!NotifySystemd())
-        return 1;
-#endif
 
     // Run!
     if (!daemon.Start(HandleRequest))
