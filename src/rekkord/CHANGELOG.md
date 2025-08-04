@@ -19,6 +19,7 @@
 *Released on 2025-08-04*
 
 - Create master key file during `rekkord setup`
+- Change default config paths
 - Reuse existing key by default in `rekkord init`
 - Require explicit user role in `rekkord add_user`
 - Set master key file permissions to *0600*
