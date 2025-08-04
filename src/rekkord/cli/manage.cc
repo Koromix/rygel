@@ -354,9 +354,9 @@ Options:
 
     %!..+-C, --config_file filename%!0     Set configuration file
 
-    %!..+-R, --repository filename%!0      Set repository URL
+    %!..+-R, --repository URL%!0           Set repository URL
+    %!..+-K, --key_file filename%!0        Set master key file
 
-    %!..+-K, --key_file filename%!0        Set explicit master key export file
     %!..+-g, --generate_key%!0             Generate new master key)", FelixTarget);
     };
 
