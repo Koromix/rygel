@@ -21,6 +21,10 @@
 #include "src/core/request/curl.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
+#if !defined(_WIN32)
+    #include <sys/stat.h>
+#endif
+
 namespace RG {
 
 static const char *BaseConfig =
@@ -316,6 +320,9 @@ Options:
 
         if (!WriteFile(mkey, filename, (int)StreamWriterFlag::NoBuffer))
             return 1;
+#if !defined(_WIN32)
+        chmod(filename, 0600);
+#endif
     }
 
     if (!st.Close())
@@ -432,6 +439,9 @@ Options:
     if (generate_key) {
         if (!WriteFile(mkey, key_filename, (int)StreamWriterFlag::NoBuffer))
             return 1;
+#if !defined(_WIN32)
+        chmod(key_filename, 0600);
+#endif
 
         LogInfo();
         LogInfo("Wrote master key: %!..+%1%!0", key_filename);
