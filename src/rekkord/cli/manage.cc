@@ -405,7 +405,7 @@ int RunAddUser(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    rk_UserRole role = rk_UserRole::WriteOnly;
+    int role = -1;
     const char *pwd = nullptr;
     const char *username = nullptr;
 
@@ -452,6 +452,10 @@ Available user roles: %!..+%2%!0)", rk_UserRoleNames[(int)role], FmtSpan(rk_User
         LogError("Missing username");
         return 1;
     }
+    if (role < 0) {
+        LogError("Missing user role");
+        return 1;
+    }
 
     if (!rekkord_config.Complete(true))
         return 1;
@@ -485,12 +489,12 @@ Available user roles: %!..+%2%!0)", rk_UserRoleNames[(int)role], FmtSpan(rk_User
         }
     }
 
-    if (!repo->InitUser(username, role, pwd))
+    if (!repo->InitUser(username, (rk_UserRole)role, pwd))
         return 1;
 
     LogInfo("Added user: %!..+%1%!0", username);
     LogInfo();
-    LogInfo("Role: %!..+%1%!0", rk_UserRoleNames[(int)role]);
+    LogInfo("Role: %!..+%1%!0", rk_UserRoleNames[role]);
     if (random_pwd) {
         LogInfo("Password: %!..+%1%!0", pwd);
     } else {
