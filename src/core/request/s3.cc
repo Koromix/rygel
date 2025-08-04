@@ -1034,9 +1034,9 @@ void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *met
 
         Size path_offset = buf.len;
 
-        if (config.bucket) {
-            Fmt(&buf, "/%1", FmtUrlSafe(config.bucket, "-._~"));
-        }
+        const char *bucket = config.bucket ? config.bucket : "";
+        Fmt(&buf, "/%1", FmtUrlSafe(bucket, "-._~"));
+
         if (key.len) {
             bool separate = (buf[buf.len - 1] != '/');
             Fmt(&buf, "%1%2", separate ? "/" : "", FmtUrlSafe(key, "-._~/"));
