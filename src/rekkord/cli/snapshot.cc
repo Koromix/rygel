@@ -18,32 +18,94 @@
 
 namespace RG {
 
+struct SaveRequest {
+    const char *channel = nullptr;
+    HeapArray<const char *> filenames;
+};
+
+static bool LoadFromFile(const char *filename, Allocator *alloc, HeapArray<SaveRequest> *out_saves)
+{
+    RG_DEFER_NC(out_guard, len = out_saves->len) { out_saves->RemoveFrom(len); };
+
+    StreamReader st(filename);
+
+    if (!st.IsValid())
+        return false;
+
+    Span<const char> root_directory = GetPathDirectory(filename);
+    root_directory = NormalizePath(root_directory, GetWorkingDirectory(), alloc);
+
+    IniParser ini(&st);
+    ini.PushLogFilter();
+    RG_DEFER { PopLogFilter(); };
+
+    bool valid = true;
+    {
+        IniProperty prop;
+        while (ini.Next(&prop)) {
+            SaveRequest save = {};
+
+            if (!prop.section.len) {
+                LogError("Property is outside section");
+                return false;
+            }
+
+            save.channel = DuplicateString(prop.section, alloc).ptr;
+
+            do {
+                if (prop.key == "SourcePath") {
+                    const char *path = NormalizePath(prop.value, root_directory, alloc).ptr;
+                    save.filenames.Append(path);
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
+            } while (ini.NextInSection(&prop));
+
+            if (!save.filenames.len) {
+                LogError("Missing source path");
+                valid = false;
+            }
+
+            out_saves->Append(save);
+        }
+    }
+    if (!ini.IsValid() || !valid)
+        return false;
+
+    out_guard.Disable();
+    return true;
+}
+
 int RunSave(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
     // Options
     rk_SaveSettings settings;
+    const char *from = nullptr;
     bool raw = false;
-    const char *channel = nullptr;
-    HeapArray<const char *> filenames;
+    HeapArray<SaveRequest> saves;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 save [-C filename] [option...] channel path...%!0
+       %!..+%1 save [-C filename] [option...] --from file%!0
        %!..+%1 save [-C filename] [option...] --raw path...%!0
 )", FelixTarget);
         PrintLn(st, CommonOptions);
         PrintLn(st, R"(
 Save options:
 
-        %!..+--raw%!0                      Skip snapshot object and report data OID
+    %!..+-F, --from file%!0                Use channel names and paths from file
 
     %!..+-f, --force%!0                    Check all files even if mtime/size match previous backup
         %!..+--follow%!0                   Follow symbolic links (instead of storing them as-is)
         %!..+--noatime%!0                  Do not modify atime if possible (Linux-only)
 
     %!..+-m, --meta metadata%!0            Save additional directory/file metadata, see below
+
+        %!..+--raw%!0                      Skip snapshot object and report data OID
 
 Available metadata save options:
 
@@ -59,8 +121,8 @@ Available metadata save options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("--raw")) {
-                raw = true;
+            } else if (opt.Test("-F", "--from", OptionType::Value)) {
+                from = opt.current_value;
             } else if (opt.Test("-f", "--force")) {
                 settings.skip = false;
             } else if (opt.Test("--follow")) {
@@ -84,26 +146,53 @@ Available metadata save options:
                         }
                     }
                 }
+            } else if (opt.Test("--raw")) {
+                raw = true;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
         }
 
-        if (!raw) {
-            channel = opt.ConsumeNonOption();
+        if (!from) {
+            SaveRequest save = {};
+
+            if (!raw) {
+                save.channel = opt.ConsumeNonOption();
+            }
+            opt.ConsumeNonOptions(&save.filenames);
+
+            saves.Append(save);
         }
-        opt.ConsumeNonOptions(&filenames);
 
         opt.LogUnusedArguments();
     }
 
-    if (!raw && !channel) {
-        LogError("No channel provided");
-        return 1;
-    }
-    if (!filenames.len) {
-        LogError("No filename provided");
-        return 1;
+    if (from) {
+        if (raw) {
+            LogError("Option --raw cannot be used with --from");
+            return 1;
+        }
+
+        if (!LoadFromFile(from, &temp_alloc, &saves))
+            return 1;
+
+        if (!saves.len) {
+            LogError("Missing save information in '%1'", from);
+            return 1;
+        }
+    } else {
+        RG_ASSERT(saves.len == 1);
+
+        const SaveRequest &save = saves[0];
+
+        if (!raw && !save.channel) {
+            LogError("No channel provided");
+            return 1;
+        }
+        if (!save.filenames.len) {
+            LogError("No filename provided");
+            return 1;
+        }
     }
 
     if (!rekkord_config.Complete(true))
@@ -126,26 +215,32 @@ Available metadata save options:
 
     LogInfo("Backing up...");
 
-    int64_t now = GetMonotonicTime();
+    bool complete = true;
 
-    rk_SaveInfo info = {};
-    if (!rk_Save(repo.get(), channel, filenames, settings, &info))
-        return 1;
+    for (const SaveRequest &save: saves) {
+        int64_t now = GetMonotonicTime();
 
-    double time = (double)(GetMonotonicTime() - now) / 1000.0;
+        rk_SaveInfo info = {};
+        if (!rk_Save(repo.get(), save.channel, save.filenames, settings, &info)) {
+            complete = false;
+            continue;
+        }
 
-    LogInfo();
-    if (raw) {
-        LogInfo("Data OID: %!..+%1%!0", info.oid);
-    } else {
-        LogInfo("Snapshot OID: %!..+%1%!0", info.oid);
-        LogInfo("Snapshot channel: %!..+%1%!0", channel);
+        double time = (double)(GetMonotonicTime() - now) / 1000.0;
+
+        LogInfo();
+        if (raw) {
+            LogInfo("Data OID: %!..+%1%!0", info.oid);
+        } else {
+            LogInfo("Snapshot channel: %!..+%1%!0", save.channel);
+            LogInfo("Snapshot OID: %!..+%1%!0", info.oid);
+        }
+        LogInfo("Source size: %!..+%1%!0", FmtDiskSize(info.size));
+        LogInfo("Total stored: %!..+%1%!0 (added %2)", FmtDiskSize(info.stored), FmtDiskSize(info.added));
+        LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
     }
-    LogInfo("Source size: %!..+%1%!0", FmtDiskSize(info.size));
-    LogInfo("Total stored: %!..+%1%!0 (added %2)", FmtDiskSize(info.stored), FmtDiskSize(info.added));
-    LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
 
-    return 0;
+    return !complete;
 }
 
 int RunRestore(Span<const char *> arguments)
