@@ -6,6 +6,13 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.83
+
+*Released on 2025-08-04*
+
+- Log detailed error S3 payloads
+- Reverse SSH setting *Keyfile* to *KeyFile* casing
+
 ### Rekkord 0.82
 
 *Released on 2025-08-02*
