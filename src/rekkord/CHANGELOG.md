@@ -6,6 +6,16 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.84
+
+*Released on 2025-08-04*
+
+- Create master key file during `rekkord setup`
+- Reuse existing key by default in `rekkord init`
+- Require explicit user role in `rekkord add_user`
+- Set master key file permissions to *0600*
+- Fix "Unknown argument" errors with some rekkord commands
+
 ### Rekkord 0.83
 
 *Released on 2025-08-04*
