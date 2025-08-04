@@ -622,8 +622,7 @@ Available output formats: %!..+%2%!0)",
                 }
             } else if (opt.Test("-v", "--verbose")) {
                 verbose++;
-            } else {
-                opt.LogUnknownError();
+            } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
         }

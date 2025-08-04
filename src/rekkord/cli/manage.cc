@@ -529,8 +529,7 @@ Please note that deleting users only requires the ability to delete objects from
                 return 0;
             } else if (opt.Test("-f", "--force")) {
                 force = true;
-            } else {
-                opt.LogUnknownError();
+            } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
         }
