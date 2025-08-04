@@ -6029,7 +6029,7 @@ const char *FindConfigFile(const char *directory, Span<const char *const> names,
 {
     RG_ASSERT(!directory || directory[0]);
 
-    const decltype(GetUserConfigPath) *funcs[] = {
+    decltype(GetUserConfigPath) *funcs[] = {
         GetUserConfigPath,
 #if !defined(_WIN32)
         GetSystemConfigPath
