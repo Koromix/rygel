@@ -665,7 +665,6 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
             sodium_bin2base64(base64.ptr, base64.len, hash.data, hash.len, sodium_base64_VARIANT_ORIGINAL);
 
             headers.Append({ header, base64.ptr });
-            headers.Append({"x-amz-checksum-type", "FULL_OBJECT" });
         }
 
         // PrepareRequest() does not try to mess with custom headers, to avoid sorting issues
