@@ -159,7 +159,7 @@ Options:
             return 1;
 
         if (idx == choices.len - 1) {
-            config_filename = PromptNonEmpty("Custom config filename", &temp_alloc);
+            config_filename = PromptNonEmpty("Custom config filename", DefaultConfigName, nullptr, &temp_alloc);
             if (!config_filename)
                 return 1;
         } else {
