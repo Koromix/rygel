@@ -26,8 +26,7 @@ namespace RG {
 static const char *BaseConfig =
 R"([Repository]
 URL = %1
-# User =
-# Password =
+KeyFile = %2
 
 [Settings]
 # Threads = 
@@ -35,7 +34,6 @@ URL = %1
 
 [Protection]
 # RetainDuration =
-# DurationSafety = On
 )";
 
 static bool GeneratePassword(Span<char> out_pwd)
@@ -51,12 +49,12 @@ static bool GeneratePassword(Span<char> out_pwd)
     return pwd_GeneratePassword(flags, out_pwd);
 }
 
-static const char *PromptNonEmpty(const char *object, const char *mask, Allocator *alloc)
+static const char *PromptNonEmpty(const char *object, const char *value, const char *mask, Allocator *alloc)
 {
     char prompt[128];
     Fmt(prompt, "%1: ", object);
 
-    const char *ret = Prompt(prompt, nullptr, mask, alloc);
+    const char *ret = Prompt(prompt, value, mask, alloc);
 
     if (!ret)
         return nullptr;
@@ -65,6 +63,12 @@ static const char *PromptNonEmpty(const char *object, const char *mask, Allocato
         return nullptr;
     }
 
+    return ret;
+}
+
+static const char *PromptNonEmpty(const char *object, Allocator *alloc)
+{
+    const char *ret = PromptNonEmpty(object, nullptr, nullptr, alloc);
     return ret;
 }
 
@@ -113,7 +117,7 @@ Options:
 
     %!..+-C, --config_file filename%!0     Set configuration file
 
-    %!..+-f, --force%!0                    Overwrite existing config file)", FelixTarget);
+    %!..+-f, --force%!0                    Overwrite existing files)", FelixTarget);
     };
 
     // Parse arguments
@@ -146,7 +150,7 @@ Options:
             return 1;
 
         if (idx == choices.len - 1) {
-            config_filename = PromptNonEmpty("Custom config filename", nullptr, &temp_alloc);
+            config_filename = PromptNonEmpty("Custom config filename", &temp_alloc);
             if (!config_filename)
                 return 1;
         } else {
@@ -154,10 +158,36 @@ Options:
         }
     }
 
-    if (!force && TestFile(config_filename)) {
-        Size idx = PromptEnum("Do you want to overwrite existing config file? ", {{'y', "Yes"}, {'n', "No"}}, 1);
-        if (idx < 0 || idx)
+    const char *key_filename;
+    {
+        Span<const char> dirname;
+        Span<const char> basename = SplitStrReverseAny(config_filename, RG_PATH_SEPARATORS, &dirname);
+
+        Span<const char> prefix;
+        SplitStrReverse(basename, '.', &prefix);
+
+        if (!prefix.len) {
+            prefix = basename;
+        }
+
+        key_filename = Fmt(&temp_alloc, "%1.key", prefix).ptr;
+
+        key_filename = PromptNonEmpty("Master key filename", key_filename, nullptr, &temp_alloc);
+        if (!key_filename)
             return 1;
+    }
+
+    if (!force) {
+        if (TestFile(config_filename)) {
+            Size idx = PromptEnum("Do you want to overwrite existing config file? ", {{'y', "Yes"}, {'n', "No"}}, 1);
+            if (idx < 0 || idx)
+                return 1;
+        }
+        if (TestFile(key_filename)) {
+            Size idx = PromptEnum("Do you want to overwrite existing key file? ", {{'y', "Yes"}, {'n', "No"}}, 1);
+            if (idx < 0 || idx)
+                return 1;
+        }
     }
 
     StreamWriter st(config_filename, (int)StreamWriterFlag::Atomic);
@@ -175,10 +205,10 @@ Options:
 
     switch (type) {
         case rk_DiskType::Local: {
-            const char *url = PromptNonEmpty("Repository path", nullptr, &temp_alloc);
+            const char *url = PromptNonEmpty("Repository path", &temp_alloc);
             if (!url)
                 return 1;
-            Print(&st, BaseConfig, url);
+            Print(&st, BaseConfig, url, SplitStrReverseAny(key_filename, RG_PATH_SEPARATORS));
         } break;
 
         case rk_DiskType::S3: {
@@ -187,21 +217,21 @@ Options:
             const char *key_id = nullptr;
             const char *secret_key = nullptr;
 
-            endpoint = PromptNonEmpty("S3 endpoint URL", nullptr, &temp_alloc);
+            endpoint = PromptNonEmpty("S3 endpoint URL", &temp_alloc);
             if (!endpoint || !CheckEndpoint(endpoint))
                 return 1;
-            bucket = PromptNonEmpty("Bucket name", nullptr, &temp_alloc);
+            bucket = PromptNonEmpty("Bucket name", &temp_alloc);
             if (!bucket)
                 return 1;
-            key_id = PromptNonEmpty("S3 access key ID", nullptr, &temp_alloc);
+            key_id = PromptNonEmpty("S3 access key ID", &temp_alloc);
             if (!key_id)
                 return 1;
-            secret_key = PromptNonEmpty("S3 secret key", "*", &temp_alloc);
+            secret_key = PromptNonEmpty("S3 secret key", nullptr, "*", &temp_alloc);
             if (!secret_key)
                 return 1;
 
             const char *url = Fmt(&temp_alloc, "s3:%1/%2", TrimStrRight(endpoint, '/'), bucket).ptr;
-            Print(&st, BaseConfig, url);
+            Print(&st, BaseConfig, url, SplitStrReverseAny(key_filename, RG_PATH_SEPARATORS));
 
             PrintLn(&st);
             PrintLn(&st, "[S3]");
@@ -234,23 +264,23 @@ Options:
                 use_keyfile = (ret == 1);
             }
 
-            host = PromptNonEmpty("SSH host", nullptr, &temp_alloc);
+            host = PromptNonEmpty("SSH host", &temp_alloc);
             if (!host)
                 return 1;
-            username = PromptNonEmpty("SSH user", nullptr, &temp_alloc);
+            username = PromptNonEmpty("SSH user", &temp_alloc);
             if (!username)
                 return 1;
             if (use_password) {
-                password = PromptNonEmpty("SSH password", "*", &temp_alloc);
+                password = PromptNonEmpty("SSH password", nullptr, "*", &temp_alloc);
                 if (!password)
                     return 1;
             }
             if (use_keyfile) {
-                keyfile = PromptNonEmpty("SSH keyfile", nullptr, &temp_alloc);
+                keyfile = PromptNonEmpty("SSH keyfile", &temp_alloc);
                 if (!keyfile)
                     return 1;
             }
-            path = PromptNonEmpty("SSH path", nullptr, &temp_alloc);
+            path = PromptNonEmpty("SSH path", &temp_alloc);
             if (!path)
                 return 1;
             fingerprint = Prompt("Host fingerprint (optional): ", &temp_alloc);
@@ -258,7 +288,7 @@ Options:
                 return 1;
 
             const char *url = Fmt(&temp_alloc, "ssh://%1@%2/%3", username, host, path).ptr;
-            Print(&st, BaseConfig, url);
+            Print(&st, BaseConfig, url, SplitStrReverseAny(key_filename, RG_PATH_SEPARATORS));
 
             PrintLn(&st);
             PrintLn(&st, "[SFTP]");
@@ -274,6 +304,20 @@ Options:
         } break;
     }
 
+    // Generate master key file
+    {
+        Span<const char> dirname = GetPathDirectory(config_filename);
+        const char *filename = NormalizePath(key_filename, dirname, &temp_alloc).ptr;
+
+        Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
+        RG_DEFER { ReleaseSafe(mkey.ptr, mkey.len); };
+
+        randombytes_buf(mkey.ptr, mkey.len);
+
+        if (!WriteFile(mkey, filename, (int)StreamWriterFlag::NoBuffer))
+            return 1;
+    }
+
     if (!st.Close())
         return 1;
 
@@ -286,7 +330,7 @@ int RunInit(Span<const char *> arguments)
 
     // Options
     const char *key_filename = nullptr;
-    bool generate_key = true;
+    bool generate_key = false;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -299,7 +343,7 @@ Options:
     %!..+-R, --repository filename%!0      Set repository URL
 
     %!..+-K, --key_file filename%!0        Set explicit master key export file
-        %!..+--reuse_key%!0                Load master key from existing file)", FelixTarget);
+    %!..+-g, --generate_key%!0             Generate new master key)", FelixTarget);
     };
 
     // Parse arguments
@@ -310,8 +354,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("--reuse_key")) {
-                generate_key = false;
+            } else if (opt.Test("-g", "--generate_key")) {
+                generate_key = true;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
