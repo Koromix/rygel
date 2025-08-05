@@ -14,11 +14,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
-#include "src/core/http/http.hh"
-#include "src/core/password/password.hh"
 #include "web.hh"
 #include "mail.hh"
 #include "user.hh"
+#include "src/core/http/http.hh"
+#include "src/core/password/otp.hh"
+#include "src/core/password/password.hh"
+#include "src/core/wrap/qrcode.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 #if defined(_WIN32)
@@ -31,6 +33,7 @@ static const int PasswordHashBytes = 128;
 
 static const int64_t TokenDuration = 1800 * 1000;
 static const int64_t InvalidTimeout = 86400 * 1000;
+static const int64_t TotpPeriod = 30000;
 
 static const int64_t PictureCacheDelay = 3600 * 1000;
 static const Size MaxPictureSize = Kibibytes(256);
@@ -173,7 +176,7 @@ static bool SendNewMail(const char *to, const uint8_t token[16], Allocator *allo
     smtp_MailContent content;
 
     const char *uuid = FormatUUID(token, alloc);
-    const char *url = Fmt(alloc, "%1/confirm#token=%2", config.url, uuid).ptr;
+    const char *url = Fmt(alloc, "%1/finalize#token=%2", config.url, uuid).ptr;
 
     content.subject = PatchText(NewUser.subject, to, url, alloc).ptr;
     content.html = PatchText(NewUser.html, to, url, alloc).ptr;
@@ -218,7 +221,7 @@ bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes])
     return true;
 }
 
-static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *username, int picture)
+static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *username, const char *secret, int picture)
 {
     Size username_bytes = strlen(username) + 1;
     Size session_bytes = RG_SIZE(SessionInfo) + username_bytes;
@@ -232,6 +235,14 @@ static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *user
     });
 
     session->userid = userid;
+    if (secret) {
+        session->totp = true;
+        session->confirmed = false;
+        CopyString(secret, session->secret);
+    } else {
+        session->totp = false;
+        session->confirmed = true;
+    }
     session->picture = picture;
     CopyString(username, MakeSpan((char *)session->username, username_bytes));
 
@@ -256,9 +267,15 @@ bool PruneTokens()
     return true;
 }
 
-RetainPtr<const SessionInfo> GetNormalSession(http_IO *io)
+RetainPtr<SessionInfo> GetNormalSession(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = sessions.Find(io);
+    RetainPtr<SessionInfo> session = sessions.Find(io);
+
+    if (!session)
+        return nullptr;
+    if (!session->confirmed)
+        return nullptr;
+
     return session;
 }
 
@@ -316,9 +333,18 @@ static void ExportSession(const SessionInfo *session, http_IO *io)
 
     if (session) {
         json.StartObject();
+
         json.Key("userid"); json.Int64(session->userid);
         json.Key("username"); json.String(session->username);
-        json.Key("picture"); json.Int(session->picture);
+        json.Key("totp"); json.Bool(session->totp);
+
+        if (session->confirmed) {
+            json.Key("confirmed"); json.Bool(true);
+            json.Key("picture"); json.Int(session->picture);
+        } else {
+            json.Key("confirmed"); json.Bool(false);
+        }
+
         json.EndObject();
     } else {
         json.Null();
@@ -487,7 +513,7 @@ void HandleUserLogin(http_IO *io)
     int64_t start = GetMonotonicTime();
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT id, password_hash, username, version
+    if (!db.Prepare(R"(SELECT id, password_hash, username, totp, version
                        FROM users
                        WHERE mail = ?1)", &stmt, mail))
         return;
@@ -498,10 +524,11 @@ void HandleUserLogin(http_IO *io)
         int64_t userid = sqlite3_column_int64(stmt, 0);
         const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
         const char *username = (const char *)sqlite3_column_text(stmt, 2);
-        int picture = sqlite3_column_int(stmt, 3);
+        const char *secret = (const char *)sqlite3_column_text(stmt, 3);
+        int picture = sqlite3_column_int(stmt, 4);
 
         if (password_hash && crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
-            RetainPtr<SessionInfo> session = CreateUserSession(userid, username, picture);
+            RetainPtr<SessionInfo> session = CreateUserSession(userid, username, secret, picture);
             sessions.Open(io, session);
 
             ExportSession(session.GetRaw(), io);
@@ -717,7 +744,7 @@ invalid:
 
 void HandleUserPassword(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = sessions.Find(io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -838,6 +865,317 @@ void HandleUserPassword(http_IO *io)
     return;
 }
 
+static bool CheckTotp(http_IO *io, const char *secret, const char *code)
+{
+    int64_t time = GetUnixTime();
+    int64_t counter = time / TotpPeriod;
+    int64_t min = counter - 1;
+    int64_t max = counter + 1;
+
+    if (!pwd_CheckHotp(secret, pwd_HotpAlgorithm::SHA1, min, max, 6, code)) {
+        LogError("Code is incorrect");
+        io->SendError(403);
+        return false;
+    }
+
+    return true;
+}
+
+void HandleTotpConfirm(http_IO *io)
+{
+    RetainPtr<SessionInfo> session = sessions.Find(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (session->confirmed) {
+        LogError("Session does not need confirmation");
+        io->SendError(403);
+        return;
+    }
+
+    const char *code = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "code") {
+                parser.ParseString(&code);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check for missing values
+    if (!code) {
+        LogError("Missing 'code' parameter");
+        io->SendError(422);
+        return;
+    }
+
+    char secret[33];
+    MemCpy(secret, session->secret, 33);
+
+    // Immediate confirmation looks weird
+    WaitDelay(800);
+
+    if (CheckTotp(io, secret, code)) {
+        session->confirmed = true;
+        ZeroSafe(session->secret, RG_SIZE(session->secret));
+
+        ExportSession(session.GetRaw(), io);
+    }
+}
+
+// This does not make any persistent change and it needs to return an image
+// so it is a GET even though it performs an action (change the secret).
+void HandleTotpSecret(http_IO *io)
+{
+    RetainPtr<SessionInfo> session = GetNormalSession(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+
+    char secret[33];
+    pwd_GenerateSecret(secret);
+
+    const char *url = pwd_GenerateHotpUrl(config.title, session->username, config.title,
+                                          pwd_HotpAlgorithm::SHA1, secret, 6, io->Allocator());
+    if (!url)
+        return;
+
+    Span<const uint8_t> png;
+    {
+        HeapArray<uint8_t> buf(io->Allocator());
+
+        StreamWriter st(&buf);
+        if (!qr_EncodeTextToPng(url, 0, &st))
+            return;
+        if (!st.Close())
+            return;
+
+        png = buf.Leak();
+    }
+
+    MemCpy(session->secret, secret, 33);
+
+    io->AddHeader("X-TOTP-SecretKey", secret);
+    io->AddCachingHeaders(0, nullptr);
+
+    io->SendAsset(200, png, "image/png");
+}
+
+void HandleTotpChange(http_IO *io)
+{
+    RetainPtr<SessionInfo> session = GetNormalSession(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+
+    const char *password = nullptr;
+    const char *code = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "password") {
+                parser.ParseString(&password);
+            } else if (key == "code") {
+                parser.ParseString(&code);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check for missing values
+    {
+        bool valid = true;
+
+        if (!password) {
+            LogError("Missing 'password' parameter");
+            valid = false;
+        }
+        if (!code) {
+            LogError("Missing 'code' parameter");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // We use this to extend/fix the response delay in case of error
+    int64_t now = GetMonotonicTime();
+
+    // Authenticate with password
+    {
+        sq_Statement stmt;
+        if (!db.Prepare(R"(SELECT password_hash FROM users WHERE id = ?1)", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, session->userid);
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("User does not exist");
+                io->SendError(404);
+            }
+            return;
+        }
+
+        const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
+
+        if (!password_hash || crypto_pwhash_str_verify(password_hash, password, strlen(password)) < 0) {
+            // Enforce constant delay if authentification fails
+            int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+            WaitDelay(safety_delay);
+
+            LogError("Invalid password");
+            io->SendError(403);
+            return;
+        }
+    }
+
+    char secret[33];
+    MemCpy(secret, session->secret, 33);
+
+    // Check user knows secret
+    if (!CheckTotp(io, secret, code))
+        return;
+
+    if (!db.Run("UPDATE users SET totp = ?2 WHERE id = ?1", session->userid, secret))
+        return;
+    session->totp = true;
+
+    io->SendText(200, "{}", "application/json");
+}
+
+void HandleTotpDisable(http_IO *io)
+{
+    RetainPtr<SessionInfo> session = GetNormalSession(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+
+    const char *password = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "password") {
+                parser.ParseString(&password);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check for missing values
+    {
+        bool valid = true;
+
+        if (!password) {
+            LogError("Missing 'password' parameter");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // We use this to extend/fix the response delay in case of error
+    int64_t now = GetMonotonicTime();
+
+    // Authenticate with password
+    {
+        sq_Statement stmt;
+        if (!db.Prepare(R"(SELECT password_hash FROM users WHERE id = ?1)", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, session->userid);
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("User does not exist");
+                io->SendError(404);
+            }
+            return;
+        }
+
+        const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
+
+        if (!password_hash || crypto_pwhash_str_verify(password_hash, password, strlen(password)) < 0) {
+            // Enforce constant delay if authentification fails
+            int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+            WaitDelay(safety_delay);
+
+            LogError("Invalid password");
+            io->SendError(403);
+            return;
+        }
+    }
+
+    if (!db.Run("UPDATE users SET totp = NULL WHERE id = ?1", session->userid))
+        return;
+    session->totp = false;
+
+    io->SendText(200, "{}", "application/json");
+}
+
 static void SendDefaultPicture(http_IO *io)
 {
 #if defined(FELIX_HOT_ASSETS)
@@ -870,7 +1208,7 @@ void HandlePictureGet(http_IO *io)
 
         explicit_user = true;
     } else {
-        RetainPtr<const SessionInfo> session = sessions.Find(io);
+        RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
         if (!session) {
             LogError("User is not logged in");
@@ -928,7 +1266,7 @@ void HandlePictureGet(http_IO *io)
 
 void HandlePictureSave(http_IO *io)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(io);
+    RetainPtr<SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1033,7 +1371,7 @@ void HandlePictureSave(http_IO *io)
 
 void HandlePictureDelete(http_IO *io)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(io);
+    RetainPtr<SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1058,7 +1396,7 @@ void HandlePictureDelete(http_IO *io)
 
 void HandleKeyList(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = sessions.Find(io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1097,7 +1435,7 @@ void HandleKeyList(http_IO *io)
 
 void HandleKeyCreate(http_IO *io)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(io);
+    RetainPtr<SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1200,7 +1538,7 @@ void HandleKeyCreate(http_IO *io)
 
 void HandleKeyDelete(http_IO *io)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(io);
+    RetainPtr<SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
         LogError("User is not logged in");

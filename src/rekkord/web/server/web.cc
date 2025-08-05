@@ -378,6 +378,14 @@ static void HandleRequest(http_IO *io)
             HandleUserReset(io);
         } else if (TestStr(request.path, "/api/user/password") && request.method == http_RequestMethod::Post) {
             HandleUserPassword(io);
+        } else if (TestStr(request.path, "/api/totp/confirm") && request.method == http_RequestMethod::Post) {
+            HandleTotpConfirm(io);
+        } else if (TestStr(request.path, "/api/totp/secret") && request.method == http_RequestMethod::Get) {
+            HandleTotpSecret(io);
+        } else if (TestStr(request.path, "/api/totp/change") && request.method == http_RequestMethod::Post) {
+            HandleTotpChange(io);
+        } else if (TestStr(request.path, "/api/totp/disable") && request.method == http_RequestMethod::Post) {
+            HandleTotpDisable(io);
         } else if (TestStr(request.path, "/api/picture/get") && request.method == http_RequestMethod::Get) {
             HandlePictureGet(io);
         } else if (TestStr(request.path, "/api/picture/save") && request.method == http_RequestMethod::Post) {

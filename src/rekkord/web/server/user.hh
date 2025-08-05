@@ -24,13 +24,19 @@ struct smtp_Config;
 
 struct SessionInfo: public RetainObject<SessionInfo> {
     int64_t userid;
+
+    std::atomic_bool totp;
+    std::atomic_bool confirmed;
+    char secret[33];
+
     std::atomic_int picture;
+
     char username[];
 };
 
 bool PruneTokens();
 
-RetainPtr<const SessionInfo> GetNormalSession(http_IO *io);
+RetainPtr<SessionInfo> GetNormalSession(http_IO *io);
 bool ValidateApiKey(http_IO *io);
 
 void HandleUserSession(http_IO *io);
@@ -42,6 +48,11 @@ void HandleUserLogout(http_IO *io);
 void HandleUserRecover(http_IO *io);
 void HandleUserReset(http_IO *io);
 void HandleUserPassword(http_IO *io);
+
+void HandleTotpConfirm(http_IO *io);
+void HandleTotpSecret(http_IO *io);
+void HandleTotpChange(http_IO *io);
+void HandleTotpDisable(http_IO *io);
 
 void HandlePictureGet(http_IO *io);
 void HandlePictureSave(http_IO *io);

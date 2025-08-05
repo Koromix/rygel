@@ -16,6 +16,7 @@
 import { render, html, ref } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Chart } from '../../../../vendor/chartjs/chart.bundle.js';
 import { Util, Log, Net, HttpError } from '../../../web/core/base.js';
+import { Base64 } from '../../../web/core/mixer.js';
 import * as UI from './ui.js';
 import { deploy } from '../../../web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';
@@ -122,7 +123,7 @@ function go(url = null, push = true) {
         } break;
 
         case 'register':
-        case 'confirm':
+        case 'finalize':
         case 'recover':
         case 'reset': { changes.mode = mode; } break;
 
@@ -168,7 +169,7 @@ async function run(changes = {}, push = false) {
         switch (route.mode) {
             case 'login': { await runLogin(); } break;
             case 'register': { await runRegister(); } break;
-            case 'confirm': { await runConfirm(); } break;
+            case 'finalize': { await runFinalize(); } break;
 
             case 'recover': { await runRecover(); } break;
             case 'reset':  { await runReset(); } break;
@@ -176,6 +177,9 @@ async function run(changes = {}, push = false) {
             default: {
                 if (session == null) {
                     await runLogin();
+                    return;
+                } else if (!session.confirmed) {
+                    await runConfirm();
                     return;
                 }
             } break;
@@ -270,6 +274,12 @@ async function login(mail, password) {
     await run({}, false);
 }
 
+async function totp(code) {
+    session = await Net.post('/api/totp/confirm', { code: code });
+
+    await run({}, false);
+}
+
 async function logout() {
     await Net.post('/api/user/logout');
 
@@ -324,7 +334,7 @@ async function runRegister() {
     }
 }
 
-async function runConfirm() {
+async function runFinalize() {
     let error = 'Missing token';
     let token = null;
 
@@ -441,6 +451,42 @@ async function runLogin() {
             throw new Error('Password is missing');
 
         await login(mail, password);
+    }
+}
+
+async function runConfirm() {
+    UI.main(html`
+        <div class="tabbar">
+            <a class="active">Login</a>
+        </div>
+
+        <div class="tab">
+            <div class="box" style="align-items: center;">
+                <div class="header">Login to ${ENV.title}</div>
+
+                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
+                    <p>Two-factor authentication (2FA)</p>
+                    <label>
+                        <input type="text" name="code" style="width: 20em;" placeholder="6 digits" />
+                    </label>
+                    <div class="actions">
+                        <button type="submit">Confirm</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `);
+
+    async function submit(e) {
+        let form = e.currentTarget;
+        let elements = form.elements;
+
+        let code = elements.code.value.trim();
+
+        if (!code)
+            throw new Error('TOTP code is missing');
+
+        await totp(code);
     }
 }
 
@@ -1004,6 +1050,9 @@ async function runAccount() {
                 <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
                 <div class="actions">
                     <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>Change picture</button>
+                    <button type="button" class="secondary" @click=${UI.wrap(changeTOTP)}>Configure two-factor authentication (2FA)</button>
+                    <button type="button" class="secondary" ?disabled=${!session.totp}
+                            @click=${UI.wrap(disableTOTP)}>Disable two-factor authentication (2FA)</button>
                     <button type="button" class="secondary" @click=${UI.wrap(configureKeys)}>Manage API keys</button>
                     <button type="button" @click=${UI.insist(logout)}>Logout</button>
                 </div>
@@ -1045,6 +1094,105 @@ async function changePicture() {
     });
 
     await run({}, false);
+}
+
+async function changeTOTP(e) {
+    let qrcode;
+    {
+        let response = await Net.fetch('/api/totp/secret');
+
+        if (!response.ok) {
+            let err = await Net.readError(response);
+            throw new Error(err);
+        }
+
+        let secret = response.headers.get('X-TOTP-SecretKey');
+        let buf = await response.arrayBuffer();
+
+        qrcode = {
+            secret: secret,
+            image: 'data:image/png;base64,' + Base64.toBase64(buf)
+        };
+    }
+
+    await UI.dialog({
+        run: (render, close) => html`
+            <div class="title">
+                Configure TOTP
+                <div style="flex: 1;"></div>
+                <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+            </div>
+
+            <div class="main">
+                <p>Confirm your identity with your password before ${session.totp ? 'changing' : 'enabling'} TOTP.</p>
+
+                <label>
+                    <span>Password</span>
+                    <input type="password" name="password" style="width: 20em;" placeholder="password" />
+                </label>
+
+                <div style="text-align: center; margin-top: 2em;"><img src="${qrcode.image}" alt="" /></div>
+                <p style="text-align: center; font-size: 0.8em; margin-top: 0;">${qrcode.secret}</p>
+
+                <p>
+                    Scan this QR code with a two-factor application on your smartphone.<br>
+                    Once done, enter the 6-digit code into the field below.
+                </p>
+
+                <label>
+                    <span>Code</span>
+                    <input type="text" name="code" style="width: 20em;" placeholder="6 digits" />
+                </label>
+
+                <p><i>Possible applications: 2FAS Auth, Authy.</i></p>
+            </div>
+
+            <div class="footer">
+                <button type="button" class="secondary" @click=${UI.insist(close)}>Cancel</button>
+                <button type="submit">Confirm</button>
+            </div>
+        `,
+
+        submit: async (elements) => {
+            await Net.post('/api/totp/change', {
+                password: elements.password.value,
+                code: elements.code.value
+            });
+
+            session.totp = true;
+        }
+    });
+}
+
+async function disableTOTP(e) {
+    await UI.dialog({
+        run: (render, close) => html`
+            <div class="title">
+                Disable TOTP
+                <div style="flex: 1;"></div>
+                <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+            </div>
+
+            <div class="main">
+                <p>Confirm your identity with your password before disabling TOTP.</p>
+
+                <label>
+                    <span>Password</span>
+                    <input type="password" name="password" style="width: 20em;" placeholder="password" />
+                </label>
+            </div>
+
+            <div class="footer">
+                <button type="button" class="secondary" @click=${UI.insist(close)}>Cancel</button>
+                <button type="submit">Confirm</button>
+            </div>
+        `,
+
+        submit: async (elements) => {
+            await Net.post('/api/totp/disable', { password: elements.password.value });
+            session.totp = false;
+        }
+    });
 }
 
 async function configureKeys() {
