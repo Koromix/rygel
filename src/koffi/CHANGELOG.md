@@ -7,6 +7,12 @@
 
 ### Koffi 2.12
 
+#### Koffi 2.12.4
+
+*Released on 2025-08-05*
+
+- Fix build with old glibc or musl versions
+
 #### Koffi 2.12.3
 
 *Released on 2025-07-28*
