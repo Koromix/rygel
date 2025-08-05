@@ -208,14 +208,15 @@ async function run(changes = {}, push = false) {
 }
 
 function makeURL(changes = {}) {
-    let hash = window.location.hash ?? '';
-
     let values = Object.assign({}, route, changes);
-    let path = '/' + values.mode + hash;
+    let path = '/' + values.mode;
 
     switch (values.mode) {
         case 'repository': { path += '/' + values.repository; } break;
     }
+
+    if (path == window.location.pathname && window.location.hash)
+        path += window.location.hash;
 
     return path;
 }
