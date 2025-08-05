@@ -1050,9 +1050,7 @@ async function runAccount() {
                 <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
                 <div class="actions">
                     <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>Change picture</button>
-                    <button type="button" class="secondary" @click=${UI.wrap(changeTOTP)}>Configure two-factor authentication (2FA)</button>
-                    <button type="button" class="secondary" ?disabled=${!session.totp}
-                            @click=${UI.wrap(disableTOTP)}>Disable two-factor authentication (2FA)</button>
+                    <button type="button" class="secondary" @click=${UI.wrap(configureTOTP)}>Configure two-factor authentication</button>
                     <button type="button" class="secondary" @click=${UI.wrap(configureKeys)}>Manage API keys</button>
                     <button type="button" @click=${UI.insist(logout)}>Logout</button>
                 </div>
@@ -1096,7 +1094,9 @@ async function changePicture() {
     await run({}, false);
 }
 
-async function changeTOTP(e) {
+async function configureTOTP(e) {
+    let enable = !session.totp;
+
     let qrcode;
     {
         let response = await Net.fetch('/api/totp/secret');
@@ -1124,27 +1124,36 @@ async function changeTOTP(e) {
             </div>
 
             <div class="main">
-                <p>Confirm your identity with your password before ${session.totp ? 'changing' : 'enabling'} TOTP.</p>
+                <p>Confirm your identity with your password to ${session.totp ? 'change' : 'enable'} two-factor authentication.</p>
 
                 <label>
                     <span>Password</span>
                     <input type="password" name="password" style="width: 20em;" placeholder="password" />
                 </label>
 
-                <div style="text-align: center; margin-top: 2em;"><img src="${qrcode.image}" alt="" /></div>
-                <p style="text-align: center; font-size: 0.8em; margin-top: 0;">${qrcode.secret}</p>
+                ${session.totp ? html`
+                    <label>
+                        <input type="checkbox" checked @change=${UI.wrap(e => { enable = !e.target.checked; render(); })} />
+                        <span>Disable two-factor authentification</span>
+                    </label>
+                ` : ''}
 
-                <p>
-                    Scan this QR code with a two-factor application on your smartphone.<br>
-                    Once done, enter the 6-digit code into the field below.
-                </p>
+                ${enable ? html`
+                    <div style="text-align: center; margin-top: 2em;"><img src="${qrcode.image}" alt="" /></div>
+                    <p style="text-align: center; font-size: 0.8em; margin-top: 0;">${qrcode.secret}</p>
 
-                <label>
-                    <span>Code</span>
-                    <input type="text" name="code" style="width: 20em;" placeholder="6 digits" />
-                </label>
+                    <p>
+                        Scan this QR code with a two-factor application on your smartphone.<br>
+                        Once done, enter the 6-digit code into the field below.
+                    </p>
 
-                <p><i>Possible applications: 2FAS Auth, Authy.</i></p>
+                    <label>
+                        <span>Code</span>
+                        <input type="text" name="code" style="width: 20em;" placeholder="6 digits" />
+                    </label>
+
+                    <p><i>Possible applications: 2FAS Auth, Authy.</i></p>
+                ` : ''}
             </div>
 
             <div class="footer">
@@ -1154,43 +1163,16 @@ async function changeTOTP(e) {
         `,
 
         submit: async (elements) => {
-            await Net.post('/api/totp/change', {
-                password: elements.password.value,
-                code: elements.code.value
-            });
+            if (enable) {
+                await Net.post('/api/totp/change', {
+                    password: elements.password.value,
+                    code: elements.code.value
+                });
+            } else {
+                await Net.post('/api/totp/disable', { password: elements.password.value });
+            }
 
-            session.totp = true;
-        }
-    });
-}
-
-async function disableTOTP(e) {
-    await UI.dialog({
-        run: (render, close) => html`
-            <div class="title">
-                Disable TOTP
-                <div style="flex: 1;"></div>
-                <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
-            </div>
-
-            <div class="main">
-                <p>Confirm your identity with your password before disabling TOTP.</p>
-
-                <label>
-                    <span>Password</span>
-                    <input type="password" name="password" style="width: 20em;" placeholder="password" />
-                </label>
-            </div>
-
-            <div class="footer">
-                <button type="button" class="secondary" @click=${UI.insist(close)}>Cancel</button>
-                <button type="submit">Confirm</button>
-            </div>
-        `,
-
-        submit: async (elements) => {
-            await Net.post('/api/totp/disable', { password: elements.password.value });
-            session.totp = false;
+            session.totp = enable;
         }
     });
 }
