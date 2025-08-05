@@ -619,6 +619,9 @@ Options:
             LogDebug("Prune tokens");
             PruneTokens();
 
+            LogDebug("Prune sessions");
+            PruneSessions();
+
             LogDebug("Send mails");
             SendMails();
         }

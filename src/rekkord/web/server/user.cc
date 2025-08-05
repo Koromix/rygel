@@ -31,14 +31,47 @@ namespace RG {
 
 static const int PasswordHashBytes = 128;
 
+static const int64_t TotpPeriod = 30000;
+
 static const int64_t TokenDuration = 1800 * 1000;
 static const int64_t InvalidTimeout = 86400 * 1000;
-static const int64_t TotpPeriod = 30000;
+static const int BanThreshold = 6;
+static const int64_t BanTime = 1800 * 1000;
 
 static const int64_t PictureCacheDelay = 3600 * 1000;
 static const Size MaxPictureSize = Kibibytes(256);
 
+struct EventInfo {
+    struct Key {
+        const char *where;
+        const char *who;
+
+        bool operator==(const Key &other) const { return TestStr(where, other.where) && TestStr(who, other.who); }
+        bool operator!=(const Key &other) const { return !(*this == other); }
+
+        uint64_t Hash() const
+        {
+            uint64_t hash = HashTraits<const char *>::Hash(where) ^
+                            HashTraits<const char *>::Hash(who);
+            return hash;
+        }
+    };
+
+    Key key;
+    int64_t until; // Monotonic
+
+    int count;
+    int64_t prev_time; // Unix time
+    int64_t time; // Unix time
+
+    RG_HASHTABLE_HANDLER(EventInfo, key);
+};
+
 static http_SessionManager<SessionInfo> sessions;
+
+static std::shared_mutex events_mutex;
+static BucketArray<EventInfo> events;
+static HashTable<EventInfo::Key, EventInfo *> events_map;
 
 static const smtp_MailContent NewUser = {
     "Welcome to {{ TITLE }}",
@@ -249,6 +282,43 @@ static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *user
     return ptr;
 }
 
+static const EventInfo *RegisterEvent(const char *where, const char *who, int64_t time = GetUnixTime())
+{
+    std::lock_guard<std::shared_mutex> lock_excl(events_mutex);
+
+    EventInfo::Key key = { where, who };
+    EventInfo *event = events_map.FindValue(key, nullptr);
+
+    if (!event || event->until < GetMonotonicTime()) {
+        Allocator *alloc;
+        event = events.AppendDefault(&alloc);
+
+        event->key.where = DuplicateString(where, alloc).ptr;
+        event->key.who = DuplicateString(who, alloc).ptr;
+        event->until = GetMonotonicTime() + BanTime;
+
+        events_map.Set(event);
+    }
+
+    event->count++;
+    event->prev_time = event->time;
+    event->time = time;
+
+    return event;
+}
+
+static int CountEvents(const char *where, const char *who)
+{
+    std::shared_lock<std::shared_mutex> lock_shr(events_mutex);
+
+    EventInfo::Key key = { where, who };
+    const EventInfo *event = events_map.FindValue(key, nullptr);
+
+    // We don't need to use precise timing, and a ban can last a bit
+    // more than BanTime (until pruning clears the ban).
+    return event ? event->count : 0;
+}
+
 static bool CheckPasswordComplexity(const char *username, Span<const char> password)
 {
     unsigned int flags = UINT_MAX & ~(int)pwd_CheckFlag::Score;
@@ -265,6 +335,35 @@ bool PruneTokens()
         return false;
 
     return true;
+}
+
+void PruneSessions()
+{
+    // Prune sessions
+    sessions.Prune();
+
+    // Prune events
+    {
+        std::lock_guard<std::shared_mutex> lock_excl(events_mutex);
+
+        int64_t now = GetMonotonicTime();
+
+        Size expired = 0;
+        for (const EventInfo &event: events) {
+            if (event.until > now)
+                break;
+
+            EventInfo **ptr = events_map.Find(event.key);
+            if (*ptr == &event) {
+                events_map.Remove(ptr);
+            }
+            expired++;
+        }
+        events.RemoveFirst(expired);
+
+        events.Trim();
+        events_map.Trim();
+    }
 }
 
 RetainPtr<SessionInfo> GetNormalSession(http_IO *io)
@@ -460,6 +559,8 @@ void HandleUserRegister(http_IO *io)
 
 void HandleUserLogin(http_IO *io)
 {
+    const http_RequestInfo &request = io->Request();
+
     // Parse input data
     const char *mail = nullptr;
     const char *password = nullptr;
@@ -520,7 +621,7 @@ void HandleUserLogin(http_IO *io)
     stmt.Run();
 
     // Validate password if user exists
-    if (stmt.IsRow()) {
+    if (stmt.IsRow() && CountEvents(request.client_addr, mail) < BanThreshold) {
         int64_t userid = sqlite3_column_int64(stmt, 0);
         const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
         const char *username = (const char *)sqlite3_column_text(stmt, 2);
@@ -533,6 +634,8 @@ void HandleUserLogin(http_IO *io)
 
             ExportSession(session.GetRaw(), io);
             return;
+        } else {
+            RegisterEvent(request.client_addr, mail);
         }
     }
 
@@ -548,6 +651,8 @@ void HandleUserLogin(http_IO *io)
 
 void HandleUserRecover(http_IO *io)
 {
+    const http_RequestInfo &request = io->Request();
+
     // Parse input data
     const char *mail = nullptr;
     {
@@ -586,6 +691,17 @@ void HandleUserRecover(http_IO *io)
 
         if (!valid) {
             io->SendError(422);
+            return;
+        }
+    }
+
+    // Prevent excessive recovery tries from same client
+    {
+        const EventInfo *event = RegisterEvent(request.client_addr, mail);
+
+        if (event->count >= BanThreshold) {
+            LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
+            io->SendError(403);
             return;
         }
     }
@@ -865,14 +981,30 @@ void HandleUserPassword(http_IO *io)
     return;
 }
 
-static bool CheckTotp(http_IO *io, const char *secret, const char *code)
+static bool CheckTotp(http_IO *io, int64_t userid, const char *secret, const char *code)
 {
     int64_t time = GetUnixTime();
     int64_t counter = time / TotpPeriod;
     int64_t min = counter - 1;
     int64_t max = counter + 1;
 
-    if (!pwd_CheckHotp(secret, pwd_HotpAlgorithm::SHA1, min, max, 6, code)) {
+    if (pwd_CheckHotp(secret, pwd_HotpAlgorithm::SHA1, min, max, 6, code)) {
+        char who[64];
+        Fmt(who, "%1", userid);
+
+        const EventInfo *event = RegisterEvent("TOTP", who, time);
+
+        bool replay = (event->prev_time / TotpPeriod >= min) &&
+                      pwd_CheckHotp(secret, pwd_HotpAlgorithm::SHA1, min, event->prev_time / TotpPeriod, 6, code);
+
+        if (replay) {
+            LogError("Please wait for the next code");
+            io->SendError(403);
+            return false;
+        }
+
+        return true;
+    } else {
         LogError("Code is incorrect");
         io->SendError(403);
         return false;
@@ -935,7 +1067,7 @@ void HandleTotpConfirm(http_IO *io)
     // Immediate confirmation looks weird
     WaitDelay(800);
 
-    if (CheckTotp(io, secret, code)) {
+    if (CheckTotp(io, session->userid, secret, code)) {
         session->confirmed = true;
         ZeroSafe(session->secret, RG_SIZE(session->secret));
 
@@ -1077,7 +1209,7 @@ void HandleTotpChange(http_IO *io)
     MemCpy(secret, session->secret, 33);
 
     // Check user knows secret
-    if (!CheckTotp(io, secret, code))
+    if (!CheckTotp(io, session->userid, secret, code))
         return;
 
     if (!db.Run("UPDATE users SET totp = ?2 WHERE id = ?1", session->userid, secret))
