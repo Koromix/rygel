@@ -395,6 +395,9 @@ async function runConfirm() {
 
         form.innerHTML = '';
         render(html`<p>Your account is now ready, please login to continue.</p>`, form);
+
+        let url = window.location.pathname + window.location.search;
+        history.replaceState(null, null, url);
     }
 }
 
@@ -550,6 +553,9 @@ async function runReset() {
 
         form.innerHTML = '';
         render(html`<p>Your password has been changed, please login to continue.</p>`, form);
+
+        let url = window.location.pathname + window.location.search;
+        history.replaceState(null, null, url);
     }
 }
 
