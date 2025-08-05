@@ -595,7 +595,6 @@ void HandleUserRecover(http_IO *io)
                        VALUES (?1, ?2, ?3))", sq_Binding(token), now, userid))
             return;
 
-        // XXX: Use a proper task queue for mails!
         if (!SendResetMail(mail, token, io->Allocator()))
             return;
     }
