@@ -49,7 +49,10 @@ bool PrototypeParser::Parse(const char *str, bool concrete, FunctionInfo *out_fu
     if (IsIdentifier(tokens[offset])) {
         Span<const char> tok = tokens[offset++];
         out_func->name = DuplicateString(tok, &instance->str_alloc).ptr;
-    } else if (concrete) {
+    } else if (!concrete) {
+        // Leave anonymous naming responsibility to caller
+        out_func->name = nullptr;
+    } else {
         MarkError("Unexpected token '%1', expected identifier", tokens[offset]);
         return false;
     }
