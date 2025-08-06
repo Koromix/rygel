@@ -27,7 +27,7 @@
 
 namespace RG {
 
-bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
+bool PrototypeParser::Parse(const char *str, bool concrete, FunctionInfo *out_func)
 {
     tokens.Clear();
     offset = 0;
@@ -41,7 +41,18 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
         return false;
     }
     offset += (offset < tokens.len && DetectCallConvention(tokens[offset], &out_func->convention));
-    out_func->name = ParseIdentifier();
+
+    if (offset >= tokens.len) {
+        MarkError("Unexpected end of prototype, expected identifier");
+        return false;
+    }
+    if (IsIdentifier(tokens[offset])) {
+        Span<const char> tok = tokens[offset++];
+        out_func->name = DuplicateString(tok, &instance->str_alloc).ptr;
+    } else if (concrete) {
+        MarkError("Unexpected token '%1', expected identifier", tokens[offset]);
+        return false;
+    }
 
     Consume("(");
     offset += (offset + 1 < tokens.len && tokens[offset] == "void" && tokens[offset + 1] == ")");
@@ -169,23 +180,6 @@ const TypeInfo *PrototypeParser::ParseType(int *out_directions)
     return instance->void_type;
 }
 
-const char *PrototypeParser::ParseIdentifier()
-{
-    if (offset >= tokens.len) {
-        MarkError("Unexpected end of prototype, expected identifier");
-        return "";
-    }
-    if (!IsIdentifier(tokens[offset])) {
-        MarkError("Unexpected token '%1', expected identifier", tokens[offset]);
-        return "";
-    }
-
-    Span<const char> tok = tokens[offset++];
-    const char *ident = DuplicateString(tok, &instance->str_alloc).ptr;
-
-    return ident;
-}
-
 bool PrototypeParser::Consume(const char *expect)
 {
     if (offset >= tokens.len) {
@@ -217,10 +211,10 @@ bool PrototypeParser::IsIdentifier(Span<const char> tok) const
     return IsAsciiAlpha(tok[0]) || tok[0] == '_';
 }
 
-bool ParsePrototype(Napi::Env env, const char *str, FunctionInfo *out_func)
+bool ParsePrototype(Napi::Env env, const char *str, bool concrete, FunctionInfo *out_func)
 {
     PrototypeParser parser(env);
-    return parser.Parse(str, out_func);
+    return parser.Parse(str, concrete, out_func);
 }
 
 }

@@ -993,7 +993,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     return WrapType(env, instance, type);
 }
 
-static bool ParseClassicFunction(const Napi::CallbackInfo &info, FunctionInfo *out_func)
+static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, FunctionInfo *out_func)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -1014,6 +1014,8 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, FunctionInfo *o
         parameters = info[3u].As<Napi::Array>();
     }
 
+    bool named = true;
+
 #if defined(_WIN32)
     if (name.IsNumber()) {
         out_func->ordinal_name = name.As<Napi::Number>().Int32Value();
@@ -1021,11 +1023,16 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, FunctionInfo *o
     }
 #endif
     if (!name.IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string or integer", GetValueType(instance, name));
-        return false;
+        if (!concrete && IsNullOrUndefined(name)) {
+            named = false;
+        } else {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string or integer", GetValueType(instance, name));
+            return false;
+        }
     }
 
-    out_func->name = DuplicateString(name.ToString().Utf8Value().c_str(), &instance->str_alloc).ptr;
+    // Leave anonymous naming responsibility to caller
+    out_func->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr : nullptr;
 
     out_func->ret.type = ResolveType(ret);
     if (!out_func->ret.type)
@@ -1090,7 +1097,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     RG_DEFER_N(err_guard) { instance->callbacks.RemoveLast(1); };
 
     if (info.Length() >= 3) {
-        if (!ParseClassicFunction(info, func))
+        if (!ParseClassicFunction(info, false, func))
             return env.Null();
     } else if (info.Length() >= 1) {
         if (!info[0].IsString()) {
@@ -1099,11 +1106,17 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
         }
 
         std::string proto = info[0u].As<Napi::String>();
-        if (!ParsePrototype(env, proto.c_str(), func))
+        if (!ParsePrototype(env, proto.c_str(), false, func))
             return env.Null();
     } else {
         ThrowError<Napi::TypeError>(env, "Expected 1 or 3 arguments, got %1", info.Length());
         return env.Null();
+    }
+
+    bool named = func->name;
+
+    if (!named) {
+        func->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
     }
 
     if (!AnalyseFunction(env, instance, func))
@@ -1116,7 +1129,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     func->required_parameters += 2;
 
     // We cannot fail after this check
-    if (instance->types_map.Find(func->name)) {
+    if (named && instance->types_map.Find(func->name)) {
         ThrowError<Napi::Error>(env, "Duplicate type name '%1'", func->name);
         return env.Null();
     }
@@ -1653,7 +1666,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
     func->lib = lib->Ref();
 
     if (info.Length() >= 3) {
-        if (!ParseClassicFunction(info, func))
+        if (!ParseClassicFunction(info, true, func))
             return env.Null();
     } else if (info.Length() >= 1) {
         if (!info[0].IsString()) {
@@ -1662,7 +1675,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
         }
 
         std::string proto = info[0u].As<Napi::String>();
-        if (!ParsePrototype(env, proto.c_str(), func))
+        if (!ParsePrototype(env, proto.c_str(), true, func))
             return env.Null();
     } else {
         ThrowError<Napi::TypeError>(env, "Expected 1 or 3 arguments, got %1", info.Length());

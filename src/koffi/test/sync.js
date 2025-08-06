@@ -947,6 +947,15 @@ async function test() {
         assert.deepEqual(opaque, { a: 0xFB, b: 0x42, c: 0x27, d: 0x8 });
     }
 
+    // Define anonymous function types
+    {
+        const AnonymousFunc1 = koffi.proto(null, 'int', ['int', 'int', 'int']);
+        const AnonymousFunc2 = koffi.proto('int (int a, int b, int c, int d)');
+
+        assert.equal(koffi.introspect(AnonymousFunc1).primitive, 'Prototype');
+        assert.equal(koffi.introspect(AnonymousFunc2).primitive, 'Prototype');
+    }
+
     lib.unload();
 }
 

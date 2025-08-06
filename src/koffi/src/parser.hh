@@ -44,13 +44,12 @@ class PrototypeParser {
 public:
     PrototypeParser(Napi::Env env) : env(env), instance(env.GetInstanceData<InstanceData>()) {}
 
-    bool Parse(const char *str, FunctionInfo *out_func);
+    bool Parse(const char *str, bool concrete, FunctionInfo *out_func);
 
 private:
     void Tokenize(const char *str);
 
     const TypeInfo *ParseType(int *out_directions);
-    const char *ParseIdentifier();
 
     bool Consume(const char *expect);
     bool Match(const char *expect);
@@ -68,6 +67,6 @@ private:
     }
 };
 
-bool ParsePrototype(Napi::Env env, const char *str, FunctionInfo *out_func);
+bool ParsePrototype(Napi::Env env, const char *str, bool concrete, FunctionInfo *out_func);
 
 }
