@@ -123,7 +123,7 @@ node qemu.js info debian_x64
 
 First, you must update the code in three steps:
 
-- Change the version numbers in `package.json` (version and stable for stable releases)
+- Change the version number in `package.json`
 - Add an entry to `CHANGELOG` to summarize the changes since last release
 - Commit theses changes with the message *Bump Koffi to X.Y.Z*
 
