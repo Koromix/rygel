@@ -35,7 +35,7 @@ Object.defineProperty(globalThis.Object.prototype, 'stuff', {
     enumerable: true
 });
 
-const SingleU = koffi.union('SingleU', {
+const SingleU = koffi.union(null, {
     f: 'float'
 });
 
@@ -73,8 +73,8 @@ async function test() {
     let lib_filename = path.join(__dirname, cnoke.output, 'union' + koffi.extension);
     let lib = koffi.load(lib_filename);
 
-    const MakeSingleU = lib.func('SingleU MakeSingleU(float f)');
-    const MakeSingleUIndirect = lib.func('MakeSingleUIndirect', 'void', ['float', '_Out_ SingleU *']);
+    const MakeSingleU = lib.func('MakeSingleU', SingleU, ['float']);
+    const MakeSingleUIndirect = lib.func('MakeSingleUIndirect', 'void', ['float', koffi.out(koffi.pointer(SingleU))]);
     const MakeDualU = lib.func('DualU MakeDualU(double d)');
     const MakeDualUIndirect = lib.func('void MakeDualUIndirect(double d, _Out_ DualU *out)');
     const MakeMultiU = lib.func('MultiU MakeMultiU(float a, float b)');

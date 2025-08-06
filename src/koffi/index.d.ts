@@ -82,14 +82,14 @@ export interface IKoffiLib {
     unload(): void;
 }
 
-export function struct(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+export function struct(name: string | null | undefined, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 export function struct(ref: IKoffiCType, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 export function struct(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
-export function pack(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+export function pack(name: string | null | undefined, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 export function pack(ref: IKoffiCType, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 export function pack(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 
-export function union(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+export function union(name: string | null | undefined, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 export function union(ref: IKoffiCType, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 export function union(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 
@@ -100,21 +100,23 @@ export class Union {
 
 export function array(ref: TypeSpec, len: number, hint?: ArrayHint | null): IKoffiCType;
 
-export function opaque(name: string): IKoffiCType;
+export function opaque(name: string | null | undefined): IKoffiCType;
 export function opaque(): IKoffiCType;
-/** @deprecated */ export function handle(name: string): IKoffiCType;
+/** @deprecated */ export function handle(name: string | null | undefined): IKoffiCType;
 /** @deprecated */ export function handle(): IKoffiCType;
 
 export function pointer(ref: TypeSpec): IKoffiCType;
-export function pointer(ref: TypeSpec, asteriskCount?: number): IKoffiCType;
-export function pointer(name: string, ref: TypeSpec, asteriskCount?: number): IKoffiCType;
+export function pointer(ref: TypeSpec, count: number): IKoffiCType;
+export function pointer(name: string | null | undefined, ref: TypeSpec): IKoffiCType;
+export function pointer(name: string | null | undefined, ref: TypeSpec, count: number): IKoffiCType;
 
 export function out(type: TypeSpec): IKoffiCType;
 export function inout(type: TypeSpec): IKoffiCType;
 
 export function disposable(type: TypeSpec): IKoffiCType;
-export function disposable(name: string, type: TypeSpec): IKoffiCType;
-export function disposable(name: string, type: TypeSpec, freeFunction: Function): IKoffiCType;
+export function disposable(type: TypeSpec, freeFunction: Function): IKoffiCType;
+export function disposable(name: string | null | undefined, type: TypeSpec): IKoffiCType;
+export function disposable(name: string | null | undefined, type: TypeSpec, freeFunction: Function): IKoffiCType;
 
 export function proto(definition: string): IKoffiCType;
 export function proto(name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;

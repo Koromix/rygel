@@ -242,24 +242,25 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         return env.Null();
     }
 
-    bool named = info.Length() > 1;
+    bool skip = (info.Length() > 1);
+    bool named = skip && !IsNullOrUndefined(info[0]);
     bool redefine = named && CheckValueTag(instance, info[0], &TypeInfoMarker);
 
     if (named && !info[0].IsString() && !redefine) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
         return env.Null();
     }
-    if (!IsObject(info[named])) {
+    if (!IsObject(info[skip])) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for members, expected object", GetValueType(instance, info[1]));
         return env.Null();
     }
 
     Napi::String name = info[0].As<Napi::String>();
-    Napi::Object obj = info[named].As<Napi::Object>();
+    Napi::Object obj = info[skip].As<Napi::Object>();
     Napi::Array keys = GetOwnPropertyNames(obj);
 
     RG_DEFER_NC(err_guard, count = instance->types.count) {
-        Size start = count + !named;
+        Size start = count + !skip;
 
         for (Size i = start; i < instance->types.count; i++) {
             const TypeInfo *it = &instance->types[i];
@@ -409,24 +410,25 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    bool named = info.Length() > 1;
+    bool skip = (info.Length() > 1);
+    bool named = skip && !IsNullOrUndefined(info[0]);
     bool redefine = named && CheckValueTag(instance, info[0], &TypeInfoMarker);
 
     if (named && !info[0].IsString() && !redefine) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
         return env.Null();
     }
-    if (!IsObject(info[named])) {
+    if (!IsObject(info[skip])) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for members, expected object", GetValueType(instance, info[1]));
         return env.Null();
     }
 
     Napi::String name = info[0].As<Napi::String>();
-    Napi::Object obj = info[named].As<Napi::Object>();
+    Napi::Object obj = info[skip].As<Napi::Object>();
     Napi::Array keys = GetOwnPropertyNames(obj);
 
     RG_DEFER_NC(err_guard, count = instance->types.count) {
-        Size start = count + !named;
+        Size start = count + !skip;
 
         for (Size i = start; i < instance->types.count; i++) {
             const TypeInfo *it = &instance->types[i];
@@ -584,7 +586,7 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    bool named = (info.Length() >= 1);
+    bool named = (info.Length() >= 1) && !IsNullOrUndefined(info[0]);
 
     if (named && !info[0].IsString()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
@@ -621,7 +623,8 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    bool named = (info.Length() >= 2 && !info[1].IsNumber());
+    bool skip = (info.Length() > 1) && !info[1].IsNumber();
+    bool named = skip && !IsNullOrUndefined(info[0]);
 
     if (named && !info[0].IsString()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
@@ -630,18 +633,18 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
 
     std::string name = named ? info[0].As<Napi::String>() : std::string();
 
-    const TypeInfo *type = ResolveType(info[named]);
+    const TypeInfo *type = ResolveType(info[skip]);
     if (!type)
         return env.Null();
 
     int count = 0;
-    if (info.Length() >= 2u + named) {
-        if (!info[1 + named].IsNumber()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for count, expected number", GetValueType(instance, info[1 + named]));
+    if (info.Length() >= 2u + skip) {
+        if (!info[1 + skip].IsNumber()) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for count, expected number", GetValueType(instance, info[1 + skip]));
             return env.Null();
         }
 
-        count = info[1 + named].As<Napi::Number>();
+        count = info[1 + skip].As<Napi::Number>();
 
         if (count < 1 || count > 4) {
             ThrowError<Napi::TypeError>(env, "Value of count must be between 1 and 4");
@@ -727,7 +730,8 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    bool named = (info.Length() >= 2 && !info[1].IsFunction());
+    bool skip = (info.Length() > 1) && !info[1].IsFunction();
+    bool named = skip && !IsNullOrUndefined(info[0]);
 
     if (named && !info[0].IsString()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
@@ -736,7 +740,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
 
     Napi::String name = info[0].As<Napi::String>();
 
-    const TypeInfo *src = ResolveType(info[named]);
+    const TypeInfo *src = ResolveType(info[skip]);
     if (!src)
         return env.Null();
     if (src->primitive != PrimitiveKind::Pointer &&
@@ -753,8 +757,8 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
 
     DisposeFunc *dispose;
     Napi::Function dispose_func;
-    if (info.Length() >= 2u + named && !IsNullOrUndefined(info[1 + named])) {
-        Napi::Function func = info[1 + named].As<Napi::Function>();
+    if (info.Length() >= 2u + skip && !IsNullOrUndefined(info[1 + skip])) {
+        Napi::Function func = info[1 + skip].As<Napi::Function>();
 
         if (!func.IsFunction()) {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for func, expected function", GetValueType(instance, func));

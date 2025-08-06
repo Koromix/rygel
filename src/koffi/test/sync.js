@@ -31,9 +31,9 @@ const { cnoke } = require('./package.json');
 // not (probably not) match the one used by Node.js!
 let free_ptr = koffi.free;
 
-const StrFree = koffi.disposable('str_free', koffi.types.str, ptr => free_ptr(ptr));
-const Str16Free = koffi.disposable('str16_free', 'str16', ptr => free_ptr(ptr));
-const WideStrFree = koffi.disposable('wstr_free', 'wchar_t *', ptr => free_ptr(ptr));
+const StrFree = koffi.disposable('str', ptr => free_ptr(ptr));
+const Str16Free = koffi.disposable('str16_free', koffi.types.str16, ptr => free_ptr(ptr));
+const WideStrFree = koffi.disposable(null, 'wchar_t *', ptr => free_ptr(ptr));
 
 const Pack1 = koffi.struct('Pack1', {
     a: 'int'
@@ -98,7 +98,7 @@ const PackedBFG = koffi.pack('PackedBFG', {
     c: 'char',
     d: 'char *',
     e: 'short',
-    inner: koffi.pack({
+    inner: koffi.pack(null, {
         f: 'float',
         g: 'double'
     })
@@ -215,8 +215,8 @@ async function test() {
     const ReturnBigString = process.platform == 'win32' ?
                             lib.stdcall(1, koffi.disposable('str', CallFree), ['str']) :
                             lib.func('const char *! __stdcall ReturnBigString(const char *str)');
-    const PrintFmt = lib.func('str_free PrintFmt(const char *fmt, ...)');
-    const PrintFmtWide = lib.func('wstr_free PrintFmtWide(const wchar_t *fmt, ...)');
+    const PrintFmt = lib.func('PrintFmt', StrFree, ['const char *', '...']);
+    const PrintFmtWide = lib.func('PrintFmtWide', WideStrFree, ['const wchar_t *', '...']);
     const Concat16 = lib.func('str16_free Concat16(const char16_t *str1, const char16_t *str2)');
     const Concat16Out1 = lib.func('void Concat16Out(const char16_t *str1, const char16_t *str2, _Out_ const str16_free *)');
     const Concat16Out2 = lib.func('Concat16Out', 'void', [koffi.pointer('char16_t'), koffi.pointer('char16_t'), koffi.out(koffi.pointer(Str16Free))]);
