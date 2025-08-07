@@ -5,6 +5,15 @@
 
 ## Koffi 2
 
+### Koffi 2.13
+
+#### Koffi 2.13.0
+
+*Released on 2025-08-07*
+
+- Support anonymous function prototype types (`koffi.proto()`)
+- Accept null or undefined name to define anonymous composite or pointer types
+
 ### Koffi 2.12
 
 #### Koffi 2.12.4
