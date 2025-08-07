@@ -119,9 +119,13 @@ export function disposable(name: string | null | undefined, type: TypeSpec): IKo
 export function disposable(name: string | null | undefined, type: TypeSpec, freeFunction: Function): IKoffiCType;
 
 export function proto(definition: string): IKoffiCType;
+export function proto(result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
+export function proto(convention: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
 export function proto(name: string | null | undefined, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
 export function proto(convention: string, name: string | null | undefined, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
 /** @deprecated */ export function callback(definition: string): IKoffiCType;
+/** @deprecated */ export function callback(result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
+/** @deprecated */ export function callback(convention: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
 /** @deprecated */ export function callback(name: string | null | undefined, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
 /** @deprecated */ export function callback(convention: string, name: string | null | undefined, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
 

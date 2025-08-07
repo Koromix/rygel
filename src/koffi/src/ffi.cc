@@ -995,6 +995,8 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
 
 static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, FunctionInfo *out_func)
 {
+    RG_ASSERT(info.Length() >= 2);
+
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
@@ -1004,17 +1006,22 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, 
 
     // Detect optional call convention
     if (name.IsString() && DetectCallConvention(name.Utf8Value().c_str(), &out_func->convention)) {
-        if (info.Length() < 4) {
-            ThrowError<Napi::TypeError>(env, "Expected 4 arguments, got %1", info.Length());
+        if (info.Length() < 3) {
+            ThrowError<Napi::TypeError>(env, "Expected 3 or 4 arguments, got %1", info.Length());
             return false;
         }
 
         name = info[1u].As<Napi::String>();
         ret = info[2u];
-        parameters = info[3u].As<Napi::Array>();
+        parameters = (info.Length() >= 4 ? info[3u] : env.Null()).As<Napi::Array>();
     }
 
-    bool named = true;
+    bool named = parameters.IsArray();
+
+    if (!named) {
+        parameters = ret.As<Napi::Array>();
+        ret = name;
+    }
 
 #if defined(_WIN32)
     if (name.IsNumber()) {
@@ -1096,7 +1103,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     FunctionInfo *func = instance->callbacks.AppendDefault();
     RG_DEFER_N(err_guard) { instance->callbacks.RemoveLast(1); };
 
-    if (info.Length() >= 3) {
+    if (info.Length() >= 2) {
         if (!ParseClassicFunction(info, false, func))
             return env.Null();
     } else if (info.Length() >= 1) {
@@ -1109,7 +1116,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
         if (!ParsePrototype(env, proto.c_str(), false, func))
             return env.Null();
     } else {
-        ThrowError<Napi::TypeError>(env, "Expected 1 or 3 arguments, got %1", info.Length());
+        ThrowError<Napi::TypeError>(env, "Expected 1 to 4 arguments, got %1", info.Length());
         return env.Null();
     }
 
@@ -1665,7 +1672,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
 
     func->lib = lib->Ref();
 
-    if (info.Length() >= 3) {
+    if (info.Length() >= 2) {
         if (!ParseClassicFunction(info, true, func))
             return env.Null();
     } else if (info.Length() >= 1) {
@@ -1678,7 +1685,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
         if (!ParsePrototype(env, proto.c_str(), true, func))
             return env.Null();
     } else {
-        ThrowError<Napi::TypeError>(env, "Expected 1 or 3 arguments, got %1", info.Length());
+        ThrowError<Napi::TypeError>(env, "Expected 1 to 4 arguments, got %1", info.Length());
         return env.Null();
     }
 
