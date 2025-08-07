@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html, ref } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { render, html, live } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Chart } from '../../../../vendor/chartjs/chart.bundle.js';
 import { Util, Log, Net, HttpError } from '../../../web/core/base.js';
 import { Base64 } from '../../../web/core/mixer.js';
@@ -24,11 +24,14 @@ import { PictureCropper } from './picture.js';
 
 import '../assets/client.css';
 
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
 const RUN_LOCK = 'run';
 
 let route = {
     mode: null,
-    repository: null
+    repository: null,
+    plan: null
 };
 let route_url = null;
 let poisoned = false;
@@ -40,7 +43,9 @@ let root_el = null;
 
 let cache = {
     repositories: [],
-    repository: null
+    repository: null,
+    plans: [],
+    plan: null
 };
 
 // ------------------------------------------------------------------------
@@ -116,7 +121,7 @@ function go(url = null, push = true) {
     switch (mode) {
         case 'login': {
             if (session != null) {
-                changes.mode = 'dashboard';
+                changes.mode = 'repositories';
             } else {
                 changes.mode = 'login';
             }
@@ -127,7 +132,8 @@ function go(url = null, push = true) {
         case 'recover':
         case 'reset': { changes.mode = mode; } break;
 
-        case 'dashboard':
+        case 'repositories':
+        case 'plans':
         case 'account': { changes.mode = mode; } break;
 
         case 'repository': {
@@ -137,7 +143,14 @@ function go(url = null, push = true) {
             changes.mode = mode;
         } break;
 
-        default: { changes.mode = 'dashboard'; } break;
+        case 'plan': {
+            changes.plan = parseInt(parts[0], 10);
+            if (Number.isNaN(changes.plan))
+                changes.plan = null;
+            changes.mode = mode;
+        } break;
+
+        default: { changes.mode = 'repositories'; } break;
     }
 
     return run(changes, push);
@@ -186,8 +199,10 @@ async function run(changes = {}, push = false) {
         }
 
         switch (route.mode) {
-            case 'dashboard': { await runDashboard(); } break;
+            case 'repositories': { await runRepositories(); } break;
             case 'repository': { await runRepository(); } break;
+            case 'plans': { await runPlans(); } break;
+            case 'plan': { await runPlan(); } break;
             case 'account': { await runAccount(); } break;
         }
 
@@ -217,6 +232,7 @@ function makeURL(changes = {}) {
 
     switch (values.mode) {
         case 'repository': { path += '/' + values.repository; } break;
+        case 'plan': { path += '/' + values.plan; } break;
     }
 
     if (path == window.location.pathname && window.location.hash)
@@ -240,7 +256,8 @@ function renderApp(el) {
             <menu>
                 <a id="logo" href="/"><img src=${ASSETS['main/logo']} alt=${'Logo ' + ENV.title} /></a>
                 ${session != null ? html`
-                    <li><a href="/dashboard" class=${route.mode == 'dashboard' || route.mode == 'repository' ? 'active' : ''}>Repositories</a></li>
+                    <li><a href="/repositories" class=${route.mode == 'repositories' || route.mode == 'repository' ? 'active' : ''}>Repositories</a></li>
+                    <li><a href="/plans" class=${route.mode == 'plans' || route.mode == 'plan' ? 'active' : ''}>Plans</a></li>
                     <div style="flex: 1;"></div>
                     <li><a href="/account" class=${route.mode == 'account' ? 'active' : ''}>Account</a></li>
                     <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
@@ -248,7 +265,7 @@ function renderApp(el) {
                 ${session == null ? html`
                     <div style="flex: 1;"></div>
                     <li><a href="/register" class=${route.mode == 'register' ? 'active' : ''}>Register</a></li>
-                    <li><a href="/dashboard" class=${route.mode != 'register' ? 'active' : ''}>Login</a></li>
+                    <li><a href="/repositories" class=${route.mode != 'register' ? 'active' : ''}>Login</a></li>
                 ` : ''}
             </menu>
         </nav>
@@ -614,14 +631,14 @@ function isLogged() {
 // Repositories
 // ------------------------------------------------------------------------
 
-async function runDashboard() {
+async function runRepositories() {
     cache.repositories = await Net.cache('repositories', '/api/repository/list');
 
     let repositories = UI.tableValues('repositories', cache.repositories, 'name');
 
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Overview</a>
+            <a class="active">Repositories</a>
             ${cache.repository != null ? html`<a href=${makeURL({ mode: 'repository' })}>${cache.repository.name}</a>` : ''}
         </div>
 
@@ -695,7 +712,7 @@ async function runRepository() {
     route.repository = cache.repository?.id;
 
     if (cache.repository == null) {
-        go('/dashboard');
+        go('/repositories');
         return;
     }
 
@@ -703,13 +720,13 @@ async function runRepository() {
 
     UI.main(html`
         <div class="tabbar">
-            <a href="/dashboard">Overview</a>
+            <a href="/repositories">Repositories</a>
             <a class="active">${cache.repository.name}</a>
         </div>
 
         <div class="tab">
             <div class="row">
-                <div class="box" style="min-width: 200px;">
+                <div class="box" style="min-width: 250px;">
                     <div class="header">Repository</div>
                     <div class="info">
                         ${cache.repository.name}
@@ -761,6 +778,8 @@ async function configureRepository(repo) {
             password: '',
             variables: {}
         };
+    } else {
+        repo = Object.assign({}, repo);
     }
 
     let url = repo.url;
@@ -1031,6 +1050,296 @@ function formatSize(size) {
     } else {
         return size + ' B';
     }
+}
+
+// ------------------------------------------------------------------------
+// Plans
+// ------------------------------------------------------------------------
+
+async function runPlans() {
+    cache.plans = await Net.cache('plans', '/api/plan/list');
+
+    let plans = UI.tableValues('plans', cache.plans, 'name');
+
+    UI.main(html`
+        <div class="tabbar">
+            <a class="active">Plans</a>
+            ${cache.plan != null ? html`<a href=${makeURL({ mode: 'plan' })}>${cache.plan.name}</a>` : ''}
+        </div>
+
+        <div class="tab">
+            <div class="box">
+                <div class="header">Plans</div>
+                <table style="table-layout: fixed; width: 100%;">
+                    <colgroup>
+                        <col/>
+                        <col/>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            ${UI.tableHeader('plans', 'name', 'Name')}
+                            <th>Key</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${plans.map(plan => {
+                            let url = makeURL({ mode: 'plan', plan: plan.id });
+
+                            return html`
+                                <tr style="cursor: pointer;" @click=${UI.wrap(e => go(url))}>
+                                    <td><a href=${url}>${plan.name}</a></td>
+                                    <td><span class="sub">${plan.key}</sub></td>
+                                </tr>
+                            `;
+                        })}
+                        ${!plans.length ? html`<tr><td colspan="2" style="text-align: center;">No plan</td></tr>` : ''}
+                    </tbody>
+                </table>
+                <div class="actions">
+                    <button type="button" @click=${UI.wrap(e => configurePlan(null))}>Add plan</button>
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+async function runPlan() {
+    if (route.plan != null) {
+        try {
+            let url = Util.pasteURL('/api/plan/get', { id: route.plan });
+            cache.plan = await Net.cache('plan', url);
+        } catch (err) {
+            if (!(err instanceof HttpError))
+                throw err;
+            if (err.status != 404 && err.status != 422)
+                throw err;
+
+            cache.plan = null;
+        }
+    } else {
+        cache.plan = null;
+    }
+
+    route.plan = cache.plan?.id;
+
+    if (cache.plan == null) {
+        go('/plans');
+        return;
+    }
+
+    UI.main(html`
+        <div class="tabbar">
+            <a href="/plans">Plans</a>
+            <a class="active">${cache.plan.name}</a>
+        </div>
+
+        <div class="tab">
+            <div class="row">
+                <div class="box" style="min-width: 250px;">
+                    <div class="header">Plan</div>
+                    <div class="info">
+                        ${cache.plan.name}
+                        <div class="sub">${cache.plan.key}</div>
+                    </div>
+                    <button type="button" @click=${UI.wrap(e => configurePlan(cache.plan))}>Configure</button>
+                </div>
+
+                <div class="box">
+                    <div class="header">Items</div>
+                    <table style="table-layout: fixed; width: 100%;">
+                        <colgroup>
+                            <col></col>
+                            <col></col>
+                            <col></col>
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Channel</th>
+                                <th>Days</th>
+                                <th>Clock time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${cache.plan.items.map(item => html`
+                                <tr>
+                                    <td>${item.channel}</td>
+                                    <td>${formatDays(item.days)}</td>
+                                    <td style="text-align: right;">${formatClock(item.clock)}</td>
+                                </tr>
+                            `)}
+                            ${!cache.plan.items.length ? html`<tr><td colspan="3" style="text-align: center;">No item</td></tr>` : ''}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+async function configurePlan(plan) {
+    let ptr = plan;
+
+    if (plan == null) {
+        plan = {
+            name: '',
+            items: []
+        };
+    } else {
+        plan = Object.assign({}, plan);
+    }
+
+    await UI.dialog({
+        run: (render, close) => {
+            return html`
+                <div class="title">
+                    ${ptr != null ? 'Edit plan' : 'Create plan'}
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                </div>
+
+                <div class="main">
+                    <label>
+                        <span>Name</span>
+                        <input type="text" name="name" required .value=${live(plan.name)}
+                               @change=${UI.wrap(e => { plan.name = e.target.value; render(); })} />
+                    </label>
+
+                    <div class="section">
+                        Items
+                        <div style="flex: 1;"></div>
+                        <button type="button" class="small" @click=${UI.wrap(add_item)}>Add item</button>
+                    </div>
+                    <table style="table-layout: fixed;">
+                        <colgroup>
+                            <col class="check"/>
+                            <col style="width: 200px;"/>
+                            <col style="width: 200px;"/>
+                            <col style="width: 150px;"/>
+                            <col style="width: 60px;"/>
+                        </colgroup>
+
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Channel</th>
+                                <th>Days</th>
+                                <th>Clock time</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            ${plan.items.map(item => html`
+                                <tr ${UI.reorderItems(plan.items, item)}>
+                                    <td class="grab"><img src=${ASSETS['ui/move']} width="16" height="16" alt="Move" /></td>
+                                    <td><input type="text" .value=${live(item.channel)} @change=${UI.wrap(e => { item.channel = e.target.value; render(); })} /></td>
+                                    <td>
+                                        ${Util.mapRange(0, DAYS.length, idx => {
+                                            let active = !!(item.days & (1 << idx));
+
+                                            return html`
+                                                <label>
+                                                    <input type="checkbox" .checked=${active} @change=${UI.wrap(e => toggle_day(item, idx))} />
+                                                    ${DAYS[idx]}
+                                                </label>
+                                            `;
+                                        })}
+                                    </td>
+                                    <td><input type="time" .value=${live(formatClock(item.clock))} @change=${UI.wrap(e => { item.clock = parseClock(e.target.value); render(); })} /></td>
+                                    <td class="right">
+                                        <button type="button" class="small"
+                                                @click=${UI.insist(e => delete_item(item))}><img src=${ASSETS['ui/delete']} alt="Delete" /></button>
+                                    </td>
+                                </tr>
+                            `)}
+                            ${!plan.items.length ?
+                                html`<tr><td colspan="5" style="text-align: center;">No item</td></tr>` : ''}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="footer">
+                    ${ptr != null ? html`
+                        <button type="button" class="danger"
+                                @click=${UI.confirm('Delete plan', e => deletePlan(plan.id).then(close))}>Delete</button>
+                        <div style="flex: 1;"></div>
+                    ` : ''}
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>Cancel</button>
+                    <button type="submit">${ptr != null ? 'Save' : 'Create'}</button>
+                </div>
+            `;
+
+            function add_item() {
+               let item = {
+                    channel: '',
+                    days: 0b0011111,
+                    clock: 0
+                };
+                plan.items.push(item);
+
+                render();
+            }
+
+            function delete_item(item) {
+                plan.items = plan.items.filter(it => it !== item);
+                render();
+            }
+
+            function toggle_day(item, idx) {
+                item.days = (item.days ^ (1 << idx)) || item.days;
+                render();
+            }
+        },
+
+        submit: async (elements) => {
+            let obj = {
+                id: plan.id,
+                name: plan.name,
+                items: plan.items
+            };
+
+            let json = await Net.post('/api/plan/save', obj);
+
+            Net.invalidate('plans');
+            Net.invalidate('plan');
+
+            let url = makeURL({ mode: 'plan', plan: json.id });
+            await go(url);
+        }
+    });
+}
+
+async function deletePlan(id) {
+    await Net.post('/api/plan/delete', { id: id });
+    Net.invalidate('plans');
+
+    if (route.plan == id)
+        route.plan = null;
+}
+
+function formatDays(days) {
+    let parts = [];
+
+    for (let i = 0; i < DAYS.length; i++) {
+        if (days & (1 << i)) {
+            let prefix = DAYS[i].substr(0, 3);
+            parts.push(prefix);
+        }
+    }
+
+    return parts.join(', ');
+}
+
+function formatClock(clock) {
+    let hh = Math.floor(clock / 100).toString().padStart(2, '0');
+    let mm = Math.floor(clock % 100).toString().padStart(2, '0');
+
+    return `${hh}:${mm}`;
+}
+
+function parseClock(clock) {
+    let [hh, mm] = (clock ?? '').split(':').map(value => parseInt(value, 10));
+    return hh * 100 + mm;
 }
 
 // ------------------------------------------------------------------------

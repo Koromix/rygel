@@ -18,6 +18,7 @@
 #include "config.hh"
 #include "database.hh"
 #include "mail.hh"
+#include "plan.hh"
 #include "repository.hh"
 #include "user.hh"
 #include "src/core/sandbox/sandbox.hh"
@@ -410,6 +411,14 @@ static void HandleRequest(http_IO *io)
             HandleRepositorySnapshots(io);
         } else if (TestStr(request.path, "/api/repository/update") && request.method == http_RequestMethod::Post) {
             HandleRepositoryUpdate(io);
+        } else if (TestStr(request.path, "/api/plan/list") && request.method == http_RequestMethod::Get) {
+            HandlePlanList(io);
+        } else if (TestStr(request.path, "/api/plan/get") && request.method == http_RequestMethod::Get) {
+            HandlePlanGet(io);
+        } else if (TestStr(request.path, "/api/plan/save") && request.method == http_RequestMethod::Post) {
+            HandlePlanSave(io);
+        } else if (TestStr(request.path, "/api/plan/delete") && request.method == http_RequestMethod::Post) {
+            HandlePlanDelete(io);
         } else {
             io->SendError(404);
         }

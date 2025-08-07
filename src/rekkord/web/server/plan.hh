@@ -13,18 +13,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import asset0 from './main/logo.webp';
-import asset1 from './main/rekkord.png';
-import asset2 from './ui/anonymous.png';
-import asset3 from './ui/delete.webp';
-import asset4 from './ui/move.webp';
+#pragma once
 
-const ASSETS = {
-    'main/logo': asset0,
-    'main/rekkord': asset1,
-    'ui/anonymous': asset2,
-    'ui/delete': asset3,
-    'ui/move': asset4,
-};
+#include "src/core/base/base.hh"
+#include "src/core/http/http.hh"
 
-export { ASSETS }
+namespace RG {
+
+void HandlePlanList(http_IO *io);
+void HandlePlanGet(http_IO *io);
+void HandlePlanSave(http_IO *io);
+void HandlePlanDelete(http_IO *io);
+
+}

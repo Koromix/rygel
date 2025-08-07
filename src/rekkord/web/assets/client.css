@@ -161,6 +161,13 @@ table .arrows .down {
 }
 table .arrows .up.active { border-bottom: 5px solid #525461; }
 table .arrows .down.active { border-top: 5px solid #525461; }
+table .grab {
+    cursor: grab;
+    padding-top: 5px;
+    padding-bottom: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
 table tbody tr:hover > td {
     background: #76b35a;
     color: white;

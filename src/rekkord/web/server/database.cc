@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 17;
+const int DatabaseVersion = 18;
 
 bool MigrateDatabase(sq_Database *db)
 {
@@ -383,9 +383,38 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 17: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE plans (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        owner INTEGER REFERENCES users (id) ON DELETE CASCADE,
+                        name TEXT NOT NULL,
+                        key TEXT NOT NULL,
+                        hash TEXT NOT NULL
+                    );
+                    CREATE UNIQUE INDEX plans_k ON plans (key);
+
+                    CREATE TABLE items (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        plan INTEGER REFERENCES plans (id) ON DELETE CASCADE,
+                        channel TEXT NOT NULL,
+                        days INTEGER NOT NULL,
+                        clock INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX items_pc ON items (plan, channel);
+
+                    CREATE TABLE paths (
+                        item INTEGER PRIMARY KEY NOT NULL,
+                        path TEXT NOT NULL
+                    );
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 17);
+            static_assert(DatabaseVersion == 18);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",
