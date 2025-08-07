@@ -1018,24 +1018,24 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, 
 
     bool named = parameters.IsArray();
 
-    if (!named) {
+    if (named) {
+#if defined(_WIN32)
+        if (name.IsNumber()) {
+            out_func->ordinal_name = name.As<Napi::Number>().Int32Value();
+            name = name.ToString();
+        }
+#endif
+        if (!name.IsString()) {
+            if (!concrete && IsNullOrUndefined(name)) {
+                named = false;
+            } else {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string or integer", GetValueType(instance, name));
+                return false;
+            }
+        }
+    } else {
         parameters = ret.As<Napi::Array>();
         ret = name;
-    }
-
-#if defined(_WIN32)
-    if (name.IsNumber()) {
-        out_func->ordinal_name = name.As<Napi::Number>().Int32Value();
-        name = name.ToString();
-    }
-#endif
-    if (!name.IsString()) {
-        if (!concrete && IsNullOrUndefined(name)) {
-            named = false;
-        } else {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string or integer", GetValueType(instance, name));
-            return false;
-        }
     }
 
     // Leave anonymous naming responsibility to caller
