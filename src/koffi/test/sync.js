@@ -949,15 +949,22 @@ async function test() {
 
     // Define anonymous function types
     {
-        const AnonymousFunc1 = koffi.proto('int', ['int', 'int', 'int']);
-        const AnonymousFunc2 = koffi.proto('__stdcall', 'int', ['int', 'int', 'int']);
-        const AnonymousFunc3 = koffi.proto('int (int a, int b, int c, int d)');
-        const AnonymousFunc4 = koffi.proto(null, 'int', ['int', 'int', 'int']);
+        const AnonymousFuncs = [
+            koffi.proto(koffi.types.int, ['int', 'int', 'int']),
+            koffi.proto('int', ['int', 'int', 'int']),
+            koffi.proto('__stdcall', 'int', ['int', 'int', 'int']),
+            koffi.proto('__stdcall', koffi.types.int, ['int', 'int', 'int']),
+            koffi.proto('int (int a, int b, int c, int d)'),
+            koffi.proto(null, 'int', ['int', 'int', 'int']),
+            koffi.proto(null, koffi.types.int, ['int', 'int', 'int'])
+        ];
 
-        assert.equal(koffi.introspect(AnonymousFunc1).primitive, 'Prototype');
-        assert.equal(koffi.introspect(AnonymousFunc2).primitive, 'Prototype');
-        assert.equal(koffi.introspect(AnonymousFunc3).primitive, 'Prototype');
-        assert.equal(koffi.introspect(AnonymousFunc4).primitive, 'Prototype');
+        for (let type of AnonymousFuncs) {
+            let info = koffi.introspect(type);
+
+            assert.equal(info.primitive, 'Prototype');
+            assert.match(info.name, /^<anonymous_[0-9]+>$/);
+        }
     }
 
     lib.unload();
