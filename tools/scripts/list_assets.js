@@ -77,7 +77,7 @@ async function run() {
     let entries = fs.readdirSync('.', { recursive: true, withFileTypes: true });
 
     let files = entries.filter(filterEntry).map(entry => {
-        let filename = path.join(entry.path, entry.name);
+        let filename = path.join(entry.path ?? entry.parentPath, entry.name);
         let ext = path.extname(filename);
         let key = filename.substr(0, filename.length - ext.length);
 
