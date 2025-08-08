@@ -884,9 +884,10 @@ static Size DecodePath(Span<char> str)
         }
 
         if (str[i] == '%') {
-            // This code explictly assumes it is safe to access the two bytes beyond the
-            // end for performance reasons. It holds true in our case because request lines
-            // end with ' HTTP/1.x'.
+            if (i > str.len - 3) [[unlikely]] {
+                LogError("Truncated %%-encoding value in URL path");
+                return -1;
+            }
 
             int high = ParseHexadecimalChar(str.ptr[++i]);
             int low = ParseHexadecimalChar(str.ptr[++i]);
@@ -923,15 +924,16 @@ static Size DecodeQueryComponent(Span<char> str)
         if (str[i] == '+') {
             str[j] = ' ';
         } else if (str[i] == '%') {
-            // This code explictly assumes it is safe to access the two bytes beyond the
-            // end for performance reasons. It holds true in our case because request lines
-            // end with ' HTTP/1.x'.
+            if (i > str.len - 3) [[unlikely]] {
+                LogError("Truncated %%-encoding value in query string");
+                return -1;
+            }
 
             int high = ParseHexadecimalChar(str.ptr[++i]);
             int low = ParseHexadecimalChar(str.ptr[++i]);
 
             if (high < 0 || low < 0) [[unlikely]] {
-
+                LogError("Malformed %%-encoding value in query string");
                 return -1;
             }
 
