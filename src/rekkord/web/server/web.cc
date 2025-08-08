@@ -393,12 +393,6 @@ static void HandleRequest(http_IO *io)
             HandlePictureSave(io);
         } else if (TestStr(request.path, "/api/picture/delete") && request.method == http_RequestMethod::Post) {
             HandlePictureDelete(io);
-        } else if (TestStr(request.path, "/api/key/list") && request.method == http_RequestMethod::Get) {
-            HandleKeyList(io);
-        } else if (TestStr(request.path, "/api/key/create") && request.method == http_RequestMethod::Post) {
-            HandleKeyCreate(io);
-        } else if (TestStr(request.path, "/api/key/delete") && request.method == http_RequestMethod::Post) {
-            HandleKeyDelete(io);
         } else if (TestStr(request.path, "/api/repository/list") && request.method == http_RequestMethod::Get) {
             HandleRepositoryList(io);
         } else if (TestStr(request.path, "/api/repository/get") && request.method == http_RequestMethod::Get) {
@@ -409,8 +403,6 @@ static void HandleRequest(http_IO *io)
             HandleRepositoryDelete(io);
         } else if (TestStr(request.path, "/api/repository/snapshots") && request.method == http_RequestMethod::Get) {
             HandleRepositorySnapshots(io);
-        } else if (TestStr(request.path, "/api/repository/update") && request.method == http_RequestMethod::Post) {
-            HandleRepositoryUpdate(io);
         } else if (TestStr(request.path, "/api/plan/list") && request.method == http_RequestMethod::Get) {
             HandlePlanList(io);
         } else if (TestStr(request.path, "/api/plan/get") && request.method == http_RequestMethod::Get) {

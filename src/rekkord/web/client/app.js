@@ -1360,7 +1360,6 @@ async function runAccount() {
                 <div class="actions">
                     <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>Change picture</button>
                     <button type="button" class="secondary" @click=${UI.wrap(configureTOTP)}>Configure two-factor authentication</button>
-                    <button type="button" class="secondary" @click=${UI.wrap(configureKeys)}>Manage API keys</button>
                     <button type="button" @click=${UI.insist(logout)}>Logout</button>
                 </div>
             </div>
@@ -1484,123 +1483,6 @@ async function configureTOTP(e) {
             session.totp = enable;
         }
     });
-}
-
-async function configureKeys() {
-    let keys = await Net.get('/api/key/list');
-    let secrets = new Map;
-
-    await UI.dialog({
-        run: (render, close) => {
-            return html`
-                <div class="title">
-                    API keys
-                    <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
-                </div>
-
-                <div class="main">
-                    <table style="table-layout: fixed;">
-                        <colgroup>
-                            <col style="width: 180px;"></col>
-                            <col style="width: 500px;"></col>
-                            <col style="width: 60px;"/>
-                        </colgroup>
-                        <thead>
-                            <tr>
-                                <th>Title</th>
-                                <th>Key</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${keys.map(key => {
-                                let secret = secrets.get(key.id);
-                                let full = (secret != null) ? `${key.key}/${secret}` : null;
-
-                                return html`
-                                    <tr>
-                                        <td>${key.title}</td>
-                                        ${full != null ? html`
-                                            <td>
-                                                <button type="button" class="small"
-                                                        @click=${UI.wrap(e => writeClipboard('API key', full))}>Copy</button>
-                                                <span class="sub">${full}</span>
-                                            </td>
-                                        ` : ''}
-                                        ${full == null ? html`<td class="missing">Cannot retrieve old API key</td>` : ''}
-                                        <td class="right">
-                                            <button type="button" class="small"
-                                                    @click=${UI.confirm(`Delete API key ${key.title}`, e => delete_key(key.id))}><img src=${ASSETS['ui/delete']} alt="Delete" /></button>
-                                        </td>
-                                    </tr>
-                                `;
-                            })}
-                            ${!keys.length ? html`<tr><td colspan="3" style="text-align: center;">No API key</td></tr>` : ''}
-                        </tbody>
-                    </table>
-                    ${secrets.size ? html`<div style="color: red; font-style: italic; text-align: center">Please copy the new keys, you won't be able to retrieve them later</div>` : ''}
-
-                    <div class="actions">
-                        <button type="button" @click=${UI.wrap(add_key)}>Create API key</button>
-                    </div>
-                </div>
-            `;
-
-            async function add_key() {
-                let key = await createKey();
-
-                secrets.set(key.id, key.secret);
-                keys = await Net.get('/api/key/list');
-
-                render();
-            }
-
-            async function delete_key(id) {
-                await deleteKey(id);
-
-                secrets.delete(id);
-                keys = await Net.get('/api/key/list');
-
-                render();
-            }
-        }
-    });
-}
-
-async function createKey() {
-    let key = await UI.dialog({
-        run: (render, close) => html`
-            <div class="title">
-                Create API key
-                <div style="flex: 1;"></div>
-                <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
-            </div>
-
-            <div class="main">
-                <label>
-                    <span>Title</span>
-                    <input name="title" type="text" required />
-                </label>
-            </div>
-
-            <div class="footer">
-                <button type="button" class="secondary" @click=${UI.insist(close)}>Cancel</button>
-                <button type="submit">Create</button>
-            </div>
-        `,
-
-        submit: async (elements) => {
-            let key = await Net.post('/api/key/create', { title: elements.title.value });
-            return key;
-        }
-    });
-
-    return key;
-}
-
-async function deleteKey(id) {
-    await Net.post('/api/key/delete', { id: id });
 }
 
 async function writeClipboard(label, text) {

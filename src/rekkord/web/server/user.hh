@@ -38,7 +38,6 @@ bool PruneTokens();
 void PruneSessions();
 
 RetainPtr<SessionInfo> GetNormalSession(http_IO *io);
-bool ValidateApiKey(http_IO *io);
 
 void HandleUserSession(http_IO *io);
 void HandleUserPing(http_IO *io);
@@ -58,9 +57,5 @@ void HandleTotpDisable(http_IO *io);
 void HandlePictureGet(http_IO *io);
 void HandlePictureSave(http_IO *io);
 void HandlePictureDelete(http_IO *io);
-
-void HandleKeyList(http_IO *io);
-void HandleKeyCreate(http_IO *io);
-void HandleKeyDelete(http_IO *io);
 
 }

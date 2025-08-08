@@ -378,52 +378,6 @@ RetainPtr<SessionInfo> GetNormalSession(http_IO *io)
     return session;
 }
 
-bool ValidateApiKey(http_IO *io)
-{
-    const http_RequestInfo &request = io->Request();
-    const char *key = request.GetHeaderValue("X-Api-Key");
-
-    if (!key) {
-        LogError("Missing API key");
-        io->SendError(401);
-        return false;
-    }
-
-    // We use this to extend/fix the response delay in case of error
-    int64_t start = GetMonotonicTime();
-
-    Span<const char> secret;
-    Span<const char> id = SplitStr(key, '/', &secret);
-
-    const char *hash;
-    {
-        sq_Statement stmt;
-        if (!db.Prepare("SELECT hash FROM keys WHERE key = ?1", &stmt, id))
-            return false;
-
-        if (!stmt.Step()) {
-            if (stmt.IsValid()) {
-                LogError("Invalid API key");
-                io->SendError(403);
-            }
-            return false;
-        }
-
-        hash = (const char *)sqlite3_column_text(stmt, 0);
-    }
-
-    if (crypto_pwhash_str_verify(hash, secret.ptr, (size_t)secret.len) < 0) {
-        int64_t safety = std::max(2000 - GetMonotonicTime() + start, (int64_t)0);
-        WaitDelay(safety);
-
-        LogError("Invalid API key");
-        io->SendError(403);
-        return false;
-    }
-
-    return true;
-}
-
 static void ExportSession(const SessionInfo *session, http_IO *io)
 {
     http_JsonPageBuilder json;
