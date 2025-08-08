@@ -433,7 +433,7 @@ void HandleRepositoryList(http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->SendError(404);
+        io->SendError(401);
         return;
     }
 
@@ -489,7 +489,7 @@ void HandleRepositoryGet(http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->SendError(404);
+        io->SendError(401);
         return;
     }
 
@@ -611,7 +611,7 @@ void HandleRepositorySave(http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->SendError(404);
+        io->SendError(401);
         return;
     }
 
@@ -759,7 +759,7 @@ void HandleRepositoryDelete(http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->SendError(404);
+        io->SendError(401);
         return;
     }
 
@@ -810,7 +810,7 @@ void HandleRepositorySnapshots(http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->SendError(404);
+        io->SendError(401);
         return;
     }
 

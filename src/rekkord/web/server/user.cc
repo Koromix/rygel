@@ -1298,7 +1298,7 @@ void HandlePictureGet(http_IO *io)
 
         if (!session) {
             LogError("User is not logged in");
-            io->SendError(404);
+            io->SendError(401);
             return;
         }
 
@@ -1356,7 +1356,7 @@ void HandlePictureSave(http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->SendError(404);
+        io->SendError(401);
         return;
     }
 
@@ -1461,7 +1461,7 @@ void HandlePictureDelete(http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->SendError(404);
+        io->SendError(401);
         return;
     }
 

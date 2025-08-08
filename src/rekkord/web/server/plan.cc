@@ -36,7 +36,7 @@ void HandlePlanList(http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->SendError(404);
+        io->SendError(401);
         return;
     }
 
@@ -78,7 +78,7 @@ void HandlePlanGet(http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->SendError(404);
+        io->SendError(401);
         return;
     }
 
@@ -177,7 +177,7 @@ void HandlePlanSave(http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->SendError(404);
+        io->SendError(401);
         return;
     }
 
@@ -375,7 +375,7 @@ void HandlePlanDelete(http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->SendError(404);
+        io->SendError(401);
         return;
     }
 
