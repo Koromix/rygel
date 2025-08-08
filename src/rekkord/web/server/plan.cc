@@ -268,10 +268,10 @@ void HandlePlanSave(http_IO *io)
                 valid = false;
             }
 
-            /* XXX: if (!item.paths.len) {
+            if (!item.paths.len) {
                 LogError("Missing item paths");
                 valid = false;
-            } */
+            }
             for (const char *path: item.paths) {
                 if (!path || !path[0]) {
                     LogError("Missing or invalid item path");

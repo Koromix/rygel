@@ -1151,12 +1151,14 @@ async function runPlan() {
                             <col></col>
                             <col></col>
                             <col></col>
+                            <col></col>
                         </colgroup>
                         <thead>
                             <tr>
                                 <th>Channel</th>
                                 <th>Days</th>
                                 <th>Clock time</th>
+                                <th>Paths</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1165,9 +1167,10 @@ async function runPlan() {
                                     <td>${item.channel}</td>
                                     <td>${formatDays(item.days)}</td>
                                     <td style="text-align: right;">${formatClock(item.clock)}</td>
+                                    <td>${item.paths.map(path => html`${path}<br>`)}</td>
                                 </tr>
                             `)}
-                            ${!cache.plan.items.length ? html`<tr><td colspan="3" style="text-align: center;">No item</td></tr>` : ''}
+                            ${!cache.plan.items.length ? html`<tr><td colspan="4" style="text-align: center;">No item</td></tr>` : ''}
                         </tbody>
                     </table>
                 </div>
@@ -1215,6 +1218,7 @@ async function configurePlan(plan) {
                             <col style="width: 200px;"/>
                             <col style="width: 200px;"/>
                             <col style="width: 150px;"/>
+                            <col style="width: 200px;"/>
                             <col style="width: 60px;"/>
                         </colgroup>
 
@@ -1224,36 +1228,44 @@ async function configurePlan(plan) {
                                 <th>Channel</th>
                                 <th>Days</th>
                                 <th>Clock time</th>
+                                <th>Paths</th>
                                 <th></th>
                             </tr>
                         </thead>
 
                         <tbody>
-                            ${plan.items.map(item => html`
-                                <tr ${UI.reorderItems(plan.items, item)}>
-                                    <td class="grab"><img src=${ASSETS['ui/move']} width="16" height="16" alt="Move" /></td>
-                                    <td><input type="text" .value=${live(item.channel)} @change=${UI.wrap(e => { item.channel = e.target.value; render(); })} /></td>
-                                    <td>
-                                        ${Util.mapRange(0, DAYS.length, idx => {
-                                            let active = !!(item.days & (1 << idx));
+                            ${plan.items.map(item => {
+                                let paths = [...item.paths, ''];
 
-                                            return html`
-                                                <label>
-                                                    <input type="checkbox" .checked=${active} @change=${UI.wrap(e => toggle_day(item, idx))} />
-                                                    ${DAYS[idx]}
-                                                </label>
-                                            `;
-                                        })}
-                                    </td>
-                                    <td><input type="time" .value=${live(formatClock(item.clock))} @change=${UI.wrap(e => { item.clock = parseClock(e.target.value); render(); })} /></td>
-                                    <td class="right">
-                                        <button type="button" class="small"
-                                                @click=${UI.insist(e => delete_item(item))}><img src=${ASSETS['ui/delete']} alt="Delete" /></button>
-                                    </td>
-                                </tr>
-                            `)}
+                                return html`
+                                    <tr ${UI.reorderItems(plan.items, item)}>
+                                        <td class="grab"><img src=${ASSETS['ui/move']} width="16" height="16" alt="Move" /></td>
+                                        <td><input type="text" .value=${live(item.channel)} @change=${UI.wrap(e => { item.channel = e.target.value; render(); })} /></td>
+                                        <td>
+                                            ${Util.mapRange(0, DAYS.length, idx => {
+                                                let active = !!(item.days & (1 << idx));
+
+                                                return html`
+                                                    <label>
+                                                        <input type="checkbox" .checked=${active} @change=${UI.wrap(e => toggle_day(item, idx))} />
+                                                        ${DAYS[idx]}
+                                                    </label>
+                                                `;
+                                            })}
+                                        </td>
+                                        <td><input type="time" .value=${live(formatClock(item.clock))} @change=${UI.wrap(e => { item.clock = parseClock(e.target.value); render(); })} /></td>
+                                        <td>${paths.map((path, idx) =>
+                                            html`<input type="text" style=${idx ? 'margin-top: 3px;' : ''} .value=${live(path)}
+                                                        @input=${UI.wrap(e => edit_path(item, idx, e.target.value))} />`)}</td>
+                                        <td class="right">
+                                            <button type="button" class="small"
+                                                    @click=${UI.insist(e => delete_item(item))}><img src=${ASSETS['ui/delete']} alt="Delete" /></button>
+                                        </td>
+                                    </tr>
+                                `;
+                            })}
                             ${!plan.items.length ?
-                                html`<tr><td colspan="5" style="text-align: center;">No item</td></tr>` : ''}
+                                html`<tr><td colspan="6" style="text-align: center;">No item</td></tr>` : ''}
                         </tbody>
                     </table>
 
@@ -1296,6 +1308,19 @@ async function configurePlan(plan) {
 
             function toggle_day(item, idx) {
                 item.days = (item.days ^ (1 << idx)) || item.days;
+                render();
+            }
+
+            function edit_path(item, idx, path) {
+                if (idx >= item.paths.length) {
+                    if (path)
+                        item.paths.push(path);
+                } else if (path) {
+                    item.paths[idx] = path;
+                } else {
+                    item.paths.splice(idx, 1);
+                }
+
                 render();
             }
 
