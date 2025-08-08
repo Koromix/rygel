@@ -1078,7 +1078,7 @@ async function runPlans() {
                     <thead>
                         <tr>
                             ${UI.tableHeader('plans', 'name', 'Name')}
-                            <th>Key</th>
+                            <th>Key prefix</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1256,6 +1256,15 @@ async function configurePlan(plan) {
                                 html`<tr><td colspan="5" style="text-align: center;">No item</td></tr>` : ''}
                         </tbody>
                     </table>
+
+                    ${ptr != null ? html`
+                        <div class="section">API key</div>
+                        <label>
+                            <span>Key prefix</span>
+                            <div class="sub">${plan.key}</div>
+                            <button type="button" class="small secondary" @click=${UI.insist(renew_key)}>Renew key</button>
+                        </label>
+                    ` : ''}
                 </div>
 
                 <div class="footer">
@@ -1289,6 +1298,18 @@ async function configurePlan(plan) {
                 item.days = (item.days ^ (1 << idx)) || item.days;
                 render();
             }
+
+            async function renew_key() {
+                let json = await Net.post('/api/plan/key', { id: plan.id });
+
+                Net.invalidate('plans');
+                Net.invalidate('plan');
+
+                await showKey(plan, json.key, json.secret);
+                plan.key = json.key;
+
+                render();
+            }
         },
 
         submit: async (elements) => {
@@ -1305,8 +1326,40 @@ async function configurePlan(plan) {
 
             let url = makeURL({ mode: 'plan', plan: json.id });
             await go(url);
+
+            if (ptr == null)
+                await showKey(plan, json.key, json.secret);
         }
     });
+}
+
+async function showKey(plan, key, secret) {
+    let full = `${key}/${secret}`;
+
+    try {
+        await UI.dialog({
+            run: (render, close) => html`
+                <div class="title">
+                    API key
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                </div>
+
+                <div class="main">
+                    <label>
+                        <span>API key</span>
+                        <input type="text" style="width: 40em;" readonly value=${full} />
+                        <button type="button" class="small" @click=${UI.wrap(e => writeClipboard('API key', full))}>Copy</button>
+                    </label>
+
+                    <div style="color: red; font-style: italic; text-align: center">Please copy this key, you won't be able to retrieve it later!</div>
+                </div>
+            `
+        });
+    } catch (err) {
+        if (err != null)
+            throw err;
+    }
 }
 
 async function deletePlan(id) {

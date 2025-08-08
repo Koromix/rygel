@@ -419,4 +419,99 @@ void HandlePlanDelete(http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
+void HandlePlanKey(http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = GetNormalSession(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+
+    // Parse input data
+    int64_t id = -1;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "id") {
+                parser.ParseInt(&id);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check missing or invalid values
+    if (id < 0) {
+        LogError("Missing or invalid 'id' parameter");
+        io->SendError(422);
+        return;
+    }
+
+    // Make sure plan exists
+    {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT id FROM plans WHERE owner = ?1 AND id = ?2", &stmt, session->userid, id))
+            return;
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Unknown repository ID %1", id);
+                io->SendError(404);
+            }
+            return;
+        }
+    }
+
+    char key[33];
+    char secret[33];
+    char hash[crypto_pwhash_STRBYTES];
+    {
+        unsigned int flags = (int)pwd_GenerateFlag::Uppers |
+                             (int)pwd_GenerateFlag::Lowers |
+                             (int)pwd_GenerateFlag::Digits;
+
+        pwd_GeneratePassword(flags, key);
+        pwd_GeneratePassword(flags, secret);
+
+        if (crypto_pwhash_str(hash, secret, strlen(secret),
+                              crypto_pwhash_OPSLIMIT_INTERACTIVE, crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
+            LogError("Failed to hash secret");
+            return;
+        }
+    }
+
+    if (!db.Run(R"(UPDATE plans SET key = ?3,
+                                    hash = ?4
+                   WHERE id = ?1 AND owner = ?2)",
+                id, session->userid, key, hash))
+        return;
+
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartObject();
+    json.Key("key"); json.String(key);
+    json.Key("secret"); json.String(secret);
+    json.EndObject();
+
+    json.Finish();
+}
+
 }

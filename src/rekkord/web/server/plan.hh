@@ -24,5 +24,6 @@ void HandlePlanList(http_IO *io);
 void HandlePlanGet(http_IO *io);
 void HandlePlanSave(http_IO *io);
 void HandlePlanDelete(http_IO *io);
+void HandlePlanKey(http_IO *io);
 
 }

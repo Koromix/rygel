@@ -373,7 +373,7 @@ form {
 
         & > span:first-child { width: 180px; }
     }
-    & * + :is(label, .widget) { margin-top: 1em; }
+    & :not(.section) + :is(label, .widget) { margin-top: 1em; }
     & label:empty { display: none; }
 
     & .widget.annotate {

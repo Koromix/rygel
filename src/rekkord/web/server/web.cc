@@ -411,6 +411,8 @@ static void HandleRequest(http_IO *io)
             HandlePlanSave(io);
         } else if (TestStr(request.path, "/api/plan/delete") && request.method == http_RequestMethod::Post) {
             HandlePlanDelete(io);
+        } else if (TestStr(request.path, "/api/plan/key") && request.method == http_RequestMethod::Post) {
+            HandlePlanKey(io);
         } else {
             io->SendError(404);
         }
