@@ -885,7 +885,7 @@ static Size DecodePath(Span<char> str)
 
         if (str[i] == '%') {
             if (i > str.len - 3) [[unlikely]] {
-                LogError("Truncated %%-encoding value in URL path");
+                LogError("Truncated %%-encoded value in URL path");
                 return -1;
             }
 
@@ -893,7 +893,7 @@ static Size DecodePath(Span<char> str)
             int low = ParseHexadecimalChar(str.ptr[++i]);
 
             if (high < 0 || low < 0) [[unlikely]] {
-                LogError("Malformed %%-encoding value in URL path");
+                LogError("Malformed %%-encoded value in URL path");
                 return -1;
             }
 
@@ -925,7 +925,7 @@ static Size DecodeQueryComponent(Span<char> str)
             str[j] = ' ';
         } else if (str[i] == '%') {
             if (i > str.len - 3) [[unlikely]] {
-                LogError("Truncated %%-encoding value in query string");
+                LogError("Truncated %%-encoded value in query string");
                 return -1;
             }
 
@@ -933,7 +933,7 @@ static Size DecodeQueryComponent(Span<char> str)
             int low = ParseHexadecimalChar(str.ptr[++i]);
 
             if (high < 0 || low < 0) [[unlikely]] {
-                LogError("Malformed %%-encoding value in query string");
+                LogError("Malformed %%-encoded value in query string");
                 return -1;
             }
 
