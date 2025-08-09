@@ -340,8 +340,13 @@ async function build() {
         let require_filename = path.join(dist_dir, pkg.cnoke.require);
 
         let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', require_filename]);
-        if (proc.status !== 0)
-            throw new Error('Failed to use prebuild:\n' + (proc.stderr || proc.stdout));
+
+        if (proc.status !== 0) {
+            let stdout = proc.stdout.toString().trim();
+            let stderr = proc.stderr.toString().trim();
+
+            throw new Error('Failed to use prebuild:\n' + (stderr || stdout));
+        }
     }
 
     return dist_dir;
