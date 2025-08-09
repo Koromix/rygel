@@ -1,5 +1,8 @@
 {
   "cnoke": {
     "output": "../../../bin/Koffi/test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.1"
   }
 }
