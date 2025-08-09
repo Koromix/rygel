@@ -113,7 +113,7 @@ const FixedString2 = koffi.struct('FixedString2', {
 });
 
 const FixedWide = koffi.struct('FixedWide', {
-    buf: koffi.array('char16', 64, 'typed')
+    buf: koffi.array('char16', 64, 'Typed')
 });
 const FixedWide2 = koffi.struct('FixedWide2', {
     buf: koffi.array('char16', 64)
@@ -970,10 +970,23 @@ async function test() {
 }
 
 function detect_glibc() {
+    let report = get_process_report();
+
     if (process.platform != 'linux')
         return false;
-    if (process.report.getReport().header?.glibcVersionRuntime == null)
+    if (report.header?.glibcVersionRuntime == null)
         return false;
 
     return true;
+}
+
+function get_process_report() {
+    let report = process.report.getReport();
+
+    // Convoluted way to avoid TypeScript error when accessing report.header?
+    // without using any TypeScript syntax (such as "as any").
+    let obj = {};
+    for (let key in report)
+        obj[key] = report[key];
+    return obj;
 }

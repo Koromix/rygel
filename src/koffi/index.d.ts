@@ -19,7 +19,13 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-export function load(path: string | null): IKoffiLib;
+type LoadOptions = {
+    lazy?: boolean,
+    global?: boolean,
+    deep?: boolean
+};
+
+export function load(path: string | null, options?: LoadOptions): IKoffiLib;
 
 interface IKoffiCType { __brand: 'IKoffiCType' }
 interface IKoffiPointerCast { __brand: 'IKoffiPointerCast' }
@@ -65,17 +71,17 @@ export type KoffiFunc<T extends (...args: any) => any> = T & {
 
 export interface IKoffiLib {
     func(definition: string): KoffiFunction;
-    func(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
-    func(convention: string, name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+    func(name: string | number, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+    func(convention: string, name: string | number, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
 
     /** @deprecated */ cdecl(definition: string): KoffiFunction;
-    /** @deprecated */ cdecl(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+    /** @deprecated */ cdecl(name: string | number, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
     /** @deprecated */ stdcall(definition: string): KoffiFunction;
-    /** @deprecated */ stdcall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+    /** @deprecated */ stdcall(name: string | number, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
     /** @deprecated */ fastcall(definition: string): KoffiFunction;
-    /** @deprecated */ fastcall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+    /** @deprecated */ fastcall(name: string | number, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
     /** @deprecated */ thiscall(definition: string): KoffiFunction;
-    /** @deprecated */ thiscall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+    /** @deprecated */ thiscall(name: string | number, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
 
     symbol(name: string, type: TypeSpec): any;
 
@@ -155,9 +161,22 @@ export function introspect(type: TypeSpec): TypeInfo;
 
 export function alias(name: string, type: TypeSpec): IKoffiCType;
 
-export function config(): Record<string, unknown>;
-export function config(cfg: Record<string, unknown>): Record<string, unknown>;
-export function stats(): Record<string, unknown>;
+type KoffiConfig = {
+    sync_stack_size: number
+    sync_heap_size: number
+    async_stack_size: number
+    async_heap_size: number
+    resident_async_pools: number
+    max_async_calls: number
+    max_type_size: number
+};
+type KoffiStats = {
+    disposed: number
+};
+
+export function config(): KoffiConfig;
+export function config(cfg: KoffiConfig): KoffiConfig;
+export function stats(): KoffiStats;
 
 export function alloc(type: TypeSpec, length: number): any;
 export function free(value: any): void;
@@ -254,5 +273,10 @@ type PrimitiveTypes =
     | 'ushort'
     | 'void'
     | 'wchar'
-    | 'wchar_t'
-export const types: Record<PrimitiveTypes, IKoffiCType>
+    | 'wchar_t';
+export const types: Record<PrimitiveTypes, IKoffiCType>;
+
+// Internal stuff, don't use!
+export const node: {
+    env: { __brand: 'IKoffiNodeEnv' }
+};

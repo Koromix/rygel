@@ -59,7 +59,7 @@ async function test() {
     assert.equal(SumInts(50, -8), 42);
 
     // Test RTLD_DEEPBIND
-    if (process.platform == 'linux' || process.platform == 'macos') {
+    if (process.platform.toString() == 'linux' || process.platform.toString() == 'macos') {
         assert.equal(GetInt1(), 1);
         assert.equal(GetInt2(), 1);
         assert.equal(GetInt3(), 3);

@@ -252,7 +252,7 @@ async function test() {
                 assert.deepEqual(vec, { x: i, y: -i });
             }
 
-            let all = koffi.decode(ptr, koffi.array('double', 10, 'array'));
+            let all = koffi.decode(ptr, koffi.array('double', 10, 'Array'));
             assert.deepEqual(all, [0, 0, 1, -1, 2, -2, 3, -3, 4, -4]);
 
             return 424242;
