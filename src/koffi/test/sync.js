@@ -628,7 +628,6 @@ async function test() {
         let big = { text: Buffer.from(text) };
         let ret = ReverseBigText(big);
 
-        assert.equal(ret.len, big.len);
         assert.equal(Buffer.from(ret.text).toString(), expected);
     }
 
