@@ -953,19 +953,26 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
 
     if (info[1].IsNumber()) {
         len = info[1].As<Napi::Number>().Int64Value();
-
-        if (len <= 0) {
-            ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
-            return env.Null();
-        }
-        if (len > instance->config.max_type_size / ref->size) {
-            ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", instance->config.max_type_size / ref->size);
-            return env.Null();
-        }
     } else if (info[1].IsString()) {
         countedby = info[1];
+
+        if (info.Length() >= 4 && !IsNullOrUndefined(info[3])) {
+            len = info[3].As<Napi::Number>().Int64Value();
+        }
     } else {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected integer or string", GetValueType(instance, info[1]));
+    }
+
+    if (countedby.IsEmpty() && len <= 0) {
+        ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
+        return env.Null();
+    } else if (len < 0) {
+        ThrowError<Napi::TypeError>(env, "Array length must be positive");
+        return env.Null();
+    }
+    if (len > instance->config.max_type_size / ref->size) {
+        ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", instance->config.max_type_size / ref->size);
+        return env.Null();
     }
 
     TypeInfo *type = nullptr;
