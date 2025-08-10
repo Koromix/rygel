@@ -105,15 +105,16 @@ export class Union {
 }
 
 export function array(ref: TypeSpec, len: number, hint?: ArrayHint | null): IKoffiCType;
+export function array(ref: TypeSpec, countedBy: string, hint?: ArrayHint | null): IKoffiCType;
 
 export function opaque(name: string | null | undefined): IKoffiCType;
 export function opaque(): IKoffiCType;
 /** @deprecated */ export function handle(name: string | null | undefined): IKoffiCType;
 /** @deprecated */ export function handle(): IKoffiCType;
 
-export function pointer(ref: TypeSpec): IKoffiCType;
+export function pointer(ref: TypeSpec, countedBy?: string | null): IKoffiCType;
 export function pointer(ref: TypeSpec, count: number): IKoffiCType;
-export function pointer(name: string | null | undefined, ref: TypeSpec): IKoffiCType;
+export function pointer(name: string | null | undefined, ref: TypeSpec, countedBy?: string | null): IKoffiCType;
 export function pointer(name: string | null | undefined, ref: TypeSpec, count: number): IKoffiCType;
 
 export function out(type: TypeSpec): IKoffiCType;

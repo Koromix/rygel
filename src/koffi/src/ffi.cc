@@ -633,36 +633,45 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
 
     std::string name = named ? info[0].As<Napi::String>() : std::string();
 
-    const TypeInfo *type = ResolveType(info[skip]);
-    if (!type)
+    const TypeInfo *ref = ResolveType(info[skip]);
+    if (!ref)
         return env.Null();
 
-    int count = 0;
+    Napi::Value countedby;
+    int count = 1;
+
     if (info.Length() >= 2u + skip) {
-        if (!info[1 + skip].IsNumber()) {
+        if (info[1 + skip].IsString()) {
+            countedby = info[1 + skip];
+        } else if (info[1 + skip].IsNumber()) {
+            count = info[1 + skip].As<Napi::Number>();
+
+            if (count < 1 || count > 4) {
+                ThrowError<Napi::TypeError>(env, "Value of count must be between 1 and 4");
+                return env.Null();
+            }
+        } else {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for count, expected number", GetValueType(instance, info[1 + skip]));
             return env.Null();
         }
-
-        count = info[1 + skip].As<Napi::Number>();
-
-        if (count < 1 || count > 4) {
-            ThrowError<Napi::TypeError>(env, "Value of count must be between 1 and 4");
-            return env.Null();
-        }
-    } else {
-        count = 1;
     }
 
-    type = MakePointerType(instance, type, count);
+    TypeInfo *type = MakePointerType(instance, ref, count);
     RG_ASSERT(type);
 
-    if (named) {
+    if (named || !countedby.IsEmpty()) {
         TypeInfo *copy = instance->types.AppendDefault();
         RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
         memcpy((void *)copy, type, RG_SIZE(*type));
-        copy->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
+
+        if (named) {
+            copy->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
+        }
+        if (!countedby.IsEmpty()) {
+            Napi::String str = countedby.As<Napi::String>();
+            copy->countedby = DuplicateString(str.Utf8Value().c_str(), &instance->str_alloc).ptr;
+        }
 
         // If the insert succeeds, we cannot fail anymore
         if (!MapType(env, instance, copy, copy->name))
@@ -931,29 +940,35 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 2) {
-        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
-        return env.Null();
-    }
-    if (!info[1].IsNumber()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected integer", GetValueType(instance, info[1]));
+        ThrowError<Napi::TypeError>(env, "Expected 2 to 3 arguments, got %1", info.Length());
         return env.Null();
     }
 
     const TypeInfo *ref = ResolveType(info[0]);
-    int64_t len = info[1].As<Napi::Number>().Int64Value();
-
     if (!ref)
         return env.Null();
-    if (len <= 0) {
-        ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
-        return env.Null();
-    }
-    if (len > instance->config.max_type_size / ref->size) {
-        ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", instance->config.max_type_size / ref->size);
-        return env.Null();
+
+    int64_t len = 0;
+    Napi::Value countedby;
+
+    if (info[1].IsNumber()) {
+        len = info[1].As<Napi::Number>().Int64Value();
+
+        if (len <= 0) {
+            ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
+            return env.Null();
+        }
+        if (len > instance->config.max_type_size / ref->size) {
+            ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", instance->config.max_type_size / ref->size);
+            return env.Null();
+        }
+    } else if (info[1].IsString()) {
+        countedby = info[1];
+    } else {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected integer or string", GetValueType(instance, info[1]));
     }
 
-    const TypeInfo *type = nullptr;
+    TypeInfo *type = nullptr;
 
     if (info.Length() >= 3 && !IsNullOrUndefined(info[2])) {
         if (!info[2].IsString()) {
@@ -988,6 +1003,11 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         type = MakeArrayType(instance, ref, len, hint);
     } else {
         type = MakeArrayType(instance, ref, len);
+    }
+
+    if (!countedby.IsEmpty()) {
+        Napi::String str = countedby.As<Napi::String>();
+        type->countedby = DuplicateString(str.Utf8Value().c_str(), &instance->str_alloc).ptr;
     }
 
     return WrapType(env, instance, type);

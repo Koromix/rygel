@@ -147,6 +147,7 @@ struct TypeInfo {
         const FunctionInfo *proto; // Callback only
     } ref;
     ArrayHint hint; // Array only
+    const char *countedby; // Pointer or array
 
     mutable Napi::FunctionReference construct; // Union only
     mutable Napi::ObjectReference defn;

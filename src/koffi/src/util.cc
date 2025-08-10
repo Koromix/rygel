@@ -383,7 +383,7 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
     return type;
 }
 
-const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count)
+TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count)
 {
     RG_ASSERT(count >= 1);
 
@@ -418,11 +418,10 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
         ref = bucket->value;
     }
 
-    return ref;
+    return (TypeInfo *)ref;
 }
 
-static const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len,
-                                     ArrayHint hint, bool insert)
+static TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint, bool insert)
 {
     RG_ASSERT(len > 0);
     RG_ASSERT(len <= instance->config.max_type_size / ref->size);
@@ -446,7 +445,7 @@ static const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref
     return type;
 }
 
-const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len)
+TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len)
 {
     ArrayHint hint = {};
 
@@ -461,7 +460,7 @@ const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size 
     return MakeArrayType(instance, ref, len, hint, true);
 }
 
-const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint)
+TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint)
 {
     return MakeArrayType(instance, ref, len, hint, false);
 }
