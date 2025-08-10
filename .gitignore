@@ -53,5 +53,6 @@ package-lock.json
 
 /vendor/spidermonkey/spidermonkey/
 !/vendor/esbuild/native/node_modules/
+!/vendor/typescript/node_modules/
 
 !.gitkeep

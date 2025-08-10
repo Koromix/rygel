@@ -64,7 +64,7 @@ function test() {
 
     for (let key in scripts) {
         let filename = path.join(__dirname, scripts[key]);
-        let args = ['../../../vendor/typescript/bin/tsc', ...TSC_OPTIONS, filename];
+        let args = ['../../../vendor/typescript/tsc', ...TSC_OPTIONS, filename];
 
         success &= run('TypeScript', key, args);
     }

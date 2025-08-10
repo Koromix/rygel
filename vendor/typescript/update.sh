@@ -9,10 +9,9 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
-npm install typescript@$VERSION
-rsync -rt --delete --exclude update.sh --exclude node_modules node_modules/typescript/ ./
+npm install typescript@$VERSION @types/node
+dos2unix node_modules/typescript/*
 
-rm -rf package-lock.json
-rm -rf node_modules
-
-dos2unix *
+rm -rf package*.json
+rm -rf node_modules/.bin
+rm -f node_modules/.*

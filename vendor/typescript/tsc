@@ -1,0 +1,12 @@
+#!/usr/bin/env node
+
+const { spawnSync } = require('child_process');
+
+let args = [
+    __dirname + '/node_modules/typescript/bin/tsc',
+    '--types', __dirname + '/node_modules/@types/node',
+    ...process.argv.slice(2)
+];
+
+let proc = spawnSync(process.execPath, args, { stdio: 'inherit' });
+process.exit(proc.status);
