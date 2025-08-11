@@ -92,7 +92,7 @@ void bk_ImportRandom(bk_Compiler *out_compiler)
 static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offset, bool quote)
 {
     switch (type->primitive) {
-        case bk_PrimitiveKind::Null: { fputs("null", stdout); } break;
+        case bk_PrimitiveKind::Null: { StdOut->Write("null"); } break;
         case bk_PrimitiveKind::Boolean: { Print("%1", vm->stack[offset++].b); } break;
         case bk_PrimitiveKind::Integer: { Print("%1", vm->stack[offset++].i); } break;
         case bk_PrimitiveKind::Float: { Print("%1", FmtDouble(vm->stack[offset++].d, 1, INT_MAX)); } break;
@@ -101,8 +101,7 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
             str = str ? str : "";
 
             if (quote) {
-
-                fputc('"', stdout);
+                StdOut->Write('"');
                 for (;;) {
                     Size next = strcspn(str, "\"\r\n\t\f\v\a\b\x1B");
 
@@ -111,38 +110,38 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
                     if (!str[next])
                         break;
                     switch (str[next]) {
-                        case '\"': { fputs("\\\"", stdout); } break;
-                        case '\r': { fputs("\\r", stdout); } break;
-                        case '\n': { fputs("\\n", stdout); } break;
-                        case '\t': { fputs("\\t", stdout); } break;
-                        case '\f': { fputs("\\f", stdout); } break;
-                        case '\v': { fputs("\\v", stdout); } break;
-                        case '\a': { fputs("\\a", stdout); } break;
-                        case '\b': { fputs("\\b", stdout); } break;
-                        case '\x1B': { fputs("\\e", stdout); } break;
+                        case '\"': { StdOut->Write("\\\""); } break;
+                        case '\r': { StdOut->Write("\\r"); } break;
+                        case '\n': { StdOut->Write("\\n"); } break;
+                        case '\t': { StdOut->Write("\\t"); } break;
+                        case '\f': { StdOut->Write("\\f"); } break;
+                        case '\v': { StdOut->Write("\\v"); } break;
+                        case '\a': { StdOut->Write("\\a"); } break;
+                        case '\b': { StdOut->Write("\\b"); } break;
+                        case '\x1B': { StdOut->Write("\\e"); } break;
                     }
 
                     str += next + 1;
                 }
-                fputc('"', stdout);
+                StdOut->Write('"');
             } else {
-                fputs(str, stdout);
+                StdOut->Write(str);
             }
         } break;
-        case bk_PrimitiveKind::Type: { fputs(vm->stack[offset++].type->signature, stdout); } break;
-        case bk_PrimitiveKind::Function: { fputs(vm->stack[offset++].func->prototype, stdout); } break;
+        case bk_PrimitiveKind::Type: { StdOut->Write(vm->stack[offset++].type->signature); } break;
+        case bk_PrimitiveKind::Function: { StdOut->Write(vm->stack[offset++].func->prototype); } break;
         case bk_PrimitiveKind::Array: {
             const bk_ArrayTypeInfo *array_type = type->AsArrayType();
 
-            fputc('[', stdout);
+            StdOut->Write('[');
             if (array_type->len) {
                 offset = PrintValue(vm, array_type->unit_type, offset, true);
                 for (Size i = 1; i < array_type->len; i++) {
-                    fputs(", ", stdout);
+                    StdOut->Write(", ");
                     offset = PrintValue(vm, array_type->unit_type, offset, true);
                 }
             }
-            fputc(']', stdout);
+            StdOut->Write(']');
         } break;
         case bk_PrimitiveKind::Record: {
             const bk_RecordTypeInfo *record_type = type->AsRecordType();
@@ -152,12 +151,11 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
                 Print("%1 = ", record_type->members[0].name);
                 offset = PrintValue(vm, record_type->members[0].type, offset, true);
                 for (Size i = 1; i < record_type->members.len; i++) {
-                    fputs(", ", stdout);
-                    Print("%1 = ", record_type->members[i].name);
+                    Print("\n, %1 = ", record_type->members[i].name);
                     offset = PrintValue(vm, record_type->members[i].type, offset, true);
                 }
             }
-            fputc(')', stdout);
+            StdOut->Write(')');
         } break;
         case bk_PrimitiveKind::Enum: {
             const bk_EnumTypeInfo *enum_type = type->AsEnumType();
@@ -165,7 +163,7 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
 
             if (value >= 0 && value < enum_type->labels.len) [[likely]] {
                 const bk_EnumTypeInfo::Label &label = enum_type->labels[value];
-                fputs(label.name, stdout);
+                StdOut->Write(label.name);
             } else {
                 // This should never happen, except for cosmic bit flips
                 Print("<invalid> (%1)", value);
