@@ -3663,8 +3663,8 @@ a.ck.ck-button.ck-link-toolbar__preview:has(.ck-icon) {
 .ck.ck-editor__editable.ck-blurred .ck-widget.ck-widget_selected.ck-widget_with-selection-handle:hover > .ck-widget__selection-handle:hover {
   background: var(--ck-color-widget-blurred-border);
 }
-.ck.ck-editor__editable > .ck-widget.ck-widget_with-selection-handle:first-child,
-.ck.ck-editor__editable blockquote > .ck-widget.ck-widget_with-selection-handle:first-child {
+.ck.ck-editor__editable:not(.ck-pagination-view) > .ck-widget.ck-widget_with-selection-handle:first-child,
+.ck.ck-editor__editable:not(.ck-pagination-view) blockquote > .ck-widget.ck-widget_with-selection-handle:first-child {
   margin-top: calc(1em + var(--ck-widget-handler-icon-size));
 }
 :root {
@@ -4485,6 +4485,7 @@ span.ck-widget.html-object-embed {
   caption-side: bottom;
   word-break: normal;
   overflow-wrap: anywhere;
+  break-before: avoid;
   color: var(--ck-content-color-image-caption-text);
   background-color: var(--ck-content-color-image-caption-background);
   padding: .6em;
@@ -4769,7 +4770,7 @@ span.ck-widget.html-object-embed {
 .ck-content li > p:first-of-type {
   margin-top: 0;
 }
-.ck-content li > p:only-child {
+.ck-content li > p:only-of-type {
   margin-top: 0;
   margin-bottom: 0;
 }
@@ -5868,9 +5869,6 @@ div.ck.ck-balloon-panel.ck-mention-balloon {
   margin-bottom: 0;
 }
 @media print {
-  .ck-content figure.table:not(.layout-table):has(> table) {
-    display: block;
-  }
   .ck-content figure.table:not(.layout-table) > table {
     height: initial;
   }
