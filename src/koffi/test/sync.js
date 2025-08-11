@@ -1006,8 +1006,11 @@ async function test() {
         arr = { len: 2, ptr: [0, 0] }; InitDynamicArray(arr, 4, 3);
         assert.deepEqual(arr, { len: 2, ptr: new Int32Array([4, 7]) });
 
-        arr = { len: 5, ptr: [0, 0, 0, 0, 0] }; InitDynamicArray(arr, 3, 8);
+        arr = { len: 5, ptr: new Uint32Array(5) }; InitDynamicArray(arr, 3, 8);
         assert.deepEqual(arr, { len: 5, ptr: new Int32Array([3, 11, 19, 27, 35]) });
+
+        arr = { len: 4, ptr: new Uint32Array(5) };
+        assert.throws(() => InitDynamicArray(arr, 3, 8), /Mismatched dynamic length between 'len' and actual array/);
     }
 
     // Make sure obvious dynamic-length errors get caught

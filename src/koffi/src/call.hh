@@ -138,6 +138,8 @@ private:
     template <typename T = uint8_t>
     T *AllocHeap(Size size, Size align);
 
+    bool CheckDynamicLength(Napi::Object obj, Size element, const char *countedby, Napi::Value value);
+
     void PopOutArguments();
 };
 

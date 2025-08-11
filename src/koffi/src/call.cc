@@ -523,6 +523,13 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
         const RecordMember &member = members[i];
         Napi::Value value = obj.Get(member.name);
 
+        if (member.countedby >= 0) {
+            const char *countedby = members[member.countedby].name;
+
+            if (!CheckDynamicLength(obj, member.type->ref.type->size, countedby, value)) [[unlikely]]
+                return false;
+        }
+
         if (value.IsUndefined())
             continue;
 
@@ -1357,6 +1364,45 @@ void CallData::DumpForward(const FunctionInfo *func) const
 
     DumpMemory("Stack", stack);
     DumpMemory("Heap", heap);
+}
+
+bool CallData::CheckDynamicLength(Napi::Object obj, Size element, const char *countedby, Napi::Value value)
+{
+    int64_t expected = -1;
+    int64_t len = -1;
+
+    // Get expected length
+    {
+        Napi::Value by = obj.Get(countedby);
+
+        if (!by.IsNumber() && !by.IsBigInt()) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Unexpected %1 value for dynamic length, expected number", GetValueType(instance, by));
+            return false;
+        }
+
+        expected = GetNumber<int64_t>(by);
+    }
+
+    // Get actual length
+    if (value.IsArray()) {
+        Napi::Array array = value.As<Napi::Array>();
+        len = array.Length();
+    } else if (value.IsTypedArray()) {
+        Napi::TypedArray typed = value.As<Napi::TypedArray>();
+        len = typed.ByteLength() / element;
+    } else if (value.IsArrayBuffer()) {
+        Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
+        len = buffer.ByteLength() / element;
+    } else {
+        len = !IsNullOrUndefined(value);
+    }
+
+    if (len != expected) {
+        ThrowError<Napi::Error>(env, "Mismatched dynamic length between '%1' and actual array", countedby);
+        return false;
+    }
+
+    return true;
 }
 
 static inline Napi::Value GetReferenceValue(Napi::Env env, napi_ref ref)
