@@ -241,7 +241,7 @@ static bool CheckDynamicMembers(Napi::Env env, TypeInfo *type)
             const RecordMember *by = std::find_if(type->members.begin(), type->members.end(),
                 [&](const RecordMember &member) { return TestStr(member.name, countedby); });
 
-            if (by == member.type->members.end()) {
+            if (by == type->members.end()) {
                 ThrowError<Napi::Error>(env, "Record type %1 does not have member '%2'", type->name, countedby);
                 return false;
             }

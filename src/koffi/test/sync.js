@@ -1010,6 +1010,10 @@ async function test() {
         assert.deepEqual(arr, { len: 5, ptr: new Int32Array([3, 11, 19, 27, 35]) });
     }
 
+    // Make sure obvious dynamic-length errors get caught
+    assert.throws(() => koffi.struct('InvalidStruct', { count: 'int', values: koffi.array('int', 'len') }), /Record type InvalidStruct does not have member 'len'/);
+    assert.throws(() => koffi.struct('InvalidStruct', { len: 'str', values: koffi.array('int', 'len') }), /Dynamic length member len is not an integer/);
+
     lib.unload();
 }
 
