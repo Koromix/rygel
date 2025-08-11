@@ -86,8 +86,9 @@ static inline bool IsRegularSize(Size size, Size max)
     return regular;
 }
 
+int ResolveDirections(Span<const char> str);
 const TypeInfo *ResolveType(Napi::Value value, int *out_directions = nullptr);
-const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_directions = nullptr);
+const TypeInfo *ResolveType(Napi::Env env, Span<const char> str);
 
 TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count = 1);
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);

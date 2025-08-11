@@ -164,9 +164,20 @@ const TypeInfo *PrototypeParser::ParseType(int *out_directions)
     }
     offset--;
 
+    if (out_directions && offset > start) {
+        int directions = ResolveDirections(tokens[start]);
+
+        if (directions) {
+            *out_directions = directions;
+            start++;
+        } else {
+            *out_directions = 1;
+        }
+    }
+
     while (offset >= start) {
         Span<const char> str = MakeSpan(tokens[start].ptr, tokens[offset].end() - tokens[start].ptr);
-        const TypeInfo *type = ResolveType(env, str, out_directions);
+        const TypeInfo *type = ResolveType(env, str);
 
         if (type) {
             offset++;

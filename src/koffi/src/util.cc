@@ -110,58 +110,6 @@ void MagicUnion::Setter(const Napi::CallbackInfo &info, const Napi::Value &value
     raw.Clear();
 }
 
-const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
-{
-    Napi::Env env = value.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    if (value.IsString()) {
-        std::string str = value.As<Napi::String>();
-
-        // Quick path for known types (int, float *, etc.)
-        const TypeInfo *type = instance->types_map.FindValue(str.c_str(), nullptr);
-
-        if (!type || (type->flags & (int)TypeFlag::IsIncomplete)) {
-            type = ResolveType(env, str.c_str(), out_directions);
-
-            if (!type) {
-                if (!env.IsExceptionPending()) {
-                    ThrowError<Napi::TypeError>(env, "Unknown or invalid type name '%1'", str.c_str());
-                }
-                return nullptr;
-            }
-
-            // Cache for quick future access
-            bool inserted;
-            auto bucket = instance->types_map.TrySetDefault(str.c_str(), &inserted);
-
-            if (inserted) {
-                bucket->key = DuplicateString(str.c_str(), &instance->str_alloc).ptr;
-                bucket->value = type;
-            }
-        } else if (out_directions) {
-            *out_directions = 1;
-        }
-
-        return type;
-    } else if (CheckValueTag(instance, value, &TypeInfoMarker)) {
-        Napi::External<TypeInfo> external = value.As<Napi::External<TypeInfo>>();
-        const TypeInfo *raw = external.Data();
-
-        const TypeInfo *type = AlignDown(raw, 4);
-        RG_ASSERT(type);
-
-        if (out_directions) {
-            Size delta = (uint8_t *)raw - (uint8_t *)type;
-            *out_directions = 1 + (int)delta;
-        }
-        return type;
-    } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
-        return nullptr;
-    }
-}
-
 static inline bool IsIdentifierStart(char c)
 {
     return IsAsciiAlpha(c) || c == '_';
@@ -188,35 +136,94 @@ static inline Span<const char> SplitIdentifier(Span<const char> str)
     return token;
 }
 
-const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_directions)
+int ResolveDirections(Span<const char> str)
+{
+    if (str == "_In_") {
+        return 1;
+    } else if (str == "_Out_") {
+        return 2;
+    } else if (str == "_Inout_") {
+        return 3;
+    } else {
+        return 0;
+    }
+}
+
+const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
+{
+    Napi::Env env = value.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (value.IsString()) {
+        std::string str = value.As<Napi::String>();
+        Span<const char> remain = str.c_str();
+
+        // Quick path for known types (int, float *, etc.)
+        const TypeInfo *type = instance->types_map.FindValue(remain.ptr, nullptr);
+
+        if (!type || (type->flags & (int)TypeFlag::IsIncomplete)) {
+            if (out_directions) {
+                Span<const char> prefix = SplitIdentifier(remain);
+                int directions = ResolveDirections(prefix);
+
+                if (directions) {
+                    remain = remain.Take(prefix.len, remain.len - prefix.len);
+                    remain = TrimStrLeft(remain);
+
+                    *out_directions = directions;
+                } else {
+                    *out_directions = 1;
+                }
+            }
+
+            type = ResolveType(env, remain.ptr);
+
+            if (!type) {
+                if (!env.IsExceptionPending()) {
+                    ThrowError<Napi::TypeError>(env, "Unknown or invalid type name '%1'", str.c_str());
+                }
+                return nullptr;
+            }
+
+            // Cache for quick future access
+            bool inserted;
+            auto bucket = instance->types_map.TrySetDefault(remain.ptr, &inserted);
+
+            if (inserted) {
+                bucket->key = DuplicateString(remain, &instance->str_alloc).ptr;
+                bucket->value = type;
+            }
+        } else if (out_directions) {
+            *out_directions = 1;
+        }
+
+        return type;
+    } else if (CheckValueTag(instance, value, &TypeInfoMarker)) {
+        Napi::External<TypeInfo> external = value.As<Napi::External<TypeInfo>>();
+        const TypeInfo *raw = external.Data();
+
+        const TypeInfo *type = AlignDown(raw, 4);
+        RG_ASSERT(type);
+
+        if (out_directions) {
+            Size delta = (uint8_t *)raw - (uint8_t *)type;
+            *out_directions = 1 + (int)delta;
+        }
+
+        return type;
+    } else {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
+        return nullptr;
+    }
+}
+
+const TypeInfo *ResolveType(Napi::Env env, Span<const char> str)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     // Each item can be > 0 for array or 0 for a pointer
     LocalArray<Size, 8> arrays;
     uint8_t disposables = 0;
-
-    // Consume parameter direction qualifier
-    if (out_directions) {
-        if (str.len && str[0] == '_') {
-            Span<const char> qualifier = SplitIdentifier(str);
-
-            if (qualifier == "_In_") {
-                *out_directions = 1;
-                str = str.Take(5, str.len - 5);
-            } else if (qualifier == "_Out_") {
-                *out_directions = 2;
-                str = str.Take(6, str.len - 6);
-            } else if (qualifier == "_Inout_") {
-                *out_directions = 3;
-                str = str.Take(8, str.len - 8);
-            } else {
-                *out_directions = 1;
-            }
-        } else {
-            *out_directions = 1;
-        }
-    }
 
     Span<const char> name;
     Span<const char> after;

@@ -966,6 +966,10 @@ async function test() {
         }
     }
 
+    // Regression tests for crash with missing type
+    assert.throws(() => lib.func('void MissingFunc(MissingType)'), /Unknown or invalid type name 'MissingType'/);
+    assert.throws(() => lib.func('void MissingFunc(_Out_ MissingType)'), /Unknown or invalid type name 'MissingType'/);
+
     lib.unload();
 }
 
