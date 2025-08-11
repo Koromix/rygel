@@ -232,33 +232,6 @@ static bool MapType(Napi::Env env, InstanceData *instance, const TypeInfo *type,
     return true;
 }
 
-static bool CheckDynamicMembers(Napi::Env env, TypeInfo *type)
-{
-    for (RecordMember &member: type->members) {
-        const char *countedby = member.type->countedby;
-
-        if (countedby) {
-            const RecordMember *by = std::find_if(type->members.begin(), type->members.end(),
-                [&](const RecordMember &member) { return TestStr(member.name, countedby); });
-
-            if (by == type->members.end()) {
-                ThrowError<Napi::Error>(env, "Record type %1 does not have member '%2'", type->name, countedby);
-                return false;
-            }
-            if (!IsInteger(by->type)) {
-                ThrowError<Napi::Error>(env, "Dynamic length member %1 is not an integer", countedby);
-                return false;
-            }
-
-            member.countedby = by - type->members.ptr;
-        } else {
-            member.countedby = -1;
-        }
-    }
-
-    return true;
-}
-
 static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 {
     Napi::Env env = info.Env();
@@ -399,8 +372,27 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         type->members.Append(member);
     }
 
-    if (!CheckDynamicMembers(env, type))
-        return env.Null();
+    for (RecordMember &member: type->members) {
+        const char *countedby = member.type->countedby;
+
+        if (countedby) {
+            const RecordMember *by = std::find_if(type->members.begin(), type->members.end(),
+                [&](const RecordMember &member) { return TestStr(member.name, countedby); });
+
+            if (by == type->members.end()) {
+                ThrowError<Napi::Error>(env, "Record type %1 does not have member '%2'", type->name, countedby);
+                return env.Null();
+            }
+            if (!IsInteger(by->type)) {
+                ThrowError<Napi::Error>(env, "Dynamic length member %1 is not an integer", countedby);
+                return env.Null();
+            }
+
+            member.countedby = by - type->members.ptr;
+        } else {
+            member.countedby = -1;
+        }
+    }
 
     size = (int32_t)AlignLen(size, type->align);
     if (!size) {
@@ -561,8 +553,14 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         type->members.Append(member);
     }
 
-    if (!CheckDynamicMembers(env, type))
-        return env.Null();
+    for (RecordMember &member: type->members) {
+        if (member.type->countedby) {
+            ThrowError<Napi::TypeError>(env, "Cannot use dynamic-length array or pointer inside of union");
+            return env.Null();
+        }
+
+        member.countedby = -1;
+    }
 
     size = (int32_t)AlignLen(size, type->align);
     if (!size) {
