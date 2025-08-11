@@ -483,6 +483,9 @@ Napi::External<TypeInfo> WrapType(Napi::Env env, InstanceData *instance, const T
 
 bool CanPassType(const TypeInfo *type, int directions)
 {
+    if (type->countedby)
+        return false;
+
     if (directions & 2) {
         if (type->primitive == PrimitiveKind::Pointer)
             return true;
@@ -510,6 +513,9 @@ bool CanPassType(const TypeInfo *type, int directions)
 
 bool CanReturnType(const TypeInfo *type)
 {
+    if (type->countedby)
+        return false;
+
     if (type->primitive == PrimitiveKind::Void && !TestStr(type->name, "void"))
         return false;
     if (type->primitive == PrimitiveKind::Array)

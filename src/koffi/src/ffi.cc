@@ -529,10 +529,16 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
             ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a member (maybe try %1 *)", member.type->name);
             return env.Null();
         }
+        if (member.type->countedby) {
+            ThrowError<Napi::TypeError>(env, "Cannot use dynamic-length array or pointer inside of union");
+            return env.Null();
+        }
 
         align = align ? align : member.type->align;
         size = std::max(size, member.type->size);
         type->align = std::max(type->align, align);
+
+        member.countedby = -1;
 
         if (TestStr(member.name, "_"))
             continue;
@@ -551,15 +557,6 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         }
 
         type->members.Append(member);
-    }
-
-    for (RecordMember &member: type->members) {
-        if (member.type->countedby) {
-            ThrowError<Napi::TypeError>(env, "Cannot use dynamic-length array or pointer inside of union");
-            return env.Null();
-        }
-
-        member.countedby = -1;
     }
 
     size = (int32_t)AlignLen(size, type->align);
