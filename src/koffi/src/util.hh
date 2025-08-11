@@ -198,6 +198,7 @@ static inline Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *pt
 
 Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type);
 void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type);
+Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, uint32_t len);
 Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type);
 void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref);
 void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *ref);

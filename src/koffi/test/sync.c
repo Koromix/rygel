@@ -196,6 +196,16 @@ typedef struct OpaqueStruct {
     int d;
 } OpaqueStruct;
 
+typedef struct VariableArray {
+    int len;
+    int values[];
+} VariableArray;
+
+typedef struct DynamicArray {
+    int len;
+    int *ptr;
+} DynamicArray;
+
 EXPORT int sym_int = 0;
 EXPORT const char *sym_str = NULL;
 EXPORT int sym_int3[3] = { 0, 0, 0 };
@@ -1070,4 +1080,20 @@ EXPORT void FillOpaqueStruct(unsigned int value, OpaqueStruct *opaque)
     opaque->b = (value >> 16) & 0xFF;
     opaque->c = (value >> 8) & 0xFF;
     opaque->d = (value >> 0) & 0xFF;
+}
+
+EXPORT void InitVariableArray(VariableArray *arr, int len, int start, int step)
+{
+    arr->len = len;
+
+    for (int i = 0; i < len; i++) {
+        arr->values[i] = start + i * step;
+    }
+}
+
+EXPORT void InitDynamicArray(DynamicArray *arr, int start, int step)
+{
+    for (int i = 0; i < arr->len; i++) {
+        arr->ptr[i] = start + i * step;
+    }
 }

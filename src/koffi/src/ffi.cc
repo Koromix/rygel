@@ -232,6 +232,33 @@ static bool MapType(Napi::Env env, InstanceData *instance, const TypeInfo *type,
     return true;
 }
 
+static bool CheckDynamicMembers(Napi::Env env, TypeInfo *type)
+{
+    for (RecordMember &member: type->members) {
+        const char *countedby = member.type->countedby;
+
+        if (countedby) {
+            const RecordMember *by = std::find_if(type->members.begin(), type->members.end(),
+                [&](const RecordMember &member) { return TestStr(member.name, countedby); });
+
+            if (by == member.type->members.end()) {
+                ThrowError<Napi::Error>(env, "Record type %1 does not have member '%2'", type->name, countedby);
+                return false;
+            }
+            if (!IsInteger(by->type)) {
+                ThrowError<Napi::Error>(env, "Dynamic length member %1 is not an integer", countedby);
+                return false;
+            }
+
+            member.countedby = by - type->members.ptr;
+        } else {
+            member.countedby = -1;
+        }
+    }
+
+    return true;
+}
+
 static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 {
     Napi::Env env = info.Env();
@@ -371,6 +398,9 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
         type->members.Append(member);
     }
+
+    if (!CheckDynamicMembers(env, type))
+        return env.Null();
 
     size = (int32_t)AlignLen(size, type->align);
     if (!size) {
@@ -531,6 +561,9 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         type->members.Append(member);
     }
 
+    if (!CheckDynamicMembers(env, type))
+        return env.Null();
+
     size = (int32_t)AlignLen(size, type->align);
     if (!size) {
         ThrowError<Napi::Error>(env, "Empty union '%1' is not allowed in C", type->name);
@@ -664,17 +697,15 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
         RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
         memcpy((void *)copy, type, RG_SIZE(*type));
+        copy->name = named ? DuplicateString(name.c_str(), &instance->str_alloc).ptr : copy->name;
 
-        if (named) {
-            copy->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
-        }
         if (!countedby.IsEmpty()) {
             Napi::String str = countedby.As<Napi::String>();
             copy->countedby = DuplicateString(str.Utf8Value().c_str(), &instance->str_alloc).ptr;
         }
 
         // If the insert succeeds, we cannot fail anymore
-        if (!MapType(env, instance, copy, copy->name))
+        if (named && !MapType(env, instance, copy, copy->name))
             return env.Null();
         err_guard.Disable();
 
@@ -1361,6 +1392,9 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
                     obj.Set("name", member.name);
                     obj.Set("type", WrapType(env, instance, member.type));
                     obj.Set("offset", member.offset);
+                    if (member.countedby >= 0) {
+                        obj.Set("countedBy", type->members[member.countedby].name);
+                    }
 
                     members.Set(member.name, obj);
                 }

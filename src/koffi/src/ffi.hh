@@ -159,6 +159,7 @@ struct RecordMember {
     const char *name;
     const TypeInfo *type;
     int32_t offset;
+    Size countedby;
 };
 
 struct LibraryHolder {

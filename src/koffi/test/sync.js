@@ -163,6 +163,16 @@ const VariadicIntFunc = koffi.proto('int VariadicIntFunc(int n, ...)');
 
 const OpaqueStruct = koffi.opaque('OpaqueStruct');
 
+const VariableArray = koffi.struct('VariableArray', {
+    len: 'int',
+    values: koffi.array('int', 'len')
+});
+
+const DynamicArray = koffi.struct('DynamicArray', {
+    len: 'int',
+    ptr: koffi.pointer(null, 'int', 'len')
+});
+
 main();
 
 async function main() {
@@ -294,6 +304,8 @@ async function test() {
     const ReturnBool = lib.func('bool ReturnBool(int value)');
     const ComputeWideLength = lib.func('int ComputeWideLength(const wchar_t *str)');
     const FillOpaqueStruct = lib.func('void FillOpaqueStruct(unsigned int value, _Out_ OpaqueStruct *opaque)');
+    const InitVariableArray = lib.func('void InitVariableArray(_Out_ VariableArray *arr, int len, int start, int step)');
+    const InitDynamicArray = lib.func('void InitDynamicArray(_Inout_ DynamicArray *arr, int start, int step)');
 
     free_ptr = CallFree;
 
@@ -969,6 +981,34 @@ async function test() {
     // Regression tests for crash with missing type
     assert.throws(() => lib.func('void MissingFunc(MissingType)'), /Unknown or invalid type name 'MissingType'/);
     assert.throws(() => lib.func('void MissingFunc(_Out_ MissingType)'), /Unknown or invalid type name 'MissingType'/);
+
+    // Test variable-length array output
+    {
+        let arr = {};
+
+        InitVariableArray(arr, 0, 1, 2);
+        assert.deepEqual(arr, { len: 0, values: new Int32Array([]) });
+
+        InitVariableArray(arr, 2, 4, 3);
+        assert.deepEqual(arr, { len: 2, values: new Int32Array([4, 7]) });
+
+        InitVariableArray(arr, 5, 3, 8);
+        assert.deepEqual(arr, { len: 5, values: new Int32Array([3, 11, 19, 27, 35]) });
+    }
+
+    // Test dynamic-length pointer output
+    {
+        let arr = null;
+
+        arr = { len: 0, ptr: [] }; InitDynamicArray(arr, 1, 2);
+        assert.deepEqual(arr, { len: 0, ptr: [] });
+
+        arr = { len: 2, ptr: [0, 0] }; InitDynamicArray(arr, 4, 3);
+        assert.deepEqual(arr, { len: 2, ptr: [4, 7] });
+
+        arr = { len: 5, ptr: [0, 0, 0, 0, 0] }; InitDynamicArray(arr, 3, 8);
+        assert.deepEqual(arr, { len: 5, ptr: [3, 11, 19, 27, 35] });
+    }
 
     lib.unload();
 }

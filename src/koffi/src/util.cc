@@ -430,7 +430,7 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
 
 static TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint, bool insert)
 {
-    RG_ASSERT(len > 0);
+    RG_ASSERT(len >= 0);
     RG_ASSERT(len <= instance->config.max_type_size / ref->size);
 
     TypeInfo *type = instance->types.AppendDefault();
@@ -685,6 +685,86 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
     return obj;
 }
 
+static uint32_t DecodeDynamicLength(const uint8_t *origin, const RecordMember &by)
+{
+    const uint8_t *src = origin + by.offset;
+
+    switch (by.type->primitive) {
+        case PrimitiveKind::Int8: {
+            int8_t i = *(int8_t *)src;
+            return (uint32_t)i;
+        } break;
+        case PrimitiveKind::UInt8: {
+            uint8_t u = *(uint8_t *)src;
+            return (uint32_t)u;
+        } break;
+        case PrimitiveKind::Int16: {
+            int16_t i = *(int16_t *)src;
+            return (uint32_t)i;
+        } break;
+        case PrimitiveKind::Int16S: {
+            int16_t i = ReverseBytes(*(int16_t *)src);
+            return (uint32_t)i;
+        } break;
+        case PrimitiveKind::UInt16: {
+            uint16_t u = *(uint16_t *)src;
+            return (uint32_t)u;
+        } break;
+        case PrimitiveKind::UInt16S: {
+            uint16_t u = ReverseBytes(*(uint16_t *)src);
+            return (uint32_t)u;
+        } break;
+        case PrimitiveKind::Int32: {
+            int32_t i = *(int32_t *)src;
+            return (uint32_t)i;
+        } break;
+        case PrimitiveKind::Int32S: {
+            int32_t i = ReverseBytes(*(int32_t *)src);
+            return (uint32_t)i;
+        } break;
+        case PrimitiveKind::UInt32: {
+            uint32_t u = *(uint32_t *)src;
+            return (uint32_t)u;
+        } break;
+        case PrimitiveKind::UInt32S: {
+            uint32_t u = ReverseBytes(*(uint32_t *)src);
+            return (uint32_t)u;
+        } break;
+        case PrimitiveKind::Int64: {
+            int64_t i = *(int64_t *)src;
+            return (uint32_t)i;
+        } break;
+        case PrimitiveKind::Int64S: {
+            int64_t i = ReverseBytes(*(int64_t *)src);
+            return (uint32_t)i;
+        } break;
+        case PrimitiveKind::UInt64: {
+            uint64_t u = *(uint64_t *)src;
+            return (uint32_t)u;
+        } break;
+        case PrimitiveKind::UInt64S: {
+            uint64_t u = ReverseBytes(*(uint64_t *)src);
+            return (uint32_t)u;
+        } break;
+
+        case PrimitiveKind::Void:
+        case PrimitiveKind::Bool:
+        case PrimitiveKind::String:
+        case PrimitiveKind::String16:
+        case PrimitiveKind::String32:
+        case PrimitiveKind::Pointer:
+        case PrimitiveKind::Callback:
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union:
+        case PrimitiveKind::Array:
+        case PrimitiveKind::Float32:
+        case PrimitiveKind::Float64:
+        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+    }
+
+    RG_UNREACHABLE();
+}
+
 void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
 {
     Napi::Env env = obj.Env();
@@ -792,7 +872,13 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
             case PrimitiveKind::Callback: {
                 void *ptr2 = *(void **)src;
 
-                if (ptr2) {
+                if (member.countedby >= 0) {
+                    const RecordMember &by = type->members[member.countedby];
+                    uint32_t len = DecodeDynamicLength(origin, by);
+
+                    Napi::Value value = DecodeArray(env, (const uint8_t *)ptr2, member.type, len);
+                    obj.Set(member.name, value);
+                } else if (ptr2) {
                     Napi::External<void> external = Napi::External<void>::New(env, ptr2);
                     SetValueTag(instance, external, member.type->ref.marker);
 
@@ -811,8 +897,16 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
                 obj.Set(member.name, obj2);
             } break;
             case PrimitiveKind::Array: {
-                Napi::Value value = DecodeArray(env, src, member.type);
-                obj.Set(member.name, value);
+                if (member.countedby >= 0) {
+                    const RecordMember &by = type->members[member.countedby];
+                    uint32_t len = DecodeDynamicLength(origin, by);
+
+                    Napi::Value value = DecodeArray(env, src, member.type, len);
+                    obj.Set(member.name, value);
+                } else {
+                    Napi::Value value = DecodeArray(env, src, member.type);
+                    obj.Set(member.name, value);
+                }
             } break;
             case PrimitiveKind::Float32: {
                 float f = *(float *)src;
@@ -828,13 +922,9 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
     }
 }
 
-Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type)
+Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, uint32_t len)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    RG_ASSERT(type->primitive == PrimitiveKind::Array);
-
-    uint32_t len = type->size / type->ref.type->size;
     Size offset = 0;
 
 #define POP_ARRAY(SetCode) \
@@ -1017,6 +1107,14 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
 #undef POP_ARRAY
 
     RG_UNREACHABLE();
+}
+
+Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type)
+{
+    RG_ASSERT(type->primitive == PrimitiveKind::Array);
+
+    uint32_t len = type->size / type->ref.type->size;
+    return DecodeArray(env, origin, type, len);
 }
 
 void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref)
