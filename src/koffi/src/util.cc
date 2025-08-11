@@ -411,6 +411,7 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
                 type->size = RG_SIZE(void *);
                 type->align = RG_SIZE(void *);
                 type->ref.type = ref;
+                type->hint = (ref->flags & (int)TypeFlag::HasTypedArray) ? ArrayHint::Typed : ArrayHint::Array;
             } else {
                 type->primitive = PrimitiveKind::Callback;
                 type->size = RG_SIZE(void *);

@@ -1001,13 +1001,13 @@ async function test() {
         let arr = null;
 
         arr = { len: 0, ptr: [] }; InitDynamicArray(arr, 1, 2);
-        assert.deepEqual(arr, { len: 0, ptr: [] });
+        assert.deepEqual(arr, { len: 0, ptr: new Int32Array([]) });
 
         arr = { len: 2, ptr: [0, 0] }; InitDynamicArray(arr, 4, 3);
-        assert.deepEqual(arr, { len: 2, ptr: [4, 7] });
+        assert.deepEqual(arr, { len: 2, ptr: new Int32Array([4, 7]) });
 
         arr = { len: 5, ptr: [0, 0, 0, 0, 0] }; InitDynamicArray(arr, 3, 8);
-        assert.deepEqual(arr, { len: 5, ptr: [3, 11, 19, 27, 35] });
+        assert.deepEqual(arr, { len: 5, ptr: new Int32Array([3, 11, 19, 27, 35]) });
     }
 
     lib.unload();
