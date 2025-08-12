@@ -1163,7 +1163,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                     if (!PushObject(obj, type->ref.type, ptr))
                         return false;
                 } else {
-                    MemSet(ptr, 0, type->size);
+                    MemSet(ptr, 0, type->ref.type->size);
                 }
 
                 out_kind = OutArgument::Kind::Object;
