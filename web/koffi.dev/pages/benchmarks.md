@@ -15,7 +15,7 @@ These results are detailed and explained below, and compared to node-ffi/node-ff
 
 # Linux x86_64
 
-The results presented below were measured on my x86_64 Linux machine (Intel® Core™ i5-4460).
+The results presented below were measured on my x86_64 Linux machine (AMD Ryzen™ 5 2600).
 
 ## rand results
 
@@ -27,9 +27,9 @@ This test is based around repeated calls to a simple standard C function `rand`,
 
 Benchmark     | Iteration time | Relative performance | Overhead
 ------------- | -------------- | -------------------- | --------
-rand_napi     | 700 ns         | x1.00                | (ref)
-rand_koffi    | 1152 ns        | x0.61                | +64%
-rand_node_ffi | 32750 ns       | x0.02                | +4576%
+rand_napi     | 569 ns         | x1.00                | (ref)
+rand_koffi    | 855 ns         | x0.67                | +50%
+rand_node_ffi | 58730 ns       | x0.010               | +10228%
 
 Because rand is a pretty small function, the FFI overhead is clearly visible.
 
@@ -39,9 +39,9 @@ This test is similar to the rand one, but it is based on `atoi`, which takes a s
 
 Benchmark     | Iteration time | Relative performance | Overhead
 ------------- | -------------- | -------------------- | --------
-atoi_napi     | 1028 ns        | x1.00                | (ref)
-atoi_koffi    | 1730 ns        | x0.59                | +68%
-atoi_node_ffi | 121670 ns      | x0.008               | +11738%
+atoi_napi     | 1039 ns        | x1.00                | (ref)
+atoi_koffi    | 1642 ns        | x0.63                | +58%
+atoi_node_ffi | 164790 ns      | x0.006               | +15767%
 
 Because atoi is a pretty small function, the FFI overhead is clearly visible.
 
@@ -54,10 +54,10 @@ This benchmark uses the CPU-based image drawing functions in Raylib. The calls a
 
 Benchmark          | Iteration time | Relative performance | Overhead
 ------------------ | -------------- | -------------------- | --------
-raylib_cc          | 18.5 µs        | x1.42                | -30%
-raylib_node_raylib | 26.3 µs        | x1.00                | (ref)
-raylib_koffi       | 28.0 µs        | x0.94                | +6%
-raylib_node_ffi    | 87.0 µs        | x0.30                | +230%
+raylib_cc          | 17.5 µs        | x1.34                | -25%
+raylib_node_raylib | 23.4 µs        | x1.00                | (ref)
+raylib_koffi       | 28.8 µs        | x0.81                | +23%
+raylib_node_ffi    | 103.9 µs       | x0.23                | +344%
 
 # Windows x86_64
 
