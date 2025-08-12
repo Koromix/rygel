@@ -1369,9 +1369,9 @@ void CallData::DumpForward(const FunctionInfo *func) const
 bool CallData::CheckDynamicLength(Napi::Object obj, Size element, const char *countedby, Napi::Value value)
 {
     int64_t expected = -1;
-    int64_t len = -1;
+    int64_t size = -1;
 
-    // Get expected length
+    // Get expected size
     {
         Napi::Value by = obj.Get(countedby);
 
@@ -1380,24 +1380,28 @@ bool CallData::CheckDynamicLength(Napi::Object obj, Size element, const char *co
             return false;
         }
 
-        expected = GetNumber<int64_t>(by);
+        // If we get anywhere near overflow there are other problems to worry about.
+        // So let's not worry about that.
+        expected = GetNumber<int64_t>(by) * element;
     }
 
-    // Get actual length
+    // Get actual size
     if (value.IsArray()) {
         Napi::Array array = value.As<Napi::Array>();
-        len = array.Length();
+        size = array.Length() * element;
     } else if (value.IsTypedArray()) {
         Napi::TypedArray typed = value.As<Napi::TypedArray>();
-        len = typed.ByteLength() / element;
+        size = typed.ByteLength();
     } else if (value.IsArrayBuffer()) {
         Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
-        len = buffer.ByteLength() / element;
+        size = buffer.ByteLength();
+    } else if (!IsNullOrUndefined(value)) {
+        size = element;
     } else {
-        len = !IsNullOrUndefined(value);
+        size = 0;
     }
 
-    if (len != expected) {
+    if (size != expected) {
         ThrowError<Napi::Error>(env, "Mismatched dynamic length between '%1' and actual array", countedby);
         return false;
     }
