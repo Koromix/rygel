@@ -986,7 +986,11 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         return env.Null();
     }
     if (!info[1 + dynamic].IsNumber()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for %2, expected integer", GetValueType(instance, info[1]), dynamic ? "maxLen" : "len");
+        if (info.Length() == 2 && info[1].IsString()) {
+            ThrowError<Napi::TypeError>(env, "Missing maxLen argument");
+        } else {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for %2, expected integer", GetValueType(instance, info[1]), dynamic ? "maxLen" : "len");
+        }
         return env.Null();
     }
 
