@@ -1,5 +1,52 @@
 # Changelog
 
+## 0.25.9
+
+* Better support building projects that use Yarn on Windows ([#3131](https://github.com/evanw/esbuild/issues/3131), [#3663](https://github.com/evanw/esbuild/issues/3663))
+
+    With this release, you can now use esbuild to bundle projects that use Yarn Plug'n'Play on Windows on drives other than the `C:` drive. The problem was as follows:
+
+    1. Yarn in Plug'n'Play mode on Windows stores its global module cache on the `C:` drive
+    2. Some developers put their projects on the `D:` drive
+    3. Yarn generates relative paths that use `../..` to get from the project directory to the cache directory
+    4. Windows-style paths don't support directory traversal between drives via `..` (so `D:\..` is just `D:`)
+    5. I didn't have access to a Windows machine for testing this edge case
+
+    Yarn works around this edge case by pretending Windows-style paths beginning with `C:\` are actually Unix-style paths beginning with `/C:/`, so the `../..` path segments are able to navigate across drives inside Yarn's implementation. This was broken for a long time in esbuild but I finally got access to a Windows machine and was able to debug and fix this edge case. So you should now be able to bundle these projects with esbuild.
+
+* Preserve parentheses around function expressions ([#4252](https://github.com/evanw/esbuild/issues/4252))
+
+    The V8 JavaScript VM uses parentheses around function expressions as an optimization hint to immediately compile the function. Otherwise the function would be lazily-compiled, which has additional overhead if that function is always called immediately as lazy compilation involves parsing the function twice. You can read [V8's blog post about this](https://v8.dev/blog/preparser) for more details.
+
+    Previously esbuild did not represent parentheses around functions in the AST so they were lost during compilation. With this change, esbuild will now preserve parentheses around function expressions when they are present in the original source code. This means these optimization hints will not be lost when bundling with esbuild. In addition, esbuild will now automatically add this optimization hint to immediately-invoked function expressions. Here's an example:
+
+    ```js
+    // Original code
+    const fn0 = () => 0
+    const fn1 = (() => 1)
+    console.log(fn0, function() { return fn1() }())
+
+    // Old output
+    const fn0 = () => 0;
+    const fn1 = () => 1;
+    console.log(fn0, function() {
+      return fn1();
+    }());
+
+    // New output
+    const fn0 = () => 0;
+    const fn1 = (() => 1);
+    console.log(fn0, (function() {
+      return fn1();
+    })());
+    ```
+
+    Note that you do not want to wrap all function expressions in parentheses. This optimization hint should only be used for functions that are called on initial load. Using this hint for functions that are not called on initial load will unnecessarily delay the initial load. Again, see V8's blog post linked above for details.
+
+* Update Go from 1.23.10 to 1.23.12 ([#4257](https://github.com/evanw/esbuild/issues/4257), [#4258](https://github.com/evanw/esbuild/pull/4258))
+
+    This should have no effect on existing code as this version change does not change Go's operating system support. It may remove certain false positive reports (specifically CVE-2025-4674 and CVE-2025-47907) from vulnerability scanners that only detect which version of the Go compiler esbuild uses.
+
 ## 0.25.8
 
 * Fix another TypeScript parsing edge case ([#4248](https://github.com/evanw/esbuild/issues/4248))
