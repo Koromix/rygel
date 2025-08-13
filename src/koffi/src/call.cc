@@ -517,7 +517,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
         RG_UNREACHABLE();
     }
 
-    memset(origin, 0, type->size);
+    MemSet(origin, 0, type->size);
 
     for (Size i = 0; i < members.len; i++) {
         const RecordMember &member = members[i];
