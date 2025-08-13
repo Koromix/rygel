@@ -461,7 +461,7 @@ Size CallData::PushString32Value(Napi::Value value, const char32_t **out_str32)
     return j;
 }
 
-bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin)
+bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, bool dynamic, uint8_t *origin)
 {
     RG_ASSERT(IsObject(obj));
     RG_ASSERT(type->primitive == PrimitiveKind::Record ||
@@ -517,18 +517,11 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
         RG_UNREACHABLE();
     }
 
-    memset(origin, 0, type->size);
+    MemSet(origin, 0, type->size);
 
     for (Size i = 0; i < members.len; i++) {
         const RecordMember &member = members[i];
         Napi::Value value = obj.Get(member.name);
-
-        if (member.countedby >= 0) {
-            const char *countedby = members[member.countedby].name;
-
-            if (!CheckDynamicLength(obj, member.type->ref.type->size, countedby, value)) [[unlikely]]
-                return false;
-        }
 
         if (value.IsUndefined())
             continue;
@@ -709,21 +702,28 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 }
 
                 Napi::Object obj2 = value.As<Napi::Object>();
-                if (!PushObject(obj2, member.type, dest))
+                if (!PushObject(obj2, member.type, dynamic, dest))
                     return false;
             } break;
             case PrimitiveKind::Array: {
                 if (value.IsArray()) {
                     Napi::Array array = value.As<Napi::Array>();
-                    Size len = (Size)member.type->size / member.type->ref.type->size;
+
+                    Size len = dynamic ? (Size)array.Length()
+                                       : (Size)(member.type->size / member.type->ref.type->size);
 
                     if (!PushNormalArray(array, len, member.type, dest))
                         return false;
                 } else if (IsRawBuffer(value)) {
                     Span<const uint8_t> buffer = GetRawBuffer(value);
-                    PushBuffer(buffer, member.type->size, member.type, dest);
+                    Size size = dynamic ? buffer.len : member.type->size;
+
+                    PushBuffer(buffer, member.type, size, dest);
                 } else if (value.IsString()) {
-                    if (!PushStringArray(value, member.type, dest))
+                    Napi::String str = value.As<Napi::String>();
+                    Size size = dynamic ? -1 : member.type->size;
+
+                    if (!PushStringArray(str, member.type, size, dest))
                         return false;
                 } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected array", GetValueType(instance, value));
@@ -931,7 +931,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
         case PrimitiveKind::Union: {
             PUSH_ARRAY(IsObject(value), "object", {
                 Napi::Object obj2 = value.As<Napi::Object>();
-                if (!PushObject(obj2, ref, dest))
+                if (!PushObject(obj2, ref, false, dest))
                     return false;
             });
         } break;
@@ -951,9 +951,11 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
                         return false;
                 } else if (IsRawBuffer(value)) {
                     Span<const uint8_t> buffer = GetRawBuffer(value);
-                    PushBuffer(buffer, ref->size, ref, dest);
+                    PushBuffer(buffer, ref, ref->size, dest);
                 } else if (value.IsString()) {
-                    if (!PushStringArray(value, ref, dest))
+                    Napi::String str = value.As<Napi::String>();
+
+                    if (!PushStringArray(str, ref, ref->size, dest))
                         return false;
                 } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected array", GetValueType(instance, value));
@@ -1001,7 +1003,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
     return true;
 }
 
-void CallData::PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo *type, uint8_t *origin)
+void CallData::PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, Size size, uint8_t *origin)
 {
     buffer.len = std::min(buffer.len, size);
 
@@ -1034,20 +1036,30 @@ void CallData::PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo 
 #undef SWAP
 }
 
-bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *origin)
+bool CallData::PushStringArray(Napi::String str, const TypeInfo *type, Size size, uint8_t *origin)
 {
-    RG_ASSERT(obj.IsString());
+    RG_ASSERT(str.IsString());
     RG_ASSERT(type->primitive == PrimitiveKind::Array);
 
     size_t encoded = 0;
 
     switch (type->ref.type->primitive) {
         case PrimitiveKind::Int8: {
-            napi_status status = napi_get_value_string_utf8(env, obj, (char *)origin, type->size, &encoded);
+            if (size < 0) {
+                napi_status status = napi_get_value_string_utf8(env, str, nullptr, 0, (size_t *)&size);
+                RG_ASSERT(status == napi_ok);
+            }
+
+            napi_status status = napi_get_value_string_utf8(env, str, (char *)origin, size, &encoded);
             RG_ASSERT(status == napi_ok);
         } break;
         case PrimitiveKind::Int16: {
-            napi_status status = napi_get_value_string_utf16(env, obj, (char16_t *)origin, type->size / 2, &encoded);
+            if (size < 0) {
+                napi_status status = napi_get_value_string_utf8(env, str, nullptr, 0, (size_t *)&size);
+                RG_ASSERT(status == napi_ok);
+            }
+
+            napi_status status = napi_get_value_string_utf16(env, str, (char16_t *)origin, size / 2, &encoded);
             RG_ASSERT(status == napi_ok);
 
             encoded *= 2;
@@ -1059,7 +1071,7 @@ bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *o
         } break;
     }
 
-    MemSet(origin + encoded, 0, type->size - encoded);
+    MemSet(origin + encoded, 0, size - encoded);
 
     return true;
 }
@@ -1152,7 +1164,11 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 Napi::Object obj = value.As<Napi::Object>();
                 RG_ASSERT(IsObject(value));
 
-                ptr = AllocHeap(type->ref.type->size, 16);
+                Size size = ComputeDynamicSize(type->ref.type, obj, directions & 1);
+                if (size < 0) [[unlikely]]
+                    return false;
+
+                ptr = AllocHeap(size, 16);
 
                 if (type->ref.type->primitive == PrimitiveKind::Union &&
                         (directions & 2) && !CheckValueTag(instance, obj, &MagicUnionMarker)) [[unlikely]] {
@@ -1161,10 +1177,10 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 }
 
                 if (directions & 1) {
-                    if (!PushObject(obj, type->ref.type, ptr))
+                    if (!PushObject(obj, type->ref.type, true, ptr))
                         return false;
                 } else {
-                    MemSet(ptr, 0, type->size);
+                    MemSet(ptr, 0, size);
                 }
 
                 out_kind = OutArgument::Kind::Object;
@@ -1366,47 +1382,111 @@ void CallData::DumpForward(const FunctionInfo *func) const
     DumpMemory("Heap", heap);
 }
 
-bool CallData::CheckDynamicLength(Napi::Object obj, Size element, const char *countedby, Napi::Value value)
+Size CallData::ComputeDynamicSize(const TypeInfo *type, Napi::Value value, bool input)
 {
-    int64_t expected = -1;
-    int64_t size = -1;
+    Size size = type->size;
 
-    // Get expected size
-    {
-        Napi::Value by = obj.Get(countedby);
+    if (type->flags & (int)TypeFlag::HasDynamicSize) {
+        switch (type->primitive) {
+            case PrimitiveKind::Bool:
+            case PrimitiveKind::Void:
+            case PrimitiveKind::Int8:
+            case PrimitiveKind::UInt8:
+            case PrimitiveKind::Int16:
+            case PrimitiveKind::Int16S:
+            case PrimitiveKind::UInt16:
+            case PrimitiveKind::UInt16S:
+            case PrimitiveKind::Int32:
+            case PrimitiveKind::Int32S:
+            case PrimitiveKind::UInt32:
+            case PrimitiveKind::UInt32S:
+            case PrimitiveKind::Int64:
+            case PrimitiveKind::Int64S:
+            case PrimitiveKind::UInt64:
+            case PrimitiveKind::UInt64S:
+            case PrimitiveKind::String:
+            case PrimitiveKind::String16:
+            case PrimitiveKind::String32:
+            case PrimitiveKind::Pointer:
+            case PrimitiveKind::Union:
+            case PrimitiveKind::Float32:
+            case PrimitiveKind::Float64:
+            case PrimitiveKind::Prototype:
+            case PrimitiveKind::Callback: RG_UNREACHABLE();
 
-        if (!by.IsNumber() && !by.IsBigInt()) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Unexpected %1 value for dynamic length, expected number", GetValueType(instance, by));
-            return false;
+            case PrimitiveKind::Record: {
+                if (!IsObject(value)) [[unlikely]]
+                    break;
+
+                const RecordMember &member = type->members[type->members.len - 1];
+                const char *countedby = type->members[member.countedby].name;
+                RG_ASSERT(member.type->primitive == PrimitiveKind::Array);
+
+                Napi::Object obj = value.As<Napi::Object>();
+                Napi::Value by = obj.Get(countedby);
+
+                if (!by.IsNumber() && !by.IsBigInt()) [[unlikely]] {
+                    if (obj.Has(countedby)) {
+                        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for dynamic length, expected number", GetValueType(instance, by));
+                    } else {
+                        ThrowError<Napi::Error>(env, "Missing dynamic length value '%1'", countedby);
+                    }
+                    return -1;
+                }
+
+                // If we get anywhere near overflow there are other problems to worry about.
+                // So let's not worry about that.
+                Size expected = GetNumber<Size>(by) * member.type->ref.type->size;
+
+                if (input) {
+                    Napi::Value sub = obj.Get(member.name);
+                    Size ret = ComputeDynamicSize(member.type, sub, input);
+
+                    if (ret < 0) [[unlikely]]
+                        return -1;
+                    if (ret != expected) {
+                        ThrowError<Napi::Error>(env, "Mismatched dynamic length between '%1' and actual array", countedby);
+                        return -1;
+                    }
+                }
+
+                size += expected;
+            } break;
+
+            case PrimitiveKind::Array: {
+                if (value.IsArray()) {
+                    Napi::Array array = value.As<Napi::Array>();
+                    size = std::max(size, (Size)array.Length() * type->ref.type->size);
+                } else if (IsRawBuffer(value)) {
+                    Span<const uint8_t> buffer = GetRawBuffer(value);
+                    size = std::max(size, buffer.len);
+                } else if (value.IsString()) {
+                    Napi::String str = value.As<Napi::String>();
+                    size_t encoded = 0;
+
+                    switch (type->ref.type->primitive) {
+                        case PrimitiveKind::Int8: {
+                            napi_status status = napi_get_value_string_utf8(env, str, nullptr, 0, &encoded);
+                            RG_ASSERT(status == napi_ok);
+                        } break;
+
+                        case PrimitiveKind::Int16: {
+                            napi_status status = napi_get_value_string_utf16(env, str, nullptr, 0, &encoded);
+                            RG_ASSERT(status == napi_ok);
+
+                            encoded *= 2;
+                        } break;
+
+                        default: {} break;
+                    }
+
+                    size = std::max(size, (Size)encoded);
+                }
+            } break;
         }
-
-        // If we get anywhere near overflow there are other problems to worry about.
-        // So let's not worry about that.
-        expected = GetNumber<int64_t>(by) * element;
     }
 
-    // Get actual size
-    if (value.IsArray()) {
-        Napi::Array array = value.As<Napi::Array>();
-        size = array.Length() * element;
-    } else if (value.IsTypedArray()) {
-        Napi::TypedArray typed = value.As<Napi::TypedArray>();
-        size = typed.ByteLength();
-    } else if (value.IsArrayBuffer()) {
-        Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
-        size = buffer.ByteLength();
-    } else if (!IsNullOrUndefined(value)) {
-        size = element;
-    } else {
-        size = 0;
-    }
-
-    if (size != expected) {
-        ThrowError<Napi::Error>(env, "Mismatched dynamic length between '%1' and actual array", countedby);
-        return false;
-    }
-
-    return true;
+    return size;
 }
 
 static inline Napi::Value GetReferenceValue(Napi::Env env, napi_ref ref)

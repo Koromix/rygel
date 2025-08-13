@@ -368,7 +368,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 Napi::Object obj = value.As<Napi::Object>();
 
                 if (param.vec_count) {
-                    if (!PushObject(obj, param.type, (uint8_t *)vec_ptr))
+                    if (!PushObject(obj, param.type, false, (uint8_t *)vec_ptr))
                         return false;
                     vec_ptr += param.vec_count;
                 } else if (param.gpr_count) {
@@ -377,7 +377,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     int16_t align = (param.type->align <= 4) ? 4 : 8;
                     gpr_ptr = AlignUp(gpr_ptr, align);
 
-                    if (!PushObject(obj, param.type, (uint8_t *)gpr_ptr))
+                    if (!PushObject(obj, param.type, false, (uint8_t *)gpr_ptr))
                         return false;
 
                     gpr_ptr += param.gpr_count;
@@ -386,7 +386,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     int16_t align = (param.type->align <= 4) ? 4 : 8;
                     args_ptr = AlignUp(args_ptr, align);
 
-                    if (!PushObject(obj, param.type, (uint8_t *)args_ptr))
+                    if (!PushObject(obj, param.type, false, (uint8_t *)args_ptr))
                         return false;
                     args_ptr += (param.type->size + 3) / 4;
                 }
@@ -944,7 +944,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
                 ptr = AllocHeap(type->ref.type->size, 16);
 
-                if (!PushObject(obj, type->ref.type, ptr))
+                if (!PushObject(obj, type->ref.type, false, ptr))
                     return;
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
@@ -965,13 +965,13 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             Napi::Object obj = value.As<Napi::Object>();
 
             if (return_ptr) {
-                if (!PushObject(obj, type, return_ptr))
+                if (!PushObject(obj, type, false, return_ptr))
                     return;
                 out_reg->r0 = (uint32_t)return_ptr;
             } else if (proto->ret.vec_count) {
-                PushObject(obj, type, (uint8_t *)&out_reg->d0);
+                PushObject(obj, type, false, (uint8_t *)&out_reg->d0);
             } else {
-                PushObject(obj, type, (uint8_t *)&out_reg->r0);
+                PushObject(obj, type, false, (uint8_t *)&out_reg->r0);
             }
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;

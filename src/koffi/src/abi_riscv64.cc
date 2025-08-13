@@ -281,7 +281,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     uint64_t regs[2] = { 0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull };
                     {
                         uint8_t buf[16] = {};
-                        if (!PushObject(obj, param.type, buf))
+                        if (!PushObject(obj, param.type, false, buf))
                             return false;
                         ExpandPair(buf, param.reg_size[0], param.reg_size[1], regs);
                     }
@@ -320,7 +320,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                         *(uint8_t **)(args_ptr++) = ptr;
                     }
 
-                    if (!PushObject(obj, param.type, ptr))
+                    if (!PushObject(obj, param.type, false, ptr))
                         return false;
                 }
             } break;
@@ -832,7 +832,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
                 ptr = AllocHeap(type->ref.type->size, 16);
 
-                if (!PushObject(obj, type->ref.type, ptr))
+                if (!PushObject(obj, type->ref.type, false, ptr))
                     return;
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
@@ -853,14 +853,14 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             Napi::Object obj = value.As<Napi::Object>();
 
             if (return_ptr) {
-                if (!PushObject(obj, type, return_ptr))
+                if (!PushObject(obj, type, false, return_ptr))
                     return;
                 out_reg->a0 = (uint64_t)return_ptr;
             } else {
                 uint64_t regs[2] = { 0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull };
                 {
                     uint8_t buf[16] = {};
-                    if (!PushObject(obj, type, buf))
+                    if (!PushObject(obj, type, false, buf))
                         return;
                     ExpandPair(buf, proto->ret.reg_size[0], proto->ret.reg_size[1], regs);
                 }

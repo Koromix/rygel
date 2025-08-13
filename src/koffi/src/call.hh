@@ -120,10 +120,10 @@ public:
     Size PushString16Value(Napi::Value value, const char16_t **out_str16);
     bool PushString32(Napi::Value value, int directions, const char32_t **out_str32);
     Size PushString32Value(Napi::Value value, const char32_t **out_str32);
-    bool PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin);
+    bool PushObject(Napi::Object obj, const TypeInfo *type, bool dynamic, uint8_t *origin);
     bool PushNormalArray(Napi::Array array, Size len, const TypeInfo *type, uint8_t *origin);
-    void PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo *type, uint8_t *origin);
-    bool PushStringArray(Napi::Value value, const TypeInfo *type, uint8_t *origin);
+    void PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, Size size, uint8_t *origin);
+    bool PushStringArray(Napi::String str, const TypeInfo *type, Size size, uint8_t *origin);
     bool PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr);
     bool PushCallback(Napi::Value value, const TypeInfo *type, void **out_ptr);
     Size PushIndirectString(Napi::Array array, const TypeInfo *ref, uint8_t **out_ptr);
@@ -138,7 +138,7 @@ private:
     template <typename T = uint8_t>
     T *AllocHeap(Size size, Size align);
 
-    bool CheckDynamicLength(Napi::Object obj, Size element, const char *countedby, Napi::Value value);
+    Size ComputeDynamicSize(const TypeInfo *type, Napi::Value value, bool input);
 
     void PopOutArguments();
 };

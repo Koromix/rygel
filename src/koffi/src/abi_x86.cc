@@ -263,11 +263,11 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
                 if (param.fast) {
                     uint8_t *ptr = (uint8_t *)(fast_ptr++);
-                    if (!PushObject(obj, param.type, ptr))
+                    if (!PushObject(obj, param.type, false, ptr))
                         return false;
                 } else {
                     uint8_t *ptr = (uint8_t *)args_ptr;
-                    if (!PushObject(obj, param.type, ptr))
+                    if (!PushObject(obj, param.type, false, ptr))
                         return false;
                     args_ptr = (uint32_t *)AlignUp(ptr + param.type->size, 4);
                 }
@@ -818,7 +818,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
 
                 ptr = AllocHeap(type->ref.type->size, 16);
 
-                if (!PushObject(obj, type->ref.type, ptr))
+                if (!PushObject(obj, type->ref.type, false, ptr))
                     return;
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
@@ -839,11 +839,11 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
             Napi::Object obj = value.As<Napi::Object>();
 
             if (return_ptr) {
-                if (!PushObject(obj, type, return_ptr))
+                if (!PushObject(obj, type, false, return_ptr))
                     return;
                 out_reg->eax = (uint32_t)return_ptr;
             } else {
-                PushObject(obj, type, (uint8_t *)&out_reg->eax);
+                PushObject(obj, type, false, (uint8_t *)&out_reg->eax);
             }
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;

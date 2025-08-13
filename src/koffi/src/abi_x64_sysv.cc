@@ -354,7 +354,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     RG_ASSERT(param.type->size <= 16);
 
                     uint64_t buf[2] = {};
-                    if (!PushObject(obj, param.type, (uint8_t *)buf))
+                    if (!PushObject(obj, param.type, false, (uint8_t *)buf))
                         return false;
 
                     if (param.gpr_first) {
@@ -374,7 +374,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     }
                 } else if (param.use_memory) {
                     args_ptr = AlignUp(args_ptr, param.type->align);
-                    if (!PushObject(obj, param.type, (uint8_t *)args_ptr))
+                    if (!PushObject(obj, param.type, false, (uint8_t *)args_ptr))
                         return false;
                     args_ptr += (param.type->size + 7) / 8;
                 }
@@ -857,7 +857,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
                 ptr = AllocHeap(type->ref.type->size, 16);
 
-                if (!PushObject(obj, type->ref.type, ptr))
+                if (!PushObject(obj, type->ref.type, false, ptr))
                     return;
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
@@ -878,14 +878,14 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             Napi::Object obj = value.As<Napi::Object>();
 
             if (return_ptr) {
-                if (!PushObject(obj, type, return_ptr))
+                if (!PushObject(obj, type, false, return_ptr))
                     return;
                 out_reg->rax = (uint64_t)return_ptr;
             } else {
                 RG_ASSERT(type->size <= 16);
 
                 uint8_t buf[16] = {};
-                if (!PushObject(obj, type, buf))
+                if (!PushObject(obj, type, false, buf))
                     return;
 
                 if (proto->ret.gpr_first && !proto->ret.xmm_count) {

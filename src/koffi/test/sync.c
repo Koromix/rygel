@@ -1086,8 +1086,15 @@ EXPORT void InitVariableArray(VariableArray *arr, int len, int start, int step)
 {
     arr->len = len;
 
-    for (int i = 0; i < len; i++) {
+    for (int i = 0; i < arr->len; i++) {
         arr->values[i] = start + i * step;
+    }
+}
+
+EXPORT void MultArray(VariableArray *arr, int mult)
+{
+    for (int i = 0; i < arr->len; i++) {
+        arr->values[i] *= mult;
     }
 }
 

@@ -110,7 +110,8 @@ typedef void DisposeFunc (Napi::Env env, const TypeInfo *type, const void *ptr);
 enum class TypeFlag {
     IsIncomplete = 1 << 0,
     HasTypedArray = 1 << 1,
-    IsCharLike = 1 << 2
+    IsCharLike = 1 << 2,
+    HasDynamicSize = 1 << 3
 };
 
 enum class ArrayHint {

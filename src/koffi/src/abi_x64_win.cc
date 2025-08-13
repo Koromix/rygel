@@ -174,7 +174,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 }
 
                 Napi::Object obj = value.As<Napi::Object>();
-                if (!PushObject(obj, param.type, ptr))
+                if (!PushObject(obj, param.type, false, ptr))
                     return false;
             } break;
             case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
@@ -682,7 +682,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
                 ptr = AllocHeap(type->ref.type->size, 16);
 
-                if (!PushObject(obj, type->ref.type, ptr))
+                if (!PushObject(obj, type->ref.type, false, ptr))
                     return;
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
@@ -703,11 +703,11 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             Napi::Object obj = value.As<Napi::Object>();
 
             if (return_ptr) {
-                if (!PushObject(obj, type, return_ptr))
+                if (!PushObject(obj, type, false, return_ptr))
                     return;
                 out_reg->rax = (uint64_t)return_ptr;
             } else {
-                PushObject(obj, type, (uint8_t *)&out_reg->rax);
+                PushObject(obj, type, false, (uint8_t *)&out_reg->rax);
             }
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;

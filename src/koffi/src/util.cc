@@ -906,7 +906,12 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
             case PrimitiveKind::Array: {
                 if (member.countedby >= 0) {
                     const RecordMember &by = type->members[member.countedby];
+
                     uint32_t len = DecodeDynamicLength(origin, by);
+                    uint32_t max = member.size / member.ref->type->size;
+
+                    // Silently truncate result
+                    len = std::min(len, max);
 
                     Napi::Value value = DecodeArray(env, src, member.type, len);
                     obj.Set(member.name, value);
@@ -1628,7 +1633,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
 
             Napi::Object obj = value.As<Napi::Object>();
 
-            if (!call.PushObject(obj, type, origin))
+            if (!call.PushObject(obj, type, false, origin))
                 return false;
         } break;
         case PrimitiveKind::Array: {
@@ -1640,9 +1645,11 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
                     return false;
             } else if (IsRawBuffer(value)) {
                 Span<const uint8_t> buffer = GetRawBuffer(value);
-                call.PushBuffer(buffer, type->size, type, origin);
+                call.PushBuffer(buffer, type, type->size, origin);
             } else if (value.IsString()) {
-                if (!call.PushStringArray(value, type, origin))
+                Napi::String str = value.As<Napi::String>();
+
+                if (!call.PushStringArray(str, type, type->size, origin))
                     return false;
             } else {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected array", GetValueType(instance, value));

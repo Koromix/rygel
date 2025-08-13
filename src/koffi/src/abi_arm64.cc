@@ -448,7 +448,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 if (param.vec_count) { // HFA
                     uint8_t *ptr = (uint8_t *)vec_ptr;
 
-                    if (!PushObject(obj, param.type, ptr))
+                    if (!PushObject(obj, param.type, false, ptr))
                         return false;
                     ExpandFloats(ptr, param.vec_count, param.vec_bytes);
 
@@ -457,14 +457,14 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     if (param.gpr_count) {
                         RG_ASSERT(param.type->align <= 8);
 
-                        if (!PushObject(obj, param.type, (uint8_t *)gpr_ptr))
+                        if (!PushObject(obj, param.type, false, (uint8_t *)gpr_ptr))
                             return false;
                         gpr_ptr += param.gpr_count;
                     } else if (param.type->size) {
 #if defined(__APPLE__)
                         args_ptr = AlignUp(args_ptr, 8);
 #endif
-                        if (!PushObject(obj, param.type, (uint8_t *)args_ptr))
+                        if (!PushObject(obj, param.type, false, (uint8_t *)args_ptr))
                             return false;
                         args_ptr += (param.type->size + 7) / 8;
                     }
@@ -483,7 +483,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                         *(uint8_t **)(args_ptr++) = ptr;
                     }
 
-                    if (!PushObject(obj, param.type, ptr))
+                    if (!PushObject(obj, param.type, false, ptr))
                         return false;
                 }
             } break;
@@ -1243,7 +1243,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
                 ptr = AllocHeap(type->ref.type->size, 16);
 
-                if (!PushObject(obj, type->ref.type, ptr))
+                if (!PushObject(obj, type->ref.type, false, ptr))
                     return;
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
@@ -1264,16 +1264,16 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             Napi::Object obj = value.As<Napi::Object>();
 
             if (return_ptr) {
-                if (!PushObject(obj, type, return_ptr))
+                if (!PushObject(obj, type, false, return_ptr))
                     return;
                 out_reg->x0 = (uint64_t)return_ptr;
             } else if (proto->ret.vec_count) { // HFA
                 uint8_t *ptr = (uint8_t *)&out_reg->d0;
 
                 ExpandFloats(ptr, proto->ret.vec_count, proto->ret.vec_bytes);
-                PushObject(obj, type, ptr);
+                PushObject(obj, type, false, ptr);
             } else {
-                PushObject(obj, type, (uint8_t *)&out_reg->x0);
+                PushObject(obj, type, false, (uint8_t *)&out_reg->x0);
             }
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;

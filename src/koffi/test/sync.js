@@ -305,6 +305,7 @@ async function test() {
     const ComputeWideLength = lib.func('int ComputeWideLength(const wchar_t *str)');
     const FillOpaqueStruct = lib.func('void FillOpaqueStruct(unsigned int value, _Out_ OpaqueStruct *opaque)');
     const InitVariableArray = lib.func('void InitVariableArray(_Out_ VariableArray *arr, int len, int start, int step)');
+    const MultArray = lib.func('void MultArray(_Inout_ VariableArray *arr, int mult)');
     const InitDynamicArray = lib.func('void InitDynamicArray(_Inout_ DynamicArray *arr, int start, int step)');
 
     free_ptr = CallFree;
@@ -986,13 +987,16 @@ async function test() {
     {
         let arr = {};
 
-        InitVariableArray(arr, 0, 1, 2);
+        arr.len = 0;
+        InitVariableArray(arr, arr.len, 1, 2);
         assert.deepEqual(arr, { len: 0, values: new Int32Array([]) });
 
-        InitVariableArray(arr, 2, 4, 3);
+        arr.len = 2;
+        InitVariableArray(arr, arr.len, 4, 3);
         assert.deepEqual(arr, { len: 2, values: new Int32Array([4, 7]) });
 
-        InitVariableArray(arr, 5, 3, 8);
+        arr.len = 5;
+        InitVariableArray(arr, arr.len, 3, 8);
         assert.deepEqual(arr, { len: 5, values: new Int32Array([3, 11, 19, 27, 35]) });
     }
 
@@ -1008,9 +1012,17 @@ async function test() {
 
         arr = { len: 5, ptr: new Uint32Array(5) }; InitDynamicArray(arr, 3, 8);
         assert.deepEqual(arr, { len: 5, ptr: new Int32Array([3, 11, 19, 27, 35]) });
+    }
 
-        arr = { len: 4, ptr: new Uint32Array(5) };
-        assert.throws(() => InitDynamicArray(arr, 3, 8), /Mismatched dynamic length between 'len' and actual array/);
+    // Check encoding of dynamic-sized struct
+    {
+        let arr = { len: 4, values: new Int32Array([3, 12, 21, 30]) };
+
+        MultArray(arr, 2);
+        assert.deepEqual(arr, { len: 4, values: new Int32Array([6, 24, 42, 60]) });
+
+        arr.len = 5;
+        assert.throws(() => MultArray(arr, 2), /Mismatched dynamic length between 'len' and actual array/);
     }
 
     // Make sure obvious dynamic-length errors get caught
