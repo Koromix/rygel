@@ -715,13 +715,11 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             case PrimitiveKind::Array: {
                 if (value.IsArray()) {
                     Napi::Array array = value.As<Napi::Array>();
-                    Size len = (Size)member.type->size / member.type->ref.type->size;
-
-                    if (!PushNormalArray(array, len, member.type, dest))
+                    if (!PushNormalArray(array, member.type, member.type->size, dest))
                         return false;
                 } else if (IsRawBuffer(value)) {
                     Span<const uint8_t> buffer = GetRawBuffer(value);
-                    PushBuffer(buffer, member.type->size, member.type, dest);
+                    PushBuffer(buffer, member.type, dest);
                 } else if (value.IsString()) {
                     if (!PushStringArray(value, member.type, dest))
                         return false;
@@ -763,15 +761,18 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
     return true;
 }
 
-bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type, uint8_t *origin)
+bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size size, uint8_t *origin)
 {
     RG_ASSERT(array.IsArray());
 
     const TypeInfo *ref = type->ref.type;
+    Size len = (Size)array.Length();
+    Size available = len * ref->size;
 
-    if (array.Length() != (size_t)len) [[unlikely]] {
-        ThrowError<Napi::Error>(env, "Expected array of length %1, got %2", len, array.Length());
-        return false;
+    if (available > size) {
+        len = size / ref->size;
+    } else {
+        MemSet(origin + available, 0, size - available);
     }
 
     Size offset = 0;
@@ -945,13 +946,11 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
 
                 if (value.IsArray()) {
                     Napi::Array array2 = value.As<Napi::Array>();
-                    Size len2 = (Size)ref->size / ref->ref.type->size;
-
-                    if (!PushNormalArray(array2, len2, ref, dest))
+                    if (!PushNormalArray(array2, ref, (Size)ref->size, dest))
                         return false;
                 } else if (IsRawBuffer(value)) {
                     Span<const uint8_t> buffer = GetRawBuffer(value);
-                    PushBuffer(buffer, ref->size, ref, dest);
+                    PushBuffer(buffer, ref, dest);
                 } else if (value.IsString()) {
                     if (!PushStringArray(value, ref, dest))
                         return false;
@@ -1001,13 +1000,13 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
     return true;
 }
 
-void CallData::PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo *type, uint8_t *origin)
+void CallData::PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, uint8_t *origin)
 {
-    buffer.len = std::min(buffer.len, size);
+    buffer.len = std::min(buffer.len, (Size)type->size);
 
     // Go fast brrrrrrr :)
-    MemCpy(origin, buffer.ptr, (size_t)buffer.len);
-    MemSet(origin + buffer.len, 0, (size_t)(size - buffer.len));
+    MemCpy(origin, buffer.ptr, buffer.len);
+    MemSet(origin + buffer.len, 0, (Size)type->size - buffer.len);
 
 #define SWAP(CType) \
         do { \
@@ -1131,7 +1130,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                     ptr = AllocHeap(size, 16);
 
                     if (directions & 1) {
-                        if (!PushNormalArray(array, len, type, ptr))
+                        if (!PushNormalArray(array, type, size, ptr))
                             return false;
                     } else {
                         MemSet(ptr, 0, size);

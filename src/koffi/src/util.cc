@@ -906,7 +906,12 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
             case PrimitiveKind::Array: {
                 if (member.countedby >= 0) {
                     const RecordMember &by = type->members[member.countedby];
+
                     uint32_t len = DecodeDynamicLength(origin, by);
+                    uint32_t max = member.type->size / member.type->ref.type->size;
+
+                    // Silently truncate result
+                    len = std::min(len, max);
 
                     Napi::Value value = DecodeArray(env, src, member.type, len);
                     obj.Set(member.name, value);
@@ -1634,13 +1639,11 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
         case PrimitiveKind::Array: {
             if (value.IsArray()) {
                 Napi::Array array = value.As<Napi::Array>();
-                Size len = (Size)type->size / type->ref.type->size;
-
-                if (!call.PushNormalArray(array, len, type, origin))
+                if (!call.PushNormalArray(array, type, type->size, origin))
                     return false;
             } else if (IsRawBuffer(value)) {
                 Span<const uint8_t> buffer = GetRawBuffer(value);
-                call.PushBuffer(buffer, type->size, type, origin);
+                call.PushBuffer(buffer, type, origin);
             } else if (value.IsString()) {
                 if (!call.PushStringArray(value, type, origin))
                     return false;

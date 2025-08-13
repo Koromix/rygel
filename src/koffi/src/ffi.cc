@@ -348,6 +348,8 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         size = member.offset + member.type->size;
         type->align = std::max(type->align, align);
 
+        member.countedby = -1;
+
         if (size > instance->config.max_type_size) {
             ThrowError<Napi::Error>(env, "Struct '%1' size is too high (max = %2)", type->name, FmtMemSize(size));
             return env.Null();
@@ -372,8 +374,9 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         type->members.Append(member);
     }
 
-    for (RecordMember &member: type->members) {
-        const char *countedby = member.type->countedby;
+    for (Size i = 0; i < type->members.len; i++) {
+        RecordMember *member = &type->members[i];
+        const char *countedby = member->type->countedby;
 
         if (countedby) {
             const RecordMember *by = std::find_if(type->members.begin(), type->members.end(),
@@ -387,10 +390,12 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
                 ThrowError<Napi::Error>(env, "Dynamic length member %1 is not an integer", countedby);
                 return env.Null();
             }
+            if (member->type->primitive == PrimitiveKind::Array && i < type->members.len - 1) {
+                ThrowError<Napi::Error>(env, "Flexible array '%1' is not the last member of struct", member->name);
+                return env.Null();
+            }
 
-            member.countedby = by - type->members.ptr;
-        } else {
-            member.countedby = -1;
+            member->countedby = by - type->members.ptr;
         }
     }
 
@@ -966,7 +971,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 2) {
-        ThrowError<Napi::TypeError>(env, "Expected 2 to 3 arguments, got %1", info.Length());
+        ThrowError<Napi::TypeError>(env, "Expected 2 to 4 arguments, got %1", info.Length());
         return env.Null();
     }
 
@@ -974,26 +979,21 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     if (!ref)
         return env.Null();
 
-    int64_t len = 0;
-    Napi::Value countedby;
+    bool dynamic = (info.Length() >= 3) && info[1].IsString();
 
-    if (info[1].IsNumber()) {
-        len = info[1].As<Napi::Number>().Int64Value();
-    } else if (info[1].IsString()) {
-        countedby = info[1];
-
-        if (info.Length() >= 4 && !IsNullOrUndefined(info[3])) {
-            len = info[3].As<Napi::Number>().Int64Value();
-        }
-    } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected integer or string", GetValueType(instance, info[1]));
+    if (dynamic && !info[1].IsString()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for countedBy, expected string", GetValueType(instance, info[1]));
+        return env.Null();
+    }
+    if (!info[1 + dynamic].IsNumber()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for %2, expected integer", GetValueType(instance, info[1]), dynamic ? "maxLen" : "len");
+        return env.Null();
     }
 
-    if (countedby.IsEmpty() && len <= 0) {
+    int64_t len = info[1 + dynamic].As<Napi::Number>().Int64Value();
+
+    if (len <= 0) {
         ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
-        return env.Null();
-    } else if (len < 0) {
-        ThrowError<Napi::TypeError>(env, "Array length must be positive");
         return env.Null();
     }
     if (len > instance->config.max_type_size / ref->size) {
@@ -1003,25 +1003,25 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
 
     TypeInfo *type = nullptr;
 
-    if (info.Length() >= 3 && !IsNullOrUndefined(info[2])) {
-        if (!info[2].IsString()) {
+    if (info.Length() >= 3 + dynamic && !IsNullOrUndefined(info[2 + dynamic])) {
+        if (!info[2 + dynamic].IsString()) {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for hint, expected string", GetValueType(instance, info[2]));
             return env.Null();
         }
 
-        std::string to = info[2].As<Napi::String>();
+        std::string str = info[2 + dynamic].As<Napi::String>();
         ArrayHint hint = {};
 
-        if (to == "Typed" || to == "typed") {
+        if (str == "Typed" || str == "typed") {
             if (!(ref->flags & (int)TypeFlag::HasTypedArray)) {
                 ThrowError<Napi::Error>(env, "Array hint 'Typed' cannot be used with type %1", ref->name);
                 return env.Null();
             }
 
             hint = ArrayHint::Typed;
-        } else if (to == "Array" || to == "array") {
+        } else if (str == "Array" || str == "array") {
             hint = ArrayHint::Array;
-        } else if (to == "String" || to == "string") {
+        } else if (str == "String" || str == "string") {
             if (ref->primitive != PrimitiveKind::Int8 && ref->primitive != PrimitiveKind::Int16) {
                 ThrowError<Napi::Error>(env, "Array hint 'String' can only be used with 8 and 16-bit signed integer types");
                 return env.Null();
@@ -1038,8 +1038,8 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         type = MakeArrayType(instance, ref, len);
     }
 
-    if (!countedby.IsEmpty()) {
-        Napi::String str = countedby.As<Napi::String>();
+    if (dynamic) {
+        Napi::String str = info[1].As<Napi::String>();
         type->countedby = DuplicateString(str.Utf8Value().c_str(), &instance->str_alloc).ptr;
     }
 
