@@ -105,7 +105,6 @@ export class Union {
 }
 
 export function array(ref: TypeSpec, len: number, hint?: ArrayHint | null): IKoffiCType;
-export function array(ref: TypeSpec, countedBy: string, hint?: ArrayHint | null): IKoffiCType;
 export function array(ref: TypeSpec, countedBy: string, maxLen: number, hint?: ArrayHint | null): IKoffiCType;
 
 export function opaque(name: string | null | undefined): IKoffiCType;
