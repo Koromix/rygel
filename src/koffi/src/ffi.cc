@@ -1007,7 +1007,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
 
     TypeInfo *type = nullptr;
 
-    if (info.Length() >= 3 + dynamic && !IsNullOrUndefined(info[2 + dynamic])) {
+    if (info.Length() >= 3u + dynamic && !IsNullOrUndefined(info[2 + dynamic])) {
         if (!info[2 + dynamic].IsString()) {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for hint, expected string", GetValueType(instance, info[2]));
             return env.Null();
@@ -2091,7 +2091,7 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
 
     bool has_offset = (info.Length() >= 2 && info[1].IsNumber());
-    bool has_len = (info.Length() >= 3u + has_offset && info[2u + has_offset].IsNumber());
+    bool has_len = (info.Length() >= 3u + has_offset && info[2 + has_offset].IsNumber());
 
     if (info.Length() < 2u + has_offset) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 to 4 arguments, got %2", 2 + has_offset, info.Length());
@@ -2106,7 +2106,7 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
 
     if (has_len) {
-        Size len = info[2u + has_offset].As<Napi::Number>();
+        Size len = info[2 + has_offset].As<Napi::Number>();
 
         Napi::Value ret = Decode(value, offset, type, &len);
         return ret;
@@ -2168,7 +2168,7 @@ static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
 
     bool has_offset = (info.Length() >= 2 && info[1].IsNumber());
-    bool has_len = (info.Length() >= 4u + has_offset && info[3u + has_offset].IsNumber());
+    bool has_len = (info.Length() >= 4u + has_offset && info[3 + has_offset].IsNumber());
 
     if (info.Length() < 3u + has_offset) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 to 5 arguments, got %2", 3 + has_offset, info.Length());
@@ -2181,10 +2181,10 @@ static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
 
     Napi::Value ref = info[0];
     int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
-    Napi::Value value = info[2u + has_offset];
+    Napi::Value value = info[2 + has_offset];
 
     if (has_len) {
-        Size len = info[3u + has_offset].As<Napi::Number>();
+        Size len = info[3 + has_offset].As<Napi::Number>();
 
         if (!Encode(ref, offset, value, type, &len))
             return env.Null();
