@@ -1294,7 +1294,8 @@ async function configurePlan(plan) {
                let item = {
                     channel: '',
                     days: 0b0011111,
-                    clock: 0
+                    clock: 0,
+                    paths: []
                 };
                 plan.items.push(item);
 
