@@ -156,7 +156,7 @@ inline bool CallData::AllocStack(Size size, Size align, T **out_ptr)
     }
 
 #if defined(RG_DEBUG)
-    memset(ptr, 0, delta);
+    MemSet(ptr, 0, delta);
 #endif
 
     mem->stack.len -= delta;
@@ -173,7 +173,7 @@ inline T *CallData::AllocHeap(Size size, Size align)
 
     if (size < 4096 && delta <= mem->heap.len) [[likely]] {
 #if defined(RG_DEBUG)
-        memset(mem->heap.ptr, 0, (size_t)delta);
+        MemSet(mem->heap.ptr, 0, delta);
 #endif
 
         mem->heap.ptr += delta;
