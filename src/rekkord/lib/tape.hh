@@ -142,6 +142,6 @@ const char *rk_ReadLink(rk_Repository *repo, const rk_ObjectID &oid, Allocator *
 std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Repository *repo, const rk_ObjectID &oid);
 
 bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> filenames,
-             const rk_SaveSettings &settings, rk_SaveInfo *out_info = nullptr);
+             const rk_SaveSettings &settings = {}, rk_SaveInfo *out_info = nullptr);
 
 }

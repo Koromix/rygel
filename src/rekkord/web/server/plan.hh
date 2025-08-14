@@ -22,9 +22,11 @@ namespace RG {
 
 void HandlePlanList(http_IO *io);
 void HandlePlanGet(http_IO *io);
-void HandlePlanFetch(http_IO *io);
 void HandlePlanSave(http_IO *io);
 void HandlePlanDelete(http_IO *io);
 void HandlePlanKey(http_IO *io);
+
+void HandlePlanFetch(http_IO *io);
+void HandlePlanReport(http_IO *io);
 
 }

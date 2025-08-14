@@ -55,6 +55,12 @@ bool rk_Config::Complete(unsigned int flags)
         }
     }
 
+    if (flags & (int)rk_ConfigFlag::RequireAgent) {
+        if (!api_key) {
+            api_key = GetEnv("REKKORD_AGENT_KEY");
+        }
+    }
+
     switch (type) {
         case rk_DiskType::Local: return true;
         case rk_DiskType::S3: return s3.remote.Complete();
@@ -80,6 +86,17 @@ bool rk_Config::Validate(unsigned int flags) const
         }
         if (!key_filename && !password) {
             LogError("Missing repository password");
+            valid = false;
+        }
+    }
+
+    if (flags & (int)rk_ConfigFlag::RequireAgent) {
+        if (!agent_url) {
+            LogError("Missing agent URL");
+            valid = false;
+        }
+        if (!api_key) {
+            LogError("Missing agent API key");
             valid = false;
         }
     }
@@ -269,6 +286,26 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Agent") {
+                do {
+                    if (prop.key == "URL") {
+                        config.agent_url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "ApiKey") {
+                        config.api_key = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "CheckPeriod") {
+                        if (ParseDuration(prop.value, &config.agent_period)) {
+                            if (config.retain <= 0) {
+                                LogError("Check period cannot be negative or zero");
+                                valid = false;
+                            }
+                        } else {
+                            valid = false;
+                        }
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
             } else if (prop.section == "S3") {
                 do {
                     if (prop.key == "LockMode") {
@@ -288,15 +325,6 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
             } else if (prop.section == "SSH" || prop.section == "SFTP") {
                 do {
                     valid &= config.ssh.SetProperty(prop.key, prop.value, root_directory);
-                } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Agent") {
-                do {
-                    if (prop.key == "ApiKey") {
-                        config.api_key = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
                 } while (ini.NextInSection(&prop));
             } else {
                 LogError("Unknown section '%1'", prop.section);

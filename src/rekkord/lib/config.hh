@@ -44,7 +44,8 @@ static const int64_t rk_MinimalRetention = 14 * 86400000ll; // 14 days
 static const int64_t rk_MaximalRetention = 100 * 86400000ll; // 100 days
 
 enum class rk_ConfigFlag {
-    RequireAuth = 1 << 0
+    RequireAuth = 1 << 0,
+    RequireAgent = 1 << 1
 };
 
 struct rk_Config {
@@ -66,6 +67,7 @@ struct rk_Config {
 
     const char *agent_url = nullptr;
     const char *api_key = nullptr;
+    int64_t agent_period = 1 * 3600000;
 
     BlockAllocator str_alloc;
 
