@@ -195,7 +195,9 @@ Available metadata save options:
         }
     }
 
-    if (!rekkord_config.Complete(true))
+    if (!rekkord_config.Complete())
+        return 1;
+    if (!rekkord_config.Validate())
         return 1;
 
     std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
@@ -330,7 +332,9 @@ If you use a snapshot channel, the most recent snapshot object that matches will
         return 1;
     }
 
-    if (!rekkord_config.Complete(true))
+    if (!rekkord_config.Complete())
+        return 1;
+    if (!rekkord_config.Validate())
         return 1;
 
     std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
@@ -397,7 +401,9 @@ R"(Usage: %!..+%1 check [-C filename] [option...]%!0
         opt.LogUnusedArguments();
     }
 
-    if (!rekkord_config.Complete(true))
+    if (!rekkord_config.Complete())
+        return 1;
+    if (!rekkord_config.Validate())
         return 1;
 
     std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);

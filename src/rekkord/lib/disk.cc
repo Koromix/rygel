@@ -37,8 +37,7 @@ bool rk_Disk::IsEmpty()
 
 std::unique_ptr<rk_Disk> rk_OpenDisk(const rk_Config &config)
 {
-    if (!config.Validate(false))
-        return nullptr;
+    RG_ASSERT(config.Validate(0));
 
     switch (config.type) {
         case rk_DiskType::Local: return rk_OpenLocalDisk(config.url);

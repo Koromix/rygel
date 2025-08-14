@@ -19,7 +19,7 @@
 
 namespace RG {
 
-bool rk_Config::Complete(bool require_auth)
+bool rk_Config::Complete(unsigned int flags)
 {
     if (!url) {
         url = GetEnv("REKKORD_REPOSITORY");
@@ -32,29 +32,26 @@ bool rk_Config::Complete(bool require_auth)
     if (!rk_DecodeURL(url, this))
         return false;
 
-    if (require_auth) {
+    if (flags & (int)rk_ConfigFlag::RequireAuth) {
         if (!key_filename) {
             key_filename = GetEnv("REKKORD_KEYFILE");
         }
 
-        if (!key_filename) {
-            if (!username) {
-                username = GetEnv("REKKORD_USER");
-                if (!username && FileIsVt100(STDERR_FILENO)) {
-                    username = Prompt("Repository user: ", &str_alloc);
-                }
-                if (!username)
-                    return false;
+        if (!key_filename && !username) {
+            username = GetEnv("REKKORD_USER");
+            if (!username && FileIsVt100(STDERR_FILENO)) {
+                username = Prompt("Repository user: ", &str_alloc);
             }
-
-            if (!password) {
-                password = GetEnv("REKKORD_PASSWORD");
-                if (!password && FileIsVt100(STDERR_FILENO)) {
-                    password = Prompt("Repository password: ", nullptr, "*", &str_alloc);
-                }
-                if (!password)
-                    return false;
+            if (!username)
+                return false;
+        }
+        if (!key_filename && !password) {
+            password = GetEnv("REKKORD_PASSWORD");
+            if (!password && FileIsVt100(STDERR_FILENO)) {
+                password = Prompt("Repository password: ", nullptr, "*", &str_alloc);
             }
+            if (!password)
+                return false;
         }
     }
 
@@ -67,7 +64,7 @@ bool rk_Config::Complete(bool require_auth)
     RG_UNREACHABLE();
 }
 
-bool rk_Config::Validate(bool require_auth) const
+bool rk_Config::Validate(unsigned int flags) const
 {
     bool valid = true;
 
@@ -76,12 +73,12 @@ bool rk_Config::Validate(bool require_auth) const
         valid = false;
     }
 
-    if (require_auth && !key_filename) {
-        if (!username) {
+    if (flags & (int)rk_ConfigFlag::RequireAuth) {
+        if (!key_filename && !username) {
             LogError("Missing repository username");
             valid = false;
         }
-        if (!password) {
+        if (!key_filename && !password) {
             LogError("Missing repository password");
             valid = false;
         }
@@ -291,6 +288,15 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
             } else if (prop.section == "SSH" || prop.section == "SFTP") {
                 do {
                     valid &= config.ssh.SetProperty(prop.key, prop.value, root_directory);
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Agent") {
+                do {
+                    if (prop.key == "ApiKey") {
+                        config.api_key = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
                 } while (ini.NextInSection(&prop));
             } else {
                 LogError("Unknown section '%1'", prop.section);

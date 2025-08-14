@@ -1378,10 +1378,12 @@ bool rk_Repository::HasConditionalWrites()
 
 std::unique_ptr<rk_Repository> rk_OpenRepository(rk_Disk *disk, const rk_Config &config, bool authenticate)
 {
-    if (!disk)
-        return nullptr;
+#if defined(RG_DEBUG)
+    unsigned int flags = authenticate ? (int)rk_ConfigFlag::RequireAuth : 0;
+    RG_ASSERT(config.Validate(flags));
+#endif
 
-    if (!config.Validate(authenticate))
+    if (!disk)
         return nullptr;
 
     std::unique_ptr<rk_Repository> repo = std::make_unique<rk_Repository>(disk, config);

@@ -381,7 +381,9 @@ Options:
     // Reuse common -K option even if we use it slightly differently
     key_filename = rekkord_config.key_filename;
 
-    if (!rekkord_config.Complete(false))
+    if (!rekkord_config.Complete(0))
+        return 1;
+    if (!rekkord_config.Validate(0))
         return 1;
     if (!key_filename && !generate_key) {
         LogError("Missing master key filename");
@@ -518,7 +520,9 @@ Available user roles: %!..+%2%!0)", rk_UserRoleNames[(int)role], FmtSpan(rk_User
         return 1;
     }
 
-    if (!rekkord_config.Complete(true))
+    if (!rekkord_config.Complete())
+        return 1;
+    if (!rekkord_config.Validate())
         return 1;
 
     std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
@@ -608,8 +612,15 @@ Please note that deleting users only requires the ability to delete objects from
         return 1;
     }
 
-    if (!rekkord_config.Complete(!force))
-        return 1;
+    // Validate configuration
+    {
+        unsigned int flags = force ? 0 : (int)rk_ConfigFlag::RequireAuth;
+
+        if (!rekkord_config.Complete(flags))
+            return 1;
+        if (!rekkord_config.Validate(flags))
+            return 1;
+    }
 
     std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
     std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, !force);
@@ -690,8 +701,15 @@ Available output formats: %!..+%2%!0)", OutputFormatNames[(int)format], FmtSpan(
         return 1;
     }
 
-    if (!rekkord_config.Complete(verify))
-        return 1;
+    // Validate configuration
+    {
+        unsigned int flags = verify ? (int)rk_ConfigFlag::RequireAuth : 0;
+
+        if (!rekkord_config.Complete(flags))
+            return 1;
+        if (!rekkord_config.Validate(flags))
+            return 1;
+    }
 
     std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
     std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, verify);
@@ -778,7 +796,9 @@ R"(Usage: %!..+%1 change_cid [-C filename] [option...]%!0
         opt.LogUnusedArguments();
     }
 
-    if (!rekkord_config.Complete(true))
+    if (!rekkord_config.Complete())
+        return 1;
+    if (!rekkord_config.Validate())
         return 1;
 
     std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
@@ -835,7 +855,9 @@ Cache options:
         opt.LogUnusedArguments();
     }
 
-    if (!rekkord_config.Complete(true))
+    if (!rekkord_config.Complete())
+        return 1;
+    if (!rekkord_config.Validate())
         return 1;
 
     std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);

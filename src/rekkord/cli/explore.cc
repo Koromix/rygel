@@ -123,7 +123,9 @@ Available sort orders: %!..+%3%!0)",
         return 1;
     }
 
-    if (!rekkord_config.Complete(true))
+    if (!rekkord_config.Complete())
+        return 1;
+    if (!rekkord_config.Validate())
         return 1;
 
     std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
@@ -325,7 +327,9 @@ Available output formats: %!..+%2%!0)",
         opt.LogUnusedArguments();
     }
 
-    if (!rekkord_config.Complete(true))
+    if (!rekkord_config.Complete())
+        return 1;
+    if (!rekkord_config.Validate())
         return 1;
 
     std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
@@ -636,7 +640,9 @@ Available output formats: %!..+%2%!0)",
         return 1;
     }
 
-    if (!rekkord_config.Complete(true))
+    if (!rekkord_config.Complete())
+        return 1;
+    if (!rekkord_config.Validate())
         return 1;
 
     std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);

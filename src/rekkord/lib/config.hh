@@ -43,6 +43,10 @@ struct rk_S3Config {
 static const int64_t rk_MinimalRetention = 14 * 86400000ll; // 14 days
 static const int64_t rk_MaximalRetention = 100 * 86400000ll; // 100 days
 
+enum class rk_ConfigFlag {
+    RequireAuth = 1 << 0
+};
+
 struct rk_Config {
     const char *url = nullptr;
 
@@ -60,10 +64,13 @@ struct rk_Config {
     int threads = -1;
     int compression_level = 6;
 
+    const char *agent_url = nullptr;
+    const char *api_key = nullptr;
+
     BlockAllocator str_alloc;
 
-    bool Complete(bool require_auth);
-    bool Validate(bool require_auth) const;
+    bool Complete(unsigned int flags = (int)rk_ConfigFlag::RequireAuth);
+    bool Validate(unsigned int flags = (int)rk_ConfigFlag::RequireAuth) const;
 };
 
 bool rk_DecodeURL(Span<const char> url, rk_Config *out_config);

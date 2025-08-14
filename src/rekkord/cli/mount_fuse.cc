@@ -550,7 +550,9 @@ If you use a snapshot channel, the most recent snapshot object that matches will
         }
     }
 
-    if (!rekkord_config.Complete(true))
+    if (!rekkord_config.Complete())
+        return 1;
+    if (!rekkord_config.Validate())
         return 1;
 
     // We keep these objects in globals for simplicity, but we need to destroy them at the end
