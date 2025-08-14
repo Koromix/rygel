@@ -1189,6 +1189,7 @@ async function configurePlan(plan) {
         };
     } else {
         plan = Object.assign({}, plan);
+        plan.items = plan.items.slice();
     }
 
     await UI.dialog({
