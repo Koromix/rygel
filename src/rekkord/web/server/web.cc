@@ -407,6 +407,8 @@ static void HandleRequest(http_IO *io)
             HandlePlanList(io);
         } else if (TestStr(request.path, "/api/plan/get") && request.method == http_RequestMethod::Get) {
             HandlePlanGet(io);
+        } else if (TestStr(request.path, "/api/plan/fetch") && request.method == http_RequestMethod::Get) {
+            HandlePlanFetch(io);
         } else if (TestStr(request.path, "/api/plan/save") && request.method == http_RequestMethod::Post) {
             HandlePlanSave(io);
         } else if (TestStr(request.path, "/api/plan/delete") && request.method == http_RequestMethod::Post) {

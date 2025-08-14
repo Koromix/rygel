@@ -71,6 +71,50 @@ void HandlePlanList(http_IO *io)
     json.Finish();
 }
 
+static bool DumpItems(json_Writer *json, int64_t id)
+{
+    sq_Statement stmt;
+    if (!db.Prepare(R"(SELECT i.id, i.channel, i.days, i.clock, p.path
+                       FROM items i
+                       LEFT JOIN paths p ON (p.item = i.id)
+                       WHERE i.plan = ?1)", &stmt, id))
+        return false;
+
+    json->Key("items"); json->StartArray();
+    if (stmt.Step()) {
+        do {
+            int64_t id = sqlite3_column_int64(stmt, 0);
+            const char *channel = (const char *)sqlite3_column_text(stmt, 1);
+            int days = sqlite3_column_int(stmt, 2);
+            int clock = sqlite3_column_int(stmt, 3);
+
+            json->StartObject();
+
+            json->Key("channel"); json->String(channel);
+            json->Key("days"); json->Int(days);
+            json->Key("clock"); json->Int(clock);
+
+            json->Key("paths"); json->StartArray();
+            if (sqlite3_column_type(stmt, 4) != SQLITE_NULL) {
+                do {
+                    const char *path = (const char *)sqlite3_column_text(stmt, 4);
+                    json->String(path);
+                } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == id);
+            } else {
+                stmt.Step();
+            }
+            json->EndArray();
+
+            json->EndObject();
+        } while (stmt.IsRow());
+        if (!stmt.IsValid())
+            return false;
+    }
+    json->EndArray();
+
+    return true;
+}
+
 void HandlePlanGet(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
@@ -112,59 +156,78 @@ void HandlePlanGet(http_IO *io)
     if (!json.Init(io))
         return;
 
+    const char *name = (const char *)sqlite3_column_text(stmt, 0);
+    const char *key = (const char *)sqlite3_column_text(stmt, 1);
+
     json.StartObject();
 
-    // Main information
-    {
-        const char *name = (const char *)sqlite3_column_text(stmt, 0);
-        const char *key = (const char *)sqlite3_column_text(stmt, 1);
+    json.Key("id"); json.Int64(id);
+    json.Key("name"); json.String(name);
+    json.Key("key"); json.String(key);
+    if (!DumpItems(&json, id))
+        return;
 
-        json.Key("id"); json.Int64(id);
-        json.Key("name"); json.String(name);
-        json.Key("key"); json.String(key);
+    json.EndObject();
+
+    json.Finish();
+}
+
+void HandlePlanFetch(http_IO *io)
+{
+    const http_RequestInfo &request = io->Request();
+    const char *header = request.GetHeaderValue("X-Api-Key");
+
+    if (!header) {
+        LogError("Missing API key");
+        io->SendError(422);
+        return;
     }
 
-    // Items
-    {
-        sq_Statement stmt;
-        if (!db.Prepare(R"(SELECT i.id, i.channel, i.days, i.clock, p.path
-                           FROM items i
-                           LEFT JOIN paths p ON (p.item = i.id)
-                           WHERE i.plan = ?1)", &stmt, id))
-            return;
+    // We use this to extend/fix the response delay in case of error
+    int64_t start = GetMonotonicTime();
 
-        json.Key("items"); json.StartArray();
-        if (stmt.Step()) {
-            do {
-                int64_t id = sqlite3_column_int64(stmt, 0);
-                const char *channel = (const char *)sqlite3_column_text(stmt, 1);
-                int days = sqlite3_column_int(stmt, 2);
-                int clock = sqlite3_column_int(stmt, 3);
+    Span<const char> secret;
+    Span<const char> key = SplitStr(header, '/', &secret);
 
-                json.StartObject();
+    sq_Statement stmt;
+    if (!db.Prepare("SELECT id, hash, name FROM plans WHERE key = ?1", &stmt, key))
+        return;
 
-                json.Key("channel"); json.String(channel);
-                json.Key("days"); json.Int(days);
-                json.Key("clock"); json.Int(clock);
+    if (!stmt.Step()) {
+        if (stmt.IsValid()) {
+            int64_t safety = std::max(2000 - GetMonotonicTime() + start, (int64_t)0);
+            WaitDelay(safety);
 
-                json.Key("paths"); json.StartArray();
-                if (sqlite3_column_type(stmt, 4) != SQLITE_NULL) {
-                    do {
-                        const char *path = (const char *)sqlite3_column_text(stmt, 4);
-                        json.String(path);
-                    } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == id);
-                } else {
-                    stmt.Step();
-                }
-                json.EndArray();
-
-                json.EndObject();
-            } while (stmt.IsRow());
-            if (!stmt.IsValid())
-                return;
+            LogError("Invalid API key");
+            io->SendError(403);
         }
-        json.EndArray();
+        return;
     }
+
+    int64_t id = sqlite3_column_int64(stmt, 0);
+    const char *hash = (const char *)sqlite3_column_text(stmt, 1);
+    const char *name = (const char *)sqlite3_column_text(stmt, 2);
+
+    if (crypto_pwhash_str_verify(hash, secret.ptr, (size_t)secret.len) < 0) {
+        int64_t safety = std::max(2000 - GetMonotonicTime() + start, (int64_t)0);
+        WaitDelay(safety);
+
+        LogError("Invalid API key");
+        io->SendError(403);
+        return;
+    }
+
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartObject();
+
+    json.Key("id"); json.Int64(id);
+    json.Key("name"); json.String(name);
+    json.Key("key"); json.String(key.ptr, key.len);
+    if (!DumpItems(&json, id))
+        return;
 
     json.EndObject();
 
