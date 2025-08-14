@@ -172,16 +172,20 @@ bool http_PreventCSRF(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
 
-    const char *str1 = request.GetHeaderValue("X-Requested-With");
-    const char *str2 = request.GetHeaderValue("Sec-Fetch-Site");
+    const char *xh = request.GetHeaderValue("X-Requested-With");
+    const char *sec = request.GetHeaderValue("Sec-Fetch-Site");
 
-    if (!str1 || !TestStr(str1, "XMLHTTPRequest")) {
-        LogError("Anti-CSRF header is missing");
-        io->SendError(403);
-        return false;
+    if (!xh || !xh[0]) {
+        xh = request.GetHeaderValue("X-Api-Key");
+
+        if (!xh || !xh[0]) {
+            LogError("Anti-CSRF header is missing");
+            io->SendError(403);
+            return false;
+        }
     }
 
-    if (str2 && !TestStr(str2, "same-origin")) {
+    if (sec && !TestStr(sec, "same-origin")) {
         LogError("Denying cross-origin request");
         io->SendError(403);
         return false;
