@@ -1153,8 +1153,9 @@ async function runPlan() {
                     <div class="header">Items</div>
                     <table style="table-layout: fixed; width: 100%;">
                         <colgroup>
+                            <col style="width: 150px;"></col>
                             <col></col>
-                            <col></col>
+                            <col style="width: 100px;"></col>
                             <col></col>
                             <col></col>
                         </colgroup>
@@ -1164,6 +1165,7 @@ async function runPlan() {
                                 <th>Days</th>
                                 <th>Clock time</th>
                                 <th>Paths</th>
+                                <th>Last run</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1171,11 +1173,16 @@ async function runPlan() {
                                 <tr>
                                     <td>${item.channel}</td>
                                     <td>${formatDays(item.days)}</td>
-                                    <td style="text-align: right;">${formatClock(item.clock)}</td>
+                                    <td style="text-align: center;">${formatClock(item.clock)}</td>
                                     <td>${item.paths.map(path => html`${path}<br>`)}</td>
+                                    <td style=${'text-align: right;' + (item.failed != null ? ' color: var(--color, red);' : '')}>
+                                        ${item.timestamp == null ? 'Never' : ''}
+                                        ${item.timestamp != null ? new Date(item.timestamp).toLocaleString() : ''}
+                                        <br>${item.failed || ''}
+                                    </td>
                                 </tr>
                             `)}
-                            ${!cache.plan.items.length ? html`<tr><td colspan="4" style="text-align: center;">No item</td></tr>` : ''}
+                            ${!cache.plan.items.length ? html`<tr><td colspan="5" style="text-align: center;">No item</td></tr>` : ''}
                         </tbody>
                     </table>
                 </div>
