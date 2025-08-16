@@ -198,6 +198,9 @@ async function run(changes = {}, push = false) {
             } break;
         }
 
+        if (session != null)
+            cache.repositories = await Net.cache('repositories', '/api/repository/list');
+
         switch (route.mode) {
             case 'repositories': { await runRepositories(); } break;
             case 'repository': { await runRepository(); } break;
@@ -637,8 +640,6 @@ function isLogged() {
 // ------------------------------------------------------------------------
 
 async function runRepositories() {
-    cache.repositories = await Net.cache('repositories', '/api/repository/list');
-
     let repositories = UI.tableValues('repositories', cache.repositories, 'name');
 
     UI.main(html`
@@ -1079,25 +1080,29 @@ async function runPlans() {
                     <colgroup>
                         <col/>
                         <col/>
+                        <col/>
                     </colgroup>
                     <thead>
                         <tr>
                             ${UI.tableHeader('plans', 'name', 'Name')}
+                            ${UI.tableHeader('plans', 'repository', 'Repository')}
                             <th>Key prefix</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${plans.map(plan => {
                             let url = makeURL({ mode: 'plan', plan: plan.id });
+                            let repo = cache.repositories.find(repo => repo.id == plan.repository);
 
                             return html`
                                 <tr style="cursor: pointer;" @click=${UI.wrap(e => go(url))}>
                                     <td><a href=${url}>${plan.name}</a></td>
+                                    <td><a href=${makeURL({ mode: 'repository', repository: plan.repository })}>${repo?.name}</a></td>
                                     <td><span class="sub">${plan.key}</sub></td>
                                 </tr>
                             `;
                         })}
-                        ${!plans.length ? html`<tr><td colspan="2" style="text-align: center;">No plan</td></tr>` : ''}
+                        ${!plans.length ? html`<tr><td colspan="3" style="text-align: center;">No plan</td></tr>` : ''}
                     </tbody>
                 </table>
                 <div class="actions">
@@ -1132,6 +1137,8 @@ async function runPlan() {
         return;
     }
 
+    let repo = cache.repositories.find(repo => repo.id == cache.plan.repository);
+
     UI.main(html`
         <div class="tabbar">
             <a href="/plans">Plans</a>
@@ -1143,7 +1150,7 @@ async function runPlan() {
                 <div class="box" style="min-width: 250px;">
                     <div class="header">Plan</div>
                     <div class="info">
-                        ${cache.plan.name}
+                        ${cache.plan.name} (${repo?.name ?? 'unassigned'})
                         <div class="sub">${cache.plan.key}</div>
                     </div>
                     <button type="button" @click=${UI.wrap(e => configurePlan(cache.plan))}>Configure</button>
@@ -1195,8 +1202,12 @@ async function configurePlan(plan) {
     let ptr = plan;
 
     if (plan == null) {
+        if (!cache.repositories.length)
+            throw new Error('Create a repository before you create a plan');
+
         plan = {
             name: '',
+            repository: route.repository ?? cache.repositories[0].id,
             items: []
         };
     } else {
@@ -1218,6 +1229,14 @@ async function configurePlan(plan) {
                         <span>Name</span>
                         <input type="text" name="name" required .value=${live(plan.name)}
                                @change=${UI.wrap(e => { plan.name = e.target.value; render(); })} />
+                    </label>
+                    <label>
+                        <span>Repository</span>
+                        <select ?disabled=${ptr != null}
+                                @change=${UI.wrap(e => { plan.repository = parseInt(e.target.value, 10); render(); })}>
+                            ${cache.repositories.map(repo =>
+                                html`<option value=${repo.id} ?selected=${repo.id == plan.repository}>${repo.name}</option>`)}
+                        </select>
                     </label>
 
                     <div class="section">
@@ -1355,6 +1374,7 @@ async function configurePlan(plan) {
             let obj = {
                 id: plan.id,
                 name: plan.name,
+                repository: plan.repository,
                 items: plan.items.map(item => ({
                     channel: item.channel,
                     days: item.days,

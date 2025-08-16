@@ -41,7 +41,7 @@ void HandlePlanList(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT id, name, key
+    if (!db.Prepare(R"(SELECT id, repository, name, key
                        FROM plans
                        WHERE owner = ?1)", &stmt, session->userid))
         return;
@@ -53,12 +53,14 @@ void HandlePlanList(http_IO *io)
     json.StartArray();
     while (stmt.Step()) {
         int64_t id = sqlite3_column_int64(stmt, 0);
-        const char *name = (const char *)sqlite3_column_text(stmt, 1);
-        const char *key = (const char *)sqlite3_column_text(stmt, 2);
+        int64_t repository = sqlite3_column_int64(stmt, 1);
+        const char *name = (const char *)sqlite3_column_text(stmt, 2);
+        const char *key = (const char *)sqlite3_column_text(stmt, 3);
 
         json.StartObject();
 
         json.Key("id"); json.Int64(id);
+        json.Key("repository"); json.Int64(repository);
         json.Key("name"); json.String(name);
         json.Key("key"); json.String(key);
 
@@ -154,7 +156,7 @@ void HandlePlanGet(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT name, key
+    if (!db.Prepare(R"(SELECT repository, name, key
                        FROM plans
                        WHERE owner = ?1 AND id = ?2)",
                     &stmt, session->userid, id))
@@ -172,12 +174,14 @@ void HandlePlanGet(http_IO *io)
     if (!json.Init(io))
         return;
 
-    const char *name = (const char *)sqlite3_column_text(stmt, 0);
-    const char *key = (const char *)sqlite3_column_text(stmt, 1);
+    int64_t repository = sqlite3_column_int64(stmt, 0);
+    const char *name = (const char *)sqlite3_column_text(stmt, 1);
+    const char *key = (const char *)sqlite3_column_text(stmt, 2);
 
     json.StartObject();
 
     json.Key("id"); json.Int64(id);
+    json.Key("repository"); json.Int64(repository);
     json.Key("name"); json.String(name);
     json.Key("key"); json.String(key);
 
@@ -203,6 +207,7 @@ void HandlePlanSave(http_IO *io)
     // Parse input data
     int64_t id = -1;
     const char *name = nullptr;
+    int64_t repository = -1;
     HeapArray<PlanItem> items;
     {
         StreamReader st;
@@ -219,6 +224,8 @@ void HandlePlanSave(http_IO *io)
                 parser.SkipNull() || parser.ParseInt(&id);
             } else if (key == "name") {
                 parser.ParseString(&name);
+            } else if (key == "repository") {
+                parser.SkipNull() || parser.ParseInt(&repository);
             } else if (key == "items") {
                 parser.ParseArray();
                 while (parser.InArray()) {
@@ -272,6 +279,14 @@ void HandlePlanSave(http_IO *io)
             LogError("Missing or invalid 'name' parameter");
             valid = false;
         }
+        if (id < 0) {
+            if (repository < 0) {
+                LogError("Missing or invalid 'repository' parameter");
+                valid = false;
+            }
+        } else {
+            repository = -1;
+        }
 
         for (const PlanItem &item: items) {
             if (!item.channel || !item.channel[0]) {
@@ -305,6 +320,21 @@ void HandlePlanSave(http_IO *io)
         }
     }
 
+    // Make sure user owns repository
+    if (repository >= 0) {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT id FROM repositories WHERE owner = ?1 AND id = ?2", &stmt, session->userid, repository))
+            return;
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Unknown repository ID %1", id);
+                io->SendError(404);
+            }
+            return;
+        }
+    }
+
     // Prepare new API key if needed
     char key[33];
     char secret[33];
@@ -334,13 +364,13 @@ void HandlePlanSave(http_IO *io)
     // Create or update plan
     bool success = db.Transaction([&]() {
         sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO plans (id, owner, name, key, hash)
-                           VALUES (?1, ?2, ?3, ?4, ?5)
+        if (!db.Prepare(R"(INSERT INTO plans (id, owner, repository, name, key, hash)
+                           VALUES (?1, ?2, ?3, ?4, ?5, ?6)
                            ON CONFLICT DO UPDATE SET id = IF(owner = excluded.owner, id, NULL),
                                                      name = excluded.name
                            RETURNING id)",
-                        &stmt, id >= 0 ? sq_Binding(id) : sq_Binding(), session->userid,
-                        name, key, hash))
+                        &stmt, id >= 0 ? sq_Binding(id) : sq_Binding(),
+                        session->userid, repository, name, key, hash))
             return false;
         if (!stmt.Step()) {
             RG_ASSERT(!stmt.IsValid());
