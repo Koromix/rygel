@@ -584,12 +584,18 @@ static std::once_flag flag;
 
 bool ReadXAttributes(int, const char *, FileType, Allocator *, HeapArray<XAttrInfo> *)
 {
+    (void)AclAccessKey;
+    (void)AclDefaultKey;
+
     std::call_once(flag, []() { LogError("Extended attributes (xattrs) are not implemented or supported on this platform"); });
     return false;
 }
 
 bool WriteXAttributes(int, const char *, Span<const XAttrInfo>)
 {
+    (void)AclAccessKey;
+    (void)AclDefaultKey;
+
     std::call_once(flag, []() { LogError("Extended attributes (xattrs) are not implemented or supported on this platform"); });
     return false;
 }
