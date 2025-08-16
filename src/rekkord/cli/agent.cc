@@ -189,7 +189,7 @@ static bool RunSnapshot(const char *channel, Span<const char *const> paths)
     return rk_Save(repo.get(), channel, paths);
 }
 
-static bool ReportSnapshot(int64_t id, int64_t timestamp, bool success)
+static bool ReportSnapshot(int64_t id, int64_t timestamp, const char *failed)
 {
     BlockAllocator temp_alloc;
 
@@ -205,10 +205,10 @@ static bool ReportSnapshot(int64_t id, int64_t timestamp, bool success)
         json.StartObject();
         json.Key("item"); json.Int64(id);
         json.Key("timestamp"); json.Int64(timestamp);
-        if (success) {
-            json.Key("failed"); json.Null();
+        if (failed) {
+            json.Key("failed"); json.String(failed);
         } else {
-            json.Key("failed"); json.String("Failed to perform snapshot");
+            json.Key("failed"); json.Null();
         }
         json.EndObject();
 
@@ -279,10 +279,20 @@ static bool CheckPlan()
         if (run) {
             LogInfo("Running snapshot for '%1'", item.channel);
 
+            const char *last_err = "Unknown error";
+            PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+                if (level == LogLevel::Error) {
+                    last_err = DuplicateString(msg, &temp_alloc).ptr;
+                }
+
+                func(level, ctx, msg);
+            });
+            RG_DEFER { PopLogFilter(); };
+
             int64_t now = GetUnixTime();
             bool success = RunSnapshot(item.channel, item.paths);
 
-            ReportSnapshot(item.id, now, success);
+            ReportSnapshot(item.id, now, success ? nullptr : last_err);
         }
 
         nothing &= !run;
