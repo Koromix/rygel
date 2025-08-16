@@ -3669,9 +3669,7 @@ struct TimeSpec {
 
 TimeSpec DecomposeTimeUTC(int64_t time);
 TimeSpec DecomposeTimeLocal(int64_t time);
-
 int64_t ComposeTimeUTC(const TimeSpec &spec);
-int64_t ComposeTimeLocal(const TimeSpec &spec);
 
 // ------------------------------------------------------------------------
 // Format
