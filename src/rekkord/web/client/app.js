@@ -249,6 +249,9 @@ function renderApp(el) {
         document.body.appendChild(root_el);
     }
 
+    let in_repositories = ['repositories', 'repository'].includes(route.mode);
+    let in_plans = ['plans', 'plan'].includes(route.mode);
+
     render(html`
         <div class="deploy" @click=${deploy}></div>
 
@@ -256,8 +259,10 @@ function renderApp(el) {
             <menu>
                 <a id="logo" href="/"><img src=${ASSETS['main/logo']} alt=${'Logo ' + ENV.title} /></a>
                 ${session != null ? html`
-                    <li><a href="/repositories" class=${route.mode == 'repositories' || route.mode == 'repository' ? 'active' : ''}>Repositories</a></li>
-                    <li><a href="/plans" class=${route.mode == 'plans' || route.mode == 'plan' ? 'active' : ''}>Plans</a></li>
+                    <li><a href=${!in_repositories && route.repository != null ? makeURL({ mode: 'repository' }) : '/repositories'}
+                           class=${in_repositories ? 'active' : ''}>Repositories</a></li>
+                    <li><a href=${!in_plans && route.plan != null ? makeURL({ mode: 'plan' }) : '/plans'}
+                           class=${in_plans ? 'active' : ''}>Plans</a></li>
                     <div style="flex: 1;"></div>
                     <li><a href="/account" class=${route.mode == 'account' ? 'active' : ''}>Account</a></li>
                     <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
