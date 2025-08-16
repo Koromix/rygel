@@ -354,27 +354,22 @@ R"(Usage: %!..+%1 agent [-C filename] [option...]%!0
     // From here on, don't quit abruptly
     WaitForInterrupt(0);
 
-    // Run periodic tasks until exit
     int status = 0;
-    {
-        bool run = true;
-        int64_t timeout = rekkord_config.agent_period;
 
-        while (run) {
-            LogDebug("Check backup plan");
-            CheckPlan();
+    // Run periodic tasks until exit
+    for (;;) {
+        WaitForResult ret = WaitForInterrupt(rekkord_config.agent_period);
 
-            WaitForResult ret = WaitForInterrupt(timeout);
-
-            if (ret == WaitForResult::Exit) {
-                LogInfo("Exit requested");
-                run = false;
-            } else if (ret == WaitForResult::Interrupt) {
-                LogInfo("Process interrupted");
-                status = 1;
-                run = false;
-            }
+        if (ret == WaitForResult::Exit) {
+            LogInfo("Exit requested");
+            break;
+        } else if (ret == WaitForResult::Interrupt) {
+            LogInfo("Process interrupted");
+            status = 1;
+            break;
         }
+
+        CheckPlan();
     }
 
     return status;
