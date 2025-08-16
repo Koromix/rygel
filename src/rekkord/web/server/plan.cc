@@ -328,6 +328,9 @@ void HandlePlanSave(http_IO *io)
         hash[0] = 0;
     }
 
+    uint8_t changeset[32];
+    FillRandomSafe(changeset);
+
     // Create or update plan
     bool success = db.Transaction([&]() {
         sq_Statement stmt;
@@ -346,27 +349,34 @@ void HandlePlanSave(http_IO *io)
 
         id = sqlite3_column_int64(stmt, 0);
 
-        if (!db.Run("DELETE FROM items WHERE plan = ?1", id))
-            return false;
-
         for (const PlanItem &item: items) {
             int64_t parent;
             {
                 sq_Statement stmt;
-                if (!db.Prepare(R"(INSERT INTO items (plan, channel, days, clock)
-                                   VALUES (?1, ?2, ?3, ?4)
+                if (!db.Prepare(R"(INSERT INTO items (plan, channel, days, clock, changeset)
+                                   VALUES (?1, ?2, ?3, ?4, ?5)
+                                   ON CONFLICT DO UPDATE SET days = excluded.days,
+                                                             clock = excluded.clock,
+                                                             changeset = excluded.changeset
                                    RETURNING id)",
-                                &stmt, id, item.channel, item.days, item.clock))
+                                &stmt, id, item.channel, item.days, item.clock, sq_Binding(changeset)))
                     return false;
                 if (!stmt.GetSingleValue(&parent))
                     return false;
             }
 
+            if (!db.Run("DELETE FROM paths WHERE item = ?1", parent))
+                return false;
             for (const char *path: item.paths) {
                 if (!db.Run("INSERT INTO paths (item, path) VALUES (?1, ?2)", parent, path))
                     return false;
             }
         }
+
+        if (!db.Run(R"(DELETE FROM items
+                       WHERE plan = ?1 AND changeset IS NOT ?2)",
+                    id, sq_Binding(changeset)))
+            return false;
 
         return true;
     });
