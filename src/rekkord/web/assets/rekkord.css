@@ -33,7 +33,7 @@ html {
 body { font-size: 14px; }
 
 :is(main, dialog) a { text-decoration: underline; }
-:is(main, dialog) a:hover { color: #26346c; }
+:is(main, dialog) a:hover { color: var(--color, #26346c); }
 :is(main, dialog) a:has(> img) { text-decoration: none !important; }
 
 h1 {
