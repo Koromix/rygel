@@ -854,6 +854,52 @@ TimeSpec DecomposeTimeLocal(int64_t time)
     return spec;
 }
 
+int64_t ComposeTimeUTC(const TimeSpec &spec)
+{
+    struct tm ti = {};
+
+    ti.tm_year = spec.year - 1900;
+    ti.tm_mon = spec.month - 1;
+    ti.tm_mday = spec.day;
+    ti.tm_hour = spec.hour;
+    ti.tm_min = spec.min;
+    ti.tm_sec = spec.sec;
+
+#if defined(_WIN32)
+    int64_t time = (int64_t)_mkgmtime64(&ti);
+#else
+    int64_t time = (int64_t)timegm(&ti);
+#endif
+
+    time *= 1000;
+    time += spec.msec;
+
+    return time;
+}
+
+int64_t ComposeTimeLocal(const TimeSpec &spec)
+{
+    struct tm ti = {};
+
+    ti.tm_year = spec.year - 1900;
+    ti.tm_mon = spec.month - 1;
+    ti.tm_mday = spec.day;
+    ti.tm_hour = spec.hour;
+    ti.tm_min = spec.min;
+    ti.tm_sec = spec.sec;
+
+#if defined(_WIN32)
+    int64_t time = (int64_t)_mktime64(&ti);
+#else
+    int64_t time = (int64_t)mktime(&ti);
+#endif
+
+    time *= 1000;
+    time += spec.msec;
+
+    return time;
+}
+
 // ------------------------------------------------------------------------
 // Strings
 // ------------------------------------------------------------------------
