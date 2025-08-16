@@ -136,16 +136,6 @@ static bool FetchPlan(Allocator *alloc, HeapArray<PlanItem> *out_items)
     return true;
 }
 
-static inline LocalDate TimeToDate(const TimeSpec &spec)
-{
-    return LocalDate(spec.year, spec.month, spec.day);
-}
-static inline LocalDate TimeToDate(int64_t time)
-{
-    TimeSpec spec = DecomposeTimeUTC(time);
-    return TimeToDate(spec);
-}
-
 static bool ShouldRun(const PlanItem &item)
 {
     RG_ASSERT(item.days & 0b1111111);
@@ -157,9 +147,10 @@ static bool ShouldRun(const PlanItem &item)
     if (item.failed)
         return true;
 
+    TimeSpec then = DecomposeTimeUTC(item.timestamp);
     TimeSpec spec = DecomposeTimeUTC(now);
-    LocalDate today = TimeToDate(spec);
-    LocalDate date = TimeToDate(item.timestamp);
+    LocalDate date = LocalDate(then.year, then.month, then.day);
+    LocalDate today = LocalDate(spec.year, spec.month, spec.day);
 
     if (date < today) {
         date++;
@@ -171,8 +162,10 @@ static bool ShouldRun(const PlanItem &item)
     }
 
     if (item.days & (1 << date.GetWeekDay())) {
-        int hhmm = spec.hour * 100 + spec.min;
-        if (hhmm >= item.clock)
+        int hhmm1 = then.hour * 100 + then.min;
+        int hhmm2 = spec.hour * 100 + spec.min;
+
+        if (hhmm1 < item.clock && hhmm2 >= item.clock)
             return true;
     }
 
