@@ -120,6 +120,8 @@ Snapshot commands:
     %!..+restore%!0                        Get and decrypt snapshot, directory or file
     %!..+check%!0                          Check snapshots and blobs
 
+    %!..+agent%!0                          Run cloud-connected snapshot agent
+
 Exploration commands:
 
     %!..+snapshots%!0                      List known snapshots
@@ -128,8 +130,6 @@ Exploration commands:
     %!..+mount%!0                          Mount repository readonly as user filesystem
 
 Advanced commands:
-
-    %!..+agent%!0                          Run background agent
 
     %!..+change_cid%!0                     Change repository cache ID (CID)
     %!..+reset_cache%!0                    Reset or rebuild local repository cache
