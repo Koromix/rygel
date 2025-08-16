@@ -1343,7 +1343,12 @@ async function configurePlan(plan) {
             let obj = {
                 id: plan.id,
                 name: plan.name,
-                items: plan.items
+                items: plan.items.map(item => ({
+                    channel: item.channel,
+                    days: item.days,
+                    clock: item.clock,
+                    paths: item.paths
+                }))
             };
 
             let json = await Net.post('/api/plan/save', obj);
