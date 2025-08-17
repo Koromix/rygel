@@ -396,6 +396,72 @@ Koffi can also convert JS strings to fixed-sized arrays in the following cases:
 
 The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. This happens by default for char, char16_t and char32_t arrays, but you can also explicitly ask for this with the `String` array hint (e.g. `koffi.array('char', 8, 'String')`).
 
+## Flexible arrays
+
+*Added in Koffi 2.14.0*
+
+C structs ending with a flexible array member are often used for variable-sized structs, and are generally paired with dynamic memory allocation. In many cases, the number of elements is described by another struct member.
+
+Use `koffi.array(type, countedBy, maxLen)` to make a flexible array type, for which the array length is determined by the struct member indicated by the `countedBy` parameter. Flexible array types can only be used as the last member of a struct, as shown below:
+
+```js
+const FlexibleArray = koffi.struct('FlexibleArray', {
+    count: 'size_t',
+    numbers: koffi.array('int', 'count', 128)
+});
+````
+
+For various reasons, Koffi requires you to specify an upper bound (`maxLen`) for the number of elements in the flexible array member.
+
+> [!WARNING]
+> Also, unlike C flexible arrays, the struct size will expand to accomodate the maximum size of the flexible array.
+
+The following example illustrates how to use a flexible array API in C from Koffi.
+
+```c
+// Build with: clang -fPIC -o flexible.so -shared flexible.c -Wall -O2
+
+#include <stddef.h>
+
+struct FlexibleArray {
+    size_t count;
+    int numbers[];
+};
+
+void AppendValues(struct FlexibleArray *arr, size_t count, int start, int step)
+{
+    for (size_t i = 0; i < count; i++) {
+        arr->numbers[arr->count + i] = start + i * step;
+    }
+    arr->count += count;
+}
+```
+
+```js
+// ES6 syntax: import koffi from 'koffi';
+const koffi = require('koffi');
+
+const lib = koffi.load('./flexible.so');
+
+const FlexibleArray = koffi.struct('FlexibleArray', {
+    count: 'size_t',
+    numbers: koffi.array('int', 'count', 256, 'Array')
+});
+
+const AppendValues = lib.func('void AppendValues(_Inout_ FlexibleArray *arr, int count, int start, int step)');
+
+let array = { count: 0, numbers: [] };
+
+AppendValues(array, 5, 1, 1);
+console.log(array); // Prints { count: 5, numbers: [1, 2, 3, 4, 5] }
+
+AppendValues(array, 3, 10, 2);
+console.log(array); // Prints { count: 8, numbers: [1, 2, 3, 4, 5, 10, 12, 14] }
+```
+
+> [!NOTE]
+> This is frequently used in the Win32 API, an exemple of this is [AllocateAndInitializeSid()](https://learn.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-allocateandinitializesid).
+
 ## Dynamic arrays (pointers)
 
 In C, dynamically-sized arrays are usually passed around as pointers. Read more about [array pointers](pointers#dynamic-arrays) in the relevant section.
