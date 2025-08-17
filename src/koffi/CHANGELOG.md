@@ -5,6 +5,17 @@
 
 ## Koffi 2
 
+### Koffi 2.14
+
+#### Koffi 2.14.0
+
+*Released on 2025-08-17*
+
+- Improve support for structs with [flexible array member](input#flexible-arrays)
+- Automatically encode/decode dynamic arrays pointers when length is known though struct member
+- Fix parser crash when direction qualifier is followed by unknown type
+- Add missing TypeScript types and arguments
+
 ### Koffi 2.13
 
 #### Koffi 2.13.0
