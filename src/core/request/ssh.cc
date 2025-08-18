@@ -140,11 +140,6 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
 
         CURLUcode ret = curl_url_set(h, CURLUPART_URL, url0, CURLU_NON_SUPPORT_SCHEME);
 
-        if (ret == CURLUE_BAD_SCHEME) {
-            Fmt(url0, "ssh://%1", url);
-            ret = curl_url_set(h, CURLUPART_URL, url0, CURLU_NON_SUPPORT_SCHEME);
-        }
-
         if (ret != CURLUE_OK) {
             LogError("Failed to parse URL '%1': %2", url, curl_url_strerror(ret));
             return false;
