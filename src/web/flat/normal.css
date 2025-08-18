@@ -245,7 +245,7 @@ table {
     border-collapse: collapse;
     empty-cells: show;
 }
-* + table { margin-top: 1em; }
+* + :is(table, .table) { margin-top: 1em; }
 tr {
     border-bottom: 1px solid #ededf0;
     vertical-align: middle;
@@ -288,11 +288,12 @@ table :is(td, th).picture > img {
     width: 24px;
     height: 24px;
 }
-table + div.legend {
+:is(table, .table) + div.legend {
     margin-top: 6px;
     text-align: center;
     font-size: 0.8em;
 }
+.table { overflow-x: scroll; }
 
 hr {
     margin: 4px auto;

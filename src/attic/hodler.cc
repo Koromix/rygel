@@ -18,6 +18,7 @@
 extern "C" {
     #include "vendor/cmark-gfm/src/cmark-gfm.h"
     #include "vendor/cmark-gfm/extensions/cmark-gfm-core-extensions.h"
+    #include "vendor/cmark-gfm/extensions/table.h"
 }
 #include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
 
@@ -555,6 +556,15 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
         while ((event = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
             cmark_node *node = cmark_iter_get_node(iter);
             cmark_node_type type = cmark_node_get_type(node);
+
+            // Wrap HTML tables for horizontal scrolling
+            if (event == CMARK_EVENT_EXIT && type == CMARK_NODE_TABLE) {
+                cmark_node *div = cmark_node_new(CMARK_NODE_CUSTOM_BLOCK);
+                cmark_node_set_on_enter(div, "<div class=\"table\">");
+                cmark_node_set_on_exit(div, "</div>");
+                cmark_node_insert_before(node, div);
+                cmark_node_append_child(div, node);
+            }
 
             // List sections and add anchors
             if (event == CMARK_EVENT_EXIT && type == CMARK_NODE_HEADING) {

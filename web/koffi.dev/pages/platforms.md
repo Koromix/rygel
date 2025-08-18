@@ -14,25 +14,14 @@ Use [NVM](https://github.com/nvm-sh/nvm) to install more recent Node versions on
 
 The following combinations of OS and architectures __are officially supported and tested__ at the moment:
 
-ISA / OS           | Windows | Linux (glibc) | Linux (musl)
------------------- | ------- | ------------- | ------------
-x86 (IA32) [^1]    | ✅      | ✅            | 🟨
-x86_64 (AMD64)     | ✅      | ✅            | ✅
-ARM32 LE [^2]      | ⬜️      | ✅            | 🟨
-ARM64 (AArch64) LE | ✅      | ✅            | ✅
-RISC-V 64 [^3]     | ⬜️      | ✅            | 🟨
-LoongArch64        | ⬜️      | ✅            | 🟨
-
-<div class="legend">✅ Yes | 🟨 Probably | ⬜️ Not applicable</div>
-
-ISA / OS           | macOS | FreeBSD     | OpenBSD
------------------- | ----- | ----------- | --------
-x86 (IA32) [^1]    | ⬜️    | ✅          | ✅
-x86_64 (AMD64)     | ✅    | ✅          | ✅
-ARM32 LE [^2]      | ⬜️    | 🟨          | 🟨
-ARM64 (AArch64) LE | ✅    | ✅          | 🟨
-RISC-V 64 [^3]     | ⬜️    | 🟨          | 🟨
-LoongArch64        | ⬜️    | 🟨          | 🟨
+ISA / OS           | Windows     | Linux (glibc) | Linux (musl) | macOS       | FreeBSD     | OpenBSD
+------------------ | ----------- | ------------- | ------------ | ----------- | ----------- | --------
+x86 (IA32) [^1]    | ✅ Yes      | ✅ Yes        | 🟨 Probably  | ⬜️ *N/A*    | ✅ Yes      | ✅ Yes
+x86_64 (AMD64)     | ✅ Yes      | ✅ Yes        | ✅ Yes       | ✅ Yes      | ✅ Yes      | ✅ Yes
+ARM32 LE [^2]      | ⬜️ *N/A*    | ✅ Yes        | 🟨 Probably  | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
+ARM64 (AArch64) LE | ✅ Yes      | ✅ Yes        | ✅ Yes       | ✅ Yes      | ✅ Yes      | 🟨 Probably
+RISC-V 64 [^3]     | ⬜️ *N/A*    | ✅ Yes        | 🟨 Probably  | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
+LoongArch64        | ⬜️ *N/A*    | ✅ Yes        | 🟨 Probably  | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
 
 <div class="legend">✅ Yes | 🟨 Probably | ⬜️ Not applicable</div>
 
