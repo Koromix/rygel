@@ -16,39 +16,9 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "repository.hh"
 
 namespace RG {
 
-static const int ConfigVersion = 2;
-static const int TagVersion = 1;
-static const int BlobVersion = 7;
-static const Size BlobSplit = Kibibytes(32);
-
-#pragma pack(push, 1)
-struct ConfigData {
-    int8_t version;
-    uint8_t cypher[64 + 2048];
-};
-#pragma pack(pop)
-
-#pragma pack(push, 1)
-struct TagIntro {
-    int8_t version;
-    rk_ObjectID oid;
-    char prefix[10];
-    uint8_t key[32];
-    int8_t count;
-};
-#pragma pack(pop)
-
-#pragma pack(push, 1)
-struct BlobIntro {
-    int8_t version;
-    int8_t type;
-    uint8_t ekey[32 + 16 + 32];
-    uint8_t header[24];
-};
-#pragma pack(pop)
+bool DetectAlerts();
 
 }

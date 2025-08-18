@@ -864,6 +864,7 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
         entry->gid = LittleEndian(file_info.gid);
     }
 
+    info.time = GetUnixTime();
     info.size = put.GetSize();
     info.stored = put.GetStored();
     info.added = put.GetWritten();
@@ -873,7 +874,7 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
         SnapshotHeader3 *header1 = (SnapshotHeader3 *)snapshot_blob.ptr;
         DirectoryHeader *header2 = (DirectoryHeader *)(header1 + 1);
 
-        header1->time = LittleEndian(GetUnixTime());
+        header1->time = LittleEndian(info.time);
         CopyString(channel, header1->channel);
         header1->size = LittleEndian(info.size);
         header1->stored = LittleEndian(info.stored);

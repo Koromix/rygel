@@ -36,23 +36,6 @@ bool rk_Config::Complete(unsigned int flags)
         if (!key_filename) {
             key_filename = GetEnv("REKKORD_KEYFILE");
         }
-
-        if (!key_filename && !username) {
-            username = GetEnv("REKKORD_USER");
-            if (!username && FileIsVt100(STDERR_FILENO)) {
-                username = Prompt("Repository user: ", &str_alloc);
-            }
-            if (!username)
-                return false;
-        }
-        if (!key_filename && !password) {
-            password = GetEnv("REKKORD_PASSWORD");
-            if (!password && FileIsVt100(STDERR_FILENO)) {
-                password = Prompt("Repository password: ", nullptr, "*", &str_alloc);
-            }
-            if (!password)
-                return false;
-        }
     }
 
     if (flags & (int)rk_ConfigFlag::RequireAgent) {
@@ -80,12 +63,8 @@ bool rk_Config::Validate(unsigned int flags) const
     }
 
     if (flags & (int)rk_ConfigFlag::RequireAuth) {
-        if (!key_filename && !username) {
-            LogError("Missing repository username");
-            valid = false;
-        }
-        if (!key_filename && !password) {
-            LogError("Missing repository password");
+        if (!key_filename) {
+            LogError("Missing repository key file");
             valid = false;
         }
     }
@@ -238,11 +217,6 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                         valid &= rk_DecodeURL(prop.value, &config);
                     } else if (prop.key == "KeyFile") {
                         config.key_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
-                    } else if (prop.key == "User") {
-                        config.username = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "Password") {
-                        config.password = DuplicateString(prop.value, &config.str_alloc).ptr;
-                        ZeroSafe((void *)prop.value.ptr, prop.value.len);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

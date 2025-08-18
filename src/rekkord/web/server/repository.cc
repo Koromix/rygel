@@ -23,96 +23,31 @@
 
 namespace RG {
 
-static smtp_MailContent FailureMessage = {
-    "[Error] {{ TITLE }}: {{ REPOSITORY }}",
-    R"(Failed to check for {{ REPOSITORY }}:\n{{ ERROR }})",
-    R"(<html lang="en"><body><p>Failed to check for <b>{{ REPOSITORY }}</b>:</p><p style="color: red;">{{ ERROR }}</p></body></html>)",
-    {}
-};
-
-static smtp_MailContent FailureResolved = {
-    "[Resolved] {{ TITLE }}: {{ REPOSITORY }}",
-    R"(Access to {{ REPOSITORY }} is now back on track!)",
-    R"(<html lang="en"><body><p>Access to <b>{{ REPOSITORY }}</b> is now back on track!</p></body></html>)",
-    {}
-};
-
-static smtp_MailContent StaleMessage = {
-    "[Stale] {{ TITLE }}: {{ REPOSITORY }} channel {{ CHANNEL }}",
-    R"(Repository {{ REPOSITORY }} channel {{ CHANNEL }} looks stale.\n\nLast snapshot: {{ TIMESTAMP }})",
-    R"(<html lang="en"><body><p>Repository <b>{{ REPOSITORY }}</b> channel <b>{{ CHANNEL }}</b> looks stale.</p><p>Last snapshot: <b>{{ TIMESTAMP }}</b></p></body></html>)",
-    {}
-};
-
-static smtp_MailContent StaleResolved = {
-    "[Resolved] {{ TITLE }}: {{ REPOSITORY }} channel {{ CHANNEL }}",
-    R"(Repository {{ REPOSITORY }} channel {{ CHANNEL }} is now back on track!\n\nLast snapshot: {{ TIMESTAMP }})",
-    R"(<html lang="en"><body><p>Repository <b>{{ REPOSITORY }}</b> channel <b>{{ CHANNEL }}</b> is now back on track!.</p><p>Last snapshot: <b>{{ TIMESTAMP }}</b></p></body></html>)",
-    {}
-};
-
-static bool FillConfig(const char *url, const char *user, const char *password,
-                       const HashMap<const char *, const char *> variables, rk_Config *out_repo)
+static bool CheckURL(const char *url)
 {
-    rk_Config access;
+    rk_Config config;
 
-    if (!rk_DecodeURL(url, &access))
+    if (!rk_DecodeURL(url, &config))
         return false;
 
-    switch (access.type) {
-        case rk_DiskType::S3:
-        case rk_DiskType::SFTP: {} break;
+    bool valid = false;
 
-        case rk_DiskType::Local: {
-            LogError("Unsupported URL '%1'", url);
-            return false;
-        }
+    switch (config.type) {
+        case rk_DiskType::Local: {} break;
+        case rk_DiskType::S3: { valid = config.s3.remote.host; } break;
+        case rk_DiskType::SFTP: { valid = config.ssh.host; } break;
     }
 
-    access.username = user;
-    access.password = password;
-
-    switch (access.type) {
-        case rk_DiskType::Local: { RG_UNREACHABLE(); } break;
-
-        case rk_DiskType::S3: {
-            access.s3.remote.access_id = variables.FindValue("S3_ACCESS_KEY_ID", nullptr);
-            access.s3.remote.access_key = variables.FindValue("S3_SECRET_ACCESS_KEY", nullptr);
-        } break;
-
-        case rk_DiskType::SFTP: {
-            access.ssh.known_hosts = false;
-            access.ssh.password = variables.FindValue("SSH_PASSWORD", nullptr);
-            access.ssh.key = variables.FindValue("SSH_KEY", nullptr);
-            access.ssh.fingerprint = variables.FindValue("SSH_FINGERPRINT", nullptr);
-        } break;
+    if (!valid) {
+        LogError("Unsupported URL '%1'", url);
+        return false;
     }
-
-    if (!access.Validate(true))
-        return false;
-
-    std::swap(*out_repo, access);
-    return true;
-}
-
-static bool ListSnapshots(const rk_Config &access, Allocator *alloc,
-                          HeapArray<rk_SnapshotInfo> *out_snapshots, HeapArray<rk_ChannelInfo> *out_channels)
-{
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(access);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), access, true);
-
-    if (!repo)
-        return false;
-
-    Size prev_snapshots = out_snapshots->len;
-    if (!rk_ListSnapshots(repo.get(), alloc, out_snapshots))
-        return false;
-    rk_ListChannels(out_snapshots->Take(prev_snapshots, out_snapshots->len - prev_snapshots), alloc, out_channels);
 
     return true;
 }
 
-static bool UpdateSnapshots(int64_t id, int64_t now, Span<const rk_SnapshotInfo> snapshots, Span<const rk_ChannelInfo> channels)
+static bool UpdateSnapshots(int64_t id, int64_t now,
+                            Span<const rk_SnapshotInfo> snapshots, Span<const rk_ChannelInfo> channels)
 {
     bool success = db.Transaction([&]() {
         if (!db.Run(R"(UPDATE failures SET resolved = 1,
@@ -175,254 +110,6 @@ static bool UpdateSnapshots(int64_t id, int64_t now, Span<const rk_SnapshotInfo>
     });
     if (!success)
         return false;
-
-    return true;
-}
-
-static bool CheckRepository(const rk_Config &access, int64_t id)
-{
-    BlockAllocator temp_alloc;
-
-    int64_t now = GetUnixTime();
-
-    HeapArray<rk_SnapshotInfo> snapshots;
-    HeapArray<rk_ChannelInfo> channels;
-
-    // Fetch snapshots
-    {
-        const char *last_err = nullptr;
-
-        // Keep last error message
-        PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-            if (level == LogLevel::Error) {
-                last_err = DuplicateString(msg, &temp_alloc).ptr;
-            }
-
-            func(level, ctx, msg);
-        });
-        RG_DEFER { PopLogFilter(); };
-
-        if (!ListSnapshots(access, &temp_alloc, &snapshots, &channels)) {
-            bool success = db.Transaction([&]() {
-                if (!db.Run(R"(UPDATE repositories SET checked = ?2,
-                                                       failed = ?3,
-                                                       errors = errors + 1
-                               WHERE id = ?1)", id, now, last_err))
-                    return false;
-
-                if (!db.Run(R"(INSERT INTO failures (repository, timestamp, message, resolved)
-                               VALUES (?1, ?2, ?3, 0)
-                               ON CONFLICT DO UPDATE SET resolved = 0)", id, now, last_err))
-                    return false;
-
-                return true;
-            });
-            if (!success)
-                return false;
-
-            return true;
-        }
-    }
-
-    if (!UpdateSnapshots(id, now, snapshots, channels))
-        return false;
-
-    return true;
-}
-
-static Span<const char> PatchFailure(Span<const char> text, const char *repository, const char *message, Allocator *alloc)
-{
-    Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
-        Span<const char> key = TrimStr(expr);
-
-        if (key == "TITLE") {
-            writer->Write(config.title);
-        } else if (key == "REPOSITORY") {
-            writer->Write(repository);
-        } else if (key == "ERROR") {
-            writer->Write(message);
-        } else {
-            Print(writer, "{{%1}}", expr);
-        }
-    });
-
-    return ret;
-}
-
-static Span<const char> PatchStale(Span<const char> text, const char *repository,
-                                   const char *channel, int64_t timestamp, Allocator *alloc)
-{
-    Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
-        Span<const char> key = TrimStr(expr);
-
-        if (key == "TITLE") {
-            writer->Write(config.title);
-        } else if (key == "REPOSITORY") {
-            writer->Write(repository);
-        } else if (key == "CHANNEL") {
-            writer->Write(channel);
-        } else if (key == "TIMESTAMP") {
-            TimeSpec spec = DecomposeTimeUTC(timestamp);
-            Print(writer, "%1", FmtTimeNice(spec));
-        } else {
-            Print(writer, "{{%1}}", expr);
-        }
-    });
-
-    return ret;
-}
-
-bool CheckRepositories()
-{
-    BlockAllocator temp_alloc;
-
-    int64_t now = GetUnixTime();
-
-    // Check repositories
-    {
-        sq_Statement stmt;
-        if (!db.Prepare(R"(SELECT r.id, r.url, r.user, r.password, v.key, v.value
-                           FROM repositories r
-                           LEFT JOIN variables v
-                           WHERE r.checked + IIF(r.errors = 0, ?2, ?3) <= ?1
-                           ORDER BY r.id)",
-                        &stmt, now, config.update_period, config.retry_delay))
-            return false;
-        if (!stmt.Run())
-            return false;
-
-        Async async;
-        BucketArray<rk_Config> repositories;
-
-        while (stmt.IsRow()) {
-            rk_Config *access = repositories.AppendDefault();
-
-            int64_t id = sqlite3_column_int64(stmt, 0);
-            const char *url = DuplicateString((const char *)sqlite3_column_text(stmt, 1), &temp_alloc).ptr;
-            const char *user = DuplicateString((const char *)sqlite3_column_text(stmt, 2), &temp_alloc).ptr;
-            const char *password = DuplicateString((const char *)sqlite3_column_text(stmt, 3), &temp_alloc).ptr;
-
-            LogDebug("Checking repository '%1'", url);
-
-            HashMap<const char *, const char *> variables;
-            do {
-                if (sqlite3_column_int64(stmt, 0) != id)
-                    break;
-                if (sqlite3_column_type(stmt, 4) == SQLITE_NULL)
-                    break;
-
-                const char *key = DuplicateString((const char *)sqlite3_column_text(stmt, 4), &temp_alloc).ptr;
-                const char *value = DuplicateString((const char *)sqlite3_column_text(stmt, 5), &temp_alloc).ptr;
-
-                variables.Set(key, value);
-            } while (stmt.Step());
-
-            if (!FillConfig(url, user, password, variables, access))
-                continue;
-
-            async.Run([=]() { return CheckRepository(*access, id); });
-        }
-        if (!stmt.IsValid())
-            return false;
-
-        stmt.Finalize();
-
-        if (!async.Sync())
-            return false;
-    }
-
-    // Post error alerts
-    {
-        sq_Statement stmt;
-        if (!db.Prepare(R"(SELECT f.id, u.mail, r.name, f.message, f.resolved
-                           FROM failures f
-                           INNER JOIN repositories r ON (r.id = f.repository)
-                           INNER JOIN users u ON (u.id = r.owner)
-                           WHERE f.timestamp < ?1 AND
-                                 (f.sent IS NULL OR f.sent < ?2))",
-                        &stmt, now - config.mail_delay, now - config.repeat_delay))
-            return false;
-
-        while (stmt.Step()) {
-            bool success = db.Transaction([&]() {
-                int64_t id = sqlite3_column_int64(stmt, 0);
-                const char *to = (const char *)sqlite3_column_text(stmt, 1);
-                const char *name = (const char *)sqlite3_column_text(stmt, 2);
-                const char *error = (const char *)sqlite3_column_text(stmt, 3);
-                bool unsolved = !sqlite3_column_int(stmt, 4);
-
-                smtp_MailContent content = unsolved ? FailureMessage : FailureResolved;
-
-                content.subject = PatchFailure(content.subject, name, error, &temp_alloc).ptr;
-                content.text = PatchFailure(content.text, name, error, &temp_alloc).ptr;
-                content.html = PatchFailure(content.html, name, error, &temp_alloc).ptr;
-
-                if (!PostMail(to, content))
-                    return false;
-
-                if (unsolved) {
-                    if (!db.Run("UPDATE failures SET sent = ?2 WHERE id = ?1", id, now))
-                        return false;
-                } else {
-                    if (!db.Run("DELETE FROM failures WHERE id = ?1", id))
-                        return false;
-                }
-
-                return true;
-            });
-            if (!success)
-                return false;
-        }
-        if (!stmt.IsValid())
-            return false;
-    }
-
-    // Post stale alerts
-    {
-        sq_Statement stmt;
-        if (!db.Prepare(R"(SELECT s.id, u.mail, r.name, s.channel, s.timestamp, s.resolved
-                           FROM stales s
-                           INNER JOIN repositories r ON (r.id = s.repository)
-                           INNER JOIN users u ON (u.id = r.owner)
-                           WHERE s.timestamp < ?1 AND
-                                 (s.sent IS NULL OR s.sent < ?2))",
-                        &stmt, now - config.mail_delay, now - config.repeat_delay))
-            return false;
-
-        while (stmt.Step()) {
-            bool success = db.Transaction([&]() {
-                int64_t id = sqlite3_column_int64(stmt, 0);
-                const char *to = (const char *)sqlite3_column_text(stmt, 1);
-                const char *name = (const char *)sqlite3_column_text(stmt, 2);
-                const char *channel = (const char *)sqlite3_column_text(stmt, 3);
-                int64_t timestamp = sqlite3_column_int64(stmt, 4);
-                bool unsolved = !sqlite3_column_int(stmt, 5);
-
-                smtp_MailContent content = unsolved ? StaleMessage : StaleResolved;
-
-                content.subject = PatchStale(content.subject, name, channel, timestamp, &temp_alloc).ptr;
-                content.text = PatchStale(content.text, name, channel, timestamp, &temp_alloc).ptr;
-                content.html = PatchStale(content.html, name, channel, timestamp, &temp_alloc).ptr;
-
-                if (!PostMail(to, content))
-                    return false;
-
-                if (unsolved) {
-                    if (!db.Run("UPDATE stales SET sent = ?2 WHERE id = ?1", id, now))
-                        return false;
-                } else {
-                    if (!db.Run("DELETE FROM stales WHERE id = ?1", id))
-                        return false;
-                }
-
-                return true;
-            });
-            if (!success)
-                return false;
-        }
-        if (!stmt.IsValid())
-            return false;
-    }
 
     return true;
 }
@@ -505,7 +192,7 @@ void HandleRepositoryGet(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT name, url, user, password, checked, failed, errors
+    if (!db.Prepare(R"(SELECT name, url, checked, failed, errors
                        FROM repositories
                        WHERE owner = ?1 AND id = ?2)",
                     &stmt, session->userid, id))
@@ -529,17 +216,13 @@ void HandleRepositoryGet(http_IO *io)
     {
         const char *name = (const char *)sqlite3_column_text(stmt, 0);
         const char *url = (const char *)sqlite3_column_text(stmt, 1);
-        const char *user = (const char *)sqlite3_column_text(stmt, 2);
-        const char *password = (const char *)sqlite3_column_text(stmt, 3);
-        int64_t checked = sqlite3_column_int64(stmt, 4);
-        const char *failed = (const char *)sqlite3_column_text(stmt, 5);
-        int errors = sqlite3_column_int(stmt, 6);
+        int64_t checked = sqlite3_column_int64(stmt, 2);
+        const char *failed = (const char *)sqlite3_column_text(stmt, 3);
+        int errors = sqlite3_column_int(stmt, 4);
 
         json.Key("id"); json.Int64(id);
         json.Key("name"); json.String(name);
         json.Key("url"); json.String(url);
-        json.Key("user"); json.String(user);
-        json.Key("password"); json.String(password);
         if (checked) {
             json.Key("checked"); json.Int64(checked);
         } else {
@@ -553,28 +236,13 @@ void HandleRepositoryGet(http_IO *io)
         json.Key("errors"); json.Int(errors);
     }
 
-    // Variables
-    {
-        sq_Statement stmt;
-        if (!db.Prepare("SELECT key, value FROM variables WHERE repository = ?1", &stmt, id))
-            return;
-
-        json.Key("variables"); json.StartObject();
-        while (stmt.Step()) {
-            const char *key = (const char *)sqlite3_column_text(stmt, 0);
-            const char *value = (const char *)sqlite3_column_text(stmt, 1);
-
-            json.Key(key); json.String(value);
-        }
-        if (!stmt.IsValid())
-            return;
-        json.EndObject();
-    }
-
     // Channels
     {
         sq_Statement stmt;
-        if (!db.Prepare("SELECT name, oid, timestamp, size, count, ignore FROM channels WHERE repository = ?1", &stmt, id))
+        if (!db.Prepare(R"(SELECT name, oid, timestamp, size, count, ignore
+                           FROM channels
+                           WHERE repository = ?1)",
+                        &stmt, id))
             return;
 
         json.Key("channels"); json.StartArray();
@@ -619,9 +287,6 @@ void HandleRepositorySave(http_IO *io)
     int64_t id = -1;
     const char *name = nullptr;
     const char *url = nullptr;
-    const char *user = nullptr;
-    const char *password = nullptr;
-    HashMap<const char *, const char *> variables;
     {
         StreamReader st;
         if (!io->OpenForRead(Kibibytes(4), &st))
@@ -639,20 +304,6 @@ void HandleRepositorySave(http_IO *io)
                 parser.ParseString(&name);
             } else if (key == "url") {
                 parser.ParseString(&url);
-            } else if (key == "user") {
-                parser.ParseString(&user);
-            } else if (key == "password") {
-                parser.ParseString(&password);
-            } else if (key == "variables") {
-                parser.ParseObject();
-                while (parser.InObject()) {
-                    Span<const char> key = {};
-                    Span<const char> value = {};
-                    parser.ParseKey(&key);
-                    parser.ParseString(&value);
-
-                    variables.Set(key.ptr, value.ptr);
-                }
             } else if (parser.IsValid()) {
                 LogError("Unexpected key '%1'", key);
                 io->SendError(422);
@@ -665,8 +316,6 @@ void HandleRepositorySave(http_IO *io)
         }
     }
 
-    rk_Config access;
-
     // Check missing or invalid values
     {
         bool valid = true;
@@ -675,17 +324,9 @@ void HandleRepositorySave(http_IO *io)
             LogError("Missing or invalid 'name' parameter");
             valid = false;
         }
-        if (!user || !user[0]) {
-            LogError("Missing or invalid 'user' parameter");
-            valid = false;
-        }
-        if (!password || !password[0]) {
-            LogError("Missing or invalid 'password' parameter");
-            valid = false;
-        }
 
         if (url) {
-            valid &= FillConfig(url, user, password, variables, &access);
+            valid = CheckURL(url);
         } else {
             LogError("Missing 'url' value");
             valid = false;
@@ -697,57 +338,22 @@ void HandleRepositorySave(http_IO *io)
         }
     }
 
-    // Make sure it works
-    {
-        std::unique_ptr<rk_Disk> disk = rk_OpenDisk(access);
-        std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), access, true);
-
-        if (!disk) {
-            io->SendError(404);
-            return;
-        }
-        if (!repo) {
-            io->SendError(403);
-            return;
-        }
-        if (repo->GetModes() != (int)rk_AccessMode::Log) {
-            LogError("Select repository user with LogOnly role and nothing else");
-            io->SendError(403);
-            return;
-        }
-    }
-
     // Create or update repository
-    bool success = db.Transaction([&]() {
+    {
         sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO repositories (id, owner, name, url, user, password, checked, failed, errors)
-                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, NULL, 0)
+        if (!db.Prepare(R"(INSERT INTO repositories (id, owner, name, url, checked, failed, errors)
+                           VALUES (?1, ?2, ?3, ?4, 0, NULL, 0)
                            ON CONFLICT DO UPDATE SET id = IF(owner = excluded.owner, id, NULL),
                                                      name = excluded.name,
                                                      url = excluded.url,
-                                                     user = excluded.user,
-                                                     password = excluded.password,
                                                      checked = excluded.checked
                            RETURNING id)",
-                        &stmt, id >= 0 ? sq_Binding(id) : sq_Binding(), session->userid,
-                        name, url, user, password))
-            return false;
+                        &stmt, id >= 0 ? sq_Binding(id) : sq_Binding(),
+                        session->userid, name, url))
+            return;
         if (!stmt.GetSingleValue(&id))
-            return false;
-
-        if (!db.Run("DELETE FROM variables WHERE repository = ?1", id))
-            return false;
-
-        for (const auto &it: variables.table) {
-            if (!db.Run("INSERT INTO variables (repository, key, value) VALUES (?1, ?2, ?3)",
-                        id, it.key, it.value))
-                return false;
-        }
-
-        return true;
-    });
-    if (!success)
-        return;
+            return;
+    }
 
     const char *json = Fmt(io->Allocator(), "{\"id\": %1}", id).ptr;
     io->SendText(200, json, "application/json");

@@ -16,14 +16,13 @@
 #pragma once
 
 #include "src/core/base/base.hh"
+#include "key.hh"
 
 namespace RG {
 
 struct rk_Config;
 class rk_Disk;
 enum class rk_WriteResult;
-
-static const int rk_MasterKeySize = 32;
 
 struct rk_Hash {
     uint8_t raw[32];
@@ -85,41 +84,9 @@ struct rk_ObjectID {
 };
 static_assert(RG_SIZE(rk_ObjectID) == 33);
 
-enum class rk_AccessMode {
-    Config = 1 << 0,
-    Read = 1 << 1,
-    Write = 1 << 2,
-    Log = 1 << 3
-};
-static const char *const rk_AccessModeNames[] = {
-    "Config",
-    "Read",
-    "Write",
-    "Log"
-};
-
 enum class rk_SaltKind {
     BlobHash = 0,
     SplitterSeed = 1
-};
-
-enum class rk_UserRole {
-    Admin = 0,
-    WriteOnly = 1,
-    ReadWrite = 2,
-    LogOnly = 3
-};
-static const char *const rk_UserRoleNames[] = {
-    "Admin",
-    "WriteOnly",
-    "ReadWrite",
-    "LogOnly"
-};
-
-struct rk_UserInfo {
-    const char *username;
-    rk_UserRole role;
-    const char *pwd; // NULL unless used to create users
 };
 
 struct rk_TagInfo {
@@ -127,18 +94,6 @@ struct rk_TagInfo {
     const char *prefix;
     rk_ObjectID oid;
     Span<const uint8_t> payload;
-};
-
-struct rk_KeySet {
-    uint8_t ckey[32];
-    uint8_t akey[32];
-    uint8_t dkey[32];
-    uint8_t wkey[32];
-    uint8_t lkey[32];
-    uint8_t tkey[32];
-    uint8_t nkey[32];
-    uint8_t skey[32];
-    uint8_t pkey[32];
 };
 
 class rk_Repository {
@@ -150,9 +105,6 @@ class rk_Repository {
     rk_Disk *disk;
     IdSet ids;
 
-    unsigned int modes = 0;
-    const char *user = nullptr;
-    const char *role = "Secure";
     rk_KeySet *keyset = nullptr;
 
     int compression_level;
@@ -174,27 +126,23 @@ public:
 
     bool Init(Span<const uint8_t> mkey);
 
-    bool Authenticate(const char *username, const char *pwd);
-    bool Authenticate(Span<const uint8_t> mkey);
+    bool Authenticate(const char *filename);
+    bool Authenticate(Span<const uint8_t> key);
     void Lock();
 
     rk_Disk *GetDisk() const { return disk; }
-    const char *GetUser() const { return user; } // Can be NULL
-    const char *GetRole() const { return role; }
     Async *GetAsync() { return &tasks; }
 
-    unsigned int GetModes() const { return modes; }
-    bool HasMode(rk_AccessMode mode) const { return modes & (int)mode; }
+    const rk_KeySet &GetKeys() const { return *keyset; }
+    const char *GetRole() const { return keyset ? rk_UserRoleNames[(int)keyset->role] : "Secure"; }
+    unsigned int GetModes() const { return keyset ? keyset->modes : 0; }
+    bool HasMode(rk_AccessMode mode) const { return keyset ? keyset->HasMode(mode) : false; }
 
     void MakeID(Span<uint8_t> out_id) const;
     void MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const;
 
     Span<const uint8_t> GetCID() const { return ids.cid; }
     bool ChangeCID();
-
-    bool InitUser(const char *username, rk_UserRole role, const char *pwd);
-    bool DeleteUser(const char *username);
-    bool ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserInfo> *out_users);
 
     bool ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<uint8_t> *out_blob, int64_t *out_size = nullptr);
     rk_WriteResult WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8_t> blob, int64_t *out_size = nullptr);
@@ -207,13 +155,8 @@ public:
     bool TestConditionalWrites(bool *out_cw = nullptr);
 
 private:
-    bool WriteKeys(const char *path, const char *pwd, rk_UserRole role, const rk_KeySet &keys);
-    bool ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, rk_KeySet *out_keys);
-
     bool WriteConfig(const char *path, Span<const uint8_t> buf, bool overwrite);
     bool ReadConfig(const char *path, Span<uint8_t> out_buf);
-
-    bool CheckRepository();
 
     bool HasConditionalWrites();
 };
@@ -221,6 +164,6 @@ private:
 std::unique_ptr<rk_Repository> rk_OpenRepository(rk_Disk *disk, const rk_Config &config, bool authenticate);
 
 // Does not log anything
-bool rk_ParseOID(Span<const char> str, rk_ObjectID *out_oid);
+bool rk_ParseOID(Span<const char> str, rk_ObjectID *out_oid = nullptr);
 
 }

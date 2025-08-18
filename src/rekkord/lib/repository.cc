@@ -16,8 +16,10 @@
 #include "src/core/base/base.hh"
 #include "config.hh"
 #include "disk.hh"
+#include "key.hh"
 #include "lz4.hh"
 #include "repository.hh"
+#include "priv_key.hh"
 #include "priv_repository.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "vendor/sha1/sha1.h"
@@ -36,15 +38,6 @@ static_assert(crypto_secretbox_MACBYTES == 16);
 static_assert(crypto_sign_ed25519_SEEDBYTES == 32);
 static_assert(crypto_sign_ed25519_BYTES == 64);
 static_assert(crypto_kdf_blake2b_KEYBYTES == crypto_box_PUBLICKEYBYTES);
-
-static void SeedSigningPair(const uint8_t sk[32], uint8_t pk[32])
-{
-    uint8_t hash[64];
-    RG_DEFER { ZeroSafe(hash, RG_SIZE(hash)); };
-
-    crypto_hash_sha512(hash, sk, 32);
-    crypto_scalarmult_ed25519_base(pk, hash);
-}
 
 rk_Repository::rk_Repository(rk_Disk *disk, const rk_Config &config)
     : disk(disk), compression_level(config.compression_level), retain(config.retain),
@@ -156,19 +149,9 @@ bool rk_Repository::Init(Span<const uint8_t> mkey)
     }
 
     keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
-    modes = UINT_MAX;
-    role = "Master";
 
-    // Derive encryption keys
-    crypto_kdf_blake2b_derive_from_key(keyset->ckey, RG_SIZE(keyset->ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(keyset->nkey, RG_SIZE(keyset->nkey), (int)MasterDerivation::NeutralKey, DerivationContext, mkey.ptr);
-    SeedSigningPair(keyset->ckey, keyset->akey);
-    crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
-    crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-    MemCpy(keyset->skey, keyset->nkey, RG_SIZE(keyset->skey));
-    SeedSigningPair(keyset->skey, keyset->pkey);
+    if (!rk_LoadKeys(mkey, keyset))
+        return false;
 
     // Generate unique repository IDs
     {
@@ -192,52 +175,15 @@ bool rk_Repository::Init(Span<const uint8_t> mkey)
     return true;
 }
 
-bool rk_Repository::Authenticate(const char *username, const char *pwd)
+bool rk_Repository::Authenticate(const char *filename)
 {
     RG_ASSERT(!keyset);
 
+    keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
     RG_DEFER_N(err_guard) { Lock(); };
 
-    const char *filename = Fmt(&str_alloc, "keys/%1", username).ptr;
-
-    if (!CheckRepository())
+    if (!rk_LoadKeys(filename, keyset))
         return false;
-
-    // Does user exist?
-    switch (disk->TestFile(filename)) {
-        case StatResult::Success: {} break;
-        case StatResult::MissingPath: {
-            LogError("User '%1' does not exist", username);
-            return false;
-        } break;
-        case StatResult::AccessDenied:
-        case StatResult::OtherError: return false;
-    }
-
-    keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
-
-    // Open disk and determine mode
-    {
-        rk_UserRole role;
-
-        if (!ReadKeys(filename, pwd, &role, keyset))
-            return false;
-
-        switch (role) {
-            case rk_UserRole::Admin: { modes = (int)rk_AccessMode::Config |
-                                               (int)rk_AccessMode::Read |
-                                               (int)rk_AccessMode::Write |
-                                               (int)rk_AccessMode::Log; } break;
-            case rk_UserRole::WriteOnly: { modes = (int)rk_AccessMode::Write; } break;
-            case rk_UserRole::ReadWrite: { modes = (int)rk_AccessMode::Read |
-                                                   (int)rk_AccessMode::Write |
-                                                   (int)rk_AccessMode::Log; } break;
-            case rk_UserRole::LogOnly: { modes = (int)rk_AccessMode::Log; } break;
-        }
-
-        this->role = rk_UserRoleNames[(int)role];
-        this->user = DuplicateString(username, &str_alloc).ptr;
-    }
 
     // Read unique identifiers
     {
@@ -251,36 +197,15 @@ bool rk_Repository::Authenticate(const char *username, const char *pwd)
     return true;
 }
 
-bool rk_Repository::Authenticate(Span<const uint8_t> mkey)
+bool rk_Repository::Authenticate(Span<const uint8_t> key)
 {
     RG_ASSERT(!keyset);
 
+    keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
     RG_DEFER_N(err_guard) { Lock(); };
 
-    if (mkey.len != rk_MasterKeySize) {
-        LogError("Malformed master key");
+    if (!rk_LoadKeys(key, keyset))
         return false;
-    }
-
-    if (!CheckRepository())
-        return false;
-
-    keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
-    modes = UINT_MAX;
-    role = "Master";
-
-    // Derive encryption keys
-    crypto_kdf_blake2b_derive_from_key(keyset->ckey, RG_SIZE(keyset->ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(keyset->dkey, RG_SIZE(keyset->dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(keyset->lkey, RG_SIZE(keyset->lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(keyset->nkey, RG_SIZE(keyset->nkey), (int)MasterDerivation::NeutralKey, DerivationContext, mkey.ptr);
-    SeedSigningPair(keyset->ckey, keyset->akey);
-    crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
-    crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-    MemCpy(keyset->skey, keyset->nkey, RG_SIZE(keyset->skey));
-    SeedSigningPair(keyset->skey, keyset->pkey);
-
-    user = nullptr;
 
     // Read unique identifiers
     {
@@ -296,42 +221,10 @@ bool rk_Repository::Authenticate(Span<const uint8_t> mkey)
 
 void rk_Repository::Lock()
 {
-    modes = 0;
-    user = nullptr;
-    role = "Secure";
-
     ZeroSafe(&ids, RG_SIZE(ids));
     ReleaseSafe(keyset, RG_SIZE(*keyset));
     keyset = nullptr;
     str_alloc.ReleaseAll();
-}
-
-static bool CheckUserName(Span<const char> username)
-{
-    const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_' || c == '.' || c == '-'; };
-
-    if (!username.len) {
-        LogError("Username cannot be empty");
-        return false;
-    }
-    if (username.len > 32) {
-        LogError("Username cannot be have more than 32 characters");
-        return false;
-    }
-    if (!std::all_of(username.begin(), username.end(), test_char)) {
-        LogError("Username must only contain lowercase alphanumeric, '_', '.' or '-' characters");
-        return false;
-    }
-
-    return true;
-}
-
-static bool IsUserName(Span<const char> username)
-{
-    PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-    RG_DEFER_N(log_guard) { PopLogFilter(); };
-
-    return CheckUserName(username);
 }
 
 void rk_Repository::MakeID(Span<uint8_t> out_id) const
@@ -365,7 +258,7 @@ void rk_Repository::MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const
     uint64_t subkey = (uint64_t)kind;
 
     uint8_t buf[32] = {};
-    crypto_kdf_blake2b_derive_from_key(buf, RG_SIZE(buf), subkey, DerivationContext, keyset->wkey);
+    crypto_kdf_blake2b_derive_from_key(buf, RG_SIZE(buf), subkey, DerivationContext, keyset->keys.wkey);
 
     MemCpy(out_buf.ptr, buf, out_buf.len);
 }
@@ -388,136 +281,6 @@ bool rk_Repository::ChangeCID()
 
     MemCpy(ids.cid, new_ids.cid, RG_SIZE(new_ids.cid));
 
-    return true;
-}
-
-bool rk_Repository::InitUser(const char *username, rk_UserRole role, const char *pwd)
-{
-    RG_ASSERT(HasMode(rk_AccessMode::Config));
-    RG_ASSERT(pwd);
-
-    BlockAllocator temp_alloc;
-
-    if (!CheckUserName(username))
-        return false;
-
-    const char *filename = Fmt(&temp_alloc, "keys/%1", username).ptr;
-    bool exists = false;
-
-    switch (disk->TestFile(filename)) {
-        case StatResult::Success: { exists = true; } break;
-        case StatResult::MissingPath: {} break;
-        case StatResult::AccessDenied:
-        case StatResult::OtherError: return false;
-    }
-
-    if (exists) {
-        LogError("User '%1' already exists", username);
-        return false;
-    }
-
-    rk_KeySet keys = *keyset;
-    randombytes_buf(keys.skey, RG_SIZE(keys.skey));
-
-    if (!WriteKeys(filename, pwd, role, keys))
-        return false;
-
-    return true;
-}
-
-bool rk_Repository::DeleteUser(const char *username)
-{
-    BlockAllocator temp_alloc;
-
-    if (!CheckUserName(username))
-        return false;
-
-    const char *filename = Fmt(&temp_alloc, "keys/%1", username).ptr;
-
-    switch (disk->TestFile(filename)) {
-        case StatResult::Success: {} break;
-        case StatResult::MissingPath: {
-            LogError("User '%1' does not exist", username);
-            return false;
-        } break;
-        case StatResult::AccessDenied:
-        case StatResult::OtherError: return false;
-    }
-
-    if (!disk->DeleteFile(filename))
-        return false;
-
-    return true;
-}
-
-static bool DecodeRole(int value, rk_UserRole *out_role)
-{
-    if (value < 0 || value >= RG_LEN(rk_UserRoleNames)) {
-        LogError("Invalid user role %1", value);
-        return false;
-    }
-
-    *out_role = (rk_UserRole)value;
-    return true;
-}
-
-bool rk_Repository::ListUsers(Allocator *alloc, bool verify, HeapArray<rk_UserInfo> *out_users)
-{
-    Size prev_len = out_users->len;
-    RG_DEFER_N(out_guard) { out_users->RemoveFrom(prev_len); };
-
-    bool success = disk->ListFiles("keys", [&](const char *path, int64_t) {
-        rk_UserInfo user = {};
-
-        Span<const char> remain = path;
-
-        if (!StartsWith(remain, "keys/"))
-            return true;
-
-        Span<const char> username = remain.Take(5, remain.len - 5);
-
-        if (!IsUserName(username))
-            return true;
-
-        user.username = DuplicateString(username, alloc).ptr;
-
-        KeyData data = {};
-        RG_DEFER { ZeroSafe(&data, RG_SIZE(data)); };
-
-        // Read file data
-        {
-            Span<uint8_t> buf = MakeSpan((uint8_t *)&data, RG_SIZE(KeyData));
-            Size len = disk->ReadFile(path, buf);
-
-            if (len != buf.len) {
-                if (len >= 0) {
-                    LogError("Malformed keys in '%1'", path);
-                }
-
-                return true;
-            }
-        }
-
-        if (verify && crypto_sign_ed25519_verify_detached(data.sig, (const uint8_t *)&data, offsetof(KeyData, sig), keyset->akey)) {
-            LogError("Invalid signature for user '%1'", user.username);
-            return true;
-        }
-
-        if (!DecodeRole(data.role, &user.role))
-            return true;
-
-        out_users->Append(user);
-        return true;
-    });
-    if (!success)
-        return false;
-
-    std::sort(out_users->begin() + prev_len, out_users->end(),
-              [](const rk_UserInfo &user1, const rk_UserInfo &user2) {
-        return CmpStr(user1.username, user2.username) < 0;
-    });
-
-    out_guard.Disable();
     return true;
 }
 
@@ -579,7 +342,7 @@ bool rk_Repository::ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<ui
         type = intro.type;
 
         uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
-        if (crypto_box_seal_open(key, intro.ekey, RG_SIZE(intro.ekey), keyset->wkey, keyset->dkey) != 0) {
+        if (crypto_box_seal_open(key, intro.ekey, RG_SIZE(intro.ekey), keyset->keys.wkey, keyset->keys.dkey) != 0) {
             LogError("Failed to unseal blob '%1'", path);
             return false;
         }
@@ -665,7 +428,7 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
             LogError("Failed to initialize symmetric encryption");
             return rk_WriteResult::OtherError;
         }
-        if (crypto_box_seal(intro.ekey, key, RG_SIZE(key), keyset->wkey) != 0) {
+        if (crypto_box_seal(intro.ekey, key, RG_SIZE(key), keyset->keys.wkey) != 0) {
             LogError("Failed to seal symmetric key");
             return rk_WriteResult::OtherError;
         }
@@ -862,14 +625,14 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
 
         uint8_t cypher[RG_SIZE(intro) + crypto_box_SEALBYTES + crypto_sign_BYTES];
 
-        if (crypto_box_seal(cypher, (const uint8_t *)&intro, RG_SIZE(intro), keyset->tkey) != 0) {
+        if (crypto_box_seal(cypher, (const uint8_t *)&intro, RG_SIZE(intro), keyset->keys.tkey) != 0) {
             LogError("Failed to seal tag payload");
             return false;
         }
 
         // Sign it to avoid tampering by other users
         crypto_sign_ed25519_detached(std::end(cypher) - crypto_sign_BYTES, nullptr, cypher,
-                                     RG_SIZE(cypher) - crypto_sign_BYTES, keyset->skey);
+                                     RG_SIZE(cypher) - crypto_sign_BYTES, keyset->keys.skey);
 
         HeapArray<char> buf(&temp_alloc);
         buf.Reserve(512);
@@ -972,7 +735,8 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
         }
 
         TagIntro intro;
-        if (crypto_box_seal_open((uint8_t *)&intro, cypher.data, cypher.len - crypto_sign_BYTES, keyset->tkey, keyset->lkey) != 0) {
+        if (crypto_box_seal_open((uint8_t *)&intro, cypher.data, cypher.len - crypto_sign_BYTES,
+                                 keyset->keys.tkey, keyset->keys.lkey) != 0) {
             LogError("Failed to unseal tag data from '%1'", main);
             continue;
         }
@@ -1092,197 +856,6 @@ bool rk_Repository::TestConditionalWrites(bool *out_cw)
     return true;
 }
 
-static bool DeriveFromPassword(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])
-{
-    static_assert(crypto_pwhash_SALTBYTES == 16);
-
-    if (crypto_pwhash(out_key, 32, pwd, strlen(pwd), salt, crypto_pwhash_OPSLIMIT_INTERACTIVE,
-                      crypto_pwhash_MEMLIMIT_INTERACTIVE, crypto_pwhash_ALG_ARGON2ID13) != 0) {
-        LogError("Failed to derive key from password (exhausted resource?)");
-        return false;
-    }
-
-    return true;
-}
-
-bool rk_Repository::WriteKeys(const char *path, const char *pwd, rk_UserRole role, const rk_KeySet &keys)
-{
-    RG_ASSERT(HasMode(rk_AccessMode::Config));
-
-    const Size PayloadSize = RG_SIZE(KeyData::cypher) - 16;
-    static_assert(RG_SIZE(keys) <= PayloadSize);
-
-    KeyData data = {};
-    uint8_t *payload = (uint8_t *)AllocateSafe(PayloadSize);
-    RG_DEFER {
-        ZeroSafe(&data, RG_SIZE(data));
-        ReleaseSafe(payload, PayloadSize);
-    };
-
-    randombytes_buf(data.salt, RG_SIZE(data.salt));
-    randombytes_buf(data.nonce, RG_SIZE(data.nonce));
-    data.role = (int8_t)role;
-
-    // Write public user key
-    SeedSigningPair(keys.skey, payload);
-
-    // Pick relevant subset of keys
-    {
-        uint8_t *dest = payload + 32;
-
-        switch (role) {
-            case rk_UserRole::Admin: {
-                MemCpy(dest + offsetof(rk_KeySet, ckey), keys.ckey, RG_SIZE(keys.ckey));
-                MemCpy(dest + offsetof(rk_KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
-                MemCpy(dest + offsetof(rk_KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
-            } break;
-
-            case rk_UserRole::WriteOnly: {
-                MemCpy(dest + offsetof(rk_KeySet, akey), keys.akey, RG_SIZE(keys.akey));
-                MemCpy(dest + offsetof(rk_KeySet, wkey), keys.wkey, RG_SIZE(keys.wkey));
-                MemCpy(dest + offsetof(rk_KeySet, tkey), keys.tkey, RG_SIZE(keys.tkey));
-            } break;
-
-            case rk_UserRole::ReadWrite: {
-                MemCpy(dest + offsetof(rk_KeySet, akey), keys.akey, RG_SIZE(keys.akey));
-                MemCpy(dest + offsetof(rk_KeySet, dkey), keys.dkey, RG_SIZE(keys.dkey));
-                MemCpy(dest + offsetof(rk_KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
-            } break;
-
-            case rk_UserRole::LogOnly: {
-                MemCpy(dest + offsetof(rk_KeySet, akey), keys.akey, RG_SIZE(keys.akey));
-                MemCpy(dest + offsetof(rk_KeySet, lkey), keys.lkey, RG_SIZE(keys.lkey));
-            } break;
-        }
-
-        MemCpy(dest + offsetof(rk_KeySet, skey), keys.skey, RG_SIZE(keys.skey));
-    }
-
-    // Encrypt payload
-    {
-        uint8_t *key = (uint8_t *)AllocateSafe(32);
-        RG_DEFER { ReleaseSafe(key, 32); };
-
-        if (!DeriveFromPassword(pwd, data.salt, key))
-            return false;
-        crypto_secretbox_easy(data.cypher, payload, PayloadSize, data.nonce, key);
-    }
-
-    // Sign serialized keyset to detect tampering
-    crypto_sign_ed25519_detached(data.sig, nullptr, (const uint8_t *)&data, offsetof(KeyData, sig), keyset->ckey);
-
-    Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
-
-    rk_WriteSettings settings = { .conditional = HasConditionalWrites() };
-    rk_WriteResult ret = disk->WriteFile(path, buf, settings);
-
-    switch (ret) {
-        case rk_WriteResult::Success: return true;
-        case rk_WriteResult::AlreadyExists: {
-            LogError("Key file '%1' already exists", path);
-            return false;
-        } break;
-        case rk_WriteResult::OtherError: return false;
-    }
-
-    RG_UNREACHABLE();
-}
-
-bool rk_Repository::ReadKeys(const char *path, const char *pwd, rk_UserRole *out_role, rk_KeySet *out_keys)
-{
-    const Size PayloadSize = RG_SIZE(KeyData::cypher) - 16;
-    static_assert(RG_SIZE(*out_keys) <= PayloadSize);
-
-    KeyData data = {};
-    uint8_t *payload = (uint8_t *)AllocateSafe(PayloadSize);
-    RG_DEFER {
-        ZeroSafe(&data, RG_SIZE(data));
-        ReleaseSafe(payload, PayloadSize);
-    };
-
-    // Read file data
-    {
-        Span<uint8_t> buf = MakeSpan((uint8_t *)&data, RG_SIZE(data));
-        Size len = disk->ReadFile(path, buf);
-
-        if (len != buf.len) {
-            if (len == 889) {
-                LogError("This looks like a user made with Rekkord ≤ 0.74, use %!..+rekkord migrate_user -K master.key username%!0");
-            } else if (len >= 0) {
-                LogError("Malformed keys in '%1'", path);
-            }
-            return false;
-        }
-    }
-
-    // Decrypt payload
-    {
-        uint8_t *key = (uint8_t *)AllocateSafe(32);
-        RG_DEFER { ReleaseSafe(key, 32); };
-
-        if (!DeriveFromPassword(pwd, data.salt, key))
-            return false;
-
-        if (crypto_secretbox_open_easy(payload, data.cypher, RG_SIZE(data.cypher), data.nonce, key)) {
-            LogError("Failed to open repository (wrong password?)");
-            return false;
-        }
-    }
-
-    rk_UserRole role;
-    if (!DecodeRole(data.role, &role))
-        return false;
-
-    *out_role = role;
-    MemCpy(out_keys, payload + 32, RG_SIZE(*out_keys));
-
-    switch (role) {
-        case rk_UserRole::Admin: {
-            SeedSigningPair(keyset->ckey, keyset->akey);
-            crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
-            crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-        } break;
-
-        case rk_UserRole::WriteOnly: {
-            ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
-            ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
-            ZeroSafe(keyset->lkey, RG_SIZE(keyset->lkey));
-        } break;
-
-        case rk_UserRole::ReadWrite: {
-            ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
-            crypto_scalarmult_curve25519_base(keyset->wkey, keyset->dkey);
-            crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-        } break;
-
-        case rk_UserRole::LogOnly: {
-            ZeroSafe(keyset->ckey, RG_SIZE(keyset->ckey));
-            ZeroSafe(keyset->dkey, RG_SIZE(keyset->dkey));
-            ZeroSafe(keyset->wkey, RG_SIZE(keyset->wkey));
-            crypto_scalarmult_curve25519_base(keyset->tkey, keyset->lkey);
-        } break;
-    }
-
-    SeedSigningPair(keyset->skey, keyset->pkey);
-
-#if 0
-    PrintLn("ckey = %1", FmtSpan(out_keys->ckey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("akey = %1", FmtSpan(out_keys->akey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("dkey = %1", FmtSpan(out_keys->dkey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("wkey = %1", FmtSpan(out_keys->wkey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("lkey = %1", FmtSpan(out_keys->lkey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("tkey = %1", FmtSpan(out_keys->tkey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("nkey = %1", FmtSpan(out_keys->nkey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("skey = %1", FmtSpan(out_keys->skey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("pkey = %1", FmtSpan(out_keys->pkey, FmtType::BigHex, "").Pad0(-2));
-
-    Span<const uint8_t> pub = MakeSpan(payload, 32);
-    PrintLn("public = %1", FmtSpan(pub, FmtType::BigHex, "").Pad0(-2));
-#endif
-
-    return true;
-}
-
 bool rk_Repository::WriteConfig(const char *path, Span<const uint8_t> data, bool overwrite)
 {
     RG_ASSERT(HasMode(rk_AccessMode::Config));
@@ -1305,7 +878,7 @@ bool rk_Repository::WriteConfig(const char *path, Span<const uint8_t> data, bool
     config.version = ConfigVersion;
 
     // Sign config to detect tampering
-    crypto_sign_ed25519(config.cypher, nullptr, data.ptr, (size_t)data.len, keyset->ckey);
+    crypto_sign_ed25519(config.cypher, nullptr, data.ptr, (size_t)data.len, keyset->keys.ckey);
 
     Size len = offsetof(ConfigData, cypher) + crypto_sign_ed25519_BYTES + data.len;
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&config, len);
@@ -1346,27 +919,12 @@ bool rk_Repository::ReadConfig(const char *path, Span<uint8_t> out_buf)
     len -= offsetof(ConfigData, cypher);
     len = std::min(len, out_buf.len + (Size)crypto_sign_ed25519_BYTES);
 
-    if (crypto_sign_ed25519_open(out_buf.ptr, nullptr, config.cypher, len, keyset->akey)) {
+    if (crypto_sign_ed25519_open(out_buf.ptr, nullptr, config.cypher, len, keyset->keys.akey)) {
         LogError("Failed to decrypt config '%1'", path);
         return false;
     }
 
     return true;
-}
-
-bool rk_Repository::CheckRepository()
-{
-    switch (disk->TestFile("rekkord")) {
-        case StatResult::Success: return true;
-        case StatResult::MissingPath: {
-            LogError("Repository '%1' is not initialized or not valid", disk->GetURL());
-            return false;
-        } break;
-        case StatResult::AccessDenied:
-        case StatResult::OtherError: return false;
-    }
-
-    RG_UNREACHABLE();
 }
 
 bool rk_Repository::HasConditionalWrites()
@@ -1389,20 +947,15 @@ std::unique_ptr<rk_Repository> rk_OpenRepository(rk_Disk *disk, const rk_Config 
     std::unique_ptr<rk_Repository> repo = std::make_unique<rk_Repository>(disk, config);
 
     if (authenticate) {
-        if (config.key_filename) {
-            Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
-            RG_DEFER_C(len = mkey.len) { ReleaseSafe(mkey.ptr, len); };
+        Span<uint8_t> key = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
+        RG_DEFER_C(len = key.len) { ReleaseSafe(key.ptr, len); };
 
-            mkey.len = ReadFile(config.key_filename, mkey);
-            if (mkey.len < 0)
-                return nullptr;
+        key.len = ReadFile(config.key_filename, key);
+        if (key.len < 0)
+            return nullptr;
 
-            if (!repo->Authenticate(mkey))
-                return nullptr;
-        } else {
-            if (!repo->Authenticate(config.username, config.password))
-                return nullptr;
-        }
+        if (!repo->Authenticate(key))
+            return nullptr;
     }
 
     return repo;
@@ -1426,6 +979,8 @@ bool rk_ParseOID(Span<const char> str, rk_ObjectID *out_oid)
     if (str.len != 65)
         return false;
 
+    rk_ObjectID oid = {};
+
     // Decode prefix
     {
         const auto ptr = std::find(std::begin(rk_BlobCatalogNames), std::end(rk_BlobCatalogNames), str[0]);
@@ -1433,7 +988,7 @@ bool rk_ParseOID(Span<const char> str, rk_ObjectID *out_oid)
         if (ptr == std::end(rk_BlobCatalogNames))
             return false;
 
-        out_oid->catalog = (rk_BlobCatalog)(ptr - rk_BlobCatalogNames);
+        oid.catalog = (rk_BlobCatalog)(ptr - rk_BlobCatalogNames);
     }
 
     for (Size i = 2, j = 0; i < 66; i += 2, j++) {
@@ -1443,9 +998,12 @@ bool rk_ParseOID(Span<const char> str, rk_ObjectID *out_oid)
         if (high < 0 || low < 0)
             return false;
 
-        out_oid->hash.raw[j] = (uint8_t)((high << 4) | low);
+        oid.hash.raw[j] = (uint8_t)((high << 4) | low);
     }
 
+    if (out_oid) {
+        *out_oid = oid;
+    }
     return true;
 }
 

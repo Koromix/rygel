@@ -21,14 +21,13 @@
 namespace RG {
 
 struct PlanItem {
-    int64_t id;
     const char *channel;
     int clock;
     int days;
     HeapArray<const char *> paths;
 
     int64_t timestamp;
-    const char *failed;
+    bool success;
 };
 
 static void LinkHeaders(Span<curl_slist> headers)
@@ -101,7 +100,7 @@ static bool FetchPlan(Allocator *alloc, HeapArray<PlanItem> *out_items)
                 parser.ParseKey(&key);
 
                 if (key == "id") {
-                    parser.ParseInt(&item.id);
+                    parser.Skip();
                 } else if (key == "channel") {
                     parser.ParseString(&item.channel);
                 } else if (key == "clock") {
@@ -110,8 +109,8 @@ static bool FetchPlan(Allocator *alloc, HeapArray<PlanItem> *out_items)
                     parser.ParseInt(&item.days);
                 } else if (key == "timestamp") {
                     parser.SkipNull() || parser.ParseInt(&item.timestamp);
-                } else if (key == "failed") {
-                    parser.SkipNull() || parser.ParseString(&item.failed);
+                } else if (key == "success") {
+                    parser.ParseBool(&item.success);
                 } else if (key == "paths") {
                     parser.ParseArray();
                     while (parser.InArray()) {
@@ -144,7 +143,7 @@ static bool ShouldRun(const PlanItem &item)
 
     if (now - item.timestamp >= 7 * 86400000)
         return true;
-    if (item.failed)
+    if (!item.success)
         return true;
 
     TimeSpec then = DecomposeTimeUTC(item.timestamp);
@@ -172,87 +171,109 @@ static bool ShouldRun(const PlanItem &item)
     return false;
 }
 
-static bool RunSnapshot(const char *channel, Span<const char *const> paths)
-{
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
-    if (!repo)
-        return false;
-
-    return rk_Save(repo.get(), channel, paths);
-}
-
-static bool ReportSnapshot(int64_t id, int64_t timestamp, const char *failed)
+static bool SendReport(Span<const char> json)
 {
     BlockAllocator temp_alloc;
 
     Span<const char> api = rekkord_config.agent_url;
     const char *key = rekkord_config.api_key;
 
-    Span<const char> body;
-    {
-        HeapArray<uint8_t> buf(&temp_alloc);
-        StreamWriter st(&buf);
-        json_Writer json(&st);
+    CURL *curl = curl_Init();
+    if (!curl)
+        return false;
+    RG_DEFER { curl_easy_cleanup(curl); };
 
-        json.StartObject();
-        json.Key("item"); json.Int64(id);
-        json.Key("timestamp"); json.Int64(timestamp);
-        if (failed) {
-            json.Key("failed"); json.String(failed);
-        } else {
-            json.Key("failed"); json.Null();
+    const char *url = Fmt(&temp_alloc, "%1/api/plan/report", TrimStrRight(api, '/')).ptr;
+
+    curl_slist headers[] = {
+        { (char *)"Content-Type: application/json", nullptr },
+        { Fmt(&temp_alloc, "X-Api-Key: %1", key).ptr, nullptr }
+    };
+    LinkHeaders(headers);
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, &headers);
+
+    Span<const char> remain = json;
+
+    curl_easy_setopt(curl, CURLOPT_POST, 1L); // POST
+    curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
+        Span<const char> *remain = (Span<const char> *)udata;
+        Size give = std::min((Size)(size * nmemb), remain->len);
+
+        MemCpy(ptr, remain->ptr, give);
+        remain->ptr += (Size)give;
+        remain->len -= (Size)give;
+
+        return (size_t)give;
+    });
+    curl_easy_setopt(curl, CURLOPT_READDATA, &remain);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)remain.len);
+
+    int status = curl_Perform(curl, "report");
+
+    if (status != 200) {
+        if (status >= 0) {
+            LogError("Failed to send report with status %1", status);
         }
-        json.EndObject();
-
-        body = buf.Leak().As<const char>();
-    }
-
-    // Perform POST request
-    {
-        CURL *curl = curl_Init();
-        if (!curl)
-            return false;
-        RG_DEFER { curl_easy_cleanup(curl); };
-
-        const char *url = Fmt(&temp_alloc, "%1/api/plan/report", TrimStrRight(api, '/')).ptr;
-
-        curl_slist headers[] = {
-            { (char *)"Content-Type: application/json", nullptr },
-            { Fmt(&temp_alloc, "X-Api-Key: %1", key).ptr, nullptr }
-        };
-        LinkHeaders(headers);
-
-        curl_easy_setopt(curl, CURLOPT_URL, url);
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, &headers);
-
-        Span<const char> remain = body;
-
-        curl_easy_setopt(curl, CURLOPT_POST, 1L); // POST
-        curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
-            Span<const char> *remain = (Span<const char> *)udata;
-            Size give = std::min((Size)(size * nmemb), remain->len);
-
-            MemCpy(ptr, remain->ptr, give);
-            remain->ptr += (Size)give;
-            remain->len -= (Size)give;
-
-            return (size_t)give;
-        });
-        curl_easy_setopt(curl, CURLOPT_READDATA, &remain);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)remain.len);
-
-        int status = curl_Perform(curl, "report");
-
-        if (status != 200) {
-            if (status >= 0) {
-                LogError("Failed to fetch plan with status %1", status);
-            }
-            return false;
-        }
+        return false;
     }
 
     return true;
+}
+
+static bool ReportSuccess(const char *channel, const rk_SaveInfo &info)
+{
+    HeapArray<char> body;
+
+    char oid[128];
+    Fmt(oid, "%1", info.oid);
+
+    // Format JSON
+    {
+        StreamWriter st(&body);
+        json_Writer json(&st);
+
+        json.StartObject();
+        json.Key("channel"); json.String(channel);
+        json.Key("timestamp"); json.Int64(info.time);
+        json.Key("oid"); json.String(oid);
+        json.Key("size"); json.Int64(info.size);
+        json.Key("stored"); json.Int64(info.stored);
+        json.Key("added"); json.Int64(info.added);
+        json.EndObject();
+    }
+
+    return SendReport(body);
+}
+
+static bool ReportError(const char *channel, int64_t time, const char *message)
+{
+    HeapArray<char> body;
+
+    // Format JSON
+    {
+        StreamWriter st(&body);
+        json_Writer json(&st);
+
+        json.StartObject();
+        json.Key("channel"); json.String(channel);
+        json.Key("timestamp"); json.Int64(time);
+        json.Key("error"); json.String(message);
+        json.EndObject();
+    }
+
+    return SendReport(body);
+}
+
+static bool RunSnapshot(const char *channel, Span<const char *const> paths, rk_SaveInfo *out_info)
+{
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
+    if (!repo)
+        return false;
+
+    return rk_Save(repo.get(), channel, paths, {}, out_info);
 }
 
 static bool CheckPlan()
@@ -282,10 +303,15 @@ static bool CheckPlan()
             });
             RG_DEFER { PopLogFilter(); };
 
-            int64_t now = GetUnixTime();
-            bool success = RunSnapshot(item.channel, item.paths);
+            rk_SaveInfo info = {};
+            bool success = RunSnapshot(item.channel, item.paths, &info);
 
-            ReportSnapshot(item.id, now, success ? nullptr : last_err);
+            if (success) {
+                ReportSuccess(item.channel, info);
+            } else {
+                int64_t now = GetUnixTime();
+                ReportError(item.channel, now, last_err);
+            }
         }
 
         nothing &= !run;

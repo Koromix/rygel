@@ -15,6 +15,7 @@
 
 #include "src/core/base/base.hh"
 #include "web.hh"
+#include "alert.hh"
 #include "config.hh"
 #include "database.hh"
 #include "mail.hh"
@@ -609,9 +610,6 @@ Options:
         LogInfo("Periodic timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
-            LogDebug("Check repositories");
-            CheckRepositories();
-
             WaitForResult ret = WaitForInterrupt(timeout);
 
             if (ret == WaitForResult::Exit) {
@@ -628,6 +626,9 @@ Options:
 
             LogDebug("Prune sessions");
             PruneSessions();
+
+            LogDebug("Detect alerts");
+            DetectAlerts();
 
             LogDebug("Send mails");
             SendMails();

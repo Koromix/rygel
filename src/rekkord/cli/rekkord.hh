@@ -20,17 +20,6 @@
 
 namespace RG {
 
-enum class OutputFormat {
-    Plain,
-    JSON,
-    XML
-};
-static const char *const OutputFormatNames[] = {
-    "Plain",
-    "JSON",
-    "XML"
-};
-
 extern const char *const DefaultConfigDirectory;
 extern const char *const DefaultConfigName;
 extern const char *const DefaultConfigEnv;

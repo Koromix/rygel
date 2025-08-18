@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 23;
+const int DatabaseVersion = 25;
 
 bool MigrateDatabase(sq_Database *db)
 {
@@ -505,9 +505,71 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 23: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX repositories_un;
+                    CREATE UNIQUE INDEX repositories_on ON repositories (owner, name);
+
+                    ALTER TABLE repositories DROP COLUMN user;
+                    ALTER TABLE repositories DROP COLUMN password;
+
+                    DROP TABLE variables;
+                )");
+                if (!success)
+                    return false;
+            } [[fallthrough]];
+
+            case 24: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX items_pc;
+
+                    ALTER TABLE items RENAME TO items_BAK;
+                    ALTER TABLE paths RENAME TO paths_BAK;
+                    ALTER TABLE runs RENAME TO runs_BAK;
+
+                    CREATE TABLE items (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        plan INTEGER REFERENCES plans (id) ON DELETE CASCADE,
+                        channel TEXT NOT NULL,
+                        days INTEGER NOT NULL,
+                        clock INTEGER NOT NULL,
+                        run INTEGER REFERENCES runs (id) ON DELETE SET NULL,
+                        changeset BLOB
+                    );
+                    CREATE UNIQUE INDEX items_pc ON items (plan, channel);
+
+                    CREATE TABLE paths (
+                        item INTEGER PRIMARY KEY NOT NULL,
+                        path TEXT NOT NULL
+                    );
+
+                    CREATE TABLE runs (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        plan INTEGER NOT NULL,
+                        channel TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        oid TEXT,
+                        error TEXT,
+
+                        FOREIGN KEY (plan, channel) REFERENCES items (plan, channel) ON DELETE CASCADE
+                    );
+
+                    INSERT INTO items (id, plan, channel, days, clock)
+                        SELECT id, plan, channel, days, clock FROM items_BAK;
+                    INSERT INTO paths (item, path)
+                        SELECT item, path FROM paths_BAK;
+
+                    DROP TABLE items_BAK;
+                    DROP TABLE paths_BAK;
+                    DROP TABLE runs_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 23);
+            static_assert(DatabaseVersion == 25);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

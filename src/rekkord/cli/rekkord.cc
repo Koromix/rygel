@@ -25,9 +25,8 @@ namespace RG {
 
 int RunSetup(Span<const char *> arguments);
 int RunInit(Span<const char *> arguments);
-int RunAddUser(Span<const char *> arguments);
-int RunDeleteUser(Span<const char *> arguments);
-int RunListUsers(Span<const char *> arguments);
+int RunDerive(Span<const char *> arguments);
+int RunIdentify(Span<const char *> arguments);
 
 int RunSave(Span<const char *> arguments);
 int RunRestore(Span<const char *> arguments);
@@ -53,8 +52,7 @@ R"(Common options:
     %!..+-C, --config_file filename%!0     Set configuration file
 
     %!..+-R, --repository URL%!0           Set repository URL
-    %!..+-u, --user username%!0            Set repository username
-    %!..+-K, --key_file filename%!0        Use master key instead of username/password
+    %!..+-K, --key_file filename%!0        Set file containing repository keys
 
     %!..+-j, --threads threads%!0          Change number of threads
                                    %!D..(default: automatic)%!0)";
@@ -68,8 +66,6 @@ bool HandleCommonOption(OptionParser &opt, bool ignore_unknown)
     } else if (opt.Test("-R", "--repository", OptionType::Value)) {
         if (!rk_DecodeURL(opt.current_value, &rekkord_config))
             return 1;
-    } else if (opt.Test("-u", "--username", OptionType::Value)) {
-        rekkord_config.username = opt.current_value;
     } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
         rekkord_config.key_filename = opt.current_value;
     } else if (opt.Test("-j", "--threads", OptionType::Value)) {
@@ -110,9 +106,8 @@ Management commands:
     %!..+setup%!0                          Run simple wizard to create basic config file
     %!..+init%!0                           Init new backup repository
 
-    %!..+add_user%!0                       Add user
-    %!..+delete_user%!0                    Delete user
-    %!..+list_users%!0                     List repository users
+    %!..+derive%!0                         Derive restricted key file from master key
+    %!..+identify%!0                       Get information about key file
 
 Snapshot commands:
 
@@ -253,9 +248,8 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
 
     HANDLE_COMMAND(setup, RunSetup, false);
     HANDLE_COMMAND(init, RunInit, true);
-    HANDLE_COMMAND(add_user, RunAddUser, true);
-    HANDLE_COMMAND(delete_user, RunDeleteUser, true);
-    HANDLE_COMMAND(list_users, RunListUsers, true);
+    HANDLE_COMMAND(derive, RunDerive, true);
+    HANDLE_COMMAND(identify, RunIdentify, true);
     HANDLE_COMMAND(save, RunSave, true);
     HANDLE_COMMAND(restore, RunRestore, true);
     HANDLE_COMMAND(check, RunCheck, true);

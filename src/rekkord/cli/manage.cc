@@ -14,8 +14,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
-#include "src/core/wrap/json.hh"
-#include "src/core/wrap/xml.hh"
 #include "rekkord.hh"
 #include "src/core/password/password.hh"
 #include "src/core/request/curl.hh"
@@ -39,19 +37,6 @@ KeyFile = %2
 [Protection]
 # RetainDuration =
 )";
-
-static bool GeneratePassword(Span<char> out_pwd)
-{
-    RG_ASSERT(out_pwd.len >= 33);
-
-    // Avoid characters that are annoying in consoles
-    unsigned int flags = (int)pwd_GenerateFlag::LowersNoAmbi |
-                         (int)pwd_GenerateFlag::UppersNoAmbi |
-                         (int)pwd_GenerateFlag::DigitsNoAmbi |
-                         (int)pwd_GenerateFlag::Specials;
-
-    return pwd_GeneratePassword(flags, out_pwd);
-}
 
 static const char *PromptNonEmpty(const char *object, const char *value, const char *mask, Allocator *alloc)
 {
@@ -378,13 +363,14 @@ Options:
         opt.LogUnusedArguments();
     }
 
-    // Reuse common -K option even if we use it slightly differently
-    key_filename = rekkord_config.key_filename;
-
     if (!rekkord_config.Complete(0))
         return 1;
     if (!rekkord_config.Validate(0))
         return 1;
+
+    // Reuse common -K option even if we use it slightly differently
+    key_filename = rekkord_config.key_filename;
+
     if (!key_filename && !generate_key) {
         LogError("Missing master key filename");
         return 1;
@@ -426,7 +412,7 @@ Options:
         randombytes_buf(mkey.ptr, mkey.len);
     } else {
         // Use separate buffer to make sure file has correct size
-        Span<uint8_t> buf = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize + 1), rk_MasterKeySize + 1);
+        Span<uint8_t> buf = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
         RG_DEFER { ReleaseSafe(buf.ptr, buf.len); };
 
         Size len = ReadFile(key_filename, buf);
@@ -463,28 +449,30 @@ Options:
     return 0;
 }
 
-int RunAddUser(Span<const char *> arguments)
+int RunDerive(Span<const char *> arguments)
 {
-    BlockAllocator temp_alloc;
-
     // Options
-    int role = -1;
-    const char *pwd = nullptr;
-    const char *username = nullptr;
+    const char *output_filename = nullptr;
+    bool force = false;
+    rk_UserRole role = rk_UserRole::Master;
 
     const auto print_usage = [=](StreamWriter *st) {
+        Span<const char *const> roles = MakeSpan(rk_UserRoleNames + 1, RG_LEN(rk_UserRoleNames) - 1);
+
         PrintLn(st,
-R"(Usage: %!..+%1 add_user [-C filename] [option...] username%!0
+R"(Usage: %!..+%1 derive [-C filename] [option...] -O destination%!0
 )", FelixTarget);
         PrintLn(st, CommonOptions);
         PrintLn(st, R"(
-User options:
+Key options:
+
+    %!..+-O, --output_file file%!0         Write keys to destination file
+
+    %!..+-f, --force%!0                    Overwrite existing file
 
     %!..+-r, --role role%!0                User role (see below)
-                                   %!D..(default: %1)%!0
-        %!..+--password password%!0        Set password explicitly
 
-Available user roles: %!..+%2%!0)", rk_UserRoleNames[(int)role], FmtSpan(rk_UserRoleNames));
+Available user roles: %!..+%1%!0)", FmtSpan(roles));
     };
 
     // Parse arguments
@@ -495,28 +483,38 @@ Available user roles: %!..+%2%!0)", rk_UserRoleNames[(int)role], FmtSpan(rk_User
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("-O", "--output_filename", OptionType::Value)) {
+                output_filename = opt.current_value;
+            } else if (opt.Test("-f", "--force")) {
+                force = true;
             } else if (opt.Test("-r", "--role", OptionType::Value)) {
                 if (!OptionToEnumI(rk_UserRoleNames, opt.current_value, &role)) {
                     LogError("Unknown user role '%1'", opt.current_value);
                     return 1;
                 }
-            } else if (opt.Test("--password", OptionType::Value)) {
-                pwd = opt.current_value;
+                if (role == rk_UserRole::Master) {
+                    LogError("Cannot use Master role for derived keyset");
+                    return 1;
+                }
             } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
         }
 
-        username = opt.ConsumeNonOption();
         opt.LogUnusedArguments();
     }
 
-    if (!username) {
-        LogError("Missing username");
+    if (!output_filename) {
+        LogError("Missing output filename");
         return 1;
     }
-    if (role < 0) {
+    if (role == rk_UserRole::Master) {
         LogError("Missing user role");
+        return 1;
+    }
+
+    if (TestFile(output_filename) && !force) {
+        LogError("File '%1' already exists", output_filename);
         return 1;
     }
 
@@ -532,241 +530,84 @@ Available user roles: %!..+%2%!0)", rk_UserRoleNames[(int)role], FmtSpan(rk_User
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Config)) {
-        LogError("Cannot create user with %1 role", repo->GetRole());
+        LogError("Cannot derive keys with %1 role", repo->GetRole());
         return 1;
     }
     LogInfo();
 
-    bool random_pwd = false;
+    if (!rk_DeriveKeys(repo->GetKeys(), role, output_filename))
+        return 1;
 
-    if (!pwd) {
-        pwd = Prompt("User password (leave empty to autogenerate): ", nullptr, "*", &temp_alloc);
-        if (!pwd)
+    LogInfo("Wrote '%1' with role %2", output_filename, rk_UserRoleNames[(int)role]);
+
+    return 0;
+}
+
+int RunIdentify(Span<const char *> arguments)
+{
+    // Options
+    bool online = true;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 identify [-C filename] [option...] -O destination%!0
+
+Key options:
+
+        %!..+--offline%!0                  Analyse key file without opening repository
+)", FelixTarget);
+        PrintLn(st, CommonOptions);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("--offline")) {
+                online = false;
+            } else if (!HandleCommonOption(opt)) {
+                return 1;
+            }
+        }
+
+        opt.LogUnusedArguments();
+    }
+
+    if (!rekkord_config.Complete())
+        return 1;
+
+    rk_KeySet *keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
+    RG_DEFER { ReleaseSafe(keyset, RG_SIZE(*keyset)); };
+
+    if (online) {
+        if (!rekkord_config.Validate())
             return 1;
 
-        if (!pwd[0]) {
-            Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
-            if (!GeneratePassword(buf))
-               return 1;
+        std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
+        std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
+        if (!repo)
+            return 1;
 
-            pwd = buf.ptr;
-            random_pwd = true;
-        }
-    }
+        LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
+        LogInfo();
 
-    if (!repo->InitUser(username, (rk_UserRole)role, pwd))
-        return 1;
-
-    LogInfo("Added user: %!..+%1%!0", username);
-    LogInfo();
-    LogInfo("Role: %!..+%1%!0", rk_UserRoleNames[role]);
-    if (random_pwd) {
-        LogInfo("Password: %!..+%1%!0", pwd);
+        *keyset = repo->GetKeys();
     } else {
-        LogInfo("Password: %!D..(hidden)%!0");
-    }
-
-    return 0;
-}
-
-int RunDeleteUser(Span<const char *> arguments)
-{
-    // Options
-    const char *username = nullptr;
-    bool force = false;
-
-    const auto print_usage = [=](StreamWriter *st) {
-        PrintLn(st,
-R"(Usage: %!..+%1 delete_user [-C filename] [option...] username%!0
-)", FelixTarget);
-        PrintLn(st, CommonOptions);
-        PrintLn(st, R"(
-User options:
-
-    %!..+-f, --force%!0                    Force deletion %!D..(to delete yourself)%!0
-
-Please note that deleting users only requires the ability to delete objects from the underlying repository storage, even though this command asks for repository authentication as a precaution.)");
-    };
-
-    // Parse arguments
-    {
-        OptionParser opt(arguments);
-
-        while (opt.Next()) {
-            if (opt.Test("--help")) {
-                print_usage(StdOut);
-                return 0;
-            } else if (opt.Test("-f", "--force")) {
-                force = true;
-            } else if (!HandleCommonOption(opt)) {
-                return 1;
-            }
-        }
-
-        username = opt.ConsumeNonOption();
-        opt.LogUnusedArguments();
-    }
-
-    if (!username) {
-        LogError("Missing username");
-        return 1;
-    }
-
-    // Validate configuration
-    {
-        unsigned int flags = force ? 0 : (int)rk_ConfigFlag::RequireAuth;
-
-        if (!rekkord_config.Complete(flags))
-            return 1;
-        if (!rekkord_config.Validate(flags))
-            return 1;
-    }
-
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, !force);
-    if (!repo)
-        return 1;
-
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
-    LogInfo();
-
-    if (!force) {
-        if (!repo->HasMode(rk_AccessMode::Config)) {
-            LogError("Refusing to delete without config access");
+        if (!rekkord_config.key_filename) {
+            LogError("Missing repository key file");
             return 1;
         }
-        if (rekkord_config.username && TestStr(username, rekkord_config.username)) {
-            LogError("Cannot delete yourself (unless --force is used)");
-            return 1;
-        }
-    }
 
-    if (!repo->DeleteUser(username))
-        return 1;
-
-    LogInfo("Deleted user: %!..+%1%!0", username);
-
-    return 0;
-}
-
-int RunListUsers(Span<const char *> arguments)
-{
-    BlockAllocator temp_alloc;
-
-    // Options
-    OutputFormat format = OutputFormat::Plain;
-    bool verify = false;
-
-    const auto print_usage = [=](StreamWriter *st) {
-        PrintLn(st,
-R"(Usage: %!..+%1 list_users [-C filename] [option...]%!0
-)", FelixTarget);
-        PrintLn(st, CommonOptions);
-        PrintLn(st, R"(
-List options:
-
-        %!..+--verify%!0                   Check user signatures with master key file
-
-    %!..+-f, --format format%!0            Change output format
-                                   %!D..(default: %1)%!0
-
-Available output formats: %!..+%2%!0)", OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
-    };
-
-    // Parse arguments
-    {
-        OptionParser opt(arguments);
-
-        while (opt.Next()) {
-            if (opt.Test("--help")) {
-                print_usage(StdOut);
-                return 0;
-            } else if (opt.Test("--verify")) {
-                verify = true;
-            } else if (opt.Test("-f", "--format", OptionType::Value)) {
-                if (!OptionToEnumI(OutputFormatNames, opt.current_value, &format)) {
-                    LogError("Unknown output format '%1'", opt.current_value);
-                    return 1;
-                }
-            } else if (!HandleCommonOption(opt)) {
-                return 1;
-            }
-        }
-
-        opt.LogUnusedArguments();
-    }
-
-    if (verify && !rekkord_config.key_filename) {
-        LogError("Specify master key file with --key_file to verify users");
-        return 1;
-    }
-
-    // Validate configuration
-    {
-        unsigned int flags = verify ? (int)rk_ConfigFlag::RequireAuth : 0;
-
-        if (!rekkord_config.Complete(flags))
-            return 1;
-        if (!rekkord_config.Validate(flags))
+        if (!rk_LoadKeys(rekkord_config.key_filename, keyset))
             return 1;
     }
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, verify);
-    if (!repo)
-        return 1;
-
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
-    LogInfo();
-
-    HeapArray<rk_UserInfo> users;
-    if (!repo->ListUsers(&temp_alloc, verify, &users))
-        return 1;
-
-    switch (format) {
-        case OutputFormat::Plain: {
-            if (users.len) {
-                for (const rk_UserInfo &user: users) {
-                    PrintLn("%!..+%1%!0 [%2]", FmtArg(user.username).Pad(24), rk_UserRoleNames[(int)user.role]);
-                }
-            } else {
-                LogInfo("There does not seem to be any user");
-            }
-        } break;
-
-        case OutputFormat::JSON: {
-            json_PrettyWriter json(StdOut);
-
-            json.StartArray();
-            for (const rk_UserInfo &user: users) {
-                json.StartObject();
-
-                json.Key("name"); json.String(user.username);
-                json.Key("role"); json.String(rk_UserRoleNames[(int)user.role]);
-
-                json.EndObject();
-            }
-            json.EndArray();
-
-            json.Flush();
-            PrintLn();
-        } break;
-
-        case OutputFormat::XML: {
-            pugi::xml_document doc;
-            pugi::xml_node root = doc.append_child("Users");
-
-            for (const rk_UserInfo &user: users) {
-                pugi::xml_node element = root.append_child("User");
-
-                element.append_attribute("Name") = user.username;
-                element.append_attribute("Role") = rk_UserRoleNames[(int)user.role];
-            }
-
-            xml_PugiWriter writer(StdOut);
-            doc.save(writer, "    ");
-        } break;
-    }
+    LogInfo("Keyset ID: %!..+%1%!0", FmtSpan(keyset->kid, FmtType::BigHex, "").Pad0(-2));
+    LogInfo("Role: %!..+%1%!0", rk_UserRoleNames[(int)keyset->role]);
 
     return 0;
 }

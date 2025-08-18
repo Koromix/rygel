@@ -50,9 +50,6 @@ enum class rk_ConfigFlag {
 
 struct rk_Config {
     const char *url = nullptr;
-
-    const char *username = nullptr;
-    const char *password = nullptr;
     const char *key_filename = nullptr;
 
     rk_DiskType type = rk_DiskType::Local;

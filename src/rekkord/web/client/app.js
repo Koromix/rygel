@@ -779,10 +779,7 @@ async function configureRepository(repo) {
     if (repo == null) {
         repo = {
             name: '',
-            url: '',
-            user: '',
-            password: '',
-            variables: {}
+            url: ''
         };
     } else {
         repo = Object.assign({}, repo);
@@ -792,8 +789,6 @@ async function configureRepository(repo) {
 
     await UI.dialog({
         run: (render, close) => {
-            let type = detectType(url);
-
             return html`
                 <div class="title">
                     ${ptr != null ? 'Edit repository' : 'Create repository'}
@@ -806,46 +801,11 @@ async function configureRepository(repo) {
                         <span>Name</span>
                         <input type="text" name="name" required value=${repo.name} />
                     </label>
-                    <div class="section">Repository</div>
                     <label>
                         <span>URL</span>
                         <input type="text" name="url" required value=${url}
                                @input=${e => { url = e.target.value; render(); }} />
                     </label>
-                    <label>
-                        <span>User</span>
-                        <input type="text" name="user" required value=${repo.user} />
-                    </label>
-                    <label>
-                        <span>Password</span>
-                        <input type="password" name="password" required value=${repo.password} />
-                    </label>
-                    ${type == 's3' ? html`
-                        <div class="section">S3</div>
-                        <label>
-                            <span>Key ID</span>
-                            <input type="text" name="S3_ACCESS_KEY_ID" required value=${repo.variables.S3_ACCESS_KEY_ID ?? ''}>
-                        </label>
-                        <label>
-                            <span>Secret access key</span>
-                            <input type="password" name="S3_SECRET_ACCESS_KEY" required value=${repo.variables.S3_SECRET_ACCESS_KEY ?? ''}>
-                        </label>
-                    ` : ''}
-                    ${type == 'ssh' ? html`
-                        <div class="section">SFTP</div>
-                        <label>
-                            <span>Password</span>
-                            <input type="password" name="SSH_PASSWORD" value=${repo.variables.SSH_PASSWORD ?? ''}>
-                        </label>
-                        <label>
-                            <span>Key</span>
-                            <input type="text" name="SSH_KEY" value=${repo.variables.SSH_KEY ?? ''}>
-                        </label>
-                        <label>
-                            <span>Fingerprint</span>
-                            <input type="text" name="SSH_FINGERPRINT" value=${repo.variables.SSH_FINGERPRINT ?? ''}>
-                        </label>
-                    ` : ''}
                 </div>
 
                 <div class="footer">
@@ -864,25 +824,8 @@ async function configureRepository(repo) {
             let obj = {
                 id: repo.id,
                 name: elements.name.value.trim() || null,
-                url: elements.url.value.trim() || null,
-                user: elements.user.value.trim() || null,
-                password: elements.password.value.trim() || null,
-                variables: {}
+                url: elements.url.value.trim() || null
             };
-
-            for (let el of elements) {
-                let name = el.getAttribute('name');
-
-                if (!name)
-                    continue;
-                if (obj.hasOwnProperty(name))
-                    continue;
-                if (!el.value)
-                    continue;
-
-                let value = el.value.toString();
-                obj.variables[name] = value.trim() || null;
-            }
 
             let json = await Net.post('/api/repository/save', obj);
 
@@ -901,24 +844,6 @@ async function deleteRepository(id) {
 
     if (route.repository == id)
         route.repository = null;
-}
-
-function detectType(url) {
-    if (url.startsWith('s3:'))
-        return 's3';
-    if (url.startsWith('http://'))
-        return 's3';
-    if (url.startsWith('https://'))
-        return 's3';
-
-    if (url.startsWith('ssh://'))
-        return 'ssh';
-    if (url.startsWith('sftp://'))
-        return 'ssh';
-    if (url.match(/^[a-zA-Z0-9_\-\.]+@.+:$/))
-        return 'ssh';
-
-    return null;
 }
 
 async function runChannel(repo, channel) {
@@ -1185,10 +1110,10 @@ async function runPlan() {
                                     <td>${formatDays(item.days)}</td>
                                     <td style="text-align: center;">${formatClock(item.clock)}</td>
                                     <td>${item.paths.map(path => html`${path}<br>`)}</td>
-                                    <td style=${'text-align: right;' + (item.failed != null ? ' color: var(--color, red);' : '')}>
+                                    <td style=${'text-align: right;' + (item.error != null ? ' color: var(--color, red);' : '')}>
                                         ${item.timestamp == null ? 'Never' : ''}
                                         ${item.timestamp != null ? new Date(item.timestamp).toLocaleString() : ''}
-                                        <br>${item.failed || ''}
+                                        <br>${item.error || ''}
                                     </td>
                                 </tr>
                             `)}
