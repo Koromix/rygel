@@ -928,9 +928,11 @@ async function runChannel(repo, channel) {
     // Make sure it is sorted by time
     snapshots.sort((snapshot1, snapshot2) => snapshot1.time - snapshot2.time);
 
-    let canvas = document.createElement('canvas');
+    let canvas = null;
 
     if (snapshots.length >= 2) {
+        canvas = document.createElement('canvas');
+
         let sets = {
             size: { label: 'Size', data: [], fill: false },
             stored: { label: 'Stored', data: [], fill: false },
@@ -997,7 +999,8 @@ async function runChannel(repo, channel) {
                 </div>
 
                 <div class="main">
-                    <div style="width: 80%; margin: 0 auto;">${canvas}</div>
+                    ${canvas != null ? html`<div style="width: 80%; margin: 0 auto;">${canvas}</div>` : ''}
+
                     <table style="table-layout: fixed;">
                         <colgroup>
                             <col></col>
