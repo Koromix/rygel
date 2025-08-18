@@ -42,9 +42,12 @@ void HandlePlanList(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT id, repository, name, key
-                       FROM plans
-                       WHERE owner = ?1)", &stmt, session->userid))
+    if (!db.Prepare(R"(SELECT p.id, p.repository, p.name, p.key, p.scan,
+                              COUNT(i.id) AS items
+                       FROM plans p
+                       LEFT JOIN items i ON (i.plan = p.id)
+                       WHERE p.owner = ?1
+                       GROUP BY p.id)", &stmt, session->userid))
         return;
 
     http_JsonPageBuilder json;
@@ -57,6 +60,8 @@ void HandlePlanList(http_IO *io)
         int64_t repository = sqlite3_column_int64(stmt, 1);
         const char *name = (const char *)sqlite3_column_text(stmt, 2);
         const char *key = (const char *)sqlite3_column_text(stmt, 3);
+        int scan = sqlite3_column_int(stmt, 4);
+        int items = sqlite3_column_int(stmt, 5);
 
         json.StartObject();
 
@@ -64,6 +69,12 @@ void HandlePlanList(http_IO *io)
         json.Key("repository"); json.Int64(repository);
         json.Key("name"); json.String(name);
         json.Key("key"); json.String(key);
+        if (scan) {
+            json.Key("scan"); json.Int(scan);
+        } else {
+            json.Key("scan"); json.Null();
+        }
+        json.Key("items"); json.Int(items);
 
         json.EndObject();
     }
@@ -167,7 +178,7 @@ void HandlePlanGet(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT repository, name, key
+    if (!db.Prepare(R"(SELECT repository, name, key, scan
                        FROM plans
                        WHERE owner = ?1 AND id = ?2)",
                     &stmt, session->userid, id))
@@ -188,6 +199,7 @@ void HandlePlanGet(http_IO *io)
     int64_t repository = sqlite3_column_int64(stmt, 0);
     const char *name = (const char *)sqlite3_column_text(stmt, 1);
     const char *key = (const char *)sqlite3_column_text(stmt, 2);
+    int scan = sqlite3_column_int(stmt, 3);
 
     json.StartObject();
 
@@ -195,6 +207,11 @@ void HandlePlanGet(http_IO *io)
     json.Key("repository"); json.Int64(repository);
     json.Key("name"); json.String(name);
     json.Key("key"); json.String(key);
+    if (scan) {
+        json.Key("scan"); json.Int(scan);
+    } else {
+        json.Key("scan"); json.Null();
+    }
 
     json.Key("items");
     if (!DumpItems(&json, id, true))
@@ -219,6 +236,7 @@ void HandlePlanSave(http_IO *io)
     int64_t id = -1;
     const char *name = nullptr;
     int64_t repository = -1;
+    int scan = -1;
     HeapArray<PlanItem> items;
     {
         StreamReader st;
@@ -237,6 +255,8 @@ void HandlePlanSave(http_IO *io)
                 parser.ParseString(&name);
             } else if (key == "repository") {
                 parser.SkipNull() || parser.ParseInt(&repository);
+            } else if (key == "scan") {
+                parser.SkipNull() || parser.ParseInt(&scan);
             } else if (key == "items") {
                 parser.ParseArray();
                 while (parser.InArray()) {
@@ -297,6 +317,10 @@ void HandlePlanSave(http_IO *io)
             }
         } else {
             repository = -1;
+        }
+        if (scan >= 2400) {
+            LogError("Invalid 'scan' parameter");
+            valid = false;
         }
 
         for (const PlanItem &item: items) {
@@ -375,13 +399,15 @@ void HandlePlanSave(http_IO *io)
     // Create or update plan
     bool success = db.Transaction([&]() {
         sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO plans (id, owner, repository, name, key, hash)
-                           VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+        if (!db.Prepare(R"(INSERT INTO plans (id, owner, repository, name, key, hash, scan)
+                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
                            ON CONFLICT DO UPDATE SET id = IF(owner = excluded.owner, id, NULL),
-                                                     name = excluded.name
+                                                     name = excluded.name,
+                                                     scan = excluded.scan
                            RETURNING id)",
                         &stmt, id >= 0 ? sq_Binding(id) : sq_Binding(),
-                        session->userid, repository, name, key, hash))
+                        session->userid, repository, name, key, hash,
+                        scan >= 0 ? sq_Binding(scan) : sq_Binding()))
             return false;
         if (!stmt.Step()) {
             RG_ASSERT(!stmt.IsValid());

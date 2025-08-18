@@ -1009,12 +1009,14 @@ async function runPlans() {
                         <col/>
                         <col/>
                         <col/>
+                        <col/>
                     </colgroup>
                     <thead>
                         <tr>
                             ${UI.tableHeader('plans', 'name', 'Name')}
                             ${UI.tableHeader('plans', 'repository', 'Repository')}
                             <th>Key prefix</th>
+                            ${UI.tableHeader('plans', makePlanTasks, 'Tâches')}
                         </tr>
                     </thead>
                     <tbody>
@@ -1027,10 +1029,11 @@ async function runPlans() {
                                     <td><a href=${url}>${plan.name}</a></td>
                                     <td><a href=${makeURL({ mode: 'repository', repository: plan.repository })}>${repo?.name}</a></td>
                                     <td><span class="sub">${plan.key}</sub></td>
+                                    <td>${makePlanTasks(plan)}</td>
                                 </tr>
                             `;
                         })}
-                        ${!plans.length ? html`<tr><td colspan="3" style="text-align: center;">No plan</td></tr>` : ''}
+                        ${!plans.length ? html`<tr><td colspan="4" style="text-align: center;">No plan</td></tr>` : ''}
                     </tbody>
                 </table>
                 <div class="actions">
@@ -1039,6 +1042,26 @@ async function runPlans() {
             </div>
         </div>
     `);
+}
+
+function makePlanTasks(plan) {
+    let parts = [];
+
+    if (plan.items) {
+        let text = `Run ${plan.items} snapshot ${plan.items > 1 ? 'items' : 'item'}`;
+        parts.push(text);
+    }
+    if (plan.scan != null) {
+        let text = `Scan repository at ${formatClock(plan.scan)}`;
+        parts.push(text);
+    }
+
+    if (!parts.length) {
+        let empty = html`<span class="sub">(nothing to do)</span>`;
+        parts.push(empty);
+    }
+
+    return parts.map((part, idx) => html`${idx ? html`<br>` : ''}${part}`);
 }
 
 async function runPlan() {
@@ -1082,10 +1105,12 @@ async function runPlan() {
                         <div class="sub">${cache.plan.key}</div>
                     </div>
                     <button type="button" @click=${UI.wrap(e => configurePlan(cache.plan))}>Configure</button>
+                    ${cache.plan.scan != null ?
+                        html`<div style="text-align: center;">Scan repository at ${formatClock(cache.plan.scan)}</div>` : ''}
                 </div>
 
                 <div class="box">
-                    <div class="header">Items</div>
+                    <div class="header">Snapshot items</div>
                     <table style="table-layout: fixed; width: 100%;">
                         <colgroup>
                             <col style="width: 150px;"></col>
@@ -1117,7 +1142,7 @@ async function runPlan() {
                                     </td>
                                 </tr>
                             `)}
-                            ${!cache.plan.items.length ? html`<tr><td colspan="5" style="text-align: center;">No item</td></tr>` : ''}
+                            ${!cache.plan.items.length ? html`<tr><td colspan="5" style="text-align: center;">No snapshot item</td></tr>` : ''}
                         </tbody>
                     </table>
                 </div>
@@ -1136,11 +1161,19 @@ async function configurePlan(plan) {
         plan = {
             name: '',
             repository: route.repository ?? cache.repositories[0].id,
+            scan: null,
             items: []
         };
     } else {
         plan = Object.assign({}, plan);
         plan.items = plan.items.slice();
+    }
+
+    let scan = true;
+
+    if (plan.scan == null) {
+        scan = false;
+        plan.scan = 1200;
     }
 
     await UI.dialog({
@@ -1167,8 +1200,22 @@ async function configurePlan(plan) {
                         </select>
                     </label>
 
+                    <div class="section">Periodic scans</div>
+                    <label>
+                        <input type="checkbox" ?checked=${scan} @change=${UI.wrap(e => { scan = e.target.checked; render(); })} />
+                        <span>Run daily repository scans from this machine</span>
+                    </label>
+                    ${scan ? html`
+                        <label>
+                            <span>Scan time</span>
+                            <td><input type="time" .value=${live(formatClock(plan.scan))}
+                                       @change=${UI.wrap(e => { plan.scan = parseClock(e.target.value); render(); })} /></td>
+                        </label>
+                        <div style="color: red; font-style: italic;">This machine needs the master key to run periodic scans, make sure it is safe!</div>
+                    ` : ''}
+
                     <div class="section">
-                        Items
+                        Snapshot items
                         <div style="flex: 1;"></div>
                         <button type="button" class="small" @click=${UI.wrap(add_item)}>Add item</button>
                     </div>
@@ -1213,7 +1260,8 @@ async function configurePlan(plan) {
                                                 `;
                                             })}
                                         </td>
-                                        <td><input type="time" .value=${live(formatClock(item.clock))} @change=${UI.wrap(e => { item.clock = parseClock(e.target.value); render(); })} /></td>
+                                        <td><input type="time" .value=${live(formatClock(item.clock))}
+                                                   @change=${UI.wrap(e => { item.clock = parseClock(e.target.value); render(); })} /></td>
                                         <td>${paths.map((path, idx) =>
                                             html`<input type="text" style=${idx ? 'margin-top: 3px;' : ''} .value=${live(path)}
                                                         @input=${UI.wrap(e => edit_path(item, idx, e.target.value))} />`)}</td>
@@ -1303,6 +1351,7 @@ async function configurePlan(plan) {
                 id: plan.id,
                 name: plan.name,
                 repository: plan.repository,
+                scan: scan ? plan.scan : null,
                 items: plan.items.map(item => ({
                     channel: item.channel,
                     days: item.days,
