@@ -1,4 +1,4 @@
-# Koffi
+# Overview
 
 Koffi is a **fast and easy-to-use C FFI module for Node.js**, featuring:
 
@@ -7,9 +7,38 @@ Koffi is a **fast and easy-to-use C FFI module for Node.js**, featuring:
 * Javascript functions can be used as C callbacks (since 1.2.0)
 * Well-tested code base for [popular OS/architecture combinations](platforms)
 
-Koffi requires a recent [Node.js](https://nodejs.org/) version with N-API version 8 support, see [this page](platforms) for more information.
+Koffi requires [Node.js](https://nodejs.org/) version 16 or later. Use [NVM](https://github.com/nvm-sh/nvm) to install more recent Node versions on older Linux distributions.
+
+The following combinations of OS and architectures __are officially supported and tested__ at the moment:
+
+ISA / OS           | Windows | Linux (glibc) | Linux (musl) | macOS | FreeBSD | OpenBSD
+------------------ | ------- | ------------- | ------------ | ----- | ------- | -------
+x86 (IA32) [^2]    | ✅       | ✅             | 🟨            | ⬜️    | ✅       | ✅
+x86_64 (AMD64)     | ✅       | ✅             | ✅            | ✅    | ✅       | ✅
+ARM32 LE [^3]      | ⬜️       | ✅             | 🟨            | ⬜️    | 🟨       | 🟨
+ARM64 (AArch64) LE | ✅       | ✅             | ✅            | ✅    | ✅       | 🟨
+RISC-V 64 [^4]     | ⬜️       | ✅             | 🟨            | ⬜️    | 🟨       | 🟨
+LoongArch64        | ⬜️       | ✅             | 🟨            | ⬜️    | 🟨       | 🟨
+
+<div class="legend">✅ Yes | 🟨 Probably | ⬜️ Not applicable</div>
+
+[^2]: The following call conventions are supported for forward calls: cdecl, stdcall, MS fastcall, thiscall. Only cdecl and stdcall can be used for C to JS callbacks.
+[^3]: The prebuilt binary uses the hard float ABI and expects a VFP coprocessor. Build from source to use Koffi with a different ABI (softfp, soft).
+[^4]: The prebuilt binary uses the LP64D (double-precision float) ABI. The LP64 ABI is supported in theory if you build Koffi from source (untested), the LP64F ABI is not supported.
+
+For all fully supported platforms (green check marks), a prebuilt binary is included in the NPM package which means you can install Koffi without a C++ compiler.
+
+# Source code
 
 The source code is available here: https://github.com/Koromix/rygel/ (in the *src/koffi* subdirectory).
+
+> [!NOTE]
+> Most of my projects live in a single repository (or monorepo), which have two killer features for me:
+>
+> - Cross-project refactoring
+> - Simplified dependency management
+>
+> You can find a more detailed rationale here: https://danluu.com/monorepo/
 
 New releases are frequent, look at the [changelog](changelog) for more information.
 
@@ -18,3 +47,7 @@ New releases are frequent, look at the [changelog](changelog) for more informati
 This program is free software: you can redistribute it and/or modify it under the terms of the **MIT License**.
 
 Find more information here: https://choosealicense.com/licenses/mit/
+
+<style>
+     table td:not(:first-child) { text-align: center; }
+</style>

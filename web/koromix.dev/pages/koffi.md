@@ -17,23 +17,14 @@ You can find more information about Koffi on the official web site: https://koff
 
 The following combinations of OS and architectures __are officially supported and tested__ at the moment:
 
-ISA / OS           | Windows | Linux (glibc) | Linux (musl)
------------------- | ------- | ------------- | ------------
-x86 (IA32) [^1]    | ✅      | ✅            | 🟨
-x86_64 (AMD64)     | ✅      | ✅            | ✅
-ARM32 LE [^2]      | ⬜️      | ✅            | 🟨
-ARM64 (AArch64) LE | ✅      | ✅            | 🟨
-RISC-V 64 [^3]     | ⬜️      | ✅            | 🟨
-
-<div class="legend">✅ Yes | 🟨 Probably | ⬜️ Not applicable</div>
-
-ISA / OS           | macOS | FreeBSD     | OpenBSD
------------------- | ----- | ----------- | --------
-x86 (IA32) [^1]    | ⬜️    | ✅          | ✅
-x86_64 (AMD64)     | ✅    | ✅          | ✅
-ARM32 LE [^2]      | ⬜️    | 🟨          | 🟨
-ARM64 (AArch64) LE | ✅    | ✅          | 🟨
-RISC-V 64 [^3]     | ⬜️    | 🟨          | 🟨
+ISA / OS           | Windows | Linux (glibc) | Linux (musl) | macOS | FreeBSD | OpenBSD
+------------------ | ------- | ------------- | ------------ | ----- | ------- | -------
+x86 (IA32) [^1]    | ✅       | ✅             | 🟨            | ⬜️    | ✅       | ✅
+x86_64 (AMD64)     | ✅       | ✅             | ✅            | ✅    | ✅       | ✅
+ARM32 LE [^2]      | ⬜️       | ✅             | 🟨            | ⬜️    | 🟨       | 🟨
+ARM64 (AArch64) LE | ✅       | ✅             | ✅            | ✅    | ✅       | 🟨
+RISC-V 64 [^3]     | ⬜️       | ✅             | 🟨            | ⬜️    | 🟨       | 🟨
+LoongArch64        | ⬜️       | ✅             | 🟨            | ⬜️    | 🟨       | 🟨
 
 <div class="legend">✅ Yes | 🟨 Probably | ⬜️ Not applicable</div>
 
