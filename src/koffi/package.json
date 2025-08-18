@@ -36,5 +36,6 @@
     "node": 16,
     "napi": 8,
     "require": "./index.js"
-  }
+  },
+  "funding": "https://buymeacoffee.com/koromix"
 }
