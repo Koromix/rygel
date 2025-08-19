@@ -80,7 +80,7 @@ static bool DumpItems(json_Writer *json, int64_t id, bool details)
     if (!db.Prepare(R"(SELECT i.id, i.channel, i.days, i.clock,
                               r.timestamp, r.oid, r.error, p.path
                        FROM items i
-                       LEFT JOIN runs r ON (r.id = i.run)
+                       LEFT JOIN reports r ON (r.id = i.report)
                        LEFT JOIN paths p ON (p.item = i.id)
                        WHERE i.plan = ?1)", &stmt, id))
         return false;
@@ -746,7 +746,7 @@ void HandlePlanReport(http_IO *io)
     }
 
     bool success = db.Transaction([&]() {
-        if (!db.Run(R"(INSERT INTO runs (plan, channel, timestamp, oid, error)
+        if (!db.Run(R"(INSERT INTO reports (plan, channel, timestamp, oid, error)
                        VALUES (?1, ?2, ?3, ?4, ?5))",
                     plan, channel, timestamp, oid, error))
             return false;
@@ -768,7 +768,8 @@ void HandlePlanReport(http_IO *io)
                 return false;
         }
 
-        if (!db.Run("UPDATE items SET run = ?3 WHERE plan = ?1 AND channel = ?2", plan, channel, id))
+        if (!db.Run(R"(UPDATE items SET report = ?3
+                       WHERE plan = ?1 AND channel = ?2)", plan, channel, id))
             return false;
 
         return true;
