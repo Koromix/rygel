@@ -320,6 +320,9 @@ Options:
     if (!st.Close())
         return 1;
 
+    LogInfo();
+    LogInfo("Created config file '%1'", config_filename);
+
     return 0;
 }
 
