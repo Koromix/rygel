@@ -56,15 +56,15 @@ bool rk_LoadKeys(Span<const uint8_t> raw, rk_KeySet *out_keys)
             LogError("Invalid keyfile prefix");
             return false;
         }
-        if (data->type <= 0 || data->type >= RG_LEN(rk_KeyTypeNames)) {
-            LogError("Invalid key type %1", data->type);
+        if (data->badge.type <= 0 || data->badge.type >= RG_LEN(rk_KeyTypeNames)) {
+            LogError("Invalid key type %1", data->badge.type);
             return false;
         }
 
-        rk_KeyType type = (rk_KeyType)data->type;
+        rk_KeyType type = (rk_KeyType)data->badge.type;
 
         out_keys->type = type;
-        MemCpy(out_keys->kid, data->kid, RG_SIZE(out_keys->kid));
+        MemCpy(out_keys->kid, data->badge.kid, RG_SIZE(out_keys->kid));
         MemCpy(&out_keys->keys, &data->keys, RG_SIZE(out_keys->keys));
 
         switch (type) {
@@ -139,11 +139,12 @@ Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw
     }
 
     KeyData *data = (KeyData *)out_raw.ptr;
-    ZeroSafe(data, RG_SIZE(*data));
 
+    ZeroSafe(data, RG_SIZE(*data));
     MemCpy(data->prefix, "RKK01", 5);
-    randombytes_buf(data->kid, RG_SIZE(data->kid));
-    data->type = (int8_t)type;
+
+    randombytes_buf(data->badge.kid, RG_SIZE(data->badge.kid));
+    data->badge.type = (int8_t)type;
 
     switch (type) {
         case rk_KeyType::Master: {
@@ -170,8 +171,10 @@ Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw
     }
 
     randombytes_buf(data->keys + offsetof(rk_KeySet::Keys, skey), RG_SIZE(keys.keys.skey));
+    SeedSigningPair(data->keys + offsetof(rk_KeySet::Keys, skey), data->badge.pkey);
 
     // Sign serialized keyset to detect tampering
+    crypto_sign_ed25519_detached(data->sig, nullptr, (const uint8_t *)&data->badge, offsetof(KeyData::Badge, sig), keys.keys.ckey);
     crypto_sign_ed25519_detached(data->sig, nullptr, (const uint8_t *)data, offsetof(KeyData, sig), keys.keys.ckey);
 
     return RG_SIZE(KeyData);

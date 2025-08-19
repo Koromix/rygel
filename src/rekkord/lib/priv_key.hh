@@ -33,8 +33,12 @@ enum class MasterDerivation {
 #pragma pack(push, 1)
 struct KeyData {
     char prefix[5];
-    uint8_t kid[16];
-    int8_t type;
+    struct Badge {
+        uint8_t kid[16];
+        int8_t type;
+        uint8_t pkey[32];
+        uint8_t sig[64];
+    } badge;
     uint8_t keys[32 * MaxKeys];
     uint8_t sig[64];
 };
