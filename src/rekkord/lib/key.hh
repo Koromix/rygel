@@ -22,13 +22,13 @@ namespace RG {
 static const Size rk_MaximumKeySize = 4096;
 static const Size rk_MasterKeySize = 32;
 
-enum class rk_UserRole {
+enum class rk_KeyType {
     Master = 0,
     WriteOnly = 1,
     ReadWrite = 2,
     LogOnly = 3
 };
-static const char *const rk_UserRoleNames[] = {
+static const char *const rk_KeyTypeNames[] = {
     "Master",
     "WriteOnly",
     "ReadWrite",
@@ -51,7 +51,7 @@ static const char *const rk_AccessModeNames[] = {
 struct rk_KeySet {
     uint8_t kid[16];
 
-    rk_UserRole role;
+    rk_KeyType type;
     unsigned int modes;
 
     struct Keys {
@@ -72,7 +72,7 @@ struct rk_KeySet {
 bool rk_LoadKeys(const char *filename, rk_KeySet *out_keys);
 bool rk_LoadKeys(Span<const uint8_t> raw, rk_KeySet *out_keys);
 
-bool rk_DeriveKeys(const rk_KeySet &keys, rk_UserRole role, const char *filename);
-Size rk_DeriveKeys(const rk_KeySet &keys, rk_UserRole role, Span<uint8_t> out_raw);
+bool rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, const char *filename);
+Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw);
 
 }

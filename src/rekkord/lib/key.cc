@@ -37,7 +37,7 @@ bool rk_LoadKeys(Span<const uint8_t> raw, rk_KeySet *out_keys)
 {
     if (raw.len == rk_MasterKeySize) {
         out_keys->modes = UINT_MAX;
-        out_keys->role = rk_UserRole::Master;
+        out_keys->type = rk_KeyType::Master;
 
         crypto_kdf_blake2b_derive_from_key(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey), (int)MasterDerivation::ConfigKey, DerivationContext, raw.ptr);
         crypto_kdf_blake2b_derive_from_key(out_keys->keys.dkey, RG_SIZE(out_keys->keys.dkey), (int)MasterDerivation::DataKey, DerivationContext, raw.ptr);
@@ -56,21 +56,21 @@ bool rk_LoadKeys(Span<const uint8_t> raw, rk_KeySet *out_keys)
             LogError("Invalid keyfile prefix");
             return false;
         }
-        if (data->role <= 0 || data->role >= RG_LEN(rk_UserRoleNames)) {
-            LogError("Invalid user role %1", data->role);
+        if (data->type <= 0 || data->type >= RG_LEN(rk_KeyTypeNames)) {
+            LogError("Invalid key type %1", data->type);
             return false;
         }
 
-        rk_UserRole role = (rk_UserRole)data->role;
+        rk_KeyType type = (rk_KeyType)data->type;
 
-        out_keys->role = role;
+        out_keys->type = type;
         MemCpy(out_keys->kid, data->kid, RG_SIZE(out_keys->kid));
         MemCpy(&out_keys->keys, &data->keys, RG_SIZE(out_keys->keys));
 
-        switch (role) {
-            case rk_UserRole::Master: { RG_UNREACHABLE(); } break;
+        switch (type) {
+            case rk_KeyType::Master: { RG_UNREACHABLE(); } break;
 
-            case rk_UserRole::WriteOnly: {
+            case rk_KeyType::WriteOnly: {
                 out_keys->modes = (int)rk_AccessMode::Write;
 
                 ZeroSafe(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey));
@@ -78,7 +78,7 @@ bool rk_LoadKeys(Span<const uint8_t> raw, rk_KeySet *out_keys)
                 ZeroSafe(out_keys->keys.lkey, RG_SIZE(out_keys->keys.lkey));
             } break;
 
-            case rk_UserRole::ReadWrite: {
+            case rk_KeyType::ReadWrite: {
                 out_keys->modes = (int)rk_AccessMode::Read |
                                   (int)rk_AccessMode::Write |
                                   (int)rk_AccessMode::Log;
@@ -88,7 +88,7 @@ bool rk_LoadKeys(Span<const uint8_t> raw, rk_KeySet *out_keys)
                 crypto_scalarmult_curve25519_base(out_keys->keys.tkey, out_keys->keys.lkey);
             } break;
 
-            case rk_UserRole::LogOnly: {
+            case rk_KeyType::LogOnly: {
                 out_keys->modes = (int)rk_AccessMode::Log;
 
                 ZeroSafe(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey));
@@ -128,7 +128,7 @@ bool rk_LoadKeys(const char *filename, rk_KeySet *out_keys)
     return rk_LoadKeys(raw, out_keys);
 }
 
-Size rk_DeriveKeys(const rk_KeySet &keys, rk_UserRole role, Span<uint8_t> out_raw)
+Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw)
 {
     RG_ASSERT(keys.modes == UINT_MAX);
     RG_ASSERT(out_raw.len >= rk_MaximumKeySize);
@@ -143,27 +143,27 @@ Size rk_DeriveKeys(const rk_KeySet &keys, rk_UserRole role, Span<uint8_t> out_ra
 
     MemCpy(data->prefix, "RKK01", 5);
     randombytes_buf(data->kid, RG_SIZE(data->kid));
-    data->role = (int8_t)role;
+    data->type = (int8_t)type;
 
-    switch (role) {
-        case rk_UserRole::Master: {
-            LogError("Cannot generate keyset with Master role");
+    switch (type) {
+        case rk_KeyType::Master: {
+            LogError("Cannot generate Master keys");
             return -1;
         } break;
 
-        case rk_UserRole::WriteOnly: {
+        case rk_KeyType::WriteOnly: {
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, akey), keys.keys.akey, RG_SIZE(keys.keys.akey));
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, wkey), keys.keys.wkey, RG_SIZE(keys.keys.wkey));
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, tkey), keys.keys.tkey, RG_SIZE(keys.keys.tkey));
         } break;
 
-        case rk_UserRole::ReadWrite: {
+        case rk_KeyType::ReadWrite: {
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, akey), keys.keys.akey, RG_SIZE(keys.keys.akey));
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, dkey), keys.keys.dkey, RG_SIZE(keys.keys.dkey));
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, lkey), keys.keys.lkey, RG_SIZE(keys.keys.lkey));
         } break;
 
-        case rk_UserRole::LogOnly: {
+        case rk_KeyType::LogOnly: {
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, akey), keys.keys.akey, RG_SIZE(keys.keys.akey));
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, lkey), keys.keys.lkey, RG_SIZE(keys.keys.lkey));
         } break;
@@ -177,12 +177,12 @@ Size rk_DeriveKeys(const rk_KeySet &keys, rk_UserRole role, Span<uint8_t> out_ra
     return RG_SIZE(KeyData);
 }
 
-bool rk_DeriveKeys(const rk_KeySet &keys, rk_UserRole role, const char *filename)
+bool rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, const char *filename)
 {
     Span<uint8_t> raw = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
     RG_DEFER_C(len = raw.len) { ReleaseSafe(raw.ptr, len); };
 
-    raw.len = rk_DeriveKeys(keys, role, raw);
+    raw.len = rk_DeriveKeys(keys, type, raw);
     if (raw.len < 0)
         return false;
 

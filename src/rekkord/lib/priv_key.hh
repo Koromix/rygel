@@ -34,7 +34,7 @@ enum class MasterDerivation {
 struct KeyData {
     char prefix[5];
     uint8_t kid[16];
-    int8_t role;
+    int8_t type;
     uint8_t keys[32 * MaxKeys];
     uint8_t sig[64];
 };

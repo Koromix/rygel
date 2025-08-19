@@ -134,7 +134,7 @@ public:
     Async *GetAsync() { return &tasks; }
 
     const rk_KeySet &GetKeys() const { return *keyset; }
-    const char *GetRole() const { return keyset ? rk_UserRoleNames[(int)keyset->role] : "Secure"; }
+    const char *GetRole() const { return keyset ? rk_KeyTypeNames[(int)keyset->type] : "Secure"; }
     unsigned int GetModes() const { return keyset ? keyset->modes : 0; }
     bool HasMode(rk_AccessMode mode) const { return keyset ? keyset->HasMode(mode) : false; }
 

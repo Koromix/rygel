@@ -211,7 +211,7 @@ Available metadata save options:
         return 1;
     }
     if (repo->HasMode(rk_AccessMode::Read)) {
-        LogWarning("You should prefer write-only users for this command");
+        LogWarning("You should prefer write-only keys for this command");
     }
     LogInfo();
 
@@ -344,7 +344,7 @@ If you use a snapshot channel, the most recent snapshot object that matches will
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Read)) {
-        LogError("Cannot restore data with %1 role", repo->GetRole());
+        LogError("Cannot restore data with %1 keys", repo->GetRole());
         return 1;
     }
     LogInfo();
@@ -413,7 +413,7 @@ R"(Usage: %!..+%1 check [-C filename] [option...]%!0
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Read)) {
-        LogError("Cannot check repository with %1 role", repo->GetRole());
+        LogError("Cannot check repository with %1 keys", repo->GetRole());
         return 1;
     }
     LogInfo();

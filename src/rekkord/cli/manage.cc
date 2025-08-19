@@ -457,10 +457,10 @@ int RunDerive(Span<const char *> arguments)
     // Options
     const char *output_filename = nullptr;
     bool force = false;
-    rk_UserRole role = rk_UserRole::Master;
+    rk_KeyType type = rk_KeyType::Master;
 
     const auto print_usage = [=](StreamWriter *st) {
-        Span<const char *const> roles = MakeSpan(rk_UserRoleNames + 1, RG_LEN(rk_UserRoleNames) - 1);
+        Span<const char *const> types = MakeSpan(rk_KeyTypeNames + 1, RG_LEN(rk_KeyTypeNames) - 1);
 
         PrintLn(st,
 R"(Usage: %!..+%1 derive [-C filename] [option...] -O destination%!0
@@ -473,9 +473,9 @@ Key options:
 
     %!..+-f, --force%!0                    Overwrite existing file
 
-    %!..+-r, --role role%!0                User role (see below)
+    %!..+-t, --type type%!0                Set key type and permissions (see below)
 
-Available user roles: %!..+%1%!0)", FmtSpan(roles));
+Available key types: %!..+%1%!0)", FmtSpan(types));
     };
 
     // Parse arguments
@@ -490,13 +490,9 @@ Available user roles: %!..+%1%!0)", FmtSpan(roles));
                 output_filename = opt.current_value;
             } else if (opt.Test("-f", "--force")) {
                 force = true;
-            } else if (opt.Test("-r", "--role", OptionType::Value)) {
-                if (!OptionToEnumI(rk_UserRoleNames, opt.current_value, &role)) {
-                    LogError("Unknown user role '%1'", opt.current_value);
-                    return 1;
-                }
-                if (role == rk_UserRole::Master) {
-                    LogError("Cannot use Master role for derived keyset");
+            } else if (opt.Test("-t", "--type", OptionType::Value)) {
+                if (!OptionToEnumI(rk_KeyTypeNames, opt.current_value, &type) || type == rk_KeyType::Master) {
+                    LogError("Unknown key type '%1'", opt.current_value);
                     return 1;
                 }
             } else if (!HandleCommonOption(opt)) {
@@ -511,8 +507,8 @@ Available user roles: %!..+%1%!0)", FmtSpan(roles));
         LogError("Missing output filename");
         return 1;
     }
-    if (role == rk_UserRole::Master) {
-        LogError("Missing user role");
+    if (type == rk_KeyType::Master) {
+        LogError("Missing key type");
         return 1;
     }
 
@@ -533,15 +529,15 @@ Available user roles: %!..+%1%!0)", FmtSpan(roles));
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Config)) {
-        LogError("Cannot derive keys with %1 role", repo->GetRole());
+        LogError("Cannot derive keys with %1 keys", repo->GetRole());
         return 1;
     }
     LogInfo();
 
-    if (!rk_DeriveKeys(repo->GetKeys(), role, output_filename))
+    if (!rk_DeriveKeys(repo->GetKeys(), type, output_filename))
         return 1;
 
-    LogInfo("Wrote '%1' with role %2", output_filename, rk_UserRoleNames[(int)role]);
+    LogInfo("Wrote '%1' with type %2", output_filename, rk_KeyTypeNames[(int)type]);
 
     return 0;
 }
@@ -609,8 +605,8 @@ Key options:
             return 1;
     }
 
-    LogInfo("Keyset ID: %!..+%1%!0", FmtSpan(keyset->kid, FmtType::BigHex, "").Pad0(-2));
-    LogInfo("Role: %!..+%1%!0", rk_UserRoleNames[(int)keyset->role]);
+    LogInfo("Key ID: %!..+%1%!0", FmtSpan(keyset->kid, FmtType::BigHex, "").Pad0(-2));
+    LogInfo("Key type: %!..+%1%!0", rk_KeyTypeNames[(int)keyset->type]);
 
     return 0;
 }
@@ -652,7 +648,7 @@ R"(Usage: %!..+%1 change_cid [-C filename] [option...]%!0
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Config)) {
-        LogError("Cannot change ID with %1 role", repo->GetRole());
+        LogError("Cannot change ID with %1 keys", repo->GetRole());
         return 1;
     }
     LogInfo();

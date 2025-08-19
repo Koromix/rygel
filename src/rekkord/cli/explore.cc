@@ -146,7 +146,7 @@ Available sort orders: %!..+%3%!0)",
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Log)) {
-        LogError("Cannot list snapshots with %1 role", repo->GetRole());
+        LogError("Cannot list snapshots with %1 keys", repo->GetRole());
         return 1;
     }
     LogInfo();
@@ -350,7 +350,7 @@ Available output formats: %!..+%2%!0)",
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Log)) {
-        LogError("Cannot list snapshots with %1 role", repo->GetRole());
+        LogError("Cannot list snapshots with %1 keys", repo->GetRole());
         return 1;
     }
     LogInfo();
@@ -663,7 +663,7 @@ Available output formats: %!..+%2%!0)",
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Read)) {
-        LogError("Cannot list objects with %1 role", repo->GetRole());
+        LogError("Cannot list objects with %1 keys", repo->GetRole());
         return 1;
     }
     LogInfo();
