@@ -549,13 +549,13 @@ int RunIdentify(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 identify [-C filename] [option...] -O destination%!0
-
-Key options:
-
-        %!..+--offline%!0                  Analyse key file without opening repository
+R"(Usage: %!..+%1 identify [-C filename] [option...]%!0
 )", FelixTarget);
         PrintLn(st, CommonOptions);
+        PrintLn(st, R"(
+Identify options:
+
+        %!..+--offline%!0                  Analyse key file without opening repository)");
     };
 
     // Parse arguments
