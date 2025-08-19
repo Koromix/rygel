@@ -38,6 +38,7 @@ static_assert(crypto_secretbox_MACBYTES == 16);
 static_assert(crypto_sign_ed25519_SEEDBYTES == 32);
 static_assert(crypto_sign_ed25519_BYTES == 64);
 static_assert(crypto_kdf_blake2b_KEYBYTES == crypto_box_PUBLICKEYBYTES);
+static_assert(crypto_pwhash_argon2id_SALTBYTES == 16);
 
 rk_Repository::rk_Repository(rk_Disk *disk, const rk_Config &config)
     : disk(disk), compression_level(config.compression_level), retain(config.retain),
@@ -592,7 +593,7 @@ StatResult rk_Repository::TestBlob(const rk_ObjectID &oid, int64_t *out_size)
 bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload)
 {
     // Accounting for the prefix, order value, encryption and base64 overhead, that's what remains per fragment
-    const Size MaxFragmentSize = 160;
+    const Size MaxFragmentSize = 148;
 
     RG_ASSERT(HasMode(rk_AccessMode::Write));
 
@@ -606,10 +607,10 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
         return false;
     }
 
-    char prefix[RG_SIZE(TagIntro::prefix) + 1];
-    uint8_t key[RG_SIZE(TagIntro::key)];
-    Fmt(prefix, "%1", FmtRandom(RG_SIZE(prefix) - 1));
-    FillRandomSafe(key, RG_SIZE(key));
+    uint8_t prefix[RG_SIZE(TagIntro::prefix)];
+    uint8_t pwd[RG_SIZE(TagIntro::key)];
+    FillRandomSafe(prefix, RG_SIZE(prefix));
+    FillRandomSafe(pwd, RG_SIZE(pwd));
 
     HeapArray<const char *> paths;
 
@@ -619,8 +620,8 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
 
         intro.version = TagVersion;
         intro.oid = oid;
-        MemCpy(intro.prefix, prefix, RG_SIZE(intro.prefix));
-        MemCpy(intro.key, key, RG_SIZE(key));
+        MemCpy(intro.prefix, prefix, RG_SIZE(prefix));
+        MemCpy(intro.key, pwd, RG_SIZE(pwd));
         intro.count = (int8_t)fragments;
 
         uint8_t cypher[RG_SIZE(intro) + crypto_box_SEALBYTES + crypto_sign_BYTES];
@@ -645,6 +646,20 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
         paths.Append(path.ptr);
     }
 
+    // So, we use 192-bit keys instead of directly 256-bit because the base name has to fit inside 255
+    // characters to work on all filesystems (most Linux filesystems limit names to 255 bytes, for example).
+    // Derive the full 256-bit key from the random 192-bit key with Argon2id, using the random
+    // prefix as a salt.
+    uint8_t key[32];
+    if (crypto_pwhash_argon2id(key, RG_SIZE(key), (const char *)pwd, RG_SIZE(pwd), prefix,
+                               crypto_pwhash_argon2id_OPSLIMIT_MIN,
+                               crypto_pwhash_argon2id_MEMLIMIT_MIN,
+                               crypto_pwhash_argon2id_ALG_ARGON2ID13) != 0) {
+        LogError("Failed to expand encryption key");
+        return false;
+    }
+    static_assert(RG_SIZE(prefix) == crypto_pwhash_argon2id_SALTBYTES);
+
     // Encrypt payload
     for (uint8_t i = 0; payload.len; i++) {
         Size frag_len = std::min(payload.len, MaxFragmentSize);
@@ -662,7 +677,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
         HeapArray<char> buf(&temp_alloc);
         buf.Reserve(512);
 
-        Fmt(&buf, "tags/P/%1_%2_", prefix, FmtArg(i).Pad0(-2));
+        Fmt(&buf, "tags/P/%1_%2_", FmtSpan(prefix, FmtType::BigHex, "").Pad0(-2), FmtArg(i).Pad0(-2));
         sodium_bin2base64(buf.end(), buf.Available(), cypher, frag_len + crypto_secretbox_MACBYTES, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
         buf.len += sodium_base64_encoded_len(frag_len + crypto_secretbox_MACBYTES, sodium_base64_VARIANT_URLSAFE_NO_PADDING) - 1;
 
@@ -746,12 +761,19 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
         }
 
         tag.name = main.ptr;
-        tag.prefix = DuplicateString(MakeSpan(intro.prefix, RG_SIZE(intro.prefix)), alloc).ptr;
+        tag.prefix = Fmt(alloc, "%1", FmtSpan(intro.prefix, FmtType::BigHex, "").Pad0(-2)).ptr;
         tag.oid = intro.oid;
 
         // Stash key and count in payload to make it available for next step
-        tag.payload = AllocateSpan<uint8_t>(&temp_alloc, RG_SIZE(intro.key));
-        MemCpy((uint8_t *)tag.payload.ptr, intro.key, RG_SIZE(intro.key));
+        tag.payload = AllocateSpan<uint8_t>(&temp_alloc, 32);
+        if (crypto_pwhash_argon2id((uint8_t *)tag.payload.ptr, tag.payload.len,
+                                   (const char *)intro.key, RG_SIZE(intro.key), intro.prefix,
+                                   crypto_pwhash_argon2id_OPSLIMIT_MIN,
+                                   crypto_pwhash_argon2id_MEMLIMIT_MIN,
+                                   crypto_pwhash_argon2id_ALG_ARGON2ID13) != 0) {
+            LogError("Failed to expand encryption key");
+            continue;
+        }
         tag.payload.len = intro.count;
 
         out_tags->Append(tag);
@@ -777,13 +799,13 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
             for (Size k = idx; k < fragments.len; k++) {
                 Span<const char> frag = fragments[k];
 
-                if (frag.len <= 14 || frag[10] != '_' || frag[13] != '_')
+                if (frag.len <= 36 || frag[32] != '_' || frag[35] != '_')
                     continue;
                 if (!StartsWith(frag, tag.prefix))
                     break;
 
                 uint8_t nonce[24] = {};
-                if (!ParseInt(frag.Take(11, 2), &nonce[23], (int)ParseFlag::End))
+                if (!ParseInt(frag.Take(33, 2), &nonce[23], (int)ParseFlag::End))
                     continue;
                 if (nonce[23] != count)
                     continue;
@@ -791,7 +813,7 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
                 LocalArray<uint8_t, 255> cypher;
                 {
                     size_t len = 0;
-                    sodium_base642bin(cypher.data, RG_SIZE(cypher.data), frag.ptr + 14, frag.len - 14, nullptr,
+                    sodium_base642bin(cypher.data, RG_SIZE(cypher.data), frag.ptr + 36, frag.len - 36, nullptr,
                                       &len, nullptr, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
 
                     if (len < crypto_secretbox_MACBYTES)

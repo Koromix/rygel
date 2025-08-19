@@ -37,12 +37,12 @@ static_assert(RG_SIZE(ConfigData) == 2113);
 struct TagIntro {
     int8_t version;
     rk_ObjectID oid;
-    char prefix[10];
-    uint8_t key[32];
+    uint8_t prefix[16];
+    uint8_t key[24];
     int8_t count;
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(TagIntro) == 77);
+static_assert(RG_SIZE(TagIntro) == 75);
 
 #pragma pack(push, 1)
 struct BlobIntro {
