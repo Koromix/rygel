@@ -308,7 +308,7 @@ Options:
         Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
         RG_DEFER { ReleaseSafe(mkey.ptr, mkey.len); };
 
-        randombytes_buf(mkey.ptr, mkey.len);
+        FillRandomSafe(mkey.ptr, mkey.len);
 
         if (!WriteFile(mkey, key_filename, (int)StreamWriterFlag::NoBuffer))
             return 1;
@@ -412,7 +412,7 @@ Options:
             return 1;
         }
 
-        randombytes_buf(mkey.ptr, mkey.len);
+        FillRandomSafe(mkey.ptr, mkey.len);
     } else {
         // Use separate buffer to make sure file has correct size
         Span<uint8_t> buf = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);

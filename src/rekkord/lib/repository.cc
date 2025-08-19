@@ -155,8 +155,8 @@ bool rk_Repository::Init(Span<const uint8_t> mkey)
 
     // Generate unique repository IDs
     {
-        randombytes_buf(ids.rid, RG_SIZE(ids.rid));
-        randombytes_buf(ids.cid, RG_SIZE(ids.cid));
+        FillRandomSafe(ids.rid, RG_SIZE(ids.rid));
+        FillRandomSafe(ids.cid, RG_SIZE(ids.cid));
 
         uint8_t buf[RG_SIZE(ids)];
         MemCpy(buf, &ids, RG_SIZE(ids));
@@ -268,7 +268,7 @@ bool rk_Repository::ChangeCID()
     RG_ASSERT(HasMode(rk_AccessMode::Config));
 
     IdSet new_ids = ids;
-    randombytes_buf(new_ids.cid, RG_SIZE(new_ids.cid));
+    FillRandomSafe(new_ids.cid, RG_SIZE(new_ids.cid));
 
     // Write new IDs
     {
@@ -609,7 +609,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
     char prefix[RG_SIZE(TagIntro::prefix) + 1];
     uint8_t key[RG_SIZE(TagIntro::key)];
     Fmt(prefix, "%1", FmtRandom(RG_SIZE(prefix) - 1));
-    randombytes_buf(key, RG_SIZE(key));
+    FillRandomSafe(key, RG_SIZE(key));
 
     HeapArray<const char *> paths;
 

@@ -168,7 +168,7 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
 
     // Create challenge key
     static_assert(RG_SIZE(challenge_key) == crypto_secretbox_KEYBYTES);
-    randombytes_buf(challenge_key, RG_SIZE(challenge_key));
+    FillRandomSafe(challenge_key, RG_SIZE(challenge_key));
 
     return true;
 }

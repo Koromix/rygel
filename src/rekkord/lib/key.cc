@@ -143,7 +143,7 @@ Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw
     ZeroSafe(data, RG_SIZE(*data));
     MemCpy(data->prefix, "RKK01", 5);
 
-    randombytes_buf(data->badge.kid, RG_SIZE(data->badge.kid));
+    FillRandomSafe(data->badge.kid, RG_SIZE(data->badge.kid));
     data->badge.type = (int8_t)type;
 
     switch (type) {
@@ -170,7 +170,7 @@ Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw
         } break;
     }
 
-    randombytes_buf(data->keys + offsetof(rk_KeySet::Keys, skey), RG_SIZE(keys.keys.skey));
+    FillRandomSafe(data->keys + offsetof(rk_KeySet::Keys, skey), RG_SIZE(keys.keys.skey));
     SeedSigningPair(data->keys + offsetof(rk_KeySet::Keys, skey), data->badge.pkey);
 
     // Sign serialized keyset to detect tampering
