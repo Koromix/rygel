@@ -172,7 +172,7 @@ Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw
     randombytes_buf(data->keys + offsetof(rk_KeySet::Keys, skey), RG_SIZE(keys.keys.skey));
 
     // Sign serialized keyset to detect tampering
-    crypto_sign_ed25519_detached(data->sig, nullptr, (const uint8_t *)&data, offsetof(KeyData, sig), keys.keys.ckey);
+    crypto_sign_ed25519_detached(data->sig, nullptr, (const uint8_t *)data, offsetof(KeyData, sig), keys.keys.ckey);
 
     return RG_SIZE(KeyData);
 }
