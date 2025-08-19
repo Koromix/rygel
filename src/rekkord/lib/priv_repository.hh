@@ -31,6 +31,7 @@ struct ConfigData {
     uint8_t cypher[64 + 2048];
 };
 #pragma pack(pop)
+static_assert(RG_SIZE(ConfigData) == 2113);
 
 #pragma pack(push, 1)
 struct TagIntro {
@@ -41,6 +42,7 @@ struct TagIntro {
     int8_t count;
 };
 #pragma pack(pop)
+static_assert(RG_SIZE(TagIntro) == 77);
 
 #pragma pack(push, 1)
 struct BlobIntro {
@@ -50,5 +52,6 @@ struct BlobIntro {
     uint8_t header[24];
 };
 #pragma pack(pop)
+static_assert(RG_SIZE(BlobIntro) == 106);
 
 }

@@ -43,5 +43,6 @@ struct KeyData {
     uint8_t sig[64];
 };
 #pragma pack(pop)
+static_assert(RG_SIZE(KeyData) == 950);
 
 }
