@@ -32,7 +32,7 @@ struct rk_Hash {
 
     int operator-(const rk_Hash &other) const { return memcmp(raw, other.raw, RG_SIZE(raw)); }
 
-    operator FmtArg() const { return FmtSpan(raw, FmtType::BigHex, "").Pad0(-2); }
+    operator FmtArg() const { return FmtHex(raw); }
 
     uint64_t Hash() const
     {
@@ -73,7 +73,7 @@ struct rk_ObjectID {
 
     void Format(FunctionRef<void(Span<const char>)> append) const
     {
-        FmtArg arg = FmtSpan(hash.raw, FmtType::BigHex, "").Pad0(-2);
+        FmtArg arg = FmtHex(hash.raw);
         Fmt(append, "%1%2", rk_BlobCatalogNames[(int)catalog], arg);
     }
     operator FmtArg() { return FmtCustom(*this); }

@@ -48,7 +48,7 @@ bool rk_Cache::Open(rk_Repository *repo, bool build)
         if (!MakeDirectory(dirname, false))
             return false;
 
-        filename = Fmt(&temp_alloc, "%1%/%2.db", dirname, FmtSpan(id, FmtType::SmallHex, "").Pad0(-2)).ptr;
+        filename = Fmt(&temp_alloc, "%1%/%2.db", dirname, FmtHex(id, FmtType::SmallHex)).ptr;
         LogDebug("Cache file: %1", filename);
     }
 

@@ -102,15 +102,15 @@ bool rk_LoadKeys(Span<const uint8_t> raw, rk_KeySet *out_keys)
     }
 
 #if 0
-    PrintLn("ckey = %1", FmtSpan(out_keys->keys.ckey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("akey = %1", FmtSpan(out_keys->keys.akey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("dkey = %1", FmtSpan(out_keys->keys.dkey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("wkey = %1", FmtSpan(out_keys->keys.wkey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("lkey = %1", FmtSpan(out_keys->keys.lkey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("tkey = %1", FmtSpan(out_keys->keys.tkey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("nkey = %1", FmtSpan(out_keys->keys.nkey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("skey = %1", FmtSpan(out_keys->keys.skey, FmtType::BigHex, "").Pad0(-2));
-    PrintLn("pkey = %1", FmtSpan(out_keys->keys.pkey, FmtType::BigHex, "").Pad0(-2));
+    PrintLn("ckey = %1", FmtHex(out_keys->keys.ckey));
+    PrintLn("akey = %1", FmtHex(out_keys->keys.akey));
+    PrintLn("dkey = %1", FmtHex(out_keys->keys.dkey));
+    PrintLn("wkey = %1", FmtHex(out_keys->keys.wkey));
+    PrintLn("lkey = %1", FmtHex(out_keys->keys.lkey));
+    PrintLn("tkey = %1", FmtHex(out_keys->keys.tkey));
+    PrintLn("nkey = %1", FmtHex(out_keys->keys.nkey));
+    PrintLn("skey = %1", FmtHex(out_keys->keys.skey));
+    PrintLn("pkey = %1", FmtHex(out_keys->keys.pkey));
 #endif
 
     return true;

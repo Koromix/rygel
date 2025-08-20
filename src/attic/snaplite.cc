@@ -51,9 +51,7 @@ static bool ListSnapshotFiles(const char *filename, BlockAllocator *alloc, HeapA
 static inline FmtArg FormatSha256(Span<const uint8_t> hash)
 {
     RG_ASSERT(hash.len == 32);
-
-    FmtArg arg = FmtSpan(hash, FmtType::BigHex, "").Pad0(-2);
-    return arg;
+    return FmtHex(hash);
 }
 
 static int RunRestore(Span<const char *> arguments)

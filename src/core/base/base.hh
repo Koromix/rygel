@@ -3956,6 +3956,12 @@ FmtArg FmtSpan(T (&arr)[N], FmtType type, const char *sep = ", ") { return FmtSp
 template <typename T, Size N>
 FmtArg FmtSpan(T (&arr)[N], const char *sep = ", ") { return FmtSpan(MakeSpan(arr), sep); }
 
+static inline FmtArg FmtHex(Span<const uint8_t> buf, FmtType type = FmtType::BigHex)
+{
+    RG_ASSERT(type == FmtType::BigHex || type == FmtType::SmallHex);
+    return FmtSpan(buf, type, "").Pad0(-2);
+}
+
 class FmtUpperAscii {
     Span<const char> str;
 

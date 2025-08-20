@@ -612,7 +612,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
     FillRandomSafe(prefix, RG_SIZE(prefix));
     FillRandomSafe(pwd, RG_SIZE(pwd));
 
-    const char *main = Fmt(&temp_alloc, "tags/M/%1", FmtSpan(keyset->kid, FmtType::BigHex, "").Pad0(-2)).ptr;
+    const char *main = Fmt(&temp_alloc, "tags/M/%1", FmtHex(keyset->kid)).ptr;
 
     HeapArray<const char *> paths;
 
@@ -679,7 +679,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
         HeapArray<char> buf(&temp_alloc);
         buf.Reserve(512);
 
-        Fmt(&buf, "tags/P/%1_%2_", FmtSpan(prefix, FmtType::BigHex, "").Pad0(-2), FmtArg(i).Pad0(-2));
+        Fmt(&buf, "tags/P/%1_%2_", FmtHex(prefix), FmtArg(i).Pad0(-2));
         sodium_bin2base64(buf.end(), buf.Available(), cypher, frag_len + crypto_secretbox_MACBYTES, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
         buf.len += sodium_base64_encoded_len(frag_len + crypto_secretbox_MACBYTES, sodium_base64_VARIANT_URLSAFE_NO_PADDING) - 1;
 
@@ -770,7 +770,7 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
         }
 
         tag.name = main.ptr;
-        tag.prefix = Fmt(alloc, "%1", FmtSpan(intro.prefix, FmtType::BigHex, "").Pad0(-2)).ptr;
+        tag.prefix = Fmt(alloc, "%1", FmtHex(intro.prefix)).ptr;
         tag.oid = intro.oid;
 
         // Stash key and count in payload to make it available for next step

@@ -706,11 +706,9 @@ Available hash algorithms: %!..+%3%!0)",
             // Format hash
             LocalArray<char, 512> text;
             if (brief) {
-                FmtArg arg = FmtSpan(hash.Take(), FmtType::BigHex, "").Pad0(-2);
-                text.len = Fmt(text.data, StdOut->IsVt100(), "%1\n", arg).len;
+                text.len = Fmt(text.data, StdOut->IsVt100(), "%1\n", FmtHex(hash.Take())).len;
             } else {
-                FmtArg arg = FmtSpan(hash.Take(), FmtType::BigHex, "").Pad0(-2);
-                text.len = Fmt(text.data, StdOut->IsVt100(), "%!..+%1%!0  %2\n", arg, reader.GetFileName()).len;
+                text.len = Fmt(text.data, StdOut->IsVt100(), "%!..+%1%!0  %2\n", FmtHex(hash.Take()), reader.GetFileName()).len;
             }
 
             // Handle truncated filename

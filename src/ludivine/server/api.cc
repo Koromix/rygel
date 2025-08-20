@@ -166,7 +166,7 @@ static bool SendNewMail(const char *to, const char *uid, Span<const uint8_t> tke
     smtp_MailContent content;
 
     // Format magic link
-    FmtArg fmt = FmtSpan(tkey, FmtType::BigHex, "").Pad0(-2);
+    FmtArg fmt = FmtHex(tkey);
     const char *url = Fmt(alloc, "%1/session#uid=%2&tk=%3&r=%4", config.url, uid, fmt, registration).ptr;
 
     content.subject = PatchText(NewUser.subject, to, url, alloc).ptr;

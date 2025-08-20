@@ -539,7 +539,7 @@ Available key types: %!..+%1%!0)", FmtSpan(types));
         return 1;
 
     LogInfo("Key file: %!..+%1%!0", output_filename);
-    LogInfo("Key ID: %!..+%1%!0", FmtSpan(kid, FmtType::BigHex, "").Pad0(-2));
+    LogInfo("Key ID: %!..+%1%!0", FmtHex(kid));
     LogInfo("Key type: %!..+%1%!0", rk_KeyTypeNames[(int)type]);
 
     return 0;
@@ -608,7 +608,7 @@ Identify options:
             return 1;
     }
 
-    LogInfo("Key ID: %!..+%1%!0", FmtSpan(keyset->kid, FmtType::BigHex, "").Pad0(-2));
+    LogInfo("Key ID: %!..+%1%!0", FmtHex(keyset->kid));
     LogInfo("Key type: %!..+%1%!0", rk_KeyTypeNames[(int)keyset->type]);
 
     return 0;

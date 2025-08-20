@@ -88,11 +88,11 @@ static const char *GenerateUUIDv4(Allocator *alloc)
     bytes[8] = (2 << 6) | (bytes[8] & 0x3F);
 
     const char *uuid = Fmt(alloc, "%1-%2-%3-%4-%5",
-                                  FmtSpan(MakeSpan(bytes + 0, 4), FmtType::BigHex, "").Pad0(-2),
-                                  FmtSpan(MakeSpan(bytes + 4, 2), FmtType::BigHex, "").Pad0(-2),
-                                  FmtSpan(MakeSpan(bytes + 6, 2), FmtType::BigHex, "").Pad0(-2),
-                                  FmtSpan(MakeSpan(bytes + 8, 2), FmtType::BigHex, "").Pad0(-2),
-                                  FmtSpan(MakeSpan(bytes + 10, 6), FmtType::BigHex, "").Pad0(-2)).ptr;
+                                  FmtHex(MakeSpan(bytes + 0, 4)),
+                                  FmtHex(MakeSpan(bytes + 4, 2)),
+                                  FmtHex(MakeSpan(bytes + 6, 2)),
+                                  FmtHex(MakeSpan(bytes + 8, 2)),
+                                  FmtHex(MakeSpan(bytes + 10, 6))).ptr;
     return uuid;
 }
 

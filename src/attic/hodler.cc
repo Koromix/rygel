@@ -467,7 +467,7 @@ static void RenderAsset(Span<const char> path, const FileHash *hash, StreamWrite
         if (hash->unique) {
             Print(writer, "/%1", hash->url);
         } else {
-            FmtArg suffix = FmtSpan(MakeSpan(hash->sha256, 8), FmtType::BigHex, "").Pad0(-2);
+            FmtArg suffix = FmtHex(MakeSpan(hash->sha256, 8));
             Print(writer, "/%1?%2", hash->url, suffix);
         }
     } else {

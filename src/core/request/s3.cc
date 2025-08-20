@@ -238,7 +238,7 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
 static FmtArg FormatSha256(const uint8_t sha256[32])
 {
     Span<const uint8_t> hash = MakeSpan(sha256, 32);
-    return FmtSpan(hash, FmtType::SmallHex, "").Pad0(-2);
+    return FmtHex(hash, FmtType::SmallHex);
 }
 
 static FmtArg FormatYYYYMMDD(const TimeSpec &date)

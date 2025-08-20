@@ -196,11 +196,11 @@ static Span<const char> PatchText(Span<const char> text, const char *mail, const
 static const char *FormatUUID(const uint8_t raw[16], Allocator *alloc)
 {
     const char *uuid = Fmt(alloc, "%1-%2-%3-%4-%5", 
-                           FmtSpan(MakeSpan(raw + 0, 4), FmtType::BigHex, "").Pad0(-2),
-                           FmtSpan(MakeSpan(raw + 4, 2), FmtType::BigHex, "").Pad0(-2),
-                           FmtSpan(MakeSpan(raw + 6, 2), FmtType::BigHex, "").Pad0(-2),
-                           FmtSpan(MakeSpan(raw + 8, 2), FmtType::BigHex, "").Pad0(-2),
-                           FmtSpan(MakeSpan(raw + 10, 6), FmtType::BigHex, "").Pad0(-2)).ptr;
+                           FmtHex(MakeSpan(raw + 0, 4)),
+                           FmtHex(MakeSpan(raw + 4, 2)),
+                           FmtHex(MakeSpan(raw + 6, 2)),
+                           FmtHex(MakeSpan(raw + 8, 2)),
+                           FmtHex(MakeSpan(raw + 10, 6))).ptr;
     return uuid;
 }
 
