@@ -192,27 +192,17 @@ static bool DecodeKeyData(const KeyData &data, rk_KeySet *out_keys)
 
 bool rk_LoadKeyFile(const char *filename, rk_KeySet *out_keys)
 {
-    Span<uint8_t> buf = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
-    RG_DEFER_C(len = buf.len) { ReleaseSafe(buf.ptr, len); };
+    Span<uint8_t> raw = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
+    RG_DEFER_C(len = raw.len) { ReleaseSafe(raw.ptr, len); };
 
-    // Load PEM file and decode
-    {
-        Span<uint8_t> raw = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
-        RG_DEFER_C(len = raw.len) { ReleaseSafe(raw.ptr, len); };
+    raw.len = rk_ReadRawKey(filename, raw);
+    if (raw.len < 0)
+        return false;
 
-        raw.len = ReadFile(filename, raw);
-        if (raw.len < 0)
-            return false;
-
-        buf.len = DecodePEM(filename, raw.As<char>(), buf);
-        if (buf.len < 0)
-            return false;
-    }
-
-    if (buf.len == rk_MasterKeySize) {
-        return rk_DeriveMasterKey(buf, out_keys);
-    } else if (buf.len == RG_SIZE(KeyData)) {
-        const KeyData *data = (const KeyData *)buf.ptr;
+    if (raw.len == rk_MasterKeySize) {
+        return rk_DeriveMasterKey(raw, out_keys);
+    } else if (raw.len == RG_SIZE(KeyData)) {
+        const KeyData *data = (const KeyData *)raw.ptr;
         return DecodeKeyData(*data, out_keys);
     }
 
