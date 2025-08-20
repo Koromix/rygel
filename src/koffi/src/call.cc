@@ -147,6 +147,7 @@ void CallData::RelayAsync(napi_env, napi_value, void *, void *udata)
 
 bool CallData::PushString(Napi::Value value, int directions, const char **out_str)
 {
+    // Fast path
     if (value.IsString()) {
         if (directions & 2) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, value));
@@ -155,62 +156,41 @@ bool CallData::PushString(Napi::Value value, int directions, const char **out_st
 
         PushStringValue(value, out_str);
         return true;
-    } else if (IsNullOrUndefined(value)) {
-        *out_str = nullptr;
-        return true;
-    } else if (value.IsArray()) {
-        Napi::Array array = value.As<Napi::Array>();
+    }
 
-        if (!(directions & 2)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
-            return false;
-        }
-        if (array.Length() != 1) [[unlikely]] {
+    return PushPointer(value, instance->str_type, directions, (void **)out_str);
+}
+
+bool CallData::PushString16(Napi::Value value, int directions, const char16_t **out_str16)
+{
+    // Fast path
+    if (value.IsString()) {
+        if (directions & 2) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, value));
             return false;
         }
 
-        value = array[0u];
-
-        if (!value.IsString()) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, array[0u]));
-            return false;
-        }
-
-        Size len = PushStringValue(value, out_str);
-        if (len < 0) [[unlikely]]
-            return false;
-
-        // Create array type
-        TypeInfo *type;
-        {
-            type = AllocateOne<TypeInfo>(&call_alloc, (int)AllocFlag::Zero);
-
-            type->name = "<temporary>";
-
-            type->primitive = PrimitiveKind::Array;
-            type->align = 1;
-            type->size = (int32_t)len;
-            type->ref.type = instance->char_type;
-            type->hint = ArrayHint::String;
-        }
-
-        // Prepare output argument
-        {
-            OutArgument *out = out_arguments.AppendDefault();
-
-            napi_status status = napi_create_reference(env, array, 1, &out->ref);
-            RG_ASSERT(status == napi_ok);
-
-            out->kind = OutArgument::Kind::Array;
-            out->ptr = (const uint8_t *)*out_str;
-            out->type = type;
-        }
-
+        PushString16Value(value, out_str16);
         return true;
-    } else {
-        return PushPointer(value, instance->str_type, directions, (void **)out_str);
     }
+
+    return PushPointer(value, instance->str16_type, directions, (void **)out_str16);
+}
+
+bool CallData::PushString32(Napi::Value value, int directions, const char32_t **out_str32)
+{
+    // Fast path
+    if (value.IsString()) {
+        if (directions & 2) [[unlikely]] {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, value));
+            return false;
+        }
+
+        PushString32Value(value, out_str32);
+        return true;
+    }
+
+    return PushPointer(value, instance->str32_type, directions, (void **)out_str32);
 }
 
 Size CallData::PushStringValue(Napi::Value value, const char **out_str)
@@ -247,74 +227,6 @@ Size CallData::PushStringValue(Napi::Value value, const char **out_str)
     return (Size)len;
 }
 
-bool CallData::PushString16(Napi::Value value, int directions, const char16_t **out_str16)
-{
-    if (value.IsString()) {
-        if (directions & 2) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
-            return false;
-        }
-
-        PushString16Value(value, out_str16);
-        return true;
-    } else if (IsNullOrUndefined(value)) {
-        *out_str16 = nullptr;
-        return true;
-    }  else if (value.IsArray()) {
-        Napi::Array array = value.As<Napi::Array>();
-
-        if (!(directions & 2)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
-            return false;
-        }
-        if (array.Length() != 1) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, value));
-            return false;
-        }
-
-        value = array[0u];
-
-        if (!value.IsString()) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, array[0u]));
-            return false;
-        }
-
-        Size len = PushString16Value(value, out_str16);
-        if (len < 0) [[unlikely]]
-            return false;
-
-        // Create array type
-        TypeInfo *type;
-        {
-            type = AllocateOne<TypeInfo>(&call_alloc, (int)AllocFlag::Zero);
-
-            type->name = "<temporary>";
-
-            type->primitive = PrimitiveKind::Array;
-            type->align = 2;
-            type->size = (int32_t)(len * 2);
-            type->ref.type = instance->char16_type;
-            type->hint = ArrayHint::String;
-        }
-
-        // Prepare output argument
-        {
-            OutArgument *out = out_arguments.AppendDefault();
-
-            napi_status status = napi_create_reference(env, array, 1, &out->ref);
-            RG_ASSERT(status == napi_ok);
-
-            out->kind = OutArgument::Kind::Array;
-            out->ptr = (const uint8_t *)*out_str16;
-            out->type = type;
-        }
-
-        return true;
-    } else {
-        return PushPointer(value, instance->str16_type, directions, (void **)out_str16);
-    }
-}
-
 Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
 {
     Span<char16_t> buf;
@@ -348,74 +260,6 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
 
     *out_str16 = buf.ptr;
     return (Size)len;
-}
-
-bool CallData::PushString32(Napi::Value value, int directions, const char32_t **out_str32)
-{
-    if (value.IsString()) {
-        if (directions & 2) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
-            return false;
-        }
-
-        PushString32Value(value, out_str32);
-        return true;
-    } else if (IsNullOrUndefined(value)) {
-        *out_str32 = nullptr;
-        return true;
-    }  else if (value.IsArray()) {
-        Napi::Array array = value.As<Napi::Array>();
-
-        if (!(directions & 2)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
-            return false;
-        }
-        if (array.Length() != 1) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, value));
-            return false;
-        }
-
-        value = array[0u];
-
-        if (!value.IsString()) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, array[0u]));
-            return false;
-        }
-
-        Size len = PushString32Value(value, out_str32);
-        if (len < 0) [[unlikely]]
-            return false;
-
-        // Create array type
-        TypeInfo *type;
-        {
-            type = AllocateOne<TypeInfo>(&call_alloc, (int)AllocFlag::Zero);
-
-            type->name = "<temporary>";
-
-            type->primitive = PrimitiveKind::Array;
-            type->align = 4;
-            type->size = (int32_t)(len * 4);
-            type->ref.type = instance->char32_type;
-            type->hint = ArrayHint::String;
-        }
-
-        // Prepare output argument
-        {
-            OutArgument *out = out_arguments.AppendDefault();
-
-            napi_status status = napi_create_reference(env, array, 1, &out->ref);
-            RG_ASSERT(status == napi_ok);
-
-            out->kind = OutArgument::Kind::Array;
-            out->ptr = (const uint8_t *)*out_str32;
-            out->type = type;
-        }
-
-        return true;
-    } else {
-        return PushPointer(value, instance->str32_type, directions, (void **)out_str32);
-    }
 }
 
 Size CallData::PushString32Value(Napi::Value value, const char32_t **out_str32)
