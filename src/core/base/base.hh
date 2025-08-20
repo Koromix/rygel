@@ -1545,7 +1545,6 @@ static inline bool StartsWith(Span<const char> str, Span<const char> prefix)
             return false;
         i++;
     }
-
     return (i == prefix.len);
 }
 static inline bool StartsWith(Span<const char> str, const char *prefix)
@@ -1556,8 +1555,17 @@ static inline bool StartsWith(Span<const char> str, const char *prefix)
             return false;
         i++;
     }
-
     return !prefix[i];
+}
+static inline bool StartsWith(const char *str, Span<const char> prefix)
+{
+    Size i = 0;
+    while (str[i] && i < prefix.len) {
+        if (str[i] != prefix[i])
+            return false;
+        i++;
+    }
+    return (i == prefix.len);
 }
 static inline bool StartsWith(const char *str, const char *prefix)
 {
@@ -1567,14 +1575,14 @@ static inline bool StartsWith(const char *str, const char *prefix)
             return false;
         i++;
     }
-
     return !prefix[i];
 }
 
-static inline bool EndsWith(Span<const char> str, const char *suffix)
+static inline bool EndsWith(Span<const char> str, Span<const char> suffix)
 {
     Size i = str.len - 1;
-    Size j = (Size)strlen(suffix) - 1;
+    Size j = suffix.len - 1;
+
     while (i >= 0 && j >= 0) {
         if (str[i] != suffix[j])
             return false;
@@ -1649,16 +1657,15 @@ static inline Span<const char> SplitStr(Span<const char> str, char split_char, S
 static inline Span<const char> SplitStr(const char *str, char split_char, const char **out_remainder = nullptr)
     { return SplitStr((char *)str, split_char, (char **)out_remainder); }
 
-static inline Span<char> SplitStr(Span<char> str, const char *split_str, Span<char> *out_remainder = nullptr)
+static inline Span<char> SplitStr(Span<char> str, Span<const char> split, Span<char> *out_remainder = nullptr)
 {
-    RG_ASSERT(split_str[0]);
+    RG_ASSERT(split.len);
 
     Size part_len = 0;
     while (part_len < str.len) {
-        if (StartsWith(str.Take(part_len, str.len - part_len), split_str)) {
+        if (StartsWith(str.Take(part_len, str.len - part_len), split)) {
             if (out_remainder) {
-                Size split_len = strlen(split_str);
-                *out_remainder = str.Take(part_len + split_len, str.len - part_len - split_len);
+                *out_remainder = str.Take(part_len + split.len, str.len - part_len - split.len);
             }
             return str.Take(0, part_len);
         }
@@ -1670,16 +1677,15 @@ static inline Span<char> SplitStr(Span<char> str, const char *split_str, Span<ch
     }
     return str;
 }
-static inline Span<char> SplitStr(char *str, const char *split_str, char **out_remainder = nullptr)
+static inline Span<char> SplitStr(char *str, Span<const char> split, char **out_remainder = nullptr)
 {
-    RG_ASSERT(split_str[0]);
+    RG_ASSERT(split.len);
 
     Size part_len = 0;
     while (str[part_len]) {
-        if (StartsWith(str + part_len, split_str)) {
+        if (StartsWith(str + part_len, split)) {
             if (out_remainder) {
-                Size split_len = strlen(split_str);
-                *out_remainder = str + part_len + split_len;
+                *out_remainder = str + part_len + split.len;
             }
             return MakeSpan(str, part_len);
         }
@@ -1691,10 +1697,10 @@ static inline Span<char> SplitStr(char *str, const char *split_str, char **out_r
     }
     return MakeSpan(str, part_len);
 }
-static inline Span<const char> SplitStr(Span<const char> str, const char *split_str, Span<const char> *out_remainder = nullptr)
-    { return SplitStr(MakeSpan((char *)str.ptr, str.len), split_str, (Span<char> *)out_remainder); }
-static inline Span<const char> SplitStr(const char *str, const char *split_str, const char **out_remainder = nullptr)
-    { return SplitStr((char *)str, split_str, (char **)out_remainder); }
+static inline Span<const char> SplitStr(Span<const char> str, Span<const char> split, Span<const char> *out_remainder = nullptr)
+    { return SplitStr(MakeSpan((char *)str.ptr, str.len), split, (Span<char> *)out_remainder); }
+static inline Span<const char> SplitStr(const char *str, Span<const char> split, const char **out_remainder = nullptr)
+    { return SplitStr((char *)str, split, (char **)out_remainder); }
 
 static inline Span<char> SplitStrLine(Span<char> str, Span<char> *out_remainder = nullptr)
 {
