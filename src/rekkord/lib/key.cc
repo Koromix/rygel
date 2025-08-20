@@ -259,7 +259,7 @@ bool rk_ExportKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filena
     SeedSigningPair(data->keys + offsetof(rk_KeySet::Keys, skey), data->badge.pkey);
 
     // Sign serialized keyset to detect tampering
-    crypto_sign_ed25519_detached(data->sig, nullptr, (const uint8_t *)&data->badge, offsetof(KeyData::Badge, sig), keys.keys.ckey);
+    crypto_sign_ed25519_detached(data->badge.sig, nullptr, (const uint8_t *)&data->badge, offsetof(KeyData::Badge, sig), keys.keys.ckey);
     crypto_sign_ed25519_detached(data->sig, nullptr, (const uint8_t *)data, offsetof(KeyData, sig), keys.keys.ckey);
 
     // Export to file
