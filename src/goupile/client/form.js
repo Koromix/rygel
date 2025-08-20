@@ -1333,7 +1333,12 @@ function FormBuilder(state, model, options = {}) {
 
                 return c;
             });
+
             anchor = anchor.replace(/-+/g, '-');
+            if (anchor.startsWith('-'))
+                anchor = anchor.substr(1);
+            if (anchor.endsWith('-'))
+                anchor = anchor.substr(0, anchor.length - 1);
 
             options.anchor = anchor;
         }
