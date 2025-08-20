@@ -126,12 +126,14 @@ bool rk_DeriveMasterKey(Span<const uint8_t> mkey, rk_KeySet *out_keys)
     crypto_kdf_blake2b_derive_from_key(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
     crypto_kdf_blake2b_derive_from_key(out_keys->keys.dkey, RG_SIZE(out_keys->keys.dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
     crypto_kdf_blake2b_derive_from_key(out_keys->keys.lkey, RG_SIZE(out_keys->keys.lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(out_keys->keys.nkey, RG_SIZE(out_keys->keys.nkey), (int)MasterDerivation::NeutralKey, DerivationContext, mkey.ptr);
     SeedSigningPair(out_keys->keys.ckey, out_keys->keys.akey);
     crypto_scalarmult_curve25519_base(out_keys->keys.wkey, out_keys->keys.dkey);
     crypto_scalarmult_curve25519_base(out_keys->keys.tkey, out_keys->keys.lkey);
+    SeedSigningPair(out_keys->keys.nkey, out_keys->keys.vkey);
 
-    MemCpy(out_keys->keys.skey, out_keys->keys.ckey, RG_SIZE(out_keys->keys.skey));
-    SeedSigningPair(out_keys->keys.skey, out_keys->keys.pkey);
+    MemCpy(out_keys->keys.skey, out_keys->keys.nkey, 32);
+    MemCpy(out_keys->keys.pkey, out_keys->keys.vkey, 32);
 
     return true;
 }
@@ -212,6 +214,7 @@ bool rk_LoadKeyFile(const char *filename, rk_KeySet *out_keys)
 
 bool rk_ExportKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filename, rk_KeySet *out_keys)
 {
+    RG_ASSERT(keys.type == rk_KeyType::Master);
     RG_ASSERT(keys.modes == UINT_MAX);
 
     KeyData *data = (KeyData *)AllocateSafe(RG_SIZE(KeyData));
@@ -231,17 +234,20 @@ bool rk_ExportKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filena
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, akey), keys.keys.akey, RG_SIZE(keys.keys.akey));
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, wkey), keys.keys.wkey, RG_SIZE(keys.keys.wkey));
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, tkey), keys.keys.tkey, RG_SIZE(keys.keys.tkey));
+            MemCpy(data->keys + offsetof(rk_KeySet::Keys, vkey), keys.keys.vkey, RG_SIZE(keys.keys.vkey));
         } break;
 
         case rk_KeyType::ReadWrite: {
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, akey), keys.keys.akey, RG_SIZE(keys.keys.akey));
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, dkey), keys.keys.dkey, RG_SIZE(keys.keys.dkey));
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, lkey), keys.keys.lkey, RG_SIZE(keys.keys.lkey));
+            MemCpy(data->keys + offsetof(rk_KeySet::Keys, vkey), keys.keys.vkey, RG_SIZE(keys.keys.vkey));
         } break;
 
         case rk_KeyType::LogOnly: {
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, akey), keys.keys.akey, RG_SIZE(keys.keys.akey));
             MemCpy(data->keys + offsetof(rk_KeySet::Keys, lkey), keys.keys.lkey, RG_SIZE(keys.keys.lkey));
+            MemCpy(data->keys + offsetof(rk_KeySet::Keys, vkey), keys.keys.vkey, RG_SIZE(keys.keys.vkey));
         } break;
     }
 
@@ -249,8 +255,8 @@ bool rk_ExportKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filena
     SeedSigningPair(data->keys + offsetof(rk_KeySet::Keys, skey), data->badge.pkey);
 
     // Sign serialized keyset to detect tampering
-    crypto_sign_ed25519_detached(data->badge.sig, nullptr, (const uint8_t *)&data->badge, offsetof(KeyData::Badge, sig), keys.keys.ckey);
-    crypto_sign_ed25519_detached(data->sig, nullptr, (const uint8_t *)data, offsetof(KeyData, sig), keys.keys.ckey);
+    crypto_sign_ed25519_detached(data->badge.sig, nullptr, (const uint8_t *)&data->badge, offsetof(KeyData::Badge, sig), keys.keys.nkey);
+    crypto_sign_ed25519_detached(data->sig, nullptr, (const uint8_t *)data, offsetof(KeyData, sig), keys.keys.nkey);
 
     // Export to file
     {
