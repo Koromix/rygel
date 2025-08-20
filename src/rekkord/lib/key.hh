@@ -72,7 +72,7 @@ struct rk_KeySet {
 bool rk_LoadKeys(const char *filename, rk_KeySet *out_keys);
 bool rk_LoadKeys(Span<const uint8_t> raw, rk_KeySet *out_keys);
 
-bool rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, const char *filename);
-Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw);
+bool rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, const char *filename, uint8_t out_kid[16] = nullptr);
+Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw, uint8_t out_kid[16] = nullptr);
 
 }

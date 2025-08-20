@@ -534,10 +534,13 @@ Available key types: %!..+%1%!0)", FmtSpan(types));
     }
     LogInfo();
 
-    if (!rk_DeriveKeys(repo->GetKeys(), type, output_filename))
+    uint8_t kid[16];
+    if (!rk_DeriveKeys(repo->GetKeys(), type, output_filename, kid))
         return 1;
 
-    LogInfo("Wrote '%1' with type %2", output_filename, rk_KeyTypeNames[(int)type]);
+    LogInfo("Key file: %!..+%1%!0", output_filename);
+    LogInfo("Key ID: %!..+%1%!0", FmtSpan(kid, FmtType::BigHex, "").Pad0(-2));
+    LogInfo("Key type: %!..+%1%!0", rk_KeyTypeNames[(int)type]);
 
     return 0;
 }

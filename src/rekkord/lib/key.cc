@@ -128,7 +128,7 @@ bool rk_LoadKeys(const char *filename, rk_KeySet *out_keys)
     return rk_LoadKeys(raw, out_keys);
 }
 
-Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw)
+Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw, uint8_t out_kid[16])
 {
     RG_ASSERT(keys.modes == UINT_MAX);
     RG_ASSERT(out_raw.len >= rk_MaximumKeySize);
@@ -177,15 +177,19 @@ Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw
     crypto_sign_ed25519_detached(data->sig, nullptr, (const uint8_t *)&data->badge, offsetof(KeyData::Badge, sig), keys.keys.ckey);
     crypto_sign_ed25519_detached(data->sig, nullptr, (const uint8_t *)data, offsetof(KeyData, sig), keys.keys.ckey);
 
+    if (out_kid) {
+        MemCpy(out_kid, data->badge.kid, RG_SIZE(data->badge.kid));
+    }
+
     return RG_SIZE(KeyData);
 }
 
-bool rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, const char *filename)
+bool rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, const char *filename, uint8_t out_kid[16])
 {
     Span<uint8_t> raw = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
     RG_DEFER_C(len = raw.len) { ReleaseSafe(raw.ptr, len); };
 
-    raw.len = rk_DeriveKeys(keys, type, raw);
+    raw.len = rk_DeriveKeys(keys, type, raw, out_kid);
     if (raw.len < 0)
         return false;
 
