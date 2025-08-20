@@ -905,7 +905,7 @@ async function renderPage() {
                 if (intf.id == null)
                     continue;
 
-                let el = page_div.querySelector('#' + intf.id);
+                let el = page_div.getElementById(intf.id);
                 let wrap = (el != null) ? Util.findParent(el, el => el.classList.contains('fm_wrap')) : null;
 
                 if (wrap != null) {
