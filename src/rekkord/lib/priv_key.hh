@@ -26,8 +26,7 @@ static const int MaxKeys = 24;
 enum class MasterDerivation {
     ConfigKey = 0,
     DataKey = 1,
-    LogKey = 2,
-    NeutralKey = 3
+    LogKey = 2
 };
 
 #pragma pack(push, 1)

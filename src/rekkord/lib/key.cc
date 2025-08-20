@@ -126,12 +126,11 @@ bool rk_DeriveMasterKey(Span<const uint8_t> mkey, rk_KeySet *out_keys)
     crypto_kdf_blake2b_derive_from_key(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
     crypto_kdf_blake2b_derive_from_key(out_keys->keys.dkey, RG_SIZE(out_keys->keys.dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
     crypto_kdf_blake2b_derive_from_key(out_keys->keys.lkey, RG_SIZE(out_keys->keys.lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(out_keys->keys.nkey, RG_SIZE(out_keys->keys.nkey), (int)MasterDerivation::NeutralKey, DerivationContext, mkey.ptr);
     SeedSigningPair(out_keys->keys.ckey, out_keys->keys.akey);
     crypto_scalarmult_curve25519_base(out_keys->keys.wkey, out_keys->keys.dkey);
     crypto_scalarmult_curve25519_base(out_keys->keys.tkey, out_keys->keys.lkey);
 
-    MemCpy(out_keys->keys.skey, out_keys->keys.nkey, RG_SIZE(out_keys->keys.skey));
+    MemCpy(out_keys->keys.skey, out_keys->keys.ckey, RG_SIZE(out_keys->keys.skey));
     SeedSigningPair(out_keys->keys.skey, out_keys->keys.pkey);
 
     return true;

@@ -61,7 +61,6 @@ struct rk_KeySet {
         uint8_t wkey[32];
         uint8_t lkey[32];
         uint8_t tkey[32];
-        uint8_t nkey[32];
         uint8_t skey[32];
         uint8_t pkey[32];
     } keys;
