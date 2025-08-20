@@ -127,7 +127,6 @@ public:
     bool Init(Span<const uint8_t> mkey);
 
     bool Authenticate(const char *filename);
-    bool Authenticate(Span<const uint8_t> key);
     void Lock();
 
     rk_Disk *GetDisk() const { return disk; }

@@ -69,10 +69,11 @@ struct rk_KeySet {
     bool HasMode(rk_AccessMode mode) const { return modes & (int)mode; }
 };
 
-bool rk_LoadKeys(const char *filename, rk_KeySet *out_keys);
-bool rk_LoadKeys(Span<const uint8_t> raw, rk_KeySet *out_keys);
+Size rk_ReadRawKey(const char *filename, Span<uint8_t> out_raw);
+bool rk_SaveRawKey(Span<const uint8_t> raw, const char *filename);
 
-bool rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, const char *filename, uint8_t out_kid[16] = nullptr);
-Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw, uint8_t out_kid[16] = nullptr);
+bool rk_DeriveMasterKey(Span<const uint8_t> mkey, rk_KeySet *out_keys);
+bool rk_LoadKeyFile(const char *filename, rk_KeySet *out_keys);
+bool rk_ExportKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filename, rk_KeySet *out_keys = nullptr);
 
 }

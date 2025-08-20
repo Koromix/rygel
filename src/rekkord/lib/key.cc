@@ -24,6 +24,86 @@
 
 namespace RG {
 
+static const char *BeginPEM = "-----BEGIN REKKORD KEY-----";
+static const char *EndPEM = "-----END REKKORD KEY-----";
+
+static Size DecodePEM(const char *filename, Span<const char> pem, Span<uint8_t> out_key)
+{
+    SplitStr(pem, BeginPEM, &pem);
+    pem = SplitStr(pem, EndPEM);
+    pem = TrimStr(pem);
+
+    if (!pem.len) {
+        LogError("Cannot find valid repository key in '%1'", filename);
+        return -1;
+    }
+
+    size_t len = 0;
+    if (sodium_base642bin(out_key.ptr, out_key.len, pem.ptr, pem.len, nullptr,
+                          &len, nullptr, sodium_base64_VARIANT_ORIGINAL) != 0) {
+        LogError("Failed to decode base64 key");
+        return -1;
+    }
+
+    return (Size)len;
+}
+
+static Size EncodePEM(Span<const uint8_t> key, Span<uint8_t> out_buf)
+{
+    Span<char> out = out_buf.As<char>();
+    Size len = 0;
+
+    len += Fmt(out.Take(len, out.len - len), "%1\n", BeginPEM).len;
+
+    Size encoded = sodium_base64_ENCODED_LEN(key.len, sodium_base64_VARIANT_ORIGINAL);
+    if (encoded > out.len - len)
+        goto error;
+    sodium_bin2base64(out.ptr + len, out.len - len, key.ptr, key.len, sodium_base64_VARIANT_ORIGINAL);
+    len += encoded - 1;
+
+    len += Fmt(out.Take(len, out.len - len), "\n%1\n", EndPEM).len;
+
+    if (len >= out.len)
+        goto error;
+
+    return len;
+
+error:
+    LogError("Failed to encode key to PEM string");
+    return -1;
+}
+
+Size rk_ReadRawKey(const char *filename, Span<uint8_t> out_raw)
+{
+    Span<uint8_t> buf = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
+    RG_DEFER_C(len = buf.len) { ReleaseSafe(buf.ptr, len); };
+
+    buf.len = ReadFile(filename, buf);
+    if (buf.len < 0)
+        return -1;
+
+    Span<const char> pem = buf.As<const char>();
+    return DecodePEM(filename, pem, out_raw);
+}
+
+bool rk_SaveRawKey(Span<const uint8_t> raw, const char *filename)
+{
+    Span<uint8_t> buf = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
+    RG_DEFER_C(len = buf.len) { ReleaseSafe(buf.ptr, len); };
+
+    buf.len = EncodePEM(raw, buf);
+    if (buf.len < 0)
+        return false;
+
+    if (!WriteFile(buf, filename, (int)StreamWriterFlag::NoBuffer))
+        return false;
+#if !defined(_WIN32)
+    chmod(filename, 0600);
+#endif
+
+    return true;
+}
+
 static void SeedSigningPair(const uint8_t sk[32], uint8_t pk[32])
 {
     uint8_t hash[64];
@@ -33,123 +113,128 @@ static void SeedSigningPair(const uint8_t sk[32], uint8_t pk[32])
     crypto_scalarmult_ed25519_base(pk, hash);
 }
 
-bool rk_LoadKeys(Span<const uint8_t> raw, rk_KeySet *out_keys)
+bool rk_DeriveMasterKey(Span<const uint8_t> mkey, rk_KeySet *out_keys)
 {
-    if (raw.len == rk_MasterKeySize) {
-        out_keys->modes = UINT_MAX;
-        out_keys->type = rk_KeyType::Master;
-
-        crypto_kdf_blake2b_derive_from_key(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey), (int)MasterDerivation::ConfigKey, DerivationContext, raw.ptr);
-        crypto_kdf_blake2b_derive_from_key(out_keys->keys.dkey, RG_SIZE(out_keys->keys.dkey), (int)MasterDerivation::DataKey, DerivationContext, raw.ptr);
-        crypto_kdf_blake2b_derive_from_key(out_keys->keys.lkey, RG_SIZE(out_keys->keys.lkey), (int)MasterDerivation::LogKey, DerivationContext, raw.ptr);
-        crypto_kdf_blake2b_derive_from_key(out_keys->keys.nkey, RG_SIZE(out_keys->keys.nkey), (int)MasterDerivation::NeutralKey, DerivationContext, raw.ptr);
-        SeedSigningPair(out_keys->keys.ckey, out_keys->keys.akey);
-        crypto_scalarmult_curve25519_base(out_keys->keys.wkey, out_keys->keys.dkey);
-        crypto_scalarmult_curve25519_base(out_keys->keys.tkey, out_keys->keys.lkey);
-
-        MemCpy(out_keys->keys.skey, out_keys->keys.nkey, RG_SIZE(out_keys->keys.skey));
-        SeedSigningPair(out_keys->keys.skey, out_keys->keys.pkey);
-    } else if (raw.len == RG_SIZE(KeyData)) {
-        const KeyData *data = (const KeyData *)raw.ptr;
-
-        if (memcmp(data->prefix, "RKK01", 5)) {
-            LogError("Invalid keyfile prefix");
-            return false;
-        }
-        if (data->badge.type <= 0 || data->badge.type >= RG_LEN(rk_KeyTypeNames)) {
-            LogError("Invalid key type %1", data->badge.type);
-            return false;
-        }
-
-        rk_KeyType type = (rk_KeyType)data->badge.type;
-
-        out_keys->type = type;
-        MemCpy(out_keys->kid, data->badge.kid, RG_SIZE(out_keys->kid));
-        MemCpy(&out_keys->keys, &data->keys, RG_SIZE(out_keys->keys));
-
-        switch (type) {
-            case rk_KeyType::Master: { RG_UNREACHABLE(); } break;
-
-            case rk_KeyType::WriteOnly: {
-                out_keys->modes = (int)rk_AccessMode::Write;
-
-                ZeroSafe(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey));
-                ZeroSafe(out_keys->keys.dkey, RG_SIZE(out_keys->keys.dkey));
-                ZeroSafe(out_keys->keys.lkey, RG_SIZE(out_keys->keys.lkey));
-            } break;
-
-            case rk_KeyType::ReadWrite: {
-                out_keys->modes = (int)rk_AccessMode::Read |
-                                  (int)rk_AccessMode::Write |
-                                  (int)rk_AccessMode::Log;
-
-                ZeroSafe(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey));
-                crypto_scalarmult_curve25519_base(out_keys->keys.wkey, out_keys->keys.dkey);
-                crypto_scalarmult_curve25519_base(out_keys->keys.tkey, out_keys->keys.lkey);
-            } break;
-
-            case rk_KeyType::LogOnly: {
-                out_keys->modes = (int)rk_AccessMode::Log;
-
-                ZeroSafe(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey));
-                ZeroSafe(out_keys->keys.dkey, RG_SIZE(out_keys->keys.dkey));
-                ZeroSafe(out_keys->keys.wkey, RG_SIZE(out_keys->keys.wkey));
-                crypto_scalarmult_curve25519_base(out_keys->keys.tkey, out_keys->keys.lkey);
-            } break;
-        }
-
-        SeedSigningPair(out_keys->keys.skey, out_keys->keys.pkey);
+    if (mkey.len != rk_MasterKeySize) {
+        LogError("Unexpected master key size");
+        return false;
     }
 
-#if 0
-    PrintLn("ckey = %1", FmtHex(out_keys->keys.ckey));
-    PrintLn("akey = %1", FmtHex(out_keys->keys.akey));
-    PrintLn("dkey = %1", FmtHex(out_keys->keys.dkey));
-    PrintLn("wkey = %1", FmtHex(out_keys->keys.wkey));
-    PrintLn("lkey = %1", FmtHex(out_keys->keys.lkey));
-    PrintLn("tkey = %1", FmtHex(out_keys->keys.tkey));
-    PrintLn("nkey = %1", FmtHex(out_keys->keys.nkey));
-    PrintLn("skey = %1", FmtHex(out_keys->keys.skey));
-    PrintLn("pkey = %1", FmtHex(out_keys->keys.pkey));
-#endif
+    out_keys->modes = UINT_MAX;
+    out_keys->type = rk_KeyType::Master;
+
+    crypto_kdf_blake2b_derive_from_key(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(out_keys->keys.dkey, RG_SIZE(out_keys->keys.dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(out_keys->keys.lkey, RG_SIZE(out_keys->keys.lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(out_keys->keys.nkey, RG_SIZE(out_keys->keys.nkey), (int)MasterDerivation::NeutralKey, DerivationContext, mkey.ptr);
+    SeedSigningPair(out_keys->keys.ckey, out_keys->keys.akey);
+    crypto_scalarmult_curve25519_base(out_keys->keys.wkey, out_keys->keys.dkey);
+    crypto_scalarmult_curve25519_base(out_keys->keys.tkey, out_keys->keys.lkey);
+
+    MemCpy(out_keys->keys.skey, out_keys->keys.nkey, RG_SIZE(out_keys->keys.skey));
+    SeedSigningPair(out_keys->keys.skey, out_keys->keys.pkey);
 
     return true;
 }
 
-bool rk_LoadKeys(const char *filename, rk_KeySet *out_keys)
+static bool DecodeKeyData(const KeyData &data, rk_KeySet *out_keys)
 {
-    Span<uint8_t> raw = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
-    RG_DEFER_C(len = raw.len) { ReleaseSafe(raw.ptr, len); };
-
-    raw.len = ReadFile(filename, raw);
-    if (raw.len < 0)
+    if (memcmp(data.prefix, "RKK01", 5)) {
+        LogError("Invalid keyfile prefix");
         return false;
-
-    return rk_LoadKeys(raw, out_keys);
-}
-
-Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw, uint8_t out_kid[16])
-{
-    RG_ASSERT(keys.modes == UINT_MAX);
-    RG_ASSERT(out_raw.len >= rk_MaximumKeySize);
-
-    if (out_raw.len < RG_SIZE(KeyData)) {
-        LogError("Key derivation requires at least %1 bytes", RG_SIZE(KeyData));
-        return -1;
+    }
+    if (data.badge.type <= 0 || data.badge.type >= RG_LEN(rk_KeyTypeNames)) {
+        LogError("Invalid key type %1", data.badge.type);
+        return false;
     }
 
-    KeyData *data = (KeyData *)out_raw.ptr;
+    rk_KeyType type = (rk_KeyType)data.badge.type;
 
-    ZeroSafe(data, RG_SIZE(*data));
+    out_keys->type = type;
+    MemCpy(out_keys->kid, data.badge.kid, RG_SIZE(out_keys->kid));
+    MemCpy(&out_keys->keys, &data.keys, RG_SIZE(out_keys->keys));
+
+    switch (type) {
+        case rk_KeyType::Master: { RG_UNREACHABLE(); } break;
+
+        case rk_KeyType::WriteOnly: {
+            out_keys->modes = (int)rk_AccessMode::Write;
+
+            ZeroSafe(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey));
+            ZeroSafe(out_keys->keys.dkey, RG_SIZE(out_keys->keys.dkey));
+            ZeroSafe(out_keys->keys.lkey, RG_SIZE(out_keys->keys.lkey));
+        } break;
+
+        case rk_KeyType::ReadWrite: {
+            out_keys->modes = (int)rk_AccessMode::Read |
+                              (int)rk_AccessMode::Write |
+                              (int)rk_AccessMode::Log;
+
+            ZeroSafe(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey));
+            crypto_scalarmult_curve25519_base(out_keys->keys.wkey, out_keys->keys.dkey);
+            crypto_scalarmult_curve25519_base(out_keys->keys.tkey, out_keys->keys.lkey);
+        } break;
+
+        case rk_KeyType::LogOnly: {
+            out_keys->modes = (int)rk_AccessMode::Log;
+
+            ZeroSafe(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey));
+            ZeroSafe(out_keys->keys.dkey, RG_SIZE(out_keys->keys.dkey));
+            ZeroSafe(out_keys->keys.wkey, RG_SIZE(out_keys->keys.wkey));
+            crypto_scalarmult_curve25519_base(out_keys->keys.tkey, out_keys->keys.lkey);
+        } break;
+    }
+
+    SeedSigningPair(out_keys->keys.skey, out_keys->keys.pkey);
+
+    return true;
+}
+
+bool rk_LoadKeyFile(const char *filename, rk_KeySet *out_keys)
+{
+    Span<uint8_t> buf = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
+    RG_DEFER_C(len = buf.len) { ReleaseSafe(buf.ptr, len); };
+
+    // Load PEM file and decode
+    {
+        Span<uint8_t> raw = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
+        RG_DEFER_C(len = raw.len) { ReleaseSafe(raw.ptr, len); };
+
+        raw.len = ReadFile(filename, raw);
+        if (raw.len < 0)
+            return false;
+
+        buf.len = DecodePEM(filename, raw.As<char>(), buf);
+        if (buf.len < 0)
+            return false;
+    }
+
+    if (buf.len == rk_MasterKeySize) {
+        return rk_DeriveMasterKey(buf, out_keys);
+    } else if (buf.len == RG_SIZE(KeyData)) {
+        const KeyData *data = (const KeyData *)buf.ptr;
+        return DecodeKeyData(*data, out_keys);
+    }
+
+    LogError("Malformed key file");
+    return false;
+}
+
+bool rk_ExportKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filename, rk_KeySet *out_keys)
+{
+    RG_ASSERT(keys.modes == UINT_MAX);
+
+    KeyData *data = (KeyData *)AllocateSafe(RG_SIZE(KeyData));
+    RG_DEFER { ReleaseSafe(data, RG_SIZE(KeyData)); };
+
     MemCpy(data->prefix, "RKK01", 5);
-
     FillRandomSafe(data->badge.kid, RG_SIZE(data->badge.kid));
     data->badge.type = (int8_t)type;
 
     switch (type) {
         case rk_KeyType::Master: {
             LogError("Cannot generate Master keys");
-            return -1;
+            return false;
         } break;
 
         case rk_KeyType::WriteOnly: {
@@ -177,27 +262,18 @@ Size rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, Span<uint8_t> out_raw
     crypto_sign_ed25519_detached(data->sig, nullptr, (const uint8_t *)&data->badge, offsetof(KeyData::Badge, sig), keys.keys.ckey);
     crypto_sign_ed25519_detached(data->sig, nullptr, (const uint8_t *)data, offsetof(KeyData, sig), keys.keys.ckey);
 
-    if (out_kid) {
-        MemCpy(out_kid, data->badge.kid, RG_SIZE(data->badge.kid));
+    // Export to file
+    {
+        Span<const uint8_t> raw = MakeSpan((const uint8_t *)data, RG_SIZE(*data));
+
+        if (!rk_SaveRawKey(raw, filename))
+            return false;
     }
 
-    return RG_SIZE(KeyData);
-}
-
-bool rk_DeriveKeys(const rk_KeySet &keys, rk_KeyType type, const char *filename, uint8_t out_kid[16])
-{
-    Span<uint8_t> raw = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
-    RG_DEFER_C(len = raw.len) { ReleaseSafe(raw.ptr, len); };
-
-    raw.len = rk_DeriveKeys(keys, type, raw, out_kid);
-    if (raw.len < 0)
-        return false;
-
-    if (!WriteFile(raw, filename, (int)StreamWriterFlag::NoBuffer))
-        return false;
-#if !defined(_WIN32)
-    chmod(filename, 0600);
-#endif
+    if (out_keys) {
+        bool success = DecodeKeyData(*data, out_keys);
+        RG_ASSERT(success);
+    }
 
     return true;
 }

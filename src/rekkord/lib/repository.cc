@@ -58,11 +58,6 @@ bool rk_Repository::Init(Span<const uint8_t> mkey)
 
     BlockAllocator temp_alloc;
 
-    if (mkey.len != rk_MasterKeySize) {
-        LogError("Malformed master key");
-        return false;
-    }
-
     HeapArray<const char *> directories;
     HeapArray<const char *> files;
 
@@ -77,6 +72,11 @@ bool rk_Repository::Init(Span<const uint8_t> mkey)
             disk->DeleteDirectory(dirname);
         }
     };
+
+    keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
+
+    if (!rk_DeriveMasterKey(mkey, keyset))
+        return false;
 
     // Prepare main directory
     switch (disk->TestDirectory("")) {
@@ -149,11 +149,6 @@ bool rk_Repository::Init(Span<const uint8_t> mkey)
             return false;
     }
 
-    keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
-
-    if (!rk_LoadKeys(mkey, keyset))
-        return false;
-
     // Generate unique repository IDs
     {
         FillRandomSafe(ids.rid, RG_SIZE(ids.rid));
@@ -183,29 +178,7 @@ bool rk_Repository::Authenticate(const char *filename)
     keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
     RG_DEFER_N(err_guard) { Lock(); };
 
-    if (!rk_LoadKeys(filename, keyset))
-        return false;
-
-    // Read unique identifiers
-    {
-        uint8_t buf[RG_SIZE(ids)];
-        if (!ReadConfig("rekkord", buf))
-            return false;
-        MemCpy(&ids, buf, RG_SIZE(ids));
-    }
-
-    err_guard.Disable();
-    return true;
-}
-
-bool rk_Repository::Authenticate(Span<const uint8_t> key)
-{
-    RG_ASSERT(!keyset);
-
-    keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
-    RG_DEFER_N(err_guard) { Lock(); };
-
-    if (!rk_LoadKeys(key, keyset))
+    if (!rk_LoadKeyFile(filename, keyset))
         return false;
 
     // Read unique identifiers
@@ -977,17 +950,8 @@ std::unique_ptr<rk_Repository> rk_OpenRepository(rk_Disk *disk, const rk_Config 
 
     std::unique_ptr<rk_Repository> repo = std::make_unique<rk_Repository>(disk, config);
 
-    if (authenticate) {
-        Span<uint8_t> key = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
-        RG_DEFER_C(len = key.len) { ReleaseSafe(key.ptr, len); };
-
-        key.len = ReadFile(config.key_filename, key);
-        if (key.len < 0)
-            return nullptr;
-
-        if (!repo->Authenticate(key))
-            return nullptr;
-    }
+    if (authenticate && !repo->Authenticate(config.key_filename))
+        return nullptr;
 
     return repo;
 }

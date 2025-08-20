@@ -19,10 +19,6 @@
 #include "src/core/request/curl.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-#if !defined(_WIN32)
-    #include <sys/stat.h>
-#endif
-
 namespace RG {
 
 static const char *BaseConfig =
@@ -310,11 +306,8 @@ Options:
 
         FillRandomSafe(mkey.ptr, mkey.len);
 
-        if (!WriteFile(mkey, key_filename, (int)StreamWriterFlag::NoBuffer))
+        if (!rk_SaveRawKey(mkey, key_filename))
             return 1;
-#if !defined(_WIN32)
-        chmod(key_filename, 0600);
-#endif
     }
 
     if (!st.Close())
@@ -418,8 +411,7 @@ Options:
         Span<uint8_t> buf = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
         RG_DEFER { ReleaseSafe(buf.ptr, buf.len); };
 
-        Size len = ReadFile(key_filename, buf);
-
+        Size len = rk_ReadRawKey(key_filename, buf);
         if (len < 0)
             return 1;
         if (len != mkey.len) {
@@ -435,11 +427,8 @@ Options:
         return 1;
 
     if (generate_key) {
-        if (!WriteFile(mkey, key_filename, (int)StreamWriterFlag::NoBuffer))
+        if (!rk_SaveRawKey(mkey, key_filename))
             return 1;
-#if !defined(_WIN32)
-        chmod(key_filename, 0600);
-#endif
 
         LogInfo();
         LogInfo("Wrote master key: %!..+%1%!0", key_filename);
@@ -534,12 +523,14 @@ Available key types: %!..+%1%!0)", FmtSpan(types));
     }
     LogInfo();
 
-    uint8_t kid[16];
-    if (!rk_DeriveKeys(repo->GetKeys(), type, output_filename, kid))
+    rk_KeySet *keys = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
+    RG_DEFER { ReleaseSafe(keys, RG_SIZE(*keys)); };
+
+    if (!rk_ExportKeyFile(repo->GetKeys(), type, output_filename, keys))
         return 1;
 
     LogInfo("Key file: %!..+%1%!0", output_filename);
-    LogInfo("Key ID: %!..+%1%!0", FmtHex(kid));
+    LogInfo("Key ID: %!..+%1%!0", FmtHex(keys->kid));
     LogInfo("Key type: %!..+%1%!0", rk_KeyTypeNames[(int)type]);
 
     return 0;
@@ -604,7 +595,7 @@ Identify options:
             return 1;
         }
 
-        if (!rk_LoadKeys(rekkord_config.key_filename, keyset))
+        if (!rk_LoadKeyFile(rekkord_config.key_filename, keyset))
             return 1;
     }
 
