@@ -612,6 +612,8 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
     FillRandomSafe(prefix, RG_SIZE(prefix));
     FillRandomSafe(pwd, RG_SIZE(pwd));
 
+    const char *main = Fmt(&temp_alloc, "tags/M/%1", FmtSpan(keyset->kid, FmtType::BigHex, "").Pad0(-2)).ptr;
+
     HeapArray<const char *> paths;
 
     // Create main tag path
@@ -638,7 +640,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
         HeapArray<char> buf(&temp_alloc);
         buf.Reserve(512);
 
-        Fmt(&buf, "tags/M/");
+        Fmt(&buf, "%1/", main);
         sodium_bin2base64(buf.end(), buf.Available(), cypher, RG_SIZE(cypher), sodium_base64_VARIANT_URLSAFE_NO_PADDING);
         buf.len += sodium_base64_encoded_len(RG_SIZE(cypher), sodium_base64_VARIANT_URLSAFE_NO_PADDING) - 1;
 
@@ -688,6 +690,9 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
         payload.len -= frag_len;
     }
 
+    if (!disk->CreateDirectory(main))
+        return false;
+
     // Create tag files
     for (const char *path: paths) {
         rk_WriteSettings settings = { .conditional = HasConditionalWrites(), .retain = retain };
@@ -734,6 +739,10 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
 
     for (Span<const char> main: mains) {
         rk_TagInfo tag = {};
+
+        if (main.len <= 33 && main[32] != '/')
+            continue;
+        main = main.Take(33, main.len - 33);
 
         LocalArray<uint8_t, 255> cypher;
         {
