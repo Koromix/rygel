@@ -152,6 +152,7 @@ static bool DecodeKeyData(const KeyData &data, rk_KeySet *out_keys)
     out_keys->type = type;
     MemCpy(out_keys->kid, data.badge.kid, RG_SIZE(out_keys->kid));
     MemCpy(&out_keys->keys, &data.keys, RG_SIZE(out_keys->keys));
+    MemCpy(out_keys->badge, &data.badge, RG_SIZE(out_keys->badge));
 
     switch (type) {
         case rk_KeyType::Master: { RG_UNREACHABLE(); } break;

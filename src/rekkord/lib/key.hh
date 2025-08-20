@@ -65,6 +65,8 @@ struct rk_KeySet {
         uint8_t pkey[32];
     } keys;
 
+    uint8_t badge[113];
+
     bool HasMode(rk_AccessMode mode) const { return modes & (int)mode; }
 };
 

@@ -43,5 +43,7 @@ struct KeyData {
 };
 #pragma pack(pop)
 static_assert(RG_SIZE(KeyData) == 950);
+static_assert(RG_SIZE(KeyData::Badge) == 113);
+static_assert(RG_SIZE(rk_KeySet::badge) == 113);
 
 }

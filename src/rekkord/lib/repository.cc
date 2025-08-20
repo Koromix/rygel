@@ -675,6 +675,18 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
             return false;
     }
 
+    // Export keyset badge
+    if (keyset->type != rk_KeyType::Master) {
+        char path[256];
+        Fmt(path, "keys/%1", FmtHex(keyset->kid));
+
+        rk_WriteSettings settings = { .conditional = HasConditionalWrites(), .retain = retain };
+        rk_WriteResult ret = disk->WriteFile(path, keyset->badge, settings);
+
+        if (ret != rk_WriteResult::Success)
+            return false;
+    }
+
     return true;
 }
 
