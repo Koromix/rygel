@@ -1,3 +1,5 @@
+<a href="https://buymeacoffee.com/koromix" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+
 # Projects
 
 Most projects are licensed under the [GPL 3.0 license](https://www.gnu.org/licenses/gpl-3.0.html), with a few exceptions listed below.
