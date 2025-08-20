@@ -115,13 +115,14 @@ Snapshot commands:
     %!..+restore%!0                        Get and decrypt snapshot, directory or file
     %!..+check%!0                          Check snapshots and blobs
 
-    %!..+agent%!0                          Run cloud-connected snapshot agent
+    %!..+agent%!0                          Run cloud-connected automated agent
 
 Exploration commands:
 
     %!..+snapshots%!0                      List known snapshots
     %!..+channels%!0                       Show status of snapshot channels
     %!..+list%!0                           List snapshot or directory children
+
     %!..+mount%!0                          Mount repository readonly as user filesystem
 
 Advanced commands:
