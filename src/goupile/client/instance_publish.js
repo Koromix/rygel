@@ -50,16 +50,16 @@ function InstancePublisher() {
                     <tbody>
                         ${actions.map(action => {
                             let local_cls = 'path';
+                            let remote_cls = 'path';
+
                             if (action.type === 'pull') {
-                                local_cls += action.from_sha256 ? ' overwrite' : ' overwrite delete';
-                            } else if (action.to_sha256 == null) {
+                                local_cls += ' overwrite' + (action.from == null ? ' delete' : '');
+                            } else if (action.to == null) {
                                 local_cls += ' virtual';
                             }
-
-                            let remote_cls = 'path';
                             if (action.type === 'push') {
-                                remote_cls += action.to_sha256 ? ' overwrite' : ' overwrite delete';
-                            } else if (action.from_sha256 == null) {
+                                remote_cls += ' overwrite' + (action.to == null ? ' delete' : '');
+                            } else if (action.from == null) {
                                 remote_cls += ' virtual';
                             }
 
@@ -69,19 +69,19 @@ function InstancePublisher() {
                                         <a @click=${UI.wrap(e => deleteFile(e, action))}>x</a>
                                     </td>
                                     <td class=${local_cls}>${action.filename}</td>
-                                    <td class="size">${action.to_sha256 ? Util.formatDiskSize(action.to_size) : ''}</td>
+                                    <td class="size">${action.to != null ? Util.formatDiskSize(action.to.size) : ''}</td>
 
                                     <td class="actions">
-                                        <a class=${action.type === 'pull' ? 'active' : (action.to_sha256 == null || action.to_sha256 === action.from_sha256 ? 'disabled' : '')}
+                                        <a class=${action.type === 'pull' ? 'active' : (action.to == null || action.to.sha256 === action.from?.sha256 ? 'disabled' : '')}
                                            @click=${e => { action.type = 'pull'; d.restart(); }}>&lt;</a>
-                                        <a class=${action.type === 'push' ? 'active' : (action.to_sha256 == null || action.to_sha256 === action.from_sha256 ? 'disabled' : '')}
+                                        <a class=${action.type === 'push' ? 'active' : (action.to == null || action.to.sha256 === action.from?.sha256 ? 'disabled' : '')}
                                            @click=${e => { action.type = 'push'; d.restart(); }}>&gt;</a>
                                     </td>
 
                                     <td class=${remote_cls}>${action.filename}</td>
                                     <td class="size">
                                         ${action.type === 'conflict' ? html`<span class="conflict" title="Modifications en conflit">⚠\uFE0E</span>&nbsp;` : ''}
-                                        ${action.from_sha256 ? Util.formatDiskSize(action.from_size) : ''}
+                                        ${action.from != null ? Util.formatDiskSize(action.from.size) : ''}
                                     </td>
                                 </tr>
                             `;
@@ -150,7 +150,7 @@ function InstancePublisher() {
     function deleteFile(e, action) {
         return UI.confirm(e, `Voulez-vous vraiment supprimer le fichier '${action.filename}' ?`,
                              'Supprimer', async () => {
-            let url = Util.pasteURL(`${ENV.urls.base}files/${action.filename}`, { sha256: action.to_sha256 });
+            let url = Util.pasteURL(`${ENV.urls.base}files/${action.filename}`, { sha256: action.to?.sha256 });
             let response = await Net.fetch(url, { method: 'DELETE' });
 
             if (!response.ok && response.status !== 404) {
@@ -168,7 +168,7 @@ function InstancePublisher() {
         let actions = await Net.get(`${ENV.urls.base}api/files/delta`);
 
         for (let action of actions) {
-            if (action.to_sha256 === action.from_sha256) {
+            if (action.to?.sha256 === action.from?.sha256) {
                 action.type = 'noop';
             } else {
                 action.type = 'push';
@@ -186,18 +186,27 @@ function InstancePublisher() {
                 throw new Error('Conflits non résolus');
 
             let files = {};
+
             for (let i = 0; i < actions.length; i += 10) {
                 let p = actions.slice(i, i + 10).map(async action => {
                     switch (action.type) {
                         case 'push': {
-                            if (action.to_sha256 != null)
-                                files[action.filename] = action.to_sha256;
+                            if (action.to != null) {
+                                files[action.filename] = {
+                                    sha256: action.to.sha256,
+                                    bundle: action.to.bundle
+                                };
+                            }
                         } break;
 
                         case 'noop':
                         case 'pull': {
-                            if (action.from_sha256 != null)
-                                files[action.filename] = action.from_sha256;
+                            if (action.from != null) {
+                                files[action.filename] = {
+                                    sha256: action.from.sha256,
+                                    bundle: action.from.bundle
+                                };
+                            }
                         } break;
                     }
                 });

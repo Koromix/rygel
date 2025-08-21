@@ -26,6 +26,14 @@
 
 namespace RG {
 
+struct PublishFile {
+    const char *filename;
+    const char *sha256;
+    const char *bundle;
+
+    RG_HASHTABLE_HANDLER(PublishFile, filename);
+};
+
 static bool CheckSha256(Span<const char> sha256)
 {
     const auto test_char = [](char c) { return (c >= 'A' && c <= 'Z') || IsAsciiDigit(c); };
@@ -478,7 +486,8 @@ void HandleFileList(http_IO *io, InstanceHolder *instance)
     }
 
     sq_Statement stmt;
-    if (!instance->db->Prepare(R"(SELECT i.filename, o.size, i.sha256 FROM fs_index i
+    if (!instance->db->Prepare(R"(SELECT i.filename, o.size, i.sha256, i.bundle
+                                  FROM fs_index i
                                   INNER JOIN fs_objects o ON (o.sha256 = i.sha256)
                                   WHERE i.version = ?1
                                   ORDER BY i.filename)", &stmt))
@@ -493,10 +502,20 @@ void HandleFileList(http_IO *io, InstanceHolder *instance)
     json.Key("version"); json.Int64(fs_version);
     json.Key("files"); json.StartArray();
     while (stmt.Step()) {
+        const char *filename = (const char *)sqlite3_column_text(stmt, 0);
+        int64_t size = sqlite3_column_int64(stmt, 1);
+        const char *sha256 = (const char *)sqlite3_column_text(stmt, 2);
+        const char *bundle = (const char *)sqlite3_column_text(stmt, 3);
+
         json.StartObject();
-        json.Key("filename"); json.String((const char *)sqlite3_column_text(stmt, 0));
-        json.Key("size"); json.Int64(sqlite3_column_int64(stmt, 1));
-        json.Key("sha256"); json.String((const char *)sqlite3_column_text(stmt, 2));
+        json.Key("filename"); json.String(filename);
+        json.Key("size"); json.Int64(size);
+        json.Key("sha256"); json.String(sha256);
+        if (bundle) {
+            json.Key("bundle"); json.String(bundle);
+        } else {
+            json.Key("bundle"); json.Null();
+        }
         json.EndObject();
     }
     if (!stmt.IsValid())
@@ -562,7 +581,9 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
 
     // Lookup file in database
     sq_Statement stmt;
-    if (!instance->db->Prepare("SELECT sha256 FROM fs_index WHERE version = ?1 AND filename = ?2",
+    if (!instance->db->Prepare(R"(SELECT IIF(version > 0 AND bundle IS NOT NULL, bundle, sha256)
+                                  FROM fs_index
+                                  WHERE version = ?1 AND filename = ?2)",
                                &stmt, fs_version, filename))
         return true;
     if (!stmt.Step())
@@ -602,6 +623,7 @@ void HandleFilePut(http_IO *io, InstanceHolder *instance)
     const char *url = request.path + 1 + instance->key.len;
     const char *filename = url + 7;
     const char *expect = request.GetQueryValue("sha256");
+    bool bundle = false;
 
     if (!StartsWith(url, "/files/")) {
         LogError("Cannot write to file outside '/files/'");
@@ -618,17 +640,42 @@ void HandleFilePut(http_IO *io, InstanceHolder *instance)
         return;
     }
 
+    if (const char *str = request.GetQueryValue("bundle"); str) {
+        if (!ParseBool(str, &bundle)) {
+            io->SendError(422);
+            return;
+        }
+    }
+
     CompressionType compression_type = CanCompressFile(filename) ? CompressionType::Gzip
                                                                  : CompressionType::None;
     const char *sha256 = nullptr;
 
     if (!PutFile(io, instance, compression_type, expect, &sha256))
         return;
-    if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
-                              VALUES (0, ?1, ?2)
-                              ON CONFLICT DO UPDATE SET sha256 = excluded.sha256)",
-                           filename, sha256))
-        return;
+
+    if (bundle) {
+        sq_Statement stmt;
+        if (!instance->db->Prepare(R"(UPDATE fs_index SET bundle = ?2
+                                      WHERE version = 0 AND filename = ?1
+                                      RETURNING version)",
+                                   &stmt, filename, sha256))
+            return;
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Cannot upload bundle for '%1'", filename);
+                io->SendError(404);
+            }
+            return;
+        }
+    } else {
+        if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
+                                  VALUES (0, ?1, ?2)
+                                  ON CONFLICT DO UPDATE SET sha256 = excluded.sha256,
+                                                            bundle = NULL)",
+                               filename, sha256))
+            return;
+    }
 
     io->SendText(200, "{}", "application/json");
 }
@@ -770,8 +817,7 @@ void HandleFileRestore(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    const char *filename = nullptr;
-    const char *sha256 = nullptr;
+    PublishFile file = {};
     {
         StreamReader st;
         if (!io->OpenForRead(Megabytes(1), &st))
@@ -784,9 +830,9 @@ void HandleFileRestore(http_IO *io, InstanceHolder *instance)
             parser.ParseKey(&key);
 
             if (key == "filename") {
-                parser.ParseString(&filename);
+                parser.ParseString(&file.filename);
             } else if (key == "sha256") {
-                parser.ParseString(&sha256);
+                parser.ParseString(&file.sha256);
             } else if (parser.IsValid()) {
                 LogError("Unexpected key '%1'", key);
                 io->SendError(422);
@@ -803,12 +849,19 @@ void HandleFileRestore(http_IO *io, InstanceHolder *instance)
     {
         bool valid = true;
 
-        if (!filename || !filename[0]) {
+        if (!file.filename || !file.filename[0]) {
             LogError("Missing or empty 'filename' value");
             valid = false;
         }
-        if (!sha256 || !sha256[0]) {
-            LogError("Missing or empty 'sha256' value");
+        if (PathContainsDotDot(file.filename)) {
+            LogError("File name must not contain any '..' component");
+            valid = false;
+        }
+
+        if (file.sha256 && file.sha256[0]) {
+            valid &= CheckSha256(file.sha256);
+        } else {
+            LogError("Missing or empty file sha256");
             valid = false;
         }
 
@@ -821,7 +874,7 @@ void HandleFileRestore(http_IO *io, InstanceHolder *instance)
     if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
                               VALUES (0, ?1, ?2)
                               ON CONFLICT DO UPDATE SET sha256 = excluded.sha256)",
-                           filename, sha256))
+                           file.filename, file.sha256))
         return;
 
     io->SendText(200, "{}", "application/json");
@@ -873,13 +926,17 @@ void HandleFileDelta(http_IO *io, InstanceHolder *instance)
 
     sq_Statement stmt1;
     sq_Statement stmt2;
-    if (!instance->db->Prepare(R"(SELECT i.filename, o.size, i.sha256 FROM fs_index i
+    if (!instance->db->Prepare(R"(SELECT i.filename, o.size, i.sha256, i.bundle
+                                  FROM fs_index i
                                   INNER JOIN fs_objects o ON (o.sha256 = i.sha256)
-                                  WHERE i.version = ?1 ORDER BY i.filename)", &stmt1))
+                                  WHERE i.version = ?1
+                                  ORDER BY i.filename)", &stmt1))
         return;
-    if (!instance->db->Prepare(R"(SELECT i.filename, o.size, i.sha256 FROM fs_index i
+    if (!instance->db->Prepare(R"(SELECT i.filename, o.size, i.sha256, i.bundle
+                                  FROM fs_index i
                                   INNER JOIN fs_objects o ON (o.sha256 = i.sha256)
-                                  WHERE i.version = ?1 ORDER BY i.filename)", &stmt2))
+                                  WHERE i.version = ?1
+                                  ORDER BY i.filename)", &stmt2))
         return;
     sqlite3_bind_int64(stmt1, 1, from_version);
     sqlite3_bind_int64(stmt2, 1, to_version);
@@ -897,45 +954,45 @@ void HandleFileDelta(http_IO *io, InstanceHolder *instance)
         const char *from = stmt1.IsRow() ? (const char *)sqlite3_column_text(stmt1, 0) : nullptr;
         const char *to = stmt2.IsRow() ? (const char *)sqlite3_column_text(stmt2, 0) : nullptr;
 
-        json.StartObject();
-        if (!from) {
-            json.Key("filename"); json.String(to);
-            json.Key("to_size"); json.Int64(sqlite3_column_int64(stmt2, 1));
-            json.Key("to_sha256"); json.String((const char *)sqlite3_column_text(stmt2, 2));
+        int cmp = (from && to) ? CmpStr(from, to) : (!from - !to);
+        RG_ASSERT(from || to);
 
-            stmt2.Run();
-        } else if (!to) {
-            json.Key("filename"); json.String(from);
-            json.Key("from_size"); json.Int64(sqlite3_column_int64(stmt1, 1));
-            json.Key("from_sha256"); json.String((const char *)sqlite3_column_text(stmt1, 2));
+        json.StartObject();
+
+        json.Key("filename"); json.String(cmp < 0 ? from : to);
+
+        if (cmp <= 0) {
+            const char *bundle = (const char *)sqlite3_column_text(stmt1, 3);
+
+            json.Key("from"); json.StartObject();
+            json.Key("size"); json.Int64(sqlite3_column_int64(stmt1, 1));
+            json.Key("sha256"); json.String((const char *)sqlite3_column_text(stmt1, 2));
+            if (bundle) {
+                json.Key("bundle"); json.String(bundle);
+            } else {
+                json.Key("bundle"); json.Null();
+            }
+            json.EndObject();
 
             stmt1.Run();
-        } else {
-            int cmp = CmpStr(from, to);
-
-            if (cmp < 0) {
-                json.Key("filename"); json.String(from);
-                json.Key("from_size"); json.Int64(sqlite3_column_int64(stmt1, 1));
-                json.Key("from_sha256"); json.String((const char *)sqlite3_column_text(stmt1, 2));
-
-                stmt1.Run();
-            } else if (cmp > 0) {
-                json.Key("filename"); json.String(to);
-                json.Key("to_size"); json.Int64(sqlite3_column_int64(stmt2, 1));
-                json.Key("to_sha256"); json.String((const char *)sqlite3_column_text(stmt2, 2));
-
-                stmt2.Run();
-            } else {
-                json.Key("filename"); json.String(from);
-                json.Key("from_size"); json.Int64(sqlite3_column_int64(stmt1, 1));
-                json.Key("from_sha256"); json.String((const char *)sqlite3_column_text(stmt1, 2));
-                json.Key("to_size"); json.Int64(sqlite3_column_int64(stmt2, 1));
-                json.Key("to_sha256"); json.String((const char *)sqlite3_column_text(stmt2, 2));
-
-                stmt1.Run();
-                stmt2.Run();
-            }
         }
+
+        if (cmp >= 0) {
+            const char *bundle = (const char *)sqlite3_column_text(stmt2, 3);
+
+            json.Key("to"); json.StartObject();
+            json.Key("size"); json.Int64(sqlite3_column_int64(stmt2, 1));
+            json.Key("sha256"); json.String((const char *)sqlite3_column_text(stmt2, 2));
+            if (bundle) {
+                json.Key("bundle"); json.String(bundle);
+            } else {
+                json.Key("bundle"); json.Null();
+            }
+            json.EndObject();
+
+            stmt2.Run();
+        }
+
         json.EndObject();
     }
     json.EndArray();
@@ -958,7 +1015,7 @@ void HandleFilePublish(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    HashMap<const char *, const char *> files;
+    HashTable<const char *, PublishFile> files;
     {
         StreamReader st;
         if (!io->OpenForRead(Megabytes(1), &st))
@@ -967,22 +1024,85 @@ void HandleFilePublish(http_IO *io, InstanceHolder *instance)
 
         parser.ParseObject();
         while (parser.InObject()) {
-            const char *filename = "";
-            const char *sha256 = "";
+            PublishFile file = {};
 
-            parser.ParseKey(&filename);
-            parser.ParseString(&sha256);
+            parser.ParseKey(&file.filename);
+
+            switch (parser.PeekToken()) {
+                case json_TokenType::String: { parser.ParseString(&file.sha256); } break;
+
+                case json_TokenType::StartObject: {
+                    parser.ParseObject();
+                    while (parser.InObject()) {
+                        Span<const char> key = {};
+                        parser.ParseKey(&key);
+
+                        if (key == "sha256") {
+                            parser.ParseString(&file.sha256);
+                        } else if (key == "bundle") {
+                            parser.SkipNull() || parser.ParseString(&file.bundle);
+                        } else if (parser.IsValid()) {
+                            LogError("Unexpected key '%1'", key);
+                            io->SendError(422);
+                            return;
+                        }
+                    }
+                } break;
+
+                default: {
+                    LogError("Unexpected value type for file reference");
+                    io->SendError(422);
+                    return;
+                } break;
+            }
 
             bool inserted;
-            files.TrySet(filename, sha256, &inserted);
+            files.TrySet(file, &inserted);
 
             if (!inserted) {
-                LogError("Duplicate file '%1'", filename);
+                LogError("Duplicate file '%1'", file.filename);
                 io->SendError(422);
                 return;
             }
         }
         if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check missing or invalid values
+    {
+        bool valid = true;
+
+        for (const PublishFile &file: files) {
+            if (!file.filename || !file.filename[0]) {
+                LogError("Missing or empty file name");
+                valid = false;
+            }
+            if (PathContainsDotDot(file.filename)) {
+                LogError("File name must not contain any '..' component");
+                valid = false;
+            }
+
+            if (file.sha256 && file.sha256[0]) {
+                valid &= CheckSha256(file.sha256);
+            } else {
+                LogError("Missing or empty file sha256");
+                valid = false;
+            }
+
+            if (file.bundle) {
+                if (file.bundle[0]) {
+                    valid &= CheckSha256(file.bundle);
+                } else {
+                    LogError("Empty file bundle");
+                    valid = false;
+                }
+            }
+        }
+
+        if (!valid) {
             io->SendError(422);
             return;
         }
@@ -1005,27 +1125,12 @@ void HandleFilePublish(http_IO *io, InstanceHolder *instance)
                 return false;
         }
 
-        for (const auto &file: files.table) {
-            if (!file.key[0]) {
-                LogError("Empty filenames are not allowed");
-                io->SendError(403);
-                return false;
-            }
-            if (PathContainsDotDot(file.key)) {
-                LogError("File name must not contain any '..' component");
-                io->SendError(403);
-                return false;
-            }
-            if (!CheckSha256(file.value)) {
-                io->SendError(422);
-                return false;
-            }
-
-            if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
-                                      VALUES (?1, ?2, ?3))",
-                                   version, file.key, file.value)) {
+        for (const PublishFile &file: files) {
+            if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256, bundle)
+                                      VALUES (?1, ?2, ?3, ?4))",
+                                   version, file.filename, file.sha256, file.bundle)) {
                 if (sqlite3_extended_errcode(*instance->db) == SQLITE_CONSTRAINT_FOREIGNKEY) {
-                    LogError("Object '%1' does not exist", file.value);
+                    LogError("Object '%1' does not exist", file.sha256);
                     io->SendError(404);
                 }
 
