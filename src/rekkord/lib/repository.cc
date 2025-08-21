@@ -397,7 +397,8 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
         intro.type = (int8_t)type;
 
         uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
-        crypto_secretstream_xchacha20poly1305_keygen(key);
+        FillRandomSafe(key, RG_SIZE(key));
+
         if (crypto_secretstream_xchacha20poly1305_init_push(&state, intro.header, key) != 0) {
             LogError("Failed to initialize symmetric encryption");
             return rk_WriteResult::OtherError;
