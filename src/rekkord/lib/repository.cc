@@ -643,11 +643,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
         uint8_t nonce[24] = {};
 
         nonce[23] = i;
-
-        if (crypto_secretbox_easy(cypher, payload.ptr, frag_len, nonce, key) != 0) {
-            LogError("Failed to encrypt tag payload");
-            return false;
-        }
+        crypto_secretbox_easy(cypher, payload.ptr, frag_len, nonce, key);
 
         HeapArray<char> buf(&temp_alloc);
         buf.Reserve(512);
