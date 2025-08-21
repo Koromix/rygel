@@ -295,7 +295,7 @@ static int fnmatch_internal(const char *pat, size_t m, const char *str, size_t n
 	return 0;
 }
 
-int fnmatch(const char *pat, const char *str, int flags)
+int fnmatch_musl(const char *pat, const char *str, int flags)
 {
 	const char *s, *p;
 	size_t inc;

@@ -1,5 +1,5 @@
-#ifndef	_FNMATCH_H
-#define	_FNMATCH_H
+#ifndef	_FNMATCH_MUSL_H
+#define	_FNMATCH_MUSL_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -15,7 +15,7 @@ extern "C" {
 #define	FNM_NOMATCH 1
 #define FNM_NOSYS   (-1)
 
-int fnmatch(const char *, const char *, int);
+int fnmatch_musl(const char *, const char *, int);
 
 #if defined(__cplusplus)
 }
