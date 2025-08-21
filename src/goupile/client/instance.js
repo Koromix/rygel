@@ -85,7 +85,8 @@ async function init() {
         ENV.urls.files = `${ENV.urls.base}files/0/`;
         ENV.version = 0;
 
-        await initBundler();
+        bundler = await import(`${ENV.urls.static}bundler.js`);
+        await bundler.init();
     }
 
     await initApp();
@@ -93,11 +94,6 @@ async function init() {
 
     if (ENV.demo)
         Log.warning('Mode de démonstration... Attention, les formulaires et les données peuvent disparaître à tout moment !', 6000);
-}
-
-async function initBundler() {
-    bundler = await import(`${ENV.urls.static}bundler.js`);
-    await bundler.init();
 }
 
 async function initApp() {
@@ -1388,11 +1384,12 @@ async function handleFileChange(filename) {
 
     let key = `${profile.userid}/${filename}`;
 
-    let target = {
+    await db.saveWithKey('changes', key, {
+        filename: filename,
+        size: blob.size,
         sha256: sha256,
         blob: blob
-    };
-    let bundle = null;
+    });
 
     buffer.code = code;
     buffer.sha256 = sha256;
@@ -1401,24 +1398,10 @@ async function handleFileChange(filename) {
         let build = await buildScript(buffer.code, ['app', 'cache', 'form', 'meta', 'page', 'thread', 'values']);
         code_builds.set(buffer.sha256, build);
 
-        let blob = new Blob([build.code]);
-
-        bundle = {
-            sha256: await mixer.Sha256.async(blob),
-            blob: blob
-        };
-
         triggerError(filename, null);
     } catch (err) {
         triggerError(filename, err);
     }
-
-    await db.saveWithKey('changes', key, {
-        filename: filename,
-        size: blob.size,
-        target: target,
-        bundle: bundle
-    });
 
     if (fs_timer != null)
         clearTimeout(fs_timer);
@@ -1445,24 +1428,16 @@ const uploadFsChanges = Util.serialize(async function () {
         let changes = await db.loadAll('changes', range);
 
         for (let file of changes) {
-            for (let data of [file.target, file.bundle]) {
-                if (data == null)
-                    continue;
+            let url = Util.pasteURL(`${ENV.urls.base}files/${file.filename}`, { sha256: file.sha256 });
 
-                let url = Util.pasteURL(`${ENV.urls.base}files/${file.filename}`, {
-                    sha256: data.sha256,
-                    bundle: 0 + (data == file.bundle)
-                });
-
-                let response = await Net.fetch(url, {
-                    method: 'PUT',
-                    body: data.blob,
-                    timeout: null
-                });
-                if (!response.ok && response.status !== 409) {
-                    let err = await Net.readError(response);
-                    throw new Error(err)
-                }
+            let response = await Net.fetch(url, {
+                method: 'PUT',
+                body: file.blob,
+                timeout: null
+            });
+            if (!response.ok && response.status !== 409) {
+                let err = await Net.readError(response);
+                throw new Error(err)
             }
 
             let key = `${profile.userid}/${file.filename}`;
@@ -1659,7 +1634,7 @@ function getElementLine(el) {
 async function runPublishDialog(e) {
     await uploadFsChanges();
 
-    let publisher = new InstancePublisher;
+    let publisher = new InstancePublisher(bundler);
     await publisher.runDialog(e);
 
     run();
@@ -1989,8 +1964,8 @@ async function fetchCode(filename) {
         let file = await db.load('changes', key);
 
         if (file != null) {
-            if (file.target != null) {
-                let code = await file.target.blob.text();
+            if (file.blob != null) {
+                let code = await file.blob.text();
                 return updateBuffer(filename, code);
             } else {
                 return updateBuffer(filename, '');

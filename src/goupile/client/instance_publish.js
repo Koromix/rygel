@@ -18,7 +18,7 @@ import { Util, Log, Net } from '../../web/core/base.js';
 import { Sha256 } from '../../web/core/mixer.js';
 import * as UI from './ui.js';
 
-function InstancePublisher() {
+function InstancePublisher(bundler) {
     let actions;
     let refresh;
 
@@ -192,6 +192,36 @@ function InstancePublisher() {
                     switch (action.type) {
                         case 'push': {
                             if (action.to != null) {
+                                if (action.to.bundle == null && action.filename.endsWith('.js')) {
+                                    let code = await fetchCode(action.filename);
+
+                                    try {
+                                        let build = await bundler.build(code, fetchCode);
+                                        code = build.code;
+                                    } catch (err) {
+                                        let line = err.errors?.[0]?.location?.line;
+                                        let msg = `Erreur dans ${action.filename}\n${line != null ? `Ligne ${line} : ` : ''}${err.errors[0].text}`;
+
+                                        throw new Error(msg);
+                                    }
+
+                                    let blob = new Blob([code]);
+                                    let sha256 = await Sha256.async(blob);
+                                    let url = Util.pasteURL(`${ENV.urls.base}files/${action.filename}`, { sha256: sha256, bundle: 1 });
+
+                                    let response = await Net.fetch(url, {
+                                        method: 'PUT',
+                                        body: blob,
+                                        timeout: null
+                                    });
+                                    if (!response.ok && response.status !== 409) {
+                                        let err = await Net.readError(response);
+                                        throw new Error(err)
+                                    }
+
+                                    action.to.bundle = sha256;
+                                }
+
                                 files[action.filename] = {
                                     sha256: action.to.sha256,
                                     bundle: action.to.bundle
@@ -220,6 +250,21 @@ function InstancePublisher() {
         } catch (err) {
             progress.close();
             throw err;
+        }
+    }
+
+    async function fetchCode(filename) {
+        let url = `${ENV.urls.base}files/0/${filename}`;
+        let response = await Net.fetch(url);
+
+        if (response.ok) {
+            let code = await response.text();
+            return code;
+        } else if (response.status == 404) {
+            throw new Error(`Unknown file '${filename}'`);
+        } else {
+            let err = await Net.readError(response);
+            throw new Error(err);
         }
     }
 }
