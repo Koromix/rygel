@@ -6513,27 +6513,34 @@ static inline uint64_t ROTL64(uint64_t v, int n)
     return (v << n) | (v >> (64 - n));
 }
 
-void InitChaCha20(uint32_t state[16], const uint32_t key[8], const uint32_t iv[2])
+static inline uint32_t LE32(const uint8_t *ptr)
 {
-    alignas(uint32_t) static char str[] = "expand 32-byte k";
-    const uint32_t *magic = (const uint32_t *)str;
+    return ((uint32_t)ptr[0] << 0) |
+           ((uint32_t)ptr[1] << 8) |
+           ((uint32_t)ptr[2] << 16) |
+           ((uint32_t)ptr[3] << 24);
+}
 
-    state[0] = LittleEndian(magic[0]);
-    state[1] = LittleEndian(magic[1]);
-    state[2] = LittleEndian(magic[2]);
-    state[3] = LittleEndian(magic[3]);
-    state[4] = LittleEndian(key[0]);
-    state[5] = LittleEndian(key[1]);
-    state[6] = LittleEndian(key[2]);
-    state[7] = LittleEndian(key[3]);
-    state[8] = LittleEndian(key[4]);
-    state[9] = LittleEndian(key[5]);
-    state[10] = LittleEndian(key[6]);
-    state[11] = LittleEndian(key[7]);
-    state[12] = 0;
-    state[13] = 0;
-    state[14] = LittleEndian(iv[0]);
-    state[15] = LittleEndian(iv[1]);
+void InitChaCha20(uint32_t state[16], const uint8_t key[32], const uint8_t iv[8], const uint8_t counter[8])
+{
+    static uint8_t magic[] = "expand 32-byte k";
+
+    state[0] = LE32(magic + 0);
+    state[1] = LE32(magic + 4);
+    state[2] = LE32(magic + 8);
+    state[3] = LE32(magic + 12);
+    state[4] = LE32(key + 0);
+    state[5] = LE32(key + 4);
+    state[6] = LE32(key + 8);
+    state[7] = LE32(key + 12);
+    state[8] = LE32(key + 16);
+    state[9] = LE32(key + 20);
+    state[10] = LE32(key + 24);
+    state[11] = LE32(key + 28);
+    state[12] = counter ? LE32(counter + 0) : 0;
+    state[13] = counter ? LE32(counter + 4) : 0;
+    state[14] = LE32(iv + 0);
+    state[15] = LE32(iv + 4);
 }
 
 void RunChaCha20(uint32_t state[16], uint8_t out_buf[64])
@@ -6605,7 +6612,7 @@ void FillRandomSafe(void *out_buf, Size len)
 #endif
 
     if (reseed) {
-        struct { uint32_t key[8]; uint32_t iv[2]; } buf;
+        struct { uint8_t key[32]; uint8_t iv[8]; } buf;
 
         MemSet(rnd_state, 0, RG_SIZE(rnd_state));
 #if defined(_WIN32)
