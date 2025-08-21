@@ -6513,7 +6513,7 @@ static inline uint64_t ROTL64(uint64_t v, int n)
     return (v << n) | (v >> (64 - n));
 }
 
-static void InitChaCha20(uint32_t state[16], uint32_t key[8], uint32_t iv[2])
+void InitChaCha20(uint32_t state[16], const uint32_t key[8], const uint32_t iv[2])
 {
     alignas(uint32_t) static char str[] = "expand 32-byte k";
     const uint32_t *magic = (const uint32_t *)str;
@@ -6536,7 +6536,7 @@ static void InitChaCha20(uint32_t state[16], uint32_t key[8], uint32_t iv[2])
     state[15] = LittleEndian(iv[1]);
 }
 
-static void RunChaCha20(uint32_t state[16], uint8_t out_buf[64])
+void RunChaCha20(uint32_t state[16], uint8_t out_buf[64])
 {
     uint32_t *out_buf32 = (uint32_t *)out_buf;
 

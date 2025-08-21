@@ -4790,6 +4790,9 @@ bool ParseVersion(Span<const char> str, int parts, int multiplier, int64_t *out_
 // Random
 // ------------------------------------------------------------------------
 
+void InitChaCha20(uint32_t state[16], const uint32_t key[8], const uint32_t iv[2]);
+void RunChaCha20(uint32_t state[16], uint8_t out_buf[64]);
+
 void FillRandomSafe(void *buf, Size len);
 static inline void FillRandomSafe(Span<uint8_t> buf) { FillRandomSafe(buf.ptr, buf.len); }
 
