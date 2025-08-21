@@ -1253,9 +1253,7 @@ function FormBuilder(state, model, options = {}) {
 
         // This helps avoid garbage output when the user types 'page.output(html);'
         if (content != null && content !== html && content !== svg) {
-            let id = makeID(null);
-
-            let render = intf => {
+            let render = (intf, id) => {
                 if (intf.options.wrap) {
                     return html`
                         <div id=${id} class="fm_wrap">
@@ -1267,7 +1265,7 @@ function FormBuilder(state, model, options = {}) {
                 }
             };
 
-            let intf = makeWidget('output', id, null, render, options);
+            let intf = makeWidget('output', makeID(null), null, render, options);
             addWidget(intf);
 
             return intf;
