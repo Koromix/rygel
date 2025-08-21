@@ -20,7 +20,7 @@
 
 namespace RG {
 
-static const int ConfigVersion = 2;
+static const int ConfigVersion = 3;
 static const int TagVersion = 1;
 static const int BlobVersion = 7;
 static const Size BlobSplit = Kibibytes(32);
@@ -28,10 +28,13 @@ static const Size BlobSplit = Kibibytes(32);
 #pragma pack(push, 1)
 struct ConfigData {
     int8_t version;
-    uint8_t cypher[64 + 2048];
+    uint16_t len;
+    uint8_t nonce[24];
+    uint8_t cypher[16 + 4096];
+    uint8_t sig[64];
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(ConfigData) == 2113);
+static_assert(RG_SIZE(ConfigData) == 4203);
 
 #pragma pack(push, 1)
 struct TagIntro {

@@ -871,7 +871,7 @@ bool rk_Repository::TestConditionalWrites(bool *out_cw)
 bool rk_Repository::WriteConfig(const char *path, Span<const uint8_t> data, bool overwrite)
 {
     RG_ASSERT(HasMode(rk_AccessMode::Config));
-    RG_ASSERT(data.len + crypto_sign_ed25519_BYTES <= RG_SIZE(ConfigData::cypher));
+    RG_ASSERT(crypto_secretbox_MACBYTES + data.len <= RG_SIZE(ConfigData::cypher));
 
     if (!overwrite && !HasConditionalWrites()) {
         switch (disk->TestFile(path)) {
@@ -888,12 +888,14 @@ bool rk_Repository::WriteConfig(const char *path, Span<const uint8_t> data, bool
     ConfigData config = {};
 
     config.version = ConfigVersion;
+    config.len = LittleEndian((uint16_t)data.len);
+    FillRandomSafe(config.nonce, RG_SIZE(config.nonce));
 
-    // Sign config to detect tampering
-    crypto_sign_ed25519(config.cypher, nullptr, data.ptr, (size_t)data.len, keyset->keys.ckey);
+    // Encrypt and sign to detect tampering
+    crypto_secretbox_easy(config.cypher, data.ptr, data.len, config.nonce, keyset->keys.akey);
+    crypto_sign_ed25519_detached(config.sig, nullptr, (const uint8_t *)&config, offsetof(ConfigData, sig), keyset->keys.ckey);
 
-    Size len = offsetof(ConfigData, cypher) + crypto_sign_ed25519_BYTES + data.len;
-    Span<const uint8_t> buf = MakeSpan((const uint8_t *)&config, len);
+    Span<const uint8_t> buf = MakeSpan((const uint8_t *)&config, RG_SIZE(config));
 
     rk_WriteSettings settings = { .conditional = !overwrite };
     rk_WriteResult ret = disk->WriteFile(path, buf, settings);
@@ -919,6 +921,8 @@ bool rk_Repository::ReadConfig(const char *path, Span<uint8_t> out_buf)
 
     if (len < 0)
         return false;
+
+    // Sanity checks
     if (len < (Size)offsetof(ConfigData, cypher)) {
         LogError("Malformed config file '%1'", path);
         return false;
@@ -927,11 +931,16 @@ bool rk_Repository::ReadConfig(const char *path, Span<uint8_t> out_buf)
         LogError("Unexpected config version %1 (expected %2)", config.version, ConfigVersion);
         return false;
     }
+    if (LittleEndian(config.len) != out_buf.len) {
+        LogError("Malformed config file '%1'", path);
+        return false;
+    }
 
-    len -= offsetof(ConfigData, cypher);
-    len = std::min(len, out_buf.len + (Size)crypto_sign_ed25519_BYTES);
-
-    if (crypto_sign_ed25519_open(out_buf.ptr, nullptr, config.cypher, len, keyset->keys.akey)) {
+    if (crypto_sign_ed25519_verify_detached(config.sig, (const uint8_t *)&config, offsetof(ConfigData, sig), keyset->keys.akey) != 0) {
+        LogError("Invalid signature in config '%1'", path);
+        return false;
+    }
+    if (crypto_secretbox_open_easy(out_buf.ptr, config.cypher, 16 + out_buf.len, config.nonce, keyset->keys.akey) != 0) {
         LogError("Failed to decrypt config '%1'", path);
         return false;
     }
