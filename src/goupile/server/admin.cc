@@ -1788,7 +1788,8 @@ void HandleInstanceConfigure(http_IO *io)
                 if (!instance->db->Run(R"(UPDATE fs_versions SET mtime = copy.mtime,
                                                                  userid = copy.userid,
                                                                  username = copy.username
-                                              FROM (SELECT mtime, userid, username FROM fs_versions WHERE version = ?1) AS copy)",
+                                              FROM (SELECT mtime, userid, username FROM fs_versions WHERE version = ?1) AS copy
+                                              WHERE version = 0)",
                                        fs_version))
                     return false;
                 if (!instance->db->Run(R"(DELETE FROM fs_index WHERE version = 0)"))
