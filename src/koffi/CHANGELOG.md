@@ -980,7 +980,6 @@ This entry documents changes since version 1.1.0.
 
 The following features and improvements are planned, not necessarily in that order:
 
-- Port Koffi to Loong64 ISA and ABI
 - Port Koffi to PowerPC (POWER9+) ISA and ABI
 - Optimize passing of structs and arrays (with auto-generated JS)
 - Automate Windows/AArch64 (qemu) and macOS/AArch64 (how? ... thanks Apple) tests
