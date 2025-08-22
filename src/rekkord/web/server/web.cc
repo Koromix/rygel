@@ -453,10 +453,8 @@ static void HandleRequest(http_IO *io)
     io->SendError(404);
 }
 
-int Main(int argc, char **argv)
+int RunWeb(Span<const char *> arguments)
 {
-    RG_CRITICAL(argc >= 1, "First argument is missing");
-
     BlockAllocator temp_alloc;
 
     // Options
@@ -465,7 +463,7 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 [option...]%!0
+R"(Usage: %!..+%1 web [option...]%!0
 
 Options:
 
@@ -478,16 +476,9 @@ Options:
                 FelixTarget, config_filename, config.http.port);
     };
 
-    // Handle version
-    if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
-        PrintLn("Compiler: %1", FelixCompiler);
-        return 0;
-    }
-
     // Find config filename
     {
-        OptionParser opt(argc, argv, OptionMode::Skip);
+        OptionParser opt(arguments, OptionMode::Skip);
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
@@ -511,7 +502,7 @@ Options:
 
     // Parse arguments
     {
-        OptionParser opt(argc, argv);
+        OptionParser opt(arguments);
 
         while (opt.Next()) {
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
@@ -637,6 +628,3 @@ Options:
 }
 
 }
-
-// C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
