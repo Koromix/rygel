@@ -5851,12 +5851,20 @@ bool NotifySystemd()
 // ------------------------------------------------------------------------
 
 static InitHelper *init;
+static ExitHelper *exit;
 
 InitHelper::InitHelper(const char *name)
     : name(name)
 {
     next = init;
     init = this;
+}
+
+ExitHelper::ExitHelper(const char *name)
+    : name(name)
+{
+    next = exit;
+    exit = this;
 }
 
 void InitApp()
@@ -5904,6 +5912,18 @@ void InitApp()
 
         init->Run();
         init = init->next;
+    }
+}
+
+void ExitApp()
+{
+    while (exit) {
+#if defined(RG_DEBUG)
+        LogDebug("Exit %1 library", exit->name);
+#endif
+
+        exit->Run();
+        exit = exit->next;
     }
 }
 

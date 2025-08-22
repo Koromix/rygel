@@ -146,12 +146,6 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
     RaiseMaximumOpenFiles(16384);
 #endif
 
-    if (ssh_init() < 0) {
-        LogError("Failed to initialize libssh");
-        return 1;
-    }
-    RG_DEFER { ssh_finalize(); };
-
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
         PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);

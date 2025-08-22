@@ -26,6 +26,16 @@
 
 namespace RG {
 
+RG_INIT(libssh)
+{
+    RG_CRITICAL(!ssh_init(), "Failed to initialize libssh");
+}
+
+RG_EXIT(libssh)
+{
+    ssh_finalize();
+}
+
 bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char>)
 {
     if (key == "Location") {

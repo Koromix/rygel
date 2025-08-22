@@ -4623,6 +4623,15 @@ public:
     virtual void Run() = 0;
 };
 
+class ExitHelper {
+public:
+    const char *name;
+    ExitHelper *next = nullptr;
+
+    ExitHelper(const char *name);
+    virtual void Run() = 0;
+};
+
 #define RG_INIT_(ClassName, Name) \
     class ClassName: public InitHelper { \
     public: \
@@ -4633,12 +4642,26 @@ public:
     void ClassName::Run()
 #define RG_INIT(Name) RG_INIT_(RG_CONCAT(RG_UNIQUE_NAME(InitHelper), Name), RG_STRINGIFY(Name))
 
+#define RG_EXIT_(ClassName, Name) \
+    class ClassName: public ExitHelper { \
+    public: \
+        ClassName(): ExitHelper(Name) {} \
+        void Run() override; \
+    }; \
+    static ClassName RG_UNIQUE_NAME(exit); \
+    void ClassName::Run()
+#define RG_EXIT(Name) RG_EXIT_(RG_CONCAT(RG_UNIQUE_NAME(ExitHelper), Name), RG_STRINGIFY(Name))
+
 void InitApp();
+void ExitApp();
+
 int Main(int argc, char **argv);
 
 static inline int RunApp(int argc, char **argv)
 {
     InitApp();
+    RG_DEFER { ExitApp(); };
+
     return Main(argc, argv);
 }
 
