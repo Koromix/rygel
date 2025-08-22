@@ -4804,14 +4804,13 @@ public:
     FastRandom();
     FastRandom(uint64_t seed);
 
+    uint64_t Next();
+
     void Fill(void *buf, Size len);
     void Fill(Span<uint8_t> buf) { Fill(buf.ptr, buf.len); }
 
     int GetInt(int min, int max);
     int64_t GetInt64(int64_t min, int64_t max);
-
-private:
-    uint64_t Next();
 };
 
 template <typename T>
@@ -4832,6 +4831,7 @@ public:
     }
 };
 
+uint64_t GetRandom();
 int GetRandomInt(int min, int max);
 int64_t GetRandomInt64(int64_t min, int64_t max);
 

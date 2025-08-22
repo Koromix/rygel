@@ -6698,6 +6698,24 @@ FastRandom::FastRandom(uint64_t seed)
     }
 }
 
+uint64_t FastRandom::Next()
+{
+    // xoshiro256++ by David Blackman and Sebastiano Vigna (vigna@acm.org)
+    // Hopefully I did not screw it up :)
+
+    uint64_t result = ROTL64(state[0] + state[3], 23) + state[0];
+    uint64_t t = state[1] << 17;
+
+    state[2] ^= state[0];
+    state[3] ^= state[1];
+    state[1] ^= state[2];
+    state[0] ^= state[3];
+    state[2] ^= t;
+    state[3] = ROTL64(state[3], 45);
+
+    return result;
+}
+
 void FastRandom::Fill(void *out_buf, Size len)
 {
     for (Size i = 0; i < len; i += 8) {
@@ -6748,22 +6766,9 @@ int64_t FastRandom::GetInt64(int64_t min, int64_t max)
     return min + (int64_t)x;
 }
 
-uint64_t FastRandom::Next()
+uint64_t GetRandom()
 {
-    // xoshiro256++ by David Blackman and Sebastiano Vigna (vigna@acm.org)
-    // Hopefully I did not screw it up :)
-
-    uint64_t result = ROTL64(state[0] + state[3], 23) + state[0];
-    uint64_t t = state[1] << 17;
-
-    state[2] ^= state[0];
-    state[3] ^= state[1];
-    state[1] ^= state[2];
-    state[0] ^= state[3];
-    state[2] ^= t;
-    state[3] = ROTL64(state[3], 45);
-
-    return result;
+    return rng_fast.Next();
 }
 
 int GetRandomInt(int min, int max)
