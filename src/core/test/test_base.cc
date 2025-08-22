@@ -1048,7 +1048,7 @@ BENCHMARK_FUNCTION("base/MatchPathName")
     });
 
     RunBenchmark("fnmatch (musl)", iterations, [&](Size) {
-        fnmatch_musl("a*/*b", "aaa/bbb", FNM_PATHNAME);
+        musl_fnmatch("a*/*b", "aaa/bbb", MUSL_FNM_PATHNAME);
     });
 
     RunBenchmark("MatchPathName", iterations, [&](Size) {
