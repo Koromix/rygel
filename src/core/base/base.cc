@@ -4177,7 +4177,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
                     (RtlNtStatusToDosErrorFunc *)(void *)GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlNtStatusToDosError");
 
                 unsigned long err = RtlNtStatusToDosError(status);
-                LogError("Failed to copy '%1' to '%2': %2", GetWin32ErrorString(err));
+                LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, GetWin32ErrorString(err));
 
                 return false;
             }
