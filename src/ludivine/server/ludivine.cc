@@ -479,11 +479,6 @@ Options:
                 FelixTarget, config_filename, config.http.port);
     };
 
-    if (sodium_init() < 0) {
-        LogError("Failed to initialize libsodium");
-        return 1;
-    }
-
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
         PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);

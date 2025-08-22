@@ -1227,15 +1227,6 @@ int Main(int argc, char **argv)
         }
     }
 
-    if (sodium_init() < 0) {
-        LogError("Failed to initialize libsodium");
-        return 1;
-    }
-    if (curl_global_init(CURL_GLOBAL_ALL)) {
-        LogError("Failed to initialize libcurl");
-        return 1;
-    }
-
     const char *cmd = nullptr;
     Span<const char *> arguments = {};
 

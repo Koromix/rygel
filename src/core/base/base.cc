@@ -5850,6 +5850,15 @@ bool NotifySystemd()
 // Main
 // ------------------------------------------------------------------------
 
+static InitHelper *init;
+
+InitHelper::InitHelper(const char *name)
+    : name(name)
+{
+    next = init;
+    init = this;
+}
+
 void InitApp()
 {
 #if defined(_WIN32)
@@ -5886,6 +5895,16 @@ void InitApp()
     // so we want to cache the result as soon as possible.
     GetApplicationExecutable();
 #endif
+
+    // Init libraries
+    while (init) {
+#if defined(RG_DEBUG)
+        LogDebug("Init %1 library", init->name);
+#endif
+
+        init->Run();
+        init = init->next;
+    }
 }
 
 // ------------------------------------------------------------------------

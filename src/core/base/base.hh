@@ -648,24 +648,6 @@ public:
     bool IsValid() const { return callback; }
 };
 
-#define RG_INIT_(ClassName) \
-    class ClassName { \
-    public: \
-        ClassName(); \
-    }; \
-    static ClassName RG_UNIQUE_NAME(init); \
-    ClassName::ClassName()
-#define RG_INIT(Name) RG_INIT_(RG_CONCAT(RG_UNIQUE_NAME(InitHelper), Name))
-
-#define RG_EXIT_(ClassName) \
-    class ClassName { \
-    public: \
-        ~ClassName(); \
-    }; \
-    static ClassName RG_UNIQUE_NAME(exit); \
-    ClassName::~ClassName()
-#define RG_EXIT(Name) RG_EXIT_(RG_CONCAT(RG_UNIQUE_NAME(ExitHelper), Name))
-
 template <typename T>
 T MultiCmp()
 {
@@ -4631,6 +4613,25 @@ bool NotifySystemd();
         while ((ret = (CallCode)) ErrorCond && errno == EINTR); \
         return ret; \
     })()
+
+class InitHelper {
+public:
+    const char *name;
+    InitHelper *next = nullptr;
+
+    InitHelper(const char *name);
+    virtual void Run() = 0;
+};
+
+#define RG_INIT_(ClassName, Name) \
+    class ClassName: public InitHelper { \
+    public: \
+        ClassName(): InitHelper(Name) {} \
+        void Run() override; \
+    }; \
+    static ClassName RG_UNIQUE_NAME(init); \
+    void ClassName::Run()
+#define RG_INIT(Name) RG_INIT_(RG_CONCAT(RG_UNIQUE_NAME(InitHelper), Name), RG_STRINGIFY(Name))
 
 void InitApp();
 int Main(int argc, char **argv);

@@ -30,6 +30,11 @@ namespace RG {
 
 extern "C" const AssetInfo CacertPem;
 
+RG_INIT(libcurl)
+{
+    RG_CRITICAL(!curl_global_init(CURL_GLOBAL_ALL), "Failed to initialize libcurl");
+}
+
 CURL *curl_Init()
 {
     CURL *curl = curl_easy_init();

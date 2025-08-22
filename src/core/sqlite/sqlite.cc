@@ -26,7 +26,7 @@ extern "C" int sqlite3_uuid_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api
 
 namespace RG {
 
-RG_INIT(SqliteExtensions)
+RG_INIT(SQLite)
 {
     sqlite3_auto_extension((void(*)())sqlite3_uuid_init);
 }

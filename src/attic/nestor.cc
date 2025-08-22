@@ -798,11 +798,6 @@ Options:
         }
     }
 
-    if (curl_global_init(CURL_GLOBAL_ALL)) {
-        LogError("Failed to initialize libcurl");
-        return 1;
-    }
-
 #if !defined(_WIN32)
     // Increase maximum number of open file descriptors (up to hard limit)
     RaiseMaximumOpenFiles();

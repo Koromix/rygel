@@ -27,7 +27,7 @@ namespace RG {
 BucketArray<const char *> rcc_log_messages;
 bool rcc_log_missing_messages = false;
 
-RG_INIT(RedirectLog)
+void rcc_RedirectLog()
 {
     SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {
         switch (level) {

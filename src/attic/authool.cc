@@ -176,11 +176,6 @@ Options:
         opt.LogUnusedArguments();
     }
 
-    if (sodium_init() < 0) {
-        LogError("Failed to initialize libsodium");
-        return 1;
-    }
-
     if (!password) {
 retry:
         password = Prompt("Password: ", nullptr, mask ? "*" : nullptr, &temp_alloc);

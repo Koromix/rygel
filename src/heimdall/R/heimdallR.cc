@@ -383,4 +383,6 @@ RcppExport void R_init_heimdallR(DllInfo *dll) {
 
     R_registerRoutines(dll, nullptr, call_entries, nullptr, nullptr);
     R_useDynamicSymbols(dll, FALSE);
+
+    rcc_RedirectLog();
 }

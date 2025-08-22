@@ -15,6 +15,7 @@
 
 #include "src/core/base/base.hh"
 #include "src/core/wrap/json.hh"
+#include "vendor/libsodium/src/libsodium/include/sodium.h"
 extern "C" {
     #include "vendor/cmark-gfm/src/cmark-gfm.h"
     #include "vendor/cmark-gfm/extensions/cmark-gfm-core-extensions.h"

@@ -17,6 +17,7 @@
 #include "src/core/request/curl.hh"
 #include "rekkord.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
+
 #if !defined(_WIN32)
     #include <sys/time.h>
 #endif
@@ -145,14 +146,6 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
     RaiseMaximumOpenFiles(16384);
 #endif
 
-    if (sodium_init() < 0) {
-        LogError("Failed to initialize libsodium");
-        return 1;
-    }
-    if (curl_global_init(CURL_GLOBAL_ALL)) {
-        LogError("Failed to initialize libcurl");
-        return 1;
-    }
     if (ssh_init() < 0) {
         LogError("Failed to initialize libssh");
         return 1;
