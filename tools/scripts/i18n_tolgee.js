@@ -25,6 +25,7 @@ const PROJECTS = {
 };
 const LANGUAGES = ['fr'];
 
+const TOLGEE_URL = (process.env.TOLGEE_URL || 'https://app.tolgee.io').replace(/\/+$/, '');
 const TOLGEE_API_KEY = process.env.TOLGEE_API_KEY || '';
 
 main();
@@ -47,6 +48,8 @@ async function run() {
     {
         let errors = [];
 
+        if (!TOLGEE_URL)
+            errors.push('Missing TOLGEE_URL');
         if (!TOLGEE_API_KEY)
             errors.push('Missing TOLGEE_API_KEY');
 
@@ -71,7 +74,7 @@ async function run() {
             for (let lang of LANGUAGES)
                 obj[lang] = project.translations[lang][key];
 
-            let json = await fetchOrFail('https://app.tolgee.io/v2/projects/translations', {
+            let json = await fetchOrFail(TOLGEE_URL + '/v2/projects/translations', {
                 method: 'POST',
                 headers: {
                     'X-API-Key': TOLGEE_API_KEY,
@@ -91,7 +94,7 @@ async function run() {
         let ids = translations.filter(t => !projects.some(project => project.keys.has(t.keyName)));
 
         if (ids.length) {
-            await fetchOrFail('https://app.tolgee.io/v2/projects/keys', {
+            await fetchOrFail(TOLGEE_URL + '/v2/projects/keys', {
                 method: 'DELETE',
                 headers: {
                     'X-API-Key': TOLGEE_API_KEY,
@@ -169,7 +172,7 @@ async function fetchTranslations() {
         if (cursor != null)
             params.cursor = cursor;
 
-        let url = 'https://app.tolgee.io/v2/projects/translations?' + new URLSearchParams(params);
+        let url = TOLGEE_URL + '/v2/projects/translations?' + new URLSearchParams(params);
 
         let response = await fetchOrFail(url, {
             headers: {
