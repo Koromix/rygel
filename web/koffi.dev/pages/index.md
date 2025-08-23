@@ -7,6 +7,12 @@ Koffi is a **fast and easy-to-use C FFI module for Node.js**, featuring:
 * Javascript functions can be used as C callbacks (since 1.2.0)
 * Well-tested code base for [popular OS/architecture combinations](platforms)
 
+I work on this project on my spare time, if you like this project, consider supporting me:
+
+<p style="display: flex; gap: 2em; justify-content: center;">
+     <a href="https://buymeacoffee.com/koromix" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174" style="border-radius: 12px;"></a>
+</p>
+
 Koffi requires [Node.js](https://nodejs.org/) version 16 or later. Use [NVM](https://github.com/nvm-sh/nvm) to install more recent Node versions on older Linux distributions.
 
 The following combinations of OS and architectures __are officially supported and tested__ at the moment:

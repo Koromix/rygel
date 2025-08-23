@@ -6,7 +6,10 @@
         <p>Hi visitor!
         <p>My name is <b>Niels Martignène</b> (or <a href="https://github.com/Koromix" target="_blank">Koromix</a>), and I've been programming for over twenty-five years. It all began when I stumbled upon an old <a href="https://en.wikipedia.org/wiki/Amstrad_CPC#CPC6128" target="_blank">Amstrad CPC-6128</a> in my parents' attic, and found out you could use BASIC to program simple games on it.
         <p>Nowadays I work on various <b>C++ applications/libraries</b>, and some <b>web applications</b>. I also do some C and assembly programming. You can find information about some of the free software projects I've worked on over the years on this website.
-        <p>I'm <b>available for hire</b>, please contact me on <a href="mailto:niels.martignene@protonmail.com">niels.martignene@protonmail.com</a> if you are interested.
+        <p>If you like what I do, consider supporting me:
+        <p style="display: flex; gap: 2em; justify-content: center;">
+             <a href="https://buymeacoffee.com/koromix" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174" style="border-radius: 12px;"></a>
+        </p>
     </div>
 </div>
 
