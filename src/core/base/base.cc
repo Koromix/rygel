@@ -2491,8 +2491,8 @@ Size ConvertWin32WideToUtf8(LPCWSTR str_w, Span<char> out_str)
     int len = WideCharToMultiByte(CP_UTF8, 0, str_w, -1, out_str.ptr, (int)out_str.len - 1, nullptr, nullptr);
     if (!len) {
         switch (GetLastError()) {
-            case ERROR_INSUFFICIENT_BUFFER: { LogError("String '<UTF-16 ...>' is too large"); } break;
-            case ERROR_NO_UNICODE_TRANSLATION: { LogError("String '<UTF-16 ...>' cannot be converted to UTF-8"); } break;
+            case ERROR_INSUFFICIENT_BUFFER: { LogError("Cannot convert UTF-16 string to UTF-8: too large"); } break;
+            case ERROR_NO_UNICODE_TRANSLATION: { LogError("Cannot convert invalid UTF-16 string to UTF-8"); } break;
             default: { LogError("WideCharToMultiByte() failed: %1", GetWin32ErrorString()); } break;
         }
         return -1;
