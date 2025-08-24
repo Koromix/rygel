@@ -773,7 +773,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
 
     if (email) {
         if (!gp_domain.config.smtp.url) [[unlikely]] {
-            LogError("This instance is not configured to send mails");
+            LogError("This domain is not configured to send mails");
             return nullptr;
         }
 
@@ -803,7 +803,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
             return nullptr;
     } else if (sms) {
         if (gp_domain.config.sms.provider == sms_Provider::None) [[unlikely]] {
-            LogError("This instance is not configured to send SMS messages");
+            LogError("This domain is not configured to send SMS messages");
             return nullptr;
         }
 

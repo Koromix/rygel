@@ -850,7 +850,7 @@ void HandleFileRestore(http_IO *io, InstanceHolder *instance)
         bool valid = true;
 
         if (!file.filename || !file.filename[0]) {
-            LogError("Missing or empty 'filename' value");
+            LogError("Missing or empty 'filename' parameter");
             valid = false;
         }
         if (PathContainsDotDot(file.filename)) {

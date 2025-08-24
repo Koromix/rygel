@@ -1367,7 +1367,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         bool valid = true;
 
         if (!tid[0]) {
-            LogError("Missing or empty 'tid' value");
+            LogError("Missing or empty 'tid' parameter");
             valid = false;
         }
         if (fragment.fs < 0 || !fragment.eid[0] || !fragment.store || !fragment.has_data) {
@@ -1394,7 +1394,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
         if (signup.enable) {
             if (!session->userid && !gp_domain.config.smtp.url) {
-                LogError("This instance is not configured to send mails");
+                LogError("This domain is not configured to send mails");
                 io->SendError(403);
                 return;
             }
@@ -1487,7 +1487,11 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 return false;
 
             if (stmt.Step()) {
-                LogError("Cannot create new %1", signup.enable ? "registration" : "thread");
+                if (signup.enable) {
+                    LogError("Cannot create new registration");
+                } else {
+                    LogError("Cannot create new thread");
+                }
                 io->SendError(403);
                 return false;
             } else if (!stmt.IsValid()) {
@@ -1794,7 +1798,7 @@ void HandleRecordDelete(http_IO *io, InstanceHolder *instance)
         bool valid = true;
 
         if (!tid[0]) {
-            LogError("Missing or empty 'tid' value");
+            LogError("Missing or empty 'tid' parameter");
             valid = false;
         }
 
@@ -1900,7 +1904,11 @@ static void HandleLock(http_IO *io, InstanceHolder *instance, bool lock)
         return;
     }
     if (!stamp || !stamp->HasPermission(UserPermission::DataSave)) {
-        LogError("User is not allowed to %1 records", lock ? "lock" : "unlock");
+        if (lock) {
+            LogError("User is not allowed to lock records");
+        } else {
+            LogError("User is not allowed to unlock records");
+        }
         io->SendError(403);
         return;
     }
@@ -1945,7 +1953,7 @@ static void HandleLock(http_IO *io, InstanceHolder *instance, bool lock)
         bool valid = true;
 
         if (!tid[0]) {
-            LogError("Missing or empty 'tid' value");
+            LogError("Missing or empty 'tid' parameter");
             valid = false;
         }
 

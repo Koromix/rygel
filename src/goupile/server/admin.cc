@@ -432,8 +432,8 @@ static void GenerateKeyPair(Span<char> out_decrypt, Span<char> out_archive)
 
 static void LogKeyPair(const char *decrypt_key, const char *archive_key)
 {
-    LogInfo("Backup decryption key: %!..+%1%!0", decrypt_key);
-    LogInfo("           Public key: %!..+%1%!0", archive_key);
+    LogInfo("Archive decryption key: %!..+%1%!0", decrypt_key);
+    LogInfo("            Public key: %!..+%1%!0", archive_key);
     LogInfo();
     LogInfo("You need this key to restore Goupile archives, %!..+you must not lose it!%!0");
     LogInfo("There is no way to get it back, without it the archives are lost.");
@@ -593,7 +593,7 @@ retry_title:
             goto retry_title;
     }
     if (!title[0]) {
-        LogError("Empty domain title is now allowed");
+        LogError("Empty domain title is not allowed");
         return 1;
     }
     if (!username) {
@@ -2718,7 +2718,7 @@ void HandleArchiveRestore(http_IO *io)
                 Size write_len = RG_RESTART_EINTR(write(fd, buf.ptr, (size_t)buf.len), < 0);
 #endif
                 if (write_len < 0) {
-                    LogError("Failed to write to disk: %1", strerror(errno));
+                    LogError("Failed to write to ZIP: %1", strerror(errno));
                     return (size_t)0;
                 }
 

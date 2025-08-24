@@ -751,7 +751,7 @@ static bool SendRequest(RequestType type, Allocator *alloc,
         MemCpy(CMSG_DATA(cmsg), &pfd[1], RG_SIZE(int));
 
         if (sendmsg(main_pfd[0], &msg, MSG_NOSIGNAL) < 0) {
-            LogError("Failed to send run request to zygote: %1 %2", strerror(errno), pfd[1]);
+            LogError("Failed to send run request to zygote: %1", strerror(errno));
             return false;
         }
 

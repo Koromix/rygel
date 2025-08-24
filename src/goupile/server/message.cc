@@ -50,7 +50,7 @@ bool SendSMS(const char *to, const char *message)
 void HandleSendMail(http_IO *io, InstanceHolder *instance)
 {
     if (!gp_domain.config.smtp.url) {
-        LogError("This instance is not configured to send mails");
+        LogError("This domain is not configured to send mails");
         io->SendError(403);
         return;
     }
@@ -140,7 +140,7 @@ void HandleSendMail(http_IO *io, InstanceHolder *instance)
 void HandleSendSMS(http_IO *io, InstanceHolder *instance)
 {
     if (gp_domain.config.sms.provider == sms_Provider::None) {
-        LogError("This instance is not configured to send SMS messages");
+        LogError("This domain is not configured to send SMS messages");
         io->SendError(403);
         return;
     }
