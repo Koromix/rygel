@@ -2491,8 +2491,8 @@ Size ConvertWin32WideToUtf8(LPCWSTR str_w, Span<char> out_str)
     int len = WideCharToMultiByte(CP_UTF8, 0, str_w, -1, out_str.ptr, (int)out_str.len - 1, nullptr, nullptr);
     if (!len) {
         switch (GetLastError()) {
-            case ERROR_INSUFFICIENT_BUFFER: { LogError("String '<UTF-16 ?>' is too large"); } break;
-            case ERROR_NO_UNICODE_TRANSLATION: { LogError("String '<UTF-16 ?>' is not valid UTF-8"); } break;
+            case ERROR_INSUFFICIENT_BUFFER: { LogError("String '<UTF-16 ...>' is too large"); } break;
+            case ERROR_NO_UNICODE_TRANSLATION: { LogError("String '<UTF-16 ...>' cannot be converted to UTF-8"); } break;
             default: { LogError("WideCharToMultiByte() failed: %1", GetWin32ErrorString()); } break;
         }
         return -1;
@@ -2655,11 +2655,11 @@ RenameResult RenameFile(const char *src_filename, const char *dest_filename, uns
 
     if (err == ERROR_ALREADY_EXISTS) {
         if (!(silent & (int)RenameResult::AlreadyExists)) {
-            LogError("Failed to rename file '%1' to '%2': file already exists", src_filename, dest_filename);
+            LogError("Failed to rename '%1' to '%2': file already exists", src_filename, dest_filename);
         }
         return RenameResult::AlreadyExists;
     } else {
-        LogError("Failed to rename file '%1' to '%2': %3", src_filename, dest_filename, GetWin32ErrorString(err));
+        LogError("Failed to rename '%1' to '%2': %3", src_filename, dest_filename, GetWin32ErrorString(err));
         return RenameResult::OtherError;
     }
 }
@@ -3146,7 +3146,7 @@ bool SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t, uint3
     times[1].tv_nsec = (mtime % 1000) * 1000000;
 
     if (futimens(fd, times) < 0) {
-        LogError("Failed to set mtime of '%1'", filename);
+        LogError("Failed to set modification time of '%1': %2", filename, filename);
         valid = false;
     }
     if (fchmod(fd, (mode_t)mode) < 0) {
@@ -5744,7 +5744,7 @@ bool RaiseMaximumOpenFiles(int limit)
     lim.rlim_cur = std::min(target, lim.rlim_max);
 
     if (setrlimit(RLIMIT_NOFILE, &lim) < 0) {
-        LogError("Could not raise RLIMIT_NOFILE: %2", strerror(errno));
+        LogError("Could not raise RLIMIT_NOFILE: %1", strerror(errno));
         return false;
     }
 
@@ -6893,7 +6893,7 @@ int CreateSocket(SocketType type, int flags)
 
     int sock = socket(family, flags, 0);
     if (sock < 0) {
-        LogError("Failed to create AF_INET socket: %1", strerror(errno));
+        LogError("Failed to create IP socket: %1", strerror(errno));
         return -1;
     }
     RG_DEFER_N(err_guard) { close(sock); };
@@ -8774,7 +8774,7 @@ bool ReloadAssets()
     lib_assets = (const Span<const AssetInfo> *)dlsym(h, "EmbedAssets");
 #endif
     if (!lib_assets) {
-        LogError("Cannot find symbol '%1' in library '%2'", "EmbedAssets", assets_filename);
+        LogError("Cannot find symbol 'EmbedAssets' in library '%1'", assets_filename);
         return false;
     }
 
