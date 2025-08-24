@@ -433,7 +433,7 @@ Options:
         LogInfo();
         LogInfo("Wrote master key: %!..+%1%!0", key_filename);
         LogInfo();
-        LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even if the default accounts are lost or deleted.");
+        LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even derived keys are lost or deleted.");
     } else {
         LogInfo("Done");
     }
@@ -518,7 +518,7 @@ Available key types: %!..+%1%!0)", FmtSpan(types));
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Config)) {
-        LogError("Cannot derive keys with %1 keys", repo->GetRole());
+        LogError("Cannot derive keys with %1 key", repo->GetRole());
         return 1;
     }
     LogInfo();
@@ -642,7 +642,7 @@ R"(Usage: %!..+%1 change_cid [-C filename] [option...]%!0
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Config)) {
-        LogError("Cannot change ID with %1 keys", repo->GetRole());
+        LogError("Cannot change cache ID with %1 key", repo->GetRole());
         return 1;
     }
     LogInfo();

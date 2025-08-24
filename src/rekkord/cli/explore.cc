@@ -146,7 +146,7 @@ Available sort orders: %!..+%3%!0)",
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Log)) {
-        LogError("Cannot list snapshots with %1 keys", repo->GetRole());
+        LogError("Cannot list snapshots with %1 key", repo->GetRole());
         return 1;
     }
     LogInfo();
@@ -350,7 +350,7 @@ Available output formats: %!..+%2%!0)",
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Log)) {
-        LogError("Cannot list snapshots with %1 keys", repo->GetRole());
+        LogError("Cannot list snapshots with %1 key", repo->GetRole());
         return 1;
     }
     LogInfo();
@@ -471,17 +471,17 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbo
     }
 
     if (verbose >= 1) {
-        PrintLn("%1    + OID: %!..+%2%!0", FmtArg(" ").Repeat(indent), obj.oid);
+        PrintLn("%1    + OID: %!..+%2%!0", FmtArg(' ').Repeat(indent), obj.oid);
 
         if (obj.type == rk_ObjectType::Snapshot) {
-            PrintLn("%1    + Stored: %!..+%2%!0", FmtArg(" ").Repeat(indent), FmtDiskSize(obj.stored));
-            PrintLn("%1    + Added: %!..+%2%!0", FmtArg(" ").Repeat(indent), FmtDiskSize(obj.added));
+            PrintLn("%1    + Stored: %!..+%2%!0", FmtArg(' ').Repeat(indent), FmtDiskSize(obj.stored));
+            PrintLn("%1    + Added: %!..+%2%!0", FmtArg(' ').Repeat(indent), FmtDiskSize(obj.added));
         } else {
-            PrintLn("%1    + UID/GID: %!..+%2:%3%!0", FmtArg(" ").Repeat(indent), obj.uid, obj.gid);
+            PrintLn("%1    + UID/GID: %!..+%2:%3%!0", FmtArg(' ').Repeat(indent), obj.uid, obj.gid);
 
             if (verbose > 1) {
                TimeSpec bspec = DecomposeTimeUTC(obj.btime);
-                PrintLn("%1    + Birth time: %!..+%2%!0", FmtArg(" ").Repeat(indent), FmtTimeNice(bspec));
+                PrintLn("%1    + Birth time: %!..+%2%!0", FmtArg(' ').Repeat(indent), FmtTimeNice(bspec));
             }
         }
     }
@@ -663,7 +663,7 @@ Available output formats: %!..+%2%!0)",
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Read)) {
-        LogError("Cannot list objects with %1 keys", repo->GetRole());
+        LogError("Cannot list objects with %1 key", repo->GetRole());
         return 1;
     }
     LogInfo();

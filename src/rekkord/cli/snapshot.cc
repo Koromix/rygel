@@ -207,7 +207,7 @@ Available metadata save options:
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Write)) {
-        LogError("Cannot save data with %1 role", repo->GetRole());
+        LogError("Cannot save data with %1 key", repo->GetRole());
         return 1;
     }
     if (repo->HasMode(rk_AccessMode::Read)) {
@@ -344,7 +344,7 @@ If you use a snapshot channel, the most recent snapshot object that matches will
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Read)) {
-        LogError("Cannot restore data with %1 keys", repo->GetRole());
+        LogError("Cannot restore data with %1 key", repo->GetRole());
         return 1;
     }
     LogInfo();
@@ -413,7 +413,7 @@ R"(Usage: %!..+%1 check [-C filename] [option...]%!0
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Read)) {
-        LogError("Cannot check repository with %1 keys", repo->GetRole());
+        LogError("Cannot check repository with %1 key", repo->GetRole());
         return 1;
     }
     LogInfo();

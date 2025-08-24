@@ -568,7 +568,7 @@ If you use a snapshot channel, the most recent snapshot object that matches will
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
     if (!repo->HasMode(rk_AccessMode::Read)) {
-        LogError("Cannot mount with %1 role", repo->GetRole());
+        LogError("Cannot mount with %1 key", repo->GetRole());
         return 1;
     }
     LogInfo();

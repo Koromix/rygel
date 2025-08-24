@@ -226,7 +226,7 @@ bool rk_ExportKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filena
 
     switch (type) {
         case rk_KeyType::Master: {
-            LogError("Cannot generate Master keys");
+            LogError("Cannot generate Master key");
             return false;
         } break;
 

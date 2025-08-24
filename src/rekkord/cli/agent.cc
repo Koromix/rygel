@@ -367,7 +367,7 @@ R"(Usage: %!..+%1 agent [-C filename] [option...]%!0
 
         LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
         if (!repo->HasMode(rk_AccessMode::Read)) {
-            LogError("Cannot restore data with %1 keys", repo->GetRole());
+            LogError("Cannot restore data with %1 key", repo->GetRole());
             return 1;
         }
         LogInfo();

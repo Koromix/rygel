@@ -259,7 +259,7 @@ static Size DecodeEntry(Span<const uint8_t> blob, Size offset, bool allow_separa
             attr_len = LittleEndian(attr_len);
 
             if (attr_len > extended.len) {
-                LogError("Invalid extended length prefix");
+                LogError("Invalid extended length");
                 return -1;
             }
 

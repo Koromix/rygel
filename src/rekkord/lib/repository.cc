@@ -299,7 +299,7 @@ bool rk_Repository::ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<ui
     {
         BlobIntro intro;
         if (remain.len < RG_SIZE(intro)) {
-            LogError("Truncated blob");
+            LogError("Truncated blob '%1'", oid);
             return false;
         }
         MemCpy(&intro, remain.ptr, RG_SIZE(intro));
@@ -364,7 +364,7 @@ bool rk_Repository::ReadBlob(const rk_ObjectID &oid, int *out_type, HeapArray<ui
         }
 
         if (!eof) {
-            LogError("Truncated blob '%1'", path);
+            LogError("Truncated blob '%1'", oid);
             return false;
         }
     }

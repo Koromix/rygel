@@ -857,11 +857,11 @@ void HandleUserPassword(http_IO *io)
         bool valid = true;
 
         if (!old_password) {
-            LogError("Missing old_password value");
+            LogError("Missing 'old_password' parameter");
             valid = false;
         }
         if (!new_password) {
-            LogError("Missing new_password value");
+            LogError("Missing 'new_password' parameter");
             valid = false;
         }
 
