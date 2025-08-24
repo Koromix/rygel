@@ -1,0 +1,15 @@
+{
+    "keys": {
+        "apply": "Apply",
+        "browse_for_image": "Browse for image",
+        "cancel": "Cancel",
+        "clear_picture": "Clear picture",
+        "confirm": "Confirm",
+        "confirm_not_reversible": "Be careful, this action cannot be reversed!",
+        "drag_paste_or_browse_image": "Drop an image, paste it or use the 'Browse' button below",
+        "filter": "Filter",
+        "upload_image": "Upload image",
+        "zoom": "Zoom"
+    },
+    "messages": {}
+}

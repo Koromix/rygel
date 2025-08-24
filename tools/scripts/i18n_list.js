@@ -23,7 +23,7 @@ const DIRECTORIES = [
     'src/goupile',
     'src/rekkord'
 ];
-const LANGUAGES = ['fr'];
+const LANGUAGES = ['en', 'fr'];
 
 main();
 
@@ -58,16 +58,31 @@ async function run() {
         if (!fs.existsSync(i18n))
             fs.mkdirSync(i18n);
 
-        let strings = [
-            ...listFilesRec(root, '.cc').flatMap(detectCxxMessages),
+        let keys = [
+            ...listFilesRec(root, '.js').flatMap(detectJsKeys)
         ];
-        strings = Array.from(new Set(strings)).sort();
+        let messages = [
+            ...listFilesRec(root, '.cc').flatMap(detectCxxMessages),
+            ...listFilesRec(root, '.js').flatMap(detectJsMessages)
+        ];
+
+        keys = Array.from(new Set(keys)).sort();
+        messages = Array.from(new Set(messages)).sort();
 
         for (let lang of LANGUAGES) {
             let filename = path.join(i18n, lang + '.json');
             let translations = fs.existsSync(filename) ? JSON.parse(fs.readFileSync(filename)) : {};
 
-            translations = strings.reduce((obj, str) => { obj[str] = translations[str] ?? null; return obj; }, {});
+            translations = {
+                keys: translations.keys ?? {},
+                messages: translations.messages ?? {}
+            };
+
+            translations.keys = keys.reduce((obj, str) => { obj[str] = translations.keys[str] ?? null; return obj; }, {});
+            translations.messages = messages.reduce((obj, str) => { obj[str] = translations.messages[str] ?? null; return obj; }, {});
+
+            if (lang == 'en')
+                translations.messages = {};
 
             fs.writeFileSync(filename, JSON.stringify(translations, null, 4));
         }
@@ -117,6 +132,26 @@ function detectCxxMessages(filename) {
 
     let matches = [
         ...code.matchAll(/(?:T|Print|PrintLn|LogError|LogWarning|LogInfo)\(\"(.+)\"(?:, .*)?\)/g)
+    ];
+
+    return matches.map(m => m[1]);
+}
+
+function detectJsKeys(filename) {
+    let code = fs.readFileSync(filename).toString();
+
+    let matches = [
+        ...code.matchAll(/T\.([a-zA-Z_0-9]+)/g)
+    ];
+
+    return matches.map(m => m[1]).filter(key => key != 'lang' && key != 'format' && key != 'message');
+}
+
+function detectJsMessages(filename) {
+    let code = fs.readFileSync(filename).toString();
+
+    let matches = [
+        ...code.matchAll(/T\.message\(`(.+)`/g)
     ];
 
     return matches.map(m => m[1]);

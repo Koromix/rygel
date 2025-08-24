@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { render, html, unsafeHTML } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, Mutex } from '../../web/core/base.js';
 import { Base64 } from '../../web/core/mixer.js';
 import * as goupile from './goupile.js';
@@ -47,23 +47,23 @@ async function init(fallback) {
 function renderMenu() {
     return html`
         <nav class="ui_toolbar" id="ui_top" style="z-index: 999999;">
-            <button class="icon lines" @click=${UI.wrap(e => go(e, '/admin/'))}>Admin</button>
+            <button class="icon lines" @click=${UI.wrap(e => go(e, '/admin/'))}>${T.admin}</button>
             <button class=${'icon instances' + (UI.isPanelActive('instances') ? ' active' : '')}
-                    @click=${UI.wrap(e => togglePanel('instances'))}>Projets</button>
+                    @click=${UI.wrap(e => togglePanel('instances'))}>${T.projects}</button>
             <button class=${'icon users' + (UI.isPanelActive('users') ? ' active' : '')}
-                    @click=${UI.wrap(e => togglePanel('users'))}>Utilisateurs</button>
+                    @click=${UI.wrap(e => togglePanel('users'))}>${T.users}</button>
             ${profile.root ? html`
                 <button class=${'icon archives' + (UI.isPanelActive('archives') ? ' active' : '')}
-                        @click=${UI.wrap(e => togglePanel('archives'))}>Archives</button>
+                        @click=${UI.wrap(e => togglePanel('archives'))}>${T.archives}</button>
             ` : ''}
             <div style="flex: 1;"></div>
             <div class="drop right" @click=${UI.deployMenu}>
                 <button class=${goupile.isLoggedOnline() ? 'icon online' : 'icon offline'}>${profile.username}</button>
                 <div>
-                    <button @click=${UI.wrap(goupile.runChangePasswordDialog)}>Modifier mon mot de passe</button>
-                    <button @click=${UI.wrap(goupile.runResetTOTP)}>Configurer la double authentification</button>
+                    <button @click=${UI.wrap(goupile.runChangePasswordDialog)}>${T.change_my_password}</button>
+                    <button @click=${UI.wrap(goupile.runResetTOTP)}>${T.configure_my_totp}</button>
                     <hr/>
-                    <button @click=${UI.wrap(goupile.logout)}>Se déconnecter</button>
+                    <button @click=${UI.wrap(goupile.logout)}>${T.logout}</button>
                 </div>
             </div>
         </nav>
@@ -79,9 +79,9 @@ function renderInstances() {
     return html`
         <div class="padded" style="background: #f8f8f8;">
             <div class="ui_quick">
-                ${profile.root ? html`<a @click=${UI.wrap(runCreateInstanceDialog)}>Créer un projet</a>` : ''}
+                ${profile.root ? html`<a @click=${UI.wrap(runCreateInstanceDialog)}>${T.create_project}</a>` : ''}
                 <div style="flex: 1;"></div>
-                Projets (<a @click=${UI.wrap(e => { instances = null; return go(); })}>rafraichir</a>)
+                ${T.projects} (<a @click=${UI.wrap(e => { instances = null; return go(); })}>${T.refresh.toLowerCase()}</a>)
             </div>
 
             <table class="ui_table fixed">
@@ -94,21 +94,21 @@ function renderInstances() {
                 </colgroup>
 
                 <tbody>
-                    ${!instances.length ? html`<tr><td colspan="5">Aucun projet</td></tr>` : ''}
+                    ${!instances.length ? html`<tr><td colspan="5">${T.no_project}</td></tr>` : ''}
                     ${instances.map(instance => html`
                         <tr class=${instance === selected_instance ? 'active' : ''}>
                             <td style="text-align: left;" class=${instance.master != null ? 'child' : ''}>
                                 ${instance.master == null && instance.legacy ? html`<span class="ui_tag" style="background: #bbb;">v2</span>`  : ''}
                                 ${instance.master != null ? html`<span style="color: #ccc;">${instance.master} / </span>${instance.key.replace(/^.*\//, '')}` : ''}
                                 ${instance.master == null ? instance.key : ''}
-                                (<a href=${'/' + instance.key} target="_blank">accès</a>)
+                                (<a href=${'/' + instance.key} target="_blank">${T.access.toLowerCase()}</a>)
                             </td>
-                            <td><a role="button" tabindex="0" @click=${UI.wrap(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a></td>
+                            <td><a role="button" tabindex="0" @click=${UI.wrap(e => runSplitInstanceDialog(e, instance.key))}>${T.split}</a></td>
                             <td><a role="button" tabindex="0" href=${Util.pasteURL('/admin/', { select: instance.key })}
                                    @click=${UI.wrap(instance != selected_instance ? (e => togglePanel('users', true))
-                                                                                        : (e => { go(e, '/admin/'); e.preventDefault(); }))}>Droits</a></td>
-                            <td><a role="button" tabindex="0" @click=${UI.wrap(e => runConfigureInstanceDialog(e, instance))}>Configurer</a></td>
-                            <td>${profile.root || instance.master != null ? html`<a role="button" tabindex="0" @click=${UI.wrap(e => runDeleteInstanceDialog(e, instance))}>Supprimer</a>` : ''}</td>
+                                                                                        : (e => { go(e, '/admin/'); e.preventDefault(); }))}>${T.permissions}</a></td>
+                            <td><a role="button" tabindex="0" @click=${UI.wrap(e => runConfigureInstanceDialog(e, instance))}>${T.configure}</a></td>
+                            <td>${profile.root || instance.master != null ? html`<a role="button" tabindex="0" @click=${UI.wrap(e => runDeleteInstanceDialog(e, instance))}>${T.delete}</a>` : ''}</td>
                         </tr>
                     `)}
                 </tbody>
@@ -123,17 +123,17 @@ function renderUsers() {
     return html`
         <div class="padded" style="flex-grow: 1.5;">
             <div class="ui_quick">
-                <a @click=${UI.wrap(runCreateUserDialog)}>Créer un utilisateur</a>
+                <a @click=${UI.wrap(runCreateUserDialog)}>${T.create_user}</a>
                 <div style="flex: 1;"></div>
                 ${selected_instance != null ? html`
                     <div class="fm_check">
                         <input id="all_users" type="checkbox" .checked=${all_users}
                                @change=${UI.wrap(e => { all_users = e.target.checked; return go(); })} />
-                        <label for="all_users">Afficher tout le monde</label>
+                        <label for="all_users">${T.show_all_users}</label>
                     </div>
                     <div style="flex: 1;"></div>
                 ` : ''}
-                Utilisateurs (<a @click=${UI.wrap(e => { users = null; selected_permissions = null; return go(); })}>rafraichir</a>)
+                ${T.users} (<a @click=${UI.wrap(e => { users = null; selected_permissions = null; return go(); })}>${T.refresh.toLowerCase()}</a>)
             </div>
 
             <table class="ui_table fixed">
@@ -154,7 +154,7 @@ function renderUsers() {
                 </colgroup>
 
                 <tbody>
-                    ${!visible_users.length ? html`<tr><td colspan=${selected_instance != null ? 5 : 4}>Aucun utilisateur</td></tr>` : ''}
+                    ${!visible_users.length ? html`<tr><td colspan=${selected_instance != null ? 5 : 4}>${T.no_user}</td></tr>` : ''}
                     ${visible_users.map(user => {
                         let permissions;
                         if (selected_instance != null) {
@@ -167,29 +167,29 @@ function renderUsers() {
                             <tr>
                                 <td style=${'text-align: left;' + (user.root ? ' color: #db0a0a;' : '')}>
                                     ${user.username}
-                                    ${user.root ? html`<span title="Super-administrateur">♛\uFE0E</span>` : ''}
+                                    ${user.root ? html`<span title="${T.root}">♛\uFE0E</span>` : ''}
                                 </td>
                                 ${selected_instance == null ? html`
                                     <td style="text-align: left;">${user.email != null ? html`<a href=${'mailto:' + user.email}>${user.email}</a>` : ''}</td>
                                     <td style="text-align: left;">${user.phone != null ? html`<a href=${'tel:' + user.phone}>${user.phone}</a>` : ''}</td>
                                 ` : ''}
                                 <td><a role="button" tabindex="0"
-                                       @click=${UI.wrap(e => runEditUserDialog(e, user))}>Modifier</a></td>
+                                       @click=${UI.wrap(e => runEditUserDialog(e, user))}>${T.edit}</a></td>
                                 ${selected_instance != null ? html`
                                     <td class=${!permissions.length ? 'ui_sub' : ''}
                                         style="white-space: normal;">
                                         ${selected_instance.master == null ? makePermissionsTag(permissions, 'build_', '#b518bf') : ''}
                                         ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : ''}
                                         ${!selected_instance.slaves ? makePermissionsTag(permissions, 'misc_', '#c97f1a') : ''}
-                                        ${!permissions.length ? 'Non assigné' : ''}
+                                        ${!permissions.length ? T.unassigned : ''}
                                     </td>
                                     <td><a role="button" tabindex="0"
-                                           @click=${UI.wrap(e => runAssignUserDialog(e, selected_instance, user,
-                                                                                              permissions))}>Assigner</a></td>
+                                           @click=${UI.wrap(e => runAssignUserDialog(e, selected_instance,
+                                                                                     user, permissions))}>${T.assign}</a></td>
                                 ` : ''}
                                 ${selected_instance == null ?
                                     html`<td><a role="button" tabindex="0"
-                                                @click=${UI.wrap(e => runDeleteUserDialog(e, user))}>Supprimer</a></td>` : ''}
+                                                @click=${UI.wrap(e => runDeleteUserDialog(e, user))}>${T.delete}</a></td>` : ''}
                             </tr>
                         `;
                     })}
@@ -214,18 +214,14 @@ function renderArchives() {
     return html`
         <div class="padded">
             <div style="margin-bottom: 2em;">
-                <p>Les archives créées manuellement ou automatiquement (chaque jour) sont gardées localement
-                pour une <span style="color: red; font-weight: bold;">période de ${ENV.retention} jours</span>.
-                Vous pouvez les télécharger et les enregistrer sur vos propres supports de stockage.</p>
-
-                <p>N'oubliez pas que <b>sans la clé de déchiffrement</b> qui vous a été confiée lors de l'ouverture
-                du domaine, le contenu de ces archives ne peut pas être restauré.</p>
+                <p>${unsafeHTML(T.format(T.archive_retention_period, ENV.retention))}</p>
+                <p>${unsafeHTML(T.remember_restore_key)}</p>
             </div>
 
             <div class="ui_quick">
-                <a @click=${UI.wrap(createBackup)}>Créer une archive</a>
+                <a @click=${UI.wrap(createBackup)}>${T.create_archive}</a>
                 <div style="flex: 1;"></div>
-                Archives (<a @click=${UI.wrap(e => { archives = null; return go(); })}>rafraichir</a>)
+                Archives (<a @click=${UI.wrap(e => { archives = null; return go(); })}>${T.refresh.toLowerCase()}</a>)
             </div>
 
             <table class="ui_table fixed">
@@ -237,14 +233,14 @@ function renderArchives() {
                 </colgroup>
 
                 <tbody>
-                    ${!archives.length ? html`<tr><td colspan="4">Aucune archive</td></tr>` : ''}
+                    ${!archives.length ? html`<tr><td colspan="4">${T.no_archive}</td></tr>` : ''}
                     ${archives.map(archive => html`
                         <tr>
                             <td style="text-align: left;"><a href=${'/admin/api/archives/files/' + archive.filename}
                                                              download>${archive.filename}</a></td>
                             <td>${Util.formatDiskSize(archive.size)}</td>
-                            <td><a @click=${UI.wrap(e => runRestoreBackupDialog(e, archive.filename))}>Restaurer</a></td>
-                            <td><a @click=${UI.wrap(e => runDeleteBackupDialog(e, archive.filename))}>Supprimer</a></td>
+                            <td><a @click=${UI.wrap(e => runRestoreBackupDialog(e, archive.filename))}>${T.restore}</a></td>
+                            <td><a @click=${UI.wrap(e => runDeleteBackupDialog(e, archive.filename))}>${T.delete}</a></td>
                         </tr>
                     `)}
                 </tbody>
@@ -252,19 +248,19 @@ function renderArchives() {
 
             <div class="ui_quick">
                 <div style="flex: 1;"></div>
-                <a @click=${UI.wrap(runUploadBackupDialog)}>Uploader une archive</a>
+                <a @click=${UI.wrap(runUploadBackupDialog)}>${T.upload_archive}</a>
             </div>
         </div>
     `;
 }
 
 async function createBackup() {
-    let progress = Log.progress('Archivage en cours');
+    let progress = Log.progress(T.archive_in_progress);
 
     try {
         await Net.post('/admin/api/archives/create', null, { timeout: 180000 });
 
-        progress.success('Archivage complété');
+        progress.success(T.archive_done);
         archives = null;
 
         go();
@@ -275,11 +271,11 @@ async function createBackup() {
 }
 
 async function runUploadBackupDialog(e) {
-    return UI.dialog(e, 'Envoi d\'archive', {}, (d, resolve, reject) => {
-        d.file('*archive', 'Archive');
+    return UI.dialog(e, T.upload_archive, {}, (d, resolve, reject) => {
+        d.file('*archive', T.archive);
 
         d.action('Envoyer', { disabled: !d.isValid() }, async () => {
-            let progress = Log.progress('Envoi en cours');
+            let progress = Log.progress(T.sending_in_progress);
 
             try {
                 let url = '/admin/api/archives/files/' + d.values.archive.name;
@@ -292,7 +288,7 @@ async function runUploadBackupDialog(e) {
 
                 if (response.ok) {
                     resolve();
-                    progress.success('Envoi complété');
+                    progress.success(T.sending_done);
 
                     archives = null;
 
@@ -312,12 +308,12 @@ async function runUploadBackupDialog(e) {
 }
 
 async function runRestoreBackupDialog(e, filename) {
-    return UI.dialog(e, `Restauration de '${filename}'`, {}, (d, resolve, reject) => {
-        d.password('*key', 'Clé de restauration');
-        d.boolean('*restore_users', 'Restaurer les utilisateurs et leurs droits', { value: false, untoggle: false });
+    return UI.dialog(e, T.format(T.restore_x, filename), {}, (d, resolve, reject) => {
+        d.password('*key', T.restore_key);
+        d.boolean('*restore_users', T.restore_users_and_permissions, { value: false, untoggle: false });
 
         d.action('Restaurer', { disabled: !d.isValid() }, async () => {
-            let progress = Log.progress('Restauration en cours');
+            let progress = Log.progress(T.restore_in_progress);
 
             try {
                 await Net.post('/admin/api/archives/restore', {
@@ -327,7 +323,7 @@ async function runRestoreBackupDialog(e, filename) {
                 });
 
                 resolve();
-                progress.success(`Archive '${filename}' restaurée`);
+                progress.success(T.format(T.archive_x_restored, filename));
 
                 instances = null;
                 users = null;
@@ -345,11 +341,11 @@ async function runRestoreBackupDialog(e, filename) {
 }
 
 function runDeleteBackupDialog(e, filename) {
-    return UI.confirm(e, `Voulez-vous vraiment supprimer l'archive '${filename}' ?`,
-                            'Supprimer', async () => {
+    return UI.confirm(e, T.format(T.confirm_archive_deletion, filename),
+                         T.delete, async () => {
         await Net.post('/admin/api/archives/delete', { filename: filename });
 
-        Log.success(`Archive '${filename}' supprimée`);
+        Log.success(T.format(T.archive_x_deleted, filename));
         archives = null;
 
         go();
@@ -392,9 +388,6 @@ async function go(e, url = null, options = {}) {
             if (url.searchParams.has('select')) {
                 let select = url.searchParams.get('select');
                 new_selected = new_instances.find(instance => instance.key === select);
-
-                if (new_selected == null)
-                    throw new Error(`Cannot select instance '${select}' (does not exist)`);
             } else {
                 new_selected = null;
             }
@@ -457,17 +450,17 @@ async function go(e, url = null, options = {}) {
 }
 
 function runCreateInstanceDialog(e) {
-    return UI.dialog(e, 'Création d\'un projet', {}, (d, resolve, reject) => {
-        d.text('*key', 'Clé du projet', {
+    return UI.dialog(e, T.create_project, {}, (d, resolve, reject) => {
+        d.text('*key', T.project_key, {
             help: [
-                'Longueur maximale : 24 caractères',
-                'Caractères autorisés : a-z (minuscules), 0-9 et \'-\''
+                T.project_key_length,
+                T.project_key_characters
             ]
         });
-        d.text('name', 'Nom', { value: d.values.key });
-        d.boolean('populate', `Paramétrer les pages d'exemple`, { value: true, untoggle: false });
+        d.text('name', T.name, { value: d.values.key });
+        d.boolean('populate', T.populate_demo, { value: true, untoggle: false });
 
-        d.action('Créer', { disabled: !d.isValid() }, async () => {
+        d.action(T.create, { disabled: !d.isValid() }, async () => {
             try {
                 await Net.post('/admin/api/instances/create', {
                     key: d.values.key,
@@ -476,7 +469,7 @@ function runCreateInstanceDialog(e) {
                 });
 
                 resolve();
-                Log.success(`Projet '${d.values.key}' créé`);
+                Log.success(T.format(T.project_x_created, d.values.key));
 
                 instances = null;
                 selected_permissions = null;
@@ -492,42 +485,33 @@ function runCreateInstanceDialog(e) {
 }
 
 function runConfigureInstanceDialog(e, instance) {
-    return UI.dialog(e, `Configuration de ${instance.key}`, {}, (d, resolve, reject) => {
+    return UI.dialog(e, T.format(T.configure_x, instance.key), {}, (d, resolve, reject) => {
         d.pushOptions({ untoggle: false });
 
         if (instance.master == null) {
             d.tabs('tabs', () => {
-                d.tab('Basique', () => {
-                    d.text('*name', 'Nom', { value: instance.config.name });
-                    d.boolean('*use_offline', 'Utilisation hors-ligne', { value: instance.config.use_offline });
-                    d.boolean('*allow_guests', 'Autoriser les invités', { value: instance.config.allow_guests });
+                d.tab(T.basic, () => {
+                    d.text('*name', T.name, { value: instance.config.name });
+                    d.boolean('*use_offline', T.use_offline, { value: instance.config.use_offline });
+                    d.boolean('*allow_guests', T.allow_guests, { value: instance.config.allow_guests });
                 });
 
-                d.tab('Avancé', () => {
-                    d.boolean('*data_remote', 'Données en ligne', { value: instance.config.data_remote });
+                d.tab(T.advanced, () => {
+                    d.boolean('*data_remote', T.online_data, { value: instance.config.data_remote });
 
-                    d.text('token_key', 'Session par token', { value: instance.config.token_key });
+                    d.text('token_key', T.session_by_token, { value: instance.config.token_key });
                     if (d.values.token_key != null && !checkCryptoKey(d.values.token_key))
-                        d.error('token_key', 'Format de clé non valide');
-                    d.text('auto_key', 'Session de requête', { value: instance.config.auto_key });
+                        d.error('token_key', );
+                    d.text('auto_key', T.session_by_key, { value: instance.config.auto_key });
 
-                    d.number('fs_version', 'Version FS', {
-                        suffix: 'Actuelle : ' + instance.config.fs_version,
-                        help: 'Attention, ceci remet les développements à zéro'
+                    d.number('fs_version', T.fs_version, {
+                        suffix: T.format(T.current_fs_x, instance.config.fs_version),
+                        help: T.fs_version_warning
                     });
                 });
-
-                /* if (profile.root && instance.legacy) {
-                    d.tab('Migration', () => {
-                        d.output(html`
-                            <p>Attention, la migration en V3 est susceptible d'entrainer des <span style="color: red; font-weight: bold;">bugs et une perte de données</span> !</p>
-                            <button type="button" @click=${UI.wrap(e => runMigrateDialog(e, instance))}>Migrer en V3</button>
-                        `);
-                    });
-                } */
             });
 
-            d.action('Configurer', { disabled: !d.isValid() }, async () => {
+            d.action(T.configure, { disabled: !d.isValid() }, async () => {
                 try {
                     await Net.post('/admin/api/instances/configure', {
                         instance: instance.key,
@@ -541,7 +525,7 @@ function runConfigureInstanceDialog(e, instance) {
                     });
 
                     resolve();
-                    Log.success(`Projet '${instance.key}' modifié`);
+                    Log.success(T.format(T.project_x_edited, instance.key));
 
                     instances = null;
 
@@ -552,9 +536,9 @@ function runConfigureInstanceDialog(e, instance) {
                 }
             });
         } else {
-            d.text('*name', 'Nom', { value: instance.config.name });
+            d.text('*name', T.name, { value: instance.config.name });
 
-            d.action('Configurer', { disabled: !d.isValid() }, async () => {
+            d.action(T.configure, { disabled: !d.isValid() }, async () => {
                 try {
                     await Net.post('/admin/api/instances/configure', {
                         instance: instance.key,
@@ -562,7 +546,7 @@ function runConfigureInstanceDialog(e, instance) {
                     });
 
                     resolve();
-                    Log.success(`Projet '${instance.key}' modifié`);
+                    Log.success(T.format(T.project_x_edited, instance.key));
 
                     instances = null;
 
@@ -586,17 +570,17 @@ function checkCryptoKey(str) {
 }
 
 async function runMigrateDialog(e, instance) {
-    return UI.dialog(e, `Migration de ${instance.key}`, {}, (d, resolve, reject) => {
-        d.output(`Voulez-vous vraiment migrer le projet '${instance.key}' ?`);
+    return UI.dialog(e, T.format(T.migrate_x, instance.key), {}, (d, resolve, reject) => {
+        d.output(T.format(T.confirm_migration_of_x, instance.key));
 
-        d.action('Migrer', {}, async () => {
+        d.action(T.migrate, {}, async () => {
             try {
                 await Net.post('/admin/api/instances/migrate', {
                     instance: instance.key
                 }, { timeout: 180000 });
 
                 resolve();
-                Log.success(`Projet '${instance.key}' migré`);
+                Log.success(T.format(T.project_x_migrated, instance.key));
 
                 instances = null;
 
@@ -610,37 +594,28 @@ async function runMigrateDialog(e, instance) {
 }
 
 function runDeleteInstanceDialog(e, instance) {
-    return UI.dialog(e, `Suppression de ${instance.key}`, {}, (d, resolve, reject) => {
-        d.output(`Voulez-vous vraiment supprimer le projet '${instance.key}' ?`);
+    return UI.confirm(e, T.format(T.confirm_project_deletion, filename),
+                         T.delete, async () => {
+        await Net.post('/admin/api/instances/delete', {
+            instance: instance.key
+        }, { timeout: 180000 });
 
-        d.action('Supprimer', {}, async () => {
-            try {
-                await Net.post('/admin/api/instances/delete', {
-                    instance: instance.key
-                }, { timeout: 180000 });
+        Log.success(T.format(T.archive_x_deleted, filename));
 
-                resolve();
-                Log.success(`Projet '${instance.key}' supprimé`);
+        instances = null;
+        archives = null;
 
-                instances = null;
-                archives = null;
-
-                go();
-            } catch (err) {
-                Log.error(err);
-                d.refresh();
-            }
-        });
+        go();
     });
 }
 
 function runSplitInstanceDialog(e, master) {
-    return UI.dialog(e, `Division de ${master}`, {}, (d, resolve, reject) => {
-        d.calc('instance', 'Projet', master);
-        d.text('*key', 'Clé du sous-projet');
-        d.text('name', 'Nom', { value: d.values.key });
+    return UI.dialog(e, T.format(T.split_x, master), {}, (d, resolve, reject) => {
+        d.calc('instance', T.project, master);
+        d.text('*key', T.slave_key);
+        d.text('name', T.name, { value: d.values.key });
 
-        d.action('Créer', { disabled: !d.isValid() }, async () => {
+        d.action(T.create, { disabled: !d.isValid() }, async () => {
             let full_key = master + '/' + d.values.key;
 
             try {
@@ -650,7 +625,7 @@ function runSplitInstanceDialog(e, master) {
                 });
 
                 resolve();
-                Log.success(`Sous-projet '${full_key}' créé`);
+                Log.success(T.format(T.slave_x_created, full_key));
 
                 instances = null;
                 selected_permissions = null;
@@ -666,36 +641,36 @@ function runSplitInstanceDialog(e, master) {
 }
 
 function runCreateUserDialog(e) {
-    return UI.dialog(e, 'Création d\'un utilisateur', {}, (d, resolve, reject) => {
-        let username = d.text('*username', 'Nom d\'utilisateur');
+    return UI.dialog(e, T.create_user, {}, (d, resolve, reject) => {
+        let username = d.text('*username', T.username);
 
-        d.password('*password', 'Mot de passe');
-        d.password('*password2', null, { placeholder: 'Confirmation' });
-        d.boolean('*change_password', 'Exiger un changement de mot de passe', {
+        d.password('*password', T.password);
+        d.password('*password2', null, { placeholder: T.confirmation });
+        d.boolean('*change_password', T.require_password_change, {
             value: true, untoggle: false
         });
         if (d.values.password != null && d.values.password2 != null) {
             if (d.values.password !== d.values.password2) {
-                d.error('password2', 'Les mots de passe sont différents');
+                d.error('password2', T.password_mismatch);
             } else if (d.values.password.length < 8) {
-                d.error('password2', 'Mot de passe trop court');
+                d.error('password2', T.password_too_short);
             }
         }
-        d.boolean('*confirm', 'Authentification à 2 facteurs', {
+        d.boolean('*confirm', T.use_totp, {
             value: false, untoggle: false
         });
 
-        d.text('email', 'Courriel');
+        d.text('email', T.email);
         if (d.values.email != null && !d.values.email.includes('@'))
-            d.error('email', 'Format non valide');
-        d.text('phone', 'Téléphone');
+            d.error('email', T.invalid_format);
+        d.text('phone', T.phone);
         if (d.values.phone != null && !d.values.phone.startsWith('+'))
-            d.error('phone', 'Format non valide (préfixe obligatoire)');
+            d.error('phone', T.invalid_format_use_prefix);
 
         if (profile.root)
-            d.boolean('*root', 'Super-administrateur', { value: false, untoggle: false });
+            d.boolean('*root', T.root, { value: false, untoggle: false });
 
-        d.action('Créer', { disabled: !d.isValid() }, async () => {
+        d.action(T.create, { disabled: !d.isValid() }, async () => {
             try {
                 await Net.post('/admin/api/users/create', {
                     username: d.values.username,
@@ -708,7 +683,7 @@ function runCreateUserDialog(e) {
                 });
 
                 resolve();
-                Log.success(`Utilisateur '${d.values.username}' créé`);
+                Log.success(T.format(T.user_x_created, d.values.username));
 
                 users = null;
                 selected_permissions = null;
@@ -723,8 +698,8 @@ function runCreateUserDialog(e) {
 }
 
 function runAssignUserDialog(e, instance, user, prev_permissions) {
-    return UI.dialog(e, `Droits de ${user.username} sur ${instance.key}`, {}, (d, resolve, reject) => {
-        d.section('Projet', () => {
+    return UI.dialog(e, T.format(T.permissions_of_x_on_x, user.username, instance.key), {}, (d, resolve, reject) => {
+        d.section(T.project, () => {
             let props = listPermissions('build_', instance.legacy);
             let value = (instance.master == null) ? prev_permissions.filter(perm => perm.startsWith('build_')) : null;
 
@@ -733,7 +708,7 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
                 disabled: instance.master != null
             });
         }, { color: '#b518bf' });
-        d.sameLine(true); d.section('Données', () => {
+        d.sameLine(true); d.section(T.data, () => {
             let props = listPermissions('data_', instance.legacy);
             let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('data_')) : null;
 
@@ -742,7 +717,7 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
                 disabled: instance.slaves > 0
             });
         }, { color: '#258264' });
-        d.sameLine(true); d.section('Autres', () => {
+        d.sameLine(true); d.section(T.other, () => {
             let props = listPermissions('misc_', instance.legacy);
             let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('misc_')) : null;
 
@@ -768,7 +743,11 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
                 });
 
                 resolve();
-                Log.success(`Droits de '${user.username}' sur le projet '${instance.key}' ${permissions.length ? 'modifiés' : 'supprimés'}`);
+                if (permissions.length) {
+                    Log.success(T.format(T.permissions_of_x_on_x_changed, user.username, instance.key));
+                } else {
+                    Log.success(T.format(T.permissions_of_x_on_x_deleted, user.username, instance.key));
+                }
 
                 selected_permissions = null;
 
@@ -800,46 +779,46 @@ function listPermissions(prefix, legacy) {
 }
 
 function runEditUserDialog(e, user) {
-    return UI.dialog(e, `Modification de ${user.username}`, {}, (d, resolve, reject) => {
+    return UI.dialog(e, T.format(T.edit_x, user.username), {}, (d, resolve, reject) => {
         d.pushOptions({ untoggle: false });
 
         d.tabs('tabs', () => {
             d.tab('Identité', () => {
-                d.text('username', 'Nom d\'utilisateur', { value: user.username });
+                d.text('username', T.username, { value: user.username });
 
-                d.text('email', 'Courriel', { value: user.email });
+                d.text('email', T.email, { value: user.email });
                 if (d.values.email != null && !d.values.email.includes('@'))
-                    d.error('email', 'Format non valide');
-                d.text('phone', 'Téléphone', { value: user.phone });
+                    d.error('email', T.invalid_format);
+                d.text('phone', T.phone, { value: user.phone });
                 if (d.values.phone != null && !d.values.phone.startsWith('+'))
-                    d.error('phone', 'Format non valide (préfixe obligatoire)');
+                    d.error('phone', T.invalid_format_use_prefix);
 
                 if (profile.root)
-                    d.boolean('*root', 'Super-administrateur', { value: user.root });
+                    d.boolean('*root', T.root, { value: user.root });
             });
 
             d.tab('Sécurité', () => {
-                d.password('password', 'Mot de passe');
+                d.password('password', T.password);
                 d.password('password2', null, {
-                    placeholder: 'Confirmation',
-                    help: 'Laissez vide pour ne pas modifier',
+                    placeholder: T.confirmation,
+                    help: T.leave_empty_to_ignore,
                     mandatory: d.values.password != null
                 });
-                d.boolean('change_password', 'Exiger un changement de mot de passe', {
+                d.boolean('change_password', T.require_password_change, {
                     value: d.values.password != null,
                     untoggle: false
                 });
                 if (d.values.password != null && d.values.password2 != null) {
                     if (d.values.password !== d.values.password2) {
-                        d.error('password2', 'Les mots de passe sont différents');
+                        d.error('password2', T.password_mismatch);
                     } else if (d.values.password.length < 8) {
-                        d.error('password2', 'Mot de passe trop court');
+                        d.error('password2', T.password_too_short);
                     }
                 }
-                d.boolean('confirm', 'Authentification à 2 facteurs', {
+                d.boolean('confirm', T.use_totp, {
                     value: user.confirm, untoggle: false
                 });
-                d.boolean('reset_secret', 'Réinitialiser le secret TOTP', {
+                d.boolean('reset_secret', T.reset_totp, {
                     value: !user.confirm,
                     disabled: !d.values.confirm,
                     untoggle: false
@@ -862,7 +841,7 @@ function runEditUserDialog(e, user) {
                 });
 
                 resolve();
-                Log.success(`Utilisateur '${d.values.username}' modifié`);
+                Log.success(T.format(T.user_x_edited, d.values.username));
 
                 users = null;
 
@@ -876,19 +855,16 @@ function runEditUserDialog(e, user) {
 }
 
 function runDeleteUserDialog(e, user) {
-    return UI.dialog(e, `Suppression de ${user.username}`, {}, (d, resolve, reject) => {
-        d.output(`Voulez-vous vraiment supprimer l'utilisateur '${user.username}' ?`);
+    return UI.confirm(e, T.format(T.confirm_user_deletion, user.username),
+                         T.delete, async () => {
+        await Net.post('/admin/api/users/delete', { userid: user.userid });
 
-        d.action('Supprimer', {}, async () => {
-            await Net.post('/admin/api/users/delete', { userid: user.userid });
+        resolve();
+        Log.success(T.format(T.user_x_deleted, user.username));
 
-            resolve();
-            Log.success(`Utilisateur '${user.username}' supprimé`);
+        users = null;
 
-            users = null;
-
-            go();
-        });
+        go();
     });
 }
 

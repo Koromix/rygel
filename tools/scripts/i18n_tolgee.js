@@ -18,12 +18,24 @@
 const fs = require('fs');
 const path = require('path');
 
-const PROJECTS = {
-    'core/base': 'src/core/base',
-    'goupile': 'src/goupile',
-    'rekkord': 'src/rekkord'
-};
-const LANGUAGES = ['fr'];
+const SOURCES = [
+    {
+        namespace: 'core/base',
+        from: 'src/core/base',
+        path: 'src/core/base/i18n'
+    },
+    {
+        namespace: 'goupile',
+        from: 'src/goupile',
+        path: 'src/goupile/i18n'
+    },
+    {
+        namespace: 'rekkord',
+        from: 'src/rekkord',
+        path: 'src/rekkord/i18n'
+    }
+];
+const LANGUAGES = ['en', 'fr'];
 
 const TOLGEE_URL = (process.env.TOLGEE_URL || 'https://app.tolgee.io').replace(/\/+$/, '');
 const TOLGEE_API_KEY = process.env.TOLGEE_API_KEY || '';
@@ -58,40 +70,61 @@ async function run() {
     }
 
     console.log('Loading languages...');
-    let projects = loadProjects();
+    let sets = loadSources();
 
     console.log('Fetching translations...');
     let translations = await fetchTranslations();
 
-    console.log('Pushing new message strings...');
-    for (let project of projects) {
-        for (let key of project.keys.values()) {
-            if (translations.find(t => t.keyNamespace == project.name && t.keyName == key))
+    console.log('Pushing new key strings...');
+    for (let set of sets) {
+        for (let key in set.keys) {
+            if (translations.find(t => t.keyNamespace == set.namespace && t.keyName == key))
                 continue;
 
-            let obj = { en: key };
+            let json = {
+                namespace: set.namespace,
+                key: key,
+                translations: set.keys[key]
+            };
 
-            for (let lang of LANGUAGES)
-                obj[lang] = project.translations[lang][key];
-
-            let json = await fetchOrFail(TOLGEE_URL + '/v2/projects/translations', {
+            await fetchOrFail(TOLGEE_URL + '/v2/projects/translations', {
                 method: 'POST',
                 headers: {
                     'X-API-Key': TOLGEE_API_KEY,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    namespace: project.name,
-                    key: key,
-                    translations: obj
-                })
+                body: JSON.stringify(json)
+            }).then(response => response.json());
+        }
+    }
+
+    console.log('Pushing new message strings...');
+    for (let set of sets) {
+        for (let msg in set.messages) {
+            if (translations.find(t => t.keyNamespace == set.namespace && t.keyName == msg))
+                continue;
+
+            let json = {
+                namespace: set.namespace,
+                key: msg,
+                translations: set.messages[msg]
+            };
+
+            await fetchOrFail(TOLGEE_URL + '/v2/projects/translations', {
+                method: 'POST',
+                headers: {
+                    'X-API-Key': TOLGEE_API_KEY,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(json)
             }).then(response => response.json());
         }
     }
 
     console.log('Delete unneeded strings...');
     {
-        let unused = translations.filter(t => !projects.some(project => project.keys.has(t.keyName)));
+        let unused = translations.filter(t => !sets.some(set => set.keys.hasOwnProperty(t.keyName) ||
+                                                                set.messages.hasOwnProperty(t.keyName)));
         let ids = unused.map(t => t.keyId);
 
         if (ids.length) {
@@ -112,54 +145,74 @@ async function run() {
     translations = await fetchTranslations();
 
     console.log('Apply translations locally...');
-    for (let project of projects) {
-        for (let lang in project.translations) {
-            let target = project.translations[lang];
+    for (let set of sets) {
+        for (let lang of set.languages) {
+            let obj = {
+                keys: {},
+                messages: {}
+            };
+
+            for (let key in set.keys)
+                obj.keys[key] = set.keys[key][lang] ?? null;
+            for (let msg in set.messages)
+                obj.messages[msg] = set.messages[msg][lang] ?? null;
 
             for (let item of translations) {
-                if (!target.hasOwnProperty(item.keyName))
-                    continue;
-
-                target[item.keyName] ??= item.translations[lang].text;
+                if (obj.keys.hasOwnProperty(item.keyName))
+                    obj.keys[item.keyName] = item.translations[lang].text;
+                if (obj.messages.hasOwnProperty(item.keyName))
+                    obj.messages[item.keyName] = item.translations[lang].text;
             }
 
-            let filename = path.join(project.root, 'i18n', lang + '.json');
-            fs.writeFileSync(filename, JSON.stringify(target, null, 4));
+            if (lang == 'en')
+                obj.messages = {};
+
+            let filename = path.join(set.path, lang + '.json');
+            fs.writeFileSync(filename, JSON.stringify(obj, null, 4));
         }
     }
 }
 
-function loadProjects() {
-    let projects = [];
+function loadSources() {
+    let sets = [];
 
-    for (let name in PROJECTS) {
-        let root = PROJECTS[name];
-
-        let project = {
-            name: name,
-            root: root,
-            keys: [],
-            translations: {}
+    for (let src of SOURCES) {
+        let set = {
+            namespace: src.namespace,
+            path: src.path,
+            languages: [],
+            keys: {},
+            messages: {}
         };
 
         for (let lang of LANGUAGES) {
-            let filename = path.join(root, 'i18n', lang + '.json');
+            let filename = path.join(src.path, lang + '.json');
 
             if (fs.existsSync(filename)) {
-                let translations = JSON.parse(fs.readFileSync(filename));
+                let json = JSON.parse(fs.readFileSync(filename));
 
-                project.translations[lang] = translations;
-                project.keys.push(...Object.keys(translations));
-            } else {
-                project.translations[lang] = {};
+                json.keys ??= {};
+                json.messages ??= {};
+
+                set.languages.push(lang);
+
+                for (let key in json.keys) {
+                    if (set.keys[key] == null)
+                        set.keys[key] = {};
+                    set.keys[key][lang] = json.keys[key];
+                }
+                for (let msg in json.messages) {
+                    if (set.messages[msg] == null)
+                        set.messages[msg] = { en: msg };
+                    set.messages[msg][lang] = json.messages[msg];
+                }
             }
         }
 
-        project.keys = new Set(project.keys);
-        projects.push(project);
+        sets.push(set);
     }
 
-    return projects;
+    return sets;
 }
 
 async function fetchTranslations() {

@@ -29,13 +29,13 @@ function ApplicationInfo(profile) {
     };
 
     this.tags = [
-        { key: 'incomplete', label: 'Incomplet', color: '#ef6e30', filter: true },
-        { key: 'control', label: 'Contrôles', color: '#d9ab46', filter: true },
-        { key: 'wait', label: 'En attente', color: '#3b96c8', filter: true },
-        { key: 'check', label: 'À vérifier', color: '#44997c', filter: true },
-        { key: 'error', label: 'Erreur', color: '#db0a0a', filter: true },
-        { key: 'draft', label: 'Brouillon', color: '#d921e8', filter: true },
-        { key: 'na', label: 'NA/ND/NSP', color: '#aaaaaa', filter: false }
+        { key: 'incomplete', label: T.label_incomplete, color: '#ef6e30', filter: true },
+        { key: 'control', label: T.label_control, color: '#d9ab46', filter: true },
+        { key: 'wait', label: T.label_wait, color: '#3b96c8', filter: true },
+        { key: 'check', label: T.label_check, color: '#44997c', filter: true },
+        { key: 'error', label: T.label_error, color: '#db0a0a', filter: true },
+        { key: 'draft', label: T.label_draft, color: '#d921e8', filter: true },
+        { key: 'na', label: T.label_na, color: '#aaaaaa', filter: false }
     ];
 }
 
@@ -83,7 +83,7 @@ function ApplicationBuilder(app) {
 
     this.panel = function(panel, enable) {
         if (panel.startsWith('_') || !app.hasOwnProperty(panel))
-            throw new Error(`Invalid panel key '${panel}'`);
+            throw new Error(T.message(`Unknown panel key '{1}'`, panel));
 
         app.panels[panel] = enable;
     };
@@ -95,7 +95,7 @@ function ApplicationBuilder(app) {
     };
     this.popOptions = function() {
         if (options_stack.length < 2)
-            throw new Error('Too many popOptions() operations');
+            throw new Error(T.message(`Too many calls to function popOptions()`));
 
         options_stack.pop();
     };
@@ -103,7 +103,7 @@ function ApplicationBuilder(app) {
     this.page = function(key, title, options = null) {
         checkKeySyntax(key);
         if (app.pages.some(page => page.key == key))
-            throw new Error(`Page key '${key}' is already used`);
+            throw new Error(T.message(`Page '{1}' already exists`, key));
 
         title = title || key;
         options = expandOptions(options);
@@ -140,7 +140,7 @@ function ApplicationBuilder(app) {
     this.form = function(key, title, func = null, options = null) {
         checkKeySyntax(key);
         if (app.stores.some(store => store.key == key))
-            throw new Error(`Store key '${key}' is already used`);
+            throw new Error(T.message(`Form '{1}' already exists`, key));
 
         if (options == null) {
             if (typeof func == 'object') {
@@ -192,7 +192,7 @@ function ApplicationBuilder(app) {
 
             if (typeof func == 'function') {
                 if (app.pages.some(page => page.key == key))
-                    throw new Error(`Page key '${key}' is already used`);
+                    throw new Error(T.message(`Page '{1}' already exists`, key));
 
                 app.pages.push(current_page);
 
@@ -247,11 +247,11 @@ function ApplicationBuilder(app) {
 
     function checkKeySyntax(key) {
         if (!key)
-            throw new Error('Empty keys are not allowed');
+            throw new Error(T.message(`Empty keys are not allowed`));
         if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
-            throw new Error('Allowed key characters: a-z, _ and 0-9 (not as first character)');
+            throw new Error(T.message(`Characters allowed in keys: a-z, ‘_’ and 0-9 (except in the first position)`));
         if (key.startsWith('__'))
-            throw new Error('Keys must not start with \'__\'');
+            throw new Error(T.message(`Keys must not start with '__'`));
     }
 
     function expandOptions(options) {

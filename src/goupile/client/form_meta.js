@@ -30,9 +30,9 @@ function MetaInterface(app, page, thread, meta) {
 
     this.constrain = function(key, types) {
         if (!key)
-            throw new Error('Constraint keys cannot be empty');
+            throw new Error(T.message(`Constraint keys must not be empty`));
         if (key.startsWith('__'))
-            throw new Error('Keys must not start with \'__\'');
+            throw new Error(T.message(`Keys must not start with '__'`));
 
         if (!Array.isArray(types))
             types = [types];
@@ -47,20 +47,20 @@ function MetaInterface(app, page, thread, meta) {
                 case 'exists': { constraint.exists = true; } break;
                 case 'unique': { constraint.unique = true; } break;
 
-                default: throw new Error(`Invalid constraint type '${type}'`);
+                default: throw new Error(T.message(`Unknown constraint type '{1}'`, type));
             }
         }
         if (!Object.values(constraint).some(value => value))
-            throw new Error('Ignoring empty constraint');
+            throw new Error(T.message(`Empty constraint`));
 
         meta.constraints[key] = constraint;
     };
 
     this.count = function(key, secret = false) {
         if (!key)
-            throw new Error('Counter keys cannot be empty');
+            throw new Error(T.message(`Counter keys must not be empty`));
         if (key.startsWith('__'))
-            throw new Error('Keys must not start with \'__\'');
+            throw new Error(T.message(`Keys must not start with '__'`));
 
         secret = !!secret;
 
@@ -79,9 +79,11 @@ function MetaInterface(app, page, thread, meta) {
 
     this.randomize = function(key, max = 2, secret = false) {
         if (!key)
-            throw new Error('')
+            throw new Error(T.message(`Randomization keys must not be empty`));
+        if (key.startsWith('__'))
+            throw new Error(T.message(`Keys must not start with '__'`));
         if (max < 2 || max > 32)
-            throw new Error('Number of randomization groups must be between 2 and 32');
+            throw new Error(T.message(`The number of randomization groups must be between 2 and 32`));
 
         secret = !!secret;
 
@@ -102,7 +104,7 @@ function MetaInterface(app, page, thread, meta) {
         page = app.pages.find(page => page.key == key);
 
         if (page == null)
-            throw new Error(`Unkown page '${key}'`);
+            throw new Error(T.message(`Unknown page '{1}'`, key));
 
         let div = document.createElement('div');
         render(content, div);

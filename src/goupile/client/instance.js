@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html, svg } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { render, html, svg, unsafeHTML } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LruMap, Mutex,
          LocalDate, LocalTime, FileReference } from '../../web/core/base.js';
 import * as Data from '../../web/core/data.js';
@@ -93,7 +93,7 @@ async function init() {
     initUI();
 
     if (ENV.demo)
-        Log.warning('Mode de démonstration... Attention, les formulaires et les données peuvent disparaître à tout moment !', 6000);
+        Log.warning(T.demo_mode_warning, 6000);
 }
 
 async function initApp() {
@@ -107,7 +107,7 @@ async function initApp() {
         let builder = new ApplicationBuilder(new_app);
 
         // For simplicity, a lot of code assumes at least one page exists
-        builder.form('default', 'Défaut', 'Page par défaut');
+        builder.form('default', 'Défaut', T.default_page);
 
         app = Util.deepFreeze(new_app);
 
@@ -142,7 +142,7 @@ async function runMainScript() {
             app: builder
         });
         if (!new_app.pages.length)
-            throw new Error('Main script does not define any page');
+            throw new Error(T.message(`Main script does not define any page`));
 
         triggerError('main.js', null);
         main_works = true;
@@ -203,11 +203,11 @@ function renderMenu() {
             ${goupile.hasPermission('build_code') ? html`
                 <div class="drop">
                     <button class=${'icon design' + (profile.develop ? ' active' : '')}
-                            @click=${UI.deployMenu}>Conception</button>
+                            @click=${UI.deployMenu}>${T.conception}</button>
                     <div>
                         <button class=${profile.develop ? 'active' : ''}
                                 @click=${UI.wrap(e => goupile.changeDevelopMode(!profile.develop))}>
-                            <div style="flex: 1;">Mode conception</div>
+                            <div style="flex: 1;">${T.conception_mode}</div>
                             ${profile.develop ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
                         </button>
                     </div>
@@ -215,7 +215,7 @@ function renderMenu() {
             ` : ''}
             ${goupile.canUnlock() ? html`
                 <button class="icon lock"
-                        @click=${UI.wrap(goupile.runUnlockDialog)}>Déverrouiller</button>
+                        @click=${UI.wrap(goupile.runUnlockDialog)}>${T.unlock}</button>
             ` : ''}
 
             ${app.panels.editor || app.panels.data ? html`
@@ -239,9 +239,9 @@ function renderMenu() {
                                 @click=${UI.deployMenu}></button>
                         <div>
                             <button class=${'icon data' + (UI.isPanelActive('data') ? ' active' : '')}
-                                    @click=${UI.wrap(e => togglePanels(UI.hasTwoPanels() && !UI.isPanelActive('data'), 'data'))}>Données</button>
+                                    @click=${UI.wrap(e => togglePanels(UI.hasTwoPanels() && !UI.isPanelActive('data'), 'data'))}>${T.data}</button>
                             <button class=${'icon view' + (UI.isPanelActive('view') ? ' active' : '')}
-                                    @click=${UI.wrap(e => togglePanels(UI.hasTwoPanels() && !UI.isPanelActive('view'), 'view'))}>Formulaire</button>
+                                    @click=${UI.wrap(e => togglePanels(UI.hasTwoPanels() && !UI.isPanelActive('view'), 'view'))}>${T.form}</button>
                         </div>
                     </div>
                 ` : ''}
@@ -259,7 +259,7 @@ function renderMenu() {
             ${show_menu && menu_is_wide ? route.page.chain.map((page, idx) => renderDropItem(page, !idx)) : ''}
             ${app.panels.data && (!UI.isPanelActive('view') || form_thread.saved) ? html`
                 <div style="width: 15px;"></div>
-                <button class="icon new" @click=${UI.wrap(e => go(e, route.page.chain[0].url))}>Ajouter</button>
+                <button class="icon new" @click=${UI.wrap(e => go(e, route.page.chain[0].url))}>${T.add}</button>
             ` : ''}
             <div style="flex: 1; min-width: 4px;"></div>
 
@@ -289,19 +289,19 @@ function renderMenu() {
                         <hr/>
                     ` : ''}
                     ${profile.type === 'login' ? html`
-                        <button @click=${UI.wrap(goupile.runChangePasswordDialog)}>Modifier mon mot de passe</button>
-                        <button @click=${UI.wrap(goupile.runResetTOTP)}>Configurer la double authentification</button>
+                        <button @click=${UI.wrap(goupile.runChangePasswordDialog)}>${T.change_my_password}</button>
+                        <button @click=${UI.wrap(goupile.runResetTOTP)}>${T.configure_my_totp}</button>
                         <hr/>
                         ${goupile.hasPermission('data_export') && goupile.hasPermission('data_fetch') ? html`
-                            <button @click=${UI.wrap(generateExportKey)}>Générer une clé d'export</button>
+                            <button @click=${UI.wrap(generateExportKey)}>${T.generate_export_key}</button>
                             <hr/>
                         ` : ''}
                     ` : ''}
                     ${profile.root || goupile.hasPermission('build_admin') ? html`
-                        <button @click=${e => window.open('/admin/')}>Administration</button>
+                        <button @click=${e => window.open('/admin/')}>${T.administration}</button>
                         <hr/>
                     ` : ''}
-                    <button @click=${UI.wrap(goupile.logout)}>${profile.userid ? 'Se déconnecter' : 'Se connecter'}</button>
+                    <button @click=${UI.wrap(goupile.logout)}>${profile.userid ? T.logout : T.login}</button>
                 </div>
             </div>
         </nav>
@@ -415,8 +415,8 @@ function isPageEnabled(page, thread) {
 async function generateExportKey(e) {
     let export_key = await Net.post(`${ENV.urls.instance}api/change/export_key`);
 
-    await UI.dialog(e, 'Clé d\'export', {}, (d, resolve, reject) => {
-        d.text('export_key', 'Clé d\'export', {
+    await UI.dialog(e, T.export_key, {}, (d, resolve, reject) => {
+        d.text('export_key', T.export_key, {
             value: export_key,
             readonly: true
         });
@@ -465,14 +465,14 @@ function renderEditor() {
                     </div>
                 </div>
                 <div style="flex: 1;"></div>
-                <button @click=${UI.wrap(e => runHistoryDialog(e, editor_filename))}>Historique</button>
+                <button @click=${UI.wrap(e => runHistoryDialog(e, editor_filename))}>${T.historical}</button>
                 <div style="flex: 1;"></div>
                 ${editor_filename === 'main.js' ? html`
                     <button ?disabled=${!main_works || !fileHasChanged('main.js')}
-                            @click=${e => { window.location.href = window.location.href; }}>Appliquer</button>
+                            @click=${e => { window.location.href = window.location.href; }}>${T.apply}</button>
                 ` : ''}
                 <button ?disabled=${!main_works}
-                        @click=${UI.wrap(runPublishDialog)}>Publier</button>
+                        @click=${UI.wrap(runPublishDialog)}>${T.publish}</button>
             </div>
 
             ${editor_el}
@@ -485,14 +485,14 @@ function updateEditorTabs() {
 
     editor_tabs.push({
         key: 'project',
-        title: 'Projet',
+        title: T.project,
         filename: 'main.js',
         active: false
     });
     if (route.page.filename != null) {
         editor_tabs.push({
             key: 'form',
-            title: 'Formulaire',
+            title: T.form,
             filename: route.page.filename,
             active: false
         });
@@ -521,7 +521,7 @@ async function runHistoryDialog(e, filename) {
     // Don't trash the undo/redo buffer
     buffer.session = null;
 
-    let p = UI.dialog(e, 'Historique du fichier', {}, (d, resolve, reject) => {
+    let p = UI.dialog(e, T.file_history, {}, (d, resolve, reject) => {
         d.output(html`
             <table class="ui_table">
                 <colgroup>
@@ -534,7 +534,7 @@ async function runHistoryDialog(e, filename) {
                     <tr class=${buffer.version == 0 ? 'active' : ''}>
                         <td class="ui_sub">(dev)</td>
                         <td>En développement</td>
-                        <td><a @click=${UI.wrap(e => loadFile(filename, 0))}>Charger</a></td>
+                        <td><a @click=${UI.wrap(e => loadFile(filename, 0))}>${T.load}</a></td>
                     </tr>
 
                     ${Util.mapRange(0, versions.length - 1, idx => {
@@ -544,7 +544,7 @@ async function runHistoryDialog(e, filename) {
                             <tr class=${buffer.version == version.version ? 'active' : ''}>
                                 <td class="ui_sub">${version.version}</td>
                                 <td>${(new Date(version.mtime)).toLocaleString()}</td>
-                                <td><a @click=${UI.wrap(e => loadFile(filename, version.version))}>Charger</a></td>
+                                <td><a @click=${UI.wrap(e => loadFile(filename, version.version))}>${T.load}</a></td>
                             </tr>
                         `;
                     })}
@@ -552,7 +552,7 @@ async function runHistoryDialog(e, filename) {
             </table>
         `);
 
-        d.action('Restaurer', { disabled: !d.isValid() || buffer.version == 0 }, async () => {
+        d.action(T.restore, { disabled: !d.isValid() || buffer.version == 0 }, async () => {
             await restoreFile(filename, buffer.sha256);
             resolve();
         });
@@ -619,7 +619,7 @@ function renderData() {
                     <div class="fm_check">
                         <input id="ins_tags" type="checkbox" .checked=${data_tags != null}
                                @change=${UI.wrap(e => toggleTagFilter(null))} />
-                        <label for="ins_tags">Filtrer :</label>
+                        <label for="ins_tags">${T.filter}${T._colon}</label>
                     </div>
                     ${app.tags.map(tag => {
                         if (!tag.filter)
@@ -650,11 +650,11 @@ function renderData() {
 
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Création</th>
+                        <th>${T.id}</th>
+                        <th>${T.creation}</th>
                         ${data_columns.map(col => {
                             let stats = `${col.count} / ${data_rows.length}`;
-                            let title = `${col.page.title}\nDisponible : ${stats} ${data_rows.length > 1 ? 'lignes' : 'ligne'}`;
+                            let title = `${col.page.title}\n${T.available}${T._colon}${stats} ${data_rows.length > 1 ? T.rows.toLowerCase() : T.row.toLowerCase()}`;
 
                             return html`
                                 <th title=${title}>
@@ -683,7 +683,7 @@ function renderData() {
 
                                     if (status.complete) {
                                         return html`<td class=${highlight ? 'complete active' : 'complete'}
-                                                        title=${col.page.title}><a href=${url}>${summary ?? '✓\uFE0E Complet'}</a></td>`;
+                                                        title=${col.page.title}><a href=${url}>${summary ?? '✓\uFE0E ' + T.complete}</a></td>`;
                                     } else if (status.filled) {
                                         let progress = Math.floor(100 * status.filled / status.total);
 
@@ -691,7 +691,7 @@ function renderData() {
                                                         title=${col.page.title}><a href=${url}>${summary ?? progress + '%'}</a></td>`;
                                     } else {
                                         return html`<td class=${highlight ? 'missing active' : 'missing'}
-                                                        title=${col.page.title}><a href=${url}>Afficher</a></td>`;
+                                                        title=${col.page.title}><a href=${url}>${T.show}</a></td>`;
                                     }
                                 })}
                                 ${row.locked ? html`<th>🔒</th>` : ''}
@@ -704,24 +704,24 @@ function renderData() {
                         <tr>
                             <td class="active missing">NA</td>
                             <td class="active missing">NA</td>
-                            <td class="missing" colspan=${data_columns.length}><a @click=${e => togglePanels(null, 'view')}>Nouvel enregistrement</a></td>
+                            <td class="missing" colspan=${data_columns.length}><a @click=${e => togglePanels(null, 'view')}>${T.new_record}</a></td>
                         </tr>
                     ` : ''}
-                    ${!data_rows.length && !recording_new ? html`<tr><td colspan=${2 + data_columns.length}>Aucune ligne à afficher</td></tr>` : ''}
+                    ${!data_rows.length && !recording_new ? html`<tr><td colspan=${2 + data_columns.length}>${T.no_row}</td></tr>` : ''}
                 </tbody>
             </table>
 
             <div class="ui_actions">
-                ${goupile.hasPermission('data_export') ? html`<button @click=${UI.wrap(runExportCreateDialog)}>Créer un export</button>` : ''}
-                ${goupile.hasPermission('data_fetch') ? html`<button @click=${UI.wrap(runExportListDialog)}>Liste des exports récents</button>` : ''}
+                ${goupile.hasPermission('data_export') ? html`<button @click=${UI.wrap(runExportCreateDialog)}>${T.create_export}</button>` : ''}
+                ${goupile.hasPermission('data_fetch') ? html`<button @click=${UI.wrap(runExportListDialog)}>${T.list_exports}</button>` : ''}
             </div>
         </div>
     `;
 }
 
 function runDeleteRecordDialog(e, row) {
-    return UI.confirm(e, `Voulez-vous vraiment supprimer l'enregistrement '${row.sequence}' ?`,
-                         'Supprimer', async () => {
+    return UI.confirm(e, T.format(T.confirm_record_deletion, row.sequence),
+                         T.delete, async () => {
         await data_mutex.run(async () => {
             await records.delete(row.tid);
 
@@ -746,21 +746,21 @@ async function runExportCreateDialog(e) {
 
     downloads.reverse();
 
-    await UI.dialog(e, 'Créer un nouvel export', {}, (d, resolve, reject) => {
+    await UI.dialog(e, T.create_export, {}, (d, resolve, reject) => {
         if (downloads.length > 0) {
-            d.enumRadio('mode', "Mode d'export", [
-                ['sequence', 'Nouveaux enregistrements'],
-                ['anchor', 'Nouveaux enregistrements et enregistrements modifiés'],
-                ['all', 'Tous les enregistements']
+            d.enumRadio('mode', T.export_mode, [
+                ['sequence', T.export_sequence],
+                ['anchor', T.export_anchor],
+                ['all', T.export_all]
             ], { value: 'sequence', untoggle: false });
 
             if (d.values.mode != 'all') {
                 let props = downloads.map(download => [download.export, (new Date(download.ctime)).toLocaleString()]);
-                d.enumDrop('since', 'Depuis cet export :', props, { value: downloads[0]?.export, untoggle: false });
+                d.enumDrop('since', T.export_since, props, { value: downloads[0]?.export, untoggle: false });
             }
         }
 
-        d.action('Créer l\'export', {}, async () => {
+        d.action(T.export, {}, async () => {
             let sequence = null;
             let anchor = null;
 
@@ -783,7 +783,7 @@ async function runExportCreateDialog(e) {
     });
 
     async function create(sequence, anchor) {
-        let progress = Log.progress('Export en cours');
+        let progress = Log.progress(T.export_in_progress);
 
         try {
             let export_id = await createExport(sequence, anchor);
@@ -791,7 +791,7 @@ async function runExportCreateDialog(e) {
             if (goupile.hasPermission('data_fetch'))
                 await exportRecords(export_id, stores);
 
-            progress.success('Export complété');
+            progress.success(T.export_done);
         } catch (err) {
             progress.close();
             Log.error(err);
@@ -805,7 +805,7 @@ async function runExportListDialog(e) {
 
     downloads.reverse();
 
-    await UI.dialog(e, 'Exports de données', {}, (d, resolve, reject) => {
+    await UI.dialog(e, T.data_exports, {}, (d, resolve, reject) => {
         d.output(html`
             <table class="ui_table">
                 <colgroup>
@@ -829,10 +829,10 @@ async function runExportListDialog(e) {
                             <td>${(new Date(download.ctime)).toLocaleString()}</td>
                             <td>${download.username}</td>
                             <td>${download.threads}</td>
-                            <td><a @click=${UI.wrap(e => exportRecords(download.export, stores))}>Télécharger</a></td>
+                            <td><a @click=${UI.wrap(e => exportRecords(download.export, stores))}>${T.download}</a></td>
                         </tr>
                     `)}
-                    ${!downloads.length ? html`<tr><td colspan="4">Aucun export réalisé</td></tr>` : ''}
+                    ${!downloads.length ? html`<tr><td colspan="4">${T.no_export}</td></tr>` : ''}
                 </tbody>
             </table>
         `);
@@ -923,7 +923,7 @@ async function renderPage() {
         triggerError(route.page.filename, null);
     } catch (err) {
         if (!page_div.children.length)
-            render('Impossible de générer la page à cause d\'une erreur', page_div);
+            render(T.failed_to_build_page, page_div);
         page_div.classList.add('disabled');
 
         if (err != null)
@@ -966,12 +966,8 @@ async function renderPage() {
             </div>
             <div style="flex: 1;"></div>
 
-            ${profile.develop && !isPageEnabled(route.page, form_thread) ? html`
-                <div id="ins_develop">
-                    Cette page n'est théoriquement pas activée<br/>
-                    Le mode de conception vous permet d'y accéder.
-                </div>
-            ` : ''}
+            ${profile.develop && !isPageEnabled(route.page, form_thread) ?
+                html`<div id="ins_develop">${T.page_disabled_warning}</div>` : ''}
 
             ${model.actions.length || app.shortcuts.length ? html`
                 <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
@@ -980,7 +976,7 @@ async function renderPage() {
                     <div style="flex: 1;"></div>
                     ${model.actions.some(action => !action.options.always) ? html`
                         <div class="drop up right">
-                            <button @click=${UI.deployMenu}>Autres actions</button>
+                            <button @click=${UI.deployMenu}>${T.other_actions}</button>
                             <div>
                                 ${model.actions.map(action => action.render())}
                             </div>
@@ -1027,17 +1023,17 @@ function defaultFormPage(ctx) {
 
                 if (!status.enabled) {
                     cls += ' disabled';
-                    text = 'Non disponible';
+                    text = T.not_available;
                 } else if (status.complete) {
                     cls += ' complete';
-                    text = 'Complet';
+                    text = T.complete;
                 } else if (status.filled && child.progress) {
                     let progress = Math.floor(100 * status.filled / status.total);
 
                     text = html`
                         <div class="ins_progress" style=${'--progress: ' + progress}>
                             <div></div>
-                            <span>${status.filled} ${status.filled > 1 ? 'items' : 'item'} sur ${status.total}</span>
+                            <span>${status.filled} ${status.filled > 1 ? T.items.toLowerCase() : T.item.toLowerCase()} / ${status.total}</span>
                         </div>
                     `;
                 } else {
@@ -1063,10 +1059,10 @@ function defaultFormPage(ctx) {
 
                 if (!status.enabled) {
                     cls += ' disabled';
-                    text = 'Non disponible';
+                    text = T.not_available;
                 } else if (status.complete) {
                     cls += ' complete';
-                    text = 'Complet';
+                    text = T.complete;
                 } else if (status.filled && child.progress) {
                     let progress = Math.floor(100 * status.filled / status.total);
 
@@ -1126,7 +1122,7 @@ function addAutomaticActions(builder, model) {
                        (!form_thread.locked || goupile.hasPermission('data_audit'));
 
         if (can_save) {
-            let label = route.page.sequence ? '+Continuer' : '+Enregistrer';
+            let label = '+' + (route.page.sequence ? T.continue : T.save);
 
             builder.action(label, { color: '#2d8261' }, async e => {
                 form_builder.triggerErrors();
@@ -1136,9 +1132,8 @@ function addAutomaticActions(builder, model) {
                     let confirm = route.page.confirm ?? !keep_open;
 
                     if (confirm) {
-                        let text = keep_open ? html`Confirmez-vous l'enregistrement ?`
-                                             : html`Confirmez-vous la <b>finalisation de cet enregistrement</b> ?`;
-                        await UI.confirm(e, text, 'Continuer', () => {});
+                        let text = keep_open ? unsafeHTML(T.confirm_save) : unsafeHTML(T.confirm_final);
+                        await UI.confirm(e, text, T.continue, () => {});
                     }
 
                     await saveRecord(form_thread.tid, form_entry, form_raw, form_meta, false);
@@ -1197,12 +1192,12 @@ function addAutomaticActions(builder, model) {
         }
 
         if (can_lock) {
-            let label = !form_thread.locked ? '+Verrouiller' : 'Déverrouiller';
+            let label = !form_thread.locked ? ('+' + T.lock) : T.unlock;
             let color = !form_thread.locked ? null : '#ff6600';
 
             builder.action(label, { color: color }, async e => {
                 if (form_state.hasChanged())
-                    await UI.confirm(e, html`Cette action <b>annulera les modifications en cours</b>, souhaitez-vous continuer ?`, label, () => {});
+                    await UI.confirm(e, unsafeHTML(T.confirm_forget_changes), label, () => {});
 
                 if (!form_thread.locked) {
                     await records.lock(form_thread.tid);
@@ -1221,9 +1216,9 @@ function addAutomaticActions(builder, model) {
 
         if (!is_new && form_state.hasChanged()) {
             builder.action('-');
-            builder.action('Oublier les modifications', {}, async e => {
-                await UI.confirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
-                                       'Oublier', () => {});
+            builder.action(T.forget_changes, {}, async e => {
+                await UI.confirm(e, unsafeHTML(T.confirm_forget_changes),
+                                    T.forget, () => {});
 
                 await data_mutex.run(async () => {
                     await openRecord(route.tid, route.anchor, route.page);
@@ -1395,7 +1390,8 @@ async function handleFileChange(filename) {
     buffer.sha256 = sha256;
 
     try {
-        let build = await buildScript(buffer.code, ['app', 'cache', 'form', 'meta', 'page', 'thread', 'values']);
+        let build = await buildScript(buffer.code, ['app', 'cache', 'form',
+                                                    'meta', 'page', 'thread', 'values']);
         code_builds.set(buffer.sha256, build);
 
         triggerError(filename, null);
@@ -1682,7 +1678,7 @@ async function go(e, url = null, options = {}) {
             // Find page information
             new_route.page = app.pages.find(page => page.key == key);
             if (new_route.page == null) {
-                Log.error(`La page '${key}' n'existe pas`);
+                Log.error(T.message(`Page '{1}' does not exist`, key));
                 new_route.page = app.homepage ?? app.pages[0];
             }
 
@@ -1701,7 +1697,7 @@ async function go(e, url = null, options = {}) {
                 } else if (!anchor.length) {
                     new_route.anchor = null;
                 } else {
-                    Log.error('L\'indicateur de version n\'est pas un nombre');
+                    Log.error(T.message(`Version indicator is not a number`));
                     new_route.anchor = null;
                 }
             }
@@ -1742,16 +1738,16 @@ async function go(e, url = null, options = {}) {
 
                         await saveRecord(form_thread.tid, form_entry, form_raw, form_meta, true);
                     } else {
-                        await UI.dialog(e, 'Enregistrer (confirmation)', {}, (d, resolve, reject) => {
+                        await UI.dialog(e, T.context_confirm, {}, (d, resolve, reject) => {
                             d.output(html`Si vous continuez, vos <b>modifications seront enregistrées</b>.`);
 
-                            d.enumRadio('save', 'Que souhaitez-vous faire avant de continuer ?', [
-                                [true, "Enregistrer mes modifications"],
-                                [false, "Oublier mes modifications"]
+                            d.enumRadio('save', T.context_action, [
+                                [true, T.context_save],
+                                [false, T.context_forget]
                             ], { value: true, untoggle: false });
 
                             if (d.values.save) {
-                                d.action('Enregistrer', {}, async e => {
+                                d.action(T.save, {}, async e => {
                                     try {
                                         form_builder.triggerErrors();
                                         await saveRecord(form_thread.tid, form_entry, form_raw, form_meta, false);
@@ -1762,7 +1758,7 @@ async function go(e, url = null, options = {}) {
                                     resolve();
                                 });
                             } else {
-                                d.action('Oublier', {}, resolve);
+                                d.action(T.forget, {}, resolve);
                             }
                         });
                     }
@@ -1837,7 +1833,8 @@ async function run(push_history = true) {
 
             if (build == null) {
                 try {
-                    build = await buildScript(buffer.code, ['app', 'cache', 'form', 'meta', 'page', 'thread', 'values']);
+                    build = await buildScript(buffer.code, ['app', 'cache', 'form',
+                                                            'meta', 'page', 'thread', 'values']);
                     code_builds.set(buffer.sha256, build);
                 } catch (err) {
                     triggerError(route.page.filename, err);
@@ -2051,14 +2048,14 @@ function getFillingStatuses(intf) {
     let statuses = [];
 
     if (!goupile.isLocked()) {
-        statuses.push(['wait', 'En attente']);
-        statuses.push(['check', 'À vérifier']);
+        statuses.push(['wait', T.status_wait]);
+        statuses.push(['check', T.status_check]);
     }
     if (intf.missing) {
         statuses.push(
-            ['nsp', goupile.isLocked() ? 'Je ne souhaite pas répondre' : 'Ne souhaite pas répondre'],
-            ['na', goupile.isLocked() ? 'Ce n\'est pas applicable' : 'Non applicable'],
-            ['nd', goupile.isLocked() ? 'Je n\'ai pas cette information' : 'Non disponible']
+            ['nsp', T.status_nsp],
+            ['na', T.status_na],
+            ['nd', T.status_nd]
         );
     }
 
@@ -2128,7 +2125,7 @@ async function buildScript(code, variables) {
 
 function throwParseError(err) {
     let line = err.errors?.[0]?.location?.line;
-    let msg = `Erreur de script\n${line != null ? `Ligne ${line} : ` : ''}${err.errors[0].text}`;
+    let msg = `${T.script_error}\n${line != null ? `${T.row} ${line}${T._colon}` : ''}${err.errors[0].text}`;
 
     throw new Error(msg);
 }
@@ -2139,7 +2136,7 @@ function throwRunError(err, map) {
     let line = location?.line;
     if (map != null && line != null)
         line = bundler.mapLine(map, location.line, location.column);
-    let msg = `Erreur de script\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
+    let msg = `${T.script_error}\n${line != null ? `${T.row} ${line}${T._colon}` : ''}${err.message}`;
 
     throw new Error(msg);
 }
@@ -2282,12 +2279,12 @@ function runAnnotationDialog(e, intf) {
 
         if (statuses.length >= 2)
             d.enumRadio('filling', null, statuses, { value: status.filling, disabled: locked });
-        d.textArea('comment', 'Commentaire libre', { rows: 4, value: status.comment, disabled: locked });
+        d.textArea('comment', T.annotate_comment, { rows: 4, value: status.comment, disabled: locked });
 
         if (goupile.hasPermission('data_audit'))
-            d.binary('locked', 'Validation finale', { value: status.locked });
+            d.binary('locked', T.annotate_lock, { value: status.locked });
 
-        d.action('Confirmer', { disabled: !d.isValid() }, async () => {
+        d.action(T.confirm, { disabled: !d.isValid() }, async () => {
             status.filling = d.values.filling;
             status.comment = d.values.comment;
             status.locked = d.values.locked;

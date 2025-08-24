@@ -161,14 +161,14 @@ function FormBuilder(state, model, options = {}) {
 
     this.pushOptions = function(options = {}) {
         if (options.hasOwnProperty('path'))
-            throw new Error('Option "path" is not supported anymore');
+            throw new Error(T.message(`Option 'path' is not supported anymore`));
 
         options = expandOptions(options);
         options_stack.push(options);
     };
     this.popOptions = function() {
         if (options_stack.length < 2)
-            throw new Error('Too many popOptions() operations');
+            throw new Error(T.message(`Too many calls to function popOptions()`));
 
         options_stack.pop();
     };
@@ -177,7 +177,7 @@ function FormBuilder(state, model, options = {}) {
         key = decodeKey(key);
 
         if (key.variables.has(key.name))
-            throw new Error(`Variable '${key}' already exists`);
+            throw new Error(T.message(`Variable '{1}' already exists`, key.name));
 
         let path = key.ptr[key.name];
 
@@ -191,7 +191,7 @@ function FormBuilder(state, model, options = {}) {
 
     this.popPath = function() {
         if (paths_stack.length < 2)
-            throw new Error('Too many popPath() operations');
+            throw new Error(T.message(`Too many calls to function popPath()`));
 
         paths_stack.pop();
     };
@@ -214,7 +214,7 @@ function FormBuilder(state, model, options = {}) {
             self.restart();
             state.just_triggered = true;
 
-            throw new Error(`Vous n'avez pas répondu correctement à toutes les questions, veuillez vérifier vos réponses ou mettre des annotations`);
+            throw new Error(T.message(`You did not answer all questions correctly. Please check your answers or add notes.`));
         }
     };
 
@@ -349,7 +349,7 @@ function FormBuilder(state, model, options = {}) {
         addWidget(intf);
 
         if (value && !value.match(/^[0-9]*$/))
-            intf.error('Le code doit comporter uniquement des chiffres');
+            intf.error(T.error_code_digits);
 
         return intf;
     };
@@ -391,7 +391,7 @@ function FormBuilder(state, model, options = {}) {
         validateMinMax(intf);
 
         if (key.retain.invalid_numbers.has(key.name))
-            intf.error('Nombre invalide (décimales ?)');
+            intf.error(T.error_invalid_number);
 
         return intf;
     };
@@ -424,16 +424,16 @@ function FormBuilder(state, model, options = {}) {
         options.decimals = options.decimals || 0;
         options.min = options.min || 0;
         if (typeof options.min !== 'number')
-            throw new Error('La valeur minimale (min) doit être un nombre; utilisez l\'option prefix pour du texte');
+            throw new Error(T.message(`The minimum value (min) must be a number; use the prefix option for text`));
         options.max = (options.max != null) ? options.max : 10;
         if (typeof options.max !== 'number')
-            throw new Error('La valeur maximale (max) doit être un nombre; utilisez l\'option suffix pour du texte');
+            throw new Error(T.message(`The maximum value (max) must be a number; use the suffix option for text`));
         options.prefix = (options.prefix != null) ? options.prefix : options.min;
         options.suffix = (options.suffix != null) ? options.suffix : options.max;
 
         let range = options.max - options.min;
         if (range <= 0)
-            throw new Error('Range (options.max - options.min) must be positive');
+            throw new Error(T.message(`The range (options.max - options.min) must be positive`));
 
         let value = readValue(key, options, value => {
             value = parseFloat(value);
@@ -456,7 +456,7 @@ function FormBuilder(state, model, options = {}) {
                 for (let key in options.ticks) {
                     let pos = parseFloat(key);
                     if (Number.isNaN(pos))
-                        throw new Error('La position du tiret doit être une valeur numérique');
+                        throw new Error(T.message(`The tick position must be a numeric value`));
 
                     let value = options.ticks[key];
                     let tick = Array.isArray(value) ? [pos, ...value] : [pos, value];
@@ -471,7 +471,7 @@ function FormBuilder(state, model, options = {}) {
                         ticks = Array.from(options.ticks);
                     }
                 } catch (err) {
-                    throw new Error('Option \'ticks\' must be a boolean, an object or array-like');
+                    throw new Error(T.message(`The 'ticks' option must be a bool, an object, or an array`));
                 }
             }
         }
@@ -560,9 +560,9 @@ function FormBuilder(state, model, options = {}) {
             return;
 
         return UI.dialog(e, null, {}, (d, resolve, reject) => {
-            let number = d.number('number', 'Valeur :', { min: min, max: max, value: value });
+            let number = d.number('number', T.new_value, { min: min, max: max, value: value });
 
-            d.action('Modifier', { disabled: !d.isValid() }, () => {
+            d.action(T.edit, { disabled: !d.isValid() }, () => {
                 updateValue(key, number.value);
                 resolve(number.value);
             });
@@ -1152,13 +1152,13 @@ function FormBuilder(state, model, options = {}) {
             <div id="${id}" class="fm_file">
                 <span>
                     ${value == null ? html`<i>${options.placeholder || ''}</i>` : ''}
-                    ${is_file ? html`<i>Envoyer :</i> ${value.name}` : ''}
-                    ${is_ref ? html`<i>Document :</i> ${value.name} (<a href=${value.url} download>télécharger</a>)` : ''}
+                    ${is_file ? html`<i>${T.send}${T._colon}</i> ${value.name}` : ''}
+                    ${is_ref ? html`<i>${T.document}${T._colon}</i> ${value.name} (<a href=${value.url} download>${T.download.toLowerCase()}</a>)` : ''}
                 </span>
                 <div>
                     <button type="button" ?disabled=${options.disabled || options.readonly}
                             @click=${e => e.currentTarget.parentNode.parentNode.querySelector('[type=file]').click() }>
-                        ${value != null ? 'Remplacer' : 'Parcourir'}
+                        ${value != null ? T.replace : T.browse}
                     </button>
                     ${value != null ? html`
                         <button type="button" ?disabled=${options.disabled || options.readonly}
@@ -1206,7 +1206,7 @@ function FormBuilder(state, model, options = {}) {
                              typeof value !== 'number' &&
                              !(value instanceof LocalDate) &&
                              !(value instanceof LocalTime))
-            throw new Error('Calculated value must be a string, a number, a date or a time');
+            throw new Error(T.message(`The calculated value must be either a string, a number, a date (LocalDate), or a time (LocalTime)`));
 
         let text;
         if (value == null) {
@@ -1384,7 +1384,7 @@ function FormBuilder(state, model, options = {}) {
 
         let render = intf => html`
             <fieldset class=${makeClasses(options, 'fm_container', 'fm_section', 'error')}>
-                <div class="fm_legend" style=${makeLegendStyle(options)}>${label || `Assurez-vous d'avoir correctement répondu à tous les items`}</div>
+                <div class="fm_legend" style=${makeLegendStyle(options)}>${label || T.please_check_answers}</div>
                 ${!self.hasErrors() ? 'Aucune erreur' : ''}
                 ${self.hasErrors() ? html`
                     <ul>
@@ -1404,9 +1404,9 @@ function FormBuilder(state, model, options = {}) {
         options = expandOptions(options);
 
         if (!key)
-            throw new Error('Key parameter must be specified');
+            throw new Error(T.message(`The key parameter must be specified`));
         if (tabs_keys.has(key))
-            throw new Error(`Tabs key '${key}' is already used`);
+            throw new Error(T.message(`Tab key '{1}' is already used`, key));
         tabs_keys.add(key);
 
         let tabs = [];
@@ -1493,11 +1493,11 @@ function FormBuilder(state, model, options = {}) {
         options = expandOptions(options);
 
         if (!tabs_ref)
-            throw new Error('form.tab must be called from inside form.tabs');
+            throw new Error(T.message(`Function form.tab() must be called from within form.tabs()`));
         if (!label)
-            throw new Error('Label must be specified');
+            throw new Error(T.message(`The tab label cannot be empty`));
         if (tabs_ref.find(tab => tab.label === label))
-            throw new Error(`Tab label '${label}' is already used`);
+            throw new Error(T.message(`Tab label '{1}' is already used`, label));
 
         let tab = {
             label: label,
@@ -1527,16 +1527,16 @@ function FormBuilder(state, model, options = {}) {
         key = decodeKey(key, options);
 
         if (!func) {
-            throw new Error(`This call does not contain a function.
+            throw new Error(T.message(`This call does not contain a function.
 
 Make sure you did not use this syntax by accident:
     page.repeat("var"), () => { /* Do stuff here */ };
 instead of:
-    page.repeat("var", () => { /* Do stuff here */ });`);
+    page.repeat("var", () => { /* Do stuff here */ });`));
         }
 
         if (key.variables.has(key.name))
-            throw new Error(`Variable '${key}' already exists`);
+            throw new Error(T.message(`Variable '{1}' already exists`, key.name));
         if (!Util.isPodObject(key.ptr[key.name]))
             key.ptr[key.name] = {};
 
@@ -1638,12 +1638,12 @@ instead of:
 
     function captureWidgets(widgets, type, func, options = {}) {
         if (!func) {
-            throw new Error(`This call does not contain a function.
+            throw new Error(T.message(`This call does not contain a function.
 
 Make sure you did not use this syntax by accident:
-    page.${type}("Title"), () => { /* Do stuff here */ };
+    page.${type}("var"), () => { /* Do stuff here */ };
 instead of:
-    page.${type}("Title", () => { /* Do stuff here */ });`);
+    page.${type}("var", () => { /* Do stuff here */ });`));
         }
 
         let prev_widgets = widgets_ref;
@@ -1729,7 +1729,7 @@ instead of:
         if (!Array.isArray(key))
             key = [null, key];
         if (key.length != 2)
-            throw new Error('Invalid key type');
+            throw new Error(T.message(`Unsupported key type`));
 
         let ptr = key[0] ?? paths_stack[paths_stack.length - 1];
         let name = key[1];
@@ -1749,18 +1749,18 @@ instead of:
         // Check key name
         if (typeof name == 'number') {
             if (name < 0 || !Number.isInteger(name))
-                throw new Error('Number keys must be positive integers');
+                throw new Error(T.message(`Number keys must be positive integers`));
 
             name = name.toString();
         } else if (typeof name == 'string') {
             if (name === '')
-                throw new Error('Empty keys are not allowed');
+                throw new Error(T.message(`Empty keys are not allowed`));
             if (!name.match(/^[a-zA-Z0-9_]*$/))
-                throw new Error('Allowed key characters: a-z, 0-9 and _');
+                throw new Error(T.message(`Allowed key characters: a-z, 0-9 and '_'`));
             if (name.startsWith('__'))
-                throw new Error('Keys must not start with \'__\'');
+                throw new Error(T.message(`Keys must not start with '__'`));
         } else {
-            throw new Error('Invalid key name, must be string or number');
+            throw new Error(T.message(`Invalid key name, must be string or number`));
         }
 
         let retain = state.retain_map.get(ptr);
@@ -1955,7 +1955,7 @@ instead of:
 
     function fillVariableInfo(intf, key, value, props = null, multi = false) {
         if (key.variables.has(key.name))
-            throw new Error(`Variable '${key}' already exists`);
+            throw new Error(T.message(`Variable '{1}' already exists`, key));
 
         let notes = Data.annotate(key.ptr, key.name);
 
@@ -2001,7 +2001,7 @@ instead of:
         notes.errors = [];
 
         if (intf.options.mandatory && intf.missing) {
-            let msg = intf.options.annotate ? 'Réponse obligatoire sauf justification' : 'Réponse obligatoire';
+            let msg = intf.options.annotate ? T.error_mandatory_unless : T.error_mandatory;
             intf.error(msg, intf.options.missing_mode !== 'error');
         }
 
@@ -2022,11 +2022,12 @@ instead of:
             if ((min != null && value < min) ||
                     (max != null && value > max)) {
                 if (min != null && max != null) {
-                    intf.error(`Doit être entre ${min.toLocaleString()} et ${max.toLocaleString()}`);
+                    let text = T.format(T.error_between_x_and_x, min.toLocaleString(), max.toLocaleString());
+                    intf.error(text);
                 } else if (min != null) {
-                    intf.error(`Doit être ≥ ${min.toLocaleString()}`);
+                    intf.error(T.format(T.error_superior_equal, min.toLocaleString()));
                 } else {
-                    intf.error(`Doit être ≤ ${max.toLocaleString()}`);
+                    intf.error(T.format(T.error_inferior_equal, max.toLocaleString()));
                 }
             }
         }
@@ -2050,7 +2051,7 @@ instead of:
                     </div>
                 ` : ''}
 
-                ${intf.options.annotate ? html`<a class="fm_annotate" @click=${e => changeAnnotation(e, intf)} title="Ajouter des annotations">🖊\uFE0E</a>` : ''}
+                ${intf.options.annotate ? html`<a class="fm_annotate" @click=${e => changeAnnotation(e, intf)} title=${T.add_notes}>🖊\uFE0E</a>` : ''}
                 ${extra != null ? html`<span style="font-weight: normal;">${extra}</span>` : ''}
             </div>
         `;

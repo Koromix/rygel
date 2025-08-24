@@ -25,16 +25,18 @@ function InstancePublisher(bundler) {
     this.runDialog = async function(e) {
         actions = await computeActions();
 
-        return UI.dialog(e, 'Publication', {}, (d, resolve, reject) => {
+        return UI.dialog(e, T.publishing, {}, (d, resolve, reject) => {
             refresh = d.refresh;
 
             let modifications = actions.reduce((acc, action) => acc + (action.type !== 'noop'), 0);
 
             d.output(html`
                 <div class="ui_quick">
-                    ${modifications || 'Aucune'} ${modifications > 1 ? 'modifications' : 'modification'} à effectuer
+                    ${!modifications ? T.no_modification : ''}
+                    ${modifications == 1 ? '1 ' + T.modification.toLowerCase() : ''}
+                    ${modifications > 1 ? modifications + ' ' + T.modifications.toLowerCase() : ''}
                     <div style="flex: 1;"></div>
-                    <a @click=${UI.wrap(refresh)}>Rafraichir</a>
+                    <a @click=${UI.wrap(refresh)}>${T.refresh}</a>
                 </div>
 
                 <table class="ui_table ins_deploy">
@@ -80,7 +82,7 @@ function InstancePublisher(bundler) {
 
                                     <td class=${remote_cls}>${action.filename}</td>
                                     <td class="size">
-                                        ${action.type === 'conflict' ? html`<span class="conflict" title="Modifications en conflit">⚠\uFE0E</span>&nbsp;` : ''}
+                                        ${action.type === 'conflict' ? html`<span class="conflict" title=${T.conflict_between_actions}>⚠\uFE0E</span>&nbsp;` : ''}
                                         ${action.from != null ? Util.formatDiskSize(action.from.size) : ''}
                                     </td>
                                 </tr>
@@ -91,11 +93,11 @@ function InstancePublisher(bundler) {
 
                 <div class="ui_quick">
                     <div style="flex: 1;"></div>
-                    <a @click=${UI.wrap(addFile)}>Ajouter un fichier</a>
+                    <a @click=${UI.wrap(addFile)}>${T.add_file}</a>
                 </div>
             `);
 
-            d.action('Publier', { disabled: !modifications || !d.isValid() }, async () => {
+            d.action(T.publish, { disabled: !modifications || !d.isValid() }, async () => {
                 await deploy(actions);
                 resolve();
             });
@@ -103,21 +105,21 @@ function InstancePublisher(bundler) {
     }
 
     function addFile(e) {
-        return UI.dialog(e, 'Ajout de fichier', {}, (d, resolve, reject) => {
-            d.file('*file', 'Fichier :');
-            d.text('*filename', 'Chemin :', { value: d.values.file ? d.values.file.name : null });
+        return UI.dialog(e, T.add_file, {}, (d, resolve, reject) => {
+            d.file('*file', T.file);
+            d.text('*filename', T.path, { value: d.values.file ? d.values.file.name : null });
 
             if (d.values.filename) {
                 if (!d.values.filename.match(/^[A-Za-z0-9_\-\.]+(\/[A-Za-z0-9_\-\.]+)*$/))
-                    d.error('filename', 'Caractères autorisés: a-z, 0-9, \'-\', \'_\', \'.\' et \'/\' (pas au début ou à la fin)');
+                    d.error('filename', T.path_charachers);
                 if (d.values.filename.includes('/../') || d.values.filename.endsWith('/..'))
-                    d.error('filename', 'Le chemin ne doit pas contenir de composants \'..\'');
+                    d.error('filename', T.path_no_dotdot);
             }
 
-            d.action('Créer', { disabled: !d.isValid() }, async () => {
+            d.action(T.create, { disabled: !d.isValid() }, async () => {
                 let progress = new Log.Entry;
 
-                progress.progress('Enregistrement du fichier');
+                progress.progress(T.saving_file);
                 try {
                     let sha256 = await Sha256.async(d.values.file);
                     let url = Util.pasteURL(`${ENV.urls.base}files/${d.values.filename}`, { sha256: sha256 });
@@ -132,7 +134,7 @@ function InstancePublisher(bundler) {
                         throw new Error(err)
                     }
 
-                    progress.success('Fichier enregistré');
+                    progress.success(T.saving_done);
                     resolve();
 
                     actions = await computeActions();
@@ -148,8 +150,8 @@ function InstancePublisher(bundler) {
     }
 
     function deleteFile(e, action) {
-        return UI.confirm(e, `Voulez-vous vraiment supprimer le fichier '${action.filename}' ?`,
-                             'Supprimer', async () => {
+        return UI.confirm(e, T.format(T.confirm_file_deletion, action.filename),
+                             T.delete, async () => {
             let url = Util.pasteURL(`${ENV.urls.base}files/${action.filename}`, { sha256: action.to?.sha256 });
             let response = await Net.fetch(url, { method: 'DELETE' });
 
@@ -179,11 +181,11 @@ function InstancePublisher(bundler) {
     }
 
     async function deploy(actions) {
-        let progress = Log.progress('Publication en cours');
+        let progress = Log.progress(T.publishing_in_progress);
 
         try {
             if (actions.some(action => action.type == 'conflict'))
-                throw new Error('Conflits non résolus');
+                throw new Error(T.message(`Unsolved conflicts`));
 
             let files = {};
 
@@ -246,7 +248,7 @@ function InstancePublisher(bundler) {
             // Publish!
             await Net.post(`${ENV.urls.base}api/files/publish`, files);
 
-            progress.success('Publication effectuée');
+            progress.success(T.publishing_done);
         } catch (err) {
             progress.close();
             throw err;
@@ -261,7 +263,7 @@ function InstancePublisher(bundler) {
             let code = await response.text();
             return code;
         } else if (response.status == 404) {
-            throw new Error(`Unknown file '${filename}'`);
+            throw new Error(T.message(`Unknown file '{1}'`, filename));
         } else {
             let err = await Net.readError(response);
             throw new Error(err);

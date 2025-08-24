@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { render, html, unsafeHTML } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, NetworkError } from '../../web/core/base.js';
 import { Base64 } from '../../web/core/mixer.js';
 import * as IDB from '../../web/core/indexedDB.js';
@@ -22,6 +22,9 @@ import * as AdminController from './admin.js';
 import * as InstanceController from './instance.js';
 import * as LegacyController from '../legacy/instance.js';
 import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
+
+import en from '../i18n/en.json';
+import fr from '../i18n/fr.json';
 
 import '../../../vendor/opensans/OpenSans.css';
 import './goupile.css';
@@ -47,6 +50,8 @@ let prev_hash = null;
 
 async function start() {
     let url = new URL(window.location.href);
+
+    initTranslations();
 
     // Select relevant controller
     if (ENV.urls.base === '/admin/') {
@@ -131,6 +136,28 @@ async function start() {
     }
 }
 
+function initTranslations() {
+    Object.assign(T, fr.keys);
+
+    T.format = (str, ...args) => {
+        str = str.replace(/{(\d+)}/g, (match, idx) => {
+            idx = parseInt(idx, 10) - 1;
+
+            if (idx >= args.length)
+                return match;
+
+            let arg = args[idx];
+            return (arg != null) ? arg : '';
+        });
+        return str;
+    };
+
+    T.message = (str, ...args) => {
+        str = fr.messages[str] ?? str;
+        return T.format(str, ...args);
+    };
+}
+
 async function registerSW() {
     try {
         if (navigator.serviceWorker != null) {
@@ -139,17 +166,17 @@ async function registerSW() {
                 let progress = new Log.Entry;
 
                 if (registration.waiting) {
-                    progress.error('Fermez tous les onglets pour terminer la mise à jour puis rafraichissez la page');
+                    progress.error(T.close_tabs_and_refresh_page_to_update);
                     document.querySelector('#ui_root').classList.add('disabled');
                 } else {
                     registration.addEventListener('updatefound', () => {
                         if (registration.active) {
-                            progress.progress('Mise à jour en cours, veuillez patienter');
+                            progress.progress(T.update_in_progress_please_wait);
                             document.querySelector('#ui_root').classList.add('disabled');
 
                             registration.installing.addEventListener('statechange', e => {
                                 if (e.target.state === 'installed') {
-                                    progress.success('Mise à jour effectuée, l\'application va redémarrer');
+                                    progress.success(T.update_done_wait_restart);
                                     setTimeout(() => { window.location.href = window.location.href; }, 3000);
                                 }
                             });
@@ -161,12 +188,12 @@ async function registerSW() {
                 let progress = new Log.Entry;
 
                 if (registration != null) {
-                    progress.progress('Nettoyage de l\'instance en cache, veuillez patienter');
+                    progress.progress(T.cache_clean_wait);
                     document.querySelector('#ui_root').classList.add('disabled');
 
                     await registration.unregister();
 
-                    progress.success('Nettoyage effectué, l\'application va redémarrer');
+                    progress.success(T.cache_clean_done);
                     setTimeout(() => { window.location.href = window.location.href; }, 3000);
                 }
             }
@@ -174,7 +201,7 @@ async function registerSW() {
     } catch (err) {
         if (ENV.use_offline) {
             console.log(err);
-            console.log("Service worker API is not available");
+            console.log(T.service_worker_not_available);
         }
     }
 }
@@ -204,9 +231,9 @@ function initNavigation() {
                 let win = remote.getCurrentWindow();
                 let p = dialog.showMessageBox(win, {
                     type: 'warning',
-                    buttons: ['Quitter', 'Annuler'],
-                    title: 'Données non enregistrées',
-                    message: 'Si vous continuer vous allez perdre les modifications non enregistrées, voulez-vous continuer ?'
+                    buttons: [T.exit, T.cancel],
+                    title: T.unsaved_data,
+                    message: T.unsaved_warning
                 });
 
                 p.then(r => {
@@ -220,7 +247,7 @@ function initNavigation() {
     } else {
         window.onbeforeunload = e => {
             if (controller.hasUnsavedData?.())
-                return 'Si vous confirmez vouloir quitter la page, les modifications en cours seront perdues !';
+                return T.unsaved_warning;
         };
     }
 
@@ -421,7 +448,7 @@ async function runLoginScreen(e, initial) {
 }
 
 async function runPasswordScreen(e, initial) {
-    let title = initial ? null : 'Confirmation d\'identité';
+    let title = initial ? null : T.identity_confirmation;
 
     return UI.dialog(e, title, { fixed: true }, (d, resolve, reject) => {
         if (initial) {
@@ -430,15 +457,15 @@ async function runPasswordScreen(e, initial) {
                 <div id="gp_title">${ENV.title}</div>
                 <br/>
             `);
-            d.text('*username', 'Nom d\'utilisateur');
+            d.text('*username', T.username);
         } else {
-            d.output(html`Veuillez <b>confirmer votre identité</b> pour continuer.`);
-            d.calc('*username', 'Nom d\'utilisateur', profile.username);
+            d.output(unsafeHTML(T.please_confirm_identity));
+            d.calc('*username', T.username, profile.username);
         }
 
-        d.password('*password', 'Mot de passe');
+        d.password('*password', T.password);
 
-        d.action('Se connecter', { disabled: !d.isValid() }, async () => {
+        d.action(T.login, { disabled: !d.isValid() }, async () => {
             try {
                 let username = (d.values.username || '').trim();
                 let password = (d.values.password || '').trim();
@@ -468,7 +495,7 @@ async function runConfirmScreen(e, initial, method) {
         };
     }
 
-    let title = initial ? null : 'Confirmation d\'identité';
+    let title = initial ? null : T.identity_confirmation;
     let errors = 0;
 
     return UI.dialog(e, title, { fixed: true }, (d, resolve, reject) => {
@@ -478,34 +505,27 @@ async function runConfirmScreen(e, initial, method) {
                 <div id="gp_title">${ENV.title}</div>
                 <br/><br/>
             ` : ''}
-            ${method === 'mail' ? html`Entrez le code secret qui vous a été <b>envoyé par mail</b>.` : ''}
-            ${method === 'sms' ? html`Entrez le code secret qui vous a été <b>envoyé par SMS</b>.` : ''}
-            ${method === 'totp' ? html`Entrez le code secret affiché <b>par l'application d'authentification</b>.` : ''}
+            ${method === 'mail' ? unsafeHTML(T.confirm_secret_mail) : ''}
+            ${method === 'sms' ? unsafeHTML(T.confirm_secret_sms) : ''}
+            ${method === 'totp' ? unsafeHTML(T.confirm_secret_totp) : ''}
             ${method === 'qrcode' ? html`
-                <p>Scannez ce QR code avec une <b>application d'authentification
-                pour mobile</b> puis saississez le code donné par cette application.</p>
-                <p><i>Applications : andOTP, FreeOTP, etc.</i></p>
+                <p>${unsafeHTML(T.confirm_secret_qr)}</p>
+                <p><i>${T.applications_totp}</i></p>
 
                 <div style="text-align: center; margin-top: 2em;"><img src=${qrcode.image} alt="" /></div>
                 <p style="text-align: center; font-size: 0.8em">${qrcode.secret}</p>
             ` : ''}
             <br/>
         `);
-        d.text('*code', 'Code secret', { help: '6 chiffres' });
+        d.text('*code', T.totp_code, { help: T.totp_digits });
 
         if (method === 'mail' || method === 'sms')
-            d.output(html`<i>Si vous ne trouvez pas ce message, pensez à vérifiez vos spams.</i>`);
+            d.output(html`<i>${T.check_spam}</i>`);
         if (errors >= 2) {
-            d.output(html`
-                <span style="color: red; font-style: italic">
-                    En cas de difficulté, vérifiez que l'heure de votre téléphone
-                    est précisément réglée, que le fuseau horaire paramétré est
-                    le bon ainsi que l'heure d'été.
-                </span>
-            `);
+            d.output(html`<span style="color: red; font-style: italic;">${T.check_clock_totp}</span>`);
         }
 
-        d.action('Continuer', { disabled: !d.isValid() }, async () => {
+        d.action(T.continue, { disabled: !d.isValid() }, async () => {
             try {
                 let new_profile = await Net.post(`${ENV.urls.instance}api/session/confirm`, { code: d.values.code });
                 resolve(new_profile);
@@ -533,9 +553,9 @@ async function runConfirmIdentity(e) {
 
         return confirm_promise;
     } else if (profile.type === 'token') {
-        throw new Error('Veuillez vous reconnecter à l\'aide du lien fourni par mail pour continuer');
+        throw new Error(T.please_reconnect_token);
     } else {
-        throw new Error('Vous devez vous reconnecter pour continuer');
+        throw new Error(T.please_reconnect_other);
     }
 }
 
@@ -543,7 +563,7 @@ function runChangePasswordDialog(e) { return runChangePassword(e); }
 
 function runChangePassword(e, username = null) {
     let forced = (username != null);
-    let title = forced ? null : 'Changement de mot de passe';
+    let title = forced ? null : T.changing_password;
 
     return UI.dialog(e, title, { fixed: forced }, (d, resolve, reject) => {
         if (forced) {
@@ -551,24 +571,24 @@ function runChangePassword(e, username = null) {
                 <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
                 <div id="gp_title">${ENV.title}</div>
                 <br/><br/>
-                Veuillez saisir un nouveau mot de passe.
+                ${T.please_change_password}
             `);
         }
 
-        d.calc('username', 'Nom d\'utilisateur', username ?? profile.username);
+        d.calc('username', T.username, username ?? profile.username);
         if (!forced)
-            d.password('*old_password', 'Ancien mot de passe');
-        d.password('*new_password', 'Nouveau mot de passe');
+            d.password('*old_password', T.old_password);
+        d.password('*new_password', T.new_password);
         d.password('*new_password2', null, {
-            placeholder: 'Confirmation',
-            help: 'Votre mot de passe doit être suffisamment complexe (longueur, lettres, chiffres, symboles)'
+            placeholder: T.confirmation,
+            help: T.password_complexity_help
         });
         if (d.values.new_password != null && d.values.new_password2 != null &&
                                              d.values.new_password !== d.values.new_password2)
-            d.error('new_password2', 'Les mots de passe sont différents');
+            d.error('new_password2', T.password_mismatch);
 
-        d.action('Modifier', { disabled: !d.isValid() }, async () => {
-            let progress = Log.progress('Modification du mot de passe');
+        d.action(T.edit, { disabled: !d.isValid() }, async () => {
+            let progress = Log.progress(T.changing_password);
 
             try {
                 await Net.post(`${ENV.urls.instance}api/change/password`, {
@@ -577,7 +597,7 @@ function runChangePassword(e, username = null) {
                 });
 
                 resolve();
-                progress.success('Mot de passe modifié');
+                progress.success(T.changed_password);
             } catch (err) {
                 progress.close();
 
@@ -605,31 +625,23 @@ async function runResetTOTP(e) {
 
     let errors = 0;
 
-    return UI.dialog(e, 'Changement de codes TOTP', { fixed: true }, (d, resolve, reject) => {
+    return UI.dialog(e, T.change_totp_codes, { fixed: true }, (d, resolve, reject) => {
         d.output(html`
-            <p>Scannez ce QR code avec une <b>application d'authentification
-            pour mobile</b> puis saississez le code donné par cette application.</p>
-            <p><i>Applications : FreeOTP, Authy, etc.</i></p>
+            <p>${unsafeHTML(T.confirm_secret_qr)}</p>
+            <p><i>${T.applications_totp}</i></p>
 
             <div style="text-align: center; margin-top: 2em;"><img src="${qrcode.image}" alt="" /></div>
-            <p style="text-align: center; font-size: 0.8em">${qrcode.secret}</p>
+            <p style="text-align: center; font-size: 0.8em;">${qrcode.secret}</p>
         `);
 
-        d.text('*code', 'Code secret', { help : '6 chiffres' });
-        d.password('*password', 'Mot de passe du compte');
+        d.text('*code', T.totp_code, { help: T.totp_digits });
+        d.password('*password', T.password);
 
-        if (errors >= 2) {
-            d.output(html`
-                <span style="color: red; font-style: italic">
-                    En cas de difficulté, vérifiez que l'heure de votre téléphone
-                    est précisément réglée, que le fuseau horaire paramétré est
-                    le bon ainsi que l'heure d'été.
-                </span>
-            `);
-        }
+        if (errors >= 2)
+            d.output(html`<span style="color: red; font-style: italic;">${T.check_clock_totp}</span>`);
 
-        d.action('Modifier', { disabled: !d.isValid() }, async () => {
-            let progress = Log.progress('Modification des codes TOTP');
+        d.action(T.edit, { disabled: !d.isValid() }, async () => {
+            let progress = Log.progress(T.changing_totp);
 
             try {
                 await Net.post(`${ENV.urls.instance}api/change/totp`, {
@@ -638,7 +650,7 @@ async function runResetTOTP(e) {
                 });
 
                 resolve();
-                progress.success('Codes TOTP modifiés');
+                progress.success(T.changed_totp);
             } catch (err) {
                 progress.close();
 
@@ -647,23 +659,23 @@ async function runResetTOTP(e) {
             }
         });
     });
-};
+}
 
 function runLockDialog(e, ctx) {
-    return UI.dialog(e, 'Verrouillage', {}, (d, resolve, reject) => {
-        d.pin('*pin', 'Code de déverrouillage');
+    return UI.dialog(e, T.locking, {}, (d, resolve, reject) => {
+        d.pin('*pin', T.lock_code);
         if (d.values.pin != null && d.values.pin.length < 4)
-            d.error('pin', 'Ce code est trop court', true);
-        d.action('Verrouiller', { disabled: !d.isValid() }, e => lock(e, d.values.pin, ctx));
+            d.error('pin', T.code_too_short, true);
+        d.action(T.lock, { disabled: !d.isValid() }, e => lock(e, d.values.pin, ctx));
     });
-};
+}
 
 function runUnlockDialog(e) {
-    return UI.dialog(e, 'Déverrouillage', {}, (d, resolve, reject) => {
-        d.pin('*pin', 'Code de déverrouillage');
-        d.action('Déverrouiller', { disabled: !d.isValid() }, e => unlock(e, d.values.pin));
+    return UI.dialog(e, T.unlocking, {}, (d, resolve, reject) => {
+        d.pin('*pin', T.unlock_code);
+        d.action(T.unlock, { disabled: !d.isValid() }, e => unlock(e, d.values.pin));
     });
-};
+}
 
 async function login(username, password) {
     try {
@@ -723,7 +735,7 @@ async function loginOffline(username, password) {
 
     let obj = await db.load('profiles', username);
     if (obj == null)
-        throw new Error('Profil hors ligne inconnu');
+        throw new Error(T.unknown_offline_profile);
 
     let key = await deriveKey(password, Base64.toBytes(obj.salt));
     let new_profile;
@@ -742,10 +754,10 @@ async function loginOffline(username, password) {
 
         if (obj.errors >= 5) {
             await db.delete('profiles', username);
-            throw new Error('Mot de passe non reconnu, connexion hors ligne désactivée');
+            throw new Error(T.offline_password_error_disabled);
         } else {
             await db.saveWithKey('profiles', username, obj);
-            throw new Error('Mot de passe non reconnu');
+            throw new Error(T.offline_password_error);
         }
     }
 
@@ -785,8 +797,6 @@ function updateProfile(new_profile, unlock = false) {
 async function logout(e) {
     await confirmDangerousAction(e);
 
-    let progress = Log.progress('Déconnexion en cours');
-
     try {
         await Net.post(`${ENV.urls.instance}api/session/logout`);
 
@@ -800,7 +810,6 @@ async function logout(e) {
         window.onbeforeunload = null;
         window.location.href = reload;
     } catch (err) {
-        progress.close();
         throw err;
     }
 }
@@ -835,13 +844,13 @@ async function lock(e, password, ctx = null) {
     let session_rnd = Util.getCookie('session_rnd');
 
     if (isLocked())
-        throw new Error('Cannot lock unauthorized session');
+        throw new Error(T.message(`Cannot lock unauthorized session`));
     if (typeof ctx == undefined)
-        throw new Error('Lock context must not be undefined');
+        throw new Error(T.message(`Lock context must not be undefined`));
     if (session_rnd == null)
-        throw new Error('Cannot lock without session cookie');
+        throw new Error(T.message(`Cannot lock without session cookie`));
     if (profile_keys.lock == null)
-        throw new Error('Cannot lock session without lock key');
+        throw new Error(T.message(`Cannot lock session without lock key`));
 
     await confirmDangerousAction(e);
 
@@ -873,19 +882,19 @@ async function lock(e, password, ctx = null) {
     window.onbeforeunload = null;
     window.location.href = ENV.urls.instance;
     await Util.waitFor(2000);
-};
+}
 
 async function unlock(e, password) {
     await confirmDangerousAction(e);
 
     let lock = loadLocal('lock');
     if (lock == null)
-        throw new Error('Session is not locked');
+        throw new Error(T.message(`Session is not locked`));
 
     let key = await deriveKey(password, Base64.toBytes(lock.salt));
 
     // Instantaneous unlock feels weird
-    let progress = Log.progress('Déverrouillage en cours');
+    let progress = Log.progress(T.unlocking_in_progress);
     await Util.waitFor(800);
 
     try {
@@ -894,14 +903,14 @@ async function unlock(e, password) {
         Util.setCookie('session_rnd', session_rnd, '/');
         deleteLocal('lock');
 
-        progress.success('Déverrouillage effectué');
+        progress.success(T.unlocking_done);
     } catch (err) {
         progress.close();
 
         lock.errors = (lock.errors || 0) + 1;
 
         if (lock.errors >= 5) {
-            Log.error('Déverrouillage refusé, blocage de sécurité imminent');
+            Log.error(T.unlocking_refused_final);
             deleteLocal('lock');
 
             setTimeout(() => {
@@ -909,7 +918,7 @@ async function unlock(e, password) {
                 window.location.href = window.location.href;
             }, 3000);
         } else {
-            Log.error('Déverrouillage refusé');
+            Log.error(T.unlocking_refused);
             storeLocal('lock', lock);
         }
 
@@ -919,7 +928,7 @@ async function unlock(e, password) {
     window.onbeforeunload = null;
     window.location.href = window.location.href;
     await Util.waitFor(2000);
-};
+}
 
 function isLocked() {
     if (profile.lock != null)
@@ -928,7 +937,7 @@ function isLocked() {
         return true;
 
     return false;
-};
+}
 
 function canUnlock() {
     return can_unlock;
@@ -941,9 +950,9 @@ function confirmDangerousAction(e) {
         return;
 
     return UI.confirm(e, html`Si vous continuez, vous <span style="color: red; font-weight: bold;">PERDREZ les modifications en cours</span>.
-                                 Voulez-vous continuer ?<br/>
-                                 Si vous souhaitez les conserver, <b>annulez cette action</b> et cliquez sur le bouton d'enregistrement.`,
-                            "Abandonner les modifications", () => {});
+                              Voulez-vous continuer ?<br/>
+                              Si vous souhaitez les conserver, <b>annulez cette action</b> et cliquez sur le bouton d'enregistrement.`,
+                            T.abandon_changes, () => {});
 }
 
 function hasPermission(perm) {
@@ -1063,7 +1072,7 @@ function decryptSecretBox(enc, key) {
 
     let message = nacl.secretbox.open(box, nonce, key);
     if (message == null)
-        throw new Error('Failed to decrypt message: wrong key?');
+        throw new Error(T.message(`Decryption failed: wrong key?`));
 
     let json;
     if (enc.format >= 2) {
