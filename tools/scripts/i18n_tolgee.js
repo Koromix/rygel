@@ -66,7 +66,7 @@ async function run() {
     console.log('Pushing new message strings...');
     for (let project of projects) {
         for (let key of project.keys.values()) {
-            if (translations.find(t => t.keyName == key))
+            if (translations.find(t => t.keyNamespace == project.name && t.keyName == key))
                 continue;
 
             let obj = { en: key };
@@ -81,8 +81,8 @@ async function run() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    key: key,
                     namespace: project.name,
+                    key: key,
                     translations: obj
                 })
             }).then(response => response.json());
@@ -120,7 +120,7 @@ async function run() {
                 if (!target.hasOwnProperty(item.keyName))
                     continue;
 
-                target[item.keyName] = item.translations[lang].text;
+                target[item.keyName] ??= item.translations[lang].text;
             }
 
             let filename = path.join(project.root, 'i18n', lang + '.json');
