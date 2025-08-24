@@ -91,7 +91,8 @@ async function run() {
 
     console.log('Delete unneeded strings...');
     {
-        let ids = translations.filter(t => !projects.some(project => project.keys.has(t.keyName)));
+        let unused = translations.filter(t => !projects.some(project => project.keys.has(t.keyName)));
+        let ids = unused.map(t => t.keyId);
 
         if (ids.length) {
             await fetchOrFail(TOLGEE_URL + '/v2/projects/keys', {
