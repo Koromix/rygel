@@ -1883,29 +1883,27 @@ void FmtLowerAscii::Format(FunctionRef<void(Span<const char>)> append) const
 
 void FmtEscape::Format(FunctionRef<void(Span<const char>)> append) const
 {
-    static const char literals[] = "0123456789ABCDEF";
-
     for (char c: str) {
-        if (c >= 32 && (unsigned int)c < 128) {
-            append(c);
+        if (c == '"') {
+            append("\\\"");
+        } else if (c == '\'') {
+            append("\\'");
+        } else if (c == '\r') {
+            append("\\r");
+        } else if (c == '\n') {
+            append("\\n");
+        } else if ((unsigned int)c < 32) {
+            char encoded[4];
+
+            encoded[0] = '\\';
+            encoded[1] = '0' + (((uint8_t)c >> 6) & 7);
+            encoded[2] = '0' + (((uint8_t)c >> 3) & 7);
+            encoded[3] = '0' + (((uint8_t)c >> 0) & 7);
+
+            Span<const char> buf = MakeSpan(encoded, 4);
+            append(buf);
         } else {
-            switch (c) {
-                case '\t': { append('\t'); } break;
-                case '\r': { append("\r"); } break;
-                case '\n': { append("\n"); } break;
-
-                default: {
-                    char encoded[4];
-
-                    encoded[0] = '\\';
-                    encoded[1] = 'x';
-                    encoded[2] = literals[((uint8_t)c >> 4) & 0xF];
-                    encoded[3] = literals[((uint8_t)c >> 0) & 0xF];
-
-                    Span<const char> buf = MakeSpan(encoded, 4);
-                    append(buf);
-                } break;
-            }
+            append(c);
         }
     }
 }

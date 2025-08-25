@@ -160,6 +160,22 @@ static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_fi
     return writer.Close();
 }
 
+static void MakeTranslationCommand(Span<const char *const> translations, const char *dest_filename, Allocator *alloc, Command *out_cmd)
+{
+    RG_ASSERT(alloc);
+
+    HeapArray<char> buf(alloc);
+
+    Fmt(&buf, "\"%1\" translate -O \"%2\"", GetApplicationExecutable(), dest_filename);
+
+    for (const char *translation: translations) {
+        Fmt(&buf, " \"%1\"", translation);
+    }
+
+    out_cmd->cache_len = buf.len;
+    out_cmd->cmd_line = buf.TrimAndLeak(1);
+}
+
 Builder::Builder(const BuildSettings &build)
     : build(build)
 {
@@ -332,6 +348,39 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
     // Build Qt resource file
     if (qrc_filenames.len) {
         const char *obj_filename = AddQtResource(target, qrc_filenames);
+        obj_filenames.Append(obj_filename);
+    }
+
+    // Translations
+    if (target.translations.len) {
+        const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_i18n.c", cache_directory, target.name).ptr;
+        const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
+
+        uint32_t features = target.CombineFeatures(build.features);
+
+        // Make C file
+        {
+            Command cmd = InitCommand();
+            MakeTranslationCommand(target.translations, src_filename, &str_alloc, &cmd);
+
+            const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Bundle %!..+%1%!0 translations", target.name).ptr;
+            AppendNode(text, src_filename, cmd, target.translations);
+        }
+
+        // Build object file
+        {
+            Command cmd = InitCommand();
+
+            const char *flags = GatherFlags(target, SourceType::C);
+
+            build.compiler->MakeCppCommand(src_filename, SourceType::C,
+                                           nullptr, {}, {}, {}, {}, flags, features,
+                                           obj_filename,  &str_alloc, &cmd);
+
+            const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0 translations", target.name).ptr;
+            AppendNode(text, obj_filename, cmd, src_filename);
+        }
+
         obj_filenames.Append(obj_filename);
     }
 

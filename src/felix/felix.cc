@@ -20,6 +20,7 @@
 #include "git.hh"
 #include "macify.hh"
 #include "target.hh"
+#include "translate.hh"
 
 #if defined(_WIN32)
     #if !defined(NOMINMAX)
@@ -907,6 +908,80 @@ Available compression types: %!..+%4%!0)", FelixTarget, CompressionTypeNames[(in
     return 0;
 }
 
+int RunTranslate(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    unsigned int flags = 0;
+    const char *output_filename = nullptr;
+    HeapArray<const char *> filenames;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 translate [option...] [filename...]%!0
+
+Options:
+
+    %!..+-O, --output_file filename%!0     Redirect output to file
+
+    %!..+-f, --flags flags%!0              Set translation flags
+
+Available translation flags: %!..+%2%!0)", FelixTarget, FmtSpan(TranslationFlagNames));
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-f", "--flags", OptionType::Value)) {
+                const char *flags_str = opt.current_value;
+
+                while (flags_str[0]) {
+                    Span<const char> part = TrimStr(SplitStrAny(flags_str, " ,", &flags_str), " ");
+
+                    if (part.len && !OptionToFlagI(TranslationFlagNames, part, &flags)) {
+                        LogError("Unknown translation flag '%1'", part);
+                        return 1;
+                    }
+                }
+            } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
+                output_filename = opt.current_value;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        const char *filename;
+        while ((filename = opt.ConsumeNonOption())) {
+            char *filename2 = NormalizePath(filename, &temp_alloc).ptr;
+#if defined(_WIN32)
+            for (Size i = 0; filename2[i]; i++) {
+                filename2[i] = (filename2[i] == '\\' ? '/' : filename2[i]);
+            }
+#endif
+
+            filenames.Append(filename2);
+        }
+    }
+
+    // Load translation files
+    TranslationSet i18n_set;
+    if (!LoadTranslations(filenames, &i18n_set))
+        return 1;
+
+    // Generate output
+    if (!PackTranslations(i18n_set.files, flags, output_filename))
+        return 1;
+
+    return 0;
+}
+
 #if defined(__APPLE__)
 
 static int RunMacify(Span<const char *> arguments)
@@ -1020,6 +1095,8 @@ int Main(int argc, char **argv)
         return RunBuild(arguments);
     } else if (TestStr(cmd, "embed")) {
         return RunEmbed(arguments);
+    } else if (TestStr(cmd, "translate")) {
+        return RunTranslate(arguments);
 #if defined(__APPLE__)
     } else if (TestStr(cmd, "macify")) {
         return RunMacify(arguments);

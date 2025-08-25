@@ -45,6 +45,8 @@ struct TargetConfig {
     const char *c_pch_filename;
     const char *cxx_pch_filename;
 
+    FileSet i18n_file_set;
+
     HeapArray<const char *> imports;
 
     HeapArray<const char *> definitions;
@@ -53,6 +55,7 @@ struct TargetConfig {
     HeapArray<const char *> export_directories;
     HeapArray<const char *> include_files;
     HeapArray<const char *> libraries;
+    HeapArray<const char *> translations;
 
     HeapArray<const char *> qt_components;
     int64_t qt_version;
@@ -125,14 +128,14 @@ static void AppendListValues(Span<const char> str, Allocator *alloc, HeapArray<c
 #undef APPEND_ITEM
 }
 
-static bool EnumerateSortedFiles(const char *directory, bool recursive,
+static bool EnumerateSortedFiles(const char *directory, const char *filter, bool recursive,
                                  Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
     RG_ASSERT(alloc);
 
     Size start_idx = out_filenames->len;
 
-    if (!EnumerateFiles(directory, nullptr, recursive ? -1  : 0, 1024, alloc, out_filenames))
+    if (!EnumerateFiles(directory, filter, recursive ? -1  : 0, 1024, alloc, out_filenames))
             return false;
 
     std::sort(out_filenames->begin() + start_idx, out_filenames->end(),
@@ -143,7 +146,7 @@ static bool EnumerateSortedFiles(const char *directory, bool recursive,
     return true;
 }
 
-static bool ResolveFileSet(const FileSet &file_set,
+static bool ResolveFileSet(const FileSet &file_set, const char *filter,
                            Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
     RG_ASSERT(alloc);
@@ -152,11 +155,11 @@ static bool ResolveFileSet(const FileSet &file_set,
 
     out_filenames->Append(file_set.filenames);
     for (const char *directory: file_set.directories) {
-        if (!EnumerateSortedFiles(directory, false, alloc, out_filenames))
+        if (!EnumerateSortedFiles(directory, filter, false, alloc, out_filenames))
             return false;
     }
     for (const char *directory: file_set.directories_rec) {
-        if (!EnumerateSortedFiles(directory, true, alloc, out_filenames))
+        if (!EnumerateSortedFiles(directory, filter, true, alloc, out_filenames))
             return false;
     }
 
@@ -328,6 +331,12 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         }
                     } else if (prop.key == "SourceIgnore") {
                         AppendListValues(prop.value, &set.str_alloc, &target_config.src_file_set.ignore);
+                    } else if (prop.key == "TranslationDirectory") {
+                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.i18n_file_set.directories);
+                    } else if (prop.key == "TranslationFile") {
+                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.i18n_file_set.filenames);
+                    } else if (prop.key == "TranslationIgnore") {
+                        AppendListValues(prop.value, &set.str_alloc, &target_config.i18n_file_set.ignore);
                     } else if (prop.key == "ImportFrom") {
                         AppendListValues(prop.value, &set.str_alloc, &target_config.imports);
                     } else if (prop.key == "IncludeDirectory") {
@@ -523,13 +532,14 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             target->libraries.Append(import->libraries);
             target->pchs.Append(import->pchs);
             target->sources.Append(import->sources);
+            target->translations.Append(import->translations);
         }
     }
 
     // Gather direct target objects
     {
         HeapArray<const char *> src_filenames;
-        if (!ResolveFileSet(target_config->src_file_set, &temp_alloc, &src_filenames))
+        if (!ResolveFileSet(target_config->src_file_set, nullptr, &temp_alloc, &src_filenames))
             return nullptr;
 
         for (const char *src_filename: src_filenames) {
@@ -550,6 +560,10 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             target->sources.Append(src);
         }
     }
+
+    // Gather translation files
+    if (!ResolveFileSet(target_config->i18n_file_set, "*.json", &set.str_alloc, &target->translations))
+        return nullptr;
 
     // PCH
     if (target_config->c_pch_filename) {
@@ -578,9 +592,10 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     DeduplicateArray(&target->libraries, [](const char *str) { return str; });
     DeduplicateArray(&target->pchs, [](const char *str) { return str; });
     DeduplicateArray(&target->sources, [](const SourceFileInfo *src) { return src->filename; });
+    DeduplicateArray(&target->translations, [](const char *str) { return str; });
 
     // Gather asset filenames
-    if (!ResolveFileSet(target_config->embed_file_set, &set.str_alloc, &target->embed_filenames))
+    if (!ResolveFileSet(target_config->embed_file_set, nullptr, &set.str_alloc, &target->embed_filenames))
         return nullptr;
 
     set.targets_map.Set(target);
