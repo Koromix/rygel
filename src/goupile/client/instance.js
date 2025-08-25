@@ -271,7 +271,7 @@ function renderMenu() {
                     <div>
                         ${profile.instances.slice().sort(Util.makeComparator(instance => instance.name)).map(instance => {
                             if (instance.url === ENV.urls.instance) {
-                                return html`<button class="active" @click=${UI.wrap(e => togglePanels(true, profile.develop ? 'view' : false))}>${ENV.title}</button>`;
+                                return html`<button class="active" @click=${UI.wrap(e => togglePanels(true, profile.develop ? 'view' : false))}>${instance.name}</button>`;
                             } else {
                                 return html`<button @click=${UI.wrap(e => go(e, instance.url))}>${instance.name}</button>`;
                             }
