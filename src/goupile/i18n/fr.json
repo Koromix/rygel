@@ -124,6 +124,7 @@
         "label_incomplete": "Incomplet",
         "label_na": "NA/ND/NSP",
         "label_wait": "En attente",
+        "language": "Langage",
         "leave_empty_to_ignore": "Laissez vide pour ne pas modifier",
         "list_exports": "Liste des exports",
         "load": "Charger",

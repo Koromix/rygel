@@ -124,6 +124,7 @@
         "label_incomplete": "Incomplete",
         "label_na": "NA/ND/NSP",
         "label_wait": "Waiting",
+        "language": "Language",
         "leave_empty_to_ignore": "Leave field empty to ignore",
         "list_exports": "List of exports",
         "load": "Load",

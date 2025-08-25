@@ -405,6 +405,18 @@ function closeDialog(dialog) {
     adjustLoadingSpinner();
 }
 
+function isDialogOpen() {
+    return (dialogs.prev != dialogs);
+}
+
+function refreshDialog() {
+    if (dialogs.prev == dialogs)
+        return;
+
+    let dlg = dialogs.prev;
+    dlg.render();
+}
+
 function adjustLoadingSpinner() {
     let empty = (dialogs.next === dialogs && active_panels[0] == null
                                           && active_panels[1] == null);
@@ -566,8 +578,11 @@ export {
     allowTwoPanels,
     hasTwoPanels,
 
-    wrap,
     dialog,
+    isDialogOpen,
+    refreshDialog,
+
+    wrap,
     confirm,
 
     deployMenu,

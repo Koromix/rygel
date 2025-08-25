@@ -21,14 +21,16 @@
     height: 96px;
 }
 
-#gp_title {
-    position: relative;
-    left: -5px;
-    top: -8px;
-    max-width: 80px;
-    color: #999;
+#gp_login {
+    display: flex;
+    margin: -8px -5px 1em -5px;
     font-size: 0.8em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+
+    & > .title {
+        max-width: 80px;
+        color: #999;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 }

@@ -29,6 +29,9 @@ import fr from '../i18n/fr.json';
 import '../../../vendor/opensans/OpenSans.css';
 import './goupile.css';
 
+let languages = {};
+let user_lang = null;
+
 // Global variables
 let profile = {};
 
@@ -51,7 +54,7 @@ let prev_hash = null;
 async function start() {
     let url = new URL(window.location.href);
 
-    initTranslations();
+    initLanguages();
 
     // Select relevant controller
     if (ENV.urls.base === '/admin/') {
@@ -136,8 +139,29 @@ async function start() {
     }
 }
 
-function initTranslations() {
-    Object.assign(T, fr.keys);
+function initLanguages() {
+    languages.en = en;
+    languages.fr = fr;
+
+    // Detect user language
+    {
+        let lang = Util.getCookie('language');
+
+        if (lang != null && !languages.hasOwnProperty(lang))
+            lang = null;
+        if (lang == null && navigator.languages != null)
+            lang = navigator.languages.map(lang => lang.replace(/-.*$/, '')).find(lang => languages.hasOwnProperty(lang));
+        if (lang == null)
+            lang = 'fr';
+
+        setTranslationTable(lang);
+    }
+}
+
+function setTranslationTable(lang) {
+    let table = languages[lang];
+
+    T = Object.assign({}, table.keys);
 
     T.format = (str, ...args) => {
         str = str.replace(/{(\d+)}/g, (match, idx) => {
@@ -151,12 +175,16 @@ function initTranslations() {
         });
         return str;
     };
-
     T.message = (str, ...args) => {
-        str = fr.messages[str] ?? str;
+        str = table.messages[str] ?? str;
         return T.format(str, ...args);
     };
+    T.lang = lang;
+
+    user_lang = lang;
+    document.documentElement.lang = user_lang;
 }
+
 
 async function registerSW() {
     try {
@@ -454,8 +482,14 @@ async function runPasswordScreen(e, initial) {
         if (initial) {
             d.output(html`
                 <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
-                <div id="gp_title">${ENV.title}</div>
-                <br/>
+                <div id="gp_login">
+                    <span class="title">${ENV.title}</span>
+                    <div style="flex: 1;"></div>
+                    <select aria-label=${T.language} @change=${UI.wrap(e => switchLanguage(e.target.value))}>
+                        ${Object.keys(languages).map(lang =>
+                            html`<option value=${lang} .selected=${lang == user_lang}>${lang.toUpperCase()}</option>`)}
+                    </select>
+                </div>
             `);
             d.text('*username', T.username);
         } else {
@@ -478,6 +512,16 @@ async function runPasswordScreen(e, initial) {
             }
         });
     });
+}
+
+async function switchLanguage(lang) {
+    setTranslationTable(lang);
+    Util.setCookie('language', lang, '/', 365 * 86400);
+
+    if (UI.isDialogOpen()) {
+        UI.refreshDialog();
+        return;
+    }
 }
 
 async function runConfirmScreen(e, initial, method) {
