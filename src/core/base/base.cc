@@ -2053,7 +2053,7 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
 
     char msg_buf[2048];
     {
-        Size len = FmtFmt(fmt, args, log_vt100, msg_buf).len;
+        Size len = FmtFmt(T(fmt), args, log_vt100, msg_buf).len;
 
         if (len == RG_SIZE(msg_buf) - 1) {
             strncpy(msg_buf + RG_SIZE(msg_buf) - 32, "... [truncated]", 32);
@@ -8924,7 +8924,54 @@ Span<const char> PatchFile(Span<const char> data, Allocator *alloc,
 }
 
 // ------------------------------------------------------------------------
-// Option parser
+// Translations
+// ------------------------------------------------------------------------
+
+static HeapArray<TranslationTable> i18n_tables;
+static HeapArray<HashMap<const char *, const char *>> i18n_maps;
+
+const TranslationTable *CurrentTranslation;
+HashMap<const char *, const char *> *TranslationMap;
+
+void InitTranslations(Span<const TranslationTable> tables)
+{
+    static const char *const EnvVariables[] = { "LC_MESSAGES", "LC_ALL", "LANG" };
+
+    RG_ASSERT(!i18n_tables.len);
+
+    for (const TranslationTable &table: tables) {
+        i18n_tables.Append(table);
+        HashMap<const char *, const char *> *map = i18n_maps.AppendDefault();
+
+        for (const TranslationTable::Pair &pair: table.messages) {
+            map->Set(pair.key, pair.value);
+        }
+    }
+
+    const char *lang = nullptr;
+    for (const char *variable: EnvVariables) {
+        lang = GetEnv(variable);
+        if (lang)
+            break;
+    }
+
+    if (lang || !TestStr(lang, "C")) {
+        Span<const char> prefix = SplitStrAny(lang, "_-");
+
+        const TranslationTable *table = std::find_if(tables.begin(), tables.end(),
+                                                     [&](const TranslationTable &table) { return TestStrI(table.language, prefix); });
+
+        if (table != tables.end()) {
+            Size idx = table - tables.ptr;
+
+            CurrentTranslation = &i18n_tables[idx];
+            TranslationMap = &i18n_maps[idx];
+        }
+    }
+}
+
+// ------------------------------------------------------------------------
+// Options
 // ------------------------------------------------------------------------
 
 static inline bool IsOption(const char *arg)

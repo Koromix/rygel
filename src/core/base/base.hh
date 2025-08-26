@@ -5344,6 +5344,35 @@ Span<const char> PatchFile(Span<const char> data, Allocator *alloc,
                            FunctionRef<void(Span<const char> key, StreamWriter *)> func);
 
 // ------------------------------------------------------------------------
+// Translations
+// ------------------------------------------------------------------------
+
+struct TranslationTable {
+    struct Pair {
+        const char *key;
+        const char *value;
+    };
+
+    const char *language;
+    Span<Pair> messages;
+};
+
+extern "C" const Span<const TranslationTable> TranslationTables;
+
+extern const TranslationTable *CurrentTranslation;
+extern HashMap<const char *, const char *> *TranslationMap;
+
+void InitTranslations(Span<const TranslationTable> tables);
+
+static inline const char *T(const char *key)
+{
+    if (!TranslationMap)
+        return key;
+
+    return TranslationMap->FindValue(key, key);
+}
+
+// ------------------------------------------------------------------------
 // Options
 // ------------------------------------------------------------------------
 
