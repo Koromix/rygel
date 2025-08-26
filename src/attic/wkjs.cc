@@ -18,8 +18,6 @@ namespace RG {
 
 int Main(int argc, char **argv)
 {
-    RG_CRITICAL(argc >= 1, "First argument is missing");
-
     // Options
     const char *filename_or_code;
     bool is_code = false;

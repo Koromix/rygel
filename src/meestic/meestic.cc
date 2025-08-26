@@ -619,8 +619,6 @@ Be careful, color names and most options are %!..+case-sensitive%!0.)", FelixTar
 
 int Main(int argc, char **argv)
 {
-    RG_CRITICAL(argc >= 1, "First argument is missing");
-
     // Handle help and version arguments
     if (argc >= 2) {
         if (TestStr(argv[1], "--help") || TestStr(argv[1], "help")) {

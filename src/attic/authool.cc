@@ -729,8 +729,6 @@ Options:
 
 int Main(int argc, char **argv)
 {
-    RG_CRITICAL(argc >= 1, "First argument is missing");
-
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 command [arg...]%!0

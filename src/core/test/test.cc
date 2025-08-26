@@ -41,8 +41,6 @@ BenchmarkInfo::BenchmarkInfo(const char *path, void (*func)())
 
 int Main(int argc, char **argv)
 {
-    RG_CRITICAL(argc >= 1, "First argument is missing");
-
     // Options
     const char *pattern = nullptr;
 

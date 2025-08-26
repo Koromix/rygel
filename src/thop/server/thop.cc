@@ -457,8 +457,6 @@ static void HandleRequest(http_IO *io)
 
 int Main(int argc, char **argv)
 {
-    RG_CRITICAL(argc >= 1, "First argument is missing");
-
     BlockAllocator temp_alloc;
 
     // Options

@@ -4548,6 +4548,8 @@ int Main(int argc, char **argv);
 
 static inline int RunApp(int argc, char **argv)
 {
+    RG_CRITICAL(argc >= 1, "First argument is missing");
+
     InitApp();
     RG_DEFER { ExitApp(); };
 

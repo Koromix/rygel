@@ -923,8 +923,6 @@ static void WINAPI RunService(DWORD, char **)
 
 int Main(int argc, char **argv)
 {
-    RG_CRITICAL(argc >= 1, "First argument is missing");
-
     SERVICE_TABLE_ENTRYA services[] = {
         {(char *)"SeatSH", (LPSERVICE_MAIN_FUNCTIONA)RunService},
         {}

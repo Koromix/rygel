@@ -1955,8 +1955,6 @@ Options:
 
 int Main(int argc, char **argv)
 {
-    RG_CRITICAL(argc >= 1, "First argument is missing");
-
     // Options
     HeapArray<const char *> config_filenames;
     const char *config_filename = FindConfigFile("jumbll.ini", &config.str_alloc, &config_filenames);

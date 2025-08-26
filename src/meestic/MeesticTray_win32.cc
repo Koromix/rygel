@@ -310,8 +310,6 @@ static inline ConfigProfile MakeDefaultProfile(const char *name, LightMode mode)
 
 int Main(int argc, char **argv)
 {
-    RG_CRITICAL(argc >= 1, "First argument is missing");
-
     BlockAllocator temp_alloc;
 
     InitCommonControls();

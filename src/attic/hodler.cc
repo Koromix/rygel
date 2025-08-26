@@ -1264,8 +1264,6 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
 
 int Main(int argc, char **argv)
 {
-    RG_CRITICAL(argc >= 1, "First argument is missing");
-
     // Options
     const char *source_dir = ".";
     const char *output_dir = nullptr;
