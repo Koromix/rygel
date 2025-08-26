@@ -8927,17 +8927,21 @@ Span<const char> PatchFile(Span<const char> data, Allocator *alloc,
 // Translations
 // ------------------------------------------------------------------------
 
+typedef HashMap<const char *, const char *> TranslationMap;
+
 static HeapArray<TranslationTable> i18n_tables;
-static HeapArray<HashMap<const char *, const char *>> i18n_maps;
+static HeapArray<TranslationMap> i18n_maps;
+static HashMap<Span<const char> , const TranslationTable *> i18n_locales;
 
-const TranslationTable *CurrentTranslation;
-HashMap<const char *, const char *> *TranslationMap;
+static const TranslationMap *i18n_global;
+static thread_local const TranslationMap *i18n_thread = i18n_global;
 
-void InitTranslations(Span<const TranslationTable> tables)
+void InitLocales(Span<const TranslationTable> tables)
 {
-    static const char *const EnvVariables[] = { "LC_MESSAGES", "LC_ALL", "LANG" };
-
     RG_ASSERT(!i18n_tables.len);
+
+    // Yeah that makes perfect sense
+    static const char *const EnvVariables[] = { "LANGUAGE", "LC_MESSAGES", "LC_ALL", "LANG" };
 
     for (const TranslationTable &table: tables) {
         i18n_tables.Append(table);
@@ -8947,27 +8951,45 @@ void InitTranslations(Span<const TranslationTable> tables)
             map->Set(pair.key, pair.value);
         }
     }
-
-    const char *lang = nullptr;
-    for (const char *variable: EnvVariables) {
-        lang = GetEnv(variable);
-        if (lang)
-            break;
+    for (const TranslationTable &table: i18n_tables) {
+        i18n_locales.Set(table.language, &table);
     }
 
-    if (lang || !TestStr(lang, "C")) {
-        Span<const char> prefix = SplitStrAny(lang, "_-");
+    for (const char *variable: EnvVariables) {
+        const char *env = GetEnv(variable);
 
-        const TranslationTable *table = std::find_if(tables.begin(), tables.end(),
-                                                     [&](const TranslationTable &table) { return TestStrI(table.language, prefix); });
+        if (env) {
+            ChangeThreadLocale(env);
 
-        if (table != tables.end()) {
-            Size idx = table - tables.ptr;
-
-            CurrentTranslation = &i18n_tables[idx];
-            TranslationMap = &i18n_maps[idx];
+            if (i18n_thread) {
+                i18n_global = i18n_thread;
+                break;
+            }
         }
     }
+}
+
+void ChangeThreadLocale(const char *name)
+{
+    if (name) {
+        Span<const char> lang = SplitStrAny(name, "_-");
+        const TranslationTable *table = i18n_locales.FindValue(lang, nullptr);
+
+        if (table) {
+            Size idx = table - i18n_tables.ptr;
+            i18n_thread = &i18n_maps[idx];
+        }
+    } else {
+        i18n_thread = i18n_global;
+    }
+}
+
+const char *T(const char *key)
+{
+    if (!i18n_thread)
+        return key;
+
+    return i18n_thread->FindValue(key, key);
 }
 
 // ------------------------------------------------------------------------

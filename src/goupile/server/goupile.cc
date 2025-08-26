@@ -846,6 +846,15 @@ static void HandleRequest(http_IO *io)
         }
     }
 
+    // Translate errors
+    {
+        const char *lang = request.GetCookieValue("language");
+
+        if (lang) {
+            ChangeThreadLocale(lang);
+        }
+    }
+
     // Send these headers whenever possible
     io->AddHeader("Referrer-Policy", "no-referrer");
     io->AddHeader("Cross-Origin-Opener-Policy", "same-origin");
@@ -1208,6 +1217,8 @@ For help about those commands, type: %!..+%1 command --help%!0)",
 
 int Main(int argc, char **argv)
 {
+    InitLocales(TranslationTables);
+
     // Handle help and version arguments
     if (argc >= 2) {
         if (TestStr(argv[1], "--help") || TestStr(argv[1], "help")) {

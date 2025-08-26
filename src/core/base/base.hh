@@ -5357,22 +5357,19 @@ struct TranslationTable {
 
     const char *language;
     Span<Pair> messages;
+
+    RG_HASHTABLE_HANDLER(TranslationTable, language);
 };
 
 extern "C" const Span<const TranslationTable> TranslationTables;
 
-extern const TranslationTable *CurrentTranslation;
-extern HashMap<const char *, const char *> *TranslationMap;
+void InitLocales(Span<const TranslationTable> tables);
 
-void InitTranslations(Span<const TranslationTable> tables);
+// Ignored if lang is not supported.
+// Use NULL to reset to process-wide setting
+void ChangeThreadLocale(const char *name);
 
-static inline const char *T(const char *key)
-{
-    if (!TranslationMap)
-        return key;
-
-    return TranslationMap->FindValue(key, key);
-}
+const char *T(const char *key);
 
 // ------------------------------------------------------------------------
 // Options

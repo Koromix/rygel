@@ -87,9 +87,9 @@ bool HandleCommonOption(OptionParser &opt, bool ignore_unknown)
 
 int Main(int argc, char **argv)
 {
-    BlockAllocator temp_alloc;
+    InitLocales(TranslationTables);
 
-    InitTranslations(TranslationTables);
+    BlockAllocator temp_alloc;
 
     // Global options
     HeapArray<const char *> config_filenames;
