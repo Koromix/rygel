@@ -212,13 +212,13 @@ Available sort orders: %!..+%3%!0)",
                     TimeSpec spec = DecomposeTimeLocal(snapshot.time);
 
                     PrintLn("%!Y.+%1%!0 %!G..%2%!0", FmtArg(snapshot.channel).Pad(40), FmtTimeNice(spec));
-                    PrintLn("  + OID: %!..+%1%!0", snapshot.oid);
-                    PrintLn("  + Size: %!..+%1%!0", FmtDiskSize(snapshot.size));
-                    PrintLn("  + Stored: %!..+%1%!0", FmtDiskSize(snapshot.stored));
-                    PrintLn("  + Added: %!..+%1%!0", FmtDiskSize(snapshot.added));
+                    PrintLn("  + %1: %!..+%2%!0", T("OID"), snapshot.oid);
+                    PrintLn("  + %1: %!..+%2%!0", T("Size"), FmtDiskSize(snapshot.size));
+                    PrintLn("  + %1: %!..+%2%!0", T("Stored"), FmtDiskSize(snapshot.stored));
+                    PrintLn("  + %1: %!..+%2%!0", T("Added"), FmtDiskSize(snapshot.added));
 
                     if (verbose >= 1) {
-                        PrintLn("  + Tag: %!D..%1%!0", snapshot.tag);
+                        PrintLn("  + %1: %!D..%2%!0", T("Tag"), snapshot.tag);
                     }
                 }
             } else {

@@ -34,16 +34,14 @@ KeyFile = %2
 # RetainDuration =
 )";
 
-static const char *PromptNonEmpty(const char *object, const char *value, const char *mask, Allocator *alloc)
+static const char *PromptNonEmpty(const char *prompt, const char *value, const char *mask, Allocator *alloc)
 {
-    char prompt[128];
-    Fmt(prompt, "%1: ", object);
-
     const char *ret = Prompt(prompt, value, mask, alloc);
 
     if (!ret)
         return nullptr;
     if (!ret[0]) {
+        Span<const char> object = TrimStrRight(prompt, ".:;,-_ ");
         LogError("Cannot use empty %1", FmtLowerAscii(object));
         return nullptr;
     }
@@ -133,14 +131,14 @@ Options:
         for (Size i = 0; i < choices.len; i++) {
             choices[i] = choices.ptr[i + 1];
         }
-        choices.Append("Custom path");
+        choices.Append(T("Custom path"));
 
-        Size idx = PromptEnum("Config file: ", choices);
+        Size idx = PromptEnum(T("Config file:"), choices);
         if (idx < 0)
             return 1;
 
         if (idx == choices.len - 1) {
-            config_filename = PromptNonEmpty("Custom config filename", DefaultConfigName, nullptr, &temp_alloc);
+            config_filename = PromptNonEmpty(T("Custom config filename:"), DefaultConfigName, nullptr, &temp_alloc);
             if (!config_filename)
                 return 1;
         } else {
@@ -165,7 +163,7 @@ Options:
         }
 
         key_path = Fmt(&temp_alloc, "%1.key", prefix).ptr;
-        key_path = PromptNonEmpty("Master key filename", key_path, nullptr, &temp_alloc);
+        key_path = PromptNonEmpty(T("Master key filename:"), key_path, nullptr, &temp_alloc);
         if (!key_path)
             return 1;
 
@@ -174,12 +172,12 @@ Options:
 
     if (!force) {
         if (TestFile(config_filename)) {
-            Size idx = PromptEnum("Do you want to overwrite existing config file? ", {{'y', "Yes"}, {'n', "No"}}, 1);
+            Size idx = PromptEnum(T("Do you want to overwrite existing config file?"), {{'y', "Yes"}, {'n', "No"}}, 1);
             if (idx < 0 || idx)
                 return 1;
         }
         if (TestFile(key_filename)) {
-            Size idx = PromptEnum("Do you want to overwrite existing key file? ", {{'y', "Yes"}, {'n', "No"}}, 1);
+            Size idx = PromptEnum(T("Do you want to overwrite existing key file?"), {{'y', "Yes"}, {'n', "No"}}, 1);
             if (idx < 0 || idx)
                 return 1;
         }
@@ -192,7 +190,7 @@ Options:
     // Prompt for repository type
     rk_DiskType type;
     {
-        Size idx = PromptEnum("Repository type: ", rk_DiskTypeNames);
+        Size idx = PromptEnum(T("Repository type:"), rk_DiskTypeNames);
         if (idx < 0)
             return 1;
         type = (rk_DiskType)idx;
@@ -200,7 +198,7 @@ Options:
 
     switch (type) {
         case rk_DiskType::Local: {
-            const char *url = PromptNonEmpty("Repository path", &temp_alloc);
+            const char *url = PromptNonEmpty(T("Repository path:"), &temp_alloc);
             if (!url)
                 return 1;
             Print(&st, BaseConfig, url, key_path);
@@ -212,16 +210,16 @@ Options:
             const char *key_id = nullptr;
             const char *secret_key = nullptr;
 
-            endpoint = PromptNonEmpty("S3 endpoint URL", &temp_alloc);
+            endpoint = PromptNonEmpty(T("S3 endpoint URL:"), &temp_alloc);
             if (!endpoint || !CheckEndpoint(endpoint))
                 return 1;
-            bucket = PromptNonEmpty("Bucket name", &temp_alloc);
+            bucket = PromptNonEmpty(T("Bucket name:"), &temp_alloc);
             if (!bucket)
                 return 1;
-            key_id = PromptNonEmpty("S3 access key ID", &temp_alloc);
+            key_id = PromptNonEmpty(T("S3 access key ID:"), &temp_alloc);
             if (!key_id)
                 return 1;
-            secret_key = PromptNonEmpty("S3 secret key", nullptr, "*", &temp_alloc);
+            secret_key = PromptNonEmpty(T("S3 secret key:"), nullptr, "*", &temp_alloc);
             if (!secret_key)
                 return 1;
 
@@ -249,9 +247,9 @@ Options:
             bool use_password;
             bool use_keyfile;
             {
-                Size ret = PromptEnum("SSH authentication mode: ", {
-                    "Password",
-                    "Keyfile"
+                Size ret = PromptEnum(T("SSH authentication mode:"), {
+                    T("Password"),
+                    T("Keyfile")
                 });
                 if (ret < 0)
                     return 1;
@@ -259,26 +257,26 @@ Options:
                 use_keyfile = (ret == 1);
             }
 
-            host = PromptNonEmpty("SSH host", &temp_alloc);
+            host = PromptNonEmpty(T("SSH host:"), &temp_alloc);
             if (!host)
                 return 1;
-            username = PromptNonEmpty("SSH user", &temp_alloc);
+            username = PromptNonEmpty(T("SSH user:"), &temp_alloc);
             if (!username)
                 return 1;
             if (use_password) {
-                password = PromptNonEmpty("SSH password", nullptr, "*", &temp_alloc);
+                password = PromptNonEmpty(T("SSH password:"), nullptr, "*", &temp_alloc);
                 if (!password)
                     return 1;
             }
             if (use_keyfile) {
-                keyfile = PromptNonEmpty("SSH keyfile", &temp_alloc);
+                keyfile = PromptNonEmpty(T("SSH keyfile:"), &temp_alloc);
                 if (!keyfile)
                     return 1;
             }
-            path = PromptNonEmpty("SSH path", &temp_alloc);
+            path = PromptNonEmpty(T("SSH path:"), &temp_alloc);
             if (!path)
                 return 1;
-            fingerprint = Prompt("Host fingerprint (optional): ", &temp_alloc);
+            fingerprint = Prompt(T("Host fingerprint (optional):"), &temp_alloc);
             if (!fingerprint)
                 return 1;
 
@@ -386,7 +384,7 @@ Options:
     }
 
     if (!key_filename) {
-        key_filename = Prompt("Master key export file: ", "master.key", nullptr, &temp_alloc);
+        key_filename = Prompt(T("Master key export file:"), "master.key", nullptr, &temp_alloc);
 
         if (!key_filename)
             return 1;

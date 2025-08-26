@@ -91,6 +91,8 @@ int Main(int argc, char **argv)
 
     BlockAllocator temp_alloc;
 
+    InitTranslations(TranslationTables);
+
     // Global options
     HeapArray<const char *> config_filenames;
     const char *config_filename = FindConfigFile(DefaultConfigDirectory, DefaultConfigName, &temp_alloc, &config_filenames);
@@ -153,7 +155,7 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
         PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
-        PrintLn("Compiler: %1", FelixCompiler);
+        PrintLn(T("Compiler: %1"), FelixCompiler);
         return 0;
     }
 

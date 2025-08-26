@@ -585,7 +585,7 @@ Options:
         title = SplitStrReverseAny(root_directory, RG_PATH_SEPARATORS).ptr;
 
 retry_title:
-        title = Prompt("Domain title: ", title, nullptr, &temp_alloc);
+        title = Prompt(T("Domain title:"), title, nullptr, &temp_alloc);
         if (!title)
             return 1;
 
@@ -597,7 +597,7 @@ retry_title:
         return 1;
     }
     if (!username) {
-        username = Prompt("Admin user: ", &temp_alloc);
+        username = Prompt(T("Admin user:"), &temp_alloc);
         if (!username)
             return 1;
     }
@@ -608,14 +608,14 @@ retry_title:
             return 1;
     } else {
 retry_pwd:
-        password = Prompt("Admin password: ", nullptr, "*", &temp_alloc);
+        password = Prompt(T("Admin password:"), nullptr, "*", &temp_alloc);
         if (!password)
             return 1;
 
         if (check_password && !pwd_CheckPassword(password, username))
             goto retry_pwd;
 
-        const char *password2 = Prompt("Confirm: ", nullptr, "*", &temp_alloc);
+        const char *password2 = Prompt(T("Confirm:"), nullptr, "*", &temp_alloc);
         if (!password2)
             return 1;
 
@@ -855,7 +855,7 @@ Options:
 
         if (!decrypt_key[0]) {
 again:
-            const char *key = Prompt("Decryption key: ", nullptr, "*", &temp_alloc);
+            const char *key = Prompt(T("Decryption key:"), nullptr, "*", &temp_alloc);
             if (!key)
                 return 1;
             if (!ParseKeyString(key, sk))
@@ -1035,7 +1035,7 @@ Options:
     }
 
     if (!decrypt_key) {
-        decrypt_key = Prompt("Decryption key: ", nullptr, "*", &temp_alloc);
+        decrypt_key = Prompt(T("Decryption key:"), nullptr, "*", &temp_alloc);
         if (!decrypt_key)
             return 1;
     }

@@ -495,7 +495,7 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         }
     } else if (TestStr(cmd, "--version")) {
         PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
-        PrintLn("Compiler: %1", FelixCompiler);
+        PrintLn(T("Compiler: %1"), FelixCompiler);
         return 0;
     }
 

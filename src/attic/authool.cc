@@ -178,12 +178,12 @@ Options:
 
     if (!password) {
 retry:
-        password = Prompt("Password: ", nullptr, mask ? "*" : nullptr, &temp_alloc);
+        password = Prompt(T("Password:"), nullptr, mask ? "*" : nullptr, &temp_alloc);
         if (!password)
             return 1;
 
         if (confirm) {
-            const char *password2 = Prompt("Confirm: ", nullptr, mask ? "*" : nullptr, &temp_alloc);
+            const char *password2 = Prompt(T("Confirm:"), nullptr, mask ? "*" : nullptr, &temp_alloc);
             if (!password2)
                 return 1;
 
@@ -261,12 +261,12 @@ Options:
 
     if (!password) {
 retry:
-        password = Prompt("Password: ", nullptr, mask ? "*" : nullptr, &temp_alloc);
+        password = Prompt(T("Password:"), nullptr, mask ? "*" : nullptr, &temp_alloc);
         if (!password)
             return 1;
 
         if (confirm) {
-            const char *password2 = Prompt("Confirm: ", nullptr, mask ? "*" : nullptr, &temp_alloc);
+            const char *password2 = Prompt(T("Confirm:"), nullptr, mask ? "*" : nullptr, &temp_alloc);
             if (!password2)
                 return 1;
 
@@ -365,7 +365,7 @@ Options:
     }
 
     if (!label) {
-        label = Prompt("Label: ", &temp_alloc);
+        label = Prompt(T("Label:"), &temp_alloc);
         if (!label)
             return 1;
         if (!label[0]) {
@@ -374,13 +374,13 @@ Options:
         }
     }
     if (!username) {
-        username = Prompt("Username: ", &temp_alloc);
+        username = Prompt(T("Username:"), &temp_alloc);
         if (!username)
             return 1;
     }
     username = username[0] ? username : nullptr;
     if (!issuer) {
-        issuer = Prompt("Issuer: ", &temp_alloc);
+        issuer = Prompt(T("Issuer:"), &temp_alloc);
         if (!issuer)
             return 1;
     }
@@ -499,7 +499,7 @@ Options:
     }
 
     if (!secret) {
-        secret = Prompt("Secret: ", &temp_alloc);
+        secret = Prompt(T("Secret:"), &temp_alloc);
         if (!secret)
             return 1;
         if (!secret[0]) {
@@ -597,7 +597,7 @@ Options:
         if (!pwd_CheckSecret(secret))
             return 1;
     } else {
-        secret = Prompt("Secret: ", &temp_alloc);
+        secret = Prompt(T("Secret:"), &temp_alloc);
         if (!secret)
             return 1;
         if (!secret[0]) {
@@ -609,7 +609,7 @@ Options:
     if (!code) {
         PrintLn("Expecting %1 digits", digits);
 
-        code = Prompt("Code: ", &temp_alloc);
+        code = Prompt(T("Code:"), &temp_alloc);
         if (!code)
             return 1;
         if (strlen(code) != (size_t)digits) {
@@ -771,7 +771,7 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         }
     } else if (TestStr(cmd, "--version")) {
         PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
-        PrintLn("Compiler: %1", FelixCompiler);
+        PrintLn(T("Compiler: %1"), FelixCompiler);
         return 0;
     }
 

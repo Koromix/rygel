@@ -131,7 +131,7 @@ function detectCxxMessages(filename) {
     let code = fs.readFileSync(filename).toString();
 
     let matches = [
-        ...code.matchAll(/(?:T|Print|PrintLn|LogError|LogWarning|LogInfo)\(\"(.+)\"(?:, .*)?\)/g)
+        ...code.matchAll(/(?:T|LogError|LogWarning|LogInfo)\(\"(.+?)\"(?:, .*)?\)/g)
     ];
 
     return matches.map(m => m[1]);
@@ -151,7 +151,7 @@ function detectJsMessages(filename) {
     let code = fs.readFileSync(filename).toString();
 
     let matches = [
-        ...code.matchAll(/T\.message\(`(.+)`/g)
+        ...code.matchAll(/T\.message\(`(.+?)`/g)
     ];
 
     return matches.map(m => m[1]);

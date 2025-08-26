@@ -81,7 +81,7 @@ bool ssh_Config::Complete()
         } else if (const char *str = GetEnv("SSH_PASSWORD"); str) {
             password = DuplicateString(str, &str_alloc).ptr;
         } else if (username && FileIsVt100(STDERR_FILENO)) {
-            password = Prompt("SSH password: ", nullptr, "*", &str_alloc);
+            password = Prompt(T("SSH password:"), nullptr, "*", &str_alloc);
             if (!password)
                 return false;
         }
