@@ -19,12 +19,12 @@
 #include "src/core/wrap/xml.hh"
 #include "compiler.hh"
 #include "locate.hh"
+#include "macify.hh"
 #include <sys/stat.h>
 
 namespace RG {
 
-static bool WriteInfoPlist(const char *name, const char *title,
-                           const char *icon_filename, const char *dest_filename) {
+static bool WriteInfoPlist(const char *name, const char *title, const char *icon_filename, const char *dest_filename) {
     static const char *const plist = R"(
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -182,141 +182,87 @@ static bool UnlinkRecursive(const char *root_directory)
     return complete;
 }
 
-int RunMacify(Span<const char *> arguments)
+bool BundleMacBinary(const char *binary_filename, const char *output_dir, const MacBundleSettings &settings)
 {
     BlockAllocator temp_alloc;
 
-    // Options
-    const char *output_bundle = nullptr;
-    const char *title = nullptr;
-    const char *icon_filename = nullptr;
-    bool force = false;
-    const char *binary_filename = nullptr;
-
-    const auto print_usage = [=](StreamWriter *st) {
-        PrintLn(st,
-R"(Usage: %!..+%1 macify [option...] binary%!0
-
-Options:
-
-    %!..+-O, --output_dir directory%!0   Set application bundle directory
-
-        %!..+--title title%!0            Set bundle name
-        %!..+--icon icon%!0              Set bundle icon (ICNS)
-
-    %!..+-f, --force%!0                  Overwrite destination files)",
-                FelixTarget);
-    };
-
-    // Parse arguments
-    {
-        OptionParser opt(arguments);
-
-        while (opt.Next()) {
-            if (opt.Test("--help")) {
-                print_usage(StdOut);
-                return 0;
-            } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
-                output_bundle = opt.current_value;
-            } else if (opt.Test("--title", OptionType::Value)) {
-                title = opt.current_value;
-            } else if (opt.Test("--icon", OptionType::Value)) {
-                icon_filename = opt.current_value;
-            } else if (opt.Test("-f", "--force")) {
-                force = true;
-            } else {
-                opt.LogUnknownError();
-                return 1;
-            }
-        }
-
-        binary_filename = opt.ConsumeNonOption();
-        opt.LogUnusedArguments();
-    }
-
-    if (!binary_filename) {
-        LogError("Missing binary filename");
-        return 1;
-    }
-    if (!output_bundle) {
-        LogError("Missing output bundle directory");
-        return 1;
-    }
+    RG_ASSERT(binary_filename);
+    RG_ASSERT(output_dir);
 
     std::unique_ptr<const Compiler> compiler = PrepareCompiler({});
     if (!compiler)
-        return 1;
+        return false;
 
     const QtInfo *qt = FindQtSdk(compiler.get());
     if (!qt)
-        return 1;
+        return false;
 
-    if (TestFile(output_bundle)) {
-        if (force) {
-            if (!UnlinkRecursive(output_bundle))
-                return 1;
+    if (TestFile(output_dir)) {
+        if (settings.force) {
+            if (!UnlinkRecursive(output_dir))
+                return false;
         } else {
-            LogError("Bundle '%1' already exists", output_bundle);
-            return 1;
+            LogError("Bundle '%1' already exists", output_dir);
+            return false;
         }
     }
 
-    if (!MakeDirectory(output_bundle))
-        return 1;
+    if (!MakeDirectory(output_dir))
+        return false;
 
-    RG_DEFER_N(root_guard) { UnlinkRecursive(output_bundle); };
+    RG_DEFER_N(root_guard) { UnlinkRecursive(output_dir); };
 
     // Create directories
     {
         const auto make_directory = [&](const char *basename) {
-            const char *dirname = Fmt(&temp_alloc, "%1%/%2", output_bundle, basename).ptr;
+            const char *dirname = Fmt(&temp_alloc, "%1%/%2", output_dir, basename).ptr;
             return MakeDirectory(dirname);
         };
 
         if (!make_directory("Contents"))
-            return 1;
+            return false;
         if (!make_directory("Contents/Frameworks"))
-            return 1;
+            return false;
         if (!make_directory("Contents/MacOs"))
-            return 1;
+            return false;
         if (!make_directory("Contents/Resources"))
-            return 1;
+            return false;
     }
 
     const char *name = SplitStrReverseAny(binary_filename, RG_PATH_SEPARATORS).ptr;
-    const char *target_binary = Fmt(&temp_alloc, "%1%/Contents%/MacOs%/%2", output_bundle, name).ptr;
-    const char *plist_filename = Fmt(&temp_alloc, "%1%/Contents%/Info.plist", output_bundle).ptr;
+    const char *target_binary = Fmt(&temp_alloc, "%1%/Contents%/MacOs%/%2", output_dir, name).ptr;
+    const char *plist_filename = Fmt(&temp_alloc, "%1%/Contents%/Info.plist", output_dir).ptr;
 
     // Copy binary to bundle
     if (!CopyFile(binary_filename, target_binary))
-        return 1;
+        return false;
     chmod(target_binary, 0755);
 
     // Copy icon (if any)
-    if (icon_filename) {
+    if (settings.icon_filename) {
         const char *dest_icon = Fmt(&temp_alloc, "%1%/Contents%/Resources%/%2",
-                                    output_bundle, SplitStrReverseAny(icon_filename, RG_PATH_SEPARATORS)).ptr;
-        if (!CopyFile(icon_filename, dest_icon))
-            return 1;
+                                    output_dir, SplitStrReverseAny(settings.icon_filename, RG_PATH_SEPARATORS)).ptr;
+        if (!CopyFile(settings.icon_filename, dest_icon))
+            return false;
     }
 
     // Write metadata file
-    if (!WriteInfoPlist(name, title, icon_filename, plist_filename))
-        return 1;
+    if (!WriteInfoPlist(name, settings.title, settings.icon_filename, plist_filename))
+        return false;
 
     // Run macdeployqt file
     {
-        const char *cmd_line = Fmt(&temp_alloc, "\"%1\" \"%2\"", qt->macdeployqt, output_bundle).ptr;
+        const char *cmd_line = Fmt(&temp_alloc, "\"%1\" \"%2\"", qt->macdeployqt, output_dir).ptr;
 
         HeapArray<char> output;
         if (!ReadCommandOutput(cmd_line, &output)) {
             LogError("Failed to use macdeployqt: %1", output.As());
-            return 1;
+            return false;
         }
     }
 
     root_guard.Disable();
-    return 0;
+    return true;
 }
 
 }
