@@ -932,23 +932,6 @@ Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
     return MakeSpan(new_str, str.len);
 }
 
-bool IsValidUtf8(Span<const char> str)
-{
-    Size i = 0;
-
-    while (i < str.len) {
-        int32_t uc;
-        Size bytes = DecodeUtf8(str, i, &uc);
-
-        if (!bytes) [[unlikely]]
-            return false;
-
-        i += bytes;
-    }
-
-    return i == str.len;
-}
-
 // ------------------------------------------------------------------------
 // Format
 // ------------------------------------------------------------------------
@@ -9284,7 +9267,7 @@ bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
 {
     StdErr->Flush();
 
-    prompt_columns = ComputeWidth(prompt);
+    prompt_columns = ComputeUnicodeWidth(prompt) + 1;
     str_offset = str.len;
 
     RenderRaw();
@@ -9610,7 +9593,7 @@ Size ConsolePrompter::ReadRawEnum(Span<const PromptChoice> choices, Size value)
 
 bool ConsolePrompter::ReadBuffered(Span<const char> *out_str)
 {
-    prompt_columns = ComputeWidth(prompt);
+    prompt_columns = ComputeUnicodeWidth(prompt) + 1;
 
     RenderBuffered();
 
@@ -9759,15 +9742,16 @@ void ConsolePrompter::FormatChoices(Span<const PromptChoice> choices, Size value
     int align = 0;
 
     for (const PromptChoice &choice: choices) {
-        align = std::max(align, (int)strlen(choice.str));
+        align = std::max(align, (int)ComputeUnicodeWidth(choice.str));
     }
 
     str.RemoveFrom(0);
     str.Append('\n');
     for (Size i = 0; i < choices.len; i++) {
         const PromptChoice &choice = choices[i];
+        int pad = align - ComputeUnicodeWidth(choice.str);
 
-        Fmt(&str, "  [%1] %2  ", choice.c, FmtArg(choice.str).Pad(align));
+        Fmt(&str, "  [%1] %2%3  ", choice.c, choice.str, FmtArg(' ').Repeat(pad));
         if (i == value) {
             str_offset = str.len;
         }
@@ -9780,7 +9764,7 @@ void ConsolePrompter::RenderRaw()
     columns = GetConsoleSize().x;
     rows = 0;
 
-    int mask_columns = mask ? ComputeWidth(mask) : 0;
+    int mask_columns = mask ? ComputeUnicodeWidth(mask) : 0;
 
     // Hide cursor during refresh
     StdErr->Write("\x1B[?25l");
@@ -9793,7 +9777,7 @@ void ConsolePrompter::RenderRaw()
         Size i = 0;
         int x2 = prompt_columns;
 
-        Print(StdErr, "\r%!0%1%!..+", prompt);
+        Print(StdErr, "\r%!0%1 %!..+", prompt);
 
         for (;;) {
             if (i == str_offset) {
@@ -9804,7 +9788,7 @@ void ConsolePrompter::RenderRaw()
                 break;
 
             Size bytes = std::min((Size)CountUtf8Bytes(str[i]), str.len - i);
-            int width = mask ? mask_columns : ComputeWidth(str.Take(i, bytes));
+            int width = mask ? mask_columns : ComputeUnicodeWidth(str.Take(i, bytes));
 
             if (x2 + width >= columns || str[i] == '\n') {
                 FmtArg prefix = FmtArg(' ').Repeat(prompt_columns - 1);
@@ -9848,7 +9832,7 @@ void ConsolePrompter::RenderBuffered()
     Span<const char> remain = str;
     Span<const char> line = SplitStr(remain, '\n', &remain);
 
-    Print(StdErr, "%1%2", prompt, line);
+    Print(StdErr, "%1 %2", prompt, line);
     while (remain.len) {
         line = SplitStr(remain, '\n', &remain);
         Print(StdErr, "\n%1%2", FmtArg(' ').Repeat(prompt_columns), line);
@@ -10015,25 +9999,6 @@ error:
 #endif
 }
 
-int ConsolePrompter::ComputeWidth(Span<const char> str)
-{
-    Size i = 0;
-    int width = 0;
-
-    while (i < str.len) {
-        int32_t uc;
-        Size bytes = DecodeUtf8(str, i, &uc);
-
-        if (!bytes) [[unlikely]]
-            return false;
-
-        i += bytes;
-        width += ComputeCharacterWidth(uc);
-    }
-
-    return width;
-}
-
 void ConsolePrompter::EnsureNulTermination()
 {
     str.Grow(1);
@@ -10181,6 +10146,23 @@ bool CanCompressFile(const char *filename)
 // Unicode
 // ------------------------------------------------------------------------
 
+bool IsValidUtf8(Span<const char> str)
+{
+    Size i = 0;
+
+    while (i < str.len) {
+        int32_t uc;
+        Size bytes = DecodeUtf8(str, i, &uc);
+
+        if (!bytes) [[unlikely]]
+            return false;
+
+        i += bytes;
+    }
+
+    return i == str.len;
+}
+
 static bool TestUnicodeTable(Span<const int32_t> table, int32_t uc)
 {
     RG_ASSERT(table.len > 0);
@@ -10194,7 +10176,26 @@ static bool TestUnicodeTable(Span<const int32_t> table, int32_t uc)
     return idx & 0x1;
 }
 
-int ComputeCharacterWidth(int32_t uc)
+int ComputeUnicodeWidth(Span<const char> str)
+{
+    Size i = 0;
+    int width = 0;
+
+    while (i < str.len) {
+        int32_t uc;
+        Size bytes = DecodeUtf8(str, i, &uc);
+
+        if (!bytes) [[unlikely]]
+            return false;
+
+        i += bytes;
+        width += ComputeUnicodeWidth(uc);
+    }
+
+    return width;
+}
+
+int ComputeUnicodeWidth(int32_t uc)
 {
     if (uc < 32)
         return 0;

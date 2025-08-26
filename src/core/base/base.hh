@@ -1878,117 +1878,6 @@ static inline Span<const char> TrimStrRight(Span<const char> str, const char *tr
 static inline Span<const char> TrimStr(Span<const char> str, const char *trim_chars = " \t\r\n")
     { return TrimStr(MakeSpan((char *)str.ptr, str.len), trim_chars); }
 
-static inline int CountUtf8Bytes(char c)
-{
-    int ones = CountLeadingZeros((uint32_t)~c << 24);
-    return std::min(std::max(ones, 1), 4);
-}
-
-static constexpr inline Size DecodeUtf8(const char *str, int32_t *out_c)
-{
-    RG_ASSERT(str[0]);
-
-#define BYTE(Idx) ((uint8_t)str[Idx])
-
-    if (BYTE(0) < 0x80) {
-        *out_c = BYTE(0);
-        return 1;
-    } else if (BYTE(0) - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
-        return 0;
-    } else if (BYTE(1)) [[likely]] {
-        if (BYTE(0) < 0xE0 && (BYTE(1) & 0xC0) == 0x80) {
-            *out_c = ((BYTE(0) & 0x1F) << 6) | (BYTE(1) & 0x3F);
-            return 2;
-        } else if (BYTE(2)) [[likely]] {
-            if (BYTE(0) < 0xF0 &&
-                   (BYTE(1) & 0xC0) == 0x80 &&
-                   (BYTE(2) & 0xC0) == 0x80) {
-                *out_c = ((BYTE(0) & 0xF) << 12) | ((BYTE(1) & 0x3F) << 6) | (BYTE(2) & 0x3F);
-                return 3;
-            } else if (BYTE(3)) [[likely]] {
-                if ((BYTE(1) & 0xC0) == 0x80 &&
-                       (BYTE(2) & 0xC0) == 0x80 &&
-                       (BYTE(3) & 0xC0) == 0x80) {
-                    *out_c = ((BYTE(0) & 0x7) << 18) | ((BYTE(1) & 0x3F) << 12) | ((BYTE(2) & 0x3F) << 6) | (BYTE(3) & 0x3F);
-                    return 4;
-                }
-            }
-        }
-    }
-
-#undef BYTE
-
-    return 0;
-}
-
-static constexpr inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
-{
-    RG_ASSERT(offset < str.len);
-
-    str = str.Take(offset, str.len - offset);
-
-#define BYTE(Idx) ((uint8_t)str[Idx])
-
-    if (BYTE(0) < 0x80) {
-        *out_c = BYTE(0);
-        return 1;
-    } else if (BYTE(0) - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
-        return 0;
-    } else if (BYTE(0) < 0xE0 && str.len >= 2 && (BYTE(1) & 0xC0) == 0x80) {
-        *out_c = ((BYTE(0) & 0x1F) << 6) | (BYTE(1) & 0x3F);
-        return 2;
-    } else if (BYTE(0) < 0xF0 && str.len >= 3 && (BYTE(1) & 0xC0) == 0x80 &&
-                                                 (BYTE(2) & 0xC0) == 0x80) {
-        *out_c = ((BYTE(0) & 0xF) << 12) | ((BYTE(1) & 0x3F) << 6) | (BYTE(2) & 0x3F);
-        return 3;
-    } else if (str.len >= 4 && (BYTE(1) & 0xC0) == 0x80 &&
-                               (BYTE(2) & 0xC0) == 0x80 &&
-                               (BYTE(3) & 0xC0) == 0x80) {
-        *out_c = ((BYTE(0) & 0x7) << 18) | ((BYTE(1) & 0x3F) << 12) | ((BYTE(2) & 0x3F) << 6) | (BYTE(3) & 0x3F);
-        return 4;
-    } else {
-        return 0;
-    }
-
-#undef BYTE
-}
-
-static constexpr inline int32_t DecodeUtf8(const char *str)
-{
-    int32_t uc = -1;
-    DecodeUtf8(str, &uc);
-    return uc;
-}
-
-static inline Size EncodeUtf8(int32_t c, char out_buf[4])
-{
-    if (c < 0x80) {
-        out_buf[0] = (char)c;
-        return 1;
-    } else if (c < 0x800) {
-        out_buf[0] = (char)(0xC0 | (c >> 6));
-        out_buf[1] = (char)(0x80 | (c & 0x3F));
-        return 2;
-    } else if (c >= 0xD800 && c < 0xE000) {
-        return 0;
-    } else if (c < 0x10000) {
-        out_buf[0] = (char)(0xE0 | (c >> 12));
-        out_buf[1] = (char)(0x80 | ((c >> 6) & 0x3F));
-        out_buf[2] = (char)(0x80 | (c & 0x3F));
-        return 3;
-    } else if (c < 0x110000) {
-        out_buf[0] = (char)(0xF0 | (c >> 18));
-        out_buf[1] = (char)(0x80 | ((c >> 12) & 0x3F));
-        out_buf[2] = (char)(0x80 | ((c >> 6) & 0x3F));
-        out_buf[3] = (char)(0x80 | (c & 0x3F));
-        return 4;
-    } else {
-        return 0;
-    }
-}
-
-bool IsValidUtf8(Span<const char> str);
-
 // ------------------------------------------------------------------------
 // Collections
 // ------------------------------------------------------------------------
@@ -5710,8 +5599,6 @@ private:
     Vec2<int> GetConsoleSize();
     int32_t ReadChar();
 
-    int ComputeWidth(Span<const char> str);
-
     void EnsureNulTermination();
 };
 
@@ -5734,7 +5621,119 @@ bool CanCompressFile(const char *filename);
 // Unicode
 // ------------------------------------------------------------------------
 
-int ComputeCharacterWidth(int32_t uc);
+static inline int CountUtf8Bytes(char c)
+{
+    int ones = CountLeadingZeros((uint32_t)~c << 24);
+    return std::min(std::max(ones, 1), 4);
+}
+
+static constexpr inline Size DecodeUtf8(const char *str, int32_t *out_c)
+{
+    RG_ASSERT(str[0]);
+
+#define BYTE(Idx) ((uint8_t)str[Idx])
+
+    if (BYTE(0) < 0x80) {
+        *out_c = BYTE(0);
+        return 1;
+    } else if (BYTE(0) - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
+        return 0;
+    } else if (BYTE(1)) [[likely]] {
+        if (BYTE(0) < 0xE0 && (BYTE(1) & 0xC0) == 0x80) {
+            *out_c = ((BYTE(0) & 0x1F) << 6) | (BYTE(1) & 0x3F);
+            return 2;
+        } else if (BYTE(2)) [[likely]] {
+            if (BYTE(0) < 0xF0 &&
+                   (BYTE(1) & 0xC0) == 0x80 &&
+                   (BYTE(2) & 0xC0) == 0x80) {
+                *out_c = ((BYTE(0) & 0xF) << 12) | ((BYTE(1) & 0x3F) << 6) | (BYTE(2) & 0x3F);
+                return 3;
+            } else if (BYTE(3)) [[likely]] {
+                if ((BYTE(1) & 0xC0) == 0x80 &&
+                       (BYTE(2) & 0xC0) == 0x80 &&
+                       (BYTE(3) & 0xC0) == 0x80) {
+                    *out_c = ((BYTE(0) & 0x7) << 18) | ((BYTE(1) & 0x3F) << 12) | ((BYTE(2) & 0x3F) << 6) | (BYTE(3) & 0x3F);
+                    return 4;
+                }
+            }
+        }
+    }
+
+#undef BYTE
+
+    return 0;
+}
+
+static constexpr inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
+{
+    RG_ASSERT(offset < str.len);
+
+    str = str.Take(offset, str.len - offset);
+
+#define BYTE(Idx) ((uint8_t)str[Idx])
+
+    if (BYTE(0) < 0x80) {
+        *out_c = BYTE(0);
+        return 1;
+    } else if (BYTE(0) - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
+        return 0;
+    } else if (BYTE(0) < 0xE0 && str.len >= 2 && (BYTE(1) & 0xC0) == 0x80) {
+        *out_c = ((BYTE(0) & 0x1F) << 6) | (BYTE(1) & 0x3F);
+        return 2;
+    } else if (BYTE(0) < 0xF0 && str.len >= 3 && (BYTE(1) & 0xC0) == 0x80 &&
+                                                 (BYTE(2) & 0xC0) == 0x80) {
+        *out_c = ((BYTE(0) & 0xF) << 12) | ((BYTE(1) & 0x3F) << 6) | (BYTE(2) & 0x3F);
+        return 3;
+    } else if (str.len >= 4 && (BYTE(1) & 0xC0) == 0x80 &&
+                               (BYTE(2) & 0xC0) == 0x80 &&
+                               (BYTE(3) & 0xC0) == 0x80) {
+        *out_c = ((BYTE(0) & 0x7) << 18) | ((BYTE(1) & 0x3F) << 12) | ((BYTE(2) & 0x3F) << 6) | (BYTE(3) & 0x3F);
+        return 4;
+    } else {
+        return 0;
+    }
+
+#undef BYTE
+}
+
+static constexpr inline int32_t DecodeUtf8(const char *str)
+{
+    int32_t uc = -1;
+    DecodeUtf8(str, &uc);
+    return uc;
+}
+
+static inline Size EncodeUtf8(int32_t c, char out_buf[4])
+{
+    if (c < 0x80) {
+        out_buf[0] = (char)c;
+        return 1;
+    } else if (c < 0x800) {
+        out_buf[0] = (char)(0xC0 | (c >> 6));
+        out_buf[1] = (char)(0x80 | (c & 0x3F));
+        return 2;
+    } else if (c >= 0xD800 && c < 0xE000) {
+        return 0;
+    } else if (c < 0x10000) {
+        out_buf[0] = (char)(0xE0 | (c >> 12));
+        out_buf[1] = (char)(0x80 | ((c >> 6) & 0x3F));
+        out_buf[2] = (char)(0x80 | (c & 0x3F));
+        return 3;
+    } else if (c < 0x110000) {
+        out_buf[0] = (char)(0xF0 | (c >> 18));
+        out_buf[1] = (char)(0x80 | ((c >> 12) & 0x3F));
+        out_buf[2] = (char)(0x80 | ((c >> 6) & 0x3F));
+        out_buf[3] = (char)(0x80 | (c & 0x3F));
+        return 4;
+    } else {
+        return 0;
+    }
+}
+
+bool IsValidUtf8(Span<const char> str);
+
+int ComputeUnicodeWidth(Span<const char> str);
+int ComputeUnicodeWidth(int32_t uc);
 
 bool IsXidStart(int32_t uc);
 bool IsXidContinue(int32_t uc);
