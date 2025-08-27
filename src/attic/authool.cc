@@ -437,13 +437,12 @@ static int RunComputeTOTP(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 compute_totp [option...]%!0
+R"(Usage: %!..+%1 compute_totp [option...] [secret]%!0
 
 Options:
 
     %!..+-a, --algorithm algorithm%!0      Change HMAC algorithm
                                    %!D..(default: %2)%!0
-    %!..+-s, --secret secret%!0            Set secret in Base32 encoding
 
     %!..+-t, --time time%!0                Use specified Unix time instead of current time
     %!..+-d, --digits digits%!0            Generate specified number of digits
@@ -466,8 +465,6 @@ Options:
                     LogError("Unknown HMAC algorithm '%1'", opt.current_value);
                     return 1;
                 }
-            } else if (opt.Test("-s", "--secret", OptionType::Value)) {
-                secret = opt.current_value;
             } else if (opt.Test("-t", "--time", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &time))
                     return 1;
@@ -495,6 +492,7 @@ Options:
             }
         }
 
+        secret = opt.ConsumeNonOption();
         opt.LogUnusedArguments();
     }
 
