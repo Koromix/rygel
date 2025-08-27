@@ -30,7 +30,6 @@ import '../../../vendor/opensans/OpenSans.css';
 import './goupile.css';
 
 let languages = {};
-let user_lang = null;
 
 // Global variables
 let profile = {};
@@ -143,48 +142,8 @@ function initLanguages() {
     languages.en = en;
     languages.fr = fr;
 
-    // Detect user language
-    {
-        let lang = Util.getCookie('language');
-
-        if (lang != null && !languages.hasOwnProperty(lang))
-            lang = null;
-        if (lang == null && navigator.languages != null)
-            lang = navigator.languages.map(lang => lang.replace(/-.*$/, '')).find(lang => languages.hasOwnProperty(lang));
-        if (lang == null)
-            lang = 'fr';
-
-        setTranslationTable(lang);
-    }
+    Util.initLocales(languages, 'fr');
 }
-
-function setTranslationTable(lang) {
-    let table = languages[lang];
-
-    T = Object.assign({}, table.keys);
-
-    T.format = (str, ...args) => {
-        str = str.replace(/{(\d+)}/g, (match, idx) => {
-            idx = parseInt(idx, 10) - 1;
-
-            if (idx >= args.length)
-                return match;
-
-            let arg = args[idx];
-            return (arg != null) ? arg : '';
-        });
-        return str;
-    };
-    T.message = (str, ...args) => {
-        str = table.messages[str] ?? str;
-        return T.format(str, ...args);
-    };
-    T.lang = lang;
-
-    user_lang = lang;
-    document.documentElement.lang = user_lang;
-}
-
 
 async function registerSW() {
     try {
@@ -487,7 +446,7 @@ async function runPasswordScreen(e, initial) {
                     <div style="flex: 1;"></div>
                     <select aria-label=${T.language} @change=${UI.wrap(e => switchLanguage(e.target.value))}>
                         ${Object.keys(languages).map(lang =>
-                            html`<option value=${lang} .selected=${lang == user_lang}>${lang.toUpperCase()}</option>`)}
+                            html`<option value=${lang} .selected=${lang == T.lang}>${lang.toUpperCase()}</option>`)}
                     </select>
                 </div>
             `);
@@ -515,7 +474,7 @@ async function runPasswordScreen(e, initial) {
 }
 
 async function switchLanguage(lang) {
-    setTranslationTable(lang);
+    Util.setLocale(lang);
     Util.setCookie('language', lang, '/', 365 * 86400);
 
     if (UI.isDialogOpen()) {

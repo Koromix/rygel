@@ -9,7 +9,7 @@
         try {
             let main = document.querySelector('main');
 
-            await load('static/staks', (value, total) => {
+            await load('static/staks', 'fr', (value, total) => {
                 let progress = Math.floor(value / total * 100);
                 main.innerHTML = progress + '%';
             });

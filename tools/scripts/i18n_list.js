@@ -18,11 +18,32 @@
 const fs = require('fs');
 const path = require('path');
 
-const DIRECTORIES = [
-    'src/core/base',
-    'src/goupile',
-    'src/meestic',
-    'src/rekkord'
+const SOURCES = [
+    {
+        namespace: 'core/base',
+        from: 'src/core/base',
+        path: 'src/core/base/i18n'
+    },
+    {
+        namespace: 'goupile',
+        from: 'src/goupile',
+        path: 'src/goupile/i18n'
+    },
+    {
+        namespace: 'meestic',
+        from: 'src/meestic',
+        path: 'src/meestic/i18n'
+    },
+    {
+        namespace: 'rekkord',
+        from: 'src/rekkord',
+        path: 'src/rekkord/i18n'
+    },
+    {
+        namespace: 'staks',
+        from: 'src/staks/src',
+        path: 'src/staks/i18n'
+    }
 ];
 const LANGUAGES = ['en', 'fr'];
 
@@ -53,25 +74,23 @@ async function run() {
             throw new Error(`Invalid option '${opt}'`);
     }
 
-    for (let root of DIRECTORIES) {
-        let i18n = path.join(root, 'i18n');
-
-        if (!fs.existsSync(i18n))
-            fs.mkdirSync(i18n);
+    for (let src of SOURCES) {
+        if (!fs.existsSync(src.path))
+            fs.mkdirSync(src.path);
 
         let keys = [
-            ...listFilesRec(root, '.js').flatMap(detectJsKeys)
+            ...listFilesRec(src.from, '.js').flatMap(detectJsKeys)
         ];
         let messages = [
-            ...listFilesRec(root, '.cc').flatMap(detectCxxMessages),
-            ...listFilesRec(root, '.js').flatMap(detectJsMessages)
+            ...listFilesRec(src.from, '.cc').flatMap(detectCxxMessages),
+            ...listFilesRec(src.from, '.js').flatMap(detectJsMessages)
         ];
 
         keys = Array.from(new Set(keys)).sort();
         messages = Array.from(new Set(messages)).sort();
 
         for (let lang of LANGUAGES) {
-            let filename = path.join(i18n, lang + '.json');
+            let filename = path.join(src.path, lang + '.json');
             let translations = fs.existsSync(filename) ? JSON.parse(fs.readFileSync(filename)) : {};
 
             translations = {

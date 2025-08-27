@@ -13,12 +13,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+if (typeof T == 'undefined')
+    globalThis.T = {};
+
 // ------------------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------------------
 
 const Util = new function() {
     let self = this;
+
+    let locales = null;
+    let default_locale = null;
 
     this.clamp = function(value, min, max) {
         return Math.min(Math.max(value, min), max);
@@ -168,23 +174,6 @@ const Util = new function() {
         let multiplicator = Math.pow(10, digits);
         n = parseFloat((n * multiplicator).toFixed(11));
         return Math.round(n) / multiplicator;
-    };
-
-    this.makeComparator = function(key_func, locales, options = {}) {
-        let collator = new Intl.Collator(locales, options);
-
-        if (key_func != null) {
-            let func = (a, b) => {
-                a = key_func(a);
-                b = key_func(b);
-
-                return collator.compare(a, b);
-            };
-
-            return func;
-        } else {
-            return collator.compare;
-        }
     };
 
     this.strToValue = function(str) {
@@ -419,6 +408,48 @@ const Util = new function() {
         }, { capture: true });
     };
 
+    this.initLocales = function(tables, default_lang) {
+        locales = tables;
+        default_locale = default_lang;
+
+        self.setLocale(null);
+    };
+
+    this.setLocale = function(lang) {
+        if (lang != null && !locales.hasOwnProperty(lang))
+            lang = null;
+        if (lang == null && navigator.languages != null)
+            lang = navigator.languages.map(lang => lang.replace(/-.*$/, '')).find(lang => locales.hasOwnProperty(lang));
+        if (lang == null)
+            lang = default_locale;
+
+        let table = locales[lang];
+
+        for (let key in T)
+            delete T[key];
+        Object.assign(T, table.keys);
+
+        T.format = (str, ...args) => {
+            str = str.replace(/{(\d+)}/g, (match, idx) => {
+                idx = parseInt(idx, 10) - 1;
+
+                if (idx >= args.length)
+                    return match;
+
+                let arg = args[idx];
+                return (arg != null) ? arg : '';
+            });
+            return str;
+        };
+        T.message = (str, ...args) => {
+            str = table.messages[str] ?? str;
+            return T.format(str, ...args);
+        };
+        T.lang = lang;
+
+        document.documentElement.lang = lang;
+    };
+
     this.formatDiskSize = function(size) {
         if (size >= 1000 * 1000 * 1000) {
             return `${(size / 1000 / 1000 / 1000).toFixed(1)} GB`;
@@ -472,6 +503,23 @@ const Util = new function() {
             return `${hours}h${min}`;
         } else {
             return `${min} minute${min > 1 ? 's' : ''}`;
+        }
+    };
+
+    this.makeComparator = function(key_func, locales, options = {}) {
+        let collator = new Intl.Collator(locales, options);
+
+        if (key_func != null) {
+            let func = (a, b) => {
+                a = key_func(a);
+                b = key_func(b);
+
+                return collator.compare(a, b);
+            };
+
+            return func;
+        } else {
+            return collator.compare;
         }
     };
 

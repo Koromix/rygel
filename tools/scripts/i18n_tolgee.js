@@ -38,6 +38,11 @@ const SOURCES = [
         namespace: 'rekkord',
         from: 'src/rekkord',
         path: 'src/rekkord/i18n'
+    },
+    {
+        namespace: 'staks',
+        from: 'src/staks/src',
+        path: 'src/staks/i18n'
     }
 ];
 const LANGUAGES = ['en', 'fr'];

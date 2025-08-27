@@ -20,27 +20,30 @@ import * as rules from './rules/modern.js';
 import { TouchInterface } from './touch.js';
 import { ASSETS } from '../assets/assets.js';
 
+import en from '../i18n/en.json';
+import fr from '../i18n/fr.json';
+
 import '../../../vendor/opensans/OpenSans.css';
 import './game.css';
 
 const KEYBOARD_SHORTCUTS = [
-    ['← / →', `Déplacement à gauche ou à droite`],
-    ['↑', `Rotation horaire`],
-    ['Ctrl', `Rotation anti-horaire`],
-    ['↓', `Descente rapide`],
+    ['← / →', () => T.input_slide],
+    ['↑', () => T.input_rotate_cw],
+    ['Ctrl', () => T.input_rotate_ccw],
+    ['↓', () => T.input_turbo],
     null,
-    ['Espace', `Verrouillage immédiat`],
-    ['C', `Mettre la pièce en réserve (hold)`],
+    ['Espace', () => T.input_lock],
+    ['C', () => T.input_hold],
     null,
-    ['P', 'Mettre en pause'],
-    ['F', `Mode plein écran`],
+    ['P', () => T.input_pause],
+    ['F', () => T.input_fullscreen],
     null,
-    ['G', `Afficher/cacher le fantôme`],
-    ['B', `Modifier le fond d'écran`],
-    ['S', 'Activer/désactiver le son'],
-    ['M', 'Activer/désactiver la musique'],
+    ['G', () => T.input_ghost],
+    ['B', () => T.input_wallpaper],
+    ['S', () => T.input_mute],
+    ['M', () => T.input_music],
     null,
-    ['H', `Afficher/cacher l'aide`]
+    ['H', () => T.input_help]
 ];
 
 const AREA_RADIUS = 4;
@@ -56,6 +59,7 @@ const DEFAULT_SETTINGS = {
 };
 
 // Assets
+let languages = {};
 let assets = null;
 
 // DOM nodes
@@ -102,7 +106,12 @@ let layout = {
 // Init
 // ------------------------------------------------------------------------
 
-async function load(prefix, progress = null) {
+async function load(prefix, lang, progress = null) {
+    languages.en = en;
+    languages.fr = fr;
+
+    Util.initLocales(languages, lang);
+
     if (window.createImageBitmap == null)
         throw new Error('ImageBitmap support is not available (old browser?)');
 
@@ -266,8 +275,8 @@ async function start(root) {
     render(html`
         <div class="stk_game">
             <div class="stk_attributions">
-                Musiques par <a href="https://freemusicarchive.org/music/audiocoffee/" target="_blank">AudioCoffee</a><br>
-                Fonds d'écran par <a href="https://www.deviantart.com/psiipilehto/" target="_blank">psiipilehto</a>
+                ${T.music_by} <a href="https://freemusicarchive.org/music/audiocoffee/" target="_blank">AudioCoffee</a><br>
+                ${T.wallpapers_by} <a href="https://www.deviantart.com/psiipilehto/" target="_blank">psiipilehto</a>
             </div>
             <canvas class="stk_canvas"></canvas>
         </div>
@@ -684,19 +693,17 @@ function drawStart() {
     ctx.font = font(32);
     ctx.fillStyle = 'white';
 
-    let text = runner.isTouch ? `Appuyez sur le bouton pour commencer`
-                              : `Appuyez sur la touche entrée ⏎\uFE0E pour commencer`;
-
+    let text = runner.isTouch ? T.start_button : T.start_return;
     runner.text(canvas.width / 2, canvas.height / 2, text, { align: 5 });
 
     if (!runner.isTouch) {
         ctx.font = 'italic ' + font(18);
 
         let help = [
-            `Utilisez les flèches gauche et droite du clavier pour déplacer les pièces pendant qu'elles chutent`,
-            `Appuyez sur la flèche haut du clavier pour les faire pivoter`,
+            T.help_slide,
+            T.help_pivot,
             '',
-            `Les autres raccourcis sont indiqués dans le cadre en bas à gauche de la zone de jeu`
+            T.help_shortcuts
         ];
 
         for (let i = 0; i < help.length; i++) {
@@ -721,7 +728,9 @@ function drawHelp() {
     let width = 0;
     let height = 18;
 
-    for (let shortcut of KEYBOARD_SHORTCUTS) {
+    let shortcuts = KEYBOARD_SHORTCUTS.map(shortcut => shortcut ? [shortcut[0], shortcut[1]()] : null);
+
+    for (let shortcut of shortcuts) {
         if (shortcut != null) {
             width = Math.max(width, 24 + 80 * window.devicePixelRatio + runner.measure(shortcut[1]).width);
             height += step;
@@ -733,8 +742,8 @@ function drawHelp() {
     drawArea(x - width, y - height, width, height);
     y -= step;
 
-    for (let i = KEYBOARD_SHORTCUTS.length - 1; i >= 0; i--) {
-        let shortcut = KEYBOARD_SHORTCUTS[i];
+    for (let i = shortcuts.length - 1; i >= 0; i--) {
+        let shortcut = shortcuts[i];
 
         if (shortcut != null) {
             ctx.font = 'bold ' + font(14);
@@ -1312,19 +1321,19 @@ function Game() {
         switch (clears) {
             case 1: {
                 action += 100 * level;
-                logAction('Single');
+                logAction(T.bonus_single);
             } break;
             case 2: {
                 action += 300 * level;
-                logAction('Double');
+                logAction(T.bonus_double);
             } break;
             case 3: {
                 action += 500 * level;
-                logAction('Triple');
+                logAction(T.bonus_triple);
             } break;
             case 4: {
                 action += 800 * level;
-                logAction('Quad');
+                logAction(T.bonus_quad);
             } break;
         }
 
@@ -1335,7 +1344,7 @@ function Game() {
             sfx.playFull(assets.sounds.clear);
 
             if (combo)
-                logAction(`Combo x${combo}`);
+                logAction(T.format(T.bonus_combo_x, combo));
         } else {
             combo = -1;
         }
@@ -1349,7 +1358,7 @@ function Game() {
                     case 3: { action += 1600; } break;
                 }
 
-                logAction('T-spin');
+                logAction(T.bonus_t);
             } break;
             case 'miniT': {
                 switch (clears) {
@@ -1359,7 +1368,7 @@ function Game() {
                     case 3: { /* Apparently impossible */ } break;
                 }
 
-                logAction('Mini T-spin');
+                logAction(T.bonus_minit);
             } break;
         }
 
@@ -1371,13 +1380,13 @@ function Game() {
                 case 4: { action += 2000 * level; } break;
             }
 
-            logAction('All Clear');
+            logAction(T.bonus_perfect);
         }
 
         back2back &&= (special == 'T' || clears == 4);
         if (back2back) {
             action *= 1.5;
-            logAction('Back-to-back Bonus');
+            logAction(T.bonus_b2b);
         }
         back2back = (special != null || clears == 4);
 
@@ -1390,7 +1399,7 @@ function Game() {
             level = new_level;
 
             sfx.playFull(assets.sounds.levelup);
-            logAction('Level up');
+            logAction(T.bonus_levelup);
         }
 
         piece = null;
