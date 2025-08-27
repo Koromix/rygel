@@ -17,17 +17,6 @@ import { render, html, noChange, directive, Directive } from '../../../../vendor
 import { Util, Log } from '../../../web/core/base.js';
 import { ASSETS } from '../assets/assets.js';
 
-if (typeof T == 'undefined')
-    T = {};
-
-Object.assign(T, {
-    cancel: 'Cancel',
-    confirm: 'Confirm',
-    confirm_not_reversible: 'Be careful, this action cannot be reversed!',
-    error_has_occured: 'An error has occured',
-    filter: 'Filter'
-});
-
 let run_func = () => {};
 let render_func = () => {};
 

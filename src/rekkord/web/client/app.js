@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html, live } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { render, html, live, unsafeHTML } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Chart } from '../../../../vendor/chartjs/chart.bundle.js';
 import { Util, Log, Net, HttpError } from '../../../web/core/base.js';
 import { Base64 } from '../../../web/core/mixer.js';
@@ -22,11 +22,16 @@ import { deploy } from '../../../web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';
 import { PictureCropper } from './picture.js';
 
+import en from '../../i18n/en.json';
+import fr from '../../i18n/fr.json';
+
 import '../assets/client.css';
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAYS = [T.day_monday, T.day_tuesday, T.day_wednesday, T.day_thursday, T.day_friday, T.day_saturday, T.day_sunday];
 
 const RUN_LOCK = 'run';
+
+let languages = {};
 
 let route = {
     mode: null,
@@ -53,6 +58,11 @@ let cache = {
 // ------------------------------------------------------------------------
 
 async function start() {
+    languages.en = en;
+    languages.fr = fr;
+
+    Util.initLocales(languages, 'en');
+
     UI.init(run, renderApp);
 
     // Handle internal links
@@ -74,7 +84,7 @@ async function start() {
     // Prevent loss of data
     window.onbeforeunload = e => {
         if (UI.isDialogOpen())
-            return 'Validez ou fermez la boîte de dialogue avant de continuer';
+            return T.confirm_or_close_dialog;
     };
 
     // Keep this around for gesture emulation on desktop
@@ -263,17 +273,18 @@ function renderApp(el) {
                 <a id="logo" href="/"><img src=${ASSETS['main/logo']} alt=${'Logo ' + ENV.title} /></a>
                 ${session != null ? html`
                     <li><a href=${!in_repositories && route.repository != null ? makeURL({ mode: 'repository' }) : '/repositories'}
-                           class=${in_repositories ? 'active' : ''}>Repositories</a></li>
+                           class=${in_repositories ? 'active' : ''}>${T.repositories}</a></li>
                     <li><a href=${!in_plans && route.plan != null ? makeURL({ mode: 'plan' }) : '/plans'}
-                           class=${in_plans ? 'active' : ''}>Plans</a></li>
-                    <div style="flex: 1;"></div>
-                    <li><a href="/account" class=${route.mode == 'account' ? 'active' : ''}>Account</a></li>
+                           class=${in_plans ? 'active' : ''}>${T.plans}</a></li>
+                ` : ''}
+                <div style="flex: 1;"></div>
+                ${session != null ? html`
+                    <li><a href="/account" class=${route.mode == 'account' ? 'active' : ''}>${T.account}</a></li>
                     <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
                 ` : ''}
                 ${session == null ? html`
-                    <div style="flex: 1;"></div>
-                    <li><a href="/register" class=${route.mode == 'register' ? 'active' : ''}>Register</a></li>
-                    <li><a href="/repositories" class=${route.mode != 'register' ? 'active' : ''}>Login</a></li>
+                    <li><a href="/register" class=${route.mode == 'register' ? 'active' : ''}>${T.register}</a></li>
+                    <li><a href="/repositories" class=${route.mode != 'register' ? 'active' : ''}>${T.login}</a></li>
                 ` : ''}
             </menu>
         </nav>
@@ -286,8 +297,19 @@ function renderApp(el) {
                 Niels Martignène (<a href="https://codeberg.org/Koromix/" target="_blank">Koromix</a>)<br>
                 <a href="mailto:niels.martignene@protonmail.com" style="font-weight: bold; color: inherit;">niels.martignene@protonmail.com</a>
             </div>
+            <select id="language" aria-label=${T.language} @change=${UI.wrap(e => switchLanguage(e.target.value))}>
+                ${Object.keys(languages).map(lang =>
+                    html`<option value=${lang} .selected=${lang == T.lang}>${lang.toUpperCase()}</option>`)}
+            </select>
         </footer>
     `, root_el);
+}
+
+async function switchLanguage(lang) {
+    Util.setLocale(lang);
+    Util.setCookie('language', lang, '/', 365 * 86400);
+
+    await run({}, false);
 }
 
 async function login(mail, password) {
@@ -328,15 +350,15 @@ async function runRegister() {
 
         <div class="tab">
             <div class="box" style="align-items: center;">
-                <div class="header">Create your account</div>
+                <div class="header">${T.create_your_account}</div>
 
                 <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                     <label>
-                        <input type="text" name="mail" style="width: 20em;" placeholder="mail address" />
+                        <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
                     </label>
                     <div class="actions">
-                        <button type="submit">Register</button>
-                        <a href="/login">Already have an account?</a>
+                        <button type="submit">${T.register}</button>
+                        <a href="/login">${T.already_have_account}</a>
                     </div>
                 </form>
             </div>
@@ -350,17 +372,17 @@ async function runRegister() {
         let mail = elements.mail.value.trim();
 
         if (!mail)
-            throw new Error('Mail address is missing');
+            throw new Error(T.message(`Mail address is missing`));
 
         await Net.post('/api/user/register', { mail: mail });
 
         form.innerHTML = '';
-        render(html`<p>Consult the <b>mail that has been sent</b> and click the link inside to finalize your registration.</p>`, form);
+        render(html`<p>${unsafeHTML(T.consult_registration_mail)}</p>`, form);
     }
 }
 
 async function runFinalize() {
-    let error = 'Missing token';
+    let error = T.message(`Missing token`);
     let token = null;
 
     if (window.location.hash) {
@@ -384,25 +406,25 @@ async function runFinalize() {
 
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Finalize account</a>
+            <a class="active">${T.finalize_account}</a>
         </div>
 
         <div class="tab">
             <div class="box" style="align-items: center;">
-                <div class="header">Create password</div>
+                <div class="header">${T.create_password}</div>
 
                 <form @submit=${UI.wrap(submit)}>
                     ${error == null ? html`
                         <label>
-                            <span>Choose password</span>
-                            <input type="password" name="password1" style="width: 20em;" placeholder="password" />
+                            <span>${T.choose_password}</span>
+                            <input type="password" name="password1" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
                         </label>
                         <label>
-                            <span>Confirm</span>
-                            <input type="password" name="password2" style="width: 20em;" placeholder="confirm" />
+                            <span>${T.confirmation}</span>
+                            <input type="password" name="password2" style="width: 20em;" placeholder=${T.confirmation.toLowerCase()} />
                         </label>
                         <div class="actions">
-                            <button type="submit">Set password</button>
+                            <button type="submit">${T.set_password}</button>
                         </div>
                     ` : ''}
                     ${error != null ? html`<p>${error}</p>` : ''}
@@ -419,9 +441,9 @@ async function runFinalize() {
         let password2 = elements.password2.value.trim();
 
         if (!password1 || !password2)
-            throw new Error('Password is missing');
+            throw new Error(T.message(`Password is missing`));
         if (password2 != password1)
-            throw new Error('Passwords do not match');
+            throw new Error(T.message(`Passwords do not match`));
 
         await Net.post('/api/user/reset', {
             token: token,
@@ -429,7 +451,7 @@ async function runFinalize() {
         });
 
         form.innerHTML = '';
-        render(html`<p>Your account is now ready, please login to continue.</p>`, form);
+        render(html`<p>${T.account_is_ready}</p>`, form);
 
         let url = window.location.pathname + window.location.search;
         history.replaceState(null, null, url);
@@ -439,24 +461,24 @@ async function runFinalize() {
 async function runLogin() {
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Login</a>
+            <a class="active">${T.login}</a>
         </div>
 
         <div class="tab">
             <div class="box" style="align-items: center;">
-                <div class="header">Login to ${ENV.title}</div>
+                <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
 
                 <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                     <label>
-                        <input type="text" name="mail" style="width: 20em;" placeholder="mail address" />
+                        <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
                     </label>
                     <label>
-                        <input type="password" name="password" style="width: 20em;" placeholder="password" />
+                        <input type="password" name="password" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
                     </label>
                     <div class="actions">
-                        <button type="submit">Login</button>
-                        <a href="/register">Create a new account?</a>
-                        <a href="/recover">Lost your password?</a>
+                        <button type="submit">${T.login}</button>
+                        <a href="/register">${T.maybe_create_account}</a>
+                        <a href="/recover">${T.maybe_lost_password}</a>
                     </div>
                 </form>
             </div>
@@ -471,9 +493,9 @@ async function runLogin() {
         let password = elements.password.value.trim();
 
         if (!mail)
-            throw new Error('Mail address is missing');
+            throw new Error(T.message(`Mail address is missing`));
         if (!password)
-            throw new Error('Password is missing');
+            throw new Error(T.message(`Password is missing`));
 
         await login(mail, password);
     }
@@ -482,20 +504,20 @@ async function runLogin() {
 async function runConfirm() {
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Login</a>
+            <a class="active">${T.login}</a>
         </div>
 
         <div class="tab">
             <div class="box" style="align-items: center;">
-                <div class="header">Login to ${ENV.title}</div>
+                <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
 
                 <form style="text-align: center;" @submit=${UI.wrap(submit)}>
-                    <p>Two-factor authentication (2FA)</p>
+                    <p>${T.two_factor_authentication}</p>
                     <label>
-                        <input type="text" name="code" style="width: 20em;" placeholder="6 digits" />
+                        <input type="text" name="code" style="width: 20em;" placeholder=${T.totp_digits} />
                     </label>
                     <div class="actions">
-                        <button type="submit">Confirm</button>
+                        <button type="submit">${T.confirm}</button>
                     </div>
                 </form>
             </div>
@@ -509,7 +531,7 @@ async function runConfirm() {
         let code = elements.code.value.trim();
 
         if (!code)
-            throw new Error('TOTP code is missing');
+            throw new Error(T.message(`TOTP code is missing`));
 
         await totp(code);
     }
@@ -518,19 +540,19 @@ async function runConfirm() {
 async function runRecover() {
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Recover account</a>
+            <a class="active">${T.recover_account}</a>
         </div>
 
         <div class="tab">
             <div class="box" style="align-items: center;">
-                <div class="header">Recover account</div>
+                <div class="header">${T.recover_account}</div>
 
                 <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                     <label>
-                        <input type="text" name="mail" style="width: 20em;" placeholder="mail address" />
+                        <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
                     </label>
                     <div class="actions">
-                        <button type="submit">Reset password</button>
+                        <button type="submit">${T.reset_password}</button>
                     </div>
                 </form>
             </div>
@@ -544,17 +566,17 @@ async function runRecover() {
         let mail = elements.mail.value.trim();
 
         if (!mail)
-            throw new Error('Mail address is missing');
+            throw new Error(T.message(`Mail address is missing`));
 
         await Net.post('/api/user/recover', { mail: mail });
 
         form.innerHTML = '';
-        render(html`<p>Consult the <b>mail that has been sent</b> and click the link inside to reset your password.</p>`, form);
+        render(html`<p>${unsafeHTML(T.consult_reset_mail)}</p>`, form);
     }
 }
 
 async function runReset() {
-    let error = 'Missing token';
+    let error = T.message(`Missing token`);
     let token = null;
 
     if (window.location.hash) {
@@ -578,25 +600,25 @@ async function runReset() {
 
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Recover account</a>
+            <a class="active">${T.recover_account}</a>
         </div>
 
         <div class="tab">
             <div class="box" style="align-items: center;">
-                <div class="header">Recover account</div>
+                <div class="header">${T.recover_account}</div>
 
                 <form @submit=${UI.wrap(submit)}>
                     ${error == null ? html`
                         <label>
                             <span>New password</span>
-                            <input type="password" name="password1" style="width: 20em;" placeholder="password" />
+                            <input type="password" name="password1" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
                         </label>
                         <label>
                             <span>Confirm</span>
-                            <input type="password" name="password2" style="width: 20em;" placeholder="confirm" />
+                            <input type="password" name="password2" style="width: 20em;" placeholder=${T.confirmation.toLowerCase()} />
                         </label>
                         <div class="actions">
-                            <button type="submit">Confirm password</button>
+                            <button type="submit">${T.confirm_password}</button>
                         </div>
                     ` : ''}
                     ${error != null ? html`<p>${error}</p>` : ''}
@@ -613,9 +635,9 @@ async function runReset() {
         let password2 = elements.password2.value.trim();
 
         if (!password1 || !password2)
-            throw new Error('Password is missing');
+            throw new Error(T.message(`Password is missing`));
         if (password2 != password1)
-            throw new Error('Passwords do not match');
+            throw new Error(T.message(`Passwords do not match`));
 
         await Net.post('/api/user/reset', {
             token: token,
@@ -644,13 +666,13 @@ async function runRepositories() {
 
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Repositories</a>
+            <a class="active">${T.repositories}</a>
             ${cache.repository != null ? html`<a href=${makeURL({ mode: 'repository' })}>${cache.repository.name}</a>` : ''}
         </div>
 
         <div class="tab">
             <div class="box">
-                <div class="header">Repositories</div>
+                <div class="header">${T.repositories}</div>
                 <table style="table-layout: fixed; width: 100%;">
                     <colgroup>
                         <col style="width: 30%;"></col>
@@ -679,19 +701,19 @@ async function runRepositories() {
                                     <td><a href=${url}>${repo.name}</a></td>
                                     <td>${repo.url}</td>
                                     <td style="text-align: right;">
-                                        ${!repo.checked ? 'Valid' : ''}
-                                        ${repo.checked && !repo.errors ? 'Success' : ''}
-                                        ${repo.errors ? html`<span style="color: red;">${repo.failed || 'Unknown error'}</span>` : ''}
-                                        <br><span class="sub">${repo.checked ? (new Date(repo.checked)).toLocaleString() : 'Check pending'}</span>
+                                        ${!repo.checked ? T.valid : ''}
+                                        ${repo.checked && !repo.errors ? T.success : ''}
+                                        ${repo.errors ? html`<span style="color: red;">${repo.failed || T.unknown_error}</span>` : ''}
+                                        <br><span class="sub">${repo.checked ? (new Date(repo.checked)).toLocaleString() : T.check_pending}</span>
                                     </td>
                                 </tr>
                             `;
                         })}
-                        ${!repositories.length ? html`<tr><td colspan="3" style="text-align: center;">No repository</td></tr>` : ''}
+                        ${!repositories.length ? html`<tr><td colspan="3" style="text-align: center;">${T.no_repository}</td></tr>` : ''}
                     </tbody>
                 </table>
                 <div class="actions">
-                    <button type="button" @click=${UI.wrap(e => configureRepository(null))}>Add repository</button>
+                    <button type="button" @click=${UI.wrap(e => configureRepository(null))}>${T.add_repository}</button>
                 </div>
             </div>
         </div>
@@ -726,23 +748,23 @@ async function runRepository() {
 
     UI.main(html`
         <div class="tabbar">
-            <a href="/repositories">Repositories</a>
+            <a href="/repositories">${T.repositories}</a>
             <a class="active">${cache.repository.name}</a>
         </div>
 
         <div class="tab">
             <div class="row">
                 <div class="box" style="min-width: 250px;">
-                    <div class="header">Repository</div>
+                    <div class="header">${T.repository}</div>
                     <div class="info">
                         ${cache.repository.name}
                         <div class="sub">${cache.repository.url}</div>
                     </div>
-                    <button type="button" @click=${UI.wrap(e => configureRepository(cache.repository))}>Configure</button>
+                    <button type="button" @click=${UI.wrap(e => configureRepository(cache.repository))}>${T.configure}</button>
                 </div>
 
                 <div class="box">
-                    <div class="header">Channels</div>
+                    <div class="header">${T.channels}</div>
                     <table style="table-layout: fixed; width: 100%;">
                         <colgroup>
                             <col></col>
@@ -751,9 +773,9 @@ async function runRepository() {
                         </colgroup>
                         <thead>
                             <tr>
-                                ${UI.tableHeader('channels', 'name', 'Name')}
-                                ${UI.tableHeader('channels', 'size', 'Size')}
-                                ${UI.tableHeader('channels', 'time', 'Timestamp')}
+                                ${UI.tableHeader('channels', 'name', T.name)}
+                                ${UI.tableHeader('channels', 'size', T.size)}
+                                ${UI.tableHeader('channels', 'time', T.timestamp)}
                             </tr>
                         </thead>
                         <tbody>
@@ -764,7 +786,7 @@ async function runRepository() {
                                     <td style="text-align: right;">${(new Date(channel.time)).toLocaleString()}</td>
                                 </tr>
                             `)}
-                            ${!channels.length ? html`<tr><td colspan="3" style="text-align: center;">No channel</td></tr>` : ''}
+                            ${!channels.length ? html`<tr><td colspan="3" style="text-align: center;">${T.no_channel}</td></tr>` : ''}
                         </tbody>
                     </table>
                 </div>
@@ -791,18 +813,18 @@ async function configureRepository(repo) {
         run: (render, close) => {
             return html`
                 <div class="title">
-                    ${ptr != null ? 'Edit repository' : 'Create repository'}
+                    ${ptr != null ? T.edit_repository : T.create_repository}
                     <div style="flex: 1;"></div>
                     <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
                 </div>
 
                 <div class="main">
                     <label>
-                        <span>Name</span>
+                        <span>${T.name}</span>
                         <input type="text" name="name" required value=${repo.name} />
                     </label>
                     <label>
-                        <span>URL</span>
+                        <span>${T.url}</span>
                         <input type="text" name="url" required value=${url}
                                @input=${e => { url = e.target.value; render(); }} />
                     </label>
@@ -811,11 +833,11 @@ async function configureRepository(repo) {
                 <div class="footer">
                     ${ptr != null ? html`
                         <button type="button" class="danger"
-                                @click=${UI.confirm('Delete repository', e => deleteRepository(repo.id).then(close))}>Delete</button>
+                                @click=${UI.confirm(T.delete_repository, e => deleteRepository(repo.id).then(close))}>${T.delete}</button>
                         <div style="flex: 1;"></div>
                     ` : ''}
-                    <button type="button" class="secondary" @click=${UI.insist(close)}>Cancel</button>
-                    <button type="submit">${ptr != null ? 'Save' : 'Create'}</button>
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
+                    <button type="submit">${ptr != null ? T.save : T.create}</button>
                 </div>
             `
         },
@@ -859,9 +881,9 @@ async function runChannel(repo, channel) {
         canvas = document.createElement('canvas');
 
         let sets = {
-            size: { label: 'Size', data: [], fill: false },
-            stored: { label: 'Stored', data: [], fill: false },
-            added: { label: 'Added', data: [], fill: false }
+            size: { label: T.size, data: [], fill: false },
+            stored: { label: T.stored, data: [], fill: false },
+            added: { label: T.added, data: [], fill: false }
         };
 
         for (let snapshot of snapshots) {
@@ -918,7 +940,7 @@ async function runChannel(repo, channel) {
 
             return html`
                 <div class="title">
-                    ${channel} snapshots
+                    ${T.format(T.x_snapshots, channel)}
                     <div style="flex: 1;"></div>
                     <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
                 </div>
@@ -936,11 +958,11 @@ async function runChannel(repo, channel) {
                         </colgroup>
                         <thead>
                             <tr>
-                                ${UI.tableHeader('snapshots', 'time', 'Timestamp')}
-                                ${UI.tableHeader('snapshots', 'oid', 'Object')}
-                                ${UI.tableHeader('snapshots', 'size', 'Size')}
-                                ${UI.tableHeader('snapshots', 'stored', 'Stored')}
-                                ${UI.tableHeader('snapshots', 'added', 'Added')}
+                                ${UI.tableHeader('snapshots', 'time', T.timestamp)}
+                                ${UI.tableHeader('snapshots', 'oid', T.object)}
+                                ${UI.tableHeader('snapshots', 'size', T.size)}
+                                ${UI.tableHeader('snapshots', 'stored', T.stored)}
+                                ${UI.tableHeader('snapshots', 'added', T.added)}
                             </tr>
                         </thead>
                         <tbody>
@@ -952,11 +974,11 @@ async function runChannel(repo, channel) {
                                     <td style="text-align: right;">${formatSize(snapshot.stored)}</td>
                                     <td style="text-align: right;">
                                         ${snapshot.added != null ? formatSize(snapshot.added) : ''}
-                                        ${snapshot.added == null ? html`<span class="sub">(unknown)</span>` : ''}
+                                        ${snapshot.added == null ? html`<span class="sub">(${T.unknown.toLowerCase()})</span>` : ''}
                                     </td>
                                 </tr>
                             `)}
-                            ${!snapshots.length ? html`<tr><td colspan="5" style="text-align: center;">No snapshot</td></tr>` : ''}
+                            ${!snapshots.length ? html`<tr><td colspan="5" style="text-align: center;">${T.no_snapshot}</td></tr>` : ''}
                         </tbody>
                     </table>
                 </div>
@@ -970,19 +992,19 @@ function formatSize(size) {
         let value = size / 1000000000;
         let prec = 1 + (value < 9.9995) + (value < 99.995);
 
-        return value.toFixed(prec) + ' GB';
+        return value.toFixed(prec) + ' ' + T.unit_gb;
     } else if (size >= 999950) {
         let value = size / 1000000;
         let prec = 1 + (value < 9.9995) + (value < 99.995);
 
-        return value.toFixed(prec) + ' MB';
+        return value.toFixed(prec) + ' ' + T.unit_mb;
     } else if (size >= 999.95) {
         let value = size / 1000;
         let prec = 1 + (value < 9.9995) + (value < 99.995);
 
-        return value.toFixed(prec) + ' kB';
+        return value.toFixed(prec) + ' ' + T.unit_kb;
     } else {
-        return size + ' B';
+        return size + ' ' + T.unit_b;
     }
 }
 
@@ -997,13 +1019,13 @@ async function runPlans() {
 
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Plans</a>
+            <a class="active">${T.plans}</a>
             ${cache.plan != null ? html`<a href=${makeURL({ mode: 'plan' })}>${cache.plan.name}</a>` : ''}
         </div>
 
         <div class="tab">
             <div class="box">
-                <div class="header">Plans</div>
+                <div class="header">${T.plans}</div>
                 <table style="table-layout: fixed; width: 100%;">
                     <colgroup>
                         <col/>
@@ -1013,10 +1035,10 @@ async function runPlans() {
                     </colgroup>
                     <thead>
                         <tr>
-                            ${UI.tableHeader('plans', 'name', 'Name')}
-                            ${UI.tableHeader('plans', 'repository', 'Repository')}
-                            <th>Key prefix</th>
-                            ${UI.tableHeader('plans', makePlanTasks, 'Tâches')}
+                            ${UI.tableHeader('plans', 'name', T.name)}
+                            ${UI.tableHeader('plans', 'repository', T.repository)}
+                            <th>${T.key_prefix}</th>
+                            ${UI.tableHeader('plans', makePlanTasks, T.tasks)}
                         </tr>
                     </thead>
                     <tbody>
@@ -1033,11 +1055,11 @@ async function runPlans() {
                                 </tr>
                             `;
                         })}
-                        ${!plans.length ? html`<tr><td colspan="4" style="text-align: center;">No plan</td></tr>` : ''}
+                        ${!plans.length ? html`<tr><td colspan="4" style="text-align: center;">${T.no_plan}</td></tr>` : ''}
                     </tbody>
                 </table>
                 <div class="actions">
-                    <button type="button" @click=${UI.wrap(e => configurePlan(null))}>Add plan</button>
+                    <button type="button" @click=${UI.wrap(e => configurePlan(null))}>${T.add_plan}</button>
                 </div>
             </div>
         </div>
@@ -1048,16 +1070,16 @@ function makePlanTasks(plan) {
     let parts = [];
 
     if (plan.items) {
-        let text = `Run ${plan.items} snapshot ${plan.items > 1 ? 'items' : 'item'}`;
+        let text = (plan.items > 1) ? T.format(T.run_x_snapshot_items, plan.items) : T.run_snapshot_item;
         parts.push(text);
     }
     if (plan.scan != null) {
-        let text = `Scan repository at ${formatClock(plan.scan)}`;
+        let text = T.format(T.scan_repository_at_x, formatClock(plan.scan));
         parts.push(text);
     }
 
     if (!parts.length) {
-        let empty = html`<span class="sub">(nothing to do)</span>`;
+        let empty = html`<span class="sub">(${T.nothing_to_do.toLowerCase()})</span>`;
         parts.push(empty);
     }
 
@@ -1092,25 +1114,25 @@ async function runPlan() {
 
     UI.main(html`
         <div class="tabbar">
-            <a href="/plans">Plans</a>
+            <a href="/plans">${T.plans}</a>
             <a class="active">${cache.plan.name}</a>
         </div>
 
         <div class="tab">
             <div class="row">
                 <div class="box" style="min-width: 250px;">
-                    <div class="header">Plan</div>
+                    <div class="header">${T.plan}</div>
                     <div class="info">
-                        ${cache.plan.name} (${repo?.name ?? 'unassigned'})
+                        ${cache.plan.name} (${repo?.name ?? T.unassigned.toLowerCase()})
                         <div class="sub">${cache.plan.key}</div>
                     </div>
-                    <button type="button" @click=${UI.wrap(e => configurePlan(cache.plan))}>Configure</button>
+                    <button type="button" @click=${UI.wrap(e => configurePlan(cache.plan))}>${T.configure}</button>
                     ${cache.plan.scan != null ?
-                        html`<div style="text-align: center;">Scan repository at ${formatClock(cache.plan.scan)}</div>` : ''}
+                        html`<div style="text-align: center;">${T.format(T.scan_repository_at_x, formatClock(cache.plan.scan))}</div>` : ''}
                 </div>
 
                 <div class="box">
-                    <div class="header">Snapshot items</div>
+                    <div class="header">${T.snapshot_items}</div>
                     <table style="table-layout: fixed; width: 100%;">
                         <colgroup>
                             <col style="width: 150px;"></col>
@@ -1142,7 +1164,7 @@ async function runPlan() {
                                     </td>
                                 </tr>
                             `)}
-                            ${!cache.plan.items.length ? html`<tr><td colspan="5" style="text-align: center;">No snapshot item</td></tr>` : ''}
+                            ${!cache.plan.items.length ? html`<tr><td colspan="5" style="text-align: center;">${T.no_snapshot_item}</td></tr>` : ''}
                         </tbody>
                     </table>
                 </div>
@@ -1156,7 +1178,7 @@ async function configurePlan(plan) {
 
     if (plan == null) {
         if (!cache.repositories.length)
-            throw new Error('Create a repository before you create a plan');
+            throw new Error(T.message(`Create a repository before you create a plan`));
 
         plan = {
             name: '',
@@ -1180,7 +1202,7 @@ async function configurePlan(plan) {
         run: (render, close) => {
             return html`
                 <div class="title">
-                    ${ptr != null ? 'Edit plan' : 'Create plan'}
+                    ${ptr != null ? T.edit_plan : T.create_plan}
                     <div style="flex: 1;"></div>
                     <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
                 </div>
@@ -1200,24 +1222,24 @@ async function configurePlan(plan) {
                         </select>
                     </label>
 
-                    <div class="section">Periodic scans</div>
+                    <div class="section">${T.periodic_scans}</div>
                     <label>
                         <input type="checkbox" ?checked=${scan} @change=${UI.wrap(e => { scan = e.target.checked; render(); })} />
-                        <span>Run daily repository scans from this machine</span>
+                        <span>${T.run_daily_scans}</span>
                     </label>
                     ${scan ? html`
                         <label>
-                            <span>Scan time</span>
+                            <span>${T.scan_time}</span>
                             <td><input type="time" .value=${live(formatClock(plan.scan))}
                                        @change=${UI.wrap(e => { plan.scan = parseClock(e.target.value); render(); })} /></td>
                         </label>
-                        <div style="color: red; font-style: italic;">This machine needs the master key to run periodic scans, make sure it is safe!</div>
+                        <div style="color: red; font-style: italic;">${T.scan_safety_warning}</div>
                     ` : ''}
 
                     <div class="section">
                         Snapshot items
                         <div style="flex: 1;"></div>
-                        <button type="button" class="small" @click=${UI.wrap(add_item)}>Add item</button>
+                        <button type="button" class="small" @click=${UI.wrap(add_item)}>${T.add_item}</button>
                     </div>
                     <table style="table-layout: fixed;">
                         <colgroup>
@@ -1232,10 +1254,10 @@ async function configurePlan(plan) {
                         <thead>
                             <tr>
                                 <th></th>
-                                <th>Channel</th>
-                                <th>Days</th>
-                                <th>Clock time</th>
-                                <th>Paths</th>
+                                <th>${T.channel}</th>
+                                <th>${T.days}</th>
+                                <th>${T.clock_time}</th>
+                                <th>${T.paths}</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -1246,7 +1268,7 @@ async function configurePlan(plan) {
 
                                 return html`
                                     <tr ${UI.reorderItems(plan.items, item)}>
-                                        <td class="grab"><img src=${ASSETS['ui/move']} width="16" height="16" alt="Move" /></td>
+                                        <td class="grab"><img src=${ASSETS['ui/move']} width="16" height="16" alt=${T.move} /></td>
                                         <td><input type="text" .value=${live(item.channel)} @change=${UI.wrap(e => { item.channel = e.target.value; render(); })} /></td>
                                         <td>
                                             ${Util.mapRange(0, DAYS.length, idx => {
@@ -1267,22 +1289,22 @@ async function configurePlan(plan) {
                                                         @input=${UI.wrap(e => edit_path(item, idx, e.target.value))} />`)}</td>
                                         <td class="right">
                                             <button type="button" class="small"
-                                                    @click=${UI.insist(e => delete_item(item))}><img src=${ASSETS['ui/delete']} alt="Delete" /></button>
+                                                    @click=${UI.insist(e => delete_item(item))}><img src=${ASSETS['ui/delete']} alt=${T.delete} /></button>
                                         </td>
                                     </tr>
                                 `;
                             })}
                             ${!plan.items.length ?
-                                html`<tr><td colspan="6" style="text-align: center;">No item</td></tr>` : ''}
+                                html`<tr><td colspan="6" style="text-align: center;">${T.no_item}</td></tr>` : ''}
                         </tbody>
                     </table>
 
                     ${ptr != null ? html`
-                        <div class="section">API key</div>
+                        <div class="section">${T.api_key}</div>
                         <label>
-                            <span>Key prefix</span>
+                            <span>${T.key_prefix}</span>
                             <div class="sub">${plan.key}</div>
-                            <button type="button" class="small secondary" @click=${UI.insist(renew_key)}>Renew key</button>
+                            <button type="button" class="small secondary" @click=${UI.insist(renew_key)}>${T.renew_key}</button>
                         </label>
                     ` : ''}
                 </div>
@@ -1290,11 +1312,11 @@ async function configurePlan(plan) {
                 <div class="footer">
                     ${ptr != null ? html`
                         <button type="button" class="danger"
-                                @click=${UI.confirm('Delete plan', e => deletePlan(plan.id).then(close))}>Delete</button>
+                                @click=${UI.confirm('Delete plan', e => deletePlan(plan.id).then(close))}>${T.delete}</button>
                         <div style="flex: 1;"></div>
                     ` : ''}
-                    <button type="button" class="secondary" @click=${UI.insist(close)}>Cancel</button>
-                    <button type="submit">${ptr != null ? 'Save' : 'Create'}</button>
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
+                    <button type="submit">${ptr != null ? T.save : T.create}</button>
                 </div>
             `;
 
@@ -1381,7 +1403,7 @@ async function showKey(plan, key, secret) {
         await UI.dialog({
             run: (render, close) => html`
                 <div class="title">
-                    API key
+                    ${T.api_key}
                     <div style="flex: 1;"></div>
                     <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
                 </div>
@@ -1390,10 +1412,10 @@ async function showKey(plan, key, secret) {
                     <label>
                         <span>API key</span>
                         <input type="text" style="width: 40em;" readonly value=${full} />
-                        <button type="button" class="small" @click=${UI.wrap(e => writeClipboard('API key', full))}>Copy</button>
+                        <button type="button" class="small" @click=${UI.wrap(e => writeClipboard('API key', full))}>${T.copy}</button>
                     </label>
 
-                    <div style="color: red; font-style: italic; text-align: center">Please copy this key, you won't be able to retrieve it later!</div>
+                    <div style="color: red; font-style: italic; text-align: center">${T.please_copy_api_key}</div>
                 </div>
             `
         });
@@ -1443,18 +1465,18 @@ function parseClock(clock) {
 async function runAccount() {
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Account</a>
+            <a class="active">${T.account}</a>
         </div>
 
         <div class="tab">
             <div class="box" style="align-items: center;">
-                <div class="header">Account</div>
+                <div class="header">${T.account}</div>
                 <div class="sub">${session.username}</div>
                 <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
                 <div class="actions">
-                    <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>Change picture</button>
-                    <button type="button" class="secondary" @click=${UI.wrap(configureTOTP)}>Configure two-factor authentication</button>
-                    <button type="button" @click=${UI.insist(logout)}>Logout</button>
+                    <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>${T.change_picture}</button>
+                    <button type="button" class="secondary" @click=${UI.wrap(configureTOTP)}>${T.configure_2fa}</button>
+                    <button type="button" @click=${UI.insist(logout)}>${T.logout}</button>
                 </div>
             </div>
         </div>
@@ -1478,7 +1500,7 @@ async function changePicture() {
         }
     }
 
-    let cropper = new PictureCropper('Change picture', 256);
+    let cropper = new PictureCropper(T.change_picture, 256);
 
     cropper.defaultURL = ASSETS['ui/anonymous'];
     cropper.imageFormat = 'image/png';
@@ -1526,17 +1548,20 @@ async function configureTOTP(e) {
             </div>
 
             <div class="main">
-                <p>Confirm your identity with your password to ${session.totp ? 'change' : 'enable'} two-factor authentication.</p>
+                <p>
+                    ${!session.totp ? T.confirm_to_enable_2fa : ''}
+                    ${session.totp ? T.confirm_to_change_2fa : ''}
+                </p>
 
                 <label>
-                    <span>Password</span>
-                    <input type="password" name="password" style="width: 20em;" placeholder="password" />
+                    <span>${T.password}</span>
+                    <input type="password" name="password" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
                 </label>
 
                 ${session.totp ? html`
                     <label>
                         <input type="checkbox" checked @change=${UI.wrap(e => { enable = !e.target.checked; render(); })} />
-                        <span>Disable two-factor authentification</span>
+                        <span>${T.disable_2fa}</span>
                     </label>
                 ` : ''}
 
@@ -1545,22 +1570,22 @@ async function configureTOTP(e) {
                     <p style="text-align: center; font-size: 0.8em; margin-top: 0;">${qrcode.secret}</p>
 
                     <p>
-                        Scan this QR code with a two-factor application on your smartphone.<br>
-                        Once done, enter the 6-digit code into the field below.
+                        ${T.totp_scan1}<br>
+                        ${T.totp_scan2}
                     </p>
 
                     <label>
                         <span>Code</span>
-                        <input type="text" name="code" style="width: 20em;" placeholder="6 digits" />
+                        <input type="text" name="code" style="width: 20em;" placeholder=${T.totp_digits} />
                     </label>
 
-                    <p><i>Possible applications: 2FAS Auth, Authy.</i></p>
+                    <p><i>${T.totp_applications}</i></p>
                 ` : ''}
             </div>
 
             <div class="footer">
-                <button type="button" class="secondary" @click=${UI.insist(close)}>Cancel</button>
-                <button type="submit">Confirm</button>
+                <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
+                <button type="submit">${T.confirm}</button>
             </div>
         `,
 

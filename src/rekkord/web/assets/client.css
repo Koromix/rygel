@@ -48,6 +48,12 @@ main.dialog {
     main.dialog { margin-top: 0; }
 }
 
+#language {
+    position: absolute;
+    right: 1em;
+    font-size: 0.8em;
+}
+
 .tab {
     display: flex;
     flex-direction: column;

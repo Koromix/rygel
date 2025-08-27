@@ -355,6 +355,15 @@ static void HandleRequest(http_IO *io)
     if (request.method != http_RequestMethod::Get && !http_PreventCSRF(io))
         return;
 
+    // Translate errors
+    {
+        const char *lang = request.GetCookieValue("language");
+
+        if (lang) {
+            ChangeThreadLocale(lang);
+        }
+    }
+
     // Send these headers whenever possible
     io->AddHeader("Referrer-Policy", "no-referrer");
     io->AddHeader("Cross-Origin-Opener-Policy", "same-origin");
