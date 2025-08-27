@@ -131,7 +131,7 @@ function go(url = null, push = true) {
 
     switch (mode) {
         case 'login': {
-            if (session != null) {
+            if (isLogged()) {
                 changes.mode = 'repositories';
             } else {
                 changes.mode = 'login';
@@ -172,7 +172,7 @@ async function run(changes = {}, push = false) {
         return;
 
     // Keep session alive
-    if (session != null && ping_timer == null) {
+    if (isLogged() && ping_timer == null) {
         ping_timer = setInterval(() => {
             Net.get('/api/user/ping');
         }, 360 * 1000);
@@ -201,23 +201,22 @@ async function run(changes = {}, push = false) {
             default: {
                 if (session == null) {
                     await runLogin();
-                    return;
                 } else if (!session.confirmed) {
                     await runConfirm();
-                    return;
                 }
             } break;
         }
 
-        if (session != null)
+        if (isLogged()) {
             cache.repositories = await Net.cache('repositories', '/api/repository/list');
 
-        switch (route.mode) {
-            case 'repositories': { await runRepositories(); } break;
-            case 'repository': { await runRepository(); } break;
-            case 'plans': { await runPlans(); } break;
-            case 'plan': { await runPlan(); } break;
-            case 'account': { await runAccount(); } break;
+            switch (route.mode) {
+                case 'repositories': { await runRepositories(); } break;
+                case 'repository': { await runRepository(); } break;
+                case 'plans': { await runPlans(); } break;
+                case 'plan': { await runPlan(); } break;
+                case 'account': { await runAccount(); } break;
+            }
         }
 
         // Update URL
@@ -272,18 +271,18 @@ function renderApp(el) {
         <nav id="top">
             <menu>
                 <a id="logo" href="/"><img src=${ASSETS['main/logo']} alt=${'Logo ' + ENV.title} /></a>
-                ${session != null ? html`
+                ${isLogged() ? html`
                     <li><a href=${!in_repositories && route.repository != null ? makeURL({ mode: 'repository' }) : '/repositories'}
                            class=${in_repositories ? 'active' : ''}>${T.repositories}</a></li>
                     <li><a href=${!in_plans && route.plan != null ? makeURL({ mode: 'plan' }) : '/plans'}
                            class=${in_plans ? 'active' : ''}>${T.plans}</a></li>
                 ` : ''}
                 <div style="flex: 1;"></div>
-                ${session != null ? html`
+                ${isLogged() ? html`
                     <li><a href="/account" class=${route.mode == 'account' ? 'active' : ''}>${T.account}</a></li>
                     <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
                 ` : ''}
-                ${session == null ? html`
+                ${!isLogged() ? html`
                     <li><a href="/register" class=${route.mode == 'register' ? 'active' : ''}>${T.register}</a></li>
                     <li><a href="/repositories" class=${route.mode != 'register' ? 'active' : ''}>${T.login}</a></li>
                 ` : ''}
@@ -654,8 +653,12 @@ async function runReset() {
 }
 
 function isLogged() {
-    let logged = (session != null);
-    return logged;
+    if (session == null)
+        return false;
+    if (!session.confirmed)
+        return false;
+
+    return true;
 }
 
 // ------------------------------------------------------------------------
