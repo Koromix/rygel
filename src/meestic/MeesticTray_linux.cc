@@ -44,7 +44,7 @@ namespace RG {
 
 extern "C" const AssetInfo MeesticPng;
 
-static const char *const ParseError = ParseError;
+static const char *const ParseError = "Failed to parse D-bus message";
 static const char *const ReplyError = "Failed to reply on D-bus";
 
 static const Vec2<int> IconSizes[] = {
