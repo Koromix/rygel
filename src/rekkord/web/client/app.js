@@ -518,6 +518,7 @@ async function runConfirm() {
                     </label>
                     <div class="actions">
                         <button type="submit">${T.confirm}</button>
+                        <button type="button" class="secondary" @click=${UI.insist(logout)}>${T.cancel}</button>
                     </div>
                 </form>
             </div>
