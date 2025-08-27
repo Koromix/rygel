@@ -7659,6 +7659,7 @@ bool StreamReader::Close(bool implicit)
     bool ret = !filename || !error;
 
     filename = nullptr;
+    lazy = false;
     error = true;
     source.type = SourceType::Memory;
     source.eof = false;
@@ -7752,7 +7753,7 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
             return -1;
         }
 
-        if (eof)
+        if (lazy || eof)
             break;
     }
 

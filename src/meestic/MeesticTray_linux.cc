@@ -616,6 +616,10 @@ static bool HandleServerData()
     };
 
     StreamReader reader(read, "<server>");
+
+    // Don't try to fill buffer, which would block, return as soon as some data is available
+    reader.SetLazy(true);
+
     json_Parser parser(&reader, &temp_alloc);
 
     parser.ParseObject();

@@ -54,6 +54,8 @@ static bool ApplySandbox()
         { "brk", sb_FilterAction::Allow },
         { "mmap/anon", sb_FilterAction ::Allow},
         { "munmap", sb_FilterAction::Allow },
+        { "mprotect/noexec", sb_FilterAction::Allow },
+        { "madvise", sb_FilterAction::Allow },
         { "close", sb_FilterAction::Allow },
         { "fcntl", sb_FilterAction::Allow },
         { "read", sb_FilterAction::Allow },
@@ -256,6 +258,10 @@ static bool HandleClientData(int fd)
     };
 
     StreamReader reader(read, "<client>");
+
+    // Don't try to fill buffer, which would block, return as soon as some data is available
+    reader.SetLazy(true);
+
     json_Parser parser(&reader, &temp_alloc);
 
     parser.ParseObject();

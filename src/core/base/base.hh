@@ -4853,6 +4853,7 @@ class StreamReader {
     };
 
     const char *filename = nullptr;
+    bool lazy = false;
     bool error = true;
 
     int64_t read_total = 0;
@@ -4908,6 +4909,7 @@ public:
 
     // Call before Open. Takes ownership and deletes the decoder at the end.
     void SetDecoder(StreamDecoder *decoder);
+    void SetLazy(bool lazy) { this->lazy = lazy; }
 
     bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
