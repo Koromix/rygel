@@ -34,7 +34,7 @@
         <ul>
             <li>Low-overhead and fast performance (see <a href="https://koffi.dev/benchmarks">benchmarks</a>)
             <li>Support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value
-            <li>Javascript functions can be used as C callbacks (since 1.2.0)
+            <li>Javascript functions can be used as C callbacks
             <li>Well-tested code base for popular OS/architecture combinations
         </ul>
         <p>Find out more on the <a href="koffi">page dedicated to Koffi</a>.
