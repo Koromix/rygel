@@ -12,9 +12,6 @@
         "zoom": "Zoom"
     },
     "messages": {
-        "%!D..[D]%!0 %1%/%!..+%2%/%!0": null,
-        "%!D..[F]%!0 %1%/%!..+%2%!0": null,
-        "%!D..[L]%!0 %1%/%!..+%2%!0": null,
         "Added": "Ajouté",
         "Backing up...": "Sauvegarde...",
         "Blob '%1' is not a Chunk": "Le blob '%1' n'est pas un fragment (Chunk)",

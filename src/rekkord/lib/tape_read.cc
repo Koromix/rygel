@@ -562,7 +562,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
 
                     if (settings.verbose) {
                         Span<const char> prefix = entry.filename.Take(0, entry.filename.len - entry.basename.len - 1);
-                        LogInfo("%!D..[D]%!0 %1%/%!..+%2%/%!0", prefix, entry.basename);
+                        LogInfo(("%!D..[D]%!0 %1%/%!..+%2%/%!0"), prefix, entry.basename);
                     }
 
                     if (!settings.fake && !MakeDirectory(entry.filename.ptr, false))
@@ -581,7 +581,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
 
                     if (settings.verbose) {
                         Span<const char> prefix = entry.filename.Take(0, entry.filename.len - entry.basename.len - 1);
-                        LogInfo("%!D..[F]%!0 %1%/%!..+%2%!0", prefix, entry.basename);
+                        LogInfo(("%!D..[F]%!0 %1%/%!..+%2%!0"), prefix, entry.basename);
                     }
 
                     int fd = -1;
@@ -619,7 +619,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
 
                     if (settings.verbose) {
                         Span<const char> prefix = entry.filename.Take(0, entry.filename.len - entry.basename.len - 1);
-                        LogInfo("%!D..[L]%!0 %1%/%!..+%2%!0", prefix, entry.basename);
+                        LogInfo(("%!D..[L]%!0 %1%/%!..+%2%!0"), prefix, entry.basename);
                     }
 
                     // NUL terminate the path
