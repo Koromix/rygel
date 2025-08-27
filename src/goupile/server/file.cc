@@ -298,7 +298,7 @@ bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const 
 
             offset += copy_len;
             return copy_len;
-        }, filename, src_encoding);
+        }, filename, 0, src_encoding);
 
         // Not much we can do at this stage in case of error. Client will get truncated data.
         SpliceStream(&reader, -1, &writer);

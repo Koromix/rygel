@@ -7534,18 +7534,21 @@ void StreamReader::SetDecoder(StreamDecoder *decoder)
     this->decoder = decoder;
 }
 
-bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
+bool StreamReader::Open(Span<const uint8_t> buf, const char *filename, unsigned int flags,
                         CompressionType compression_type)
 {
     Close(true);
 
     RG_DEFER_N(err_guard) { error = true; };
+
+    lazy = flags & (int)StreamReaderFlag::LazyFill;
     error = false;
     raw_read = 0;
     read_total = 0;
     read_max = -1;
 
-    this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<memory>";
+    RG_ASSERT(filename);
+    this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     source.type = SourceType::Memory;
     source.u.memory.buf = buf;
@@ -7558,11 +7561,13 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
     return true;
 }
 
-bool StreamReader::Open(int fd, const char *filename, CompressionType compression_type)
+bool StreamReader::Open(int fd, const char *filename, unsigned int flags, CompressionType compression_type)
 {
     Close(true);
 
     RG_DEFER_N(err_guard) { error = true; };
+
+    lazy = flags & (int)StreamReaderFlag::LazyFill;
     error = false;
     raw_read = 0;
     read_total = 0;
@@ -7583,11 +7588,13 @@ bool StreamReader::Open(int fd, const char *filename, CompressionType compressio
     return true;
 }
 
-OpenResult StreamReader::Open(const char *filename, CompressionType compression_type)
+OpenResult StreamReader::Open(const char *filename, unsigned int flags, CompressionType compression_type)
 {
     Close(true);
 
     RG_DEFER_N(err_guard) { error = true; };
+
+    lazy = flags & (int)StreamReaderFlag::LazyFill;
     error = false;
     raw_read = 0;
     read_total = 0;
@@ -7611,18 +7618,21 @@ OpenResult StreamReader::Open(const char *filename, CompressionType compression_
     return OpenResult::Success;
 }
 
-bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename,
+bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename, unsigned int flags,
                         CompressionType compression_type)
 {
     Close(true);
 
     RG_DEFER_N(err_guard) { error = true; };
+
+    lazy = flags & (int)StreamReaderFlag::LazyFill;
     error = false;
     raw_read = 0;
     read_total = 0;
     read_max = -1;
 
-    this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<closure>";
+    RG_ASSERT(filename);
+    this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     source.type = SourceType::Function;
     new (&source.u.func) std::function<Size(Span<uint8_t>)>(func);
@@ -8856,7 +8866,7 @@ bool PatchFile(StreamReader *reader, StreamWriter *writer,
 bool PatchFile(Span<const uint8_t> data, StreamWriter *writer,
                FunctionRef<void(Span<const char>, StreamWriter *)> func)
 {
-    StreamReader reader(data, nullptr);
+    StreamReader reader(data, "<asset>");
 
     if (!PatchFile(&reader, writer, func)) {
         RG_ASSERT(reader.IsValid());
@@ -8869,7 +8879,7 @@ bool PatchFile(Span<const uint8_t> data, StreamWriter *writer,
 bool PatchFile(const AssetInfo &asset, StreamWriter *writer,
                FunctionRef<void(Span<const char>, StreamWriter *)> func)
 {
-    StreamReader reader(asset.data, nullptr, asset.compression_type);
+    StreamReader reader(asset.data, "<asset>", 0, asset.compression_type);
 
     if (!PatchFile(&reader, writer, func)) {
         RG_ASSERT(reader.IsValid());

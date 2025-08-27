@@ -326,7 +326,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                 char sha256[65];
                 Size total_len = 0;
                 {
-                    StreamReader reader(asset.data, "<asset>", asset.compression_type);
+                    StreamReader reader(asset.data, "<asset>", 0, asset.compression_type);
                     StreamWriter writer(&blob, "<blob>", compression_type);
 
                     crypto_hash_sha256_state state;

@@ -919,7 +919,7 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
     bool many = instance->legacy;
     const char *lock = nullptr;
     {
-        StreamReader st(json);
+        StreamReader st(json, "<token>");
         json_Parser parser(&st, io->Allocator());
 
         parser.ParseObject();

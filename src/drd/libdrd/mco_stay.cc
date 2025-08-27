@@ -970,7 +970,7 @@ bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
             continue;
         }
 
-        StreamReader st(filename, compression_type);
+        StreamReader st(filename, 0, compression_type);
         if (!st.IsValid()) {
             success = false;
             continue;

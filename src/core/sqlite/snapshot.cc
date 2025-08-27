@@ -496,7 +496,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const c
         RG_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
         Fmt(&path_buf, ".%1", FmtArg(0).Pad0(-16));
 
-        StreamReader reader(path_buf.ptr, CompressionType::LZ4);
+        StreamReader reader(path_buf.ptr, 0, CompressionType::LZ4);
         StreamWriter writer(dest_filename);
         uint8_t sha256[32];
 
@@ -516,7 +516,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const c
         RG_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
         Fmt(&path_buf, ".%1", FmtArg(i).Pad0(-16));
 
-        StreamReader reader(path_buf.ptr, CompressionType::LZ4);
+        StreamReader reader(path_buf.ptr, 0, CompressionType::LZ4);
         StreamWriter writer(wal_filename);
         uint8_t sha256[32];
 

@@ -461,10 +461,10 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
             StreamWriter writer;
 
             if (src_filename) {
-                if (reader.Open(src_filename, dest.compression_type) != OpenResult::Success)
+                if (reader.Open(src_filename, 0, dest.compression_type) != OpenResult::Success)
                     return false;
             } else {
-                if (!reader.Open(STDIN_FILENO, "<stdin>", dest.compression_type))
+                if (!reader.Open(STDIN_FILENO, "<stdin>", 0, dest.compression_type))
                     return false;
             }
 

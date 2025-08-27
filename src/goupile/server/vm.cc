@@ -310,7 +310,7 @@ static bool InitVM()
         const AssetInfo *asset = FindEmbedAsset("src/goupile/server/vm.js");
         RG_ASSERT(asset);
 
-        StreamReader reader(asset->data, "<asset>", asset->compression_type);
+        StreamReader reader(asset->data, "<asset>", 0, asset->compression_type);
         StreamWriter writer(&vm_js, "<memory>");
 
         if (!SpliceStream(&reader, -1, &writer))

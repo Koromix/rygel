@@ -4843,6 +4843,10 @@ enum class CompressionSpeed {
 class StreamDecoder;
 class StreamEncoder;
 
+enum class StreamReaderFlag {
+    LazyFill = 1 << 0
+};
+
 class StreamReader {
     RG_DELETE_COPY(StreamReader)
 
@@ -4893,30 +4897,30 @@ class StreamReader {
 
 public:
     StreamReader() { Close(true); }
-    StreamReader(Span<const uint8_t> buf, const char *filename = nullptr,
+    StreamReader(Span<const uint8_t> buf, const char *filename, unsigned int flags = 0,
                  CompressionType compression_type = CompressionType::None)
-        : StreamReader() { Open(buf, filename, compression_type); }
-    StreamReader(int fd, const char *filename,
+        : StreamReader() { Open(buf, filename, flags, compression_type); }
+    StreamReader(int fd, const char *filename, unsigned int flags = 0,
                  CompressionType compression_type = CompressionType::None)
-        : StreamReader() { Open(fd, filename, compression_type); }
-    StreamReader(const char *filename,
+        : StreamReader() { Open(fd, filename, flags, compression_type); }
+    StreamReader(const char *filename, unsigned int flags = 0,
                  CompressionType compression_type = CompressionType::None)
-        : StreamReader() { Open(filename, compression_type); }
-    StreamReader(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
+        : StreamReader() { Open(filename, flags, compression_type); }
+    StreamReader(const std::function<Size(Span<uint8_t>)> &func, const char *filename, unsigned int flags = 0,
                  CompressionType compression_type = CompressionType::None)
-        : StreamReader() { Open(func, filename, compression_type); }
+        : StreamReader() { Open(func, filename, flags, compression_type); }
     ~StreamReader() { Close(true); }
 
     // Call before Open. Takes ownership and deletes the decoder at the end.
     void SetDecoder(StreamDecoder *decoder);
-    void SetLazy(bool lazy) { this->lazy = lazy; }
 
-    bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
+    bool Open(Span<const uint8_t> buf, const char *filename, unsigned int flags = 0,
               CompressionType compression_type = CompressionType::None);
-    bool Open(int fd, const char *filename,
+    bool Open(int fd, const char *filename, unsigned int flags = 0,
               CompressionType compression_type = CompressionType::None);
-    OpenResult Open(const char *filename, CompressionType compression_type = CompressionType::None);
-    bool Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
+    OpenResult Open(const char *filename, unsigned int flags = 0,
+                    CompressionType compression_type = CompressionType::None);
+    bool Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename, unsigned int flags = 0,
               CompressionType compression_type = CompressionType::None);
     bool Close() { return Close(false); }
 

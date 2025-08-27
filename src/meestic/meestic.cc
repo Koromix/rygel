@@ -257,11 +257,8 @@ static bool HandleClientData(int fd)
         return received;
     };
 
-    StreamReader reader(read, "<client>");
-
     // Don't try to fill buffer, which would block, return as soon as some data is available
-    reader.SetLazy(true);
-
+    StreamReader reader(read, "<client>", (int)StreamReaderFlag::LazyFill);
     json_Parser parser(&reader, &temp_alloc);
 
     parser.ParseObject();

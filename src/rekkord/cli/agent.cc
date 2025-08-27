@@ -87,7 +87,7 @@ static bool FetchPlan(Allocator *alloc, HeapArray<PlanItem> *out_items)
 
     // Parse plan
     {
-        StreamReader st(json.As<uint8_t>());
+        StreamReader st(json.As<uint8_t>(), "<plan>");
         json_Parser parser(&st, alloc);
 
         parser.ParseArray();
