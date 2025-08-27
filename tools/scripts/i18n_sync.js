@@ -47,7 +47,7 @@ const SOURCES = [
 ];
 const LANGUAGES = ['en', 'fr'];
 
-const TOLGEE_URL = (process.env.TOLGEE_URL || 'https://app.tolgee.io').replace(/\/+$/, '');
+const TOLGEE_URL = (process.env.TOLGEE_URL || '').replace(/\/+$/, '');
 const TOLGEE_API_KEY = process.env.TOLGEE_API_KEY || '';
 
 main();
@@ -58,7 +58,6 @@ async function main() {
 
     try {
         await run();
-        console.log('Done');
     } catch (err) {
         console.error(err);
         process.exit(1);
@@ -66,6 +65,157 @@ async function main() {
 }
 
 async function run() {
+    let args = process.argv.slice(2);
+    let action = null;
+
+    for (let arg of args) {
+        if (arg == '--help') {
+            print_usage();
+            return 0;
+        } else if (arg == '--scan') {
+            action = 'scan';
+        } else if (arg == '--sync') {
+            action = 'sync';
+        } else if (arg[0] == '-') {
+            throw new Error(`Invalid option '${arg}'`);
+        }
+    }
+
+    if (action == null || action == 'scan')
+        await scanCode();
+
+    if (action == null) {
+        if (TOLGEE_URL) {
+            await syncTolgee();
+        } else {
+            console.error('Ignoring Tolgee sync because TOLGEE_URL is missing');
+        }
+    } else if (action == 'sync') {
+        await syncTolgee();
+    }
+
+    console.log('Done');
+}
+
+function print_usage() {
+    let help = `Usage: i18n_sync.js [command] [options...]
+
+Options:
+
+    --scan                               Only scan code
+    --sync                               Only sync with Tolgee`;
+
+    console.log(help);
+}
+
+
+async function scanCode() {
+    console.log('Scanning code...');
+
+    for (let src of SOURCES) {
+        if (!fs.existsSync(src.path))
+            fs.mkdirSync(src.path);
+
+        let keys = [
+            ...listFilesRec(src.from, '.js').flatMap(detectJsKeys)
+        ];
+        let messages = [
+            ...listFilesRec(src.from, '.cc').flatMap(detectCxxMessages),
+            ...listFilesRec(src.from, '.js').flatMap(detectJsMessages)
+        ];
+
+        keys = Array.from(new Set(keys)).sort();
+        messages = Array.from(new Set(messages)).sort();
+
+        for (let lang of LANGUAGES) {
+            let filename = path.join(src.path, lang + '.json');
+            let translations = fs.existsSync(filename) ? JSON.parse(fs.readFileSync(filename)) : {};
+
+            translations = {
+                keys: translations.keys ?? {},
+                messages: translations.messages ?? {}
+            };
+
+            translations.keys = keys.reduce((obj, str) => { obj[str] = translations.keys[str] ?? null; return obj; }, {});
+            translations.messages = messages.reduce((obj, str) => { obj[str] = translations.messages[str] ?? null; return obj; }, {});
+
+            if (lang == 'en')
+                translations.messages = {};
+
+            fs.writeFileSync(filename, JSON.stringify(translations, null, 4));
+        }
+    }
+}
+
+function listFilesRec(path, ext = null) {
+    let filenames = [];
+
+    let entries = fs.readdirSync(path, { withFileTypes: true });
+
+    for (let entry of entries) {
+        let filename = path + '/' + entry.name;
+
+        if (entry.isDirectory()) {
+            let ret = listFilesRec(filename, ext);
+            filenames.push(...ret);
+        } else if (entry.isFile()) {
+            if (ext == null || entry.name.endsWith(ext))
+                filenames.push(filename);
+        }
+    }
+
+    return filenames;
+}
+
+function completeObject(dest, src) {
+    for (let key in src) {
+        let value = src[key];
+
+        if (value != null && typeof value == 'object') {
+            if (dest[key] == null || typeof dest[key] != 'object')
+                dest[key] = {};
+
+            dest[key] = completeObject(dest[key], value);
+        } else if (!dest.hasOwnProperty(key)) {
+            dest[key] = null;
+        }
+    }
+
+    dest = Object.keys(src).sort().reduce((obj, key) => { obj[key] = dest[key]; return obj; }, {});
+    return dest;
+}
+
+function detectCxxMessages(filename) {
+    let code = fs.readFileSync(filename).toString();
+
+    let matches = [
+        ...code.matchAll(/(?:T|LogError|LogWarning|LogInfo)\(\"(.+?)\"(?:, .*)?\)/g)
+    ];
+
+    return matches.map(m => m[1]);
+}
+
+function detectJsKeys(filename) {
+    let code = fs.readFileSync(filename).toString();
+
+    let matches = [
+        ...code.matchAll(/T\.([a-zA-Z_0-9]+)/g)
+    ];
+
+    return matches.map(m => m[1]).filter(key => key != 'lang' && key != 'format' && key != 'message');
+}
+
+function detectJsMessages(filename) {
+    let code = fs.readFileSync(filename).toString();
+
+    let matches = [
+        ...code.matchAll(/T\.message\(`(.+?)`/g)
+    ];
+
+    return matches.map(m => m[1]);
+}
+
+async function syncTolgee() {
     // Check prerequisites
     {
         let errors = [];
@@ -152,7 +302,7 @@ async function run() {
         }
     }
 
-    console.log('Fetching translations (again)...');
+    console.log('Fetching translations...');
     translations = await fetchTranslations();
 
     console.log('Apply translations locally...');
@@ -163,9 +313,12 @@ async function run() {
                 messages: {}
             };
 
-            for (let key in set.keys)
+            let keys = Object.keys(set.keys).sort();
+            let messages = Object.keys(set.messages).sort();
+
+            for (let key of keys)
                 obj.keys[key] = set.keys[key][lang] ?? null;
-            for (let msg in set.messages)
+            for (let msg of messages)
                 obj.messages[msg] = set.messages[msg][lang] ?? null;
 
             for (let item of translations) {
