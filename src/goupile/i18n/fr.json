@@ -244,7 +244,7 @@
         "users": "Utilisateurs"
     },
     "messages": {
-        "            Public key: %!..+%1%!0": "                    Clé publique : %!..+%1%!0",
+        "            Public key: %!..+%1%!0": "                     Clé publique : %!..+%1%!0",
         "Admin password:": "Mot de passe administrateur :",
         "Admin user needs to confirm identity": "L'utilisateur administrateur doit confirmer son identité",
         "Admin user:": "Utilisateur administrateur :",
