@@ -682,12 +682,12 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
             return true;
 
         out_st->Close();
-        return out_st->Open(write, "<http>", encoding);
+        return out_st->Open(write, "<http>", 0, encoding);
     } else {
         const auto chunk = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
 
         out_st->Close();
-        return out_st->Open(chunk, "<http>", encoding);
+        return out_st->Open(chunk, "<http>", 0, encoding);
     }
 }
 

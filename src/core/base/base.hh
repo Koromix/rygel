@@ -5043,10 +5043,10 @@ public:
 };
 
 enum class StreamWriterFlag {
-    Exclusive = 1 << 0,
-    Atomic = 1 << 1,
-    NoBuffer = 1 << 2,
-    LineBuffer = 1 << 3
+    Exclusive = 1 << 0, // Only for files
+    Atomic = 1 << 1, // Only for files
+    NoBuffer = 1 << 2, // Only for files and descriptors
+    LineBuffer = 1 << 3 // Only for files and descriptors
 };
 
 class StreamWriter {
@@ -5103,14 +5103,14 @@ class StreamWriter {
 
 public:
     StreamWriter() { Close(true); }
-    StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
+    StreamWriter(HeapArray<uint8_t> *mem, const char *filename, unsigned int flags = 0,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
-        : StreamWriter() { Open(mem, filename, compression_type, compression_speed); }
-    StreamWriter(HeapArray<char> *mem, const char *filename = nullptr,
+        : StreamWriter() { Open(mem, filename, flags, compression_type, compression_speed); }
+    StreamWriter(HeapArray<char> *mem, const char *filename, unsigned int flags = 0,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
-        : StreamWriter() { Open(mem, filename, compression_type, compression_speed); }
+        : StreamWriter() { Open(mem, filename, flags, compression_type, compression_speed); }
     StreamWriter(int fd, const char *filename, unsigned int flags = 0,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
@@ -5119,29 +5119,29 @@ public:
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
         : StreamWriter() { Open(filename, flags, compression_type, compression_speed); }
-    StreamWriter(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
+    StreamWriter(const std::function<bool(Span<const uint8_t>)> &func, const char *filename, unsigned int flags = 0,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
-        : StreamWriter() { Open(func, filename, compression_type, compression_speed); }
+        : StreamWriter() { Open(func, filename, flags, compression_type, compression_speed); }
     ~StreamWriter() { Close(true); }
 
     // Call before Open. Takes ownership and deletes the encoder at the end.
     void SetEncoder(StreamEncoder *encoder);
 
-    bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
+    bool Open(HeapArray<uint8_t> *mem, const char *filename, unsigned int flags = 0,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default);
-    bool Open(HeapArray<char> *mem, const char *filename = nullptr,
+    bool Open(HeapArray<char> *mem, const char *filename, unsigned int flags = 0,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default)
-        { return Open((HeapArray<uint8_t> *)mem, filename, compression_type, compression_speed); }
+        { return Open((HeapArray<uint8_t> *)mem, filename, flags, compression_type, compression_speed); }
     bool Open(int fd, const char *filename, unsigned int flags = 0,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default);
     bool Open(const char *filename, unsigned int flags = 0,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default);
-    bool Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
+    bool Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename, unsigned int flags = 0,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default);
     bool Close() { return Close(false); }

@@ -144,7 +144,7 @@ static bool GeneratePNG(const uint8_t qr[qrcodegen_BUFFER_LEN_MAX], int border, 
         MemCpy(chunk.type, "IDAT", 4);
         idat.Append(MakeSpan((const uint8_t *)&chunk, RG_SIZE(chunk)));
 
-        StreamWriter writer(&idat, "<png>", CompressionType::Zlib);
+        StreamWriter writer(&idat, "<png>", 0, CompressionType::Zlib);
         for (int y = 0; y < size4; y++) {
             LocalArray<uint8_t, MaxSize + 1> buf;
             buf.Append((uint8_t)0); // Scanline filter

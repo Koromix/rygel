@@ -8001,7 +8001,7 @@ void StreamWriter::SetEncoder(StreamEncoder *encoder)
     this->encoder = encoder;
 }
 
-bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
+bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename, unsigned int,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
     Close(true);
@@ -8010,7 +8010,8 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
     error = false;
     raw_written = 0;
 
-    this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<memory>";
+    RG_ASSERT(filename);
+    this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     dest.type = DestinationType::Memory;
     dest.u.mem.memory = mem;
@@ -8124,7 +8125,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
     return true;
 }
 
-bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename,
+bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename, unsigned int,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
     Close(true);
@@ -8133,7 +8134,8 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
     error = false;
     raw_written = 0;
 
-    this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<closure>";
+    RG_ASSERT(filename);
+    this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     dest.type = DestinationType::Function;
     new (&dest.u.func) std::function<bool(Span<const uint8_t>)>(func);
@@ -8895,7 +8897,7 @@ Span<const uint8_t> PatchFile(Span<const uint8_t> data, Allocator *alloc,
     RG_ASSERT(alloc);
 
     HeapArray<uint8_t> buf(alloc);
-    StreamWriter writer(&buf, nullptr);
+    StreamWriter writer(&buf, "<asset>");
 
     PatchFile(data, &writer, func);
 
@@ -8914,7 +8916,7 @@ Span<const uint8_t> PatchFile(const AssetInfo &asset, Allocator *alloc,
     RG_ASSERT(alloc);
 
     HeapArray<uint8_t> buf(alloc);
-    StreamWriter writer(&buf, nullptr, asset.compression_type);
+    StreamWriter writer(&buf, "<asset>", 0, asset.compression_type);
 
     PatchFile(asset, &writer, func);
 

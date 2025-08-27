@@ -385,7 +385,7 @@ bool json_Parser::PassThrough(StreamWriter *writer)
 bool json_Parser::PassThrough(Span<char> *out_buf)
 {
     HeapArray<uint8_t> buf(handler.allocator);
-    StreamWriter st(&buf);
+    StreamWriter st(&buf, "<through>");
 
     if (!PassThrough(&st))
         return false;

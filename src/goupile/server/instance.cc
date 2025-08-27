@@ -607,7 +607,7 @@ bool MigrateInstance(sq_Database *db, int target)
                         char sha256[65];
                         {
                             StreamReader reader(filename);
-                            StreamWriter writer(&gzip, "<gzip>", CompressionType::Gzip);
+                            StreamWriter writer(&gzip, "<blob>", 0, CompressionType::Gzip);
 
                             crypto_hash_sha256_state state;
                             crypto_hash_sha256_init(&state);

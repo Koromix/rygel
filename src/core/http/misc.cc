@@ -200,7 +200,7 @@ bool http_JsonPageBuilder::Init(http_IO *io)
 
     if (!io->NegociateEncoding(CompressionType::Brotli, CompressionType::Gzip, &encoding))
         return false;
-    if (!st.Open(&buf, nullptr, encoding))
+    if (!st.Open(&buf, "<json>", 0, encoding))
         return false;
 
     this->io = io;

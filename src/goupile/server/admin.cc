@@ -327,7 +327,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                 Size total_len = 0;
                 {
                     StreamReader reader(asset.data, "<asset>", 0, asset.compression_type);
-                    StreamWriter writer(&blob, "<blob>", compression_type);
+                    StreamWriter writer(&blob, "<blob>", 0, compression_type);
 
                     crypto_hash_sha256_state state;
                     crypto_hash_sha256_init(&state);
@@ -1044,7 +1044,7 @@ Options:
     if (extract) {
         writer.Open(output_filename, (int)StreamWriterFlag::Atomic | (int)StreamWriterFlag::Exclusive);
     } else {
-        writer.Open([](Span<const uint8_t>) { return true; });
+        writer.Open([](Span<const uint8_t>) { return true; }, "<null>");
     }
     if (!writer.IsValid())
         return 1;

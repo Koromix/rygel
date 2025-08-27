@@ -207,7 +207,7 @@ static Size WriteAsset(const EmbedAsset &asset, FunctionRef<void(Span<const uint
         compressed_len += buf.len;
 
         return true;
-    }, nullptr, asset.compression_type);
+    }, "<asset>", 0, asset.compression_type);
 
     if (!compressor.IsValid())
         return -1;

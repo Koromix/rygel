@@ -231,7 +231,7 @@ static bool ReportSuccess(const char *channel, const rk_SaveInfo &info)
 
     // Format JSON
     {
-        StreamWriter st(&body);
+        StreamWriter st(&body, "<report>");
         json_Writer json(&st);
 
         json.StartObject();
@@ -253,7 +253,7 @@ static bool ReportError(const char *channel, int64_t time, const char *message)
 
     // Format JSON
     {
-        StreamWriter st(&body);
+        StreamWriter st(&body, "<report>");
         json_Writer json(&st);
 
         json.StartObject();

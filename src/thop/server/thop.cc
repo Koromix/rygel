@@ -216,7 +216,7 @@ static bool InitDictionarySet(Span<const char *const> table_directories)
             buf.Grow(Mebibytes(1));
 
             StreamReader reader(filename);
-            StreamWriter writer(&buf, nullptr, CompressionType::Gzip);
+            StreamWriter writer(&buf, "<json>", 0, CompressionType::Gzip);
             if (!SpliceStream(&reader, Megabytes(16), &writer))
                 return false;
             if (!writer.Close())

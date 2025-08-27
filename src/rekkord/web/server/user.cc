@@ -1053,7 +1053,7 @@ void HandleTotpSecret(http_IO *io)
     {
         HeapArray<uint8_t> buf(io->Allocator());
 
-        StreamWriter st(&buf);
+        StreamWriter st(&buf, "<png>");
         if (!qr_EncodeTextToPng(url, 0, &st))
             return;
         if (!st.Close())

@@ -177,7 +177,7 @@ static bool SendNewMail(const char *to, const char *uid, Span<const uint8_t> tke
     {
         HeapArray<uint8_t> buf(alloc);
 
-        StreamWriter st(&buf);
+        StreamWriter st(&buf, "<png>");
         if (!qr_EncodeTextToPng(url, 0, &st))
             return false;
         st.Close();

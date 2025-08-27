@@ -340,7 +340,7 @@ void ExportProfile(const SessionInfo *session, const InstanceHolder *instance, j
 Span<const char> ExportProfile(const SessionInfo *session, const InstanceHolder *instance, Allocator *alloc)
 {
     HeapArray<char> buf(alloc);
-    StreamWriter st(&buf);
+    StreamWriter st(&buf, "<profile>");
     json_Writer json(&st);
 
     ExportProfile(session, instance, &json);
@@ -1423,7 +1423,7 @@ void HandleChangeQRcode(http_IO *io)
     {
         HeapArray<uint8_t> buf(io->Allocator());
 
-        StreamWriter st(&buf);
+        StreamWriter st(&buf, "<png>");
         if (!qr_EncodeTextToPng(url, 0, &st))
             return;
         if (!st.Close())
