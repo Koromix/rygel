@@ -27,6 +27,9 @@ namespace RG {
 static const char *BeginPEM = "-----BEGIN REKKORD KEY-----";
 static const char *EndPEM = "-----END REKKORD KEY-----";
 
+static const Size EncodedLimit = 16384;
+static const Size EncodedLineSplit = 70;
+
 static Size DecodePEM(const char *filename, Span<const char> pem, Span<uint8_t> out_key)
 {
     SplitStr(pem, BeginPEM, &pem);
@@ -37,9 +40,19 @@ static Size DecodePEM(const char *filename, Span<const char> pem, Span<uint8_t> 
         LogError("Cannot find valid repository key in '%1'", filename);
         return -1;
     }
+    if (pem.len > EncodedLimit) {
+        LogError("Excessive base64 key size in '%1'", filename);
+        return -1;
+    }
+
+    LocalArray<char, EncodedLimit> base64;
+    for (char c: pem) {
+        base64.data[base64.len] = c;
+        base64.len += !IsAsciiWhite(c);
+    }
 
     size_t len = 0;
-    if (sodium_base642bin(out_key.ptr, out_key.len, pem.ptr, pem.len, nullptr,
+    if (sodium_base642bin(out_key.ptr, out_key.len, base64.data, base64.len, nullptr,
                           &len, nullptr, sodium_base64_VARIANT_ORIGINAL) != 0) {
         LogError("Failed to decode base64 key");
         return -1;
@@ -53,15 +66,22 @@ static Size EncodePEM(Span<const uint8_t> key, Span<uint8_t> out_buf)
     Span<char> out = out_buf.As<char>();
     Size len = 0;
 
+    LocalArray<char, EncodedLimit> base64;
+    {
+        Size encoded = sodium_base64_ENCODED_LEN(key.len, sodium_base64_VARIANT_ORIGINAL);
+        if (encoded > RG_SIZE(base64))
+            goto error;
+        base64.len = encoded - 1;
+
+        sodium_bin2base64(base64.data, RG_SIZE(base64.data), key.ptr, key.len, sodium_base64_VARIANT_ORIGINAL);
+    }
+
     len += Fmt(out.Take(len, out.len - len), "%1\n", BeginPEM).len;
-
-    Size encoded = sodium_base64_ENCODED_LEN(key.len, sodium_base64_VARIANT_ORIGINAL);
-    if (encoded > out.len - len)
-        goto error;
-    sodium_bin2base64(out.ptr + len, out.len - len, key.ptr, key.len, sodium_base64_VARIANT_ORIGINAL);
-    len += encoded - 1;
-
-    len += Fmt(out.Take(len, out.len - len), "\n%1\n", EndPEM).len;
+    for (Size i = 0; i < base64.len; i += EncodedLineSplit) {
+        Size take = std::min(EncodedLineSplit, base64.len - i);
+        len += Fmt(out.Take(len, out.len - len), "%1\n", base64.Take(i, take)).len;
+    }
+    len += Fmt(out.Take(len, out.len - len), "%1\n", EndPEM).len;
 
     if (len >= out.len)
         goto error;
