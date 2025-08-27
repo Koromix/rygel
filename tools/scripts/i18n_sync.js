@@ -305,6 +305,26 @@ async function syncTolgee() {
     console.log('Fetching translations...');
     translations = await fetchTranslations();
 
+    console.log('Remove outdated markers...');
+    for (let item of translations) {
+        for (let lang in item.translations) {
+            let translation = item.translations[lang];
+
+            if (translation.outdated) {
+                let url = TOLGEE_URL + `/v2/projects/translations/${translation.id}/set-outdated-flag/false`;
+
+                await fetchOrFail(url, {
+                    method: 'PUT',
+                    headers: {
+                        'X-API-Key': TOLGEE_API_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: '{}'
+                });
+            }
+        }
+    }
+
     console.log('Apply translations locally...');
     for (let set of sets) {
         for (let lang of set.languages) {
