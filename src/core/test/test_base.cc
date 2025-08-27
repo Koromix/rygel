@@ -24,7 +24,9 @@
 
 #include <string>
 #include <unordered_map>
-#include <fnmatch.h>
+#if !defined(_WIN32)
+    #include <fnmatch.h>
+#endif
 
 // Comparative benchmarks
 #if defined(_WIN32)
@@ -1041,11 +1043,11 @@ BENCHMARK_FUNCTION("base/MatchPathName")
     RunBenchmark("PathMatchSpecA", iterations, [&](Size) {
         PathMatchSpecA("aaa/bbb", "a*/*b");
     });
-#endif
-
+#else
     RunBenchmark("fnmatch", iterations, [&](Size) {
         fnmatch("a*/*b", "aaa/bbb", FNM_PATHNAME);
     });
+#endif
 
     RunBenchmark("fnmatch (musl)", iterations, [&](Size) {
         musl_fnmatch("a*/*b", "aaa/bbb", MUSL_FNM_PATHNAME);
