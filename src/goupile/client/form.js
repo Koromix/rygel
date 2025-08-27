@@ -653,7 +653,7 @@ function FormBuilder(state, model, options = {}) {
                         @change=${e => handleEnumDropChange(e, key)}>
                     ${options.untoggle || !props.some(p => p != null && value === p.value) ?
                         html`<option value="undefined" .selected=${value == null}
-                                     ?disabled=${options.readonly && value != null}>-- Valeur non renseignée --</option>` : ''}
+                                     ?disabled=${options.readonly && value != null}>${T.missing_value_choice}</option>` : ''}
                     ${props.map(p =>
                         html`<option value=${Util.valueToStr(p.value)} .selected=${value === p.value}
                                      ?disabled=${options.readonly && value !== p.value}>${p.label}</option>`)}

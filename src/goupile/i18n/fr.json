@@ -135,6 +135,7 @@
         "logout": "Se déconnecter",
         "migrate": "Migrer",
         "migrate_x": "Migration de {1}",
+        "missing_value_choice": "-- Valeur non renseignée --",
         "modification": "Modification",
         "modifications": "Modifications",
         "name": "Nom",
