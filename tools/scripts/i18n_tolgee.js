@@ -123,7 +123,8 @@ async function run() {
 
     console.log('Delete unneeded strings...');
     {
-        let unused = translations.filter(t => !sets.some(set => set.keys.hasOwnProperty(t.keyName) ||
+        let unused = translations.filter(t => !sets.some(set => t.keyNamespace == set.namespace &&
+                                                                set.keys.hasOwnProperty(t.keyName) ||
                                                                 set.messages.hasOwnProperty(t.keyName)));
         let ids = unused.map(t => t.keyId);
 
@@ -158,6 +159,9 @@ async function run() {
                 obj.messages[msg] = set.messages[msg][lang] ?? null;
 
             for (let item of translations) {
+                if (item.keyNamespace != set.namespace)
+                    continue;
+
                 if (obj.keys.hasOwnProperty(item.keyName))
                     obj.keys[item.keyName] = item.translations[lang].text;
                 if (obj.messages.hasOwnProperty(item.keyName))
