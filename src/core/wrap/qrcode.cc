@@ -82,7 +82,7 @@ static bool GeneratePNG(const uint8_t qr[qrcodegen_BUFFER_LEN_MAX], int border, 
     static const int MaxSize = (int)Kibibytes(2) - 1;
 
     static const uint8_t PngHeader[] = { 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A };
-    static const uint8_t PngFooter[] = { 0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xAE, 0x42, 0x60, 0x82};
+    static const uint8_t PngFooter[] = { 0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xAE, 0x42, 0x60, 0x82 };
 
     int size = qrcodegen_getSize(qr) + 2 * border / 4;
     int size4 = qrcodegen_getSize(qr) * 4 + 2 * border;
