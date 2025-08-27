@@ -2914,7 +2914,7 @@ bool MigrateInstance(sq_Database *db, int target)
                 )");
                 if (!success)
                     return false;
-            } // [[fallthrough]];
+            } [[fallthrough]];
 
             case 132: {
                 bool success = db->RunMany(R"(
