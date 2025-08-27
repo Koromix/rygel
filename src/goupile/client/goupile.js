@@ -143,6 +143,7 @@ function initLanguages() {
     languages.fr = fr;
 
     Util.initLocales(languages, 'fr');
+    Util.setCookie('language', document.documentElement.lang, '/', 365 * 86400);
 }
 
 async function registerSW() {
@@ -475,7 +476,7 @@ async function runPasswordScreen(e, initial) {
 
 async function switchLanguage(lang) {
     Util.setLocale(lang);
-    Util.setCookie('language', lang, '/', 365 * 86400);
+    Util.setCookie('language', document.documentElement.lang, '/', 365 * 86400);
 
     if (UI.isDialogOpen()) {
         UI.refreshDialog();
