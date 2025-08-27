@@ -31,7 +31,7 @@ bool smtp_Config::Validate() const
     bool valid = true;
 
     if (!url) {
-        LogError("SMTP url is not set");
+        LogError("SMTP URL is not set");
         valid = false;
     }
     if (username && !password) {

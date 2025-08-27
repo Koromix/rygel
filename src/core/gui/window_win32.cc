@@ -273,7 +273,7 @@ static HWND CreateMainWindow(const char *application_name)
                                    rect.right - rect.left, rect.bottom - rect.top,
                                    nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
         if (!main_wnd) {
-            LogError("Failed to create Win32 window: %s", GetWin32ErrorString());
+            LogError("Failed to create Win32 window: %1", GetWin32ErrorString());
             return nullptr;
         }
 

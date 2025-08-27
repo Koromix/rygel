@@ -179,6 +179,7 @@
         "Done": "Terminé",
         "Endpoint URL must not include path": "L'URL du point de terminaison S3 ne doit pas inclure de chemin",
         "Excessive POSIX ACL size": "Taille excessive de l'ACL POSIX",
+        "Excessive base64 key size in '%1'": "Taille excessive de la clé base64 dans '%1'",
         "Excessive tag data size": "Taille excessive des données de balise",
         "Execution time: %!..+%1s%!0": "Temps d'exécution : %!..+%1s%!0",
         "Execution time: %!..+%1s%!0 %!D..[dry run]%!0": "Temps d'exécution : %!..+%1s%!0 %!D..[exécution fictive]%!0",

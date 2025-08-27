@@ -113,7 +113,7 @@ bool ssh_Config::Validate() const
     }
 
     if (!known_hosts && !fingerprint) {
-        LogError("Cannot use SFTP without known Fingerprint and no valid server hash");
+        LogError("Cannot use SFTP without known Fingerprint and without using KnownHosts");
         valid = false;
     }
     if (!password && !key && !keyfile) {
@@ -172,7 +172,7 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
         Span<const char> path = remain;
 
         if (host.ptr == username.end() || path.ptr == host.end()) {
-            LogError("Failed to parse SSH URL, expected <user>@<host>:");
+            LogError("Failed to parse SSH URL, expected <user>@<host>");
             return false;
         }
 
@@ -246,7 +246,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
 
         size_t hash_len;
         if (ssh_get_publickey_hash(pk, SSH_PUBLICKEY_HASH_SHA256, &hash.ptr, &hash_len) < 0) {
-            LogError("Failed to hash SSH public key of '%1': %1", config.host, ssh_get_error(ssh));
+            LogError("Failed to hash SSH public key of '%1': %2", config.host, ssh_get_error(ssh));
             return nullptr;
         }
         hash.len = (Size)hash_len;

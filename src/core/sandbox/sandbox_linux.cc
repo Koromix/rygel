@@ -437,7 +437,7 @@ bool sb_SandboxBuilder::Apply()
                 }
 
                 if (mount(nullptr, ".", nullptr, MS_REC | MS_PRIVATE, nullptr) < 0) {
-                    LogError("Failed to set MS_PRIVATE on ", fs_root, strerror(errno));
+                    LogError("Failed to set MS_PRIVATE on '%1': %2", fs_root, strerror(errno));
                     return false;
                 }
 

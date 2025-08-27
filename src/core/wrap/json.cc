@@ -367,7 +367,7 @@ bool json_Parser::PassThrough(StreamWriter *writer)
 
     if (reader.HasParseError()) {
         rapidjson::ParseErrorCode err = reader.GetParseErrorCode();
-        LogError("%1", GetParseError_En(err));
+        LogError(("%1"), GetParseError_En(err));
 
         error = true;
     } else if (reader.IterativeParseComplete()) {
@@ -428,7 +428,7 @@ json_TokenType json_Parser::PeekToken()
             if (reader.HasParseError()) {
                 if (!error) {
                     rapidjson::ParseErrorCode err = reader.GetParseErrorCode();
-                    LogError("%1", GetParseError_En(err));
+                    LogError(("%1"), GetParseError_En(err));
                 }
                 error = true;
             } else {

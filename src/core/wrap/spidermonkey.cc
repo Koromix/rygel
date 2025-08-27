@@ -84,7 +84,7 @@ static void ReportAndClearException(JSContext *ctx)
     });
     RG_DEFER { RG::PopLogFilter(); };
 
-    LogError("%1", message);
+    LogError(("%1"), message);
 }
 
 bool js_Instance::Evaluate(Span<const char> code, const char *filename, int line, JS::RootedValue *out_ret)

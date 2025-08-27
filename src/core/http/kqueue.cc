@@ -429,7 +429,7 @@ bool http_Dispatcher::Run()
     // Delete remaining clients when function exits
     RG_DEFER {
         if (!async.Wait(100)) {
-            LogInfo("Waiting up to %1 sec before shutting down clients", (double)daemon->stop_timeout / 1000);
+            LogInfo("Waiting up to %1 sec before shutting down clients...", (double)daemon->stop_timeout / 1000);
 
             if (!async.Wait(daemon->stop_timeout)) {
                 for (http_Socket *socket: sockets) {

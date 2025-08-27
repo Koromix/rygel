@@ -20,9 +20,9 @@ const path = require('path');
 
 const SOURCES = [
     {
-        namespace: 'core/base',
-        from: 'src/core/base',
-        path: 'src/core/base/i18n'
+        namespace: 'core',
+        from: 'src/core',
+        path: 'src/core/i18n'
     },
     {
         namespace: 'goupile',
