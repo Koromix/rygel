@@ -129,7 +129,7 @@ async function scanCode() {
 
         for (let lang of LANGUAGES) {
             let filename = path.join(src.path, lang + '.json');
-            let translations = fs.existsSync(filename) ? JSON.parse(fs.readFileSync(filename)) : {};
+            let translations = fs.existsSync(filename) ? readTranslations(filename, false) : {};
 
             translations = {
                 keys: translations.keys ?? {},
@@ -142,7 +142,7 @@ async function scanCode() {
             if (lang == 'en')
                 translations.messages = {};
 
-            fs.writeFileSync(filename, JSON.stringify(translations, null, 4));
+            writeTranslations(filename, translations);
         }
     }
 }
@@ -355,7 +355,7 @@ async function syncTolgee() {
                 obj.messages = {};
 
             let filename = path.join(set.path, lang + '.json');
-            fs.writeFileSync(filename, JSON.stringify(obj, null, 4));
+            writeTranslations(filename, obj);
         }
     }
 }
@@ -376,7 +376,7 @@ function loadSources() {
             let filename = path.join(src.path, lang + '.json');
 
             if (fs.existsSync(filename)) {
-                let json = JSON.parse(fs.readFileSync(filename));
+                let json = readTranslations(filename, true);
 
                 json.keys ??= {};
                 json.messages ??= {};
@@ -442,4 +442,62 @@ async function fetchOrFail(url, options = {}) {
     }
 
     return response;
+}
+
+function readTranslations(filename, flat) {
+    let json = JSON.parse(fs.readFileSync(filename));
+
+    if (flat) {
+        let obj = {
+            keys: flatten({}, json.keys ?? {}, ''),
+            messages: json.messages ?? {}
+        };
+
+        return obj;
+    } else {
+        return json;
+    }
+}
+
+function flatten(ret, obj, prefix) {
+    for (let key in obj) {
+        let value = obj[key];
+
+        if (value != null && typeof value == 'object') {
+            flatten(ret, value, prefix + key + '.');
+        } else {
+            ret[prefix + key] = value;
+        }
+    }
+
+    return ret;
+}
+
+function writeTranslations(filename, obj) {
+    let json = {
+        keys: expand(obj.keys),
+        messages: obj.messages
+    };
+
+    fs.writeFileSync(filename, JSON.stringify(json, null, 4));
+}
+
+function expand(obj) {
+    let ret = {};
+
+    for (let key in obj) {
+        let parts = key.split('.');
+        let last = parts.pop();
+
+        let ptr = ret;
+
+        for (let part of parts) {
+            ptr[part] ??= {};
+            ptr = ptr[part];
+        }
+
+        ptr[last] = obj[key];
+    }
+
+    return ret;
 }

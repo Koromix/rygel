@@ -27,7 +27,7 @@ import fr from '../../i18n/fr.json';
 
 import '../assets/client.css';
 
-const DAYS = [T.day_monday, T.day_tuesday, T.day_wednesday, T.day_thursday, T.day_friday, T.day_saturday, T.day_sunday];
+const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 const RUN_LOCK = 'run';
 
@@ -993,19 +993,21 @@ function formatSize(size) {
         let value = size / 1000000000;
         let prec = 1 + (value < 9.9995) + (value < 99.995);
 
-        return value.toFixed(prec) + ' ' + T.unit_gb;
+        return value.toFixed(prec) + ' ' + T.size_units.gb;
     } else if (size >= 999950) {
         let value = size / 1000000;
         let prec = 1 + (value < 9.9995) + (value < 99.995);
 
-        return value.toFixed(prec) + ' ' + T.unit_mb;
+        return value.toFixed(prec) + ' ' + T.size_units.mb;
     } else if (size >= 999.95) {
         let value = size / 1000;
         let prec = 1 + (value < 9.9995) + (value < 99.995);
 
-        return value.toFixed(prec) + ' ' + T.unit_kb;
+        return value.toFixed(prec) + ' ' + T.size_units.kb;
+    } else if (size > 1) {
+        return T.format(T.size_units.x_b, size);
     } else {
-        return size + ' ' + T.unit_b;
+        return size ? T.size_units.one : T.size_units.zero;
     }
 }
 
@@ -1278,7 +1280,7 @@ async function configurePlan(plan) {
                                                 return html`
                                                     <label>
                                                         <input type="checkbox" .checked=${active} @change=${UI.wrap(e => toggle_day(item, idx))} />
-                                                        ${DAYS[idx]}
+                                                        ${T.day_names[DAYS[idx]]}
                                                     </label>
                                                 `;
                                             })}
@@ -1439,7 +1441,7 @@ function formatDays(days) {
 
     for (let i = 0; i < DAYS.length; i++) {
         if (days & (1 << i)) {
-            let prefix = DAYS[i].substr(0, 3);
+            let prefix = T.day_names[DAYS[i]].substr(0, 3);
             parts.push(prefix);
         }
     }
