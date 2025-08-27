@@ -20,7 +20,7 @@
 
 namespace RG {
 
-struct PlanItem {
+struct ItemData {
     const char *channel;
     int clock;
     int days;
@@ -41,7 +41,7 @@ static void LinkHeaders(Span<curl_slist> headers)
     headers[headers.len - 1].next = nullptr;
 }
 
-static bool FetchPlan(Allocator *alloc, HeapArray<PlanItem> *out_items)
+static bool FetchPlan(Allocator *alloc, HeapArray<ItemData> *out_items)
 {
     RG_DEFER_NC(err_guard, len = out_items->len) { out_items->RemoveFrom(len); };
 
@@ -92,7 +92,7 @@ static bool FetchPlan(Allocator *alloc, HeapArray<PlanItem> *out_items)
 
         parser.ParseArray();
         while (parser.InArray()) {
-            PlanItem item = {};
+            ItemData item = {};
 
             parser.ParseObject();
             while (parser.InObject()) {
@@ -135,7 +135,7 @@ static bool FetchPlan(Allocator *alloc, HeapArray<PlanItem> *out_items)
     return true;
 }
 
-static bool ShouldRun(const PlanItem &item)
+static bool ShouldRun(const ItemData &item)
 {
     RG_ASSERT(item.days & 0b1111111);
 
@@ -280,14 +280,14 @@ static bool CheckPlan()
 {
     BlockAllocator temp_alloc;
 
-    HeapArray<PlanItem> items;
+    HeapArray<ItemData> items;
     bool nothing = true;
 
     LogInfo("Fetching backup plan...");
     if (!FetchPlan(&temp_alloc, &items))
         return false;
 
-    for (const PlanItem &item: items) {
+    for (const ItemData &item: items) {
         bool run = ShouldRun(item);
 
         if (run) {
