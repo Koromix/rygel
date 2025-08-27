@@ -30,6 +30,11 @@ const SOURCES = [
         path: 'src/goupile/i18n'
     },
     {
+        namespace: 'meestic',
+        from: 'src/meestic',
+        path: 'src/meestic/i18n'
+    },
+    {
         namespace: 'rekkord',
         from: 'src/rekkord',
         path: 'src/rekkord/i18n'

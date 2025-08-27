@@ -195,9 +195,9 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                     AppendMenuA(menu, flags, i + 10, profile.name);
                 }
                 AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
-                AppendMenuA(menu, MF_STRING, 1, "&About");
+                AppendMenuA(menu, MF_STRING, 1, T("&About"));
                 AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
-                AppendMenuA(menu, MF_STRING, 2, "&Exit");
+                AppendMenuA(menu, MF_STRING, 2, T("&Exit"));
 
                 int align = GetSystemMetrics(SM_MENUDROPALIGNMENT) ? TPM_RIGHTALIGN : TPM_LEFTALIGN;
                 int action = (int)TrackPopupMenu(menu, align | TPM_BOTTOMALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD,
@@ -310,6 +310,8 @@ static inline ConfigProfile MakeDefaultProfile(const char *name, LightMode mode)
 
 int Main(int argc, char **argv)
 {
+    InitLocales(TranslationTables);
+
     BlockAllocator temp_alloc;
 
     InitCommonControls();
@@ -383,8 +385,7 @@ By default, the first of the following config files will be used:
 
         profile_idx = config.default_idx;
     } else {
-        config.profiles.Append(MakeDefaultProfile("Enable", LightMode::Static));
-        config.profiles.Append(MakeDefaultProfile("Disable", LightMode::Disabled));
+        AddDefaultProfiles(&config);
     }
 
     HINSTANCE module = GetModuleHandle(nullptr);

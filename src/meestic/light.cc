@@ -36,7 +36,7 @@ static_assert(RG_SIZE(ControlPacket) == 65);
 
 static void DumpPacket(Span<const uint8_t> bytes)
 {
-    PrintLn(StdErr, "Length = %1:", FmtMemSize(bytes.len));
+    PrintLn(StdErr, T("Length = %1:"), FmtMemSize(bytes.len));
 
     for (const uint8_t *ptr = bytes.begin(); ptr < bytes.end();) {
         Print(StdErr, "  [0x%1 %2 %3]  ", FmtArg(ptr).Pad0(-16),

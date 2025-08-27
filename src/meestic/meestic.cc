@@ -570,8 +570,8 @@ Be careful, color names and most options are %!..+case-sensitive%!0.)", FelixTar
     hs_log_set_handler([](hs_log_level level, int, const char *msg, void *) {
         switch (level) {
             case HS_LOG_ERROR:
-            case HS_LOG_WARNING: { LogError("%1", msg); } break;
-            case HS_LOG_DEBUG: { LogDebug("%1", msg); } break;
+            case HS_LOG_WARNING: { LogError(("%1"), msg); } break;
+            case HS_LOG_DEBUG: { LogDebug(("%1"), msg); } break;
         }
     }, nullptr);
 
@@ -625,6 +625,8 @@ Be careful, color names and most options are %!..+case-sensitive%!0.)", FelixTar
 
 int Main(int argc, char **argv)
 {
+    InitLocales(TranslationTables);
+
     // Handle help and version arguments
     if (argc >= 2) {
         if (TestStr(argv[1], "--help") || TestStr(argv[1], "help")) {

@@ -21,6 +21,7 @@ const path = require('path');
 const DIRECTORIES = [
     'src/core/base',
     'src/goupile',
+    'src/meestic',
     'src/rekkord'
 ];
 const LANGUAGES = ['en', 'fr'];

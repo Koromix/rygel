@@ -37,15 +37,15 @@ namespace RG {
         int ret = Call; \
          \
         if (ret < 0) { \
-            LogError("%1: %2", (Message), strerror(-ret)); \
+            LogError(("%1: %2"), (Message), strerror(-ret)); \
             return (Ret); \
         } \
     } while (false)
 
 extern "C" const AssetInfo MeesticPng;
 
-static const char *const ParseError = "Failed to parse D-bus message";
-static const char *const ReplyError = "Failed to reply on D-bus";
+static const char *const ParseError = T("Failed to parse D-Bus message");
+static const char *const ReplyError = T("Failed to reply on D-Bus");
 
 static const Vec2<int> IconSizes[] = {
     { 22, 22 },
@@ -315,7 +315,7 @@ static int HandleMatch(sd_bus_message *m, void *, sd_bus_error *)
     if (TestStr(name, "org.kde.StatusNotifierWatcher")) {
         CALL_SDBUS(sd_bus_call_method(bus_user, "org.kde.StatusNotifierWatcher", "/StatusNotifierWatcher", "org.kde.StatusNotifierWatcher",
                                       "RegisterStatusNotifierItem", nullptr, nullptr, "s", bus_name),
-                   "Failed to register tray icon item with the watcher", -1);
+                   T("Failed to register tray icon item with the watcher"), -1);
         return 1;
     }
 
@@ -326,7 +326,7 @@ static bool RegisterTrayIcon()
 {
     Fmt(bus_name, "org.kde.StatusNotifierItem-%1-1", getpid());
 
-    CALL_SDBUS(sd_bus_request_name(bus_user, bus_name, 0), "Failed to acquire tray icon name", false);
+    CALL_SDBUS(sd_bus_request_name(bus_user, bus_name, 0), T("Failed to acquire tray icon name"), false);
 
     static struct {
         const char *category = "ApplicationStatus";
@@ -399,10 +399,10 @@ static bool RegisterTrayIcon()
     };
 
     CALL_SDBUS(sd_bus_add_object_vtable(bus_user, nullptr, "/StatusNotifierItem", "org.kde.StatusNotifierItem", vtable, &properties),
-               "Failed to create tray icon object", false);
+               T("Failed to create tray icon object"), false);
     CALL_SDBUS(sd_bus_match_signal(bus_user, nullptr, "org.freedesktop.DBus", nullptr, "org.freedesktop.DBus",
                                    "NameOwnerChanged", HandleMatch, nullptr),
-               "Failed to add D-Bus match rule", false);
+               T("Failed to add D-Bus match rule"), false);
 
     // Ignore failure... maybe the watcher is not ready yet?
     sd_bus_call_method(bus_user, "org.kde.StatusNotifierWatcher", "/StatusNotifierWatcher", "org.kde.StatusNotifierWatcher",
@@ -436,7 +436,7 @@ static bool DumpMenuItems(FunctionRef<bool(int, const char *, int)> func)
     }
 
     ITEM(-1, "-", -1);
-    ITEM(1, "_Exit", -1);
+    ITEM(1, T("_Exit"), -1);
 
 #undef ITEM
 
@@ -521,7 +521,7 @@ static bool RegisterTrayMenu()
             }
             CALL_SDBUS(sd_bus_message_exit_container(m), ParseError, -1);
 
-            CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "(ia{sv})"), "Failed to prepare sd-bus reply A", -1);
+            CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "(ia{sv})"), T("Failed to prepare D-Bus reply"), -1);
             DumpMenuItems([&](int id, const char *label, int check) {
                 if (!items.Find(id))
                     return true;
@@ -533,11 +533,11 @@ static bool RegisterTrayMenu()
                     "visible", "b", true,
                     "toggle-type", "s", (check >= 0) ? "radio" : "",
                     "toggle-state", "i", check
-                ), "Failed to prepare sd-bus reply X", false);
+                ), T("Failed to prepare D-Bus reply"), false);
 
                 return true;
             });
-            CALL_SDBUS(sd_bus_message_close_container(reply), "Failed to prepare sd-bus reply B", -1);
+            CALL_SDBUS(sd_bus_message_close_container(reply), T("Failed to prepare D-Bus reply"), -1);
 
             return sd_bus_send(nullptr, reply, nullptr);
         }, 0),
@@ -589,7 +589,7 @@ static bool RegisterTrayMenu()
     };
 
     CALL_SDBUS(sd_bus_add_object_vtable(bus_user, nullptr, "/MenuBar", "com.canonical.dbusmenu", vtable, &properties),
-               "Failed to create tray icon menu", false);
+               T("Failed to create tray icon menu"), false);
 
     return true;
 }
@@ -597,7 +597,7 @@ static bool RegisterTrayMenu()
 static int GetBusTimeout(sd_bus *bus)
 {
     uint64_t timeout64;
-    CALL_SDBUS(sd_bus_get_timeout(bus, &timeout64), "Failed to get D-Bus connection timeout", -1);
+    CALL_SDBUS(sd_bus_get_timeout(bus, &timeout64), T("Failed to get D-Bus connection timeout"), -1);
 
     int timeout = (int)std::min(timeout64 / 1000, (uint64_t)INT_MAX);
     return timeout;
@@ -658,13 +658,15 @@ static bool HandleServerData()
     profiles_revision++;
     CALL_SDBUS(sd_bus_emit_signal(bus_user, "/MenuBar", "com.canonical.dbusmenu",
                                   "LayoutUpdated", "ui", profiles_revision, 0),
-               "Failed to emit D-bus signal", false);
+               T("Failed to emit D-Bus signal"), false);
 
     return true;
 }
 
 int Main(int argc, char **argv)
 {
+    InitLocales(TranslationTables);
+
     BlockAllocator temp_alloc;
 
     // Options
@@ -705,7 +707,7 @@ Options:
     }
 
     // Open D-Bus connections
-    CALL_SDBUS(sd_bus_open_user_with_description(&bus_user, FelixTarget), "Failed to connect to session D-Bus bus", 1);
+    CALL_SDBUS(sd_bus_open_user_with_description(&bus_user, FelixTarget), T("Failed to connect to session D-Bus bus"), 1);
     RG_DEFER { sd_bus_flush_close_unref(bus_user); };
 
     // Register the tray icon
@@ -770,7 +772,7 @@ Options:
                     break;
             }
 
-            CALL_SDBUS(sd_bus_process(bus_user, nullptr), "Failed to process session D-Bus messages", 1);
+            CALL_SDBUS(sd_bus_process(bus_user, nullptr), T("Failed to process session D-Bus messages"), 1);
         }
     }
 

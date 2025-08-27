@@ -174,8 +174,8 @@ static inline ConfigProfile MakeDefaultProfile(const char *name, LightMode mode)
 
 void AddDefaultProfiles(Config *out_config)
 {
-    out_config->profiles.Append(MakeDefaultProfile("Enable", LightMode::Static));
-    out_config->profiles.Append(MakeDefaultProfile("Disable", LightMode::Disabled));
+    out_config->profiles.Append(MakeDefaultProfile(T("Enable"), LightMode::Static));
+    out_config->profiles.Append(MakeDefaultProfile(T("Disable"), LightMode::Disabled));
 }
 
 static inline int ParseHexadecimalChar(char c)
