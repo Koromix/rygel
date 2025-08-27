@@ -1161,7 +1161,7 @@ async function runPlan() {
                                     <td style="text-align: center;">${formatClock(item.clock)}</td>
                                     <td>${item.paths.map(path => html`${path}<br>`)}</td>
                                     <td style=${'text-align: right;' + (item.error != null ? ' color: var(--color, red);' : '')}>
-                                        ${item.timestamp == null ? 'Never' : ''}
+                                        ${item.timestamp == null ? T.never : ''}
                                         ${item.timestamp != null ? new Date(item.timestamp).toLocaleString() : ''}
                                         <br>${item.error || ''}
                                     </td>
