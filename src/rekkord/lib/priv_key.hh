@@ -21,7 +21,7 @@
 namespace RG {
 
 static const char *const DerivationContext = "REKKORD0";
-static const int MaxKeys = 24;
+static const int MaxKeys = 16;
 
 enum class MasterDerivation {
     ConfigKey = 0,
@@ -43,7 +43,7 @@ struct KeyData {
     uint8_t sig[64];
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(KeyData) == 950);
+static_assert(RG_SIZE(KeyData) == 694);
 static_assert(RG_SIZE(KeyData::Badge) == 113);
 static_assert(RG_SIZE(rk_KeySet::badge) == 113);
 
