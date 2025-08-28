@@ -20,6 +20,20 @@
 
 namespace RG {
 
+static smtp_MailContent UncheckedMessage = {
+    "[Error] {{ TITLE }}: {{ REPOSITORY }}",
+    R"(Repository {{ REPOSITORY }} has not been checked recently.\n\nLast scan: {{ TIMESTAMP }})",
+    R"(<html lang="en"><body><p>Repository <b>{{ REPOSITORY }}</b> has not been checked recently.</p><p>Last scan: <b>{{ TIMESTAMP }}</b></p></body></html>)",
+    {}
+};
+
+static smtp_MailContent UncheckedResolved = {
+    "[Resolved] {{ TITLE }}: {{ REPOSITORY }}",
+    R"(Periodic scans of {{ REPOSITORY }} now seem to run!)",
+    R"(<html lang="en"><body><p>Periodic scans of <b>{{ REPOSITORY }}</b> now seem to run!</p></body></html>)",
+    {}
+};
+
 static smtp_MailContent FailureMessage = {
     "[Error] {{ TITLE }}: {{ REPOSITORY }}",
     R"(Failed to check for {{ REPOSITORY }}:\n{{ ERROR }})",
@@ -83,6 +97,29 @@ static Span<const char> PatchFailure(Span<const char> text, const char *reposito
 
 static Span<const char> PatchStale(Span<const char> text, const char *repository,
                                    const char *channel, int64_t timestamp, Allocator *alloc)
+{
+    Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
+        if (key == "TITLE") {
+            writer->Write(config.title);
+        } else if (key == "REPOSITORY") {
+            writer->Write(repository);
+        } else if (key == "CHANNEL") {
+            writer->Write(channel);
+        } else if (key == "TIMESTAMP") {
+            TimeSpec spec = DecomposeTimeUTC(timestamp);
+            Print(writer, "%1", FmtTimeNice(spec));
+        } else {
+            Print(writer, "{{%1}}", expr);
+        }
+    });
+
+    return ret;
+}
+
+static Span<const char> PatchCorrupt(Span<const char> text, const char *repository,
+                                     const char *channel, int64_t timestamp, Allocator *alloc)
 {
     Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
         Span<const char> key = TrimStr(expr);
