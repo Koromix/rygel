@@ -528,6 +528,8 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
 
             if (key == "RANDOM") {
                 Print(writer, "%1", FmtRandom(8));
+            } else if (key == "URL") {
+                Print(writer, "%1", page->url);
             } else if (StartsWith(key, "ASSET ")) {
                 Span<const char> path = TrimStr(key.Take(6, key.len - 6));
                 const FileHash *hash = assets.map.FindValue(path, nullptr);
@@ -790,6 +792,8 @@ static bool RenderTemplate(const char *template_filename, Span<const PageData> p
             writer->Write(page.description);
         } else if (key == "RANDOM") {
             Print(writer, "%1", FmtRandom(8));
+        } else if (key == "URL") {
+            Print(writer, "%1", page.url);
         } else if (StartsWith(key, "ASSET ")) {
             Span<const char> path = TrimStr(key.Take(6, key.len - 6));
             const FileHash *hash = assets.map.FindValue(path, nullptr);
