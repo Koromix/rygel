@@ -56,7 +56,7 @@ Pour effectuer une validation des données côté serveur en mode batch, Goupiel
 
 Ces vérifications reposent sur le code JavaScript de chaque page, qui peut définir des conditions et signaler des erreurs en fonction des données saisies. Les erreurs sont consignées dans les métadonnées en parallèle de chaque enregistrement de données.
 
-# Exécution de Goupile en mode debug
+# Exécuter Goupile (debug)
 
 Pour travailler sur Goupile, utilisez des builds en mode debug. Commencez par cloner le dépôt principal, puis compilez l’outil de build (felix) à l’aide du script bootstrap.
 

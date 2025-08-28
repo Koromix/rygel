@@ -56,7 +56,7 @@ To perform data validation on the server in batch mode, Goupiel forks a zygote p
 
 These checks rely on the JavaScript code of each page, which can define conditions and errors based on the entered data. Errors are logged in the metadata alongside each record data.
 
-# Run Goupile in debug mode
+# Run Goupile (debug)
 
 To work on Goupile, use debug builds. Start by cloning the main repository, and build the build tool (felix) with the bootstrap script.
 
