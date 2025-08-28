@@ -142,7 +142,7 @@ function initLanguages() {
     languages.en = en;
     languages.fr = fr;
 
-    Util.initLocales(languages, 'fr');
+    Util.initLocales(languages, ENV.lang);
     Util.setCookie('language', document.documentElement.lang, '/', 365 * 86400);
 }
 

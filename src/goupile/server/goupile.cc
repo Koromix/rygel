@@ -463,6 +463,7 @@ static void HandleAdminRequest(http_IO *io)
                         json.Key("static"); json.String(Fmt(buf, "/admin/static/%1/", shared_etag).ptr);
                     json.EndObject();
                     json.Key("title"); json.String("Admin");
+                    json.Key("lang"); json.String(gp_domain.config.default_lang);
                     json.Key("permissions"); json.StartObject();
                     for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
                         bool legacy = LegacyPermissionMask & (1 << i);
@@ -692,6 +693,7 @@ static void HandleInstanceRequest(http_IO *io)
                         json.Key("files"); json.String(Fmt(buf, "/%1/files/%2/", master->key, fs_version).ptr);
                     json.EndObject();
                     json.Key("title"); json.String(master->title);
+                    json.Key("lang"); json.String(gp_domain.config.default_lang);
                     json.Key("legacy"); json.Bool(master->legacy);
                     json.Key("demo"); json.Bool(instance->demo);
                     json.Key("version"); json.Int64(fs_version);

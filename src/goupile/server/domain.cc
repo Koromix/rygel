@@ -101,6 +101,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         config.title = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "DemoMode") {
                         valid &= ParseBool(prop.value, &config.demo_mode);
+                    } else if (prop.key == "DefaultLang") {
+                        config.default_lang = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

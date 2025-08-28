@@ -52,6 +52,7 @@ struct DomainConfig {
 
     const char *title = nullptr;
     bool demo_mode = false;
+    const char *default_lang = "fr";
 
     uint8_t archive_key[32] = {}; // crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES
     bool enable_archives = false;
