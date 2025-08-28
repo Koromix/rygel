@@ -1150,11 +1150,11 @@ async function runPlan() {
                         </colgroup>
                         <thead>
                             <tr>
-                                <th>Channel</th>
-                                <th>Days</th>
-                                <th>Clock time</th>
-                                <th>Paths</th>
-                                <th>Last run</th>
+                                <th>${T.channel}</th>
+                                <th>${T.days}</th>
+                                <th>${T.clock_time}</th>
+                                <th>${T.paths}</th>
+                                <th>${T.last_run}</th>
                             </tr>
                         </thead>
                         <tbody>

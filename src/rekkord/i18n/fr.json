@@ -55,6 +55,7 @@
         "finalize_account": "Finaliser le compte",
         "key_prefix": "Préfixe de clé",
         "language": "Langage",
+        "last_run": "Dernière exécution",
         "login": "Se connecter",
         "login_to_x": "Connectez-vous à {1}",
         "logout": "Se déconnecter",

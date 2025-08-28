@@ -55,6 +55,7 @@
         "finalize_account": "Finalize account",
         "key_prefix": "Key prefix",
         "language": "Language",
+        "last_run": "Last run",
         "login": "Login",
         "login_to_x": "Login to {1}",
         "logout": "Logout",
