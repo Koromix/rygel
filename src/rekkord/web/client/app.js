@@ -14,7 +14,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, live, unsafeHTML } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Chart } from '../../../../vendor/chartjs/chart.bundle.js';
 import { Util, Log, Net, HttpError } from '../../../web/core/base.js';
 import { Base64 } from '../../../web/core/mixer.js';
 import * as UI from './ui.js';
@@ -883,7 +882,7 @@ async function runChannel(repo, channel) {
     let canvas = null;
 
     if (snapshots.length >= 2) {
-        canvas = document.createElement('canvas');
+        const { Chart } = await import(BUNDLES['chart.bundle.js']);
 
         let sets = {
             size: { label: T.size, data: [], fill: false },
@@ -898,6 +897,7 @@ async function runChannel(repo, channel) {
                 sets.added.data.push({ x: snapshot.time, y: snapshot.added });
         }
 
+        canvas = document.createElement('canvas');
         let ctx = canvas.getContext('2d');
 
         new Chart(ctx, {
