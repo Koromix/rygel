@@ -1,6 +1,6 @@
 [Unit]
 Description=Goupile eCRF (%i)
-Documentation=https://goupile.fr/
+Documentation=https://goupile.org/
 Wants=network-online.target
 After=network-online.target
 

@@ -194,4 +194,4 @@ Use `./felix --help` for more information.
 
 # Documentation
 
-You can find more information on [the official website](https://goupile.fr/), in french and english.
+You can find more information on [the official website](https://goupile.org/), in french and english.

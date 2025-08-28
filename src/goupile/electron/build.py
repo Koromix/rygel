@@ -74,7 +74,7 @@ if __name__ == "__main__":
     update_version = subprocess.check_output('git log -n1 --pretty=format:%cd --date=format:%Y.%m.%d', shell = True)
     update_version = update_version.decode()
     update_version = update_version.replace('.0', '.')
-    update_url = f'https://goupile.fr/files/{safe_name.lower()}/'
+    update_url = f'https://goupile.org/files/{safe_name.lower()}/'
     shortcut_name = args.shortcut_name or manifest["name"]
 
     # Update package.json
