@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr" class="nojs">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>{{ TITLE }}</title>
+        <meta name="author" content="Niels Martignène">
+        <meta name="description" content="{{ DESCRIPTION }}">
+        <link rel="icon" href="{{ ASSET favicon.webp }}">
+
+        <meta name="theme-color" content="#24579d">
+        <link rel="stylesheet" href="{{ ASSET static/site.min.css }}">
+
+        <script type="text/javascript" src="{{ ASSET static/highlight.min.js }}" async></script>
+        <script type="text/javascript" src="{{ ASSET static/site.min.js }}"></script>
+    </head>
+
+    <body>
+        <div id="deploy"></div>
+
+        <nav id="top">
+            <menu>
+                <a id="logo" href="/"><img src="{{ ASSET static/logo.webp }}" width="428" height="128" alt="" /></a>
+
+{{ LINKS }}
+
+                <div style="flex: 1;"></div>
+                <li><a href="https://nlnet.nl/project/Goupile/" style="border-bottom-color: transparent; margin-top: 8px;"><img src="{{ ASSET static/nlnet/ngi0core.svg }}" width="95" height="30" alt="NGI Zero Core"/></a></li>
+                <li><a href="https://codeberg.org/Koromix/goupile" style="border-bottom-color: transparent; margin-top: 8px;"><img src="https://img.shields.io/badge/Codeberg-Goupile-2185d0" alt="Codeberg"/></a></li>
+                <a id="flag" href="/en{{ URL }}">🇬🇧</a>
+            </menu>
+        </nav>
+
+        {{ TOC }}
+
+        <main>
+            {{ CONTENT }}
+        </main>
+
+        <footer>
+            <div>Goupile © 2025</div>
+            <div style="font-size: 0.8em;">
+                Niels Martignène (<a href="https://koromix.dev/" target="_blank">Koromix</a>)<br>
+                <a href="mailto:niels.martignene@protonmail.com" style="font-weight: bold; color: inherit;">niels.martignene@protonmail.com</a>
+            </div>
+        </footer>
+    </body>
+</html>
