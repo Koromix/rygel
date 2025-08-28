@@ -37,6 +37,7 @@ static const char *const UrlFormatNames[] = {
 };
 
 struct BuildSettings {
+    const char *base = "/";
     UrlFormat urls = UrlFormat::Pretty;
     bool gzip = false;
     bool sourcemap = false;
@@ -462,23 +463,23 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary,
     return true;
 }
 
-static void RenderAsset(Span<const char> path, const FileHash *hash, StreamWriter *writer)
+static void RenderAsset(const char *base, Span<const char> path, const FileHash *hash, StreamWriter *writer)
 {
     if (hash) {
         if (hash->unique) {
-            Print(writer, "/%1", hash->url);
+            Print(writer, "%1%2", base, hash->url);
         } else {
             FmtArg suffix = FmtHex(MakeSpan(hash->sha256, 8));
-            Print(writer, "/%1?%2", hash->url, suffix);
+            Print(writer, "%1%2?%3", base, hash->url, suffix);
         }
     } else {
         LogWarning("Unknown asset '%1'", path);
-        Print(writer, "/%1", path);
+        Print(writer, "%1%2", base, path);
     }
 }
 
 // XXX: Resolve page links in content
-static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *alloc)
+static bool RenderMarkdown(const char *base, PageData *page, const AssetSet &assets, Allocator *alloc)
 {
     HeapArray<char> content;
     if (page->src_filename && ReadFile(page->src_filename, Mebibytes(8), &content) < 0)
@@ -534,7 +535,7 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
                 Span<const char> path = TrimStr(key.Take(6, key.len - 6));
                 const FileHash *hash = assets.map.FindValue(path, nullptr);
 
-                RenderAsset(path, hash, writer);
+                RenderAsset(base, path, hash, writer);
             } else {
                 Print(writer, "{{%1}}", expr);
             }
@@ -680,7 +681,7 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
     return true;
 }
 
-static Size RenderMenu(Span<const PageData> pages, Size active_idx,
+static Size RenderMenu(const char *base, Span<const PageData> pages, Size active_idx,
                        Size idx, Size end, int depth, StreamWriter *writer)
 {
     const PageData *page = &pages[idx];
@@ -732,7 +733,7 @@ static Size RenderMenu(Span<const PageData> pages, Size active_idx,
         Print(writer, "<a href=\"#\" class=\"category%1\" style=\"margin-left: %2em;\">%3</a>", active ? " active" : "", margin, category);
         PrintLn(writer, "%1", depth ? "" : "<div>");
         while (i < j) {
-            i = RenderMenu(pages, active_idx, i, j, depth + 1, writer);
+            i = RenderMenu(base, pages, active_idx, i, j, depth + 1, writer);
         }
         PrintLn(writer, "%1", depth ? "" : "</div></li>");
 
@@ -763,14 +764,15 @@ static Size RenderMenu(Span<const PageData> pages, Size active_idx,
         bool active = (active_idx >= i && active_idx < j);
         int margin = std::max(0, depth - 1);
 
-        Print(writer, "<a href=\"%1\"%2 style=\"margin-left: %3em;\">%4</a>", page->url, active ? " class=\"active\"" : "", margin, title);
+        Print(writer, "<a href=\"%1%2\"%3 style=\"margin-left: %4em;\">%5</a>", base, page->url, active ? " class=\"active\"" : "", margin, title);
         PrintLn(writer, "%1", depth ? "" : "</li>");
 
         return j;
     }
 }
 
-static bool RenderTemplate(const char *template_filename, Span<const PageData> pages, Size page_idx,
+static bool RenderTemplate(const char *base, const char *template_filename,
+                           Span<const PageData> pages, Size page_idx,
                            const AssetSet &assets, const char *dest_filename)
 {
     const PageData &page = pages[page_idx];
@@ -798,10 +800,10 @@ static bool RenderTemplate(const char *template_filename, Span<const PageData> p
             Span<const char> path = TrimStr(key.Take(6, key.len - 6));
             const FileHash *hash = assets.map.FindValue(path, nullptr);
 
-            RenderAsset(path, hash, writer);
+            RenderAsset(base, path, hash, writer);
         } else if (key == "LINKS") {
             for (Size i = 0; i < pages.len;) {
-                i = RenderMenu(pages, page_idx, i, pages.len, 0, writer);
+                i = RenderMenu(base, pages, page_idx, i, pages.len, 0, writer);
             }
         } else if (key == "TOC") {
             if (page.toc && page.sections.len > 1) {
@@ -937,12 +939,12 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
                 page.src_filename = nullptr;
             } else {
                 if (TestStr(page.name, "index")) {
-                    page.url = "/";
+                    page.url = "";
                 } else {
                     switch (build.urls) {
                         case UrlFormat::Pretty:
-                        case UrlFormat::PrettySub: { page.url = Fmt(&temp_alloc, "/%1", page.name).ptr; } break;
-                        case UrlFormat::Ugly: { page.url = Fmt(&temp_alloc, "/%1.html", page.name).ptr; } break;
+                        case UrlFormat::PrettySub: { page.url = page.name; } break;
+                        case UrlFormat::Ugly: { page.url = Fmt(&temp_alloc, "%1.html", page.name).ptr; } break;
                     }
                 }
             }
@@ -1211,7 +1213,7 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
         if (ext == ".html") {
             page.template_filename = page.src_filename;
         } else if (ext == ".md") {
-            if (!RenderMarkdown(&page, assets, &temp_alloc))
+            if (!RenderMarkdown(build.base, &page, assets, &temp_alloc))
                 return false;
         } else {
             LogError("Cannot render pages with '%1' extension", ext);
@@ -1240,7 +1242,7 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
             const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
             async.Run([=, &pages, &assets]() {
-                if (!RenderTemplate(template_filename, pages, i, assets, dest_filename))
+                if (!RenderTemplate(build.base, template_filename, pages, i, assets, dest_filename))
                     return false;
 
                 if (gzip_file) {
@@ -1268,6 +1270,8 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
 
 int Main(int argc, char **argv)
 {
+    BlockAllocator temp_alloc;
+
     // Options
     const char *source_dir = nullptr;
     const char *output_dir = nullptr;
@@ -1281,15 +1285,18 @@ R"(Usage: %!..+%1 [option...] [source] -O output_dir%!0
 Options:
 
     %!..+-O, --output_dir directory%!0     Set output directory
-    %!..+-u, --urls format%!0              Change URL format
+
+    %!..+-b, --base URL%!0                 Base URL
                                    %!D..(default: %2)%!0
+    %!..+-u, --urls format%!0              Change URL format
+                                   %!D..(default: %3)%!0
         %!..+--gzip%!0                     Create static gzip files
 
         %!..+--sourcemap%!0                Add inline sourcemaps to bundles
     %!..+-l, --loop%!0                     Build repeatedly until interrupted
 
-Available URL formats: %!..+%3%!0)",
-                FelixTarget, UrlFormatNames[(int)build.urls], FmtSpan(UrlFormatNames));
+Available URL formats: %!..+%4%!0)",
+                FelixTarget, build.base, UrlFormatNames[(int)build.urls], FmtSpan(UrlFormatNames));
     };
 
     // Handle version
@@ -1309,6 +1316,9 @@ Available URL formats: %!..+%3%!0)",
                 return 0;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 output_dir = opt.current_value;
+            } else if (opt.Test("-b", "--base", OptionType::Value)) {
+                Span<const char> base = TrimStrRight(opt.current_value, "/");
+                build.base = Fmt(&temp_alloc, "%1/", base).ptr;
             } else if (opt.Test("-u", "--urls", OptionType::Value)) {
                 if (!OptionToEnumI(UrlFormatNames, opt.current_value, &build.urls)) {
                     LogError("Unknown URL format '%1'", opt.current_value);
