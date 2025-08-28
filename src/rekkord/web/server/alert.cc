@@ -76,6 +76,26 @@ static smtp_MailContent CorruptResolved = {
     {}
 };
 
+static Span<const char> PatchUnchecked(Span<const char> text, const char *repository, int64_t timestamp, Allocator *alloc)
+{
+    Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
+        if (key == "TITLE") {
+            writer->Write(config.title);
+        } else if (key == "REPOSITORY") {
+            writer->Write(repository);
+        } else if (key == "TIMESTAMP") {
+            TimeSpec spec = DecomposeTimeUTC(timestamp);
+            Print(writer, "%1", FmtTimeNice(spec));
+        } else {
+            Print(writer, "{{%1}}", expr);
+        }
+    });
+
+    return ret;
+}
+
 static Span<const char> PatchFailure(Span<const char> text, const char *repository, const char *message, Allocator *alloc)
 {
     Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
@@ -119,7 +139,7 @@ static Span<const char> PatchStale(Span<const char> text, const char *repository
 }
 
 static Span<const char> PatchCorrupt(Span<const char> text, const char *repository,
-                                     const char *channel, int64_t timestamp, Allocator *alloc)
+                                     const char *channel, Allocator *alloc)
 {
     Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
         Span<const char> key = TrimStr(expr);
@@ -130,9 +150,6 @@ static Span<const char> PatchCorrupt(Span<const char> text, const char *reposito
             writer->Write(repository);
         } else if (key == "CHANNEL") {
             writer->Write(channel);
-        } else if (key == "TIMESTAMP") {
-            TimeSpec spec = DecomposeTimeUTC(timestamp);
-            Print(writer, "%1", FmtTimeNice(spec));
         } else {
             Print(writer, "{{%1}}", expr);
         }
