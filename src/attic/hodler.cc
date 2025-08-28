@@ -1265,30 +1265,27 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
 int Main(int argc, char **argv)
 {
     // Options
-    const char *source_dir = ".";
+    const char *source_dir = nullptr;
     const char *output_dir = nullptr;
     BuildSettings build;
     bool loop = false;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 [option...] -O output_dir%!0
+R"(Usage: %!..+%1 [option...] [source] -O output_dir%!0
 
 Options:
 
-    %!..+-S, --source_dir filename%!0      Set source directory
-                                   %!D..(default: %2)%!0
-
     %!..+-O, --output_dir directory%!0     Set output directory
     %!..+-u, --urls format%!0              Change URL format
-                                   %!D..(default: %3)%!0
+                                   %!D..(default: %2)%!0
         %!..+--gzip%!0                     Create static gzip files
 
         %!..+--sourcemap%!0                Add inline sourcemaps to bundles
     %!..+-l, --loop%!0                     Build repeatedly until interrupted
 
-Available URL formats: %!..+%4%!0)",
-                FelixTarget, source_dir, UrlFormatNames[(int)build.urls], FmtSpan(UrlFormatNames));
+Available URL formats: %!..+%3%!0)",
+                FelixTarget, UrlFormatNames[(int)build.urls], FmtSpan(UrlFormatNames));
     };
 
     // Handle version
@@ -1306,8 +1303,6 @@ Available URL formats: %!..+%4%!0)",
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("-S", "--source_dir", OptionType::Value)) {
-                source_dir = opt.current_value;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 output_dir = opt.current_value;
             } else if (opt.Test("-u", "--urls", OptionType::Value)) {
@@ -1326,6 +1321,9 @@ Available URL formats: %!..+%4%!0)",
                 return 1;
             }
         }
+
+        source_dir = opt.ConsumeNonOption();
+        source_dir = source_dir ? source_dir : ".";
     }
 
     if (!output_dir) {
