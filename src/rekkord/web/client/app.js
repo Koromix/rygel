@@ -293,7 +293,7 @@ function renderApp(el) {
         <footer>
             <div>${ENV.title} © 2025</div>
             <div style="font-size: 0.8em;">
-                Niels Martignène (<a href="https://codeberg.org/Koromix/" target="_blank">Koromix</a>)<br>
+                Niels Martignène (<a href="https://koromix.dev/" target="_blank">Koromix</a>)<br>
                 <a href="mailto:niels.martignene@protonmail.com" style="font-weight: bold; color: inherit;">niels.martignene@protonmail.com</a>
             </div>
             <select id="language" aria-label=${T.language} @change=${UI.wrap(e => switchLanguage(e.target.value))}>
