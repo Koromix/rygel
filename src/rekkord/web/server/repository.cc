@@ -60,15 +60,17 @@ static bool UpdateSnapshots(int64_t id, int64_t now,
             char oid[128];
             Fmt(oid, "%1", snapshot.oid);
 
-            if (!db.Run(R"(INSERT INTO snapshots (repository, oid, channel, timestamp, size, stored, added)
-                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+            if (!db.Run(R"(INSERT INTO snapshots (repository, oid, channel, timestamp,
+                                                  size, stored, added, valid)
+                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
                            ON CONFLICT DO UPDATE SET channel = excluded.channel,
                                                      timestamp = excluded.timestamp,
                                                      size = excluded.size,
                                                      stored = excluded.stored,
-                                                     added = excluded.added)",
+                                                     added = excluded.added,
+                                                     valid = excluded.valid)",
                         id, oid, snapshot.channel, snapshot.time,
-                        snapshot.size, snapshot.stored, snapshot.added))
+                            snapshot.size, snapshot.stored, snapshot.added, 0 + snapshot.valid))
                 return false;
         }
 
@@ -76,13 +78,16 @@ static bool UpdateSnapshots(int64_t id, int64_t now,
             char oid[128];
             Fmt(oid, "%1", channel.oid);
 
-            if (!db.Run(R"(INSERT INTO channels (repository, name, oid, timestamp, size, count, ignore)
-                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)
+            if (!db.Run(R"(INSERT INTO channels (repository, name, oid, timestamp,
+                                                 size, count, valid, ignore)
+                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, ?7)
                            ON CONFLICT DO UPDATE SET oid = excluded.oid,
                                                      timestamp = excluded.timestamp,
                                                      size = excluded.size,
-                                                     count = excluded.count)",
-                        id, channel.name, oid, channel.time, channel.size, channel.count))
+                                                     count = excluded.count,
+                                                     valid = excluded.valid)",
+                        id, channel.name, oid, channel.time, channel.size,
+                            channel.count, channel.valid))
                 return false;
 
             if (now - channel.time >= config.stale_delay) {

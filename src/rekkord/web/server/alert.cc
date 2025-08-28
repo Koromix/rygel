@@ -48,6 +48,20 @@ static smtp_MailContent StaleResolved = {
     {}
 };
 
+static smtp_MailContent CorruptMessage = {
+    "[Corrupt] {{ TITLE }}: {{ REPOSITORY }} channel {{ CHANNEL }}",
+    R"(Repository {{ REPOSITORY }} channel {{ CHANNEL }} has corrupt snapshots.\n\n)",
+    R"(<html lang="en"><body><p>Repository <b>{{ REPOSITORY }}</b> channel <b>{{ CHANNEL }}</b> has corrupt snapshots.</p></body></html>)",
+    {}
+};
+
+static smtp_MailContent CorruptResolved = {
+    "[Resolved] {{ TITLE }}: {{ REPOSITORY }} channel {{ CHANNEL }}",
+    R"(Repository {{ REPOSITORY }} channel {{ CHANNEL }} is now back on track!\n\nAll snapshots are valid.)",
+    R"(<html lang="en"><body><p>Repository <b>{{ REPOSITORY }}</b> channel <b>{{ CHANNEL }}</b> is now back on track!.</p><p>All snapshots are valid.</p></body></html>)",
+    {}
+};
+
 static Span<const char> PatchFailure(Span<const char> text, const char *repository, const char *message, Allocator *alloc)
 {
     Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
