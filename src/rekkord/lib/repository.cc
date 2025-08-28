@@ -665,7 +665,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
 
     // Create tag files
     for (const char *path: paths) {
-        rk_WriteSettings settings = { .conditional = HasConditionalWrites(), .retain = retain };
+        rk_WriteSettings settings = { .retain = retain };
         rk_WriteResult ret = disk->WriteFile(path, {}, settings);
 
         if (ret != rk_WriteResult::Success)
@@ -680,8 +680,11 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
         rk_WriteSettings settings = { .conditional = HasConditionalWrites(), .retain = retain };
         rk_WriteResult ret = disk->WriteFile(path, keyset->badge, settings);
 
-        if (ret != rk_WriteResult::Success)
-            return false;
+        switch (ret) {
+            case rk_WriteResult::Success:
+            case rk_WriteResult::AlreadyExists: {} break;
+            case rk_WriteResult::OtherError: return false;
+        }
     }
 
     return true;
