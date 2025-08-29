@@ -327,9 +327,8 @@ int RunAgent(Span<const char *> arguments)
 {
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 agent [-C filename] [option...]%!0
-)", FelixTarget);
-        PrintLn(st, CommonOptions);
+T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
+        PrintCommonOptions(st);
     };
 
     // Parse arguments

@@ -24,10 +24,9 @@ extern const char *const DefaultConfigDirectory;
 extern const char *const DefaultConfigName;
 extern const char *const DefaultConfigEnv;
 
-extern const char *const CommonOptions;
-
 extern rk_Config rekkord_config;
 
+void PrintCommonOptions(StreamWriter *st);
 bool HandleCommonOption(OptionParser &opt, bool ignore_unknown = false);
 
 }

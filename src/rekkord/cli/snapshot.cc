@@ -89,12 +89,11 @@ int RunSave(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 save [-C filename] [option...] channel path...%!0
+T(R"(Usage: %!..+%1 save [-C filename] [option...] channel path...%!0
        %!..+%1 save [-C filename] [option...] --from file%!0
-       %!..+%1 save [-C filename] [option...] --raw path...%!0
-)", FelixTarget);
-        PrintLn(st, CommonOptions);
-        PrintLn(st, R"(
+       %!..+%1 save [-C filename] [option...] --raw path...%!0)"), FelixTarget);
+        PrintCommonOptions(st);
+        PrintLn(st, T(R"(
 Save options:
 
     %!..+-F, --from file%!0                Use channel names and paths from file
@@ -110,7 +109,7 @@ Save options:
 Available metadata save options:
 
     %!..+ATime%!0                          Store atime (access time) values
-    %!..+XAttrs%!0                         Store extended attributes and ACLs (when supported))");
+    %!..+XAttrs%!0                         Store extended attributes and ACLs (when supported))"));
     };
 
     // Parse arguments
@@ -256,10 +255,9 @@ int RunRestore(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 restore [-C filename] [option...] identifier destination%!0
-)", FelixTarget);
-        PrintLn(st, CommonOptions);
-        PrintLn(st, R"(
+T(R"(Usage: %!..+%1 restore [-C filename] [option...] identifier destination%!0)"), FelixTarget);
+        PrintCommonOptions(st);
+        PrintLn(st, T(R"(
 Restore options:
 
     %!..+-f, --force%!0                    Overwrite destination files
@@ -276,7 +274,7 @@ Available metadata restoration options:
     %!..+XAttrs%!0                         Restore extended attributes and ACLs (when supported)
 
 Use an object ID (OID) or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<OID|channel>[:<path>]%!0.
-If you use a snapshot channel, the most recent snapshot object that matches will be used.)");
+If you use a snapshot channel, the most recent snapshot object that matches will be used.)"));
     };
 
     // Parse arguments
@@ -380,9 +378,8 @@ int RunCheck(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 check [-C filename] [option...]%!0
-)", FelixTarget);
-        PrintLn(st, CommonOptions);
+T(R"(Usage: %!..+%1 check [-C filename] [option...]%!0)"), FelixTarget);
+        PrintCommonOptions(st);
     };
 
     // Parse arguments

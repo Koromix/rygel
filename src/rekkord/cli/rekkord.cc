@@ -48,8 +48,10 @@ const char *const DefaultConfigDirectory = "rekkord";
 const char *const DefaultConfigName = "rekkord.ini";
 const char *const DefaultConfigEnv = "REKKORD_CONFIG_FILE";
 
-const char *const CommonOptions =
-R"(Common options:
+void PrintCommonOptions(StreamWriter *st)
+{
+    PrintLn(st, T(R"(
+Common options:
 
     %!..+-C, --config_file filename%!0     Set configuration file
 
@@ -57,7 +59,8 @@ R"(Common options:
     %!..+-K, --key_file filename%!0        Set file containing repository keys
 
     %!..+-j, --threads threads%!0          Change number of threads
-                                   %!D..(default: automatic)%!0)";
+                                   %!D..(default: automatic)%!0)"));
+}
 
 rk_Config rekkord_config;
 
@@ -101,7 +104,7 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 command [arg...]%!0
+T(R"(Usage: %!..+%1 command [arg...]%!0
 
 Management commands:
 
@@ -136,14 +139,14 @@ Advanced commands:
     %!..+reset_cache%!0                    Reset or rebuild local repository cache
 
 Most commands try to find a configuration file if one exists. Unless the path is explicitly defined, the first of the following config files will be used:
-)", FelixTarget);
+)"), FelixTarget);
 
         for (const char *filename: config_filenames) {
             PrintLn(st, "    %!..+%1%!0", filename);
         }
 
-        PrintLn(st, R"(
-Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)", FelixTarget);
+        PrintLn(st, T(R"(
+Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)"), FelixTarget);
     };
 
 #if !defined(_WIN32)

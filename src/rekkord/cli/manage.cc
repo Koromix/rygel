@@ -94,13 +94,13 @@ int RunSetup(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 setup [-C filename] [option...]%!0
+T(R"(Usage: %!..+%1 setup [-C filename] [option...]%!0
 
 Options:
 
     %!..+-C, --config_file filename%!0     Set configuration file
 
-    %!..+-f, --force%!0                    Overwrite existing files)", FelixTarget);
+    %!..+-f, --force%!0                    Overwrite existing files)"), FelixTarget);
     };
 
     // Parse arguments
@@ -327,7 +327,7 @@ int RunInit(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 init [-C filename] [option...]%!0
+T(R"(Usage: %!..+%1 init [-C filename] [option...]%!0
 
 Options:
 
@@ -336,7 +336,7 @@ Options:
     %!..+-R, --repository URL%!0           Set repository URL
     %!..+-K, --key_file filename%!0        Set master key file
 
-    %!..+-g, --generate_key%!0             Generate new master key)", FelixTarget);
+    %!..+-g, --generate_key%!0             Generate new master key)"), FelixTarget);
     };
 
     // Parse arguments
@@ -450,10 +450,9 @@ int RunDerive(Span<const char *> arguments)
         Span<const char *const> types = MakeSpan(rk_KeyTypeNames + 1, RG_LEN(rk_KeyTypeNames) - 1);
 
         PrintLn(st,
-R"(Usage: %!..+%1 derive [-C filename] [option...] -O destination%!0
-)", FelixTarget);
-        PrintLn(st, CommonOptions);
-        PrintLn(st, R"(
+T(R"(Usage: %!..+%1 derive [-C filename] [option...] -O destination%!0)"), FelixTarget);
+        PrintCommonOptions(st);
+        PrintLn(st, T(R"(
 Key options:
 
     %!..+-O, --output_file file%!0         Write keys to destination file
@@ -462,7 +461,7 @@ Key options:
 
     %!..+-t, --type type%!0                Set key type and permissions (see below)
 
-Available key types: %!..+%1%!0)", FmtSpan(types));
+Available key types: %!..+%1%!0)"), FmtSpan(types));
     };
 
     // Parse arguments
@@ -541,13 +540,12 @@ int RunIdentify(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 identify [-C filename] [option...]%!0
-)", FelixTarget);
-        PrintLn(st, CommonOptions);
-        PrintLn(st, R"(
+T(R"(Usage: %!..+%1 identify [-C filename] [option...]%!0)"), FelixTarget);
+        PrintCommonOptions(st);
+        PrintLn(st, T(R"(
 Identify options:
 
-        %!..+--offline%!0                  Analyse key file without opening repository)");
+        %!..+--offline%!0                  Analyse key file without opening repository)"));
     };
 
     // Parse arguments
@@ -607,9 +605,8 @@ int RunChangeCID(Span<const char *> arguments)
 {
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 change_cid [-C filename] [option...]%!0
-)", FelixTarget);
-        PrintLn(st, CommonOptions);
+T(R"(Usage: %!..+%1 change_cid [-C filename] [option...]%!0)"), FelixTarget);
+        PrintCommonOptions(st);
     };
 
     // Parse arguments
@@ -660,13 +657,12 @@ int RunResetCache(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 reset_cache [-C filename] [option...]%!0
-)", FelixTarget);
-        PrintLn(st, CommonOptions);
-        PrintLn(st, R"(
+T(R"(Usage: %!..+%1 reset_cache [-C filename] [option...]%!0)"), FelixTarget);
+        PrintCommonOptions(st);
+        PrintLn(st, T(R"(
 Cache options:
 
-        %!..+--list%!0                     List existing blobs)");
+        %!..+--list%!0                     List existing blobs)"));
     };
 
     // Parse arguments

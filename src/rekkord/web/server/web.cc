@@ -484,7 +484,7 @@ int RunWeb(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 web [option...]%!0
+T(R"(Usage: %!..+%1 web [option...]%!0
 
 Options:
 
@@ -493,7 +493,7 @@ Options:
 
     %!..+-p, --port port%!0                Change web server port
                                    %!D..(default: %3)%!0
-        %!..+--sandbox%!0                  Run sandboxed (on supported platforms))",
+        %!..+--sandbox%!0                  Run sandboxed (on supported platforms))"),
                 FelixTarget, config_filename, config.http.port);
     };
 

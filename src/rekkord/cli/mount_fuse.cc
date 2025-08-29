@@ -475,10 +475,9 @@ int RunMount(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 mount [-C filename] [option...] identifier mountpoint%!0
-)", FelixTarget);
-        PrintLn(st, CommonOptions);
-        PrintLn(st, R"(
+T(R"(Usage: %!..+%1 mount [-C filename] [option...] identifier mountpoint%!0)"), FelixTarget);
+        PrintCommonOptions(st);
+        PrintLn(st, T(R"(
 Mount options:
 
     %!..+-f, --foreground%!0               Run mount process in foreground
@@ -491,7 +490,7 @@ Mount options:
         %!..+--debug%!0                    Debug FUSE calls
 
 Use an object ID (OID) or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<OID|channel>[:<path>]%!0.
-If you use a snapshot channel, the most recent snapshot object that matches will be used.)");
+If you use a snapshot channel, the most recent snapshot object that matches will be used.)"));
     };
 
     // Parse arguments

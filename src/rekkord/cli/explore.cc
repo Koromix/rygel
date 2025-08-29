@@ -61,10 +61,9 @@ int RunSnapshots(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 snapshots [-C filename] [option...]%!0
-)", FelixTarget);
-        PrintLn(st, CommonOptions);
-        PrintLn(st, R"(
+T(R"(Usage: %!..+%1 snapshots [-C filename] [option...]%!0)"), FelixTarget);
+        PrintCommonOptions(st);
+        PrintLn(st, T(R"(
 Snapshot options:
 
     %!..+-f, --format format%!0            Change output format
@@ -78,7 +77,7 @@ Snapshot options:
     %!..+-p, --pattern pattern%!0          Filter snapshot channels with glob-like pattern
 
 Available output formats: %!..+%2%!0
-Available sort orders: %!..+%3%!0)",
+Available sort orders: %!..+%3%!0)"),
                 OutputFormatNames[(int)format], FmtSpan(OutputFormatNames), FmtSpan(SortOrderNames));
     };
 
@@ -301,17 +300,16 @@ int RunChannels(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 channels [-C filename] [option...]%!0
-)", FelixTarget);
-        PrintLn(st, CommonOptions);
-        PrintLn(st, R"(
+T(R"(Usage: %!..+%1 channels [-C filename] [option...]%!0)"), FelixTarget);
+        PrintCommonOptions(st);
+        PrintLn(st, T(R"(
 Channel options:
 
     %!..+-f, --format format%!0            Change output format
                                    %!D..(default: %1)%!0
     %!..+-v, --verbose%!0                  Enable verbose output (plain only)
 
-Available output formats: %!..+%2%!0)",
+Available output formats: %!..+%2%!0)"),
                 OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
     };
 
@@ -601,10 +599,9 @@ int RunList(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 list [-C filename] [option...] identifier%!0
-)", FelixTarget);
-        PrintLn(st, CommonOptions);
-        PrintLn(st, R"(
+T(R"(Usage: %!..+%1 list [-C filename] [option...] identifier%!0)"), FelixTarget);
+        PrintCommonOptions(st);
+        PrintLn(st, T(R"(
 List options:
 
     %!..+-f, --format format%!0            Change output format
@@ -616,7 +613,7 @@ List options:
 Use an object ID (OID) or a snapshot channel as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<OID|channel>[:<path>]%!0.
 If you use a snapshot channel, the most recent snapshot object that matches will be used.
 
-Available output formats: %!..+%2%!0)",
+Available output formats: %!..+%2%!0)"),
                 OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
     };
 
