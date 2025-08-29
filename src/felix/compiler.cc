@@ -291,8 +291,8 @@ public:
 
                 switch (compiler->platform) {
                     case HostPlatform::Linux: { suffix = "pc-linux-gnu"; } break;
-                    case HostPlatform::FreeBSD: { suffix = "freebsd-unkown"; } break;
-                    case HostPlatform::OpenBSD: { suffix = "openbsd-unkown"; } break;
+                    case HostPlatform::FreeBSD: { suffix = "freebsd-unknown"; } break;
+                    case HostPlatform::OpenBSD: { suffix = "openbsd-unknown"; } break;
 
                     case HostPlatform::WasmWasi: {
                         RG_ASSERT(sysroot);
