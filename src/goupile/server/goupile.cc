@@ -968,7 +968,7 @@ static int RunServe(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 [serve] [option...]%!0
+T(R"(Usage: %!..+%1 [serve] [option...]%!0
 
 Options:
 
@@ -986,7 +986,7 @@ Other commands:
     %!..+keys%!0                           Generate archive key pairs
     %!..+unseal%!0                         Unseal domain archive
 
-For help about those commands, type: %!..+%1 command --help%!0)",
+For help about those commands, type: %!..+%1 command --help%!0)"),
                 FelixTarget, config_filename, gp_domain.config.http.port);
     };
 
