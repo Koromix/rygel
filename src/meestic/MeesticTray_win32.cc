@@ -329,7 +329,7 @@ int Main(int argc, char **argv)
         HeapArray<char> help;
 
         Fmt(&help,
-R"(Usage: %!..+%1 [option...]%!0
+T(R"(Usage: %!..+%1 [option...]%!0
 
 Options:
 
@@ -337,7 +337,7 @@ Options:
 
 By default, the first of the following config files will be used:
 
-)",
+)"),
                 FelixTarget);
 
         for (const char *filename: config_filenames) {

@@ -671,12 +671,12 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 [option...]%!0
+T(R"(Usage: %!..+%1 [option...]%!0
 
 Options:
 
     %!..+-S, --socket_file socket%!0       Change control socket
-                                   %!D..(default: %2)%!0)",
+                                   %!D..(default: %2)%!0)"),
                 FelixTarget, socket_filename);
     };
 

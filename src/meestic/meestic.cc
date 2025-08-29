@@ -517,7 +517,7 @@ static int RunSet(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 set [option...] [color...]%!0
+T(R"(Usage: %!..+%1 set [option...] [color...]%!0
 
 Options:
 
@@ -529,23 +529,23 @@ Options:
                                    %!D..(default: %4)%!0
 
 Supported modes:
-)", FelixTarget, LightModeOptions[(int)settings.mode].name, settings.speed, settings.intensity);
+)"), FelixTarget, LightModeOptions[(int)settings.mode].name, settings.speed, settings.intensity);
         for (const OptionDesc &desc: LightModeOptions) {
-            PrintLn(st, "    %!..+%1%!0    %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0    %2", FmtArg(desc.name).Pad(27), T(desc.help));
         };
-        PrintLn(st, R"(
+        PrintLn(st, T(R"(
 A few predefined color names can be used (such as MsiBlue), or you can use
 hexadecimal RGB color codes. Don't forget the quotes or your shell may not
 like the hash character.
 
 Predefined color names:
-)");
+)"));
         for (const PredefinedColor &color: PredefinedColors) {
             PrintLn(st, "    %!..+%1%!0    %!D..#%2%3%4%!0", FmtArg(color.name).Pad(27), FmtHex(color.rgb.red).Pad0(-2),
                                                                                        FmtHex(color.rgb.green).Pad0(-2),
                                                                                        FmtHex(color.rgb.blue).Pad0(-2));
         };
-        PrintLn(st, R"(
+        PrintLn(st, T(R"(
 Examples:
 
     Disable lighting
@@ -560,7 +560,7 @@ Examples:
     Quickly transition between Magenta, Orange and MsiBlue colors
     %!..+%1 -m Transition -s 2 Magenta Orange MsiBlue%!0
 
-Be careful, color names and most options are %!..+case-sensitive%!0.)", FelixTarget);
+Be careful, color names and most options are %!..+case-sensitive%!0.)"), FelixTarget);
     };
 
     // Harmonize log output

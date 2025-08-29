@@ -34,10 +34,10 @@ enum class LightMode {
     Transition
 };
 static const OptionDesc LightModeOptions[] = {
-    {"Disabled",   "Disable keyboard light"},
-    {"Static",     "Use static lighting"},
-    {"Breathe",    "Breathe each color"},
-    {"Transition", "Transition between colors"}
+    { "Disabled",   T("Disable keyboard light") },
+    { "Static",     T("Use static lighting") },
+    { "Breathe",    T("Breathe each color") },
+    { "Transition", T("Transition between colors") }
 };
 
 struct LightSettings {
