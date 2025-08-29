@@ -565,6 +565,9 @@ static inline void *MemMem(const void *src, Size src_len, const void *needle, Si
 
 #endif
 
+// Implemented for translations, but we need it before we get to this part
+const char *T(const char *key);
+
 template <typename T, typename = typename std::enable_if<std::is_enum<T>::value, T>>
 typename std::underlying_type<T>::type MaskEnum(T value)
 {
@@ -4050,9 +4053,9 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
     template <typename... Args>
     static inline void LogInfo(Args... args) { Log(LogLevel::Info, nullptr, args...); }
     template <typename... Args>
-    static inline void LogWarning(Args... args) { Log(LogLevel::Warning, "Warning: ", args...); }
+    static inline void LogWarning(Args... args) { Log(LogLevel::Warning, T("Warning: "), args...); }
     template <typename... Args>
-    static inline void LogError(Args... args) { Log(LogLevel::Error, "Error: ", args...); }
+    static inline void LogError(Args... args) { Log(LogLevel::Error, T("Error: "), args...); }
 #endif
 
 void SetLogHandler(const std::function<LogFunc> &func, bool vt100);
@@ -5374,8 +5377,6 @@ void InitLocales(Span<const TranslationTable> tables);
 // Ignored if lang is not supported.
 // Use NULL to reset to process-wide setting
 void ChangeThreadLocale(const char *name);
-
-const char *T(const char *key);
 
 // ------------------------------------------------------------------------
 // Options
