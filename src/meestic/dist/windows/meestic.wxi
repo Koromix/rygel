@@ -19,7 +19,7 @@
         <ComponentRef Id="README" />
     </Feature>
 
-    <StandardDirectory Id="ProgramFilesFolder">
+    <StandardDirectory Id="ProgramFiles64Folder">
         <Directory Id="INSTALLFOLDER" Name="Meestic">
             <Component Id="README">
                 <File Id="README.md" KeyPath="yes" Source="README.md" ></File>

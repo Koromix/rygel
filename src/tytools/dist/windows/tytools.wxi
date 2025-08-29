@@ -24,7 +24,7 @@
         <ComponentRef Id="TextFiles" />
     </Feature>
 
-    <StandardDirectory Id="ProgramFilesFolder">
+    <StandardDirectory Id="ProgramFiles64Folder">
         <Directory Id="INSTALLFOLDER" Name="TyTools">
             <Component Id="CliBinaries" Guid="224300d3-842d-462c-ac13-572db04e5d26">
                 <File Id="TyCmdBinary" Source="tycmd.exe" ></File>
