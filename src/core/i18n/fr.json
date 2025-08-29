@@ -330,7 +330,7 @@
         "Socket pathname in NOTIFY_SOCKET is too long": "L'adresse de socket dans NOTIFY_SOCKET est trop longue",
         "String '%1' is not valid UTF-8": "La chaîne '%1' n'est pas une chaîne UTF-8 valide",
         "String '%1' is too large": "La chaîne '%1' est trop grande",
-        "The server is unknown, public key hash: %!..+%1%!0": "Le serveur est inconnu, l'empreinte de la clé publique est : % !..+%1%!0",
+        "The server is unknown, public key hash: %!..+%1%!0": "Le serveur est inconnu, l'empreinte de la clé publique est : %!..+%1%!0",
         "This program must not be run as root": "Ce programme ne doit pas être exécuté en tant que root",
         "This snapshot does not contain any frame": "Cet instantané ne contient pas de cadre",
         "Too many cookies, server limit is %1": "Trop de cookies, la limite du serveur est de %1",
