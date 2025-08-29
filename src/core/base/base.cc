@@ -10285,7 +10285,7 @@ int ComputeUnicodeWidth(Span<const char> str)
             return false;
 
         i += bytes;
-        width += ComputeUnicodeWidth(uc);
+        width += ComputeCharacterWidth(uc);
     }
 
     return width;
