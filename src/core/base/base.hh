@@ -5598,7 +5598,7 @@ class ConsolePrompter {
 #endif
 
 public:
-    const char *prompt = ">>> ";
+    const char *prompt = ">>>";
     const char *mask = nullptr;
 
     HeapArray<char> str;
