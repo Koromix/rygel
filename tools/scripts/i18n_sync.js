@@ -189,7 +189,9 @@ function detectCxxMessages(filename) {
     let code = fs.readFileSync(filename).toString();
 
     let matches = [
-        ...code.matchAll(/(?:T|LogError|LogWarning|LogInfo)\(\"(.+?)\"(?:, .*)?\)/g)
+        ...code.matchAll(/(?:LogError|LogWarning|LogInfo)\(\"(.+?)\"(?:, .*)?\)/g),
+        ...code.matchAll(/T\(\"(.+?)\"\)/g),
+        ...code.matchAll(/T\(R\"\((.+?)\)\"\)/gs)
     ];
 
     return matches.map(m => m[1]);
