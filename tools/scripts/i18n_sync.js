@@ -121,6 +121,7 @@ async function scanCode() {
         ];
         let messages = [
             ...listFilesRec(src.from, '.cc').flatMap(detectCxxMessages),
+            ...listFilesRec(src.from, '.hh').flatMap(detectCxxMessages),
             ...listFilesRec(src.from, '.js').flatMap(detectJsMessages)
         ];
 
