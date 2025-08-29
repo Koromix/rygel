@@ -17,7 +17,7 @@
 - Integrate Rekkord Web into main binary (`rekkord web`)
 - Add basic `rekkord agent` to work in tandem with Rekkord Web
 - Use single CSPRNG to generate various encryption keys
-- Ensure proper libcurl and libsodium initilization
+- Ensure proper libcurl and libsodium initialization
 
 ### Rekkord 0.85
 
