@@ -31,7 +31,7 @@ int RunIdentify(Span<const char *> arguments);
 
 int RunSave(Span<const char *> arguments);
 int RunRestore(Span<const char *> arguments);
-int RunCheck(Span<const char *> arguments);
+int RunScan(Span<const char *> arguments);
 
 int RunSnapshots(Span<const char *> arguments);
 int RunChannels(Span<const char *> arguments);
@@ -118,7 +118,8 @@ Snapshot commands:
 
     %!..+save%!0                           Store directory or file and make snapshot
     %!..+restore%!0                        Get and decrypt snapshot, directory or file
-    %!..+check%!0                          Check snapshots and blobs
+
+    %!..+scan%!0                           Check snapshots and blobs
 
 Exploration commands:
 
@@ -247,7 +248,7 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
     HANDLE_COMMAND(identify, RunIdentify, true);
     HANDLE_COMMAND(save, RunSave, true);
     HANDLE_COMMAND(restore, RunRestore, true);
-    HANDLE_COMMAND(check, RunCheck, true);
+    HANDLE_COMMAND(scan, RunScan, true);
     HANDLE_COMMAND(snapshots, RunSnapshots, true);
     HANDLE_COMMAND(channels, RunChannels, true);
     HANDLE_COMMAND(list, RunList, true);

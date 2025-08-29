@@ -372,13 +372,13 @@ If you use a snapshot channel, the most recent snapshot object that matches will
     return 0;
 }
 
-int RunCheck(Span<const char *> arguments)
+int RunScan(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-T(R"(Usage: %!..+%1 check [-C filename] [option...]%!0)"), FelixTarget);
+T(R"(Usage: %!..+%1 scan [-C filename] [option...]%!0)"), FelixTarget);
         PrintCommonOptions(st);
     };
 
