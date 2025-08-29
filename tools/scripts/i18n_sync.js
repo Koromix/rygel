@@ -259,37 +259,17 @@ async function syncTolgee(languages, sources) {
         }
     }
 
-    console.log('Delete unneeded strings...');
-    {
-        let unused = translations.filter(t => !sets.some(set => t.keyNamespace == set.namespace &&
-                                                                set.keys.hasOwnProperty(t.keyName) ||
-                                                                set.messages.hasOwnProperty(t.keyName)));
-        let ids = unused.map(t => t.keyId);
-
-        if (ids.length) {
-            await fetchOrFail(TOLGEE_URL + '/v2/projects/keys', {
-                method: 'DELETE',
-                headers: {
-                    'X-API-Key': TOLGEE_API_KEY,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    ids: ids
-                })
-            });
-        }
-    }
-
-    console.log('Fetching translations...');
-    translations = await fetchTranslations();
-
-    console.log('Remove outdated markers...');
+    console.log('Update outdated markers...');
     for (let item of translations) {
+        let unused = !sets.some(set => item.keyNamespace == set.namespace &&
+                                       set.keys.hasOwnProperty(item.keyName) ||
+                                       set.messages.hasOwnProperty(item.keyName));
+
         for (let lang in item.translations) {
             let translation = item.translations[lang];
 
-            if (translation.outdated) {
-                let url = TOLGEE_URL + `/v2/projects/translations/${translation.id}/set-outdated-flag/false`;
+            if (translation.outdated != unused) {
+                let url = TOLGEE_URL + `/v2/projects/translations/${translation.id}/set-outdated-flag/${unused ? 'true' : 'false'}`;
 
                 await fetchOrFail(url, {
                     method: 'PUT',
@@ -302,6 +282,9 @@ async function syncTolgee(languages, sources) {
             }
         }
     }
+
+    console.log('Fetching translations...');
+    translations = await fetchTranslations();
 
     console.log('Apply translations locally...');
     for (let set of sets) {
