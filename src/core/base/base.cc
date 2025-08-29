@@ -10258,6 +10258,20 @@ static bool TestUnicodeTable(Span<const int32_t> table, int32_t uc)
     return idx & 0x1;
 }
 
+static inline int ComputeCharacterWidth(int32_t uc)
+{
+    // Fast path
+    if (uc < 128)
+        return (uc >= 32) ? 1 : 0;
+
+    if (TestUnicodeTable(WcWidthNull, uc))
+        return 0;
+    if (TestUnicodeTable(WcWidthWide, uc))
+        return 2;
+
+    return 1;
+}
+
 int ComputeUnicodeWidth(Span<const char> str)
 {
     Size i = 0;
@@ -10275,19 +10289,6 @@ int ComputeUnicodeWidth(Span<const char> str)
     }
 
     return width;
-}
-
-int ComputeUnicodeWidth(int32_t uc)
-{
-    if (uc < 32)
-        return 0;
-
-    if (TestUnicodeTable(WcWidthNull, uc))
-        return 0;
-    if (TestUnicodeTable(WcWidthWide, uc))
-        return 2;
-
-    return 1;
 }
 
 bool IsXidStart(int32_t uc)

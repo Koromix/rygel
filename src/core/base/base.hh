@@ -5767,7 +5767,6 @@ static inline Size EncodeUtf8(int32_t c, char out_buf[4])
 bool IsValidUtf8(Span<const char> str);
 
 int ComputeUnicodeWidth(Span<const char> str);
-int ComputeUnicodeWidth(int32_t uc);
 
 bool IsXidStart(int32_t uc);
 bool IsXidContinue(int32_t uc);
