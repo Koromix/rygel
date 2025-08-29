@@ -151,7 +151,7 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
                 Print("%1 = ", record_type->members[0].name);
                 offset = PrintValue(vm, record_type->members[0].type, offset, true);
                 for (Size i = 1; i < record_type->members.len; i++) {
-                    Print("\n, %1 = ", record_type->members[i].name);
+                    Print(", %1 = ", record_type->members[i].name);
                     offset = PrintValue(vm, record_type->members[i].type, offset, true);
                 }
             }
