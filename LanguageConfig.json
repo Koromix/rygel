@@ -1,0 +1,34 @@
+{
+    "languages": ["en", "fr"],
+    "sources": [
+        {
+            "namespace": "core",
+            "sources": ["src/core"],
+            "path": "src/core/i18n"
+        },
+        {
+            "namespace": "goupile",
+            "sources": [
+                "src/goupile/server",
+                "src/goupile/client",
+                "src/goupile/legacy"
+            ],
+            "path": "src/goupile/i18n"
+        },
+        {
+            "namespace": "meestic",
+            "sources": ["src/meestic"],
+            "path": "src/meestic/i18n"
+        },
+        {
+            "namespace": "rekkord",
+            "sources": ["src/rekkord"],
+            "path": "src/rekkord/i18n"
+        },
+        {
+            "namespace": "staks",
+            "sources": ["src/staks/src"],
+            "path": "src/staks/i18n"
+        }
+    ]
+}

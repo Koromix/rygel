@@ -18,34 +18,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const SOURCES = [
-    {
-        namespace: 'core',
-        from: 'src/core',
-        path: 'src/core/i18n'
-    },
-    {
-        namespace: 'goupile',
-        from: 'src/goupile',
-        path: 'src/goupile/i18n'
-    },
-    {
-        namespace: 'meestic',
-        from: 'src/meestic',
-        path: 'src/meestic/i18n'
-    },
-    {
-        namespace: 'rekkord',
-        from: 'src/rekkord',
-        path: 'src/rekkord/i18n'
-    },
-    {
-        namespace: 'staks',
-        from: 'src/staks/src',
-        path: 'src/staks/i18n'
-    }
-];
-const LANGUAGES = ['en', 'fr'];
+const CONFIG_FILENAME = 'LanguageConfig.json';
 
 const TOLGEE_URL = (process.env.TOLGEE_URL || '').replace(/\/+$/, '');
 const TOLGEE_API_KEY = process.env.TOLGEE_API_KEY || '';
@@ -81,17 +54,19 @@ async function run() {
         }
     }
 
+    let { languages, sources } = JSON.parse(fs.readFileSync(CONFIG_FILENAME));
+
     if (action == null || action == 'scan')
-        await scanCode();
+        await scanCode(languages, sources);
 
     if (action == null) {
         if (TOLGEE_URL) {
-            await syncTolgee();
+            await syncTolgee(languages, sources);
         } else {
             console.error('Ignoring Tolgee sync because TOLGEE_URL is missing');
         }
     } else if (action == 'sync') {
-        await syncTolgee();
+        await syncTolgee(languages, sources);
     }
 
     console.log('Done');
@@ -109,26 +84,26 @@ Options:
 }
 
 
-async function scanCode() {
+async function scanCode(languages, sources) {
     console.log('Scanning code...');
 
-    for (let src of SOURCES) {
+    for (let src of sources) {
         if (!fs.existsSync(src.path))
             fs.mkdirSync(src.path);
 
         let keys = [
-            ...listFilesRec(src.from, '.js').flatMap(detectJsKeys)
+            ...src.sources.flatMap(src => listFilesRec(src, '.js').flatMap(detectJsKeys))
         ];
         let messages = [
-            ...listFilesRec(src.from, '.cc').flatMap(detectCxxMessages),
-            ...listFilesRec(src.from, '.hh').flatMap(detectCxxMessages),
-            ...listFilesRec(src.from, '.js').flatMap(detectJsMessages)
+            ...src.sources.flatMap(src => listFilesRec(src, '.cc').flatMap(detectCxxMessages)),
+            ...src.sources.flatMap(src => listFilesRec(src, '.hh').flatMap(detectCxxMessages)),
+            ...src.sources.flatMap(src => listFilesRec(src, '.js').flatMap(detectJsMessages))
         ];
 
         keys = Array.from(new Set(keys)).sort();
         messages = Array.from(new Set(messages)).sort();
 
-        for (let lang of LANGUAGES) {
+        for (let lang of languages) {
             let filename = path.join(src.path, lang + '.json');
             let translations = fs.existsSync(filename) ? readTranslations(filename, false) : {};
 
@@ -218,7 +193,7 @@ function detectJsMessages(filename) {
     return matches.map(m => m[1]);
 }
 
-async function syncTolgee() {
+async function syncTolgee(languages, sources) {
     // Check prerequisites
     {
         let errors = [];
@@ -233,7 +208,7 @@ async function syncTolgee() {
     }
 
     console.log('Loading languages...');
-    let sets = loadSources();
+    let sets = loadSources(languages, sources);
 
     console.log('Fetching translations...');
     let translations = await fetchTranslations();
@@ -363,10 +338,10 @@ async function syncTolgee() {
     }
 }
 
-function loadSources() {
+function loadSources(languages, sources) {
     let sets = [];
 
-    for (let src of SOURCES) {
+    for (let src of sources) {
         let set = {
             namespace: src.namespace,
             path: src.path,
@@ -375,7 +350,7 @@ function loadSources() {
             messages: {}
         };
 
-        for (let lang of LANGUAGES) {
+        for (let lang of languages) {
             let filename = path.join(src.path, lang + '.json');
 
             if (fs.existsSync(filename)) {
