@@ -6,6 +6,19 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.86
+
+*Released on 2025-08-29*
+
+- Replace repository users with keyset files
+- Replace raw keyfiles with PEM-based format
+- Rename `rekkord check` command to `rekkord scan`
+- Add translation system and first translation: french
+- Integrate Rekkord Web into main binary (`rekkord web`)
+- Add basic `rekkord agent` to work in tandem with Rekkord Web
+- Use single CSPRNG to generate various encryption keys
+- Ensure proper libcurl and libsodium initilization
+
 ### Rekkord 0.85
 
 *Released on 2025-08-04*
