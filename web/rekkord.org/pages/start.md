@@ -96,62 +96,47 @@ After initialization, the **master key** is exported to a binary file, named `ma
 
 Rekkord uses **multiple encryption keys** which are derived from this master key:
 
-- The *config key (ckey)* is paired with an *access key (akey)* to sign config files and user key files
+- The *config key (ckey)* is paired with an *access key (akey)* to sign config files and user keyfiles
 - The *data key (dkey)* is paired with a *write key (wkey)* for data encryption (snapshot information, directory metadata, file content)
 - The *log key (lkey)* is paired with a *tag key (tkey)*, to manage snapshots and record snapshot information
 
-For simple use cases, you can simply use the master key for everything. However, we recommend that you create separate users, for two reasons:
+For simple use cases, you can simply use the master key for everything. However, we recommend that you create restricted keyfiles, for two reasons:
 
-- Each user can have a restricted role: *Admin, ReadWrite, WriteOnly or LogOnly*
-- Snapshots are signed with each user-specific signing key, this can be used to detect cross-server tampering during repository checks
+- Each restricted keyfile can have limited capabilities: *Admin, ReadWrite, WriteOnly or LogOnly*
+- Snapshots are signed with each keyfile-specific signing key, this can be used to detect cross-server tampering during repository checks
 
-# Repository users
+# Restricted keys
 
-User roles are used to restrict the set of possible actions each user can do, as shown in the table below.
+The master key can do everything. It is possible to create restricted keyfiles with limited capabilities; these keyfiles only contain the encryption keys needed to perform the correspond action, and nothing else.
 
-| Role      | Permissions                            |
+At the moment, Rekkord supports three kinds of restricted keyfiles:
+
+| Type      | Permissions                            |
 |-----------|----------------------------------------|
-| Admin     | Manage users, read and write snapshots |
 | ReadWrite | Read and write snapshots               |
 | WriteOnly | Create snapshots                       |
 | LogOnly   | List snapshots                         |
 
-In addition, each user has its own key pair with which snapshots are signed.
+In addition, each keyfile has its own key pair with which snapshots are signed. These signatures are checked during repository scans.
 
-> [!WARNING]
-> Repository users contain the necessary encryption keys for a given role, protected by a password.
->
-> These have **nothing to do with the SSH login name or the S3 access keys** (or any other backend that may appear one day), which you have to manage yourself!
-
-Use the following commands to manage repository users:
-
-- `rekkord add_user name -r role`
-- `rekkord delete_user name`
-- `rekkord list_users`
-
-To create a new user, you must either use the master key file (created by `rekkord init`) or use an existing user with the *Admin* role.
+You must use the master key to create a restricted (or derived) keyfile. Use the `rekkord derive` command to create a restricted keyfile:
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
 
-# Use the master key file
-rekkord add_user -K master.key john -r ReadWrite
-
-# Or use existing user to create new user
-export REKKORD_USER=admin
-rekkord add_user joe -r ReadWrite
+rekkord derive -K master.key -t ReadWrite -O readwrite.key
+rekkord derive -K master.key -t WriteOnly -O write.key
 ```
 
-Most Rekkord commands require you to specify the user, you can do this in one of two ways:
+Most Rekkord commands require you to specify the keyfile, you can do this in one of two ways:
 
-- Set the `REKKORD_USER` environment variable (e.g. `export REKKORD_USER=joe`)
-- Set the *User* setting in the *Repository* section of the config file (see example below)
+- Set the `REKKORD_KEYFILE` environment variable (e.g. `export REKKORD_KEYFILE=write.key`)
+- Set the *KeyFile* setting in the *Repository* section of the config file (see example below)
 
 ```ini
 [Repository]
 URL = ssh://foo@example.com/backup
-User = joe
-# Password = Set the password here to avoid password prompt on each command
+KeyFile = write.key
 
 [SFTP]
 KeyFile = <SSH keyfile>
