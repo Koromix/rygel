@@ -8944,15 +8944,59 @@ static HeapArray<TranslationTable> i18n_tables;
 static HeapArray<TranslationMap> i18n_maps;
 static HashMap<Span<const char> , const TranslationTable *> i18n_locales;
 
-static const TranslationMap *i18n_global;
-static thread_local const TranslationMap *i18n_thread = i18n_global;
+static const TranslationMap *i18n_default;
+static thread_local const TranslationMap *i18n_thread = i18n_default;
+
+static void SetDefaultLocale()
+{
+    if (i18n_default)
+        return;
+
+    // Obey environment settings, even on Windows, for easy override
+    {
+        // Yeah this order makes perfect sense. Don't ask.
+        static const char *const EnvVariables[] = { "LANGUAGE", "LC_MESSAGES", "LC_ALL", "LANG" };
+
+        for (const char *variable: EnvVariables) {
+            const char *env = GetEnv(variable);
+
+            if (env) {
+                ChangeThreadLocale(env);
+                i18n_default = i18n_thread;
+
+                if (i18n_default)
+                    return;
+            }
+        }
+    }
+
+#if defined(_WIN32)
+    {
+        wchar_t buffer[16384];
+        unsigned long languages = 0;
+        unsigned long size = RG_LEN(buffer);
+
+        if (GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &languages, buffer, &size)) {
+            if (languages) {
+                char lang[256] = {};
+                ConvertWin32WideToUtf8(buffer, lang);
+
+                ChangeThreadLocale(lang);
+                i18n_default = i18n_thread;
+
+                if (i18n_default)
+                    return;
+            }
+        } else {
+            LogError("Failed to retrieve preferred Windows UI language: %1", GetWin32ErrorString());
+        }
+    }
+#endif
+}
 
 void InitLocales(Span<const TranslationTable> tables)
 {
     RG_ASSERT(!i18n_tables.len);
-
-    // Yeah that makes perfect sense
-    static const char *const EnvVariables[] = { "LANGUAGE", "LC_MESSAGES", "LC_ALL", "LANG" };
 
     for (const TranslationTable &table: tables) {
         i18n_tables.Append(table);
@@ -8966,18 +9010,7 @@ void InitLocales(Span<const TranslationTable> tables)
         i18n_locales.Set(table.language, &table);
     }
 
-    for (const char *variable: EnvVariables) {
-        const char *env = GetEnv(variable);
-
-        if (env) {
-            ChangeThreadLocale(env);
-
-            if (i18n_thread) {
-                i18n_global = i18n_thread;
-                break;
-            }
-        }
-    }
+    SetDefaultLocale();
 }
 
 void ChangeThreadLocale(const char *name)
