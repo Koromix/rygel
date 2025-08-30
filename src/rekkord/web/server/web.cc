@@ -368,7 +368,8 @@ static void HandleRequest(http_IO *io)
         return;
 
     // Translate server-side errors
-    if (const char *lang = request.GetCookieValue("language"); lang) {
+    {
+        const char *lang = request.GetCookieValue("language");
         ChangeThreadLocale(lang);
     }
 

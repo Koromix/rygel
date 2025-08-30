@@ -5374,8 +5374,7 @@ extern "C" const Span<const TranslationTable> TranslationTables;
 
 void InitLocales(Span<const TranslationTable> tables);
 
-// Ignored if lang is not supported.
-// Use NULL to reset to process-wide setting
+// Resets the localgale to the process default if lang is NULL or is unknown
 void ChangeThreadLocale(const char *name);
 
 // ------------------------------------------------------------------------

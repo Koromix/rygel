@@ -8982,16 +8982,14 @@ void InitLocales(Span<const TranslationTable> tables)
 
 void ChangeThreadLocale(const char *name)
 {
-    if (name) {
-        Span<const char> lang = SplitStrAny(name, "_-");
-        const TranslationTable *table = i18n_locales.FindValue(lang, nullptr);
+    Span<const char> lang = name ? SplitStrAny(name, "_-") : "";
+    const TranslationTable *table = i18n_locales.FindValue(lang, nullptr);
 
-        if (table) {
-            Size idx = table - i18n_tables.ptr;
-            i18n_thread = &i18n_maps[idx];
-        }
+    if (table) {
+        Size idx = table - i18n_tables.ptr;
+        i18n_thread = &i18n_maps[idx];
     } else {
-        i18n_thread = i18n_global;
+        i18n_thread = i18n_default;
     }
 }
 
