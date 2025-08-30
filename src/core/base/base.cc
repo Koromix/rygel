@@ -4272,11 +4272,6 @@ bool FileIsVt100(int fd)
                     }
                 }
 
-                if (emulation && win32_utf8) {
-                    SetConsoleCP(CP_UTF8); // Does not work yet, but it might some day
-                    SetConsoleOutputCP(CP_UTF8);
-                }
-
                 return emulation;
             }();
 
@@ -5855,6 +5850,9 @@ void InitApp()
     _setmode(STDIN_FILENO, _O_BINARY);
     _setmode(STDOUT_FILENO, _O_BINARY);
     _setmode(STDERR_FILENO, _O_BINARY);
+
+    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
 #endif
 
 #if !defined(_WIN32) && !defined(__wasi__)
