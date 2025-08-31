@@ -20,7 +20,7 @@
 
 namespace K {
 
-static const int CacheVersion = 1;
+static const int CacheVersion = 2;
 static const int64_t CommitDelay = 5000;
 
 bool rk_Cache::Open(rk_Repository *repo, bool build)
@@ -101,9 +101,27 @@ bool rk_Cache::Open(rk_Repository *repo, bool build)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 1: {
+                    bool success = main.RunMany(R"(
+                        ALTER TABLE meta RENAME TO meta_BAK;
+
+                        CREATE TABLE meta (
+                            cid BLOB,
+                            exhaustive INTEGER CHECK (exhaustive IN (0, 1)) NOT NULL
+                        );
+
+                        INSERT INTO meta (cid, exhaustive)
+                            SELECT cid, 1 FROM meta_BAK;
+
+                        DROP TABLE meta_BAK;
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 1);
+                static_assert(CacheVersion == 2);
             }
 
             if (!main.SetUserVersion(CacheVersion))
@@ -116,30 +134,43 @@ bool rk_Cache::Open(rk_Repository *repo, bool build)
             return false;
     }
 
+    bool reset = false;
+
     // Check known CID against repository CID
     {
         sq_Statement stmt;
-        if (!main.Prepare("SELECT cid FROM meta", &stmt))
+        if (!main.Prepare("SELECT cid, exhaustive FROM meta", &stmt))
             return false;
 
         if (stmt.Step()) {
             Span<const uint8_t> cid1 = repo->GetCID();
             Span<const uint8_t> cid2 = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 0),
                                                 sqlite3_column_bytes(stmt, 0));
+            bool exhaustive = sqlite3_column_int(stmt, 1);
 
-            build &= (cid1 != cid2);
+            if (cid1 != cid2) {
+                reset = true;
+            } else if (build && !exhaustive) {
+                reset = true;
+            }
         } else if (stmt.IsValid()) {
-            if (!main.Run("INSERT INTO meta (cid) VALUES (NULL)"))
+            if (!main.Run("INSERT INTO meta (cid, exhaustive) VALUES (NULL, 0)"))
                 return false;
+
+            reset = true;
         } else {
             return false;
         }
     }
 
-    if (build) {
-        LogInfo("Rebuilding cache...");
+    if (reset) {
+        if (build) {
+            LogInfo("Rebuilding cache...");
+        } else {
+            LogInfo("Resetting cache...");
+        }
 
-        bool success = main.Transaction([&]() { return Reset(true); });
+        bool success = main.Transaction([&]() { return Reset(build); });
         if (!success)
             return false;
     }
@@ -223,7 +254,7 @@ bool rk_Cache::Reset(bool list)
                 return false;
         }
 
-        if (!main.Run("UPDATE meta SET cid = ?1", repo->GetCID()))
+        if (!main.Run("UPDATE meta SET cid = ?1, exhaustive = ?2", repo->GetCID(), 0 + list))
             return false;
 
         return true;
