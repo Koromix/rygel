@@ -6,6 +6,15 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.88
+
+*Released on 2025-08-31*
+
+- Fix cache reset not working after CID change when conditional writes are supported
+- Use UI language preference on Windows
+- Fix mangled UTF-8 output in Windows terminal
+- Fix minor mistakes and misses in french translation
+
 ### Rekkord 0.87
 
 *Released on 2025-08-29*
