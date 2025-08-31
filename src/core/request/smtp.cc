@@ -24,7 +24,7 @@
 #include "smtp.hh"
 #include "vendor/base64/include/libbase64.h"
 
-namespace RG {
+namespace K {
 
 bool smtp_Config::Validate() const
 {
@@ -131,12 +131,12 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
 
 bool smtp_Sender::Send(const char *to, Span<const char> mail)
 {
-    RG_ASSERT(config.url);
+    K_ASSERT(config.url);
 
     CURL *curl = curl_Init();
     if (!curl)
         return false;
-    RG_DEFER { curl_easy_cleanup(curl); };
+    K_DEFER { curl_easy_cleanup(curl); };
 
     // In theory you have to use curl_slist_add, but why do two allocations when none is needed?
     curl_slist recipients = { (char *)to, nullptr };
@@ -193,7 +193,7 @@ Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_Mai
     const char *domain;
     {
         uint64_t rnd[2];
-        FillRandomSafe(&rnd, RG_SIZE(rnd));
+        FillRandomSafe(&rnd, K_SIZE(rnd));
         Fmt(id, "%1%2", FmtHex(rnd[0]).Pad0(-16), FmtHex(rnd[1]).Pad0(-16));
 
         SplitStr(from, '@', &domain);
@@ -213,7 +213,7 @@ Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_Mai
 
     if (content.files.len) {
         uint64_t rnd;
-        FillRandomSafe(&rnd, RG_SIZE(rnd));
+        FillRandomSafe(&rnd, K_SIZE(rnd));
         Fmt(mixed, "=_%1", FmtHex(rnd).Pad0(-16));
 
         Fmt(&buf, "Content-Type: multipart/mixed; boundary=\"%1\";\r\n\r\n", mixed);
@@ -222,7 +222,7 @@ Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_Mai
 
     if (content.text && content.html) {
         uint64_t rnd;
-        FillRandomSafe(&rnd, RG_SIZE(rnd));
+        FillRandomSafe(&rnd, K_SIZE(rnd));
         Fmt(alternative, "=_%1", FmtHex(rnd).Pad0(-16));
 
         Fmt(&buf, "Content-Type: multipart/alternative; boundary=\"%1\";\r\n\r\n", alternative);
@@ -243,8 +243,8 @@ Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_Mai
 
     if (content.files.len) {
         for (const smtp_AttachedFile &file: content.files) {
-            RG_ASSERT(file.mimetype);
-            RG_ASSERT(file.id || !file.inlined);
+            K_ASSERT(file.mimetype);
+            K_ASSERT(file.id || !file.inlined);
 
             Fmt(&buf, "--%1\r\n", mixed);
             Fmt(&buf, "Content-Type: %1\r\n", file.mimetype);

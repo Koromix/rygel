@@ -19,7 +19,7 @@
 #include "src/core/sqlite/sqlite.hh"
 #include "repository.hh"
 
-namespace RG {
+namespace K {
 
 struct rk_CacheStat {
     int64_t ctime;

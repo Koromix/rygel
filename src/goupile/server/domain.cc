@@ -17,7 +17,7 @@
 #include "domain.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
 const int DomainVersion = 111;
 
@@ -89,7 +89,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
 
     IniParser ini(st);
     ini.PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {
@@ -131,7 +131,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         LogError("Setting Data.ArchiveKey should be moved to Archives.PublicKey");
 
                         size_t key_len;
-                        int ret = sodium_base642bin(config.archive_key, RG_SIZE(config.archive_key),
+                        int ret = sodium_base642bin(config.archive_key, K_SIZE(config.archive_key),
                                                     prop.value.ptr, (size_t)prop.value.len, nullptr, &key_len,
                                                     nullptr, sodium_base64_VARIANT_ORIGINAL);
                         if (!ret && key_len == 32) {
@@ -159,7 +159,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         static_assert(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
 
                         size_t key_len;
-                        int ret = sodium_base642bin(config.archive_key, RG_SIZE(config.archive_key),
+                        int ret = sodium_base642bin(config.archive_key, K_SIZE(config.archive_key),
                                                     prop.value.ptr, (size_t)prop.value.len, nullptr, &key_len,
                                                     nullptr, sodium_base64_VARIANT_ORIGINAL);
                         if (!ret && key_len == 32) {
@@ -293,7 +293,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
 
     // Default values
     if (!config.title) {
-        Span<const char> basename = SplitStrReverseAny(root_directory, RG_PATH_SEPARATORS);
+        Span<const char> basename = SplitStrReverseAny(root_directory, K_PATH_SEPARATORS);
 
         if (CheckDomainTitle(basename)) {
             LogError("Domain title is not set, using '%1'", basename);
@@ -333,7 +333,7 @@ bool LoadConfig(const char *filename, DomainConfig *out_config)
 
 bool DomainHolder::Open(const char *filename)
 {
-    RG_DEFER_N(err_guard) { Close(); };
+    K_DEFER_N(err_guard) { Close(); };
     Close();
 
     // Load config file
@@ -369,7 +369,7 @@ bool DomainHolder::Open(const char *filename)
     {
         const char *tmp_filename1 = CreateUniqueFile(config.tmp_directory, nullptr, ".tmp", &config.str_alloc);
         const char *tmp_filename2 = CreateUniqueFile(config.instances_directory, "", ".tmp", &config.str_alloc);
-        RG_DEFER { UnlinkFile(tmp_filename2); };
+        K_DEFER { UnlinkFile(tmp_filename2); };
 
         if (RenameFile(tmp_filename1, tmp_filename2, (int)RenameFlag::Overwrite) != RenameResult::Success) {
             UnlinkFile(tmp_filename1);
@@ -418,7 +418,7 @@ bool DomainHolder::Open(const char *filename)
             {
                 uint8_t buf[32];
                 FillRandomSafe(buf);
-                sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+                sodium_bin2base64(local_key, K_SIZE(local_key), buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
             }
 
             if (!db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
@@ -658,10 +658,10 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
             InstanceHolder *master = instance->master;
 
             Size remove_idx = std::find(master->slaves.begin(), master->slaves.end(), instance) - master->slaves.ptr;
-            RG_ASSERT(remove_idx < master->slaves.len);
+            K_ASSERT(remove_idx < master->slaves.len);
 
             MemMove(master->slaves.ptr + remove_idx, master->slaves.ptr + remove_idx + 1,
-                        (master->slaves.len - remove_idx - 1) * RG_SIZE(*master->slaves.ptr));
+                        (master->slaves.len - remove_idx - 1) * K_SIZE(*master->slaves.ptr));
             master->slaves.len--;
 
             if (master->unique < prev_unique) {
@@ -696,7 +696,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
 
         InstanceHolder *instance = new InstanceHolder();
         int64_t unique = next_unique++;
-        RG_DEFER_N(instance_guard) { delete instance; };
+        K_DEFER_N(instance_guard) { delete instance; };
 
         if (start.prev_instance) {
             InstanceHolder *prev_instance = start.prev_instance;
@@ -713,7 +713,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
             }
         } else {
             sq_Database *db = new sq_Database;
-            RG_DEFER_N(db_guard) { delete db; };
+            K_DEFER_N(db_guard) { delete db; };
 
             const char *db_filename = MakeInstanceFileName(config.instances_directory, start.instance_key, &temp_alloc);
 
@@ -754,7 +754,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
 
         if (start.prev_instance) {
             InstanceHolder *prev_instance = start.prev_instance;
-            RG_ASSERT(prev_instance->key == instance->key);
+            K_ASSERT(prev_instance->key == instance->key);
 
             while (prev_instance->master->refcount) {
                 WaitDelay(100);
@@ -792,7 +792,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
                 // Add instance to parent list
                 master->slaves.Grow(1);
                 MemMove(master->slaves.ptr + insert_idx + 1, master->slaves.ptr + insert_idx,
-                            (master->slaves.len - insert_idx) * RG_SIZE(*master->slaves.ptr));
+                            (master->slaves.len - insert_idx) * K_SIZE(*master->slaves.ptr));
                 master->slaves.ptr[insert_idx] = instance;
                 master->slaves.len++;
 
@@ -923,7 +923,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
 
                     EnumResult ret = EnumerateDirectory(instances_directory, "*.db", -1,
                                                         [&](const char *filename, FileType) {
-                        Span<const char> key = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
+                        Span<const char> key = SplitStrReverseAny(filename, K_PATH_SEPARATORS);
                         key = SplitStr(key, '.');
 
                         stmt.Reset();
@@ -1004,7 +1004,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     {
                         uint8_t buf[32];
                         FillRandomSafe(buf);
-                        sodium_bin2base64(passport, RG_SIZE(passport), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+                        sodium_bin2base64(passport, K_SIZE(passport), buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
                     }
 
                     if (!db->Run("UPDATE dom_users SET passport = ?2 WHERE rowid = ?1", rowid, passport))

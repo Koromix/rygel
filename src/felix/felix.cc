@@ -32,7 +32,7 @@
     #include <windows.h>
 #endif
 
-namespace RG {
+namespace K {
 
 struct BuildPreset {
     const char *name;
@@ -95,7 +95,7 @@ static int RunTarget(const char *target_filename, Span<const char *const> argume
     DWORD exit_code = 0;
     bool success = (WaitForSingleObject(process_info.hProcess, INFINITE) == WAIT_OBJECT_0) &&
                    GetExitCodeProcess(process_info.hProcess, &exit_code);
-    RG_ASSERT(success);
+    K_ASSERT(success);
 
     return (int)exit_code;
 #else
@@ -203,7 +203,7 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                            int *out_jobs, HeapArray<BuildPreset> *out_presets)
 {
     // This function assumes the file is in the current working directory
-    RG_ASSERT(!strpbrk(basename, RG_PATH_SEPARATORS));
+    K_ASSERT(!strpbrk(basename, K_PATH_SEPARATORS));
 
     StreamReader st(basename);
     if (!st.IsValid())
@@ -211,7 +211,7 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
 
     IniParser ini(&st);
     ini.PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {
@@ -308,7 +308,7 @@ static int RunBuild(Span<const char *> arguments)
     HostSpecifier host_spec = {};
     BuildSettings build = {};
     uint32_t maybe_features = 0;
-    int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_THREADS);
+    int jobs = std::min(GetCoreCount() + 1, K_ASYNC_MAX_THREADS);
     int quiet = 0;
     bool verbose = false;
     const char *run_target_name = nullptr;
@@ -411,7 +411,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
-                    config_filename = Fmt(&temp_alloc, "%1%/FelixBuild.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
+                    config_filename = Fmt(&temp_alloc, "%1%/FelixBuild.ini", TrimStrRight(opt.current_value, K_PATH_SEPARATORS)).ptr;
                 } else {
                     config_filename = opt.current_value;
                 }
@@ -434,7 +434,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
     const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;
     if (config_filename) {
         Span<const char> root_directory;
-        config_filename = SplitStrReverseAny(config_filename, RG_PATH_SEPARATORS, &root_directory).ptr;
+        config_filename = SplitStrReverseAny(config_filename, K_PATH_SEPARATORS, &root_directory).ptr;
 
         if (root_directory.len) {
             const char *root_directory0 = DuplicateString(root_directory, &temp_alloc).ptr;
@@ -696,7 +696,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
             if (target.qt_components.len) {
                 if (!qt && !missing_qt) {
                     PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-                    RG_DEFER { PopLogFilter(); };
+                    K_DEFER { PopLogFilter(); };
 
                     qt = FindQtSdk(compiler.get());
                     missing_qt = !qt;
@@ -802,7 +802,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
 
     // Run?
     if (run_target) {
-        RG_ASSERT(run_target->type == TargetType::Executable);
+        K_ASSERT(run_target->type == TargetType::Executable);
 
         if (run_here && !SetWorkingDirectory(start_directory))
             return 1;
@@ -1108,4 +1108,4 @@ int Main(int argc, char **argv)
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

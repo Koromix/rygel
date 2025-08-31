@@ -22,7 +22,7 @@
     #include <sys/time.h>
 #endif
 
-namespace RG {
+namespace K {
 
 int RunSetup(Span<const char *> arguments);
 int RunInit(Span<const char *> arguments);
@@ -221,7 +221,7 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
 
 #define HANDLE_COMMAND(Cmd, Func, ReadConfig) \
         do { \
-            if (TestStr(cmd, RG_STRINGIFY(Cmd))) { \
+            if (TestStr(cmd, K_STRINGIFY(Cmd))) { \
                 if ((ReadConfig) && config_filename) { \
                     if (!rk_LoadConfig(config_filename, &rekkord_config)) \
                         return 1; \
@@ -277,4 +277,4 @@ int RunMount(Span<const char *>)
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

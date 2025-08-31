@@ -19,7 +19,7 @@
 
 #include <fcntl.h>
 
-namespace RG {
+namespace K {
 
 static const int MaxPathSize = 4096 - 128;
 
@@ -185,7 +185,7 @@ StatResult SftpDisk::TestDirectory(const char *path)
 
     bool success = RunSafe("stat directory", [&](ConnectionData *conn) {
         sftp_attributes attr = sftp_stat(conn->sftp, filename.data);
-        RG_DEFER { sftp_attributes_free(attr); };
+        K_DEFER { sftp_attributes_free(attr); };
 
         if (!attr) {
             int error = sftp_get_error(conn->sftp);
@@ -255,7 +255,7 @@ Size SftpDisk::ReadFile(const char *path, Span<uint8_t> out_buf)
                 return RunResult::OtherError;
             }
         }
-        RG_DEFER { sftp_close(file); };
+        K_DEFER { sftp_close(file); };
 
         while (read_len < out_buf.len) {
             ssize_t bytes = sftp_read(file, out_buf.ptr + read_len, out_buf.len - read_len);
@@ -300,7 +300,7 @@ Size SftpDisk::ReadFile(const char *path, HeapArray<uint8_t> *out_buf)
     bool success = RunSafe("read file", [&](ConnectionData *conn) {
         read_len = 0;
 
-        RG_DEFER_NC(out_guard, len = out_buf->len) { out_buf->RemoveFrom(len); };
+        K_DEFER_NC(out_guard, len = out_buf->len) { out_buf->RemoveFrom(len); };
 
         sftp_file file = sftp_open(conn->sftp, filename.data, flags, 0);
         if (!file) {
@@ -313,7 +313,7 @@ Size SftpDisk::ReadFile(const char *path, HeapArray<uint8_t> *out_buf)
                 return RunResult::OtherError;
             }
         }
-        RG_DEFER { sftp_close(file); };
+        K_DEFER { sftp_close(file); };
 
         for (;;) {
             out_buf->Grow(Mebibytes(1));
@@ -394,7 +394,7 @@ rk_WriteResult SftpDisk::WriteFile(const char *path, Span<const uint8_t> buf, co
             }
         }
 
-        RG_DEFER_N(tmp_guard) {
+        K_DEFER_N(tmp_guard) {
             sftp_close(file);
             sftp_unlink(conn->sftp, tmp.data);
         };
@@ -439,7 +439,7 @@ rk_WriteResult SftpDisk::WriteFile(const char *path, Span<const uint8_t> buf, co
                 // So we need to stat the path to emulate EEXIST.
 
                 sftp_attributes attr = sftp_stat(conn->sftp, filename.data);
-                RG_DEFER { sftp_attributes_free(attr); };
+                K_DEFER { sftp_attributes_free(attr); };
 
                 if (attr) {
                     ret = rk_WriteResult::AlreadyExists;
@@ -527,11 +527,11 @@ bool SftpDisk::ListFiles(const char *path, FunctionRef<bool(const char *, int64_
                     return RunResult::OtherError;
                 }
             }
-            RG_DEFER { sftp_closedir(dir); };
+            K_DEFER { sftp_closedir(dir); };
 
             for (;;) {
                 sftp_attributes attr = sftp_readdir(conn->sftp, dir);
-                RG_DEFER { sftp_attributes_free(attr); };
+                K_DEFER { sftp_attributes_free(attr); };
 
                 if (!attr) {
                     if (sftp_dir_eof(dir))
@@ -581,7 +581,7 @@ StatResult SftpDisk::TestFile(const char *path, int64_t *out_size)
 
     bool success = RunSafe("stat file", [&](ConnectionData *conn) {
         sftp_attributes attr = sftp_stat(conn->sftp, filename.data);
-        RG_DEFER { sftp_attributes_free(attr); };
+        K_DEFER { sftp_attributes_free(attr); };
 
         if (!attr) {
             int error = sftp_get_error(conn->sftp);
@@ -632,7 +632,7 @@ bool SftpDisk::RunSafe(const char *action, FunctionRef<RunResult(ConnectionData 
     ConnectionData *conn = ReserveConnection();
     if (!conn)
         return false;
-    RG_DEFER { ReleaseConnection(conn); };
+    K_DEFER { ReleaseConnection(conn); };
 
     for (int i = 0; i < 9; i++) {
         RunResult ret = func(conn);
@@ -689,7 +689,7 @@ ConnectionData *SftpDisk::ReserveConnection()
     ssh_session ssh;
     if (url) {
         PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-        RG_DEFER_N(log_guard) { PopLogFilter(); };
+        K_DEFER_N(log_guard) { PopLogFilter(); };
 
         ssh = ssh_Connect(config);
 
@@ -714,13 +714,13 @@ ConnectionData *SftpDisk::ReserveConnection()
     }
 
     ConnectionData *conn = new ConnectionData;
-    RG_DEFER_N(err_guard) { delete conn; };
+    K_DEFER_N(err_guard) { delete conn; };
 
     conn->ssh = ssh;
     conn->sftp = sftp_new(conn->ssh);
 
     if (!conn->sftp)
-        RG_BAD_ALLOC();
+        K_BAD_ALLOC();
     if (sftp_init(conn->sftp) < 0) {
         LogError("Failed to initialize SFTP: %1", ssh_get_error(conn->ssh));
         return nullptr;

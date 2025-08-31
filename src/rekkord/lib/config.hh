@@ -20,7 +20,7 @@
 #include "src/core/request/ssh.hh"
 #include "disk.hh"
 
-namespace RG {
+namespace K {
 
 enum class rk_DiskType {
     Local,

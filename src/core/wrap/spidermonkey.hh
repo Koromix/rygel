@@ -21,16 +21,16 @@
 
 #include "src/core/base/base.hh"
 
-RG_PUSH_NO_WARNINGS
+K_PUSH_NO_WARNINGS
 #include <jsapi.h>
 #include <js/CompilationAndEvaluation.h>
 #include <js/Conversions.h>
 #include <js/ErrorReport.h>
 #include <js/Initialization.h>
 #include <js/SourceText.h>
-RG_POP_NO_WARNINGS
+K_POP_NO_WARNINGS
 
-namespace RG {
+namespace K {
 
 class js_Instance {
     JSContext *ctx = nullptr;

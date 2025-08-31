@@ -22,7 +22,7 @@
 #include "src/core/request/smtp.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
 static smtp_Sender smtp;
 static sms_Sender sms;

@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "src/core/request/s3.hh"
 
-namespace RG {
+namespace K {
 
 static bool ConnectToS3(s3_Client *s3, const char *url)
 {
@@ -314,7 +314,7 @@ Options:
         case s3_PutResult::OtherError: return 1;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 static int RunDelete(Span<const char *> arguments)
@@ -429,4 +429,4 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

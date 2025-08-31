@@ -17,7 +17,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 enum class drd_Sector: int8_t {
     Public,
@@ -34,13 +34,13 @@ union alignas(8) drd_DiagnosisCode {
 
     drd_DiagnosisCode() = default;
 
-    static drd_DiagnosisCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+    static drd_DiagnosisCode Parse(Span<const char> str, unsigned int flags = K_DEFAULT_PARSE_FLAGS,
                                    Span<const char> *out_remaining = nullptr)
     {
         drd_DiagnosisCode code = {};
         Size end = 0;
         {
-            Size copy_len = std::min(RG_SIZE(code.str) - 1, str.len);
+            Size copy_len = std::min(K_SIZE(code.str) - 1, str.len);
             for (; end < copy_len && str[end] != ' '; end++) {
                 code.str[end] = UpperAscii(str[end]);
             }
@@ -106,12 +106,12 @@ union alignas(8) drd_ProcedureCode {
 
     drd_ProcedureCode() = default;
 
-    static drd_ProcedureCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+    static drd_ProcedureCode Parse(Span<const char> str, unsigned int flags = K_DEFAULT_PARSE_FLAGS,
                                    Span<const char> *out_remaining = nullptr)
     {
         drd_ProcedureCode code = {};
         {
-            Size copy_len = std::min(RG_SIZE(str) - 1, str.len);
+            Size copy_len = std::min(K_SIZE(str) - 1, str.len);
             for (Size i = 0; i < copy_len; i++) {
                 code.str[i] = UpperAscii(str[i]);
             }
@@ -157,7 +157,7 @@ struct drd_UnitCode {
     drd_UnitCode() = default;
     explicit drd_UnitCode(int16_t code) : number(code) {}
 
-    static drd_UnitCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+    static drd_UnitCode Parse(Span<const char> str, unsigned int flags = K_DEFAULT_PARSE_FLAGS,
                               Span<const char> *out_remaining = nullptr)
     {
         drd_UnitCode code = {};

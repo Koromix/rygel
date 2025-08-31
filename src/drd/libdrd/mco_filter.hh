@@ -18,10 +18,10 @@
 #include "src/core/base/base.hh"
 #include "mco_classifier.hh"
 
-namespace RG {
+namespace K {
 
 class mco_FilterRunner {
-    RG_DELETE_COPY(mco_FilterRunner)
+    K_DELETE_COPY(mco_FilterRunner)
 
     HeapArray<char> filter_buf;
 

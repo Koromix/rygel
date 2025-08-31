@@ -22,7 +22,7 @@
 #include "src/core/base/base.hh"
 #include "test.hh"
 
-namespace RG {
+namespace K {
 
 static HeapArray<const TestInfo *> tests;
 static HeapArray<const BenchmarkInfo *> benchmarks;
@@ -100,7 +100,7 @@ int Main(int argc, char **argv)
         PrintLn();
     }
 
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
     if (!pattern) {
         LogInfo("Benchmarks are disabled by default in debug builds");
     }
@@ -110,7 +110,7 @@ int Main(int argc, char **argv)
     for (Size i = 0; i < benchmarks.len; i++) {
         const BenchmarkInfo &bench = *benchmarks[i];
 
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
         bool enable = pattern && MatchPathSpec(bench.path, pattern);
 #else
         bool enable = !pattern || MatchPathSpec(bench.path, pattern);
@@ -136,4 +136,4 @@ int Main(int argc, char **argv)
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

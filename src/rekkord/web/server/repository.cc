@@ -21,7 +21,7 @@
 #include "user.hh"
 #include "../../lib/librekkord.hh"
 
-namespace RG {
+namespace K {
 
 static bool CheckURL(const char *url)
 {

@@ -23,7 +23,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 struct smtp_Config {
     const char *url = nullptr;

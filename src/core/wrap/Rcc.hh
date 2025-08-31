@@ -25,7 +25,7 @@
 
 #include <Rcpp.h>
 
-namespace RG {
+namespace K {
 
 extern BucketArray<const char *> rcc_log_messages;
 extern bool rcc_log_missing_messages;
@@ -276,7 +276,7 @@ public:
 
     void Set(Size idx, const char *str)
     {
-        RG_ASSERT(idx >= 0 && idx < span.len);
+        K_ASSERT(idx >= 0 && idx < span.len);
         if (str) {
             SET_STRING_ELT(xp, idx, Rf_mkChar(str));
         } else {
@@ -285,8 +285,8 @@ public:
     }
     void Set(Size idx, Span<const char> str)
     {
-        RG_ASSERT(idx >= 0 && idx < span.len);
-        RG_ASSERT(str.len < INT_MAX);
+        K_ASSERT(idx >= 0 && idx < span.len);
+        K_ASSERT(str.len < INT_MAX);
         SET_STRING_ELT(xp, idx, Rf_mkCharLen(str.ptr, (int)str.len));
     }
 };
@@ -380,12 +380,12 @@ public:
             }
         }
 
-        RG_UNREACHABLE();
+        K_UNREACHABLE();
     }
 };
 
 class rcc_ListBuilder {
-    RG_DELETE_COPY(rcc_ListBuilder)
+    K_DELETE_COPY(rcc_ListBuilder)
 
     struct Variable {
         const char *name;
@@ -464,7 +464,7 @@ public:
 };
 
 class rcc_DataFrameBuilder {
-    RG_DELETE_COPY(rcc_DataFrameBuilder)
+    K_DELETE_COPY(rcc_DataFrameBuilder)
 
     rcc_ListBuilder list_builder;
     Size len;

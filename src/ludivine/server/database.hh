@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "src/core/sqlite/sqlite.hh"
 
-namespace RG {
+namespace K {
 
 struct Config;
 

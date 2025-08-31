@@ -25,7 +25,7 @@
 #include "vendor/lz4/lib/lz4hc.h"
 #include "vendor/lz4/lib/lz4frame.h"
 
-namespace RG {
+namespace K {
 
 class LZ4Decompressor: public StreamDecoder {
     LZ4F_dctx *decoder = nullptr;
@@ -33,7 +33,7 @@ class LZ4Decompressor: public StreamDecoder {
 
     uint8_t in_buf[256 * 1024];
     Size in_len = 0;
-    Size in_hint = RG_SIZE(in_buf);
+    Size in_hint = K_SIZE(in_buf);
 
     uint8_t out_buf[256 * 1024];
     Size out_len = 0;
@@ -50,7 +50,7 @@ LZ4Decompressor::LZ4Decompressor(StreamReader *reader, CompressionType)
 {
     LZ4F_errorCode_t err = LZ4F_createDecompressionContext(&decoder, LZ4F_VERSION);
     if (LZ4F_isError(err))
-        RG_BAD_ALLOC();
+        K_BAD_ALLOC();
 }
 
 LZ4Decompressor::~LZ4Decompressor()
@@ -82,7 +82,7 @@ Size LZ4Decompressor::Read(Size max_len, void *user_buf)
         const uint8_t *next_in = in_buf;
         uint8_t *next_out = out_buf + out_len;
         size_t avail_in = (size_t)in_len;
-        size_t avail_out = (size_t)(RG_SIZE(out_buf) - out_len);
+        size_t avail_out = (size_t)(K_SIZE(out_buf) - out_len);
 
         LZ4F_decompressOptions_t opt = {};
         size_t ret = LZ4F_decompress(decoder, next_out, &avail_out, next_in, &avail_in, &opt);
@@ -96,12 +96,12 @@ Size LZ4Decompressor::Read(Size max_len, void *user_buf)
 
         MemMove(in_buf, in_buf + avail_in, in_len - avail_in);
         in_len -= avail_in;
-        in_hint = std::min(RG_SIZE(in_buf), (Size)ret);
+        in_hint = std::min(K_SIZE(in_buf), (Size)ret);
 
         out_len += (Size)avail_out;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 class LZ4Compressor: public StreamEncoder {
@@ -123,7 +123,7 @@ LZ4Compressor::LZ4Compressor(StreamWriter *writer, CompressionType, CompressionS
 {
     LZ4F_errorCode_t err = LZ4F_createCompressionContext(&encoder, LZ4F_VERSION);
     if (LZ4F_isError(err))
-        RG_BAD_ALLOC();
+        K_BAD_ALLOC();
 
     switch (speed) {
         case CompressionSpeed::Default: { prefs.compressionLevel = LZ4HC_CLEVEL_MIN; } break;
@@ -135,7 +135,7 @@ LZ4Compressor::LZ4Compressor(StreamWriter *writer, CompressionType, CompressionS
 
     size_t ret = LZ4F_compressBegin(encoder, dynamic_buf.end(), dynamic_buf.capacity - dynamic_buf.len, &prefs);
     if (LZ4F_isError(ret))
-        RG_BAD_ALLOC();
+        K_BAD_ALLOC();
 
     dynamic_buf.len += ret;
 }
@@ -191,7 +191,7 @@ bool LZ4Compressor::Finalize()
     return true;
 }
 
-RG_REGISTER_DECOMPRESSOR(CompressionType::LZ4, LZ4Decompressor);
-RG_REGISTER_COMPRESSOR(CompressionType::LZ4, LZ4Compressor);
+K_REGISTER_DECOMPRESSOR(CompressionType::LZ4, LZ4Decompressor);
+K_REGISTER_COMPRESSOR(CompressionType::LZ4, LZ4Compressor);
 
 }

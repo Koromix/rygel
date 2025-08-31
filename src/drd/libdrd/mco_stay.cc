@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "mco_stay.hh"
 
-namespace RG {
+namespace K {
 
 #pragma pack(push, 1)
 struct PackHeader {
@@ -34,10 +34,10 @@ struct PackHeader {
 #define PACK_SIGNATURE "DRD_MCO_PACK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
-static_assert(RG_SIZE(PackHeader::signature) == RG_SIZE(PACK_SIGNATURE));
-static_assert(RG_SIZE(mco_Stay) == 112);
-static_assert(RG_SIZE(drd_DiagnosisCode) == 8);
-static_assert(RG_SIZE(mco_ProcedureRealisation) == 24);
+static_assert(K_SIZE(PackHeader::signature) == K_SIZE(PACK_SIGNATURE));
+static_assert(K_SIZE(mco_Stay) == 112);
+static_assert(K_SIZE(drd_DiagnosisCode) == 8);
+static_assert(K_SIZE(mco_ProcedureRealisation) == 24);
 
 bool mco_StaySet::SavePack(StreamWriter *st) const
 {
@@ -45,20 +45,20 @@ bool mco_StaySet::SavePack(StreamWriter *st) const
 
     CopyString(PACK_SIGNATURE, bh.signature);
     bh.version = PACK_VERSION;
-    bh.native_size = (uint8_t)RG_SIZE(Size);
+    bh.native_size = (uint8_t)K_SIZE(Size);
     bh.stays_len = stays.len;
     for (const mco_Stay &stay: stays) {
         bh.diagnoses_len += stay.other_diagnoses.len;
         bh.procedures_len += stay.procedures.len;
     }
 
-    st->Write(&bh, RG_SIZE(bh));
-#if RG_SIZE_MAX == INT64_MAX
-    st->Write(stays.ptr, stays.len * RG_SIZE(*stays.ptr));
+    st->Write(&bh, K_SIZE(bh));
+#if K_SIZE_MAX == INT64_MAX
+    st->Write(stays.ptr, stays.len * K_SIZE(*stays.ptr));
 #else
     for (const mco_Stay &stay: stays) {
         mco_Stay stay2;
-        MemCpy(&stay2, &stay, RG_SIZE(stay));
+        MemCpy(&stay2, &stay, K_SIZE(stay));
 
         union {
             uint8_t raw[32];
@@ -73,14 +73,14 @@ bool mco_StaySet::SavePack(StreamWriter *st) const
         u.st.procedures_len = (int64_t)stay.procedures.len;
         MemCpy(&stay2.other_diagnoses, u.raw, 32);
 
-        st->Write(&stay2, RG_SIZE(stay2));
+        st->Write(&stay2, K_SIZE(stay2));
     }
 #endif
     for (const mco_Stay &stay: stays) {
-        st->Write(stay.other_diagnoses.ptr, stay.other_diagnoses.len * RG_SIZE(*stay.other_diagnoses.ptr));
+        st->Write(stay.other_diagnoses.ptr, stay.other_diagnoses.len * K_SIZE(*stay.other_diagnoses.ptr));
     }
     for (const mco_Stay &stay: stays) {
-        st->Write(stay.procedures.ptr, stay.procedures.len * RG_SIZE(*stay.procedures.ptr));
+        st->Write(stay.procedures.ptr, stay.procedures.len * K_SIZE(*stay.procedures.ptr));
     }
 
     return st->Close();
@@ -102,7 +102,7 @@ bool mco_StaySet::SavePack(const char *filename) const
 bool mco_StaySetBuilder::LoadPack(StreamReader *st, HashTable<int32_t, mco_Test> *out_tests)
 {
     const Size start_stays_len = set.stays.len;
-    RG_DEFER_N(set_guard) { set.stays.RemoveFrom(start_stays_len); };
+    K_DEFER_N(set_guard) { set.stays.RemoveFrom(start_stays_len); };
 
     if (out_tests) {
         LogError("Testing is not supported by '.dmpak' files");
@@ -112,10 +112,10 @@ bool mco_StaySetBuilder::LoadPack(StreamReader *st, HashTable<int32_t, mco_Test>
     HeapArray<mco_ProcedureRealisation> procedures(&procedures_alloc);
 
     PackHeader bh;
-    if (st->Read(RG_SIZE(bh), &bh) != RG_SIZE(bh))
+    if (st->Read(K_SIZE(bh), &bh) != K_SIZE(bh))
         goto corrupt_error;
 
-    if (strncmp(bh.signature, PACK_SIGNATURE, RG_SIZE(bh.signature)) != 0) {
+    if (strncmp(bh.signature, PACK_SIGNATURE, K_SIZE(bh.signature)) != 0) {
         LogError("File '%1' does not have dspak signature", st->GetFileName());
         return false;
     }
@@ -127,26 +127,26 @@ bool mco_StaySetBuilder::LoadPack(StreamReader *st, HashTable<int32_t, mco_Test>
     if (bh.stays_len < 0 || bh.diagnoses_len < 0 || bh.procedures_len < 0)
         goto corrupt_error;
 
-    if (bh.stays_len > (RG_SIZE_MAX - start_stays_len)) {
+    if (bh.stays_len > (K_SIZE_MAX - start_stays_len)) {
         LogError("Too much data to load in '%1'", st->GetFileName());
         return false;
     }
 
     set.stays.Grow((Size)bh.stays_len);
-    if (st->Read(RG_SIZE(*set.stays.ptr) * (Size)bh.stays_len,
-                 set.stays.end()) != RG_SIZE(*set.stays.ptr) * (Size)bh.stays_len)
+    if (st->Read(K_SIZE(*set.stays.ptr) * (Size)bh.stays_len,
+                 set.stays.end()) != K_SIZE(*set.stays.ptr) * (Size)bh.stays_len)
         goto corrupt_error;
     set.stays.len += (Size)bh.stays_len;
 
     other_diagnoses.Reserve((Size)bh.diagnoses_len);
-    if (st->Read(RG_SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len,
-                 other_diagnoses.ptr) != RG_SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len)
+    if (st->Read(K_SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len,
+                 other_diagnoses.ptr) != K_SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len)
         goto corrupt_error;
     other_diagnoses.len += (Size)bh.diagnoses_len;
 
     procedures.Grow((Size)bh.procedures_len);
-    if (st->Read(RG_SIZE(*procedures.ptr) * (Size)bh.procedures_len,
-                procedures.ptr) != RG_SIZE(*procedures.ptr) * (Size)bh.procedures_len)
+    if (st->Read(K_SIZE(*procedures.ptr) * (Size)bh.procedures_len,
+                procedures.ptr) != K_SIZE(*procedures.ptr) * (Size)bh.procedures_len)
         goto corrupt_error;
     procedures.len += (Size)bh.procedures_len;
 
@@ -158,7 +158,7 @@ bool mco_StaySetBuilder::LoadPack(StreamReader *st, HashTable<int32_t, mco_Test>
         for (Size i = set.stays.len - (Size)bh.stays_len; i < set.stays.len; i++) {
             mco_Stay *stay = &set.stays[i];
 
-#if RG_SIZE_MAX < INT64_MAX
+#if K_SIZE_MAX < INT64_MAX
             union {
                 uint8_t raw[32];
                 struct {
@@ -220,7 +220,7 @@ static bool ParsePmsiChar(char c, char *out_value)
 template <typename T>
 static bool ParsePmsiInt(Span<const char> str, T *out_value)
 {
-    RG_ASSERT(str.len > 0);
+    K_ASSERT(str.len > 0);
 
     if (str[0] == ' ')
         return true;
@@ -238,7 +238,7 @@ static bool ParsePmsiInt(Span<const char> str, T *out_value)
 
 static bool ParsePmsiDate(Span<const char> str, LocalDate *out_date)
 {
-    RG_ASSERT(str.len == 8);
+    K_ASSERT(str.len == 8);
 
     if (str[0] == ' ')
         return true;
@@ -697,7 +697,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
             case 'M': { stay.unit.number = (int16_t)(stay.unit.number + 2000); } break;
         }
 
-        if (i < RG_LEN(test.auth_supplements)) [[likely]] {
+        if (i < K_LEN(test.auth_supplements)) [[likely]] {
             int type = 0;
             ParsePmsiInt(read_fragment(2), &type);
             ParsePmsiInt(read_fragment(4), &test.auth_supplements[i].days);
@@ -819,14 +819,14 @@ bool mco_StaySetBuilder::LoadAtih(StreamReader *st,
                                   HashTable<int32_t, mco_Test> *out_tests)
 {
     Size stays_len = set.stays.len;
-    RG_DEFER_N(set_guard) { set.stays.RemoveFrom(stays_len); };
+    K_DEFER_N(set_guard) { set.stays.RemoveFrom(stays_len); };
 
     Size errors = 0;
     {
         LineReader reader(st);
 
         reader.PushLogFilter();
-        RG_DEFER { PopLogFilter(); };
+        K_DEFER { PopLogFilter(); };
 
         Span<const char> line;
         while (reader.Next(&line)) {
@@ -871,7 +871,7 @@ bool mco_StaySetBuilder::LoadFichComp(StreamReader *st, HashTable<int32_t, mco_T
     {
         LineReader reader(st);
         reader.PushLogFilter();
-        RG_DEFER { PopLogFilter(); };
+        K_DEFER { PopLogFilter(); };
 
         Span<const char> line;
         while (reader.Next(&line)) {

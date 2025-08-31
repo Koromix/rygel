@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "config.hh"
 
-namespace RG {
+namespace K {
 
 bool Config::Validate() const
 {
@@ -46,7 +46,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
     IniParser ini(st);
     ini.PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {

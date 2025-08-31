@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "drdc.hh"
 
-namespace RG {
+namespace K {
 
 struct Config {
     HeapArray<const char *> table_directories;

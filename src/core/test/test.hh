@@ -23,7 +23,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 struct TestInfo {
     const char *path;
@@ -45,26 +45,26 @@ struct BenchmarkInfo {
     static const TestInfo VarName((Path), FuncName); \
      \
     static void FuncName(Size *out_total, Size *out_failures)
-#define TEST_FUNCTION(Path) TEST_FUNCTION_(RG_UNIQUE_NAME(func_), RG_UNIQUE_NAME(test_), "test/" Path)
+#define TEST_FUNCTION(Path) TEST_FUNCTION_(K_UNIQUE_NAME(func_), K_UNIQUE_NAME(test_), "test/" Path)
 
 #define TEST_EX(Condition, ...) \
     do { \
         (*out_total)++; \
         if (!(Condition)) { \
-            Print("\n    %!D..[%1:%2]%!0 ", SplitStrReverseAny(__FILE__, RG_PATH_SEPARATORS), __LINE__); \
+            Print("\n    %!D..[%1:%2]%!0 ", SplitStrReverseAny(__FILE__, K_PATH_SEPARATORS), __LINE__); \
             Print(__VA_ARGS__); \
             (*out_failures)++; \
         } \
     } while (false)
 
 #define TEST(Condition) \
-    TEST_EX((Condition), "%1", RG_STRINGIFY(Condition))
+    TEST_EX((Condition), "%1", K_STRINGIFY(Condition))
 #define TEST_EQ(Value1, Value2) \
     do { \
         auto value1 = (Value1); \
         auto value2 = (Value2); \
         \
-        TEST_EX(value1 == value2, "%1: %2 == %3", RG_STRINGIFY(Value1), value1, value2); \
+        TEST_EX(value1 == value2, "%1: %2 == %3", K_STRINGIFY(Value1), value1, value2); \
     } while (false)
 #define TEST_STR(Str1, Str2) \
     do { \
@@ -78,7 +78,7 @@ struct BenchmarkInfo {
             str2 = "(null)"; \
         } \
         \
-        TEST_EX(str1 == str2, "%1: '%2' == '%3'", RG_STRINGIFY(Str1), str1, str2); \
+        TEST_EX(str1 == str2, "%1: '%2' == '%3'", K_STRINGIFY(Str1), str1, str2); \
     } while (false)
 
 #define BENCHMARK_FUNCTION_(FuncName, VarName, Path) \
@@ -87,7 +87,7 @@ struct BenchmarkInfo {
     static const BenchmarkInfo VarName((Path), FuncName); \
      \
     static void FuncName()
-#define BENCHMARK_FUNCTION(Path) BENCHMARK_FUNCTION_(RG_UNIQUE_NAME(func_), RG_UNIQUE_NAME(bench_), "bench/" Path)
+#define BENCHMARK_FUNCTION(Path) BENCHMARK_FUNCTION_(K_UNIQUE_NAME(func_), K_UNIQUE_NAME(bench_), "bench/" Path)
 
 static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<void(Size)> func)
 {

@@ -19,7 +19,7 @@
 #include "src/drd/libdrd/libdrd.hh"
 #include "src/core/http/http.hh"
 
-namespace RG {
+namespace K {
 
 struct StructureEntity;
 struct StructureSet;
@@ -51,7 +51,7 @@ struct User: public RetainObject<User> {
     bool CheckMcoDispenseMode(mco_DispenseMode dispense_mode) const
         { return mco_dispense_modes & (1 << (int)dispense_mode); }
 
-    RG_HASHTABLE_HANDLER(User, name);
+    K_HASHTABLE_HANDLER(User, name);
 };
 
 struct UserSet {

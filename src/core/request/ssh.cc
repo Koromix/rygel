@@ -24,14 +24,14 @@
 #include "ssh.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
-RG_INIT(libssh)
+K_INIT(libssh)
 {
-    RG_CRITICAL(!ssh_init(), "Failed to initialize libssh");
+    K_CRITICAL(!ssh_init(), "Failed to initialize libssh");
 }
 
-RG_EXIT(libssh)
+K_EXIT(libssh)
 {
     ssh_finalize();
 }
@@ -142,7 +142,7 @@ void ssh_Config::Clone(ssh_Config *out_config) const
 bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
 {
     CURLU *h = curl_url();
-    RG_DEFER { curl_url_cleanup(h); };
+    K_DEFER { curl_url_cleanup(h); };
 
     if (StartsWith(url, "ssh://") || StartsWith(url, "sftp://")) {
         char url0[32768];
@@ -205,9 +205,9 @@ ssh_session ssh_Connect(const ssh_Config &config)
 
     ssh_session ssh = ssh_new();
     if (!ssh)
-        RG_BAD_ALLOC();
+        K_BAD_ALLOC();
 
-    RG_DEFER_N(err_guard) {
+    K_DEFER_N(err_guard) {
         if (ssh_is_connected(ssh)) {
             ssh_disconnect(ssh);
         }
@@ -242,7 +242,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
             LogError("Failed to retrieve SSH public key of '%1': %2", config.host, ssh_get_error(ssh));
             return nullptr;
         }
-        RG_DEFER { ssh_key_free(pk); };
+        K_DEFER { ssh_key_free(pk); };
 
         size_t hash_len;
         if (ssh_get_publickey_hash(pk, SSH_PUBLICKEY_HASH_SHA256, &hash.ptr, &hash_len) < 0) {
@@ -250,7 +250,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
             return nullptr;
         }
         hash.len = (Size)hash_len;
-        RG_DEFER { ssh_clean_pubkey_hash(&hash.ptr); };
+        K_DEFER { ssh_clean_pubkey_hash(&hash.ptr); };
 
         ssh_known_hosts_e state = ssh_session_is_known_server(ssh);
 
@@ -266,10 +266,10 @@ ssh_session ssh_Connect(const ssh_Config &config)
             case SSH_KNOWN_HOSTS_NOT_FOUND:
             case SSH_KNOWN_HOSTS_UNKNOWN: {
                 char base64[256] = {};
-                RG_ASSERT(sodium_base64_ENCODED_LEN(hash.len, sodium_base64_VARIANT_ORIGINAL_NO_PADDING) < RG_SIZE(base64));
+                K_ASSERT(sodium_base64_ENCODED_LEN(hash.len, sodium_base64_VARIANT_ORIGINAL_NO_PADDING) < K_SIZE(base64));
 
                 CopyString("SHA256:", base64);
-                sodium_bin2base64(base64 + 7, RG_SIZE(base64) - 7, hash.ptr, hash.len, sodium_base64_VARIANT_ORIGINAL_NO_PADDING);
+                sodium_bin2base64(base64 + 7, K_SIZE(base64) - 7, hash.ptr, hash.len, sodium_base64_VARIANT_ORIGINAL_NO_PADDING);
 
                 if (config.fingerprint && TestStr(base64, config.fingerprint))
                     break;
@@ -308,7 +308,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
             LogError("Failed to import private key string");
             return nullptr;
         }
-        RG_DEFER { ssh_key_free(private_key); };
+        K_DEFER { ssh_key_free(private_key); };
 
         if (ssh_userauth_publickey(ssh, nullptr, private_key) != SSH_AUTH_SUCCESS) {
             LogError("Failed to authenticate to '%1@%2': %3", config.username, config.host, ssh_get_error(ssh));
@@ -321,14 +321,14 @@ ssh_session ssh_Connect(const ssh_Config &config)
             LogError("Failed to load private key from '%1'", config.keyfile);
             return nullptr;
         }
-        RG_DEFER { ssh_key_free(private_key); };
+        K_DEFER { ssh_key_free(private_key); };
 
         if (ssh_userauth_publickey(ssh, nullptr, private_key) != SSH_AUTH_SUCCESS) {
             LogError("Failed to authenticate to '%1@%2': %3", config.username, config.host, ssh_get_error(ssh));
             return nullptr;
         }
     } else {
-        RG_ASSERT(config.password);
+        K_ASSERT(config.password);
 
         if (ssh_userauth_password(ssh, nullptr, config.password) != SSH_AUTH_SUCCESS) {
             LogError("Failed to authenticate to '%1@%2': %3", config.username, config.host, ssh_get_error(ssh));

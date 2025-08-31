@@ -19,7 +19,7 @@
 #include "src/drd/libdrd/libdrd.hh"
 #include "src/core/http/http.hh"
 
-namespace RG {
+namespace K {
 
 struct Config {
     HeapArray<const char *> table_directories;

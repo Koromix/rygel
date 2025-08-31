@@ -29,7 +29,7 @@
     #include <linux/input.h>
 #endif
 
-namespace RG {
+namespace K {
 
 #if defined(__linux__)
 
@@ -110,15 +110,15 @@ static int OpenInputDevice(const char *needle, int flags)
         const char *filename = Fmt(&temp_alloc, "/dev/input/%1", basename).ptr;
 
         // Open device
-        int fd = RG_RESTART_EINTR(open(filename, O_RDONLY | O_CLOEXEC | flags), < 0);
+        int fd = K_RESTART_EINTR(open(filename, O_RDONLY | O_CLOEXEC | flags), < 0);
         if (fd < 0) {
             LogError("Failed to open '%1': %2", filename, strerror(errno));
             return true;
         }
-        RG_DEFER_N(fd_guard) { close(fd); };
+        K_DEFER_N(fd_guard) { close(fd); };
 
         char name[256];
-        if (ioctl(fd, EVIOCGNAME(RG_LEN(name)), name) < 0) {
+        if (ioctl(fd, EVIOCGNAME(K_LEN(name)), name) < 0) {
             LogError("Failed to get device name of '%1': %2", filename, strerror(errno));
             return true;
         }
@@ -177,7 +177,7 @@ static bool ToggleProfile(int delta)
 static bool HandleInputEvent(int fd)
 {
     struct input_event ev = {};
-    Size len = read(fd, &ev, RG_SIZE(ev));
+    Size len = read(fd, &ev, K_SIZE(ev));
 
     if (len < 0) {
         if (errno == EAGAIN)
@@ -186,7 +186,7 @@ static bool HandleInputEvent(int fd)
         LogError("Failed to read evdev event: %1", strerror(errno));
         return false;
     }
-    RG_ASSERT(len == RG_SIZE(ev));
+    K_ASSERT(len == K_SIZE(ev));
 
     if (ev.type == EV_KEY && ev.code == BTN_TRIGGER_HAPPY40 && ev.value == 1) {
         ToggleProfile(1);
@@ -357,7 +357,7 @@ By default, the first of the following config files will be used:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
-                    config_filename = Fmt(&temp_alloc, "%1%/meestic.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
+                    config_filename = Fmt(&temp_alloc, "%1%/meestic.ini", TrimStrRight(opt.current_value, K_PATH_SEPARATORS)).ptr;
                 } else {
                     config_filename = opt.current_value;
                 }
@@ -402,7 +402,7 @@ By default, the first of the following config files will be used:
         if (input_fd < 0)
             return 1;
     }
-    RG_DEFER { close(input_fd); };
+    K_DEFER { close(input_fd); };
 
     // Open the light MSI HID device ahead of time
     if (!GetDebugFlag("FAKE_LIGHTS")) {
@@ -410,13 +410,13 @@ By default, the first of the following config files will be used:
         if (!port)
             return 1;
     }
-    RG_DEFER { CloseLightDevice(port); };
+    K_DEFER { CloseLightDevice(port); };
 
     // Open control socket
     int listen_fd = OpenUnixSocket(socket_filename, SOCK_STREAM);
     if (listen_fd < 0)
         return 1;
-    RG_DEFER { close(listen_fd); };
+    K_DEFER { close(listen_fd); };
 
     // Listen for clients
     if (listen(listen_fd, 4) < 0) {
@@ -604,7 +604,7 @@ Be careful, color names and most options are %!..+case-sensitive%!0.)"), FelixTa
                 return 1;
 
             if (!settings.colors.Available()) {
-                LogError("A maximum of %1 colors is supported", RG_LEN(settings.colors.data));
+                LogError("A maximum of %1 colors is supported", K_LEN(settings.colors.data));
                 return 1;
             }
             settings.colors.Append(color);
@@ -673,4 +673,4 @@ int Main(int argc, char **argv)
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

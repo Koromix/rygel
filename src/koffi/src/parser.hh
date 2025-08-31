@@ -26,7 +26,7 @@
 
 #include <napi.h>
 
-namespace RG {
+namespace K {
 
 struct InstanceData;
 struct TypeInfo;

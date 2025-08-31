@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "build.hh"
 
-namespace RG {
+namespace K {
 
 bool Builder::PrepareEsbuild()
 {
@@ -69,7 +69,7 @@ bool Builder::PrepareEsbuild()
 
             for (const char *name: names) {
                 char suffix[64];
-                Fmt(suffix, "%1-%2/%3%4", os, arch, name, RG_EXECUTABLE_EXTENSION);
+                Fmt(suffix, "%1-%2/%3%4", os, arch, name, K_EXECUTABLE_EXTENSION);
 
                 const char *binary = NormalizePath(suffix, prefix, &str_alloc).ptr;
 
@@ -142,12 +142,12 @@ bool Builder::PrepareEsbuild()
         }
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 static const char *MakeGlobalName(const char *filename, Allocator *alloc)
 {
-    Span<const char> basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
+    Span<const char> basename = SplitStrReverseAny(filename, K_PATH_SEPARATORS);
     Span<const char> name = SplitStr(basename, '.');
 
     Span<char> buf = AllocateSpan<char>(alloc, name.len + 1);
@@ -163,7 +163,7 @@ static const char *MakeGlobalName(const char *filename, Allocator *alloc)
 
 const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
 {
-    RG_ASSERT(src.type == SourceType::Esbuild);
+    K_ASSERT(src.type == SourceType::Esbuild);
 
     const char *meta_filename = build_map.FindValue({ current_ns, src.filename }, nullptr);
 

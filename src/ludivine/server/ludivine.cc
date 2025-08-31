@@ -29,7 +29,7 @@
     #include <netdb.h>
 #endif
 
-namespace RG {
+namespace K {
 
 Config config;
 sq_Database db;
@@ -238,7 +238,7 @@ static void InitAssets()
     // Update ETag
     {
         uint64_t buf;
-        FillRandomSafe(&buf, RG_SIZE(buf));
+        FillRandomSafe(&buf, K_SIZE(buf));
         Fmt(shared_etag, "%1", FmtHex(buf).Pad0(-16));
     }
 
@@ -253,7 +253,7 @@ static void InitAssets()
         } else if (TestStr(asset.name, "src/ludivine/assets/main/ldv.webp")) {
             assets_map.Set("/favicon.webp", &asset);
         } else {
-            Span<const char> name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS);
+            Span<const char> name = SplitStrReverseAny(asset.name, K_PATH_SEPARATORS);
 
             if (NameContainsHash(name)) {
                 const char *url = Fmt(&assets_alloc, "/static/%1", name).ptr;
@@ -273,8 +273,8 @@ static void InitAssets()
         }
     }
 
-    RG_ASSERT(js);
-    RG_ASSERT(css);
+    K_ASSERT(js);
+    K_ASSERT(css);
 
     assets_index.data = PatchFile(assets_index, &assets_alloc, [&](Span<const char> expr, StreamWriter *writer) {
         Span<const char> key = TrimStr(expr);
@@ -311,7 +311,7 @@ static void InitAssets()
 
             json.StartObject();
             for (const char *bundle: bundles) {
-                const char *name = SplitStrReverseAny(bundle, RG_PATH_SEPARATORS).ptr;
+                const char *name = SplitStrReverseAny(bundle, K_PATH_SEPARATORS).ptr;
                 json.Key(name); json.String(bundle);
             }
             json.EndObject();
@@ -494,7 +494,7 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
-                    config_filename = Fmt(&temp_alloc, "%1%/ludivine.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
+                    config_filename = Fmt(&temp_alloc, "%1%/ludivine.ini", TrimStrRight(opt.current_value, K_PATH_SEPARATORS)).ptr;
                 } else {
                     config_filename = opt.current_value;
                 }
@@ -626,4 +626,4 @@ Options:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

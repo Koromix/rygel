@@ -23,7 +23,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 enum class sms_Provider {
     None,

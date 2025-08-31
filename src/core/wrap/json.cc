@@ -23,7 +23,7 @@
 #include "json.hh"
 #include "vendor/fast_float/fast_float.h"
 
-namespace RG {
+namespace K {
 
 json_StreamReader::json_StreamReader(StreamReader *st)
     : st(st)
@@ -99,7 +99,7 @@ bool json_Parser::Handler::RawNumber(const char *str, Size len, bool)
 {
     token = json_TokenType::Number;
 
-    u.num.len = std::min(len, RG_SIZE(u.num.data) - 1);
+    u.num.len = std::min(len, K_SIZE(u.num.data) - 1);
     MemCpy(u.num.data, str, len);
     u.num.data[u.num.len] = 0;
 
@@ -123,7 +123,7 @@ bool json_Parser::Handler::Key(const char *key, Size len, bool)
 json_Parser::json_Parser(StreamReader *st, Allocator *alloc)
     : st(st), handler({ alloc })
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
     reader.IterativeParseInit();
 }
 
@@ -197,7 +197,7 @@ bool json_Parser::ParseBool(bool *out_b)
 bool json_Parser::ParseInt(int64_t *out_i)
 {
     if (ConsumeToken(json_TokenType::Number)) {
-        error |= !RG::ParseInt(handler.u.num, out_i);
+        error |= !K::ParseInt(handler.u.num, out_i);
         return !error;
     } else {
         return false;
@@ -207,7 +207,7 @@ bool json_Parser::ParseInt(int64_t *out_i)
 bool json_Parser::ParseInt(int *out_i)
 {
     if (ConsumeToken(json_TokenType::Number)) {
-        error |= !RG::ParseInt(handler.u.num, out_i);
+        error |= !K::ParseInt(handler.u.num, out_i);
         return !error;
     } else {
         return false;
@@ -269,14 +269,14 @@ bool json_Parser::Skip()
                 Skip();
             }
         } break;
-        case json_TokenType::EndObject: { RG_ASSERT(error); } break;
+        case json_TokenType::EndObject: { K_ASSERT(error); } break;
         case json_TokenType::StartArray: {
             ParseArray();
             while (InArray()) {
                 Skip();
             }
         } break;
-        case json_TokenType::EndArray: { RG_ASSERT(error); } break;
+        case json_TokenType::EndArray: { K_ASSERT(error); } break;
 
         case json_TokenType::Null:
         case json_TokenType::Bool:
@@ -323,11 +323,11 @@ public:
 
     bool Key(const char *key, Size len, bool) { json.Key(key, len); return json.IsValid(); }
 
-    bool Double(double) { RG_UNREACHABLE(); }
-    bool Int(int) { RG_UNREACHABLE(); }
-    bool Int64(int64_t) { RG_UNREACHABLE(); }
-    bool Uint(unsigned int) { RG_UNREACHABLE(); }
-    bool Uint64(uint64_t) { RG_UNREACHABLE(); }
+    bool Double(double) { K_UNREACHABLE(); }
+    bool Int(int) { K_UNREACHABLE(); }
+    bool Int64(int64_t) { K_UNREACHABLE(); }
+    bool Uint(unsigned int) { K_UNREACHABLE(); }
+    bool Uint64(uint64_t) { K_UNREACHABLE(); }
 };
 
 bool json_Parser::PassThrough(StreamWriter *writer)
@@ -343,7 +343,7 @@ bool json_Parser::PassThrough(StreamWriter *writer)
         empty &= !reader.IterativeParseNext<flags>(st, copier);
     } else {
         switch (handler.token) {
-            case json_TokenType::Invalid: { RG_UNREACHABLE(); } break;
+            case json_TokenType::Invalid: { K_UNREACHABLE(); } break;
 
             case json_TokenType::StartObject: { copier.StartObject(); } break;
             case json_TokenType::EndObject: { copier.EndObject(0); } break;
@@ -409,7 +409,7 @@ bool json_Parser::PassThrough(const char **out_str)
 
 void json_Parser::PushLogFilter()
 {
-    RG::PushLogFilter([this](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
+    K::PushLogFilter([this](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
         char ctx[1024];
         Fmt(ctx, "%1(%2:%3): ", st.GetFileName(), st.GetLineNumber(), st.GetLineOffset());
 
@@ -466,7 +466,7 @@ bool json_Parser::IncreaseDepth()
 
 Span<const char> json_ConvertToJsonName(Span<const char> name, Span<char> out_buf)
 {
-    RG_ASSERT(out_buf.len >= 2);
+    K_ASSERT(out_buf.len >= 2);
 
     if (name.len) {
         out_buf[0] = LowerAscii(name[0]);
@@ -493,7 +493,7 @@ Span<const char> json_ConvertToJsonName(Span<const char> name, Span<char> out_bu
 
 Span<const char> json_ConvertFromJsonName(Span<const char> name, Span<char> out_buf)
 {
-    RG_ASSERT(out_buf.len >= 2);
+    K_ASSERT(out_buf.len >= 2);
 
     if (name.len) {
         out_buf[0] = UpperAscii(name[0]);

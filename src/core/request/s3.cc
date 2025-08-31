@@ -25,7 +25,7 @@
 #include "src/core/wrap/xml.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
 // Fix mess caused by windows.h (included by libcurl)
 #if defined(GetObject)
@@ -34,7 +34,7 @@ namespace RG {
 
 static const char *GetS3Env(const char *name)
 {
-    RG_ASSERT(strlen(name) < 64);
+    K_ASSERT(strlen(name) < 64);
 
     static const char *const prefixes[] = {
         "S3_",
@@ -164,7 +164,7 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
     }
 
     CURLU *h = curl_url();
-    RG_DEFER { curl_url_cleanup(h); };
+    K_DEFER { curl_url_cleanup(h); };
 
     // Use CURLU to parse URL
     {
@@ -182,7 +182,7 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
     int port = curl_GetUrlPartInt(h, CURLUPART_PORT);
 
     const char *path = curl_GetUrlPartStr(h, CURLUPART_PATH, &out_config->str_alloc).ptr;
-    RG_ASSERT(path[0] == '/');
+    K_ASSERT(path[0] == '/');
 
     const char *region = nullptr;
     bool virtual_mode = false;
@@ -253,7 +253,7 @@ static FmtArg FormatYYYYMMDD(const TimeSpec &date)
 
 s3_Client::s3_Client()
 {
-    static_assert(CURL_LOCK_DATA_LAST <= RG_LEN(share_mutexes));
+    static_assert(CURL_LOCK_DATA_LAST <= K_LEN(share_mutexes));
 
     share = curl_share_init();
 
@@ -279,7 +279,7 @@ s3_Client::~s3_Client()
 
 bool s3_Client::Open(const s3_Config &config)
 {
-    RG_ASSERT(!open);
+    K_ASSERT(!open);
 
     if (!config.Validate())
         return false;
@@ -439,7 +439,7 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(int64_t, Spa
         ctx.offset = 0;
 
         if (out_info) {
-            MemSet(out_info->version, 0, RG_SIZE(out_info->version));
+            MemSet(out_info->version, 0, K_SIZE(out_info->version));
 
             curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, +[](char *buf, size_t, size_t nmemb, void *udata) {
                 s3_ObjectInfo *out_info = (s3_ObjectInfo *)udata;
@@ -501,7 +501,7 @@ Size s3_Client::GetObject(Span<const char> key, Span<uint8_t> out_buf, s3_Object
 Size s3_Client::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj, s3_ObjectInfo *out_info)
 {
     int64_t prev_len = out_obj->len;
-    RG_DEFER_N(err_guard) { out_obj->RemoveFrom(prev_len); };
+    K_DEFER_N(err_guard) { out_obj->RemoveFrom(prev_len); };
 
     int64_t size = GetObject(key, [&](int64_t offset, Span<const uint8_t> buf) {
         out_obj->len = offset ? out_obj->len : prev_len;
@@ -538,7 +538,7 @@ StatResult s3_Client::HeadObject(Span<const char> key, s3_ObjectInfo *out_info)
         curl_easy_setopt(curl, CURLOPT_NOBODY, 1L); // HEAD
 
         if (out_info) {
-            MemSet(out_info->version, 0, RG_SIZE(out_info->version));
+            MemSet(out_info->version, 0, K_SIZE(out_info->version));
 
             curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, +[](char *buf, size_t, size_t nmemb, void *udata) {
                 s3_ObjectInfo *out_info = (s3_ObjectInfo *)udata;
@@ -584,7 +584,7 @@ static inline const char *GetLockModeString(s3_LockMode mode)
         case s3_LockMode::Compliance: return "COMPLIANCE";
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
@@ -624,7 +624,7 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
             LocalArray<uint8_t, 32> hash;
 
             switch (settings.checksum) {
-                case s3_ChecksumType::None: { RG_UNREACHABLE(); } break;
+                case s3_ChecksumType::None: { K_UNREACHABLE(); } break;
 
                 case s3_ChecksumType::CRC32: {
                     header = "x-amz-checksum-crc32";
@@ -796,7 +796,7 @@ bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mo
 
 bool s3_Client::OpenAccess()
 {
-    RG_ASSERT(!open);
+    K_ASSERT(!open);
 
     BlockAllocator temp_alloc;
 
@@ -807,7 +807,7 @@ bool s3_Client::OpenAccess()
         CURL *curl = ReserveConnection();
         if (!curl)
             return false;
-        RG_DEFER { ReleaseConnection(curl); };
+        K_DEFER { ReleaseConnection(curl); };
 
         // Garage sends back the correct region in its XML Error message, maybe others do too
         HeapArray<uint8_t> xml;
@@ -956,7 +956,7 @@ int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<in
     CURL *curl = ReserveConnection();
     if (!curl)
         return false;
-    RG_DEFER { ReleaseConnection(curl); };
+    K_DEFER { ReleaseConnection(curl); };
 
     LocalArray<char, 16384> log;
     int status = 0;
@@ -1092,12 +1092,12 @@ static void HmacSha256(Span<const uint8_t> key, Span<const char> message, uint8_
     uint8_t padded_key[64];
 
     // Hash and/or pad key
-    if (key.len > RG_SIZE(padded_key)) {
+    if (key.len > K_SIZE(padded_key)) {
         crypto_hash_sha256(padded_key, key.ptr, (size_t)key.len);
-        MemSet(padded_key + 32, 0, RG_SIZE(padded_key) - 32);
+        MemSet(padded_key + 32, 0, K_SIZE(padded_key) - 32);
     } else {
         MemCpy(padded_key, key.ptr, key.len);
-        MemSet(padded_key + key.len, 0, RG_SIZE(padded_key) - key.len);
+        MemSet(padded_key + key.len, 0, K_SIZE(padded_key) - key.len);
     }
 
     // Inner hash
@@ -1106,11 +1106,11 @@ static void HmacSha256(Span<const uint8_t> key, Span<const char> message, uint8_
         crypto_hash_sha256_state state;
         crypto_hash_sha256_init(&state);
 
-        for (Size i = 0; i < RG_SIZE(padded_key); i++) {
+        for (Size i = 0; i < K_SIZE(padded_key); i++) {
             padded_key[i] ^= 0x36;
         }
 
-        crypto_hash_sha256_update(&state, padded_key, RG_SIZE(padded_key));
+        crypto_hash_sha256_update(&state, padded_key, K_SIZE(padded_key));
         crypto_hash_sha256_update(&state, (const uint8_t *)message.ptr, (size_t)message.len);
         crypto_hash_sha256_final(&state, inner_hash);
     }
@@ -1120,13 +1120,13 @@ static void HmacSha256(Span<const uint8_t> key, Span<const char> message, uint8_
         crypto_hash_sha256_state state;
         crypto_hash_sha256_init(&state);
 
-        for (Size i = 0; i < RG_SIZE(padded_key); i++) {
+        for (Size i = 0; i < K_SIZE(padded_key); i++) {
             padded_key[i] ^= 0x36; // IPAD is still there
             padded_key[i] ^= 0x5C;
         }
 
-        crypto_hash_sha256_update(&state, padded_key, RG_SIZE(padded_key));
-        crypto_hash_sha256_update(&state, inner_hash, RG_SIZE(inner_hash));
+        crypto_hash_sha256_update(&state, padded_key, K_SIZE(padded_key));
+        crypto_hash_sha256_update(&state, inner_hash, K_SIZE(inner_hash));
         crypto_hash_sha256_final(&state, out_digest);
     }
 }
@@ -1134,7 +1134,7 @@ static void HmacSha256(Span<const uint8_t> key, Span<const char> message, uint8_
 const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *method, Span<const char> path,
                                          Span<const KeyValue> params, Span<const KeyValue> headers, Allocator *alloc)
 {
-    RG_ASSERT(!date.offset);
+    K_ASSERT(!date.offset);
 
     // Get signing key
     uint8_t key[32];

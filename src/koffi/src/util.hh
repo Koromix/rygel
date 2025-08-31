@@ -26,7 +26,7 @@
 
 #include <napi.h>
 
-namespace RG {
+namespace K {
 
 extern const napi_type_tag TypeInfoMarker;
 extern const napi_type_tag CastMarker;
@@ -151,7 +151,7 @@ static inline Span<uint8_t> GetRawBuffer(Napi::Value value)
         return MakeSpan((uint8_t *)buffer.Data(), (Size)buffer.ByteLength());
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 int GetTypedArrayType(const TypeInfo *type);
@@ -159,7 +159,7 @@ int GetTypedArrayType(const TypeInfo *type);
 template <typename T>
 T GetNumber(Napi::Value value)
 {
-    RG_ASSERT(value.IsNumber() || value.IsBigInt());
+    K_ASSERT(value.IsNumber() || value.IsBigInt());
 
     if (value.IsNumber()) [[likely]] {
         return (T)value.As<Napi::Number>().DoubleValue();
@@ -170,7 +170,7 @@ T GetNumber(Napi::Value value)
         return (T)bigint.Uint64Value(&lossless);
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 template <typename T>
@@ -237,7 +237,7 @@ static inline Napi::Array GetOwnPropertyNames(Napi::Object obj)
     napi_status status = napi_get_all_property_names(env, obj, napi_key_own_only,
                                                      (napi_key_filter)(napi_key_enumerable | napi_key_skip_symbols),
                                                      napi_key_numbers_to_strings, &result);
-    RG_ASSERT(status == napi_ok);
+    K_ASSERT(status == napi_ok);
 
     return Napi::Array(env, result);
 }

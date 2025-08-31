@@ -23,13 +23,13 @@
 #include "password.hh"
 #include "password_dict.inc"
 
-namespace RG {
+namespace K {
 
 // XXX: Should we try to detect date-like parts?
 // XXX: Use compact and RO-only data structure made for big dictionaries
 // XXX: Add proper names to dictionary, and automatically manage plurals
 
-static RG_CONSTINIT ConstMap<128, int32_t, const char *> replacements = {
+static K_CONSTINIT ConstMap<128, int32_t, const char *> replacements = {
     { DecodeUtf8("Ç"), "c" },
     { DecodeUtf8("È"), "e" },
     { DecodeUtf8("É"), "e" },
@@ -107,7 +107,7 @@ static const char *spatial_sequences[26] = {
 
 static Size SimplifyText(Span<const char> password, Span<char> out_buf)
 {
-    RG_ASSERT(out_buf.len > 0);
+    K_ASSERT(out_buf.len > 0);
 
     password = TrimStr(password);
 
@@ -159,7 +159,7 @@ static Size SimplifyText(Span<const char> password, Span<char> out_buf)
 static bool SearchWord(const char *word)
 {
     Size start = 0;
-    Size end = RG_LEN(pwd_DictWords);
+    Size end = K_LEN(pwd_DictWords);
 
     while (end > start) {
         Size i = (start + end) / 2;
@@ -180,7 +180,7 @@ static bool SearchWord(const char *word)
 
 static bool CheckComplexity(Span<const char> password, unsigned int flags)
 {
-    RG_ASSERT(password.len >= pwd_MinLength);
+    K_ASSERT(password.len >= pwd_MinLength);
 
     int score = 0;
 
@@ -208,10 +208,10 @@ static bool CheckComplexity(Span<const char> password, unsigned int flags)
 
             int prev_score = score;
             LocalArray<char, 32> word_buf;
-            char reverse_buf[RG_SIZE(word_buf.data)];
+            char reverse_buf[K_SIZE(word_buf.data)];
 
             word_buf.Append((char)c);
-            reverse_buf[RG_SIZE(reverse_buf) - 2] = (char)c;
+            reverse_buf[K_SIZE(reverse_buf) - 2] = (char)c;
             while (++i < password.len && IsAsciiAlpha(password[i])) {
                 int next = (uint8_t)password[i];
                 int diff = c - next;
@@ -222,11 +222,11 @@ static bool CheckComplexity(Span<const char> password, unsigned int flags)
 
                 if (word_buf.Available() > 1) [[likely]] {
                     word_buf.Append((char)c);
-                    reverse_buf[RG_SIZE(reverse_buf) - word_buf.len - 1] = (char)c;
+                    reverse_buf[K_SIZE(reverse_buf) - word_buf.len - 1] = (char)c;
                 }
             }
             word_buf.data[word_buf.len] = 0;
-            reverse_buf[RG_SIZE(reverse_buf) - 1] = 0;
+            reverse_buf[K_SIZE(reverse_buf) - 1] = 0;
 
             const char *reverse_word = std::end(reverse_buf) - word_buf.len - 1;
 
@@ -392,7 +392,7 @@ bool pwd_GeneratePassword(unsigned int flags, Span<char> out_password)
     // One try should be enough but let's make sure!
     {
         PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-        RG_DEFER_N(log_guard) { PopLogFilter(); };
+        K_DEFER_N(log_guard) { PopLogFilter(); };
 
         for (int i = 0; i < 1000; i++) {
             Fmt(out_password, "%1%2%3%4%5%6%7%8%9",

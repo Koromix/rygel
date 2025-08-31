@@ -20,7 +20,7 @@
 #include "mail.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
 static const smtp_MailContent NewUser = {
     "Connexion à {{ TITLE }} !",
@@ -151,7 +151,7 @@ static Span<const char> PatchText(Span<const char> text, const char *mail, const
         } else if (key == "MAIL") {
             writer->Write(mail);
         } else if (key == "URL") {
-            RG_ASSERT(url);
+            K_ASSERT(url);
             writer->Write(url);
         } else {
             Print(writer, "{{%1}}", expr);
@@ -743,7 +743,7 @@ void HandleUpload(http_IO *io)
     }
 
     int fd = -1;
-    RG_DEFER { CloseDescriptor(fd); };
+    K_DEFER { CloseDescriptor(fd); };
 
     // Open new vault generation file
     for (;;) {

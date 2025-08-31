@@ -17,7 +17,7 @@
 #include "disk.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
 static const int MaxPathSize = 4096 - 128;
 
@@ -106,7 +106,7 @@ Size LocalDisk::ReadFile(const char *path, Span<uint8_t> out_buf)
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
-    return RG::ReadFile(filename.data, out_buf);
+    return K::ReadFile(filename.data, out_buf);
 }
 
 Size LocalDisk::ReadFile(const char *path, HeapArray<uint8_t> *out_buf)
@@ -114,7 +114,7 @@ Size LocalDisk::ReadFile(const char *path, HeapArray<uint8_t> *out_buf)
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
-    return RG::ReadFile(filename.data, Mebibytes(64), out_buf);
+    return K::ReadFile(filename.data, Mebibytes(64), out_buf);
 }
 
 rk_WriteResult LocalDisk::WriteFile(const char *path, Span<const uint8_t> buf, const rk_WriteSettings &settings)
@@ -148,7 +148,7 @@ rk_WriteResult LocalDisk::WriteFile(const char *path, Span<const uint8_t> buf, c
         }
     }
 
-    RG_DEFER_N(tmp_guard) {
+    K_DEFER_N(tmp_guard) {
         CloseDescriptor(fd);
         UnlinkFile(tmp.data);
     };
@@ -204,7 +204,7 @@ bool LocalDisk::ListFiles(const char *path, FunctionRef<bool(const char *, int64
     const char *dirname0 = path[0] ? Fmt(&temp_alloc, "%1/%2", url, path).ptr : url;
     Size prefix_len = strlen(url);
 
-    if (!RG::TestFile(dirname0, FileType::Directory))
+    if (!K::TestFile(dirname0, FileType::Directory))
         return true;
 
     HeapArray<const char *> pending_directories;

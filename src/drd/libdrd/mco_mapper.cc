@@ -17,7 +17,7 @@
 #include "mco_classifier.hh"
 #include "mco_mapper.hh"
 
-namespace RG {
+namespace K {
 
 struct MapperContext {
     const mco_TableIndex *index;
@@ -103,7 +103,7 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size node_idx,
     // This limit is arbitrary, quick tests show depth maxing at less than 100 so we
     // should be alright. If this becomes a problem, I'll rewrite this function to
     // avoid recursion.
-    RG_ASSERT(depth < 4096);
+    K_ASSERT(depth < 4096);
 
 #define RUN_TREE_SUB(ChildIdx, ChangeCode) \
         do { \
@@ -113,7 +113,7 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size node_idx,
                                       constraint_copy, out_constraints); \
         } while (false)
 
-    RG_ASSERT(node_idx < ctx.index->ghm_nodes.len);
+    K_ASSERT(node_idx < ctx.index->ghm_nodes.len);
     const mco_GhmDecisionNode &ghm_node = ctx.index->ghm_nodes[node_idx];
 
     bool success = true;
@@ -135,7 +135,7 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size node_idx,
                     uint64_t *ptr = ctx.warn_cmd28_jumps_cache.TrySet(node_idx, 0, &inserted);
                     if (inserted) {
                         warn_cmd28_jumps = UINT64_MAX;
-                        RG_ASSERT(ghm_node.u.test.children_count <= 64);
+                        K_ASSERT(ghm_node.u.test.children_count <= 64);
                         for (const mco_DiagnosisInfo &diag_info: ctx.index->diagnoses) {
                             if (constraint.cmds & (1u << diag_info.cmd) &&
                                     !(diag_info.raw[8] & 0x2)) {
@@ -225,7 +225,7 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size node_idx,
 bool mco_ComputeGhmConstraints(const mco_TableIndex &index,
                                HashTable<mco_GhmCode, mco_GhmConstraint> *out_constraints)
 {
-    RG_ASSERT(!out_constraints->count);
+    K_ASSERT(!out_constraints->count);
 
     MapperContext ctx;
     ctx.index = &index;

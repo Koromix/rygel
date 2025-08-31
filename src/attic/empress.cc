@@ -18,10 +18,10 @@
 #include "vendor/sha1/sha1.h"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
 // Skip None
-static const Span<const char *const> AvailableAlgorithms = MakeSpan(CompressionTypeNames + 1, RG_LEN(CompressionTypeNames) - 1);
+static const Span<const char *const> AvailableAlgorithms = MakeSpan(CompressionTypeNames + 1, K_LEN(CompressionTypeNames) - 1);
 
 enum class HashAlgorithm {
     CRC32,
@@ -159,7 +159,7 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
                 return 1;
             }
 
-            const char *basename = SplitStrReverseAny(src_filename, RG_PATH_SEPARATORS).ptr;
+            const char *basename = SplitStrReverseAny(src_filename, K_PATH_SEPARATORS).ptr;
             output_filename = Fmt(&temp_alloc, "%1%/%2%3", output_directory, basename, compression_ext).ptr;
         } else if (src_filename) {
             const char *compression_ext = CompressionTypeExtensions[(int)compression_type];
@@ -186,7 +186,7 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
 
         for (const char *src_filename: src_filenames) {
             if (output_directory) {
-                const char *basename = SplitStrReverseAny(src_filename, RG_PATH_SEPARATORS).ptr;
+                const char *basename = SplitStrReverseAny(src_filename, K_PATH_SEPARATORS).ptr;
 
                 const char *dest_filename = Fmt(&temp_alloc, "%1%/%2%3", output_directory, basename, compression_ext).ptr;
                 dest_filenames.Append(dest_filename);
@@ -196,7 +196,7 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
             }
         }
     }
-    RG_ASSERT(dest_filenames.len == src_filenames.len);
+    K_ASSERT(dest_filenames.len == src_filenames.len);
 
     unsigned int write_flags = (int)StreamWriterFlag::Atomic |
                                (force ? 0 : (int)StreamWriterFlag::Exclusive);
@@ -211,7 +211,7 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
             StreamReader reader;
             StreamWriter writer;
 
-            Span<const char> src_basename = src_filename ? SplitStrReverseAny(src_filename, RG_PATH_SEPARATORS)
+            Span<const char> src_basename = src_filename ? SplitStrReverseAny(src_filename, K_PATH_SEPARATORS)
                                                          : CompressionTypeNames[(int)compression_type];
             ProgressHandle progress(src_basename);
 
@@ -377,7 +377,7 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
                 compression_ext.len = 0;
             }
 
-            Span<const char> basename = SplitStrReverseAny(src_filename, RG_PATH_SEPARATORS).ptr;
+            Span<const char> basename = SplitStrReverseAny(src_filename, K_PATH_SEPARATORS).ptr;
             const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", output_directory, basename.Take(0, basename.len - compression_ext.len)).ptr;
 
             destinations.Append({ dest_filename, type });
@@ -421,7 +421,7 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
                     compression_ext.len = 0;
                 }
 
-                Span<const char> basename = SplitStrReverseAny(src_filename, RG_PATH_SEPARATORS).ptr;
+                Span<const char> basename = SplitStrReverseAny(src_filename, K_PATH_SEPARATORS).ptr;
                 const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", output_directory, basename.Take(0, basename.len - compression_ext.len)).ptr;
 
                 destinations.Append({ dest_filename, type });
@@ -445,7 +445,7 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
         if (!valid)
             return 1;
     }
-    RG_ASSERT(destinations.len == src_filenames.len);
+    K_ASSERT(destinations.len == src_filenames.len);
 
     unsigned int write_flags = (int)StreamWriterFlag::Atomic |
                                (force ? 0 : (int)StreamWriterFlag::Exclusive);
@@ -468,7 +468,7 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
                     return false;
             }
 
-            Span<const char> dest_basename = dest.filename ? SplitStrReverseAny(dest.filename, RG_PATH_SEPARATORS)
+            Span<const char> dest_basename = dest.filename ? SplitStrReverseAny(dest.filename, K_PATH_SEPARATORS)
                                                            : CompressionTypeNames[(int)dest.compression_type];
             ProgressHandle progress(dest_basename);
 
@@ -522,55 +522,55 @@ static Size HashFile(StreamReader *reader, HashAlgorithm algorithm, Span<uint8_t
 
     switch (algorithm) {
         case HashAlgorithm::CRC32: {
-            RG_ASSERT(out_hash.len >= 4);
+            K_ASSERT(out_hash.len >= 4);
 
             uint32_t crc32 = 0;
             PROCESS({ crc32 = CRC32(crc32, bytes); });
 
             crc32 = BigEndian(crc32);
-            MemCpy(out_hash.ptr, &crc32, RG_SIZE(crc32));
+            MemCpy(out_hash.ptr, &crc32, K_SIZE(crc32));
 
             return 4;
         } break;
 
         case HashAlgorithm::CRC32C: {
-            RG_ASSERT(out_hash.len >= 4);
+            K_ASSERT(out_hash.len >= 4);
 
             uint32_t crc32 = 0;
             PROCESS({ crc32 = CRC32C(crc32, bytes); });
 
             crc32 = BigEndian(crc32);
-            MemCpy(out_hash.ptr, &crc32, RG_SIZE(crc32));
+            MemCpy(out_hash.ptr, &crc32, K_SIZE(crc32));
 
             return 4;
         } break;
 
         case HashAlgorithm::CRC64xz: {
-            RG_ASSERT(out_hash.len >= 8);
+            K_ASSERT(out_hash.len >= 8);
 
             uint64_t crc64 = 0;
             PROCESS({ crc64 = CRC64xz(crc64, bytes); });
 
             crc64 = BigEndian(crc64);
-            MemCpy(out_hash.ptr, &crc64, RG_SIZE(crc64));
+            MemCpy(out_hash.ptr, &crc64, K_SIZE(crc64));
 
             return 8;
         } break;
 
         case HashAlgorithm::CRC64nvme: {
-            RG_ASSERT(out_hash.len >= 8);
+            K_ASSERT(out_hash.len >= 8);
 
             uint64_t crc64 = 0;
             PROCESS({ crc64 = CRC64nvme(crc64, bytes); });
 
             crc64 = BigEndian(crc64);
-            MemCpy(out_hash.ptr, &crc64, RG_SIZE(crc64));
+            MemCpy(out_hash.ptr, &crc64, K_SIZE(crc64));
 
             return 8;
         } break;
 
         case HashAlgorithm::SHA1: {
-            RG_ASSERT(out_hash.len >= 32);
+            K_ASSERT(out_hash.len >= 32);
 
             SHA1_CTX ctx;
             SHA1Init(&ctx);
@@ -582,7 +582,7 @@ static Size HashFile(StreamReader *reader, HashAlgorithm algorithm, Span<uint8_t
         } break;
 
         case HashAlgorithm::SHA256: {
-            RG_ASSERT(out_hash.len >= 32);
+            K_ASSERT(out_hash.len >= 32);
 
             crypto_hash_sha256_state state;
             crypto_hash_sha256_init(&state);
@@ -594,7 +594,7 @@ static Size HashFile(StreamReader *reader, HashAlgorithm algorithm, Span<uint8_t
         } break;
 
         case HashAlgorithm::SHA512: {
-            RG_ASSERT(out_hash.len >= 64);
+            K_ASSERT(out_hash.len >= 64);
 
             crypto_hash_sha512_state state;
             crypto_hash_sha512_init(&state);
@@ -606,7 +606,7 @@ static Size HashFile(StreamReader *reader, HashAlgorithm algorithm, Span<uint8_t
         } break;
 
         case HashAlgorithm::BLAKE3: {
-            RG_ASSERT(out_hash.len >= 32);
+            K_ASSERT(out_hash.len >= 32);
 
             blake3_hasher state;
             blake3_hasher_init(&state);
@@ -620,7 +620,7 @@ static Size HashFile(StreamReader *reader, HashAlgorithm algorithm, Span<uint8_t
 
 #undef PROCESS
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 static int RunHash(Span<const char *> arguments)
@@ -712,7 +712,7 @@ Available hash algorithms: %!..+%3%!0)",
             }
 
             // Handle truncated filename
-            if (text.len == RG_SIZE(text.data) - 1 && text[text.len - 1] != '\n') {
+            if (text.len == K_SIZE(text.data) - 1 && text[text.len - 1] != '\n') {
                 text[text.len - 4] = '.';
                 text[text.len - 3] = '.';
                 text[text.len - 2] = '.';
@@ -785,4 +785,4 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

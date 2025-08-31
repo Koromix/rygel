@@ -17,7 +17,7 @@
 #include "light.hh"
 #include "src/tytools/libhs/libhs.h"
 
-namespace RG {
+namespace K {
 
 #pragma pack(push, 1)
 // Guessed through retro-engineering, each field is subject to interpretation
@@ -31,7 +31,7 @@ struct ControlPacket {
     RgbColor colors[7];
     char _pad2[38];
 };
-static_assert(RG_SIZE(ControlPacket) == 65);
+static_assert(K_SIZE(ControlPacket) == 65);
 #pragma pack(pop)
 
 static void DumpPacket(Span<const uint8_t> bytes)
@@ -82,14 +82,14 @@ hs_port *OpenLightDevice()
     };
 
     hs_device *dev;
-    int ret = hs_find(specs, RG_LEN(specs), &dev);
+    int ret = hs_find(specs, K_LEN(specs), &dev);
     if (ret < 0)
         return nullptr;
     if (!ret) {
         LogError("Cannot find Mystic Light HID device (1462:1562, 1462:1563 or 1462:1564)");
         return nullptr;
     }
-    RG_DEFER { hs_device_unref(dev); };
+    K_DEFER { hs_device_unref(dev); };
 
     hs_port *port;
     if (hs_port_open(dev, HS_PORT_MODE_WRITE, &port) < 0)
@@ -121,16 +121,16 @@ bool ApplyLight(hs_port *port, const LightSettings &settings)
     pkt.intensity = (int8_t)settings.intensity;
     if (settings.colors.len) {
         pkt.count = (int8_t)settings.colors.len;
-        MemCpy(pkt.colors, settings.colors.data, settings.colors.len * RG_SIZE(RgbColor));
+        MemCpy(pkt.colors, settings.colors.data, settings.colors.len * K_SIZE(RgbColor));
     } else {
         pkt.count = 1;
         pkt.colors[0] = { 29, 191, 255 }; // MSI blue
     }
 
     if (GetDebugFlag("DUMP_PACKETS")) {
-        DumpPacket(MakeSpan((const uint8_t *)&pkt, RG_SIZE(pkt)));
+        DumpPacket(MakeSpan((const uint8_t *)&pkt, K_SIZE(pkt)));
     }
-    if (hs_hid_send_feature_report(port, (const uint8_t *)&pkt, RG_SIZE(pkt)) < 0)
+    if (hs_hid_send_feature_report(port, (const uint8_t *)&pkt, K_SIZE(pkt)) < 0)
         return false;
 
     return true;
@@ -141,7 +141,7 @@ bool ApplyLight(const LightSettings &settings)
     hs_port *port = OpenLightDevice();
     if (!port)
         return false;
-    RG_DEFER { CloseLightDevice(port); };
+    K_DEFER { CloseLightDevice(port); };
 
     return ApplyLight(port, settings);
 }

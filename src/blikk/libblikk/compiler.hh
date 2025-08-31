@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "program.hh"
 
-namespace RG {
+namespace K {
 
 class bk_Parser;
 struct bk_TokenizedFile;
@@ -29,7 +29,7 @@ struct bk_CompileReport {
 };
 
 class bk_Compiler {
-    RG_DELETE_COPY(bk_Compiler)
+    K_DELETE_COPY(bk_Compiler)
 
     bk_Parser *parser;
 

@@ -19,7 +19,7 @@
 #include "user.hh"
 #include "src/core/http/http.hh"
 
-namespace RG {
+namespace K {
 
 struct McoCacheSet {
     HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> constraints_set;
@@ -48,7 +48,7 @@ bool InitMcoProfile(const char *profile_directory, const char *authorization_fil
 bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *const> stay_filenames);
 
 class McoResultProvider {
-    RG_DELETE_COPY(McoResultProvider)
+    K_DELETE_COPY(McoResultProvider)
 
     // Parameters
     LocalDate min_date = {};

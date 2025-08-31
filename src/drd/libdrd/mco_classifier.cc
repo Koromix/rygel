@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "mco_classifier.hh"
 
-namespace RG {
+namespace K {
 
 struct RunGhmTreeContext {
     const mco_TableIndex *index;
@@ -41,7 +41,7 @@ static int16_t ComputeAge(LocalDate date, LocalDate birthdate)
 
 static const mco_PreparedStay *FindMainStay(Span<const mco_PreparedStay> mono_preps, int duration)
 {
-    RG_ASSERT(duration >= 0);
+    K_ASSERT(duration >= 0);
 
     int max_duration = -1;
     const mco_PreparedStay *zx_prep = nullptr;
@@ -140,7 +140,7 @@ static bool SetError(mco_ErrorSet *error_set, int16_t error, int16_t priority = 
     if (!error)
         return true;
 
-    RG_ASSERT(error >= 0 && error < decltype(mco_ErrorSet::errors)::Bits);
+    K_ASSERT(error >= 0 && error < decltype(mco_ErrorSet::errors)::Bits);
     if (error_set) {
         if (priority >= 0 && (!error_set->main_error || priority > error_set->priority ||
                               (priority == error_set->priority && error < error_set->main_error))) {
@@ -446,7 +446,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
                     static_assert(std::alignment_of<mco_ProcedureInfo>::value >= 8);
 
                     if ((proc_info->bytes[32] & 0x8) &&
-                            proc.activity >= 0 && proc.activity < RG_LEN(proc_info->additions) &&
+                            proc.activity >= 0 && proc.activity < K_LEN(proc_info->additions) &&
                             proc_info->additions[proc.activity]) {
                         additions_mismatch += !additions.TestAndSet(proc_info->additions[proc.activity]);
                     }
@@ -1104,7 +1104,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
                         Span<const mco_Stay> mono_stays, unsigned int flags,
                         mco_PreparedSet *out_prepared_set, mco_ErrorSet *out_errors)
 {
-    RG_ASSERT(mono_stays.len > 0);
+    K_ASSERT(mono_stays.len > 0);
 
     // Reset prepared data
     out_prepared_set->index = nullptr;
@@ -1143,7 +1143,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
 
     // Too critical to even try anything (all data is invalid)
     if (mono_stays[0].errors & (int)mco_Stay::Error::UnknownRumVersion) [[unlikely]] {
-        RG_ASSERT(mono_stays.len == 1);
+        K_ASSERT(mono_stays.len == 1);
 
         out_prepared_set->prep.duration = -1;
         out_prepared_set->prep.age = -1;
@@ -1204,7 +1204,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
 static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm_node,
                           mco_ErrorSet *out_errors)
 {
-    RG_ASSERT(ghm_node.function != 12);
+    K_ASSERT(ghm_node.function != 12);
 
     switch (ghm_node.function) {
         case 0:
@@ -1579,8 +1579,8 @@ static mco_GhmCode RunGhmTree(const mco_TableIndex &index, const mco_PreparedSta
 
     Size node_idx = 0;
     for (Size i = 0;; i++) {
-        RG_ASSERT(i < index.ghm_nodes.len); // Infinite loops
-        RG_ASSERT(node_idx < index.ghm_nodes.len);
+        K_ASSERT(i < index.ghm_nodes.len); // Infinite loops
+        K_ASSERT(node_idx < index.ghm_nodes.len);
 
         const mco_GhmDecisionNode &ghm_node = index.ghm_nodes[node_idx];
 
@@ -1606,20 +1606,20 @@ static mco_GhmCode RunGhmTree(const mco_TableIndex &index, const mco_PreparedSta
 
 int mco_GetMinimalDurationForSeverity(int severity)
 {
-    RG_ASSERT(severity >= 0 && severity < 4);
+    K_ASSERT(severity >= 0 && severity < 4);
     return severity ? (severity + 2) : 0;
 }
 
 int mco_LimitSeverity(int severity, int duration)
 {
-    RG_ASSERT(severity >= 0 && severity < 4);
+    K_ASSERT(severity >= 0 && severity < 4);
     return duration >= 3 ? std::min(duration - 2, severity) : 0;
 }
 
 bool mco_TestGhmRootExclusion(const mco_DiagnosisInfo &cma_diag_info,
                               const mco_GhmRootInfo &ghm_root_info)
 {
-    RG_ASSERT(ghm_root_info.cma_exclusion_mask.offset < RG_SIZE(mco_DiagnosisInfo::raw));
+    K_ASSERT(ghm_root_info.cma_exclusion_mask.offset < K_SIZE(mco_DiagnosisInfo::raw));
     return (cma_diag_info.raw[ghm_root_info.cma_exclusion_mask.offset] &
             ghm_root_info.cma_exclusion_mask.value);
 }
@@ -1628,12 +1628,12 @@ bool mco_TestDiagnosisExclusion(const mco_TableIndex &index,
                                 const mco_DiagnosisInfo &cma_diag_info,
                                 const mco_DiagnosisInfo &main_diag_info)
 {
-    RG_ASSERT(cma_diag_info.exclusion_set_idx < index.exclusions.len);
+    K_ASSERT(cma_diag_info.exclusion_set_idx < index.exclusions.len);
     const mco_ExclusionInfo *excl = &index.exclusions[cma_diag_info.exclusion_set_idx];
     if (!excl) [[unlikely]]
         return false;
 
-    RG_ASSERT(main_diag_info.cma_exclusion_mask.offset < RG_SIZE(excl->raw));
+    K_ASSERT(main_diag_info.cma_exclusion_mask.offset < K_SIZE(excl->raw));
     return (excl->raw[main_diag_info.cma_exclusion_mask.offset] &
             main_diag_info.cma_exclusion_mask.value);
 }
@@ -1681,8 +1681,8 @@ static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_Prepare
         int severity = ghm.parts.mode - 'A';
 
         if (ghm_root_info.childbirth_severity_list) {
-            RG_ASSERT(ghm_root_info.childbirth_severity_list > 0 &&
-                      ghm_root_info.childbirth_severity_list <= RG_SIZE(index.cma_cells));
+            K_ASSERT(ghm_root_info.childbirth_severity_list > 0 &&
+                      ghm_root_info.childbirth_severity_list <= K_SIZE(index.cma_cells));
             Span<const mco_ValueRangeCell<2>> cma_cells =
                 index.cma_cells[ghm_root_info.childbirth_severity_list - 1];
             for (const mco_ValueRangeCell<2> &cell: cma_cells) {
@@ -2285,7 +2285,7 @@ static Size RunClassifier(const mco_TableSet &table_set,
             result.ghm = mco_PickGhm(*prepared_set.index, prepared_set.prep, prepared_set.mono_preps,
                                      flags, &errors, &result.ghm_for_ghs);
         }
-        RG_ASSERT(result.ghm.IsValid());
+        K_ASSERT(result.ghm.IsValid());
 
         // Classify GHS
         result.ghs = mco_PickGhs(*prepared_set.index, authorization_set, sector,
@@ -2336,7 +2336,7 @@ static Size RunClassifier(const mco_TableSet &table_set,
                                                            sector, mono_prep, mono_prep, mono_result->ghm,
                                                            mono_flags, &mono_errors, &mono_result->ghs_duration);
                         } else {
-                            RG_DEFER_C(prev_stay = mono_prep.stay) { mono_prep.stay = prev_stay; };
+                            K_DEFER_C(prev_stay = mono_prep.stay) { mono_prep.stay = prev_stay; };
                             mco_Stay fixed_mono_stay = FixMonoStayForClassifier(*mono_prep.stay);
                             mono_prep.stay = &fixed_mono_stay;
 

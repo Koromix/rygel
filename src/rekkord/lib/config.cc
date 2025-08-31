@@ -17,7 +17,7 @@
 #include "config.hh"
 #include "vendor/lz4/lib/lz4hc.h"
 
-namespace RG {
+namespace K {
 
 bool rk_Config::Complete(unsigned int flags)
 {
@@ -50,7 +50,7 @@ bool rk_Config::Complete(unsigned int flags)
         case rk_DiskType::SFTP: return ssh.Complete();
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 bool rk_Config::Validate(unsigned int flags) const
@@ -205,7 +205,7 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
 
     IniParser ini(st);
     ini.PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {

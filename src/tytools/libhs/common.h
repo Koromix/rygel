@@ -92,6 +92,8 @@ typedef long ssize_t;
     #define strncasecmp _strnicmp
 #endif
 
+#define _HS_STRINGIFY_(a) #a
+#define _HS_STRINGIFY(a) _HS_STRINGIFY_(a)
 #define _HS_CONCAT_HELPER(a, b) a ## b
 #define _HS_CONCAT(a, b) _HS_CONCAT_HELPER(a, b)
 #define _HS_UNIQUE_ID(prefix) _HS_CONCAT(prefix, __LINE__)

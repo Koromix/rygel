@@ -19,7 +19,7 @@
 #include "config.hh"
 #include "src/core/sqlite/sqlite.hh"
 
-namespace RG {
+namespace K {
 
 extern Config config;
 extern sq_Database db;

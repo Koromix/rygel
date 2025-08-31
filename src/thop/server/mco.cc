@@ -20,7 +20,7 @@
 #include "thop.hh"
 #include "user.hh"
 
-namespace RG {
+namespace K {
 
 mco_TableSet mco_table_set;
 McoCacheSet mco_cache_set;
@@ -302,7 +302,7 @@ static Span<const mco_Result *> GetIndexRange(Span<const mco_Result *> index,
 
 bool McoResultProvider::Run(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    RG_ASSERT(min_date.IsValid() && max_date.IsValid());
+    K_ASSERT(min_date.IsValid() && max_date.IsValid());
 
     if (filter) {
         return RunFilter(func);
@@ -315,7 +315,7 @@ bool McoResultProvider::Run(FunctionRef<void(Span<const mco_Result>, Span<const 
 
 bool McoResultProvider::RunFilter(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    RG_ASSERT(filter);
+    K_ASSERT(filter);
 
     const Size split_size = 8192;
 
@@ -378,7 +378,7 @@ bool McoResultProvider::RunFilter(FunctionRef<void(Span<const mco_Result>, Span<
                     if (result.ghm.Root() == ghm_root) {
                         results_buf[j] = result;
                         MemMove(&mono_results_buf[k], &mono_results_buf[m],
-                                    result.stays.len * RG_SIZE(mco_Result));
+                                    result.stays.len * K_SIZE(mco_Result));
 
                         j++;
                         k += result.stays.len;
@@ -401,7 +401,7 @@ bool McoResultProvider::RunFilter(FunctionRef<void(Span<const mco_Result>, Span<
 
 bool McoResultProvider::RunIndex(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    RG_ASSERT(ghm_root.IsValid());
+    K_ASSERT(ghm_root.IsValid());
 
     const Size split_size = 8192;
 
@@ -433,7 +433,7 @@ bool McoResultProvider::RunIndex(FunctionRef<void(Span<const mco_Result>, Span<c
 
 bool McoResultProvider::RunDirect(FunctionRef<void(Span<const mco_Result>, Span<const mco_Result>)> func)
 {
-    RG_ASSERT(!ghm_root.IsValid());
+    K_ASSERT(!ghm_root.IsValid());
 
     const Size split_size = 65536;
 

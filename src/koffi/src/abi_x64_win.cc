@@ -29,7 +29,7 @@
 
 #include <napi.h>
 
-namespace RG {
+namespace K {
 
 struct BackRegisters {
     uint64_t rax;
@@ -99,12 +99,12 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
     // Push arguments
     for (Size i = 0; i < func->parameters.len; i++) {
         const ParameterInfo &param = func->parameters[i];
-        RG_ASSERT(param.directions >= 1 && param.directions <= 3);
+        K_ASSERT(param.directions >= 1 && param.directions <= 3);
 
         Napi::Value value = info[param.offset];
 
         switch (param.type->primitive) {
-            case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
                 if (!value.IsBoolean()) [[unlikely]] {
@@ -177,7 +177,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 if (!PushObject(obj, param.type, ptr))
                     return false;
             } break;
-            case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
                 if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
@@ -206,7 +206,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 *(void **)(args_ptr++) = ptr;
             } break;
 
-            case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
         }
     }
 
@@ -223,7 +223,7 @@ void CallData::Execute(const FunctionInfo *func, void *native)
     TEB *teb = GetTEB();
 
     // Restore previous stack limits at the end
-    RG_DEFER_C(exception_list = teb->ExceptionList,
+    K_DEFER_C(exception_list = teb->ExceptionList,
                base = teb->StackBase,
                limit = teb->StackLimit,
                dealloc = teb->DeallocationStack,
@@ -280,11 +280,11 @@ void CallData::Execute(const FunctionInfo *func, void *native)
         case PrimitiveKind::Record:
         case PrimitiveKind::Union:
         case PrimitiveKind::Callback: { result.u64 = PERFORM_CALL(G); } break;
-        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: { result.f = PERFORM_CALL(F); } break;
         case PrimitiveKind::Float64: { result.d = PERFORM_CALL(D); } break;
 
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
 #undef PERFORM_CALL
@@ -292,7 +292,7 @@ void CallData::Execute(const FunctionInfo *func, void *native)
 
 Napi::Value CallData::Complete(const FunctionInfo *func)
 {
-    RG_DEFER {
+    K_DEFER {
        PopOutArguments();
 
         if (func->ret.type->dispose) {
@@ -339,14 +339,14 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
             Napi::Object obj = DecodeObject(env, ptr, func->ret.type);
             return obj;
         } break;
-        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: return Napi::Number::New(env, (double)result.f);
         case PrimitiveKind::Float64: return Napi::Number::New(env, result.d);
 
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_stack, BackRegisters *out_reg)
@@ -357,7 +357,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
     TEB *teb = GetTEB();
 
     // Restore previous stack limits at the end
-    RG_DEFER_C(base = teb->StackBase,
+    K_DEFER_C(base = teb->StackBase,
                limit = teb->StackLimit,
                dealloc = teb->DeallocationStack) {
         teb->StackBase = base;
@@ -381,7 +381,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
     uint8_t *return_ptr = !proto->ret.regular ? (uint8_t *)gpr_ptr[0] : nullptr;
 
-    RG_DEFER_N(err_guard) { memset(out_reg, 0, RG_SIZE(*out_reg)); };
+    K_DEFER_N(err_guard) { memset(out_reg, 0, K_SIZE(*out_reg)); };
 
     if (trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
@@ -395,10 +395,10 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
     // Convert to JS arguments
     for (Size i = 0, j = !!return_ptr; i < proto->parameters.len; i++, j++) {
         const ParameterInfo &param = proto->parameters[i];
-        RG_ASSERT(param.directions >= 1 && param.directions <= 3);
+        K_ASSERT(param.directions >= 1 && param.directions <= 3);
 
         switch (param.type->primitive) {
-            case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
                 bool b = *(bool *)(j < 4 ? gpr_ptr + j : args_ptr);
@@ -569,7 +569,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 Napi::Object obj2 = DecodeObject(env, ptr, param.type);
                 arguments.Append(obj2);
             } break;
-            case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
                 float f = *(float *)(j < 4 ? xmm_ptr + j : args_ptr);
                 args_ptr += (j >= 4);
@@ -585,7 +585,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
 
-            case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
         }
     }
 
@@ -710,7 +710,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 PushObject(obj, type, (uint8_t *)&out_reg->rax);
             }
         } break;
-        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: {
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
@@ -752,7 +752,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             out_reg->rax = (uint64_t)ptr;
         } break;
 
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
 #undef RETURN_INTEGER_SWAP

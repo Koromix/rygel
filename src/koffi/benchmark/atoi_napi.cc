@@ -22,7 +22,7 @@
 #include "src/core/base/base.hh"
 #include <napi.h>
 
-namespace RG {
+namespace K {
 
 template <typename T, typename... Args>
 void ThrowError(Napi::Env env, const char *msg, Args... args)
@@ -45,7 +45,7 @@ static Napi::Value RunAtoi(const Napi::CallbackInfo &info)
 
     char str[64];
     {
-        napi_status status = napi_get_value_string_utf8(env, info[0], str, RG_SIZE(str), nullptr);
+        napi_status status = napi_get_value_string_utf8(env, info[0], str, K_SIZE(str), nullptr);
 
         if (status != napi_ok) [[unlikely]] {
             if (status == napi_string_expected) {
@@ -66,7 +66,7 @@ static Napi::Value RunAtoi(const Napi::CallbackInfo &info)
 
 static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 {
-    using namespace RG;
+    using namespace K;
 
     exports.Set("atoi", Napi::Function::New(env, RunAtoi));
 

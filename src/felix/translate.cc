@@ -17,7 +17,7 @@
 #include "src/core/wrap/json.hh"
 #include "translate.hh"
 
-namespace RG {
+namespace K {
 
 // For simplicity, I've replicated the required data structures from core/base directly below.
 // Don't forget to keep them in sync.
@@ -110,7 +110,7 @@ bool LoadTranslations(Span<const char *const> filenames, TranslationSet *out_set
             return false;
         json_Parser parser(&reader, &set.str_alloc);
 
-        Span<const char> basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
+        Span<const char> basename = SplitStrReverseAny(filename, K_PATH_SEPARATORS);
         Span<const char> language = SplitStr(basename, '.');
 
         TranslationFile *file;

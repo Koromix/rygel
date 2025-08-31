@@ -25,7 +25,7 @@
 
 struct curl_slist;
 
-namespace RG {
+namespace K {
 
 struct s3_Config {
     const char *scheme = "https";

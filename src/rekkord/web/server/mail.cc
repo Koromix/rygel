@@ -18,7 +18,7 @@
 #include "web.hh"
 #include "mail.hh"
 
-namespace RG {
+namespace K {
 
 static const int64_t RetryDelay = 10 * 60000;
 static const int64_t MaxErrors = 10;

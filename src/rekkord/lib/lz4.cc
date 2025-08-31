@@ -16,14 +16,14 @@
 #include "src/core/base/base.hh"
 #include "lz4.hh"
 
-namespace RG {
+namespace K {
 
 DecodeLZ4::DecodeLZ4()
 {
     LZ4F_errorCode_t err = LZ4F_createDecompressionContext(&decoder, LZ4F_VERSION);
 
     if (LZ4F_isError(err))
-        RG_BAD_ALLOC();
+        K_BAD_ALLOC();
 }
 
 DecodeLZ4::~DecodeLZ4()
@@ -51,7 +51,7 @@ bool DecodeLZ4::Flush(bool complete, FunctionRef<bool(Span<const uint8_t>)> func
         const uint8_t *next_in = in_buf.ptr;
         uint8_t *next_out = out_buf;
         size_t avail_in = (size_t)in_buf.len;
-        size_t avail_out = (size_t)RG_SIZE(out_buf);
+        size_t avail_out = (size_t)K_SIZE(out_buf);
 
         LZ4F_decompressOptions_t opt = {};
         size_t ret = LZ4F_decompress(decoder, next_out, &avail_out, next_in, &avail_in, &opt);
@@ -81,7 +81,7 @@ EncodeLZ4::EncodeLZ4()
     LZ4F_errorCode_t err = LZ4F_createCompressionContext(&encoder, LZ4F_VERSION);
 
     if (LZ4F_isError(err))
-        RG_BAD_ALLOC();
+        K_BAD_ALLOC();
 }
 
 EncodeLZ4::~EncodeLZ4()
@@ -112,7 +112,7 @@ bool EncodeLZ4::Start(int level)
 
 bool EncodeLZ4::Append(Span<const uint8_t> buf)
 {
-    RG_ASSERT(started);
+    K_ASSERT(started);
 
     size_t needed = LZ4F_compressBound((size_t)buf.len, nullptr);
     dynamic_buf.Grow((Size)needed);
@@ -132,7 +132,7 @@ bool EncodeLZ4::Append(Span<const uint8_t> buf)
 
 bool EncodeLZ4::Flush(bool complete, FunctionRef<Size(Span<const uint8_t>)> func)
 {
-    RG_ASSERT(started);
+    K_ASSERT(started);
 
     if (complete) {
         size_t needed = LZ4F_compressBound(0, nullptr);

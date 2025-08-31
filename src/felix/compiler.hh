@@ -17,7 +17,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 enum class HostPlatform {
     Windows,
@@ -210,7 +210,7 @@ struct Command {
 };
 
 class Compiler {
-    RG_DELETE_COPY(Compiler)
+    K_DELETE_COPY(Compiler)
 
 public:
     HostPlatform platform;

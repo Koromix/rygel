@@ -17,7 +17,7 @@
 #include "drdc.hh"
 #include "config.hh"
 
-namespace RG {
+namespace K {
 
 int RunMcoClassify(Span<const char *> arguments);
 int RunMcoDump(Span<const char *> arguments);
@@ -129,7 +129,7 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
                 break;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
-                    config_filename = Fmt(&temp_alloc, "%1%/drdc.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
+                    config_filename = Fmt(&temp_alloc, "%1%/drdc.ini", TrimStrRight(opt.current_value, K_PATH_SEPARATORS)).ptr;
                 } else {
                     config_filename = opt.current_value;
                 }
@@ -141,7 +141,7 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
 
 #define HANDLE_COMMAND(Cmd, Func, ReadConfig) \
         do { \
-            if (TestStr(cmd, RG_STRINGIFY(Cmd))) { \
+            if (TestStr(cmd, K_STRINGIFY(Cmd))) { \
                 bool load = (ReadConfig) && TestFile(config_filename); \
                  \
                 if (load && !LoadConfig(config_filename, &drdc_config)) \
@@ -167,4 +167,4 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

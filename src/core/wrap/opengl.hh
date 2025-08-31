@@ -1208,10 +1208,10 @@
     #define GL_MAP_UNSYNCHRONIZED_BIT 0x0020
     #define GL_COMPRESSED_RED_RGTC1 0x8DBB
     #define GL_COMPRESSED_SIGNED_RED_RGTC1 0x8DBC
-    #define GL_COMPRESSED_RG_RGTC2 0x8DBD
-    #define GL_COMPRESSED_SIGNED_RG_RGTC2 0x8DBE
+    #define GL_COMPRESSED_K_RGTC2 0x8DBD
+    #define GL_COMPRESSED_SIGNED_K_RGTC2 0x8DBE
     #define GL_RG 0x8227
-    #define GL_RG_INTEGER 0x8228
+    #define GL_K_INTEGER 0x8228
     #define GL_R8 0x8229
     #define GL_R16 0x822A
     #define GL_RG8 0x822B
@@ -2409,7 +2409,7 @@
 // Custom helpers
 // ------------------------------------------------------------------------
 
-namespace RG {
+namespace K {
 
 // Generic
 bool ogl_InitFunctions(void *(*get_proc_address)(const char *name));
@@ -2422,5 +2422,5 @@ GLuint ogl_BuildShader(const char *name, const char *vertex_src, const char *fra
 // ------------------------------------------------------------------------
 
 #define OGL_FUNCTION(Cond, ...) \
-    extern RG_FORCE_EXPAND(OGL_FUNCTION_PTR(__VA_ARGS__))
+    extern K_FORCE_EXPAND(OGL_FUNCTION_PTR(__VA_ARGS__))
 #include "opengl_func.inc"

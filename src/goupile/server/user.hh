@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "src/core/http/http.hh"
 
-namespace RG {
+namespace K {
 
 class InstanceHolder;
 
@@ -78,7 +78,7 @@ struct SessionStamp {
 
     bool HasPermission(UserPermission perm) const { return permissions & (int)perm; };
 
-    RG_HASHTABLE_HANDLER(SessionStamp, unique);
+    K_HASHTABLE_HANDLER(SessionStamp, unique);
 };
 
 enum class SessionConfirm {

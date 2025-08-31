@@ -24,9 +24,9 @@
 
 extern "C" int sqlite3_uuid_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi);
 
-namespace RG {
+namespace K {
 
-RG_INIT(SQLite)
+K_INIT(SQLite)
 {
     sqlite3_auto_extension((void(*)())sqlite3_uuid_init);
 }
@@ -80,7 +80,7 @@ bool sq_Statement::Step()
 void sq_Statement::Reset()
 {
     int ret = sqlite3_reset(stmt);
-    RG_ASSERT(ret == SQLITE_OK);
+    K_ASSERT(ret == SQLITE_OK);
 }
 
 bool sq_Statement::GetSingleValue(int *out_value)
@@ -144,8 +144,8 @@ bool sq_Database::Open(const char *filename, unsigned int flags)
         PRAGMA busy_timeout = 15000;
     )";
 
-    RG_ASSERT(!db);
-    RG_DEFER_N(out_guard) { Close(); };
+    K_ASSERT(!db);
+    K_DEFER_N(out_guard) { Close(); };
 
     if (sqlite3_open_v2(filename, &db, flags, nullptr) != SQLITE_OK) {
         LogError("SQLite failed to open '%1': %2", filename, sqlite3_errmsg(db));
@@ -208,14 +208,14 @@ bool sq_Database::SetUserVersion(int version)
 bool sq_Database::Transaction(FunctionRef<bool()> func)
 {
     bool nested = LockExclusive();
-    RG_DEFER { UnlockExclusive(); };
+    K_DEFER { UnlockExclusive(); };
 
     if (nested) {
         return func();
     } else {
         if (!Run("BEGIN IMMEDIATE TRANSACTION"))
             return false;
-        RG_DEFER_N(rollback_guard) { Run("ROLLBACK"); };
+        K_DEFER_N(rollback_guard) { Run("ROLLBACK"); };
 
         if (!func())
             return false;
@@ -252,7 +252,7 @@ bool sq_Database::Prepare(const char *sql, sq_Statement *out_stmt)
 bool sq_Database::RunMany(const char *sql)
 {
     LockShared();
-    RG_DEFER { UnlockShared(); };
+    K_DEFER { UnlockShared(); };
 
     char *error = nullptr;
     if (sqlite3_exec(db, sql, nullptr, nullptr, &error) != SQLITE_OK) {
@@ -294,7 +294,7 @@ bool sq_Database::BackupTo(const char *filename)
     sqlite3_backup *backup = sqlite3_backup_init(dest_db, "main", db, "main");
     if (!backup)
         return false;
-    RG_DEFER { sqlite3_backup_finish(backup); };
+    K_DEFER { sqlite3_backup_finish(backup); };
 
 restart:
     int ret = sqlite3_backup_step(backup, -1);
@@ -326,8 +326,8 @@ bool sq_Database::Checkpoint(bool restart)
 bool sq_Database::CheckpointDirect()
 {
     bool nested = LockExclusive();
-    RG_ASSERT(!nested);
-    RG_DEFER { UnlockExclusive(); };
+    K_ASSERT(!nested);
+    K_DEFER { UnlockExclusive(); };
 
     int ret = sqlite3_wal_checkpoint_v2(db, nullptr, SQLITE_CHECKPOINT_FULL, nullptr, nullptr);
     if (ret != SQLITE_OK) {
@@ -362,8 +362,8 @@ bool sq_Database::LockExclusive()
         Wait(&lock, false);
     }
 
-    RG_ASSERT(!running_exclusive);
-    RG_ASSERT(!running_shared);
+    K_ASSERT(!running_exclusive);
+    K_ASSERT(!running_shared);
 
     running_exclusive = 1;
     running_exclusive_thread = std::this_thread::get_id();
@@ -396,7 +396,7 @@ void sq_Database::LockShared()
         Wait(&lock, true);
     }
 
-    RG_ASSERT(!running_exclusive);
+    K_ASSERT(!running_exclusive);
 
     running_shared++;
 }
@@ -438,7 +438,7 @@ inline void sq_Database::WakeUpWaiters()
     waiter->run = true;
 
     if (waiter->shared) {
-        RG_ASSERT(waiter != &wait_root);
+        K_ASSERT(waiter != &wait_root);
 
         waiter = waiter->next;
 

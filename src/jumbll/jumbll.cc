@@ -22,7 +22,7 @@
     #include <io.h>
 #endif
 
-namespace RG {
+namespace K {
 
 static const int SchemaVersion = 9;
 
@@ -119,9 +119,9 @@ static const char *ReadUUID(const char *filename, Allocator *alloc)
 
 bool BackupSet::Open(const char *db_filename, bool create)
 {
-    RG_ASSERT(!db.IsValid());
+    K_ASSERT(!db.IsValid());
 
-    RG_DEFER_N(err_guard) { Close(); };
+    K_DEFER_N(err_guard) { Close(); };
 
     int flags = SQLITE_OPEN_READWRITE | (create ? SQLITE_OPEN_CREATE : 0);
     int version;
@@ -533,7 +533,7 @@ class DistributeContext {
         int64_t used;
         int64_t total;
 
-        RG_HASHTABLE_HANDLER(UsageInfo, id);
+        K_HASHTABLE_HANDLER(UsageInfo, id);
     };
 
     BackupSet *set;
@@ -703,16 +703,16 @@ static const char *BuildDiskPath(const char *src_filename, const char *disk_path
 #if defined(_WIN32)
     if (IsAsciiAlpha(src_filename[0]) && src_filename[1] == ':') {
         char drive = LowerAscii(src_filename[0]);
-        const char *remain = TrimStrLeft(src_filename + 2, RG_PATH_SEPARATORS).ptr;
+        const char *remain = TrimStrLeft(src_filename + 2, K_PATH_SEPARATORS).ptr;
 
         dest_filename = Fmt(alloc, "%1%2/%3", disk_path, drive, remain).ptr;
     } else {
-        const char *remain = TrimStrLeft(src_filename, RG_PATH_SEPARATORS).ptr;
+        const char *remain = TrimStrLeft(src_filename, K_PATH_SEPARATORS).ptr;
         dest_filename = Fmt(alloc, "%1%2", disk_path, remain).ptr;
     }
 #else
     {
-        const char *remain = TrimStrLeft(src_filename, RG_PATH_SEPARATORS).ptr;
+        const char *remain = TrimStrLeft(src_filename, K_PATH_SEPARATORS).ptr;
         dest_filename = Fmt(alloc, "%1%2", disk_path, remain).ptr;
     }
 #endif
@@ -773,7 +773,7 @@ bool DistributeContext::BackupNew(const DiskData &disk, const char *disk_path, b
 
     Span<uint8_t> buf1 = AllocateSpan<uint8_t>(&temp_alloc, Mebibytes(4));
     Span<uint8_t> buf2 = AllocateSpan<uint8_t>(&temp_alloc, Mebibytes(4));
-    RG_DEFER {
+    K_DEFER {
         ReleaseSpan(&temp_alloc, buf1);
         ReleaseSpan(&temp_alloc, buf2);
     };
@@ -797,7 +797,7 @@ bool DistributeContext::BackupNew(const DiskData &disk, const char *disk_path, b
                     if (checksum) {
                         int src_fd = OpenFile(src_filename, (int)OpenFlag::Read);
                         int dest_fd = OpenFile(dest_filename, (int)OpenFlag::Read);
-                        RG_DEFER {
+                        K_DEFER {
                             CloseDescriptor(src_fd);
                             CloseDescriptor(dest_fd);
                         };
@@ -883,7 +883,7 @@ bool DistributeContext::DeleteExtra(const DiskData &disk, const char *dest_dir, 
 #if defined(_WIN32)
                 if (origin[0] == '/' && IsAsciiAlpha(origin[1]) && origin[2] == '/') {
                     char drive = UpperAscii(origin[1]);
-                    Span<const char> remain = TrimStrLeft(origin + 2, RG_PATH_SEPARATORS);
+                    Span<const char> remain = TrimStrLeft(origin + 2, K_PATH_SEPARATORS);
 
                     origin = Fmt(&temp_alloc, "%1:/%2", drive, remain).ptr;
                 }
@@ -1116,7 +1116,7 @@ Options:
                 } else if (TestStr(status, "removed")) {
                     PrintLn("  %!R..(-)%!0 %!..+%1%!0 %!D..(-%2 for %3)%!0", filename, FmtDiskSize(size), disk->name);
                 } else {
-                    RG_UNREACHABLE();
+                    K_UNREACHABLE();
                 }
             } while (stmt.Step());
         } else {
@@ -1134,7 +1134,7 @@ Options:
 
 static bool CopyFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size, int64_t mtime)
 {
-    Span<const char> basename = SplitStrReverseAny(src_filename, RG_PATH_SEPARATORS);
+    Span<const char> basename = SplitStrReverseAny(src_filename, K_PATH_SEPARATORS);
     ProgressHandle progress(basename);
 
     if (!SpliceFile(src_fd, src_filename, dest_fd, dest_filename, size, progress))
@@ -1176,7 +1176,7 @@ static bool PerformCopies(BackupSet *set, const DiskData &disk, const char *disk
             valid = false;
             continue;
         }
-        RG_DEFER { CloseDescriptor(src_fd); };
+        K_DEFER { CloseDescriptor(src_fd); };
 
         // Check file information consistency
         {
@@ -1206,7 +1206,7 @@ static bool PerformCopies(BackupSet *set, const DiskData &disk, const char *disk
             valid = false;
             continue;
         }
-        RG_DEFER { CloseDescriptor(dest_fd); };
+        K_DEFER { CloseDescriptor(dest_fd); };
 
         LogInfo("Copy '%1' to %2 (%3)", src_filename, disk.name, disk.uuid);
 
@@ -1682,7 +1682,7 @@ Options:
     disk_path = NormalizePath(disk_path, &temp_alloc).ptr;
 
     if (!name) {
-        Span<const char> basename = SplitStrReverseAny(disk_path, RG_PATH_SEPARATORS);
+        Span<const char> basename = SplitStrReverseAny(disk_path, K_PATH_SEPARATORS);
 
         if (!basename.len) {
             LogError("Missing disk name (use -n option)");
@@ -2029,7 +2029,7 @@ By default, the first of the following config files will be used:
 
 #define HANDLE_COMMAND(Cmd, Func, ReadConfig) \
         do { \
-            if (TestStr(cmd, RG_STRINGIFY(Cmd))) { \
+            if (TestStr(cmd, K_STRINGIFY(Cmd))) { \
                 bool load = (ReadConfig) && config_filename && TestFile(config_filename); \
                  \
                 if (load) { \
@@ -2061,4 +2061,4 @@ By default, the first of the following config files will be used:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

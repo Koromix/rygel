@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "rekkord.hh"
 
-namespace RG {
+namespace K {
 
 struct SaveRequest {
     const char *channel = nullptr;
@@ -25,7 +25,7 @@ struct SaveRequest {
 
 static bool LoadFromFile(const char *filename, Allocator *alloc, HeapArray<SaveRequest> *out_saves)
 {
-    RG_DEFER_NC(out_guard, len = out_saves->len) { out_saves->RemoveFrom(len); };
+    K_DEFER_NC(out_guard, len = out_saves->len) { out_saves->RemoveFrom(len); };
 
     StreamReader st(filename);
 
@@ -37,7 +37,7 @@ static bool LoadFromFile(const char *filename, Allocator *alloc, HeapArray<SaveR
 
     IniParser ini(&st);
     ini.PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {
@@ -180,7 +180,7 @@ Available metadata save options:
             return 1;
         }
     } else {
-        RG_ASSERT(saves.len == 1);
+        K_ASSERT(saves.len == 1);
 
         const SaveRequest &save = saves[0];
 

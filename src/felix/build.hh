@@ -20,7 +20,7 @@
 #include "locate.hh"
 #include "target.hh"
 
-namespace RG {
+namespace K {
 
 struct BuildSettings {
     // Mandatory
@@ -36,7 +36,7 @@ struct BuildSettings {
 };
 
 class Builder {
-    RG_DELETE_COPY(Builder)
+    K_DELETE_COPY(Builder)
 
     struct Node {
         const char *text;
@@ -60,7 +60,7 @@ class Builder {
         Size deps_offset;
         Size deps_len;
 
-        RG_HASHTABLE_HANDLER(CacheEntry, dest_filename);
+        K_HASHTABLE_HANDLER(CacheEntry, dest_filename);
     };
 
     struct DependencyEntry {

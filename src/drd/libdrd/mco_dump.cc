@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "mco_dump.hh"
 
-namespace RG {
+namespace K {
 
 struct BuildReadableTreeContext {
     Span<const mco_GhmDecisionNode> ghm_nodes;
@@ -31,7 +31,7 @@ static bool ProcessGhmNode(BuildReadableTreeContext &ctx, Size node_idx);
 static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionNode &ghm_node,
                            mco_ReadableGhmNode *out_node)
 {
-    RG_ASSERT(ghm_node.function != 12);
+    K_ASSERT(ghm_node.function != 12);
 
     out_node->key = Fmt(ctx.str_alloc, "%1%2%3",
                         FmtHex(ghm_node.function).Pad0(-2),
@@ -42,7 +42,7 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
     out_node->function = ghm_node.function;
     out_node->children_idx = ghm_node.u.test.children_idx;
     out_node->children_count = ghm_node.u.test.children_count;
-    RG_ASSERT(out_node->children_idx <= ctx.ghm_nodes.len - out_node->children_count);
+    K_ASSERT(out_node->children_idx <= ctx.ghm_nodes.len - out_node->children_count);
 
     switch (ghm_node.function) {
         case 0:
@@ -285,8 +285,8 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
 static bool ProcessGhmNode(BuildReadableTreeContext &ctx, Size node_idx)
 {
     for (Size i = 0;; i++) {
-        RG_ASSERT(i < ctx.ghm_nodes.len); // Infinite loops
-        RG_ASSERT(node_idx < ctx.ghm_nodes.len);
+        K_ASSERT(i < ctx.ghm_nodes.len); // Infinite loops
+        K_ASSERT(node_idx < ctx.ghm_nodes.len);
 
         const mco_GhmDecisionNode &ghm_node = ctx.ghm_nodes[node_idx];
         mco_ReadableGhmNode *out_node = &ctx.out_nodes[node_idx];
@@ -313,7 +313,7 @@ static bool ProcessGhmNode(BuildReadableTreeContext &ctx, Size node_idx)
         }
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 // XXX: Add classifier_tree export to drdR
@@ -328,7 +328,7 @@ bool mco_BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes, Allocat
     ctx.ghm_nodes = ghm_nodes;
     out_nodes->Grow(ghm_nodes.len);
     ctx.out_nodes = MakeSpan(out_nodes->end(), ghm_nodes.len);
-    MemSet(ctx.out_nodes.ptr, 0, ctx.out_nodes.len * RG_SIZE(*ctx.out_nodes.ptr));
+    MemSet(ctx.out_nodes.ptr, 0, ctx.out_nodes.len * K_SIZE(*ctx.out_nodes.ptr));
     ctx.str_alloc = str_alloc;
 
     if (!ProcessGhmNode(ctx, 0))
@@ -342,8 +342,8 @@ static void DumpReadableNodes(Span<const mco_ReadableGhmNode> readable_nodes,
                               Size node_idx, int depth, StreamWriter *out_st)
 {
     for (Size i = 0;; i++) {
-        RG_ASSERT(i < readable_nodes.len); // Infinite loops
-        RG_ASSERT(node_idx < readable_nodes.len);
+        K_ASSERT(i < readable_nodes.len); // Infinite loops
+        K_ASSERT(node_idx < readable_nodes.len);
 
         const mco_ReadableGhmNode &readable_node = readable_nodes[node_idx];
 
@@ -393,13 +393,13 @@ void mco_DumpDiagnosisTable(Span<const mco_DiagnosisInfo> diagnoses,
         PrintLn(out_st, "        Category: %1", diag_info.cmd);
         PrintLn(out_st, "        Severity: %1", diag_info.severity + 1);
         Print(out_st, "        Mask:");
-        for (Size i = 0; i < RG_LEN(diag_info.raw); i++) {
+        for (Size i = 0; i < K_LEN(diag_info.raw); i++) {
             Print(out_st, " 0b%1", FmtBin(diag_info.raw[i]).Pad0(-8));
         }
         PrintLn(out_st);
 
         if (exclusions.len) {
-            RG_ASSERT(diag_info.exclusion_set_idx <= exclusions.len);
+            K_ASSERT(diag_info.exclusion_set_idx <= exclusions.len);
             const mco_ExclusionInfo *excl_info = &exclusions[diag_info.exclusion_set_idx];
 
             Print(out_st, "        Exclusions (list %1):", diag_info.exclusion_set_idx);
@@ -424,7 +424,7 @@ void mco_DumpProcedureTable(Span<const mco_ProcedureInfo> procedures, StreamWrit
         PrintLn(out_st, "        Activities: %1", proc.ActivitiesToStr(buf));
         PrintLn(out_st, "        Extensions: %1", proc.ExtensionsToStr(buf));
         Print(out_st, "        Mask: ");
-        for (Size i = 0; i < RG_LEN(proc.bytes); i++) {
+        for (Size i = 0; i < K_LEN(proc.bytes); i++) {
             Print(out_st, " 0b%1", FmtBin(proc.bytes[i]).Pad0(-8));
         }
         PrintLn(out_st);
@@ -581,7 +581,7 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set, StreamWriter *out_st
                                      index.valid ? "" : " (incomplete)");
         // We don't really need to loop here, but we want the switch to get
         // warnings when we introduce new table types.
-        for (Size i = 0; i < RG_LEN(index.tables); i++) {
+        for (Size i = 0; i < K_LEN(index.tables); i++) {
             if (!index.tables[i])
                 continue;
 
@@ -613,7 +613,7 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set, StreamWriter *out_st
                     mco_DumpSeverityTable(index.gnn_cells, out_st);
                     PrintLn(out_st);
 
-                    for (Size j = 0; j < RG_LEN(index.cma_cells); j++) {
+                    for (Size j = 0; j < K_LEN(index.cma_cells); j++) {
                         PrintLn(out_st, "    CMA Table %1:", j + 1);
                         mco_DumpSeverityTable(index.cma_cells[j], out_st);
                         PrintLn(out_st);
@@ -629,7 +629,7 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set, StreamWriter *out_st
                     mco_DumpAuthorizationTable(index.authorizations, out_st);
                 } break;
                 case mco_TableType::SrcPairTable: {
-                    for (Size j = 0; j < RG_LEN(index.src_pairs); j++) {
+                    for (Size j = 0; j < K_LEN(index.src_pairs); j++) {
                         PrintLn(out_st, "    Supplement Pairs List %1:", j + 1);
                         DumpSupplementPairTable(index.src_pairs[j], out_st);
                         PrintLn(out_st);

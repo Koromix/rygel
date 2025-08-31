@@ -52,7 +52,7 @@ struct cap_user_data {
     uint32_t inheritable;
 };
 
-namespace RG {
+namespace K {
 
 bool sb_IsSandboxSupported()
 {
@@ -83,7 +83,7 @@ void sb_SandboxBuilder::MaskFiles(Span<const char *const> filenames)
 {
     masked_filenames.Grow(filenames.len);
     for (const char *filename: filenames) {
-        RG_ASSERT(filename[0] == '/');
+        K_ASSERT(filename[0] == '/');
 
         const char *copy = DuplicateString(filename, &str_alloc).ptr;
         masked_filenames.Append(copy);
@@ -92,13 +92,13 @@ void sb_SandboxBuilder::MaskFiles(Span<const char *const> filenames)
 
 void sb_SandboxBuilder::MountPath(const char *src, const char *dest, bool readonly)
 {
-    RG_ASSERT(src[0] == '/');
-    RG_ASSERT(dest[0] == '/' && dest[1]);
+    K_ASSERT(src[0] == '/');
+    K_ASSERT(dest[0] == '/' && dest[1]);
 
     BindMount bind = {};
 
-    bind.src = DuplicateString(TrimStrRight(src, RG_PATH_SEPARATORS), &str_alloc).ptr;
-    bind.dest = DuplicateString(TrimStrRight(dest, RG_PATH_SEPARATORS), &str_alloc).ptr;
+    bind.src = DuplicateString(TrimStrRight(src, K_PATH_SEPARATORS), &str_alloc).ptr;
+    bind.dest = DuplicateString(TrimStrRight(dest, K_PATH_SEPARATORS), &str_alloc).ptr;
     bind.readonly = readonly;
 
     mounts.Append(bind);
@@ -122,26 +122,26 @@ static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
         char buf[512];
         Fmt(buf, "/proc/%1/uid_map", pid);
 
-        uid_fd = RG_RESTART_EINTR(open(buf, O_CLOEXEC | O_WRONLY), < 0);
+        uid_fd = K_RESTART_EINTR(open(buf, O_CLOEXEC | O_WRONLY), < 0);
         if (uid_fd < 0) {
             LogError("Failed to open '%1' for writing: %2", buf, strerror(errno));
             return false;
         }
     }
-    RG_DEFER { close(uid_fd); };
+    K_DEFER { close(uid_fd); };
 
     int gid_fd;
     {
         char buf[512];
         Fmt(buf, "/proc/%1/gid_map", pid);
 
-        gid_fd = RG_RESTART_EINTR(open(buf, O_CLOEXEC | O_WRONLY), < 0);
+        gid_fd = K_RESTART_EINTR(open(buf, O_CLOEXEC | O_WRONLY), < 0);
         if (gid_fd < 0) {
             LogError("Failed to open '%1' for writing: %2", buf, strerror(errno));
             return false;
         }
     }
-    RG_DEFER { close(gid_fd); };
+    K_DEFER { close(gid_fd); };
 
     // More random crap Linux wants us to do, or writing GID map fails in unprivileged mode
     {
@@ -157,7 +157,7 @@ static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
         LocalArray<char, 512> buf;
 
         buf.len = Fmt(buf.data, "%1 %1 1\n", uid).len;
-        if (RG_RESTART_EINTR(write(uid_fd, buf.data, buf.len), < 0) < 0) {
+        if (K_RESTART_EINTR(write(uid_fd, buf.data, buf.len), < 0) < 0) {
             LogError("Failed to write UID map: %1", strerror(errno));
             return false;
         }
@@ -168,7 +168,7 @@ static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
         LocalArray<char, 512> buf;
 
         buf.len = Fmt(buf.data, "%1 %1 1\n", gid).len;
-        if (RG_RESTART_EINTR(write(gid_fd, buf.data, buf.len), < 0) < 0) {
+        if (K_RESTART_EINTR(write(gid_fd, buf.data, buf.len), < 0) < 0) {
             LogError("Failed to write GID map: %1", strerror(errno));
             return false;
         }
@@ -202,8 +202,8 @@ bool sb_SandboxBuilder::Apply()
     if (!uid) {
         int random_id = GetRandomInt(58000, 60000);
 
-        static_assert(RG_SIZE(uid_t) >= RG_SIZE(int));
-        static_assert(RG_SIZE(gid_t) >= RG_SIZE(int));
+        static_assert(K_SIZE(uid_t) >= K_SIZE(int));
+        static_assert(K_SIZE(gid_t) >= K_SIZE(int));
 
         uid = random_id;
         gid = random_id;
@@ -253,7 +253,7 @@ bool sb_SandboxBuilder::Apply()
                 LogError("Failed to create eventfd: %1", strerror(errno));
                 return false;
             }
-            RG_DEFER { close(efd); };
+            K_DEFER { close(efd); };
 
             pid_t child_pid = fork();
             if (child_pid < 0) {
@@ -262,7 +262,7 @@ bool sb_SandboxBuilder::Apply()
             }
 
             if (child_pid) {
-                RG_DEFER_N(kill_guard) {
+                K_DEFER_N(kill_guard) {
                     kill(child_pid, SIGKILL);
                     waitpid(child_pid, nullptr, 0);
                 };
@@ -274,7 +274,7 @@ bool sb_SandboxBuilder::Apply()
                 int64_t dummy = 1;
                 if (!InitNamespaces(isolation_flags))
                     return false;
-                if (RG_RESTART_EINTR(write(efd, &dummy, RG_SIZE(dummy)), < 0) < 0) {
+                if (K_RESTART_EINTR(write(efd, &dummy, K_SIZE(dummy)), < 0) < 0) {
                     LogError("Failed to write to eventfd: %1", strerror(errno));
                     return false;
                 }
@@ -302,7 +302,7 @@ bool sb_SandboxBuilder::Apply()
                 }
             } else {
                 int64_t dummy;
-                if (RG_RESTART_EINTR(read(efd, &dummy, RG_SIZE(dummy)), < 0) < 0) {
+                if (K_RESTART_EINTR(read(efd, &dummy, K_SIZE(dummy)), < 0) < 0) {
                     LogError("Failed to read eventfd: %1", strerror(errno));
                     _exit(1);
                 }
@@ -409,19 +409,19 @@ bool sb_SandboxBuilder::Apply()
 
             // Do the silly pivot_root dance
             {
-                int old_root_fd = RG_RESTART_EINTR(open("/", O_DIRECTORY | O_PATH), < 0);
+                int old_root_fd = K_RESTART_EINTR(open("/", O_DIRECTORY | O_PATH), < 0);
                 if (old_root_fd < 0) {
                     LogError("Failed to open directory '/': %1", strerror(errno));
                     return false;
                 }
-                RG_DEFER { close(old_root_fd); };
+                K_DEFER { close(old_root_fd); };
 
-                int new_root_fd = RG_RESTART_EINTR(open(fs_root, O_DIRECTORY | O_PATH), < 0);
+                int new_root_fd = K_RESTART_EINTR(open(fs_root, O_DIRECTORY | O_PATH), < 0);
                 if (new_root_fd < 0) {
                     LogError("Failed to open directory '%1': %2", fs_root, strerror(errno));
                     return false;
                 }
-                RG_DEFER { close(new_root_fd); };
+                K_DEFER { close(new_root_fd); };
 
                 if (fchdir(new_root_fd) < 0) {
                     LogError("Failed to change current directory to '%1': %2", fs_root, strerror(errno));
@@ -489,7 +489,7 @@ bool sb_SandboxBuilder::Apply()
 
         cap_user_header hdr = {_LINUX_CAPABILITY_VERSION_3, 0};
         cap_user_data data[2];
-        MemSet(data, 0, RG_SIZE(data));
+        MemSet(data, 0, K_SIZE(data));
 
         if (syscall(__NR_capset, &hdr, data) < 0) {
             LogError("Failed to drop capabilities: %1", strerror(errno));
@@ -549,7 +549,7 @@ bool sb_SandboxBuilder::Apply()
                 case sb_FilterAction::Trap: { seccomp_action = SCMP_ACT_TRAP; } break;
                 case sb_FilterAction::Kill: { seccomp_action = kill_code; } break;
             }
-            RG_ASSERT(seccomp_action != UINT32_MAX);
+            K_ASSERT(seccomp_action != UINT32_MAX);
 
             return seccomp_action;
         };
@@ -559,7 +559,7 @@ bool sb_SandboxBuilder::Apply()
             LogError("Cannot sandbox syscalls: seccomp_init() failed");
             return false;
         }
-        RG_DEFER { seccomp_release(ctx); };
+        K_DEFER { seccomp_release(ctx); };
 
         for (const sb_FilterItem &item: filter_items) {
             if (item.action != default_action) {
@@ -567,13 +567,13 @@ bool sb_SandboxBuilder::Apply()
 
                 if (TestStr(item.name, "ioctl/tty")) {
                     int syscall = seccomp_syscall_resolve_name("ioctl");
-                    RG_ASSERT(syscall != __NR_SCMP_ERROR);
+                    K_ASSERT(syscall != __NR_SCMP_ERROR);
 
                     ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 1,
                                            SCMP_A1(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFFFFFFF00ul, 0x5400u));
                 } else if (TestStr(item.name, "mmap/anon")) {
                     int syscall = seccomp_syscall_resolve_name("mmap");
-                    RG_ASSERT(syscall != __NR_SCMP_ERROR);
+                    K_ASSERT(syscall != __NR_SCMP_ERROR);
 
                     unsigned int prot_mask = PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC;
                     unsigned int prot_combinations[] = {
@@ -600,7 +600,7 @@ bool sb_SandboxBuilder::Apply()
                     }
                 } else if (TestStr(item.name, "mmap/shared")) {
                     int syscall = seccomp_syscall_resolve_name("mmap");
-                    RG_ASSERT(syscall != __NR_SCMP_ERROR);
+                    K_ASSERT(syscall != __NR_SCMP_ERROR);
 
                     unsigned int mask = PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC;
                     unsigned int combinations[] = {
@@ -619,7 +619,7 @@ bool sb_SandboxBuilder::Apply()
                     }
                 } else if (TestStr(item.name, "mprotect/noexec")) {
                     int syscall = seccomp_syscall_resolve_name("mprotect");
-                    RG_ASSERT(syscall != __NR_SCMP_ERROR);
+                    K_ASSERT(syscall != __NR_SCMP_ERROR);
 
                     unsigned int mask = PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC;
                     unsigned int combinations[] = {
@@ -637,7 +637,7 @@ bool sb_SandboxBuilder::Apply()
                     }
                 } else if (TestStr(item.name, "clone/fork")) {
                     int syscall = seccomp_syscall_resolve_name("clone");
-                    RG_ASSERT(syscall != __NR_SCMP_ERROR);
+                    K_ASSERT(syscall != __NR_SCMP_ERROR);
 
                     unsigned int mask = CLONE_CHILD_SETTID | CLONE_CHILD_CLEARTID | SIGCHLD;
                     unsigned int combinations[] = {

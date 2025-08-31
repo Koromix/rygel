@@ -22,7 +22,7 @@
 #include "src/core/base/base.hh"
 #include "spidermonkey.hh"
 
-namespace RG {
+namespace K {
 
 static JSClass GlobalClass = {
     .name = "Global",
@@ -77,12 +77,12 @@ static void ReportAndClearException(JSContext *ctx)
     const char *filename = report->filename.c_str();
     const char *message = report->message().c_str();
 
-    RG::PushLogFilter([&](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
+    K::PushLogFilter([&](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
         char ctx[1024];
         Fmt(ctx, "%1(%2): ", filename, report->lineno);
         func(level, ctx, msg);
     });
-    RG_DEFER { RG::PopLogFilter(); };
+    K_DEFER { K::PopLogFilter(); };
 
     LogError(("%1"), message);
 }
@@ -143,7 +143,7 @@ std::unique_ptr<js_Instance> js_CreateInstance()
         LogError("Failed to create JS context");
         return nullptr;
     }
-    RG_DEFER_N(err_guard) { JS_DestroyContext(ctx); };
+    K_DEFER_N(err_guard) { JS_DestroyContext(ctx); };
 
     if (!JS::InitSelfHostedCode(ctx)) {
         LogError("Failed to initialize JS self-hosted code");

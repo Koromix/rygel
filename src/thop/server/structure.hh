@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "src/drd/libdrd/libdrd.hh"
 
-namespace RG {
+namespace K {
 
 struct StructureEntity {
     const char *path;
@@ -37,7 +37,7 @@ struct StructureSet {
 };
 
 class StructureSetBuilder {
-    RG_DELETE_COPY(StructureSetBuilder)
+    K_DELETE_COPY(StructureSetBuilder)
 
     StructureSet set;
 

@@ -25,7 +25,7 @@
 #include "vendor/libssh/include/libssh/libssh.h"
 #include "vendor/libssh/include/libssh/sftp.h"
 
-namespace RG {
+namespace K {
 
 struct ssh_Config {
     const char *host = nullptr;

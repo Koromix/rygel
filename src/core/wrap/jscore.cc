@@ -22,7 +22,7 @@
 #include "src/core/base/base.hh"
 #include "jscore.hh"
 
-namespace RG {
+namespace K {
 
 void js_ExposeFunction(JSContextRef ctx, JSObjectRef obj, const char *name, JSObjectCallAsFunctionCallback func)
 {
@@ -34,25 +34,25 @@ void js_ExposeFunction(JSContextRef ctx, JSObjectRef obj, const char *name, JSOb
 
 Span<const char> js_ReadString(JSContextRef, JSStringRef str, Allocator *alloc)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     Size max = JSStringGetMaximumUTF8CStringSize(str);
     Span<char> buf = AllocateSpan<char>(alloc, max);
 
     buf.len = JSStringGetUTF8CString(str, buf.ptr, buf.len) - 1;
-    RG_ASSERT(buf.len >= 0);
+    K_ASSERT(buf.len >= 0);
 
     return buf;
 }
 
 Span<const char> js_ReadString(JSContextRef ctx, JSValueRef value, Allocator *alloc)
 {
-    RG_ASSERT(JSValueIsString(ctx, value));
+    K_ASSERT(JSValueIsString(ctx, value));
 
     JSStringRef str = JSValueToStringCopy(ctx, value, nullptr);
     if (!str)
         return false;
-    RG_DEFER { JSStringRelease(str); };
+    K_DEFER { JSStringRelease(str); };
 
     return js_ReadString(ctx, str, alloc);
 }
@@ -62,14 +62,14 @@ bool js_PrintValue(JSContextRef ctx, JSValueRef value, JSValueRef *ex, StreamWri
     JSStringRef str = JSValueToStringCopy(ctx, value, ex);
     if (!str)
         return false;
-    RG_DEFER { JSStringRelease(str); };
+    K_DEFER { JSStringRelease(str); };
 
     Size max = JSStringGetMaximumUTF8CStringSize(str);
     Span<char> buf = AllocateSpan<char>(nullptr, max);
-    RG_DEFER { ReleaseSpan(nullptr, buf); };
+    K_DEFER { ReleaseSpan(nullptr, buf); };
 
     Size len = JSStringGetUTF8CString(str, buf.ptr, buf.len) - 1;
-    RG_ASSERT(len >= 0);
+    K_ASSERT(len >= 0);
 
     st->Write(buf.Take(0, len));
 

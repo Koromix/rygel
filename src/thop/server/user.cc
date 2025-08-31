@@ -20,12 +20,12 @@
 #include "user.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
 static http_SessionManager<const User> sessions;
 
 class UserSetBuilder {
-    RG_DELETE_COPY(UserSetBuilder)
+    K_DELETE_COPY(UserSetBuilder)
 
     struct UnitRuleSet {
         bool allow_default;
@@ -93,11 +93,11 @@ static bool CheckUserName(Span<const char> name)
 
 bool UserSetBuilder::LoadIni(StreamReader *st)
 {
-    RG_DEFER_NC(out_guard, len = set.users.len) { set.users.RemoveFrom(len); };
+    K_DEFER_NC(out_guard, len = set.users.len) { set.users.RemoveFrom(len); };
 
     IniParser ini(st);
     ini.PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {
@@ -124,7 +124,7 @@ bool UserSetBuilder::LoadIni(StreamReader *st)
                     if (first_property) {
                         Size template_idx = map.FindValue(prop.value.ptr, -1);
                         if (template_idx >= 0) {
-                            MemCpy(user, &set.users[template_idx], RG_SIZE(*user));
+                            MemCpy(user, &set.users[template_idx], K_SIZE(*user));
                             rule_set = rule_sets[template_idx];
                             allow.Append(rule_sets[template_idx].allow);
                             deny.Append(rule_sets[template_idx].deny);
@@ -252,7 +252,7 @@ bool UserSetBuilder::LoadFiles(Span<const char *const> filenames)
 
 void UserSetBuilder::Finish(const StructureSet &structure_set, UserSet *out_set)
 {
-    RG_ASSERT(set.users.len == rule_sets.len);
+    K_ASSERT(set.users.len == rule_sets.len);
 
     for (Size i = 0; i < set.users.len; i++) {
         User &user = set.users[i];

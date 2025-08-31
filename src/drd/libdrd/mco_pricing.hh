@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "mco_classifier.hh"
 
-namespace RG {
+namespace K {
 
 struct mco_Pricing {
     Span<const mco_Stay> stays; // Not valid in totals / summaries
@@ -62,11 +62,11 @@ struct mco_Pricing {
 
     void ApplyCoefficient()
     {
-        RG_ASSERT(!std::isnan(ghs_coefficient));
+        K_ASSERT(!std::isnan(ghs_coefficient));
 
         ghs_cents = (int64_t)(ghs_coefficient * ghs_cents);
         price_cents = (int64_t)(ghs_coefficient * price_cents);
-        for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
+        for (Size i = 0; i < K_LEN(mco_SupplementTypeNames); i++) {
             supplement_cents.values[i] = (int64_t)(ghs_coefficient * supplement_cents.values[i]);
         }
         total_cents = (int64_t)(ghs_coefficient * total_cents);
@@ -74,7 +74,7 @@ struct mco_Pricing {
 
     mco_Pricing WithCoefficient() const
     {
-        RG_ASSERT(!std::isnan(ghs_coefficient));
+        K_ASSERT(!std::isnan(ghs_coefficient));
 
         mco_Pricing pricing_coeff = *this;
         pricing_coeff.ApplyCoefficient();

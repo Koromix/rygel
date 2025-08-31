@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "mco_common.hh"
 
-namespace RG {
+namespace K {
 
 enum class mco_TableType: uint32_t {
     UnknownTable,
@@ -110,13 +110,13 @@ struct mco_DiagnosisInfo {
 
     inline uint8_t GetByte(uint8_t byte_idx) const
     {
-        RG_ASSERT(byte_idx < RG_SIZE(raw));
+        K_ASSERT(byte_idx < K_SIZE(raw));
         return raw[byte_idx];
     }
     inline bool Test(drd_ListMask mask) const { return GetByte((uint8_t)mask.offset) & mask.value; }
     inline bool Test(uint8_t offset, uint8_t value) const { return GetByte(offset) & value; }
 
-    RG_HASHTABLE_HANDLER(mco_DiagnosisInfo, diag);
+    K_HASHTABLE_HANDLER(mco_DiagnosisInfo, diag);
 };
 
 struct mco_ExclusionInfo {
@@ -143,7 +143,7 @@ struct alignas(8) mco_ProcedureInfo {
 
     inline uint8_t GetByte(int16_t byte_idx) const
     {
-        RG_ASSERT(byte_idx >= 0 && byte_idx < RG_SIZE(bytes));
+        K_ASSERT(byte_idx >= 0 && byte_idx < K_SIZE(bytes));
         return bytes[byte_idx];
     }
     inline bool Test(drd_ListMask mask) const { return GetByte(mask.offset) & mask.value; }
@@ -152,7 +152,7 @@ struct alignas(8) mco_ProcedureInfo {
     Span<const char> ActivitiesToStr(Span<char> out_buf) const;
     Span<const char> ExtensionsToStr(Span<char> out_buf) const;
 
-    RG_HASHTABLE_HANDLER(mco_ProcedureInfo, proc);
+    K_HASHTABLE_HANDLER(mco_ProcedureInfo, proc);
 };
 
 struct mco_ProcedureLink {
@@ -173,7 +173,7 @@ struct mco_ValueRangeCell {
 
     bool Test(Size idx, int value) const
     {
-        RG_ASSERT(idx < N);
+        K_ASSERT(idx < N);
         return (value >= limits[idx].min && value < limits[idx].max);
     }
 };
@@ -197,7 +197,7 @@ struct mco_GhmRootInfo {
 
     drd_ListMask cma_exclusion_mask;
 
-    RG_HASHTABLE_HANDLER(mco_GhmRootInfo, ghm_root);
+    K_HASHTABLE_HANDLER(mco_GhmRootInfo, ghm_root);
 };
 
 struct mco_GhmToGhsInfo {
@@ -229,8 +229,8 @@ struct mco_GhmToGhsInfo {
         return ghs[(int)sector];
     }
 
-    RG_HASHTABLE_HANDLER(mco_GhmToGhsInfo, ghm);
-    RG_HASHTABLE_HANDLER_N(GhmRootHandler, mco_GhmToGhsInfo, ghm.Root());
+    K_HASHTABLE_HANDLER(mco_GhmToGhsInfo, ghm);
+    K_HASHTABLE_HANDLER_N(GhmRootHandler, mco_GhmToGhsInfo, ghm.Root());
 };
 
 struct mco_GhsPriceInfo {
@@ -248,7 +248,7 @@ struct mco_GhsPriceInfo {
     int32_t exb_cents;
     uint16_t flags;
 
-    RG_HASHTABLE_HANDLER(mco_GhsPriceInfo, ghs);
+    K_HASHTABLE_HANDLER(mco_GhsPriceInfo, ghs);
 };
 
 enum class mco_AuthorizationScope: int8_t {
@@ -271,14 +271,14 @@ struct mco_AuthorizationInfo {
     } type;
     int8_t function;
 
-    RG_HASHTABLE_HANDLER(mco_AuthorizationInfo, type.value);
+    K_HASHTABLE_HANDLER(mco_AuthorizationInfo, type.value);
 };
 
 struct mco_SrcPair {
     drd_DiagnosisCode diag;
     drd_ProcedureCode proc;
 
-    RG_HASHTABLE_HANDLER(mco_SrcPair, diag);
+    K_HASHTABLE_HANDLER(mco_SrcPair, diag);
 };
 
 LocalDate mco_ConvertDate1980(uint16_t days);
@@ -288,7 +288,7 @@ struct mco_TableIndex {
     LocalDate limit_dates[2];
     bool valid;
 
-    const mco_TableInfo *tables[RG_LEN(mco_TableTypeNames)];
+    const mco_TableInfo *tables[K_LEN(mco_TableTypeNames)];
     uint32_t changed_tables;
 
     Span<const mco_GhmDecisionNode> ghm_nodes;
@@ -377,7 +377,7 @@ struct mco_TableSet {
 };
 
 class mco_TableSetBuilder {
-    RG_DELETE_COPY(mco_TableSetBuilder)
+    K_DELETE_COPY(mco_TableSetBuilder)
 
     struct TableLoadInfo {
         Size table_idx;
@@ -473,7 +473,7 @@ public:
             } break;
         }
 
-        RG_UNREACHABLE();
+        K_UNREACHABLE();
     }
 };
 

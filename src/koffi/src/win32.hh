@@ -26,7 +26,7 @@
 #include <intrin.h>
 #include <napi.h>
 
-namespace RG {
+namespace K {
 
 struct PE_DOS_HEADER {
     uint16_t e_magic;

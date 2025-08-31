@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "target.hh"
 
-namespace RG {
+namespace K {
 
 struct FileSet {
     HeapArray<const char *> directories;
@@ -72,12 +72,12 @@ struct TargetConfig {
 
     int link_priority;
 
-    RG_HASHTABLE_HANDLER(TargetConfig, name);
+    K_HASHTABLE_HANDLER(TargetConfig, name);
 };
 
 static void AppendNormalizedPath(Span<const char> path, Allocator *alloc, HeapArray<const char *> *out_paths)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     path = NormalizePath(path, alloc);
     out_paths->Append(path.ptr);
@@ -85,7 +85,7 @@ static void AppendNormalizedPath(Span<const char> path, Allocator *alloc, HeapAr
 
 static void AppendListValues(Span<const char> str, Allocator *alloc, HeapArray<const char *> *out_list)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     HeapArray<char> buf(alloc);
 
@@ -131,7 +131,7 @@ static void AppendListValues(Span<const char> str, Allocator *alloc, HeapArray<c
 static bool EnumerateSortedFiles(const char *directory, const char *filter, bool recursive,
                                  Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     Size start_idx = out_filenames->len;
 
@@ -149,9 +149,9 @@ static bool EnumerateSortedFiles(const char *directory, const char *filter, bool
 static bool ResolveFileSet(const FileSet &file_set, const char *filter,
                            Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
-    RG_DEFER_NC(out_guard, len = out_filenames->len) { out_filenames->RemoveFrom(len); };
+    K_DEFER_NC(out_guard, len = out_filenames->len) { out_filenames->RemoveFrom(len); };
 
     out_filenames->Append(file_set.filenames);
     for (const char *directory: file_set.directories) {
@@ -222,11 +222,11 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_enable, uint3
 
 bool TargetSetBuilder::LoadIni(StreamReader *st)
 {
-    RG_DEFER_NC(out_guard, count = set.targets.count) { set.targets.RemoveFrom(count); };
+    K_DEFER_NC(out_guard, count = set.targets.count) { set.targets.RemoveFrom(count); };
 
     IniParser ini(st);
     ini.PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {
@@ -243,7 +243,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
             target_config.name = DuplicateString(prop.section, &set.str_alloc).ptr;
             target_config.type = TargetType::Executable;
             target_config.platforms = ParseSupportedPlatforms("Desktop");
-            RG_ASSERT(target_config.platforms);
+            K_ASSERT(target_config.platforms);
             target_config.title = target_config.name;
             target_config.version_tag = target_config.name;
 
@@ -462,7 +462,7 @@ static void DeduplicateArray(HeapArray<T> *array, Func func)
 // We steal stuff from TargetConfig so it's not reusable after that
 const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 {
-    RG_DEFER_NC(out_guard, count = set.targets.count) { set.targets.RemoveFrom(count); };
+    K_DEFER_NC(out_guard, count = set.targets.count) { set.targets.RemoveFrom(count); };
 
     // Heavy type, so create it directly in HeapArray
     TargetInfo *target = set.targets.AppendDefault();
@@ -716,7 +716,7 @@ unsigned int ParseSupportedPlatforms(Span<const char> str)
         }
 
         if (part.len) {
-            for (Size i = 0; i < RG_LEN(HostPlatformNames); i++) {
+            for (Size i = 0; i < K_LEN(HostPlatformNames); i++) {
                 Span<const char> name = HostPlatformNames[i];
 
                 while (name.len) {

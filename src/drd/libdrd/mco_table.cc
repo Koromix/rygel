@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "mco_table.hh"
 
-namespace RG {
+namespace K {
 
 struct ProcedureExtensionInfo {
     drd_ProcedureCode proc;
@@ -40,7 +40,7 @@ struct ProcedureAdditionInfo {
     do { \
         if (Cond) [[unlikely]] { \
             LogError("Malformed binary table file '%1': %2", \
-                     (Filename) ? (Filename) : "?", RG_STRINGIFY(Cond)); \
+                     (Filename) ? (Filename) : "?", K_STRINGIFY(Cond)); \
             return false; \
         } \
     } while (false)
@@ -92,7 +92,7 @@ static drd_DiagnosisCode ConvertDiagnosisCode(int16_t code123, uint16_t code456)
 {
     drd_DiagnosisCode code = {};
 
-    snprintf(code.str, RG_SIZE(code.str), "%c%02d", code123 / 100 + 65, code123 % 100);
+    snprintf(code.str, K_SIZE(code.str), "%c%02d", code123 / 100 + 65, code123 % 100);
 
     static const char code456_chars[] = " 0123456789+";
     code456 %= 1584;
@@ -114,7 +114,7 @@ static drd_ProcedureCode ConvertProcedureCode(int16_t root_idx, char char4, uint
         proc.str[2 - i] = (char)((root_idx % 26) + 65);
         root_idx /= 26;
     }
-    snprintf(proc.str + 3, RG_SIZE(proc.str) - 3, "%c%03u", (char4 % 26) + 65, seq % 1000);
+    snprintf(proc.str + 3, K_SIZE(proc.str) - 3, "%c%03u", (char4 % 26) + 65, seq % 1000);
 
     return proc;
 }
@@ -123,7 +123,7 @@ static drd_ProcedureCode ConvertProcedureCode(int16_t root_idx, char char4, uint
 static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
                               Allocator *str_alloc, HeapArray<mco_TableInfo> *out_tables)
 {
-    RG_DEFER_NC(out_tables_guard, len = out_tables->len) { out_tables->RemoveFrom(len); };
+    K_DEFER_NC(out_tables_guard, len = out_tables->len) { out_tables->RemoveFrom(len); };
 
     // Since FG 10.10b, each tab file can contain several tables, with a different
     // date range for each. The struct layout changed a bit around FG 11.11, which is
@@ -138,7 +138,7 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
         uint8_t sections_count;
         uint8_t pad2[4];
 	};
-    static_assert(RG_SIZE(mco_TableInfo::raw_type) > RG_SIZE(PackedHeader1111::name));
+    static_assert(K_SIZE(mco_TableInfo::raw_type) > K_SIZE(PackedHeader1111::name));
     struct PackedSection1111 {
         uint8_t pad1[18];
         uint16_t values_count;
@@ -157,15 +157,15 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
     PackedHeader1111 raw_main_header;
     PackedSection1111 raw_main_section;
     {
-        FAIL_PARSE_IF(filename, file_data.len < RG_SIZE(PackedHeader1111) + RG_SIZE(PackedSection1111));
+        FAIL_PARSE_IF(filename, file_data.len < K_SIZE(PackedHeader1111) + K_SIZE(PackedSection1111));
 
-        MemCpy(&raw_main_header, file_data.ptr, RG_SIZE(PackedHeader1111));
+        MemCpy(&raw_main_header, file_data.ptr, K_SIZE(PackedHeader1111));
         FAIL_PARSE_IF(filename, raw_main_header.sections_count != 1);
 
         // Cheap and dirty way to make sure sscanf does not go overboard
         raw_main_header.pad1 = 0;
 
-        MemCpy(&raw_main_section, file_data.ptr + RG_SIZE(PackedHeader1111), RG_SIZE(PackedSection1111));
+        MemCpy(&raw_main_section, file_data.ptr + K_SIZE(PackedHeader1111), K_SIZE(PackedSection1111));
         raw_main_section.values_count = BigEndian(raw_main_section.values_count);
         raw_main_section.value_len = BigEndian(raw_main_section.value_len);
         raw_main_section.raw_len = BigEndian(raw_main_section.raw_len);
@@ -174,49 +174,49 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
         unsigned int version = 0, revision = 0;
         sscanf(raw_main_header.version, "%2u%2u", &version, &revision);
         FAIL_PARSE_IF(filename, version < 11 || (version == 11 && revision < 10));
-        FAIL_PARSE_IF(filename, raw_main_section.value_len != RG_SIZE(PackedTablePtr1111));
-        FAIL_PARSE_IF(filename, file_data.len < RG_SIZE(PackedHeader1111) +
-                                raw_main_section.values_count * RG_SIZE(PackedTablePtr1111));
+        FAIL_PARSE_IF(filename, raw_main_section.value_len != K_SIZE(PackedTablePtr1111));
+        FAIL_PARSE_IF(filename, file_data.len < K_SIZE(PackedHeader1111) +
+                                raw_main_section.values_count * K_SIZE(PackedTablePtr1111));
     }
 
     for (int i = 0; i < raw_main_section.values_count; i++) {
         mco_TableInfo table = {};
 
         PackedTablePtr1111 raw_table_ptr;
-        MemCpy(&raw_table_ptr, file_data.ptr + RG_SIZE(PackedHeader1111) +
-                                               RG_SIZE(PackedSection1111) + i * RG_SIZE(PackedTablePtr1111),
-                   RG_SIZE(PackedTablePtr1111));
+        MemCpy(&raw_table_ptr, file_data.ptr + K_SIZE(PackedHeader1111) +
+                                               K_SIZE(PackedSection1111) + i * K_SIZE(PackedTablePtr1111),
+                   K_SIZE(PackedTablePtr1111));
         raw_table_ptr.date_range[0] = BigEndian(raw_table_ptr.date_range[0]);
         raw_table_ptr.date_range[1] = BigEndian(raw_table_ptr.date_range[1]);
         raw_table_ptr.raw_offset = BigEndian(raw_table_ptr.raw_offset);
         FAIL_PARSE_IF(filename, file_data.len < (Size)(raw_table_ptr.raw_offset +
-                                                       RG_SIZE(PackedHeader1111)));
+                                                       K_SIZE(PackedHeader1111)));
 
         PackedHeader1111 raw_table_header;
-        PackedSection1111 raw_table_sections[RG_LEN(table.sections.data)];
+        PackedSection1111 raw_table_sections[K_LEN(table.sections.data)];
         {
             bool weird_section = false;
 
-            MemCpy(&raw_table_header, file_data.ptr + raw_table_ptr.raw_offset, RG_SIZE(PackedHeader1111));
+            MemCpy(&raw_table_header, file_data.ptr + raw_table_ptr.raw_offset, K_SIZE(PackedHeader1111));
             if (!memcmp(raw_table_header.signature, "GESTCOMP", 8)) [[unlikely]] {
                 weird_section = true;
 
                 MemMove(&raw_table_header.pad1, raw_table_header.name,
-                        RG_SIZE(PackedHeader1111) - offsetof(PackedHeader1111, pad1));
-                MemCpy(&raw_table_header.name, raw_table_header.signature, RG_SIZE(raw_table_header.name));
+                        K_SIZE(PackedHeader1111) - offsetof(PackedHeader1111, pad1));
+                MemCpy(&raw_table_header.name, raw_table_header.signature, K_SIZE(raw_table_header.name));
             }
             FAIL_PARSE_IF(filename, file_data.len < (Size)(raw_table_ptr.raw_offset +
-                                                           (uint32_t)raw_table_header.sections_count * RG_SIZE(PackedSection1111)));
-            FAIL_PARSE_IF(filename, raw_table_header.sections_count > RG_LEN(raw_table_sections));
+                                                           (uint32_t)raw_table_header.sections_count * K_SIZE(PackedSection1111)));
+            FAIL_PARSE_IF(filename, raw_table_header.sections_count > K_LEN(raw_table_sections));
 
             // Cheap and dirty way to make sure sscanf does not go overboard
             raw_table_header.pad1 = 0;
 
             for (int j = 0; j < raw_table_header.sections_count; j++) {
-                MemCpy(&raw_table_sections[j], file_data.ptr + raw_table_ptr.raw_offset + RG_SIZE(PackedHeader1111) +
-                                                               j * RG_SIZE(PackedSection1111), RG_SIZE(PackedSection1111));
+                MemCpy(&raw_table_sections[j], file_data.ptr + raw_table_ptr.raw_offset + K_SIZE(PackedHeader1111) +
+                                                               j * K_SIZE(PackedSection1111), K_SIZE(PackedSection1111));
                 if (weird_section) [[unlikely]] {
-                    MemMove((uint8_t *)&raw_table_sections[j] + 8, &raw_table_sections[j], RG_SIZE(PackedSection1111) - 8);
+                    MemMove((uint8_t *)&raw_table_sections[j] + 8, &raw_table_sections[j], K_SIZE(PackedSection1111) - 8);
                 }
                 raw_table_sections[j].values_count = BigEndian(raw_table_sections[j].values_count);
                 raw_table_sections[j].value_len = BigEndian(raw_table_sections[j].value_len);
@@ -305,7 +305,7 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
 static bool ParseGhmDecisionTree(const uint8_t *file_data, const mco_TableInfo &table,
                                  HeapArray<mco_GhmDecisionNode> *out_nodes)
 {
-    RG_DEFER_NC(out_nodes_guard, len = out_nodes->len) { out_nodes->RemoveFrom(len); };
+    K_DEFER_NC(out_nodes_guard, len = out_nodes->len) { out_nodes->RemoveFrom(len); };
 
 #pragma pack(push, 1)
     struct PackedTreeNode {
@@ -317,14 +317,14 @@ static bool ParseGhmDecisionTree(const uint8_t *file_data, const mco_TableInfo &
 #pragma pack(pop)
 
     FAIL_PARSE_IF(table.filename, table.sections.len != 1);
-    FAIL_PARSE_IF(table.filename, table.sections[0].value_len != RG_SIZE(PackedTreeNode));
+    FAIL_PARSE_IF(table.filename, table.sections[0].value_len != K_SIZE(PackedTreeNode));
 
     for (Size i = 0; i < table.sections[0].values_count; i++) {
         mco_GhmDecisionNode ghm_node = {};
 
         PackedTreeNode raw_node;
         MemCpy(&raw_node, file_data + table.sections[0].raw_offset +
-                                      i * RG_SIZE(PackedTreeNode), RG_SIZE(PackedTreeNode));
+                                      i * K_SIZE(PackedTreeNode), K_SIZE(PackedTreeNode));
         raw_node.children_idx = BigEndian(raw_node.children_idx);
 
         ghm_node.function = raw_node.function;
@@ -365,7 +365,7 @@ static bool ParseGhmDecisionTree(const uint8_t *file_data, const mco_TableInfo &
 static bool ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &table,
                                 HeapArray<mco_DiagnosisInfo> *out_diagnoses)
 {
-    RG_DEFER_NC(out_guard, len = out_diagnoses->len) { out_diagnoses->RemoveFrom(len); };
+    K_DEFER_NC(out_guard, len = out_diagnoses->len) { out_diagnoses->RemoveFrom(len); };
 
 #pragma pack(push, 1)
     struct PackedDiagnosisPtr  {
@@ -381,11 +381,11 @@ static bool ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &t
     FAIL_PARSE_IF(table.filename, table.sections.len != 5);
     FAIL_PARSE_IF(table.filename, table.sections[0].values_count != 26 * 100 ||
                                   table.sections[0].value_len != 2);
-    FAIL_PARSE_IF(table.filename, table.sections[1].value_len != RG_SIZE(PackedDiagnosisPtr));
+    FAIL_PARSE_IF(table.filename, table.sections[1].value_len != K_SIZE(PackedDiagnosisPtr));
     FAIL_PARSE_IF(table.filename, !table.sections[2].value_len || table.sections[2].value_len % 2 ||
-                                  table.sections[2].value_len / 2 > RG_SIZE(mco_DiagnosisInfo::raw));
+                                  table.sections[2].value_len / 2 > K_SIZE(mco_DiagnosisInfo::raw));
     FAIL_PARSE_IF(table.filename, !table.sections[3].value_len ||
-                                  table.sections[3].value_len > RG_SIZE(mco_DiagnosisInfo::warnings) * 8);
+                                  table.sections[3].value_len > K_SIZE(mco_DiagnosisInfo::warnings) * 8);
     FAIL_PARSE_IF(table.filename, !table.sections[4].value_len);
 
     Size block_end = table.sections[1].raw_offset;
@@ -398,15 +398,15 @@ static bool ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &t
                                          root_idx * 2;
             uint16_t end_idx = (uint16_t)((end_idx_ptr[0] << 8) | end_idx_ptr[1]);
             FAIL_PARSE_IF(table.filename, end_idx > table.sections[1].values_count);
-            block_end = table.sections[1].raw_offset + end_idx * RG_SIZE(PackedDiagnosisPtr);
+            block_end = table.sections[1].raw_offset + end_idx * K_SIZE(PackedDiagnosisPtr);
         }
         if (block_end == block_start)
             continue;
 
         for (Size block_offset = block_start; block_offset < block_end;
-             block_offset += RG_SIZE(PackedDiagnosisPtr)) {
+             block_offset += K_SIZE(PackedDiagnosisPtr)) {
             PackedDiagnosisPtr raw_diag_ptr;
-            MemCpy(&raw_diag_ptr, file_data + block_offset, RG_SIZE(PackedDiagnosisPtr));
+            MemCpy(&raw_diag_ptr, file_data + block_offset, K_SIZE(PackedDiagnosisPtr));
             raw_diag_ptr.code456 = BigEndian(raw_diag_ptr.code456);
             raw_diag_ptr.section2_idx = BigEndian(raw_diag_ptr.section2_idx);
             raw_diag_ptr.section4_bit = BigEndian(raw_diag_ptr.section4_bit);
@@ -478,17 +478,17 @@ static bool ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &t
 static bool ParseExclusionTable(const uint8_t *file_data, const mco_TableInfo &table,
                                 HeapArray<mco_ExclusionInfo> *out_exclusions)
 {
-    RG_DEFER_NC(out_exclusions_guard, len = out_exclusions->len) { out_exclusions->RemoveFrom(len); };
+    K_DEFER_NC(out_exclusions_guard, len = out_exclusions->len) { out_exclusions->RemoveFrom(len); };
 
     FAIL_PARSE_IF(table.filename, table.sections.len != 5);
     FAIL_PARSE_IF(table.filename, !table.sections[4].value_len);
-    FAIL_PARSE_IF(table.filename, table.sections[4].value_len > RG_SIZE(mco_ExclusionInfo::raw));
+    FAIL_PARSE_IF(table.filename, table.sections[4].value_len > K_SIZE(mco_ExclusionInfo::raw));
 
     for (Size i = 0; i < table.sections[4].values_count; i++) {
         mco_ExclusionInfo *excl = out_exclusions->AppendDefault();
         MemCpy(excl->raw, file_data + table.sections[4].raw_offset +
                                       i * table.sections[4].value_len, table.sections[4].value_len);
-        MemSet(excl->raw + table.sections[4].value_len, 0, RG_SIZE(excl->raw) - table.sections[4].value_len);
+        MemSet(excl->raw + table.sections[4].value_len, 0, K_SIZE(excl->raw) - table.sections[4].value_len);
     }
 
     out_exclusions_guard.Disable();
@@ -498,7 +498,7 @@ static bool ParseExclusionTable(const uint8_t *file_data, const mco_TableInfo &t
 static bool ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &table,
                                 HeapArray<mco_ProcedureInfo> *out_procs)
 {
-    RG_DEFER_NC(out_proc_guard, len = out_procs->len) { out_procs->RemoveFrom(len); };
+    K_DEFER_NC(out_proc_guard, len = out_procs->len) { out_procs->RemoveFrom(len); };
 
 #pragma pack(push, 1)
     struct PackedProcedurePtr  {
@@ -514,9 +514,9 @@ static bool ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &t
     FAIL_PARSE_IF(table.filename, table.sections.len != 3);
     FAIL_PARSE_IF(table.filename, table.sections[0].values_count != 26 * 26 * 26 ||
                                   table.sections[0].value_len != 2);
-    FAIL_PARSE_IF(table.filename, table.sections[1].value_len != RG_SIZE(PackedProcedurePtr));
+    FAIL_PARSE_IF(table.filename, table.sections[1].value_len != K_SIZE(PackedProcedurePtr));
     FAIL_PARSE_IF(table.filename, !table.sections[2].value_len ||
-                                  table.sections[2].value_len > RG_SIZE(mco_ProcedureInfo::bytes));
+                                  table.sections[2].value_len > K_SIZE(mco_ProcedureInfo::bytes));
 
     Size block_end = table.sections[1].raw_offset;
     for (int16_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
@@ -528,17 +528,17 @@ static bool ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &t
                                          root_idx * 2;
             uint16_t end_idx = (uint16_t)((end_idx_ptr[0] << 8) | end_idx_ptr[1]);
             FAIL_PARSE_IF(table.filename, end_idx > table.sections[1].values_count);
-            block_end = table.sections[1].raw_offset + end_idx * RG_SIZE(PackedProcedurePtr);
+            block_end = table.sections[1].raw_offset + end_idx * K_SIZE(PackedProcedurePtr);
         }
         if (block_end == block_start)
             continue;
 
         for (Size block_offset = block_start; block_offset < block_end;
-             block_offset += RG_SIZE(PackedProcedurePtr)) {
+             block_offset += K_SIZE(PackedProcedurePtr)) {
             mco_ProcedureInfo proc = {};
 
             PackedProcedurePtr raw_proc_ptr;
-            MemCpy(&raw_proc_ptr, file_data + block_offset, RG_SIZE(PackedProcedurePtr));
+            MemCpy(&raw_proc_ptr, file_data + block_offset, K_SIZE(PackedProcedurePtr));
             raw_proc_ptr.seq_phase = BigEndian(raw_proc_ptr.seq_phase);
             raw_proc_ptr.section2_idx = BigEndian(raw_proc_ptr.section2_idx);
             raw_proc_ptr.date_min = BigEndian(raw_proc_ptr.date_min);
@@ -593,7 +593,7 @@ static bool ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &t
 static bool ParseProcedureAdditionTable(const uint8_t *file_data, const mco_TableInfo &table,
                                         HeapArray<ProcedureAdditionInfo> *out_additions)
 {
-    RG_DEFER_NC(out_guard, len = out_additions->len) { out_additions->RemoveFrom(len); };
+    K_DEFER_NC(out_guard, len = out_additions->len) { out_additions->RemoveFrom(len); };
 
 #pragma pack(push, 1)
     struct PackedRootPtr {
@@ -615,15 +615,15 @@ static bool ParseProcedureAdditionTable(const uint8_t *file_data, const mco_Tabl
 
     FAIL_PARSE_IF(table.filename, table.sections.len != 4);
     FAIL_PARSE_IF(table.filename, table.sections[0].values_count != 26 * 26 * 26 ||
-                                  table.sections[0].value_len != RG_SIZE(PackedRootPtr));
-    FAIL_PARSE_IF(table.filename, table.sections[1].value_len != RG_SIZE(PackedProc1));
+                                  table.sections[0].value_len != K_SIZE(PackedRootPtr));
+    FAIL_PARSE_IF(table.filename, table.sections[1].value_len != K_SIZE(PackedProc1));
     FAIL_PARSE_IF(table.filename, table.sections[2].value_len != 2);
-    FAIL_PARSE_IF(table.filename, table.sections[3].value_len != RG_SIZE(PackedProc2));
+    FAIL_PARSE_IF(table.filename, table.sections[3].value_len != K_SIZE(PackedProc2));
 
     for (int16_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
         PackedRootPtr raw_root_ptr;
         MemCpy(&raw_root_ptr, file_data + table.sections[0].raw_offset +
-                                          root_idx * RG_SIZE(PackedRootPtr), RG_SIZE(PackedRootPtr));
+                                          root_idx * K_SIZE(PackedRootPtr), K_SIZE(PackedRootPtr));
         raw_root_ptr.count = BigEndian(raw_root_ptr.count);
         raw_root_ptr.proc1_idx = BigEndian(raw_root_ptr.proc1_idx);
         FAIL_PARSE_IF(table.filename,
@@ -632,7 +632,7 @@ static bool ParseProcedureAdditionTable(const uint8_t *file_data, const mco_Tabl
         for (Size i = 0; i < raw_root_ptr.count; i++) {
             PackedProc1 raw_proc1;
             MemCpy(&raw_proc1, file_data + table.sections[1].raw_offset +
-                                           (raw_root_ptr.proc1_idx + i) * table.sections[1].value_len, RG_SIZE(PackedProc1));
+                                           (raw_root_ptr.proc1_idx + i) * table.sections[1].value_len, K_SIZE(PackedProc1));
             raw_proc1.seq_phase_activity = BigEndian(raw_proc1.seq_phase_activity);
             raw_proc1.proc2_idx = BigEndian(raw_proc1.proc2_idx);
             FAIL_PARSE_IF(table.filename,
@@ -649,14 +649,14 @@ static bool ParseProcedureAdditionTable(const uint8_t *file_data, const mco_Tabl
                 uint16_t proc2_idx;
                 {
                     const uint8_t *proc2_idx_ptr = file_data + table.sections[2].raw_offset +
-                                                               (raw_proc1.proc2_idx + j) * RG_SIZE(uint16_t);
+                                                               (raw_proc1.proc2_idx + j) * K_SIZE(uint16_t);
                     proc2_idx = (uint16_t)((proc2_idx_ptr[0] << 8) | proc2_idx_ptr[1]);
                     FAIL_PARSE_IF(table.filename, proc2_idx >= table.sections[3].values_count);
                 }
 
                 PackedProc2 raw_proc2;
                 MemCpy(&raw_proc2, file_data + table.sections[3].raw_offset +
-                                               proc2_idx * RG_SIZE(PackedProc2), RG_SIZE(PackedProc2));
+                                               proc2_idx * K_SIZE(PackedProc2), K_SIZE(PackedProc2));
                 raw_proc2.root_idx = BigEndian(raw_proc2.root_idx);
                 raw_proc2.seq_phase_activity = BigEndian(raw_proc2.seq_phase_activity);
                 FAIL_PARSE_IF(table.filename, raw_proc2.root_idx >= 26 * 26 * 26);
@@ -682,7 +682,7 @@ static bool ParseProcedureAdditionTable(const uint8_t *file_data, const mco_Tabl
 static bool ParseProcedureExtensionTable(const uint8_t *file_data, const mco_TableInfo &table,
                                          HeapArray<ProcedureExtensionInfo> *out_extensions)
 {
-    RG_DEFER_NC(out_guard, len = out_extensions->len) { out_extensions->RemoveFrom(len); };
+    K_DEFER_NC(out_guard, len = out_extensions->len) { out_extensions->RemoveFrom(len); };
 
 #pragma pack(push, 1)
     struct PackedProcedureExtension {
@@ -699,9 +699,9 @@ static bool ParseProcedureExtensionTable(const uint8_t *file_data, const mco_Tab
     FAIL_PARSE_IF(table.filename, table.sections[0].values_count != 26 * 26 * 26 ||
                                   table.sections[0].value_len != 2);
     if (table.version[0] >= 12 || (table.version[0] == 11 && table.version[1] >= 29)) {
-        FAIL_PARSE_IF(table.filename, table.sections[1].value_len != RG_SIZE(PackedProcedureExtension));
+        FAIL_PARSE_IF(table.filename, table.sections[1].value_len != K_SIZE(PackedProcedureExtension));
     } else {
-        FAIL_PARSE_IF(table.filename, table.sections[1].value_len != RG_SIZE(PackedProcedureExtension) - 4);
+        FAIL_PARSE_IF(table.filename, table.sections[1].value_len != K_SIZE(PackedProcedureExtension) - 4);
     }
 
     Size block_end = table.sections[1].raw_offset;
@@ -755,7 +755,7 @@ static bool ParseProcedureExtensionTable(const uint8_t *file_data, const mco_Tab
 static bool ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &table,
                               HeapArray<mco_GhmRootInfo> *out_ghm_roots)
 {
-    RG_DEFER_NC(out_ghm_roots_guard, len = out_ghm_roots->len) { out_ghm_roots->RemoveFrom(len); };
+    K_DEFER_NC(out_ghm_roots_guard, len = out_ghm_roots->len) { out_ghm_roots->RemoveFrom(len); };
 
 #pragma pack(push, 1)
     struct PackedGhmRoot {
@@ -776,13 +776,13 @@ static bool ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &tab
 
     FAIL_PARSE_IF(table.filename, table.sections.len != 1);
     if (table.version[0] >= 12 || (table.version[0] == 11 && table.version[1] >= 29)) {
-        FAIL_PARSE_IF(table.filename, table.sections[0].value_len != RG_SIZE(PackedGhmRoot));
+        FAIL_PARSE_IF(table.filename, table.sections[0].value_len != K_SIZE(PackedGhmRoot));
     } else if (table.version[0] == 11 && table.version[1] >= 28) {
-        FAIL_PARSE_IF(table.filename, table.sections[0].value_len != RG_SIZE(PackedGhmRoot) - 1);
+        FAIL_PARSE_IF(table.filename, table.sections[0].value_len != K_SIZE(PackedGhmRoot) - 1);
     } else if (table.version[0] == 11 && table.version[1] >= 15) {
-        FAIL_PARSE_IF(table.filename, table.sections[0].value_len != RG_SIZE(PackedGhmRoot) - 2);
+        FAIL_PARSE_IF(table.filename, table.sections[0].value_len != K_SIZE(PackedGhmRoot) - 2);
     } else {
-        FAIL_PARSE_IF(table.filename, table.sections[0].value_len != RG_SIZE(PackedGhmRoot) - 3);
+        FAIL_PARSE_IF(table.filename, table.sections[0].value_len != K_SIZE(PackedGhmRoot) - 3);
     }
 
     for (Size i = 0; i < table.sections[0].values_count; i++) {
@@ -878,7 +878,7 @@ static bool ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &tab
 static bool ParseSeverityTable(const uint8_t *file_data, const mco_TableInfo &table,
                                int section_idx, HeapArray<mco_ValueRangeCell<2>> *out_cells)
 {
-    RG_DEFER_NC(out_cells_guard, len = out_cells->len) { out_cells->RemoveFrom(len); };
+    K_DEFER_NC(out_cells_guard, len = out_cells->len) { out_cells->RemoveFrom(len); };
 
 #pragma pack(push, 1)
     struct PackedCell {
@@ -891,14 +891,14 @@ static bool ParseSeverityTable(const uint8_t *file_data, const mco_TableInfo &ta
 #pragma pack(pop)
 
     FAIL_PARSE_IF(table.filename, section_idx >= table.sections.len);
-    FAIL_PARSE_IF(table.filename, table.sections[section_idx].value_len != RG_SIZE(PackedCell));
+    FAIL_PARSE_IF(table.filename, table.sections[section_idx].value_len != K_SIZE(PackedCell));
 
     for (Size i = 0; i < table.sections[section_idx].values_count; i++) {
         mco_ValueRangeCell<2> cell = {};
 
         PackedCell raw_cell;
         MemCpy(&raw_cell, file_data + table.sections[section_idx].raw_offset +
-                                      i * RG_SIZE(PackedCell), RG_SIZE(PackedCell));
+                                      i * K_SIZE(PackedCell), K_SIZE(PackedCell));
         raw_cell.var1_min = BigEndian(raw_cell.var1_min);
         raw_cell.var1_max = BigEndian(raw_cell.var1_max);
         raw_cell.var2_min = BigEndian(raw_cell.var2_min);
@@ -922,7 +922,7 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
                                HeapArray<mco_GhmToGhsInfo> *out_ghs)
 {
     Size start_ghs_len = out_ghs->len;
-    RG_DEFER_N(out_ghs_guard) { out_ghs->RemoveFrom(start_ghs_len); };
+    K_DEFER_N(out_ghs_guard) { out_ghs->RemoveFrom(start_ghs_len); };
 
 #pragma pack(push, 1)
     struct PackedGhsNode {
@@ -940,17 +940,17 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
             uint16_t low_duration_threshold;
         } sectors[2];
 	};
-    static_assert(RG_LEN(PackedGhsNode().sectors) == RG_LEN(mco_GhmToGhsInfo().ghs));
+    static_assert(K_LEN(PackedGhsNode().sectors) == K_LEN(mco_GhmToGhsInfo().ghs));
 #pragma pack(pop)
 
     FAIL_PARSE_IF(table.filename, table.sections.len != 1);
-    FAIL_PARSE_IF(table.filename, table.sections[0].value_len != RG_SIZE(PackedGhsNode));
+    FAIL_PARSE_IF(table.filename, table.sections[0].value_len != K_SIZE(PackedGhsNode));
 
     mco_GhmToGhsInfo current_ghs = {};
     for (Size i = 0; i < table.sections[0].values_count; i++) {
         PackedGhsNode raw_ghs_node;
         MemCpy(&raw_ghs_node, file_data + table.sections[0].raw_offset +
-                                          i * RG_SIZE(PackedGhsNode), RG_SIZE(PackedGhsNode));
+                                          i * K_SIZE(PackedGhsNode), K_SIZE(PackedGhsNode));
         raw_ghs_node.type_seq = BigEndian(raw_ghs_node.type_seq);
         for (int j = 0; j < 2; j++) {
             raw_ghs_node.sectors[j].ghs_code = BigEndian(raw_ghs_node.sectors[j].ghs_code);
@@ -1055,7 +1055,7 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
         }
 
         if (raw_ghs_node.valid_ghs) {
-            for (Size j = 0; j < RG_LEN(current_ghs.ghs); j++) {
+            for (Size j = 0; j < K_LEN(current_ghs.ghs); j++) {
                 current_ghs.ghs[j].number = (int16_t)raw_ghs_node.sectors[j].ghs_code;
             }
             out_ghs->Append(current_ghs);
@@ -1086,7 +1086,7 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
 static bool ParseAuthorizationTable(const uint8_t *file_data, const mco_TableInfo &table,
                                     HeapArray<mco_AuthorizationInfo> *out_auths)
 {
-    RG_DEFER_NC(out_auths_guard, len = out_auths->len) { out_auths->RemoveFrom(len); };
+    K_DEFER_NC(out_auths_guard, len = out_auths->len) { out_auths->RemoveFrom(len); };
 
 #pragma pack(push, 1)
     struct PackedAuthorization {
@@ -1106,7 +1106,7 @@ static bool ParseAuthorizationTable(const uint8_t *file_data, const mco_TableInf
 
             PackedAuthorization raw_auth;
             MemCpy(&raw_auth, file_data + table.sections[i].raw_offset +
-                                          j * RG_SIZE(PackedAuthorization), RG_SIZE(PackedAuthorization));
+                                          j * K_SIZE(PackedAuthorization), K_SIZE(PackedAuthorization));
 
             if (i == 0) {
                 auth.type.st.scope = mco_AuthorizationScope::Bed;
@@ -1130,7 +1130,7 @@ static bool ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &tab
                               int section_idx, HeapArray<mco_SrcPair> *out_pairs)
 {
     Size start_len = out_pairs->len;
-    RG_DEFER_N(out_pairs_guard) { out_pairs->RemoveFrom(start_len); };
+    K_DEFER_N(out_pairs_guard) { out_pairs->RemoveFrom(start_len); };
 
 #pragma pack(push, 1)
     struct PackedPair {
@@ -1142,14 +1142,14 @@ static bool ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &tab
 #pragma pack(pop)
 
     FAIL_PARSE_IF(table.filename, section_idx >= table.sections.len);
-    FAIL_PARSE_IF(table.filename, table.sections[section_idx].value_len != RG_SIZE(PackedPair));
+    FAIL_PARSE_IF(table.filename, table.sections[section_idx].value_len != K_SIZE(PackedPair));
 
     for (Size i = 0; i < table.sections[section_idx].values_count; i++) {
         mco_SrcPair pair = {};
 
         PackedPair raw_pair;
         MemCpy(&raw_pair, file_data + table.sections[section_idx].raw_offset +
-                                      i * RG_SIZE(PackedPair), RG_SIZE(PackedPair));
+                                      i * K_SIZE(PackedPair), K_SIZE(PackedPair));
         raw_pair.diag_code123 = BigEndian(raw_pair.diag_code123);
         raw_pair.diag_code456 = BigEndian(raw_pair.diag_code456);
         raw_pair.proc_code123 = BigEndian(raw_pair.proc_code123);
@@ -1162,7 +1162,7 @@ static bool ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &tab
                 pair.proc.str[2 - j] = (char)((code123_remain % 26) + 65);
                 code123_remain /= 26;
             }
-            snprintf(pair.proc.str + 3, RG_SIZE(pair.proc.str) - 3, "%c%03u",
+            snprintf(pair.proc.str + 3, K_SIZE(pair.proc.str) - 3, "%c%03u",
                      (raw_pair.proc_code456 / 1000 % 26) + 65,
                      raw_pair.proc_code456 % 1000);
         }
@@ -1182,17 +1182,17 @@ static bool ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &tab
 static bool ParseGhsMinorationTable(const uint8_t *file_data, const mco_TableInfo &table,
                                     HeapArray<mco_GhsCode> *out_minored_ghs)
 {
-    RG_DEFER_NC(out_guard, len = out_minored_ghs->len) { out_minored_ghs->RemoveFrom(len); };
+    K_DEFER_NC(out_guard, len = out_minored_ghs->len) { out_minored_ghs->RemoveFrom(len); };
 
     FAIL_PARSE_IF(table.filename, table.sections.len != 1);
-    FAIL_PARSE_IF(table.filename, table.sections[0].value_len != RG_SIZE(int16_t));
+    FAIL_PARSE_IF(table.filename, table.sections[0].value_len != K_SIZE(int16_t));
 
     for (Size i = 0; i < table.sections[0].values_count; i++) {
         mco_GhsCode ghs = {};
 
         uint16_t raw_ghs;
         MemCpy(&raw_ghs, file_data + table.sections[0].raw_offset +
-                                     i * RG_SIZE(uint16_t), RG_SIZE(uint16_t));
+                                     i * K_SIZE(uint16_t), K_SIZE(uint16_t));
         ghs.number = BigEndian(raw_ghs);
 
         out_minored_ghs->Append(ghs);
@@ -1207,7 +1207,7 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
                             HeapArray<mco_GhsPriceInfo> *out_ghs_prices,
                             mco_SupplementCounters<int32_t> *out_supplement_prices)
 {
-    RG_DEFER_NC(out_guard, len = out_ghs_prices->len) { out_ghs_prices->RemoveFrom(len); };
+    K_DEFER_NC(out_guard, len = out_ghs_prices->len) { out_ghs_prices->RemoveFrom(len); };
     mco_SupplementCounters<int32_t> supplement_prices = {};
 
     double ghs_coefficient = 0.0;
@@ -1217,7 +1217,7 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
         bool valid = true;
 
         ini.PushLogFilter();
-        RG_DEFER { PopLogFilter(); };
+        K_DEFER { PopLogFilter(); };
 
         IniProperty prop;
         while (ini.Next(&prop)) {
@@ -1389,7 +1389,7 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader *st)
         IniParser ini(&mem_st);
 
         ini.PushLogFilter();
-        RG_DEFER { PopLogFilter(); };
+        K_DEFER { PopLogFilter(); };
 
         IniProperty prop;
         bool valid = true;
@@ -1480,11 +1480,11 @@ void mco_TableSetBuilder::Finish(mco_TableSet *out_set)
                         table_info1.build_date - table_info2.build_date) < 0;
     });
 
-    TableLoadInfo *active_tables[RG_LEN(mco_TableTypeNames)];
+    TableLoadInfo *active_tables[K_LEN(mco_TableTypeNames)];
     Size active_count = 0;
 
-    TableLoadInfo dummy_loads[RG_LEN(mco_TableTypeNames)];
-    for (Size i = 0; i < RG_LEN(active_tables); i++) {
+    TableLoadInfo dummy_loads[K_LEN(mco_TableTypeNames)];
+    for (Size i = 0; i < K_LEN(active_tables); i++) {
         dummy_loads[i].table_idx = -1;
         dummy_loads[i].prev_index_idx = -1;
         active_tables[i] = &dummy_loads[i];
@@ -1500,7 +1500,7 @@ void mco_TableSetBuilder::Finish(mco_TableSet *out_set)
 
             start_date = {};
             LocalDate next_end_date = {};
-            for (Size i = 0; i < RG_LEN(active_tables); i++) {
+            for (Size i = 0; i < K_LEN(active_tables); i++) {
                 if (active_tables[i]->table_idx < 0)
                     continue;
 
@@ -1548,7 +1548,7 @@ static void BuildAdditionLists(const mco_TableIndex &index,
     for (const ProcedureAdditionInfo &addition_info: additions) {
         int16_t addition_idx = 0;
         if (addition_info.activity2 >= 0 &&
-                addition_info.activity2 < RG_LEN(mco_ProcedureInfo::additions)) [[likely]] {
+                addition_info.activity2 < K_LEN(mco_ProcedureInfo::additions)) [[likely]] {
             mco_ProcedureInfo *proc_info =
                 (mco_ProcedureInfo *)index.procedures_map->FindValue(addition_info.proc2, nullptr);
 
@@ -1648,7 +1648,7 @@ bool mco_TableSetBuilder::CommitIndex(LocalDate start_date, LocalDate end_date,
         } while (false)
 
     // Load tables and build index
-    for (Size i = 0; i < RG_LEN(index.tables); i++) {
+    for (Size i = 0; i < K_LEN(index.tables); i++) {
         bool valid = true;
 
         TableLoadInfo *load_info = current_tables[i];
@@ -1710,10 +1710,10 @@ bool mco_TableSetBuilder::CommitIndex(LocalDate start_date, LocalDate end_date,
                                                           *table_info, &extensions);
 
                     for (const ProcedureExtensionInfo &ext_info: extensions) {
-                        if (ext_info.extension >= RG_SIZE(mco_ProcedureInfo::extensions) * 8) {
+                        if (ext_info.extension >= K_SIZE(mco_ProcedureInfo::extensions) * 8) {
                             LogError("Procedure %1 extension value %2 > %3 cannot be used",
                                      ext_info.proc, ext_info.extension,
-                                     RG_SIZE(mco_ProcedureInfo::extensions) * 8 - 1);
+                                     K_SIZE(mco_ProcedureInfo::extensions) * 8 - 1);
                             continue;
                         }
 

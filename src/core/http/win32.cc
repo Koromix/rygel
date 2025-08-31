@@ -37,7 +37,7 @@
 #include <mswsock.h>
 #include <io.h>
 
-namespace RG {
+namespace K {
 
 struct http_Socket {
     int sock = -1;
@@ -79,9 +79,9 @@ private:
 
 bool http_Daemon::Start(std::function<void(http_IO *io)> func)
 {
-    RG_ASSERT(listeners.len);
-    RG_ASSERT(!handle_func);
-    RG_ASSERT(func);
+    K_ASSERT(listeners.len);
+    K_ASSERT(!handle_func);
+    K_ASSERT(func);
 
     async = new Async(1 + listeners.len);
 
@@ -229,14 +229,14 @@ static bool CreateSocketPair(int out_pair[2])
     SOCKET client = INVALID_SOCKET;
     SOCKET peer = INVALID_SOCKET;
 
-    RG_DEFER {
+    K_DEFER {
         closesocket(listener);
         closesocket(client);
         closesocket(peer);
     };
 
     sockaddr_in addr = {};
-    socklen_t addr_len = RG_SIZE(addr);
+    socklen_t addr_len = K_SIZE(addr);
 
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -252,16 +252,16 @@ static bool CreateSocketPair(int out_pair[2])
     // Set reuse flag
     {
         int reuse = 1;
-        setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, RG_SIZE(reuse));
+        setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, K_SIZE(reuse));
     }
 
-    if (bind(listener, (struct sockaddr *)&addr, RG_SIZE(addr)) < 0)
+    if (bind(listener, (struct sockaddr *)&addr, K_SIZE(addr)) < 0)
         goto error;
     if (getsockname(listener, (struct sockaddr *)&addr, &addr_len) < 0)
         goto error;
     if (listen(listener, 1) < 0)
         goto error;
-    if (connect(client, (struct sockaddr *)&addr, RG_SIZE(addr)) < 0)
+    if (connect(client, (struct sockaddr *)&addr, K_SIZE(addr)) < 0)
         goto error;
 
     peer = accept(listener, nullptr, nullptr);
@@ -287,7 +287,7 @@ bool http_Dispatcher::Run()
 
     if (!CreateSocketPair(pair_fd))
         return false;
-    RG_DEFER {
+    K_DEFER {
         CloseSocket(pair_fd[0]);
         CloseSocket(pair_fd[1]);
 
@@ -296,7 +296,7 @@ bool http_Dispatcher::Run()
     };
 
     // Delete remaining clients when function exits
-    RG_DEFER {
+    K_DEFER {
         if (!async.Wait(100)) {
             LogInfo("Waiting up to %1 sec before shutting down clients...", (double)daemon->stop_timeout / 1000);
 
@@ -339,11 +339,11 @@ bool http_Dispatcher::Run()
         }
         if (pfds[1].revents) {
             uintptr_t addr = 0;
-            Size ret = recv(pair_fd[0], (char *)&addr, RG_SIZE(addr), 0);
+            Size ret = recv(pair_fd[0], (char *)&addr, K_SIZE(addr), 0);
 
             if (ret <= 0)
                 break;
-            RG_ASSERT(ret == RG_SIZE(void *));
+            K_ASSERT(ret == K_SIZE(void *));
 
             http_Socket *socket = (http_Socket *)addr;
 
@@ -366,7 +366,7 @@ bool http_Dispatcher::Run()
         // Process new connections
         if (accepts) {
             sockaddr_storage ss;
-            socklen_t ss_len = RG_SIZE(ss);
+            socklen_t ss_len = K_SIZE(ss);
 
             // Accept queued clients
             for (int i = 0; i < 1; i++) {
@@ -500,13 +500,13 @@ bool http_Dispatcher::Run()
         }
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 void http_Dispatcher::Wake(http_Socket *socket)
 {
     uintptr_t addr = (uintptr_t)socket;
-    Size ret = send((SOCKET)pair_fd[1], (char *)&addr, RG_SIZE(addr), 0);
+    Size ret = send((SOCKET)pair_fd[1], (char *)&addr, K_SIZE(addr), 0);
     (void)ret;
 }
 
@@ -527,7 +527,7 @@ http_Socket *http_Dispatcher::InitSocket(SOCKET sock, int64_t start, struct sock
 
     socket->sock = (int)sock;
 
-    RG_DEFER_N(err_guard) { delete socket; };
+    K_DEFER_N(err_guard) { delete socket; };
 
     if (!socket->client.Init(socket, start, sa)) [[unlikely]]
         return nullptr;
@@ -553,8 +553,8 @@ void http_Dispatcher::ParkSocket(http_Socket *socket)
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
-    RG_ASSERT(socket);
-    RG_ASSERT(!response.started);
+    K_ASSERT(socket);
+    K_ASSERT(!response.started);
 
     response.started = true;
 

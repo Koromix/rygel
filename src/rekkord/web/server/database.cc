@@ -17,7 +17,7 @@
 #include "config.hh"
 #include "database.hh"
 
-namespace RG {
+namespace K {
 
 const int DatabaseVersion = 27;
 

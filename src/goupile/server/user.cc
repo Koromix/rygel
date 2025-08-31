@@ -25,7 +25,7 @@
 #include "src/core/wrap/qrcode.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
 static_assert(PasswordHashBytes == crypto_pwhash_STRBYTES);
 
@@ -56,7 +56,7 @@ struct EventInfo {
     int64_t prev_time; // Unix time
     int64_t time; // Unix time
 
-    RG_HASHTABLE_HANDLER(EventInfo, key);
+    K_HASHTABLE_HANDLER(EventInfo, key);
 };
 
 static http_SessionManager<SessionInfo> sessions;
@@ -234,7 +234,7 @@ void ExportProfile(const SessionInfo *session, const InstanceHolder *instance, j
             json->Key("authorized"); json->Bool(false);
 
             switch (confirm) {
-                case SessionConfirm::None: { RG_UNREACHABLE(); } break;
+                case SessionConfirm::None: { K_UNREACHABLE(); } break;
                 case SessionConfirm::Mail: { json->Key("confirm"); json->String("mail"); } break;
                 case SessionConfirm::SMS: { json->Key("confirm"); json->String("sms"); } break;
                 case SessionConfirm::TOTP: { json->Key("confirm"); json->String("totp"); } break;
@@ -263,7 +263,7 @@ void ExportProfile(const SessionInfo *session, const InstanceHolder *instance, j
                     case SessionType::Login: { json->Key("type"); json->String("login"); } break;
                     case SessionType::Token: { json->Key("type"); json->String("token"); } break;
                     case SessionType::Key: {
-                        RG_ASSERT(instance->config.auto_key);
+                        K_ASSERT(instance->config.auto_key);
                         json->Key("type"); json->String("key");
                     } break;
                     case SessionType::Auto: { json->Key("type"); json->String("auto"); } break;
@@ -305,7 +305,7 @@ void ExportProfile(const SessionInfo *session, const InstanceHolder *instance, j
                 }
 
                 json->Key("permissions"); json->StartObject();
-                for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+                for (Size i = 0; i < K_LEN(UserPermissionNames); i++) {
                     Span<const char> key = json_ConvertToJsonName(UserPermissionNames[i], buf);
                     json->Key(key.ptr, (size_t)key.len); json->Bool(stamp->permissions & (1 << i));
                 }
@@ -320,7 +320,7 @@ void ExportProfile(const SessionInfo *session, const InstanceHolder *instance, j
                     const SessionStamp *stamp = session->GetStamp(master);
                     json->Key("develop"); json->Bool(stamp && stamp->develop.load(std::memory_order_relaxed));
                 } else {
-                    RG_ASSERT(!stamp->develop.load());
+                    K_ASSERT(!stamp->develop.load());
                 }
 
                 json->Key("root"); json->Bool(session->is_root);
@@ -344,7 +344,7 @@ Span<const char> ExportProfile(const SessionInfo *session, const InstanceHolder 
     json_Writer json(&st);
 
     ExportProfile(session, instance, &json);
-    RG_ASSERT(st.Close());
+    K_ASSERT(st.Close());
 
     buf.Grow(1);
     buf.ptr[buf.len] = 0;
@@ -366,7 +366,7 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
                                                 const char *username, const char *local_key)
 {
     Size username_bytes = strlen(username) + 1;
-    Size session_bytes = RG_SIZE(SessionInfo) + username_bytes;
+    Size session_bytes = K_SIZE(SessionInfo) + username_bytes;
 
     SessionInfo *session = (SessionInfo *)AllocateRaw(nullptr, session_bytes, (int)AllocFlag::Zero);
 
@@ -412,7 +412,7 @@ RetainPtr<const SessionInfo> GetNormalSession(http_IO *io, InstanceHolder *insta
             {
                 uint8_t buf[32];
                 FillRandomSafe(buf);
-                sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+                sodium_bin2base64(local_key, K_SIZE(local_key), buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
             }
 
             session = CreateUserSession(SessionType::Auto, 0, "Guest", local_key);
@@ -531,7 +531,7 @@ static bool CheckPasswordComplexity(const SessionInfo &session, Span<const char>
         case PasswordComplexity::Moderate: { flags = UINT_MAX & ~(int)pwd_CheckFlag::Score; } break;
         case PasswordComplexity::Hard: { flags = UINT_MAX; } break;
     }
-    RG_ASSERT(flags);
+    K_ASSERT(flags);
 
     return pwd_CheckPassword(password, session.username, flags);
 }
@@ -672,7 +672,7 @@ void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
                 session = CreateUserSession(SessionType::Login, userid, username, local_key);
             } else if (TestStr(confirm, "TOTP")) {
                 if (secret) {
-                    if (strlen(secret) >= RG_SIZE(SessionInfo::secret)) {
+                    if (strlen(secret) >= K_SIZE(SessionInfo::secret)) {
                         // Should never happen, but let's be careful
                         LogError("Session secret is too big");
                         return;
@@ -724,7 +724,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
                                                 const char *username, const char *email, const char *sms,
                                                 bool single, const char *lock)
 {
-    RG_ASSERT(!email || !sms);
+    K_ASSERT(!email || !sms);
 
     BlockAllocator temp_alloc;
 
@@ -747,7 +747,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         {
             uint8_t buf[32];
             FillRandomSafe(buf);
-            sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+            sodium_bin2base64((char *)local_key, 45, buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 
         if (!instance->db->Prepare(R"(INSERT INTO ins_users (key, local_key)
@@ -758,7 +758,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
             return nullptr;
 
         if (!stmt.Step()) {
-            RG_ASSERT(!stmt.IsValid());
+            K_ASSERT(!stmt.IsValid());
             return nullptr;
         }
     }
@@ -766,7 +766,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
     userid = sqlite3_column_int64(stmt, 0);
     local_key = (const char *)sqlite3_column_text(stmt, 1);
 
-    RG_ASSERT(userid > 0);
+    K_ASSERT(userid > 0);
     userid = -userid;
 
     RetainPtr<SessionInfo> session;
@@ -779,7 +779,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
 
         char code[9];
         {
-            static_assert(RG_SIZE(code) <= RG_SIZE(SessionInfo::secret));
+            static_assert(K_SIZE(code) <= K_SIZE(SessionInfo::secret));
 
             uint32_t rnd = randombytes_uniform(100000000); // 8 digits
             Fmt(code, "%1", FmtArg(rnd).Pad0(-8));
@@ -809,7 +809,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
 
         char code[9];
         {
-            static_assert(RG_SIZE(code) <= RG_SIZE(SessionInfo::secret));
+            static_assert(K_SIZE(code) <= K_SIZE(SessionInfo::secret));
 
             uint32_t rnd = randombytes_uniform(1000000); // 6 digits
             Fmt(code, "%1", FmtArg(rnd).Pad0(-6));
@@ -1007,7 +1007,7 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
 
     if (claims.len) {
         bool success = instance->db->Transaction([&]() {
-            RG_ASSERT(session->userid < 0);
+            K_ASSERT(session->userid < 0);
 
             for (const char *claim: claims) {
                 if (!instance->legacy) {
@@ -1088,7 +1088,7 @@ static bool CheckTotp(http_IO *io, const SessionInfo &session, InstanceHolder *i
     int64_t max = counter + 1;
 
     if (pwd_CheckHotp(session.secret, pwd_HotpAlgorithm::SHA1, min, max, 6, code)) {
-        RG_ASSERT(session.userid > 0 || instance);
+        K_ASSERT(session.userid > 0 || instance);
 
         const char *where = (session.userid > 0) ? "" : instance->key.ptr;
         const EventInfo *event = RegisterEvent(where, session.username, time);
@@ -1172,13 +1172,13 @@ void HandleSessionConfirm(http_IO *io, InstanceHolder *instance)
     WaitDelay(800);
 
     switch (session->confirm) {
-        case SessionConfirm::None: { RG_UNREACHABLE(); } break;
+        case SessionConfirm::None: { K_UNREACHABLE(); } break;
 
         case SessionConfirm::Mail:
         case SessionConfirm::SMS: {
             if (TestStr(code, session->secret)) {
                 session->confirm = SessionConfirm::None;
-                sodium_memzero(session->secret, RG_SIZE(session->secret));
+                sodium_memzero(session->secret, K_SIZE(session->secret));
 
                 SendProfile(io, session.GetRaw(), instance);
             } else {
@@ -1202,7 +1202,7 @@ void HandleSessionConfirm(http_IO *io, InstanceHolder *instance)
                 }
 
                 session->confirm = SessionConfirm::None;
-                sodium_memzero(session->secret, RG_SIZE(session->secret));
+                sodium_memzero(session->secret, K_SIZE(session->secret));
 
                 lock_excl.unlock();
                 SendProfile(io, session.GetRaw(), instance);
@@ -1302,7 +1302,7 @@ void HandleChangePassword(http_IO *io, InstanceHolder *instance)
             return;
         }
     }
-    RG_ASSERT(old_password || session->change_password);
+    K_ASSERT(old_password || session->change_password);
 
     // Complex enough?
     if (!CheckPasswordComplexity(*session, new_password)) {
@@ -1648,7 +1648,7 @@ void HandleChangeExportKey(http_IO *io, InstanceHolder *instance)
     {
         uint8_t buf[32];
         FillRandomSafe(buf);
-        sodium_bin2base64(key_buf.ptr, (size_t)key_buf.len, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+        sodium_bin2base64(key_buf.ptr, (size_t)key_buf.len, buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
     }
 
     if (!gp_domain.db.Run(R"(UPDATE dom_permissions SET export_key = ?3
@@ -1667,14 +1667,14 @@ void HandleChangeExportKey(http_IO *io, InstanceHolder *instance)
 
 int64_t CreateInstanceUser(InstanceHolder *instance, const char *username)
 {
-    RG_ASSERT(username);
+    K_ASSERT(username);
 
     // Create random local key
     char local_key[45];
     {
         uint8_t buf[32];
         FillRandomSafe(buf);
-        sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+        sodium_bin2base64((char *)local_key, 45, buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
     }
 
     int64_t userid;
@@ -1694,7 +1694,7 @@ int64_t CreateInstanceUser(InstanceHolder *instance, const char *username)
     if (!success)
         return 0;
 
-    RG_ASSERT(userid > 0);
+    K_ASSERT(userid > 0);
     userid = -userid;
 
     return userid;
@@ -1722,7 +1722,7 @@ RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *in
     {
         uint8_t buf[32];
         FillRandomSafe(buf);
-        sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+        sodium_bin2base64((char *)local_key, 45, buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
     }
 
     int64_t userid = CreateInstanceUser(instance, username);
@@ -1742,7 +1742,7 @@ RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *in
     if (!success)
         return nullptr;
 
-    RG_ASSERT(userid > 0);
+    K_ASSERT(userid > 0);
     userid = -userid;
 
     RetainPtr<SessionInfo> session = CreateUserSession(SessionType::Auto, userid, username, local_key);

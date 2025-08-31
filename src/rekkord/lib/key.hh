@@ -17,7 +17,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 static const Size rk_MaximumKeySize = 4096;
 static const Size rk_MasterKeySize = 32;

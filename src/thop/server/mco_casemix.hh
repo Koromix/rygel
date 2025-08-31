@@ -19,7 +19,7 @@
 #include "user.hh"
 #include "src/core/http/http.hh"
 
-namespace RG {
+namespace K {
 
 void ProduceMcoAggregate(http_IO *io, const User *user);
 void ProduceMcoResults(http_IO *io, const User *user);

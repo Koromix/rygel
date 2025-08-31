@@ -15,7 +15,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 struct Element {
     enum class Type {
@@ -51,7 +51,7 @@ struct Concept {
     const char *name = nullptr;
     const char *path = nullptr;
 
-    RG_HASHTABLE_HANDLER(Concept, name);
+    K_HASHTABLE_HANDLER(Concept, name);
 };
 
 struct ConceptSet {

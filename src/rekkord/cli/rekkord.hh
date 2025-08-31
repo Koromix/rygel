@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "src/rekkord/lib/librekkord.hh"
 
-namespace RG {
+namespace K {
 
 extern const char *const DefaultConfigDirectory;
 extern const char *const DefaultConfigName;

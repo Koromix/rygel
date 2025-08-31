@@ -22,7 +22,7 @@
 #include "src/core/password/password.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
 struct PlanItem {
     const char *channel;
@@ -410,7 +410,7 @@ void HandlePlanSave(http_IO *io)
                         scan >= 0 ? sq_Binding(scan) : sq_Binding()))
             return false;
         if (!stmt.Step()) {
-            RG_ASSERT(!stmt.IsValid());
+            K_ASSERT(!stmt.IsValid());
             return false;
         }
 

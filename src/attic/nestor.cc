@@ -17,7 +17,7 @@
 #include "src/core/http/http.hh"
 #include "src/core/request/curl.hh"
 
-namespace RG {
+namespace K {
 
 enum class SourceType {
     Local,
@@ -67,13 +67,13 @@ static thread_local CURL *curl = nullptr;
 static const char *NormalizeURL(const char *url, Allocator *alloc)
 {
     CURLU *h = curl_url();
-    RG_DEFER { curl_url_cleanup(h); };
+    K_DEFER { curl_url_cleanup(h); };
 
     // Parse URL
     {
         CURLUcode ret = curl_url_set(h, CURLUPART_URL, url, CURLU_NON_SUPPORT_SCHEME);
         if (ret == CURLUE_OUT_OF_MEMORY)
-            RG_BAD_ALLOC();
+            K_BAD_ALLOC();
         if (ret != CURLUE_OK) {
             LogError("Malformed URL '%1'", url);
             return nullptr;
@@ -180,7 +180,7 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
 
     IniParser ini(st);
     ini.PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {
@@ -413,7 +413,7 @@ R"(<!DOCTYPE html>
 
         if (ret != EnumResult::Success) {
             switch (ret) {
-                case EnumResult::Success: { RG_UNREACHABLE(); } break;
+                case EnumResult::Success: { K_UNREACHABLE(); } break;
 
                 case EnumResult::MissingPath: { io->SendError(404); } break;
                 case EnumResult::AccessDenied: { io->SendError(403); } break;
@@ -443,7 +443,7 @@ R"(<!DOCTYPE html>
 
         if (key == "TITLE") {
             Span<const char> stripped = TrimStrRight(request.path, "/");
-            Span<const char> title = Fmt(io->Allocator(), "%1/", SplitStrReverseAny(stripped, RG_PATH_SEPARATORS));
+            Span<const char> title = Fmt(io->Allocator(), "%1/", SplitStrReverseAny(stripped, K_PATH_SEPARATORS));
 
             WriteContent(title, writer);
         } else if (key == "NAV") {
@@ -703,7 +703,7 @@ static void HandleRequest(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
 
-    RG_ASSERT(StartsWith(request.path, "/"));
+    K_ASSERT(StartsWith(request.path, "/"));
 
     // Security checks
     if (request.method != http_RequestMethod::Get) {
@@ -896,4 +896,4 @@ Options:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

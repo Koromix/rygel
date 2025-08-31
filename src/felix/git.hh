@@ -17,7 +17,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 union GitHash {
     uint8_t raw[20] = {};

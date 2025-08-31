@@ -24,7 +24,7 @@
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include "vendor/miniz/miniz.h"
 
-namespace RG {
+namespace K {
 
 class MinizDecompressor: public StreamDecoder {
     tinfl_decompressor inflator;
@@ -56,7 +56,7 @@ public:
 MinizDecompressor::MinizDecompressor(StreamReader *reader, CompressionType type)
     : StreamDecoder(reader), is_gzip(type == CompressionType::Gzip), process_gzip_header(is_gzip)
 {
-    static_assert(RG_SIZE(out_buf) >= TINFL_LZ_DICT_SIZE);
+    static_assert(K_SIZE(out_buf) >= TINFL_LZ_DICT_SIZE);
     tinfl_init(&inflator);
 }
 
@@ -67,7 +67,7 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
     // probably quite rare.
     if (process_gzip_header) {
         const Size header_max = 8192;
-        static_assert(header_max < RG_SIZE(in_buf) / 4);
+        static_assert(header_max < K_SIZE(in_buf) / 4);
 
         in_len = ReadRaw(header_max, in_buf);
 
@@ -153,16 +153,16 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
                 }
             }
 
-            while (out_len < RG_SIZE(out_buf)) {
+            while (out_len < K_SIZE(out_buf)) {
                 if (!in_len) {
                     in_ptr = in_buf;
-                    in_len = ReadRaw(RG_SIZE(in_buf), in_buf);
+                    in_len = ReadRaw(K_SIZE(in_buf), in_buf);
                     if (in_len < 0)
                         return read_len ? read_len : in_len;
                 }
 
                 size_t in_arg = (size_t)in_len;
-                size_t out_arg = (size_t)(RG_SIZE(out_buf) - out_len);
+                size_t out_arg = (size_t)(K_SIZE(out_buf) - out_len);
                 uint32_t flags = (uint32_t)
                     ((is_gzip ? 0 : TINFL_FLAG_PARSE_ZLIB_HEADER) |
                      (IsSourceEOF() ? 0 : TINFL_FLAG_HAS_MORE_INPUT));
@@ -184,13 +184,13 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
                     // Gzip footer (CRC and size check)
                     if (is_gzip) {
                         uint32_t footer[2];
-                        static_assert(RG_SIZE(footer) == 8);
+                        static_assert(K_SIZE(footer) == 8);
 
-                        if (in_len < RG_SIZE(footer)) {
+                        if (in_len < K_SIZE(footer)) {
                             MemCpy(footer, in_ptr, in_len);
 
                             uint8_t *ptr = (uint8_t *)footer + in_len;
-                            Size missing_len = RG_SIZE(footer) - in_len;
+                            Size missing_len = K_SIZE(footer) - in_len;
 
                             if (ReadRaw(missing_len, ptr) < missing_len) {
                                 if (IsValid()) {
@@ -200,7 +200,7 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
                                 }
                             }
                         } else {
-                            MemCpy(footer, in_ptr, RG_SIZE(footer));
+                            MemCpy(footer, in_ptr, K_SIZE(footer));
                         }
                         footer[0] = LittleEndian(footer[0]);
                         footer[1] = LittleEndian(footer[1]);
@@ -265,7 +265,7 @@ MinizCompressor::MinizCompressor(StreamWriter *writer, CompressionType type, Com
         MinizCompressor *compressor = (MinizCompressor *)udata;
         return (int)compressor->WriteRaw(MakeSpan((uint8_t *)buf, len));
     }, this, flags);
-    RG_ASSERT(status == TDEFL_STATUS_OKAY);
+    K_ASSERT(status == TDEFL_STATUS_OKAY);
 
     if (is_gzip) {
         static uint8_t gzip_header[] = {
@@ -298,7 +298,7 @@ bool MinizCompressor::Write(Span<const uint8_t> buf)
             return false;
         small_buf.Clear();
 
-        if (buf.len >= RG_SIZE(small_buf.data) / 2) {
+        if (buf.len >= K_SIZE(small_buf.data) / 2) {
             if (!WriteDeflate(buf))
                 return false;
         } else {
@@ -350,16 +350,16 @@ bool MinizCompressor::Finalize()
             LittleEndian((uint32_t)uncompressed_size)
         };
 
-        if (!WriteRaw(MakeSpan((uint8_t *)gzip_footer, RG_SIZE(gzip_footer))))
+        if (!WriteRaw(MakeSpan((uint8_t *)gzip_footer, K_SIZE(gzip_footer))))
             return false;
     }
 
     return true;
 }
 
-RG_REGISTER_DECOMPRESSOR(CompressionType::Zlib, MinizDecompressor);
-RG_REGISTER_DECOMPRESSOR(CompressionType::Gzip, MinizDecompressor);
-RG_REGISTER_COMPRESSOR(CompressionType::Zlib, MinizCompressor);
-RG_REGISTER_COMPRESSOR(CompressionType::Gzip, MinizCompressor);
+K_REGISTER_DECOMPRESSOR(CompressionType::Zlib, MinizDecompressor);
+K_REGISTER_DECOMPRESSOR(CompressionType::Gzip, MinizDecompressor);
+K_REGISTER_COMPRESSOR(CompressionType::Zlib, MinizCompressor);
+K_REGISTER_COMPRESSOR(CompressionType::Gzip, MinizCompressor);
 
 }

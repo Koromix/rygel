@@ -26,7 +26,7 @@
 struct ImFontAtlas;
 struct GLFWwindow;
 
-namespace RG {
+namespace K {
 
 enum class gui_InputKey {
     Control,
@@ -120,7 +120,7 @@ struct gui_State {
 };
 
 class gui_Window {
-    RG_DELETE_COPY(gui_Window)
+    K_DELETE_COPY(gui_Window)
 
     gui_State priv = {};
 

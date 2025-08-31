@@ -30,7 +30,7 @@
 #include <commctrl.h>
 #include <wchar.h>
 
-namespace RG {
+namespace K {
 
 #define WM_APP_TRAY (WM_APP + 1)
 #define WM_APP_REHOOK (WM_APP + 2)
@@ -52,10 +52,10 @@ static void ShowDialog(const char *text)
     TASKDIALOGCONFIG dialog = {};
 
     wchar_t title[1024]; ConvertUtf8ToWin32Wide(FelixTarget, title);
-    wchar_t main[1024]; swprintf(main, RG_LEN(main), L"%hs %hs", FelixTarget, FelixVersion);
+    wchar_t main[1024]; swprintf(main, K_LEN(main), L"%hs %hs", FelixTarget, FelixVersion);
     wchar_t content[2048]; ConvertUtf8ToWin32Wide(text, content);
 
-    dialog.cbSize = RG_SIZE(dialog);
+    dialog.cbSize = K_SIZE(dialog);
     dialog.hwndParent = main_hwnd;
     dialog.hInstance = module;
     dialog.dwCommonButtons = TDCBF_OK_BUTTON;
@@ -94,7 +94,7 @@ static bool ApplyProfile(Size idx)
         // Should work first time...
         {
             PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-            RG_DEFER { PopLogFilter(); };
+            K_DEFER { PopLogFilter(); };
 
             if (ApplyLight(port, config.profiles[idx].settings)) {
                 profile_idx = idx;
@@ -186,7 +186,7 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                 GetCursorPos(&click);
 
                 HMENU menu = CreatePopupMenu();
-                RG_DEFER { DestroyMenu(menu); };
+                K_DEFER { DestroyMenu(menu); };
 
                 for (Size i = 0; i < config.profiles.count; i++) {
                     const ConfigProfile &profile = config.profiles[i];
@@ -278,7 +278,7 @@ static void RedirectErrors() {
 
         // Append context
         if (ctx) {
-            Size len = ConvertUtf8ToWin32Wide(ctx, buf_w.Take(0, RG_LEN(buf_w.data) - 2));
+            Size len = ConvertUtf8ToWin32Wide(ctx, buf_w.Take(0, K_LEN(buf_w.data) - 2));
             if (len < 0)
                 return;
             wcscpy(buf_w.data + len, L": ");
@@ -368,7 +368,7 @@ By default, the first of the following config files will be used:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
-                    config_filename = Fmt(&temp_alloc, "%1%/meestic.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
+                    config_filename = Fmt(&temp_alloc, "%1%/meestic.ini", TrimStrRight(opt.current_value, K_PATH_SEPARATORS)).ptr;
                 } else {
                     config_filename = opt.current_value;
                 }
@@ -396,7 +396,7 @@ By default, the first of the following config files will be used:
     {
         WNDCLASSEXA wc = {};
 
-        wc.cbSize = RG_SIZE(wc);
+        wc.cbSize = K_SIZE(wc);
         wc.hInstance = module;
         wc.lpszClassName = cls_name;
         wc.lpfnWndProc = MainWindowProc;
@@ -407,7 +407,7 @@ By default, the first of the following config files will be used:
             return 1;
         }
     }
-    RG_DEFER { UnregisterClassA(cls_name, module); };
+    K_DEFER { UnregisterClassA(cls_name, module); };
 
     // Create hidden window
     main_hwnd = CreateWindowExA(0, cls_name, win_name, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
@@ -416,7 +416,7 @@ By default, the first of the following config files will be used:
         LogError("Failed to create window named '%1': %2", win_name, GetLastError(), GetWin32ErrorString());
         return 1;
     }
-    RG_DEFER { DestroyWindow(main_hwnd); };
+    K_DEFER { DestroyWindow(main_hwnd); };
 
     // We want to intercept Fn+F8, and this is not possible with RegisterHotKey because
     // it is not mapped to a virtual key. We want the raw scan code.
@@ -425,25 +425,25 @@ By default, the first of the following config files will be used:
         LogError("Failed to insert low-level keyboard hook: %1", GetWin32ErrorString());
         return 1;
     }
-    RG_DEFER { if (hook) UnhookWindowsHookEx(hook); };
+    K_DEFER { if (hook) UnhookWindowsHookEx(hook); };
 
     // Unfortunately, Windows sometimes disconnects our hook for no good reason
     if (!SetTimer(main_hwnd, WM_APP_REHOOK, 30000, nullptr)) {
         LogError("Failed to create Win32 timer: %1", GetWin32ErrorString());
         return 1;
     }
-    RG_DEFER { KillTimer(main_hwnd, WM_APP_REHOOK); };
+    K_DEFER { KillTimer(main_hwnd, WM_APP_REHOOK); };
 
     toggle = CreateEvent(nullptr, TRUE, FALSE, nullptr);
     if (!toggle) {
         LogError("Failed to create Win32 event object: %1", GetWin32ErrorString());
         return 1;
     }
-    RG_DEFER { CloseHandle(toggle); };
+    K_DEFER { CloseHandle(toggle); };
 
     // Create tray icon
     {
-        notify.cbSize = RG_SIZE(notify);
+        notify.cbSize = K_SIZE(notify);
         notify.hWnd = main_hwnd;
         notify.uID = 0xA56B96F2u;
         notify.hIcon = LoadIcon(module, MAKEINTRESOURCE(1));
@@ -456,7 +456,7 @@ By default, the first of the following config files will be used:
             return 1;
         }
     }
-    RG_DEFER { Shell_NotifyIconA(NIM_DELETE, &notify); };
+    K_DEFER { Shell_NotifyIconA(NIM_DELETE, &notify); };
 
     // Open the light MSI HID device ahead of time
     if (!GetDebugFlag("FAKE_LIGHTS")) {
@@ -464,7 +464,7 @@ By default, the first of the following config files will be used:
         if (!port)
             return 1;
     }
-    RG_DEFER { CloseLightDevice(port); };
+    K_DEFER { CloseLightDevice(port); };
 
     // Check that it works once, at least
     if (!ApplyProfile(config.default_idx))
@@ -497,6 +497,6 @@ By default, the first of the following config files will be used:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }
 
 #endif

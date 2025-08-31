@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "repository.hh"
 
-namespace RG {
+namespace K {
 
 static const int ConfigVersion = 3;
 static const int TagVersion = 1;
@@ -34,7 +34,7 @@ struct ConfigData {
     uint8_t sig[64];
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(ConfigData) == 4203);
+static_assert(K_SIZE(ConfigData) == 4203);
 
 #pragma pack(push, 1)
 struct TagIntro {
@@ -45,7 +45,7 @@ struct TagIntro {
     int8_t count;
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(TagIntro) == 75);
+static_assert(K_SIZE(TagIntro) == 75);
 
 #pragma pack(push, 1)
 struct BlobIntro {
@@ -55,6 +55,6 @@ struct BlobIntro {
     uint8_t header[24];
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(BlobIntro) == 106);
+static_assert(K_SIZE(BlobIntro) == 106);
 
 }

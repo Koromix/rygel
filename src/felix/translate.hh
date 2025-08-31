@@ -17,7 +17,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 struct TranslationMessage {
     const char *key;

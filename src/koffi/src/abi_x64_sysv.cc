@@ -28,7 +28,7 @@
 
 #include <napi.h>
 
-namespace RG {
+namespace K {
 
 enum class RegisterClass {
     NoClass = 0, // Explicitly 0
@@ -99,7 +99,7 @@ static inline RegisterClass MergeClasses(RegisterClass cls1, RegisterClass cls2)
 
 static Size ClassifyType(const TypeInfo *type, Size offset, Span<RegisterClass> classes)
 {
-    RG_ASSERT(classes.len > 0);
+    K_ASSERT(classes.len > 0);
 
     switch (type->primitive) {
         case PrimitiveKind::Void: { return 0; } break;
@@ -178,10 +178,10 @@ static Size ClassifyType(const TypeInfo *type, Size offset, Span<RegisterClass> 
             return 1;
         } break;
 
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int xmm_avail)
@@ -200,7 +200,7 @@ static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int xmm_avail)
     int xmm_count = 0;
 
     for (RegisterClass cls: classes) {
-        RG_ASSERT(cls != RegisterClass::NoClass);
+        K_ASSERT(cls != RegisterClass::NoClass);
 
         if (cls == RegisterClass::Memory) {
             param->use_memory = true;
@@ -283,12 +283,12 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
     // Push arguments
     for (Size i = 0; i < func->parameters.len; i++) {
         const ParameterInfo &param = func->parameters[i];
-        RG_ASSERT(param.directions >= 1 && param.directions <= 3);
+        K_ASSERT(param.directions >= 1 && param.directions <= 3);
 
         Napi::Value value = info[param.offset];
 
         switch (param.type->primitive) {
-            case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
                 if (!value.IsBoolean()) [[unlikely]] {
@@ -351,7 +351,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 Napi::Object obj = value.As<Napi::Object>();
 
                 if (param.gpr_count || param.xmm_count) {
-                    RG_ASSERT(param.type->size <= 16);
+                    K_ASSERT(param.type->size <= 16);
 
                     uint64_t buf[2] = {};
                     if (!PushObject(obj, param.type, (uint8_t *)buf))
@@ -379,7 +379,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     args_ptr += (param.type->size + 7) / 8;
                 }
             } break;
-            case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
                 if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
@@ -409,7 +409,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
             } break;
 
-            case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
         }
     }
 
@@ -457,23 +457,23 @@ void CallData::Execute(const FunctionInfo *func, void *native)
         case PrimitiveKind::Union: {
             if (func->ret.gpr_first && !func->ret.xmm_count) {
                 RaxRdxRet ret = PERFORM_CALL(GG);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, K_SIZE(ret));
             } else if (func->ret.gpr_first) {
                 RaxXmm0Ret ret = PERFORM_CALL(GD);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, K_SIZE(ret));
             } else if (func->ret.xmm_count == 2) {
                 Xmm0Xmm1Ret ret = PERFORM_CALL(DD);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, K_SIZE(ret));
             } else {
                 Xmm0RaxRet ret = PERFORM_CALL(DG);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, K_SIZE(ret));
             }
         } break;
-        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: { result.f = PERFORM_CALL(F); } break;
         case PrimitiveKind::Float64: { result.d = PERFORM_CALL(DG).xmm0; } break;
 
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
 #undef PERFORM_CALL
@@ -481,7 +481,7 @@ void CallData::Execute(const FunctionInfo *func, void *native)
 
 Napi::Value CallData::Complete(const FunctionInfo *func)
 {
-    RG_DEFER {
+    K_DEFER {
        PopOutArguments();
 
         if (func->ret.type->dispose) {
@@ -528,14 +528,14 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
             Napi::Object obj = DecodeObject(env, ptr, func->ret.type);
             return obj;
         } break;
-        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: return Napi::Number::New(env, (double)result.f);
         case PrimitiveKind::Float64: return Napi::Number::New(env, result.d);
 
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_stack, BackRegisters *out_reg)
@@ -555,7 +555,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
     uint8_t *return_ptr = proto->ret.use_memory ? (uint8_t *)gpr_ptr[0] : nullptr;
     gpr_ptr += proto->ret.use_memory;
 
-    RG_DEFER_N(err_guard) { memset(out_reg, 0, RG_SIZE(*out_reg)); };
+    K_DEFER_N(err_guard) { memset(out_reg, 0, K_SIZE(*out_reg)); };
 
     if (trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
@@ -569,10 +569,10 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
     // Convert to JS arguments
     for (Size i = 0; i < proto->parameters.len; i++) {
         const ParameterInfo &param = proto->parameters[i];
-        RG_ASSERT(param.directions >= 1 && param.directions <= 3);
+        K_ASSERT(param.directions >= 1 && param.directions <= 3);
 
         switch (param.type->primitive) {
-            case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
                 bool b = *(bool *)((param.gpr_count ? gpr_ptr : args_ptr)++);
@@ -714,7 +714,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
                 if (param.gpr_count || param.xmm_count) {
-                    RG_ASSERT(param.type->size <= 16);
+                    K_ASSERT(param.type->size <= 16);
 
                     uint64_t buf[2] = {};
 
@@ -745,7 +745,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                     args_ptr += (param.type->size + 7) / 8;
                 }
             } break;
-            case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
                 float f = *(float *)((param.xmm_count ? xmm_ptr : args_ptr)++);
 
@@ -759,7 +759,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
 
-            case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
         }
     }
 
@@ -882,7 +882,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                     return;
                 out_reg->rax = (uint64_t)return_ptr;
             } else {
-                RG_ASSERT(type->size <= 16);
+                K_ASSERT(type->size <= 16);
 
                 uint8_t buf[16] = {};
                 if (!PushObject(obj, type, buf))
@@ -903,7 +903,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 }
             }
         } break;
-        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: {
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
@@ -945,7 +945,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             out_reg->rax = (uint64_t)ptr;
         } break;
 
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
 #undef RETURN_INTEGER_SWAP

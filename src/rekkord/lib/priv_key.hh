@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "key.hh"
 
-namespace RG {
+namespace K {
 
 static const char *const DerivationContext = "REKKORD0";
 static const int MaxKeys = 24;
@@ -43,8 +43,8 @@ struct KeyData {
     uint8_t sig[64];
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(KeyData) == 950);
-static_assert(RG_SIZE(KeyData::Badge) == 113);
-static_assert(RG_SIZE(rk_KeySet::badge) == 113);
+static_assert(K_SIZE(KeyData) == 950);
+static_assert(K_SIZE(KeyData::Badge) == 113);
+static_assert(K_SIZE(rk_KeySet::badge) == 113);
 
 }

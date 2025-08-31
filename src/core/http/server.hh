@@ -25,7 +25,7 @@
 
 struct sockaddr;
 
-namespace RG {
+namespace K {
 
 enum class http_AddressMode {
     Socket,
@@ -38,7 +38,7 @@ static const char *const http_AddressModeNames[] = {
     "X-Real-IP"
 };
 
-extern RG_CONSTINIT ConstMap<128, int, const char *> http_ErrorMessages;
+extern K_CONSTINIT ConstMap<128, int, const char *> http_ErrorMessages;
 
 struct http_Config {
 #if defined(__OpenBSD__)
@@ -78,7 +78,7 @@ class http_Dispatcher;
 struct http_Socket;
 
 class http_Daemon {
-    RG_DELETE_COPY(http_Daemon)
+    K_DELETE_COPY(http_Daemon)
 
     HeapArray<int> listeners;
 
@@ -158,7 +158,7 @@ struct http_KeyHead {
     http_KeyValue *first;
     http_KeyValue *last;
 
-    RG_HASHTABLE_HANDLER(http_KeyHead, key);
+    K_HASHTABLE_HANDLER(http_KeyHead, key);
 };
 
 struct http_RequestInfo {
@@ -203,7 +203,7 @@ enum class http_CookieFlag {
 };
 
 class http_IO {
-    RG_DELETE_COPY(http_IO)
+    K_DELETE_COPY(http_IO)
 
     http_Daemon *daemon;
 
@@ -240,7 +240,7 @@ public:
     http_IO(http_Daemon *daemon) : daemon(daemon) { Rearm(-1); }
 
     const http_RequestInfo &Request() const { return request; }
-    RG::BlockAllocator *Allocator() { return &allocator; }
+    K::BlockAllocator *Allocator() { return &allocator; }
 
     bool NegociateEncoding(CompressionType preferred, CompressionType *out_encoding);
     bool NegociateEncoding(CompressionType preferred1, CompressionType preferred2, CompressionType *out_encoding);

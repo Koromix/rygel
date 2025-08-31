@@ -24,7 +24,7 @@
     #include <sys/extattr.h>
 #endif
 
-namespace RG {
+namespace K {
 
 static const char *AclAccessKey = "rk.acl1";
 static const char *AclDefaultKey = "rk.acl1d";
@@ -38,14 +38,14 @@ static const int AclVersion = 2;
 struct AclHeader {
     uint32_t version;
 };
-static_assert(RG_SIZE(AclHeader) == 4);
+static_assert(K_SIZE(AclHeader) == 4);
 
 struct AclEntry {
     uint16_t tag;
     uint16_t perm;
     uint32_t id;
 };
-static_assert(RG_SIZE(AclEntry) == 8);
+static_assert(K_SIZE(AclEntry) == 8);
 
 enum class AclPermission {
     Read = 4,
@@ -82,7 +82,7 @@ static Span<const char> FormatACLs(const char *filename, Span<const uint8_t> raw
 
     // Check size and header
     {
-        if (raw.len < RG_SIZE(AclHeader) || raw.len % RG_SIZE(AclEntry) != RG_SIZE(AclHeader)) {
+        if (raw.len < K_SIZE(AclHeader) || raw.len % K_SIZE(AclEntry) != K_SIZE(AclHeader)) {
             LogError("Invalid ACL attribute size in '%1'", filename);
             return {};
         }
@@ -97,7 +97,7 @@ static Span<const char> FormatACLs(const char *filename, Span<const uint8_t> raw
         }
     }
 
-    for (Size offset = RG_SIZE(AclHeader); offset < raw.len; offset += RG_SIZE(AclEntry)) {
+    for (Size offset = K_SIZE(AclHeader); offset < raw.len; offset += K_SIZE(AclEntry)) {
         AclEntry entry = *(const AclEntry *)(raw.ptr + offset);
 
         entry.tag = LittleEndian(entry.tag);
@@ -151,7 +151,7 @@ static bool ParsePermissions(Span<const char> str, uint16_t *out_perm)
 
 static Size ParseACLs(Span<const char> str, Span<uint8_t> out_buf)
 {
-    RG_ASSERT(out_buf.len >= RG_SIZE(AclHeader));
+    K_ASSERT(out_buf.len >= K_SIZE(AclHeader));
 
     Size len = 0;
 
@@ -160,11 +160,11 @@ static Size ParseACLs(Span<const char> str, Span<uint8_t> out_buf)
         AclHeader header = {};
         header.version = LittleEndian(AclVersion);
 
-        MemCpy(out_buf.ptr, &header, RG_SIZE(header));
-        len += RG_SIZE(header);
+        MemCpy(out_buf.ptr, &header, K_SIZE(header));
+        len += K_SIZE(header);
 
-        out_buf.ptr += RG_SIZE(header);
-        out_buf.len -= RG_SIZE(header);
+        out_buf.ptr += K_SIZE(header);
+        out_buf.len -= K_SIZE(header);
     }
 
     // Parse entries
@@ -204,16 +204,16 @@ static Size ParseACLs(Span<const char> str, Span<uint8_t> out_buf)
         entry.id = LittleEndian(entry.id);
         entry.perm = LittleEndian(entry.perm);
 
-        if (out_buf.len < RG_SIZE(entry)) {
+        if (out_buf.len < K_SIZE(entry)) {
             LogError("Excessive POSIX ACL size");
             return -1;
         }
 
-        MemCpy(out_buf.ptr, &entry, RG_SIZE(entry));
-        len += RG_SIZE(entry);
+        MemCpy(out_buf.ptr, &entry, K_SIZE(entry));
+        len += K_SIZE(entry);
 
-        out_buf.ptr += RG_SIZE(entry);
-        out_buf.len -= RG_SIZE(entry);
+        out_buf.ptr += K_SIZE(entry);
+        out_buf.len -= K_SIZE(entry);
     }
 
     return len;
@@ -255,7 +255,7 @@ retry:
 
 bool ReadXAttributes(int fd, const char *filename, FileType, Allocator *alloc, HeapArray<XAttrInfo> *out_xattrs)
 {
-    RG_DEFER_NC(err_guard, len = out_xattrs->len) { out_xattrs->RemoveFrom(len); };
+    K_DEFER_NC(err_guard, len = out_xattrs->len) { out_xattrs->RemoveFrom(len); };
 
     HeapArray<char> list(alloc);
     {
@@ -373,7 +373,7 @@ bool WriteXAttributes(int fd, const char *filename, Span<const XAttrInfo> xattrs
 
 static Span<const char> ReadACLs(int fd, const char *filename, acl_type_t type, Allocator *alloc)
 {
-    RG_ASSERT(type == ACL_TYPE_ACCESS || fd < 0);
+    K_ASSERT(type == ACL_TYPE_ACCESS || fd < 0);
 
     acl_t acl = (fd >= 0) ? acl_get_fd(fd)
                           : acl_get_link_np(filename, type);
@@ -385,7 +385,7 @@ static Span<const char> ReadACLs(int fd, const char *filename, acl_type_t type, 
         LogError("Failed to open ACL entries for '%1': %2", filename, strerror(errno));
         return {};
     }
-    RG_DEFER { acl_free(acl); };
+    K_DEFER { acl_free(acl); };
 
     // Ignore trivial ACLs
     {
@@ -401,7 +401,7 @@ static Span<const char> ReadACLs(int fd, const char *filename, acl_type_t type, 
         LogError("Failed to read ACL entries for '%1': %2", filename, strerror(errno));
         return {};
     }
-    RG_DEFER { acl_free(str); };
+    K_DEFER { acl_free(str); };
 
     Span<const char> copy = DuplicateString(str, alloc).ptr;
     return copy;
@@ -409,7 +409,7 @@ static Span<const char> ReadACLs(int fd, const char *filename, acl_type_t type, 
 
 static bool WriteACLs(int fd, const char *filename, acl_type_t type, Span<const char> str)
 {
-    RG_ASSERT(type == ACL_TYPE_ACCESS || fd < 0);
+    K_ASSERT(type == ACL_TYPE_ACCESS || fd < 0);
 
     char buf[32768];
     CopyString(str, buf);
@@ -419,7 +419,7 @@ static bool WriteACLs(int fd, const char *filename, acl_type_t type, Span<const 
         LogError("Failed to decode ACL string for '%1': %2", filename, strerror(errno));
         return false;
     }
-    RG_DEFER { acl_free(acl); };
+    K_DEFER { acl_free(acl); };
 
     if (fd >= 0) {
         if (acl_set_fd(fd, acl) < 0) {
@@ -472,7 +472,7 @@ retry:
 
 bool ReadXAttributes(int fd, const char *filename, FileType type, Allocator *alloc, HeapArray<XAttrInfo> *out_xattrs)
 {
-    RG_DEFER_NC(err_guard, len = out_xattrs->len) { out_xattrs->RemoveFrom(len); };
+    K_DEFER_NC(err_guard, len = out_xattrs->len) { out_xattrs->RemoveFrom(len); };
 
     // Get access ACLs
     {

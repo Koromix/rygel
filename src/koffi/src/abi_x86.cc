@@ -31,7 +31,7 @@
 
 #include <napi.h>
 
-namespace RG {
+namespace K {
 
 struct BackRegisters {
     uint32_t eax;
@@ -112,16 +112,16 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
             func->decorated_name = Fmt(&instance->str_alloc, "_%1", func->name).ptr;
         } break;
         case CallConvention::Stdcall: {
-            RG_ASSERT(!func->variadic);
+            K_ASSERT(!func->variadic);
             func->decorated_name = Fmt(&instance->str_alloc, "_%1@%2", func->name, params_size).ptr;
         } break;
         case CallConvention::Fastcall: {
-            RG_ASSERT(!func->variadic);
+            K_ASSERT(!func->variadic);
             func->decorated_name = Fmt(&instance->str_alloc, "@%1@%2", func->name, params_size).ptr;
             func->args_size += 16;
         } break;
         case CallConvention::Thiscall: {
-            RG_ASSERT(!func->variadic);
+            K_ASSERT(!func->variadic);
             func->args_size += 16;
         } break;
     }
@@ -194,12 +194,12 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
     // Push arguments
     for (Size i = 0; i < func->parameters.len; i++) {
         const ParameterInfo &param = func->parameters[i];
-        RG_ASSERT(param.directions >= 1 && param.directions <= 3);
+        K_ASSERT(param.directions >= 1 && param.directions <= 3);
 
         Napi::Value value = info[param.offset];
 
         switch (param.type->primitive) {
-            case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
                 if (!value.IsBoolean()) [[unlikely]] {
@@ -272,7 +272,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     args_ptr = (uint32_t *)AlignUp(ptr + param.type->size, 4);
                 }
             } break;
-            case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
                 if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
@@ -300,7 +300,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 *(void **)((param.fast ? fast_ptr : args_ptr)++) = ptr;
             } break;
 
-            case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
         }
     }
 
@@ -320,7 +320,7 @@ void CallData::Execute(const FunctionInfo *func, void *native)
     TEB *teb = GetTEB();
 
     // Restore previous stack limits at the end
-    RG_DEFER_C(exception_list = teb->ExceptionList,
+    K_DEFER_C(exception_list = teb->ExceptionList,
                base = teb->StackBase,
                limit = teb->StackLimit,
                dealloc = teb->DeallocationStack,
@@ -387,18 +387,18 @@ void CallData::Execute(const FunctionInfo *func, void *native)
             } else if (func->ret.fast == 2) {
                 result.d = PERFORM_CALL(D);
             } else {
-                RG_UNREACHABLE();
+                K_UNREACHABLE();
             }
         } break;
 #else
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: { result.u64 = PERFORM_CALL(G); } break;
 #endif
-        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: { result.f = PERFORM_CALL(F); } break;
         case PrimitiveKind::Float64: { result.d = PERFORM_CALL(D); } break;
 
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
 #undef PERFORM_CALL
@@ -406,7 +406,7 @@ void CallData::Execute(const FunctionInfo *func, void *native)
 
 Napi::Value CallData::Complete(const FunctionInfo *func)
 {
-    RG_DEFER {
+    K_DEFER {
        PopOutArguments();
 
         if (func->ret.type->dispose) {
@@ -453,14 +453,14 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
             Napi::Object obj = DecodeObject(env, ptr, func->ret.type);
             return obj;
         } break;
-        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: return Napi::Number::New(env, (double)result.f);
         case PrimitiveKind::Float64: return Napi::Number::New(env, result.d);
 
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack, BackRegisters *out_reg)
@@ -472,7 +472,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
     TEB *teb = GetTEB();
 
     // Restore previous stack limits at the end
-    RG_DEFER_C(base = teb->StackBase,
+    K_DEFER_C(base = teb->StackBase,
                limit = teb->StackLimit,
                dealloc = teb->DeallocationStack) {
         teb->StackBase = base;
@@ -506,9 +506,9 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
 #endif
     }
 
-    RG_DEFER_N(err_guard) {
+    K_DEFER_N(err_guard) {
         int pop = out_reg->ret_pop;
-        memset(out_reg, 0, RG_SIZE(*out_reg));
+        memset(out_reg, 0, K_SIZE(*out_reg));
         out_reg->x87_double = true;
         out_reg->ret_pop = pop;
     };
@@ -525,10 +525,10 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
     // Convert to JS arguments
     for (Size i = 0; i < proto->parameters.len; i++) {
         const ParameterInfo &param = proto->parameters[i];
-        RG_ASSERT(param.directions >= 1 && param.directions <= 3);
+        K_ASSERT(param.directions >= 1 && param.directions <= 3);
 
         switch (param.type->primitive) {
-            case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
                 bool b = *(bool *)(args_ptr++);
@@ -673,7 +673,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
             } break;
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
-                RG_ASSERT(!param.fast);
+                K_ASSERT(!param.fast);
 
                 uint8_t *ptr = (uint8_t *)args_ptr;
 
@@ -682,7 +682,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
 
                 args_ptr = (uint32_t *)AlignUp(ptr + param.type->size, 4);
             } break;
-            case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
                 float f = *(float *)(args_ptr++);
 
@@ -697,7 +697,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
                 arguments.Append(arg);
             } break;
 
-            case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
         }
     }
 
@@ -846,7 +846,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
                 PushObject(obj, type, (uint8_t *)&out_reg->eax);
             }
         } break;
-        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: {
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
@@ -886,7 +886,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
             out_reg->eax = (uint32_t)ptr;
         } break;
 
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
 #undef RETURN_INTEGER_64_SWAP

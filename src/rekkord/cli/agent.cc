@@ -18,7 +18,7 @@
 #include "src/core/request/curl.hh"
 #include "src/core/wrap/json.hh"
 
-namespace RG {
+namespace K {
 
 struct ItemData {
     const char *channel;
@@ -43,7 +43,7 @@ static void LinkHeaders(Span<curl_slist> headers)
 
 static bool FetchPlan(Allocator *alloc, HeapArray<ItemData> *out_items)
 {
-    RG_DEFER_NC(err_guard, len = out_items->len) { out_items->RemoveFrom(len); };
+    K_DEFER_NC(err_guard, len = out_items->len) { out_items->RemoveFrom(len); };
 
     Span<const char> api = rekkord_config.agent_url;
     const char *key = rekkord_config.api_key;
@@ -53,7 +53,7 @@ static bool FetchPlan(Allocator *alloc, HeapArray<ItemData> *out_items)
         CURL *curl = curl_Init();
         if (!curl)
             return false;
-        RG_DEFER { curl_easy_cleanup(curl); };
+        K_DEFER { curl_easy_cleanup(curl); };
 
         const char *url = Fmt(alloc, "%1/api/plan/fetch", TrimStrRight(api, '/')).ptr;
 
@@ -137,7 +137,7 @@ static bool FetchPlan(Allocator *alloc, HeapArray<ItemData> *out_items)
 
 static bool ShouldRun(const ItemData &item)
 {
-    RG_ASSERT(item.days & 0b1111111);
+    K_ASSERT(item.days & 0b1111111);
 
     int64_t now = GetUnixTime();
 
@@ -181,7 +181,7 @@ static bool SendReport(Span<const char> json)
     CURL *curl = curl_Init();
     if (!curl)
         return false;
-    RG_DEFER { curl_easy_cleanup(curl); };
+    K_DEFER { curl_easy_cleanup(curl); };
 
     const char *url = Fmt(&temp_alloc, "%1/api/plan/report", TrimStrRight(api, '/')).ptr;
 
@@ -301,7 +301,7 @@ static bool CheckPlan()
 
                 func(level, ctx, msg);
             });
-            RG_DEFER { PopLogFilter(); };
+            K_DEFER { PopLogFilter(); };
 
             rk_SaveInfo info = {};
             bool success = RunSnapshot(item.channel, item.paths, &info);

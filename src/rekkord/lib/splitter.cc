@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "splitter.hh"
 
-namespace RG {
+namespace K {
 
 static const Size AverageMin = 256;
 static const Size AverageMax = Mebibytes(256);
@@ -70,7 +70,7 @@ static const uint32_t GearTable[] = {
     0x0DC82C11u, 0x23FFE354u, 0x2EAC53A6u, 0x16139E09u, 0x0AFD0DBCu, 0x2A4D4237u,
     0x56A368C7u, 0x234325E4u, 0x2DCE9187u, 0x32E8EA7Eu
 };
-static_assert(RG_LEN(GearTable) == 256);
+static_assert(K_LEN(GearTable) == 256);
 
 template <typename T>
 T CeilingDivide(T x, T y)
@@ -93,10 +93,10 @@ static Size CenterSize(Size avg, Size min, Size max)
 FastSplitter::FastSplitter(Size avg, Size min, Size max, uint64_t salt8)
     : avg(avg), min(min), max(max)
 {
-    RG_ASSERT(AverageMin <= avg && avg <= AverageMax);
-    RG_ASSERT(MinimumMin <= min && min <= MinimumMax);
-    RG_ASSERT(MaximumMin <= max && max <= MaximumMax);
-    RG_ASSERT(min < avg && avg < max);
+    K_ASSERT(AverageMin <= avg && avg <= AverageMax);
+    K_ASSERT(MinimumMin <= min && min <= MinimumMax);
+    K_ASSERT(MaximumMin <= max && max <= MaximumMax);
+    K_ASSERT(min < avg && avg < max);
 
     // Init masks
     {
@@ -112,11 +112,11 @@ FastSplitter::FastSplitter(Size avg, Size min, Size max, uint64_t salt8)
             uint64_t salt8;
             uint8_t salt[8];
         } u;
-        static_assert(RG_SIZE(salt) == RG_SIZE(u.salt));
-        static_assert(RG_SIZE(u.salt) == RG_SIZE(salt8));
+        static_assert(K_SIZE(salt) == K_SIZE(u.salt));
+        static_assert(K_SIZE(u.salt) == K_SIZE(salt8));
 
         u.salt8 = LittleEndian(salt8);
-        MemCpy(salt, u.salt, RG_SIZE(salt));
+        MemCpy(salt, u.salt, K_SIZE(salt));
     }
 }
 

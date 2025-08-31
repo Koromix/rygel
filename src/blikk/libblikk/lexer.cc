@@ -18,9 +18,9 @@
 #include "lexer.hh"
 #include "vendor/fast_float/fast_float.h"
 
-namespace RG {
+namespace K {
 
-static RG_CONSTINIT ConstMap<64, const char *, bk_Token> KeywordsMap = {
+static K_CONSTINIT ConstMap<64, const char *, bk_Token> KeywordsMap = {
     { "func", { bk_TokenKind::Func, 0, 0, {} } },
     { "return", { bk_TokenKind::Return, 0, 0, {} } },
     { "let", { bk_TokenKind::Let, 0, 0, {} } },
@@ -49,7 +49,7 @@ static RG_CONSTINIT ConstMap<64, const char *, bk_Token> KeywordsMap = {
 };
 
 class bk_Lexer {
-    RG_DELETE_COPY(bk_Lexer)
+    K_DELETE_COPY(bk_Lexer)
 
     const char *filename;
     Span<const char> code;
@@ -108,12 +108,12 @@ private:
 bk_Lexer::bk_Lexer(bk_TokenizedFile *file)
     : file(file), tokens(file->tokens)
 {
-    RG_ASSERT(file);
+    K_ASSERT(file);
 }
 
 bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
 {
-    RG_DEFER_NC(err_guard, tokens_len = tokens.len,
+    K_DEFER_NC(err_guard, tokens_len = tokens.len,
                            prototypes_len = file->prototypes.len) {
         tokens.RemoveFrom(tokens_len);
         file->prototypes.RemoveFrom(prototypes_len);

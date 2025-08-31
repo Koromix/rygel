@@ -27,7 +27,7 @@
     #include <io.h>
 #endif
 
-namespace RG {
+namespace K {
 
 static const int PasswordHashBytes = 128;
 
@@ -64,7 +64,7 @@ struct EventInfo {
     int64_t prev_time; // Unix time
     int64_t time; // Unix time
 
-    RG_HASHTABLE_HANDLER(EventInfo, key);
+    K_HASHTABLE_HANDLER(EventInfo, key);
 };
 
 static http_SessionManager<SessionInfo> sessions;
@@ -183,7 +183,7 @@ static Span<const char> PatchText(Span<const char> text, const char *mail, const
         } else if (key == "MAIL") {
             writer->Write(mail);
         } else if (key == "URL") {
-            RG_ASSERT(url);
+            K_ASSERT(url);
             writer->Write(url);
         } else {
             Print(writer, "{{%1}}", expr);
@@ -257,7 +257,7 @@ bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes])
 static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *username, const char *secret, int picture)
 {
     Size username_bytes = strlen(username) + 1;
-    Size session_bytes = RG_SIZE(SessionInfo) + username_bytes;
+    Size session_bytes = K_SIZE(SessionInfo) + username_bytes;
 
     SessionInfo *session = (SessionInfo *)AllocateRaw(nullptr, session_bytes, (int)AllocFlag::Zero);
 
@@ -469,7 +469,7 @@ void HandleUserRegister(http_IO *io)
     uint8_t token[16];
 
     // Always create it to reduce timing discloure
-    FillRandomSafe(token, RG_SIZE(token));
+    FillRandomSafe(token, K_SIZE(token));
 
     // Try to create user
     bool success = db.Transaction([&]() {
@@ -487,7 +487,7 @@ void HandleUserRegister(http_IO *io)
             userid = sqlite3_column_int64(stmt, 0);
             exists = (sqlite3_column_type(stmt, 1) != SQLITE_NULL);
         } else {
-            RG_ASSERT(!stmt.IsValid());
+            K_ASSERT(!stmt.IsValid());
             return false;
         }
 
@@ -664,7 +664,7 @@ void HandleUserRecover(http_IO *io)
     uint8_t token[16];
 
     // Always create it to reduce timing discloure
-    FillRandomSafe(token, RG_SIZE(token));
+    FillRandomSafe(token, K_SIZE(token));
 
     // Find user
     {
@@ -1023,7 +1023,7 @@ void HandleTotpConfirm(http_IO *io)
 
     if (CheckTotp(io, session->userid, secret, code)) {
         session->confirmed = true;
-        ZeroSafe(session->secret, RG_SIZE(session->secret));
+        ZeroSafe(session->secret, K_SIZE(session->secret));
 
         ExportSession(session.GetRaw(), io);
     }
@@ -1266,10 +1266,10 @@ static void SendDefaultPicture(http_IO *io)
 {
 #if defined(FELIX_HOT_ASSETS)
     const AssetInfo *DefaultPicture = FindEmbedAsset("src/rekkord/web/assets/ui/anonymous.png");
-    RG_ASSERT(DefaultPicture);
+    K_ASSERT(DefaultPicture);
 #else
     static const AssetInfo *DefaultPicture = FindEmbedAsset("src/rekkord/web/assets/ui/anonymous.png");
-    RG_ASSERT(DefaultPicture);
+    K_ASSERT(DefaultPicture);
 #endif
 
     io->AddEncodingHeader(DefaultPicture->compression_type);
@@ -1284,7 +1284,7 @@ void HandlePictureGet(http_IO *io)
     bool explicit_user = false;
 
     if (StartsWith(request.path, "/pictures/")) {
-        RG_ASSERT(StartsWith(request.path, "/pictures/"));
+        K_ASSERT(StartsWith(request.path, "/pictures/"));
         Span<const char> str = request.path + 10;
 
         if (!ParseInt(str, &userid)) {
@@ -1318,7 +1318,7 @@ void HandlePictureGet(http_IO *io)
             return;
         }
     }
-    RG_DEFER { sqlite3_blob_close(blob); };
+    K_DEFER { sqlite3_blob_close(blob); };
 
     Size len = sqlite3_blob_bytes(blob);
 
@@ -1365,7 +1365,7 @@ void HandlePictureSave(http_IO *io)
     const char *tmp_filename = CreateUniqueFile(config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
     if (!tmp_filename)
         return;
-    RG_DEFER {
+    K_DEFER {
         CloseDescriptor(fd);
         UnlinkFile(tmp_filename);
     };
@@ -1415,7 +1415,7 @@ void HandlePictureSave(http_IO *io)
             LogError("SQLite Error: %1", sqlite3_errmsg(db));
             return false;
         }
-        RG_DEFER { sqlite3_blob_close(blob); };
+        K_DEFER { sqlite3_blob_close(blob); };
 
         StreamReader reader(fd, "<temp>");
         int64_t read_len = 0;
@@ -1599,7 +1599,7 @@ void HandleKeyCreate(http_IO *io)
                            RETURNING id)", &stmt, session->userid, title, key, hash))
             return false;
         if (!stmt.Step()) {
-            RG_ASSERT(!stmt.IsValid());
+            K_ASSERT(!stmt.IsValid());
             return false;
         }
 

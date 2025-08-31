@@ -17,7 +17,7 @@
 #include "mco_authorization.hh"
 #include "mco_table.hh"
 
-namespace RG {
+namespace K {
 
 Span<const mco_Authorization> mco_AuthorizationSet::FindUnit(drd_UnitCode unit) const
 {
@@ -63,14 +63,14 @@ bool mco_AuthorizationSet::TestFacilityAuthorization(int8_t auth_type, LocalDate
 bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader *st)
 {
     Size authorizations_len = set.authorizations.len;
-    RG_DEFER_NC(out_guard, facility_authorizations_len = set.facility_authorizations.len) {
+    K_DEFER_NC(out_guard, facility_authorizations_len = set.facility_authorizations.len) {
         set.authorizations.RemoveFrom(authorizations_len);
         set.facility_authorizations.RemoveFrom(facility_authorizations_len);
     };
 
     LineReader reader(st);
     reader.PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {
@@ -89,13 +89,13 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader *st)
                     authorizations = &set.authorizations;
                 }
                 valid &= ParseInt(line.Take(13, 3), &auth.type,
-                                  RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
+                                  K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
                 ParseInt(line.Take(16, 2), &auth.dates[0].st.day,
-                         RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                         K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
                 ParseInt(line.Take(18, 2), &auth.dates[0].st.month,
-                         RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                         K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
                 ParseInt(line.Take(20, 4), &auth.dates[0].st.year,
-                         RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                         K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
                 auth.dates[1] = mco_MaxDate1980;
                 switch (line[27]) {
                     case 'C': { auth.mode = mco_Authorization::Mode::Complete; } break;
@@ -124,7 +124,7 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader *st)
 bool mco_AuthorizationSetBuilder::LoadIni(StreamReader *st)
 {
     Size authorizations_len = set.authorizations.len;
-    RG_DEFER_NC(out_guard, facility_authorizations_len = set.facility_authorizations.len) {
+    K_DEFER_NC(out_guard, facility_authorizations_len = set.facility_authorizations.len) {
         set.authorizations.RemoveFrom(authorizations_len);
         set.facility_authorizations.RemoveFrom(facility_authorizations_len);
     };
@@ -132,7 +132,7 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader *st)
     IniParser ini(st);
 
     ini.PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {
@@ -152,7 +152,7 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader *st)
 
             do {
                 if (prop.key == "Authorization") {
-                    valid &= ParseInt(prop.value, &auth.type, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
+                    valid &= ParseInt(prop.value, &auth.type, K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
                 } else if (prop.key == "Mode") {
                     if (prop.value == "Complete") {
                         auth.mode = mco_Authorization::Mode::Complete;

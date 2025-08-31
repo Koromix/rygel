@@ -20,7 +20,7 @@
 #include "mco_stay.hh"
 #include "mco_table.hh"
 
-namespace RG {
+namespace K {
 
 enum class mco_ClassifyFlag {
     MonoOriginalStay = 1 << 0,

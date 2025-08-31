@@ -19,7 +19,7 @@
 #include "src/core/request/curl.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
 static const char *BaseConfig =
 R"([Repository]
@@ -58,13 +58,13 @@ static const char *PromptNonEmpty(const char *object, Allocator *alloc)
 static bool CheckEndpoint(const char *url)
 {
     CURLU *h = curl_url();
-    RG_DEFER { curl_url_cleanup(h); };
+    K_DEFER { curl_url_cleanup(h); };
 
     // Parse URL
     {
         CURLUcode ret = curl_url_set(h, CURLUPART_URL, url, 0);
         if (ret == CURLUE_OUT_OF_MEMORY)
-            RG_BAD_ALLOC();
+            K_BAD_ALLOC();
         if (ret != CURLUE_OK) {
             LogError("Malformed endpoint URL '%1'", url);
             return false;
@@ -73,8 +73,8 @@ static bool CheckEndpoint(const char *url)
 
     char *path = nullptr;
     if (curl_url_get(h, CURLUPART_PATH, &path, 0) == CURLUE_OUT_OF_MEMORY)
-        RG_BAD_ALLOC();
-    RG_DEFER { curl_free(path); };
+        K_BAD_ALLOC();
+    K_DEFER { curl_free(path); };
 
     if (path && !TestStr(path, "/")) {
         LogError("Endpoint URL must not include path");
@@ -153,7 +153,7 @@ Options:
     const char *key_filename;
     {
         Span<const char> dirname;
-        Span<const char> basename = SplitStrReverseAny(config_filename, RG_PATH_SEPARATORS, &dirname);
+        Span<const char> basename = SplitStrReverseAny(config_filename, K_PATH_SEPARATORS, &dirname);
 
         Span<const char> prefix;
         SplitStrReverse(basename, '.', &prefix);
@@ -300,7 +300,7 @@ Options:
     // Generate master key file
     {
         Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
-        RG_DEFER { ReleaseSafe(mkey.ptr, mkey.len); };
+        K_DEFER { ReleaseSafe(mkey.ptr, mkey.len); };
 
         FillRandomSafe(mkey.ptr, mkey.len);
 
@@ -395,7 +395,7 @@ Options:
     }
 
     Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
-    RG_DEFER { ReleaseSafe(mkey.ptr, mkey.len); };
+    K_DEFER { ReleaseSafe(mkey.ptr, mkey.len); };
 
     if (generate_key) {
         if (TestFile(key_filename)) {
@@ -407,7 +407,7 @@ Options:
     } else {
         // Use separate buffer to make sure file has correct size
         Span<uint8_t> buf = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
-        RG_DEFER { ReleaseSafe(buf.ptr, buf.len); };
+        K_DEFER { ReleaseSafe(buf.ptr, buf.len); };
 
         Size len = rk_ReadRawKey(key_filename, buf);
         if (len < 0)
@@ -447,7 +447,7 @@ int RunDerive(Span<const char *> arguments)
     rk_KeyType type = rk_KeyType::Master;
 
     const auto print_usage = [=](StreamWriter *st) {
-        Span<const char *const> types = MakeSpan(rk_KeyTypeNames + 1, RG_LEN(rk_KeyTypeNames) - 1);
+        Span<const char *const> types = MakeSpan(rk_KeyTypeNames + 1, K_LEN(rk_KeyTypeNames) - 1);
 
         PrintLn(st,
 T(R"(Usage: %!..+%1 derive [-C filename] [option...] -O destination%!0)"), FelixTarget);
@@ -520,8 +520,8 @@ Available key types: %!..+%1%!0)"), FmtSpan(types));
     }
     LogInfo();
 
-    rk_KeySet *keys = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
-    RG_DEFER { ReleaseSafe(keys, RG_SIZE(*keys)); };
+    rk_KeySet *keys = (rk_KeySet *)AllocateSafe(K_SIZE(rk_KeySet));
+    K_DEFER { ReleaseSafe(keys, K_SIZE(*keys)); };
 
     if (!rk_ExportKeyFile(repo->GetKeys(), type, output_filename, keys))
         return 1;
@@ -569,8 +569,8 @@ Identify options:
     if (!rekkord_config.Complete())
         return 1;
 
-    rk_KeySet *keyset = (rk_KeySet *)AllocateSafe(RG_SIZE(rk_KeySet));
-    RG_DEFER { ReleaseSafe(keyset, RG_SIZE(*keyset)); };
+    rk_KeySet *keyset = (rk_KeySet *)AllocateSafe(K_SIZE(rk_KeySet));
+    K_DEFER { ReleaseSafe(keyset, K_SIZE(*keyset)); };
 
     if (online) {
         if (!rekkord_config.Validate())

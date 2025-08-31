@@ -24,7 +24,7 @@
 #include "src/core/base/base.hh"
 #include "src/core/wrap/json.hh"
 
-namespace RG {
+namespace K {
 
 struct http_RequestInfo;
 class http_IO;

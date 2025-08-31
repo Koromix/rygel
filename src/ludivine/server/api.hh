@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "src/core/http/http.hh"
 
-namespace RG {
+namespace K {
 
 void HandleRegister(http_IO *io);
 void HandleToken(http_IO *io);

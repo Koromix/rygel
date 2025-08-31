@@ -19,7 +19,7 @@
 #include "common.hh"
 #include "mco_table.hh"
 
-namespace RG {
+namespace K {
 
 struct mco_ReadableGhmNode {
     const char *type;

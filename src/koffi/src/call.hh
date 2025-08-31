@@ -27,7 +27,7 @@
 
 #include <napi.h>
 
-namespace RG {
+namespace K {
 
 bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func);
 
@@ -155,7 +155,7 @@ inline bool CallData::AllocStack(Size size, Size align, T **out_ptr)
         return false;
     }
 
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
     MemSet(ptr, 0, delta);
 #endif
 
@@ -172,7 +172,7 @@ inline T *CallData::AllocHeap(Size size, Size align)
     Size delta = size + (ptr - mem->heap.ptr);
 
     if (size < 4096 && delta <= mem->heap.len) [[likely]] {
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
         MemSet(mem->heap.ptr, 0, delta);
 #endif
 
@@ -181,7 +181,7 @@ inline T *CallData::AllocHeap(Size size, Size align)
 
         return ptr;
     } else {
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
         int flags = (int)AllocFlag::Zero;
 #else
         int flags = 0;

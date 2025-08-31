@@ -19,7 +19,7 @@
 #include "error.hh"
 #include "program.hh"
 
-namespace RG {
+namespace K {
 
 enum class bk_RunFlag {
     HideErrors = 1 << 0,
@@ -27,7 +27,7 @@ enum class bk_RunFlag {
 };
 
 class bk_VirtualMachine {
-    RG_DELETE_COPY(bk_VirtualMachine)
+    K_DELETE_COPY(bk_VirtualMachine)
 
     unsigned int flags;
     bool run;

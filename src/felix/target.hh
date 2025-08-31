@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "compiler.hh"
 
-namespace RG {
+namespace K {
 
 struct TargetConfig;
 struct SourceFileInfo;
@@ -73,7 +73,7 @@ struct alignas(8) TargetInfo {
 
     bool TestPlatforms(HostPlatform platform) const { return platforms & (1 << (int)platform); }
 
-    RG_HASHTABLE_HANDLER(TargetInfo, name);
+    K_HASHTABLE_HANDLER(TargetInfo, name);
 };
 
 struct SourceFileInfo {
@@ -97,7 +97,7 @@ struct SourceFileInfo {
         return features;
     }
 
-    RG_HASHTABLE_HANDLER(SourceFileInfo, filename);
+    K_HASHTABLE_HANDLER(SourceFileInfo, filename);
 };
 
 struct TargetSet {
@@ -111,7 +111,7 @@ struct TargetSet {
 };
 
 class TargetSetBuilder {
-    RG_DELETE_COPY(TargetSetBuilder)
+    K_DELETE_COPY(TargetSetBuilder)
 
     const Compiler *compiler;
     uint32_t features;

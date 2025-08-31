@@ -15,7 +15,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 template <typename T>
 struct Animation {

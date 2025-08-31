@@ -25,7 +25,7 @@
 
 #include <napi.h>
 
-namespace RG {
+namespace K {
 
 static const Size DefaultSyncStackSize = Mebibytes(1);
 static const Size DefaultSyncHeapSize = Mebibytes(2);
@@ -152,7 +152,7 @@ struct TypeInfo {
     mutable Napi::FunctionReference construct; // Union only
     mutable Napi::ObjectReference defn;
 
-    RG_HASHTABLE_HANDLER(TypeInfo, name);
+    K_HASHTABLE_HANDLER(TypeInfo, name);
 };
 
 struct RecordMember {
@@ -329,7 +329,7 @@ struct InstanceData {
         int64_t disposed = 0;
     } stats;
 };
-static_assert(DefaultResidentAsyncPools <= RG_LEN(InstanceData::memories.data) - 1);
+static_assert(DefaultResidentAsyncPools <= K_LEN(InstanceData::memories.data) - 1);
 static_assert(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);
 static_assert(MaxAsyncCalls >= DefaultMaxAsyncCalls);
 

@@ -17,7 +17,7 @@
 #include "src/core/wrap/json.hh"
 #include "embed.hh"
 
-namespace RG {
+namespace K {
 
 // For simplicity, I've replicated the required data structures from libcc
 // and packer.hh directly below. Don't forget to keep them in sync.
@@ -88,7 +88,7 @@ static const char *StripDirectoryComponents(Span<const char> filename, int strip
 {
     const char *name = filename.ptr;
     for (int i = 0; filename.len && i <= strip_count; i++) {
-        name = SplitStrAny(filename, RG_PATH_SEPARATORS, &filename).ptr;
+        name = SplitStrAny(filename, K_PATH_SEPARATORS, &filename).ptr;
     }
 
     return name;
@@ -107,7 +107,7 @@ static CompressionType AdaptCompression(const char *filename, CompressionType co
 static bool LoadMetaFile(const char *filename, CompressionType compression_type,
                          Allocator *alloc, HeapArray<EmbedAsset> *out_assets)
 {
-    RG_DEFER_NC(out_guard, len = out_assets->len) { out_assets->RemoveFrom(len); };
+    K_DEFER_NC(out_guard, len = out_assets->len) { out_assets->RemoveFrom(len); };
 
     StreamReader st(filename);
     if (!st.IsValid())
@@ -115,7 +115,7 @@ static bool LoadMetaFile(const char *filename, CompressionType compression_type,
 
     IniParser ini(&st);
     ini.PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {
@@ -162,7 +162,7 @@ bool ResolveAssets(Span<const char *const> filenames, int strip_count,
                    CompressionType compression_type, EmbedAssetSet *out_set)
 {
     Size prev_len = out_set->assets.len;
-    RG_DEFER_N(out_guard) { out_set->assets.RemoveFrom(prev_len); };
+    K_DEFER_N(out_guard) { out_set->assets.RemoveFrom(prev_len); };
 
     for (const char *filename: filenames) {
         if (filename[0] == '@') {
@@ -221,7 +221,7 @@ static Size WriteAsset(const EmbedAsset &asset, FunctionRef<void(Span<const uint
     }
 
     bool success = compressor.Close();
-    RG_ASSERT(success);
+    K_ASSERT(success);
 
     return compressed_len;
 }
@@ -272,7 +272,7 @@ static void PrintAsLiterals(Span<const uint8_t> bytes, StreamWriter *out_st)
         MemCpy(buf + 61, LookupTable + 4 * bytes[i + 15], 4);
         buf[65] = '"';
 
-        out_st->Write(MakeSpan(buf, RG_SIZE(buf)));
+        out_st->Write(MakeSpan(buf, K_SIZE(buf)));
     }
 
     if (i < bytes.len) {
@@ -329,7 +329,7 @@ static void PrintAsArray(Span<const uint8_t> bytes, StreamWriter *out_st)
         MemCpy(buf + 70, LookupTable + 5 * bytes[i + 14], 5);
         MemCpy(buf + 75, LookupTable + 5 * bytes[i + 15], 5);
 
-        out_st->Write(MakeSpan(buf, RG_SIZE(buf)));
+        out_st->Write(MakeSpan(buf, K_SIZE(buf)));
     }
 
     for (; i < bytes.len; i++) {

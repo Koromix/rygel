@@ -22,7 +22,7 @@
 #include "src/core/base/base.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
 static const char *ImplementationName();
 static uint32_t GetRandom32();
@@ -37,9 +37,9 @@ static randombytes_implementation BaseRandom = {
     .close = nullptr
 };
 
-RG_INIT(libsodium)
+K_INIT(libsodium)
 {
-    RG_CRITICAL(!sodium_init(), "Failed to initialize libsodium");
+    K_CRITICAL(!sodium_init(), "Failed to initialize libsodium");
     randombytes_set_implementation(&BaseRandom);
 }
 

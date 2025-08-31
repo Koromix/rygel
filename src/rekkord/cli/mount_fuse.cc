@@ -24,7 +24,7 @@
     #include "vendor/libfuse/include/fuse.h"
 #endif
 
-namespace RG {
+namespace K {
 
 struct CacheEntry {
     CacheEntry *parent;
@@ -58,7 +58,7 @@ static CacheEntry root = {};
 
 static CacheEntry *FindChild(CacheEntry &entry, Span<const char> name)
 {
-    RG_ASSERT(entry.directory.ready);
+    K_ASSERT(entry.directory.ready);
 
     for (CacheEntry &child: entry.directory.children) {
         if (TestStr(child.name, name))
@@ -88,7 +88,7 @@ static void CopyAttributes(const rk_ObjectInfo &obj, CacheEntry *out_entry)
             out_entry->sb.st_nlink = 1;
         } break;
 
-        case rk_ObjectType::Unknown: { RG_UNREACHABLE(); } break;
+        case rk_ObjectType::Unknown: { K_UNREACHABLE(); } break;
     }
 
     out_entry->sb.st_uid = obj.uid;
@@ -224,7 +224,7 @@ static bool InitRoot(const rk_ObjectID &oid)
 
 static bool CacheDirectoryChildren(CacheEntry *entry)
 {
-    RG_ASSERT(S_ISDIR(entry->sb.st_mode));
+    K_ASSERT(S_ISDIR(entry->sb.st_mode));
 
     std::lock_guard lock(entry->directory.mutex);
 
@@ -258,7 +258,7 @@ static bool CacheDirectoryChildren(CacheEntry *entry)
 
 static int ResolveEntry(const char *path, CacheEntry **out_ptr)
 {
-    RG_ASSERT(path[0] == '/');
+    K_ASSERT(path[0] == '/');
 
     Span<const char> remain = path + 1;
     CacheEntry *entry = &root;
@@ -312,23 +312,23 @@ static int DoGetAttr(const char *path, struct stat *stbuf, fuse_file_info *)
 {
     const CacheEntry *entry;
     if (int error = ResolveEntry(path, &entry); error < 0) {
-        MemSet(stbuf, 0, RG_SIZE(*stbuf));
+        MemSet(stbuf, 0, K_SIZE(*stbuf));
         return error;
     }
-    RG_DEFER { entry->Unref(); };
+    K_DEFER { entry->Unref(); };
 
-    MemCpy(stbuf, &entry->sb, RG_SIZE(entry->sb));
+    MemCpy(stbuf, &entry->sb, K_SIZE(entry->sb));
     return 0;
 }
 
 static int DoReadLink(const char *path, char *buf, size_t size)
 {
-    RG_ASSERT(size >= 1);
+    K_ASSERT(size >= 1);
 
     CacheEntry *entry;
     if (int error = ResolveEntry(path, &entry); error < 0)
         return error;
-    RG_DEFER_N(err_guard) { entry->Unref(); };
+    K_DEFER_N(err_guard) { entry->Unref(); };
 
     if (!S_ISLNK(entry->sb.st_mode))
         return -ENOENT;
@@ -351,7 +351,7 @@ static int DoOpenDir(const char *path, fuse_file_info *fi)
     CacheEntry *entry;
     if (int error = ResolveEntry(path, &entry); error < 0)
         return error;
-    RG_DEFER_N(err_guard) { entry->Unref(); };
+    K_DEFER_N(err_guard) { entry->Unref(); };
 
     if (!S_ISDIR(entry->sb.st_mode))
         return -ENOTDIR;
@@ -407,7 +407,7 @@ static int DoOpen(const char *path, fuse_file_info *fi)
     const CacheEntry *entry;
     if (int error = ResolveEntry(path, &entry); error < 0)
         return error;
-    RG_DEFER { entry->Unref(); };
+    K_DEFER { entry->Unref(); };
 
     if (!S_ISREG(entry->sb.st_mode))
         return -EINVAL;
@@ -560,7 +560,7 @@ If you use a snapshot channel, the most recent snapshot object that matches will
     repo = rk_OpenRepository(disk.get(), rekkord_config, true);
     if (!repo)
         return 1;
-    RG_DEFER {
+    K_DEFER {
         repo.reset(nullptr);
         disk.reset(nullptr);
     };

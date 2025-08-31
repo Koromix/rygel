@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "../libdrd/libdrd.hh"
 
-namespace RG {
+namespace K {
 
 struct Config;
 

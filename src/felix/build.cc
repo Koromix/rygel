@@ -19,7 +19,7 @@
 #include "build.hh"
 #include "locate.hh"
 
-namespace RG {
+namespace K {
 
 #if defined(_WIN32)
     #define MAX_COMMAND_LEN 4096
@@ -121,7 +121,7 @@ static bool UpdateResourceFile(const char *target_name, const char *icon_filenam
 
     pugi::xml_document doc;
     pugi::xml_parse_result result = doc.load_string(manifest);
-    RG_ASSERT(result);
+    K_ASSERT(result);
 
     pugi::xml_node identity = doc.select_node("/assembly/assemblyIdentity").node();
     identity.attribute("name").set_value(target_name);
@@ -135,7 +135,7 @@ static bool UpdateResourceFile(const char *target_name, const char *icon_filenam
         char old_res[2048] = {};
         {
             StreamReader reader(dest_filename);
-            reader.Read(RG_SIZE(old_res) - 1, old_res);
+            reader.Read(K_SIZE(old_res) - 1, old_res);
         }
 
         new_manifest = !TestStr(old_res, res);
@@ -162,7 +162,7 @@ static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_fi
 
 static void MakeTranslationCommand(Span<const char *const> translations, const char *dest_filename, Allocator *alloc, Command *out_cmd)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     HeapArray<char> buf(alloc);
 
@@ -179,8 +179,8 @@ static void MakeTranslationCommand(Span<const char *const> translations, const c
 Builder::Builder(const BuildSettings &build)
     : build(build)
 {
-    RG_ASSERT(build.output_directory);
-    RG_ASSERT(build.compiler);
+    K_ASSERT(build.output_directory);
+    K_ASSERT(build.compiler);
 
     const char *platform = SplitStrReverse(HostPlatformNames[(int)build.compiler->platform], '/').ptr;
     const char *architecture = HostArchitectureNames[(int)build.compiler->architecture];
@@ -198,8 +198,8 @@ static const char *GetLastDirectoryAndName(const char *filename)
     Span<const char> remain = filename;
     const char *name;
 
-    SplitStrReverseAny(remain, RG_PATH_SEPARATORS, &remain);
-    name = SplitStrReverseAny(remain, RG_PATH_SEPARATORS, &remain).ptr;
+    SplitStrReverseAny(remain, K_PATH_SEPARATORS, &remain);
+    name = SplitStrReverseAny(remain, K_PATH_SEPARATORS, &remain).ptr;
 
     return name;
 }
@@ -263,7 +263,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
     }
 
     if (core) {
-        RG_DEFER_C(prev_ns = current_ns,
+        K_DEFER_C(prev_ns = current_ns,
                    prev_directory = cache_directory) {
             current_ns = prev_ns;
             cache_directory = prev_directory;
@@ -273,7 +273,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         current_ns = core->name;
 
         for (const SourceFileInfo *src: core->sources) {
-            RG_ASSERT(src->type == SourceType::C || src->type == SourceType::Cxx);
+            K_ASSERT(src->type == SourceType::C || src->type == SourceType::Cxx);
 
             if (!AddCppSource(*src, &obj_filenames))
                 return false;
@@ -428,7 +428,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         // Build module if needed
         if (module) {
             const char *module_filename = Fmt(&str_alloc, "%1%/%2_assets%3", build.output_directory,
-                                              target.name, RG_SHARED_LIBRARY_EXTENSION).ptr;
+                                              target.name, K_SHARED_LIBRARY_EXTENSION).ptr;
             const char *flags = GatherFlags(target, SourceType::Object);
 
             Command cmd = InitCommand();
@@ -596,12 +596,12 @@ bool Builder::AddSource(const SourceFileInfo &src)
         }
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *out_objects)
 {
-    RG_ASSERT(src.type == SourceType::C || src.type == SourceType::Cxx);
+    K_ASSERT(src.type == SourceType::C || src.type == SourceType::Cxx);
 
     // Precompiled header (if any)
     const char *pch_filename = nullptr;
@@ -623,7 +623,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
-            case SourceType::QtResources: { RG_UNREACHABLE(); } break;
+            case SourceType::QtResources: { K_UNREACHABLE(); } break;
         }
 
         if (pch) {
@@ -718,7 +718,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
 
 bool Builder::AddAssemblySource(const SourceFileInfo &src, HeapArray<const char *> *out_objects)
 {
-    RG_ASSERT(src.type == SourceType::GnuAssembly || src.type == SourceType::MicrosoftAssembly);
+    K_ASSERT(src.type == SourceType::GnuAssembly || src.type == SourceType::MicrosoftAssembly);
 
     const char *obj_filename = build_map.FindValue({ current_ns, src.filename }, nullptr);
 
@@ -763,7 +763,7 @@ bool Builder::UpdateVersionSource(const char *target, const char *version, const
     bool new_version;
     if (TestFile(dest_filename, FileType::File)) {
         char old_code[1024] = {};
-        ReadFile(dest_filename, MakeSpan(old_code, RG_SIZE(old_code) - 1));
+        ReadFile(dest_filename, MakeSpan(old_code, K_SIZE(old_code) - 1));
 
         new_version = !TestStr(old_code, code);
     } else {
@@ -779,7 +779,7 @@ bool Builder::UpdateVersionSource(const char *target, const char *version, const
 
 bool Builder::Build(int jobs, bool verbose)
 {
-    RG_ASSERT(jobs > 0);
+    K_ASSERT(jobs > 0);
 
     // Reset build context
     clear_filenames.Clear();
@@ -788,7 +788,7 @@ bool Builder::Build(int jobs, bool verbose)
     workers.Clear();
     workers.AppendDefault(jobs);
 
-    RG_DEFER {
+    K_DEFER {
         // Update cache even if some tasks fail
         if (nodes.len && !build.fake) {
             for (const WorkerState &worker: workers) {
@@ -827,7 +827,7 @@ bool Builder::Build(int jobs, bool verbose)
 #if defined(_WIN32)
         if (clear_filenames.len) {
             PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-            RG_DEFER { PopLogFilter(); };
+            K_DEFER { PopLogFilter(); };
 
             for (Size i = 0; i < 3; i++) {
                 bool success = true;
@@ -853,12 +853,12 @@ bool Builder::Build(int jobs, bool verbose)
             const Command &cmd = node.cmd;
 
             if (cmd.cmd_line.len > MAX_COMMAND_LEN && cmd.rsp_offset > 0) {
-                RG_ASSERT(cmd.rsp_offset < cmd.cmd_line.len);
+                K_ASSERT(cmd.rsp_offset < cmd.cmd_line.len);
 
                 // In theory, there can be conflicts between RSP files. But it is unlikely
                 // that response files will be generated for anything other than link commands,
                 // so the risk is very low.
-                const char *target_basename = SplitStrReverseAny(node.dest_filename, RG_PATH_SEPARATORS).ptr;
+                const char *target_basename = SplitStrReverseAny(node.dest_filename, K_PATH_SEPARATORS).ptr;
                 const char *rsp_filename = Fmt(&str_alloc, "%1%/Misc%/%2.rsp", cache_directory, target_basename).ptr;
 
                 if (!EnsureDirectoryExists(rsp_filename))
@@ -957,7 +957,7 @@ void Builder::LoadCache()
     if (!TestFile(cache_filename))
         return;
 
-    RG_DEFER_N(clear_guard) {
+    K_DEFER_N(clear_guard) {
         cache_map.Clear();
         cache_dependencies.Clear();
 
@@ -1075,13 +1075,13 @@ const char *Builder::BuildObjectPath(Span<const char> src_filename, const char *
                                      const char *prefix, const char *suffix)
 {
     if (PathIsAbsolute(src_filename)) {
-        SplitStrAny(src_filename, RG_PATH_SEPARATORS, &src_filename);
+        SplitStrAny(src_filename, K_PATH_SEPARATORS, &src_filename);
     }
 
     HeapArray<char> buf(&str_alloc);
 
     Span<const char> src_directory;
-    Span<const char> src_name = SplitStrReverseAny(src_filename, RG_PATH_SEPARATORS, &src_directory);
+    Span<const char> src_name = SplitStrReverseAny(src_filename, K_PATH_SEPARATORS, &src_directory);
 
     Size offset = Fmt(&buf, "%1%/Objects%/", output_directory).len;
 
@@ -1121,8 +1121,8 @@ static void AppendFlags(const char *flags, HeapArray<char> *out_buf)
 
 const char *Builder::GatherFlags(const TargetInfo &target, SourceType type)
 {
-    RG_ASSERT((uintptr_t)&target % 8 == 0);
-    RG_ASSERT((int)type < 8);
+    K_ASSERT((uintptr_t)&target % 8 == 0);
+    K_ASSERT((int)type < 8);
 
     const void *key = (const void *)((uint8_t *)&target + (int)type);
 
@@ -1178,7 +1178,7 @@ static inline const char *CleanFileName(const char *str)
 bool Builder::AppendNode(const char *text, const char *dest_filename, const Command &cmd,
                          Span<const char *const> src_filenames)
 {
-    RG_ASSERT(src_filenames.len >= 1);
+    K_ASSERT(src_filenames.len >= 1);
 
     build_map.Set({ current_ns, CleanFileName(src_filenames[0]) }, dest_filename);
     total++;
@@ -1335,7 +1335,7 @@ static Span<const char> ParseMakeFragment(Span<const char> remain, HeapArray<cha
 
 static bool ParseMakeRule(const char *filename, Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     HeapArray<char> rule_buf;
     if (ReadFile(filename, Megabytes(2), &rule_buf) < 0)
@@ -1370,7 +1370,7 @@ static bool ParseMakeRule(const char *filename, Allocator *alloc, HeapArray<cons
 
 static Size ExtractShowIncludes(Span<char> buf, Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
-    RG_ASSERT(alloc || !out_filenames);
+    K_ASSERT(alloc || !out_filenames);
 
     // We need to strip include notes from the output
     Span<char> new_buf = MakeSpan(buf.ptr, 0);
@@ -1417,9 +1417,9 @@ static Size ExtractShowIncludes(Span<char> buf, Allocator *alloc, HeapArray<cons
 
 static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
-    RG_DEFER_NC(err_guard, len = out_filenames->len) {
+    K_DEFER_NC(err_guard, len = out_filenames->len) {
         out_filenames->RemoveFrom(len);
         UnlinkFile(filename);
     };
@@ -1606,7 +1606,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
             Node *trigger = &nodes[trigger_idx];
 
             if (!--trigger->semaphore) {
-                RG_ASSERT(!trigger->success);
+                K_ASSERT(!trigger->success);
                 async->Run([=, this]() { return RunNode(async, trigger, verbose); });
             }
         }

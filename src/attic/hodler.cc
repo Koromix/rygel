@@ -23,7 +23,7 @@ extern "C" {
 }
 #include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
 
-namespace RG {
+namespace K {
 
 enum class UrlFormat {
     Pretty,
@@ -99,7 +99,7 @@ struct PageData {
     Span<const char> html;
 };
 
-static RG_CONSTINIT ConstMap<128, int32_t, const char *> replacements = {
+static K_CONSTINIT ConstMap<128, int32_t, const char *> replacements = {
     { DecodeUtf8("Ç"), "c" },
     { DecodeUtf8("È"), "e" },
     { DecodeUtf8("É"), "e" },
@@ -147,7 +147,7 @@ static RG_CONSTINIT ConstMap<128, int32_t, const char *> replacements = {
 
 static const char *SectionToPageName(Span<const char> section, Allocator *alloc)
 {
-    Span<const char> basename = SplitStrReverseAny(section, RG_PATH_SEPARATORS);
+    Span<const char> basename = SplitStrReverseAny(section, K_PATH_SEPARATORS);
 
     Span<const char> simple;
     SplitStrReverse(basename, '.', &simple);
@@ -255,7 +255,7 @@ static const char *FindEsbuild(const char *path, Allocator *alloc)
 
         if (os && arch) {
             char suffix[64];
-            Fmt(suffix, "%1-%2/bin/esbuild%3", os, arch, RG_EXECUTABLE_EXTENSION);
+            Fmt(suffix, "%1-%2/bin/esbuild%3", os, arch, K_EXECUTABLE_EXTENSION);
 
             const char *binary = NormalizePath(suffix, path, alloc).ptr;
 
@@ -278,12 +278,12 @@ missing:
 
 static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<BundleObject> *out_objects)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     BlockAllocator temp_alloc;
 
     Size prev_len = out_objects->len;
-    RG_DEFER_N(err_guard) { out_objects->RemoveFrom(prev_len); };
+    K_DEFER_N(err_guard) { out_objects->RemoveFrom(prev_len); };
 
     StreamReader reader(filename);
     if (!reader.IsValid())
@@ -369,11 +369,11 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<B
 static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary,
                          bool sourcemap, bool gzip, Allocator *alloc, HeapArray<FileHash> *out_hashes)
 {
-    Span<const char> basename = SplitStrReverseAny(bundle.name, RG_PATH_SEPARATORS);
+    Span<const char> basename = SplitStrReverseAny(bundle.name, K_PATH_SEPARATORS);
     Span<const char> prefix = MakeSpan(bundle.name, basename.ptr - bundle.name);
 
     const char *meta_filename = Fmt(alloc, "%1.meta", bundle.dest_filename).ptr;
-    RG_DEFER { UnlinkFile(meta_filename); };
+    K_DEFER { UnlinkFile(meta_filename); };
 
     // Prepare command
     const char *cmd;
@@ -419,7 +419,7 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary,
     for (const BundleObject &obj: bundle_objects) {
         FileHash *hash = out_hashes->AppendDefault();
 
-        Span<const char> basename = SplitStrReverseAny(obj.dest_filename, RG_PATH_SEPARATORS);
+        Span<const char> basename = SplitStrReverseAny(obj.dest_filename, K_PATH_SEPARATORS);
         const char *gzip_filename = Fmt(alloc, "%1.gz", obj.dest_filename).ptr;
 
         hash->name = obj.src_filename;
@@ -490,7 +490,7 @@ static bool RenderMarkdown(const char *base, PageData *page, const AssetSet &ass
 
     // Prepare markdown parser
     cmark_parser *parser = cmark_parser_new(CMARK_OPT_DEFAULT | CMARK_OPT_FOOTNOTES);
-    RG_DEFER { cmark_parser_free(parser); };
+    K_DEFER { cmark_parser_free(parser); };
 
     // Enable syntax extensions
     {
@@ -549,12 +549,12 @@ static bool RenderMarkdown(const char *base, PageData *page, const AssetSet &ass
 
     // Finalize parsing
     cmark_node *root = cmark_parser_finish(parser);
-    RG_DEFER { cmark_node_free(root); };
+    K_DEFER { cmark_node_free(root); };
 
     // Customize rendered tree
     {
         cmark_iter *iter = cmark_iter_new(root);
-        RG_DEFER { cmark_iter_free(iter); };
+        K_DEFER { cmark_iter_free(iter); };
 
         cmark_event_type event;
         while ((event = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
@@ -577,7 +577,7 @@ static bool RenderMarkdown(const char *base, PageData *page, const AssetSet &ass
 
                 if (cmark_node_get_type(child) == CMARK_NODE_TEXT) {
                     const char *literal = cmark_node_get_literal(child);
-                    RG_ASSERT(literal);
+                    K_ASSERT(literal);
 
                     Span<const char> toc;
                     Span<const char> title = SplitStr(literal, '^', &toc);
@@ -625,7 +625,7 @@ static bool RenderMarkdown(const char *base, PageData *page, const AssetSet &ass
 
                 if (cmark_node_get_type(text) == CMARK_NODE_TEXT) {
                     const char *literal = cmark_node_get_literal(text);
-                    RG_ASSERT(literal);
+                    K_ASSERT(literal);
 
                     const char *cls = nullptr;
 
@@ -642,7 +642,7 @@ static bool RenderMarkdown(const char *base, PageData *page, const AssetSet &ass
                     }
 
                     if (cls) {
-                        RG_DEFER {
+                        K_DEFER {
                             cmark_node_free(node);
                             cmark_node_free(text);
                         };
@@ -687,7 +687,7 @@ static Size RenderMenu(const char *base, Span<const PageData> pages, Size active
     const PageData *page = &pages[idx];
 
     if (!page->menu) {
-        RG_ASSERT(!depth);
+        K_ASSERT(!depth);
         return idx + 1;
     }
 
@@ -895,7 +895,7 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
 
         IniParser ini(&st);
         ini.PushLogFilter();
-        RG_DEFER { PopLogFilter(); };
+        K_DEFER { PopLogFilter(); };
 
         bool valid = true;
 
@@ -966,7 +966,7 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
 
         IniParser ini(&st);
         ini.PushLogFilter();
-        RG_DEFER { PopLogFilter(); };
+        K_DEFER { PopLogFilter(); };
 
         bool valid = true;
 
@@ -1106,7 +1106,7 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
         Size prefix_len = strlen(copy.src_filename);
 
         for (const char *src_filename: src_filenames) {
-            const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
+            const char *basename = TrimStrLeft(src_filename + prefix_len, K_PATH_SEPARATORS).ptr;
 
             Span<const char> url = NormalizePath(basename, copy.dest_filename, &temp_alloc);
             const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", output_dir, url).ptr;
@@ -1189,7 +1189,7 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
                     copy->filename = DuplicateString(hash.filename, &temp_alloc).ptr;
                     copy->url = DuplicateString(hash.url, &temp_alloc).ptr;
                     copy->unique = hash.unique;
-                    MemCpy(copy->sha256, hash.sha256, RG_SIZE(hash.sha256));
+                    MemCpy(copy->sha256, hash.sha256, K_SIZE(hash.sha256));
 
                     assets.map.Set(copy->name, copy);
                     assets.map.Set(copy->url, copy);
@@ -1376,4 +1376,4 @@ Available URL formats: %!..+%4%!0)",
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

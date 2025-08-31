@@ -17,7 +17,7 @@
 #include "config.hh"
 #include "disk.hh"
 
-namespace RG {
+namespace K {
 
 rk_Disk::~rk_Disk()
 {
@@ -37,7 +37,7 @@ bool rk_Disk::IsEmpty()
 
 std::unique_ptr<rk_Disk> rk_OpenDisk(const rk_Config &config)
 {
-    RG_ASSERT(config.Validate(0));
+    K_ASSERT(config.Validate(0));
 
     switch (config.type) {
         case rk_DiskType::Local: return rk_OpenLocalDisk(config.url);
@@ -45,7 +45,7 @@ std::unique_ptr<rk_Disk> rk_OpenDisk(const rk_Config &config)
         case rk_DiskType::S3: return rk_OpenS3Disk(config.s3);
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 }

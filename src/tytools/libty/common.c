@@ -34,7 +34,7 @@ static _HS_THREAD_LOCAL char last_error_msg[512];
     extern const char *FelixCompiler;
 #else
     #if defined(FELIX_TARGET)
-        const char *FelixTarget = RG_STRINGIFY(FELIX_TARGET);
+        const char *FelixTarget = _HS_STRINGIFY(FELIX_TARGET);
     #else
         const char *FelixTarget = "????";
     #endif

@@ -22,7 +22,7 @@
 #include "src/core/base/base.hh"
 #include <napi.h>
 
-namespace RG {
+namespace K {
 
 template <typename T, typename... Args>
 void ThrowError(Napi::Env env, const char *msg, Args... args)
@@ -66,7 +66,7 @@ static Napi::Value RunRand(const Napi::CallbackInfo &info)
 
 static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 {
-    using namespace RG;
+    using namespace K;
 
     exports.Set("srand", Napi::Function::New(env, RunSrand));
     exports.Set("rand", Napi::Function::New(env, RunRand));

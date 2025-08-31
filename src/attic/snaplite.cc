@@ -17,11 +17,11 @@
 #include "src/core/sqlite/snapshot.hh"
 #include "src/core/sqlite/sqlite.hh"
 
-namespace RG {
+namespace K {
 
 static bool ListSnapshotFiles(const char *filename, BlockAllocator *alloc, HeapArray<const char *> *out_filenames)
 {
-    RG_ASSERT(!out_filenames->len);
+    K_ASSERT(!out_filenames->len);
 
     if (!filename) {
         LogError("Missing snapshot directory or filename");
@@ -50,7 +50,7 @@ static bool ListSnapshotFiles(const char *filename, BlockAllocator *alloc, HeapA
 
 static inline FmtArg FormatSha256(Span<const uint8_t> hash)
 {
-    RG_ASSERT(hash.len == 32);
+    K_ASSERT(hash.len == 32);
     return FmtHex(hash);
 }
 
@@ -231,7 +231,7 @@ Options:
 
         if (verbosity) {
             for (const sq_SnapshotGeneration &generation: snapshot.generations) {
-                const char *basename = SplitStrReverseAny(generation.base_filename, RG_PATH_SEPARATORS).ptr;
+                const char *basename = SplitStrReverseAny(generation.base_filename, K_PATH_SEPARATORS).ptr;
 
                 PrintLn("  - Generation '%1' (%2 %3)", basename, generation.frames, generation.frames == 1 ? "frame" : "frames");
                 PrintLn("    + From:%!0 %1", FmtTimeNice(DecomposeTimeUTC(generation.ctime)));
@@ -513,4 +513,4 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

@@ -23,7 +23,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 bool qr_EncodeTextToPng(Span<const char> text, int border, StreamWriter *out_st);
 bool qr_EncodeBinaryToPng(Span<const uint8_t> data, int border, StreamWriter *out_st);

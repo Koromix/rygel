@@ -24,7 +24,7 @@
 #include "src/core/base/base.hh"
 #include "vendor/pugixml/src/pugixml.hpp"
 
-namespace RG {
+namespace K {
 
 class xml_PugiWriter: public pugi::xml_writer {
     StreamWriter *st;

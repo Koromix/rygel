@@ -26,7 +26,7 @@
 
 #include <napi.h>
 
-namespace RG {
+namespace K {
 
 struct RelayContext {
     CallData *call;
@@ -49,8 +49,8 @@ CallData::CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
     mem->generation += !mem->depth;
     mem->depth++;
 
-    RG_ASSERT(AlignUp(mem->stack.ptr, 16) == mem->stack.ptr);
-    RG_ASSERT(AlignUp(mem->stack.end(), 16) == mem->stack.end());
+    K_ASSERT(AlignUp(mem->stack.ptr, 16) == mem->stack.ptr);
+    K_ASSERT(AlignUp(mem->stack.end(), 16) == mem->stack.end());
 }
 
 CallData::~CallData()
@@ -77,8 +77,8 @@ void CallData::Dispose()
             int16_t idx = used_trampolines[i];
             TrampolineInfo *trampoline = &shared.trampolines[idx];
 
-            RG_ASSERT(trampoline->instance == instance);
-            RG_ASSERT(!trampoline->func.IsEmpty());
+            K_ASSERT(trampoline->instance == instance);
+            K_ASSERT(!trampoline->func.IsEmpty());
 
             trampoline->instance = nullptr;
             trampoline->func.Reset();
@@ -203,7 +203,7 @@ Size CallData::PushStringValue(Napi::Value value, const char **out_str)
     buf.len = std::max((Size)0, mem->heap.len - Kibibytes(32));
 
     status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
-    RG_ASSERT(status == napi_ok);
+    K_ASSERT(status == napi_ok);
 
     len++;
 
@@ -212,13 +212,13 @@ Size CallData::PushStringValue(Napi::Value value, const char **out_str)
         mem->heap.len -= (Size)len;
     } else {
         status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
-        RG_ASSERT(status == napi_ok);
+        K_ASSERT(status == napi_ok);
 
         len++;
         buf = AllocateSpan<char>(&call_alloc, (Size)len);
 
         status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
-        RG_ASSERT(status == napi_ok);
+        K_ASSERT(status == napi_ok);
 
         len++;
     }
@@ -238,7 +238,7 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
     buf.len = std::max((Size)0, mem->heap.len - Kibibytes(32)) / 2;
 
     status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
-    RG_ASSERT(status == napi_ok);
+    K_ASSERT(status == napi_ok);
 
     len++;
 
@@ -247,13 +247,13 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
         mem->heap.len -= (Size)len * 2;
     } else {
         status = napi_get_value_string_utf16(env, value, nullptr, 0, &len);
-        RG_ASSERT(status == napi_ok);
+        K_ASSERT(status == napi_ok);
 
         len++;
         buf = AllocateSpan<char16_t>(&call_alloc, (Size)len);
 
         status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
-        RG_ASSERT(status == napi_ok);
+        K_ASSERT(status == napi_ok);
 
         len++;
     }
@@ -307,8 +307,8 @@ Size CallData::PushString32Value(Napi::Value value, const char32_t **out_str32)
 
 bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin)
 {
-    RG_ASSERT(IsObject(obj));
-    RG_ASSERT(type->primitive == PrimitiveKind::Record ||
+    K_ASSERT(IsObject(obj));
+    K_ASSERT(type->primitive == PrimitiveKind::Record ||
               type->primitive == PrimitiveKind::Union);
 
     Span<const RecordMember> members = {};
@@ -358,7 +358,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             }
         }
     } else {
-        RG_UNREACHABLE();
+        K_UNREACHABLE();
     }
 
     MemSet(origin, 0, type->size);
@@ -380,7 +380,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
         uint8_t *dest = origin + member.offset;
 
         switch (member.type->primitive) {
-            case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
                 if (!value.IsBoolean()) [[unlikely]] {
@@ -598,7 +598,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 *(void **)dest = ptr;
             } break;
 
-            case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
         }
     }
 
@@ -607,7 +607,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
 bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size size, uint8_t *origin)
 {
-    RG_ASSERT(array.IsArray());
+    K_ASSERT(array.IsArray());
 
     const TypeInfo *ref = type->ref.type;
     Size len = (Size)array.Length();
@@ -836,7 +836,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
             }
         } break;
 
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
 #undef PUSH_ARRAY
@@ -855,7 +855,7 @@ void CallData::PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, uint
 #define SWAP(CType) \
         do { \
             CType *data = (CType *)origin; \
-            Size len = buffer.len / RG_SIZE(CType); \
+            Size len = buffer.len / K_SIZE(CType); \
              \
             for (Size i = 0; i < len; i++) { \
                 data[i] = ReverseBytes(data[i]); \
@@ -879,19 +879,19 @@ void CallData::PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, uint
 
 bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *origin)
 {
-    RG_ASSERT(obj.IsString());
-    RG_ASSERT(type->primitive == PrimitiveKind::Array);
+    K_ASSERT(obj.IsString());
+    K_ASSERT(type->primitive == PrimitiveKind::Array);
 
     size_t encoded = 0;
 
     switch (type->ref.type->primitive) {
         case PrimitiveKind::Int8: {
             napi_status status = napi_get_value_string_utf8(env, obj, (char *)origin, type->size, &encoded);
-            RG_ASSERT(status == napi_ok);
+            K_ASSERT(status == napi_ok);
         } break;
         case PrimitiveKind::Int16: {
             napi_status status = napi_get_value_string_utf16(env, obj, (char16_t *)origin, type->size / 2, &encoded);
-            RG_ASSERT(status == napi_ok);
+            K_ASSERT(status == napi_ok);
 
             encoded *= 2;
         } break;
@@ -927,7 +927,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         } break;
 
         case napi_external: {
-            RG_ASSERT(type->primitive == PrimitiveKind::Pointer ||
+            K_ASSERT(type->primitive == PrimitiveKind::Pointer ||
                       type->primitive == PrimitiveKind::String ||
                       type->primitive == PrimitiveKind::String16 ||
                       type->primitive == PrimitiveKind::String32);
@@ -995,7 +995,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             } else if (ref->primitive == PrimitiveKind::Record ||
                        ref->primitive == PrimitiveKind::Union) [[likely]] {
                 Napi::Object obj = value.As<Napi::Object>();
-                RG_ASSERT(IsObject(value));
+                K_ASSERT(IsObject(value));
 
                 ptr = AllocHeap(ref->size, 16);
 
@@ -1021,7 +1021,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 OutArgument *out = out_arguments.AppendDefault();
 
                 napi_status status = napi_create_reference(env, value, 1, &out->ref);
-                RG_ASSERT(status == napi_ok);
+                K_ASSERT(status == napi_ok);
 
                 out->kind = out_kind;
                 out->ptr = ptr;
@@ -1034,7 +1034,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         } break;
 
         case napi_string: {
-            RG_ASSERT(type->primitive == PrimitiveKind::Pointer);
+            K_ASSERT(type->primitive == PrimitiveKind::Pointer);
 
             if (directions & 2) [[unlikely]]
                 goto unexpected;
@@ -1170,7 +1170,7 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
             return env.Null();
         }
         if (!used_trampolines.Available()) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "This call uses too many temporary callbacks (max = %1)", RG_LEN(used_trampolines.data));
+            ThrowError<Napi::Error>(env, "This call uses too many temporary callbacks (max = %1)", K_LEN(used_trampolines.data));
             return env.Null();
         }
 
@@ -1259,7 +1259,7 @@ static inline Napi::Value GetReferenceValue(Napi::Env env, napi_ref ref)
     napi_value value;
 
     napi_status status = napi_get_reference_value(env, ref, &value);
-    RG_ASSERT(status == napi_ok);
+    K_ASSERT(status == napi_ok);
 
     return Napi::Value(env, value);
 }
@@ -1268,18 +1268,18 @@ void CallData::PopOutArguments()
 {
     for (const OutArgument &out: out_arguments) {
         Napi::Value value = GetReferenceValue(env, out.ref);
-        RG_ASSERT(!value.IsEmpty());
+        K_ASSERT(!value.IsEmpty());
 
         switch (out.kind) {
             case OutArgument::Kind::Array: {
-                RG_ASSERT(value.IsArray());
+                K_ASSERT(value.IsArray());
 
                 Napi::Array array(env, value);
                 DecodeNormalArray(array, out.ptr, out.type);
             } break;
 
             case OutArgument::Kind::Buffer: {
-                RG_ASSERT(IsRawBuffer(value));
+                K_ASSERT(IsRawBuffer(value));
 
                 Span<uint8_t> buffer = GetRawBuffer(value);
                 DecodeBuffer(buffer, out.ptr, out.type);
@@ -1288,8 +1288,8 @@ void CallData::PopOutArguments()
             case OutArgument::Kind::String: {
                 Napi::Array array(env, value);
 
-                RG_ASSERT(array.IsArray());
-                RG_ASSERT(array.Length() == 1);
+                K_ASSERT(array.IsArray());
+                K_ASSERT(array.Length() == 1);
 
                 Size len = strnlen((const char *)out.ptr, out.max_len);
                 Napi::String str = Napi::String::New(env, (const char *)out.ptr, len);
@@ -1300,8 +1300,8 @@ void CallData::PopOutArguments()
             case OutArgument::Kind::String16: {
                 Napi::Array array(env, value);
 
-                RG_ASSERT(array.IsArray());
-                RG_ASSERT(array.Length() == 1);
+                K_ASSERT(array.IsArray());
+                K_ASSERT(array.Length() == 1);
 
                 Size len = NullTerminatedLength((const char16_t *)out.ptr, out.max_len);
                 Napi::String str = Napi::String::New(env, (const char16_t *)out.ptr, len);
@@ -1312,8 +1312,8 @@ void CallData::PopOutArguments()
             case OutArgument::Kind::String32: {
                 Napi::Array array(env, value);
 
-                RG_ASSERT(array.IsArray());
-                RG_ASSERT(array.Length() == 1);
+                K_ASSERT(array.IsArray());
+                K_ASSERT(array.Length() == 1);
 
                 Size len = NullTerminatedLength((const char32_t *)out.ptr, out.max_len);
                 Napi::String str = MakeStringFromUTF32(env, (const char32_t *)out.ptr, len);

@@ -23,7 +23,7 @@
 #include "snapshot.hh"
 #include "sqlite.hh"
 
-namespace RG {
+namespace K {
 
 #pragma pack(push, 1)
 struct SnapshotHeader {
@@ -40,18 +40,18 @@ struct FrameData {
 #define SNAPSHOT_SIGNATURE "SQLITESNAPSHOT"
 
 // This should warn us in most cases when we break the file format
-static_assert(RG_SIZE(SnapshotHeader::signature) == RG_SIZE(SNAPSHOT_SIGNATURE));
-static_assert(RG_SIZE(SnapshotHeader) == 20);
-static_assert(RG_SIZE(FrameData) == 40);
+static_assert(K_SIZE(SnapshotHeader::signature) == K_SIZE(SNAPSHOT_SIGNATURE));
+static_assert(K_SIZE(SnapshotHeader) == 20);
+static_assert(K_SIZE(FrameData) == 40);
 
 bool sq_Database::SetSnapshotDirectory(const char *directory, int64_t full_delay)
 {
-    RG_ASSERT(!snapshot);
+    K_ASSERT(!snapshot);
 
     LockExclusive();
-    RG_DEFER { UnlockExclusive(); };
+    K_DEFER { UnlockExclusive(); };
 
-    RG_DEFER_N(err_guard) {
+    K_DEFER_N(err_guard) {
         snapshot_main_writer.Close();
         snapshot_wal_reader.Close();
         snapshot_wal_writer.Close();
@@ -158,7 +158,7 @@ bool sq_Database::CheckpointSnapshot(bool restart)
     bool locked = false;
     bool success = true;
 
-    RG_DEFER {
+    K_DEFER {
         if (locked) {
             UnlockExclusive();
         }
@@ -171,7 +171,7 @@ bool sq_Database::CheckpointSnapshot(bool restart)
     };
 
     snapshot_checkpointing = true;
-    RG_DEFER { snapshot_checkpointing = false; };
+    K_DEFER { snapshot_checkpointing = false; };
 
     std::lock_guard<std::mutex> lock(snapshot_mutex);
 
@@ -180,7 +180,7 @@ bool sq_Database::CheckpointSnapshot(bool restart)
     restart |= (now - snapshot_start >= snapshot_full_delay);
 
     if (restart) {
-        snapshot_path_buf.len = SplitStrReverseAny(snapshot_path_buf, RG_PATH_SEPARATORS).ptr - snapshot_path_buf.ptr;
+        snapshot_path_buf.len = SplitStrReverseAny(snapshot_path_buf, K_PATH_SEPARATORS).ptr - snapshot_path_buf.ptr;
         snapshot_path_buf.ptr[snapshot_path_buf.len] = 0;
 
         // Start new checksum file
@@ -201,13 +201,13 @@ bool sq_Database::CheckpointSnapshot(bool restart)
             sh.version = SNAPSHOT_VERSION;
             sh.filename_len = LittleEndian((int32_t)db_filename.len);
 
-            success &= snapshot_main_writer.Write(&sh, RG_SIZE(sh));
+            success &= snapshot_main_writer.Write(&sh, K_SIZE(sh));
             success &= snapshot_main_writer.Write(db_filename);
         }
 
         // Perform initial copy
         {
-            RG_DEFER_C(len = snapshot_path_buf.len) {
+            K_DEFER_C(len = snapshot_path_buf.len) {
                 snapshot_path_buf.RemoveFrom(len);
                 snapshot_path_buf.ptr[snapshot_path_buf.len] = 0;
             };
@@ -221,14 +221,14 @@ bool sq_Database::CheckpointSnapshot(bool restart)
             frame.mtime = LittleEndian(now);
 
             success &= SpliceWithChecksum(&reader, &writer, frame.sha256);
-            success &= snapshot_main_writer.Write((const uint8_t *)&frame, RG_SIZE(frame));
+            success &= snapshot_main_writer.Write((const uint8_t *)&frame, K_SIZE(frame));
         }
 
         // Flush snapshot header to disk
         success &= snapshot_main_writer.Flush();
 
         locked = !LockExclusive();
-        RG_ASSERT(locked);
+        K_ASSERT(locked);
 
         // Restart WAL frame copies
         snapshot_start = now;
@@ -242,7 +242,7 @@ bool sq_Database::CheckpointSnapshot(bool restart)
             return success;
 
         locked = !LockExclusive();
-        RG_ASSERT(locked);
+        K_ASSERT(locked);
     }
 
     success &= CopyWAL(true);
@@ -279,14 +279,14 @@ bool sq_Database::OpenNextFrame(int64_t now)
         frame.mtime = LittleEndian(now);
         crypto_hash_sha256_final(&snapshot_wal_state, frame.sha256);
 
-        success &= snapshot_main_writer.Write((const uint8_t *)&frame, RG_SIZE(frame));
+        success &= snapshot_main_writer.Write((const uint8_t *)&frame, K_SIZE(frame));
         success &= snapshot_main_writer.Flush();
     }
 
     snapshot_frame++;
     snapshot_data = false;
 
-    RG_DEFER_C(len = snapshot_path_buf.len) {
+    K_DEFER_C(len = snapshot_path_buf.len) {
         snapshot_path_buf.RemoveFrom(len);
         snapshot_path_buf.ptr[snapshot_path_buf.len] = 0;
     };
@@ -347,9 +347,9 @@ Size sq_SnapshotInfo::FindFrame(int64_t mtime) const
 
 bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
 {
-    RG_ASSERT(!out_set->snapshots.len);
+    K_ASSERT(!out_set->snapshots.len);
 
-    RG_DEFER_N(out_guard) {
+    K_DEFER_N(out_guard) {
         out_set->snapshots.Clear();
         out_set->str_alloc.Reset();
     };
@@ -362,11 +362,11 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
             return false;
 
         SnapshotHeader sh;
-        if (st.Read(RG_SIZE(sh), &sh) != RG_SIZE(sh)) {
+        if (st.Read(K_SIZE(sh), &sh) != K_SIZE(sh)) {
             LogError("Truncated snapshot header in '%1' (skipping)", filename);
             continue;
         }
-        if (strncmp(sh.signature, SNAPSHOT_SIGNATURE, RG_SIZE(sh.signature)) != 0) {
+        if (strncmp(sh.signature, SNAPSHOT_SIGNATURE, K_SIZE(sh.signature)) != 0) {
             LogError("File '%1' does not have snapshot signature", filename);
             return false;
         }
@@ -396,7 +396,7 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
                 snapshot = &out_set->snapshots[prev_idx];
             }
         }
-        RG_DEFER {
+        K_DEFER {
             if (!snapshot->generations.len) {
                 out_set->snapshots.RemoveLast(1);
                 snapshots_map.Remove(orig_filename);
@@ -413,7 +413,7 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
             sq_SnapshotFrame frame = {};
 
             FrameData raw_frame;
-            if (Size read_len = st.Read(RG_SIZE(raw_frame), &raw_frame); read_len != RG_SIZE(raw_frame)) {
+            if (Size read_len = st.Read(K_SIZE(raw_frame), &raw_frame); read_len != K_SIZE(raw_frame)) {
                 if (read_len) {
                     LogError("Truncated snapshot frame in '%1' (ignoring)", filename);
                 }
@@ -423,7 +423,7 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
 
             frame.generation_idx = snapshot->generations.len;
             frame.mtime = raw_frame.mtime;
-            MemCpy(frame.sha256, raw_frame.sha256, RG_SIZE(frame.sha256));
+            MemCpy(frame.sha256, raw_frame.sha256, K_SIZE(frame.sha256));
 
             snapshot->frames.Append(frame);
         } while (!st.IsEOF());
@@ -475,7 +475,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const c
     }
 
     const char *wal_filename = Fmt(&temp_alloc, "%1-wal", dest_filename).ptr;
-    RG_DEFER { UnlinkFile(wal_filename); };
+    K_DEFER { UnlinkFile(wal_filename); };
 
     // Safety check
     if (overwrite) {
@@ -493,7 +493,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const c
     {
         const sq_SnapshotFrame &frame = snapshot.frames[generation->frame_idx];
 
-        RG_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
+        K_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
         Fmt(&path_buf, ".%1", FmtArg(0).Pad0(-16));
 
         StreamReader reader(path_buf.ptr, 0, CompressionType::LZ4);
@@ -503,7 +503,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const c
         if (!SpliceWithChecksum(&reader, &writer, sha256))
             return false;
 
-        if (memcmp(sha256, frame.sha256, RG_SIZE(sha256))) {
+        if (memcmp(sha256, frame.sha256, K_SIZE(sha256))) {
             LogError("Database copy checksum does not match");
             return false;
         }
@@ -513,7 +513,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const c
     for (Size i = 1, j = generation->frame_idx + 1; j <= frame_idx; i++, j++) {
         const sq_SnapshotFrame &frame = snapshot.frames[j];
 
-        RG_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
+        K_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
         Fmt(&path_buf, ".%1", FmtArg(i).Pad0(-16));
 
         StreamReader reader(path_buf.ptr, 0, CompressionType::LZ4);
@@ -523,7 +523,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const c
         if (!SpliceWithChecksum(&reader, &writer, sha256))
             return false;
 
-        if (memcmp(sha256, frame.sha256, RG_SIZE(sha256))) {
+        if (memcmp(sha256, frame.sha256, K_SIZE(sha256))) {
             LogError("WAL copy checksum does not match");
             return false;
         }

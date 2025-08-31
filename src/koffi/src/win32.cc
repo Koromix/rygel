@@ -34,7 +34,7 @@
 #include <ntsecapi.h>
 #include <processthreadsapi.h>
 
-namespace RG {
+namespace K {
 
 const HashMap<int, const char *> WindowsMachineNames = {
     { 0x184, "Alpha AXP, 32-bit" },
@@ -138,9 +138,9 @@ static int GetFileMachine(HANDLE h, bool check_dll)
     PE_DOS_HEADER dos = {};
     PE_NT_HEADERS nt = {};
 
-    if (!ReadAt(h, 0, &dos, RG_SIZE(dos)))
+    if (!ReadAt(h, 0, &dos, K_SIZE(dos)))
         goto generic;
-    if (!ReadAt(h, dos.e_lfanew, &nt, RG_SIZE(nt)))
+    if (!ReadAt(h, dos.e_lfanew, &nt, K_SIZE(nt)))
         goto generic;
 
     if (dos.e_magic != 0x5A4D) // MZ
@@ -179,7 +179,7 @@ int GetSelfMachine()
         LogError("Cannot open '%1': %2", filename, GetWin32ErrorString());
         return -1;
     }
-    RG_DEFER { CloseHandle(h); };
+    K_DEFER { CloseHandle(h); };
 
     return GetFileMachine(h, false);
 }
@@ -193,7 +193,7 @@ int GetDllMachine(const wchar_t *filename)
         LogError("Cannot open '%1': %2", filename, GetWin32ErrorString());
         return -1;
     }
-    RG_DEFER { CloseHandle(h); };
+    K_DEFER { CloseHandle(h); };
 
     return GetFileMachine(h, true);
 }

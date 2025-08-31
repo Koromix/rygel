@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "mco_common.hh"
 
-namespace RG {
+namespace K {
 
 struct mco_Authorization {
     enum class Mode: int8_t {
@@ -32,7 +32,7 @@ struct mco_Authorization {
     Mode mode;
     LocalDate dates[2];
 
-    RG_HASHTABLE_HANDLER(mco_Authorization, unit);
+    K_HASHTABLE_HANDLER(mco_Authorization, unit);
 };
 
 struct mco_AuthorizationSet {
@@ -47,7 +47,7 @@ struct mco_AuthorizationSet {
 };
 
 class mco_AuthorizationSetBuilder {
-    RG_DELETE_COPY(mco_AuthorizationSetBuilder)
+    K_DELETE_COPY(mco_AuthorizationSetBuilder)
 
     mco_AuthorizationSet set;
 

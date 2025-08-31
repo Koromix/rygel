@@ -50,7 +50,7 @@
 
 #include <napi.h>
 
-namespace RG {
+namespace K {
 
 SharedData shared;
 
@@ -147,7 +147,7 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
                 if (!ChangeMemorySize(key.c_str(), value, &new_config.async_heap_size))
                     return env.Null();
             } else if (key == "resident_async_pools") {
-                if (!ChangeAsyncLimit(key.c_str(), value, RG_LEN(instance->memories.data) - 1, &new_config.resident_async_pools))
+                if (!ChangeAsyncLimit(key.c_str(), value, K_LEN(instance->memories.data) - 1, &new_config.resident_async_pools))
                     return env.Null();
             } else if (key == "max_async_calls") {
                 if (!ChangeAsyncLimit(key.c_str(), value, MaxAsyncCalls, &max_async_calls))
@@ -259,7 +259,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     Napi::Object obj = info[skip].As<Napi::Object>();
     Napi::Array keys = GetOwnPropertyNames(obj);
 
-    RG_DEFER_NC(err_guard, count = instance->types.count) {
+    K_DEFER_NC(err_guard, count = instance->types.count) {
         Size start = count + !skip;
 
         for (Size i = start; i < instance->types.count; i++) {
@@ -454,7 +454,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     Napi::Object obj = info[skip].As<Napi::Object>();
     Napi::Array keys = GetOwnPropertyNames(obj);
 
-    RG_DEFER_NC(err_guard, count = instance->types.count) {
+    K_DEFER_NC(err_guard, count = instance->types.count) {
         Size start = count + !skip;
 
         for (Size i = start; i < instance->types.count; i++) {
@@ -629,7 +629,7 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
     Napi::String name = info[0].As<Napi::String>();    
 
     TypeInfo *type = instance->types.AppendDefault();
-    RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
+    K_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
                        : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
@@ -690,13 +690,13 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     }
 
     TypeInfo *type = MakePointerType(instance, ref, count);
-    RG_ASSERT(type);
+    K_ASSERT(type);
 
     if (named || !countedby.IsEmpty()) {
         TypeInfo *copy = instance->types.AppendDefault();
-        RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
+        K_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
-        memcpy((void *)copy, type, RG_SIZE(*type));
+        memcpy((void *)copy, type, K_SIZE(*type));
         copy->name = named ? DuplicateString(name.c_str(), &instance->str_alloc).ptr : copy->name;
 
         if (!countedby.IsEmpty()) {
@@ -717,7 +717,7 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
 
 static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int directions)
 {
-    RG_ASSERT(directions >= 1 && directions <= 3);
+    K_ASSERT(directions >= 1 && directions <= 3);
 
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -817,7 +817,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
                 external
             };
 
-            ref.Call(self, RG_LEN(args), args);
+            ref.Call(self, K_LEN(args), args);
             instance->stats.disposed++;
         };
         dispose_func = func;
@@ -831,9 +831,9 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     }
 
     TypeInfo *type = instance->types.AppendDefault();
-    RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
+    K_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
-    memcpy((void *)type, (const void *)src, RG_SIZE(*src));
+    memcpy((void *)type, (const void *)src, K_SIZE(*src));
     type->members.allocator = GetNullAllocator();
 
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
@@ -1052,7 +1052,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
 
 static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, FunctionInfo *out_func)
 {
-    RG_ASSERT(info.Length() >= 2);
+    K_ASSERT(info.Length() >= 2);
 
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -1158,7 +1158,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     FunctionInfo *func = instance->callbacks.AppendDefault();
-    RG_DEFER_N(err_guard) { instance->callbacks.RemoveLast(1); };
+    K_DEFER_N(err_guard) { instance->callbacks.RemoveLast(1); };
 
     if (info.Length() >= 2) {
         if (!ParseClassicFunction(info, false, func))
@@ -1205,7 +1205,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
 
     type->primitive = PrimitiveKind::Prototype;
     type->align = alignof(void *);
-    type->size = RG_SIZE(void *);
+    type->size = K_SIZE(void *);
     type->ref.proto = func;
 
     instance->types_map.Set(type->name, type);
@@ -1428,7 +1428,7 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
         return nullptr;
 
     InstanceMemory *mem = new InstanceMemory();
-    RG_DEFER_N(mem_guard) { delete mem; };
+    K_DEFER_N(mem_guard) { delete mem; };
 
     stack_size = AlignLen(stack_size, Kibibytes(64));
 
@@ -1437,12 +1437,12 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
     mem->stack.len = stack_size;
     mem->stack.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->stack.len, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
-    RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
+    K_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
 #else
     mem->stack.len = stack_size;
     mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
 
-    RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
+    K_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
 #endif
 
 #if defined(__OpenBSD__)
@@ -1459,7 +1459,7 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
 #else
     mem->heap.ptr = (uint8_t *)mmap(nullptr, mem->heap.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
 #endif
-    RG_CRITICAL(mem->heap.ptr, "Failed to allocate %1 of memory", mem->heap.len);
+    K_CRITICAL(mem->heap.ptr, "Failed to allocate %1 of memory", mem->heap.len);
 
     if (temporary) {
         instance->temporaries++;
@@ -1498,7 +1498,7 @@ static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native,
 
     // Execute call
     {
-        RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
+        K_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
         exec_call = &call;
 
         call.Execute(func, native);
@@ -1520,11 +1520,11 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     FunctionInfo copy;
-    memcpy((void *)&copy, func, RG_SIZE(*func));
+    memcpy((void *)&copy, func, K_SIZE(*func));
     copy.lib = nullptr;
 
     // This makes variadic calls non-reentrant
-    RG_DEFER_C(len = copy.parameters.len) {
+    K_DEFER_C(len = copy.parameters.len) {
         copy.parameters.RemoveFrom(len);
         copy.parameters.Leak();
     };
@@ -1579,7 +1579,7 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
 
     // Execute call
     {
-        RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
+        K_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
         exec_call = &call;
 
         call.Execute(&copy, native);
@@ -1629,7 +1629,7 @@ public:
 void AsyncCall::Execute()
 {
     if (prepared) {
-        RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
+        K_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
         exec_call = &call;
 
         call.Execute(func, native);
@@ -1638,7 +1638,7 @@ void AsyncCall::Execute()
 
 void AsyncCall::OnOK()
 {
-    RG_ASSERT(prepared);
+    K_ASSERT(prepared);
 
     Napi::FunctionReference &callback = Callback();
 
@@ -1648,13 +1648,13 @@ void AsyncCall::OnOK()
         call.Complete(func)
     };
 
-    callback.Call(self, RG_LEN(args), args);
+    callback.Call(self, K_LEN(args), args);
 }
 
 static Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native,
                                       const Napi::CallbackInfo &info)
 {
-    RG_ASSERT(!func->variadic);
+    K_ASSERT(!func->variadic);
 
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -1712,7 +1712,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, Bac
         }
 
         // Avoid triggering the "use callback beyond FFI" check
-        RG_DEFER_C(generation = trampoline->generation) { trampoline->generation = generation; };
+        K_DEFER_C(generation = trampoline->generation) { trampoline->generation = generation; };
         trampoline->generation = -1;
 
         // We set dispose_call to true so that the main thread will dispose of CallData itself
@@ -1728,7 +1728,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
     LibraryHolder *lib = (LibraryHolder *)info.Data();
 
     FunctionInfo *func = new FunctionInfo();
-    RG_DEFER { func->Unref(); };
+    K_DEFER { func->Unref(); };
 
     func->lib = lib->Ref();
 
@@ -1876,7 +1876,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 
     if (!instance->memories.len) {
         AllocateMemory(instance, instance->config.sync_stack_size, instance->config.sync_heap_size);
-        RG_ASSERT(instance->memories.len);
+        K_ASSERT(instance->memories.len);
     }
 
     // Load shared library
@@ -1890,7 +1890,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
             return env.Null();
     } else {
         module = GetModuleHandle(nullptr);
-        RG_ASSERT(module);
+        K_ASSERT(module);
     }
 #else
     if (info[0].IsString()) {
@@ -1917,7 +1917,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 #endif
 
     LibraryHolder *lib = new LibraryHolder(module);
-    RG_DEFER { lib->Unref(); };
+    K_DEFER { lib->Unref(); };
 
     Napi::Object obj = Napi::Object::New(env);
 
@@ -2040,7 +2040,7 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         std::lock_guard<std::mutex> lock(shared.mutex);
 
         TrampolineInfo *trampoline = &shared.trampolines[idx];
-        RG_ASSERT(!trampoline->func.IsEmpty());
+        K_ASSERT(!trampoline->func.IsEmpty());
 
         trampoline->func.Reset();
         trampoline->recv.Reset();
@@ -2354,8 +2354,8 @@ bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
 static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initializer_list<const char *> names,
                                   PrimitiveKind primitive, int32_t size, int16_t align, const char *ref = nullptr)
 {
-    RG_ASSERT(names.size() > 0);
-    RG_ASSERT(align <= size);
+    K_ASSERT(names.size() > 0);
+    K_ASSERT(align <= size);
 
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
@@ -2379,7 +2379,7 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
 
     if (ref) {
         const TypeInfo *marker = instance->types_map.FindValue(ref, nullptr);
-        RG_ASSERT(marker);
+        K_ASSERT(marker);
 
         type->ref.marker = marker;
     }
@@ -2389,7 +2389,7 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
     for (const char *name: names) {
         bool inserted;
         instance->types_map.TrySet(name, type, &inserted);
-        RG_ASSERT(inserted);
+        K_ASSERT(inserted);
 
         if (!EndsWith(name, "*")) {
             map.Set(name, wrapper);
@@ -2406,12 +2406,12 @@ static inline PrimitiveKind GetSignPrimitive(Size len, bool sign)
         case 8: return sign ? PrimitiveKind::Int64 : PrimitiveKind::UInt64;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 static inline PrimitiveKind GetLittleEndianPrimitive(PrimitiveKind kind)
 {
-#if defined(RG_BIG_ENDIAN)
+#if defined(K_BIG_ENDIAN)
     return (PrimitiveKind)((int)kind + 1);
 #else
     return kind;
@@ -2420,7 +2420,7 @@ static inline PrimitiveKind GetLittleEndianPrimitive(PrimitiveKind kind)
 
 static inline PrimitiveKind GetBigEndianPrimitive(PrimitiveKind kind)
 {
-#if defined(RG_BIG_ENDIAN)
+#if defined(K_BIG_ENDIAN)
     return kind;
 #else
     return (PrimitiveKind)((int)kind + 1);
@@ -2430,7 +2430,7 @@ static inline PrimitiveKind GetBigEndianPrimitive(PrimitiveKind kind)
 static InstanceData *CreateInstance()
 {
     InstanceData *instance = new InstanceData();
-    RG_DEFER_N(err_guard) { delete instance; };
+    K_DEFER_N(err_guard) { delete instance; };
 
     instance->main_thread_id = std::this_thread::get_id();
 
@@ -2450,7 +2450,7 @@ static InstanceData *CreateInstance()
 static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 {
     InstanceData *instance = CreateInstance();
-    RG_CRITICAL(instance, "Failed to initialize Koffi");
+    K_CRITICAL(instance, "Failed to initialize Koffi");
 
     env.SetInstanceData(instance);
 
@@ -2525,16 +2525,16 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         exports.Set("types", types);
 
         RegisterPrimitiveType(env, types, {"void"}, PrimitiveKind::Void, 0, 0);
-        RegisterPrimitiveType(env, types, {"bool"}, PrimitiveKind::Bool, RG_SIZE(bool), alignof(bool));
+        RegisterPrimitiveType(env, types, {"bool"}, PrimitiveKind::Bool, K_SIZE(bool), alignof(bool));
         RegisterPrimitiveType(env, types, {"int8_t", "int8"}, PrimitiveKind::Int8, 1, 1);
         RegisterPrimitiveType(env, types, {"uint8_t", "uint8"}, PrimitiveKind::UInt8, 1, 1);
         RegisterPrimitiveType(env, types, {"char"}, PrimitiveKind::Int8, 1, 1);
         RegisterPrimitiveType(env, types, {"unsigned char", "uchar"}, PrimitiveKind::UInt8, 1, 1);
         RegisterPrimitiveType(env, types, {"char16_t", "char16"}, PrimitiveKind::Int16, 2, 2);
         RegisterPrimitiveType(env, types, {"char32_t", "char32"}, PrimitiveKind::Int32, 4, 4);
-        if (RG_SIZE(wchar_t) == 2) {
+        if (K_SIZE(wchar_t) == 2) {
             RegisterPrimitiveType(env, types, {"wchar_t", "wchar"}, PrimitiveKind::Int16, 2, 2);
-        } else if (RG_SIZE(wchar_t) == 4) {
+        } else if (K_SIZE(wchar_t) == 4) {
             RegisterPrimitiveType(env, types, {"wchar_t", "wchar"}, PrimitiveKind::Int32, 4, 4);
         }
         RegisterPrimitiveType(env, types, {"int16_t", "int16"}, PrimitiveKind::Int16, 2, 2);
@@ -2559,22 +2559,22 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         RegisterPrimitiveType(env, types, {"uint64_t", "uint64"}, PrimitiveKind::UInt64, 8, alignof(int64_t));
         RegisterPrimitiveType(env, types, {"uint64_le_t", "uint64_le"}, GetLittleEndianPrimitive(PrimitiveKind::UInt64), 8, alignof(int64_t));
         RegisterPrimitiveType(env, types, {"uint64_be_t", "uint64_be"}, GetBigEndianPrimitive(PrimitiveKind::UInt64), 8, alignof(int64_t));
-        RegisterPrimitiveType(env, types, {"intptr_t", "intptr"}, GetSignPrimitive(RG_SIZE(intptr_t), true), RG_SIZE(intptr_t), alignof(intptr_t));
-        RegisterPrimitiveType(env, types, {"uintptr_t", "uintptr"}, GetSignPrimitive(RG_SIZE(intptr_t), false), RG_SIZE(intptr_t), alignof(intptr_t));
-        RegisterPrimitiveType(env, types, {"size_t"}, GetSignPrimitive(RG_SIZE(size_t), false), RG_SIZE(size_t), alignof(size_t));
-        RegisterPrimitiveType(env, types, {"long"}, GetSignPrimitive(RG_SIZE(long), true), RG_SIZE(long), alignof(long));
-        RegisterPrimitiveType(env, types, {"unsigned long", "ulong"}, GetSignPrimitive(RG_SIZE(long), false), RG_SIZE(long), alignof(long));
-        RegisterPrimitiveType(env, types, {"long long", "longlong"}, PrimitiveKind::Int64, RG_SIZE(int64_t), alignof(int64_t));
-        RegisterPrimitiveType(env, types, {"unsigned long long", "ulonglong"}, PrimitiveKind::UInt64, RG_SIZE(uint64_t), alignof(uint64_t));
+        RegisterPrimitiveType(env, types, {"intptr_t", "intptr"}, GetSignPrimitive(K_SIZE(intptr_t), true), K_SIZE(intptr_t), alignof(intptr_t));
+        RegisterPrimitiveType(env, types, {"uintptr_t", "uintptr"}, GetSignPrimitive(K_SIZE(intptr_t), false), K_SIZE(intptr_t), alignof(intptr_t));
+        RegisterPrimitiveType(env, types, {"size_t"}, GetSignPrimitive(K_SIZE(size_t), false), K_SIZE(size_t), alignof(size_t));
+        RegisterPrimitiveType(env, types, {"long"}, GetSignPrimitive(K_SIZE(long), true), K_SIZE(long), alignof(long));
+        RegisterPrimitiveType(env, types, {"unsigned long", "ulong"}, GetSignPrimitive(K_SIZE(long), false), K_SIZE(long), alignof(long));
+        RegisterPrimitiveType(env, types, {"long long", "longlong"}, PrimitiveKind::Int64, K_SIZE(int64_t), alignof(int64_t));
+        RegisterPrimitiveType(env, types, {"unsigned long long", "ulonglong"}, PrimitiveKind::UInt64, K_SIZE(uint64_t), alignof(uint64_t));
         RegisterPrimitiveType(env, types, {"float", "float32"}, PrimitiveKind::Float32, 4, alignof(float));
         RegisterPrimitiveType(env, types, {"double", "float64"}, PrimitiveKind::Float64, 8, alignof(double));
-        RegisterPrimitiveType(env, types, {"char *", "str", "string"}, PrimitiveKind::String, RG_SIZE(void *), alignof(void *), "char");
-        RegisterPrimitiveType(env, types, {"char16_t *", "char16 *", "str16", "string16"}, PrimitiveKind::String16, RG_SIZE(void *), alignof(void *), "char16_t");
-        RegisterPrimitiveType(env, types, {"char32_t *", "char32 *", "str32", "string32"}, PrimitiveKind::String32, RG_SIZE(void *), alignof(void *), "char32_t");
-        if (RG_SIZE(wchar_t) == 2) {
-            RegisterPrimitiveType(env, types, {"wchar_t *", "wchar *"}, PrimitiveKind::String16, RG_SIZE(void *), alignof(void *), "wchar_t");
-        } else if (RG_SIZE(wchar_t) == 4) {
-            RegisterPrimitiveType(env, types, {"wchar_t *", "wchar *"}, PrimitiveKind::String32, RG_SIZE(void *), alignof(void *), "wchar_t");
+        RegisterPrimitiveType(env, types, {"char *", "str", "string"}, PrimitiveKind::String, K_SIZE(void *), alignof(void *), "char");
+        RegisterPrimitiveType(env, types, {"char16_t *", "char16 *", "str16", "string16"}, PrimitiveKind::String16, K_SIZE(void *), alignof(void *), "char16_t");
+        RegisterPrimitiveType(env, types, {"char32_t *", "char32 *", "str32", "string32"}, PrimitiveKind::String32, K_SIZE(void *), alignof(void *), "char32_t");
+        if (K_SIZE(wchar_t) == 2) {
+            RegisterPrimitiveType(env, types, {"wchar_t *", "wchar *"}, PrimitiveKind::String16, K_SIZE(void *), alignof(void *), "wchar_t");
+        } else if (K_SIZE(wchar_t) == 4) {
+            RegisterPrimitiveType(env, types, {"wchar_t *", "wchar *"}, PrimitiveKind::String32, K_SIZE(void *), alignof(void *), "wchar_t");
         }
 
         instance->void_type = instance->types_map.FindValue("void", nullptr);
@@ -2601,7 +2601,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         node.Set("env", external);
     }
 
-    exports.Set("version", Napi::String::New(env, RG_STRINGIFY(VERSION)));
+    exports.Set("version", Napi::String::New(env, K_STRINGIFY(VERSION)));
 
     return exports;
 }

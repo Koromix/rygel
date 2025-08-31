@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "program.hh"
 
-namespace RG {
+namespace K {
 
 static bk_TypeInfo BaseTypes[] = {
     {"Null", bk_PrimitiveKind::Null, true, 0},
@@ -53,7 +53,7 @@ const char *bk_Program::LocateInstruction(const bk_FunctionInfo *func, Size pc, 
 
     const bk_SourceMap::Line *line = std::upper_bound(src->lines.begin(), src->lines.end(), pc,
                                                        [](Size pc, const bk_SourceMap::Line &line) { return pc < line.addr; }) - 1;
-    RG_ASSERT(line);
+    K_ASSERT(line);
 
     if (out_line) {
         *out_line = line->line;

@@ -32,7 +32,7 @@
 #endif
 #include "vendor/curl/include/curl/curl.h"
 
-namespace RG {
+namespace K {
 
 CURL *curl_Init();
 bool curl_Reset(CURL *curl);

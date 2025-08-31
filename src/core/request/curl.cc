@@ -26,21 +26,21 @@
     #include <fcntl.h>
 #endif
 
-namespace RG {
+namespace K {
 
 extern "C" const AssetInfo CacertPem;
 
-RG_INIT(libcurl)
+K_INIT(libcurl)
 {
-    RG_CRITICAL(!curl_global_init(CURL_GLOBAL_ALL), "Failed to initialize libcurl");
+    K_CRITICAL(!curl_global_init(CURL_GLOBAL_ALL), "Failed to initialize libcurl");
 }
 
 CURL *curl_Init()
 {
     CURL *curl = curl_easy_init();
     if (!curl)
-        RG_BAD_ALLOC();
-    RG_DEFER_N(err_guard) { curl_easy_cleanup(curl); };
+        K_BAD_ALLOC();
+    K_DEFER_N(err_guard) { curl_easy_cleanup(curl); };
 
     if (!curl_Reset(curl))
         return nullptr;
@@ -127,8 +127,8 @@ Span<const char> curl_GetUrlPartStr(CURLU *h, CURLUPart part, Allocator *alloc)
 
     CURLUcode ret = curl_url_get(h, part, &buf, 0);
     if (ret == CURLUE_OUT_OF_MEMORY)
-        RG_BAD_ALLOC();
-    RG_DEFER { curl_free(buf); };
+        K_BAD_ALLOC();
+    K_DEFER { curl_free(buf); };
 
     if (buf && buf[0]) {
         Span<const char> str = DuplicateString(buf, alloc);
@@ -144,8 +144,8 @@ int curl_GetUrlPartInt(CURLU *h, CURLUPart part)
 
     CURLUcode ret = curl_url_get(h, part, &buf, 0);
     if (ret == CURLUE_OUT_OF_MEMORY)
-        RG_BAD_ALLOC();
-    RG_DEFER { curl_free(buf); };
+        K_BAD_ALLOC();
+    K_DEFER { curl_free(buf); };
 
     int value = -1;
     if (buf) {

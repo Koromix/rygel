@@ -17,7 +17,7 @@
 #include "compiler.hh"
 #include "locate.hh"
 
-namespace RG {
+namespace K {
 
 enum class EmbedMode {
     Arrays,
@@ -51,7 +51,7 @@ static void MakeEmbedCommand(Span<const char *const> embed_filenames, EmbedMode 
                              const char *embed_options, const char *dest_filename,
                              Allocator *alloc, Command *out_cmd)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     HeapArray<char> buf(alloc);
 
@@ -154,7 +154,7 @@ static HostArchitecture ParseTarget(Span<const char> output)
 
 static bool IdentifyCompiler(const char *bin, const char *needle)
 {
-    bin = SplitStrReverseAny(bin, RG_PATH_SEPARATORS).ptr;
+    bin = SplitStrReverseAny(bin, K_PATH_SEPARATORS).ptr;
 
     const char *ptr = strstr(bin, needle);
     Size len = (Size)strlen(needle);
@@ -266,7 +266,7 @@ public:
                         return false;
                     } break;
 
-                    case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+                    case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
                 }
 #elif !defined(__APPLE_)
             } else {
@@ -286,7 +286,7 @@ public:
                         return false;
                     } break;
 
-                    case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+                    case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
                 }
 
                 switch (compiler->platform) {
@@ -295,7 +295,7 @@ public:
                     case HostPlatform::OpenBSD: { suffix = "openbsd-unknown"; } break;
 
                     case HostPlatform::WasmWasi: {
-                        RG_ASSERT(sysroot);
+                        K_ASSERT(sysroot);
                         suffix = "wasi";
                     } break;
 
@@ -433,7 +433,7 @@ public:
     const char *GetLinkExtension(TargetType type) const override
     {
         if (platform == HostPlatform::WasmWasi) {
-            RG_ASSERT(type != TargetType::Library);
+            K_ASSERT(type != TargetType::Library);
             return ".wasm";
         }
 
@@ -448,7 +448,7 @@ public:
             } break;
         }
 
-        RG_UNREACHABLE();
+        K_UNREACHABLE();
     }
     const char *GetImportExtension() const override { return (platform == HostPlatform::Windows) ? ".lib" : ".so"; }
     const char *GetLibPrefix() const override { return (platform == HostPlatform::Windows) ? "" : "lib"; }
@@ -466,10 +466,10 @@ public:
                           const char *embed_options, const char *dest_filename,
                           Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         EmbedMode mode = (clang_ver >= 190000) ? EmbedMode::Embed : EmbedMode::Literals;
-        RG::MakeEmbedCommand(embed_filenames, mode, embed_options, dest_filename, alloc, out_cmd);
+        K::MakeEmbedCommand(embed_filenames, mode, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
@@ -477,14 +477,14 @@ public:
                         Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                         Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
         MakeCppCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
                        include_files, custom_flags, features, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         const char *cache_filename = Fmt(alloc, "%1.pch", pch_filename).ptr;
         return cache_filename;
@@ -497,7 +497,7 @@ public:
                         Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                         const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
 
@@ -526,7 +526,7 @@ public:
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
-            case SourceType::QtResources: { RG_UNREACHABLE(); } break;
+            case SourceType::QtResources: { K_UNREACHABLE(); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -540,7 +540,7 @@ public:
                 case SourceType::Object:
                 case SourceType::Esbuild:
                 case SourceType::QtUi:
-                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
+                case SourceType::QtResources: { K_UNREACHABLE(); } break;
             }
         }
         Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
@@ -620,7 +620,7 @@ public:
             case HostArchitecture::RISCV64:
             case HostArchitecture::Loong64: {} break;
 
-            case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+            case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
         }
 
         // Platform flags
@@ -704,7 +704,7 @@ public:
             }
         }
         if (features & (int)CompileFeature::CFI) {
-            RG_ASSERT(features & (int)CompileFeature::LTO);
+            K_ASSERT(features & (int)CompileFeature::LTO);
 
             if (clang_ver >= 160000) {
                 if (architecture == HostArchitecture::x86_64) {
@@ -761,7 +761,7 @@ public:
                              uint32_t features, const char *dest_filename,
                              Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
 
@@ -811,7 +811,7 @@ public:
     void MakeResourceCommand(const char *rc_filename, const char *dest_filename,
                              Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         out_cmd->cmd_line = Fmt(alloc, "\"%1\" /FO\"%2\" \"%3\"", rc, dest_filename, rc_filename);
         out_cmd->cache_len = out_cmd->cmd_line.len;
@@ -822,7 +822,7 @@ public:
                          const char *custom_flags, uint32_t features, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
 
@@ -878,7 +878,7 @@ public:
                         }
                     }
                     Fmt(&buf, " -framework %1", basename);
-                } else if (strpbrk(lib, RG_PATH_SEPARATORS)) {
+                } else if (strpbrk(lib, K_PATH_SEPARATORS)) {
                     Fmt(&buf, " %1", lib);
                 } else {
                     Fmt(&buf, " -l%1", lib);
@@ -957,7 +957,7 @@ public:
             Fmt(&buf, " -fsanitize=safe-stack");
         }
         if (features & (int)CompileFeature::CFI) {
-            RG_ASSERT(features & (int)CompileFeature::LTO);
+            K_ASSERT(features & (int)CompileFeature::LTO);
             Fmt(&buf, " -fsanitize=cfi");
         }
         if (features & (int)CompileFeature::ShuffleCode) {
@@ -987,7 +987,7 @@ public:
         out_cmd->cmd_line = buf.TrimAndLeak(1);
     }
 
-    void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+    void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { K_UNREACHABLE(); }
 
 private:
     void AddClangTarget(HeapArray<char> *out_buf) const
@@ -1154,7 +1154,7 @@ public:
             } break;
         }
 
-        RG_UNREACHABLE();
+        K_UNREACHABLE();
     }
     const char *GetImportExtension() const override { return ".so"; }
     const char *GetLibPrefix() const override { return "lib"; }
@@ -1172,10 +1172,10 @@ public:
                           const char *embed_options, const char *dest_filename,
                           Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         EmbedMode mode = (gcc_ver >= 150000) ? EmbedMode::Embed : EmbedMode::Literals;
-        RG::MakeEmbedCommand(embed_filenames, mode, embed_options, dest_filename, alloc, out_cmd);
+        K::MakeEmbedCommand(embed_filenames, mode, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
@@ -1183,14 +1183,14 @@ public:
                         Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                         Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
         MakeCppCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
                        include_files, custom_flags, features, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         const char *cache_filename = Fmt(alloc, "%1.gch", pch_filename).ptr;
         return cache_filename;
@@ -1203,7 +1203,7 @@ public:
                         Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                         const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
 
@@ -1232,7 +1232,7 @@ public:
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
-            case SourceType::QtResources: { RG_UNREACHABLE(); } break;
+            case SourceType::QtResources: { K_UNREACHABLE(); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -1246,7 +1246,7 @@ public:
                 case SourceType::Object:
                 case SourceType::Esbuild:
                 case SourceType::QtUi:
-                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
+                case SourceType::QtResources: { K_UNREACHABLE(); } break;
             }
         }
         Fmt(&buf, " -I. -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
@@ -1319,7 +1319,7 @@ public:
             case HostArchitecture::Loong64:
             case HostArchitecture::Web32: {} break;
 
-            case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+            case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
         }
 
         // Platform flags
@@ -1424,7 +1424,7 @@ public:
                              uint32_t features, const char *dest_filename,
                              Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
 
@@ -1471,7 +1471,7 @@ public:
     void MakeResourceCommand(const char *rc_filename, const char *dest_filename,
                              Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         out_cmd->cmd_line = Fmt(alloc, "\"%1\" -O coff \"%2\" \"%3\"", windres, rc_filename, dest_filename);
         out_cmd->cache_len = out_cmd->cmd_line.len;
@@ -1482,7 +1482,7 @@ public:
                          const char *custom_flags, uint32_t features, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
 
@@ -1533,7 +1533,7 @@ public:
                         }
                     }
                     Fmt(&buf, " -framework %1", basename);
-                } else if (strpbrk(lib, RG_PATH_SEPARATORS)) {
+                } else if (strpbrk(lib, K_PATH_SEPARATORS)) {
                     Fmt(&buf, " %1", lib);
                 } else {
                     Fmt(&buf, " -l%1", lib);
@@ -1615,7 +1615,7 @@ public:
         out_cmd->cmd_line = buf.TrimAndLeak(1);
     }
 
-    void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+    void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { K_UNREACHABLE(); }
 };
 
 #if defined(_WIN32)
@@ -1687,7 +1687,7 @@ public:
                 case HostArchitecture::RISCV64:
                 case HostArchitecture::Loong64:
                 case HostArchitecture::Web32:
-                case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+                case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
             }
             compiler->link = Fmt(&compiler->str_alloc, "%1link%2", prefix, version).ptr;
         }
@@ -1745,7 +1745,7 @@ public:
             case TargetType::Library: return ".dll";
         }
 
-        RG_UNREACHABLE();
+        K_UNREACHABLE();
     }
     const char *GetImportExtension() const override { return ".lib"; }
     const char *GetLibPrefix() const override { return ""; }
@@ -1763,11 +1763,11 @@ public:
                           const char *embed_options, const char *dest_filename,
                           Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         // Strings literals were limited in length before MSVC 2022
         EmbedMode mode = (cl_ver >= 193000) ? EmbedMode::Literals : EmbedMode::Arrays;
-        RG::MakeEmbedCommand(embed_filenames, mode, embed_options, dest_filename, alloc, out_cmd);
+        K::MakeEmbedCommand(embed_filenames, mode, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
@@ -1775,21 +1775,21 @@ public:
                         Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                         Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
         MakeCppCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
                        include_files, custom_flags, features, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         const char *cache_filename = Fmt(alloc, "%1.pch", pch_filename).ptr;
         return cache_filename;
     }
     const char *GetPchObject(const char *pch_filename, Allocator *alloc) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         const char *obj_filename = Fmt(alloc, "%1.obj", pch_filename).ptr;
         return obj_filename;
@@ -1801,7 +1801,7 @@ public:
                         Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                         const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
 
@@ -1815,7 +1815,7 @@ public:
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
-            case SourceType::QtResources: { RG_UNREACHABLE(); } break;
+            case SourceType::QtResources: { K_UNREACHABLE(); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " \"/Fo%1\"", dest_filename);
@@ -1938,14 +1938,14 @@ public:
             case HostArchitecture::RISCV64:
             case HostArchitecture::Loong64:
             case HostArchitecture::Web32:
-            case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+            case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
         }
     }
 
     void MakeResourceCommand(const char *rc_filename, const char *dest_filename,
                              Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         out_cmd->cmd_line = Fmt(alloc, "\"%1\" /nologo /FO\"%2\" \"%3\"", rc, dest_filename, rc_filename);
         out_cmd->cache_len = out_cmd->cmd_line.len;
@@ -1956,7 +1956,7 @@ public:
                          const char *custom_flags, uint32_t features, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
 
@@ -2012,7 +2012,7 @@ public:
         out_cmd->skip_lines = 1;
     }
 
-    void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+    void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { K_UNREACHABLE(); }
 
 private:
     void MakeMasmCommand(const char *src_filename, Span<const char *const> definitions,
@@ -2020,7 +2020,7 @@ private:
                          uint32_t features, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
 
@@ -2065,7 +2065,7 @@ private:
                            uint32_t features, const char *dest_filename,
                            Allocator *alloc, Command *out_cmd) const
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
 
@@ -2177,12 +2177,12 @@ public:
                           const char *embed_options, const char *dest_filename,
                           Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
-        RG::MakeEmbedCommand(embed_filenames, EmbedMode::Literals, embed_options, dest_filename, alloc, out_cmd);
+        K_ASSERT(alloc);
+        K::MakeEmbedCommand(embed_filenames, EmbedMode::Literals, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,
-                        Span<const char *const>, const char *, uint32_t, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+                        Span<const char *const>, const char *, uint32_t, Allocator *, Command *) const override { K_UNREACHABLE(); }
 
     const char *GetPchCache(const char *, Allocator *) const override { return nullptr; }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
@@ -2193,7 +2193,7 @@ public:
                         Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                         const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         // Hide noisy EmCC messages
         out_cmd->env_variables.Append({ "EMCC_LOGGING", "0" });
@@ -2210,9 +2210,9 @@ public:
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
-            case SourceType::QtResources: { RG_UNREACHABLE(); } break;
+            case SourceType::QtResources: { K_UNREACHABLE(); } break;
         }
-        RG_ASSERT(dest_filename); // No PCH
+        K_ASSERT(dest_filename); // No PCH
         Fmt(&buf, " -o \"%1\"", dest_filename);
         Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
         out_cmd->rsp_offset = buf.len;
@@ -2282,16 +2282,16 @@ public:
     }
 
     void MakeAssemblyCommand(const char *, Span<const char *const>, Span<const char *const>, const char *,
-                             uint32_t, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+                             uint32_t, const char *, Allocator *, Command *) const override { K_UNREACHABLE(); }
 
-    void MakeResourceCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+    void MakeResourceCommand(const char *, const char *, Allocator *, Command *) const override { K_UNREACHABLE(); }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
                          Span<const char *const> libraries, TargetType link_type,
                          const char *custom_flags, uint32_t, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         // Hide noisy EmCC messages
         out_cmd->env_variables.Append({ "EMCC_LOGGING", "0" });
@@ -2301,7 +2301,7 @@ public:
         // Linker
         switch (link_type) {
             case TargetType::Executable: { Fmt(&buf, "\"%1\"", cxx); } break;
-            case TargetType::Library: { RG_UNREACHABLE(); } break;
+            case TargetType::Library: { K_UNREACHABLE(); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -2312,7 +2312,7 @@ public:
         }
         if (libraries.len) {
             for (const char *lib: libraries) {
-                if (strpbrk(lib, RG_PATH_SEPARATORS)) {
+                if (strpbrk(lib, K_PATH_SEPARATORS)) {
                     Fmt(&buf, " %1", lib);
                 } else {
                     Fmt(&buf, " -l%1", lib);
@@ -2342,7 +2342,7 @@ public:
         out_cmd->cmd_line = buf.TrimAndLeak(1);
     }
 
-    void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+    void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { K_UNREACHABLE(); }
 };
 
 class TeensyCompiler final: public Compiler {
@@ -2374,7 +2374,7 @@ public:
         std::unique_ptr<TeensyCompiler> compiler = std::make_unique<TeensyCompiler>(platform);
 
         if (!cc) {
-            cc = Fmt(&compiler->str_alloc, "%1%/hardware/tools/arm/bin/arm-none-eabi-gcc%2", arduino, RG_EXECUTABLE_EXTENSION).ptr;
+            cc = Fmt(&compiler->str_alloc, "%1%/hardware/tools/arm/bin/arm-none-eabi-gcc%2", arduino, K_EXECUTABLE_EXTENSION).ptr;
 
             if (!TestFile(cc)) {
                 LogError("Cannot find Teensy compiler in Arduino SDK");
@@ -2393,7 +2393,7 @@ public:
             case HostPlatform::Teensy41: { compiler->model = Model::Teensy41; } break;
             case HostPlatform::TeensyMM: { compiler->model = Model::TeensyMM; } break;
 
-            default: { RG_UNREACHABLE(); } break;
+            default: { K_UNREACHABLE(); } break;
         }
 
         // Find executables
@@ -2445,7 +2445,7 @@ public:
 
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetLinkExtension(TargetType type) const override {
-        RG_ASSERT(type == TargetType::Executable);
+        K_ASSERT(type == TargetType::Executable);
         return ".elf";
     }
     const char *GetImportExtension() const override { return ".so"; }
@@ -2467,7 +2467,7 @@ public:
             case Model::Teensy41:
             case Model::TeensyMM: { dirname = Fmt(alloc, "%1%/hardware/teensy/avr/cores/teensy4", arduino).ptr; } break;
         }
-        RG_ASSERT(dirname);
+        K_ASSERT(dirname);
 
         EnumResult ret = EnumerateDirectory(dirname, nullptr, 1024, [&](const char *basename, FileType) {
             if (TestStr(basename, "Blink.cc"))
@@ -2505,12 +2505,12 @@ public:
                           const char *embed_options, const char *dest_filename,
                           Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
-        RG::MakeEmbedCommand(embed_filenames, EmbedMode::Literals, embed_options, dest_filename, alloc, out_cmd);
+        K_ASSERT(alloc);
+        K::MakeEmbedCommand(embed_filenames, EmbedMode::Literals, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,
-                        Span<const char *const>, const char *, uint32_t, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+                        Span<const char *const>, const char *, uint32_t, Allocator *, Command *) const override { K_UNREACHABLE(); }
 
     const char *GetPchCache(const char *, Allocator *) const override { return nullptr; }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
@@ -2521,7 +2521,7 @@ public:
                         Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                         const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
 
@@ -2535,9 +2535,9 @@ public:
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
-            case SourceType::QtResources: { RG_UNREACHABLE(); } break;
+            case SourceType::QtResources: { K_UNREACHABLE(); } break;
         }
-        RG_ASSERT(dest_filename); // No PCH
+        K_ASSERT(dest_filename); // No PCH
         Fmt(&buf, " -o \"%1\"", dest_filename);
         Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
         out_cmd->rsp_offset = buf.len;
@@ -2649,23 +2649,23 @@ public:
     }
 
     void MakeAssemblyCommand(const char *, Span<const char *const>, Span<const char *const>, const char *,
-                             uint32_t, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+                             uint32_t, const char *, Allocator *, Command *) const override { K_UNREACHABLE(); }
 
-    void MakeResourceCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+    void MakeResourceCommand(const char *, const char *, Allocator *, Command *) const override { K_UNREACHABLE(); }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
                          Span<const char *const> libraries, TargetType link_type,
                          const char *custom_flags, uint32_t features, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
 
         // Linker
         switch (link_type) {
             case TargetType::Executable: { Fmt(&buf, "\"%1\"", cc); } break;
-            case TargetType::Library: { RG_UNREACHABLE(); } break;
+            case TargetType::Library: { K_UNREACHABLE(); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -2685,7 +2685,7 @@ public:
         if (libraries.len) {
             Fmt(&buf, " -Wl,--start-group");
             for (const char *lib: libraries) {
-                if (strpbrk(lib, RG_PATH_SEPARATORS)) {
+                if (strpbrk(lib, K_PATH_SEPARATORS)) {
                     Fmt(&buf, " %1", lib);
                 } else {
                     Fmt(&buf, " -l%1", lib);
@@ -2726,7 +2726,7 @@ public:
     void MakePostCommand(const char *src_filename, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(alloc);
+        K_ASSERT(alloc);
 
         Span<const char> cmd = Fmt(alloc, "\"%1\" -O ihex -R .eeprom \"%2\" \"%3\"", objcopy, src_filename, dest_filename);
         out_cmd->cmd_line = cmd;
@@ -2894,7 +2894,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                     return nullptr;
                 } break;
 
-                case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+                case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
             }
 
             if (!spec.cc) {
@@ -2925,7 +2925,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                     return nullptr;
                 } break;
 
-                case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+                case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
             }
         }
 
@@ -2953,7 +2953,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                     return nullptr;
                 } break;
 
-                case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+                case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
             }
 
             return ClangCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);

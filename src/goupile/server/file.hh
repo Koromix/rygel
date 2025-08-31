@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "src/core/http/http.hh"
 
-namespace RG {
+namespace K {
 
 class InstanceHolder;
 
@@ -36,7 +36,7 @@ void HandleFilePublish(http_IO *io, InstanceHolder *instance);
 
 static inline void FormatSha256(Span<const uint8_t> hash, char out_sha256[65])
 {
-    RG_ASSERT(hash.len == 32);
+    K_ASSERT(hash.len == 32);
     Fmt(MakeSpan(out_sha256, 65), "%1", FmtHex(hash));
 }
 

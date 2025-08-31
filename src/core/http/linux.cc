@@ -37,7 +37,7 @@
 #include <sys/epoll.h>
 #include <sys/sendfile.h>
 
-namespace RG {
+namespace K {
 
 struct http_Socket {
     int sock = -1;
@@ -81,9 +81,9 @@ private:
 
 bool http_Daemon::Start(std::function<void(http_IO *io)> func)
 {
-    RG_ASSERT(listeners.len);
-    RG_ASSERT(!handle_func);
-    RG_ASSERT(func);
+    K_ASSERT(listeners.len);
+    K_ASSERT(!handle_func);
+    K_ASSERT(func);
 
     async = new Async(1 + listeners.len);
 
@@ -196,7 +196,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
 
 bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> parts)
 {
-    static_assert(RG_SIZE(Span<const uint8_t>) == RG_SIZE(struct iovec));
+    static_assert(K_SIZE(Span<const uint8_t>) == K_SIZE(struct iovec));
     static_assert(alignof(Span<const uint8_t>) == alignof(struct iovec));
     static_assert(offsetof(Span<const uint8_t>, ptr) == offsetof(struct iovec, iov_base));
     static_assert(offsetof(Span<const uint8_t>, len) == offsetof(struct iovec, iov_len));
@@ -250,10 +250,10 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
-    RG_ASSERT(socket);
-    RG_ASSERT(!response.started);
+    K_ASSERT(socket);
+    K_ASSERT(!response.started);
 
-    RG_DEFER { close(fd); };
+    K_DEFER { close(fd); };
 
     response.started = true;
 
@@ -275,7 +275,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     if (cork) {
         SetDescriptorRetain(socket->sock, true);
     }
-    RG_DEFER {
+    K_DEFER {
         if (cork) {
             SetDescriptorRetain(socket->sock, false);
         }
@@ -320,7 +320,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
 bool http_Dispatcher::Run()
 {
-    RG_ASSERT(epoll_fd < 0);
+    K_ASSERT(epoll_fd < 0);
 
     Async async(1 + WorkersPerDispatcher);
 
@@ -329,13 +329,13 @@ bool http_Dispatcher::Run()
         LogError("Failed to initialize epoll: %1", strerror(errno));
         return false;
     }
-    RG_DEFER {
+    K_DEFER {
         CloseDescriptor(epoll_fd);
         epoll_fd = -1;
     };
 
     // Delete remaining clients when function exits
-    RG_DEFER {
+    K_DEFER {
         if (!async.Wait(100)) {
             LogInfo("Waiting up to %1 sec before shutting down clients...", (double)daemon->stop_timeout / 1000);
 
@@ -382,7 +382,7 @@ bool http_Dispatcher::Run()
         // Process new connections
         if (accepts) {
             sockaddr_storage ss;
-            socklen_t ss_len = RG_SIZE(ss);
+            socklen_t ss_len = K_SIZE(ss);
 
             // Accept queued clients
             for (int i = 0; i < 8; i++) {
@@ -511,7 +511,7 @@ bool http_Dispatcher::Run()
         events.len = ready;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockaddr *sa)
@@ -531,7 +531,7 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
 
     socket->sock = sock;
 
-    RG_DEFER_N(err_guard) { delete socket; };
+    K_DEFER_N(err_guard) { delete socket; };
 
     if (!socket->client.Init(socket, start, sa)) [[unlikely]]
         return nullptr;

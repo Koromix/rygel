@@ -20,7 +20,7 @@
 #include "thop.hh"
 #include "user.hh"
 
-namespace RG {
+namespace K {
 
 static bool GetQueryDateRange(http_IO *io, const char *key, LocalDate *out_start_date, LocalDate *out_end_date)
 {
@@ -169,7 +169,7 @@ struct Aggregate {
     int64_t price_cents;
     Span<Part> parts;
 
-    RG_HASHTABLE_HANDLER(Aggregate, key);
+    K_HASHTABLE_HANDLER(Aggregate, key);
 };
 
 enum class AggregationFlag {
@@ -183,7 +183,7 @@ struct AggregateSet {
 };
 
 class AggregateSetBuilder {
-    RG_DELETE_COPY(AggregateSetBuilder)
+    K_DELETE_COPY(AggregateSetBuilder)
 
     const User *user;
     unsigned int flags;
@@ -257,7 +257,7 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
             const mco_Result &mono_result = sub_mono_results[k];
             const mco_Pricing &mono_pricing = sub_mono_pricings[k];
             drd_UnitCode unit = mono_result.stays[0].unit;
-            RG_ASSERT(mono_result.stays[0].bill_id == result.stays[0].bill_id);
+            K_ASSERT(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
             if (user->mco_allowed_units.Find(unit)) {
                 bool inserted;
@@ -313,7 +313,7 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
             agg->mono_count += multiplier * (int32_t)result.stays.len;
             agg->price_cents += multiplier * pricing.price_cents;
             if (agg->parts.ptr) {
-                RG_ASSERT(agg->parts.len == agg_parts.len);
+                K_ASSERT(agg->parts.len == agg_parts.len);
                 for (Size k = 0; k < agg->parts.len; k++) {
                     agg->parts[k].mono_count += agg_parts[k].mono_count;
                     agg->parts[k].price_cents += agg_parts[k].price_cents;

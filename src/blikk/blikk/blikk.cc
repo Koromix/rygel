@@ -17,7 +17,7 @@
 #include "blikk.hh"
 #include "src/core/sandbox/sandbox.hh"
 
-namespace RG {
+namespace K {
 
 static bool ApplySandbox()
 {
@@ -191,10 +191,10 @@ Options:
         } break;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

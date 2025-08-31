@@ -39,7 +39,7 @@
     #include <pwd.h>
 #endif
 
-namespace RG {
+namespace K {
 
 static const char *DefaultConfig =
 R"([Domain]
@@ -253,7 +253,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
         *out_error = 409;
         return false;
     }
-    RG_DEFER_N(db_guard) { UnlinkFile(database_filename); };
+    K_DEFER_N(db_guard) { UnlinkFile(database_filename); };
 
     uid_t owner_uid = 0;
     gid_t owner_gid = 0;
@@ -344,7 +344,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                     }
 
                     bool success = writer.Close();
-                    RG_ASSERT(success);
+                    K_ASSERT(success);
 
                     uint8_t hash[crypto_hash_sha256_BYTES];
                     crypto_hash_sha256_final(&state, hash);
@@ -397,7 +397,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
         }
 
         if (userid > 0) {
-            RG_ASSERT(permissions);
+            K_ASSERT(permissions);
 
             if (!domain->db.Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
                                    VALUES (?1, ?2, ?3))",
@@ -419,15 +419,15 @@ static void GenerateKeyPair(Span<char> out_decrypt, Span<char> out_archive)
     static_assert(crypto_box_PUBLICKEYBYTES == 32);
     static_assert(crypto_box_SECRETKEYBYTES == 32);
 
-    RG_ASSERT(out_decrypt.len >= 45);
-    RG_ASSERT(out_archive.len >= 45);
+    K_ASSERT(out_decrypt.len >= 45);
+    K_ASSERT(out_archive.len >= 45);
 
     uint8_t sk[crypto_box_SECRETKEYBYTES];
     uint8_t pk[crypto_box_PUBLICKEYBYTES];
     crypto_box_keypair(pk, sk);
 
-    sodium_bin2base64(out_decrypt.ptr, out_decrypt.len, sk, RG_SIZE(sk), sodium_base64_VARIANT_ORIGINAL);
-    sodium_bin2base64(out_archive.ptr, out_archive.len, pk, RG_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
+    sodium_bin2base64(out_decrypt.ptr, out_decrypt.len, sk, K_SIZE(sk), sodium_base64_VARIANT_ORIGINAL);
+    sodium_bin2base64(out_archive.ptr, out_archive.len, pk, K_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
 }
 
 static void LogKeyPair(const char *decrypt_key, const char *archive_key)
@@ -445,7 +445,7 @@ static bool ParseKeyString(Span<const char> str, uint8_t out_key[32] = nullptr)
 
     uint8_t key[32];
     size_t key_len;
-    int ret = sodium_base642bin(key, RG_SIZE(key), str.ptr, (size_t)str.len,
+    int ret = sodium_base642bin(key, K_SIZE(key), str.ptr, (size_t)str.len,
                                 nullptr, &key_len, nullptr, sodium_base64_VARIANT_ORIGINAL);
     if (ret || key_len != 32) {
         LogError("Malformed key value");
@@ -453,7 +453,7 @@ static bool ParseKeyString(Span<const char> str, uint8_t out_key[32] = nullptr)
     }
 
     if (out_key) {
-        MemCpy(out_key, key, RG_SIZE(key));
+        MemCpy(out_key, key, K_SIZE(key));
     }
     return true;
 }
@@ -522,7 +522,7 @@ Options:
                 if (!ParseKeyString(opt.current_value))
                     return 1;
 
-                RG_ASSERT(strlen(opt.current_value) < RG_SIZE(archive_key));
+                K_ASSERT(strlen(opt.current_value) < K_SIZE(archive_key));
                 CopyString(opt.current_value, archive_key);
             } else if (opt.Test("--demo", OptionType::OptionalValue)) {
                 demo = opt.current_value ? opt.current_value : "demo";
@@ -556,7 +556,7 @@ Options:
     // Drop created files and directories if anything fails
     HeapArray<const char *> directories;
     HeapArray<const char *> files;
-    RG_DEFER_N(root_guard) {
+    K_DEFER_N(root_guard) {
         domain.db.Close();
 
         for (const char *filename: files) {
@@ -583,7 +583,7 @@ Options:
 
     // Gather missing information
     if (!title) {
-        title = SplitStrReverseAny(root_directory, RG_PATH_SEPARATORS).ptr;
+        title = SplitStrReverseAny(root_directory, K_PATH_SEPARATORS).ptr;
 
 retry_title:
         title = Prompt(T("Domain title:"), title, nullptr, &temp_alloc);
@@ -694,7 +694,7 @@ retry_pwd:
         {
             uint8_t buf[32];
             FillRandomSafe(buf);
-            sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+            sodium_bin2base64(local_key, K_SIZE(local_key), buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 
         if (!domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
@@ -706,7 +706,7 @@ retry_pwd:
     // Create default instance
     {
         unsigned int flags = (int)InstanceFlag::DefaultProject;
-        uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
+        uint32_t permissions = (1u << K_LEN(UserPermissionNames)) - 1;
 
         int dummy;
         if (demo && !CreateInstance(&domain, demo, demo, 1, permissions, flags, &dummy))
@@ -752,7 +752,7 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
-                    config_filename = Fmt(&temp_alloc, "%1%/goupile.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
+                    config_filename = Fmt(&temp_alloc, "%1%/goupile.ini", TrimStrRight(opt.current_value, K_PATH_SEPARATORS)).ptr;
                 } else {
                     config_filename = opt.current_value;
                 }
@@ -834,10 +834,10 @@ Options:
                     if (!ParseKeyString(opt.current_value))
                         return 1;
 
-                    RG_ASSERT(strlen(opt.current_value) < RG_SIZE(decrypt_key));
+                    K_ASSERT(strlen(opt.current_value) < K_SIZE(decrypt_key));
                     CopyString(opt.current_value, decrypt_key);
                 } else {
-                    MemSet(decrypt_key, 0, RG_SIZE(decrypt_key));
+                    MemSet(decrypt_key, 0, K_SIZE(decrypt_key));
                 }
 
                 random_key = false;
@@ -866,15 +866,15 @@ again:
         } else {
             // Already checked it is well formed
             size_t key_len;
-            int ret = sodium_base642bin(sk, RG_SIZE(sk), decrypt_key, strlen(decrypt_key),
+            int ret = sodium_base642bin(sk, K_SIZE(sk), decrypt_key, strlen(decrypt_key),
                                         nullptr, &key_len, nullptr, sodium_base64_VARIANT_ORIGINAL);
-            RG_ASSERT(!ret && key_len == 32);
+            K_ASSERT(!ret && key_len == 32);
         }
 
         crypto_scalarmult_base(pk, sk);
 
-        sodium_bin2base64(decrypt_key, RG_SIZE(decrypt_key), sk, RG_SIZE(sk), sodium_base64_VARIANT_ORIGINAL);
-        sodium_bin2base64(archive_key, RG_SIZE(archive_key), pk, RG_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
+        sodium_bin2base64(decrypt_key, K_SIZE(decrypt_key), sk, K_SIZE(sk), sodium_base64_VARIANT_ORIGINAL);
+        sodium_bin2base64(archive_key, K_SIZE(archive_key), pk, K_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
     }
 
     LogKeyPair(decrypt_key, archive_key);
@@ -898,7 +898,7 @@ static UnsealResult UnsealArchive(StreamReader *reader, StreamWriter *writer, co
         static_assert(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
 
         size_t key_len;
-        int ret = sodium_base642bin(askey, RG_SIZE(askey),
+        int ret = sodium_base642bin(askey, K_SIZE(askey),
                                     decrypt_key, strlen(decrypt_key), nullptr, &key_len,
                                     nullptr, sodium_base64_VARIANT_ORIGINAL);
         if (ret || key_len != 32) {
@@ -911,7 +911,7 @@ static UnsealResult UnsealArchive(StreamReader *reader, StreamWriter *writer, co
 
     // Read archive header
     ArchiveIntro intro;
-    if (reader->Read(RG_SIZE(intro), &intro) != RG_SIZE(intro)) {
+    if (reader->Read(K_SIZE(intro), &intro) != K_SIZE(intro)) {
         if (reader->IsValid()) {
             LogError("Truncated archive");
         }
@@ -919,7 +919,7 @@ static UnsealResult UnsealArchive(StreamReader *reader, StreamWriter *writer, co
     }
 
     // Check signature
-    if (strncmp(intro.signature, ARCHIVE_SIGNATURE, RG_SIZE(intro.signature)) != 0) {
+    if (strncmp(intro.signature, ARCHIVE_SIGNATURE, K_SIZE(intro.signature)) != 0) {
         LogError("Unexpected archive signature");
         return UnsealResult::Error;
     }
@@ -930,7 +930,7 @@ static UnsealResult UnsealArchive(StreamReader *reader, StreamWriter *writer, co
 
     // Decrypt symmetric key
     uint8_t skey[crypto_secretstream_xchacha20poly1305_KEYBYTES];
-    if (crypto_box_seal_open(skey, intro.eskey, RG_SIZE(intro.eskey), apkey, askey) != 0) {
+    if (crypto_box_seal_open(skey, intro.eskey, K_SIZE(intro.eskey), apkey, askey) != 0) {
         LogError("Failed to unseal archive (wrong key?)");
         return UnsealResult::WrongKey;
     }
@@ -1076,7 +1076,7 @@ void HandleDemoCreate(http_IO *io)
     }
 
     char name[9];
-    Fmt(name, "%1", FmtRandom(RG_SIZE(name) - 1));
+    Fmt(name, "%1", FmtRandom(K_SIZE(name) - 1));
 
     bool success = gp_domain.db.Transaction([&]() {
         unsigned int flags = (int)InstanceFlag::DefaultProject | (int)InstanceFlag::DemoInstance;
@@ -1098,7 +1098,7 @@ void HandleDemoCreate(http_IO *io)
     InstanceHolder *instance = gp_domain.Ref(name);
     if (!instance)
         return;
-    RG_DEFER { instance->Unref(); };
+    K_DEFER { instance->Unref(); };
 
     RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
     if (!session) [[unlikely]]
@@ -1126,7 +1126,7 @@ void HandleDemoCreate(http_IO *io)
 
 void PruneDemos()
 {
-    RG_ASSERT(gp_domain.config.demo_mode);
+    K_ASSERT(gp_domain.config.demo_mode);
 
     // Best effort
     gp_domain.db.Transaction([&] {
@@ -1256,7 +1256,7 @@ void HandleInstanceCreate(http_IO *io)
             return false;
 
         unsigned int flags = populate ? (int)InstanceFlag::DefaultProject : 0;
-        uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
+        uint32_t permissions = (1u << K_LEN(UserPermissionNames)) - 1;
 
         int error;
         if (!CreateInstance(&gp_domain, instance_key, name, session->userid, permissions, flags, &error)) {
@@ -1280,7 +1280,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
     BlockAllocator temp_alloc;
 
     Span<InstanceHolder *> instances = gp_domain.LockInstances();
-    RG_DEFER { gp_domain.UnlockInstances(); };
+    K_DEFER { gp_domain.UnlockInstances(); };
 
     if (out_conflict) {
         *out_conflict = false;
@@ -1293,7 +1293,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
     };
 
     HeapArray<BackupEntry> entries;
-    RG_DEFER { for (const BackupEntry &entry: entries) UnlinkFile(entry.filename); };
+    K_DEFER { for (const BackupEntry &entry: entries) UnlinkFile(entry.filename); };
 
     // Make archive filename
     const char *archive_filename;
@@ -1318,7 +1318,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
 #endif
 
         char mtime_str[128];
-        if (!strftime(mtime_str, RG_SIZE(mtime_str), "%Y%m%dT%H%M%S%z", &mtime_tm)) {
+        if (!strftime(mtime_str, K_SIZE(mtime_str), "%Y%m%dT%H%M%S%z", &mtime_tm)) {
             LogError("Failed to format current time: strftime failed");
             return false;
         }
@@ -1328,7 +1328,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
         if (filter) {
             const char *filename = sqlite3_db_filename(*filter->db, "main");
 
-            Span<const char> basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
+            Span<const char> basename = SplitStrReverseAny(filename, K_PATH_SEPARATORS);
             SplitStrReverse(basename, '.', &basename);
 
             Fmt(&buf, "+%1.goarch", basename);
@@ -1355,7 +1355,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
         if (filter == nullptr || instance == filter || instance->master == filter) {
             const char *filename = sqlite3_db_filename(*instance->db, "main");
 
-            const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
+            const char *basename = SplitStrReverseAny(filename, K_PATH_SEPARATORS).ptr;
             basename = Fmt(&temp_alloc, "instances/%1", basename).ptr;
 
             entries.Append({ instance->db, basename, nullptr });
@@ -1395,12 +1395,12 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
             LogError("Failed to initialize symmetric encryption");
             return false;
         }
-        if (crypto_box_seal(intro.eskey, skey, RG_SIZE(skey), gp_domain.config.archive_key) != 0) {
+        if (crypto_box_seal(intro.eskey, skey, K_SIZE(skey), gp_domain.config.archive_key) != 0) {
             LogError("Failed to seal symmetric key");
             return false;
         }
 
-        if (!writer.Write(&intro, RG_SIZE(intro)))
+        if (!writer.Write(&intro, K_SIZE(intro)))
             return false;
     }
 
@@ -1440,7 +1440,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
         LogError("Failed to create ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
         return false;
     }
-    RG_DEFER { mz_zip_writer_end(&zip); };
+    K_DEFER { mz_zip_writer_end(&zip); };
 
     // Add databases to ZIP archive
     for (const BackupEntry &entry: entries) {
@@ -1542,7 +1542,7 @@ void HandleInstanceDelete(http_IO *io)
         io->SendError(404);
         return;
     }
-    RG_DEFER_N(ref_guard) { instance->Unref(); };
+    K_DEFER_N(ref_guard) { instance->Unref(); };
 
     // Can this admin user touch this instance?
     if (!session->IsRoot()) {
@@ -1742,7 +1742,7 @@ void HandleInstanceConfigure(http_IO *io)
         io->SendError(404);
         return;
     }
-    RG_DEFER_N(ref_guard) { instance->Unref(); };
+    K_DEFER_N(ref_guard) { instance->Unref(); };
 
     // Can this admin user touch this instance?
     if (!session->IsRoot()) {
@@ -1838,7 +1838,7 @@ void HandleInstanceList(http_IO *io)
     }
 
     Span<InstanceHolder *> instances = gp_domain.LockInstances();
-    RG_DEFER { gp_domain.UnlockInstances(); };
+    K_DEFER { gp_domain.UnlockInstances(); };
 
     // Export data
     http_JsonPageBuilder json;
@@ -2101,7 +2101,7 @@ void HandleInstancePermissions(http_IO *io)
         io->SendError(404);
         return;
     }
-    RG_DEFER { instance->Unref(); };
+    K_DEFER { instance->Unref(); };
 
     // Can this admin user touch this instance?
     if (!session->IsRoot()) {
@@ -2156,7 +2156,7 @@ void HandleInstancePermissions(http_IO *io)
             continue;
 
         json.Key(Fmt(buf, "%1", userid).ptr); json.StartArray();
-        for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+        for (Size i = 0; i < K_LEN(UserPermissionNames); i++) {
             if (instance->legacy && !(LegacyPermissionMask & (1 << i)))
                 continue;
 
@@ -2228,7 +2228,7 @@ void HandleInstanceMigrate(http_IO *io)
         io->SendError(404);
         return;
     }
-    RG_DEFER_N(ref_guard) { instance->Unref(); };
+    K_DEFER_N(ref_guard) { instance->Unref(); };
 
     // Can this admin user touch this instance?
     if (!session->IsRoot()) {
@@ -2467,7 +2467,7 @@ void HandleArchiveDownload(http_IO *io)
         io->SendError(422);
         return;
     }
-    if (!basename[0] || strpbrk(basename, RG_PATH_SEPARATORS)) {
+    if (!basename[0] || strpbrk(basename, K_PATH_SEPARATORS)) {
         LogError("Filename cannot be empty or contain path separators");
         io->SendError(422);
         return;
@@ -2513,7 +2513,7 @@ void HandleArchiveUpload(http_IO *io)
         io->SendError(422);
         return;
     }
-    if (!basename[0] || strpbrk(basename, RG_PATH_SEPARATORS)) {
+    if (!basename[0] || strpbrk(basename, K_PATH_SEPARATORS)) {
         LogError("Filename cannot be empty or contain path separators");
         io->SendError(422);
         return;
@@ -2646,7 +2646,7 @@ void HandleArchiveRestore(http_IO *io)
     // Create directory for instance files
     const char *tmp_directory = CreateUniqueDirectory(gp_domain.config.tmp_directory, nullptr, io->Allocator());
     HeapArray<const char *> tmp_filenames;
-    RG_DEFER {
+    K_DEFER {
         for (const char *filename: tmp_filenames) {
             UnlinkFile(filename);
         }
@@ -2665,7 +2665,7 @@ void HandleArchiveRestore(http_IO *io)
         if (!extract_filename)
             return;
         tmp_filenames.Append(extract_filename);
-        RG_DEFER { CloseDescriptor(fd); };
+        K_DEFER { CloseDescriptor(fd); };
 
         StreamReader reader(src_filename);
         StreamWriter writer(fd, extract_filename);
@@ -2697,7 +2697,7 @@ void HandleArchiveRestore(http_IO *io)
         LogError("Failed to open ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
         return;
     }
-    RG_DEFER { mz_zip_reader_end(&zip); };
+    K_DEFER { mz_zip_reader_end(&zip); };
 
     // Extract and open archived main database (goupile.db)
     sq_Database main_db;
@@ -2707,10 +2707,10 @@ void HandleArchiveRestore(http_IO *io)
         if (!main_filename)
             return;
         tmp_filenames.Append(main_filename);
-        RG_DEFER { CloseDescriptor(fd); };
+        K_DEFER { CloseDescriptor(fd); };
 
         int success = mz_zip_reader_extract_file_to_callback(&zip, "goupile.db", [](void *udata, mz_uint64, const void *ptr, size_t len) {
-            RG_ASSERT(len <= RG_SIZE_MAX);
+            K_ASSERT(len <= K_SIZE_MAX);
 
             int fd = *(int *)udata;
             Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)len);
@@ -2719,7 +2719,7 @@ void HandleArchiveRestore(http_IO *io)
 #if defined(_WIN32)
                 Size write_len = _write(fd, buf.ptr, (unsigned int)buf.len);
 #else
-                Size write_len = RG_RESTART_EINTR(write(fd, buf.ptr, (size_t)buf.len), < 0);
+                Size write_len = K_RESTART_EINTR(write(fd, buf.ptr, (size_t)buf.len), < 0);
 #endif
                 if (write_len < 0) {
                     LogError("Failed to write to ZIP: %1", strerror(errno));
@@ -2806,7 +2806,7 @@ void HandleArchiveRestore(http_IO *io)
 
     // Prepare for cleanup up of old instance directory
     const char *swap_directory = nullptr;
-    RG_DEFER {
+    K_DEFER {
         if (swap_directory) {
             EnumerateDirectory(swap_directory, nullptr, -1, [&](const char *filename, FileType) {
                 filename = Fmt(io->Allocator(), "%1%/%2", swap_directory, filename).ptr;
@@ -2921,7 +2921,7 @@ void HandleArchiveRestore(http_IO *io)
             swap_directory = tmp_directory;
         }
 
-        RG_ASSERT(tmp_filenames.len == entries.len + 2);
+        K_ASSERT(tmp_filenames.len == entries.len + 2);
         tmp_filenames.RemoveFrom(2);
         tmp_directory = nullptr;
 
@@ -3045,7 +3045,7 @@ void HandleUserCreate(http_IO *io)
     {
         uint8_t buf[32];
         FillRandomSafe(buf);
-        sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+        sodium_bin2base64(local_key, K_SIZE(local_key), buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
     }
 
     gp_domain.db.Transaction([&]() {

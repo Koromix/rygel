@@ -27,7 +27,7 @@
     #include <windows.h>
 #endif
 
-namespace RG {
+namespace K {
 
 static std::mutex mutex;
 static BlockAllocator str_alloc;
@@ -87,8 +87,8 @@ static bool LocateSdkQmake(const Compiler *compiler, Allocator *alloc, const cha
 
     // Sort by decreasing version
     std::sort(sdk_candidates.begin(), sdk_candidates.end(), [](Span<const char> path1, Span<const char> path2) {
-        const char *basename1 = SplitStrReverseAny(path1, RG_PATH_SEPARATORS).ptr;
-        const char *basename2 = SplitStrReverseAny(path2, RG_PATH_SEPARATORS).ptr;
+        const char *basename1 = SplitStrReverseAny(path1, K_PATH_SEPARATORS).ptr;
+        const char *basename2 = SplitStrReverseAny(path2, K_PATH_SEPARATORS).ptr;
 
         return CmpStr(basename1, basename2) > 0;
     });
@@ -153,7 +153,7 @@ static bool LocateSdkQmake(const Compiler *compiler, Allocator *alloc, const cha
 static const char *GetGnuArchitectureString(HostArchitecture architecture)
 {
     switch (architecture) {
-        case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+        case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
 
         case HostArchitecture::x86: return "i386";
         case HostArchitecture::x86_64: return "x86_64";
@@ -164,7 +164,7 @@ static const char *GetGnuArchitectureString(HostArchitecture architecture)
         case HostArchitecture::Web32: return "web";
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 static bool AdjustLibraryPath(const char *name, const Compiler *compiler,
@@ -262,15 +262,15 @@ const QtInfo *FindQtSdk(const Compiler *compiler)
                     qt.binaries = DuplicateString(value, &str_alloc).ptr;
 
                     if (!qt.moc) {
-                        const char *binary = Fmt(&str_alloc, "%1%/moc%2", value, RG_EXECUTABLE_EXTENSION).ptr;
+                        const char *binary = Fmt(&str_alloc, "%1%/moc%2", value, K_EXECUTABLE_EXTENSION).ptr;
                         qt.moc = TestFile(binary, FileType::File) ? binary : nullptr;
                     }
                     if (!qt.rcc) {
-                        const char *binary = Fmt(&str_alloc, "%1%/rcc%2", value, RG_EXECUTABLE_EXTENSION).ptr;
+                        const char *binary = Fmt(&str_alloc, "%1%/rcc%2", value, K_EXECUTABLE_EXTENSION).ptr;
                         qt.rcc = TestFile(binary, FileType::File) ? binary : nullptr;
                     }
                     if (!qt.uic) {
-                        const char *binary = Fmt(&str_alloc, "%1%/uic%2", value, RG_EXECUTABLE_EXTENSION).ptr;
+                        const char *binary = Fmt(&str_alloc, "%1%/uic%2", value, K_EXECUTABLE_EXTENSION).ptr;
                         qt.uic = TestFile(binary, FileType::File) ? binary : nullptr;
                     }
 
@@ -340,8 +340,8 @@ static bool TestWasiSdk(const char *path, Allocator *alloc, WasiSdkInfo *out_sdk
     if (!TestFile(path))
         return false;
 
-    Fmt(cc, "%1%/bin/clang%2", path, RG_EXECUTABLE_EXTENSION);
-    Fmt(ld, "%1%/bin/wasm-ld%2", path, RG_EXECUTABLE_EXTENSION);
+    Fmt(cc, "%1%/bin/clang%2", path, K_EXECUTABLE_EXTENSION);
+    Fmt(ld, "%1%/bin/wasm-ld%2", path, K_EXECUTABLE_EXTENSION);
     Fmt(sysroot, "%1%/share/wasi-sysroot", path);
 
     if (!TestFile(cc, FileType::File))
@@ -392,7 +392,7 @@ const WasiSdkInfo *FindWasiSdk()
 
         if (test.env) {
             Span<const char> prefix = GetEnv(test.env);
-            prefix = TrimStrRight(prefix, RG_PATH_SEPARATORS);
+            prefix = TrimStrRight(prefix, K_PATH_SEPARATORS);
 
             if (!prefix.len)
                 continue;
@@ -421,7 +421,7 @@ static bool TestArduinoSdk(const char *path)
     if (!TestFile(path))
         return false;
 
-    Fmt(arduino, "%1%/arduino%2", path, RG_EXECUTABLE_EXTENSION);
+    Fmt(arduino, "%1%/arduino%2", path, K_EXECUTABLE_EXTENSION);
     Fmt(hardware, "%1%/hardware/arduino", path);
 
     if (!TestFile(arduino, FileType::File))
@@ -447,7 +447,7 @@ const char *FindArduinoSdk()
 #if defined(_WIN32)
     {
         wchar_t buf_w[2048];
-        DWORD buf_w_len = RG_LEN(buf_w);
+        DWORD buf_w_len = K_LEN(buf_w);
 
         bool found = !RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\Arduino", L"Install_Dir",
                                    RRF_RT_REG_SZ, nullptr, buf_w, &buf_w_len) ||
@@ -502,7 +502,7 @@ const char *FindArduinoSdk()
 
         if (test.env) {
             Span<const char> prefix = GetEnv(test.env);
-            prefix = TrimStrRight(prefix, RG_PATH_SEPARATORS);
+            prefix = TrimStrRight(prefix, K_PATH_SEPARATORS);
 
             if (!prefix.len)
                 continue;

@@ -19,7 +19,7 @@
 #include "std.hh"
 #include "vm.hh"
 
-namespace RG {
+namespace K {
 
 void bk_ImportAll(bk_Compiler *out_compiler)
 {
@@ -169,7 +169,7 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
                 Print("<invalid> (%1)", value);
             }
         } break;
-        case bk_PrimitiveKind::Opaque: { Print("0x%1", FmtArg(vm->stack[offset++].opaque).Pad0(-RG_SIZE(void *) * 2)); } break;
+        case bk_PrimitiveKind::Opaque: { Print("0x%1", FmtArg(vm->stack[offset++].opaque).Pad0(-K_SIZE(void *) * 2)); } break;
     }
 
     return offset;

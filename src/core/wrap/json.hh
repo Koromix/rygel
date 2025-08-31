@@ -22,19 +22,19 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-RG_PUSH_NO_WARNINGS
+K_PUSH_NO_WARNINGS
 #define RAPIDJSON_NO_SIZETYPEDEFINE
-namespace rapidjson { typedef RG::Size SizeType; }
+namespace rapidjson { typedef K::Size SizeType; }
 #include "vendor/rapidjson/reader.h"
 #include "vendor/rapidjson/writer.h"
 #include "vendor/rapidjson/prettywriter.h"
 #include "vendor/rapidjson/error/en.h"
-RG_POP_NO_WARNINGS
+K_POP_NO_WARNINGS
 
-namespace RG {
+namespace K {
 
 class json_StreamReader {
-    RG_DELETE_COPY(json_StreamReader)
+    K_DELETE_COPY(json_StreamReader)
 
     StreamReader *st;
 
@@ -102,7 +102,7 @@ static const char *const json_TokenTypeNames[] = {
 };
 
 class json_Parser {
-    RG_DELETE_COPY(json_Parser)
+    K_DELETE_COPY(json_Parser)
 
     struct Handler {
         Allocator *allocator;
@@ -121,11 +121,11 @@ class json_Parser {
 
         bool Null();
         bool Bool(bool b);
-        bool Double(double) { RG_UNREACHABLE(); }
-        bool Int(int) { RG_UNREACHABLE(); }
-        bool Int64(int64_t) { RG_UNREACHABLE(); }
-        bool Uint(unsigned int) { RG_UNREACHABLE(); }
-        bool Uint64(uint64_t) { RG_UNREACHABLE(); }
+        bool Double(double) { K_UNREACHABLE(); }
+        bool Int(int) { K_UNREACHABLE(); }
+        bool Int64(int64_t) { K_UNREACHABLE(); }
+        bool Uint(unsigned int) { K_UNREACHABLE(); }
+        bool Uint64(uint64_t) { K_UNREACHABLE(); }
         bool RawNumber(const char *, Size, bool);
         bool String(const char *str, Size len, bool);
 
@@ -183,7 +183,7 @@ private:
 };
 
 class json_StreamWriter {
-    RG_DELETE_COPY(json_StreamWriter)
+    K_DELETE_COPY(json_StreamWriter)
 
     StreamWriter *st;
     LocalArray<uint8_t, 1024> buf;
@@ -199,7 +199,7 @@ public:
     {
         buf.Append((uint8_t)c);
 
-        if (buf.len == RG_SIZE(buf.data)) {
+        if (buf.len == K_SIZE(buf.data)) {
             st->Write(buf);
             buf.Clear();
         }
@@ -220,7 +220,7 @@ public:
 
 template <typename T = rapidjson::Writer<json_StreamWriter>>
 class json_WriterBase: public T {
-    RG_DELETE_COPY(json_WriterBase)
+    K_DELETE_COPY(json_WriterBase)
 
     json_StreamWriter writer;
 

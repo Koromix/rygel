@@ -75,38 +75,38 @@
 struct sigaction;
 struct BrotliEncoderStateStruct;
 
-namespace RG {
+namespace K {
 
 // ------------------------------------------------------------------------
 // Config
 // ------------------------------------------------------------------------
 
 #if !defined(NDEBUG)
-    #define RG_DEBUG
+    #define K_DEBUG
 #endif
 
-#define RG_DEFAULT_ALLOCATOR MallocAllocator
-#define RG_BLOCK_ALLOCATOR_DEFAULT_SIZE Kibibytes(4)
+#define K_DEFAULT_ALLOCATOR MallocAllocator
+#define K_BLOCK_ALLOCATOR_DEFAULT_SIZE Kibibytes(4)
 
-#define RG_HEAPARRAY_BASE_CAPACITY 8
-#define RG_HEAPARRAY_GROWTH_FACTOR 2.0
+#define K_HEAPARRAY_BASE_CAPACITY 8
+#define K_HEAPARRAY_GROWTH_FACTOR 2.0
 
 // Must be a power-of-two
-#define RG_HASHTABLE_BASE_CAPACITY 8
-#define RG_HASHTABLE_MAX_LOAD_FACTOR 0.5
+#define K_HASHTABLE_BASE_CAPACITY 8
+#define K_HASHTABLE_MAX_LOAD_FACTOR 0.5
 
-#define RG_FMT_STRING_BASE_CAPACITY 256
-#define RG_FMT_STRING_PRINT_BUFFER_SIZE 1024
+#define K_FMT_STRING_BASE_CAPACITY 256
+#define K_FMT_STRING_PRINT_BUFFER_SIZE 1024
 
-#define RG_LINE_READER_STEP_SIZE 65536
+#define K_LINE_READER_STEP_SIZE 65536
 
-#define RG_ASYNC_MAX_THREADS 2048
-#define RG_ASYNC_MAX_IDLE_TIME 10000
-#define RG_ASYNC_MAX_PENDING_TASKS 2048
+#define K_ASYNC_MAX_THREADS 2048
+#define K_ASYNC_MAX_IDLE_TIME 10000
+#define K_ASYNC_MAX_PENDING_TASKS 2048
 
-#define RG_PROGRESS_MAX_NODES 400
-#define RG_PROGRESS_USED_NODES 100
-#define RG_PROGRESS_TEXT_SIZE 64
+#define K_PROGRESS_MAX_NODES 400
+#define K_PROGRESS_USED_NODES 100
+#define K_PROGRESS_TEXT_SIZE 64
 
 // ------------------------------------------------------------------------
 // Utility
@@ -125,13 +125,13 @@ extern StreamWriter *const StdErr;
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(_M_ARM64) || __riscv_xlen == 64 || defined(__loongarch64)
     typedef int64_t Size;
-    #define RG_SIZE_MAX INT64_MAX
+    #define K_SIZE_MAX INT64_MAX
 #elif defined(_WIN32) || defined(__APPLE__) || defined(__unix__)
     typedef int32_t Size;
-    #define RG_SIZE_MAX INT32_MAX
+    #define K_SIZE_MAX INT32_MAX
 #elif defined(__thumb__) || defined(__arm__) || defined(__wasm32__)
     typedef int32_t Size;
-    #define RG_SIZE_MAX INT32_MAX
+    #define K_SIZE_MAX INT32_MAX
 #else
     #error Machine architecture not supported
 #endif
@@ -139,7 +139,7 @@ extern StreamWriter *const StdErr;
 #if defined(_MSC_VER) || __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     // Sane platform
 #elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    #define RG_BIG_ENDIAN
+    #define K_BIG_ENDIAN
 #else
     #error This code base is not designed to support platforms with crazy endianness
 #endif
@@ -152,16 +152,16 @@ extern StreamWriter *const StdErr;
 #endif
 static_assert(sizeof(double) == 8, "This code base is not designed to support single-precision double floats");
 
-#define RG_STRINGIFY_(a) #a
-#define RG_STRINGIFY(a) RG_STRINGIFY_(a)
-#define RG_CONCAT_(a, b) a ## b
-#define RG_CONCAT(a, b) RG_CONCAT_(a, b)
-#define RG_UNIQUE_NAME(prefix) RG_CONCAT(prefix, __LINE__)
-#define RG_FORCE_EXPAND(x) x
-#define RG_IGNORE (void)!
+#define K_STRINGIFY_(a) #a
+#define K_STRINGIFY(a) K_STRINGIFY_(a)
+#define K_CONCAT_(a, b) a ## b
+#define K_CONCAT(a, b) K_CONCAT_(a, b)
+#define K_UNIQUE_NAME(prefix) K_CONCAT(prefix, __LINE__)
+#define K_FORCE_EXPAND(x) x
+#define K_IGNORE (void)!
 
 #if defined(__GNUC__) || defined(__clang__)
-    #define RG_PUSH_NO_WARNINGS \
+    #define K_PUSH_NO_WARNINGS \
         _Pragma("GCC diagnostic push") \
         _Pragma("GCC diagnostic ignored \"-Wall\"") \
         _Pragma("GCC diagnostic ignored \"-Wextra\"") \
@@ -173,7 +173,7 @@ static_assert(sizeof(double) == 8, "This code base is not designed to support si
         _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"") \
         _Pragma("GCC diagnostic ignored \"-Wzero-as-null-pointer-constant\"") \
         _Pragma("GCC diagnostic ignored \"-Winvalid-offsetof\"")
-    #define RG_POP_NO_WARNINGS \
+    #define K_POP_NO_WARNINGS \
         _Pragma("GCC diagnostic pop")
 
     #if !defined(SCNd8)
@@ -186,8 +186,8 @@ static_assert(sizeof(double) == 8, "This code base is not designed to support si
         #define SCNu8 "hhu"
     #endif
 #elif defined(_MSC_VER)
-    #define RG_PUSH_NO_WARNINGS __pragma(warning(push, 0))
-    #define RG_POP_NO_WARNINGS __pragma(warning(pop))
+    #define K_PUSH_NO_WARNINGS __pragma(warning(push, 0))
+    #define K_POP_NO_WARNINGS __pragma(warning(pop))
 
     #define __restrict__ __restrict
 #else
@@ -209,73 +209,73 @@ static_assert(sizeof(double) == 8, "This code base is not designed to support si
 extern "C" void AssertMessage(const char *filename, int line, const char *cond);
 
 #if defined(_MSC_VER)
-    #define RG_DEBUG_BREAK() __debugbreak()
+    #define K_DEBUG_BREAK() __debugbreak()
 #elif defined(__clang__)
-    #define RG_DEBUG_BREAK() __builtin_debugtrap()
+    #define K_DEBUG_BREAK() __builtin_debugtrap()
 #elif defined(__i386__) || defined(__x86_64__)
-    #define RG_DEBUG_BREAK() __asm__ __volatile__("int $0x03")
+    #define K_DEBUG_BREAK() __asm__ __volatile__("int $0x03")
 #elif defined(__thumb__)
-    #define RG_DEBUG_BREAK() __asm__ __volatile__(".inst 0xde01")
+    #define K_DEBUG_BREAK() __asm__ __volatile__(".inst 0xde01")
 #elif defined(__aarch64__)
-    #define RG_DEBUG_BREAK() __asm__ __volatile__(".inst 0xd4200000")
+    #define K_DEBUG_BREAK() __asm__ __volatile__(".inst 0xd4200000")
 #elif defined(__arm__)
-    #define RG_DEBUG_BREAK() __asm__ __volatile__(".inst 0xe7f001f0")
+    #define K_DEBUG_BREAK() __asm__ __volatile__(".inst 0xe7f001f0")
 #elif defined(__riscv)
-    #define RG_DEBUG_BREAK() __asm__ __volatile__("ebreak")
+    #define K_DEBUG_BREAK() __asm__ __volatile__("ebreak")
 #elif defined(__loongarch64)
-    #define RG_DEBUG_BREAK() __asm__ __volatile__("break 1")
+    #define K_DEBUG_BREAK() __asm__ __volatile__("break 1")
 #endif
 
 #if defined(_MSC_VER) || __EXCEPTIONS
-    #define RG_BAD_ALLOC() \
+    #define K_BAD_ALLOC() \
         do { \
             throw std::bad_alloc(); \
         } while (false)
 #else
-    #define RG_BAD_ALLOC() \
+    #define K_BAD_ALLOC() \
         do { \
             PrintLn(StdErr, "Memory allocation failed"); \
             abort(); \
         } while (false);
 #endif
 
-#define RG_CRITICAL(Cond, ...) \
+#define K_CRITICAL(Cond, ...) \
     do { \
         if (!(Cond)) [[unlikely]] { \
             PrintLn(StdErr, __VA_ARGS__); \
             abort(); \
         } \
     } while (false)
-#if defined(RG_DEBUG)
-    #define RG_ASSERT(Cond) \
+#if defined(K_DEBUG)
+    #define K_ASSERT(Cond) \
         do { \
             if (!(Cond)) [[unlikely]] { \
-                RG::AssertMessage(__FILE__, __LINE__, RG_STRINGIFY(Cond)); \
-                RG_DEBUG_BREAK(); \
+                K::AssertMessage(__FILE__, __LINE__, K_STRINGIFY(Cond)); \
+                K_DEBUG_BREAK(); \
                 abort(); \
             } \
         } while (false)
 #else
-    #define RG_ASSERT(Cond) \
+    #define K_ASSERT(Cond) \
         do { \
             (void)sizeof(Cond); \
         } while (false)
 #endif
 
-#if defined(RG_DEBUG)
-    #define RG_UNREACHABLE() \
+#if defined(K_DEBUG)
+    #define K_UNREACHABLE() \
         do { \
-            RG::AssertMessage(__FILE__, __LINE__, "Reached code marked as UNREACHABLE"); \
-            RG_DEBUG_BREAK(); \
+            K::AssertMessage(__FILE__, __LINE__, "Reached code marked as UNREACHABLE"); \
+            K_DEBUG_BREAK(); \
             abort(); \
         } while (false)
 #elif defined(__GNUC__) || defined(__clang__)
-    #define RG_UNREACHABLE() __builtin_unreachable()
+    #define K_UNREACHABLE() __builtin_unreachable()
 #else
-    #define RG_UNREACHABLE() __assume(0)
+    #define K_UNREACHABLE() __assume(0)
 #endif
 
-#define RG_DELETE_COPY(Cls) \
+#define K_DELETE_COPY(Cls) \
     Cls(const Cls&) = delete; \
     Cls &operator=(const Cls&) = delete;
 
@@ -289,11 +289,11 @@ constexpr Size Kibibytes(Size len) { return len * 1024; }
 constexpr Size Megabytes(Size len) { return len * 1000 * 1000; }
 constexpr Size Kilobytes(Size len) { return len * 1000; }
 
-#define RG_SIZE(Type) ((RG::Size)sizeof(Type))
+#define K_SIZE(Type) ((K::Size)sizeof(Type))
 template <typename T, unsigned N>
 char (&ComputeArraySize(T const (&)[N]))[N];
-#define RG_BITS(Type) (8 * RG_SIZE(Type))
-#define RG_LEN(Array) RG_SIZE(RG::ComputeArraySize(Array))
+#define K_BITS(Type) (8 * K_SIZE(Type))
+#define K_LEN(Array) K_SIZE(K::ComputeArraySize(Array))
 
 static constexpr inline uint16_t ReverseBytes(uint16_t u)
 {
@@ -328,7 +328,7 @@ static constexpr inline int32_t ReverseBytes(int32_t i)
 static constexpr inline int64_t ReverseBytes(int64_t i)
     { return (int64_t)ReverseBytes((uint64_t)i); }
 
-#if defined(RG_BIG_ENDIAN)
+#if defined(K_BIG_ENDIAN)
 template <typename T>
 constexpr T LittleEndian(T v) { return ReverseBytes(v); }
 template <typename T>
@@ -478,9 +478,9 @@ constexpr T BigEndian(T v) { return ReverseBytes(v); }
 #endif
 
 #if __cplusplus >= 202002L && (defined(_MSC_VER) || defined(__clang__) || __GNUC__ >= 11)
-    #define RG_CONSTINIT constinit
+    #define K_CONSTINIT constinit
 #else
-    #define RG_CONSTINIT const
+    #define K_CONSTINIT const
 #endif
 
 static inline Size AlignLen(Size len, Size align)
@@ -507,7 +507,7 @@ static inline T *AlignDown(T *ptr, Size align)
 // even if length is 0. This is dumb, work around this.
 static inline void *MemCpy(void *__restrict__ dest, const void *__restrict__ src, Size len)
 {
-    RG_ASSERT(len >= 0);
+    K_ASSERT(len >= 0);
 
 #if defined(__clang__)
     // LLVM guarantees sane behavior
@@ -521,7 +521,7 @@ static inline void *MemCpy(void *__restrict__ dest, const void *__restrict__ src
 }
 static inline void *MemMove(void *dest, const void *src, Size len)
 {
-    RG_ASSERT(len >= 0);
+    K_ASSERT(len >= 0);
 
 #if defined(__clang__)
     // LLVM guarantees sane behavior
@@ -535,7 +535,7 @@ static inline void *MemMove(void *dest, const void *src, Size len)
 }
 static inline void *MemSet(void *dest, int c, Size len)
 {
-    RG_ASSERT(len >= 0);
+    K_ASSERT(len >= 0);
 
 #if defined(__clang__)
     // LLVM guarantees sane behavior
@@ -556,8 +556,8 @@ void *MemMem(const void *src, Size src_len, const void *needle, Size needle_len)
 
 static inline void *MemMem(const void *src, Size src_len, const void *needle, Size needle_len)
 {
-    RG_ASSERT(src_len >= 0);
-    RG_ASSERT(needle_len > 0);
+    K_ASSERT(src_len >= 0);
+    K_ASSERT(needle_len > 0);
 
     void *ptr = memmem(src, (size_t)src_len, needle, (size_t)needle_len);
     return ptr;
@@ -577,7 +577,7 @@ typename std::underlying_type<T>::type MaskEnum(T value)
 
 template <typename Fun>
 class DeferGuard {
-    RG_DELETE_COPY(DeferGuard)
+    K_DELETE_COPY(DeferGuard)
 
     Fun f;
     bool enabled;
@@ -613,14 +613,14 @@ DeferGuard<Fun> operator+(DeferGuardHelper, Fun &&f)
 // Write 'DEFER { code };' to do something at the end of the current scope, you
 // can use DEFER_N(Name) if you need to disable the guard for some reason, and
 // DEFER_NC(Name, Captures) if you need to capture values.
-#define RG_DEFER \
-    auto RG_UNIQUE_NAME(defer) = RG::DeferGuardHelper() + [&]()
-#define RG_DEFER_N(Name) \
-    auto Name = RG::DeferGuardHelper() + [&]()
-#define RG_DEFER_C(...) \
-    auto RG_UNIQUE_NAME(defer) = RG::DeferGuardHelper() + [&, __VA_ARGS__]()
-#define RG_DEFER_NC(Name, ...) \
-    auto Name = RG::DeferGuardHelper() + [&, __VA_ARGS__]()
+#define K_DEFER \
+    auto K_UNIQUE_NAME(defer) = K::DeferGuardHelper() + [&]()
+#define K_DEFER_N(Name) \
+    auto Name = K::DeferGuardHelper() + [&]()
+#define K_DEFER_C(...) \
+    auto K_UNIQUE_NAME(defer) = K::DeferGuardHelper() + [&, __VA_ARGS__]()
+#define K_DEFER_NC(Name, ...) \
+    auto Name = K::DeferGuardHelper() + [&, __VA_ARGS__]()
 
 // Heavily inspired from FunctionRef in LLVM
 template<typename Fn> class FunctionRef;
@@ -715,19 +715,19 @@ public:
 
         Size operator*() const
         {
-            RG_ASSERT(offset <= RG_LEN(bitset->data));
+            K_ASSERT(offset <= K_LEN(bitset->data));
 
-            if (offset == RG_LEN(bitset->data))
+            if (offset == K_LEN(bitset->data))
                 return -1;
-            return offset * RG_SIZE(size_t) * 8 + ctz;
+            return offset * K_SIZE(size_t) * 8 + ctz;
         }
 
         Iterator &operator++()
         {
-            RG_ASSERT(offset <= RG_LEN(bitset->data));
+            K_ASSERT(offset <= K_LEN(bitset->data));
 
             while (!bits) {
-                if (offset == RG_LEN(bitset->data) - 1)
+                if (offset == K_LEN(bitset->data) - 1)
                     return *this;
                 bits = bitset->data[++offset];
             }
@@ -754,14 +754,14 @@ public:
     typedef Iterator<Bitset> iterator_type;
 
     static constexpr Size Bits = N;
-    size_t data[(N + RG_BITS(size_t) - 1) / RG_BITS(size_t)] = {};
+    size_t data[(N + K_BITS(size_t) - 1) / K_BITS(size_t)] = {};
 
     constexpr Bitset() = default;
     constexpr Bitset(std::initializer_list<Size> bits)
     {
         for (Size idx: bits) {
-            Size offset = idx / (RG_SIZE(size_t) * 8);
-            size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
+            Size offset = idx / (K_SIZE(size_t) * 8);
+            size_t mask = (size_t)1 << (idx % (K_SIZE(size_t) * 8));
 
             data[offset] |= mask;
         }
@@ -769,22 +769,22 @@ public:
 
     void Clear()
     {
-        MemSet(data, 0, RG_SIZE(data));
+        MemSet(data, 0, K_SIZE(data));
     }
 
     Iterator<Bitset> begin() { return Iterator<Bitset>(this, 0); }
     Iterator<const Bitset> begin() const { return Iterator<const Bitset>(this, 0); }
-    Iterator<Bitset> end() { return Iterator<Bitset>(this, RG_LEN(data)); }
-    Iterator<const Bitset> end() const { return Iterator<const Bitset>(this, RG_LEN(data)); }
+    Iterator<Bitset> end() { return Iterator<Bitset>(this, K_LEN(data)); }
+    Iterator<const Bitset> end() const { return Iterator<const Bitset>(this, K_LEN(data)); }
 
     Size PopCount() const
     {
         Size count = 0;
         for (size_t bits: data) {
-#if RG_SIZE_MAX == INT64_MAX
-            count += RG::PopCount((uint64_t)bits);
+#if K_SIZE_MAX == INT64_MAX
+            count += K::PopCount((uint64_t)bits);
 #else
-            count += RG::PopCount((uint32_t)bits);
+            count += K::PopCount((uint32_t)bits);
 #endif
         }
         return count;
@@ -792,28 +792,28 @@ public:
 
     inline bool Test(Size idx) const
     {
-        RG_ASSERT(idx >= 0 && idx < N);
+        K_ASSERT(idx >= 0 && idx < N);
 
-        Size offset = idx / (RG_SIZE(size_t) * 8);
-        size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
+        Size offset = idx / (K_SIZE(size_t) * 8);
+        size_t mask = (size_t)1 << (idx % (K_SIZE(size_t) * 8));
 
         return data[offset] & mask;
     }
     inline void Set(Size idx, bool value = true)
     {
-        RG_ASSERT(idx >= 0 && idx < N);
+        K_ASSERT(idx >= 0 && idx < N);
 
-        Size offset = idx / (RG_SIZE(size_t) * 8);
-        size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
+        Size offset = idx / (K_SIZE(size_t) * 8);
+        size_t mask = (size_t)1 << (idx % (K_SIZE(size_t) * 8));
 
         data[offset] = ApplyMask(data[offset], mask, value);
     }
     inline bool TestAndSet(Size idx, bool value = true)
     {
-        RG_ASSERT(idx >= 0 && idx < N);
+        K_ASSERT(idx >= 0 && idx < N);
 
-        Size offset = idx / (RG_SIZE(size_t) * 8);
-        size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
+        Size offset = idx / (K_SIZE(size_t) * 8);
+        size_t mask = (size_t)1 << (idx % (K_SIZE(size_t) * 8));
 
         bool ret = data[offset] & mask;
         data[offset] = ApplyMask(data[offset], mask, value);
@@ -823,7 +823,7 @@ public:
 
     Bitset &operator&=(const Bitset &other)
     {
-        for (Size i = 0; i < RG_LEN(data); i++) {
+        for (Size i = 0; i < K_LEN(data); i++) {
             data[i] &= other.data[i];
         }
         return *this;
@@ -831,7 +831,7 @@ public:
     Bitset operator&(const Bitset &other)
     {
         Bitset ret;
-        for (Size i = 0; i < RG_LEN(data); i++) {
+        for (Size i = 0; i < K_LEN(data); i++) {
             ret.data[i] = data[i] & other.data[i];
         }
         return ret;
@@ -839,7 +839,7 @@ public:
 
     Bitset &operator|=(const Bitset &other)
     {
-        for (Size i = 0; i < RG_LEN(data); i++) {
+        for (Size i = 0; i < K_LEN(data); i++) {
             data[i] |= other.data[i];
         }
         return *this;
@@ -847,7 +847,7 @@ public:
     Bitset operator|(const Bitset &other)
     {
         Bitset ret;
-        for (Size i = 0; i < RG_LEN(data); i++) {
+        for (Size i = 0; i < K_LEN(data); i++) {
             ret.data[i] = data[i] | other.data[i];
         }
         return ret;
@@ -855,7 +855,7 @@ public:
 
     Bitset &operator^=(const Bitset &other)
     {
-        for (Size i = 0; i < RG_LEN(data); i++) {
+        for (Size i = 0; i < K_LEN(data); i++) {
             data[i] ^= other.data[i];
         }
         return *this;
@@ -863,7 +863,7 @@ public:
     Bitset operator^(const Bitset &other)
     {
         Bitset ret;
-        for (Size i = 0; i < RG_LEN(data); i++) {
+        for (Size i = 0; i < K_LEN(data); i++) {
             ret.data[i] = data[i] ^ other.data[i];
         }
         return ret;
@@ -871,7 +871,7 @@ public:
 
     Bitset &Flip()
     {
-        for (Size i = 0; i < RG_LEN(data); i++) {
+        for (Size i = 0; i < K_LEN(data); i++) {
             data[i] = ~data[i];
         }
         return *this;
@@ -879,7 +879,7 @@ public:
     Bitset operator~()
     {
         Bitset ret;
-        for (Size i = 0; i < RG_LEN(data); i++) {
+        for (Size i = 0; i < K_LEN(data); i++) {
             ret.data[i] = ~data[i];
         }
         return ret;
@@ -921,12 +921,12 @@ struct Span {
 
     constexpr T &operator[](Size idx)
     {
-        RG_ASSERT(idx >= 0 && idx < len);
+        K_ASSERT(idx >= 0 && idx < len);
         return ptr[idx];
     }
     constexpr const T &operator[](Size idx) const
     {
-        RG_ASSERT(idx >= 0 && idx < len);
+        K_ASSERT(idx >= 0 && idx < len);
         return ptr[idx];
     }
 
@@ -948,8 +948,8 @@ struct Span {
 
     constexpr Span Take(Size offset, Size sub_len) const
     {
-        RG_ASSERT(sub_len >= 0 && sub_len <= len);
-        RG_ASSERT(offset >= 0 && offset <= len - sub_len);
+        K_ASSERT(sub_len >= 0 && sub_len <= len);
+        K_ASSERT(offset >= 0 && offset <= len - sub_len);
 
         Span<T> sub = { ptr + offset, sub_len };
         return sub;
@@ -990,7 +990,7 @@ struct Span<const char> {
 
     constexpr char operator[](Size idx) const
     {
-        RG_ASSERT(idx >= 0 && idx < len);
+        K_ASSERT(idx >= 0 && idx < len);
         return ptr[idx];
     }
 
@@ -1002,8 +1002,8 @@ struct Span<const char> {
 
     constexpr Span Take(Size offset, Size sub_len) const
     {
-        RG_ASSERT(sub_len >= 0 && sub_len <= len);
-        RG_ASSERT(offset >= 0 && offset <= len - sub_len);
+        K_ASSERT(sub_len >= 0 && sub_len <= len);
+        K_ASSERT(offset >= 0 && offset <= len - sub_len);
 
         Span<const char> sub = { ptr + offset, sub_len };
         return sub;
@@ -1036,14 +1036,14 @@ public:
     Size stride;
 
     Strider() = default;
-    constexpr Strider(T *ptr_) : ptr(ptr_), stride(RG_SIZE(T)) {}
+    constexpr Strider(T *ptr_) : ptr(ptr_), stride(K_SIZE(T)) {}
     constexpr Strider(T *ptr_, Size stride_) : ptr(ptr_), stride(stride_) {}
 
     constexpr bool IsValid() const { return ptr; }
 
     constexpr T &operator[](Size idx) const
     {
-        RG_ASSERT(idx >= 0);
+        K_ASSERT(idx >= 0);
         return *(T *)((uint8_t *)ptr + (idx * stride));
     }
 };
@@ -1051,7 +1051,7 @@ public:
 template <typename T>
 static constexpr inline Strider<T> MakeStrider(T *ptr)
 {
-    return Strider<T>(ptr, RG_SIZE(T));
+    return Strider<T>(ptr, K_SIZE(T));
 }
 template <typename T>
 static constexpr inline Strider<T> MakeStrider(T *ptr, Size stride)
@@ -1061,7 +1061,7 @@ static constexpr inline Strider<T> MakeStrider(T *ptr, Size stride)
 template <typename T, Size N>
 static constexpr inline Strider<T> MakeStrider(T (&arr)[N])
 {
-    return Strider<T>(arr, RG_SIZE(T));
+    return Strider<T>(arr, K_SIZE(T));
 }
 
 enum class AllocFlag {
@@ -1070,7 +1070,7 @@ enum class AllocFlag {
 };
 
 class Allocator {
-    RG_DELETE_COPY(Allocator)
+    K_DELETE_COPY(Allocator)
 
 public:
     Allocator() = default;
@@ -1086,7 +1086,7 @@ Allocator *GetNullAllocator();
 
 static inline void *AllocateRaw(Allocator *alloc, Size size, unsigned int flags = 0)
 {
-    RG_ASSERT(size >= 0);
+    K_ASSERT(size >= 0);
 
     if (!alloc) {
         alloc = GetDefaultAllocator();
@@ -1103,7 +1103,7 @@ T *AllocateOne(Allocator *alloc, unsigned int flags = 0)
         alloc = GetDefaultAllocator();
     }
 
-    Size size = RG_SIZE(T);
+    Size size = K_SIZE(T);
 
     T *ptr = (T *)alloc->Allocate(size, flags);
     return ptr;
@@ -1112,13 +1112,13 @@ T *AllocateOne(Allocator *alloc, unsigned int flags = 0)
 template <typename T>
 Span<T> AllocateSpan(Allocator *alloc, Size len, unsigned int flags = 0)
 {
-    RG_ASSERT(len >= 0);
+    K_ASSERT(len >= 0);
 
     if (!alloc) {
         alloc = GetDefaultAllocator();
     }
 
-    Size size = len * RG_SIZE(T);
+    Size size = len * K_SIZE(T);
 
     T *ptr = (T *)alloc->Allocate(size, flags);
     return MakeSpan(ptr, len);
@@ -1127,7 +1127,7 @@ Span<T> AllocateSpan(Allocator *alloc, Size len, unsigned int flags = 0)
 static inline void *ResizeRaw(Allocator *alloc, void *ptr, Size old_size, Size new_size,
                               unsigned int flags = 0)
 {
-    RG_ASSERT(new_size >= 0);
+    K_ASSERT(new_size >= 0);
 
     if (!alloc) {
         alloc = GetDefaultAllocator();
@@ -1141,14 +1141,14 @@ template <typename T>
 Span<T> ResizeSpan(Allocator *alloc, Span<T> mem, Size new_len,
                    unsigned int flags = 0)
 {
-    RG_ASSERT(new_len >= 0);
+    K_ASSERT(new_len >= 0);
 
     if (!alloc) {
         alloc = GetDefaultAllocator();
     }
 
-    Size old_size = mem.len * RG_SIZE(T);
-    Size new_size = new_len * RG_SIZE(T);
+    Size old_size = mem.len * K_SIZE(T);
+    Size new_size = new_len * K_SIZE(T);
 
     mem.ptr = (T *)alloc->Resize(mem.ptr, old_size, new_size, flags);
     return MakeSpan(mem.ptr, new_len);
@@ -1170,7 +1170,7 @@ void ReleaseOne(Allocator *alloc, T *ptr)
         alloc = GetDefaultAllocator();
     }
 
-    alloc->Release((void *)ptr, RG_SIZE(T));
+    alloc->Release((void *)ptr, K_SIZE(T));
 }
 
 template<typename T>
@@ -1180,7 +1180,7 @@ void ReleaseSpan(Allocator *alloc, Span<T> mem)
         alloc = GetDefaultAllocator();
     }
 
-    Size size = mem.len * RG_SIZE(T);
+    Size size = mem.len * K_SIZE(T);
 
     alloc->Release((void *)mem.ptr, size);
 }
@@ -1231,10 +1231,10 @@ class BlockAllocator: public Allocator {
     uint8_t *last_alloc = nullptr;
 
 public:
-    BlockAllocator(Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
+    BlockAllocator(Size block_size = K_BLOCK_ALLOCATOR_DEFAULT_SIZE)
         : block_size(block_size)
     {
-        RG_ASSERT(block_size > 0);
+        K_ASSERT(block_size > 0);
     }
 
     BlockAllocator(BlockAllocator &&other) { *this = std::move(other); }
@@ -1273,9 +1273,9 @@ public:
     RetainPtr(T *p, void (*delete_func)(std::remove_const_t<T> *))
         : p(p)
     {
-        RG_ASSERT(p);
-        RG_ASSERT(delete_func);
-        RG_ASSERT(!p->delete_func || delete_func == p->delete_func);
+        K_ASSERT(p);
+        K_ASSERT(delete_func);
+        K_ASSERT(!p->delete_func || delete_func == p->delete_func);
 
         p->Ref();
         p->delete_func = delete_func;
@@ -1284,7 +1284,7 @@ public:
         : p(p)
     {
         if (p) {
-            RG_ASSERT(p->delete_func);
+            K_ASSERT(p->delete_func);
 
             if (ref) {
                 p->Ref();
@@ -1331,7 +1331,7 @@ public:
 
     T &operator*() const
     {
-        RG_ASSERT(p);
+        K_ASSERT(p);
         return *p;
     }
     T *operator->() const { return p; }
@@ -1348,7 +1348,7 @@ public:
     bool Unref() const
     {
         int new_count = --refcount;
-        RG_ASSERT(new_count >= 0);
+        K_ASSERT(new_count >= 0);
         return new_count;
     }
 
@@ -1644,7 +1644,7 @@ static inline Span<const char> SplitStr(const char *str, char split_char, const 
 
 static inline Span<char> SplitStr(Span<char> str, Span<const char> split, Span<char> *out_remainder = nullptr)
 {
-    RG_ASSERT(split.len);
+    K_ASSERT(split.len);
 
     Size part_len = 0;
     while (part_len < str.len) {
@@ -1664,7 +1664,7 @@ static inline Span<char> SplitStr(Span<char> str, Span<const char> split, Span<c
 }
 static inline Span<char> SplitStr(char *str, Span<const char> split, char **out_remainder = nullptr)
 {
-    RG_ASSERT(split.len);
+    K_ASSERT(split.len);
 
     Size part_len = 0;
     while (str[part_len]) {
@@ -1897,7 +1897,7 @@ public:
     constexpr LocalArray() = default;
     constexpr LocalArray(std::initializer_list<T> l)
     {
-        RG_ASSERT(l.size() <= N);
+        K_ASSERT(l.size() <= N);
         for (const T &it: l) {
             data[len++] = it;
         }
@@ -1920,16 +1920,16 @@ public:
     T *end() { return data + len; }
     const T *end() const { return data + len; }
 
-    Size Available() const { return RG_LEN(data) - len; }
+    Size Available() const { return K_LEN(data) - len; }
 
     T &operator[](Size idx)
     {
-        RG_ASSERT(idx >= 0 && idx < len);
+        K_ASSERT(idx >= 0 && idx < len);
         return data[idx];
     }
     const T &operator[](Size idx) const
     {
-        RG_ASSERT(idx >= 0 && idx < len);
+        K_ASSERT(idx >= 0 && idx < len);
         return data[idx];
     }
 
@@ -1949,7 +1949,7 @@ public:
 
     T *AppendDefault(Size count = 1)
     {
-        RG_ASSERT(len <= N - count);
+        K_ASSERT(len <= N - count);
 
         T *first = data + len;
         if constexpr(!std::is_trivial<T>::value) {
@@ -1958,7 +1958,7 @@ public:
                 len++;
             }
         } else {
-            MemSet(first, 0, count * RG_SIZE(T));
+            MemSet(first, 0, count * K_SIZE(T));
             len += count;
         }
 
@@ -1967,7 +1967,7 @@ public:
 
     T *Append(const T &value)
     {
-        RG_ASSERT(len < N);
+        K_ASSERT(len < N);
 
         T *it = data + len;
         *it = value;
@@ -1977,7 +1977,7 @@ public:
     }
     T *Append(T &&value)
     {
-        RG_ASSERT(len < N);
+        K_ASSERT(len < N);
 
         T *it = data + len;
         *it = std::move(value);
@@ -1987,7 +1987,7 @@ public:
     }
     T *Append(Span<const T> values)
     {
-        RG_ASSERT(values.len <= N - len);
+        K_ASSERT(values.len <= N - len);
 
         T *it = data + len;
         for (Size i = 0; i < values.len; i++) {
@@ -2000,7 +2000,7 @@ public:
 
     void RemoveFrom(Size first)
     {
-        RG_ASSERT(first >= 0 && first <= len);
+        K_ASSERT(first >= 0 && first <= len);
 
         for (Size i = first; i < len; i++) {
             data[i] = T();
@@ -2009,7 +2009,7 @@ public:
     }
     void RemoveLast(Size count = 1)
     {
-        RG_ASSERT(count >= 0 && count <= len);
+        K_ASSERT(count >= 0 && count <= len);
         RemoveFrom(len - count);
     }
 
@@ -2051,8 +2051,8 @@ public:
     HeapArray &operator=(HeapArray &&other)
     {
         Clear();
-        MemMove(this, &other, RG_SIZE(other));
-        MemSet(&other, 0, RG_SIZE(other));
+        MemMove(this, &other, K_SIZE(other));
+        MemSet(&other, 0, K_SIZE(other));
         return *this;
     }
     HeapArray(const HeapArray &other) { *this = other; }
@@ -2065,7 +2065,7 @@ public:
                 ptr[i] = other.ptr[i];
             }
         } else {
-            MemCpy(ptr, other.ptr, other.len * RG_SIZE(*ptr));
+            MemCpy(ptr, other.ptr, other.len * K_SIZE(*ptr));
         }
         len = other.len;
         return *this;
@@ -2089,12 +2089,12 @@ public:
 
     T &operator[](Size idx)
     {
-        RG_ASSERT(idx >= 0 && idx < len);
+        K_ASSERT(idx >= 0 && idx < len);
         return ptr[idx];
     }
     const T &operator[](Size idx) const
     {
-        RG_ASSERT(idx >= 0 && idx < len);
+        K_ASSERT(idx >= 0 && idx < len);
         return ptr[idx];
     }
 
@@ -2114,7 +2114,7 @@ public:
 
     void SetCapacity(Size new_capacity)
     {
-        RG_ASSERT(new_capacity >= 0);
+        K_ASSERT(new_capacity >= 0);
 
         if (new_capacity != capacity) {
             if (len > new_capacity) {
@@ -2124,7 +2124,7 @@ public:
                 len = new_capacity;
             }
 
-            ptr = (T *)ResizeRaw(allocator, ptr, capacity * RG_SIZE(T), new_capacity * RG_SIZE(T));
+            ptr = (T *)ResizeRaw(allocator, ptr, capacity * K_SIZE(T), new_capacity * K_SIZE(T));
             capacity = new_capacity;
         }
     }
@@ -2138,18 +2138,18 @@ public:
 
     T *Grow(Size reserve_capacity = 1)
     {
-        RG_ASSERT(capacity >= 0);
-        RG_ASSERT(reserve_capacity >= 0);
-        RG_ASSERT((size_t)capacity + (size_t)reserve_capacity <= RG_SIZE_MAX);
+        K_ASSERT(capacity >= 0);
+        K_ASSERT(reserve_capacity >= 0);
+        K_ASSERT((size_t)capacity + (size_t)reserve_capacity <= K_SIZE_MAX);
 
         if (reserve_capacity > capacity - len) {
             Size needed = capacity + reserve_capacity;
 
             Size new_capacity;
-            if (needed <= RG_HEAPARRAY_BASE_CAPACITY) {
-                new_capacity = RG_HEAPARRAY_BASE_CAPACITY;
+            if (needed <= K_HEAPARRAY_BASE_CAPACITY) {
+                new_capacity = K_HEAPARRAY_BASE_CAPACITY;
             } else {
-                new_capacity = (Size)((double)(needed - 1) * RG_HEAPARRAY_GROWTH_FACTOR);
+                new_capacity = (Size)((double)(needed - 1) * K_HEAPARRAY_GROWTH_FACTOR);
             }
 
             SetCapacity(new_capacity);
@@ -2171,7 +2171,7 @@ public:
                 len++;
             }
         } else {
-            MemSet(first, 0, count * RG_SIZE(T));
+            MemSet(first, 0, count * K_SIZE(T));
             len += count;
         }
 
@@ -2216,7 +2216,7 @@ public:
 
     void RemoveFrom(Size first)
     {
-        RG_ASSERT(first >= 0 && first <= len);
+        K_ASSERT(first >= 0 && first <= len);
 
         if constexpr(!std::is_trivial<T>::value) {
             for (Size i = first; i < len; i++) {
@@ -2227,7 +2227,7 @@ public:
     }
     void RemoveLast(Size count = 1)
     {
-        RG_ASSERT(count >= 0 && count <= len);
+        K_ASSERT(count >= 0 && count <= len);
         RemoveFrom(len - count);
     }
 
@@ -2257,7 +2257,7 @@ public:
 
 template <typename T, Size BucketSize = 64, typename AllocatorType = BlockAllocator>
 class BucketArray {
-    RG_DELETE_COPY(BucketArray)
+    K_DELETE_COPY(BucketArray)
 
 public:
     struct Bucket {
@@ -2375,8 +2375,8 @@ public:
     BucketArray &operator=(BucketArray &&other)
     {
         ClearBucketsAndValues();
-        MemMove(this, &other, RG_SIZE(other));
-        MemSet(&other, 0, RG_SIZE(other));
+        MemMove(this, &other, K_SIZE(other));
+        MemSet(&other, 0, K_SIZE(other));
         return *this;
     }
 
@@ -2409,7 +2409,7 @@ public:
 
     const T &operator[](Size idx) const
     {
-        RG_ASSERT(idx >= 0 && idx < count);
+        K_ASSERT(idx >= 0 && idx < count);
 
         idx += offset;
         Size bucket_idx = idx / BucketSize;
@@ -2427,7 +2427,7 @@ public:
         if (bucket_idx >= buckets.len) {
             Bucket *new_bucket = AllocateOne<Bucket>(buckets.allocator);
             new (&new_bucket->allocator) AllocatorType();
-            new_bucket->values = (T *)AllocateRaw(&new_bucket->allocator, BucketSize * RG_SIZE(T));
+            new_bucket->values = (T *)AllocateRaw(&new_bucket->allocator, BucketSize * K_SIZE(T));
 
             buckets.Append(new_bucket);
         }
@@ -2452,7 +2452,7 @@ public:
 
     void RemoveFrom(Size from)
     {
-        RG_ASSERT(from >= 0 && from <= count);
+        K_ASSERT(from >= 0 && from <= count);
 
         if (from == count)
             return;
@@ -2478,13 +2478,13 @@ public:
     }
     void RemoveLast(Size n = 1)
     {
-        RG_ASSERT(n >= 0 && n <= count);
+        K_ASSERT(n >= 0 && n <= count);
         RemoveFrom(count - n);
     }
 
     void RemoveFirst(Size n = 1)
     {
-        RG_ASSERT(n >= 0 && n <= count);
+        K_ASSERT(n >= 0 && n <= count);
 
         if (n == count) {
             Clear();
@@ -2503,7 +2503,7 @@ public:
                 DeleteBucket(buckets[i]);
             }
             MemMove(&buckets[0], &buckets[end_bucket_idx],
-                    (buckets.len - end_bucket_idx) * RG_SIZE(Bucket *));
+                    (buckets.len - end_bucket_idx) * K_SIZE(Bucket *));
             buckets.RemoveLast(end_bucket_idx);
         }
 
@@ -2530,7 +2530,7 @@ public:
 
         count = (it.bucket_idx * BucketSize) + it.bucket_offset - offset;
 
-        RG_ASSERT(it == end());
+        K_ASSERT(it == end());
     }
     void RemoveFrom(const Iterator<const BucketArray<T, BucketSize>> &it) { return RemoveFrom((iterator_type)it); }
 
@@ -2550,7 +2550,7 @@ public:
                 DeleteBucket(buckets[i]);
             }
             MemMove(&buckets[0], &buckets[it.bucket_idx],
-                    (buckets.len - it.bucket_idx) * RG_SIZE(Bucket *));
+                    (buckets.len - it.bucket_idx) * K_SIZE(Bucket *));
             buckets.RemoveLast(it.bucket_idx);
         }
 
@@ -2616,18 +2616,18 @@ public:
 
         ValueType &operator*()
         {
-            RG_ASSERT(!table->IsEmpty(offset));
+            K_ASSERT(!table->IsEmpty(offset));
             return table->data[offset];
         }
         const ValueType &operator*() const
         {
-            RG_ASSERT(!table->IsEmpty(offset));
+            K_ASSERT(!table->IsEmpty(offset));
             return table->data[offset];
         }
 
         Iterator &operator++()
         {
-            RG_ASSERT(offset < table->capacity);
+            K_ASSERT(offset < table->capacity);
             while (++offset < table->capacity && table->IsEmpty(offset));
             return *this;
         }
@@ -2673,8 +2673,8 @@ public:
     HashTable &operator=(HashTable &&other)
     {
         Clear();
-        MemMove(this, &other, RG_SIZE(other));
-        MemSet(&other, 0, RG_SIZE(other));
+        MemMove(this, &other, K_SIZE(other));
+        MemSet(&other, 0, K_SIZE(other));
         return *this;
     }
     HashTable(const HashTable &other) { *this = other; }
@@ -2709,7 +2709,7 @@ public:
 
         count = 0;
         if (used) {
-            size_t len = (size_t)(capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t);
+            size_t len = (size_t)(capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t);
             MemSet(used, 0, len);
         }
     }
@@ -2803,7 +2803,7 @@ public:
             return;
 
         Size clear_idx = it - data;
-        RG_ASSERT(!IsEmpty(clear_idx));
+        K_ASSERT(!IsEmpty(clear_idx));
 
         it->~ValueType();
         count--;
@@ -2823,7 +2823,7 @@ public:
 
             MarkUsed(clear_idx);
             MarkEmpty(idx);
-            MemMove(&data[clear_idx], &data[idx], RG_SIZE(*data));
+            MemMove(&data[clear_idx], &data[idx], K_SIZE(*data));
 
             clear_idx = idx;
         }
@@ -2838,9 +2838,9 @@ public:
         if (count) {
             Size new_capacity = (Size)1 << (64 - CountLeadingZeros((uint64_t)count));
 
-            if (new_capacity < RG_HASHTABLE_BASE_CAPACITY) {
-                new_capacity = RG_HASHTABLE_BASE_CAPACITY;
-            } else if (count > (double)new_capacity * RG_HASHTABLE_MAX_LOAD_FACTOR) {
+            if (new_capacity < K_HASHTABLE_BASE_CAPACITY) {
+                new_capacity = K_HASHTABLE_BASE_CAPACITY;
+            } else if (count > (double)new_capacity * K_HASHTABLE_MAX_LOAD_FACTOR) {
                 new_capacity *= 2;
             }
 
@@ -2884,7 +2884,7 @@ private:
             Size idx = HashToIndex(hash);
             ValueType *it = Find(&idx, key);
             if (!it) {
-                if (count >= (Size)((double)capacity * RG_HASHTABLE_MAX_LOAD_FACTOR)) {
+                if (count >= (Size)((double)capacity * K_HASHTABLE_MAX_LOAD_FACTOR)) {
                     Rehash(capacity << 1);
                     idx = HashToIndex(hash);
                     while (!IsEmpty(idx)) {
@@ -2901,7 +2901,7 @@ private:
                 return it;
             }
         } else {
-            Rehash(RG_HASHTABLE_BASE_CAPACITY);
+            Rehash(K_HASHTABLE_BASE_CAPACITY);
 
             Size idx = HashToIndex(hash);
             count++;
@@ -2916,7 +2916,7 @@ private:
     {
         if (new_capacity == capacity)
             return;
-        RG_ASSERT(count <= new_capacity);
+        K_ASSERT(count <= new_capacity);
 
         size_t *old_used = used;
         ValueType *old_data = data;
@@ -2924,9 +2924,9 @@ private:
 
         if (new_capacity) {
             used = (size_t *)AllocateRaw(allocator,
-                                         (new_capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t),
+                                         (new_capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t),
                                          (int)AllocFlag::Zero);
-            data = (ValueType *)AllocateRaw(allocator, new_capacity * RG_SIZE(ValueType));
+            data = (ValueType *)AllocateRaw(allocator, new_capacity * K_SIZE(ValueType));
             for (Size i = 0; i < new_capacity; i++) {
                 new (&data[i]) ValueType();
             }
@@ -2948,22 +2948,22 @@ private:
             capacity = 0;
         }
 
-        ReleaseRaw(allocator, old_used, (old_capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t));
-        ReleaseRaw(allocator, old_data, old_capacity * RG_SIZE(ValueType));
+        ReleaseRaw(allocator, old_used, (old_capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t));
+        ReleaseRaw(allocator, old_data, old_capacity * K_SIZE(ValueType));
     }
 
     inline void MarkUsed(Size idx)
     {
-        used[idx / (RG_SIZE(size_t) * 8)] |= (1ull << (idx % (RG_SIZE(size_t) * 8)));
+        used[idx / (K_SIZE(size_t) * 8)] |= (1ull << (idx % (K_SIZE(size_t) * 8)));
     }
     inline void MarkEmpty(Size idx)
     {
-        used[idx / (RG_SIZE(size_t) * 8)] &= ~(1ull << (idx % (RG_SIZE(size_t) * 8)));
+        used[idx / (K_SIZE(size_t) * 8)] &= ~(1ull << (idx % (K_SIZE(size_t) * 8)));
     }
 
     inline bool IsEmpty(size_t *used, Size idx) const
     {
-        bool empty = !(used[idx / (RG_SIZE(size_t) * 8)] & (1ull << (idx % (RG_SIZE(size_t) * 8))));
+        bool empty = !(used[idx / (K_SIZE(size_t) * 8)] & (1ull << (idx % (K_SIZE(size_t) * 8))));
         return empty;
     }
     inline bool IsEmpty(Size idx) const { return IsEmpty(used, idx); }
@@ -3047,7 +3047,7 @@ DEFINE_INTEGER_HASH_TRAITS_32(unsigned int, constexpr);
 #endif
 DEFINE_INTEGER_HASH_TRAITS_64(long long, constexpr);
 DEFINE_INTEGER_HASH_TRAITS_64(unsigned long long, constexpr);
-#if RG_SIZE_MAX == INT64_MAX
+#if K_SIZE_MAX == INT64_MAX
     DEFINE_INTEGER_HASH_TRAITS_64(void *);
     DEFINE_INTEGER_HASH_TRAITS_64(const void *);
 #else
@@ -3074,7 +3074,7 @@ static constexpr inline uint64_t HashStr(Span<const char> str)
         } :
 #endif
         [](const char *p) {
-#if defined(RG_BIG_ENDIAN)
+#if defined(K_BIG_ENDIAN)
             uint64_t result = ((uint64_t)p[0] << 56) |
                               ((uint64_t)p[1] << 48) |
                               ((uint64_t)p[2] << 40) |
@@ -3155,7 +3155,7 @@ public:
     static constexpr bool Test(Span<const char> key1, const char * key2) { return key1 == key2; }
 };
 
-#define RG_HASHTABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
+#define K_HASHTABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
     class Name { \
     public: \
         static constexpr KeyType GetKey(const ValueType &value) \
@@ -3169,16 +3169,16 @@ public:
         static constexpr bool TestKeys(KeyType key1, TestKey key2) \
             { return TestFunc((key1), (key2)); } \
     }
-#define RG_HASHTABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
-    RG_HASHTABLE_HANDLER_EX_N(HashHandler, ValueType, KeyType, KeyMember, HashFunc, TestFunc)
-#define RG_HASHTABLE_HANDLER(ValueType, KeyMember) \
-    RG_HASHTABLE_HANDLER_EX(ValueType, decltype(ValueType::KeyMember), KeyMember, HashTraits<decltype(ValueType::KeyMember)>::Hash, HashTraits<decltype(ValueType::KeyMember)>::Test)
-#define RG_HASHTABLE_HANDLER_N(Name, ValueType, KeyMember) \
-    RG_HASHTABLE_HANDLER_EX_N(Name, ValueType, decltype(ValueType::KeyMember), KeyMember, HashTraits<decltype(ValueType::KeyMember)>::Hash, HashTraits<decltype(ValueType::KeyMember)>::Test)
-#define RG_HASHTABLE_HANDLER_T(ValueType, KeyType, KeyMember) \
-    RG_HASHTABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashTraits<KeyType>::Hash, HashTraits<KeyType>::Test)
-#define RG_HASHTABLE_HANDLER_NT(Name, ValueType, KeyType, KeyMember) \
-    RG_HASHTABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashTraits<KeyType>::Hash, HashTraits<KeyType>::Test)
+#define K_HASHTABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
+    K_HASHTABLE_HANDLER_EX_N(HashHandler, ValueType, KeyType, KeyMember, HashFunc, TestFunc)
+#define K_HASHTABLE_HANDLER(ValueType, KeyMember) \
+    K_HASHTABLE_HANDLER_EX(ValueType, decltype(ValueType::KeyMember), KeyMember, HashTraits<decltype(ValueType::KeyMember)>::Hash, HashTraits<decltype(ValueType::KeyMember)>::Test)
+#define K_HASHTABLE_HANDLER_N(Name, ValueType, KeyMember) \
+    K_HASHTABLE_HANDLER_EX_N(Name, ValueType, decltype(ValueType::KeyMember), KeyMember, HashTraits<decltype(ValueType::KeyMember)>::Hash, HashTraits<decltype(ValueType::KeyMember)>::Test)
+#define K_HASHTABLE_HANDLER_T(ValueType, KeyType, KeyMember) \
+    K_HASHTABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashTraits<KeyType>::Hash, HashTraits<KeyType>::Test)
+#define K_HASHTABLE_HANDLER_NT(Name, ValueType, KeyType, KeyMember) \
+    K_HASHTABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashTraits<KeyType>::Hash, HashTraits<KeyType>::Test)
 
 template <typename KeyType, typename ValueType>
 class HashMap {
@@ -3187,7 +3187,7 @@ public:
         KeyType key;
         ValueType value;
 
-        RG_HASHTABLE_HANDLER(Bucket, key);
+        K_HASHTABLE_HANDLER(Bucket, key);
     };
 
     HashTable<KeyType, Bucket> table;
@@ -3316,13 +3316,13 @@ public:
         ValueType value;
     };
 
-    size_t used[(N + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t)] = {};
+    size_t used[(N + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t)] = {};
     Bucket data[N] = {};
     Size count = 0;
 
     constexpr ConstMap(std::initializer_list<Bucket> l)
     {
-        RG_CRITICAL(l.size() <= N, "ConstMap<%1> cannot be store %2 values", N, l.size());
+        K_CRITICAL(l.size() <= N, "ConstMap<%1> cannot be store %2 values", N, l.size());
 
         for (const Bucket &it: l) {
             Bucket *bucket = Insert(it.key);
@@ -3396,11 +3396,11 @@ private:
 
     constexpr void MarkUsed(Size idx)
     {
-        used[idx / (RG_SIZE(size_t) * 8)] |= (1ull << (idx % (RG_SIZE(size_t) * 8)));
+        used[idx / (K_SIZE(size_t) * 8)] |= (1ull << (idx % (K_SIZE(size_t) * 8)));
     }
     constexpr bool IsEmpty(Size idx) const
     {
-        bool empty = !(used[idx / (RG_SIZE(size_t) * 8)] & (1ull << (idx % (RG_SIZE(size_t) * 8))));
+        bool empty = !(used[idx / (K_SIZE(size_t) * 8)] & (1ull << (idx % (K_SIZE(size_t) * 8))));
         return empty;
     }
 
@@ -3417,7 +3417,7 @@ private:
 union LocalDate {
     int32_t value;
     struct {
-#if defined(RG_BIG_ENDIAN)
+#if defined(K_BIG_ENDIAN)
         int16_t year;
         int8_t month;
         int8_t day;
@@ -3429,12 +3429,12 @@ union LocalDate {
     } st;
 
     LocalDate() = default;
-#if defined(RG_BIG_ENDIAN)
+#if defined(K_BIG_ENDIAN)
     LocalDate(int16_t year, int8_t month, int8_t day)
-        : st({ year, month, day }) { RG_ASSERT(IsValid()); }
+        : st({ year, month, day }) { K_ASSERT(IsValid()); }
 #else
     LocalDate(int16_t year, int8_t month, int8_t day)
-        : st({ day, month, year }) { RG_ASSERT(IsValid()); }
+        : st({ day, month, year }) { K_ASSERT(IsValid()); }
 #endif
 
     static inline bool IsLeapYear(int16_t year)
@@ -3613,7 +3613,7 @@ public:
     template <typename T>
     explicit FmtCustom(const T &obj)
     {
-        static_assert(RG_SIZE(*this) <= RG_SIZE(raw));
+        static_assert(K_SIZE(*this) <= K_SIZE(raw));
         new (raw) Concrete<T>(&obj, &FmtTraits<T>::Format);
     }
 
@@ -3720,7 +3720,7 @@ static inline FmtArg FmtOctal(uint64_t u)
 }
 static inline FmtArg FmtHex(uint64_t u, FmtType type = FmtType::BigHex)
 {
-    RG_ASSERT(type == FmtType::BigHex || type == FmtType::SmallHex);
+    K_ASSERT(type == FmtType::BigHex || type == FmtType::SmallHex);
 
     FmtArg arg;
     arg.type = type;
@@ -3787,7 +3787,7 @@ static inline FmtArg FmtTimeNice(TimeSpec spec, bool ms = false)
 
 static inline FmtArg FmtRandom(Size len, const char *chars = nullptr)
 {
-    RG_ASSERT(len < 256);
+    K_ASSERT(len < 256);
     len = std::min(len, (Size)256);
 
     FmtArg arg;
@@ -3823,7 +3823,7 @@ FmtArg FmtSpan(Span<T> arr, FmtType type, const char *sep = ", ")
     FmtArg arg;
     arg.type = FmtType::Span;
     arg.u.span.type = type;
-    arg.u.span.type_len = RG_SIZE(T);
+    arg.u.span.type_len = K_SIZE(T);
     arg.u.span.ptr = (const void *)arr.ptr;
     arg.u.span.len = arr.len;
     arg.u.span.separator = sep;
@@ -3838,7 +3838,7 @@ FmtArg FmtSpan(T (&arr)[N], const char *sep = ", ") { return FmtSpan(MakeSpan(ar
 
 static inline FmtArg FmtHex(Span<const uint8_t> buf, FmtType type = FmtType::BigHex)
 {
-    RG_ASSERT(type == FmtType::BigHex || type == FmtType::SmallHex);
+    K_ASSERT(type == FmtType::BigHex || type == FmtType::SmallHex);
     return FmtSpan(buf, type, "").Pad0(-2);
 }
 
@@ -3987,7 +3987,7 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
     LogFmt(level, ctx, fmt, fmt_args);
 }
 
-#if defined(RG_DEBUG) && __cplusplus >= 202002L && __has_include(<source_location>)
+#if defined(K_DEBUG) && __cplusplus >= 202002L && __has_include(<source_location>)
     struct LogContext {
         const char *fmt;
         char str[56] = {};
@@ -4043,7 +4043,7 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
     template <typename... Args>
     static inline void LogError(LogContext ctx, Args... args) { Log(LogLevel::Error, ctx.str, ctx.fmt, args...); }
 #else
-    #if defined(RG_DEBUG)
+    #if defined(K_DEBUG)
         template <typename... Args>
         static inline void LogDebug(Args... args) { Log(LogLevel::Debug, "Debug: ", args...); }
     #else
@@ -4088,7 +4088,7 @@ struct ProgressInfo {
 typedef void ProgressFunc(Span<const ProgressInfo> states);
 
 class ProgressHandle {
-    char text[RG_PROGRESS_TEXT_SIZE] = {};
+    char text[K_PROGRESS_TEXT_SIZE] = {};
 
     std::atomic<ProgressNode *> node = nullptr;
 
@@ -4108,7 +4108,7 @@ public:
     template<typename... Args>
     void SetFmt(int64_t value, int64_t min, int64_t max, const char *fmt, Args... args)
     {
-        char buf[RG_PROGRESS_TEXT_SIZE];
+        char buf[K_PROGRESS_TEXT_SIZE];
         Fmt(buf, fmt, args...);
 
         Set(value, min, max, (const char *)buf);
@@ -4126,7 +4126,7 @@ public:
 
 private:
     ProgressNode *AcquireNode();
-    void CopyText(Span<const char> text, char out[RG_PROGRESS_TEXT_SIZE]);
+    void CopyText(Span<const char> text, char out[K_PROGRESS_TEXT_SIZE]);
 };
 
 void SetProgressHandler(const std::function<ProgressFunc> &func);
@@ -4139,15 +4139,15 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars);
 // ------------------------------------------------------------------------
 
 #if defined(_WIN32)
-    #define RG_PATH_SEPARATORS "\\/"
-    #define RG_PATH_DELIMITER ';'
-    #define RG_EXECUTABLE_EXTENSION ".exe"
-    #define RG_SHARED_LIBRARY_EXTENSION ".dll"
+    #define K_PATH_SEPARATORS "\\/"
+    #define K_PATH_DELIMITER ';'
+    #define K_EXECUTABLE_EXTENSION ".exe"
+    #define K_SHARED_LIBRARY_EXTENSION ".dll"
 #else
-    #define RG_PATH_SEPARATORS "/"
-    #define RG_PATH_DELIMITER ':'
-    #define RG_EXECUTABLE_EXTENSION ""
-    #define RG_SHARED_LIBRARY_EXTENSION ".so"
+    #define K_PATH_SEPARATORS "/"
+    #define K_PATH_DELIMITER ':'
+    #define K_EXECUTABLE_EXTENSION ""
+    #define K_SHARED_LIBRARY_EXTENSION ".so"
 #endif
 
 #if defined(_WIN32)
@@ -4499,7 +4499,7 @@ bool DropRootIdentity();
 bool NotifySystemd();
 #endif
 
-#define RG_RESTART_EINTR(CallCode, ErrorCond) \
+#define K_RESTART_EINTR(CallCode, ErrorCond) \
     ([&]() { \
         decltype(CallCode) ret; \
         while ((ret = (CallCode)) ErrorCond && errno == EINTR); \
@@ -4524,25 +4524,25 @@ public:
     virtual void Run() = 0;
 };
 
-#define RG_INIT_(ClassName, Name) \
+#define K_INIT_(ClassName, Name) \
     class ClassName: public InitHelper { \
     public: \
         ClassName(): InitHelper(Name) {} \
         void Run() override; \
     }; \
-    static ClassName RG_UNIQUE_NAME(init); \
+    static ClassName K_UNIQUE_NAME(init); \
     void ClassName::Run()
-#define RG_INIT(Name) RG_INIT_(RG_CONCAT(RG_UNIQUE_NAME(InitHelper), Name), RG_STRINGIFY(Name))
+#define K_INIT(Name) K_INIT_(K_CONCAT(K_UNIQUE_NAME(InitHelper), Name), K_STRINGIFY(Name))
 
-#define RG_EXIT_(ClassName, Name) \
+#define K_EXIT_(ClassName, Name) \
     class ClassName: public ExitHelper { \
     public: \
         ClassName(): ExitHelper(Name) {} \
         void Run() override; \
     }; \
-    static ClassName RG_UNIQUE_NAME(exit); \
+    static ClassName K_UNIQUE_NAME(exit); \
     void ClassName::Run()
-#define RG_EXIT(Name) RG_EXIT_(RG_CONCAT(RG_UNIQUE_NAME(ExitHelper), Name), RG_STRINGIFY(Name))
+#define K_EXIT(Name) K_EXIT_(K_CONCAT(K_UNIQUE_NAME(ExitHelper), Name), K_STRINGIFY(Name))
 
 void InitApp();
 void ExitApp();
@@ -4551,10 +4551,10 @@ int Main(int argc, char **argv);
 
 static inline int RunApp(int argc, char **argv)
 {
-    RG_CRITICAL(argc >= 1, "First argument is missing");
+    K_CRITICAL(argc >= 1, "First argument is missing");
 
     InitApp();
-    RG_DEFER { ExitApp(); };
+    K_DEFER { ExitApp(); };
 
     return Main(argc, argv);
 }
@@ -4591,10 +4591,10 @@ enum class ParseFlag {
     Validate = 1 << 1,
     End = 1 << 2
 };
-#define RG_DEFAULT_PARSE_FLAGS ((int)ParseFlag::Log | (int)ParseFlag::Validate | (int)ParseFlag::End)
+#define K_DEFAULT_PARSE_FLAGS ((int)ParseFlag::Log | (int)ParseFlag::Validate | (int)ParseFlag::End)
 
 template <typename T>
-bool ParseInt(Span<const char> str, T *out_value, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+bool ParseInt(Span<const char> str, T *out_value, unsigned int flags = K_DEFAULT_PARSE_FLAGS,
               Span<const char> *out_remaining = nullptr)
 {
     if (!str.len) [[unlikely]] {
@@ -4653,20 +4653,20 @@ overflow:
     return false;
 }
 
-bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags = K_DEFAULT_PARSE_FLAGS,
                Span<const char> *out_remaining = nullptr);
 
-bool ParseSize(Span<const char> str, int64_t *out_size, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+bool ParseSize(Span<const char> str, int64_t *out_size, unsigned int flags = K_DEFAULT_PARSE_FLAGS,
                Span<const char> *out_remaining = nullptr);
-#if RG_SIZE_MAX < INT64_MAX
+#if K_SIZE_MAX < INT64_MAX
 static inline bool ParseSize(Span<const char> str, Size *out_size,
-                             unsigned int flags = RG_DEFAULT_PARSE_FLAGS, Span<const char> *out_remaining = nullptr)
+                             unsigned int flags = K_DEFAULT_PARSE_FLAGS, Span<const char> *out_remaining = nullptr)
 {
     int64_t size = 0;
     if (!ParseSize(str, &size, flags, out_remaining))
         return false;
 
-    if (size > RG_SIZE_MAX) [[unlikely]] {
+    if (size > K_SIZE_MAX) [[unlikely]] {
         if (flags & (int)ParseFlag::Log) {
             LogError("Size value is too high");
         }
@@ -4678,13 +4678,13 @@ static inline bool ParseSize(Span<const char> str, Size *out_size,
 }
 #endif
 
-bool ParseDate(Span<const char> date_str, LocalDate *out_date, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+bool ParseDate(Span<const char> date_str, LocalDate *out_date, unsigned int flags = K_DEFAULT_PARSE_FLAGS,
                Span<const char> *out_remaining = nullptr);
 
-bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int flags = K_DEFAULT_PARSE_FLAGS,
                    Span<const char> *out_remaining = nullptr);
 static inline bool ParseDuration(Span<const char> str, int *out_duration,
-                                 unsigned int flags = RG_DEFAULT_PARSE_FLAGS, Span<const char> *out_remaining = nullptr)
+                                 unsigned int flags = K_DEFAULT_PARSE_FLAGS, Span<const char> *out_remaining = nullptr)
 {
     int64_t duration = 0;
     if (!ParseDuration(str, &duration, flags, out_remaining))
@@ -4702,7 +4702,7 @@ static inline bool ParseDuration(Span<const char> str, int *out_duration,
 }
 
 bool ParseVersion(Span<const char> str, int parts, int multiplier, int64_t *out_duration,
-                  unsigned int flags = RG_DEFAULT_PARSE_FLAGS, Span<const char> *out_remaining = nullptr);
+                  unsigned int flags = K_DEFAULT_PARSE_FLAGS, Span<const char> *out_remaining = nullptr);
 
 // ------------------------------------------------------------------------
 // Random
@@ -4743,7 +4743,7 @@ public:
     T operator()()
     {
         T value;
-        rng.Fill(&value, RG_SIZE(value));
+        rng.Fill(&value, K_SIZE(value));
         return value;
     }
 };
@@ -4801,7 +4801,7 @@ void CloseSocket(int fd);
 // ------------------------------------------------------------------------
 
 class Async {
-    RG_DELETE_COPY(Async)
+    K_DELETE_COPY(Async)
 
 #if !defined(__wasi__)
     std::atomic_bool success { true };
@@ -4851,7 +4851,7 @@ enum class StreamReaderFlag {
 };
 
 class StreamReader {
-    RG_DELETE_COPY(StreamReader)
+    K_DELETE_COPY(StreamReader)
 
     enum class SourceType {
         Memory,
@@ -5010,16 +5010,16 @@ public:
     StreamDecompressorHelper(CompressionType type, CreateDecompressorFunc *func);
 };
 
-#define RG_REGISTER_DECOMPRESSOR(Type, Cls) \
-    static StreamDecoder *RG_UNIQUE_NAME(CreateDecompressor)(StreamReader *reader, CompressionType type) \
+#define K_REGISTER_DECOMPRESSOR(Type, Cls) \
+    static StreamDecoder *K_UNIQUE_NAME(CreateDecompressor)(StreamReader *reader, CompressionType type) \
     { \
         StreamDecoder *decompressor = new Cls(reader, type); \
         return decompressor; \
     } \
-    static StreamDecompressorHelper RG_UNIQUE_NAME(CreateDecompressorHelper)((Type), RG_UNIQUE_NAME(CreateDecompressor))
+    static StreamDecompressorHelper K_UNIQUE_NAME(CreateDecompressorHelper)((Type), K_UNIQUE_NAME(CreateDecompressor))
 
 class LineReader {
-    RG_DELETE_COPY(LineReader)
+    K_DELETE_COPY(LineReader)
 
     HeapArray<char> buf;
     Span<char> view = {};
@@ -5053,7 +5053,7 @@ enum class StreamWriterFlag {
 };
 
 class StreamWriter {
-    RG_DELETE_COPY(StreamWriter)
+    K_DELETE_COPY(StreamWriter)
 
     enum class DestinationType {
         Memory,
@@ -5222,13 +5222,13 @@ public:
     StreamCompressorHelper(CompressionType type, CreateCompressorFunc *func);
 };
 
-#define RG_REGISTER_COMPRESSOR(Type, Cls) \
-    static StreamEncoder *RG_UNIQUE_NAME(CreateCompressor)(StreamWriter *writer, CompressionType type, CompressionSpeed speed) \
+#define K_REGISTER_COMPRESSOR(Type, Cls) \
+    static StreamEncoder *K_UNIQUE_NAME(CreateCompressor)(StreamWriter *writer, CompressionType type, CompressionSpeed speed) \
     { \
         StreamEncoder *compressor = new Cls(writer, type, speed); \
         return compressor; \
     } \
-    static StreamCompressorHelper RG_UNIQUE_NAME(CreateCompressorHelper)((Type), RG_UNIQUE_NAME(CreateCompressor))
+    static StreamCompressorHelper K_UNIQUE_NAME(CreateCompressorHelper)((Type), K_UNIQUE_NAME(CreateCompressor))
 
 bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer, Span<uint8_t> buf,
                   FunctionRef<void(int64_t, int64_t)> progress = [](int64_t, int64_t) {});
@@ -5261,7 +5261,7 @@ struct IniProperty {
 };
 
 class IniParser {
-    RG_DELETE_COPY(IniParser)
+    K_DELETE_COPY(IniParser)
 
     HeapArray<char> current_section;
 
@@ -5301,7 +5301,7 @@ struct AssetInfo {
     CompressionType compression_type;
     Span<const uint8_t> data;
 
-    RG_HASHTABLE_HANDLER(AssetInfo, name);
+    K_HASHTABLE_HANDLER(AssetInfo, name);
 };
 
 #if defined(FELIX_HOT_ASSETS)
@@ -5367,7 +5367,7 @@ struct TranslationTable {
     const char *language;
     Span<Pair> messages;
 
-    RG_HASHTABLE_HANDLER(TranslationTable, language);
+    K_HASHTABLE_HANDLER(TranslationTable, language);
 };
 
 extern "C" const Span<const TranslationTable> TranslationTables;
@@ -5399,7 +5399,7 @@ enum class OptionType {
 };
 
 class OptionParser {
-    RG_DELETE_COPY(OptionParser)
+    K_DELETE_COPY(OptionParser)
 
     Span<const char *> args;
     OptionMode mode;
@@ -5663,7 +5663,7 @@ static inline int CountUtf8Bytes(char c)
 
 static constexpr inline Size DecodeUtf8(const char *str, int32_t *out_c)
 {
-    RG_ASSERT(str[0]);
+    K_ASSERT(str[0]);
 
 #define BYTE(Idx) ((uint8_t)str[Idx])
 
@@ -5700,7 +5700,7 @@ static constexpr inline Size DecodeUtf8(const char *str, int32_t *out_c)
 
 static constexpr inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
 {
-    RG_ASSERT(offset < str.len);
+    K_ASSERT(offset < str.len);
 
     str = str.Take(offset, str.len - offset);
 

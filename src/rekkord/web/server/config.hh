@@ -19,7 +19,7 @@
 #include "src/core/http/http.hh"
 #include "src/core/request/smtp.hh"
 
-namespace RG {
+namespace K {
 
 struct Config {
     const char *title = nullptr;

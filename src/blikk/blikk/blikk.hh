@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "../libblikk/libblikk.hh"
 
-namespace RG {
+namespace K {
 
 struct Config {
     bool sandbox = false;

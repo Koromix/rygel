@@ -18,12 +18,12 @@
 #include "src/core/base/base.hh"
 #include "common.hh"
 
-namespace RG {
+namespace K {
 
 union mco_GhmRootCode {
     int32_t value;
     struct {
-#if defined(RG_BIG_ENDIAN)
+#if defined(K_BIG_ENDIAN)
         int8_t cmd;
         char type;
         int8_t seq;
@@ -37,7 +37,7 @@ union mco_GhmRootCode {
     } parts;
 
     mco_GhmRootCode() = default;
-#if defined(RG_BIG_ENDIAN)
+#if defined(K_BIG_ENDIAN)
     constexpr mco_GhmRootCode(int8_t cmd, char type, int8_t seq)
         : parts { cmd, type, seq, 0 } {}
 #else
@@ -45,7 +45,7 @@ union mco_GhmRootCode {
         : parts { 0, seq, type, cmd } {}
 #endif
 
-    static mco_GhmRootCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+    static mco_GhmRootCode Parse(Span<const char> str, unsigned int flags = K_DEFAULT_PARSE_FLAGS,
                                  Span<const char> *out_remaining = nullptr)
     {
         mco_GhmRootCode code = {};
@@ -118,7 +118,7 @@ union mco_GhmRootCode {
 union mco_GhmCode {
     int32_t value;
     struct {
-#if defined(RG_BIG_ENDIAN)
+#if defined(K_BIG_ENDIAN)
         int8_t cmd;
         char type;
         int8_t seq;
@@ -132,7 +132,7 @@ union mco_GhmCode {
     } parts;
 
     mco_GhmCode() = default;
-#if defined(RG_BIG_ENDIAN)
+#if defined(K_BIG_ENDIAN)
     constexpr mco_GhmCode(int8_t cmd, char type, int8_t seq, char mode)
         : parts { cmd, type, seq, mode } {}
 #else
@@ -140,7 +140,7 @@ union mco_GhmCode {
         : parts { mode, seq, type, cmd } {}
 #endif
 
-    static mco_GhmCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+    static mco_GhmCode Parse(Span<const char> str, unsigned int flags = K_DEFAULT_PARSE_FLAGS,
                              Span<const char> *out_remaining = nullptr)
     {
         mco_GhmCode code = {};
@@ -240,7 +240,7 @@ struct mco_GhsCode {
     mco_GhsCode() = default;
     explicit mco_GhsCode(int16_t number) : number(number) {}
 
-    static mco_GhsCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+    static mco_GhsCode Parse(Span<const char> str, unsigned int flags = K_DEFAULT_PARSE_FLAGS,
                              Span<const char> *out_remaining = nullptr)
     {
         mco_GhsCode code = {};
@@ -316,7 +316,7 @@ static const char *const mco_SupplementTypeNames[] = {
 
 template <typename T>
 union mco_SupplementCounters {
-    T values[RG_LEN(mco_SupplementTypeNames)];
+    T values[K_LEN(mco_SupplementTypeNames)];
     struct {
         T rea;
         T reasi;
@@ -338,7 +338,7 @@ union mco_SupplementCounters {
         T ent3;
         T sdc;
     } st;
-    static_assert(RG_SIZE(mco_SupplementCounters::values) == RG_SIZE(mco_SupplementCounters::st));
+    static_assert(K_SIZE(mco_SupplementCounters::values) == K_SIZE(mco_SupplementCounters::st));
 
     template <typename U>
     mco_SupplementCounters &operator+=(const mco_SupplementCounters<U> &other)
@@ -376,7 +376,7 @@ union mco_SupplementCounters {
     template <typename U>
     bool operator==(const mco_SupplementCounters<U> &other) const
     {
-        return !memcmp(this, &other, RG_SIZE(*this));
+        return !memcmp(this, &other, K_SIZE(*this));
     }
     template <typename U>
     bool operator !=(const mco_SupplementCounters<U> &other) const { return !(*this == other); }

@@ -25,7 +25,7 @@
 #include "window.hh"
 #include "vendor/glfw/include/GLFW/glfw3.h"
 
-namespace RG {
+namespace K {
 
 static std::mutex init_mutex;
 static Size windows_count = 0;

@@ -133,7 +133,7 @@
 #include <random>
 #include <thread>
 
-namespace RG {
+namespace K {
 
 // ------------------------------------------------------------------------
 // Utility
@@ -141,7 +141,7 @@ namespace RG {
 
 #if !defined(FELIX)
     #if defined(FELIX_TARGET)
-        const char *FelixTarget = RG_STRINGIFY(FELIX_TARGET);
+        const char *FelixTarget = K_STRINGIFY(FELIX_TARGET);
     #else
         const char *FelixTarget = "????";
     #endif
@@ -158,8 +158,8 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond)
 
 void *MemMem(const void *src, Size src_len, const void *needle, Size needle_len)
 {
-    RG_ASSERT(src_len >= 0);
-    RG_ASSERT(needle_len > 0);
+    K_ASSERT(src_len >= 0);
+    K_ASSERT(needle_len > 0);
 
     src_len -= needle_len - 1;
 
@@ -195,7 +195,7 @@ protected:
     void *Allocate(Size size, unsigned int flags) override
     {
         void *ptr = malloc((size_t)size);
-        RG_CRITICAL(ptr, "Failed to allocate %1 of memory", FmtMemSize(size));
+        K_CRITICAL(ptr, "Failed to allocate %1 of memory", FmtMemSize(size));
 
         if (flags & (int)AllocFlag::Zero) {
             MemSet(ptr, 0, size);
@@ -211,7 +211,7 @@ protected:
             ptr = nullptr;
         } else {
             void *new_ptr = realloc(ptr, (size_t)new_size);
-            RG_CRITICAL(new_ptr || !new_size, "Failed to resize %1 memory block to %2",
+            K_CRITICAL(new_ptr || !new_size, "Failed to resize %1 memory block to %2",
                                               FmtMemSize(old_size), FmtMemSize(new_size));
 
             if ((flags & (int)AllocFlag::Zero) && new_size > old_size) {
@@ -232,14 +232,14 @@ protected:
 
 class NullAllocator: public Allocator {
 protected:
-    void *Allocate(Size, unsigned int) override { RG_UNREACHABLE(); }
-    void *Resize(void *, Size, Size, unsigned int) override { RG_UNREACHABLE(); }
+    void *Allocate(Size, unsigned int) override { K_UNREACHABLE(); }
+    void *Resize(void *, Size, Size, unsigned int) override { K_UNREACHABLE(); }
     void Release(const void *, Size) override {}
 };
 
 Allocator *GetDefaultAllocator()
 {
-    static Allocator *default_allocator = new RG_DEFAULT_ALLOCATOR;
+    static Allocator *default_allocator = new K_DEFAULT_ALLOCATOR;
     return default_allocator;
 }
 
@@ -276,7 +276,7 @@ void LinkedAllocator::ReleaseAll()
 
 void LinkedAllocator::ReleaseAllExcept(void *ptr)
 {
-    RG_ASSERT(ptr);
+    K_ASSERT(ptr);
 
     Bucket *keep = PointerToBucket(ptr);
     Bucket *bucket = keep->next;
@@ -295,7 +295,7 @@ void LinkedAllocator::ReleaseAllExcept(void *ptr)
 
 void *LinkedAllocator::Allocate(Size size, unsigned int flags)
 {
-    Bucket *bucket = (Bucket *)AllocateRaw(allocator, RG_SIZE(Bucket) + size, flags);
+    Bucket *bucket = (Bucket *)AllocateRaw(allocator, K_SIZE(Bucket) + size, flags);
 
     bucket->prev = bucket;
     bucket->next = bucket;
@@ -321,8 +321,8 @@ void *LinkedAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned 
         Bucket *bucket = PointerToBucket(ptr);
         bool single = (bucket->next == bucket);
 
-        bucket = (Bucket *)ResizeRaw(allocator, bucket, RG_SIZE(Bucket) + old_size,
-                                                        RG_SIZE(Bucket) + new_size, flags);
+        bucket = (Bucket *)ResizeRaw(allocator, bucket, K_SIZE(Bucket) + old_size,
+                                                        K_SIZE(Bucket) + new_size, flags);
 
         list = bucket;
 
@@ -353,7 +353,7 @@ void LinkedAllocator::Release(const void *ptr, Size size)
     bucket->prev->next = bucket->next;
     bucket->next->prev = bucket->prev;
 
-    ReleaseRaw(allocator, bucket, RG_SIZE(Bucket) + size);
+    ReleaseRaw(allocator, bucket, K_SIZE(Bucket) + size);
 }
 
 void LinkedAllocator::GiveTo(LinkedAllocator *alloc)
@@ -366,7 +366,7 @@ void LinkedAllocator::GiveTo(LinkedAllocator *alloc)
         list->next = other;
         other->prev = list;
     } else if (list) {
-        RG_ASSERT(!alloc->list);
+        K_ASSERT(!alloc->list);
         alloc->list = list;
     }
 
@@ -415,7 +415,7 @@ void BlockAllocator::ReleaseAll()
 
 void *BlockAllocator::Allocate(Size size, unsigned int flags)
 {
-    RG_ASSERT(size >= 0);
+    K_ASSERT(size >= 0);
 
     // Keep alignement requirements
     Size aligned_size = AlignLen(size, 8);
@@ -425,7 +425,7 @@ void *BlockAllocator::Allocate(Size size, unsigned int flags)
         return ptr;
     } else {
         if (!current_bucket || (current_bucket->used + aligned_size) > block_size) {
-            current_bucket = (Bucket *)AllocateRaw(&allocator, RG_SIZE(Bucket) + block_size,
+            current_bucket = (Bucket *)AllocateRaw(&allocator, K_SIZE(Bucket) + block_size,
                                                    flags & ~(int)AllocFlag::Zero);
             current_bucket->used = 0;
         }
@@ -444,8 +444,8 @@ void *BlockAllocator::Allocate(Size size, unsigned int flags)
 
 void *BlockAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned int flags)
 {
-    RG_ASSERT(old_size >= 0);
-    RG_ASSERT(new_size >= 0);
+    K_ASSERT(old_size >= 0);
+    K_ASSERT(new_size >= 0);
 
     if (!new_size) {
         Release(ptr, old_size);
@@ -492,7 +492,7 @@ void *BlockAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned i
 
 void BlockAllocator::Release(const void *ptr, Size size)
 {
-    RG_ASSERT(size >= 0);
+    K_ASSERT(size >= 0);
 
     if (ptr) {
         Size aligned_size = AlignLen(size, 8);
@@ -501,7 +501,7 @@ void BlockAllocator::Release(const void *ptr, Size size)
             current_bucket->used -= aligned_size;
 
             if (!current_bucket->used) {
-                ReleaseRaw(&allocator, current_bucket, RG_SIZE(Bucket) + block_size);
+                ReleaseRaw(&allocator, current_bucket, K_SIZE(Bucket) + block_size);
                 current_bucket = nullptr;
             }
 
@@ -618,7 +618,7 @@ void ZeroSafe(void *ptr, Size len)
 
 LocalDate LocalDate::FromJulianDays(int days)
 {
-    RG_ASSERT(days >= 0);
+    K_ASSERT(days >= 0);
 
     // Algorithm from Richards, copied from Wikipedia:
     // https://en.wikipedia.org/w/index.php?title=Julian_day&oldid=792497863
@@ -639,7 +639,7 @@ LocalDate LocalDate::FromJulianDays(int days)
 
 int LocalDate::ToJulianDays() const
 {
-    RG_ASSERT(IsValid());
+    K_ASSERT(IsValid());
 
     // Straight from the Web:
     // http://www.cs.utsa.edu/~cs1063/projects/Spring2011/Project1/jdn-explanation.html
@@ -659,7 +659,7 @@ int LocalDate::ToJulianDays() const
 
 int LocalDate::GetWeekDay() const
 {
-    RG_ASSERT(IsValid());
+    K_ASSERT(IsValid());
 
     // Zeller's congruence:
     // https://en.wikipedia.org/wiki/Zeller%27s_congruence
@@ -684,7 +684,7 @@ int LocalDate::GetWeekDay() const
 
 LocalDate &LocalDate::operator++()
 {
-    RG_ASSERT(IsValid());
+    K_ASSERT(IsValid());
 
     if (st.day < DaysInMonth(st.year, st.month)) {
         st.day++;
@@ -702,7 +702,7 @@ LocalDate &LocalDate::operator++()
 
 LocalDate &LocalDate::operator--()
 {
-    RG_ASSERT(IsValid());
+    K_ASSERT(IsValid());
 
     if (st.day > 1) {
         st.day--;
@@ -754,13 +754,13 @@ int64_t GetUnixTime()
     return (int64_t)emscripten_get_now();
 #elif defined(__linux__)
     struct timespec ts;
-    RG_CRITICAL(clock_gettime(CLOCK_REALTIME_COARSE, &ts) == 0, "clock_gettime(CLOCK_REALTIME_COARSE) failed: %1", strerror(errno));
+    K_CRITICAL(clock_gettime(CLOCK_REALTIME_COARSE, &ts) == 0, "clock_gettime(CLOCK_REALTIME_COARSE) failed: %1", strerror(errno));
 
     int64_t time = (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
     return time;
 #else
     struct timespec ts;
-    RG_CRITICAL(clock_gettime(CLOCK_REALTIME, &ts) == 0, "clock_gettime(CLOCK_REALTIME) failed: %1", strerror(errno));
+    K_CRITICAL(clock_gettime(CLOCK_REALTIME, &ts) == 0, "clock_gettime(CLOCK_REALTIME) failed: %1", strerror(errno));
 
     int64_t time = (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
     return time;
@@ -775,12 +775,12 @@ int64_t GetMonotonicTime()
     return (int64_t)emscripten_get_now();
 #elif defined(CLOCK_MONOTONIC_COARSE)
     struct timespec ts;
-    RG_CRITICAL(clock_gettime(CLOCK_MONOTONIC_COARSE, &ts) == 0, "clock_gettime(CLOCK_MONOTONIC_COARSE) failed: %1", strerror(errno));
+    K_CRITICAL(clock_gettime(CLOCK_MONOTONIC_COARSE, &ts) == 0, "clock_gettime(CLOCK_MONOTONIC_COARSE) failed: %1", strerror(errno));
 
     return (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
 #else
     struct timespec ts;
-    RG_CRITICAL(clock_gettime(CLOCK_MONOTONIC, &ts) == 0, "clock_gettime(CLOCK_MONOTONIC) failed: %1", strerror(errno));
+    K_CRITICAL(clock_gettime(CLOCK_MONOTONIC, &ts) == 0, "clock_gettime(CLOCK_MONOTONIC) failed: %1", strerror(errno));
 
     return (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
 #endif
@@ -856,7 +856,7 @@ TimeSpec DecomposeTimeLocal(int64_t time)
 
 int64_t ComposeTimeUTC(const TimeSpec &spec)
 {
-    RG_ASSERT(!spec.offset);
+    K_ASSERT(!spec.offset);
 
     struct tm ti = {};
 
@@ -885,8 +885,8 @@ int64_t ComposeTimeUTC(const TimeSpec &spec)
 
 bool CopyString(const char *str, Span<char> buf)
 {
-#if defined(RG_DEBUG)
-    RG_ASSERT(buf.len > 0);
+#if defined(K_DEBUG)
+    K_ASSERT(buf.len > 0);
 #else
     if (!buf.len) [[unlikely]]
         return false;
@@ -907,8 +907,8 @@ bool CopyString(const char *str, Span<char> buf)
 
 bool CopyString(Span<const char> str, Span<char> buf)
 {
-#if defined(RG_DEBUG)
-    RG_ASSERT(buf.len > 0);
+#if defined(K_DEBUG)
+    K_ASSERT(buf.len > 0);
 #else
     if (!buf.len) [[unlikely]]
         return false;
@@ -924,7 +924,7 @@ bool CopyString(Span<const char> str, Span<char> buf)
 
 Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     char *new_str = (char *)AllocateRaw(alloc, str.len + 1);
     MemCpy(new_str, str.ptr, str.len);
@@ -1018,7 +1018,7 @@ static Span<char> FormatUnsignedToSmallHex(uint64_t value, char out_buf[32])
 #if defined(JKJ_HEADER_DRAGONBOX)
 static Size FakeFloatPrecision(Span<char> buf, int K, int min_prec, int max_prec, int *out_K)
 {
-    RG_ASSERT(min_prec >= 0);
+    K_ASSERT(min_prec >= 0);
 
     if (-K < min_prec) {
         int delta = min_prec + K;
@@ -1381,7 +1381,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             } break;
 
             case FmtType::Date: {
-                RG_ASSERT(!arg.u.date.value || arg.u.date.IsValid());
+                K_ASSERT(!arg.u.date.value || arg.u.date.IsValid());
 
                 int year = arg.u.date.st.year;
                 if (year < 0) {
@@ -1469,7 +1469,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 static const char *const DefaultChars = "abcdefghijklmnopqrstuvwxyz0123456789";
                 Span<const char> chars = arg.u.random.chars ? arg.u.random.chars : DefaultChars;
 
-                RG_ASSERT(arg.u.random.len <= RG_SIZE(out_buf.data));
+                K_ASSERT(arg.u.random.len <= K_SIZE(out_buf.data));
 
                 for (Size j = 0; j < arg.u.random.len; j++) {
                     int rnd = GetRandomInt(0, (int)chars.len);
@@ -1520,9 +1520,9 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     switch (arg.u.span.type) {
                         case FmtType::Str1: { arg2.u.str1 = *(const char **)ptr; } break;
                         case FmtType::Str2: { arg2.u.str2 = *(const Span<const char> *)ptr; } break;
-                        case FmtType::Buffer: { RG_UNREACHABLE(); } break;
+                        case FmtType::Buffer: { K_UNREACHABLE(); } break;
                         case FmtType::Char: { arg2.u.ch = *(const char *)ptr; } break;
-                        case FmtType::Custom: { RG_UNREACHABLE(); } break;
+                        case FmtType::Custom: { K_UNREACHABLE(); } break;
                         case FmtType::Bool: { arg2.u.b = *(const bool *)ptr; } break;
                         case FmtType::Integer:
                         case FmtType::Unsigned:
@@ -1535,7 +1535,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                                 case 4: { arg2.u.u = *(const uint32_t *)ptr; } break;
                                 case 2: { arg2.u.u = *(const uint16_t *)ptr; } break;
                                 case 1: { arg2.u.u = *(const uint8_t *)ptr; } break;
-                                default: { RG_UNREACHABLE(); } break;
+                                default: { K_UNREACHABLE(); } break;
                             }
                         } break;
                         case FmtType::Float: {
@@ -1553,10 +1553,10 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         case FmtType::Date: { arg2.u.date = *(const LocalDate *)ptr; } break;
                         case FmtType::TimeISO:
                         case FmtType::TimeNice: { arg2.u.time = *(decltype(FmtArg::u.time) *)ptr; } break;
-                        case FmtType::Random: { RG_UNREACHABLE(); } break;
-                        case FmtType::FlagNames: { RG_UNREACHABLE(); } break;
-                        case FmtType::FlagOptions: { RG_UNREACHABLE(); } break;
-                        case FmtType::Span: { RG_UNREACHABLE(); } break;
+                        case FmtType::Random: { K_UNREACHABLE(); } break;
+                        case FmtType::FlagNames: { K_UNREACHABLE(); } break;
+                        case FmtType::FlagOptions: { K_UNREACHABLE(); } break;
+                        case FmtType::Span: { K_UNREACHABLE(); } break;
                     }
                     ptr += arg.u.span.type_len;
 
@@ -1670,7 +1670,7 @@ static inline Size ProcessAnsiSpecifier(const char *spec, bool vt100, AppendFunc
 
 end:
     if (!valid) {
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
         LogDebug("Format string contains invalid ANSI specifier");
 #endif
         return idx;
@@ -1687,7 +1687,7 @@ end:
 template <typename AppendFunc>
 static inline void DoFormat(const char *fmt, Span<const FmtArg> args, bool vt100, AppendFunc append)
 {
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
     bool invalid_marker = false;
     uint32_t unused_arguments = ((uint32_t)1 << args.len) - 1;
 #endif
@@ -1720,7 +1720,7 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args, bool vt100
             idx--;
             if (idx < args.len) {
                 ProcessArg<AppendFunc>(args[idx], append);
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
                 unused_arguments &= ~((uint32_t)1 << idx);
             } else {
                 invalid_marker = true;
@@ -1731,25 +1731,25 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args, bool vt100
             append('%');
             fmt_ptr = marker_ptr + 2;
         } else if (marker_ptr[1] == '/') {
-            append(*RG_PATH_SEPARATORS);
+            append(*K_PATH_SEPARATORS);
             fmt_ptr = marker_ptr + 2;
         } else if (marker_ptr[1] == '!') {
             fmt_ptr = marker_ptr + 2 + ProcessAnsiSpecifier(marker_ptr + 1, vt100, append);
         } else if (marker_ptr[1]) {
             append(marker_ptr[0]);
             fmt_ptr = marker_ptr + 1;
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
             invalid_marker = true;
 #endif
         } else {
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
             invalid_marker = true;
 #endif
             break;
         }
     }
 
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
     if (invalid_marker && unused_arguments) {
         PrintLn(StdErr, "\nLog format string '%1' has invalid markers and unused arguments", fmt);
     } else if (unused_arguments) {
@@ -1762,7 +1762,7 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args, bool vt100
 
 Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, Span<char> out_buf)
 {
-    RG_ASSERT(out_buf.len >= 0);
+    K_ASSERT(out_buf.len >= 0);
 
     if (!out_buf.len)
         return {};
@@ -1787,7 +1787,7 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, HeapArra
 {
     Size start_len = out_buf->len;
 
-    out_buf->Grow(RG_FMT_STRING_BASE_CAPACITY);
+    out_buf->Grow(K_FMT_STRING_BASE_CAPACITY);
     DoFormat(fmt, args, vt100, [&](Span<const char> frag) {
         out_buf->Grow(frag.len + 1);
         MemCpy(out_buf->end(), frag.ptr, frag.len);
@@ -1800,7 +1800,7 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, HeapArra
 
 Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, Allocator *alloc)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     HeapArray<char> buf(alloc);
     FmtFmt(fmt, args, vt100, &buf);
@@ -1816,13 +1816,13 @@ void FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, FunctionRef<vo
 
 void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)
 {
-    LocalArray<char, RG_FMT_STRING_PRINT_BUFFER_SIZE> buf;
+    LocalArray<char, K_FMT_STRING_PRINT_BUFFER_SIZE> buf;
     DoFormat(fmt, args, st->IsVt100(), [&](Span<const char> frag) {
-        if (frag.len > RG_LEN(buf.data) - buf.len) {
+        if (frag.len > K_LEN(buf.data) - buf.len) {
             st->Write(buf);
             buf.len = 0;
         }
-        if (frag.len >= RG_LEN(buf.data)) {
+        if (frag.len >= K_LEN(buf.data)) {
             st->Write(frag);
         } else {
             MemCpy(buf.data + buf.len, frag.ptr, frag.len);
@@ -1913,8 +1913,8 @@ void FmtUrlSafe::Format(FunctionRef<void(Span<const char>)> append) const
 
 FmtArg FmtVersion(int64_t version, int parts, int by)
 {
-    RG_ASSERT(version >= 0);
-    RG_ASSERT(parts > 0);
+    K_ASSERT(version >= 0);
+    K_ASSERT(parts > 0);
 
     FmtArg arg = {};
     arg.type = FmtType::Buffer;
@@ -2000,7 +2000,7 @@ bool GetDebugFlag(const char *name)
 
     if (debug) {
         bool ret = false;
-        if (!ParseBool(debug, &ret, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log)) {
+        if (!ParseBool(debug, &ret, K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log)) {
             LogError("Environment variable '%1' is not a boolean", name);
         }
         return ret;
@@ -2033,7 +2033,7 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
     if (skip)
         return;
     skip = true;
-    RG_DEFER { skip = false; };
+    K_DEFER { skip = false; };
 
     if (!init) {
         // Do this first... GetDebugFlag() might log an error or something, in which
@@ -2055,9 +2055,9 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
     {
         Size len = FmtFmt(T(fmt), args, log_vt100, msg_buf).len;
 
-        if (len == RG_SIZE(msg_buf) - 1) {
-            strncpy(msg_buf + RG_SIZE(msg_buf) - 32, "... [truncated]", 32);
-            msg_buf[RG_SIZE(msg_buf) - 1] = 0;
+        if (len == K_SIZE(msg_buf) - 1) {
+            strncpy(msg_buf + K_SIZE(msg_buf) - 32, "... [truncated]", 32);
+            msg_buf[K_SIZE(msg_buf) - 1] = 0;
         }
     }
 
@@ -2086,13 +2086,13 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
 
 void PushLogFilter(const std::function<LogFilterFunc> &func)
 {
-    RG_ASSERT(log_filters_len < RG_LEN(log_filters));
+    K_ASSERT(log_filters_len < K_LEN(log_filters));
     log_filters[log_filters_len++] = new std::function<LogFilterFunc>(func);
 }
 
 void PopLogFilter()
 {
-    RG_ASSERT(log_filters_len > 0);
+    K_ASSERT(log_filters_len > 0);
     delete log_filters[--log_filters_len];
 }
 
@@ -2100,7 +2100,7 @@ void PopLogFilter()
 bool RedirectLogToWindowsEvents(const char *name)
 {
     static HANDLE log = nullptr;
-    RG_ASSERT(!log);
+    K_ASSERT(!log);
 
     log = OpenEventLogA(nullptr, name);
     if (!log) {
@@ -2151,7 +2151,7 @@ bool RedirectLogToWindowsEvents(const char *name)
 #if !defined(__wasi__)
 
 struct ProgressState {
-    char text[RG_PROGRESS_TEXT_SIZE];
+    char text[K_PROGRESS_TEXT_SIZE];
 
     int64_t value;
     int64_t min;
@@ -2172,7 +2172,7 @@ struct ProgressNode {
 static std::function<ProgressFunc> pg_handler = DefaultProgressHandler;
 
 static std::atomic_int pg_count;
-static ProgressNode pg_nodes[RG_PROGRESS_MAX_NODES];
+static ProgressNode pg_nodes[K_PROGRESS_MAX_NODES];
 
 static std::mutex pg_mutex;
 static bool pg_run = false;
@@ -2304,22 +2304,22 @@ ProgressNode *ProgressHandle::AcquireNode()
 
             pg_run = true;
         }
-    } else if (count > RG_PROGRESS_USED_NODES) {
+    } else if (count > K_PROGRESS_USED_NODES) {
         pg_count--;
         return nullptr;
     }
 
-    int base = GetRandomInt(0, RG_LEN(pg_nodes));
+    int base = GetRandomInt(0, K_LEN(pg_nodes));
 
-    for (int i = 0; i < RG_LEN(pg_nodes); i++) {
-        int idx = (base + i) % RG_LEN(pg_nodes);
+    for (int i = 0; i < K_LEN(pg_nodes); i++) {
+        int idx = (base + i) % K_LEN(pg_nodes);
 
         ProgressNode *node = &pg_nodes[idx];
         bool used = node->used.exchange(true);
 
         if (!used) {
-            static_assert(RG_SIZE(text) == RG_SIZE(node->front.text));
-            MemCpy(node->front.text, text, RG_SIZE(text));
+            static_assert(K_SIZE(text) == K_SIZE(node->front.text));
+            MemCpy(node->front.text, text, K_SIZE(text));
 
             ProgressNode *prev = nullptr;
             bool set = this->node.compare_exchange_strong(prev, node);
@@ -2338,16 +2338,16 @@ ProgressNode *ProgressHandle::AcquireNode()
     return nullptr;
 }
 
-void ProgressHandle::CopyText(Span<const char> text, char out[RG_PROGRESS_TEXT_SIZE])
+void ProgressHandle::CopyText(Span<const char> text, char out[K_PROGRESS_TEXT_SIZE])
 {
-    Span<char> buf = MakeSpan(out, RG_PROGRESS_TEXT_SIZE);
+    Span<char> buf = MakeSpan(out, K_PROGRESS_TEXT_SIZE);
     bool complete = CopyString(text, buf);
 
     if (!complete) [[unlikely]] {
-        out[RG_PROGRESS_TEXT_SIZE - 4] = '.';
-        out[RG_PROGRESS_TEXT_SIZE - 3] = '.';
-        out[RG_PROGRESS_TEXT_SIZE - 2] = '.';
-        out[RG_PROGRESS_TEXT_SIZE - 1] = 0;
+        out[K_PROGRESS_TEXT_SIZE - 4] = '.';
+        out[K_PROGRESS_TEXT_SIZE - 3] = '.';
+        out[K_PROGRESS_TEXT_SIZE - 2] = '.';
+        out[K_PROGRESS_TEXT_SIZE - 1] = 0;
     }
 }
 
@@ -2493,16 +2493,16 @@ char *GetWin32ErrorString(uint32_t error_code)
     if (win32_utf8) {
         if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                             nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                            str_buf, RG_SIZE(str_buf), nullptr))
+                            str_buf, K_SIZE(str_buf), nullptr))
             goto fail;
     } else {
         wchar_t buf_w[256];
         if (!FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                             nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                            buf_w, RG_SIZE(buf_w), nullptr))
+                            buf_w, K_SIZE(buf_w), nullptr))
             goto fail;
 
-        if (!WideCharToMultiByte(CP_UTF8, 0, buf_w, -1, str_buf, RG_SIZE(str_buf), nullptr, nullptr))
+        if (!WideCharToMultiByte(CP_UTF8, 0, buf_w, -1, str_buf, K_SIZE(str_buf), nullptr, nullptr))
             goto fail;
     }
 
@@ -2592,7 +2592,7 @@ StatResult StatFile(int fd, const char *filename, unsigned int flags, FileInfo *
                 } break;
             }
         }
-        RG_DEFER { CloseHandle(h); };
+        K_DEFER { CloseHandle(h); };
 
         return StatHandle(h, filename, out_info);
     } else {
@@ -2603,7 +2603,7 @@ StatResult StatFile(int fd, const char *filename, unsigned int flags, FileInfo *
 
 RenameResult RenameFile(const char *src_filename, const char *dest_filename, unsigned int silent, unsigned int flags)
 {
-    RG_ASSERT(!(silent & ((int)RenameResult::Success | (int)RenameResult::OtherError)));
+    K_ASSERT(!(silent & ((int)RenameResult::Success | (int)RenameResult::OtherError)));
 
     DWORD move_flags = (flags & (int)RenameFlag::Overwrite) ? MOVEFILE_REPLACE_EXISTING : 0;
     DWORD err = ERROR_SUCCESS;
@@ -2654,7 +2654,7 @@ bool ResizeFile(int fd, const char *filename, int64_t len)
         LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
         return false;
     }
-    RG_DEFER { SetFilePointerEx(h, prev_pos, nullptr, FILE_BEGIN); };
+    K_DEFER { SetFilePointerEx(h, prev_pos, nullptr, FILE_BEGIN); };
 
     if (!SetFilePointerEx(h, { .QuadPart = len }, nullptr, FILE_BEGIN)) {
         LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
@@ -2725,7 +2725,7 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
                               FunctionRef<bool(const char *, const FileInfo &)> func)
 {
     if (filter) {
-        RG_ASSERT(!strpbrk(filter, RG_PATH_SEPARATORS));
+        K_ASSERT(!strpbrk(filter, K_PATH_SEPARATORS));
     } else {
         filter = "*";
     }
@@ -2733,7 +2733,7 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
     wchar_t find_filter_w[4096];
     {
         char find_filter[4096];
-        if (snprintf(find_filter, RG_SIZE(find_filter), "%s\\%s", dirname, filter) >= RG_SIZE(find_filter)) {
+        if (snprintf(find_filter, K_SIZE(find_filter), "%s\\%s", dirname, filter) >= K_SIZE(find_filter)) {
             LogError("Cannot enumerate directory '%1': Path too long", dirname);
             return EnumResult::OtherError;
         }
@@ -2770,7 +2770,7 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
             default: return EnumResult::OtherError;
         }
     }
-    RG_DEFER { FindClose(handle); };
+    K_DEFER { FindClose(handle); };
 
     Size count = 0;
     do {
@@ -2990,19 +2990,19 @@ StatResult StatFile(int fd, const char *path, unsigned int flags, FileInfo *out_
 static bool SyncDirectory(Span<const char> directory)
 {
     char directory0[4096];
-    if (directory.len >= RG_SIZE(directory0)) {
+    if (directory.len >= K_SIZE(directory0)) {
         LogError("Failed to sync directory '%1': path too long", directory);
         return false;
     }
     MemCpy(directory0, directory.ptr, directory.len);
     directory0[directory.len] = 0;
 
-    int dirfd = RG_RESTART_EINTR(open(directory0, O_RDONLY | O_CLOEXEC), < 0);
+    int dirfd = K_RESTART_EINTR(open(directory0, O_RDONLY | O_CLOEXEC), < 0);
     if (dirfd < 0) {
         LogError("Failed to sync directory '%1': %2", directory, strerror(errno));
         return false;
     }
-    RG_DEFER { CloseDescriptor(dirfd); };
+    K_DEFER { CloseDescriptor(dirfd); };
 
     if (fsync(dirfd) < 0) {
         LogError("Failed to sync directory '%1': %2", directory, strerror(errno));
@@ -3020,7 +3020,7 @@ static inline bool IsErrnoNotSupported(int err)
 
 RenameResult RenameFile(const char *src_filename, const char *dest_filename, unsigned int silent, unsigned int flags)
 {
-    RG_ASSERT(!(silent & ((int)RenameResult::Success | (int)RenameResult::OtherError)));
+    K_ASSERT(!(silent & ((int)RenameResult::Success | (int)RenameResult::OtherError)));
 
     if (flags & (int)RenameFlag::Overwrite) {
         if (rename(src_filename, dest_filename) < 0)
@@ -3261,7 +3261,7 @@ static EnumResult ReadDirectory(DIR *dirp, const char *dirname, const char *filt
 EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func)
 {
-    DIR *dirp = RG_RESTART_EINTR(opendir(dirname), == nullptr);
+    DIR *dirp = K_RESTART_EINTR(opendir(dirname), == nullptr);
     if (!dirp) {
         LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
 
@@ -3271,7 +3271,7 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
             default: return EnumResult::OtherError;
         }
     }
-    RG_DEFER { closedir(dirp); };
+    K_DEFER { closedir(dirp); };
 
     return ReadDirectory(dirp, dirname, filter, max_files, func);
 }
@@ -3279,7 +3279,7 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
 EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, const FileInfo &)> func)
 {
-    DIR *dirp = RG_RESTART_EINTR(opendir(dirname), == nullptr);
+    DIR *dirp = K_RESTART_EINTR(opendir(dirname), == nullptr);
     if (!dirp) {
         LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
 
@@ -3289,7 +3289,7 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
             default: return EnumResult::OtherError;
         }
     }
-    RG_DEFER { closedir(dirp); };
+    K_DEFER { closedir(dirp); };
 
     return ReadDirectory(dirp, dirname, filter, max_files, func);
 }
@@ -3306,7 +3306,7 @@ EnumResult EnumerateDirectory(int fd, const char *dirname, const char *filter, S
         LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
         return EnumResult::OtherError;
     }
-    RG_DEFER { closedir(dirp); };
+    K_DEFER { closedir(dirp); };
 
     return ReadDirectory(dirp, dirname, filter, max_files, func);
 }
@@ -3321,7 +3321,7 @@ EnumResult EnumerateDirectory(int fd, const char *dirname, const char *filter, S
         LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
         return EnumResult::OtherError;
     }
-    RG_DEFER { closedir(dirp); };
+    K_DEFER { closedir(dirp); };
 
     return ReadDirectory(dirp, dirname, filter, max_files, func);
 }
@@ -3333,7 +3333,7 @@ EnumResult EnumerateDirectory(int fd, const char *dirname, const char *filter, S
 bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Size max_files,
                     Allocator *str_alloc, HeapArray<const char *> *out_files)
 {
-    RG_DEFER_NC(out_guard, len = out_files->len) { out_files->RemoveFrom(len); };
+    K_DEFER_NC(out_guard, len = out_files->len) { out_files->RemoveFrom(len); };
 
     EnumResult ret = EnumerateDirectory(dirname, nullptr, max_files,
                                         [&](const char *basename, FileType file_type) {
@@ -3404,7 +3404,7 @@ bool TestFile(const char *filename, FileType type)
             case FileType::Pipe: { LogError("Path '%1' is not a pipe", filename); } break;
             case FileType::Socket: { LogError("Path '%1' is not a socket", filename); } break;
 
-            case FileType::Link: { RG_UNREACHABLE(); } break;
+            case FileType::Link: { K_UNREACHABLE(); } break;
         }
 
         return false;
@@ -3542,7 +3542,7 @@ bool MatchPathSpec(const char *path, const char *spec, bool case_sensitive)
     Span<const char> path2 = path;
 
     do {
-        const char *it = SplitStrReverseAny(path2, RG_PATH_SEPARATORS, &path2).ptr;
+        const char *it = SplitStrReverseAny(path2, K_PATH_SEPARATORS, &path2).ptr;
 
         if (MatchPathName(it, spec, case_sensitive))
             return true;
@@ -3553,10 +3553,10 @@ bool MatchPathSpec(const char *path, const char *spec, bool case_sensitive)
 
 bool FindExecutableInPath(Span<const char> paths, const char *name, Allocator *alloc, const char **out_path)
 {
-    RG_ASSERT(alloc || !out_path);
+    K_ASSERT(alloc || !out_path);
 
     // Fast path
-    if (strpbrk(name, RG_PATH_SEPARATORS)) {
+    if (strpbrk(name, K_PATH_SEPARATORS)) {
         if (!TestFile(name, FileType::File))
             return false;
 
@@ -3567,7 +3567,7 @@ bool FindExecutableInPath(Span<const char> paths, const char *name, Allocator *a
     }
 
     while (paths.len) {
-        Span<const char> path = SplitStr(paths, RG_PATH_DELIMITER, &paths);
+        Span<const char> path = SplitStr(paths, K_PATH_DELIMITER, &paths);
 
         LocalArray<char, 4096> buf;
         buf.len = Fmt(buf.data, "%1%/%2", path, name).len;
@@ -3588,7 +3588,7 @@ bool FindExecutableInPath(Span<const char> paths, const char *name, Allocator *a
             }
         }
 #else
-        if (buf.len < RG_SIZE(buf.data) - 1 && TestFile(buf.data)) {
+        if (buf.len < K_SIZE(buf.data) - 1 && TestFile(buf.data)) {
             if (out_path) {
                 *out_path = DuplicateString(buf.data, alloc).ptr;
             }
@@ -3602,10 +3602,10 @@ bool FindExecutableInPath(Span<const char> paths, const char *name, Allocator *a
 
 bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_path)
 {
-    RG_ASSERT(alloc || !out_path);
+    K_ASSERT(alloc || !out_path);
 
     // Fast path
-    if (strpbrk(name, RG_PATH_SEPARATORS)) {
+    if (strpbrk(name, K_PATH_SEPARATORS)) {
         if (!TestFile(name, FileType::File))
             return false;
 
@@ -3621,13 +3621,13 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
     if (win32_utf8) {
         paths = GetEnv("PATH");
     } else {
-        wchar_t buf_w[RG_SIZE(env_buf.data)];
-        DWORD len = GetEnvironmentVariableW(L"PATH", buf_w, RG_LEN(buf_w));
+        wchar_t buf_w[K_SIZE(env_buf.data)];
+        DWORD len = GetEnvironmentVariableW(L"PATH", buf_w, K_LEN(buf_w));
 
         if (!len && GetLastError() != ERROR_ENVVAR_NOT_FOUND) {
             LogError("Failed to get PATH environment variable: %1", GetWin32ErrorString());
             return false;
-        } else if (len >= RG_LEN(buf_w)) {
+        } else if (len >= K_LEN(buf_w)) {
             LogError("Failed to get PATH environment variable: buffer to small");
             return false;
         }
@@ -3677,19 +3677,19 @@ const char *GetWorkingDirectory()
 
 #if defined(_WIN32)
     if (!win32_utf8) {
-        wchar_t buf_w[RG_SIZE(buf)];
-        DWORD ret = GetCurrentDirectoryW(RG_SIZE(buf_w), buf_w);
-        RG_ASSERT(ret && ret <= RG_SIZE(buf_w));
+        wchar_t buf_w[K_SIZE(buf)];
+        DWORD ret = GetCurrentDirectoryW(K_SIZE(buf_w), buf_w);
+        K_ASSERT(ret && ret <= K_SIZE(buf_w));
 
         Size str_len = ConvertWin32WideToUtf8(buf_w, buf);
-        RG_ASSERT(str_len >= 0);
+        K_ASSERT(str_len >= 0);
 
         return buf;
     }
 #endif
 
-    const char *ptr = getcwd(buf, RG_SIZE(buf));
-    RG_ASSERT(ptr);
+    const char *ptr = getcwd(buf, K_SIZE(buf));
+    K_ASSERT(ptr);
 
     return buf;
 }
@@ -3701,15 +3701,15 @@ const char *GetApplicationExecutable()
 
     if (!executable_path[0]) {
         if (win32_utf8) {
-            Size path_len = (Size)GetModuleFileNameA(nullptr, executable_path, RG_SIZE(executable_path));
-            RG_ASSERT(path_len && path_len < RG_SIZE(executable_path));
+            Size path_len = (Size)GetModuleFileNameA(nullptr, executable_path, K_SIZE(executable_path));
+            K_ASSERT(path_len && path_len < K_SIZE(executable_path));
         } else {
-            wchar_t path_w[RG_SIZE(executable_path)];
-            Size path_len = (Size)GetModuleFileNameW(nullptr, path_w, RG_SIZE(path_w));
-            RG_ASSERT(path_len && path_len < RG_LEN(path_w));
+            wchar_t path_w[K_SIZE(executable_path)];
+            Size path_len = (Size)GetModuleFileNameW(nullptr, path_w, K_SIZE(path_w));
+            K_ASSERT(path_len && path_len < K_LEN(path_w));
 
             Size str_len = ConvertWin32WideToUtf8(path_w, executable_path);
-            RG_ASSERT(str_len >= 0);
+            K_ASSERT(str_len >= 0);
         }
     }
 
@@ -3718,13 +3718,13 @@ const char *GetApplicationExecutable()
     static char executable_path[4096];
 
     if (!executable_path[0]) {
-        uint32_t buffer_size = RG_SIZE(executable_path);
+        uint32_t buffer_size = K_SIZE(executable_path);
         int ret = _NSGetExecutablePath(executable_path, &buffer_size);
-        RG_ASSERT(!ret);
+        K_ASSERT(!ret);
 
         char *path_buf = realpath(executable_path, nullptr);
-        RG_ASSERT(path_buf);
-        RG_ASSERT(strlen(path_buf) < RG_SIZE(executable_path));
+        K_ASSERT(path_buf);
+        K_ASSERT(strlen(path_buf) < K_SIZE(executable_path));
 
         CopyString(path_buf, executable_path);
         free(path_buf);
@@ -3735,8 +3735,8 @@ const char *GetApplicationExecutable()
     static char executable_path[4096];
 
     if (!executable_path[0]) {
-        ssize_t ret = readlink("/proc/self/exe", executable_path, RG_SIZE(executable_path));
-        RG_ASSERT(ret > 0 && ret < RG_SIZE(executable_path));
+        ssize_t ret = readlink("/proc/self/exe", executable_path, K_SIZE(executable_path));
+        K_ASSERT(ret > 0 && ret < K_SIZE(executable_path));
     }
 
     return executable_path;
@@ -3748,27 +3748,27 @@ const char *GetApplicationExecutable()
 
         size_t argc;
         {
-            int ret = sysctl(name, RG_LEN(name), nullptr, &argc, NULL, 0);
-            RG_ASSERT(ret >= 0);
-            RG_ASSERT(argc >= 1);
+            int ret = sysctl(name, K_LEN(name), nullptr, &argc, NULL, 0);
+            K_ASSERT(ret >= 0);
+            K_ASSERT(argc >= 1);
         }
 
         HeapArray<char *> argv;
         {
             argv.AppendDefault(argc);
-            int ret = sysctl(name, RG_LEN(name), argv.ptr, &argc, nullptr, 0);
-            RG_ASSERT(ret >= 0);
+            int ret = sysctl(name, K_LEN(name), argv.ptr, &argc, nullptr, 0);
+            K_ASSERT(ret >= 0);
         }
 
         if (PathIsAbsolute(argv[0])) {
-            RG_ASSERT(strlen(argv[0]) < RG_SIZE(executable_path));
+            K_ASSERT(strlen(argv[0]) < K_SIZE(executable_path));
 
             CopyString(argv[0], executable_path);
         } else {
             const char *path;
             bool success = FindExecutableInPath(argv[0], GetDefaultAllocator(), &path);
-            RG_ASSERT(success);
-            RG_ASSERT(strlen(path) < RG_SIZE(executable_path));
+            K_ASSERT(success);
+            K_ASSERT(strlen(path) < K_SIZE(executable_path));
 
             CopyString(path, executable_path);
             ReleaseRaw(nullptr, (void *)path, -1);
@@ -3783,9 +3783,9 @@ const char *GetApplicationExecutable()
         int name[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
         size_t len = sizeof(executable_path);
 
-        int ret = sysctl(name, RG_LEN(name), executable_path, &len, NULL, 0);
-        RG_ASSERT(ret >= 0);
-        RG_ASSERT(len < RG_SIZE(executable_path));
+        int ret = sysctl(name, K_LEN(name), executable_path, &len, NULL, 0);
+        K_ASSERT(ret >= 0);
+        K_ASSERT(len < K_SIZE(executable_path));
     }
 
     return executable_path;
@@ -3814,7 +3814,7 @@ const char *GetApplicationDirectory()
 Span<const char> GetPathDirectory(Span<const char> filename)
 {
     Span<const char> directory;
-    SplitStrReverseAny(filename, RG_PATH_SEPARATORS, &directory);
+    SplitStrReverseAny(filename, K_PATH_SEPARATORS, &directory);
 
     return directory.len ? directory : ".";
 }
@@ -3822,7 +3822,7 @@ Span<const char> GetPathDirectory(Span<const char> filename)
 // Names starting with a dot are not considered to be an extension (POSIX hidden files)
 Span<const char> GetPathExtension(Span<const char> filename, CompressionType *out_compression_type)
 {
-    filename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
+    filename = SplitStrReverseAny(filename, K_PATH_SEPARATORS);
 
     Span<const char> extension = {};
     const auto consume_next_extension = [&]() {
@@ -3861,7 +3861,7 @@ CompressionType GetPathCompression(Span<const char> filename)
 
 Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory, unsigned int flags, Allocator *alloc)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     if (!path.len && !root_directory.len)
         return Fmt(alloc, "");
@@ -3869,17 +3869,17 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
     HeapArray<char> buf(alloc);
     Size parts_count = 0;
 
-    char separator = (flags & (int)NormalizeFlag::ForceSlash) ? '/' : *RG_PATH_SEPARATORS;
+    char separator = (flags & (int)NormalizeFlag::ForceSlash) ? '/' : *K_PATH_SEPARATORS;
 
     const auto append_normalized_path = [&](Span<const char> path) {
         if (!buf.len && PathIsAbsolute(path)) {
-            Span<const char> prefix = SplitStrAny(path, RG_PATH_SEPARATORS, &path);
+            Span<const char> prefix = SplitStrAny(path, K_PATH_SEPARATORS, &path);
             buf.Append(prefix);
             buf.Append(separator);
         }
 
         while (path.len) {
-            Span<const char> part = SplitStrAny(path, RG_PATH_SEPARATORS, &path);
+            Span<const char> part = SplitStrAny(path, K_PATH_SEPARATORS, &path);
 
             if (part == "..") {
                 if (parts_count) {
@@ -3980,7 +3980,7 @@ static bool CheckForDumbTerm()
 
 OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, int *out_fd)
 {
-    RG_ASSERT(!(silent & ((int)OpenResult::Success | (int)OpenResult::OtherError)));
+    K_ASSERT(!(silent & ((int)OpenResult::Success | (int)OpenResult::OtherError)));
 
     DWORD access = 0;
     DWORD share = 0;
@@ -4019,7 +4019,7 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
             oflags = _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY | _O_NOINHERIT;
         } break;
     }
-    RG_ASSERT(oflags >= 0);
+    K_ASSERT(oflags >= 0);
 
     if (flags & (int)OpenFlag::Keep) {
         if (creation == CREATE_ALWAYS) {
@@ -4028,20 +4028,20 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
         oflags &= ~_O_TRUNC;
     }
     if (flags & (int)OpenFlag::Directory) {
-        RG_ASSERT(!(flags & (int)OpenFlag::Exclusive));
-        RG_ASSERT(!(flags & (int)OpenFlag::Append));
+        K_ASSERT(!(flags & (int)OpenFlag::Exclusive));
+        K_ASSERT(!(flags & (int)OpenFlag::Append));
 
         creation = OPEN_EXISTING;
         attributes = FILE_FLAG_BACKUP_SEMANTICS;
         oflags &= ~(_O_CREAT | _O_TRUNC | _O_BINARY);
     }
     if (flags & (int)OpenFlag::Exists) {
-        RG_ASSERT(!(flags & (int)OpenFlag::Exclusive));
+        K_ASSERT(!(flags & (int)OpenFlag::Exclusive));
 
         creation = OPEN_EXISTING;
         oflags &= ~_O_CREAT;
     } else if (flags & (int)OpenFlag::Exclusive) {
-        RG_ASSERT(creation == CREATE_ALWAYS);
+        K_ASSERT(creation == CREATE_ALWAYS);
 
         creation = CREATE_NEW;
         oflags |= (int)_O_EXCL;
@@ -4049,7 +4049,7 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
 
     HANDLE h = nullptr;
     int fd = -1;
-    RG_DEFER_N(err_guard) {
+    K_DEFER_N(err_guard) {
         CloseDescriptor(fd);
         if (h) {
             CloseHandle(h);
@@ -4110,7 +4110,7 @@ void CloseDescriptor(int fd)
 
 bool FlushFile(int fd, const char *filename)
 {
-    RG_ASSERT(filename);
+    K_ASSERT(filename);
 
     HANDLE h = (HANDLE)_get_osfhandle(fd);
 
@@ -4190,7 +4190,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
 
         while (size) {
             LocalArray<uint8_t, 655536> buf;
-            unsigned long count = (unsigned long)std::min(size, (int64_t)RG_SIZE(buf.data));
+            unsigned long count = (unsigned long)std::min(size, (int64_t)K_SIZE(buf.data));
 
             buf.len = _read(src_fd, buf.data, count);
 
@@ -4232,7 +4232,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
         return true;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 bool FileIsVt100(int fd)
@@ -4417,7 +4417,7 @@ error:
 
 OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, int *out_fd)
 {
-    RG_ASSERT(!(silent & ((int)OpenResult::Success | (int)OpenResult::OtherError)));
+    K_ASSERT(!(silent & ((int)OpenResult::Success | (int)OpenResult::OtherError)));
 
     int oflags = -1;
     switch (flags & ((int)OpenFlag::Read |
@@ -4428,29 +4428,29 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
         case (int)OpenFlag::Read | (int)OpenFlag::Write: { oflags = O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC; } break;
         case (int)OpenFlag::Append: { oflags = O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC; } break;
     }
-    RG_ASSERT(oflags >= 0);
+    K_ASSERT(oflags >= 0);
 
     if (flags & (int)OpenFlag::Keep) {
         oflags &= ~O_TRUNC;
     }
     if (flags & (int)OpenFlag::Directory) {
-        RG_ASSERT(!(flags & (int)OpenFlag::Exclusive));
-        RG_ASSERT(!(flags & (int)OpenFlag::Append));
+        K_ASSERT(!(flags & (int)OpenFlag::Exclusive));
+        K_ASSERT(!(flags & (int)OpenFlag::Append));
 
         oflags &= ~(O_CREAT | O_WRONLY | O_RDWR | O_TRUNC);
     }
     if (flags & (int)OpenFlag::Exists) {
-        RG_ASSERT(!(flags & (int)OpenFlag::Exclusive));
+        K_ASSERT(!(flags & (int)OpenFlag::Exclusive));
         oflags &= ~O_CREAT;
     } else if (flags & (int)OpenFlag::Exclusive) {
-        RG_ASSERT(oflags & O_CREAT);
+        K_ASSERT(oflags & O_CREAT);
         oflags |= O_EXCL;
     }
     if (flags & (int)OpenFlag::NoFollow) {
         oflags |= O_NOFOLLOW;
     }
 
-    int fd = RG_RESTART_EINTR(open(filename, oflags, 0644), < 0);
+    int fd = K_RESTART_EINTR(open(filename, oflags, 0644), < 0);
     if (fd < 0) {
         OpenResult ret;
         switch (errno) {
@@ -4482,7 +4482,7 @@ void CloseDescriptor(int fd)
 
 bool FlushFile(int fd, const char *filename)
 {
-    RG_ASSERT(filename);
+    K_ASSERT(filename);
 
 #if defined(__APPLE__)
     if (fsync(fd) < 0 && errno != EINVAL && errno != ENOTSUP) {
@@ -4615,7 +4615,7 @@ unsupported:
 
         while (size) {
             LocalArray<uint8_t, 655536> buf;
-            Size count = (Size)std::min(size, (int64_t)RG_SIZE(buf.data));
+            Size count = (Size)std::min(size, (int64_t)K_SIZE(buf.data));
 
             buf.len = read(src_fd, buf.data, (size_t)count);
 
@@ -4657,7 +4657,7 @@ unsupported:
         return true;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 bool FileIsVt100(int fd)
@@ -4711,7 +4711,7 @@ bool MakeDirectory(const char *directory, bool error_if_exists)
 bool MakeDirectoryRec(Span<const char> directory)
 {
     char buf[4096];
-    if (directory.len >= RG_SIZE(buf)) [[unlikely]] {
+    if (directory.len >= K_SIZE(buf)) [[unlikely]] {
         LogError("Path '%1' is too large", directory);
         return false;
     }
@@ -4737,7 +4737,7 @@ bool MakeDirectoryRec(Span<const char> directory)
                 return false;
             }
 
-            buf[offset] = *RG_PATH_SEPARATORS;
+            buf[offset] = *K_PATH_SEPARATORS;
         }
     }
 
@@ -4803,7 +4803,7 @@ bool CreateOverlappedPipe(bool overlap0, bool overlap1, PipeMode mode, HANDLE ou
     static LONG pipe_idx;
 
     HANDLE handles[2] = {};
-    RG_DEFER_N(handle_guard) {
+    K_DEFER_N(handle_guard) {
         CloseHandleSafe(&handles[0]);
         CloseHandleSafe(&handles[1]);
     };
@@ -4915,14 +4915,14 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
         LogError("Failed to create job object: %1", GetWin32ErrorString());
         return false;
     }
-    RG_DEFER { CloseHandleSafe(&job_handle); };
+    K_DEFER { CloseHandleSafe(&job_handle); };
 
     // If I die, everyone dies!
     {
         JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = {};
         limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
 
-        if (!SetInformationJobObject(job_handle, JobObjectExtendedLimitInformation, &limits, RG_SIZE(limits))) {
+        if (!SetInformationJobObject(job_handle, JobObjectExtendedLimitInformation, &limits, K_SIZE(limits))) {
             LogError("SetInformationJobObject() failed: %1", GetWin32ErrorString());
             return false;
         }
@@ -4930,7 +4930,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
 
     // Create read pipes
     HANDLE in_pipe[2] = {};
-    RG_DEFER {
+    K_DEFER {
         CloseHandleSafe(&in_pipe[0]);
         CloseHandleSafe(&in_pipe[1]);
     };
@@ -4939,7 +4939,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
 
     // Create write pipes
     HANDLE out_pipe[2] = {};
-    RG_DEFER {
+    K_DEFER {
         CloseHandleSafe(&out_pipe[0]);
         CloseHandleSafe(&out_pipe[1]);
     };
@@ -4988,7 +4988,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
     // Start process
     HANDLE process_handle;
     {
-        RG_DEFER {
+        K_DEFER {
             CloseHandleSafe(&si.hStdInput);
             CloseHandleSafe(&si.hStdOutput);
             CloseHandleSafe(&si.hStdError);
@@ -5028,7 +5028,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
         CloseHandleSafe(&in_pipe[0]);
         CloseHandleSafe(&out_pipe[1]);
     }
-    RG_DEFER { CloseHandleSafe(&process_handle); };
+    K_DEFER { CloseHandleSafe(&process_handle); };
 
     // Read and write standard process streams
     {
@@ -5050,11 +5050,11 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
 
                     if (!write_buf.len) {
                         write_buf = in_func();
-                        RG_ASSERT(write_buf.len >= 0);
+                        K_ASSERT(write_buf.len >= 0);
                     }
 
                     if (write_buf.len) {
-                        RG_ASSERT(write_buf.len < UINT_MAX);
+                        K_ASSERT(write_buf.len < UINT_MAX);
 
                         if (!WriteFileEx(in_pipe[1], write_buf.ptr, (DWORD)write_buf.len,
                                          &proc_in.ov, PendingIO::CompletionHandler)) {
@@ -5080,7 +5080,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                         proc_out.len = -1;
                     }
 
-                    if (proc_out.len && !ReadFileEx(out_pipe[0], read_buf, RG_SIZE(read_buf), &proc_out.ov, PendingIO::CompletionHandler)) {
+                    if (proc_out.len && !ReadFileEx(out_pipe[0], read_buf, K_SIZE(read_buf), &proc_out.ov, PendingIO::CompletionHandler)) {
                         proc_out.err = GetLastError();
                     }
                 }
@@ -5110,7 +5110,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
             console_ctrl_event
         };
 
-        if (WaitForMultipleObjects(RG_LEN(events), events, FALSE, INFINITE) == WAIT_FAILED) {
+        if (WaitForMultipleObjects(K_LEN(events), events, FALSE, INFINITE) == WAIT_FAILED) {
             LogError("WaitForMultipleObjects() failed: %1", GetWin32ErrorString());
             return false;
         }
@@ -5165,11 +5165,11 @@ static void DefaultSignalHandler(int signal)
 #endif
 
     pid_t pid = getpid();
-    RG_ASSERT(pid > 1);
+    K_ASSERT(pid > 1);
 
     if (interrupt_pfd[1] >= 0) {
         char dummy = 0;
-        RG_IGNORE write(interrupt_pfd[1], &dummy, 1);
+        K_IGNORE write(interrupt_pfd[1], &dummy, 1);
     }
 
     if (flag_signal) {
@@ -5225,7 +5225,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
 
     // Create read pipes
     int in_pfd[2] = {-1, -1};
-    RG_DEFER {
+    K_DEFER {
         CloseDescriptorSafe(&in_pfd[0]);
         CloseDescriptorSafe(&in_pfd[1]);
     };
@@ -5240,7 +5240,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
 
     // Create write pipes
     int out_pfd[2] = {-1, -1};
-    RG_DEFER {
+    K_DEFER {
         CloseDescriptorSafe(&out_pfd[0]);
         CloseDescriptorSafe(&out_pfd[1]);
     };
@@ -5301,7 +5301,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
             LogError("Failed to set up standard process descriptors: %1", strerror(errno));
             return false;
         }
-        RG_DEFER { posix_spawn_file_actions_destroy(&file_actions); };
+        K_DEFER { posix_spawn_file_actions_destroy(&file_actions); };
 
         if (in_func.IsValid() && (errno = posix_spawn_file_actions_adddup2(&file_actions, in_pfd[0], STDIN_FILENO))) {
             LogError("Failed to set up standard process descriptors: %1", strerror(errno));
@@ -5349,7 +5349,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
             pfds.Append({ interrupt_pfd[0], POLLIN, 0 });
         }
 
-        if (RG_RESTART_EINTR(poll(pfds.data, (nfds_t)pfds.len, -1), < 0) < 0) {
+        if (K_RESTART_EINTR(poll(pfds.data, (nfds_t)pfds.len, -1), < 0) < 0) {
             LogError("Failed to poll process I/O: %1", strerror(errno));
             break;
         }
@@ -5362,15 +5362,15 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
         if (in_revents & (POLLHUP | POLLERR)) {
             CloseDescriptorSafe(&in_pfd[1]);
         } else if (in_revents & POLLOUT) {
-            RG_ASSERT(in_func.IsValid());
+            K_ASSERT(in_func.IsValid());
 
             if (!write_buf.len) {
                 write_buf = in_func();
-                RG_ASSERT(write_buf.len >= 0);
+                K_ASSERT(write_buf.len >= 0);
             }
 
             if (write_buf.len) {
-                ssize_t write_len = RG_RESTART_EINTR(write(in_pfd[1], write_buf.ptr, (size_t)write_buf.len), < 0);
+                ssize_t write_len = K_RESTART_EINTR(write(in_pfd[1], write_buf.ptr, (size_t)write_buf.len), < 0);
 
                 if (write_len > 0) {
                     write_buf.ptr += write_len;
@@ -5390,10 +5390,10 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
         if (out_revents & POLLERR) {
             break;
         } else if (out_revents & (POLLIN | POLLHUP)) {
-            RG_ASSERT(out_func.IsValid());
+            K_ASSERT(out_func.IsValid());
 
             uint8_t read_buf[4096];
-            ssize_t read_len = RG_RESTART_EINTR(read(out_pfd[0], read_buf, RG_SIZE(read_buf)), < 0);
+            ssize_t read_len = K_RESTART_EINTR(read(out_pfd[0], read_buf, K_SIZE(read_buf)), < 0);
 
             if (read_len > 0) {
                 out_func(MakeSpan(read_buf, read_len));
@@ -5424,7 +5424,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
         int64_t start = GetMonotonicTime();
 
         for (;;) {
-            int ret = RG_RESTART_EINTR(waitpid(pid, &status, terminate ? WNOHANG : 0), < 0);
+            int ret = K_RESTART_EINTR(waitpid(pid, &status, terminate ? WNOHANG : 0), < 0);
 
             if (ret < 0) {
                 LogError("Failed to wait for process exit: %1", strerror(errno));
@@ -5462,18 +5462,18 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                         HeapArray<uint8_t> *out_buf, int *out_code)
 {
     Size start_len = out_buf->len;
-    RG_DEFER_N(out_guard) { out_buf->RemoveFrom(start_len); };
+    K_DEFER_N(out_guard) { out_buf->RemoveFrom(start_len); };
 
     // Check virtual memory limits
     {
-        Size memory_max = RG_SIZE_MAX - out_buf->len - 1;
+        Size memory_max = K_SIZE_MAX - out_buf->len - 1;
 
         if (memory_max <= 0) [[unlikely]] {
             LogError("Exhausted memory limit");
             return false;
         }
 
-        RG_ASSERT(max_len);
+        K_ASSERT(max_len);
         max_len = (max_len >= 0) ? std::min(max_len, memory_max) : memory_max;
     }
 
@@ -5554,8 +5554,8 @@ static HANDLE wait_msg_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
 
 void WaitDelay(int64_t delay)
 {
-    RG_ASSERT(delay >= 0);
-    RG_ASSERT(delay < 1000ll * INT32_MAX);
+    K_ASSERT(delay >= 0);
+    K_ASSERT(delay < 1000ll * INT32_MAX);
 
     while (delay) {
         DWORD delay32 = (DWORD)std::min(delay, (int64_t)UINT32_MAX);
@@ -5568,7 +5568,7 @@ void WaitDelay(int64_t delay)
 WaitForResult WaitForInterrupt(int64_t timeout)
 {
     ignore_ctrl_event = InitConsoleCtrlHandler();
-    RG_ASSERT(ignore_ctrl_event);
+    K_ASSERT(ignore_ctrl_event);
 
     HANDLE events[] = {
         console_ctrl_event,
@@ -5581,10 +5581,10 @@ WaitForResult WaitForInterrupt(int64_t timeout)
             DWORD timeout32 = (DWORD)std::min(timeout, (int64_t)UINT32_MAX);
             timeout -= timeout32;
 
-            ret = WaitForMultipleObjects(RG_LEN(events), events, FALSE, timeout32);
+            ret = WaitForMultipleObjects(K_LEN(events), events, FALSE, timeout32);
         } while (ret == WAIT_TIMEOUT && timeout);
     } else {
-        ret = WaitForMultipleObjects(RG_LEN(events), events, FALSE, INFINITE);
+        ret = WaitForMultipleObjects(K_LEN(events), events, FALSE, INFINITE);
     }
 
     switch (ret) {
@@ -5594,7 +5594,7 @@ WaitForResult WaitForInterrupt(int64_t timeout)
             return WaitForResult::Message;
         } break;
         default: {
-            RG_ASSERT(ret == WAIT_TIMEOUT);
+            K_ASSERT(ret == WAIT_TIMEOUT);
             return WaitForResult::Timeout;
         } break;
     }
@@ -5609,8 +5609,8 @@ void SignalWaitFor()
 
 void WaitDelay(int64_t delay)
 {
-    RG_ASSERT(delay >= 0);
-    RG_ASSERT(delay < 1000ll * INT32_MAX);
+    K_ASSERT(delay >= 0);
+    K_ASSERT(delay < 1000ll * INT32_MAX);
 
     struct timespec ts;
     ts.tv_sec = (int)(delay / 1000);
@@ -5618,7 +5618,7 @@ void WaitDelay(int64_t delay)
 
     struct timespec rem;
     while (nanosleep(&ts, &rem) < 0) {
-        RG_ASSERT(errno == EINTR);
+        K_ASSERT(errno == EINTR);
         ts = rem;
     }
 }
@@ -5639,7 +5639,7 @@ WaitForResult WaitForInterrupt(int64_t timeout)
 
         struct timespec rem;
         while (!explicit_signal && !message && nanosleep(&ts, &rem) < 0) {
-            RG_ASSERT(errno == EINTR);
+            K_ASSERT(errno == EINTR);
             ts = rem;
         }
     } else {
@@ -5694,7 +5694,7 @@ int GetCoreCount()
             cores = (int)std::thread::hardware_concurrency();
         }
 
-        RG_ASSERT(cores > 0);
+        K_ASSERT(cores > 0);
     }
 
     return cores;
@@ -5751,7 +5751,7 @@ bool DropRootIdentity()
         goto error;
     if (setreuid(uid, uid) < 0)
         goto error;
-    RG_CRITICAL(setuid(0) < 0, "Managed to regain root privileges");
+    K_CRITICAL(setuid(0) < 0, "Managed to regain root privileges");
 
     return true;
 
@@ -5781,7 +5781,7 @@ bool NotifySystemd()
 
         addr.sun_family = AF_UNIX;
         addr.sun_path[0] = 0;
-        CopyString(addr_str, MakeSpan(addr.sun_path + 1, RG_SIZE(addr.sun_path) - 1));
+        CopyString(addr_str, MakeSpan(addr.sun_path + 1, K_SIZE(addr.sun_path) - 1));
     } else if (addr_str[0] == '/') {
         if (strlen(addr_str) >= sizeof(addr.sun_path)) {
             LogError("Socket pathname in NOTIFY_SOCKET is too long");
@@ -5800,7 +5800,7 @@ bool NotifySystemd()
         LogError("Failed to create UNIX socket: %1", strerror(errno));
         return false;
     }
-    RG_DEFER { close(fd); };
+    K_DEFER { close(fd); };
 
     struct iovec iov = {};
     struct msghdr msg = {};
@@ -5869,7 +5869,7 @@ void InitApp()
     atexit([]() {
         if (interrupt_pfd[1] >= 0) {
             pid_t pid = getpid();
-            RG_ASSERT(pid > 1);
+            K_ASSERT(pid > 1);
 
             SetSignalHandler(SIGTERM, [](int) {});
             kill(-pid, SIGTERM);
@@ -5885,7 +5885,7 @@ void InitApp()
 
     // Init libraries
     while (init) {
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
         LogDebug("Init %1 library", init->name);
 #endif
 
@@ -5897,7 +5897,7 @@ void InitApp()
 void ExitApp()
 {
     while (exit) {
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
         LogDebug("Exit %1 library", exit->name);
 #endif
 
@@ -5914,18 +5914,18 @@ void ExitApp()
 
 const char *GetUserConfigPath(const char *name, Allocator *alloc)
 {
-    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+    K_ASSERT(!strchr(K_PATH_SEPARATORS, name[0]));
 
     static char cache_dir[4096];
     static std::once_flag flag;
 
     std::call_once(flag, []() {
         wchar_t *dir = nullptr;
-        RG_DEFER { CoTaskMemFree(dir); };
+        K_DEFER { CoTaskMemFree(dir); };
 
-        RG_CRITICAL(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &dir) == S_OK,
+        K_CRITICAL(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &dir) == S_OK,
                     "Failed to retrieve path to roaming user AppData");
-        RG_CRITICAL(ConvertWin32WideToUtf8(dir, cache_dir) >= 0,
+        K_CRITICAL(ConvertWin32WideToUtf8(dir, cache_dir) >= 0,
                     "Path to roaming AppData is invalid or too big");
     });
 
@@ -5935,18 +5935,18 @@ const char *GetUserConfigPath(const char *name, Allocator *alloc)
 
 const char *GetUserCachePath(const char *name, Allocator *alloc)
 {
-    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+    K_ASSERT(!strchr(K_PATH_SEPARATORS, name[0]));
 
     static char cache_dir[4096];
     static std::once_flag flag;
 
     std::call_once(flag, []() {
         wchar_t *dir = nullptr;
-        RG_DEFER { CoTaskMemFree(dir); };
+        K_DEFER { CoTaskMemFree(dir); };
 
-        RG_CRITICAL(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &dir) == S_OK,
+        K_CRITICAL(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &dir) == S_OK,
                     "Failed to retrieve path to local user AppData");
-        RG_CRITICAL(ConvertWin32WideToUtf8(dir, cache_dir) >= 0,
+        K_CRITICAL(ConvertWin32WideToUtf8(dir, cache_dir) >= 0,
                     "Path to local AppData is invalid or too big");
     });
 
@@ -5962,16 +5962,16 @@ const char *GetTemporaryDirectory()
     std::call_once(flag, []() {
         Size len;
         if (win32_utf8) {
-            len = (Size)GetTempPathA(RG_SIZE(temp_dir), temp_dir);
-            RG_CRITICAL(len < RG_SIZE(temp_dir), "Temporary directory path is too big");
+            len = (Size)GetTempPathA(K_SIZE(temp_dir), temp_dir);
+            K_CRITICAL(len < K_SIZE(temp_dir), "Temporary directory path is too big");
         } else {
             static wchar_t dir_w[4096];
-            Size len_w = (Size)GetTempPathW(RG_LEN(dir_w), dir_w);
+            Size len_w = (Size)GetTempPathW(K_LEN(dir_w), dir_w);
 
-            RG_CRITICAL(len_w < RG_LEN(dir_w), "Temporary directory path is too big");
+            K_CRITICAL(len_w < K_LEN(dir_w), "Temporary directory path is too big");
 
             len = ConvertWin32WideToUtf8(dir_w, temp_dir);
-            RG_CRITICAL(len >= 0, "Temporary directory path is invalid or too big");
+            K_CRITICAL(len >= 0, "Temporary directory path is invalid or too big");
         }
 
         while (len > 0 && IsPathSeparator(temp_dir[len - 1])) {
@@ -5987,7 +5987,7 @@ const char *GetTemporaryDirectory()
 
 const char *GetUserConfigPath(const char *name, Allocator *alloc)
 {
-    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+    K_ASSERT(!strchr(K_PATH_SEPARATORS, name[0]));
 
     const char *xdg = GetEnv("XDG_CONFIG_HOME");
     const char *home = GetEnv("HOME");
@@ -6012,7 +6012,7 @@ const char *GetUserConfigPath(const char *name, Allocator *alloc)
 
 const char *GetUserCachePath(const char *name, Allocator *alloc)
 {
-    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+    K_ASSERT(!strchr(K_PATH_SEPARATORS, name[0]));
 
     const char *xdg = GetEnv("XDG_CACHE_HOME");
     const char *home = GetEnv("HOME");
@@ -6037,7 +6037,7 @@ const char *GetUserCachePath(const char *name, Allocator *alloc)
 
 const char *GetSystemConfigPath(const char *name, Allocator *alloc)
 {
-    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+    K_ASSERT(!strchr(K_PATH_SEPARATORS, name[0]));
 
     const char *path = Fmt(alloc, "/etc/%1", name).ptr;
     return path;
@@ -6055,7 +6055,7 @@ const char *GetTemporaryDirectory()
             env.len--;
         }
 
-        if (env.len && env.len < RG_SIZE(temp_dir)) {
+        if (env.len && env.len < K_SIZE(temp_dir)) {
             CopyString(env, temp_dir);
         } else {
             CopyString("/tmp", temp_dir);
@@ -6070,7 +6070,7 @@ const char *GetTemporaryDirectory()
 const char *FindConfigFile(const char *directory, Span<const char *const> names,
                            Allocator *alloc, HeapArray<const char *> *out_possibilities)
 {
-    RG_ASSERT(!directory || directory[0]);
+    K_ASSERT(!directory || directory[0]);
 
     decltype(GetUserConfigPath) *funcs[] = {
         GetUserConfigPath,
@@ -6096,7 +6096,7 @@ const char *FindConfigFile(const char *directory, Span<const char *const> names,
 
     LocalArray<const char *, 8> tests;
     {
-        RG_ASSERT(names.len <= tests.Available());
+        K_ASSERT(names.len <= tests.Available());
 
         for (const char *name: names) {
             if (directory) {
@@ -6131,11 +6131,11 @@ const char *FindConfigFile(const char *directory, Span<const char *const> names,
 static const char *CreateUniquePath(Span<const char> directory, const char *prefix, const char *extension,
                                     Allocator *alloc, FunctionRef<bool(const char *path)> create)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     HeapArray<char> filename(alloc);
     filename.Append(directory);
-    filename.Append(*RG_PATH_SEPARATORS);
+    filename.Append(*K_PATH_SEPARATORS);
     if (prefix) {
         filename.Append(prefix);
         filename.Append('.');
@@ -6144,7 +6144,7 @@ static const char *CreateUniquePath(Span<const char> directory, const char *pref
     Size change_offset = filename.len;
 
     PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-    RG_DEFER_N(log_guard) { PopLogFilter(); };
+    K_DEFER_N(log_guard) { PopLogFilter(); };
 
     for (Size i = 0; i < 1000; i++) {
         // We want to show an error on last try
@@ -6209,9 +6209,9 @@ bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags, Span<c
     bool value = false;
 
     switch (str.len) {
-        default: { RG_ASSERT(str.len >= 0); } [[fallthrough]];
+        default: { K_ASSERT(str.len >= 0); } [[fallthrough]];
 
-#if defined(RG_BIG_ENDIAN)
+#if defined(K_BIG_ENDIAN)
         case 8: { u.raw[0] = LowerAscii(str[7]); } [[fallthrough]];
         case 7: { u.raw[1] = LowerAscii(str[6]); } [[fallthrough]];
         case 6: { u.raw[2] = LowerAscii(str[5]); } [[fallthrough]];
@@ -6464,7 +6464,7 @@ malformed:
 bool ParseVersion(Span<const char> str, int parts, int multiplier,
                   int64_t *out_version, unsigned int flags, Span<const char> *out_remaining)
 {
-    RG_ASSERT(parts >= 0 && parts < 6);
+    K_ASSERT(parts >= 0 && parts < 6);
 
     int64_t version = 0;
     Span<const char> remain = str;
@@ -6566,7 +6566,7 @@ void RunChaCha20(uint32_t state[16], uint8_t out_buf[64])
     uint32_t *out_buf32 = (uint32_t *)out_buf;
 
     uint32_t x[16];
-    MemCpy(x, state, RG_SIZE(x));
+    MemCpy(x, state, K_SIZE(x));
 
     for (Size i = 0; i < 20; i += 2) {
         x[0] += x[4];   x[12] = ROTL32(x[12] ^ x[0], 16);
@@ -6610,7 +6610,7 @@ void RunChaCha20(uint32_t state[16], uint8_t out_buf[64])
         x[9]  += x[14]; x[4]  = ROTL32(x[4] ^ x[9],  7);
     }
 
-    for (Size i = 0; i < RG_LEN(x); i++) {
+    for (Size i = 0; i < K_LEN(x); i++) {
         out_buf32[i] = LittleEndian(x[i] + state[i]);
     }
 
@@ -6632,24 +6632,24 @@ void FillRandomSafe(void *out_buf, Size len)
     if (reseed) {
         struct { uint8_t key[32]; uint8_t iv[8]; } buf;
 
-        MemSet(rnd_state, 0, RG_SIZE(rnd_state));
+        MemSet(rnd_state, 0, K_SIZE(rnd_state));
 #if defined(_WIN32)
-        RG_CRITICAL(RtlGenRandom(&buf, RG_SIZE(buf)), "RtlGenRandom() failed: %1", GetWin32ErrorString());
+        K_CRITICAL(RtlGenRandom(&buf, K_SIZE(buf)), "RtlGenRandom() failed: %1", GetWin32ErrorString());
 #elif defined(__linux__)
         {
 restart:
-            int ret = syscall(SYS_getrandom, &buf, RG_SIZE(buf), 0);
-            RG_CRITICAL(ret >= 0, "getrandom() failed: %1", strerror(errno));
+            int ret = syscall(SYS_getrandom, &buf, K_SIZE(buf), 0);
+            K_CRITICAL(ret >= 0, "getrandom() failed: %1", strerror(errno));
 
-            if (ret < RG_SIZE(buf)) [[unlikely]]
+            if (ret < K_SIZE(buf)) [[unlikely]]
                 goto restart;
         }
 #else
-        RG_CRITICAL(getentropy(&buf, RG_SIZE(buf)) == 0, "getentropy() failed: %1", strerror(errno));
+        K_CRITICAL(getentropy(&buf, K_SIZE(buf)) == 0, "getentropy() failed: %1", strerror(errno));
 #endif
 
         InitChaCha20(rnd_state, buf.key, buf.iv);
-        ZeroSafe(&buf, RG_SIZE(buf));
+        ZeroSafe(&buf, K_SIZE(buf));
 
         rnd_remain = Mebibytes(4);
         rnd_time = GetMonotonicTime();
@@ -6657,18 +6657,18 @@ restart:
         rnd_pid = getpid();
 #endif
 
-        rnd_offset = RG_SIZE(rnd_buf);
+        rnd_offset = K_SIZE(rnd_buf);
     }
 
-    Size copy_len = std::min(RG_SIZE(rnd_buf) - rnd_offset, len);
+    Size copy_len = std::min(K_SIZE(rnd_buf) - rnd_offset, len);
     MemCpy(out_buf, rnd_buf + rnd_offset, copy_len);
     ZeroSafe(rnd_buf + rnd_offset, copy_len);
     rnd_offset += copy_len;
 
-    for (Size i = copy_len; i < len; i += RG_SIZE(rnd_buf)) {
+    for (Size i = copy_len; i < len; i += K_SIZE(rnd_buf)) {
         RunChaCha20(rnd_state, rnd_buf);
 
-        copy_len = std::min(RG_SIZE(rnd_buf), len - i);
+        copy_len = std::min(K_SIZE(rnd_buf), len - i);
         MemCpy((uint8_t *)out_buf + i, rnd_buf, copy_len);
         ZeroSafe(rnd_buf, copy_len);
         rnd_offset = copy_len;
@@ -6680,7 +6680,7 @@ restart:
 FastRandom::FastRandom()
 {
     do {
-        FillRandomSafe(state, RG_SIZE(state));
+        FillRandomSafe(state, K_SIZE(state));
     } while (std::all_of(std::begin(state), std::end(state), [](uint64_t v) { return !v; }));
 }
 
@@ -6720,7 +6720,7 @@ void FastRandom::Fill(void *out_buf, Size len)
     for (Size i = 0; i < len; i += 8) {
         uint64_t rnd = Next();
 
-        Size copy_len = std::min(RG_SIZE(rnd), len - i);
+        Size copy_len = std::min(K_SIZE(rnd), len - i);
         MemCpy((uint8_t *)out_buf + i, &rnd, copy_len);
     }
 }
@@ -6730,7 +6730,7 @@ int FastRandom::GetInt(int min, int max)
     int range = max - min;
 
     if (range < 2) [[unlikely]] {
-        RG_ASSERT(range >= 1);
+        K_ASSERT(range >= 1);
         return min;
     }
 
@@ -6750,7 +6750,7 @@ int64_t FastRandom::GetInt64(int64_t min, int64_t max)
     int64_t range = max - min;
 
     if (range < 2) [[unlikely]] {
-        RG_ASSERT(range >= 1);
+        K_ASSERT(range >= 1);
         return min;
     }
 
@@ -6804,7 +6804,7 @@ bool InitWinsock()
             return;
         }
 
-        RG_ASSERT(LOBYTE(wsa.wVersion) == 2 && HIBYTE(wsa.wVersion) == 2);
+        K_ASSERT(LOBYTE(wsa.wVersion) == 2 && HIBYTE(wsa.wVersion) == 2);
         atexit([]() { WSACleanup(); });
 
         ready = true;
@@ -6835,7 +6835,7 @@ int CreateSocket(SocketType type, int flags)
         LogError("Failed to create IP socket: %1", GetWin32ErrorString());
         return -1;
     }
-    RG_DEFER_N(err_guard) { closesocket(sock); };
+    K_DEFER_N(err_guard) { closesocket(sock); };
 
     int reuse = 1;
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse));
@@ -6875,7 +6875,7 @@ int CreateSocket(SocketType type, int flags)
         LogError("Failed to create IP socket: %1", strerror(errno));
         return -1;
     }
-    RG_DEFER_N(err_guard) { close(sock); };
+    K_DEFER_N(err_guard) { close(sock); };
 
 #if !defined(SOCK_CLOEXEC)
     fcntl(sock, F_SETFD, FD_CLOEXEC);
@@ -6908,7 +6908,7 @@ int CreateSocket(SocketType type, int flags)
 
 bool BindIPSocket(int sock, SocketType type, int port)
 {
-    RG_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
+    K_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
 
     if (type == SocketType::IPv4) {
         struct sockaddr_in addr = {};
@@ -6974,12 +6974,12 @@ bool BindUnixSocket(int sock, const char *path)
 
 int OpenIPSocket(SocketType type, int port, int flags)
 {
-    RG_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
+    K_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
 
     int sock = CreateSocket(type, flags);
     if (sock < 0)
         return -1;
-    RG_DEFER_N(err_guard) { CloseSocket(sock); };
+    K_DEFER_N(err_guard) { CloseSocket(sock); };
 
     if (!BindIPSocket(sock, type, port))
         return -1;
@@ -6993,7 +6993,7 @@ int OpenUnixSocket(const char *path, int flags)
     int sock = CreateSocket(SocketType::Unix, flags);
     if (sock < 0)
         return -1;
-    RG_DEFER_N(err_guard) { CloseSocket(sock); };
+    K_DEFER_N(err_guard) { CloseSocket(sock); };
 
     if (!BindUnixSocket(sock, path))
         return -1;
@@ -7015,7 +7015,7 @@ int ConnectToUnixSocket(const char *path, int flags)
     int sock = CreateSocket(SocketType::Unix, flags);
     if (sock < 0)
         return -1;
-    RG_DEFER_N(err_guard) { CloseSocket(sock); };
+    K_DEFER_N(err_guard) { CloseSocket(sock); };
 
     if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 #if defined(_WIN32)
@@ -7101,7 +7101,7 @@ struct WorkerData {
 };
 
 class AsyncPool {
-    RG_DELETE_COPY(AsyncPool)
+    K_DELETE_COPY(AsyncPool)
 
     std::mutex pool_mutex;
     std::condition_variable pending_cv;
@@ -7143,7 +7143,7 @@ static thread_local bool async_running_task = false;
 
 Async::Async(int threads)
 {
-    RG_ASSERT(threads);
+    K_ASSERT(threads);
 
     if (threads > 0) {
         pool = new AsyncPool(threads, false);
@@ -7167,7 +7167,7 @@ Async::Async(int threads)
 
 Async::Async(Async *parent)
 {
-    RG_ASSERT(parent);
+    K_ASSERT(parent);
 
     pool = parent->pool;
     pool->RegisterAsync();
@@ -7225,9 +7225,9 @@ int Async::GetWorkerIdx()
 
 AsyncPool::AsyncPool(int threads, bool leak)
 {
-    if (threads > RG_ASYNC_MAX_THREADS) {
-        LogError("Async cannot use more than %1 threads", RG_ASYNC_MAX_THREADS);
-        threads = RG_ASYNC_MAX_THREADS;
+    if (threads > K_ASYNC_MAX_THREADS) {
+        LogError("Async cannot use more than %1 threads", K_ASYNC_MAX_THREADS);
+        threads = K_ASYNC_MAX_THREADS;
     }
 
     // The first queue is for the main thread
@@ -7331,12 +7331,12 @@ void AsyncPool::AddTask(Async *async, int worker_idx, const std::function<bool()
 
     int prev_pending = pending_tasks++;
 
-    if (prev_pending >= RG_ASYNC_MAX_PENDING_TASKS) {
+    if (prev_pending >= K_ASYNC_MAX_PENDING_TASKS) {
         int worker_idx = async_running_worker_idx;
 
         do {
             RunTasks(worker_idx, nullptr);
-        } while (pending_tasks >= RG_ASYNC_MAX_PENDING_TASKS);
+        } while (pending_tasks >= K_ASYNC_MAX_PENDING_TASKS);
     } else if (!prev_pending) {
         std::lock_guard<std::mutex> lock_pool(pool_mutex);
 
@@ -7357,7 +7357,7 @@ void AsyncPool::RunWorker(int worker_idx)
         RunTasks(worker_idx, nullptr);
         lock_pool.lock();
 
-        std::chrono::duration<int, std::milli> duration(RG_ASYNC_MAX_IDLE_TIME); // Thanks C++
+        std::chrono::duration<int, std::milli> duration(K_ASYNC_MAX_IDLE_TIME); // Thanks C++
         pending_cv.wait_for(lock_pool, duration, [&]() { return !!pending_tasks; });
     }
 
@@ -7371,7 +7371,7 @@ void AsyncPool::RunWorker(int worker_idx)
 
 void AsyncPool::SyncOn(Async *async, bool soon)
 {
-    RG_DEFER_C(pool = async_running_pool,
+    K_DEFER_C(pool = async_running_pool,
                worker_idx = async_running_worker_idx) {
         async_running_pool = pool;
         async_running_worker_idx = worker_idx;
@@ -7443,7 +7443,7 @@ void AsyncPool::RunTask(Task *task)
 {
     Async *async = task->async;
 
-    RG_DEFER_C(running = async_running_task) { async_running_task = running; };
+    K_DEFER_C(running = async_running_task) { async_running_task = running; };
     async_running_task = true;
 
     pending_tasks--;
@@ -7463,12 +7463,12 @@ void AsyncPool::RunTask(Task *task)
 
 Async::Async(int threads)
 {
-    RG_ASSERT(threads);
+    K_ASSERT(threads);
 }
 
 Async::Async(Async *parent)
 {
-    RG_ASSERT(parent);
+    K_ASSERT(parent);
 }
 
 Async::~Async()
@@ -7520,14 +7520,14 @@ extern StreamReader *const StdIn = &StdInStream;
 extern StreamWriter *const StdOut = &StdOutStream;
 extern StreamWriter *const StdErr = &StdErrStream;
 
-static CreateDecompressorFunc *DecompressorFunctions[RG_LEN(CompressionTypeNames)];
-static CreateCompressorFunc *CompressorFunctions[RG_LEN(CompressionTypeNames)];
+static CreateDecompressorFunc *DecompressorFunctions[K_LEN(CompressionTypeNames)];
+static CreateCompressorFunc *CompressorFunctions[K_LEN(CompressionTypeNames)];
 
 void StreamReader::SetDecoder(StreamDecoder *decoder)
 {
-    RG_ASSERT(decoder);
-    RG_ASSERT(!filename);
-    RG_ASSERT(!this->decoder);
+    K_ASSERT(decoder);
+    K_ASSERT(!filename);
+    K_ASSERT(!this->decoder);
 
     this->decoder = decoder;
 }
@@ -7537,7 +7537,7 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename, unsigned 
 {
     Close(true);
 
-    RG_DEFER_N(err_guard) { error = true; };
+    K_DEFER_N(err_guard) { error = true; };
 
     lazy = flags & (int)StreamReaderFlag::LazyFill;
     error = false;
@@ -7545,7 +7545,7 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename, unsigned 
     read_total = 0;
     read_max = -1;
 
-    RG_ASSERT(filename);
+    K_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     source.type = SourceType::Memory;
@@ -7563,7 +7563,7 @@ bool StreamReader::Open(int fd, const char *filename, unsigned int flags, Compre
 {
     Close(true);
 
-    RG_DEFER_N(err_guard) { error = true; };
+    K_DEFER_N(err_guard) { error = true; };
 
     lazy = flags & (int)StreamReaderFlag::LazyFill;
     error = false;
@@ -7571,8 +7571,8 @@ bool StreamReader::Open(int fd, const char *filename, unsigned int flags, Compre
     read_total = 0;
     read_max = -1;
 
-    RG_ASSERT(fd >= 0);
-    RG_ASSERT(filename);
+    K_ASSERT(fd >= 0);
+    K_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     source.type = SourceType::File;
@@ -7590,7 +7590,7 @@ OpenResult StreamReader::Open(const char *filename, unsigned int flags, Compress
 {
     Close(true);
 
-    RG_DEFER_N(err_guard) { error = true; };
+    K_DEFER_N(err_guard) { error = true; };
 
     lazy = flags & (int)StreamReaderFlag::LazyFill;
     error = false;
@@ -7598,7 +7598,7 @@ OpenResult StreamReader::Open(const char *filename, unsigned int flags, Compress
     read_total = 0;
     read_max = -1;
 
-    RG_ASSERT(filename);
+    K_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     source.type = SourceType::File;
@@ -7621,7 +7621,7 @@ bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const ch
 {
     Close(true);
 
-    RG_DEFER_N(err_guard) { error = true; };
+    K_DEFER_N(err_guard) { error = true; };
 
     lazy = flags & (int)StreamReaderFlag::LazyFill;
     error = false;
@@ -7629,7 +7629,7 @@ bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const ch
     read_total = 0;
     read_max = -1;
 
-    RG_ASSERT(filename);
+    K_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     source.type = SourceType::Function;
@@ -7644,7 +7644,7 @@ bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const ch
 
 bool StreamReader::Close(bool implicit)
 {
-    RG_ASSERT(implicit || this != StdIn);
+    K_ASSERT(implicit || this != StdIn);
 
     if (decoder) {
         delete decoder;
@@ -7714,13 +7714,13 @@ bool StreamReader::Rewind()
 
 int StreamReader::GetDescriptor() const
 {
-    RG_ASSERT(source.type == SourceType::File);
+    K_ASSERT(source.type == SourceType::File);
     return source.u.file.fd;
 }
 
 void StreamReader::SetDescriptorOwned(bool owned)
 {
-    RG_ASSERT(source.type == SourceType::File);
+    K_ASSERT(source.type == SourceType::File);
     source.u.file.owned = owned;
 }
 
@@ -7774,18 +7774,18 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
     if (error) [[unlikely]]
         return -1;
 
-    RG_DEFER_NC(buf_guard, buf_len = out_buf->len) { out_buf->RemoveFrom(buf_len); };
+    K_DEFER_NC(buf_guard, buf_len = out_buf->len) { out_buf->RemoveFrom(buf_len); };
 
     // Check virtual memory limits
     {
-        Size memory_max = RG_SIZE_MAX - out_buf->len - 1;
+        Size memory_max = K_SIZE_MAX - out_buf->len - 1;
 
         if (memory_max <= 0) [[unlikely]] {
             LogError("Exhausted memory limit reading file '%1'", filename);
             return -1;
         }
 
-        RG_ASSERT(max_len);
+        K_ASSERT(max_len);
         max_len = (max_len >= 0) ? std::min(max_len, memory_max) : memory_max;
     }
 
@@ -7813,7 +7813,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
         Size total_len = 0;
 
         while (!eof) {
-            Size grow = std::min(total_len ? Megabytes(1) : Kibibytes(64), RG_SIZE_MAX - out_buf->len);
+            Size grow = std::min(total_len ? Megabytes(1) : Kibibytes(64), K_SIZE_MAX - out_buf->len);
             out_buf->Grow(grow);
 
             Size read_len = Read(out_buf->Available(), out_buf->end());
@@ -7880,7 +7880,7 @@ bool StreamReader::InitDecompressor(CompressionType type)
         }
 
         decoder = func(this, type);
-        RG_ASSERT(decoder);
+        K_ASSERT(decoder);
     }
 
     return true;
@@ -7907,7 +7907,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
             max_len = std::min(max_len, (Size)UINT_MAX);
             read_len = _read(source.u.file.fd, out_buf, (unsigned int)max_len);
 #else
-            read_len = RG_RESTART_EINTR(read(source.u.file.fd, out_buf, (size_t)max_len), < 0);
+            read_len = K_RESTART_EINTR(read(source.u.file.fd, out_buf, (size_t)max_len), < 0);
 #endif
             if (read_len < 0) {
                 LogError("Error while reading file '%1': %2", filename, strerror(errno));
@@ -7933,7 +7933,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
 
 StreamDecompressorHelper::StreamDecompressorHelper(CompressionType compression_type, CreateDecompressorFunc *func)
 {
-    RG_ASSERT(!DecompressorFunctions[(int)compression_type]);
+    K_ASSERT(!DecompressorFunctions[(int)compression_type]);
     DecompressorFunctions[(int)compression_type] = func;
 }
 
@@ -7949,9 +7949,9 @@ bool LineReader::Next(Span<char> *out_line)
 
     for (;;) {
         if (!view.len) {
-            buf.Grow(RG_LINE_READER_STEP_SIZE + 1);
+            buf.Grow(K_LINE_READER_STEP_SIZE + 1);
 
-            Size read_len = st->Read(RG_LINE_READER_STEP_SIZE, buf.end());
+            Size read_len = st->Read(K_LINE_READER_STEP_SIZE, buf.end());
             if (read_len < 0) {
                 error = true;
                 return false;
@@ -7977,7 +7977,7 @@ bool LineReader::Next(Span<char> *out_line)
 
 void LineReader::PushLogFilter()
 {
-    RG::PushLogFilter([this](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
+    K::PushLogFilter([this](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
         char ctx[1024];
 
         if (line_number > 0) {
@@ -7992,9 +7992,9 @@ void LineReader::PushLogFilter()
 
 void StreamWriter::SetEncoder(StreamEncoder *encoder)
 {
-    RG_ASSERT(encoder);
-    RG_ASSERT(!filename);
-    RG_ASSERT(!this->encoder);
+    K_ASSERT(encoder);
+    K_ASSERT(!filename);
+    K_ASSERT(!this->encoder);
 
     this->encoder = encoder;
 }
@@ -8004,11 +8004,11 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename, unsigned 
 {
     Close(true);
 
-    RG_DEFER_N(err_guard) { error = true; };
+    K_DEFER_N(err_guard) { error = true; };
     error = false;
     raw_written = 0;
 
-    RG_ASSERT(filename);
+    K_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     dest.type = DestinationType::Memory;
@@ -8028,12 +8028,12 @@ bool StreamWriter::Open(int fd, const char *filename, unsigned int flags,
 {
     Close(true);
 
-    RG_DEFER_N(err_guard) { error = true; };
+    K_DEFER_N(err_guard) { error = true; };
     error = false;
     raw_written = 0;
 
-    RG_ASSERT(fd >= 0);
-    RG_ASSERT(filename);
+    K_ASSERT(fd >= 0);
+    K_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     InitFile(flags);
@@ -8053,11 +8053,11 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
 {
     Close(true);
 
-    RG_DEFER_N(err_guard) { error = true; };
+    K_DEFER_N(err_guard) { error = true; };
     error = false;
     raw_written = 0;
 
-    RG_ASSERT(filename);
+    K_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     InitFile(flags);
@@ -8083,7 +8083,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
 
             if (has_proc) {
                 const char *dirname = DuplicateString(directory, &str_alloc).ptr;
-                dest.u.file.fd = RG_RESTART_EINTR(open(dirname, O_WRONLY | O_TMPFILE | O_CLOEXEC, 0644), < 0);
+                dest.u.file.fd = K_RESTART_EINTR(open(dirname, O_WRONLY | O_TMPFILE | O_CLOEXEC, 0644), < 0);
 
                 if (dest.u.file.fd >= 0) {
                     dest.u.file.owned = true;
@@ -8096,7 +8096,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
 #endif
 
         if (!dest.u.file.owned) {
-            const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
+            const char *basename = SplitStrReverseAny(filename, K_PATH_SEPARATORS).ptr;
 
             dest.u.file.tmp_filename = CreateUniqueFile(directory, basename, ".tmp", &str_alloc, &dest.u.file.fd);
             if (!dest.u.file.tmp_filename)
@@ -8128,11 +8128,11 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
 {
     Close(true);
 
-    RG_DEFER_N(err_guard) { error = true; };
+    K_DEFER_N(err_guard) { error = true; };
     error = false;
     raw_written = 0;
 
-    RG_ASSERT(filename);
+    K_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     dest.type = DestinationType::Function;
@@ -8228,12 +8228,12 @@ bool StreamWriter::Flush()
         case DestinationType::Function: return true;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 int StreamWriter::GetDescriptor() const
 {
-    RG_ASSERT(dest.type == DestinationType::BufferedFile ||
+    K_ASSERT(dest.type == DestinationType::BufferedFile ||
               dest.type == DestinationType::LineFile ||
               dest.type == DestinationType::DirectFile);
 
@@ -8242,7 +8242,7 @@ int StreamWriter::GetDescriptor() const
 
 void StreamWriter::SetDescriptorOwned(bool owned)
 {
-    RG_ASSERT(dest.type == DestinationType::BufferedFile ||
+    K_ASSERT(dest.type == DestinationType::BufferedFile ||
               dest.type == DestinationType::LineFile ||
               dest.type == DestinationType::DirectFile);
 
@@ -8268,8 +8268,8 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
 
 bool StreamWriter::Close(bool implicit)
 {
-    RG_ASSERT(implicit || this != StdOut);
-    RG_ASSERT(implicit || this != StdErr);
+    K_ASSERT(implicit || this != StdOut);
+    K_ASSERT(implicit || this != StdErr);
 
     if (encoder) {
         error = error || !encoder->Finalize();
@@ -8328,7 +8328,7 @@ bool StreamWriter::Close(bool implicit)
                         // a temporary file and let RenameFile() handle the final step. Should be rare!
                         if (!linked) {
                             Span<const char> directory = GetPathDirectory(filename);
-                            const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
+                            const char *basename = SplitStrReverseAny(filename, K_PATH_SEPARATORS).ptr;
 
                             dest.u.file.tmp_filename = CreateUniquePath(directory, basename, ".tmp", &str_alloc, [&](const char *path) {
                                 return !linkat(AT_FDCWD, proc, AT_FDCWD, path, AT_SYMLINK_FOLLOW);
@@ -8373,7 +8373,7 @@ bool StreamWriter::Close(bool implicit)
                 UnlinkFile(filename);
             }
 
-            MemSet(&dest.u.file, 0, RG_SIZE(dest.u.file));
+            MemSet(&dest.u.file, 0, K_SIZE(dest.u.file));
         } break;
 
         case DestinationType::Function: {
@@ -8397,9 +8397,9 @@ void StreamWriter::InitFile(unsigned int flags)
     bool direct = (flags & (int)StreamWriterFlag::NoBuffer);
     bool line = (flags & (int)StreamWriterFlag::LineBuffer);
 
-    RG_ASSERT(!direct || !line);
+    K_ASSERT(!direct || !line);
 
-    MemSet(&dest.u.file, 0, RG_SIZE(dest.u.file));
+    MemSet(&dest.u.file, 0, K_SIZE(dest.u.file));
 
     if (direct) {
         dest.type = DestinationType::DirectFile;
@@ -8414,15 +8414,15 @@ void StreamWriter::InitFile(unsigned int flags)
 
 bool StreamWriter::FlushBuffer()
 {
-    RG_ASSERT(!error);
-    RG_ASSERT(dest.type == DestinationType::BufferedFile ||
+    K_ASSERT(!error);
+    K_ASSERT(dest.type == DestinationType::BufferedFile ||
               dest.type == DestinationType::LineFile);
 
     while (dest.u.file.buf_used) {
 #if defined(_WIN32)
         Size write_len = _write(dest.u.file.fd, dest.u.file.buf.ptr, (unsigned int)dest.u.file.buf_used);
 #else
-        Size write_len = RG_RESTART_EINTR(write(dest.u.file.fd, dest.u.file.buf.ptr, (size_t)dest.u.file.buf_used), < 0);
+        Size write_len = K_RESTART_EINTR(write(dest.u.file.fd, dest.u.file.buf.ptr, (size_t)dest.u.file.buf_used), < 0);
 #endif
 
         if (write_len < 0) {
@@ -8453,7 +8453,7 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
         }
 
         encoder = func(this, type, speed);
-        RG_ASSERT(encoder);
+        K_ASSERT(encoder);
     }
 
     return true;
@@ -8540,7 +8540,7 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
                 unsigned int int_len = (unsigned int)std::min(buf.len, (Size)UINT_MAX);
                 Size write_len = _write(dest.u.file.fd, buf.ptr, int_len);
 #else
-                Size write_len = RG_RESTART_EINTR(write(dest.u.file.fd, buf.ptr, (size_t)buf.len), < 0);
+                Size write_len = K_RESTART_EINTR(write(dest.u.file.fd, buf.ptr, (size_t)buf.len), < 0);
 #endif
 
                 if (write_len < 0) {
@@ -8575,14 +8575,14 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 
 StreamCompressorHelper::StreamCompressorHelper(CompressionType compression_type, CreateCompressorFunc *func)
 {
-    RG_ASSERT(!CompressorFunctions[(int)compression_type]);
+    K_ASSERT(!CompressorFunctions[(int)compression_type]);
     CompressorFunctions[(int)compression_type] = func;
 }
 
 bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer, Span<uint8_t> buf,
                   FunctionRef<void(int64_t, int64_t)> progress)
 {
-    RG_ASSERT(buf.len >= Kibibytes(2));
+    K_ASSERT(buf.len >= Kibibytes(2));
 
     if (!reader->IsValid())
         return false;
@@ -8629,7 +8629,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
     if (error) [[unlikely]]
         return LineType::Exit;
 
-    RG_DEFER_N(err_guard) { error = true; };
+    K_DEFER_N(err_guard) { error = true; };
 
     Span<char> line;
     while (reader.Next(&line)) {
@@ -8723,7 +8723,7 @@ bool ReloadAssets()
         SplitStrReverse(prefix, '.', &prefix);
 #endif
 
-        Fmt(assets_filename, "%1_assets%2", prefix, RG_SHARED_LIBRARY_EXTENSION);
+        Fmt(assets_filename, "%1_assets%2", prefix, K_SHARED_LIBRARY_EXTENSION);
     }
 
     // Check library time
@@ -8752,7 +8752,7 @@ bool ReloadAssets()
         LogError("Cannot load library '%1'", assets_filename);
         return false;
     }
-    RG_DEFER { FreeLibrary(h); };
+    K_DEFER { FreeLibrary(h); };
 
     lib_assets = (const Span<const AssetInfo> *)(void *)GetProcAddress(h, "EmbedAssets");
 #else
@@ -8761,7 +8761,7 @@ bool ReloadAssets()
         LogError("Cannot load library '%1': %2", assets_filename, dlerror());
         return false;
     }
-    RG_DEFER { dlclose(h); };
+    K_DEFER { dlclose(h); };
 
     lib_assets = (const Span<const AssetInfo> *)dlsym(h, "EmbedAssets");
 #endif
@@ -8797,7 +8797,7 @@ Span<const AssetInfo> GetEmbedAssets()
 {
     if (!assets_ready) {
         ReloadAssets();
-        RG_ASSERT(assets_ready);
+        K_ASSERT(assets_ready);
     }
 
     return assets;
@@ -8807,7 +8807,7 @@ const AssetInfo *FindEmbedAsset(const char *name)
 {
     if (!assets_ready) {
         ReloadAssets();
-        RG_ASSERT(assets_ready);
+        K_ASSERT(assets_ready);
     }
 
     return assets_map.FindValue(name, nullptr);
@@ -8869,7 +8869,7 @@ bool PatchFile(Span<const uint8_t> data, StreamWriter *writer,
     StreamReader reader(data, "<asset>");
 
     if (!PatchFile(&reader, writer, func)) {
-        RG_ASSERT(reader.IsValid());
+        K_ASSERT(reader.IsValid());
         return false;
     }
 
@@ -8882,7 +8882,7 @@ bool PatchFile(const AssetInfo &asset, StreamWriter *writer,
     StreamReader reader(asset.data, "<asset>", 0, asset.compression_type);
 
     if (!PatchFile(&reader, writer, func)) {
-        RG_ASSERT(reader.IsValid());
+        K_ASSERT(reader.IsValid());
         return false;
     }
 
@@ -8892,7 +8892,7 @@ bool PatchFile(const AssetInfo &asset, StreamWriter *writer,
 Span<const uint8_t> PatchFile(Span<const uint8_t> data, Allocator *alloc,
                               FunctionRef<void(Span<const char>, StreamWriter *)> func)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     HeapArray<uint8_t> buf(alloc);
     StreamWriter writer(&buf, "<asset>");
@@ -8900,7 +8900,7 @@ Span<const uint8_t> PatchFile(Span<const uint8_t> data, Allocator *alloc,
     PatchFile(data, &writer, func);
 
     bool success = writer.Close();
-    RG_ASSERT(success);
+    K_ASSERT(success);
 
     buf.Grow(1);
     buf.ptr[buf.len] = 0;
@@ -8911,7 +8911,7 @@ Span<const uint8_t> PatchFile(Span<const uint8_t> data, Allocator *alloc,
 Span<const uint8_t> PatchFile(const AssetInfo &asset, Allocator *alloc,
                               FunctionRef<void(Span<const char>, StreamWriter *)> func)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     HeapArray<uint8_t> buf(alloc);
     StreamWriter writer(&buf, "<asset>", 0, asset.compression_type);
@@ -8919,7 +8919,7 @@ Span<const uint8_t> PatchFile(const AssetInfo &asset, Allocator *alloc,
     PatchFile(asset, &writer, func);
 
     bool success = writer.Close();
-    RG_ASSERT(success);
+    K_ASSERT(success);
 
     buf.Grow(1);
     buf.ptr[buf.len] = 0;
@@ -8974,7 +8974,7 @@ static void SetDefaultLocale()
     {
         wchar_t buffer[16384];
         unsigned long languages = 0;
-        unsigned long size = RG_LEN(buffer);
+        unsigned long size = K_LEN(buffer);
 
         if (GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &languages, buffer, &size)) {
             if (languages) {
@@ -8996,7 +8996,7 @@ static void SetDefaultLocale()
 
 void InitLocales(Span<const TranslationTable> tables)
 {
-    RG_ASSERT(!i18n_tables.len);
+    K_ASSERT(!i18n_tables.len);
 
     for (const TranslationTable &table: tables) {
         i18n_tables.Append(table);
@@ -9104,8 +9104,8 @@ const char *OptionParser::Next()
             // option up to '=' in our buffer. And store the part after '=' as the
             // current value.
             Size len = needle - opt;
-            if (len > RG_SIZE(buf) - 1) {
-                len = RG_SIZE(buf) - 1;
+            if (len > K_SIZE(buf) - 1) {
+                len = K_SIZE(buf) - 1;
             }
             MemCpy(buf, opt, len);
             buf[len] = 0;
@@ -9187,8 +9187,8 @@ void OptionParser::ConsumeNonOptions(HeapArray<const char *> *non_options)
 
 bool OptionParser::Test(const char *test1, const char *test2, OptionType type)
 {
-    RG_ASSERT(test1 && IsOption(test1));
-    RG_ASSERT(!test2 || IsOption(test2));
+    K_ASSERT(test1 && IsOption(test1));
+    K_ASSERT(!test2 || IsOption(test2));
 
     if (TestStr(test1, current_option) || (test2 && TestStr(test2, current_option))) {
         switch (type) {
@@ -9319,11 +9319,11 @@ bool ConsolePrompter::Read(Span<const char> *out_str)
 #if !defined(_WIN32) && !defined(__wasm__)
     struct sigaction old_sa;
     IgnoreSigWinch(&old_sa);
-    RG_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
+    K_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
 #endif
 
     if (FileIsVt100(STDERR_FILENO) && EnableRawMode()) {
-        RG_DEFER {
+        K_DEFER {
             Print(StdErr, "%!0");
             DisableRawMode();
         };
@@ -9336,16 +9336,16 @@ bool ConsolePrompter::Read(Span<const char> *out_str)
 
 Size ConsolePrompter::ReadEnum(Span<const PromptChoice> choices, Size value)
 {
-    RG_ASSERT(value < choices.len);
+    K_ASSERT(value < choices.len);
 
 #if !defined(_WIN32) && !defined(__wasm__)
     struct sigaction old_sa;
     IgnoreSigWinch(&old_sa);
-    RG_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
+    K_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
 #endif
 
     if (FileIsVt100(STDERR_FILENO) && EnableRawMode()) {
-        RG_DEFER {
+        K_DEFER {
             Print(StdErr, "%!0");
             DisableRawMode();
         };
@@ -9395,7 +9395,7 @@ bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
                 LocalArray<char, 16> buf;
 
                 const auto match_escape = [&](const char *seq) {
-                    RG_ASSERT(strlen(seq) < RG_SIZE(buf.data));
+                    K_ASSERT(strlen(seq) < K_SIZE(buf.data));
 
                     for (Size i = 0; seq[i]; i++) {
                         if (i >= buf.len) {
@@ -9624,7 +9624,7 @@ Size ConsolePrompter::ReadRawEnum(Span<const PromptChoice> choices, Size value)
                 LocalArray<char, 16> buf;
 
                 const auto match_escape = [&](const char *seq) {
-                    RG_ASSERT(strlen(seq) < RG_SIZE(buf.data));
+                    K_ASSERT(strlen(seq) < K_SIZE(buf.data));
 
                     for (Size i = 0; seq[i]; i++) {
                         if (i >= buf.len) {
@@ -9835,8 +9835,8 @@ Size ConsolePrompter::FindBackward(Size offset, const char *chars)
 
 void ConsolePrompter::Delete(Size start, Size end)
 {
-    RG_ASSERT(start >= 0);
-    RG_ASSERT(end >= start && end <= str.len);
+    K_ASSERT(start >= 0);
+    K_ASSERT(end >= start && end <= str.len);
 
     MemMove(str.ptr + start, str.ptr + end, str.len - end);
     str.len -= end - start;
@@ -10118,7 +10118,7 @@ void ConsolePrompter::EnsureNulTermination()
 
 const char *Prompt(const char *prompt, const char *default_value, const char *mask, Allocator *alloc)
 {
-    RG_ASSERT(alloc);
+    K_ASSERT(alloc);
 
     ConsolePrompter prompter;
 
@@ -10138,7 +10138,7 @@ const char *Prompt(const char *prompt, const char *default_value, const char *ma
 
 Size PromptEnum(const char *prompt, Span<const PromptChoice> choices, Size value)
 {
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
     {
         HashSet<char> keys;
 
@@ -10147,7 +10147,7 @@ Size PromptEnum(const char *prompt, Span<const PromptChoice> choices, Size value
         }
 
         bool duplicates = (keys.table.count < choices.len);
-        RG_ASSERT(!duplicates);
+        K_ASSERT(!duplicates);
     }
 #endif
 
@@ -10160,7 +10160,7 @@ Size PromptEnum(const char *prompt, Span<const PromptChoice> choices, Size value
 Size PromptEnum(const char *prompt, Span<const char *const> strings, Size value)
 {
     static const char literals[] = "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    RG_ASSERT(strings.len <= RG_LEN(literals));
+    K_ASSERT(strings.len <= K_LEN(literals));
 
     HeapArray<PromptChoice> choices;
 
@@ -10215,7 +10215,7 @@ bool CanCompressFile(const char *filename)
         const char *ptr = GetPathExtension(filename).ptr;
 
         Size i = 0;
-        while (i < RG_SIZE(extension) - 1 && ptr[i]) {
+        while (i < K_SIZE(extension) - 1 && ptr[i]) {
             extension[i] = LowerAscii(ptr[i]);
             i++;
         }
@@ -10276,8 +10276,8 @@ bool IsValidUtf8(Span<const char> str)
 
 static bool TestUnicodeTable(Span<const int32_t> table, int32_t uc)
 {
-    RG_ASSERT(table.len > 0);
-    RG_ASSERT(table.len % 2 == 0);
+    K_ASSERT(table.len > 0);
+    K_ASSERT(table.len % 2 == 0);
 
     auto it = std::upper_bound(table.begin(), table.end(), uc,
                                [](int32_t uc, int32_t x) { return uc < x; });
@@ -10352,7 +10352,7 @@ uint32_t CRC32(uint32_t state, Span<const uint8_t> buf)
 {
     state = ~state;
 
-    Size right = buf.len & (RG_SIZE_MAX - 3);
+    Size right = buf.len & (K_SIZE_MAX - 3);
 
     for (Size i = 0; i < right; i += 4) {
         state = (state >> 8) ^ Crc32Table[(state ^ buf[i + 0]) & 0xFF];
@@ -10371,7 +10371,7 @@ uint32_t CRC32C(uint32_t state, Span<const uint8_t> buf)
 {
     state = ~state;
 
-    Size right = buf.len & (RG_SIZE_MAX - 3);
+    Size right = buf.len & (K_SIZE_MAX - 3);
 
     for (Size i = 0; i < right; i += 4) {
         state = (state >> 8) ^ Crc32CTable[(state ^ buf[i + 0]) & 0xFF];

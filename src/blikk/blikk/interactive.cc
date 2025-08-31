@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "blikk.hh"
 
-namespace RG {
+namespace K {
 
 struct LogEntry {
     LogLevel level;
@@ -72,7 +72,7 @@ begin
 end
 )", "<outro>", &outro);
 
-        RG_ASSERT(success);
+        K_ASSERT(success);
     }
 
     out_file->tokens.Append(intro.tokens);
@@ -101,7 +101,7 @@ int RunCommand(Span<const char> code, const Config &config)
 
         // ... but don't tell the user if it fails!
         SetLogHandler([](LogLevel, const char *, const char *) {}, false);
-        RG_DEFER { SetLogHandler(DefaultLogHandler, StdErr->IsVt100()); };
+        K_DEFER { SetLogHandler(DefaultLogHandler, StdErr->IsVt100()); };
 
         valid_with_fake_print = compiler.Compile(file);
     } else {
@@ -112,7 +112,7 @@ int RunCommand(Span<const char> code, const Config &config)
     if (!valid_with_fake_print) {
         bk_TokenizedFile file;
         bool success = bk_Tokenize(code, "<inline>", &file);
-        RG_ASSERT(success);
+        K_ASSERT(success);
 
         if (!compiler.Compile(file))
             return 1;
@@ -167,7 +167,7 @@ int RunInteractive(const Config &config)
                 trace.Store(level, ctx, msg);
             }
         }, false);
-        RG_DEFER_N(try_guard) {
+        K_DEFER_N(try_guard) {
             prompter.Commit();
             trace.Dump();
         };
@@ -195,7 +195,7 @@ int RunInteractive(const Config &config)
 
             bk_TokenizedFile file;
             bool success = bk_Tokenize(code, "<interactive>", &file);
-            RG_ASSERT(success);
+            K_ASSERT(success);
 
             bk_CompileReport report;
             if (!compiler.Compile(file, &report)) {

@@ -18,7 +18,7 @@
 #include "web.hh"
 #include "mail.hh"
 
-namespace RG {
+namespace K {
 
 static smtp_MailContent FailureMessage = {
     "[Error] {{ TITLE }}: {{ REPOSITORY }}",

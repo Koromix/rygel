@@ -23,7 +23,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 struct sq_SnapshotGeneration {
     const char *base_filename;

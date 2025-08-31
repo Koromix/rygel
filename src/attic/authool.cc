@@ -19,7 +19,7 @@
 #include "src/core/wrap/qrcode.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
 static int RunGeneratePassword(Span<const char *> arguments)
 {
@@ -795,4 +795,4 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

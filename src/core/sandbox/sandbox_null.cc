@@ -24,7 +24,7 @@
 #include "src/core/base/base.hh"
 #include "sandbox.hh"
 
-namespace RG {
+namespace K {
 
 bool sb_IsSandboxSupported()
 {
@@ -33,22 +33,22 @@ bool sb_IsSandboxSupported()
 
 void sb_SandboxBuilder::SetIsolationFlags(unsigned int)
 {
-    RG_ASSERT(false);
+    K_ASSERT(false);
 }
 
 void sb_SandboxBuilder::RevealPaths(Span<const char *const>, bool)
 {
-    RG_ASSERT(false);
+    K_ASSERT(false);
 }
 
 void sb_SandboxBuilder::MaskFiles(Span<const char *const>)
 {
-    RG_ASSERT(false);
+    K_ASSERT(false);
 }
 
 bool sb_SandboxBuilder::Apply()
 {
-    RG_ASSERT(false);
+    K_ASSERT(false);
     return false;
 }
 

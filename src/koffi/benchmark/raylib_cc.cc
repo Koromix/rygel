@@ -22,7 +22,7 @@
 #include "src/core/base/base.hh"
 #include "vendor/raylib/src/raylib.h"
 
-namespace RG {
+namespace K {
 
 // #define RENDER
 
@@ -90,4 +90,4 @@ int Main(int argc, char **argv)
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

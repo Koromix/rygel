@@ -18,20 +18,20 @@
 #include "disk.hh"
 #include "repository.hh"
 
-namespace RG {
+namespace K {
 
 static const int CacheVersion = 1;
 static const int64_t CommitDelay = 5000;
 
 bool rk_Cache::Open(rk_Repository *repo, bool build)
 {
-    RG_ASSERT(!this->repo);
-    RG_ASSERT(!main.IsValid());
-    RG_ASSERT(!write.IsValid());
+    K_ASSERT(!this->repo);
+    K_ASSERT(!main.IsValid());
+    K_ASSERT(!write.IsValid());
 
     BlockAllocator temp_alloc;
 
-    RG_DEFER_N(err_guard) { Close(); };
+    K_DEFER_N(err_guard) { Close(); };
 
     this->repo = repo;
 
@@ -170,7 +170,7 @@ bool rk_Cache::Close()
 
 bool rk_Cache::Reset(bool list)
 {
-    RG_ASSERT(repo);
+    K_ASSERT(repo);
 
     bool success = main.Transaction([&]() {
         if (!main.Run("DELETE FROM stats"))
@@ -202,7 +202,7 @@ bool rk_Cache::Reset(bool list)
 
                     char str[128];
                     str[0] = catalog[0];
-                    CopyString(hash, MakeSpan(str + 1, RG_SIZE(str) - 1));
+                    CopyString(hash, MakeSpan(str + 1, K_SIZE(str) - 1));
 
                     if (!rk_ParseOID(str, &oid))
                         return true;
@@ -241,7 +241,7 @@ int64_t rk_Cache::CountBlobs(int64_t *out_checked)
                          LEFT JOIN checks c ON (c.oid = b.oid))", &stmt))
         return -1;
     if (!stmt.Step()) {
-        RG_ASSERT(!stmt.IsValid());
+        K_ASSERT(!stmt.IsValid());
         return -1;
     }
 
@@ -256,7 +256,7 @@ int64_t rk_Cache::CountBlobs(int64_t *out_checked)
 
 bool rk_Cache::PruneChecks(int64_t from)
 {
-    RG_ASSERT(repo);
+    K_ASSERT(repo);
 
     bool success = main.Run("DELETE FROM checks WHERE mark < ?1", from);
     return success;
@@ -264,7 +264,7 @@ bool rk_Cache::PruneChecks(int64_t from)
 
 StatResult rk_Cache::TestBlob(const rk_ObjectID &oid, int64_t *out_size)
 {
-    RG_ASSERT(repo);
+    K_ASSERT(repo);
 
     sq_Statement stmt;
     if (!main.Prepare("SELECT size FROM blobs WHERE oid = ?1", &stmt, oid.Raw()))
@@ -286,7 +286,7 @@ StatResult rk_Cache::TestBlob(const rk_ObjectID &oid, int64_t *out_size)
 
 bool rk_Cache::HasCheck(const rk_ObjectID &oid, bool *out_valid)
 {
-    RG_ASSERT(repo);
+    K_ASSERT(repo);
 
     sq_Statement stmt;
     if (!main.Prepare("SELECT valid FROM checks WHERE oid = ?1", &stmt, oid.Raw()))
@@ -304,7 +304,7 @@ bool rk_Cache::HasCheck(const rk_ObjectID &oid, bool *out_valid)
 
 StatResult rk_Cache::GetStat(const char *path, rk_CacheStat *out_stat)
 {
-    RG_ASSERT(repo);
+    K_ASSERT(repo);
 
     sq_Statement stmt;
     if (!main.Prepare(R"(SELECT mtime, ctime, mode, size, hash, stored
@@ -316,7 +316,7 @@ StatResult rk_Cache::GetStat(const char *path, rk_CacheStat *out_stat)
         Span<const uint8_t> hash = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 4),
                                                              sqlite3_column_bytes(stmt, 4));
 
-        if (hash.len != RG_SIZE(out_stat->hash)) [[unlikely]] {
+        if (hash.len != K_SIZE(out_stat->hash)) [[unlikely]] {
             LogDebug("Hash size mismatch for '%1'", path);
             return StatResult::MissingPath;
         }
@@ -338,7 +338,7 @@ StatResult rk_Cache::GetStat(const char *path, rk_CacheStat *out_stat)
 
 void rk_Cache::PutBlob(const rk_ObjectID &oid, int64_t size)
 {
-    RG_ASSERT(repo);
+    K_ASSERT(repo);
 
     // Can't use lock_guard, see Commit()
     put_mutex.lock();
@@ -351,7 +351,7 @@ void rk_Cache::PutBlob(const rk_ObjectID &oid, int64_t size)
 
 bool rk_Cache::PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid)
 {
-    RG_ASSERT(repo);
+    K_ASSERT(repo);
 
     // Can't use lock_guard, see Commit()
     put_mutex.lock();
@@ -374,7 +374,7 @@ bool rk_Cache::PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid)
 
 void rk_Cache::PutStat(const char *path, const rk_CacheStat &st)
 {
-    RG_ASSERT(repo);
+    K_ASSERT(repo);
 
     // Can't use lock_guard, see Commit()
     put_mutex.lock();
@@ -390,7 +390,7 @@ void rk_Cache::PutStat(const char *path, const rk_CacheStat &st)
 // Call with put_mutex locked, but don't use a guard because this method releases the lock!
 bool rk_Cache::Commit(bool force)
 {
-    RG_ASSERT(repo);
+    K_ASSERT(repo);
 
     int64_t now = GetMonotonicTime();
 
@@ -406,7 +406,7 @@ bool rk_Cache::Commit(bool force)
 
     put_mutex.unlock();
 
-    RG_DEFER {
+    K_DEFER {
         commit.blobs.RemoveFrom(0);
         commit.checks.RemoveFrom(0);
         commit.stats.RemoveFrom(0);
@@ -441,7 +441,7 @@ bool rk_Cache::Commit(bool force)
         }
 
         for (const PendingStat &stat: commit.stats) {
-            Span<const uint8_t> hash = MakeSpan((const uint8_t *)&stat.st.hash.raw, RG_SIZE(stat.st.hash.raw));
+            Span<const uint8_t> hash = MakeSpan((const uint8_t *)&stat.st.hash.raw, K_SIZE(stat.st.hash.raw));
 
             if (!write.Run(R"(INSERT INTO stats (path, mtime, ctime, mode, size, hash, stored)
                               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)

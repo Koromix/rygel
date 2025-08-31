@@ -37,7 +37,7 @@
 #include "vendor/fmt/include/fmt/format.h"
 #include "vendor/fmt/include/fmt/compile.h"
 
-namespace RG {
+namespace K {
 
 TEST_FUNCTION("base/FormatDouble")
 {
@@ -284,7 +284,7 @@ TEST_FUNCTION("base/FastRandom")
 TEST_FUNCTION("base/ParseBool")
 {
     PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
 #define VALID(Str, Flags, Value, Remain) \
         do { \
@@ -303,29 +303,29 @@ TEST_FUNCTION("base/ParseBool")
             TEST_EX(!valid, "%1: Invalid == %2 %3", (Str), valid ? "Valid" : "Invalid", value); \
         } while (false)
 
-    VALID("1", RG_DEFAULT_PARSE_FLAGS, true, 0);
-    VALID("on", RG_DEFAULT_PARSE_FLAGS, true, 0);
-    VALID("y", RG_DEFAULT_PARSE_FLAGS, true, 0);
-    VALID("yes", RG_DEFAULT_PARSE_FLAGS, true, 0);
-    VALID("true", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("1", K_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("on", K_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("y", K_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("yes", K_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("true", K_DEFAULT_PARSE_FLAGS, true, 0);
 
-    VALID("0", RG_DEFAULT_PARSE_FLAGS, false, 0);
-    VALID("off", RG_DEFAULT_PARSE_FLAGS, false, 0);
-    VALID("n", RG_DEFAULT_PARSE_FLAGS, false, 0);
-    VALID("no", RG_DEFAULT_PARSE_FLAGS, false, 0);
-    VALID("false", RG_DEFAULT_PARSE_FLAGS, false, 0);
+    VALID("0", K_DEFAULT_PARSE_FLAGS, false, 0);
+    VALID("off", K_DEFAULT_PARSE_FLAGS, false, 0);
+    VALID("n", K_DEFAULT_PARSE_FLAGS, false, 0);
+    VALID("no", K_DEFAULT_PARSE_FLAGS, false, 0);
+    VALID("false", K_DEFAULT_PARSE_FLAGS, false, 0);
 
-    VALID("true", RG_DEFAULT_PARSE_FLAGS, true, 0);
-    VALID("TrUe", RG_DEFAULT_PARSE_FLAGS, true, 0);
-    INVALID("trues", RG_DEFAULT_PARSE_FLAGS);
+    VALID("true", K_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("TrUe", K_DEFAULT_PARSE_FLAGS, true, 0);
+    INVALID("trues", K_DEFAULT_PARSE_FLAGS);
     VALID("FALSE!", 0, false, 1);
-    VALID("Y", RG_DEFAULT_PARSE_FLAGS, true, 0);
-    INVALID("YE", RG_DEFAULT_PARSE_FLAGS);
+    VALID("Y", K_DEFAULT_PARSE_FLAGS, true, 0);
+    INVALID("YE", K_DEFAULT_PARSE_FLAGS);
     VALID("yes", 0, true, 0);
     VALID("yes!!!", 0, true, 3);
     VALID("n+", 0, false, 1);
     VALID("no+", 0, false, 1);
-    INVALID("no+", RG_DEFAULT_PARSE_FLAGS);
+    INVALID("no+", K_DEFAULT_PARSE_FLAGS);
 
 #undef INVALID
 #undef VALID
@@ -334,7 +334,7 @@ TEST_FUNCTION("base/ParseBool")
 TEST_FUNCTION("base/ParseSize")
 {
     PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
 #define VALID(Str, Flags, Value, Remain) \
         do { \
@@ -353,22 +353,22 @@ TEST_FUNCTION("base/ParseSize")
             TEST_EX(!valid, "%1: Invalid == %2 %3", (Str), valid ? "Valid" : "Invalid", value); \
         } while (false)
 
-    VALID("1", RG_DEFAULT_PARSE_FLAGS, 1, 0);
-    VALID("2147483648", RG_DEFAULT_PARSE_FLAGS, 2147483648, 0);
-    VALID("4294967295", RG_DEFAULT_PARSE_FLAGS, 4294967295, 0);
-    INVALID("1S", RG_DEFAULT_PARSE_FLAGS);
+    VALID("1", K_DEFAULT_PARSE_FLAGS, 1, 0);
+    VALID("2147483648", K_DEFAULT_PARSE_FLAGS, 2147483648, 0);
+    VALID("4294967295", K_DEFAULT_PARSE_FLAGS, 4294967295, 0);
+    INVALID("1S", K_DEFAULT_PARSE_FLAGS);
 
-    VALID("4B", RG_DEFAULT_PARSE_FLAGS, 4, 0);
-    VALID("4k", RG_DEFAULT_PARSE_FLAGS, 4000, 0);
-    VALID("4M", RG_DEFAULT_PARSE_FLAGS, 4000000, 0);
-    VALID("4G", RG_DEFAULT_PARSE_FLAGS, 4000000000, 0);
-    VALID("4T", RG_DEFAULT_PARSE_FLAGS, 4000000000000ll, 0);
+    VALID("4B", K_DEFAULT_PARSE_FLAGS, 4, 0);
+    VALID("4k", K_DEFAULT_PARSE_FLAGS, 4000, 0);
+    VALID("4M", K_DEFAULT_PARSE_FLAGS, 4000000, 0);
+    VALID("4G", K_DEFAULT_PARSE_FLAGS, 4000000000, 0);
+    VALID("4T", K_DEFAULT_PARSE_FLAGS, 4000000000000ll, 0);
     VALID("4s", 0, 4, 1);
-    INVALID("4s", RG_DEFAULT_PARSE_FLAGS);
+    INVALID("4s", K_DEFAULT_PARSE_FLAGS);
 
-    VALID("4G", RG_DEFAULT_PARSE_FLAGS, 4000000000, 0);
+    VALID("4G", K_DEFAULT_PARSE_FLAGS, 4000000000, 0);
     VALID("4Gi", 0, 4000000000, 1);
-    INVALID("4Gi", RG_DEFAULT_PARSE_FLAGS);
+    INVALID("4Gi", K_DEFAULT_PARSE_FLAGS);
 
 #undef INVALID
 #undef VALID
@@ -377,7 +377,7 @@ TEST_FUNCTION("base/ParseSize")
 TEST_FUNCTION("base/ParseDuration")
 {
     PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
 #define VALID(Str, Flags, Value, Remain) \
         do { \
@@ -396,20 +396,20 @@ TEST_FUNCTION("base/ParseDuration")
             TEST_EX(!valid, "%1: Invalid == %2 %3", (Str), valid ? "Valid" : "Invalid", value); \
         } while (false)
 
-    VALID("1", RG_DEFAULT_PARSE_FLAGS, 1000, 0);
-    VALID("300", RG_DEFAULT_PARSE_FLAGS, 300000, 0);
-    INVALID("1p", RG_DEFAULT_PARSE_FLAGS);
+    VALID("1", K_DEFAULT_PARSE_FLAGS, 1000, 0);
+    VALID("300", K_DEFAULT_PARSE_FLAGS, 300000, 0);
+    INVALID("1p", K_DEFAULT_PARSE_FLAGS);
 
-    VALID("4s", RG_DEFAULT_PARSE_FLAGS, 4000, 0);
-    VALID("4m", RG_DEFAULT_PARSE_FLAGS, 4000 * 60, 0);
-    VALID("4h", RG_DEFAULT_PARSE_FLAGS, 4000 * 3600, 0);
-    VALID("4d", RG_DEFAULT_PARSE_FLAGS, 4000 * 86400, 0);
+    VALID("4s", K_DEFAULT_PARSE_FLAGS, 4000, 0);
+    VALID("4m", K_DEFAULT_PARSE_FLAGS, 4000 * 60, 0);
+    VALID("4h", K_DEFAULT_PARSE_FLAGS, 4000 * 3600, 0);
+    VALID("4d", K_DEFAULT_PARSE_FLAGS, 4000 * 86400, 0);
     VALID("4w", 0, 4000, 1);
-    INVALID("4w", RG_DEFAULT_PARSE_FLAGS);
+    INVALID("4w", K_DEFAULT_PARSE_FLAGS);
 
-    VALID("4d", RG_DEFAULT_PARSE_FLAGS, 4000 * 86400, 0);
+    VALID("4d", K_DEFAULT_PARSE_FLAGS, 4000 * 86400, 0);
     VALID("4dt", 0, 4000 * 86400, 1);
-    INVALID("4dt", RG_DEFAULT_PARSE_FLAGS);
+    INVALID("4dt", K_DEFAULT_PARSE_FLAGS);
 
 #undef INVALID
 #undef VALID
@@ -834,14 +834,14 @@ struct IntBucket {
     int key;
     int value;
 
-    RG_HASHTABLE_HANDLER(IntBucket, key);
+    K_HASHTABLE_HANDLER(IntBucket, key);
 };
 
 struct StrBucket {
     const char *key;
     int value;
 
-    RG_HASHTABLE_HANDLER(StrBucket, key);
+    K_HASHTABLE_HANDLER(StrBucket, key);
 };
 
 TEST_FUNCTION("base/HashTable")
@@ -975,11 +975,11 @@ BENCHMARK_FUNCTION("base/Fmt")
     int fd = OpenFile("/dev/null", (int)OpenFlag::Write);
     FILE *fp = fdopen(fd, "wb");
 #endif
-    RG_ASSERT(fp);
-    RG_DEFER { fclose(fp); };
+    K_ASSERT(fp);
+    K_DEFER { fclose(fp); };
 
     StreamWriter writer(fd, "/dev/null");
-    RG_ASSERT(writer.IsValid());
+    K_ASSERT(writer.IsValid());
 
     RunBenchmark("printf", iterations, [&](Size) {
         fprintf(fp, "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
@@ -987,7 +987,7 @@ BENCHMARK_FUNCTION("base/Fmt")
 
     RunBenchmark("snprintf", iterations, [&](Size) {
         char buf[1024];
-        snprintf(buf, RG_SIZE(buf), "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
+        snprintf(buf, K_SIZE(buf), "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 
 #if !defined(_WIN32)
@@ -1001,7 +1001,7 @@ BENCHMARK_FUNCTION("base/Fmt")
 
     RunBenchmark("stbsp_snprintf", iterations, [&](Size) {
         char buf[1024];
-        stbsp_snprintf(buf, RG_SIZE(buf), "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
+        stbsp_snprintf(buf, K_SIZE(buf), "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 
     RunBenchmark("fmt::format_to", iterations, [&](Size) {

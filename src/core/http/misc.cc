@@ -23,7 +23,7 @@
 #include "server.hh"
 #include "misc.hh"
 
-namespace RG {
+namespace K {
 
 // Mostly compliant, respects 'q=0' weights but it does not care about ordering beyond that. The
 // caller is free to choose a preferred encoding among acceptable ones.
@@ -77,7 +77,7 @@ uint32_t http_ParseAcceptableEncodings(Span<const char> encodings)
 
 bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 16> *out_ranges)
 {
-    RG_DEFER_NC(out_guard, len = out_ranges->len) { out_ranges->RemoveFrom(len); };
+    K_DEFER_NC(out_guard, len = out_ranges->len) { out_ranges->RemoveFrom(len); };
 
     Span<const char> unit = TrimStr(SplitStr(str, '=', &str));
     if (unit != "bytes") {
@@ -196,7 +196,7 @@ bool http_PreventCSRF(http_IO *io)
 
 bool http_JsonPageBuilder::Init(http_IO *io)
 {
-    RG_ASSERT(!this->io);
+    K_ASSERT(!this->io);
 
     if (!io->NegociateEncoding(CompressionType::Brotli, CompressionType::Gzip, &encoding))
         return false;
@@ -212,7 +212,7 @@ void http_JsonPageBuilder::Finish()
     Flush();
 
     bool success = st.Close();
-    RG_ASSERT(success);
+    K_ASSERT(success);
 
     Span<const uint8_t> data = buf.Leak();
     allocator.GiveTo(io->Allocator());

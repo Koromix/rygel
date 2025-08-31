@@ -24,7 +24,7 @@
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "vendor/sha1/sha1.h"
 
-namespace RG {
+namespace K {
 
 static inline Size GetBase32DecodedLength(Size len)
 {
@@ -93,7 +93,7 @@ static Size DecodeBase32(Span<const char> b32, Span<uint8_t> out_buf)
 
 void pwd_GenerateSecret(Span<char> out_buf)
 {
-    RG_ASSERT(out_buf.len > 0);
+    K_ASSERT(out_buf.len > 0);
 
     static const char *chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
@@ -144,17 +144,17 @@ const char *pwd_GenerateHotpUrl(const char *label, const char *username, const c
 
 static Size HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8_t out_digest[20])
 {
-    RG_ASSERT(message.len <= UINT32_MAX);
+    K_ASSERT(message.len <= UINT32_MAX);
 
     uint8_t padded_key[64];
 
     // Hash and/or pad key
-    if (key.len > RG_SIZE(padded_key)) {
+    if (key.len > K_SIZE(padded_key)) {
         SHA1(padded_key, key.ptr, (size_t)key.len);
-        MemSet(padded_key + 20, 0, RG_SIZE(padded_key) - 20);
+        MemSet(padded_key + 20, 0, K_SIZE(padded_key) - 20);
     } else {
         MemCpy(padded_key, key.ptr, key.len);
-        MemSet(padded_key + key.len, 0, RG_SIZE(padded_key) - key.len);
+        MemSet(padded_key + key.len, 0, K_SIZE(padded_key) - key.len);
     }
 
     // Inner hash
@@ -163,11 +163,11 @@ static Size HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8
         SHA1_CTX ctx;
         SHA1Init(&ctx);
 
-        for (Size i = 0; i < RG_SIZE(padded_key); i++) {
+        for (Size i = 0; i < K_SIZE(padded_key); i++) {
             padded_key[i] ^= 0x36;
         }
 
-        SHA1Update(&ctx, padded_key, RG_SIZE(padded_key));
+        SHA1Update(&ctx, padded_key, K_SIZE(padded_key));
         SHA1Update(&ctx, message.ptr, (uint32_t)message.len);
         SHA1Final((unsigned char *)inner_hash, &ctx);
     }
@@ -177,13 +177,13 @@ static Size HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8
         SHA1_CTX ctx;
         SHA1Init(&ctx);
 
-        for (Size i = 0; i < RG_SIZE(padded_key); i++) {
+        for (Size i = 0; i < K_SIZE(padded_key); i++) {
             padded_key[i] ^= 0x36; // IPAD is still there
             padded_key[i] ^= 0x5C;
         }
 
-        SHA1Update(&ctx, padded_key, RG_SIZE(padded_key));
-        SHA1Update(&ctx, inner_hash, RG_SIZE(inner_hash));
+        SHA1Update(&ctx, padded_key, K_SIZE(padded_key));
+        SHA1Update(&ctx, inner_hash, K_SIZE(inner_hash));
         SHA1Final((unsigned char *)out_digest, &ctx);
     }
 
@@ -197,12 +197,12 @@ static Size HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uin
     uint8_t padded_key[64];
 
     // Hash and/or pad key
-    if (key.len > RG_SIZE(padded_key)) {
+    if (key.len > K_SIZE(padded_key)) {
         crypto_hash_sha256(padded_key, key.ptr, (size_t)key.len);
-        MemSet(padded_key + 32, 0, RG_SIZE(padded_key) - 32);
+        MemSet(padded_key + 32, 0, K_SIZE(padded_key) - 32);
     } else {
         MemCpy(padded_key, key.ptr, key.len);
-        MemSet(padded_key + key.len, 0, RG_SIZE(padded_key) - key.len);
+        MemSet(padded_key + key.len, 0, K_SIZE(padded_key) - key.len);
     }
 
     // Inner hash
@@ -211,11 +211,11 @@ static Size HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uin
         crypto_hash_sha256_state state;
         crypto_hash_sha256_init(&state);
 
-        for (Size i = 0; i < RG_SIZE(padded_key); i++) {
+        for (Size i = 0; i < K_SIZE(padded_key); i++) {
             padded_key[i] ^= 0x36;
         }
 
-        crypto_hash_sha256_update(&state, padded_key, RG_SIZE(padded_key));
+        crypto_hash_sha256_update(&state, padded_key, K_SIZE(padded_key));
         crypto_hash_sha256_update(&state, message.ptr, (size_t)message.len);
         crypto_hash_sha256_final(&state, inner_hash);
     }
@@ -225,13 +225,13 @@ static Size HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uin
         crypto_hash_sha256_state state;
         crypto_hash_sha256_init(&state);
 
-        for (Size i = 0; i < RG_SIZE(padded_key); i++) {
+        for (Size i = 0; i < K_SIZE(padded_key); i++) {
             padded_key[i] ^= 0x36; // IPAD is still there
             padded_key[i] ^= 0x5C;
         }
 
-        crypto_hash_sha256_update(&state, padded_key, RG_SIZE(padded_key));
-        crypto_hash_sha256_update(&state, inner_hash, RG_SIZE(inner_hash));
+        crypto_hash_sha256_update(&state, padded_key, K_SIZE(padded_key));
+        crypto_hash_sha256_update(&state, inner_hash, K_SIZE(inner_hash));
         crypto_hash_sha256_final(&state, out_digest);
     }
 
@@ -245,12 +245,12 @@ static Size HmacSha512(Span<const uint8_t> key, Span<const uint8_t> message, uin
     uint8_t padded_key[128];
 
     // Hash and/or pad key
-    if (key.len > RG_SIZE(padded_key)) {
+    if (key.len > K_SIZE(padded_key)) {
         crypto_hash_sha512(padded_key, key.ptr, (size_t)key.len);
-        MemSet(padded_key + 64, 0, RG_SIZE(padded_key) - 64);
+        MemSet(padded_key + 64, 0, K_SIZE(padded_key) - 64);
     } else {
         MemCpy(padded_key, key.ptr, key.len);
-        MemSet(padded_key + key.len, 0, RG_SIZE(padded_key) - key.len);
+        MemSet(padded_key + key.len, 0, K_SIZE(padded_key) - key.len);
     }
 
     // Inner hash
@@ -259,11 +259,11 @@ static Size HmacSha512(Span<const uint8_t> key, Span<const uint8_t> message, uin
         crypto_hash_sha512_state state;
         crypto_hash_sha512_init(&state);
 
-        for (Size i = 0; i < RG_SIZE(padded_key); i++) {
+        for (Size i = 0; i < K_SIZE(padded_key); i++) {
             padded_key[i] ^= 0x36;
         }
 
-        crypto_hash_sha512_update(&state, padded_key, RG_SIZE(padded_key));
+        crypto_hash_sha512_update(&state, padded_key, K_SIZE(padded_key));
         crypto_hash_sha512_update(&state, message.ptr, (size_t)message.len);
         crypto_hash_sha512_final(&state, inner_hash);
     }
@@ -273,13 +273,13 @@ static Size HmacSha512(Span<const uint8_t> key, Span<const uint8_t> message, uin
         crypto_hash_sha512_state state;
         crypto_hash_sha512_init(&state);
 
-        for (Size i = 0; i < RG_SIZE(padded_key); i++) {
+        for (Size i = 0; i < K_SIZE(padded_key); i++) {
             padded_key[i] ^= 0x36; // IPAD is still there
             padded_key[i] ^= 0x5C;
         }
 
-        crypto_hash_sha512_update(&state, padded_key, RG_SIZE(padded_key));
-        crypto_hash_sha512_update(&state, inner_hash, RG_SIZE(inner_hash));
+        crypto_hash_sha512_update(&state, padded_key, K_SIZE(padded_key));
+        crypto_hash_sha512_update(&state, inner_hash, K_SIZE(inner_hash));
         crypto_hash_sha512_final(&state, out_digest);
     }
 

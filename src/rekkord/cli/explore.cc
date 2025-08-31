@@ -18,7 +18,7 @@
 #include "src/core/wrap/xml.hh"
 #include "rekkord.hh"
 
-namespace RG {
+namespace K {
 
 enum class OutputFormat {
     Plain,
@@ -185,7 +185,7 @@ Available sort orders: %!..+%3%!0)"),
                 case SortOrder::Stored: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.stored - s2.stored; }; } break;
                 case SortOrder::Added: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.added - s2.added; }; } break;
             }
-            RG_ASSERT(func);
+            K_ASSERT(func);
 
             if (ascending) {
                 compare = [=](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) {

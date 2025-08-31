@@ -35,7 +35,7 @@
     #include <sys/time.h>
 #endif
 
-namespace RG {
+namespace K {
 
 void MigrateLegacySnapshot1(HeapArray<uint8_t> *blob);
 void MigrateLegacySnapshot2(HeapArray<uint8_t> *blob);
@@ -121,7 +121,7 @@ GetContext::GetContext(rk_Repository *repo, const rk_RestoreSettings &settings, 
 
 static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uint8_t> buf)
 {
-    RG_ASSERT(buf.len < UINT32_MAX);
+    K_ASSERT(buf.len < UINT32_MAX);
 
     HANDLE h = (HANDLE)_get_osfhandle(fd);
 
@@ -160,7 +160,7 @@ static void SetFileOwner(int, const char *, uint32_t, uint32_t)
 static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uint8_t> buf)
 {
     while (buf.len) {
-        Size written = RG_RESTART_EINTR(pwrite(fd, buf.ptr, buf.len, (off_t)offset), < 0);
+        Size written = K_RESTART_EINTR(pwrite(fd, buf.ptr, buf.len, (off_t)offset), < 0);
 
         if (written < 0) {
             LogError("Failed to write to '%1': %2", filename, strerror(errno));
@@ -249,13 +249,13 @@ static Size DecodeEntry(Span<const uint8_t> blob, Size offset, bool allow_separa
         Size count = 0;
 
         for (Size offset = 0; offset < extended.len;) {
-            if (extended.len - offset < RG_SIZE(uint16_t)) {
+            if (extended.len - offset < K_SIZE(uint16_t)) {
                 LogError("Truncated extended blob");
                 return -1;
             }
 
             uint16_t attr_len;
-            MemCpy(&attr_len, extended.ptr + offset, RG_SIZE(attr_len));
+            MemCpy(&attr_len, extended.ptr + offset, K_SIZE(attr_len));
             attr_len = LittleEndian(attr_len);
 
             if (attr_len > extended.len) {
@@ -274,7 +274,7 @@ static Size DecodeEntry(Span<const uint8_t> blob, Size offset, bool allow_separa
             XAttrInfo *xattr = xattrs.AppendDefault();
 
             uint16_t attr_len;
-            MemCpy(&attr_len, extended.ptr + offset, RG_SIZE(attr_len));
+            MemCpy(&attr_len, extended.ptr + offset, K_SIZE(attr_len));
             attr_len = LittleEndian(attr_len);
 
             Span<const uint8_t> attr = MakeSpan(extended.ptr + offset + 2, attr_len);
@@ -314,7 +314,7 @@ static Size DecodeEntry(Span<const uint8_t> blob, Size offset, bool allow_separa
         LogError("Unsafe object name '%1'", entry.basename);
         return -1;
     }
-    if (!allow_separators && strpbrk(entry.basename.ptr, RG_PATH_SEPARATORS)) {
+    if (!allow_separators && strpbrk(entry.basename.ptr, K_PATH_SEPARATORS)) {
         LogError("Unsafe object name '%1'", entry.basename);
         return -1;
     }
@@ -327,7 +327,7 @@ static Size DecodeEntry(Span<const uint8_t> blob, Size offset, bool allow_separa
 static bool DecodeEntries(Span<const uint8_t> blob, Size offset, bool allow_separators,
                           Allocator *alloc, HeapArray<EntryInfo> *out_entries)
 {
-    RG_DEFER_NC(err_guard, len = out_entries->len) { out_entries->RemoveFrom(len); };
+    K_DEFER_NC(err_guard, len = out_entries->len) { out_entries->RemoveFrom(len); };
 
     while (offset < blob.len) {
         EntryInfo entry = {};
@@ -346,18 +346,18 @@ static bool DecodeEntries(Span<const uint8_t> blob, Size offset, bool allow_sepa
 
 static int64_t DecodeChunks(const rk_ObjectID &oid, Span<const uint8_t> blob, HeapArray<FileChunk> *out_chunks)
 {
-    RG_DEFER_NC(err_guard, len = out_chunks->len) { out_chunks->RemoveFrom(len); };
+    K_DEFER_NC(err_guard, len = out_chunks->len) { out_chunks->RemoveFrom(len); };
 
     int64_t file_size = -1;
 
-    if (blob.len % RG_SIZE(RawChunk) != RG_SIZE(int64_t)) {
+    if (blob.len % K_SIZE(RawChunk) != K_SIZE(int64_t)) {
         LogError("Malformed file blob '%1'", oid);
         return -1;
     }
-    blob.len -= RG_SIZE(int64_t);
+    blob.len -= K_SIZE(int64_t);
 
     // Get file length from end of stream
-    MemCpy(&file_size, blob.end(), RG_SIZE(file_size));
+    MemCpy(&file_size, blob.end(), K_SIZE(file_size));
     file_size = LittleEndian(file_size);
 
     if (file_size < 0) {
@@ -368,11 +368,11 @@ static int64_t DecodeChunks(const rk_ObjectID &oid, Span<const uint8_t> blob, He
     // Check coherence
     Size prev_end = 0;
 
-    for (Size offset = 0; offset < blob.len; offset += RG_SIZE(RawChunk)) {
+    for (Size offset = 0; offset < blob.len; offset += K_SIZE(RawChunk)) {
         FileChunk chunk = {};
 
         RawChunk entry = {};
-        MemCpy(&entry, blob.ptr + offset, RG_SIZE(entry));
+        MemCpy(&entry, blob.ptr + offset, K_SIZE(entry));
 
         chunk.offset = LittleEndian(entry.offset);
         chunk.len = LittleEndian(entry.len);
@@ -387,8 +387,8 @@ static int64_t DecodeChunks(const rk_ObjectID &oid, Span<const uint8_t> blob, He
         out_chunks->Append(chunk);
     }
 
-    if (blob.len >= RG_SIZE(RawChunk) + RG_SIZE(int64_t)) {
-        const RawChunk *last = (const RawChunk *)(blob.end() - RG_SIZE(RawChunk));
+    if (blob.len >= K_SIZE(RawChunk) + K_SIZE(int64_t)) {
+        const RawChunk *last = (const RawChunk *)(blob.end() - K_SIZE(RawChunk));
         int64_t size = LittleEndian(last->offset) + LittleEndian(last->len);
 
         if (size != file_size) [[unlikely]] {
@@ -416,7 +416,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
     if (!dest_dirname[0]) {
         dest_dirname = ".";
     }
-    dest.filename = TrimStrRight(dest_dirname, RG_PATH_SEPARATORS);
+    dest.filename = TrimStrRight(dest_dirname, K_PATH_SEPARATORS);
 
     return ExtractEntries(blob, allow_separators, dest);
 }
@@ -425,7 +425,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
 {
     // XXX: Make sure each path does not clobber a previous one
 
-    if (blob.len < RG_SIZE(DirectoryHeader)) [[unlikely]] {
+    if (blob.len < K_SIZE(DirectoryHeader)) [[unlikely]] {
         LogError("Malformed directory blob");
         return false;
     }
@@ -445,7 +445,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
                 int fd = OpenFile(meta.filename.ptr, (int)OpenFlag::Write | (int)OpenFlag::Directory);
                 if (fd < 0)
                     return;
-                RG_DEFER { CloseDescriptor(fd); };
+                K_DEFER { CloseDescriptor(fd); };
 
                 // Set directory metadata
                 if (chown) {
@@ -469,7 +469,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
         if (ctx->meta.xattrs.len) {
             Span<XAttrInfo> xattrs = ctx->meta.xattrs;
             ctx->meta.xattrs = AllocateSpan<XAttrInfo>(&ctx->temp_alloc, xattrs.len);
-            MemCpy(ctx->meta.xattrs.ptr, xattrs.ptr, xattrs.len * RG_SIZE(XAttrInfo));
+            MemCpy(ctx->meta.xattrs.ptr, xattrs.ptr, xattrs.len * K_SIZE(XAttrInfo));
         }
 
         ctx->chown = settings.chown;
@@ -477,7 +477,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
         ctx->fake = settings.fake;
     }
 
-    if (!DecodeEntries(blob, RG_SIZE(DirectoryHeader), allow_separators, &ctx->temp_alloc, &ctx->entries))
+    if (!DecodeEntries(blob, K_SIZE(DirectoryHeader), allow_separators, &ctx->temp_alloc, &ctx->entries))
         return false;
 
     // Filter out invalid entries
@@ -510,11 +510,11 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
             keep.Set(path);
 
             if (allow_separators) {
-                SplitStrReverse(path, *RG_PATH_SEPARATORS, &path);
+                SplitStrReverse(path, *K_PATH_SEPARATORS, &path);
 
                 while (path.len > dest.filename.len) {
                     keep.Set(path);
-                    SplitStrReverse(path, *RG_PATH_SEPARATORS, &path);
+                    SplitStrReverse(path, *K_PATH_SEPARATORS, &path);
                 }
             }
         }
@@ -525,12 +525,12 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
         if (allow_separators) {
             for (const EntryInfo &entry: ctx->entries) {
                 Span<const char> path = entry.filename;
-                SplitStrReverse(path, *RG_PATH_SEPARATORS, &path);
+                SplitStrReverse(path, *K_PATH_SEPARATORS, &path);
 
                 while (path.len > dest.filename.len) {
                     if (!CleanDirectory(path, keep))
                         return false;
-                    SplitStrReverse(path, *RG_PATH_SEPARATORS, &path);
+                    SplitStrReverse(path, *K_PATH_SEPARATORS, &path);
                 }
             }
         }
@@ -585,7 +585,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
                     }
 
                     int fd = -1;
-                    RG_DEFER { CloseDescriptor(fd); };
+                    K_DEFER { CloseDescriptor(fd); };
 
                     if (entry.size) {
                         bool chunked = (type == (int)BlobType::File);
@@ -637,7 +637,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
                     MakeProgress(1, 0);
                 } break;
 
-                default: { RG_UNREACHABLE(); } break;
+                default: { K_UNREACHABLE(); } break;
             }
 
             return true;
@@ -660,7 +660,7 @@ int GetContext::GetFile(const rk_ObjectID &oid, bool chunked, Span<const uint8_t
     }
 
     int fd = !settings.fake ? writer.GetDescriptor() : -1;
-    RG_DEFER_N(err_guard) { CloseDescriptor(fd); };
+    K_DEFER_N(err_guard) { CloseDescriptor(fd); };
 
     int64_t file_size = 0;
 
@@ -807,12 +807,12 @@ bool rk_Restore(rk_Repository *repo, const rk_ObjectID &oid, const rk_RestoreSet
             int64_t file_size = 0;
 
             if (chunked) {
-                if (blob.len < RG_SIZE(int64_t)) {
+                if (blob.len < K_SIZE(int64_t)) {
                     LogError("Malformed file blob '%1'", oid);
                     return false;
                 }
 
-                MemCpy(&file_size, blob.end() - RG_SIZE(int64_t), RG_SIZE(int64_t));
+                MemCpy(&file_size, blob.end() - K_SIZE(int64_t), K_SIZE(int64_t));
                 file_size = LittleEndian(file_size);
             }
 
@@ -848,7 +848,7 @@ bool rk_Restore(rk_Repository *repo, const rk_ObjectID &oid, const rk_RestoreSet
                 }
             }
 
-            if (blob.len < RG_SIZE(DirectoryHeader)) {
+            if (blob.len < K_SIZE(DirectoryHeader)) {
                 LogError("Malformed directory blob '%1'", oid);
                 return false;
             }
@@ -875,9 +875,9 @@ bool rk_Restore(rk_Repository *repo, const rk_ObjectID &oid, const rk_RestoreSet
         } break;
 
         case (int)BlobType::Snapshot1: { MigrateLegacySnapshot1(&blob); } [[fallthrough]];
-        case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
-        case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
-        case (int)BlobType::Snapshot4: { MigrateLegacyEntries3(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, K_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, K_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot4: { MigrateLegacyEntries3(&blob, K_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot5: { MigrateLegacySnapshot2(&blob); } [[fallthrough]];
         case (int)BlobType::Snapshot: {
             if (!settings.fake) {
@@ -893,12 +893,12 @@ bool rk_Restore(rk_Repository *repo, const rk_ObjectID &oid, const rk_RestoreSet
             }
 
             // There must be at least one entry
-            if (blob.len <= RG_SIZE(SnapshotHeader3) + RG_SIZE(DirectoryHeader)) {
+            if (blob.len <= K_SIZE(SnapshotHeader3) + K_SIZE(DirectoryHeader)) {
                 LogError("Malformed snapshot blob '%1'", oid);
                 return false;
             }
 
-            DirectoryHeader *header = (DirectoryHeader *)(blob.ptr + RG_SIZE(SnapshotHeader3));
+            DirectoryHeader *header = (DirectoryHeader *)(blob.ptr + K_SIZE(SnapshotHeader3));
             int64_t entries = LittleEndian(header->entries);
             int64_t size = LittleEndian(header->size);
 
@@ -909,7 +909,7 @@ bool rk_Restore(rk_Repository *repo, const rk_ObjectID &oid, const rk_RestoreSet
             ProgressHandle progress("Restore");
             GetContext get(repo, settings, entries, size);
 
-            Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader3), blob.len - RG_SIZE(SnapshotHeader3));
+            Span<uint8_t> dir = blob.Take(K_SIZE(SnapshotHeader3), blob.len - K_SIZE(SnapshotHeader3));
 
             if (!get.ExtractEntries(dir, true, dest_path))
                 return false;
@@ -948,7 +948,7 @@ bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc, HeapArray<rk_Snapsh
     BlockAllocator temp_alloc;
 
     Size prev_snapshots = out_snapshots ? out_snapshots->len : 0;
-    RG_DEFER_N(err_guard) { out_snapshots->RemoveFrom(prev_snapshots); };
+    K_DEFER_N(err_guard) { out_snapshots->RemoveFrom(prev_snapshots); };
 
     HeapArray<rk_TagInfo> tags;
     if (!repo->ListTags(&temp_alloc, &tags))
@@ -962,14 +962,14 @@ bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc, HeapArray<rk_Snapsh
             rk_SnapshotInfo snapshot = {};
 
             if (tag.payload.len < (Size)offsetof(SnapshotHeader3, channel) + 1 ||
-                    tag.payload.len > RG_SIZE(SnapshotHeader3)) {
+                    tag.payload.len > K_SIZE(SnapshotHeader3)) {
                 LogError("Malformed snapshot tag (ignoring)");
                 continue;
             }
 
             SnapshotHeader3 header = {};
             MemCpy(&header, tag.payload.ptr, tag.payload.len);
-            header.channel[RG_SIZE(header.channel) - 1] = 0;
+            header.channel[K_SIZE(header.channel) - 1] = 0;
 
             snapshot.tag = DuplicateString(tag.name, alloc).ptr;
             snapshot.oid = tag.oid;
@@ -1144,13 +1144,13 @@ ListContext::ListContext(rk_Repository *repo, const rk_ListSettings &settings, i
 Size ListContext::RecurseEntries(Span<const uint8_t> blob, bool allow_separators, int depth,
                                  Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects)
 {
-    if (blob.len < RG_SIZE(DirectoryHeader)) [[unlikely]] {
+    if (blob.len < K_SIZE(DirectoryHeader)) [[unlikely]] {
         LogError("Malformed directory blob");
         return -1;
     }
 
     HeapArray<EntryInfo> entries;
-    if (!DecodeEntries(blob, RG_SIZE(DirectoryHeader), allow_separators, alloc, &entries))
+    if (!DecodeEntries(blob, K_SIZE(DirectoryHeader), allow_separators, alloc, &entries))
         return -1;
 
     Async async(repo->GetAsync());
@@ -1179,7 +1179,7 @@ Size ListContext::RecurseEntries(Span<const uint8_t> blob, bool allow_separators
             case (int)RawEntry::Kind::Link: { obj->type = rk_ObjectType::Link; } break;
             case (int)RawEntry::Kind::Unknown: { obj->type = rk_ObjectType::Unknown; } break;
 
-            default: { RG_UNREACHABLE(); } break;
+            default: { K_UNREACHABLE(); } break;
         }
         obj->name = entry.basename.ptr;
         obj->mtime = entry.mtime;
@@ -1199,7 +1199,7 @@ Size ListContext::RecurseEntries(Span<const uint8_t> blob, bool allow_separators
             continue;
 
         switch (obj->type) {
-            case rk_ObjectType::Snapshot: { RG_UNREACHABLE(); } break;
+            case rk_ObjectType::Snapshot: { K_UNREACHABLE(); } break;
 
             case rk_ObjectType::Directory: {
                 if (!settings.recurse)
@@ -1278,7 +1278,7 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
                      Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects)
 {
     Size prev_len = out_objects->len;
-    RG_DEFER_N(out_guard) { out_objects->RemoveFrom(prev_len); };
+    K_DEFER_N(out_guard) { out_objects->RemoveFrom(prev_len); };
 
     int type;
     HeapArray<uint8_t> blob;
@@ -1292,7 +1292,7 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
         case (int)BlobType::Directory2: { MigrateLegacyEntries2(&blob, 0); } [[fallthrough]];
         case (int)BlobType::Directory3: { MigrateLegacyEntries3(&blob, 0); } [[fallthrough]];
         case (int)BlobType::Directory: {
-            if (blob.len < RG_SIZE(DirectoryHeader)) {
+            if (blob.len < K_SIZE(DirectoryHeader)) {
                 LogError("Malformed directory blob '%1'", oid);
                 return false;
             }
@@ -1307,12 +1307,12 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
         } break;
 
         case (int)BlobType::Snapshot1: { MigrateLegacySnapshot1(&blob); } [[fallthrough]];
-        case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
-        case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
-        case (int)BlobType::Snapshot4: { MigrateLegacyEntries3(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, K_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, K_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot4: { MigrateLegacyEntries3(&blob, K_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot5: { MigrateLegacySnapshot2(&blob); } [[fallthrough]];
         case (int)BlobType::Snapshot: {
-            if (blob.len < RG_SIZE(SnapshotHeader3) + RG_SIZE(DirectoryHeader)) {
+            if (blob.len < K_SIZE(SnapshotHeader3) + K_SIZE(DirectoryHeader)) {
                 LogError("Malformed snapshot blob '%1'", oid);
                 return false;
             }
@@ -1324,7 +1324,7 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
             ListContext tree(repo, settings, entries);
 
             // Make sure snapshot channel is NUL terminated
-            header1->channel[RG_SIZE(header1->channel) - 1] = 0;
+            header1->channel[K_SIZE(header1->channel) - 1] = 0;
 
             rk_ObjectInfo *obj = out_objects->AppendDefault();
 
@@ -1337,7 +1337,7 @@ bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListS
             obj->stored = LittleEndian(header1->stored) + size;
             obj->added = LittleEndian(header1->added) + (type >= (int)BlobType::Snapshot ? size : 0);
 
-            Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader3), blob.len - RG_SIZE(SnapshotHeader3));
+            Span<uint8_t> dir = blob.Take(K_SIZE(SnapshotHeader3), blob.len - K_SIZE(SnapshotHeader3));
 
             Size children = tree.RecurseEntries(dir, true, 1, alloc, out_objects);
             if (children < 0)
@@ -1419,13 +1419,13 @@ bool CheckContext::Check(const rk_ObjectID &oid, FunctionRef<bool(int, Span<cons
 static void HashBlake3(int type, Span<const uint8_t> buf, const uint8_t salt[32], rk_Hash *out_hash)
 {
     uint8_t salt2[32];
-    MemCpy(salt2, salt, RG_SIZE(salt2));
+    MemCpy(salt2, salt, K_SIZE(salt2));
     salt2[31] ^= (uint8_t)type;
 
     blake3_hasher hasher;
     blake3_hasher_init_keyed(&hasher, salt2);
     blake3_hasher_update(&hasher, buf.ptr, buf.len);
-    blake3_hasher_finalize(&hasher, out_hash->raw, RG_SIZE(out_hash->raw));
+    blake3_hasher_finalize(&hasher, out_hash->raw, K_SIZE(out_hash->raw));
 }
 
 bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate)
@@ -1486,12 +1486,12 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
         } break;
 
         case (int)BlobType::Snapshot1: { MigrateLegacySnapshot1(&blob); } [[fallthrough]];
-        case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
-        case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
-        case (int)BlobType::Snapshot4: { MigrateLegacyEntries3(&blob, RG_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot2: { MigrateLegacyEntries1(&blob, K_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot3: { MigrateLegacyEntries2(&blob, K_SIZE(SnapshotHeader2)); } [[fallthrough]];
+        case (int)BlobType::Snapshot4: { MigrateLegacyEntries3(&blob, K_SIZE(SnapshotHeader2)); } [[fallthrough]];
         case (int)BlobType::Snapshot5: { MigrateLegacySnapshot2(&blob); } [[fallthrough]];
         case (int)BlobType::Snapshot: {
-            Span<uint8_t> dir = blob.Take(RG_SIZE(SnapshotHeader3), blob.len - RG_SIZE(SnapshotHeader3));
+            Span<uint8_t> dir = blob.Take(K_SIZE(SnapshotHeader3), blob.len - K_SIZE(SnapshotHeader3));
 
             if (!RecurseEntries(dir, true))
                 return false;
@@ -1525,13 +1525,13 @@ bool CheckContext::RecurseEntries(Span<const uint8_t> blob, bool allow_separator
 {
     BlockAllocator temp_alloc;
 
-    if (blob.len < RG_SIZE(DirectoryHeader)) [[unlikely]] {
+    if (blob.len < K_SIZE(DirectoryHeader)) [[unlikely]] {
         LogError("Malformed directory blob");
         return false;
     }
 
     HeapArray<EntryInfo> entries;
-    if (!DecodeEntries(blob, RG_SIZE(DirectoryHeader), allow_separators, &temp_alloc, &entries))
+    if (!DecodeEntries(blob, K_SIZE(DirectoryHeader), allow_separators, &temp_alloc, &entries))
         return false;
 
     // Filter out invalid entries
@@ -1585,7 +1585,7 @@ bool CheckContext::RecurseEntries(Span<const uint8_t> blob, bool allow_separator
                         }
                     } break;
 
-                    default: { RG_UNREACHABLE(); } break;
+                    default: { K_UNREACHABLE(); } break;
                 }
 
                 return true;
@@ -1734,7 +1734,7 @@ Size FileHandle::Read(int64_t offset, Span<uint8_t> out_buf)
         {
             std::lock_guard<std::mutex> lock(mutex);
 
-            for (Size i = 0; i < RG_LEN(buffers); i++) {
+            for (Size i = 0; i < K_LEN(buffers); i++) {
                 if (buffers[i].idx == idx) {
                     buf = &buffers[i];
                     buf->mutex.lock();
@@ -1745,7 +1745,7 @@ Size FileHandle::Read(int64_t offset, Span<uint8_t> out_buf)
 
             if (!buf) {
                 buf = &buffers[discard];
-                discard = (discard + 1) % RG_LEN(buffers);
+                discard = (discard + 1) % K_LEN(buffers);
 
                 buf->mutex.lock();
 
@@ -1754,7 +1754,7 @@ Size FileHandle::Read(int64_t offset, Span<uint8_t> out_buf)
             }
         }
 
-        RG_DEFER { buf->mutex.unlock(); };
+        K_DEFER { buf->mutex.unlock(); };
 
         if (!buf->data.len) {
             // This happens if a previous request has failed on this exact buffer
@@ -1763,7 +1763,7 @@ Size FileHandle::Read(int64_t offset, Span<uint8_t> out_buf)
                 return false;
             }
 
-            RG_DEFER_N(err_guard) { buf->idx = -1; };
+            K_DEFER_N(err_guard) { buf->idx = -1; };
 
             rk_ObjectID oid = { rk_BlobCatalog::Raw, chunk.hash };
             int type;
@@ -1855,7 +1855,7 @@ std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Repository *repo, const rk_ObjectI
         } break;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 }

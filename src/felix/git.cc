@@ -20,7 +20,7 @@
     #include <io.h>
 #endif
 
-namespace RG {
+namespace K {
 
 #pragma pack(push, 1)
 struct IdxHeader {
@@ -114,7 +114,7 @@ bool GitVersioneer::IsAvailable()
 
 bool GitVersioneer::Prepare(const char *root_directory)
 {
-    RG_ASSERT(!repo_directory);
+    K_ASSERT(!repo_directory);
 
     if (!IsAvailable()) {
         LogError("Cannot use git versioning without zlib support");
@@ -282,7 +282,7 @@ bool GitVersioneer::Prepare(const char *root_directory)
 
 const char *GitVersioneer::Version(Span<const char> key)
 {
-    RG_ASSERT(commits.len);
+    K_ASSERT(commits.len);
 
     // Mimic git short hashes
     char id[12];
@@ -315,7 +315,7 @@ const char *GitVersioneer::Version(Span<const char> key)
             }
 
             Size next = idx + 1;
-            RG_ASSERT(next <= commits.len);
+            K_ASSERT(next <= commits.len);
 
             if (next == commits.len) {
                 GitHash parent = {};
@@ -361,7 +361,7 @@ const char *GitVersioneer::Version(Span<const char> key)
 
 bool GitVersioneer::CacheTagInfo(Span<const char> tag, Span<const char> id)
 {
-    RG_ASSERT(StartsWith(tag, "refs/tags/"));
+    K_ASSERT(StartsWith(tag, "refs/tags/"));
 
     GitHash hash = {};
     {
@@ -434,7 +434,7 @@ bool GitVersioneer::ReadAttributes(const GitHash &hash, FunctionRef<bool(Span<co
     // Try loose files
     for (Span<char> loose_filename: loose_filenames) {
         DecodeHash(hash.raw[0], loose_filename.end() - 41);
-        loose_filename[loose_filename.len - 39] = *RG_PATH_SEPARATORS;
+        loose_filename[loose_filename.len - 39] = *K_PATH_SEPARATORS;
         DecodeHash(MakeSpan(hash.raw + 1, 19), loose_filename.end() - 38);
 
         if (!TestFile(loose_filename.ptr))
@@ -509,7 +509,7 @@ static bool ReadSection(int fd, int64_t offset, Size len, void *out_ptr)
 #if defined(_WIN32)
     Size read_len = _read(fd, out_ptr, (unsigned int)len);
 #else
-    Size read_len = RG_RESTART_EINTR(read(fd, out_ptr, (size_t)len), < 0);
+    Size read_len = K_RESTART_EINTR(read(fd, out_ptr, (size_t)len), < 0);
 #endif
     if (read_len < 0)
         return false;
@@ -537,7 +537,7 @@ bool GitVersioneer::FindInIndexes(Size start_idx, const GitHash &hash, PackLocat
         }
 
         IdxHeader header = {};
-        if (!ReadSection(fd, 0, RG_SIZE(header), &header))
+        if (!ReadSection(fd, 0, K_SIZE(header), &header))
             return false;
         if (BigEndian(header.magic) != 0xFF744F63 || BigEndian(header.version) != 2) {
             LogError("Invalid or unsupported IDX file");
@@ -560,7 +560,7 @@ bool GitVersioneer::FindInIndexes(Size start_idx, const GitHash &hash, PackLocat
 
             names.AppendDefault(to - from);
 
-            if (!ReadSection(fd, RG_SIZE(header) + from, names.len, names.ptr))
+            if (!ReadSection(fd, K_SIZE(header) + from, names.len, names.ptr))
                 return false;
         }
 
@@ -574,7 +574,7 @@ bool GitVersioneer::FindInIndexes(Size start_idx, const GitHash &hash, PackLocat
         }
         if (offset1 < 0)
             continue;
-        offset1 = RG_SIZE(header) + 24 * total + 4 * offset1;
+        offset1 = K_SIZE(header) + 24 * total + 4 * offset1;
 
         // Read offset into PACK file
         int32_t offset2 = 0;
@@ -652,7 +652,7 @@ bool GitVersioneer::ReadPackAttributes(Size idx, int64_t offset, FunctionRef<boo
 
         // Check PACK header
         PackHeader header = {};
-        if (!ReadSection(fd, 0, RG_SIZE(header), &header))
+        if (!ReadSection(fd, 0, K_SIZE(header), &header))
             return false;
         if (BigEndian(header.magic) != 0x5041434B || BigEndian(header.version) != 2) {
             LogError("Invalid or unsupported PACK file");
@@ -677,8 +677,8 @@ bool GitVersioneer::ReadPackAttributes(Size idx, int64_t offset, FunctionRef<boo
         Span<const uint8_t> remain = {};
 
         if (type == 6) { // OBJ_OFS_DELTA
-            MemCpy(&offset, obj.ptr, RG_SIZE(offset));
-            remain = obj.Take(RG_SIZE(offset), obj.len - RG_SIZE(offset));
+            MemCpy(&offset, obj.ptr, K_SIZE(offset));
+            remain = obj.Take(K_SIZE(offset), obj.len - K_SIZE(offset));
         } else if (type == 7) { // OBJ_REF_DELTA
             GitHash hash = {};
             MemCpy(hash.raw, obj.ptr, 20);
@@ -797,7 +797,7 @@ bool GitVersioneer::ReadPackObject(int fd, int64_t offset, int *out_type, HeapAr
     Size len = 0;
     {
         uint8_t chunk[6] = {};
-        if (!ReadSection(fd, offset, RG_SIZE(chunk), chunk))
+        if (!ReadSection(fd, offset, K_SIZE(chunk), chunk))
             return false;
 
         type = (chunk[0] >> 4) & 0x7;
@@ -809,31 +809,31 @@ bool GitVersioneer::ReadPackObject(int fd, int64_t offset, int *out_type, HeapAr
             do {
                 len |= (Size)(chunk[used] << shift);
                 shift += 7;
-            } while ((chunk[used++] & 0x80) && used < RG_LEN(chunk));
+            } while ((chunk[used++] & 0x80) && used < K_LEN(chunk));
         }
         offset += used;
 
-        if (used != RG_SIZE(chunk) && !SeekFile(fd, offset))
+        if (used != K_SIZE(chunk) && !SeekFile(fd, offset))
             return false;
     }
 
     // Deal with delta encoding
     if (type == 6) { // OBJ_OFS_DELTA
         uint8_t chunk[6] = {};
-        if (!ReadSection(fd, offset, RG_SIZE(chunk), chunk))
+        if (!ReadSection(fd, offset, K_SIZE(chunk), chunk))
             return false;
 
         int64_t negative = 0;
         offset += ParseOffset(chunk, &negative).ptr - chunk;
         negative = base - negative;
 
-        out_obj->Append(MakeSpan((const uint8_t *)&negative, RG_SIZE(negative)));
+        out_obj->Append(MakeSpan((const uint8_t *)&negative, K_SIZE(negative)));
 
         if (!SeekFile(fd, offset))
             return false;
     } else if (type == 7) { // OBJ_REF_DELTA
         uint8_t hash[20];
-        if (!ReadSection(fd, offset, RG_SIZE(hash), hash))
+        if (!ReadSection(fd, offset, K_SIZE(hash), hash))
             return false;
         offset += 20;
 

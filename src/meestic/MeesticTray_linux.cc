@@ -30,7 +30,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-namespace RG {
+namespace K {
 
 #define CALL_SDBUS(Call, Message, Ret) \
     do { \
@@ -131,7 +131,7 @@ static void GeneratePNG(const uint8_t *data, int32_t width, int32_t height, Heap
         ChunkHeader chunk = {};
         IHDR ihdr = {};
 
-        chunk.len = BigEndian((uint32_t)RG_SIZE(ihdr));
+        chunk.len = BigEndian((uint32_t)K_SIZE(ihdr));
         MemCpy(chunk.type, "IHDR", 4);
         ihdr.width = BigEndian(width);
         ihdr.height = BigEndian(width);
@@ -141,11 +141,11 @@ static void GeneratePNG(const uint8_t *data, int32_t width, int32_t height, Heap
         ihdr.filter = 0;
         ihdr.interlace = 0;
 
-        out_png->Append(MakeSpan((const uint8_t *)&chunk, RG_SIZE(chunk)));
-        out_png->Append(MakeSpan((const uint8_t *)&ihdr, RG_SIZE(ihdr)));
+        out_png->Append(MakeSpan((const uint8_t *)&chunk, K_SIZE(chunk)));
+        out_png->Append(MakeSpan((const uint8_t *)&ihdr, K_SIZE(ihdr)));
 
         // Chunk CRC-32
-        Span<const uint8_t> span = MakeSpan(out_png->ptr + chunk_pos + 4, RG_SIZE(ihdr) + 4);
+        Span<const uint8_t> span = MakeSpan(out_png->ptr + chunk_pos + 4, K_SIZE(ihdr) + 4);
         uint32_t crc32 = BigEndian((uint32_t)CRC32(0, span));
         out_png->Append(MakeSpan((const uint8_t *)&crc32, 4));
     }
@@ -157,7 +157,7 @@ static void GeneratePNG(const uint8_t *data, int32_t width, int32_t height, Heap
         ChunkHeader chunk = {};
         chunk.len = 0; // Unknown for now
         MemCpy(chunk.type, "IDAT", 4);
-        out_png->Append(MakeSpan((const uint8_t *)&chunk, RG_SIZE(chunk)));
+        out_png->Append(MakeSpan((const uint8_t *)&chunk, K_SIZE(chunk)));
 
         StreamWriter writer(out_png, "<png>", 0, CompressionType::Zlib);
         for (int y = 0; y < height; y++) {
@@ -167,13 +167,13 @@ static void GeneratePNG(const uint8_t *data, int32_t width, int32_t height, Heap
             writer.Write(scanline);
         }
         bool success = writer.Close();
-        RG_ASSERT(success);
+        K_ASSERT(success);
 
         // Fix length
         {
             uint32_t len = BigEndian((uint32_t)(out_png->len - chunk_pos - 8));
             uint32_t *ptr = (uint32_t *)(out_png->ptr + chunk_pos);
-            MemCpy(ptr, &len, RG_SIZE(len));
+            MemCpy(ptr, &len, K_SIZE(len));
         }
 
         // Chunk CRC-32
@@ -189,22 +189,22 @@ static void GeneratePNG(const uint8_t *data, int32_t width, int32_t height, Heap
 static IconInfo InitIcons()
 {
     static bool init = false;
-    static Span<const uint8_t> icons[RG_LEN(IconSizes)];
+    static Span<const uint8_t> icons[K_LEN(IconSizes)];
     static IconInfo info;
     static BlockAllocator icons_alloc;
 
     // We could do this at compile-time if we had better (or at least easier to use) compile-time
     // possibilities... Well. It's quick enough, so no big deal.
     if (!init) {
-        RG_ASSERT(MeesticPng.compression_type == CompressionType::None);
+        K_ASSERT(MeesticPng.compression_type == CompressionType::None);
 
         // Load embedded PNG file
         int width, height, channels;
         uint8_t *png = stbi_load_from_memory(MeesticPng.data.ptr, MeesticPng.data.len, &width, &height, &channels, 4);
-        RG_CRITICAL(png, "Failed to load embedded PNG icon");
-        RG_DEFER { free(png); };
+        K_CRITICAL(png, "Failed to load embedded PNG icon");
+        K_DEFER { free(png); };
 
-        for (Size i = 0; i < RG_LEN(IconSizes); i++) {
+        for (Size i = 0; i < K_LEN(IconSizes); i++) {
             Vec2<int> size = IconSizes[i];
 
             // Allocate memory
@@ -214,7 +214,7 @@ static IconInfo InitIcons()
 
             // Downsize the icon for the tray
             uint8_t *resized = stbir_resize_uint8_linear(png, width, height, 0, icon, size.x, size.y, 0, STBIR_RGBA);
-            RG_CRITICAL(resized, "Failed to resize icon");
+            K_CRITICAL(resized, "Failed to resize icon");
 
             // Write out first icon size to disk
             if (!i) {
@@ -260,7 +260,7 @@ static int GetIconComplexProperty(sd_bus *, const char *, const char *, const ch
         CALL_SDBUS(sd_bus_message_open_container(reply, 'r', "sa(iiay)ss"), ReplyError, -1);
         CALL_SDBUS(sd_bus_message_append(reply, "s", FelixTarget), ReplyError, -1);
         CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "(iiay)"), ReplyError, -1);
-        for (Size i = 0; i < RG_LEN(IconSizes); i++) {
+        for (Size i = 0; i < K_LEN(IconSizes); i++) {
             Vec2<int> size = IconSizes[i];
             Span<const uint8_t> icon = icons.pixmaps[i];
 
@@ -284,7 +284,7 @@ static int GetIconComplexProperty(sd_bus *, const char *, const char *, const ch
         IconInfo icons = InitIcons();
 
         CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "(iiay)"), ReplyError, -1);
-        for (Size i = 0; i < RG_LEN(IconSizes); i++) {
+        for (Size i = 0; i < K_LEN(IconSizes); i++) {
             Vec2<int> size = IconSizes[i];
             Span<const uint8_t> icon = icons.pixmaps[i];
 
@@ -304,7 +304,7 @@ static int GetIconComplexProperty(sd_bus *, const char *, const char *, const ch
         return 1;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 static int HandleMatch(sd_bus_message *m, void *, sd_bus_error *)
@@ -419,7 +419,7 @@ static int GetMenuComplexProperty(sd_bus *, const char *, const char *, const ch
         return 1;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 static bool DumpMenuItems(FunctionRef<bool(int, const char *, int)> func)
@@ -476,7 +476,7 @@ static bool RegisterTrayMenu()
         SD_BUS_METHOD("GetLayout", "iias", "u(ia{sv}av)", [](sd_bus_message *m, void *, sd_bus_error *) {
             sd_bus_message *reply;
             CALL_SDBUS(sd_bus_message_new_method_return(m, &reply), ReplyError, -1);
-            RG_DEFER { sd_bus_message_unref(reply); };
+            K_DEFER { sd_bus_message_unref(reply); };
 
             int root;
             CALL_SDBUS(sd_bus_message_read(m, "i", &root), ParseError, -1);
@@ -510,7 +510,7 @@ static bool RegisterTrayMenu()
         SD_BUS_METHOD("GetGroupProperties", "aias", "a(ia{sv})", [](sd_bus_message *m, void *, sd_bus_error *) {
             sd_bus_message *reply;
             CALL_SDBUS(sd_bus_message_new_method_return(m, &reply), ReplyError, -1);
-            RG_DEFER { sd_bus_message_unref(reply); };
+            K_DEFER { sd_bus_message_unref(reply); };
 
             HashSet<int> items;
             CALL_SDBUS(sd_bus_message_enter_container(m, 'a', "i"), ParseError, -1);
@@ -705,7 +705,7 @@ Options:
 
     // Open D-Bus connections
     CALL_SDBUS(sd_bus_open_user_with_description(&bus_user, FelixTarget), T("Failed to connect to session D-Bus bus"), 1);
-    RG_DEFER { sd_bus_flush_close_unref(bus_user); };
+    K_DEFER { sd_bus_flush_close_unref(bus_user); };
 
     // Register the tray icon
     if (!RegisterTrayIcon())
@@ -722,7 +722,7 @@ Options:
         meestic_fd = ConnectToUnixSocket(socket_filename, SOCK_STREAM);
         if (meestic_fd < 0)
             return 1;
-        RG_DEFER { close(meestic_fd); };
+        K_DEFER { close(meestic_fd); };
 
         // React to main service and D-Bus events
         while (run) {
@@ -737,7 +737,7 @@ Options:
             if (timeout == INT_MAX)
                 timeout = -1;
 
-            if (poll(pfds, RG_LEN(pfds), timeout) < 0) {
+            if (poll(pfds, K_LEN(pfds), timeout) < 0) {
                 if (errno == EINTR) {
                     WaitForResult ret = WaitForResult(0);
 
@@ -781,6 +781,6 @@ Options:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }
 
 #endif

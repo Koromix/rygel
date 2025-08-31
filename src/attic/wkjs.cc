@@ -14,7 +14,7 @@
 #include "src/core/base/base.hh"
 #include "src/core/wrap/jscore.hh"
 
-namespace RG {
+namespace K {
 
 int Main(int argc, char **argv)
 {
@@ -64,7 +64,7 @@ Options:
     }
 
     JSGlobalContextRef ctx = JSGlobalContextCreate(nullptr);
-    RG_DEFER { JSGlobalContextRelease(ctx); };
+    K_DEFER { JSGlobalContextRelease(ctx); };
 
     // Expose utility functions
     {
@@ -98,7 +98,7 @@ Options:
         ret = JSEvaluateScript(ctx, js_AutoString(code), nullptr, nullptr, 1, &ex);
 
         if (!ret) {
-            RG_ASSERT(ex);
+            K_ASSERT(ex);
 
             js_PrintValue(ctx, ex, nullptr, StdErr);
             PrintLn(StdErr);
@@ -118,4 +118,4 @@ Options:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

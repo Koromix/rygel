@@ -21,7 +21,7 @@
 
 #include <thread>
 
-namespace RG {
+namespace K {
 
 struct Instance {
     ~Instance();
@@ -39,10 +39,10 @@ struct Instance {
 RcppExport SEXP heimdallR_Init()
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = new Instance;
-    RG_DEFER_N(inst_guard) { delete inst; };
+    K_DEFER_N(inst_guard) { delete inst; };
 
     SEXP inst_xp = R_MakeExternalPtr(inst, R_NilValue, R_NilValue);
     R_RegisterCFinalizerEx(inst_xp, [](SEXP inst_xp) {
@@ -124,7 +124,7 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
 RcppExport SEXP heimdallR_AddEvents(SEXP inst_xp, SEXP source_xp, SEXP values_xp, SEXP keys_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
     Rcpp::String source(source_xp);
@@ -143,7 +143,7 @@ RcppExport SEXP heimdallR_AddEvents(SEXP inst_xp, SEXP source_xp, SEXP values_xp
 RcppExport SEXP heimdallR_AddMeasures(SEXP inst_xp, SEXP source_xp, SEXP values_xp, SEXP keys_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
     Rcpp::String source(source_xp);
@@ -181,7 +181,7 @@ RcppExport SEXP heimdallR_AddMeasures(SEXP inst_xp, SEXP source_xp, SEXP values_
 RcppExport SEXP heimdallR_AddPeriods(SEXP inst_xp, SEXP source_xp, SEXP values_xp, SEXP keys_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
     Rcpp::String source(source_xp);
@@ -210,7 +210,7 @@ RcppExport SEXP heimdallR_AddPeriods(SEXP inst_xp, SEXP source_xp, SEXP values_x
 RcppExport SEXP heimdallR_SetConcepts(SEXP inst_xp, SEXP name_xp, SEXP concepts_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
     Rcpp::String name(name_xp);
@@ -274,7 +274,7 @@ RcppExport SEXP heimdallR_SetConcepts(SEXP inst_xp, SEXP name_xp, SEXP concepts_
 RcppExport SEXP heimdallR_Run(SEXP inst_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
 
@@ -286,10 +286,10 @@ RcppExport SEXP heimdallR_Run(SEXP inst_xp)
 
         inst->run = true;
         inst->run_thread = std::thread([=]() {
-            RG_DEFER { inst->run = false; };
+            K_DEFER { inst->run = false; };
 
             gui_Window window;
-            if (!window.Create(RG_HEIMDALL_NAME))
+            if (!window.Create(K_HEIMDALL_NAME))
                 rcc_StopWithLastError();
             if (!window.InitImGui())
                 rcc_StopWithLastError();
@@ -315,7 +315,7 @@ RcppExport SEXP heimdallR_Run(SEXP inst_xp)
 RcppExport SEXP heimdallR_RunSync(SEXP inst_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
 
@@ -325,7 +325,7 @@ RcppExport SEXP heimdallR_RunSync(SEXP inst_xp)
     }
 
     gui_Window window;
-    if (!window.Create(RG_HEIMDALL_NAME))
+    if (!window.Create(K_HEIMDALL_NAME))
         rcc_StopWithLastError();
     if (!window.InitImGui())
         rcc_StopWithLastError();
@@ -356,7 +356,7 @@ Instance::~Instance() { /* StopInstance(this); */ }
 RcppExport SEXP heimdallR_Stop(SEXP inst_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
     StopInstance(inst);
@@ -370,14 +370,14 @@ RcppExport SEXP heimdallR_Stop(SEXP inst_xp)
 
 RcppExport void R_init_heimdallR(DllInfo *dll) {
     static const R_CallMethodDef call_entries[] = {
-        {"heimdallR_Init", (DL_FUNC)&RG::heimdallR_Init, 0},
-        {"heimdallR_AddEvents", (DL_FUNC)&RG::heimdallR_AddEvents, 4},
-        {"heimdallR_AddMeasures", (DL_FUNC)&RG::heimdallR_AddMeasures, 4},
-        {"heimdallR_AddPeriods", (DL_FUNC)&RG::heimdallR_AddPeriods, 4},
-        {"heimdallR_SetConcepts", (DL_FUNC)&RG::heimdallR_SetConcepts, 3},
-        {"heimdallR_Run", (DL_FUNC)&RG::heimdallR_Run, 1},
-        {"heimdallR_RunSync", (DL_FUNC)&RG::heimdallR_RunSync, 1},
-        {"heimdallR_Stop", (DL_FUNC)&RG::heimdallR_Stop, 1},
+        {"heimdallR_Init", (DL_FUNC)&K::heimdallR_Init, 0},
+        {"heimdallR_AddEvents", (DL_FUNC)&K::heimdallR_AddEvents, 4},
+        {"heimdallR_AddMeasures", (DL_FUNC)&K::heimdallR_AddMeasures, 4},
+        {"heimdallR_AddPeriods", (DL_FUNC)&K::heimdallR_AddPeriods, 4},
+        {"heimdallR_SetConcepts", (DL_FUNC)&K::heimdallR_SetConcepts, 3},
+        {"heimdallR_Run", (DL_FUNC)&K::heimdallR_Run, 1},
+        {"heimdallR_RunSync", (DL_FUNC)&K::heimdallR_RunSync, 1},
+        {"heimdallR_Stop", (DL_FUNC)&K::heimdallR_Stop, 1},
         {}
     };
 

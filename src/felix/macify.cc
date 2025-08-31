@@ -22,7 +22,7 @@
 #include "macify.hh"
 #include <sys/stat.h>
 
-namespace RG {
+namespace K {
 
 static bool WriteInfoPlist(const char *name, const char *title, const char *icon_filename, const char *dest_filename) {
     static const char *const plist = R"(
@@ -68,14 +68,14 @@ static bool WriteInfoPlist(const char *name, const char *title, const char *icon
 
     pugi::xml_document doc;
     pugi::xml_parse_result result = doc.load_string(plist);
-    RG_ASSERT(result);
+    K_ASSERT(result);
 
     pugi::xml_node executable_node = doc.select_node("/plist/dict/key[text()='CFBundleExecutable']/following-sibling::string[1]").node();
     pugi::xml_node icon_node = doc.select_node("/plist/dict/key[text()='CFBundleIconFile']/following-sibling::string[1]").node();
     pugi::xml_node title_node = doc.select_node("/plist/dict/key[text()='CFBundleName']/following-sibling::string[1]").node();
 
     executable_node.text().set(name);
-    icon_node.text().set(icon_filename ? SplitStrReverseAny(icon_filename, RG_PATH_SEPARATORS).ptr : "");
+    icon_node.text().set(icon_filename ? SplitStrReverseAny(icon_filename, K_PATH_SEPARATORS).ptr : "");
     title_node.text().set(title ? title : name);
 
     class StaticWriter: public pugi::xml_writer {
@@ -186,8 +186,8 @@ bool BundleMacBinary(const char *binary_filename, const char *output_dir, const 
 {
     BlockAllocator temp_alloc;
 
-    RG_ASSERT(binary_filename);
-    RG_ASSERT(output_dir);
+    K_ASSERT(binary_filename);
+    K_ASSERT(output_dir);
 
     std::unique_ptr<const Compiler> compiler = PrepareCompiler({});
     if (!compiler)
@@ -210,7 +210,7 @@ bool BundleMacBinary(const char *binary_filename, const char *output_dir, const 
     if (!MakeDirectory(output_dir))
         return false;
 
-    RG_DEFER_N(root_guard) { UnlinkRecursive(output_dir); };
+    K_DEFER_N(root_guard) { UnlinkRecursive(output_dir); };
 
     // Create directories
     {
@@ -229,7 +229,7 @@ bool BundleMacBinary(const char *binary_filename, const char *output_dir, const 
             return false;
     }
 
-    const char *name = SplitStrReverseAny(binary_filename, RG_PATH_SEPARATORS).ptr;
+    const char *name = SplitStrReverseAny(binary_filename, K_PATH_SEPARATORS).ptr;
     const char *target_binary = Fmt(&temp_alloc, "%1%/Contents%/MacOs%/%2", output_dir, name).ptr;
     const char *plist_filename = Fmt(&temp_alloc, "%1%/Contents%/Info.plist", output_dir).ptr;
 
@@ -241,7 +241,7 @@ bool BundleMacBinary(const char *binary_filename, const char *output_dir, const 
     // Copy icon (if any)
     if (settings.icon_filename) {
         const char *dest_icon = Fmt(&temp_alloc, "%1%/Contents%/Resources%/%2",
-                                    output_dir, SplitStrReverseAny(settings.icon_filename, RG_PATH_SEPARATORS)).ptr;
+                                    output_dir, SplitStrReverseAny(settings.icon_filename, K_PATH_SEPARATORS)).ptr;
         if (!CopyFile(settings.icon_filename, dest_icon))
             return false;
     }

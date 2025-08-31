@@ -23,7 +23,7 @@
 #include "curl.hh"
 #include "sms.hh"
 
-namespace RG {
+namespace K {
 
 bool sms_Config::Validate() const
 {
@@ -66,14 +66,14 @@ bool sms_Sender::Init(const sms_Config &config)
 
 bool sms_Sender::Send(const char *to, const char *message)
 {
-    RG_ASSERT(config.provider != sms_Provider::None);
+    K_ASSERT(config.provider != sms_Provider::None);
 
     switch (config.provider) {
-        case sms_Provider::None: { RG_UNREACHABLE(); } break;
+        case sms_Provider::None: { K_UNREACHABLE(); } break;
         case sms_Provider::Twilio: return SendTwilio(to, message);
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 bool sms_Sender::SendTwilio(const char *to, const char *message)
@@ -83,7 +83,7 @@ bool sms_Sender::SendTwilio(const char *to, const char *message)
     CURL *curl = curl_Init();
     if (!curl)
         return false;
-    RG_DEFER { curl_easy_cleanup(curl); };
+    K_DEFER { curl_easy_cleanup(curl); };
 
     const char *url = Fmt(&temp_alloc, "https://api.twilio.com/2010-04-01/Accounts/%1/Messages", config.authid).ptr;
     const char *body = Fmt(&temp_alloc, "To=%1&From=%2&Body=%3", to, config.from, FmtUrlSafe(message, "-._~")).ptr;

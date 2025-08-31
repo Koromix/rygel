@@ -20,7 +20,7 @@
 #include "vendor/lz4/lib/lz4hc.h"
 #include "vendor/lz4/lib/lz4frame.h"
 
-namespace RG {
+namespace K {
 
 class DecodeLZ4 {
     LZ4F_dctx *decoder = nullptr;

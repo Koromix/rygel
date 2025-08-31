@@ -19,7 +19,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 struct MacBundleSettings {
     const char *title = nullptr;

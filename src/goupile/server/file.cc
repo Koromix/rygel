@@ -24,14 +24,14 @@
     #include <io.h>
 #endif
 
-namespace RG {
+namespace K {
 
 struct PublishFile {
     const char *filename;
     const char *sha256;
     const char *bundle;
 
-    RG_HASHTABLE_HANDLER(PublishFile, filename);
+    K_HASHTABLE_HANDLER(PublishFile, filename);
 };
 
 static bool CheckSha256(Span<const char> sha256)
@@ -112,7 +112,7 @@ bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const 
         return false;
     }
     src_len = sqlite3_blob_bytes(src_blob);
-    RG_DEFER { sqlite3_blob_close(src_blob); };
+    K_DEFER { sqlite3_blob_close(src_blob); };
 
     if (download) {
         const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1\"", FmtUrlSafe(filename, "")).ptr;
@@ -153,12 +153,12 @@ bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const 
             char boundary[17];
             {
                 uint64_t buf;
-                FillRandomSafe(&buf, RG_SIZE(buf));
+                FillRandomSafe(&buf, K_SIZE(buf));
                 Fmt(boundary, "%1", FmtHex(buf).Pad0(-16));
             }
 
             // Boundary strings
-            LocalArray<Span<const char>, RG_LEN(ranges.data) * 2> boundaries;
+            LocalArray<Span<const char>, K_LEN(ranges.data) * 2> boundaries;
             int64_t total_len = 0;
             {
                 const char *mimetype = GetMimeType(GetPathExtension(filename), nullptr);
@@ -214,7 +214,7 @@ bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const 
                 Size offset = 0;
                 while (offset < range_len) {
                     uint8_t buf[16384];
-                    Size copy_len = std::min(range_len - offset, RG_SIZE(buf));
+                    Size copy_len = std::min(range_len - offset, K_SIZE(buf));
 
                     if (sqlite3_blob_read(src_blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
                         LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
@@ -251,7 +251,7 @@ bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const 
             Size offset = 0;
             while (offset < range_len) {
                 uint8_t buf[16384];
-                Size copy_len = std::min(range_len - offset, RG_SIZE(buf));
+                Size copy_len = std::min(range_len - offset, K_SIZE(buf));
 
                 if (sqlite3_blob_read(src_blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
                     LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
@@ -331,7 +331,7 @@ bool PutFile(http_IO *io, InstanceHolder *instance, CompressionType compression_
     const char *tmp_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
     if (!tmp_filename)
         return false;
-    RG_DEFER {
+    K_DEFER {
         CloseDescriptor(fd);
         UnlinkFile(tmp_filename);
     };
@@ -423,7 +423,7 @@ bool PutFile(http_IO *io, InstanceHolder *instance, CompressionType compression_
             LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
             return false;
         }
-        RG_DEFER { sqlite3_blob_close(blob); };
+        K_DEFER { sqlite3_blob_close(blob); };
 
         StreamReader reader(fd, "<temp>");
         int64_t read_len = 0;
@@ -532,8 +532,8 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
     const http_RequestInfo &request = io->Request();
     const char *url = request.path + 1 + instance->key.len;
 
-    RG_ASSERT(url <= request.path + strlen(request.path));
-    RG_ASSERT(url[0] == '/');
+    K_ASSERT(url <= request.path + strlen(request.path));
+    K_ASSERT(url[0] == '/');
 
     const char *client_sha256 = request.GetQueryValue("sha256");
 
@@ -955,7 +955,7 @@ void HandleFileDelta(http_IO *io, InstanceHolder *instance)
         const char *to = stmt2.IsRow() ? (const char *)sqlite3_column_text(stmt2, 0) : nullptr;
 
         int cmp = (from && to) ? CmpStr(from, to) : (!from - !to);
-        RG_ASSERT(from || to);
+        K_ASSERT(from || to);
 
         json.StartObject();
 
@@ -1160,7 +1160,7 @@ void HandleFilePublish(http_IO *io, InstanceHolder *instance)
     if (!success)
         return;
 
-    RG_ASSERT(version >= 0);
+    K_ASSERT(version >= 0);
     if (!instance->SyncViews(gp_domain.config.view_directory))
         return;
     instance->fs_version = version;

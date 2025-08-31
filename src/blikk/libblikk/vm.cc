@@ -17,7 +17,7 @@
 #include "program.hh"
 #include "vm.hh"
 
-namespace RG {
+namespace K {
 
 bk_VirtualMachine::bk_VirtualMachine(const bk_Program *const program, unsigned int flags)
     : flags(flags), program(program)
@@ -36,10 +36,10 @@ bool bk_VirtualMachine::Run()
     Size pc = frame->pc;
     Size bp = frame->bp;
     Span<const bk_Instruction> ir = frame->func ? frame->func->ir : program->main;
-    RG_ASSERT(pc < ir.len);
+    K_ASSERT(pc < ir.len);
 
     // Save PC on exit
-    RG_DEFER { frame->pc = pc; };
+    K_DEFER { frame->pc = pc; };
 
     const bk_Instruction *inst;
 
@@ -554,7 +554,7 @@ bool bk_VirtualMachine::Run()
 
                     DISPATCH(pc = 1); // Skip NOP
                 } else {
-                    RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
+                    K_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
 
                     stack.Grow(ret_type->size);
 
@@ -567,7 +567,7 @@ bool bk_VirtualMachine::Run()
 
                         func->native(this, args, ret);
 
-                        MemMove(args.ptr - 1, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
+                        MemMove(args.ptr - 1, ret.ptr, ret.len * K_SIZE(*ret.ptr));
                         stack.len -= args.len + 2;
                     } else {
                         Span<bk_PrimitiveValue> args = MakeSpan(stack.end() - func_type->params_size, func_type->params_size);
@@ -576,7 +576,7 @@ bool bk_VirtualMachine::Run()
 
                         func->native(this, args, ret);
 
-                        MemMove(args.ptr - 1, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
+                        MemMove(args.ptr - 1, ret.ptr, ret.len * K_SIZE(*ret.ptr));
                         stack.len -= args.len + 1;
                     }
 
@@ -616,7 +616,7 @@ bool bk_VirtualMachine::Run()
 
                 DISPATCH(pc = 1); // Skip NOP
             } else {
-                RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
+                K_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
 
                 stack.Grow(ret_type->size);
 
@@ -629,7 +629,7 @@ bool bk_VirtualMachine::Run()
 
                     func->native(this, args, ret);
 
-                    MemMove(args.ptr, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
+                    MemMove(args.ptr, ret.ptr, ret.len * K_SIZE(*ret.ptr));
                     stack.len -= args.len + 1;
                 } else {
                     Span<bk_PrimitiveValue> args = MakeSpan(stack.end() - func_type->params_size, func_type->params_size);
@@ -638,7 +638,7 @@ bool bk_VirtualMachine::Run()
 
                     func->native(this, args, ret);
 
-                    MemMove(args.ptr, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
+                    MemMove(args.ptr, ret.ptr, ret.len * K_SIZE(*ret.ptr));
                     stack.len -= args.len;
                 }
 
@@ -681,20 +681,20 @@ bool bk_VirtualMachine::Run()
         CASE(InlineIf): {
             Size ptr = stack.len - 2 * inst->u2.i - 1;
             Size src = stack[ptr].b ? (ptr + 1) : (ptr + 1 + inst->u2.i);
-            MemCpy(stack.ptr + ptr, stack.ptr + src, inst->u2.i * RG_SIZE(*stack.ptr));
+            MemCpy(stack.ptr + ptr, stack.ptr + src, inst->u2.i * K_SIZE(*stack.ptr));
             stack.len = ptr + inst->u2.i;
             DISPATCH(++pc);
         }
 
         CASE(End): {
-            RG_ASSERT(stack.len == inst->u2.i);
+            K_ASSERT(stack.len == inst->u2.i);
 
             pc++;
             return true;
         }
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 
 #undef CASE
 #undef LOOP
@@ -709,7 +709,7 @@ void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Siz
     switch (inst.code) {
         case bk_Opcode::Push: {
             switch (inst.u1.primitive) {
-                case bk_PrimitiveKind::Null: { RG_UNREACHABLE(); } break;
+                case bk_PrimitiveKind::Null: { K_UNREACHABLE(); } break;
                 case bk_PrimitiveKind::Boolean: { PrintLn(StdErr, " %!Y..[Bool]%!0 %1 %!M..>%2%!0", inst.u2.b, stack.len); } break;
                 case bk_PrimitiveKind::Integer: { PrintLn(StdErr, " %!Y..[Int]%!0 %1 %!M..>%2%!0", inst.u2.i, stack.len); } break;
                 case bk_PrimitiveKind::Float: { PrintLn(StdErr, " %!Y..[Float]%!0 %1 %!M..>%2%!0", FmtDouble(inst.u2.d, 1, INT_MAX), stack.len); } break;
@@ -719,7 +719,7 @@ void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Siz
                 case bk_PrimitiveKind::Array: { PrintLn(StdErr, " %!Y..[Array]%!0 %!M..>%1%!0", stack.len); } break;
                 case bk_PrimitiveKind::Record: { PrintLn(StdErr, " %!Y..[Record]%!0 %!M..>%1%!0", stack.len); } break;
                 case bk_PrimitiveKind::Enum: { PrintLn(StdErr, " %!Y..[Enum]%!0 %1 %!M..>%2%!0", inst.u2.i, stack.len); } break;
-                case bk_PrimitiveKind::Opaque: { PrintLn(StdErr, " %!Y..[Opaque]%!0 0x%1 %!M..>%2%!0", FmtArg(inst.u2.opaque).Pad0(-RG_SIZE(void *) * 2), stack.len); } break;
+                case bk_PrimitiveKind::Opaque: { PrintLn(StdErr, " %!Y..[Opaque]%!0 0x%1 %!M..>%2%!0", FmtArg(inst.u2.opaque).Pad0(-K_SIZE(void *) * 2), stack.len); } break;
             }
         } break;
         case bk_Opcode::Reserve: { PrintLn(StdErr, " |%1 %!M..>%2%!0", inst.u2.i, stack.len); } break;

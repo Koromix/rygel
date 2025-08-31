@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "mco_common.hh"
 
-namespace RG {
+namespace K {
 
 struct alignas(8) mco_ProcedureRealisation {
     drd_ProcedureCode proc;
@@ -112,8 +112,8 @@ struct mco_Stay {
     // files on 32-bit platforms.
     Span<drd_DiagnosisCode> other_diagnoses;
     Span<mco_ProcedureRealisation> procedures;
-#if RG_SIZE_MAX < INT64_MAX
-    char _pad1[32 - 2 * RG_SIZE(Size) - 2 * RG_SIZE(void *)];
+#if K_SIZE_MAX < INT64_MAX
+    char _pad1[32 - 2 * K_SIZE(Size) - 2 * K_SIZE(void *)];
 #endif
 };
 
@@ -126,7 +126,7 @@ static inline bool mco_SplitTest(int32_t id1, int32_t id2)
 template <typename T>
 Span<T> mco_Split(Span<T> mono_stays, Size split_len, Span<T> *out_remainder = nullptr)
 {
-    RG_ASSERT(mono_stays.len >= split_len);
+    K_ASSERT(mono_stays.len >= split_len);
 
     while (split_len < mono_stays.len &&
            !mco_SplitTest(mono_stays[split_len - 1].bill_id, mono_stays[split_len].bill_id)) {
@@ -158,7 +158,7 @@ struct mco_Test {
     SupplementTest auth_supplements[16];
     int exb_exh;
 
-    RG_HASHTABLE_HANDLER(mco_Test, bill_id);
+    K_HASHTABLE_HANDLER(mco_Test, bill_id);
 };
 
 struct mco_StaySet {
@@ -170,12 +170,12 @@ struct mco_StaySet {
 };
 
 class mco_StaySetBuilder {
-    RG_DELETE_COPY(mco_StaySetBuilder)
+    K_DELETE_COPY(mco_StaySetBuilder)
 
     mco_StaySet set;
 
-    BlockAllocator other_diagnoses_alloc { 2048 * RG_SIZE(drd_DiagnosisCode) };
-    BlockAllocator procedures_alloc { 2048 * RG_SIZE(mco_ProcedureRealisation) };
+    BlockAllocator other_diagnoses_alloc { 2048 * K_SIZE(drd_DiagnosisCode) };
+    BlockAllocator procedures_alloc { 2048 * K_SIZE(mco_ProcedureRealisation) };
 
     struct FichCompData {
         enum class Type {

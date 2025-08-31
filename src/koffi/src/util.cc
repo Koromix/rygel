@@ -26,7 +26,7 @@
 
 #include <napi.h>
 
-namespace RG {
+namespace K {
 
 // Value does not matter, the tag system uses memory addresses
 const napi_type_tag TypeInfoMarker = { 0x1cc449675b294374, 0xbb13a50e97dcb017 };
@@ -35,7 +35,7 @@ const napi_type_tag MagicUnionMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 
 
 Napi::Function MagicUnion::InitClass(Napi::Env env, const TypeInfo *type)
 {
-    RG_ASSERT(type->primitive == PrimitiveKind::Union);
+    K_ASSERT(type->primitive == PrimitiveKind::Union);
 
     // node-addon-api wants std::vector
     std::vector<Napi::ClassPropertyDescriptor<MagicUnion>> properties; 
@@ -96,7 +96,7 @@ Napi::Value MagicUnion::Getter(const Napi::CallbackInfo &info)
         active_idx = idx;
     }
 
-    RG_ASSERT(!value.IsEmpty());
+    K_ASSERT(!value.IsEmpty());
     return value;
 }
 
@@ -203,7 +203,7 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
         const TypeInfo *raw = external.Data();
 
         const TypeInfo *type = AlignDown(raw, 4);
-        RG_ASSERT(type);
+        K_ASSERT(type);
 
         if (out_directions) {
             Size delta = (uint8_t *)raw - (uint8_t *)type;
@@ -343,7 +343,7 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str)
 
             TypeInfo *copy = instance->types.AppendDefault();
 
-            memcpy((void *)copy, (const void *)type, RG_SIZE(*type));
+            memcpy((void *)copy, (const void *)type, K_SIZE(*type));
             copy->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
             copy->members.allocator = GetNullAllocator();
 
@@ -373,12 +373,12 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str)
             }
 
             type = MakeArrayType(instance, type, len);
-            RG_ASSERT(type);
+            K_ASSERT(type);
         } else {
-            RG_ASSERT(!len);
+            K_ASSERT(!len);
 
             type = MakePointerType(instance, type);
-            RG_ASSERT(type);
+            K_ASSERT(type);
         }
     }
 
@@ -392,7 +392,7 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str)
 
 TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count)
 {
-    RG_ASSERT(count >= 1);
+    K_ASSERT(count >= 1);
 
     for (int i = 0; i < count; i++) {
         char name_buf[256];
@@ -408,14 +408,14 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
 
             if (ref->primitive != PrimitiveKind::Prototype) {
                 type->primitive = PrimitiveKind::Pointer;
-                type->size = RG_SIZE(void *);
-                type->align = RG_SIZE(void *);
+                type->size = K_SIZE(void *);
+                type->align = K_SIZE(void *);
                 type->ref.type = ref;
                 type->hint = (ref->flags & (int)TypeFlag::HasTypedArray) ? ArrayHint::Typed : ArrayHint::Array;
             } else {
                 type->primitive = PrimitiveKind::Callback;
-                type->size = RG_SIZE(void *);
-                type->align = RG_SIZE(void *);
+                type->size = K_SIZE(void *);
+                type->align = K_SIZE(void *);
                 type->ref.proto = ref->ref.proto;
             }
 
@@ -431,8 +431,8 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
 
 static TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint, bool insert)
 {
-    RG_ASSERT(len >= 0);
-    RG_ASSERT(len <= instance->config.max_type_size / ref->size);
+    K_ASSERT(len >= 0);
+    K_ASSERT(len <= instance->config.max_type_size / ref->size);
 
     TypeInfo *type = instance->types.AppendDefault();
 
@@ -597,7 +597,7 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
 
 void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker)
 {
-    static_assert(RG_SIZE(TypeInfo) >= 16);
+    static_assert(K_SIZE(TypeInfo) >= 16);
 
     // We used to make a temporary tag on the stack with lower set to a constant value and
     // upper to the pointer address, but this broke in Node 20.12 and Node 21.6 due to ExternalWrapper
@@ -611,7 +611,7 @@ void SetValueTag(const InstanceData *instance, Napi::Value value, const void *ma
     const napi_type_tag *tag = (const napi_type_tag *)marker;
 
     napi_status status = napi_type_tag_object(value.Env(), value, tag);
-    RG_ASSERT(status == napi_ok);
+    K_ASSERT(status == napi_ok);
 }
 
 bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *marker)
@@ -641,7 +641,7 @@ int GetTypedArrayType(const TypeInfo *type)
         default: return -1;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len)
@@ -766,10 +766,10 @@ static uint32_t DecodeDynamicLength(const uint8_t *origin, const RecordMember &b
         case PrimitiveKind::Array:
         case PrimitiveKind::Float32:
         case PrimitiveKind::Float64:
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
@@ -777,7 +777,7 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
     Napi::Env env = obj.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    RG_ASSERT(type->primitive == PrimitiveKind::Record);
+    K_ASSERT(type->primitive == PrimitiveKind::Record);
 
     for (Size i = 0; i < type->members.len; i++) {
         const RecordMember &member = type->members[i];
@@ -785,7 +785,7 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
         const uint8_t *src = origin + member.offset;
 
         switch (member.type->primitive) {
-            case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
                 bool b = *(bool *)src;
@@ -929,7 +929,7 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
                 obj.Set(member.name, Napi::Number::New(env, d));
             } break;
 
-            case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+            case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
         }
     }
 }
@@ -964,7 +964,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 }); \
             } else { \
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
-                Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * RG_SIZE(CType)); \
+                Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * K_SIZE(CType)); \
                  \
                 DecodeBuffer(buffer, origin, type->ref.type); \
                  \
@@ -981,7 +981,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 }); \
             } else { \
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
-                Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * RG_SIZE(CType)); \
+                Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * K_SIZE(CType)); \
                  \
                 DecodeBuffer(buffer, origin, type->ref.type); \
                  \
@@ -990,7 +990,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
         } while (false)
 
     switch (type->ref.type->primitive) {
-        case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Bool: {
             POP_ARRAY({
@@ -1111,19 +1111,19 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
         case PrimitiveKind::Float32: { POP_NUMBER_ARRAY(Float32Array, float); } break;
         case PrimitiveKind::Float64: { POP_NUMBER_ARRAY(Float64Array, double); } break;
 
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
 #undef POP_NUMBER_ARRAY_SWAP
 #undef POP_NUMBER_ARRAY
 #undef POP_ARRAY
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type)
 {
-    RG_ASSERT(type->primitive == PrimitiveKind::Array);
+    K_ASSERT(type->primitive == PrimitiveKind::Array);
 
     uint32_t len = type->size / type->ref.type->size;
     return DecodeArray(env, origin, type, len);
@@ -1134,7 +1134,7 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
     Napi::Env env = array.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    RG_ASSERT(array.IsArray());
+    K_ASSERT(array.IsArray());
 
     Size offset = 0;
     uint32_t len = array.Length();
@@ -1168,7 +1168,7 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
         } while (false)
 
     switch (ref->primitive) {
-        case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Bool: {
             POP_ARRAY({
@@ -1275,7 +1275,7 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
         case PrimitiveKind::Float32: { POP_NUMBER_ARRAY(float); } break;
         case PrimitiveKind::Float64: { POP_NUMBER_ARRAY(double); } break;
 
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
 #undef POP_NUMBER_ARRAY_SWAP
@@ -1291,7 +1291,7 @@ void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *r
 #define SWAP(CType) \
         do { \
             CType *data = (CType *)buffer.ptr; \
-            Size len = buffer.len / RG_SIZE(CType); \
+            Size len = buffer.len / K_SIZE(CType); \
              \
             for (Size i = 0; i < len; i++) { \
                 data[i] = ReverseBytes(data[i]); \
@@ -1361,17 +1361,17 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
                 } break;
                 case PrimitiveKind::Int16: 
                 case PrimitiveKind::UInt16: {
-                    Size count = NullTerminatedLength((const char16_t *)ptr, RG_SIZE_MAX);
+                    Size count = NullTerminatedLength((const char16_t *)ptr, K_SIZE_MAX);
                     type = MakeArrayType(instance, type, count);
                 } break;
                 case PrimitiveKind::Int32:
                 case PrimitiveKind::UInt32: {
-                    Size count = NullTerminatedLength((const char32_t *)ptr, RG_SIZE_MAX);
+                    Size count = NullTerminatedLength((const char32_t *)ptr, K_SIZE_MAX);
                     type = MakeArrayType(instance, type, count);
                 } break;
 
                 case PrimitiveKind::Pointer: {
-                    Size count = NullTerminatedLength((const void **)ptr, RG_SIZE_MAX);
+                    Size count = NullTerminatedLength((const void **)ptr, K_SIZE_MAX);
                     type = MakeArrayType(instance, type, count);
                 } break;
 
@@ -1470,14 +1470,14 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 
         case PrimitiveKind::Prototype: {
             const FunctionInfo *proto = type->ref.proto;
-            RG_ASSERT(!proto->variadic);
-            RG_ASSERT(!proto->lib);
+            K_ASSERT(!proto->variadic);
+            K_ASSERT(!proto->lib);
 
             FunctionInfo *func = new FunctionInfo();
-            RG_DEFER { func->Unref(); };
+            K_DEFER { func->Unref(); };
 
-            memcpy((void *)func, proto, RG_SIZE(*proto));
-            memset((void *)&func->parameters, 0, RG_SIZE(func->parameters));
+            memcpy((void *)func, proto, K_SIZE(*proto));
+            memset((void *)&func->parameters, 0, K_SIZE(func->parameters));
             func->parameters = proto->parameters;
 
             func->name = "<anonymous>";
@@ -1575,7 +1575,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
         } while (false)
 
     switch (type->primitive) {
-        case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Bool: {
             if (!value.IsBoolean()) [[unlikely]] {
@@ -1688,7 +1688,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
             *(void **)origin = ptr;
         } break;
 
-        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
 #undef PUSH_INTEGER_SWAP

@@ -17,7 +17,7 @@
 #include "light.hh"
 #include "config.hh"
 
-namespace RG {
+namespace K {
 
 static const PredefinedColor ColorTable[] = {
     { "LightGray",  { 200, 200, 200 } },
@@ -56,7 +56,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
     IniParser ini(st);
     ini.PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {
@@ -97,7 +97,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
                                 if (ParseColor(part, &color)) {
                                     if (!profile->settings.colors.Available()) {
-                                        LogError("A maximum of %1 colors is supported", RG_LEN(profile->settings.colors.data));
+                                        LogError("A maximum of %1 colors is supported", K_LEN(profile->settings.colors.data));
                                         valid = false;
                                         break;
                                     }

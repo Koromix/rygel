@@ -22,7 +22,7 @@
 #include "src/core/request/smtp.hh"
 #include "src/core/sqlite/sqlite.hh"
 
-namespace RG {
+namespace K {
 
 extern const int DomainVersion;
 extern const int MaxInstancesPerDomain;

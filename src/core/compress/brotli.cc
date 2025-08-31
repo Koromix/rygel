@@ -24,7 +24,7 @@
 #include "vendor/brotli/c/include/brotli/decode.h"
 #include "vendor/brotli/c/include/brotli/encode.h"
 
-namespace RG {
+namespace K {
 
 class BrotliDecompressor: public StreamDecoder {
     BrotliDecoderState *state = nullptr;
@@ -48,7 +48,7 @@ BrotliDecompressor::BrotliDecompressor(StreamReader *reader, CompressionType)
 {
     state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
     if (!state)
-        RG_BAD_ALLOC();
+        K_BAD_ALLOC();
 }
 
 BrotliDecompressor::~BrotliDecompressor()
@@ -70,8 +70,8 @@ Size BrotliDecompressor::Read(Size max_len, void *user_buf)
             return copy_len;
         }
 
-        if (in_len < RG_SIZE(in_buf)) {
-            Size raw_len = ReadRaw(RG_SIZE(in_buf) - in_len, in_buf + in_len);
+        if (in_len < K_SIZE(in_buf)) {
+            Size raw_len = ReadRaw(K_SIZE(in_buf) - in_len, in_buf + in_len);
             if (raw_len < 0)
                 return -1;
             in_len += raw_len;
@@ -80,7 +80,7 @@ Size BrotliDecompressor::Read(Size max_len, void *user_buf)
         const uint8_t *next_in = in_buf;
         uint8_t *next_out = out_buf + out_len;
         size_t avail_in = (size_t)in_len;
-        size_t avail_out = (size_t)(RG_SIZE(out_buf) - out_len);
+        size_t avail_out = (size_t)(K_SIZE(out_buf) - out_len);
 
         BrotliDecoderResult ret = BrotliDecoderDecompressStream(state, &avail_in, &next_in,
                                                                 &avail_out, &next_out, nullptr);
@@ -98,7 +98,7 @@ Size BrotliDecompressor::Read(Size max_len, void *user_buf)
         out_len = next_out - out_buf - out_len;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 class BrotliCompressor: public StreamEncoder {
@@ -117,7 +117,7 @@ BrotliCompressor::BrotliCompressor(StreamWriter *writer, CompressionType, Compre
 {
     state = BrotliEncoderCreateInstance(nullptr, nullptr, nullptr);
     if (!state)
-        RG_BAD_ALLOC();
+        K_BAD_ALLOC();
 
     static_assert(BROTLI_MIN_QUALITY == 0 && BROTLI_MAX_QUALITY == 11);
 
@@ -141,7 +141,7 @@ bool BrotliCompressor::Write(Span<const uint8_t> buf)
         const uint8_t *next_in = buf.ptr;
         uint8_t *next_out = output_buf;
         size_t avail_in = (size_t)buf.len;
-        size_t avail_out = RG_SIZE(output_buf);
+        size_t avail_out = K_SIZE(output_buf);
 
         if (!BrotliEncoderCompressStream(state, BROTLI_OPERATION_PROCESS,
                                          &avail_in, &next_in, &avail_out, &next_out, nullptr)) {
@@ -166,7 +166,7 @@ bool BrotliCompressor::Finalize()
         const uint8_t *next_in = nullptr;
         uint8_t *next_out = output_buf;
         size_t avail_in = 0;
-        size_t avail_out = RG_SIZE(output_buf);
+        size_t avail_out = K_SIZE(output_buf);
 
         if (!BrotliEncoderCompressStream(state, BROTLI_OPERATION_FINISH,
                                          &avail_in, &next_in, &avail_out, &next_out, nullptr)) {
@@ -180,7 +180,7 @@ bool BrotliCompressor::Finalize()
     return true;
 }
 
-RG_REGISTER_DECOMPRESSOR(CompressionType::Brotli, BrotliDecompressor);
-RG_REGISTER_COMPRESSOR(CompressionType::Brotli, BrotliCompressor);
+K_REGISTER_DECOMPRESSOR(CompressionType::Brotli, BrotliDecompressor);
+K_REGISTER_COMPRESSOR(CompressionType::Brotli, BrotliCompressor);
 
 }

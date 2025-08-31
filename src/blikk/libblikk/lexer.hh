@@ -17,7 +17,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 enum class bk_TokenKind {
     #define TOKEN(Kind, Str) Kind,

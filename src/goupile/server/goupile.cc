@@ -39,14 +39,14 @@
     #include <malloc.h>
 #endif
 
-namespace RG {
+namespace K {
 
 struct RenderInfo {
     const char *key;
     AssetInfo asset;
     int64_t time;
 
-    RG_HASHTABLE_HANDLER(RenderInfo, key);
+    K_HASHTABLE_HANDLER(RenderInfo, key);
 };
 
 DomainHolder gp_domain;
@@ -248,7 +248,7 @@ static void InitAssets()
     // Update ETag
     {
         uint64_t buf;
-        FillRandomSafe(&buf, RG_SIZE(buf));
+        FillRandomSafe(&buf, K_SIZE(buf));
         Fmt(shared_etag, "%1", FmtHex(buf).Pad0(-16));
     }
 
@@ -269,7 +269,7 @@ static void InitAssets()
             assets_map.Set("/admin/favicon.png", &asset);
         } else if (StartsWith(asset.name, "src/goupile/client/") ||
                    StartsWith(asset.name, "vendor/opensans/")) {
-            const char *name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
+            const char *name = SplitStrReverseAny(asset.name, K_PATH_SEPARATORS).ptr;
             const char *url = Fmt(&assets_alloc, "/static/%1/%2", shared_etag, name).ptr;
 
             assets_map.Set(url, &asset);
@@ -277,7 +277,7 @@ static void InitAssets()
         } else if (StartsWith(asset.name, "vendor/")) {
             Span<const char> library = SplitStr(asset.name + 7, '/');
 
-            const char *name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
+            const char *name = SplitStrReverseAny(asset.name, K_PATH_SEPARATORS).ptr;
             const char *url = Fmt(&assets_alloc, "/static/%1/%2/%3", shared_etag, library, name).ptr;
 
             assets_map.Set(url, &asset);
@@ -417,7 +417,7 @@ static void HandleProcessSignal(http_IO *io, int signal)
 static void HandleAdminRequest(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
-    RG_ASSERT(StartsWith(request.path, "/admin/") || TestStr(request.path, "/admin"));
+    K_ASSERT(StartsWith(request.path, "/admin/") || TestStr(request.path, "/admin"));
 
     const char *admin_url = request.path + 6;
 
@@ -435,7 +435,7 @@ static void HandleAdminRequest(http_IO *io)
     {
         if (TestStr(admin_url, "/")) {
             const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
-            RG_ASSERT(asset);
+            K_ASSERT(asset);
 
             const AssetInfo *render = RenderTemplate(request.path, *asset,
                                                      [&](Span<const char> expr, StreamWriter *writer) {
@@ -465,7 +465,7 @@ static void HandleAdminRequest(http_IO *io)
                     json.Key("title"); json.String("Admin");
                     json.Key("lang"); json.String(gp_domain.config.default_lang);
                     json.Key("permissions"); json.StartObject();
-                    for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+                    for (Size i = 0; i < K_LEN(UserPermissionNames); i++) {
                         bool legacy = LegacyPermissionMask & (1 << i);
 
                         Span<const char> str = json_ConvertToJsonName(UserPermissionNames[i], buf);
@@ -486,7 +486,7 @@ static void HandleAdminRequest(http_IO *io)
             return;
         } else if (TestStr(admin_url, "/favicon.png")) {
             const AssetInfo *asset = assets_map.FindValue("/admin/favicon.png", nullptr);
-            RG_ASSERT(asset);
+            K_ASSERT(asset);
 
             AttachStatic(io, *asset, 0, shared_etag);
 
@@ -617,7 +617,7 @@ static void HandleInstanceRequest(http_IO *io)
         io->SendError(404);
         return;
     }
-    RG_DEFER { instance->Unref(); };
+    K_DEFER { instance->Unref(); };
 
     // Enforce trailing slash on base URLs. Use 302 instead of 301 to avoid
     // problems with query strings being erased without question.
@@ -658,7 +658,7 @@ static void HandleInstanceRequest(http_IO *io)
         if (TestStr(instance_url, "/") || TestStr(instance_url, "/sw.js") ||
                                           TestStr(instance_url, "/sw.pk.js") ||
                                           TestStr(instance_url, "/manifest.json")) {
-            RG_ASSERT(asset);
+            K_ASSERT(asset);
 
             const InstanceHolder *master = instance->master;
             int64_t fs_version = master->fs_version.load(std::memory_order_relaxed);
@@ -882,7 +882,7 @@ static void HandleRequest(http_IO *io)
         AttachStatic(io, *render, 0, shared_etag);
     } else if (TestStr(request.path, "/favicon.png")) {
         const AssetInfo *asset = assets_map.FindValue("/favicon.png", nullptr);
-        RG_ASSERT(asset);
+        K_ASSERT(asset);
 
         AttachStatic(io, *asset, 0, shared_etag);
     } else if (StartsWith(request.path, "/admin/") || TestStr(request.path, "/admin")) {
@@ -997,7 +997,7 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
-                    config_filename = Fmt(&temp_alloc, "%1%/goupile.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
+                    config_filename = Fmt(&temp_alloc, "%1%/goupile.ini", TrimStrRight(opt.current_value, K_PATH_SEPARATORS)).ptr;
                 } else {
                     config_filename = opt.current_value;
                 }
@@ -1270,4 +1270,4 @@ int Main(int argc, char **argv)
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

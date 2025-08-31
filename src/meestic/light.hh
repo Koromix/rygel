@@ -19,7 +19,7 @@
 
 struct hs_port;
 
-namespace RG {
+namespace K {
 
 struct RgbColor {
     uint8_t red;

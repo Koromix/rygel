@@ -18,7 +18,7 @@
 #include "config.hh"
 #include "src/core/request/s3.hh"
 
-namespace RG {
+namespace K {
 
 class S3Disk: public rk_Disk {
     s3_Client s3;
@@ -139,7 +139,7 @@ rk_WriteResult S3Disk::WriteFile(const char *path, Span<const uint8_t> buf, cons
         case s3_PutResult::OtherError: return rk_WriteResult::OtherError;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 bool S3Disk::DeleteFile(const char *path)

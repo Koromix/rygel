@@ -48,9 +48,9 @@
     #include <arpa/inet.h>
 #endif
 
-namespace RG {
+namespace K {
 
-RG_CONSTINIT ConstMap<128, int, const char *> http_ErrorMessages = {
+K_CONSTINIT ConstMap<128, int, const char *> http_ErrorMessages = {
     { 100, "Continue" },
     { 101, "Switching Protocols" },
     { 102, "Processing" },
@@ -262,7 +262,7 @@ static int CreateListenSocket(const http_Config &config, bool first)
     int sock = CreateSocket(config.sock_type, SOCK_STREAM);
     if (sock < 0)
         return -1;
-    RG_DEFER_N(err_guard) { CloseSocket(sock); };
+    K_DEFER_N(err_guard) { CloseSocket(sock); };
 
     if (!first) {
         // Set SO_REUSEPORT after first connection, so that two HTTP serving processes don't end up
@@ -307,7 +307,7 @@ static int CreateListenSocket(const http_Config &config, bool first)
 
 bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 {
-    RG_ASSERT(!listeners.len);
+    K_ASSERT(!listeners.len);
 
     if (!config.Validate())
         return false;
@@ -334,7 +334,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         return false;
 #endif
 
-    RG_DEFER_N(err_guard) {
+    K_DEFER_N(err_guard) {
         for (int listener: listeners) {
             CloseSocket(listener);
         }
@@ -404,7 +404,7 @@ void http_Daemon::RunHandler(http_IO *client, int64_t now)
 
         func(level, ctx_buf, msg);
     });
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     client->request.keepalive &= (now < client->socket_start + keepalive_time);
 
@@ -417,7 +417,7 @@ void http_Daemon::RunHandler(http_IO *client, int64_t now)
 
 static inline bool IsFieldKeyValid(Span<const char> key)
 {
-    static RG_CONSTINIT Bitset<256> ValidCharacters = {
+    static K_CONSTINIT Bitset<256> ValidCharacters = {
         '!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '0', '1', '2', '3', '4', '5',
         '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
         'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '^', '_',
@@ -434,7 +434,7 @@ static inline bool IsFieldKeyValid(Span<const char> key)
 
 static inline bool IsFieldValueValid(Span<const char> key)
 {
-    static RG_CONSTINIT Bitset<256> ValidCharacters = {
+    static K_CONSTINIT Bitset<256> ValidCharacters = {
         ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?',
         '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
@@ -473,7 +473,7 @@ const http_KeyHead *http_RequestInfo::FindQuery(const char *key) const
 
 const http_KeyHead *http_RequestInfo::FindHeader(const char *key) const
 {
-    RG_ASSERT(IsHeaderKeyValid(key));
+    K_ASSERT(IsHeaderKeyValid(key));
 
     const http_KeyHead *head = headers_map.Find(key);
     return head;
@@ -493,7 +493,7 @@ const char *http_RequestInfo::GetQueryValue(const char *key) const
 
 const char *http_RequestInfo::GetHeaderValue(const char *key) const
 {
-    RG_ASSERT(IsHeaderKeyValid(key));
+    K_ASSERT(IsHeaderKeyValid(key));
 
     const http_KeyHead *head = headers_map.Find(key);
     return head ? head->last->value : nullptr;
@@ -507,8 +507,8 @@ const char *http_RequestInfo::GetCookieValue(const char *key) const
 
 bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
 {
-    RG_ASSERT(socket);
-    RG_ASSERT(!incoming.reading);
+    K_ASSERT(socket);
+    K_ASSERT(!incoming.reading);
 
     // Safety checks
     if (request.GetHeaderValue("Content-Encoding")) {
@@ -528,7 +528,7 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
     timeout_at = GetMonotonicTime() + daemon->send_timeout;
 
     bool success = out_st->Open([this](Span<uint8_t> out_buf) { return ReadDirect(out_buf); }, "<http>");
-    RG_ASSERT(success);
+    K_ASSERT(success);
 
     // Additional precaution
     out_st->SetReadLimit(max_len);
@@ -538,7 +538,7 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
 
 void http_IO::AddHeader(Span<const char> key, Span<const char> value)
 {
-    RG_ASSERT(!response.started);
+    K_ASSERT(!response.started);
 
     http_KeyValue header = {};
 
@@ -555,7 +555,7 @@ void http_IO::AddEncodingHeader(CompressionType encoding)
         case CompressionType::Zlib: { AddHeader("Content-Encoding", "deflate"); } break;
         case CompressionType::Gzip: { AddHeader("Content-Encoding", "gzip"); } break;
         case CompressionType::Brotli: { AddHeader("Content-Encoding", "br"); } break;
-        case CompressionType::LZ4: { RG_UNREACHABLE(); } break;
+        case CompressionType::LZ4: { K_UNREACHABLE(); } break;
         case CompressionType::Zstd: { AddHeader("Content-Encoding", "zstd"); } break;
     }
 }
@@ -570,7 +570,7 @@ void http_IO::AddCookieHeader(const char *path, const char *name, const char *va
         buf.len = Fmt(buf.data, "%1=; Path=%2; Max-Age=0;", name, path).len;
     }
 
-    RG_ASSERT(buf.Available() >= 128);
+    K_ASSERT(buf.Available() >= 128);
 
     buf.len += Fmt(buf.TakeAvailable(), " SameSite=Strict;").len;
     if (flags & (int)http_CookieFlag::HttpOnly) {
@@ -585,9 +585,9 @@ void http_IO::AddCookieHeader(const char *path, const char *name, const char *va
 
 void http_IO::AddCachingHeaders(int64_t max_age, const char *etag)
 {
-    RG_ASSERT(max_age >= 0);
+    K_ASSERT(max_age >= 0);
 
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
     max_age = 0;
 #endif
 
@@ -646,9 +646,9 @@ bool http_IO::NegociateEncoding(CompressionType preferred1, CompressionType pref
 
 bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, StreamWriter *out_st)
 {
-    RG_ASSERT(socket);
-    RG_ASSERT(!response.started);
-    RG_ASSERT(!request.headers_only);
+    K_ASSERT(socket);
+    K_ASSERT(!response.started);
+    K_ASSERT(!request.headers_only);
 
     daemon->StartWrite(socket);
 
@@ -693,8 +693,8 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
 
 void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(StreamWriter *)> func)
 {
-    RG_ASSERT(socket);
-    RG_ASSERT(!response.started);
+    K_ASSERT(socket);
+    K_ASSERT(!response.started);
 
     // HEAD quick path
     if (request.headers_only) {
@@ -727,7 +727,7 @@ void http_IO::SendEmpty(int status)
 
 void http_IO::SendText(int status, Span<const char> text, const char *mimetype)
 {
-    RG_ASSERT(mimetype);
+    K_ASSERT(mimetype);
     AddHeader("Content-Type", mimetype);
 
     Send(status, text.len, [&](StreamWriter *writer) { return writer->Write(text); });
@@ -789,7 +789,7 @@ void http_IO::SendFile(int status, const char *filename, const char *mimetype)
     int fd = OpenFile(filename, (int)OpenFlag::Read);
     if (fd < 0)
         return;
-    RG_DEFER_N(err_guard) { CloseDescriptor(fd); };
+    K_DEFER_N(err_guard) { CloseDescriptor(fd); };
 
     FileInfo file_info;
     if (StatFile(fd, filename, &file_info) != StatResult::Success)
@@ -822,7 +822,7 @@ bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
             case AF_INET: {
                 void *ptr = &((sockaddr_in *)sa)->sin_addr;
 
-                if (!inet_ntop(AF_INET, ptr, addr, RG_SIZE(addr))) [[unlikely]] {
+                if (!inet_ntop(AF_INET, ptr, addr, K_SIZE(addr))) [[unlikely]] {
                     LogError("Cannot convert IPv4 address to text");
                     return false;
                 }
@@ -830,26 +830,26 @@ bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
 
             case AF_INET6: {
 #if !defined(_WIN32)
-                RG_ASSERT(RG_SIZE(addr) >= INET6_ADDRSTRLEN + 2);
+                K_ASSERT(K_SIZE(addr) >= INET6_ADDRSTRLEN + 2);
 #endif
 
                 void *ptr = &((sockaddr_in6 *)sa)->sin6_addr;
 
-                if (!inet_ntop(AF_INET6, ptr, addr, RG_SIZE(addr))) [[unlikely]] {
+                if (!inet_ntop(AF_INET6, ptr, addr, K_SIZE(addr))) [[unlikely]] {
                     LogError("Cannot convert IPv6 address to text");
                     return false;
                 }
 
                 if (StartsWith(addr, "::ffff:") || StartsWith(addr, "::FFFF:")) {
                     // Not supposed to even go near the limit, but make sure!
-                    Size move = std::min((Size)strlen(addr + 7) + 1, RG_SIZE(addr) - 8);
+                    Size move = std::min((Size)strlen(addr + 7) + 1, K_SIZE(addr) - 8);
                     MemMove(addr, addr + 7, move);
                 }
             } break;
 
             case AF_UNIX: { CopyString("unix", addr); } break;
 
-            default: { RG_UNREACHABLE(); } break;
+            default: { K_UNREACHABLE(); } break;
         }
     }
 
@@ -1255,7 +1255,7 @@ Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, 
         case CompressionType::Zlib: { Fmt(&buf, "Content-Encoding: deflate\r\n"); } break;
         case CompressionType::Gzip: { Fmt(&buf, "Content-Encoding: gzip\r\n"); } break;
         case CompressionType::Brotli: { Fmt(&buf, "Content-Encoding: br\r\n"); } break;
-        case CompressionType::LZ4: { RG_UNREACHABLE(); } break;
+        case CompressionType::LZ4: { K_UNREACHABLE(); } break;
         case CompressionType::Zstd: { Fmt(&buf, "Content-Encoding: zstd\r\n"); } break;
     }
 
@@ -1357,7 +1357,7 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
     LocalArray<Span<const uint8_t>, 2 * 16 + 1> parts;
 
     while (data.len >= 0xFFFF) {
-        parts.Append(MakeSpan(full, RG_SIZE(full)));
+        parts.Append(MakeSpan(full, K_SIZE(full)));
         parts.Append(MakeSpan(data.ptr, 0xFFFF));
 
         data.ptr += 0xFFFF;
@@ -1372,7 +1372,7 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
         last[4] = literals[((size_t)data.len >> 4) & 0xF];
         last[5] = literals[((size_t)data.len >> 0) & 0xF];
 
-        parts.Append(MakeSpan(last, RG_SIZE(last)));
+        parts.Append(MakeSpan(last, K_SIZE(last)));
         parts.Append(MakeSpan(data.ptr, data.len));
     }
 

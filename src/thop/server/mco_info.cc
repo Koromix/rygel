@@ -19,7 +19,7 @@
 #include "mco_info.hh"
 #include "mco.hh"
 
-namespace RG {
+namespace K {
 
 static const mco_TableIndex *GetIndexFromRequest(http_IO *io, drd_Sector *out_sector = nullptr)
 {
@@ -379,8 +379,8 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
                            HashMap<int16_t, uint16_t> *out_nodes)
 {
     for (Size i = 0;; i++) {
-        RG_ASSERT(i < ctx.ghm_nodes.len); // Infinite loops
-        RG_ASSERT(node_idx < ctx.ghm_nodes.len);
+        K_ASSERT(i < ctx.ghm_nodes.len); // Infinite loops
+        K_ASSERT(node_idx < ctx.ghm_nodes.len);
 
         const mco_GhmDecisionNode &ghm_node = ctx.ghm_nodes[node_idx];
         bool stop = false;
@@ -549,7 +549,7 @@ void ProduceMcoHighlight(http_IO *io, const User *)
             ctx.ignore_diagnoses = true;
         } else {
             drd_DiagnosisCode diag =
-                drd_DiagnosisCode::Parse(code, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                drd_DiagnosisCode::Parse(code, K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (!diag.IsValid()) {
                 LogError("Invalid CIM-10 code '%1'", code);
                 io->SendError(422);
@@ -573,7 +573,7 @@ void ProduceMcoHighlight(http_IO *io, const User *)
             ctx.ignore_procedures = true;
         } else {
             drd_ProcedureCode proc =
-                drd_ProcedureCode::Parse(code, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                drd_ProcedureCode::Parse(code, K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (!proc.IsValid()) {
                 LogError("Invalid CCAM code '%1'", code);
                 io->SendError(422);

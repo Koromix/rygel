@@ -17,7 +17,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 struct bk_TypeInfo;
 struct bk_FunctionInfo;
@@ -73,46 +73,46 @@ struct bk_TypeInfo {
 
     struct bk_FunctionTypeInfo *AsFunctionType()
     {
-        RG_ASSERT(primitive == bk_PrimitiveKind::Function);
+        K_ASSERT(primitive == bk_PrimitiveKind::Function);
         return (bk_FunctionTypeInfo *)this;
     }
     const struct bk_FunctionTypeInfo *AsFunctionType() const
     {
-        RG_ASSERT(primitive == bk_PrimitiveKind::Function);
+        K_ASSERT(primitive == bk_PrimitiveKind::Function);
         return (const bk_FunctionTypeInfo *)this;
     }
     struct bk_ArrayTypeInfo *AsArrayType()
     {
-        RG_ASSERT(primitive == bk_PrimitiveKind::Array);
+        K_ASSERT(primitive == bk_PrimitiveKind::Array);
         return (bk_ArrayTypeInfo *)this;
     }
     const struct bk_ArrayTypeInfo *AsArrayType() const
     {
-        RG_ASSERT(primitive == bk_PrimitiveKind::Array);
+        K_ASSERT(primitive == bk_PrimitiveKind::Array);
         return (const bk_ArrayTypeInfo *)this;
     }
     struct bk_RecordTypeInfo *AsRecordType()
     {
-        RG_ASSERT(primitive == bk_PrimitiveKind::Record);
+        K_ASSERT(primitive == bk_PrimitiveKind::Record);
         return (bk_RecordTypeInfo *)this;
     }
     const struct bk_RecordTypeInfo *AsRecordType() const
     {
-        RG_ASSERT(primitive == bk_PrimitiveKind::Record);
+        K_ASSERT(primitive == bk_PrimitiveKind::Record);
         return (const bk_RecordTypeInfo *)this;
     }
     struct bk_EnumTypeInfo *AsEnumType()
     {
-        RG_ASSERT(primitive == bk_PrimitiveKind::Enum);
+        K_ASSERT(primitive == bk_PrimitiveKind::Enum);
         return (bk_EnumTypeInfo *)this;
     }
     const struct bk_EnumTypeInfo *AsEnumType() const
     {
-        RG_ASSERT(primitive == bk_PrimitiveKind::Enum);
+        K_ASSERT(primitive == bk_PrimitiveKind::Enum);
         return (const bk_EnumTypeInfo *)this;
     }
 
-    RG_HASHTABLE_HANDLER(bk_TypeInfo, signature);
+    K_HASHTABLE_HANDLER(bk_TypeInfo, signature);
 };
 struct bk_FunctionTypeInfo: public bk_TypeInfo {
     LocalArray<const bk_TypeInfo *, 16> params;
@@ -131,7 +131,7 @@ struct bk_RecordTypeInfo: public bk_TypeInfo {
         Size offset;
     };
 
-    LocalArray<Member, RG_LEN(bk_FunctionTypeInfo::params.data)> members;
+    LocalArray<Member, K_LEN(bk_FunctionTypeInfo::params.data)> members;
     const bk_FunctionInfo *func;
 };
 struct bk_EnumTypeInfo: public bk_TypeInfo {
@@ -139,7 +139,7 @@ struct bk_EnumTypeInfo: public bk_TypeInfo {
         const char *name;
         int64_t value;
 
-        RG_HASHTABLE_HANDLER(Label, name);
+        K_HASHTABLE_HANDLER(Label, name);
     };
 
     HeapArray<Label> labels;
@@ -159,7 +159,7 @@ enum class bk_Opcode {
     #include "opcodes.inc"
 };
 static const char *const bk_OpcodeNames[] = {
-    #define OPCODE(Code) RG_STRINGIFY(Code),
+    #define OPCODE(Code) K_STRINGIFY(Code),
     #include "opcodes.inc"
 };
 
@@ -172,7 +172,7 @@ struct bk_Instruction {
     } u1;
     bk_PrimitiveValue u2;
 };
-static_assert(RG_SIZE(bk_Instruction) == 16);
+static_assert(K_SIZE(bk_Instruction) == 16);
 
 struct bk_SourceMap {
     struct Line {
@@ -208,7 +208,7 @@ struct bk_FunctionInfo {
     const char *name;
     const char *prototype;
     const bk_FunctionTypeInfo *type;
-    LocalArray<Parameter, RG_LEN(bk_FunctionTypeInfo::params.data)> params;
+    LocalArray<Parameter, K_LEN(bk_FunctionTypeInfo::params.data)> params;
 
     Mode mode;
     std::function<bk_NativeFunction> native; // Native only
@@ -224,7 +224,7 @@ struct bk_FunctionInfo {
     bk_FunctionInfo *overload_prev;
     bk_FunctionInfo *overload_next;
 
-    RG_HASHTABLE_HANDLER(bk_FunctionInfo, name);
+    K_HASHTABLE_HANDLER(bk_FunctionInfo, name);
 };
 
 struct bk_VariableInfo {
@@ -242,7 +242,7 @@ struct bk_VariableInfo {
 
     const bk_VariableInfo *shadow;
 
-    RG_HASHTABLE_HANDLER(bk_VariableInfo, name);
+    K_HASHTABLE_HANDLER(bk_VariableInfo, name);
 };
 
 struct bk_CallFrame {

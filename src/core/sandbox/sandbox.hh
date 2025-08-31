@@ -23,7 +23,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 enum class sb_IsolationFlag {
     Network = 1 << 0
@@ -45,7 +45,7 @@ struct sb_FilterItem {
 bool sb_IsSandboxSupported();
 
 class sb_SandboxBuilder final {
-    RG_DELETE_COPY(sb_SandboxBuilder)
+    K_DELETE_COPY(sb_SandboxBuilder)
 
 #if defined(__linux__)
     struct BindMount {

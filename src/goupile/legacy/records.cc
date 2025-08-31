@@ -26,7 +26,7 @@
     #include <unistd.h>
 #endif
 
-namespace RG {
+namespace K {
 
 void HandleLegacyLoad(http_IO *io, InstanceHolder *instance)
 {
@@ -196,7 +196,7 @@ void HandleLegacySave(http_IO *io, InstanceHolder *instance)
     }
 
     if (!session->userid) {
-        RG_ASSERT(session->type == SessionType::Auto);
+        K_ASSERT(session->type == SessionType::Auto);
 
         session = MigrateGuestSession(io, instance, nullptr);
         if (!session)
@@ -205,7 +205,7 @@ void HandleLegacySave(http_IO *io, InstanceHolder *instance)
         if (!stamp)
             return;
 
-        RG_ASSERT(session->userid < 0);
+        K_ASSERT(session->userid < 0);
     }
 
     HeapArray<SaveRecord> records;
@@ -466,7 +466,7 @@ void HandleLegacySave(http_IO *io, InstanceHolder *instance)
                 sqlite3_bind_int(stmt, 8, 0 + record.deleted);
 
                 if (!stmt.Step()) {
-                    RG_ASSERT(!stmt.IsValid());
+                    K_ASSERT(!stmt.IsValid());
                     return false;
                 }
 
@@ -525,7 +525,7 @@ class RecordExporter {
         char ctime[32];
         char mtime[32];
 
-        RG_HASHTABLE_HANDLER(Row, ulid);
+        K_HASHTABLE_HANDLER(Row, ulid);
     };
 
     struct Column {
@@ -539,7 +539,7 @@ class RecordExporter {
         HeapArray<const char *> values;
         bool valued;
 
-        RG_HASHTABLE_HANDLER(Column, name);
+        K_HASHTABLE_HANDLER(Column, name);
     };
 
     struct Table {
@@ -557,7 +557,7 @@ class RecordExporter {
         Column *last_column;
         const char *prev_name;
 
-        RG_HASHTABLE_HANDLER(Table, name);
+        K_HASHTABLE_HANDLER(Table, name);
     };
 
     const char *instance_key;
@@ -1073,7 +1073,7 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
                 LogError("User is not logged in");
                 io->SendError(401);
             } else {
-                RG_ASSERT(!session->HasPermission(instance, UserPermission::DataExport));
+                K_ASSERT(!session->HasPermission(instance, UserPermission::DataExport));
 
                 LogError("User is not allowed to export data");
                 io->SendError(403);
@@ -1108,7 +1108,7 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
         return;
 
     const char *export_filename = CreateUniqueFile(gp_domain.config.tmp_directory, "", ".tmp", io->Allocator());
-    RG_DEFER { UnlinkFile(export_filename); };
+    K_DEFER { UnlinkFile(export_filename); };
 
     RecordExporter exporter(instance);
 

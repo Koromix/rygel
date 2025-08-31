@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "key.hh"
 
-namespace RG {
+namespace K {
 
 struct rk_Config;
 class rk_Disk;
@@ -27,21 +27,21 @@ enum class rk_WriteResult;
 struct rk_Hash {
     uint8_t raw[32];
 
-    bool operator==(const rk_Hash &other) const { return memcmp(raw, other.raw, RG_SIZE(raw)) == 0; }
-    bool operator!=(const rk_Hash &other) const { return memcmp(raw, other.raw, RG_SIZE(raw)) != 0; }
+    bool operator==(const rk_Hash &other) const { return memcmp(raw, other.raw, K_SIZE(raw)) == 0; }
+    bool operator!=(const rk_Hash &other) const { return memcmp(raw, other.raw, K_SIZE(raw)) != 0; }
 
-    int operator-(const rk_Hash &other) const { return memcmp(raw, other.raw, RG_SIZE(raw)); }
+    int operator-(const rk_Hash &other) const { return memcmp(raw, other.raw, K_SIZE(raw)); }
 
     operator FmtArg() const { return FmtHex(raw); }
 
     uint64_t Hash() const
     {
         uint64_t hash;
-        MemCpy(&hash, raw, RG_SIZE(hash));
+        MemCpy(&hash, raw, K_SIZE(hash));
         return hash;
     }
 };
-static_assert(RG_SIZE(rk_Hash) == 32);
+static_assert(K_SIZE(rk_Hash) == 32);
 
 enum class rk_BlobCatalog: int8_t {
     Meta,
@@ -60,7 +60,7 @@ struct rk_ObjectID {
     {
         if ((int)catalog < 0)
             return false; 
-        if ((int)catalog >= RG_LEN(rk_BlobCatalogNames))
+        if ((int)catalog >= K_LEN(rk_BlobCatalogNames))
             return false;
 
         return true;
@@ -80,9 +80,9 @@ struct rk_ObjectID {
 
     uint64_t Hash() const { return hash.Hash(); }
 
-    Span<const uint8_t> Raw() const { return MakeSpan((const uint8_t *)this, RG_SIZE(*this)); }
+    Span<const uint8_t> Raw() const { return MakeSpan((const uint8_t *)this, K_SIZE(*this)); }
 };
-static_assert(RG_SIZE(rk_ObjectID) == 33);
+static_assert(K_SIZE(rk_ObjectID) == 33);
 
 enum class rk_SaltKind {
     BlobHash = 0,

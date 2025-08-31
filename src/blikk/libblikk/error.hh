@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "program.hh"
 
-namespace RG {
+namespace K {
 
 enum class bk_DiagnosticType {
     Error,
@@ -51,7 +51,7 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
     char align[1024];
     int align_more;
     {
-        int align_len = std::min((int)RG_SIZE(align) - 1, column);
+        int align_len = std::min((int)K_SIZE(align) - 1, column);
         for (Size i = 0; i < align_len; i++) {
             align[i] = (extract[i] == '\t') ? '\t' : ' ';
         }

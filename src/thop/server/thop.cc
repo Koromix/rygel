@@ -24,7 +24,7 @@
 #include "src/core/http/http.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
 struct DictionarySet {
     HeapArray<AssetInfo> dictionaries;
@@ -55,7 +55,7 @@ struct Route {
         void (*func)(http_IO *io, const User *user);
     } u;
 
-    RG_HASHTABLE_HANDLER(Route, url);
+    K_HASHTABLE_HANDLER(Route, url);
 };
 
 Config thop_config;
@@ -86,7 +86,7 @@ static void ProduceSettings(http_IO *io, const User *user)
     json.Key("permissions"); json.StartObject();
     {
         unsigned int permissions = user ? user->permissions : 0;
-        for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+        for (Size i = 0; i < K_LEN(UserPermissionNames); i++) {
             Span<const char> key = json_ConvertToJsonName(UserPermissionNames[i], buf);
             json.Key(key.ptr, (size_t)key.len); json.Bool(permissions & (1 << i));
         }
@@ -119,7 +119,7 @@ static void ProduceSettings(http_IO *io, const User *user)
             json.Key("max_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[1]).ptr);
 
             json.Key("algorithms"); json.StartArray();
-            for (Size i = 0; i < RG_LEN(mco_DispenseModeOptions); i++) {
+            for (Size i = 0; i < K_LEN(mco_DispenseModeOptions); i++) {
                 if (user->CheckMcoDispenseMode((mco_DispenseMode)i)) {
                     const OptionDesc &desc = mco_DispenseModeOptions[i];
                     json.String(desc.name);
@@ -208,8 +208,8 @@ static bool InitDictionarySet(Span<const char *const> table_directories)
     for (const char *filename: filenames) {
         AssetInfo dict = {};
 
-        const char *name = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
-        RG_ASSERT(name[0]);
+        const char *name = SplitStrReverseAny(filename, K_PATH_SEPARATORS).ptr;
+        K_ASSERT(name[0]);
 
         HeapArray<uint8_t> buf(&dictionary_set.alloc);
         {
@@ -267,12 +267,12 @@ static void InitRoutes()
     };
 
     Span<const AssetInfo> assets = GetEmbedAssets();
-    RG_ASSERT(assets.len > 0);
+    K_ASSERT(assets.len > 0);
 
     // We can use a global ETag because everything is in the binary
     {
         uint64_t buf;
-        FillRandomSafe(&buf, RG_SIZE(buf));
+        FillRandomSafe(&buf, K_SIZE(buf));
         Fmt(thop_etag, "%1", FmtHex(buf).Pad0(-16));
     }
 
@@ -284,7 +284,7 @@ static void InitRoutes()
         } else if (TestStr(asset.name, "src/thop/client/images/favicon.png")) {
             add_asset_route(http_RequestMethod::Get, "/favicon.png", Route::Matching::Exact, asset);
         } else {
-            const char *basename = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
+            const char *basename = SplitStrReverseAny(asset.name, K_PATH_SEPARATORS).ptr;
             const char *url = Fmt(&routes_alloc, "/static/%1", basename).ptr;
 
             add_asset_route(http_RequestMethod::Get, url, Route::Matching::Exact, asset);
@@ -294,7 +294,7 @@ static void InitRoutes()
         const char *url = Fmt(&routes_alloc, "/dictionaries/%1", desc.name).ptr;
         add_asset_route(http_RequestMethod::Get, url, Route::Matching::Exact, desc);
     }
-    RG_ASSERT(html.name);
+    K_ASSERT(html.name);
 
     // Patch HTML
     html.data = PatchFile(html, &routes_alloc, [](Span<const char> expr, StreamWriter *writer) {
@@ -502,7 +502,7 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
-                    config_filename = Fmt(&temp_alloc, "%1%/thop.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
+                    config_filename = Fmt(&temp_alloc, "%1%/thop.ini", TrimStrRight(opt.current_value, K_PATH_SEPARATORS)).ptr;
                 } else {
                     config_filename = opt.current_value;
                 }
@@ -613,4 +613,4 @@ Options:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

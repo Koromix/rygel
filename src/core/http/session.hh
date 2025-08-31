@@ -24,11 +24,11 @@
 #include "src/core/base/base.hh"
 #include "server.hh"
 
-namespace RG {
+namespace K {
 
 template <typename T>
 class http_SessionManager {
-    RG_DELETE_COPY(http_SessionManager)
+    K_DELETE_COPY(http_SessionManager)
 
     static const int64_t MaxSessionDelay = 1440 * 60000;
     static const int64_t MaxKeyDelay = 15 * 60000;
@@ -47,7 +47,7 @@ class http_SessionManager {
 
         RetainPtr<T> udata;
 
-        RG_HASHTABLE_HANDLER_T(SessionHandle, const char *, session_key);
+        K_HASHTABLE_HANDLER_T(SessionHandle, const char *, session_key);
     };
 
     const char *cookie_path = "/";
@@ -113,7 +113,7 @@ public:
 
             // Regenerate session if needed
             if (now - handle->register_time >= RegenerateDelay) {
-                static_assert(RG_SIZE(handle->session_rnd) == 33);
+                static_assert(K_SIZE(handle->session_rnd) == 33);
 
                 char session_rnd[33];
                 CopyString(handle->session_rnd, session_rnd);
@@ -191,11 +191,11 @@ private:
 
         // Register handle with unique key
         for (;;) {
-            static_assert(RG_SIZE(SessionHandle::session_key) == 65);
+            static_assert(K_SIZE(SessionHandle::session_key) == 65);
 
             {
                 uint64_t buf[4];
-                FillRandomSafe(buf, RG_SIZE(buf));
+                FillRandomSafe(buf, K_SIZE(buf));
                 Fmt(handle->session_key, "%1%2%3%4",
                     FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16),
                     FmtHex(buf[2]).Pad0(-16), FmtHex(buf[3]).Pad0(-16));
@@ -210,13 +210,13 @@ private:
 
         // Reuse or create public randomized key (for use in session-specific URLs)
         if (session_rnd) {
-            RG_ASSERT(strlen(session_rnd) + 1 == RG_SIZE(handle->session_rnd));
+            K_ASSERT(strlen(session_rnd) + 1 == K_SIZE(handle->session_rnd));
             CopyString(session_rnd, handle->session_rnd);
         } else {
-            static_assert(RG_SIZE(handle->session_rnd) == 33);
+            static_assert(K_SIZE(handle->session_rnd) == 33);
 
             uint64_t buf[2];
-            FillRandomSafe(&buf, RG_SIZE(buf));
+            FillRandomSafe(&buf, K_SIZE(buf));
             Fmt(handle->session_rnd, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
         }
 

@@ -19,7 +19,7 @@
 #include "mco_common.hh"
 #include "mco_table.hh"
 
-namespace RG {
+namespace K {
 
 struct mco_GhmConstraint {
     enum class Warning {
@@ -33,7 +33,7 @@ struct mco_GhmConstraint {
     uint32_t raac_durations;
     uint32_t warnings;
 
-    RG_HASHTABLE_HANDLER(mco_GhmConstraint, ghm);
+    K_HASHTABLE_HANDLER(mco_GhmConstraint, ghm);
 };
 
 bool mco_ComputeGhmConstraints(const mco_TableIndex &index,

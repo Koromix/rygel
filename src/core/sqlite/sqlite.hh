@@ -31,7 +31,7 @@
 
 #include <thread>
 
-namespace RG {
+namespace K {
 
 class sq_Database;
 
@@ -78,7 +78,7 @@ public:
 };
 
 class sq_Statement {
-    RG_DELETE_COPY(sq_Statement)
+    K_DELETE_COPY(sq_Statement)
 
     sq_Database *db = nullptr;
     sqlite3_stmt *stmt = nullptr;
@@ -114,7 +114,7 @@ public:
 };
 
 class sq_Database {
-    RG_DELETE_COPY(sq_Database)
+    K_DELETE_COPY(sq_Database)
 
     struct LockWaiter {
         LockWaiter *prev;

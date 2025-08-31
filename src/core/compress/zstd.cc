@@ -23,7 +23,7 @@
 
 #include "vendor/zstd/lib/zstd.h"
 
-namespace RG {
+namespace K {
 
 class ZstdDecompressor: public StreamDecoder {
     ZSTD_DStream *ctx = nullptr;
@@ -44,7 +44,7 @@ ZstdDecompressor::ZstdDecompressor(StreamReader *reader, CompressionType)
 {
     ctx = ZSTD_createDStream();
     if (!ctx)
-        RG_BAD_ALLOC();
+        K_BAD_ALLOC();
 
     in_buf.Reserve(ZSTD_DStreamInSize());
     out_buf.Reserve(ZSTD_DStreamOutSize());
@@ -94,7 +94,7 @@ Size ZstdDecompressor::Read(Size max_len, void *user_buf)
         out_buf.len = (Size)output.pos;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 class ZstdCompressor: public StreamEncoder {
@@ -115,7 +115,7 @@ ZstdCompressor::ZstdCompressor(StreamWriter *writer, CompressionType, Compressio
 {
     ctx = ZSTD_createCStream();
     if (!ctx)
-        RG_BAD_ALLOC();
+        K_BAD_ALLOC();
 
     out_buf.Reserve(ZSTD_CStreamOutSize());
 
@@ -182,7 +182,7 @@ bool ZstdCompressor::Finalize()
     return true;
 }
 
-RG_REGISTER_DECOMPRESSOR(CompressionType::Zstd, ZstdDecompressor);
-RG_REGISTER_COMPRESSOR(CompressionType::Zstd, ZstdCompressor);
+K_REGISTER_DECOMPRESSOR(CompressionType::Zstd, ZstdDecompressor);
+K_REGISTER_COMPRESSOR(CompressionType::Zstd, ZstdCompressor);
 
 }

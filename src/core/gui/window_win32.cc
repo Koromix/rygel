@@ -33,7 +33,7 @@
 #endif
 #include <windows.h>
 
-namespace RG {
+namespace K {
 
 static OGL_FUNCTION_PTR(HGLRC, wglCreateContextAttribsARB, HDC hDC, HGLRC hShareContext,
                         const int *attribList);
@@ -186,7 +186,7 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
 
             if (!thread_info->input.mouseover) {
                 TRACKMOUSEEVENT tme = {};
-                tme.cbSize = RG_SIZE(tme);
+                tme.cbSize = K_SIZE(tme);
                 tme.hwndTrack = thread_window->hwnd;
                 tme.dwFlags = TME_LEAVE;
                 TrackMouseEvent(&tme);
@@ -241,7 +241,7 @@ static HWND CreateMainWindow(const char *application_name)
             return nullptr;
 
         WNDCLASSEXW gl_cls = {};
-        gl_cls.cbSize = RG_SIZE(gl_cls);
+        gl_cls.cbSize = K_SIZE(gl_cls);
         gl_cls.hInstance = GetModuleHandle(nullptr);
         gl_cls.lpszClassName = application_name_w;
         gl_cls.lpfnWndProc = MainWindowProc;
@@ -279,7 +279,7 @@ static HWND CreateMainWindow(const char *application_name)
 
         ShowWindow(main_wnd, SW_SHOW);
     }
-    RG_DEFER_N(gl_wnd_guard) { DestroyWindow(main_wnd); };
+    K_DEFER_N(gl_wnd_guard) { DestroyWindow(main_wnd); };
 
     gl_wnd_guard.Disable();
     return main_wnd;
@@ -307,7 +307,7 @@ static bool InitWGL(const char *application_name)
             return false;
 
         WNDCLASSEXW dummy_cls = {};
-        dummy_cls.cbSize = RG_SIZE(dummy_cls);
+        dummy_cls.cbSize = K_SIZE(dummy_cls);
         dummy_cls.hInstance = GetModuleHandle(nullptr);
         dummy_cls.lpszClassName = dummy_cls_name_w;
         dummy_cls.lpfnWndProc = DefWindowProcW;
@@ -319,7 +319,7 @@ static bool InitWGL(const char *application_name)
             return false;
         }
     }
-    RG_DEFER { UnregisterClassW(dummy_cls_name_w, GetModuleHandle(nullptr)); };
+    K_DEFER { UnregisterClassW(dummy_cls_name_w, GetModuleHandle(nullptr)); };
 
     HWND dummy_wnd;
     HDC dummy_dc;
@@ -333,11 +333,11 @@ static bool InitWGL(const char *application_name)
             return false;
         }
     }
-    RG_DEFER { DestroyWindow(dummy_wnd); };
+    K_DEFER { DestroyWindow(dummy_wnd); };
 
     {
         PIXELFORMATDESCRIPTOR pfd = {};
-        pfd.nSize = RG_SIZE(PIXELFORMATDESCRIPTOR);
+        pfd.nSize = K_SIZE(PIXELFORMATDESCRIPTOR);
         pfd.nVersion = 1;
         pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
         pfd.iPixelType = PFD_TYPE_RGBA;
@@ -354,13 +354,13 @@ static bool InitWGL(const char *application_name)
         LogError("Failed to create OpenGL context for dummy window: %1", GetWin32ErrorString());
         return false;
     }
-    RG_DEFER { wglDeleteContext(dummy_ctx); };
+    K_DEFER { wglDeleteContext(dummy_ctx); };
 
     if (!wglMakeCurrent(dummy_dc, dummy_ctx)) {
         LogError("Failed to change OpenGL context of dummy window: %1", GetWin32ErrorString());
         return false;
     }
-    RG_DEFER { wglMakeCurrent(dummy_dc, nullptr); };
+    K_DEFER { wglMakeCurrent(dummy_dc, nullptr); };
 
 #define IMPORT_WGL_FUNCTION(Name) \
         do { \
@@ -409,7 +409,7 @@ static HGLRC CreateGLContext(const char *application_name, HDC dc)
     // Set GL-compatible pixel format
     {
         PIXELFORMATDESCRIPTOR pixel_fmt_desc;
-        DescribePixelFormat(dc, pixel_fmt_index, RG_SIZE(pixel_fmt_desc), &pixel_fmt_desc);
+        DescribePixelFormat(dc, pixel_fmt_index, K_SIZE(pixel_fmt_desc), &pixel_fmt_desc);
         if (!SetPixelFormat(dc, pixel_fmt_index, &pixel_fmt_desc)) {
             LogError("Cannot set pixel format on GL window: %1", GetWin32ErrorString());
             return nullptr;
@@ -445,7 +445,7 @@ static HGLRC CreateGLContext(const char *application_name, HDC dc)
             return nullptr;
         }
     }
-    RG_DEFER_N(gl_guard) { wglDeleteContext(gl); };
+    K_DEFER_N(gl_guard) { wglDeleteContext(gl); };
 
     gl_guard.Disable();
     return gl;
@@ -475,10 +475,10 @@ static bool SetGLContext(HDC dc, HGLRC gl)
 
 bool gui_Window::Create(const char *application_name)
 {
-    RG_ASSERT(!window);
+    K_ASSERT(!window);
 
     window = new gui_Win32Window();
-    RG_DEFER_N(out_guard) { Release(); };
+    K_DEFER_N(out_guard) { Release(); };
 
     thread_window = window;
     thread_info = &priv;
@@ -569,7 +569,7 @@ bool gui_Window::ProcessEvents(bool wait)
 
     // XXX: Should we report an error instead?
     bool success = SetGLContext(window->hdc, window->hgl);
-    RG_ASSERT(success);
+    K_ASSERT(success);
 
     if (imgui_local) {
         StartImGuiFrame();

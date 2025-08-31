@@ -23,7 +23,7 @@
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include "vendor/miniz/miniz.h"
 
-namespace RG {
+namespace K {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
 const int InstanceVersion = 133;
@@ -89,11 +89,11 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                     valid &= ParseSize(value, &config.max_file_size);
                 } else if (TestStr(setting, "TokenKey")) {
                     size_t key_len;
-                    int ret = sodium_base642bin(config.token_skey, RG_SIZE(config.token_skey),
+                    int ret = sodium_base642bin(config.token_skey, K_SIZE(config.token_skey),
                                                 value, strlen(value), nullptr, &key_len,
                                                 nullptr, sodium_base64_VARIANT_ORIGINAL);
                     if (!ret && key_len == 32) {
-                        static_assert(RG_SIZE(config.token_pkey) == crypto_scalarmult_BYTES);
+                        static_assert(K_SIZE(config.token_pkey) == crypto_scalarmult_BYTES);
                         crypto_scalarmult_base(config.token_pkey, config.token_skey);
 
                         config.token_key = DuplicateString(value, &str_alloc).ptr;
@@ -167,8 +167,8 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
     }
 
     // Create challenge key
-    static_assert(RG_SIZE(challenge_key) == crypto_secretbox_KEYBYTES);
-    FillRandomSafe(challenge_key, RG_SIZE(challenge_key));
+    static_assert(K_SIZE(challenge_key) == crypto_secretbox_KEYBYTES);
+    FillRandomSafe(challenge_key, K_SIZE(challenge_key));
 
     return true;
 }
@@ -180,7 +180,7 @@ bool InstanceHolder::Checkpoint()
 
 bool InstanceHolder::SyncViews(const char *directory)
 {
-    RG_ASSERT(master == this);
+    K_ASSERT(master == this);
 
     BlockAllocator temp_alloc;
     bool logged = false;
@@ -208,7 +208,7 @@ bool InstanceHolder::SyncViews(const char *directory)
                 LogError("Failed to create ZIP archive '%1': %2", zip_filename, mz_zip_get_error_string(zip.m_last_error));
                 return false;
             }
-            RG_DEFER_N(err_guard) {
+            K_DEFER_N(err_guard) {
                 mz_zip_writer_end(&zip);
                 UnlinkFile(zip_filename);
             };
@@ -247,7 +247,7 @@ bool InstanceHolder::SyncViews(const char *directory)
                     return false;
                 }
                 src_len = sqlite3_blob_bytes(src_blob);
-                RG_DEFER { sqlite3_blob_close(src_blob); };
+                K_DEFER { sqlite3_blob_close(src_blob); };
 
                 Size offset = 0;
                 StreamReader reader([&](Span<uint8_t> buf) {
@@ -292,7 +292,7 @@ bool InstanceHolder::SyncViews(const char *directory)
 
 bool MigrateInstance(sq_Database *db, int target)
 {
-    RG_ASSERT(!target || target == LegacyVersion || target == InstanceVersion);
+    K_ASSERT(!target || target == LegacyVersion || target == InstanceVersion);
 
     BlockAllocator temp_alloc;
 
@@ -329,7 +329,7 @@ bool MigrateInstance(sq_Database *db, int target)
     }
 
     LogInfo("Migrate instance database '%1': %2 to %3",
-            SplitStrReverseAny(filename, RG_PATH_SEPARATORS), version, target);
+            SplitStrReverseAny(filename, K_PATH_SEPARATORS), version, target);
 
     bool success = db->Transaction([&]() {
         int64_t time = GetUnixTime();
@@ -623,7 +623,7 @@ bool MigrateInstance(sq_Database *db, int target)
                             } while (!reader.IsEOF());
 
                             bool success2 = writer.Close();
-                            RG_ASSERT(success2);
+                            K_ASSERT(success2);
 
                             uint8_t hash[crypto_hash_sha256_BYTES];
                             crypto_hash_sha256_final(&state, hash);
@@ -685,7 +685,7 @@ bool MigrateInstance(sq_Database *db, int target)
 
                     IniParser ini(&st);
                     ini.PushLogFilter();
-                    RG_DEFER { PopLogFilter(); };
+                    K_DEFER { PopLogFilter(); };
 
                     const char *sql = R"(INSERT INTO fs_settings (key, value) VALUES (?1, ?2)
                                          ON CONFLICT DO UPDATE SET value = excluded.value)";
@@ -887,7 +887,7 @@ bool MigrateInstance(sq_Database *db, int target)
                         LogError("SQLite Error: %1", sqlite3_errmsg(*db));
                         return false;
                     }
-                    RG_DEFER { sqlite3_blob_close(blob); };
+                    K_DEFER { sqlite3_blob_close(blob); };
 
                     Size real_len = 0;
                     if (compression_type == CompressionType::None) {
@@ -1077,7 +1077,7 @@ bool MigrateInstance(sq_Database *db, int target)
                 {
                     uint8_t buf[32];
                     FillRandomSafe(buf);
-                    sodium_bin2base64(shared_key, RG_SIZE(shared_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+                    sodium_bin2base64(shared_key, K_SIZE(shared_key), buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
                 }
 
                 if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('SharedKey', ?1);", shared_key))
@@ -1126,7 +1126,7 @@ bool MigrateInstance(sq_Database *db, int target)
                         return false;
                     }
                     src_len = (Size)sqlite3_blob_bytes(src_blob);
-                    RG_DEFER { sqlite3_blob_close(src_blob); };
+                    K_DEFER { sqlite3_blob_close(src_blob); };
 
                     // Insert new entry
                     sqlite3_blob *dest_blob;
@@ -1145,7 +1145,7 @@ bool MigrateInstance(sq_Database *db, int target)
                             return false;
                         }
                     }
-                    RG_DEFER { sqlite3_blob_close(dest_blob); };
+                    K_DEFER { sqlite3_blob_close(dest_blob); };
 
                     // Init decompressor
                     StreamReader reader;
@@ -1207,7 +1207,7 @@ bool MigrateInstance(sq_Database *db, int target)
                 {
                     uint8_t buf[32];
                     FillRandomSafe(buf);
-                    sodium_bin2base64(token_key, RG_SIZE(token_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+                    sodium_bin2base64(token_key, K_SIZE(token_key), buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
                 }
 
                 if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('TokenKey', ?1);", token_key))
@@ -1639,7 +1639,7 @@ bool MigrateInstance(sq_Database *db, int target)
                 {
                     uint8_t buf[32];
                     FillRandomSafe(buf);
-                    sodium_bin2base64(lock_key, RG_SIZE(lock_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+                    sodium_bin2base64(lock_key, K_SIZE(lock_key), buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
                 }
 
                 if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('LockKey', ?1);", lock_key))
@@ -1743,7 +1743,7 @@ bool MigrateInstance(sq_Database *db, int target)
                             int64_t counter = ++ptr->value;
 
                             PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-                            RG_DEFER { PopLogFilter(); };
+                            K_DEFER { PopLogFilter(); };
 
                             if (db->Run("UPDATE rec_entries SET sequence = ?2 WHERE rowid = ?1", rowid, counter))
                                 break;

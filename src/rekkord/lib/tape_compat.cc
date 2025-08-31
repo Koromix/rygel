@@ -17,11 +17,11 @@
 #include "repository.hh"
 #include "priv_tape.hh"
 
-namespace RG {
+namespace K {
 
 void MigrateLegacySnapshot1(HeapArray<uint8_t> *blob)
 {
-    if (blob->len < RG_SIZE(SnapshotHeader1))
+    if (blob->len < K_SIZE(SnapshotHeader1))
         return;
 
     SnapshotHeader1 *header1 = (SnapshotHeader1 *)blob->ptr;
@@ -30,14 +30,14 @@ void MigrateLegacySnapshot1(HeapArray<uint8_t> *blob)
     header2.time = header1->time;
     header2.size = header1->size;
     header2.stored = header1->stored;
-    MemCpy(header2.channel, header1->channel, RG_SIZE(header2.channel));
+    MemCpy(header2.channel, header1->channel, K_SIZE(header2.channel));
 
-    MemCpy(blob->ptr, &header2, RG_SIZE(SnapshotHeader2));
+    MemCpy(blob->ptr, &header2, K_SIZE(SnapshotHeader2));
 }
 
 void MigrateLegacySnapshot2(HeapArray<uint8_t> *blob)
 {
-    if (blob->len < RG_SIZE(SnapshotHeader2))
+    if (blob->len < K_SIZE(SnapshotHeader2))
         return;
 
     Size from = offsetof(SnapshotHeader2, channel);
@@ -55,24 +55,24 @@ void MigrateLegacySnapshot2(HeapArray<uint8_t> *blob)
 
 void MigrateLegacyEntries1(HeapArray<uint8_t> *blob, Size start)
 {
-    if (blob->len < RG_SIZE(int64_t))
+    if (blob->len < K_SIZE(int64_t))
         return;
 
-    blob->Grow(RG_SIZE(DirectoryHeader));
+    blob->Grow(K_SIZE(DirectoryHeader));
 
-    MemMove(blob->ptr + start + RG_SIZE(DirectoryHeader), blob->ptr + start, blob->len);
-    blob->len += RG_SIZE(DirectoryHeader) - RG_SIZE(int64_t);
+    MemMove(blob->ptr + start + K_SIZE(DirectoryHeader), blob->ptr + start, blob->len);
+    blob->len += K_SIZE(DirectoryHeader) - K_SIZE(int64_t);
 
     DirectoryHeader *header = (DirectoryHeader *)(blob->ptr + start);
 
-    MemCpy(&header->size, blob->end(), RG_SIZE(int64_t));
+    MemCpy(&header->size, blob->end(), K_SIZE(int64_t));
     header->entries = 0;
 }
 
 void MigrateLegacyEntries2(HeapArray<uint8_t> *blob, Size start)
 {
     HeapArray<uint8_t> entries;
-    Size offset = start + RG_SIZE(DirectoryHeader);
+    Size offset = start + K_SIZE(DirectoryHeader);
 
     while (offset < blob->len) {
         RawEntry *ptr = (RawEntry *)(blob->ptr + offset);
@@ -84,20 +84,20 @@ void MigrateLegacyEntries2(HeapArray<uint8_t> *blob, Size start)
         entries.Grow(ptr->GetSize());
         MemCpy(entries.end(), blob->ptr + offset, skip);
         MemMove(entries.end() + offsetof(RawEntry, btime), entries.end() + offsetof(RawEntry, ctime), skip - offsetof(RawEntry, ctime));
-        MemSet(entries.end() + offsetof(RawEntry, atime), 0, RG_SIZE(RawEntry::atime));
+        MemSet(entries.end() + offsetof(RawEntry, atime), 0, K_SIZE(RawEntry::atime));
         entries.len += ptr->GetSize();
 
         offset += skip;
     }
 
-    blob->RemoveFrom(start + RG_SIZE(DirectoryHeader));
+    blob->RemoveFrom(start + K_SIZE(DirectoryHeader));
     blob->Append(entries);
 }
 
 void MigrateLegacyEntries3(HeapArray<uint8_t> *blob, Size start)
 {
     HeapArray<uint8_t> entries;
-    Size offset = start + RG_SIZE(DirectoryHeader);
+    Size offset = start + K_SIZE(DirectoryHeader);
 
     while (offset < blob->len) {
         if (blob->len - offset < 92)

@@ -25,7 +25,7 @@
 
 #include <napi.h>
 
-namespace RG {
+namespace K {
 
 bool PrototypeParser::Parse(const char *str, bool concrete, FunctionInfo *out_func)
 {
@@ -221,7 +221,7 @@ bool PrototypeParser::Match(const char *expect)
 
 bool PrototypeParser::IsIdentifier(Span<const char> tok) const
 {
-    RG_ASSERT(tok.len);
+    K_ASSERT(tok.len);
     return IsAsciiAlpha(tok[0]) || tok[0] == '_';
 }
 

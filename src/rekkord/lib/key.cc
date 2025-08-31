@@ -22,7 +22,7 @@
     #include <sys/stat.h>
 #endif
 
-namespace RG {
+namespace K {
 
 static const char *BeginPEM = "-----BEGIN REKKORD KEY-----";
 static const char *EndPEM = "-----END REKKORD KEY-----";
@@ -69,11 +69,11 @@ static Size EncodePEM(Span<const uint8_t> key, Span<uint8_t> out_buf)
     LocalArray<char, EncodedLimit> base64;
     {
         Size encoded = sodium_base64_ENCODED_LEN(key.len, sodium_base64_VARIANT_ORIGINAL);
-        if (encoded > RG_SIZE(base64))
+        if (encoded > K_SIZE(base64))
             goto error;
         base64.len = encoded - 1;
 
-        sodium_bin2base64(base64.data, RG_SIZE(base64.data), key.ptr, key.len, sodium_base64_VARIANT_ORIGINAL);
+        sodium_bin2base64(base64.data, K_SIZE(base64.data), key.ptr, key.len, sodium_base64_VARIANT_ORIGINAL);
     }
 
     len += Fmt(out.Take(len, out.len - len), "%1\n", BeginPEM).len;
@@ -96,7 +96,7 @@ error:
 Size rk_ReadRawKey(const char *filename, Span<uint8_t> out_raw)
 {
     Span<uint8_t> buf = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
-    RG_DEFER_C(len = buf.len) { ReleaseSafe(buf.ptr, len); };
+    K_DEFER_C(len = buf.len) { ReleaseSafe(buf.ptr, len); };
 
     buf.len = ReadFile(filename, buf);
     if (buf.len < 0)
@@ -109,7 +109,7 @@ Size rk_ReadRawKey(const char *filename, Span<uint8_t> out_raw)
 bool rk_SaveRawKey(Span<const uint8_t> raw, const char *filename)
 {
     Span<uint8_t> buf = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
-    RG_DEFER_C(len = buf.len) { ReleaseSafe(buf.ptr, len); };
+    K_DEFER_C(len = buf.len) { ReleaseSafe(buf.ptr, len); };
 
     buf.len = EncodePEM(raw, buf);
     if (buf.len < 0)
@@ -127,7 +127,7 @@ bool rk_SaveRawKey(Span<const uint8_t> raw, const char *filename)
 static void SeedSigningPair(const uint8_t sk[32], uint8_t pk[32])
 {
     uint8_t hash[64];
-    RG_DEFER { ZeroSafe(hash, RG_SIZE(hash)); };
+    K_DEFER { ZeroSafe(hash, K_SIZE(hash)); };
 
     crypto_hash_sha512(hash, sk, 32);
     crypto_scalarmult_ed25519_base(pk, hash);
@@ -143,10 +143,10 @@ bool rk_DeriveMasterKey(Span<const uint8_t> mkey, rk_KeySet *out_keys)
     out_keys->modes = UINT_MAX;
     out_keys->type = rk_KeyType::Master;
 
-    crypto_kdf_blake2b_derive_from_key(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(out_keys->keys.dkey, RG_SIZE(out_keys->keys.dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(out_keys->keys.lkey, RG_SIZE(out_keys->keys.lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
-    crypto_kdf_blake2b_derive_from_key(out_keys->keys.nkey, RG_SIZE(out_keys->keys.nkey), (int)MasterDerivation::NeutralKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(out_keys->keys.ckey, K_SIZE(out_keys->keys.ckey), (int)MasterDerivation::ConfigKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(out_keys->keys.dkey, K_SIZE(out_keys->keys.dkey), (int)MasterDerivation::DataKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(out_keys->keys.lkey, K_SIZE(out_keys->keys.lkey), (int)MasterDerivation::LogKey, DerivationContext, mkey.ptr);
+    crypto_kdf_blake2b_derive_from_key(out_keys->keys.nkey, K_SIZE(out_keys->keys.nkey), (int)MasterDerivation::NeutralKey, DerivationContext, mkey.ptr);
     SeedSigningPair(out_keys->keys.ckey, out_keys->keys.akey);
     crypto_scalarmult_curve25519_base(out_keys->keys.wkey, out_keys->keys.dkey);
     crypto_scalarmult_curve25519_base(out_keys->keys.tkey, out_keys->keys.lkey);
@@ -164,7 +164,7 @@ static bool DecodeKeyData(const KeyData &data, rk_KeySet *out_keys)
         LogError("Invalid keyfile prefix");
         return false;
     }
-    if (data.badge.type <= 0 || data.badge.type >= RG_LEN(rk_KeyTypeNames)) {
+    if (data.badge.type <= 0 || data.badge.type >= K_LEN(rk_KeyTypeNames)) {
         LogError("Invalid key type %1", data.badge.type);
         return false;
     }
@@ -172,19 +172,19 @@ static bool DecodeKeyData(const KeyData &data, rk_KeySet *out_keys)
     rk_KeyType type = (rk_KeyType)data.badge.type;
 
     out_keys->type = type;
-    MemCpy(out_keys->kid, data.badge.kid, RG_SIZE(out_keys->kid));
-    MemCpy(&out_keys->keys, &data.keys, RG_SIZE(out_keys->keys));
-    MemCpy(out_keys->badge, &data.badge, RG_SIZE(out_keys->badge));
+    MemCpy(out_keys->kid, data.badge.kid, K_SIZE(out_keys->kid));
+    MemCpy(&out_keys->keys, &data.keys, K_SIZE(out_keys->keys));
+    MemCpy(out_keys->badge, &data.badge, K_SIZE(out_keys->badge));
 
     switch (type) {
-        case rk_KeyType::Master: { RG_UNREACHABLE(); } break;
+        case rk_KeyType::Master: { K_UNREACHABLE(); } break;
 
         case rk_KeyType::WriteOnly: {
             out_keys->modes = (int)rk_AccessMode::Write;
 
-            ZeroSafe(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey));
-            ZeroSafe(out_keys->keys.dkey, RG_SIZE(out_keys->keys.dkey));
-            ZeroSafe(out_keys->keys.lkey, RG_SIZE(out_keys->keys.lkey));
+            ZeroSafe(out_keys->keys.ckey, K_SIZE(out_keys->keys.ckey));
+            ZeroSafe(out_keys->keys.dkey, K_SIZE(out_keys->keys.dkey));
+            ZeroSafe(out_keys->keys.lkey, K_SIZE(out_keys->keys.lkey));
         } break;
 
         case rk_KeyType::ReadWrite: {
@@ -192,7 +192,7 @@ static bool DecodeKeyData(const KeyData &data, rk_KeySet *out_keys)
                               (int)rk_AccessMode::Write |
                               (int)rk_AccessMode::Log;
 
-            ZeroSafe(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey));
+            ZeroSafe(out_keys->keys.ckey, K_SIZE(out_keys->keys.ckey));
             crypto_scalarmult_curve25519_base(out_keys->keys.wkey, out_keys->keys.dkey);
             crypto_scalarmult_curve25519_base(out_keys->keys.tkey, out_keys->keys.lkey);
         } break;
@@ -200,9 +200,9 @@ static bool DecodeKeyData(const KeyData &data, rk_KeySet *out_keys)
         case rk_KeyType::LogOnly: {
             out_keys->modes = (int)rk_AccessMode::Log;
 
-            ZeroSafe(out_keys->keys.ckey, RG_SIZE(out_keys->keys.ckey));
-            ZeroSafe(out_keys->keys.dkey, RG_SIZE(out_keys->keys.dkey));
-            ZeroSafe(out_keys->keys.wkey, RG_SIZE(out_keys->keys.wkey));
+            ZeroSafe(out_keys->keys.ckey, K_SIZE(out_keys->keys.ckey));
+            ZeroSafe(out_keys->keys.dkey, K_SIZE(out_keys->keys.dkey));
+            ZeroSafe(out_keys->keys.wkey, K_SIZE(out_keys->keys.wkey));
             crypto_scalarmult_curve25519_base(out_keys->keys.tkey, out_keys->keys.lkey);
         } break;
     }
@@ -215,7 +215,7 @@ static bool DecodeKeyData(const KeyData &data, rk_KeySet *out_keys)
 bool rk_LoadKeyFile(const char *filename, rk_KeySet *out_keys)
 {
     Span<uint8_t> raw = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
-    RG_DEFER_C(len = raw.len) { ReleaseSafe(raw.ptr, len); };
+    K_DEFER_C(len = raw.len) { ReleaseSafe(raw.ptr, len); };
 
     raw.len = rk_ReadRawKey(filename, raw);
     if (raw.len < 0)
@@ -223,7 +223,7 @@ bool rk_LoadKeyFile(const char *filename, rk_KeySet *out_keys)
 
     if (raw.len == rk_MasterKeySize) {
         return rk_DeriveMasterKey(raw, out_keys);
-    } else if (raw.len == RG_SIZE(KeyData)) {
+    } else if (raw.len == K_SIZE(KeyData)) {
         const KeyData *data = (const KeyData *)raw.ptr;
         return DecodeKeyData(*data, out_keys);
     }
@@ -234,14 +234,14 @@ bool rk_LoadKeyFile(const char *filename, rk_KeySet *out_keys)
 
 bool rk_ExportKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filename, rk_KeySet *out_keys)
 {
-    RG_ASSERT(keys.type == rk_KeyType::Master);
-    RG_ASSERT(keys.modes == UINT_MAX);
+    K_ASSERT(keys.type == rk_KeyType::Master);
+    K_ASSERT(keys.modes == UINT_MAX);
 
-    KeyData *data = (KeyData *)AllocateSafe(RG_SIZE(KeyData));
-    RG_DEFER { ReleaseSafe(data, RG_SIZE(KeyData)); };
+    KeyData *data = (KeyData *)AllocateSafe(K_SIZE(KeyData));
+    K_DEFER { ReleaseSafe(data, K_SIZE(KeyData)); };
 
     MemCpy(data->prefix, "RKK01", 5);
-    FillRandomSafe(data->badge.kid, RG_SIZE(data->badge.kid));
+    FillRandomSafe(data->badge.kid, K_SIZE(data->badge.kid));
     data->badge.type = (int8_t)type;
 
     switch (type) {
@@ -251,27 +251,27 @@ bool rk_ExportKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filena
         } break;
 
         case rk_KeyType::WriteOnly: {
-            MemCpy(data->keys + offsetof(rk_KeySet::Keys, akey), keys.keys.akey, RG_SIZE(keys.keys.akey));
-            MemCpy(data->keys + offsetof(rk_KeySet::Keys, wkey), keys.keys.wkey, RG_SIZE(keys.keys.wkey));
-            MemCpy(data->keys + offsetof(rk_KeySet::Keys, tkey), keys.keys.tkey, RG_SIZE(keys.keys.tkey));
-            MemCpy(data->keys + offsetof(rk_KeySet::Keys, vkey), keys.keys.vkey, RG_SIZE(keys.keys.vkey));
+            MemCpy(data->keys + offsetof(rk_KeySet::Keys, akey), keys.keys.akey, K_SIZE(keys.keys.akey));
+            MemCpy(data->keys + offsetof(rk_KeySet::Keys, wkey), keys.keys.wkey, K_SIZE(keys.keys.wkey));
+            MemCpy(data->keys + offsetof(rk_KeySet::Keys, tkey), keys.keys.tkey, K_SIZE(keys.keys.tkey));
+            MemCpy(data->keys + offsetof(rk_KeySet::Keys, vkey), keys.keys.vkey, K_SIZE(keys.keys.vkey));
         } break;
 
         case rk_KeyType::ReadWrite: {
-            MemCpy(data->keys + offsetof(rk_KeySet::Keys, akey), keys.keys.akey, RG_SIZE(keys.keys.akey));
-            MemCpy(data->keys + offsetof(rk_KeySet::Keys, dkey), keys.keys.dkey, RG_SIZE(keys.keys.dkey));
-            MemCpy(data->keys + offsetof(rk_KeySet::Keys, lkey), keys.keys.lkey, RG_SIZE(keys.keys.lkey));
-            MemCpy(data->keys + offsetof(rk_KeySet::Keys, vkey), keys.keys.vkey, RG_SIZE(keys.keys.vkey));
+            MemCpy(data->keys + offsetof(rk_KeySet::Keys, akey), keys.keys.akey, K_SIZE(keys.keys.akey));
+            MemCpy(data->keys + offsetof(rk_KeySet::Keys, dkey), keys.keys.dkey, K_SIZE(keys.keys.dkey));
+            MemCpy(data->keys + offsetof(rk_KeySet::Keys, lkey), keys.keys.lkey, K_SIZE(keys.keys.lkey));
+            MemCpy(data->keys + offsetof(rk_KeySet::Keys, vkey), keys.keys.vkey, K_SIZE(keys.keys.vkey));
         } break;
 
         case rk_KeyType::LogOnly: {
-            MemCpy(data->keys + offsetof(rk_KeySet::Keys, akey), keys.keys.akey, RG_SIZE(keys.keys.akey));
-            MemCpy(data->keys + offsetof(rk_KeySet::Keys, lkey), keys.keys.lkey, RG_SIZE(keys.keys.lkey));
-            MemCpy(data->keys + offsetof(rk_KeySet::Keys, vkey), keys.keys.vkey, RG_SIZE(keys.keys.vkey));
+            MemCpy(data->keys + offsetof(rk_KeySet::Keys, akey), keys.keys.akey, K_SIZE(keys.keys.akey));
+            MemCpy(data->keys + offsetof(rk_KeySet::Keys, lkey), keys.keys.lkey, K_SIZE(keys.keys.lkey));
+            MemCpy(data->keys + offsetof(rk_KeySet::Keys, vkey), keys.keys.vkey, K_SIZE(keys.keys.vkey));
         } break;
     }
 
-    FillRandomSafe(data->keys + offsetof(rk_KeySet::Keys, skey), RG_SIZE(keys.keys.skey));
+    FillRandomSafe(data->keys + offsetof(rk_KeySet::Keys, skey), K_SIZE(keys.keys.skey));
     SeedSigningPair(data->keys + offsetof(rk_KeySet::Keys, skey), data->badge.pkey);
 
     // Sign serialized keyset to detect tampering
@@ -280,7 +280,7 @@ bool rk_ExportKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filena
 
     // Export to file
     {
-        Span<const uint8_t> raw = MakeSpan((const uint8_t *)data, RG_SIZE(*data));
+        Span<const uint8_t> raw = MakeSpan((const uint8_t *)data, K_SIZE(*data));
 
         if (!rk_SaveRawKey(raw, filename))
             return false;
@@ -288,7 +288,7 @@ bool rk_ExportKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filena
 
     if (out_keys) {
         bool success = DecodeKeyData(*data, out_keys);
-        RG_ASSERT(success);
+        K_ASSERT(success);
     }
 
     return true;

@@ -16,14 +16,14 @@
 #include "data.hh"
 #include "src/core/wrap/opengl.hh"
 #include "src/core/gui/gui.hh"
-RG_PUSH_NO_WARNINGS
+K_PUSH_NO_WARNINGS
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 #include "vendor/imgui/imgui.h"
 #include "vendor/imgui/imgui_internal.h"
 #include "vendor/tkspline/src/spline.h"
-RG_POP_NO_WARNINGS
+K_POP_NO_WARNINGS
 
-namespace RG {
+namespace K {
 
 // NOTE: Beware, as of now, this software is a proof-of-concept. The quality of the
 // code reflects that... Good luck ;)
@@ -53,7 +53,7 @@ static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
         case VisColor::Limit: return ImGui::ColorConvertFloat4ToU32(ImVec4(0.9f, 0.7f, 0.03f, 0.55f * alpha));
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 static bool DetectAnomaly(const Element &elmt)
@@ -67,7 +67,7 @@ static bool DetectAnomaly(const Element &elmt)
         case Element::Type::Period: return false;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 static void DrawPeriods(double x_offset, double y_min, double y_max, double time_zoom, float alpha,
@@ -77,7 +77,7 @@ static void DrawPeriods(double x_offset, double y_min, double y_max, double time
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
     for (const Element *elmt: periods) {
-        RG_ASSERT(elmt->type == Element::Type::Period);
+        K_ASSERT(elmt->type == Element::Type::Period);
 
         ImRect rect {
             (float)(x_offset + elmt->time * time_zoom), (float)y_min,
@@ -105,9 +105,9 @@ static void DrawPeriods(double x_offset, double y_min, double y_max, double time
 
 static void TextMeasure(const Element &elmt, double align_offset)
 {
-    RG_ASSERT(elmt.type == Element::Type::Measure);
+    K_ASSERT(elmt.type == Element::Type::Measure);
 
-    RG_DEFER_N(style_guard) { ImGui::PopStyleColor(); };
+    K_DEFER_N(style_guard) { ImGui::PopStyleColor(); };
     if (DetectAnomaly(elmt)) {
         ImGui::PushStyleColor(ImGuiCol_Text, GetVisColor(VisColor::Alert));
     } else {
@@ -159,7 +159,7 @@ static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const>
                 { rect.Max.x + 10.0f, bb.Max.y },
                 { rect.Min.x - 10.0f, bb.Max.y }
             };
-            draw->AddConvexPolyFilled(points, RG_LEN(points), color);
+            draw->AddConvexPolyFilled(points, K_LEN(points), color);
         } else {
             ImVec2 points[] = {
                 { rect.Min.x, bb.Min.y },
@@ -271,7 +271,7 @@ static void DrawPartialSpline(ImDrawList *draw, const std::vector<double> &xs,
             ImVec2((float)xs[0], (float)ys[0]),
             ImVec2((float)xs[1], (float)ys[1])
         };
-        draw->AddPolyline(points, RG_LEN(points), colors[0], false, 1.0f);
+        draw->AddPolyline(points, K_LEN(points), colors[0], false, 1.0f);
     }
 }
 
@@ -318,7 +318,7 @@ void DrawLine(InterpolationMode interpolation, Fun f)
                         ImVec2(point.x, prev_point.y),
                         point
                     };
-                    draw->AddPolyline(points, RG_LEN(points), prev_color, false, 1.0f);
+                    draw->AddPolyline(points, K_LEN(points), prev_color, false, 1.0f);
                 }
 
                 prev_color = color;
@@ -378,7 +378,7 @@ static void DrawMeasures(double x_offset, double y_min, double y_max, double tim
 {
     if (!measures.len)
         return;
-    RG_ASSERT(measures[0]->type == Element::Type::Measure);
+    K_ASSERT(measures[0]->type == Element::Type::Measure);
 
     ImDrawList *draw = ImGui::GetWindowDrawList();
     ImFont *font = ImGui::GetFont();
@@ -388,7 +388,7 @@ static void DrawMeasures(double x_offset, double y_min, double y_max, double tim
     if (max > min) {
         y_scaler  = (y_max - y_min - 4.0f) / (max - min);;
     } else {
-        RG_ASSERT(!(min > max));
+        K_ASSERT(!(min > max));
         y_max = (y_max + y_min) / 2.0f;
         y_scaler = 1.0f;
     }
@@ -408,7 +408,7 @@ static void DrawMeasures(double x_offset, double y_min, double y_max, double tim
     DrawLine(interpolation, [&](Size i, ImVec2 *out_point, ImU32 *out_color) {
         if (i >= measures.len)
             return false;
-        RG_ASSERT(measures[i]->type == Element::Type::Measure);
+        K_ASSERT(measures[i]->type == Element::Type::Measure);
         if (!std::isnan(measures[i]->u.measure.min)) {
             *out_point = compute_coordinates(measures[i]->time, measures[i]->u.measure.min);
             *out_color = GetVisColor(VisColor::Limit, alpha);
@@ -710,7 +710,7 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
                     continue;
                 }
             }
-            RG_ASSERT(path.len > 0);
+            K_ASSERT(path.len > 0);
 
             if (state.filter_text[0] &&
                     !strstr(path.ptr, state.filter_text) &&
@@ -764,7 +764,7 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
     // Prepare draw API
     ImDrawList *draw = ImGui::GetWindowDrawList();
     draw->PushClipRect(bb.Min, bb.Max);
-    RG_DEFER { draw->PopClipRect(); };
+    K_DEFER { draw->PopClipRect(); };
 
     // Recalculate entity height if needed
     bool cache_refreshed = false;
@@ -877,7 +877,7 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
                         continue;
                     }
                 }
-                RG_ASSERT(path.len > 0);
+                K_ASSERT(path.len > 0);
 
                 if (state.filter_text[0] &&
                         !strstr(path.ptr, state.filter_text) &&
@@ -1061,7 +1061,7 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
     {
         draw->PushClipRect(ImVec2(win->ClipRect.Min.x + (float)tree_width, win->ClipRect.Min.y),
                            win->ClipRect.Max, true);
-        RG_DEFER { draw->PopClipRect(); };
+        K_DEFER { draw->PopClipRect(); };
 
         double y = state.render_offset + bb.Min.y;
         for (const LineData &line: lines) {
@@ -1116,7 +1116,7 @@ static void DrawTime(ImRect bb, double time_offset, double time_zoom,
         case TimeUnit::Months: { suffix = "mo"; } break;
         case TimeUnit::Years: { suffix = "y"; } break;
     }
-    RG_ASSERT(suffix);
+    K_ASSERT(suffix);
 
     // Find appropriate time step
     double time_step = 10.0 / pow(10.0, floor(log10(time_zoom)));
@@ -1485,7 +1485,7 @@ static void AddConceptsToView(const HashMap<Span<const char>, Span<const char>> 
         switch (copy_mode) {
             case PathCopyMode::Flat: { concept_info->path = "/"; } break;
             case PathCopyMode::SingleLevel: {
-                RG_ASSERT(it.value.len);
+                K_ASSERT(it.value.len);
 
                 Size len = strcspn(it.value.ptr + 1, "/") + 1;
                 concept_info->path = DuplicateString(MakeSpan(it.value.ptr, len), &out_concept_set->str_alloc).ptr;
@@ -1593,7 +1593,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
         ImGui::SetNextWindowPos(view_pos);
         ImGui::SetNextWindowSize(view_size);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-        RG_DEFER { ImGui::PopStyleVar(1); };
+        K_DEFER { ImGui::PopStyleVar(1); };
 
         ConceptSet *concept_set;
         if (state.concept_set_idx >= 0 && state.concept_set_idx < concept_sets.len) {
@@ -1679,7 +1679,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
                     }
                     ImGui::Separator();
 
-                    ImGui::Combo("Copy mode", &copy_mode, PathCopyModeNames, RG_LEN(PathCopyModeNames));
+                    ImGui::Combo("Copy mode", &copy_mode, PathCopyModeNames, K_LEN(PathCopyModeNames));
 
                     ImGui::EndMenu();
                 }
@@ -1718,12 +1718,12 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
         if (ImGui::CollapsingHeader("Plots", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Checkbox("Draw plots", &state.new_settings.plot_measures);
             ImGui::Combo("Interpolation", (int *)&state.new_settings.interpolation,
-                         InterpolationModeNames, RG_LEN(InterpolationModeNames));
+                         InterpolationModeNames, K_LEN(InterpolationModeNames));
             ImGui::Checkbox("Show labels", &state.new_settings.plot_labels);
         }
         if (ImGui::CollapsingHeader("Time", ImGuiTreeNodeFlags_DefaultOpen)) {
             int time_unit = (int)state.new_settings.time_unit;
-            ImGui::Combo("Time unit", &time_unit, TimeUnitNames, RG_LEN(TimeUnitNames));
+            ImGui::Combo("Time unit", &time_unit, TimeUnitNames, K_LEN(TimeUnitNames));
             state.new_settings.time_unit = (TimeUnit)time_unit;
             ImGui::Checkbox("Natural time", &state.new_settings.natural_time);
         }

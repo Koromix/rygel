@@ -24,10 +24,10 @@
 #include "src/core/base/base.hh"
 #include "vendor/webkit/include/JavaScriptCore/JavaScript.h"
 
-namespace RG {
+namespace K {
 
 class js_AutoString {
-    RG_DELETE_COPY(js_AutoString)
+    K_DELETE_COPY(js_AutoString)
 
     JSStringRef ref = nullptr;
 

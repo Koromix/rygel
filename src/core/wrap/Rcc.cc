@@ -22,7 +22,7 @@
 #include "src/core/base/base.hh"
 #include "Rcc.hh"
 
-namespace RG {
+namespace K {
 
 BucketArray<const char *> rcc_log_messages;
 bool rcc_log_missing_messages = false;
@@ -144,7 +144,7 @@ void rcc_Vector<LocalDate>::Set(Size idx, LocalDate date)
                 char buf[32];
                 Fmt(buf, "%1", date);
 
-                RG_ASSERT(idx >= 0 && idx < u.chr.len);
+                K_ASSERT(idx >= 0 && idx < u.chr.len);
                 SET_STRING_ELT(xp, idx, Rf_mkChar(buf));
             } else {
                 SET_STRING_ELT(xp, idx, NA_STRING);

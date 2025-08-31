@@ -23,7 +23,7 @@
 
 #include "src/core/base/base.hh"
 
-namespace RG {
+namespace K {
 
 enum class pwd_HotpAlgorithm {
     SHA1, // Only choice supported by Google Authenticator

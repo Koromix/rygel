@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "light.hh"
 
-namespace RG {
+namespace K {
 
 struct ConfigProfile {
     const char *name;
@@ -26,7 +26,7 @@ struct ConfigProfile {
     bool manual = false;
     LightSettings settings;
 
-    RG_HASHTABLE_HANDLER(ConfigProfile, name);
+    K_HASHTABLE_HANDLER(ConfigProfile, name);
 };
 
 struct Config {

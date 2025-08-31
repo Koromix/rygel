@@ -19,7 +19,7 @@
 #include "user.hh"
 #include "src/core/http/http.hh"
 
-namespace RG {
+namespace K {
 
 void ProduceMcoDiagnoses(http_IO *io, const User *user);
 void ProduceMcoProcedures(http_IO *io, const User *user);

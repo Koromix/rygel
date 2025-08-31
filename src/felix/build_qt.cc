@@ -17,7 +17,7 @@
 #include "build.hh"
 #include "locate.hh"
 
-namespace RG {
+namespace K {
 
 bool Builder::PrepareQtSdk(int64_t min_version)
 {
@@ -43,7 +43,7 @@ bool Builder::PrepareQtSdk(int64_t min_version)
 
 const char *Builder::AddQtUiSource(const SourceFileInfo &src)
 {
-    RG_ASSERT(src.type == SourceType::QtUi);
+    K_ASSERT(src.type == SourceType::QtUi);
 
     const char *header_filename = build_map.FindValue({ current_ns, src.filename }, nullptr);
 
@@ -144,7 +144,7 @@ bool Builder::AddQtDirectories(const SourceFileInfo &src, HeapArray<const char *
     for (const char *component: src.target->qt_components) {
 #if defined(_WIN32)
         // Probably never gonna be possible...
-        RG_ASSERT(build.compiler->platform != HostPlatform::macOS);
+        K_ASSERT(build.compiler->platform != HostPlatform::macOS);
 #else
         if (build.compiler->platform == HostPlatform::macOS) {
             if (!misc_includes) {
@@ -234,7 +234,7 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
             const char *library = (*link_libraries)[i];
 
             if (library[0] == '!') {
-                Span<const char> name = SplitStrReverseAny(library + 1, RG_PATH_SEPARATORS);
+                Span<const char> name = SplitStrReverseAny(library + 1, K_PATH_SEPARATORS);
 
                 if (name == "QtGui") {
                     link_libraries->Append("!QtDBus");
@@ -299,7 +299,7 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
         Size j = prev_len;
         for (Size i = prev_len; i < link_libraries->len; i++) {
             const char *library = (*link_libraries)[i];
-            const char *basename = SplitStrReverseAny(library, RG_PATH_SEPARATORS).ptr;
+            const char *basename = SplitStrReverseAny(library, K_PATH_SEPARATORS).ptr;
 
             (*link_libraries)[j] = library;
 

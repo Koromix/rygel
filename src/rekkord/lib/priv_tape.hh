@@ -18,7 +18,7 @@
 #include "src/core/base/base.hh"
 #include "tape.hh"
 
-namespace RG {
+namespace K {
 
 enum class BlobType {
     Chunk = 0,
@@ -59,7 +59,7 @@ struct SnapshotHeader1 {
     int64_t stored; // Little Endian
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(SnapshotHeader1) == 536);
+static_assert(K_SIZE(SnapshotHeader1) == 536);
 
 #pragma pack(push, 1)
 struct SnapshotHeader2 {
@@ -69,7 +69,7 @@ struct SnapshotHeader2 {
     char channel[512];
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(SnapshotHeader2) == 536);
+static_assert(K_SIZE(SnapshotHeader2) == 536);
 
 #pragma pack(push, 1)
 struct SnapshotHeader3 {
@@ -80,7 +80,7 @@ struct SnapshotHeader3 {
     char channel[512];
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(SnapshotHeader3) == 544);
+static_assert(K_SIZE(SnapshotHeader3) == 544);
 
 #pragma pack(push, 1)
 struct DirectoryHeader {
@@ -88,7 +88,7 @@ struct DirectoryHeader {
     int64_t entries; // Little Endian
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(DirectoryHeader) == 16);
+static_assert(K_SIZE(DirectoryHeader) == 16);
 
 #pragma pack(push, 1)
 struct RawEntry {
@@ -119,16 +119,16 @@ struct RawEntry {
     uint32_t mode; // Little Endian
     int64_t size; // Little Endian
 
-    inline Size GetSize() const { return RG_SIZE(RawEntry) + LittleEndian(name_len) + LittleEndian(extended_len); }
+    inline Size GetSize() const { return K_SIZE(RawEntry) + LittleEndian(name_len) + LittleEndian(extended_len); }
 
-    inline Span<char> GetName() { return MakeSpan((char *)this + RG_SIZE(RawEntry), LittleEndian(name_len)); }
-    inline Span<const char> GetName() const { return MakeSpan((const char *)this + RG_SIZE(RawEntry), LittleEndian(name_len)); }
+    inline Span<char> GetName() { return MakeSpan((char *)this + K_SIZE(RawEntry), LittleEndian(name_len)); }
+    inline Span<const char> GetName() const { return MakeSpan((const char *)this + K_SIZE(RawEntry), LittleEndian(name_len)); }
 
-    inline Span<uint8_t> GetExtended() { return MakeSpan((uint8_t *)this + RG_SIZE(RawEntry) + LittleEndian(name_len), LittleEndian(extended_len)); }
-    inline Span<const uint8_t> GetExtended() const { return MakeSpan((const uint8_t *)this + RG_SIZE(RawEntry) + LittleEndian(name_len), LittleEndian(extended_len)); }
+    inline Span<uint8_t> GetExtended() { return MakeSpan((uint8_t *)this + K_SIZE(RawEntry) + LittleEndian(name_len), LittleEndian(extended_len)); }
+    inline Span<const uint8_t> GetExtended() const { return MakeSpan((const uint8_t *)this + K_SIZE(RawEntry) + LittleEndian(name_len), LittleEndian(extended_len)); }
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(RawEntry) == 90);
+static_assert(K_SIZE(RawEntry) == 90);
 
 #pragma pack(push, 1)
 struct RawChunk {
@@ -137,6 +137,6 @@ struct RawChunk {
     rk_Hash hash;
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(RawChunk) == 44);
+static_assert(K_SIZE(RawChunk) == 44);
 
 }

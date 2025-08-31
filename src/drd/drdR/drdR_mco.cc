@@ -17,7 +17,7 @@
 #include "../libdrd/libdrd.hh"
 #include "src/core/wrap/Rcc.hh"
 
-namespace RG {
+namespace K {
 
 struct ClassifierInstance {
     mco_TableSet table_set;
@@ -47,7 +47,7 @@ RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
                               SEXP authorization_filename_xp, SEXP default_sector_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     rcc_Vector<const char *> table_dirs(table_dirs_xp);
     rcc_Vector<const char *> table_filenames(table_filenames_xp);
@@ -58,7 +58,7 @@ RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
     }
 
     ClassifierInstance *classifier = new ClassifierInstance;
-    RG_DEFER_N(classifier_guard) { delete classifier; };
+    K_DEFER_N(classifier_guard) { delete classifier; };
 
     HeapArray<const char *> table_dirs2;
     HeapArray<const char *> table_filenames2;
@@ -433,17 +433,17 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
     rcc_Vector<double> ghs_coefficient = df_builder.Add<double>("ghs_coefficient");
     rcc_Vector<int> ghs_duration = df_builder.Add<int>("ghs_duration");
     rcc_Vector<int> exb_exh = df_builder.Add<int>("exb_exh");
-    rcc_Vector<double> supplement_cents[RG_LEN(mco_SupplementTypeNames)];
-    rcc_Vector<int> supplement_count[RG_LEN(mco_SupplementTypeNames)];
+    rcc_Vector<double> supplement_cents[K_LEN(mco_SupplementTypeNames)];
+    rcc_Vector<int> supplement_count[K_LEN(mco_SupplementTypeNames)];
     if (export_supplement_cents) {
-        for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
+        for (Size i = 0; i < K_LEN(mco_SupplementTypeNames); i++) {
             char name_buf[32];
             MakeSupplementColumnName(mco_SupplementTypeNames[i], "_cents", name_buf);
             supplement_cents[i] = df_builder.Add<double>(name_buf);
         }
     }
     if (export_supplement_counts) {
-        for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
+        for (Size i = 0; i < K_LEN(mco_SupplementTypeNames); i++) {
             char name_buf[32];
             MakeSupplementColumnName(mco_SupplementTypeNames[i], "_count", name_buf);
             supplement_count[i] = df_builder.Add<int>(name_buf);
@@ -464,7 +464,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
             admin_id[k] = result.stays[0].admin_id;
             bill_id[k] = result.stays[0].bill_id;
             if (export_units) {
-                RG_ASSERT(result.stays.len == 1);
+                K_ASSERT(result.stays.len == 1);
                 unit[k] = result.stays[0].unit.number;
             }
             exit_date.Set(k, result.stays[result.stays.len - 1].exit.date);
@@ -485,7 +485,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
             ghs_coefficient[k] = (double)pricing.ghs_coefficient;
             ghs_duration[k] = (result.ghs_duration >= 0) ? result.ghs_duration : NA_INTEGER;
             exb_exh[k] = pricing.exb_exh;
-            for (Size l = 0; l < RG_LEN(mco_SupplementTypeNames); l++) {
+            for (Size l = 0; l < K_LEN(mco_SupplementTypeNames); l++) {
                 if (export_supplement_cents) {
                     supplement_cents[l][k] = pricing.supplement_cents.values[l];
                 }
@@ -507,7 +507,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
                                   SEXP apply_coefficient_xp, SEXP supplement_columns_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     static const int task_size = 2048;
 
@@ -560,8 +560,8 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
 #define LOAD_OPTIONAL_COLUMN(Var, Name) \
         do { \
-            if ((Var ## _df).containsElementNamed(RG_STRINGIFY(Name))) { \
-                (Var).Name = (Var ##_df)[RG_STRINGIFY(Name)]; \
+            if ((Var ## _df).containsElementNamed(K_STRINGIFY(Name))) { \
+                (Var).Name = (Var ##_df)[K_STRINGIFY(Name)]; \
             } \
         } while (false)
 
@@ -722,14 +722,14 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
         df_builder.Set("price_cents", (double)summary.price_cents);
         df_builder.Set("ghs_cents", (double)summary.ghs_cents);
         if (export_supplement_cents) {
-            for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
+            for (Size i = 0; i < K_LEN(mco_SupplementTypeNames); i++) {
                 char name_buf[32];
                 MakeSupplementColumnName(mco_SupplementTypeNames[i], "_cents", name_buf);
                 df_builder.Set(name_buf, (double)summary.supplement_cents.values[i]);
             }
         }
         if (export_supplement_counts) {
-            for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
+            for (Size i = 0; i < K_LEN(mco_SupplementTypeNames); i++) {
                 char name_buf[32];
                 MakeSupplementColumnName(mco_SupplementTypeNames[i], "_count", name_buf);
                 df_builder.Set(name_buf, (int)summary.supplement_days.values[i]);
@@ -771,7 +771,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 RcppExport SEXP drdR_mco_Indexes(SEXP classifier_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
@@ -812,7 +812,7 @@ RcppExport SEXP drdR_mco_Indexes(SEXP classifier_xp)
 RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp, SEXP map_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
@@ -923,7 +923,7 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp
                 if (ghm_to_ghs_info.procedure_masks.len) {
                     Size buf_len = 0;
                     for (const drd_ListMask &mask: ghm_to_ghs_info.procedure_masks) {
-                        buf_len += Fmt(MakeSpan(buf + buf_len, RG_SIZE(buf) - buf_len),
+                        buf_len += Fmt(MakeSpan(buf + buf_len, K_SIZE(buf) - buf_len),
                                        "|A$%1.%2", mask.offset, mask.value).len;
                     }
                     procedures.Set(i, buf + 1);
@@ -995,13 +995,13 @@ static int GetDiagnosisSexSpec(const mco_DiagnosisInfo &diag_info)
         case 0x3: return NA_INTEGER;
     }
 
-    RG_UNREACHABLE();
+    K_UNREACHABLE();
 }
 
 RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
@@ -1046,7 +1046,7 @@ RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
 RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
@@ -1191,7 +1191,7 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
 RcppExport SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
@@ -1243,7 +1243,7 @@ RcppExport SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
 RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
 {
     BEGIN_RCPP
-    RG_DEFER { rcc_DumpWarnings(); };
+    K_DEFER { rcc_DumpWarnings(); };
 
     rcc_Vector<const char *> filenames(filenames_xp);
 
@@ -1424,8 +1424,8 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
 
 RcppExport SEXP drdR_mco_SupplementTypes()
 {
-    rcc_Vector<const char *> types(RG_LEN(mco_SupplementTypeNames));
-    for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
+    rcc_Vector<const char *> types(K_LEN(mco_SupplementTypeNames));
+    for (Size i = 0; i < K_LEN(mco_SupplementTypeNames); i++) {
         types.Set(i, mco_SupplementTypeNames[i]);
     }
 
@@ -1480,18 +1480,18 @@ RcppExport SEXP drdR_mco_CleanProcedures(SEXP procedures_xp)
 
 RcppExport void R_init_drdR(DllInfo *dll) {
     static const R_CallMethodDef call_entries[] = {
-        {"drdR_mco_Init", (DL_FUNC)&RG::drdR_mco_Init, 4},
-        {"drdR_mco_Classify", (DL_FUNC)&RG::drdR_mco_Classify, 10},
+        {"drdR_mco_Init", (DL_FUNC)&K::drdR_mco_Init, 4},
+        {"drdR_mco_Classify", (DL_FUNC)&K::drdR_mco_Classify, 10},
         // {"drdR_mco_Dispense", (DL_FUNC)&drdR_mco_Dispense, 3},
-        {"drdR_mco_Indexes", (DL_FUNC)&RG::drdR_mco_Indexes, 1},
-        {"drdR_mco_GhmGhs", (DL_FUNC)&RG::drdR_mco_GhmGhs, 4},
-        {"drdR_mco_Diagnoses", (DL_FUNC)&RG::drdR_mco_Diagnoses, 2},
-        {"drdR_mco_Exclusions", (DL_FUNC)&RG::drdR_mco_Exclusions, 2},
-        {"drdR_mco_Procedures", (DL_FUNC)&RG::drdR_mco_Procedures, 2},
-        {"drdR_mco_LoadStays", (DL_FUNC)&RG::drdR_mco_LoadStays, 1},
-        {"drdR_mco_SupplementTypes", (DL_FUNC)&RG::drdR_mco_SupplementTypes, 0},
-        {"drdR_mco_CleanDiagnoses", (DL_FUNC)&RG::drdR_mco_CleanDiagnoses, 1},
-        {"drdR_mco_CleanProcedures", (DL_FUNC)&RG::drdR_mco_CleanProcedures, 1},
+        {"drdR_mco_Indexes", (DL_FUNC)&K::drdR_mco_Indexes, 1},
+        {"drdR_mco_GhmGhs", (DL_FUNC)&K::drdR_mco_GhmGhs, 4},
+        {"drdR_mco_Diagnoses", (DL_FUNC)&K::drdR_mco_Diagnoses, 2},
+        {"drdR_mco_Exclusions", (DL_FUNC)&K::drdR_mco_Exclusions, 2},
+        {"drdR_mco_Procedures", (DL_FUNC)&K::drdR_mco_Procedures, 2},
+        {"drdR_mco_LoadStays", (DL_FUNC)&K::drdR_mco_LoadStays, 1},
+        {"drdR_mco_SupplementTypes", (DL_FUNC)&K::drdR_mco_SupplementTypes, 0},
+        {"drdR_mco_CleanDiagnoses", (DL_FUNC)&K::drdR_mco_CleanDiagnoses, 1},
+        {"drdR_mco_CleanProcedures", (DL_FUNC)&K::drdR_mco_CleanProcedures, 1},
         {}
     };
 

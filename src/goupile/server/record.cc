@@ -26,7 +26,7 @@
 #include "src/core/wrap/json.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-namespace RG {
+namespace K {
 
 struct RecordFilter {
     const char *single_tid = nullptr;
@@ -218,8 +218,8 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
 
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.sequence, e.store").len;
     } else {
-        RG_ASSERT(!filter.single_tid);
-        RG_ASSERT(!filter.use_claims);
+        K_ASSERT(!filter.single_tid);
+        K_ASSERT(!filter.use_claims);
 
         sql.len += Fmt(sql.TakeAvailable(),
                        R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, summary, tags, data) AS (
@@ -446,7 +446,7 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
             if (stamp->HasPermission(UserPermission::DataAudit)) {
                 json.Key("deleted"); json.Bool(cursor->deleted);
             } else {
-                RG_ASSERT(!cursor->deleted);
+                K_ASSERT(!cursor->deleted);
             }
             json.Key("anchor"); json.Int64(cursor->anchor);
             json.Key("ctime"); json.Int64(cursor->ctime);
@@ -584,7 +584,7 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
             if (stamp->HasPermission(UserPermission::DataAudit)) {
                 json.Key("deleted"); json.Bool(cursor->deleted);
             } else {
-                RG_ASSERT(!cursor->deleted);
+                K_ASSERT(!cursor->deleted);
             }
             json.Key("anchor"); json.Int64(cursor->anchor);
             json.Key("ctime"); json.Int64(cursor->ctime);
@@ -685,7 +685,7 @@ void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
 static bool CheckExportPermission(http_IO *io, InstanceHolder *instance, UserPermission perm,
                                   int64_t *out_userid = nullptr, const char **out_username = nullptr)
 {
-    RG_ASSERT(perm == UserPermission::DataExport || perm == UserPermission::DataFetch);
+    K_ASSERT(perm == UserPermission::DataExport || perm == UserPermission::DataFetch);
 
     const http_RequestInfo &request = io->Request();
     const char *export_key = !instance->slaves.len ? request.GetHeaderValue("X-Export-Key") : nullptr;
@@ -713,7 +713,7 @@ static bool CheckExportPermission(http_IO *io, InstanceHolder *instance, UserPer
             }
 
             if (out_userid) {
-                RG_ASSERT(out_username);
+                K_ASSERT(out_username);
 
                 *out_userid = sqlite3_column_int64(stmt, 0);
                 *out_username = DuplicateString((const char *)sqlite3_column_text(stmt, 1), io->Allocator()).ptr;
@@ -741,7 +741,7 @@ static bool CheckExportPermission(http_IO *io, InstanceHolder *instance, UserPer
         }
 
         if (out_userid) {
-            RG_ASSERT(out_username);
+            K_ASSERT(out_username);
 
             *out_userid = session->userid;
             *out_username = session->username;
@@ -810,7 +810,7 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
     const char *tmp_filename = CreateUniqueFile(gp_domain.config.export_directory, nullptr, ".tmp", io->Allocator(), &fd);
     if (!tmp_filename)
         return;
-    RG_DEFER {
+    K_DEFER {
         CloseDescriptor(fd);
         UnlinkFile(tmp_filename);
     };
@@ -1029,7 +1029,7 @@ static const char *TagsToJson(Span<const char *const> tags, Allocator *alloc)
 
     Fmt(&buf, "[");
     for (const char *tag: tags) {
-        RG_ASSERT(CheckTag(tag));
+        K_ASSERT(CheckTag(tag));
         Fmt(&buf, "\"%1\", ", tag);
     }
     buf.len -= 2;
@@ -1041,7 +1041,7 @@ static const char *TagsToJson(Span<const char *const> tags, Allocator *alloc)
 static int64_t RunCounter(const CounterInfo &counter, int64_t state, int64_t *out_state)
 {
     if (counter.max) {
-        RG_ASSERT(counter.max >= 1 && counter.max <= 64);
+        K_ASSERT(counter.max >= 1 && counter.max <= 64);
 
         uint64_t mask = state ? (uint64_t)state : ((1u << counter.max) - 1);
 
@@ -1440,7 +1440,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         if (!stamp)
             return;
 
-        RG_ASSERT(session->userid < 0);
+        K_ASSERT(session->userid < 0);
     }
 
     int64_t new_anchor = -1;
@@ -2104,7 +2104,7 @@ void HandleBlobGet(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    RG_ASSERT(StartsWith(url, "/blobs/"));
+    K_ASSERT(StartsWith(url, "/blobs/"));
 
     Span<const char> tid;
     const char *sha256;

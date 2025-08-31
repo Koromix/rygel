@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "mco_pricing.hh"
 
-namespace RG {
+namespace K {
 
 int64_t mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
                      int ghs_duration, bool death, bool ucd,
@@ -84,7 +84,7 @@ void mco_Price(const mco_Result &result, bool apply_coefficient, mco_Pricing *ou
     }
 
     out_pricing->supplement_days += result.supplement_days;
-    for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
+    for (Size i = 0; i < K_LEN(mco_SupplementTypeNames); i++) {
         int32_t supplement_cents = (int32_t)(ghs_coefficient *
                                              (result.supplement_days.values[i] * prices.values[i]));
 
@@ -108,7 +108,7 @@ void mco_Price(Span<const mco_Result> results, bool apply_coefficient,
         async.Run([&, task_offset]() {
             Size end = std::min(results.len, task_offset + task_size);
             MemSet(out_pricings->ptr + start_pricings_len + task_offset, 0,
-                       (end - task_offset) * RG_SIZE(*out_pricings->ptr));
+                       (end - task_offset) * K_SIZE(*out_pricings->ptr));
             for (Size j = task_offset; j < end; j++) {
                 mco_Price(results[j], apply_coefficient, &out_pricings->ptr[start_pricings_len + j]);
             }
@@ -152,7 +152,7 @@ static double ComputeCoefficients(const mco_Pricing &pricing, Span<const mco_Pri
     double total = 0;
     for (Size i = 0; i < mono_pricings.len; i++) {
         const mco_Pricing &mono_pricing = mono_pricings[i];
-        RG_ASSERT(mono_pricing.stays[0].bill_id == pricing.stays[0].bill_id);
+        K_ASSERT(mono_pricing.stays[0].bill_id == pricing.stays[0].bill_id);
 
         double coefficient = -1;
         switch (mode) {
@@ -199,7 +199,7 @@ static double ComputeCoefficients(const mco_Pricing &pricing, Span<const mco_Pri
 void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono_pricings,
                   mco_DispenseMode dispense_mode, HeapArray<mco_Pricing> *out_mono_pricings)
 {
-    RG_ASSERT(mono_pricings.len >= pricings.len);
+    K_ASSERT(mono_pricings.len >= pricings.len);
 
     static const int task_size = 2048;
 

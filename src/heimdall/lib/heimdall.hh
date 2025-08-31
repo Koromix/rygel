@@ -18,9 +18,9 @@
 #include "animation.hh"
 #include "src/core/gui/gui.hh"
 
-namespace RG {
+namespace K {
 
-#define RG_HEIMDALL_NAME "heimdall"
+#define K_HEIMDALL_NAME "heimdall"
 
 enum class InterpolationMode {
     Linear,

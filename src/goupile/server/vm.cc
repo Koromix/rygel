@@ -27,7 +27,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-namespace RG {
+namespace K {
 
 enum class RequestType {
     MergeDataMeta = 0
@@ -173,7 +173,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths)
 
 static bool InitView(const char *zip_filename)
 {
-    RG_ASSERT(!fs_zip.m_pState);
+    K_ASSERT(!fs_zip.m_pState);
 
     if (!mz_zip_reader_init_file(&fs_zip, zip_filename, 0)) {
         LogError("Failed to open ZIP archive '%1': %2", zip_filename, mz_zip_get_error_string(fs_zip.m_last_error));
@@ -193,7 +193,7 @@ static void ReleaseView()
 
 static bool LoadViewFile(const char *filename, Size max_len, Span<const uint8_t> *out_buf)
 {
-    RG_ASSERT(fs_zip.m_pState);
+    K_ASSERT(fs_zip.m_pState);
 
     // Try the cache (fast path)
     {
@@ -260,9 +260,9 @@ static JSValueRef GetFileData(JSContextRef ctx, JSObjectRef, JSObjectRef,
         JSStringRef str = JSValueToStringCopy(ctx, argv[0], &ex);
         if (!str)
             return ex;
-        RG_DEFER { JSStringRelease(str); };
+        K_DEFER { JSStringRelease(str); };
 
-        JSStringGetUTF8CString(str, filename, RG_SIZE(filename));
+        JSStringGetUTF8CString(str, filename, K_SIZE(filename));
     }
 
     Span<const uint8_t> data;
@@ -277,7 +277,7 @@ static JSValueRef GetFileData(JSContextRef ctx, JSObjectRef, JSObjectRef,
 
 static void DumpException(JSContextRef ctx, JSValueRef ex)
 {
-    RG_ASSERT(ex);
+    K_ASSERT(ex);
 
     js_PrintValue(ctx, ex, nullptr, StdErr);
     PrintLn(StdErr);
@@ -288,8 +288,8 @@ static JSValueRef CallMethod(JSContextRef ctx, JSObjectRef obj, const char *meth
 {
     JSValueRef func = JSObjectGetProperty(ctx, obj, js_AutoString(method), nullptr);
 
-    RG_ASSERT(func);
-    RG_ASSERT(JSValueIsObject(ctx, func) && JSObjectIsFunction(ctx, (JSObjectRef)func));
+    K_ASSERT(func);
+    K_ASSERT(JSValueIsObject(ctx, func) && JSObjectIsFunction(ctx, (JSObjectRef)func));
 
     JSValueRef ex = nullptr;
     JSValueRef ret = JSObjectCallAsFunction(ctx, (JSObjectRef)func, obj, args.len, args.ptr, &ex);
@@ -308,14 +308,14 @@ static bool InitVM()
     HeapArray<char> vm_js;
     {
         const AssetInfo *asset = FindEmbedAsset("src/goupile/server/vm.js");
-        RG_ASSERT(asset);
+        K_ASSERT(asset);
 
         StreamReader reader(asset->data, "<asset>", 0, asset->compression_type);
         StreamWriter writer(&vm_js, "<memory>");
 
         if (!SpliceStream(&reader, -1, &writer))
             return false;
-        RG_ASSERT(writer.Close());
+        K_ASSERT(writer.Close());
     }
 
     // Prepare VM for JS execution
@@ -349,22 +349,22 @@ static bool InitVM()
         JSValueRef construct = JSValueIsObject(vm_ctx, vm) ? JSObjectGetProperty(vm_ctx, (JSObjectRef)vm, js_AutoString("VmApi"), nullptr)
                                                            : JSValueMakeUndefined(vm_ctx);
 
-        RG_ASSERT(JSValueIsObject(vm_ctx, construct));
-        RG_ASSERT(JSObjectIsFunction(vm_ctx, (JSObjectRef)construct));
+        K_ASSERT(JSValueIsObject(vm_ctx, construct));
+        K_ASSERT(JSObjectIsFunction(vm_ctx, (JSObjectRef)construct));
 
         JSValueRef args[] = {
             native
         };
 
         JSValueRef ex = nullptr;
-        JSValueRef ret = JSObjectCallAsConstructor(vm_ctx, (JSObjectRef)construct, RG_LEN(args), args, &ex);
+        JSValueRef ret = JSObjectCallAsConstructor(vm_ctx, (JSObjectRef)construct, K_LEN(args), args, &ex);
 
         if (!ret) {
             DumpException(vm_ctx, ex);
             return false;
         }
 
-        RG_ASSERT(JSValueIsObject(vm_ctx, ret));
+        K_ASSERT(JSValueIsObject(vm_ctx, ret));
         vm_api = (JSObjectRef)ret;
     }
 
@@ -409,7 +409,7 @@ static bool HandleMergeDataMeta(json_Parser *parser, Allocator *alloc, StreamWri
         JSValueRef ret = CallMethod(vm_ctx, vm_api, "mergeDataMeta", args);
         if (!ret)
             return false;
-        RG_ASSERT(JSValueIsString(vm_ctx, ret));
+        K_ASSERT(JSValueIsString(vm_ctx, ret));
 
         result = js_ReadString(vm_ctx, ret, alloc);
     }
@@ -428,15 +428,15 @@ static bool HandleRequest(int kind, struct cmsghdr *cmsg, pid_t *out_pid)
         return false;
     }
     if (cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS ||
-                                          cmsg->cmsg_len != CMSG_LEN(RG_SIZE(int))) {
+                                          cmsg->cmsg_len != CMSG_LEN(K_SIZE(int))) {
         LogError("Missing socket descriptor for request command");
         return false;
     }
 
     int fd = -1;
-    RG_DEFER { CloseDescriptor(fd); };
+    K_DEFER { CloseDescriptor(fd); };
 
-    MemCpy(&fd, CMSG_DATA(cmsg), RG_SIZE(int));
+    MemCpy(&fd, CMSG_DATA(cmsg), K_SIZE(int));
 
     pid_t pid = fork();
 
@@ -497,7 +497,7 @@ static bool ServeRequests()
             .msg_iov = &iov,
             .msg_iovlen = 1,
             .msg_control = control,
-            .msg_controllen = RG_SIZE(control),
+            .msg_controllen = K_SIZE(control),
             .msg_flags = 0
         };
 
@@ -572,9 +572,9 @@ static bool ServeRequests()
 
 ZygoteResult RunZygote(bool sandbox, const char *view_directory)
 {
-    RG_ASSERT(main_pfd[0] < 0);
+    K_ASSERT(main_pfd[0] < 0);
 
-    RG_DEFER_N(pfd_guard) {
+    K_DEFER_N(pfd_guard) {
         CloseDescriptor(main_pfd[0]);
         CloseDescriptor(main_pfd[1]);
 
@@ -601,7 +601,7 @@ ZygoteResult RunZygote(bool sandbox, const char *view_directory)
         main_pid = pid;
 
         uint8_t dummy = 0;
-        Size ret = recv(main_pfd[0], &dummy, RG_SIZE(dummy), 0);
+        Size ret = recv(main_pfd[0], &dummy, K_SIZE(dummy), 0);
 
         if (ret < 0) {
             LogError("Failed to read from zygote socket: %1", strerror(errno));
@@ -640,13 +640,13 @@ ZygoteResult RunZygote(bool sandbox, const char *view_directory)
 
         // I'm ready!
         uint8_t dummy = 0;
-        Size ret = send(main_pfd[1], &dummy, RG_SIZE(dummy), MSG_NOSIGNAL);
+        Size ret = send(main_pfd[1], &dummy, K_SIZE(dummy), MSG_NOSIGNAL);
 
         if (ret < 0) {
             LogError("Failed to write to zygote socket: %1", strerror(errno));
             return ZygoteResult::Error;
         }
-        RG_ASSERT(ret);
+        K_ASSERT(ret);
 
         if (!ServeRequests())
             return ZygoteResult::Error;
@@ -668,7 +668,7 @@ void StopZygote()
         bool terminate = false;
 
         for (;;) {
-            int ret = RG_RESTART_EINTR(waitpid(main_pid, nullptr, terminate ? WNOHANG : 0), < 0);
+            int ret = K_RESTART_EINTR(waitpid(main_pid, nullptr, terminate ? WNOHANG : 0), < 0);
 
             if (ret < 0) {
                 LogError("Failed to wait for process exit: %1", strerror(errno));
@@ -692,7 +692,7 @@ void StopZygote()
 
 bool CheckZygote()
 {
-    RG_ASSERT(main_pid > 0);
+    K_ASSERT(main_pid > 0);
 
     int ret = waitpid(main_pid, nullptr, WNOHANG);
 
@@ -712,9 +712,9 @@ bool CheckZygote()
 static bool SendRequest(RequestType type, Allocator *alloc,
                         FunctionRef<bool(json_Writer *)> send, FunctionRef<bool(json_Parser *)> receive)
 {
-    RG_ASSERT(alloc);
-    RG_ASSERT(main_pfd[0] >= 0);
-    RG_ASSERT(main_pfd[1] < 0);
+    K_ASSERT(alloc);
+    K_ASSERT(main_pfd[0] >= 0);
+    K_ASSERT(main_pfd[1] < 0);
 
     // Communicate through socket pair
     int pfd[2];
@@ -722,7 +722,7 @@ static bool SendRequest(RequestType type, Allocator *alloc,
         LogError("Failed to create UNIX socket pair: %1", strerror(errno));
         return false;
     }
-    RG_DEFER {
+    K_DEFER {
         CloseDescriptor(pfd[0]);
         CloseDescriptor(pfd[1]);
     };
@@ -730,7 +730,7 @@ static bool SendRequest(RequestType type, Allocator *alloc,
     // Send request and connection to zygote
     {
         uint8_t kind = (uint8_t)type;
-        uint8_t control[CMSG_SPACE(RG_SIZE(int))] = {};
+        uint8_t control[CMSG_SPACE(K_SIZE(int))] = {};
 
         struct iovec iov = { &kind, 1 };
         struct msghdr msg = {
@@ -739,16 +739,16 @@ static bool SendRequest(RequestType type, Allocator *alloc,
             .msg_iov = &iov,
             .msg_iovlen = 1,
             .msg_control = control,
-            .msg_controllen = RG_SIZE(control),
+            .msg_controllen = K_SIZE(control),
             .msg_flags = 0
         };
 
         struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
-        RG_ASSERT(cmsg);
+        K_ASSERT(cmsg);
         cmsg->cmsg_level = SOL_SOCKET;
         cmsg->cmsg_type = SCM_RIGHTS;
-        cmsg->cmsg_len = CMSG_LEN(RG_SIZE(int));
-        MemCpy(CMSG_DATA(cmsg), &pfd[1], RG_SIZE(int));
+        cmsg->cmsg_len = CMSG_LEN(K_SIZE(int));
+        MemCpy(CMSG_DATA(cmsg), &pfd[1], K_SIZE(int));
 
         if (sendmsg(main_pfd[0], &msg, MSG_NOSIGNAL) < 0) {
             LogError("Failed to send run request to zygote: %1", strerror(errno));

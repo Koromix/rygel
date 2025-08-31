@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "structure.hh"
 
-namespace RG {
+namespace K {
 
 static bool CheckStructureName(Span<const char> name)
 {
@@ -36,11 +36,11 @@ static bool CheckStructureName(Span<const char> name)
 
 bool StructureSetBuilder::LoadIni(StreamReader *st)
 {
-    RG_DEFER_NC(out_guard, len = set.structures.len) { set.structures.RemoveFrom(len); };
+    K_DEFER_NC(out_guard, len = set.structures.len) { set.structures.RemoveFrom(len); };
 
     IniParser ini(st);
     ini.PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     bool valid = true;
     {

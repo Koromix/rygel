@@ -26,7 +26,7 @@
 #include <userenv.h>
 #include <wchar.h>
 
-namespace RG {
+namespace K {
 
 struct PendingIO {
     OVERLAPPED ov = {}; // Keep first
@@ -89,7 +89,7 @@ static HANDLE ConnectToServer(Span<const uint8_t> msg)
         }
         return nullptr;
     }
-    RG_DEFER_N(err_guard) { CloseHandle(pipe); };
+    K_DEFER_N(err_guard) { CloseHandle(pipe); };
 
     // We want messages, not bytes
     DWORD mode = PIPE_READMODE_MESSAGE;
@@ -193,17 +193,17 @@ In order for this to work, you must first install the service from an elevated c
         if (!pipe)
             return 127;
     }
-    RG_DEFER { CloseHandle(pipe); };
+    K_DEFER { CloseHandle(pipe); };
 
     int exit_code = 0;
 
     // Get the send pipe from the server
     HANDLE rev = nullptr;
-    if (ReadSync(pipe, &rev, RG_SIZE(rev)) != RG_SIZE(rev)) {
+    if (ReadSync(pipe, &rev, K_SIZE(rev)) != K_SIZE(rev)) {
         LogError("Failed to get back reverse HANDLE: %1", GetWin32ErrorString());
         return 127;
     }
-    RG_DEFER { CloseHandle(rev); };
+    K_DEFER { CloseHandle(rev); };
 
     // Send stdin through second pipe and from background thread, to avoid issues when trying
     // to do asynchronous I/O with standard input/output and using the same pipe.
@@ -213,7 +213,7 @@ In order for this to work, you must first install the service from an elevated c
         DWORD buf_len;
 
         for (;;) {
-            if (!::ReadFile(GetStdHandle(STD_INPUT_HANDLE), buf, RG_SIZE(buf), &buf_len, nullptr)) {
+            if (!::ReadFile(GetStdHandle(STD_INPUT_HANDLE), buf, K_SIZE(buf), &buf_len, nullptr)) {
                 DWORD err = GetLastError();
 
                 if (err != ERROR_BROKEN_PIPE && err != ERROR_NO_DATA) {
@@ -243,14 +243,14 @@ In order for this to work, you must first install the service from an elevated c
         LogError("Failed to create thread: %1", GetWin32ErrorString());
         return 127;
     }
-    RG_DEFER { CloseHandle(send_thread); };
+    K_DEFER { CloseHandle(send_thread); };
 
     // Interpret messages from server (output, exit, error)
     for (;;) {
         uint8_t buf[8192];
         Size buf_len;
 
-        buf_len = ReadSync(pipe, buf, RG_SIZE(buf));
+        buf_len = ReadSync(pipe, buf, K_SIZE(buf));
         if (buf_len < 0) {
             LogError("Failed to read from SeatSH: %1", GetWin32ErrorString());
             return 127;
@@ -317,7 +317,7 @@ static void ReportStatus(int state)
 
 static void ReportError(int error)
 {
-    RG_ASSERT(error > 0);
+    K_ASSERT(error > 0);
 
     current_error = error;
 
@@ -349,7 +349,7 @@ static HANDLE GetClientToken(HANDLE pipe)
         LogError("Failed to get pipe client information: %1", GetWin32ErrorString());
         return nullptr;
     }
-    RG_DEFER { RevertToSelf(); };
+    K_DEFER { RevertToSelf(); };
 
     HANDLE token;
     if (!OpenThreadToken(GetCurrentThread(), TOKEN_READ, FALSE, &token)) {
@@ -368,7 +368,7 @@ static bool GetTokenSID(HANDLE token, PSID *out_sid)
     } buf;
     DWORD size;
 
-    if (!GetTokenInformation(token, TokenUser, &buf, RG_SIZE(buf), &size)) {
+    if (!GetTokenInformation(token, TokenUser, &buf, K_SIZE(buf), &size)) {
         LogError("Failed to get token user information: %1", GetWin32ErrorString());
         return false;
     }
@@ -408,7 +408,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
     HANDLE rev[2];
     if (!CreateOverlappedPipe(true, true, PipeMode::Message, rev))
         return false;
-    RG_DEFER {
+    K_DEFER {
         CloseHandleSafe(&rev[0]);
         CloseHandleSafe(&rev[1]);
     };
@@ -428,7 +428,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
             return false;
         }
     }
-    RG_DEFER { CloseHandle(client); };
+    K_DEFER { CloseHandle(client); };
 
     // ... in order to give it access to our new pipe. It's all about handles folks!
     {
@@ -437,7 +437,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
         if (!DuplicateHandle(GetCurrentProcess(), rev[1], client,
                              &rev_client, 0, FALSE, DUPLICATE_SAME_ACCESS))
             return false;
-        if (!WriteSync(pipe, &rev_client, RG_SIZE(rev_client))) {
+        if (!WriteSync(pipe, &rev_client, K_SIZE(rev_client))) {
             LogError("Failed to send reverse HANDLE to client: %1", GetWin32ErrorString());
             return false;
         }
@@ -489,7 +489,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
     }
 
     HANDLE client_token = GetClientToken(pipe);
-    RG_DEFER { CloseHandle(client_token); };
+    K_DEFER { CloseHandle(client_token); };
 
     HANDLE console_token;
     {
@@ -504,7 +504,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
             return false;
         }
     }
-    RG_DEFER { CloseHandle(console_token); };
+    K_DEFER { CloseHandle(console_token); };
 
     // Security check: same user?
     if (!MatchUsers(client_token, console_token)) {
@@ -516,7 +516,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
     PROCESS_INFORMATION pi = {};
 
     // Basic startup information
-    si.cb = RG_SIZE(si);
+    si.cb = K_SIZE(si);
     si.lpDesktop = (wchar_t *)L"winsta0\\default";
     si.dwFlags |= STARTF_USESTDHANDLES;
 
@@ -524,7 +524,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
     HANDLE in_pipe[2] = {};
     HANDLE out_pipe[2] = {};
     HANDLE err_pipe[2] = {};
-    RG_DEFER {
+    K_DEFER {
         CloseHandleSafe(&in_pipe[0]);
         CloseHandleSafe(&in_pipe[1]);
         CloseHandleSafe(&out_pipe[0]);
@@ -545,11 +545,11 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
         LogError("Failed to retrieve user environment: %1", GetWin32ErrorString());
         return false;
     }
-    RG_DEFER { DestroyEnvironmentBlock(env); };
+    K_DEFER { DestroyEnvironmentBlock(env); };
 
     // Launch process with our redirections
     {
-        RG_DEFER {
+        K_DEFER {
             CloseHandleSafe(&si.hStdInput);
             CloseHandleSafe(&si.hStdOutput);
             CloseHandleSafe(&si.hStdError);
@@ -581,7 +581,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
         CloseHandleSafe(&out_pipe[1]);
         CloseHandleSafe(&err_pipe[1]);
     }
-    RG_DEFER {
+    K_DEFER {
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
     };
@@ -620,7 +620,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
                 }
 
                 if (client_in.len < 0) {
-                    if (!ReadFileEx(rev[0], client_in.buf, RG_SIZE(client_in.buf),
+                    if (!ReadFileEx(rev[0], client_in.buf, K_SIZE(client_in.buf),
                                     &client_in.ov, PendingIO::CompletionHandler)) {
                         client_in.err = GetLastError();
                     }
@@ -661,7 +661,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
                 if (proc_out.len < 0) {
                     proc_out.buf[0] = 2;
 
-                    if (!ReadFileEx(out_pipe[0], proc_out.buf + 1, RG_SIZE(proc_out.buf) - 1,
+                    if (!ReadFileEx(out_pipe[0], proc_out.buf + 1, K_SIZE(proc_out.buf) - 1,
                                     &proc_out.ov, PendingIO::CompletionHandler)) {
                         proc_out.err = GetLastError();
                     }
@@ -701,7 +701,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
                 if (proc_err.len < 0) {
                     proc_err.buf[0] = 3;
 
-                    if (!ReadFileEx(err_pipe[0], proc_err.buf + 1, RG_SIZE(proc_err.buf) - 1,
+                    if (!ReadFileEx(err_pipe[0], proc_err.buf + 1, K_SIZE(proc_err.buf) - 1,
                                     &proc_err.ov, PendingIO::CompletionHandler)) {
                         proc_err.err = GetLastError();
                     }
@@ -741,7 +741,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
         buf[0] = 0;
         MemCpy(buf + 1, &exit_code, 4);
 
-        if (!WriteSync(pipe, buf, RG_SIZE(buf))) {
+        if (!WriteSync(pipe, buf, K_SIZE(buf))) {
             LogError("Failed to send process exit code to client: %1", GetWin32ErrorString());
             return false;
         }
@@ -752,31 +752,31 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
 
 static DWORD WINAPI RunPipeThread(void *pipe)
 {
-    RG_DEFER { CloseHandle(pipe); };
+    K_DEFER { CloseHandle(pipe); };
 
     int client_id = GetRandomInt(0, 100000000);
 
     char err_buf[8192];
-    CopyString("Unknown error", MakeSpan(err_buf + 1, RG_SIZE(err_buf) - 1));
+    CopyString("Unknown error", MakeSpan(err_buf + 1, K_SIZE(err_buf) - 1));
     err_buf[0] = 1;
 
     // If something fails (command does not exist, etc), send it to the client
-    RG_DEFER_N(err_guard) { WriteSync(pipe, err_buf, strlen(err_buf)); };
+    K_DEFER_N(err_guard) { WriteSync(pipe, err_buf, strlen(err_buf)); };
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         char ctx_buf[1024];
         Fmt(ctx_buf, "%1[Client %2_%3]", ctx ? ctx : "", FmtArg(instance_id).Pad0(-8), FmtArg(client_id).Pad0(-8));
 
         if (level == LogLevel::Error) {
-            CopyString(msg, MakeSpan(err_buf + 1, RG_SIZE(err_buf) - 1));
+            CopyString(msg, MakeSpan(err_buf + 1, K_SIZE(err_buf) - 1));
         };
 
         func(level, ctx_buf, msg);
     });
-    RG_DEFER { PopLogFilter(); };
+    K_DEFER { PopLogFilter(); };
 
     char buf[8192];
-    Size buf_len = ReadSync(pipe, buf, RG_SIZE(buf) - 1);
+    Size buf_len = ReadSync(pipe, buf, K_SIZE(buf) - 1);
     if (buf_len < 0)
         return 1;
     if (buf_len < 4) {
@@ -827,7 +827,7 @@ static void WINAPI RunService(DWORD, char **)
 
     // Register our service controller
     status_handle = RegisterServiceCtrlHandlerExA("SeatSH", &ServiceHandler, nullptr);
-    RG_CRITICAL(status_handle, "Failed to register service controller: %1", GetWin32ErrorString());
+    K_CRITICAL(status_handle, "Failed to register service controller: %1", GetWin32ErrorString());
 
     ReportStatus(SERVICE_START_PENDING);
 
@@ -840,7 +840,7 @@ static void WINAPI RunService(DWORD, char **)
         ReportError(__LINE__);
         return;
     }
-    RG_DEFER { CloseHandle(connect_event); };
+    K_DEFER { CloseHandle(connect_event); };
 
     // The stop event is used by the service control handler, for shutdown
     stop_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
@@ -849,14 +849,14 @@ static void WINAPI RunService(DWORD, char **)
         ReportError(__LINE__);
         return;
     }
-    RG_DEFER { CloseHandle(stop_event); };
+    K_DEFER { CloseHandle(stop_event); };
 
     // Open for everyone!
     SECURITY_DESCRIPTOR sd;
     SECURITY_ATTRIBUTES sa = {};
     InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
     SetSecurityDescriptorDacl(&sd, TRUE, nullptr, FALSE);
-    sa.nLength = RG_SIZE(SECURITY_ATTRIBUTES);
+    sa.nLength = K_SIZE(SECURITY_ATTRIBUTES);
     sa.lpSecurityDescriptor = &sd;
     sa.bInheritHandle = FALSE;
 
@@ -871,7 +871,7 @@ static void WINAPI RunService(DWORD, char **)
             ReportError(__LINE__);
             return;
         }
-        RG_DEFER_N(pipe_guard) {
+        K_DEFER_N(pipe_guard) {
             CancelIo(pipe);
             CloseHandle(pipe);
         };
@@ -889,7 +889,7 @@ static void WINAPI RunService(DWORD, char **)
             connect_event,
             stop_event
         };
-        DWORD ret = WaitForMultipleObjects(RG_LEN(events), events, FALSE, INFINITE);
+        DWORD ret = WaitForMultipleObjects(K_LEN(events), events, FALSE, INFINITE);
 
         if (ret == WAIT_OBJECT_0) {
             DWORD dummy;
@@ -948,4 +948,4 @@ int Main(int argc, char **argv)
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }

@@ -20,7 +20,7 @@
 #include "program.hh"
 #include "vm.hh"
 
-namespace RG {
+namespace K {
 
 struct ForwardInfo {
     const char *name;
@@ -32,7 +32,7 @@ struct ForwardInfo {
 
     ForwardInfo *next;
 
-    RG_HASHTABLE_HANDLER(ForwardInfo, name);
+    K_HASHTABLE_HANDLER(ForwardInfo, name);
 };
 
 struct LoopContext {
@@ -70,7 +70,7 @@ static ForwardInfo fake_fwd = {};
 #define IR (*ir)
 
 class bk_Parser {
-    RG_DELETE_COPY(bk_Parser)
+    K_DELETE_COPY(bk_Parser)
 
     bk_Program *program;
 
@@ -227,7 +227,7 @@ private:
     template <typename... Args>
     void MarkError(Size pos, const char *fmt, Args... args)
     {
-        RG_ASSERT(pos >= 0);
+        K_ASSERT(pos >= 0);
 
         if (show_errors) {
             Size offset = (pos < tokens.len) ? tokens[pos].offset : file->code.len;
@@ -361,7 +361,7 @@ bool bk_Compiler::Compile(Span<const char> code, const char *filename, bk_Compil
 
 void bk_Compiler::AddFunction(const char *prototype, unsigned int flags, std::function<bk_NativeFunction> native)
 {
-    RG_ASSERT(native);
+    K_ASSERT(native);
     parser->AddFunction(prototype, flags, native);
 }
 
@@ -381,8 +381,8 @@ bk_Parser::bk_Parser(bk_Program *program)
     ir = &program->main;
     offset_ptr = &main_offset;
 
-    RG_ASSERT(program);
-    RG_ASSERT(!IR.len);
+    K_ASSERT(program);
+    K_ASSERT(!IR.len);
 
     // Base types
     for (const bk_TypeInfo &type: bk_BaseTypes) {
@@ -414,7 +414,7 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
     prev_main_len = program->main.len;
 
     // Restore previous state if something goes wrong
-    RG_DEFER_NC(err_guard, globals_len = program->globals.len,
+    K_DEFER_NC(err_guard, globals_len = program->globals.len,
                            sources_len = program->sources.len,
                            prev_main_offset = main_offset,
                            variables_count = program->variables.count,
@@ -480,7 +480,7 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
 
     src = program->sources.AppendDefault();
     src->filename = DuplicateString(file.filename, &program->str_alloc).ptr;
-    RG_ASSERT(ir == &program->main);
+    K_ASSERT(ir == &program->main);
 
     // Protect IR from before this parse step
     Emit(bk_Opcode::Nop);
@@ -495,9 +495,9 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
     }
 
     // Maybe it'll help catch bugs
-    RG_ASSERT(!depth);
-    RG_ASSERT(!loop);
-    RG_ASSERT(!current_func);
+    K_ASSERT(!depth);
+    K_ASSERT(!loop);
+    K_ASSERT(!current_func);
 
     if (valid) {
         Emit(bk_Opcode::End, main_offset);
@@ -526,7 +526,7 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
     const char *signature;
     {
         Size offset = strcspn(ptr, "(");
-        RG_ASSERT(offset > 0 && ptr[offset] == '(');
+        K_ASSERT(offset > 0 && ptr[offset] == '(');
 
         ptr[offset] = 0;
         func->name = InternString(ptr);
@@ -565,17 +565,17 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
             if (ptr[1] != ')') {
                 do {
                     Size len = strcspn(++ptr, ",)");
-                    RG_ASSERT(ptr[len]);
+                    K_ASSERT(ptr[len]);
 
                     char c = ptr[len];
                     ptr[len] = 0;
 
                     if (TestStr(ptr, "...")) {
-                        RG_ASSERT(c == ')');
+                        K_ASSERT(c == ')');
                         func_type->variadic = true;
                     } else {
                         const bk_TypeInfo *type2 = program->types_map.FindValue(ptr, nullptr);
-                        RG_ASSERT(type2);
+                        K_ASSERT(type2);
 
                         func->params.Append({"", type2, false});
                         func_type->params.Append(type2);
@@ -589,10 +589,10 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
                 ptr += 2;
             }
             if (ptr[0] == ':') {
-                RG_ASSERT(ptr[1] == ' ');
+                K_ASSERT(ptr[1] == ' ');
 
                 func_type->ret_type = program->types_map.FindValue(ptr + 2, nullptr);
-                RG_ASSERT(func_type->ret_type);
+                K_ASSERT(func_type->ret_type);
             } else {
                 func_type->ret_type = bk_NullType;
             }
@@ -607,16 +607,16 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
         bk_FunctionInfo *head = *program->functions_map.TrySet(func);
 
         if (head != func) {
-            RG_ASSERT(!head->type->variadic && !func->type->variadic);
+            K_ASSERT(!head->type->variadic && !func->type->variadic);
 
             head->overload_prev->overload_next = func;
             func->overload_next = head;
             func->overload_prev = head->overload_prev;
             head->overload_prev = func;
 
-#if defined(RG_DEBUG)
+#if defined(K_DEBUG)
             do {
-                RG_ASSERT(!TestOverload(*head->type, func->type->params));
+                K_ASSERT(!TestOverload(*head->type, func->type->params));
                 head = head->overload_next;
             } while (head != func);
 #endif
@@ -655,7 +655,7 @@ void bk_Parser::AddOpaque(const char *name)
 
 void bk_Parser::Preparse(Span<const Size> positions)
 {
-    RG_ASSERT(!forwards.count);
+    K_ASSERT(!forwards.count);
 
     for (Size i = positions.len - 1; i >= 0; i--) {
         Size fwd_pos = positions[i];
@@ -711,7 +711,7 @@ bool bk_Parser::ParseBlock(bool end_with_else)
     depth++;
 
     bool recurse = RecurseInc();
-    RG_DEFER_C(prev_offset = *offset_ptr,
+    K_DEFER_C(prev_offset = *offset_ptr,
                variables_count = program->variables.count) {
         RecurseDec();
         depth--;
@@ -926,7 +926,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
                 type_buf.params.Append(param.type);
                 type_buf.params_size += param.type->size;
             } else {
-                MarkError(pos - 1, "Functions cannot have more than %1 parameters", RG_LEN(type_buf.params.data));
+                MarkError(pos - 1, "Functions cannot have more than %1 parameters", K_LEN(type_buf.params.data));
             }
 
             signature_buf.Append(param.type->signature);
@@ -1075,7 +1075,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
     if (!record) {
         Size func_offset = 0;
 
-        RG_DEFER_C(prev_func = current_func,
+        K_DEFER_C(prev_func = current_func,
                    prev_variables = program->variables.count,
                    prev_offset = offset_ptr,
                    prev_src = src,
@@ -1519,7 +1519,7 @@ void bk_Parser::ParseWhile()
     }
 
     // Break and continue need to apply to while loop blocks
-    RG_DEFER_C(prev_loop = loop) { loop = prev_loop; };
+    K_DEFER_C(prev_loop = loop) { loop = prev_loop; };
     LoopContext ctx = { *offset_ptr, -1, -1 };
     loop = &ctx;
 
@@ -1594,7 +1594,7 @@ void bk_Parser::ParseFor()
     Emit(bk_Opcode::BranchIfFalse);
 
     // Break and continue need to apply to while loop blocks
-    RG_DEFER_C(prev_loop = loop) { loop = prev_loop; };
+    K_DEFER_C(prev_loop = loop) { loop = prev_loop; };
     LoopContext ctx = { *offset_ptr, -1, -1 };
     loop = &ctx;
 
@@ -1713,7 +1713,7 @@ static int GetOperatorPrecedence(bk_TokenKind kind, bool expect_unary)
 StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint)
 {
     Size start_stack_len = stack.len;
-    RG_DEFER { stack.RemoveFrom(start_stack_len); };
+    K_DEFER { stack.RemoveFrom(start_stack_len); };
 
     // Safety dummy
     stack.Append({ bk_NullType });
@@ -1726,7 +1726,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
     Size prev_offset = pos;
 
     bool recurse = RecurseInc();
-    RG_DEFER { RecurseDec(); };
+    K_DEFER { RecurseDec(); };
 
     if (!recurse) [[unlikely]] {
         MarkError(pos, "Excessive parsing depth (compiler limit)");
@@ -1903,7 +1903,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
 
                     if (primitive == bk_PrimitiveKind::Function) {
                         if (IR[IR.len - 1].code == bk_Opcode::Push) {
-                            RG_ASSERT(IR[IR.len - 1].u1.primitive == bk_PrimitiveKind::Function);
+                            K_ASSERT(IR[IR.len - 1].u1.primitive == bk_PrimitiveKind::Function);
 
                             bk_FunctionInfo *func = (bk_FunctionInfo *)IR[IR.len - 1].u2.func;
                             bool overload = var->module;
@@ -1919,7 +1919,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                         }
                     } else if (primitive == bk_PrimitiveKind::Type) {
                         if (IR[IR.len - 1].code == bk_Opcode::Push) {
-                            RG_ASSERT(IR[IR.len - 1].u1.primitive == bk_PrimitiveKind::Type);
+                            K_ASSERT(IR[IR.len - 1].u1.primitive == bk_PrimitiveKind::Type);
 
                             const bk_TypeInfo *type = IR[IR.len - 1].u2.type;
 
@@ -1945,7 +1945,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                         goto error;
                     }
                 } else if (!call && var->module && var->type->primitive == bk_PrimitiveKind::Function) {
-                    RG_ASSERT(IR[IR.len - 1].code == bk_Opcode::Push &&
+                    K_ASSERT(IR[IR.len - 1].code == bk_Opcode::Push &&
                               IR[IR.len - 1].u1.primitive == bk_PrimitiveKind::Function);
 
                     bk_FunctionInfo *func = (bk_FunctionInfo *)IR[IR.len - 1].u2.func;
@@ -2085,7 +2085,7 @@ end:
         ProduceOperator(op);
     }
 
-    RG_ASSERT(stack.len == start_stack_len + 2 || !show_errors);
+    K_ASSERT(stack.len == start_stack_len + 2 || !show_errors);
     return stack[stack.len - 1];
 
 unexpected:
@@ -2149,7 +2149,7 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
     bool success = false;
 
     if (op.prec == 0) { // Assignement operators
-        RG_ASSERT(!op.unary);
+        K_ASSERT(!op.unary);
 
         StackSlot dest = stack[stack.len - 2];
         const StackSlot &expr = stack[stack.len - 1];
@@ -2225,7 +2225,7 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
                 success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::RightRotateInt, dest.type);
             } break;
 
-            default: { RG_UNREACHABLE(); } break;
+            default: { K_UNREACHABLE(); } break;
         }
 
         if (current_func) {
@@ -2236,7 +2236,7 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
             // In order for StoreIndirectK to work, the variable address must remain on the stack.
             // To do so, replace LoadIndirect (which removes them) with LoadIndirectK.
             if (op.kind != bk_TokenKind::Reassign) {
-                RG_ASSERT(IR[dest.indirect_addr].code == bk_Opcode::LoadIndirect);
+                K_ASSERT(IR[dest.indirect_addr].code == bk_Opcode::LoadIndirect);
                 IR[dest.indirect_addr].code = bk_Opcode::LoadIndirectK;
             }
 
@@ -2357,19 +2357,19 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
                 success = EmitOperator1(bk_PrimitiveKind::Boolean, bk_Opcode::NotBool, stack[stack.len - 1].type);
             } break;
             case bk_TokenKind::AndAnd: {
-                RG_ASSERT(op.branch_addr && IR[op.branch_addr].code == bk_Opcode::SkipIfFalse);
+                K_ASSERT(op.branch_addr && IR[op.branch_addr].code == bk_Opcode::SkipIfFalse);
                 IR[op.branch_addr].u2.i = IR.len - op.branch_addr + 1;
 
                 success = EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::AndBool, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::OrOr: {
-                RG_ASSERT(op.branch_addr && IR[op.branch_addr].code == bk_Opcode::SkipIfTrue);
+                K_ASSERT(op.branch_addr && IR[op.branch_addr].code == bk_Opcode::SkipIfTrue);
                 IR[op.branch_addr].u2.i = IR.len - op.branch_addr + 1;
 
                 success = EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::OrBool, stack[stack.len - 2].type);
             } break;
 
-            default: { RG_UNREACHABLE(); } break;
+            default: { K_UNREACHABLE(); } break;
         }
     }
 
@@ -2437,7 +2437,7 @@ bk_VariableInfo *bk_Parser::FindVariable(const char *name)
         // Make sure we don't come back here by accident
         forwards_map.Remove(ptr);
 
-        RG_DEFER_C(prev_ir = ir,
+        K_DEFER_C(prev_ir = ir,
                    prev_src = src,
                    prev_func = current_func,
                    prev_depth = depth,
@@ -2455,7 +2455,7 @@ bk_VariableInfo *bk_Parser::FindVariable(const char *name)
         offset_ptr = &main_offset;
 
         do {
-            RG_DEFER_C(prev_pos = pos,
+            K_DEFER_C(prev_pos = pos,
                        prev_errors = show_errors,
                        prev_loop = loop) {
                 pos = prev_pos;
@@ -2471,7 +2471,7 @@ bk_VariableInfo *bk_Parser::FindVariable(const char *name)
                 case bk_TokenKind::Record: { ParseFunction(fwd, true); } break;
                 case bk_TokenKind::Enum: { ParseEnum(fwd); } break;
 
-                default: { RG_UNREACHABLE(); } break;
+                default: { K_UNREACHABLE(); } break;
             }
 
             fwd = fwd->next;
@@ -2503,7 +2503,7 @@ const bk_FunctionTypeInfo *bk_Parser::ParseFunctionType()
             if (type_buf.params.Available()) [[likely]] {
                 type_buf.params.Append(type);
             } else {
-                MarkError(pos - 1, "Functions cannot have more than %1 parameters", RG_LEN(type_buf.params.data));
+                MarkError(pos - 1, "Functions cannot have more than %1 parameters", K_LEN(type_buf.params.data));
             }
             signature_buf.Append(type->signature);
 
@@ -2579,7 +2579,7 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
     // Unit type
     if (multi) {
         bool recurse = RecurseInc();
-        RG_DEFER { RecurseDec(); };
+        K_DEFER { RecurseDec(); };
 
         if (recurse) [[likely]] {
             type_buf.unit_type = ParseArrayType();
@@ -2655,7 +2655,7 @@ void bk_Parser::ParseArraySubscript()
             int64_t offset = idx * unit_type->size;
 
             if (show_errors) {
-                RG_ASSERT(IR[IR.len - 1].u1.primitive == bk_PrimitiveKind::Integer);
+                K_ASSERT(IR[IR.len - 1].u1.primitive == bk_PrimitiveKind::Integer);
 
                 if (idx < 0 || idx >= array_type->len) {
                     MarkError(idx_pos, "Index is out of range: %1 (array length %2)", idx, array_type->len);
@@ -2764,7 +2764,7 @@ void bk_Parser::ParseEnumDot()
 {
     Size label_pos = pos;
 
-    RG_ASSERT(IR[IR.len - 1].code == bk_Opcode::Push &&
+    K_ASSERT(IR[IR.len - 1].code == bk_Opcode::Push &&
               IR[IR.len - 1].u1.primitive == bk_PrimitiveKind::Type);
     const bk_EnumTypeInfo *enum_type = IR.ptr[--IR.len].u2.type->AsEnumType();
 
@@ -2786,7 +2786,7 @@ void bk_Parser::ParseEnumDot()
 // Don't try to call from outside ParseExpression()!
 bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overload)
 {
-    LocalArray<const bk_TypeInfo *, RG_LEN(bk_FunctionTypeInfo::params.data)> args;
+    LocalArray<const bk_TypeInfo *, K_LEN(bk_FunctionTypeInfo::params.data)> args;
 
     Size call_pos = pos - 1;
     Size call_addr = IR.len;
@@ -2799,7 +2799,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
             SkipNewLines();
 
             if (!args.Available()) [[unlikely]] {
-                MarkError(pos, "Functions cannot take more than %1 arguments", RG_LEN(args.data));
+                MarkError(pos, "Functions cannot take more than %1 arguments", K_LEN(args.data));
                 return false;
             }
 
@@ -2938,7 +2938,7 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
 
         stack.Append({ args[1] });
     } else {
-        RG_UNREACHABLE();
+        K_UNREACHABLE();
     }
 }
 
@@ -2952,7 +2952,7 @@ void bk_Parser::EmitLoad(bk_VariableInfo *var)
 
         stack.Append({ var->type, var, false });
     } else if (var->type->IsComposite()) {
-        RG_ASSERT(var->offset >= 0);
+        K_ASSERT(var->offset >= 0);
 
         bk_Opcode code = var->local ? bk_Opcode::LeaLocal : bk_Opcode::Lea;
         Emit(code, var->offset);
@@ -2960,7 +2960,7 @@ void bk_Parser::EmitLoad(bk_VariableInfo *var)
 
         stack.Append({ var->type, var, true });
     } else {
-        RG_ASSERT(var->offset >= 0);
+        K_ASSERT(var->offset >= 0);
 
         bk_Opcode code = var->local ? bk_Opcode::LoadLocal : bk_Opcode::Load;
         Emit(code, var->offset);
@@ -3139,8 +3139,8 @@ void bk_Parser::DiscardResult(Size size)
 
 bool bk_Parser::CopyBigConstant(Size size)
 {
-    RG_ASSERT(size > 1);
-    RG_ASSERT(size <= INT32_MAX);
+    K_ASSERT(size > 1);
+    K_ASSERT(size <= INT32_MAX);
 
     program->ro.Grow(size);
 
@@ -3159,14 +3159,14 @@ bool bk_Parser::CopyBigConstant(Size size)
                     return false;
 
                 offset -= IR[addr].u2.i;
-                MemSet(program->ro.end() + offset, 0, IR[addr].u2.i * RG_SIZE(bk_PrimitiveValue));
+                MemSet(program->ro.end() + offset, 0, IR[addr].u2.i * K_SIZE(bk_PrimitiveValue));
             } break;
             case bk_Opcode::Fetch: {
                 if (IR[addr].u1.i > offset)
                     return false;
 
                 offset -= IR[addr].u1.i;
-                MemCpy(program->ro.end() + offset, program->ro.ptr + IR[addr].u2.i, IR[addr].u1.i * RG_SIZE(bk_PrimitiveValue));
+                MemCpy(program->ro.end() + offset, program->ro.ptr + IR[addr].u2.i, IR[addr].u1.i * K_SIZE(bk_PrimitiveValue));
             } break;
 
             default: return false;
@@ -3182,7 +3182,7 @@ bool bk_Parser::CopyBigConstant(Size size)
 
 void bk_Parser::EmitPop(int64_t count)
 {
-    RG_ASSERT(count >= 0 || !valid);
+    K_ASSERT(count >= 0 || !valid);
 
     if (count) {
         Emit(bk_Opcode::Pop, count);
@@ -3191,7 +3191,7 @@ void bk_Parser::EmitPop(int64_t count)
 
 void bk_Parser::EmitReturn(Size size)
 {
-    RG_ASSERT(current_func);
+    K_ASSERT(current_func);
 
     // We support tail recursion elimination (TRE)
     if (IR[IR.len - 1].code == bk_Opcode::Call && IR[IR.len - 1].u2.func == current_func) {
@@ -3215,7 +3215,7 @@ void bk_Parser::EmitReturn(Size size)
 bk_VariableInfo *bk_Parser::CreateGlobal(const char *name, const bk_TypeInfo *type,
                                          Span<const bk_PrimitiveValue> values, bool module)
 {
-    RG_ASSERT(values.len <= INT32_MAX);
+    K_ASSERT(values.len <= INT32_MAX);
 
     bk_VariableInfo *var = program->variables.AppendDefault();
 
@@ -3254,7 +3254,7 @@ bool bk_Parser::MapVariable(bk_VariableInfo *var, Size var_pos)
     definitions_map.Set(var, var_pos);
 
     while (it && (int)it->local > (int)var->local) {
-        RG_ASSERT(it != var);
+        K_ASSERT(it != var);
 
         ptr = (bk_VariableInfo **)&it->shadow;
         it = (bk_VariableInfo *)it->shadow;
@@ -3348,7 +3348,7 @@ void bk_Parser::TrimInstructions(Size trim_addr)
 
     // Don't trim previously compiled code
     if (trim_addr < min_addr) [[unlikely]] {
-        RG_ASSERT(!valid);
+        K_ASSERT(!valid);
         return;
     }
 

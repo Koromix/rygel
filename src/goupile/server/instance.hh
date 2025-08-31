@@ -20,7 +20,7 @@
 #include "src/core/sqlite/sqlite.hh"
 #include "user.hh"
 
-namespace RG {
+namespace K {
 
 extern const int InstanceVersion;
 extern const int LegacyVersion;
@@ -60,7 +60,7 @@ public:
 
     BlockAllocator str_alloc;
 
-    RG_HASHTABLE_HANDLER(InstanceHolder, key);
+    K_HASHTABLE_HANDLER(InstanceHolder, key);
 
     bool Checkpoint();
 
