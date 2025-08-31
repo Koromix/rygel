@@ -10417,16 +10417,12 @@ uint64_t CRC64xz(uint64_t state, Span<const uint8_t> buf)
 {
     state = ~state;
 
-    Size left = std::min(buf.len, (Size)(AlignUp(buf.ptr, 16) - buf.ptr));
-    Size right = std::max(left, (Size)(AlignDown(buf.end(), 16) - buf.ptr));
+    Size len16 = buf.len / 16 * 16;
 
-    for (Size i = 0; i < left; i++) {
-        state = XzUpdate1(state, buf[i]);
-    }
-    for (Size i = left; i < right; i += 16) {
+    for (Size i = 0; i < len16; i += 16) {
         state = XzUpdate16(state, buf.ptr + i);
     }
-    for (Size i = right; i < buf.len; i++) {
+    for (Size i = len16; i < buf.len; i++) {
         state = XzUpdate1(state, buf[i]);
     }
 
@@ -10464,16 +10460,12 @@ uint64_t CRC64nvme(uint64_t state, Span<const uint8_t> buf)
 {
     state = ~state;
 
-    Size left = std::min(buf.len, (Size)(AlignUp(buf.ptr, 16) - buf.ptr));
-    Size right = std::max(left, (Size)(AlignDown(buf.end(), 16) - buf.ptr));
+    Size len16 = buf.len / 16 * 16;
 
-    for (Size i = 0; i < left; i++) {
-        state = NvmeUpdate1(state, buf[i]);
-    }
-    for (Size i = left; i < right; i += 16) {
+    for (Size i = 0; i < len16; i += 16) {
         state = NvmeUpdate16(state, buf.ptr + i);
     }
-    for (Size i = right; i < buf.len; i++) {
+    for (Size i = len16; i < buf.len; i++) {
         state = NvmeUpdate1(state, buf[i]);
     }
 
