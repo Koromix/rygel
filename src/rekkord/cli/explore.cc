@@ -211,13 +211,13 @@ Available sort orders: %!..+%3%!0)"),
                     TimeSpec spec = DecomposeTimeLocal(snapshot.time);
 
                     PrintLn("%!Y.+%1%!0 %!G..%2%!0", FmtArg(snapshot.channel).Pad(40), FmtTimeNice(spec));
-                    PrintLn("  + %1: %!..+%2%!0", T("OID"), snapshot.oid);
-                    PrintLn("  + %1: %!..+%2%!0", T("Size"), FmtDiskSize(snapshot.size));
-                    PrintLn("  + %1: %!..+%2%!0", T("Stored"), FmtDiskSize(snapshot.stored));
-                    PrintLn("  + %1: %!..+%2%!0", T("Added"), FmtDiskSize(snapshot.added));
+                    PrintLn(T("  + OID: %!..+%1%!0"), snapshot.oid);
+                    PrintLn(T("  + Size: %!..+%1%!0"), FmtDiskSize(snapshot.size));
+                    PrintLn(T("  + Stored: %!..+%1%!0"), FmtDiskSize(snapshot.stored));
+                    PrintLn(T("  + Added: %!..+%1%!0"), FmtDiskSize(snapshot.added));
 
                     if (verbose >= 1) {
-                        PrintLn("  + %1: %!D..%2%!0", T("Tag"), snapshot.tag);
+                        PrintLn(T("  + Tag: %!D..%1%!0"), snapshot.tag);
                     }
                 }
             } else {
@@ -367,7 +367,7 @@ Available output formats: %!..+%2%!0)"),
                             FmtArg(channel.name).Pad(28), FmtArg(channel.count).Pad(-4),
                             FmtTimeNice(spec), FmtDiskSize(channel.size));
                     if (verbose >= 1) {
-                        PrintLn("  + OID: %!..+%1%!0", channel.oid);
+                        PrintLn(T("  + OID: %!..+%1%!0"), channel.oid);
                     }
                 }
             } else {
@@ -469,17 +469,17 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbo
     }
 
     if (verbose >= 1) {
-        PrintLn("%1    + OID: %!..+%2%!0", FmtArg(' ').Repeat(indent), obj.oid);
+        PrintLn(T("%1    + OID: %!..+%2%!0"), FmtArg(' ').Repeat(indent), obj.oid);
 
         if (obj.type == rk_ObjectType::Snapshot) {
-            PrintLn("%1    + Stored: %!..+%2%!0", FmtArg(' ').Repeat(indent), FmtDiskSize(obj.stored));
-            PrintLn("%1    + Added: %!..+%2%!0", FmtArg(' ').Repeat(indent), FmtDiskSize(obj.added));
+            PrintLn(T("%1    + Stored: %!..+%2%!0"), FmtArg(' ').Repeat(indent), FmtDiskSize(obj.stored));
+            PrintLn(T("%1    + Added: %!..+%2%!0"), FmtArg(' ').Repeat(indent), FmtDiskSize(obj.added));
         } else {
-            PrintLn("%1    + UID/GID: %!..+%2:%3%!0", FmtArg(' ').Repeat(indent), obj.uid, obj.gid);
+            PrintLn(T("%1    + UID/GID: %!..+%2:%3%!0"), FmtArg(' ').Repeat(indent), obj.uid, obj.gid);
 
             if (verbose > 1) {
-               TimeSpec bspec = DecomposeTimeUTC(obj.btime);
-                PrintLn("%1    + Birth time: %!..+%2%!0", FmtArg(' ').Repeat(indent), FmtTimeNice(bspec));
+                TimeSpec bspec = DecomposeTimeUTC(obj.btime);
+                PrintLn(T("%1    + Birth time: %!..+%2%!0"), FmtArg(' ').Repeat(indent), FmtTimeNice(bspec));
             }
         }
     }
