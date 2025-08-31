@@ -161,7 +161,7 @@
         "password_mismatch": "Les mots de passe sont différents",
         "password_too_short": "Mot de passe trop court",
         "path": "Chemin",
-        "path_charachers": "Caractères autorisés: a-z, 0-9, '-', '_', '.' et '/' (pas au début ou à la fin)",
+        "path_characters": "Caractères autorisés : a-z, 0-9, '-', '_', '.' et '/' (pas au début ou à la fin)",
         "path_no_dotdot": "Le chemin ne doit pas contenir de composants '..'",
         "permissions": "Droits",
         "permissions_of_x_on_x": "Droits de {1} sur {2}",

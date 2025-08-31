@@ -111,7 +111,7 @@ function InstancePublisher(bundler) {
 
             if (d.values.filename) {
                 if (!d.values.filename.match(/^[A-Za-z0-9_\-\.]+(\/[A-Za-z0-9_\-\.]+)*$/))
-                    d.error('filename', T.path_charachers);
+                    d.error('filename', T.path_characters);
                 if (d.values.filename.includes('/../') || d.values.filename.endsWith('/..'))
                     d.error('filename', T.path_no_dotdot);
             }

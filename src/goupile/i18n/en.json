@@ -161,7 +161,7 @@
         "password_mismatch": "Passwords don't match",
         "password_too_short": "Password is too short",
         "path": "Path",
-        "path_charachers": "Allowed characters: a-z, 0-9, '-', '_', '.' and '/' (except at start or end)",
+        "path_characters": "Allowed characters: a-z, 0-9, '-', '_', '.' and '/' (except at start or end)",
         "path_no_dotdot": "Path must not contain any '..' component",
         "permissions": "Permissions",
         "permissions_of_x_on_x": "Permissions of {1} on {2}",
