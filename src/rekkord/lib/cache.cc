@@ -56,6 +56,8 @@ bool rk_Cache::Open(rk_Repository *repo, bool build)
         return false;
     if (!main.SetWAL(true))
         return false;
+    if (!main.Run("PRAGMA synchronous = NORMAL"))
+        return false;
 
     int version;
     if (!main.GetUserVersion(&version))

@@ -86,8 +86,6 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     config.tmp_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                 } else if (prop.key == "StaticDirectory") {
                     config.static_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
-                } else if (prop.key == "SynchronousFull") {
-                    valid &= ParseBool(prop.value, &config.sync_full);
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;

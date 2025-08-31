@@ -140,8 +140,6 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                             LogError("Malformed ArchiveKey value");
                             valid = false;
                         }
-                    } else if (prop.key == "SynchronousFull") {
-                        valid &= ParseBool(prop.value, &config.sync_full);
                     } else if (prop.key == "UseSnapshots") {
                         valid &= ParseBool(prop.value, &config.use_snapshots);
                     } else if (prop.key == "AutoCreate") {
@@ -363,8 +361,6 @@ bool DomainHolder::Open(const char *filename)
         if (!db.Open(config.database_filename, flags))
             return false;
         if (!db.SetWAL(true))
-            return false;
-        if (!db.SetSynchronousFull(config.sync_full))
             return false;
     }
 
@@ -727,10 +723,6 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
                 continue;
             }
             if (!db->SetWAL(true)) {
-                complete = false;
-                continue;
-            }
-            if (!db->SetSynchronousFull(config.sync_full)) {
                 complete = false;
                 continue;
             }

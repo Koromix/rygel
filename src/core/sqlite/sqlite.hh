@@ -163,7 +163,6 @@ public:
     bool Close();
 
     bool SetWAL(bool enable);
-    bool SetSynchronousFull(bool enable);
     bool SetSnapshotDirectory(const char *directory, int64_t full_delay);
 
     bool UsesSnapshot() const { return snapshot; }

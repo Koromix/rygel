@@ -545,8 +545,6 @@ Options:
         return 1;
     if (!db.SetWAL(true))
         return 1;
-    if (!db.SetSynchronousFull(config.sync_full))
-        return 1;
     if (!MigrateDatabase(&db))
         return 1;
     if (!MakeDirectory(config.tmp_directory, false))

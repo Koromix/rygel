@@ -38,7 +38,6 @@ struct Config {
     const char *vault_directory = nullptr;
     const char *tmp_directory = nullptr;
     const char *static_directory = nullptr;
-    bool sync_full = false;
 
     http_Config http { 8890 };
     const char *require_host = nullptr;

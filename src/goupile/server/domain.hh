@@ -56,7 +56,6 @@ struct DomainConfig {
 
     uint8_t archive_key[32] = {}; // crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES
     bool enable_archives = false;
-    bool sync_full = false;
     bool use_snapshots = true;
     bool auto_create = true;
     bool auto_migrate = true;

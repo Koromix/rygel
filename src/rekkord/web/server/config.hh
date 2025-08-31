@@ -27,7 +27,6 @@ struct Config {
 
     const char *database_filename = nullptr;
     const char *tmp_directory = nullptr;
-    bool sync_full = false;
 
     int64_t update_period = 6 * 3600000;
     int64_t retry_delay = 10 * 60000;

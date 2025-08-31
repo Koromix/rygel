@@ -140,7 +140,7 @@ bool sq_Database::Open(const char *filename, unsigned int flags)
     static const char *const sql = R"(
         PRAGMA locking_mode = NORMAL;
         PRAGMA foreign_keys = ON;
-        PRAGMA synchronous = NORMAL;
+        PRAGMA synchronous = FULL;
         PRAGMA busy_timeout = 15000;
     )";
 
@@ -167,12 +167,6 @@ bool sq_Database::Open(const char *filename, unsigned int flags)
 bool sq_Database::SetWAL(bool enable)
 {
     const char *sql = enable ? "PRAGMA journal_mode = WAL" : "PRAGMA journal_mode = DELETE";
-    return Run(sql);
-}
-
-bool sq_Database::SetSynchronousFull(bool enable)
-{
-    const char *sql = enable ? "PRAGMA synchronous = FULL" : "PRAGMA synchronous = NORMAL";
     return Run(sql);
 }
 
