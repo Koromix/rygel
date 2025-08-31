@@ -690,7 +690,7 @@ int64_t PutContext::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8
 void PutContext::MakeProgress(int64_t stored)
 {
     stored = put_stored.fetch_add(stored, std::memory_order_relaxed) + stored;
-    pg_stored.SetFmt("%1 stored", FmtDiskSize(stored));
+    pg_stored.SetFmt(T("%1 stored"), FmtDiskSize(stored));
 }
 
 bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> filenames,

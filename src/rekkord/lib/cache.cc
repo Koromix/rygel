@@ -215,7 +215,7 @@ bool rk_Cache::Reset(bool list)
                     return false;
 
                 int64_t blobs = listed.fetch_add(1, std::memory_order_relaxed) + 1;
-                progress.SetFmt("%1 cached", blobs);
+                progress.SetFmt(T("%1 cached"), blobs);
 
                 return true;
             });

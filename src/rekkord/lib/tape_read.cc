@@ -780,7 +780,7 @@ void GetContext::MakeProgress(int64_t entries, int64_t size)
     size = restored_size.fetch_add(size, std::memory_order_relaxed) + size;
 
     if (!settings.verbose) {
-        pg_entries.SetFmt(entries, total_entries, "%1 / %2 entries", entries, total_entries);
+        pg_entries.SetFmt(entries, total_entries, T("%1 / %2 entries"), entries, total_entries);
         pg_size.SetFmt(size, total_size, "%1 / %2", FmtDiskSize(size), FmtDiskSize(total_size));
     }
 }
@@ -1268,9 +1268,9 @@ void ListContext::MakeProgress(int64_t entries)
     entries = known_entries.fetch_add(entries, std::memory_order_relaxed) + entries;
 
     if (total_entries) {
-        pg_entries.SetFmt(entries, total_entries, "%1 / %2 entries", entries, total_entries);
+        pg_entries.SetFmt(entries, total_entries, T("%1 / %2 entries"), entries, total_entries);
     } else {
-        pg_entries.SetFmt(entries, total_entries, "%1 entries", entries);
+        pg_entries.SetFmt(entries, total_entries, T("%1 entries"), entries);
     }
 }
 
@@ -1601,7 +1601,7 @@ bool CheckContext::RecurseEntries(Span<const uint8_t> blob, bool allow_separator
 void CheckContext::MakeProgress(int64_t blobs)
 {
     blobs = checked_blobs.fetch_add(blobs, std::memory_order_relaxed) + blobs;
-    pg_blobs.SetFmt(blobs, total_blobs, "%1 / %2 blobs", blobs, total_blobs);
+    pg_blobs.SetFmt(blobs, total_blobs, T("%1 / %2 blobs"), blobs, total_blobs);
 }
 
 bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshots)
@@ -1628,7 +1628,7 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
     bool valid = true;
 
     ProgressHandle progress("Snapshots");
-    progress.SetFmt((int64_t)0, (int64_t)snapshots.len, "0 / %1 snapshots", snapshots.len);
+    progress.SetFmt((int64_t)0, (int64_t)snapshots.len, T("0 / %1 snapshots"), snapshots.len);
 
     for (Size i = 0; i < snapshots.len; i++) {
         const rk_SnapshotInfo &snapshot = snapshots[i];
@@ -1647,7 +1647,7 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
             return true;
         });
 
-        progress.SetFmt(i + 1, snapshots.len, "%1 / %2 snapshots", i + 1, snapshots.len);
+        progress.SetFmt(i + 1, snapshots.len, T("%1 / %2 snapshots"), i + 1, snapshots.len);
     }
 
     if (!cache.Close())
