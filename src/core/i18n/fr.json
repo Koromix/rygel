@@ -171,6 +171,7 @@
         "Failed to resize file '%1': %2": "Échec du redimensionnement du fichier '%1' : %2",
         "Failed to restrict privileges: %1": "Échec de la restriction des privilèges : %1",
         "Failed to retrieve SSH public key of '%1': %2": "Échec de récupération de la clé publique SSH de '%1' : %2",
+        "Failed to retrieve preferred Windows UI language: %1": "Échec de récupération de la langue préférée de l'interface utilisateur Windows : %1",
         "Failed to rewind '%1': %2": "Échec de rembobinage de '%1' : %2",
         "Failed to seek to start of '%1': %2": "Échec de rembobinage de '%1' : %2",
         "Failed to send SMS with status %1": "Échec de l'envoi du SMS avec le statut %1",
