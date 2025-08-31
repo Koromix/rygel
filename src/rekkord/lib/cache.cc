@@ -177,6 +177,8 @@ bool rk_Cache::Open(rk_Repository *repo, bool build)
 
     if (!write.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         return false;
+    if (!write.Run("PRAGMA synchronous = NORMAL"))
+        return false;
 
     err_guard.Disable();
     return true;
