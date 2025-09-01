@@ -239,6 +239,8 @@ R"(Usage: %!..+%1 put [option...] url source key
 
 Options:
 
+        %!..+--crc64nvme%!0                Send file checksum for integrity
+
     %!..+-t, --mimetype type%!0            Set object mimetype (Content-Type)
 
         %!..+--conditional%!0              Ask for conditional write (If-None-Match))", FelixTarget);
@@ -252,6 +254,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("--crc64nvme", OptionType::Value)) {
+                settings.checksum = s3_ChecksumType::CRC64nvme;
             } else if (opt.Test("-t", "--mimetype", OptionType::Value)) {
                 settings.mimetype = opt.current_value;
             } else if (opt.Test("--conditional")) {
@@ -294,6 +298,23 @@ Options:
     if (size < 0) {
         LogError("Cannot send file of unknown length");
         return 1;
+    }
+
+    if (settings.checksum == s3_ChecksumType::CRC64nvme) {
+        settings.hash.crc64nvme = 0;
+
+        while (!reader.IsEOF()) {
+            LocalArray<uint8_t, 8192> buf;
+
+            buf.len = reader.Read(buf.data);
+            if (buf.len < 0)
+                return 1;
+
+            settings.hash.crc64nvme = CRC64nvme(settings.hash.crc64nvme, buf);
+        }
+
+        if (!reader.Rewind())
+            return -1;
     }
 
     const auto func = [&](int64_t offset, Span<uint8_t> buf) {
