@@ -531,7 +531,16 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
         case rk_WriteResult::Success:
         case rk_WriteResult::AlreadyExists: {} break;
 
-        default: return rk_WriteResult::OtherError;
+        default: {
+            uint64_t recompute = CRC64nvme(0, raw);
+            LogError("Failed to write blob '%1': %2 / %3", oid, settings.hash.crc64nvme, recompute);
+
+            char debug[256];
+            Fmt(debug, "/tmp/debug/%1", oid);
+            WriteFile(raw, debug);
+
+            return rk_WriteResult::OtherError;
+        } break;
     }
 
     if (out_size) {
