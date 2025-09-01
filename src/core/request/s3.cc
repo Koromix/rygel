@@ -600,12 +600,14 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
         FunctionRef<Size(int64_t offset, Span<uint8_t>)> func;
         HeapArray<uint8_t> sent;
         int64_t offset;
+        int count;
     };
 
     PutContext ctx;
 
     ctx.func = func;
     ctx.offset = 0;
+    ctx.count = 0;
 
     int status = RunSafe("upload S3 object", 5, 412, [&](CURL *curl) {
         LocalArray<KeyValue, 16> headers;
@@ -698,6 +700,11 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
 
             ctx->sent.Append(buf);
 
+            if (ctx->offset > ret && !ctx->count) {
+                LogInfo("FUCK");
+                return (size_t)CURL_READFUNC_ABORT;
+            }
+
             return (size_t)ret;
         });
         curl_easy_setopt(curl, CURLOPT_READDATA, &ctx);
@@ -720,6 +727,8 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
             EnsureDirectoryExists(path);
             WriteFile(ctx.sent, path);
         }
+
+        ctx.count++;
 
         return ret;
     });
