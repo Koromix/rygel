@@ -7512,16 +7512,22 @@ int Async::GetWorkerCount()
 // Streams
 // ------------------------------------------------------------------------
 
-static StreamReader StdInStream(STDIN_FILENO, "<stdin>");
-static StreamWriter StdOutStream(STDOUT_FILENO, "<stdout>", (int)StreamWriterFlag::LineBuffer);
-static StreamWriter StdErrStream(STDERR_FILENO, "<stderr>", (int)StreamWriterFlag::LineBuffer);
+static NoDestroy<StreamReader> StdInStream(STDIN_FILENO, "<stdin>");
+static NoDestroy<StreamWriter> StdOutStream(STDOUT_FILENO, "<stdout>", (int)StreamWriterFlag::LineBuffer);
+static NoDestroy<StreamWriter> StdErrStream(STDERR_FILENO, "<stderr>", (int)StreamWriterFlag::LineBuffer);
 
-extern StreamReader *const StdIn = &StdInStream;
-extern StreamWriter *const StdOut = &StdOutStream;
-extern StreamWriter *const StdErr = &StdErrStream;
+extern StreamReader *const StdIn = StdInStream.Get();
+extern StreamWriter *const StdOut = StdOutStream.Get();
+extern StreamWriter *const StdErr = StdErrStream.Get();
 
 static CreateDecompressorFunc *DecompressorFunctions[K_LEN(CompressionTypeNames)];
 static CreateCompressorFunc *CompressorFunctions[K_LEN(CompressionTypeNames)];
+
+K_EXIT(FlushStd)
+{
+    StdOut->Flush();
+    StdErr->Flush();
+}
 
 void StreamReader::SetDecoder(StreamDecoder *decoder)
 {
