@@ -699,7 +699,19 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
         curl_easy_setopt(curl, CURLOPT_READDATA, &ctx);
         curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)size);
 
-        return curl_Perform(curl, nullptr);
+        int ret = curl_Perform(curl, nullptr);
+
+        if (ret == 400) {
+            HeapArray<char> debug;
+
+            for (const KeyValue &kv: headers) {
+                Fmt(&debug, "%1 = %2\n", kv.key, kv.value);
+            }
+
+            LogError("CURL %1 :: %2 :: %3", key, settings.hash.crc64nvme, FmtEscape(debug));
+        }
+
+        return ret;
     });
 
     switch (status) {
