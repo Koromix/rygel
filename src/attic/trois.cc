@@ -254,7 +254,7 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("--crc64nvme", OptionType::Value)) {
+            } else if (opt.Test("--crc64nvme")) {
                 settings.checksum = s3_ChecksumType::CRC64nvme;
             } else if (opt.Test("-t", "--mimetype", OptionType::Value)) {
                 settings.mimetype = opt.current_value;
@@ -300,6 +300,15 @@ Options:
         return 1;
     }
 
+#if 1
+    HeapArray<uint8_t> data;
+    if (reader.ReadAll(-1, &data) < 0)
+        return 1;
+
+    settings.hash.crc64nvme = CRC64nvme(0, data);
+
+    s3_PutResult ret = s3.PutObject(key, data, settings);
+#else
     if (settings.checksum == s3_ChecksumType::CRC64nvme) {
         settings.hash.crc64nvme = 0;
 
@@ -325,6 +334,7 @@ Options:
     };
 
     s3_PutResult ret = s3.PutObject(key, size, func, settings);
+#endif
 
     switch (ret) {
         case s3_PutResult::Success: return 0;

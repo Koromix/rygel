@@ -71,7 +71,7 @@ bool curl_Reset(CURL *curl)
     success &= !curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, 10000L);
     success &= !curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 60000L);
 
-#if 0
+#if 1
     success &= !curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 #else
     // curl_easy_setopt is variadic, so we need the + lambda operator to force the
