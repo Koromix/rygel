@@ -1668,6 +1668,7 @@ void HandleInstanceConfigure(http_IO *io)
     bool change_use_offline = false;
     bool change_data_remote = false;
     bool change_allow_guests = false;
+    bool change_export = false;
     int64_t fs_version = -1;
     {
         StreamReader st;
@@ -1705,6 +1706,21 @@ void HandleInstanceConfigure(http_IO *io)
                 }
             } else if (key == "fs_version") {
                 parser.SkipNull() || parser.ParseInt(&fs_version);
+            } else if (key == "export_days") {
+                if (!parser.SkipNull()) {
+                    parser.ParseInt(&config.export_days);
+                    change_export = true;
+                }
+            } else if (key == "export_time") {
+                if (!parser.SkipNull()) {
+                    parser.ParseInt(&config.export_time);
+                    change_export = true;
+                }
+            } else if (key == "export_all") {
+                if (!parser.SkipNull()) {
+                    parser.ParseBool(&config.export_all);
+                    change_export = true;
+                }
             } else if (parser.IsValid()) {
                 LogError("Unexpected key '%1'", key);
                 io->SendError(422);
@@ -1728,6 +1744,16 @@ void HandleInstanceConfigure(http_IO *io)
         if (config.name && !config.name[0]) {
             LogError("Application name cannot be empty");
             valid = false;
+        }
+        if (change_export) {
+            if (config.export_days < 0 || config.export_days > 127) {
+                LogError("Invalid value for export days");
+                valid = false;
+            }
+            if (config.export_time < 0 || config.export_time >= 2400) {
+                LogError("Invalid value for export time");
+                valid = false;
+            }
         }
 
         if (!valid) {
@@ -1784,6 +1810,9 @@ void HandleInstanceConfigure(http_IO *io)
             success &= !config.token_key || instance->db->Run(sql, "TokenKey", config.token_key);
             success &= !config.auto_key || instance->db->Run(sql, "AutoKey", config.auto_key);
             success &= !change_allow_guests || instance->db->Run(sql, "AllowGuests", 0 + config.allow_guests);
+            success &= !change_export || instance->db->Run(sql, "ExportDays", config.export_days);
+            success &= !change_export || instance->db->Run(sql, "ExportTime", config.export_time);
+            success &= !change_export || instance->db->Run(sql, "ExportAll", 0 + config.export_all);
 
             if (fs_version > 0) {
                 success &= instance->db->Run(sql, "FsVersion", fs_version);
@@ -1886,6 +1915,13 @@ void HandleInstanceList(http_IO *io)
                 json.Key("auto_key"); json.String(instance->config.auto_key);
             }
             json.Key("allow_guests"); json.Bool(instance->config.allow_guests);
+            if (instance->config.export_days) {
+                json.Key("export_days"); json.Int(instance->config.export_days);
+            } else {
+                json.Key("export_days"); json.Null();
+            }
+            json.Key("export_time"); json.Int(instance->config.export_time);
+            json.Key("export_all"); json.Bool(instance->config.export_all);
             json.Key("fs_version"); json.Int64(instance->fs_version);
         json.EndObject();
 

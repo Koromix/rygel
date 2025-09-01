@@ -75,6 +75,15 @@
         "current_fs_x": "Current version: {1}",
         "data": "Data",
         "data_exports": "Data exports",
+        "day_names": {
+            "friday": "Friday",
+            "monday": "Monday",
+            "saturday": "Saturday",
+            "sunday": "Sunday",
+            "thursday": "Thursday",
+            "tuesday": "Tuesday",
+            "wednesday": "Wednesday"
+        },
         "default_page": "Default page",
         "delete": "Delete",
         "demo_mode_warning": "Demo mode... Please note that forms and data may disappear at any time!",
@@ -94,12 +103,15 @@
         "export": "Export",
         "export_all": "All records",
         "export_anchor": "New and modified records",
+        "export_days": "Export days",
         "export_done": "Export success",
         "export_in_progress": "Export in progress",
         "export_key": "Export key",
         "export_mode": "Export mode",
         "export_sequence": "New records",
         "export_since": "Since export",
+        "export_time": "Export time",
+        "exports": "Exports",
         "failed_to_build_page": "Unable to generate the page due to an error",
         "file": "File",
         "file_history": "File history",
@@ -142,6 +154,7 @@
         "new_password": "New password",
         "new_record": "New record",
         "new_value": "New value",
+        "no": "No",
         "no_archive": "No archive",
         "no_export": "No export",
         "no_modification": "No change",
@@ -242,7 +255,8 @@
         "user_x_deleted": "Deleted user '{1}'",
         "user_x_edited": "Changed user '{1}'",
         "username": "Username",
-        "users": "Users"
+        "users": "Users",
+        "yes": "Yes"
     },
     "messages": {}
 }

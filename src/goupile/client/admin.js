@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, unsafeHTML } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, Mutex } from '../../web/core/base.js';
+import { Util, Log, Net, Mutex, LocalDate, LocalTime } from '../../web/core/base.js';
 import { Base64 } from '../../web/core/mixer.js';
 import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
@@ -509,10 +509,39 @@ function runConfigureInstanceDialog(e, instance) {
                         help: T.fs_version_warning
                     });
                 });
+
+                d.tab(T.exports, () => {
+                    let export_days = [1, 2, 3, 4, 5, 6, 7].filter(day => instance.config.export_days & (1 << day));
+                    let export_time = new LocalTime(Math.floor(instance.config.export_time / 100), instance.config.export_time % 100);
+
+                    d.multiCheck('export_days', T.export_days, [
+                        [1, T.day_names.monday],
+                        [2, T.day_names.tuesday],
+                        [3, T.day_names.wednesday],
+                        [4, T.day_names.thursday],
+                        [5, T.day_names.friday],
+                        [6, T.day_names.saturday],
+                        [7, T.day_names.sunday]
+                    ], { value: export_days });
+
+                    d.time('export_time', T.export_time, {
+                        value: export_time,
+                        disabled: d.values.export_days == null
+                    });
+                    d.boolean('*export_all', T.export_all, {
+                        value: instance.config.export_all,
+                        disabled: d.values.export_days == null
+                    });
+                })
             });
 
             d.action(T.configure, { disabled: !d.isValid() }, async () => {
                 try {
+                    let export_days = (d.values.export_days ?? []).reduce((acc, day) => acc | (1 << day), 0);
+                    let export_time = (d.values.export_time != null) ? (d.values.export_time.hour * 100 + d.values.export_time.minute) : null;
+
+                    console.log(d.values.export_time, export_time);
+
                     await Net.post('/admin/api/instances/configure', {
                         instance: instance.key,
                         name: d.values.name,
@@ -521,7 +550,10 @@ function runConfigureInstanceDialog(e, instance) {
                         token_key: d.values.token_key,
                         auto_key: d.values.auto_key,
                         allow_guests: d.values.allow_guests,
-                        fs_version: d.values.fs_version
+                        fs_version: d.values.fs_version,
+                        export_days: export_days,
+                        export_time: export_time,
+                        export_all: d.values.export_all
                     });
 
                     resolve();

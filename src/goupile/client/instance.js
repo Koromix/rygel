@@ -818,8 +818,9 @@ async function runExportListDialog(e) {
                 <thead>
                     <tr>
                         <th>Date</th>
-                        <th>Utilisateur</th>
                         <th>Enregistrements</th>
+                        <th>Automatique</th>
+                        <th></th>
                     </tr>
                 </thead>
 
@@ -827,8 +828,8 @@ async function runExportListDialog(e) {
                     ${downloads.map(download => html`
                         <tr>
                             <td>${(new Date(download.ctime)).toLocaleString()}</td>
-                            <td>${download.username}</td>
                             <td>${download.threads}</td>
+                            <td>${download.scheduled ? T.yes : T.no}</td>
                             <td><a @click=${UI.wrap(e => exportRecords(download.export, stores))}>${T.download}</a></td>
                         </tr>
                     `)}

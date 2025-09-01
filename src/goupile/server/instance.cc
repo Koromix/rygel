@@ -18,6 +18,7 @@
 #include "file.hh"
 #include "goupile.hh"
 #include "instance.hh"
+#include "record.hh"
 #include "vm.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
@@ -26,7 +27,7 @@
 namespace K {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 133;
+const int InstanceVersion = 134;
 const int LegacyVersion = 60;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
@@ -105,6 +106,26 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                     config.auto_key = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(setting, "AllowGuests")) {
                     valid &= ParseBool(value, &config.allow_guests);
+                } else if (TestStr(setting, "ExportDays")) {
+                    if (ParseInt(value, &config.export_days)) {
+                        if (config.export_days < 0 || config.export_days > 127) {
+                            LogError("Invalid auto-export days");
+                            valid = false;
+                        }
+                    } else {
+                        valid = false;
+                    }
+                } else if (TestStr(setting, "ExportTime")) {
+                    if (ParseInt(value, &config.export_time)) {
+                        if (config.export_time < 0 || config.export_time >= 2400) {
+                            LogError("Invalid auto-export time");
+                            valid = false;
+                        }
+                    } else {
+                        valid = false;
+                    }
+                } else if (TestStr(setting, "ExportAll")) {
+                    valid &= ParseBool(value, &config.export_all);
                 } else if (TestStr(setting, "FsVersion")) {
                     int version = -1;
                     valid &= ParseInt(value, &version);
@@ -142,6 +163,27 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
             return false;
     }
 
+    // Find last scheduled export
+    {
+        sq_Statement stmt;
+        if (!db->Prepare(R"(SELECT ctime, sequence
+                            FROM rec_exports
+                            WHERE scheduled = 1
+                            ORDER BY export DESC)", &stmt))
+            return false;
+
+        if (stmt.Step()) {
+            int64_t ctime = sqlite3_column_int64(stmt, 0);
+            int64_t sequence = sqlite3_column_int64(stmt, 1);
+            TimeSpec spec = DecomposeTimeUTC(ctime);
+
+            last_export_day = LocalDate(spec.year, spec.month, spec.day);
+            last_export_sequence = sequence;
+        } else if (!stmt.IsValid()) {
+            return false;
+        }
+    }
+
     // Check configuration
     {
         bool valid = true;
@@ -175,7 +217,46 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
 
 bool InstanceHolder::Checkpoint()
 {
-    return db->Checkpoint();
+    if (!db->Checkpoint())
+        return false;
+
+    // Not critical
+    PerformScheduledExport();
+
+    return true;
+}
+
+bool InstanceHolder::PerformScheduledExport()
+{
+    if (!config.export_days)
+        return true;
+
+    int64_t now = GetUnixTime();
+    TimeSpec spec = DecomposeTimeUTC(now);
+    LocalDate today(spec.year, spec.month, spec.day);
+    int hhmm = spec.hour * 100 + spec.min;
+
+    if (last_export_day == today)
+        return true;
+    if (!(config.export_days & (1 << spec.day)))
+        return true;
+    if (hhmm < config.export_time)
+        return true;
+
+    ExportSettings settings = {};
+
+    settings.sequence = config.export_all ? -1 : last_export_sequence;
+    settings.scheduled = true;
+
+    ExportInfo info;
+    int64_t export_id = ExportRecords(this, 0, settings, &info);
+    if (export_id < 0)
+        return false;
+
+    last_export_day = today;
+    last_export_sequence = info.max_sequence;
+
+    return true;
 }
 
 bool InstanceHolder::SyncViews(const char *directory)
@@ -2922,9 +3003,34 @@ bool MigrateInstance(sq_Database *db, int target)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 133: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE rec_exports RENAME TO rec_exports_BAK;
+
+                    CREATE TABLE rec_exports (
+                        export INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ctime INTEGER NOT NULL,
+                        userid INTEGER NOT NULL,
+                        sequence INTEGER NOT NULL,
+                        anchor INTEGER NOT NULL,
+                        threads INTEGER NOT NULL,
+                        scheduled INTEGER CHECK (scheduled IN (0, 1)) NOT NULL
+                    );
+
+                    INSERT INTO rec_exports (export, ctime, userid, sequence, anchor, threads, scheduled)
+                        SELECT export, ctime, userid, sequence, anchor, threads, 0 FROM rec_exports_BAK;
+
+                    INSERT INTO fs_settings (key, value) VALUES ('ExportTime', 0);
+                    INSERT INTO fs_settings (key, value) VALUES ('ExportDays', 0);
+                    INSERT INTO fs_settings (key, value) VALUES ('ExportAll', 0);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 133);
+            static_assert(InstanceVersion == 134);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

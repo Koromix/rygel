@@ -682,8 +682,7 @@ void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
     json.Finish();
 }
 
-static bool CheckExportPermission(http_IO *io, InstanceHolder *instance, UserPermission perm,
-                                  int64_t *out_userid = nullptr, const char **out_username = nullptr)
+static int64_t CheckExportPermission(http_IO *io, InstanceHolder *instance, UserPermission perm)
 {
     K_ASSERT(perm == UserPermission::DataExport || perm == UserPermission::DataFetch);
 
@@ -694,38 +693,32 @@ static bool CheckExportPermission(http_IO *io, InstanceHolder *instance, UserPer
         const InstanceHolder *master = instance->master;
 
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT p.permissions, u.userid, u.username
+        if (!gp_domain.db.Prepare(R"(SELECT p.permissions, u.userid
                                      FROM dom_permissions p
                                      INNER JOIN dom_users ON (u.userid = p.userid)
                                      WHERE p.instance = ?1 AND p.export_key = ?2)", &stmt))
-            return false;
+            return -1;
         sqlite3_bind_text(stmt, 1, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
         sqlite3_bind_text(stmt, 2, export_key, -1, SQLITE_STATIC);
 
         if (stmt.Step()) {
             uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
+            int64_t userid = sqlite3_column_int64(stmt, 1);
 
             if (!(permissions & (int)UserPermission::DataExport) ||
                     !(permissions & (int)UserPermission::DataFetch)) {
                 LogError("Missing data export or fetch permission");
                 io->SendError(403);
-                return false;
+                return -1;
             }
 
-            if (out_userid) {
-                K_ASSERT(out_username);
-
-                *out_userid = sqlite3_column_int64(stmt, 0);
-                *out_username = DuplicateString((const char *)sqlite3_column_text(stmt, 1), io->Allocator()).ptr;
-            }
-
-            return true;
+            return userid;
         } else {
             if (stmt.IsValid()) {
                 LogError("Export key is not valid");
                 io->SendError(403);
             }
-            return false;
+            return -1;
         }
     } else {
        RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
@@ -733,21 +726,14 @@ static bool CheckExportPermission(http_IO *io, InstanceHolder *instance, UserPer
        if (!session) {
             LogError("User is not logged in");
             io->SendError(401);
-            return false;
+            return -1;
         } else if (!session->HasPermission(instance, perm)) {
             LogError("User is not allowed to export data");
             io->SendError(403);
-            return false;
+            return -1;
         }
 
-        if (out_userid) {
-            K_ASSERT(out_username);
-
-            *out_userid = session->userid;
-            *out_username = session->username;
-        }
-
-        return true;
+        return session->userid;
     }
 }
 
@@ -764,52 +750,14 @@ static const char *MakeExportFileName(const char *instance_key, int64_t export_i
     return filename;
 }
 
-void HandleExportCreate(http_IO *io, InstanceHolder *instance)
+int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSettings &settings, ExportInfo *out_info)
 {
-    if (!instance->config.data_remote) {
-        LogError("Records API is disabled in Offline mode");
-        io->SendError(403);
-        return;
-    }
-
-    int64_t userid;
-    const char *username;
-    if (!CheckExportPermission(io, instance, UserPermission::DataExport, &userid, &username))
-        return;
-
-    int64_t sequence = -1;
-    int64_t anchor = -1;
-    {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(4), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
-
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
-
-            if (key == "sequence") {
-                parser.SkipNull() || parser.ParseInt(&sequence);
-            } else if (key == "anchor") {
-                parser.SkipNull() || parser.ParseInt(&anchor);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
-            }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+    BlockAllocator temp_alloc;
 
     int fd = -1;
-    const char *tmp_filename = CreateUniqueFile(gp_domain.config.export_directory, nullptr, ".tmp", io->Allocator(), &fd);
+    const char *tmp_filename = CreateUniqueFile(gp_domain.config.export_directory, nullptr, ".tmp", &temp_alloc, &fd);
     if (!tmp_filename)
-        return;
+        return -1;
     K_DEFER {
         CloseDescriptor(fd);
         UnlinkFile(tmp_filename);
@@ -819,12 +767,12 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
     {
         RecordFilter filter = {};
 
-        filter.min_sequence = sequence;
-        filter.min_anchor = anchor;
+        filter.min_sequence = settings.sequence;
+        filter.min_anchor = settings.anchor;
         filter.read_data = true;
 
         if (!walker.Prepare(instance, 0, filter))
-            return;
+            return -1;
     }
 
     const RecordInfo *cursor = walker.GetCursor();
@@ -875,18 +823,17 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
         threads++;
     }
     if (!walker.IsValid())
-        return;
+        return -1;
     json.EndArray();
 
     json.EndObject();
 
     if (!st.Close())
-        return;
+        return -1;
 
     if (!threads) {
         LogError("No record to export");
-        io->SendError(404);
-        return;
+        return -1;
     }
 
     // We need the export ID to make it, see inside transaction
@@ -897,16 +844,16 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
         // Create export metadata
         {
             sq_Statement stmt;
-            if (!instance->db->Prepare(R"(INSERT INTO rec_exports (ctime, userid, username, sequence, anchor, threads)
+            if (!instance->db->Prepare(R"(INSERT INTO rec_exports (ctime, userid, sequence, anchor, threads, scheduled)
                                           VALUES (?1, ?2, ?3, ?4, ?5, ?6)
                                           RETURNING export)",
-                                       &stmt, now, userid, username, max_sequence, max_anchor, threads))
+                                       &stmt, now, userid, max_sequence, max_anchor, threads, 0 + settings.scheduled))
                 return false;
             if (!stmt.GetSingleValue(&export_id))
                 return false;
         }
 
-        filename = MakeExportFileName(instance->key.ptr, export_id, now, io->Allocator());
+        filename = MakeExportFileName(instance->key.ptr, export_id, now, &temp_alloc);
 
         if (RenameFile(tmp_filename, filename, 0) != RenameResult::Success)
             return false;
@@ -914,6 +861,58 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
         return true;
     });
     if (!success)
+        return -1;
+
+    if (out_info) {
+        out_info->max_sequence = max_sequence;
+        out_info->max_anchor = max_anchor;
+    }
+    return export_id;
+}
+
+void HandleExportCreate(http_IO *io, InstanceHolder *instance)
+{
+    if (!instance->config.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
+    }
+
+    int64_t userid = CheckExportPermission(io, instance, UserPermission::DataExport);
+    if (userid < 0)
+        return;
+
+    ExportSettings settings;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(4), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "sequence") {
+                parser.SkipNull() || parser.ParseInt(&settings.sequence);
+            } else if (key == "anchor") {
+                parser.SkipNull() || parser.ParseInt(&settings.anchor);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    ExportInfo info;
+    int64_t export_id = ExportRecords(instance, userid, settings, &info);
+    if (export_id < 0)
         return;
 
     const char *response = Fmt(io->Allocator(), "{ \"export\": %1 }", export_id).ptr;
@@ -928,12 +927,14 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    if (!CheckExportPermission(io, instance, UserPermission::DataFetch))
+    if (CheckExportPermission(io, instance, UserPermission::DataFetch) < 0)
         return;
 
     sq_Statement stmt;
-    if (!instance->db->Prepare(R"(SELECT export, ctime, userid, username, sequence, anchor, threads
-                                  FROM rec_exports ORDER BY export)", &stmt))
+    if (!instance->db->Prepare(R"(SELECT export, ctime, userid, sequence,
+                                         anchor, threads, scheduled
+                                  FROM rec_exports
+                                  ORDER BY export)", &stmt))
         return;
 
     http_JsonPageBuilder json;
@@ -945,19 +946,19 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
         int64_t export_id = sqlite3_column_int64(stmt, 0);
         int64_t ctime = sqlite3_column_int64(stmt, 1);
         int64_t userid = sqlite3_column_int64(stmt, 2);
-        const char *username = (const char *)sqlite3_column_text(stmt, 3);
-        int64_t sequence = sqlite3_column_int64(stmt, 4);
-        int64_t anchor = sqlite3_column_int64(stmt, 5);
-        int64_t threads = sqlite3_column_int64(stmt, 6);
+        int64_t sequence = sqlite3_column_int64(stmt, 3);
+        int64_t anchor = sqlite3_column_int64(stmt, 4);
+        int64_t threads = sqlite3_column_int64(stmt, 5);
+        bool scheduled = sqlite3_column_int(stmt, 6);
 
         json.StartObject();
         json.Key("export"); json.Int64(export_id);
         json.Key("ctime"); json.Int64(ctime);
         json.Key("userid"); json.Int64(userid);
-        json.Key("username"); json.String(username);
         json.Key("sequence"); json.Int64(sequence);
         json.Key("anchor"); json.Int64(anchor);
         json.Key("threads"); json.Int64(threads);
+        json.Key("scheduled"); json.Bool(scheduled);
         json.EndObject();
     }
     if (!stmt.IsValid())
@@ -977,7 +978,7 @@ void HandleExportDownload(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    if (!CheckExportPermission(io, instance, UserPermission::DataFetch))
+    if (CheckExportPermission(io, instance, UserPermission::DataFetch) < 0)
         return;
 
     int64_t export_id;

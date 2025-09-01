@@ -53,10 +53,16 @@ public:
         const char *auto_key = nullptr;
         const char *shared_key = nullptr;
         bool allow_guests = false;
+        int export_days = 0;
+        int export_time = 0;
+        bool export_all = false;
     } config;
 
     std::atomic_int64_t fs_version { 0 };
     uint8_t challenge_key[32];
+
+    LocalDate last_export_day = {};
+    int64_t last_export_sequence = -1;
 
     BlockAllocator str_alloc;
 
@@ -73,6 +79,8 @@ private:
     InstanceHolder() {};
 
     bool Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate);
+
+    bool PerformScheduledExport();
 
     friend class DomainHolder;
 };
