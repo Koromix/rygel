@@ -717,6 +717,7 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
             char path[256];
             Fmt(path, "/tmp/debug/raw_%1", key);
 
+            EnsureDirectoryExists(path);
             WriteFile(ctx.sent, path);
         }
 
