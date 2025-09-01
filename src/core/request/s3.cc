@@ -598,6 +598,7 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
 
     struct PutContext {
         FunctionRef<Size(int64_t offset, Span<uint8_t>)> func;
+        HeapArray<uint8_t> sent;
         int64_t offset;
     };
 
@@ -683,6 +684,7 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
 
         // Handle restart
         ctx.offset = 0;
+        ctx.sent.len = 0;
 
         curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L); // PUT
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
@@ -693,6 +695,8 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
             if (ret < 0)
                 return (size_t)CURL_READFUNC_ABORT;
             ctx->offset += ret;
+
+            ctx->sent.Append(buf);
 
             return (size_t)ret;
         });
@@ -709,6 +713,11 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
             }
 
             LogError("CURL %1 :: %2 :: %3", key, settings.hash.crc64nvme, FmtEscape(debug));
+
+            char path[256];
+            Fmt(path, "/tmp/debug/raw_%1", key);
+
+            WriteFile(ctx.sent, path);
         }
 
         return ret;
