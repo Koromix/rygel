@@ -150,8 +150,8 @@ private:
     void *ReserveConnection(); // CURL
     void ReleaseConnection(void *curl); // CURL
 
-    int RunSafe(const char *action, int tries, int expect, FunctionRef<int(void *)> func);
-    int RunSafe(const char *action, int tries, FunctionRef<int(void *)> func) { return RunSafe(action, tries, 0, func); }
+    int RunSafe(const char *action, int tries, int expect, FunctionRef<int(void *, int)> func);
+    int RunSafe(const char *action, int tries, FunctionRef<int(void *, int)> func) { return RunSafe(action, tries, 0, func); }
 
     void PrepareRequest(void *curl, const TimeSpec &date, const char *method, Span<const char> key,
                         Span<const KeyValue> params, Allocator *alloc);

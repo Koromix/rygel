@@ -352,7 +352,7 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
     HeapArray<uint8_t> xml;
 
     for (;;) {
-        int status = RunSafe("list S3 objects", 5, [&](CURL *curl) {
+        int status = RunSafe("list S3 objects", 5, [&](CURL *curl, int) {
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
@@ -429,7 +429,7 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(int64_t, Spa
     ctx.func = func;
     ctx.offset = 0;
 
-    int status = RunSafe("get S3 object", 5, 404, [&](CURL *curl) {
+    int status = RunSafe("get S3 object", 5, 404, [&](CURL *curl, int) {
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
@@ -529,7 +529,7 @@ StatResult s3_Client::HeadObject(Span<const char> key, s3_ObjectInfo *out_info)
         key = Fmt(&temp_alloc, "%1/%2", config.prefix, key);
     }
 
-    int status = RunSafe("test S3 object", 5, 404, [&](CURL *curl) {
+    int status = RunSafe("test S3 object", 5, 404, [&](CURL *curl, int) {
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
@@ -606,7 +606,7 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
     ctx.func = func;
     ctx.offset = 0;
 
-    int status = RunSafe("upload S3 object", 5, 412, [&](CURL *curl) {
+    int status = RunSafe("upload S3 object", 5, 412, [&](CURL *curl, int count) {
         LocalArray<KeyValue, 16> headers;
 
         int64_t now = GetUnixTime();
@@ -699,7 +699,14 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
         curl_easy_setopt(curl, CURLOPT_READDATA, &ctx);
         curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)size);
 
-        return curl_Perform(curl, nullptr);
+        int ret = curl_Perform(curl, nullptr);
+
+        if (ret == 400 && !count) {
+            // Retry once for transient BadDigest errors
+            return 500;
+        }
+
+        return ret;
     });
 
     switch (status) {
@@ -729,7 +736,7 @@ bool s3_Client::DeleteObject(Span<const char> key)
         key = Fmt(&temp_alloc, "%1/%2", config.prefix, key);
     }
 
-    int status = RunSafe("delete S3 object", 5, 204, [&](CURL *curl) {
+    int status = RunSafe("delete S3 object", 5, 204, [&](CURL *curl, int) {
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
@@ -763,7 +770,7 @@ bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mo
     TimeSpec spec = DecomposeTimeUTC(until);
     Span<const char> body = Fmt(&temp_alloc, xml, FmtTimeISO(spec), GetLockModeString(mode));
 
-    int status = RunSafe("retain S3 object", 5, [&](CURL *curl) {
+    int status = RunSafe("retain S3 object", 5, [&](CURL *curl, int) {
         int64_t now = GetUnixTime();
         TimeSpec date = DecomposeTimeUTC(now);
 
@@ -857,7 +864,7 @@ bool s3_Client::OpenAccess()
 
     // Authentification test, adjust region if needed
     {
-        int status = RunSafe("authenticate to S3 bucket", 3, 404, [&](CURL *curl) {
+        int status = RunSafe("authenticate to S3 bucket", 3, 404, [&](CURL *curl, int) {
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
@@ -934,11 +941,8 @@ void s3_Client::ReleaseConnection(CURL *curl)
     connections.Append(curl);
 }
 
-static inline bool ShouldRetry(int count, int status)
+static inline bool ShouldRetry(int status)
 {
-    if (status == 400 && !count) // Retry once for buggy endpoints
-        return true;
-
     if (status == 409) // Transient conflict
         return true;
 
@@ -954,7 +958,7 @@ static inline bool ShouldRetry(int count, int status)
     return false;
 }
 
-int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<int(CURL *)> func)
+int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<int(CURL *, int)> func)
 {
     CURL *curl = ReserveConnection();
     if (!curl)
@@ -982,11 +986,11 @@ int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<in
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &log);
 
-        status = func(curl);
+        status = func(curl, i);
 
         if (status == 200 || status == expect)
             return status;
-        if (status > 0 && !ShouldRetry(i, status))
+        if (status > 0 && !ShouldRetry(status))
             break;
 
         // Connection may be busted for some reason, start from scratch
