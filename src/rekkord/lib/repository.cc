@@ -428,25 +428,22 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
 
             blob.ptr += frag.len;
             blob.len -= frag.len;
-
-            complete |= (frag.len < BlobSplit);
+            complete = !blob.len;
 
             if (!lz4.Append(frag))
                 return rk_WriteResult::OtherError;
 
             bool success = lz4.Flush(complete, [&](Span<const uint8_t> buf) {
-                // This should rarely loop because data should compress to less
-                // than BlobSplit but we ought to be safe ;)
-
                 Size processed = 0;
 
                 while (buf.len >= BlobSplit) {
-                    Size piece_len = std::min(BlobSplit, buf.len);
-                    Span<const uint8_t> piece = buf.Take(0, piece_len);
+                    Span<const uint8_t> piece = buf.Take(0, BlobSplit);
 
                     buf.ptr += piece.len;
                     buf.len -= piece.len;
+
                     processed += piece.len;
+                    compressed += piece.len;
 
                     uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
                     unsigned long long cypher_len;
@@ -455,8 +452,6 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
                     Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
                     raw.Append(final);
                 }
-
-                compressed += processed;
 
                 if (!complete)
                     return processed;
