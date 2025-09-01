@@ -66,7 +66,7 @@ LocalDisk::~LocalDisk()
 
 rk_ChecksumType LocalDisk::GetChecksumType()
 {
-    return rk_ChecksumType::None;
+    return rk_ChecksumType::CRC64nvme;
 }
 
 bool LocalDisk::CreateDirectory(const char *path)
@@ -164,6 +164,27 @@ rk_WriteResult LocalDisk::WriteFile(const char *path, Span<const uint8_t> buf, c
     // File is complete
     CloseDescriptor(fd);
     fd = -1;
+
+    // CHECK
+    if (settings.checksum == rk_ChecksumType::CRC64nvme) {
+        StreamReader st(tmp.data);
+        uint64_t crc64 = 0;
+
+        while (!st.IsEOF()) {
+            LocalArray<uint8_t, 16384> buf;
+
+            buf.len = st.Read(buf.data);
+            if (buf.len < 0)
+                return rk_WriteResult::OtherError;
+
+            crc64 = CRC64nvme(crc64, buf);
+        }
+
+        if (crc64 != settings.hash.crc64nvme) {
+            LogError("Checksum failure for '%1'", path);
+            return rk_WriteResult::OtherError;
+        }
+    }
 
     // Finalize!
     {
