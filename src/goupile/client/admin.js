@@ -511,7 +511,7 @@ function runConfigureInstanceDialog(e, instance) {
                 });
 
                 d.tab(T.exports, () => {
-                    let export_days = [1, 2, 3, 4, 5, 6, 7].filter(day => instance.config.export_days & (1 << day));
+                    let export_days = [1, 2, 3, 4, 5, 6, 7].filter(day => instance.config.export_days & (1 << (day - 1)));
                     let export_time = new LocalTime(Math.floor(instance.config.export_time / 100), instance.config.export_time % 100);
 
                     d.multiCheck('export_days', T.export_days, [
@@ -526,21 +526,19 @@ function runConfigureInstanceDialog(e, instance) {
 
                     d.time('export_time', T.export_time, {
                         value: export_time,
-                        disabled: d.values.export_days == null
+                        disabled: !d.values.export_days?.length
                     });
                     d.boolean('*export_all', T.export_all, {
                         value: instance.config.export_all,
-                        disabled: d.values.export_days == null
+                        disabled: !d.values.export_days?.length
                     });
                 })
             });
 
             d.action(T.configure, { disabled: !d.isValid() }, async () => {
                 try {
-                    let export_days = (d.values.export_days ?? []).reduce((acc, day) => acc | (1 << day), 0);
+                    let export_days = (d.values.export_days ?? []).reduce((acc, day) => acc | (1 << (day - 1)), 0);
                     let export_time = (d.values.export_time != null) ? (d.values.export_time.hour * 100 + d.values.export_time.minute) : null;
-
-                    console.log(d.values.export_time, export_time);
 
                     await Net.post('/admin/api/instances/configure', {
                         instance: instance.key,
