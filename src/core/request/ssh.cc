@@ -31,7 +31,7 @@ K_INIT(libssh)
     K_CRITICAL(!ssh_init(), "Failed to initialize libssh");
 }
 
-K_EXIT(libssh)
+K_FINALIZE(libssh)
 {
     ssh_finalize();
 }

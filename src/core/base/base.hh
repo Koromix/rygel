@@ -4536,12 +4536,12 @@ public:
     virtual void Run() = 0;
 };
 
-class ExitHelper {
+class FinalizeHelper {
 public:
     const char *name;
-    ExitHelper *next = nullptr;
+    FinalizeHelper *next = nullptr;
 
-    ExitHelper(const char *name);
+    FinalizeHelper(const char *name);
     virtual void Run() = 0;
 };
 
@@ -4555,15 +4555,24 @@ public:
     void ClassName::Run()
 #define K_INIT(Name) K_INIT_(K_CONCAT(K_UNIQUE_NAME(InitHelper), Name), K_STRINGIFY(Name))
 
-#define K_EXIT_(ClassName, Name) \
-    class ClassName: public ExitHelper { \
+#define K_FINALIZE_(ClassName, Name) \
+    class ClassName: public FinalizeHelper { \
     public: \
-        ClassName(): ExitHelper(Name) {} \
+        ClassName(): FinalizeHelper(Name) {} \
         void Run() override; \
     }; \
-    static ClassName K_UNIQUE_NAME(exit); \
+    static ClassName K_UNIQUE_NAME(finalize); \
     void ClassName::Run()
-#define K_EXIT(Name) K_EXIT_(K_CONCAT(K_UNIQUE_NAME(ExitHelper), Name), K_STRINGIFY(Name))
+#define K_FINALIZE(Name) K_FINALIZE_(K_CONCAT(K_UNIQUE_NAME(FinalizeHelper), Name), K_STRINGIFY(Name))
+
+#define K_EXIT_(ClassName) \
+    class ClassName { \
+    public: \
+        ~ClassName(); \
+    }; \
+    static ClassName K_UNIQUE_NAME(exit); \
+    ClassName::~ClassName()
+#define K_EXIT(Name) K_EXIT_(K_CONCAT(K_UNIQUE_NAME(ExitHelper), Name))
 
 void InitApp();
 void ExitApp();

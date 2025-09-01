@@ -5827,7 +5827,7 @@ bool NotifySystemd()
 // ------------------------------------------------------------------------
 
 static InitHelper *init;
-static ExitHelper *exit;
+static FinalizeHelper *finalize;
 
 InitHelper::InitHelper(const char *name)
     : name(name)
@@ -5836,11 +5836,11 @@ InitHelper::InitHelper(const char *name)
     init = this;
 }
 
-ExitHelper::ExitHelper(const char *name)
+FinalizeHelper::FinalizeHelper(const char *name)
     : name(name)
 {
-    next = exit;
-    exit = this;
+    next = finalize;
+    finalize = this;
 }
 
 void InitApp()
@@ -5896,13 +5896,13 @@ void InitApp()
 
 void ExitApp()
 {
-    while (exit) {
+    while (finalize) {
 #if defined(K_DEBUG)
-        LogDebug("Exit %1 library", exit->name);
+        LogDebug("Finalize %1 library", finalize->name);
 #endif
 
-        exit->Run();
-        exit = exit->next;
+        finalize->Run();
+        finalize = finalize->next;
     }
 }
 
