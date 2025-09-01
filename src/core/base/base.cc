@@ -8941,7 +8941,7 @@ Span<const char> PatchFile(Span<const char> data, Allocator *alloc,
 typedef HashMap<const char *, const char *> TranslationMap;
 
 static HeapArray<TranslationTable> i18n_tables;
-static HeapArray<TranslationMap> i18n_maps;
+static NoDestroy<HeapArray<TranslationMap>> i18n_maps;
 static HashMap<Span<const char> , const TranslationTable *> i18n_locales;
 
 static const TranslationMap *i18n_default;
@@ -9000,7 +9000,8 @@ void InitLocales(Span<const TranslationTable> tables)
 
     for (const TranslationTable &table: tables) {
         i18n_tables.Append(table);
-        HashMap<const char *, const char *> *map = i18n_maps.AppendDefault();
+
+        TranslationMap *map = i18n_maps->AppendDefault();
 
         for (const TranslationTable::Pair &pair: table.messages) {
             map->Set(pair.key, pair.value);
@@ -9020,7 +9021,7 @@ void ChangeThreadLocale(const char *name)
 
     if (table) {
         Size idx = table - i18n_tables.ptr;
-        i18n_thread = &i18n_maps[idx];
+        i18n_thread = &(*i18n_maps)[idx];
     } else {
         i18n_thread = i18n_default;
     }

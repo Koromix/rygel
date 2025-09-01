@@ -622,6 +622,27 @@ DeferGuard<Fun> operator+(DeferGuardHelper, Fun &&f)
 #define K_DEFER_NC(Name, ...) \
     auto Name = K::DeferGuardHelper() + [&, __VA_ARGS__]()
 
+template <typename T>
+class NoDestroy {
+    K_DELETE_COPY(NoDestroy);
+
+    alignas(T) uint8_t data[K_SIZE(T)];
+
+public:
+    template <class... Args>
+    NoDestroy(Args&&... args) { new (data) T(std::forward<Args>(args)...); }
+
+    ~NoDestroy() = default;
+
+    const T *Get() const { return (const T *)(data); }
+    T *Get() { return (T*)data; }
+
+    const T &operator*() const { return *Get(); }
+    T& operator*() { return *Get(); }
+    const T *operator->() const { return Get(); }
+    T *operator->() { return Get(); }
+};
+
 // Heavily inspired from FunctionRef in LLVM
 template<typename Fn> class FunctionRef;
 template<typename Ret, typename ...Params>
