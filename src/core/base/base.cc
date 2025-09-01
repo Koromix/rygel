@@ -3963,15 +3963,16 @@ bool PathContainsDotDot(const char *path)
 
 static bool CheckForDumbTerm()
 {
-    static bool init = false;
-    static bool dumb = false;
-
-    if (!init) {
+    static bool dumb = ([]() {
         const char *term = GetEnv("TERM");
 
-        dumb |= term && TestStr(term, "dumb");
-        dumb |= !!GetEnv("NO_COLOR");
-    }
+        if (term && TestStr(term, "dumb"))
+            return true;
+        if (GetEnv("NO_COLOR"))
+            return true;
+
+        return false;
+    })();
 
     return dumb;
 }
