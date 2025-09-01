@@ -219,9 +219,8 @@ bool InstanceHolder::Checkpoint()
 {
     if (!db->Checkpoint())
         return false;
-
-    // Not critical
-    PerformScheduledExport();
+    if (!PerformScheduledExport())
+        return false;
 
     return true;
 }
@@ -249,8 +248,7 @@ bool InstanceHolder::PerformScheduledExport()
     settings.scheduled = true;
 
     ExportInfo info;
-    int64_t export_id = ExportRecords(this, 0, settings, &info);
-    if (export_id < 0)
+    if (ExportRecords(this, 0, settings, &info) < 0)
         return false;
 
     last_export_day = today;

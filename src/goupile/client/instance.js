@@ -817,10 +817,10 @@ async function runExportListDialog(e) {
 
                 <thead>
                     <tr>
-                        <th>Date</th>
-                        <th>Enregistrements</th>
-                        <th>Automatique</th>
-                        <th></th>
+                        <th>${T.date}</th>
+                        <th>${T.threads}</th>
+                        <th>${T.automatic}</th>
+                        <th>${T.download}</th>
                     </tr>
                 </thead>
 
@@ -830,7 +830,10 @@ async function runExportListDialog(e) {
                             <td>${(new Date(download.ctime)).toLocaleString()}</td>
                             <td>${download.threads}</td>
                             <td>${download.scheduled ? T.yes : T.no}</td>
-                            <td><a @click=${UI.wrap(e => exportRecords(download.export, stores))}>${T.download}</a></td>
+                            <td>
+                                ${download.threads ? html`<a @click=${UI.wrap(e => exportRecords(download.export, stores))}>${T.download}</a>` : ''}
+                                ${!download.threads ? '(' + T.not_available.toLowerCase() + ')' : ''}
+                            </td>
                         </tr>
                     `)}
                     ${!downloads.length ? html`<tr><td colspan="4">${T.no_export}</td></tr>` : ''}

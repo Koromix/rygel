@@ -145,7 +145,14 @@ async function exportRecords(export_id, stores, filter = null) {
 
 async function walkThreads(export_id) {
     let url = Util.pasteURL(`${ENV.urls.instance}api/export/download`, { export: export_id });
-    let json = await Net.get(url);
+    let response = await Net.fetch(url);
+
+    if (!response.ok) {
+        let err = await Net.readError(response);
+        throw new Error(err);
+    }
+
+    let json = await response.json();
     let threads = Array.isArray(json) ? json : json.threads;
 
     let tables = {};

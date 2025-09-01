@@ -832,13 +832,25 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
         return -1;
 
     if (!threads) {
-        LogError("No record to export");
-        return -1;
+        sq_Statement stmt;
+        if (!instance->db->Prepare(R"(SELECT sequence, anchor
+                                      FROM rec_exports
+                                      ORDER BY export DESC)", &stmt))
+            return -1;
+
+        if (stmt.Step()) {
+            max_sequence = sqlite3_column_int64(stmt, 0);
+            max_anchor = sqlite3_column_int64(stmt, 0);
+        } else if (stmt.IsValid()) {
+            max_sequence = 0;
+            max_anchor = 0;
+        } else {
+            return -1;
+        }
     }
 
     // We need the export ID to make it, see inside transaction
     int64_t export_id = 0;
-    const char *filename = nullptr;
 
     bool success = instance->db->Transaction([&]() {
         // Create export metadata
@@ -853,9 +865,9 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
                 return false;
         }
 
-        filename = MakeExportFileName(instance->key.ptr, export_id, now, &temp_alloc);
+        const char *filename = MakeExportFileName(instance->key.ptr, export_id, now, &temp_alloc);
 
-        if (RenameFile(tmp_filename, filename, 0) != RenameResult::Success)
+        if (threads && RenameFile(tmp_filename, filename, 0) != RenameResult::Success)
             return false;
 
         return true;
@@ -867,6 +879,7 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
         out_info->max_sequence = max_sequence;
         out_info->max_anchor = max_anchor;
     }
+
     return export_id;
 }
 
@@ -999,9 +1012,10 @@ void HandleExportDownload(http_IO *io, InstanceHolder *instance)
     }
 
     int64_t ctime;
+    int64_t threads;
     {
         sq_Statement stmt;
-        if (!instance->db->Prepare("SELECT ctime FROM rec_exports WHERE export = ?1", &stmt, export_id))
+        if (!instance->db->Prepare("SELECT ctime, threads FROM rec_exports WHERE export = ?1", &stmt, export_id))
             return;
 
         if (!stmt.Step()) {
@@ -1013,6 +1027,13 @@ void HandleExportDownload(http_IO *io, InstanceHolder *instance)
         }
 
         ctime = sqlite3_column_int64(stmt, 0);
+        threads = sqlite3_column_int64(stmt, 1);
+    }
+
+    if (!threads) {
+        LogError("Cannot download empty export");
+        io->SendError(404);
+        return;
     }
 
     const char *filename = MakeExportFileName(instance->key.ptr, export_id, ctime, io->Allocator());

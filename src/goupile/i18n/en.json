@@ -22,6 +22,7 @@
         "archive_x_restored": "Archive '{1}' restored",
         "archives": "Archives",
         "assign": "Assign",
+        "automatic": "Automatic",
         "available": "Available",
         "basic": "Basic",
         "browse": "Browse",
@@ -75,6 +76,7 @@
         "current_fs_x": "Current version: {1}",
         "data": "Data",
         "data_exports": "Data exports",
+        "date": "Date",
         "day_names": {
             "friday": "Friday",
             "monday": "Monday",
@@ -233,6 +235,7 @@
         "status_nd": "Not available",
         "status_nsp": "Refuse to answer",
         "status_wait": "Waiting",
+        "threads": "Records",
         "totp_code": "Secret code",
         "totp_digits": "6 digits",
         "unassigned": "Unassigned",
