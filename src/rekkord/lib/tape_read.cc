@@ -1604,7 +1604,7 @@ void CheckContext::MakeProgress(int64_t blobs)
     pg_blobs.SetFmt(blobs, total_blobs, T("%1 / %2 blobs"), blobs, total_blobs);
 }
 
-bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshots)
+bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshots, HeapArray<Size> *out_errors)
 {
     BlockAllocator temp_alloc;
 
@@ -1633,7 +1633,7 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
     for (Size i = 0; i < snapshots.len; i++) {
         const rk_SnapshotInfo &snapshot = snapshots[i];
 
-        valid &= check.Check(snapshot.oid, [&](int type, Span<const uint8_t>) {
+        bool ret = check.Check(snapshot.oid, [&](int type, Span<const uint8_t>) {
             if (type != (int)BlobType::Snapshot1 &&
                     type != (int)BlobType::Snapshot2 &&
                     type != (int)BlobType::Snapshot3 &&
@@ -1646,6 +1646,13 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
 
             return true;
         });
+
+        if (!ret) {
+            if (out_errors) {
+                out_errors->Append(i);
+            }
+            valid = false;
+        }
 
         progress.SetFmt(i + 1, snapshots.len, T("%1 / %2 snapshots"), i + 1, snapshots.len);
     }

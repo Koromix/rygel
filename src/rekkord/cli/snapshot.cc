@@ -420,10 +420,21 @@ T(R"(Usage: %!..+%1 scan [-C filename] [option...]%!0)"), FelixTarget);
         return 1;
 
     LogInfo("Checking repository...");
-    if (!rk_CheckSnapshots(repo.get(), snapshots))
-        return 1;
-    LogInfo("Done");
 
+    HeapArray<Size> errors;
+    bool valid = rk_CheckSnapshots(repo.get(), snapshots, &errors);
+
+    for (const Size idx: errors) {
+        const rk_SnapshotInfo &snapshot = snapshots[idx];
+        TimeSpec spec = DecomposeTimeLocal(snapshot.time);
+
+        LogError("Invalid content in snapshot '%1' (%2) from %3", snapshot.oid, snapshot.channel, FmtTimeNice(spec));
+    }
+
+    if (!valid)
+        return 1;
+
+    LogInfo("All clear!");
     return 0;
 }
 

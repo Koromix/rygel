@@ -137,7 +137,7 @@ bool rk_LocateObject(rk_Repository *repo, Span<const char> identifier, rk_Object
 bool rk_ListChildren(rk_Repository *repo, const rk_ObjectID &oid, const rk_ListSettings &settings,
                      Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
 
-bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshots);
+bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshots, HeapArray<Size> *out_errors = nullptr);
 
 const char *rk_ReadLink(rk_Repository *repo, const rk_ObjectID &oid, Allocator *alloc);
 std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Repository *repo, const rk_ObjectID &oid);
