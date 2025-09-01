@@ -259,6 +259,7 @@
         "user_x_edited": "Utilisateur '{1}' modifié",
         "username": "Nom d'utilisateur",
         "users": "Utilisateurs",
+        "local_time_x": "Heure locale {1}",
         "yes": "Oui"
     },
     "messages": {

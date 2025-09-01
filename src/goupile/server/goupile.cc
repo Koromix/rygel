@@ -455,6 +455,9 @@ static void HandleAdminRequest(http_IO *io)
                     json_Writer json(writer);
                     char buf[128];
 
+                    int64_t now = GetUnixTime();
+                    TimeSpec spec = DecomposeTimeLocal(now);
+
                     json.StartObject();
                     json.Key("key"); json.String("admin");
                     json.Key("urls"); json.StartObject();
@@ -463,6 +466,7 @@ static void HandleAdminRequest(http_IO *io)
                         json.Key("static"); json.String(Fmt(buf, "/admin/static/%1/", shared_etag).ptr);
                     json.EndObject();
                     json.Key("title"); json.String("Admin");
+                    json.Key("timezone"); json.Int(spec.offset);
                     json.Key("lang"); json.String(gp_domain.config.default_lang);
                     json.Key("permissions"); json.StartObject();
                     for (Size i = 0; i < K_LEN(UserPermissionNames); i++) {

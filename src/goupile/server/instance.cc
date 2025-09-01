@@ -175,7 +175,7 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
         if (stmt.Step()) {
             int64_t ctime = sqlite3_column_int64(stmt, 0);
             int64_t sequence = sqlite3_column_int64(stmt, 1);
-            TimeSpec spec = DecomposeTimeUTC(ctime);
+            TimeSpec spec = DecomposeTimeLocal(ctime);
 
             last_export_day = LocalDate(spec.year, spec.month, spec.day);
             last_export_sequence = sequence;
@@ -231,7 +231,7 @@ bool InstanceHolder::PerformScheduledExport()
         return true;
 
     int64_t now = GetUnixTime();
-    TimeSpec spec = DecomposeTimeUTC(now);
+    TimeSpec spec = DecomposeTimeLocal(now);
     LocalDate today(spec.year, spec.month, spec.day);
     int hhmm = spec.hour * 100 + spec.min;
 

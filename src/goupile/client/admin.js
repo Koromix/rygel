@@ -514,6 +514,11 @@ function runConfigureInstanceDialog(e, instance) {
                     let export_days = [1, 2, 3, 4, 5, 6, 7].filter(day => instance.config.export_days & (1 << (day - 1)));
                     let export_time = new LocalTime(Math.floor(instance.config.export_time / 100), instance.config.export_time % 100);
 
+                    // Beautiful JS API
+                    let time = new Date;
+                    let offset = ENV.timezone + time.getTimezoneOffset();
+                    time.setMinutes(time.getMinutes() + offset);
+
                     d.multiCheck('export_days', T.export_days, [
                         [1, T.day_names.monday],
                         [2, T.day_names.tuesday],
@@ -526,7 +531,8 @@ function runConfigureInstanceDialog(e, instance) {
 
                     d.time('export_time', T.export_time, {
                         value: export_time,
-                        disabled: !d.values.export_days?.length
+                        disabled: !d.values.export_days?.length,
+                        help: T.format(T.local_time_x, time.toLocaleTimeString())
                     });
                     d.boolean('*export_all', T.export_all, {
                         value: instance.config.export_all,

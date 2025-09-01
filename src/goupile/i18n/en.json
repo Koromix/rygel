@@ -239,6 +239,7 @@
         "totp_code": "Secret code",
         "totp_digits": "6 digits",
         "unassigned": "Unassigned",
+        "local_time_x": "Local time {1}",
         "unknown_offline_profile": "Unknown offline profile",
         "unlock": "Unlock",
         "unlock_code": "Unlock code",
