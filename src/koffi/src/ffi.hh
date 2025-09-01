@@ -47,17 +47,17 @@ enum class PrimitiveKind {
     Int8,
     UInt8,
     Int16,
-    Int16S,
+    Int16S,  // Keep behind Int16
     UInt16,
-    UInt16S,
+    UInt16S, // Keep behind UInt16
     Int32,
-    Int32S,
+    Int32S,  // Keep behind Int32
     UInt32,
-    UInt32S,
+    UInt32S, // Keep behind UInt32
     Int64,
-    Int64S,
+    Int64S,  // Keep behind Int64
     UInt64,
-    UInt64S,
+    UInt64S, // Keep behind UInt64
     String,
     String16,
     String32,
