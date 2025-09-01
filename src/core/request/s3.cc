@@ -934,8 +934,11 @@ void s3_Client::ReleaseConnection(CURL *curl)
     connections.Append(curl);
 }
 
-static inline bool ShouldRetry(int status)
+static inline bool ShouldRetry(int count, int status)
 {
+    if (status == 400 && !count) // Retry once for buggy endpoints
+        return true;
+
     if (status == 409) // Transient conflict
         return true;
 
@@ -983,7 +986,7 @@ int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<in
 
         if (status == 200 || status == expect)
             return status;
-        if (status > 0 && !ShouldRetry(status))
+        if (status > 0 && !ShouldRetry(i, status))
             break;
 
         // Connection may be busted for some reason, start from scratch
