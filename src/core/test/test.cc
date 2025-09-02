@@ -82,6 +82,7 @@ int Main(int argc, char **argv)
 
         if (!pattern || MatchPathSpec(test.path, pattern)) {
             Print("%!y..%1%!0", FmtArg(test.path).Pad(36));
+            StdOut->Flush();
 
             Size total = 0;
             Size failures = 0;
