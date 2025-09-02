@@ -1161,7 +1161,7 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
                 }
 
                 if (gp_domain.config.archive_hour >= 0) {
-                    TimeSpec spec = gp_domain.config.archive_utc ? DecomposeTimeUTC(time) : DecomposeTimeLocal(time);
+                    TimeSpec spec = DecomposeTimeLocal(time);
 
                     if (spec.hour == gp_domain.config.archive_hour && time - snapshot > 2 * 3600 * 1000) {
                         LogInfo("Creating daily snapshot");

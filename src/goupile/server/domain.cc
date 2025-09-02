@@ -185,14 +185,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                             }
                         }
                     } else if (prop.key == "AutoZone") {
-                        if (TestStrI(prop.value, "UTC")) {
-                            config.archive_utc = true;
-                        } else if (TestStrI(prop.value, "Local")) {
-                            config.archive_utc = false;
-                        } else {
-                            LogError("Unknown time mode '%1'", prop.value);
-                            valid = false;
-                        }
+                        LogWarning("Ignoring obsolete AutoZone setting");
                     } else if (prop.key == "RetentionDays") {
                         if (prop.value == "Forever") {
                             config.archive_hour = -1;

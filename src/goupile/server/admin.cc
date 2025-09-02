@@ -59,7 +59,6 @@ Title = %1
 [Archives]
 PublicKey = %2
 # AutoHour = 0
-# AutoZone = Local
 # RetentionDays = 7
 
 [Defaults]
