@@ -1240,7 +1240,7 @@ BENCHMARK_FUNCTION("base/ParseBool")
 #undef VALID
 }
 
-TEST_FUNCTION("crc/CRC32")
+TEST_FUNCTION("base/CRC32")
 {
 #define TEST_CRC(Str, Expected) \
         do { \
@@ -1260,7 +1260,7 @@ TEST_FUNCTION("crc/CRC32")
 #undef TEST_CRC
 }
 
-TEST_FUNCTION("crc/CRC32C")
+TEST_FUNCTION("base/CRC32C")
 {
 #define TEST_CRC(Str, Expected) \
         do { \
@@ -1280,7 +1280,7 @@ TEST_FUNCTION("crc/CRC32C")
 #undef TEST_CRC
 }
 
-TEST_FUNCTION("crc/CRC64xz")
+TEST_FUNCTION("base/CRC64xz")
 {
 #define TEST_CRC(Str, Expected) \
         do { \
@@ -1300,7 +1300,7 @@ TEST_FUNCTION("crc/CRC64xz")
 #undef TEST_CRC
 }
 
-TEST_FUNCTION("crc/CRC64nvme")
+TEST_FUNCTION("base/CRC64nvme")
 {
 #define TEST_CRC(Str, Expected) \
         do { \
