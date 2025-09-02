@@ -15,7 +15,7 @@
 
 import { Util, Log , LocalDate } from '../../../web/core/base.js';
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import * as UI from '../core/ui.js';
+import * as UI from '../../web/core/ui.js';
 
 import './calendar.css';
 

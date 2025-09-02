@@ -16,7 +16,7 @@
 import { render, html, live, unsafeHTML } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, HttpError } from '../../../web/core/base.js';
 import { Base64 } from '../../../web/core/mixer.js';
-import * as UI from './ui.js';
+import * as UI from '../../../web/core/ui.js';
 import { deploy } from '../../../web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';
 import { PictureCropper } from './picture.js';

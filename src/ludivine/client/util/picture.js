@@ -16,7 +16,7 @@
 import { render, html, svg, live } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import { loadImage } from '../core/misc.js';
-import * as UI from '../core/ui.js';
+import * as UI from '../../../web/core/ui.js';
 import { ColorPicker } from './color.js';
 
 import './picture.css';
@@ -134,6 +134,8 @@ function PictureCropper(title, size) {
         is_default = true;
 
         let blob = await UI.dialog({
+            overlay: true,
+
             open: () => {
                 preview.addEventListener('pointerdown', handleCustomEvent);
                 preview.addEventListener('wheel', handleCustomEvent);

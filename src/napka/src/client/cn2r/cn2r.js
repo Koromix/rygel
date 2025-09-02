@@ -15,7 +15,7 @@
 
 import { render, html, unsafeHTML } from '../../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net } from '../../../../web/core/base.js';
-import { UI } from '../../lib/ui.js';
+import * as UI from '../../../../web/core/ui.js';
 import * as parse from '../../lib/parse.js';
 import { start, zoom, makeField, makeEdit, updateEntry, deleteEntry,
          renderMarkdown, login, logout, isConnected, loadTexture } from '../map.js';

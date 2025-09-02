@@ -15,6 +15,7 @@
 
 import { render, html, svg } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LocalDate } from '../../../web/core/base.js';
+import * as UI from '../../../web/core/ui.js';
 
 function computeAge(from, to = null) {
     if (!(from instanceof Date))
@@ -328,6 +329,17 @@ function formatDescription(str) {
     return [html, text];
 }
 
+function safeTag(title) {
+    let content = html`
+        <div style="width: 320px;">
+            <p>${title}
+            <p>Les <b>chercheurs n’y ont pas accès</b> et ces données ne seront pas utilisées dans les différentes études ni même consultables par nos chercheurs.
+        </div>
+    `;
+
+    return html`<div class="safe" @click=${UI.wrap(e => popup(e, content))}></div>`;
+}
+
 export {
     computeAge,
     computeAgeMonths,
@@ -344,5 +356,7 @@ export {
     inflate,
 
     EventProviders,
-    createEvent
+    createEvent,
+
+    safeTag
 }

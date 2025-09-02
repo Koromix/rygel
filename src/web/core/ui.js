@@ -13,9 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html, noChange, directive, Directive } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../../web/core/base.js';
-import { ASSETS } from '../../assets/assets.js';
+import { render, html, noChange, directive, Directive } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Log } from './base.js';
 
 if (typeof T == 'undefined')
     T = {};
@@ -49,7 +48,7 @@ let drag_restore = null;
 let table_orders = {};
 let table_filters = {};
 
-function init(run, render) {
+function init(run = null, render = null) {
     Log.pushHandler(notifyHandler);
 
     // Detect fullscreen exit
@@ -60,8 +59,10 @@ function init(run, render) {
         }
     });
 
-    run_func = run;
-    render_func = render;
+    if (run != null)
+        run_func = run;
+    if (render != null)
+        render_func = render;
 }
 
 function notifyHandler(action, entry) {
@@ -205,12 +206,12 @@ function main(content = null) {
         main_el.className = 'primary';
     }
 
-    if (dialogs.length) {
-        let el = dialogs[dialogs.length - 1].el;
-        render_func(el, fullscreen);
+    let overlay = dialogs.find(dlg => dlg.overlay);
+
+    if (overlay != null) {
+        render_func(overlay.el, fullscreen);
     } else {
         render_func(main_el, fullscreen);
-
         main_el.classList.toggle('fullscreen', fullscreen);
     }
 
@@ -238,15 +239,15 @@ async function toggleFullscreen(enable = null) {
 }
 
 function dialog(options = {}) {
-    options = Object.assign({}, options);
-
-    if (options.resolve_on_submit == null)
-        options.resolve_on_submit = true;
-    if (options.can_be_closed == null)
-        options.can_be_closed = true;
+    options = Object.assign({
+        overlay: false,
+        resolve_on_submit: true,
+        can_be_closed: true
+    }, options);
 
     let dlg = {
         el: null,
+        overlay: options.overlay,
 
         update: null,
         resolve: null,
@@ -272,8 +273,12 @@ function dialog(options = {}) {
         init_dialogs = true;
     }
 
-    dlg.el = document.createElement('main');
-    dlg.el.className = 'dialog';
+    if (dlg.overlay) {
+        dlg.el = document.createElement('main');
+        dlg.el.className = 'dialog';
+    } else {
+        dlg.el = document.createElement('dialog');
+    }
 
     let p = new Promise((resolve, reject) => {
         dlg.update = () => {
@@ -320,13 +325,20 @@ function dialog(options = {}) {
             dlg.update();
         }
 
-        setTimeout(run_func, 0);
+        if (dlg.overlay) {
+            main();
+        } else {
+            document.body.removeChild(dlg.el);
+        }
 
-        main();
+        setTimeout(run_func, 0);
     });
 
     dialogs.push(dlg);
     dlg.update();
+
+    if (!dlg.overlay)
+        document.body.appendChild(dlg.el);
 
     if (options.open != null)
         options.open(dlg.el.children[0]);
@@ -483,17 +495,6 @@ function popup(e, content) {
 function closePopup() {
     if (current_popup != null)
         current_popup.reject();
-}
-
-function safe(title) {
-    let content = html`
-        <div style="width: 320px;">
-            <p>${title}
-            <p>Les <b>chercheurs n’y ont pas accès</b> et ces données ne seront pas utilisées dans les différentes études ni même consultables par nos chercheurs.
-        </div>
-    `;
-
-    return html`<div class="safe" @click=${wrap(e => popup(e, content))}></div>`;
 }
 
 class SelectDirective extends Directive {
@@ -673,12 +674,12 @@ function setFilter(key, str, keys) {
     }
 }
 
-function tableValues(key, values, default_by = null) {
+function tableValues(key, values, default_by = null, default_ascending = null) {
     let order = table_orders[key];
     let filter = table_filters[key];
 
     if (order == null && default_by != null) {
-        setOrder(key, default_by);
+        setOrder(key, default_by, default_ascending);
         order = table_orders[key];
     }
     if (order != null) {
@@ -761,12 +762,10 @@ export {
     popup,
     closePopup,
 
-    safe,
-
     selectValue,
     reorderItems,
 
     tableHeader,
     tableFilter,
-    tableValues,
+    tableValues
 }

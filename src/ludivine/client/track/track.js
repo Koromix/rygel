@@ -1,4 +1,5 @@
-// Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
+
+import * as UI from '../../web/core/ui.js';// Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import * as UI from '../ui.js';
+import * as UI from '../../../web/core/ui.js';
 import { DrawAPI, InputAPI } from './api.js';
 import { calibrate } from './trackers/mouse.js';
 import experiments from './experiments/experiments.json';

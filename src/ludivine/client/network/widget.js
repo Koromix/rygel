@@ -15,7 +15,7 @@
 
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
-import { loadTexture } from '../core/misc.js';
+import { loadTexture, safeTag } from '../core/misc.js';
 import { PROXIMITY_LEVELS, PERSON_KINDS, QUALITY_COLORS, USER_GUIDES } from './constants.js';
 import { ASSETS } from '../../assets/assets.js';
 
@@ -526,6 +526,8 @@ function NetworkWidget(app, mod, world) {
 
         for (;;) {
             let names = await UI.dialog({
+                overlay: true,
+
                 run: (render, close) => {
                     text = text.trim().replace(/ *-+ */g, '-');
 
@@ -547,7 +549,7 @@ function NetworkWidget(app, mod, world) {
                                 <label>
                                     <span>
                                         Quels sont les noms/libellés des personnes que vous souhaitez ajouter ?
-                                        ${UI.safe('Les noms des personnes sont privées.')}
+                                        ${safeTag('Les noms des personnes sont privées.')}
                                     </span>
 
                                     <textarea rows="7" @input=${e => { text = e.target.value; render(); }}>${text}</textarea>
@@ -577,6 +579,8 @@ function NetworkWidget(app, mod, world) {
                 }));
 
                 await UI.dialog({
+                    overlay: true,
+
                     run: (render, close) => {
                         return html`
                             <div class="tabbar">
@@ -746,6 +750,8 @@ function NetworkWidget(app, mod, world) {
         let name = namePerson(p, false);
 
         await UI.dialog({
+            overlay: true,
+
             run: (render, close) => html`
                 <div class="tabbar">
                     <a class="active">Modifier la relation ${name}</a>
@@ -835,6 +841,8 @@ function NetworkWidget(app, mod, world) {
         let b = persons.find(it => it.id == link.b);
 
         await UI.dialog({
+            overlay: true,
+
             run: (render, close) => html`
                 <div class="tabbar">
                     <a class="active">Modifier le lien entre ${namePerson(a, false)} et ${namePerson(b, false)}</a>

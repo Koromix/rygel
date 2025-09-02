@@ -16,13 +16,13 @@
 import { render, html, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
 import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
 import { Util, Log, Net, HttpError, LocalDate } from '../../web/core/base.js';
+import * as UI from '../../web/core/ui.js';
 import { Hex, Base64 } from '../../web/core/mixer.js';
 import { computeAge, dateToString, niceDate,
          progressBar, progressCircle, deflate, inflate,
-         EventProviders, createEvent } from './core/misc.js';
+         EventProviders, createEvent, safeTag } from './core/misc.js';
 import { PictureCropper } from './util/picture.js';
 import { PROJECTS } from '../projects/projects.js';
-import * as UI from './core/ui.js';
 import { initSync, isSyncing, downloadVault, uploadVault, openVault } from './core/sync.js';
 import { ProjectInfo, ProjectBuilder } from './core/project.js';
 import { ConsentModule } from './form/consent.js';
@@ -843,7 +843,7 @@ async function runProfile() {
                 <div class="box profile">
                     <div class="header">
                         Profil
-                        ${UI.safe('Votre avatar est privé.')}
+                        ${safeTag('Votre avatar est privé.')}
                     </div>
                     <img class="avatar" src=${identity?.picture ?? ASSETS['ui/user']} alt=""/>
 
@@ -869,7 +869,7 @@ async function runProfile() {
                     <div class="box">
                         <div class="header">
                             Mon journal
-                            ${UI.safe('Les entrées de votre journal sont privées.')}
+                            ${safeTag('Les entrées de votre journal sont privées.')}
                         </div>
                         ${entries.map(entry => html`
                             <div class="diary">
@@ -1035,6 +1035,8 @@ function isLogged() {
 
 async function changePassword() {
     await UI.dialog({
+        overlay: true,
+
         run: (render, close) => {
             return html`
                 <div class="tabbar">

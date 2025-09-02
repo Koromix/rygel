@@ -15,7 +15,7 @@
 
 import { render, html, svg, ref } from '../../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../../web/libjs/common.js';
-import * as UI from '../../lib/ui.js';
+import * as UI from '../../../web/core/ui.js';
 import Seeso, { CalibrationAccuracyCriteria, InitializationErrorType } from '../../../../../vendor/seeso/seeso.js';
 
 let seeso = null;
@@ -47,6 +47,8 @@ async function calibrate(video, draw, input) {
             input.stop();
 
             await UI.dialog({
+                overlay: true,
+
                 run: (render, close) => html`
                     <div class="title">
                         Clé SeeSo

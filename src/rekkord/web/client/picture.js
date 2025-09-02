@@ -15,7 +15,7 @@
 
 import { render, html, live } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net } from '../../../web/core/base.js';
-import * as UI from './ui.js';
+import * as UI from '../../../web/core/ui.js';
 
 if (typeof T == 'undefined')
     T = {};

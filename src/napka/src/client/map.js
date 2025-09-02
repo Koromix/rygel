@@ -16,7 +16,7 @@
 import { render, html, unsafeHTML } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import MarkdownIt from '../../node_modules/markdown-it/dist/markdown-it.js';
 import { Util, Log, Net } from '../../../web/core/base.js';
-import { UI } from '../lib/ui.js';
+import * as UI from '../../../web/core/ui.js';
 import * as parse from '../lib/parse.js';
 import { AppRunner } from '../../../web/core/runner.js';
 import { TileMap } from '../lib/tilemap.js';
@@ -43,7 +43,7 @@ let edit_changes = new Set;
 let edit_key = null;
 
 async function start(prov, options = {}) {
-    Log.pushHandler(UI.notifyHandler);
+    UI.init();
 
     provider = prov;
     await provider.loadMap();
@@ -209,15 +209,20 @@ async function login() {
                 <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
             </div>
 
-            <label>
-                <span>Utilisateur</span>
-                <input name="username" type="text" />
-            </label>
-            <label>
-                <span>Mot de passe</span>
-                <input name="password" type="password" />
-            </label>
-            <button type="submit">Se connecter</button>
+            <div class="main">
+                <label>
+                    <span>Utilisateur</span>
+                    <input name="username" type="text" />
+                </label>
+                <label>
+                    <span>Mot de passe</span>
+                    <input name="password" type="password" />
+                </label>
+            </div>
+
+            <div class="footer">
+                <button type="submit">Se connecter</button>
+            </div>
         `,
 
         submit: async (elements) => {
@@ -355,7 +360,7 @@ async function handleClick(markers, clickable) {
                         <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
                     </div>
 
-                    <div @click=${handlePopupClick}>
+                    <div class="main" @click=${handlePopupClick}>
                         ${markers.map(marker => html`
                             <a @click=${UI.wrap(e => { handleClick([marker], true); close(); })}>${marker.entry.name}</a><br>
                         `)}
@@ -382,7 +387,7 @@ async function handleClick(markers, clickable) {
                         <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
                     </div>
 
-                    <div @click=${handlePopupClick}>
+                    <div class="main" @click=${handlePopupClick}>
                         ${provider.renderEntry(entry, edit_key)}
                     </div>
 
@@ -391,8 +396,8 @@ async function handleClick(markers, clickable) {
                             <button type="button" class="danger"
                                     @click=${UI.confirm('Supprimer cet établissement', e => deleteEntry(entry.id).then(close))}>Supprimer</button>
                             <div style="flex: 1;"></div>
-                            <button @click=${closeOrSubmit} type="submit">Modifier</button>
                             <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
+                            <button @click=${closeOrSubmit} type="submit">Modifier</button>
                         </div>
                     ` : ''}
                 `,

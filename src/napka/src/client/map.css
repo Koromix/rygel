@@ -430,69 +430,70 @@ form {
     box-shadow: #15172526 0px 15px 25px 0px,
                 #15172520 0px 2px 8px 0px;
     gap: 0.71em;
-}
-form fieldset {
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.71em;
-    padding: 10px 12px;
-    background: #f8f8f8;
-    border: none;
-    border-radius: 4px;
-}
-form fieldset:disabled > * { opacity: 0.2; }
-form > label {
-    display: flex;
-    gap: 0.43em;
-    align-items: center;
-    height: 2em;
-    white-space: nowrap;
-}
-form > label > span:first-child { width: 180px; }
-form > label > input:not([type=checkbox]):not([type=radio]), form label > select { flex: 1; }
-form input[type=text], form input[type=password], form select { width: 90%; }
-form > button {
-    margin-top: 20px;
-    padding: 3px 12px 4px 12px;
-    align-self: center;
-}
-form > .title {
-    display: flex;
-    position: sticky;
-    top: -28px;
-    z-index: 9999;
-    margin: -28px -16px 8px -16px;
-    font-weight: bold;
-    border-bottom: 1px solid #ededf0;
-    border-radius: 6px 6px 0 0;
-    background: #eee;
-    padding: 10px;
-    align-items: center;
-    justify-content: center;
-    gap: 0.71em;
-}
-form > .title > span {
-    padding-left: 5px;
-    flex: 1;
-}
-form > .title > span + button { margin-left: 50px; }
-form > .footer {
-    display: flex;
-    position: sticky;
-    bottom: -16px;
-    z-index: 9999;
-    margin: 8px -16px -16px -16px;
-    border-bottom: 1px solid #ededf0;
-    border-radius: 0 0 6px 6px;
-    background: #eee;
-    padding: 10px;
-    align-items: center;
-    justify-content: right;
-    gap: 0.71em;
+
+    & fieldset {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.71em;
+        padding: 10px 12px;
+        background: #f8f8f8;
+        border: none;
+        border-radius: 4px;
+    }
+    & fieldset:disabled > * { opacity: 0.2; }
+
+    & label {
+        display: flex;
+        gap: 0.43em;
+        align-items: center;
+        height: 2em;
+        white-space: nowrap;
+    }
+    & label > span:first-child { width: 180px; }
+    & label > input:not([type=checkbox]):not([type=radio]), form label > select { flex: 1; }
+    & * + label { margin-top: 1em; }
+    & label:empty { display: none; }
+
+    & input[type=text], form input[type=password], form select { width: 90%; }
+
+    & > .title {
+        display: flex;
+        position: sticky;
+        top: -28px;
+        z-index: 9999;
+        margin: -28px -16px 8px -16px;
+        font-weight: bold;
+        border-bottom: 1px solid #ededf0;
+        border-radius: 6px 6px 0 0;
+        background: #eee;
+        padding: 10px;
+        align-items: center;
+        justify-content: center;
+        gap: 0.71em;
+    }
+    & > .title > span {
+        padding-left: 5px;
+        flex: 1;
+    }
+    & > .title > span + button { margin-left: 50px; }
+    & > .footer {
+        display: flex;
+        position: sticky;
+        bottom: -16px;
+        z-index: 9999;
+        margin: 8px -16px -16px -16px;
+        border-bottom: 1px solid #ededf0;
+        border-radius: 0 0 6px 6px;
+        background: #eee;
+        padding: 10px;
+        align-items: center;
+        justify-content: right;
+        gap: 0.71em;
+    }
 }
 
-.dialog {
+dialog {
     position: fixed;
     z-index: 9999;
     left: 0;
@@ -504,22 +505,23 @@ form > .footer {
     justify-content: center;
     background: #ffffffcc;
     backdrop-filter: blur(4px);
+
+    & > form {
+        background-color: white;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    & > form div.info {
+        display: flex;
+        width: 656px;
+    }
+    & > form div.info > div {
+        padding: 8px;
+        width: 320px;
+        flex-wrap: wrap;
+    }
 }
-.dialog.screen { background: #76b35a; }
-.dialog > form {
-    background-color: white;
-    max-height: 80vh;
-    overflow-y: auto;
-}
-.dialog > form div.info {
-    display: flex;
-    width: 656px;
-}
-.dialog > form div.info > div {
-    padding: 8px;
-    width: 320px;
-    flex-wrap: wrap;
-}
+dialog.screen { background: #76b35a; }
 
 @media (max-width: 1100px) {
     body {
