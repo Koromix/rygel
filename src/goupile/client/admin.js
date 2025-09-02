@@ -511,7 +511,7 @@ function runConfigureInstanceDialog(e, instance) {
                 });
 
                 d.tab(T.exports, () => {
-                    let export_days = [1, 2, 3, 4, 5, 6, 7].filter(day => instance.config.export_days & (1 << (day - 1)));
+                    let export_days = [0, 1, 2, 3, 4, 5, 6].filter(day => instance.config.export_days & (1 << day));
                     let export_time = new LocalTime(Math.floor(instance.config.export_time / 100), instance.config.export_time % 100);
 
                     // Beautiful JS API
@@ -520,13 +520,13 @@ function runConfigureInstanceDialog(e, instance) {
                     time.setMinutes(time.getMinutes() + offset);
 
                     d.multiCheck('export_days', T.export_days, [
-                        [1, T.day_names.monday],
-                        [2, T.day_names.tuesday],
-                        [3, T.day_names.wednesday],
-                        [4, T.day_names.thursday],
-                        [5, T.day_names.friday],
-                        [6, T.day_names.saturday],
-                        [7, T.day_names.sunday]
+                        [0, T.day_names.monday],
+                        [1, T.day_names.tuesday],
+                        [2, T.day_names.wednesday],
+                        [3, T.day_names.thursday],
+                        [4, T.day_names.friday],
+                        [5, T.day_names.saturday],
+                        [6, T.day_names.sunday]
                     ], { value: export_days });
 
                     d.time('export_time', T.export_time, {
@@ -543,7 +543,7 @@ function runConfigureInstanceDialog(e, instance) {
 
             d.action(T.configure, { disabled: !d.isValid() }, async () => {
                 try {
-                    let export_days = (d.values.export_days ?? []).reduce((acc, day) => acc | (1 << (day - 1)), 0);
+                    let export_days = (d.values.export_days ?? []).reduce((acc, day) => acc | (1 << day), 0);
                     let export_time = (d.values.export_time != null) ? (d.values.export_time.hour * 100 + d.values.export_time.minute) : null;
 
                     await Net.post('/admin/api/instances/configure', {
