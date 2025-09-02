@@ -163,8 +163,25 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
             return false;
     }
 
-    // Find last scheduled export
+    // Check configuration
     {
+        bool valid = true;
+
+        if (!config.name) {
+            LogError("Missing instance name");
+            valid = false;
+        }
+        if (config.max_file_size <= 0) {
+            LogError("Maximum file size must be >= 0");
+            valid = false;
+        }
+
+        if (!valid)
+            return false;
+    }
+
+    // Find last scheduled export
+    if (!legacy) {
         sq_Statement stmt;
         if (!db->Prepare(R"(SELECT ctime, sequence
                             FROM rec_exports
@@ -182,23 +199,6 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
         } else if (!stmt.IsValid()) {
             return false;
         }
-    }
-
-    // Check configuration
-    {
-        bool valid = true;
-
-        if (!config.name) {
-            LogError("Missing instance name");
-            valid = false;
-        }
-        if (config.max_file_size <= 0) {
-            LogError("Maximum file size must be >= 0");
-            valid = false;
-        }
-
-        if (!valid)
-            return false;
     }
 
     // Instance title
@@ -219,7 +219,7 @@ bool InstanceHolder::Checkpoint()
 {
     if (!db->Checkpoint())
         return false;
-    if (!PerformScheduledExport())
+    if (!legacy && !PerformScheduledExport())
         return false;
 
     return true;
@@ -227,6 +227,8 @@ bool InstanceHolder::Checkpoint()
 
 bool InstanceHolder::PerformScheduledExport()
 {
+    K_ASSERT(!legacy);
+
     if (!config.export_days)
         return true;
 
