@@ -239,7 +239,7 @@ bool InstanceHolder::PerformScheduledExport()
 
     if (last_export_day == today)
         return true;
-    if (!(config.export_days & (1 << spec.day)))
+    if (!(config.export_days & (1 << today.GetWeekDay())))
         return true;
     if (hhmm < config.export_time)
         return true;
