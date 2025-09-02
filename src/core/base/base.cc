@@ -5876,6 +5876,10 @@ void InitApp()
             kill(-pid, SIGTERM);
         }
     });
+
+    // Make sure timezone information is in place, which is useful if some kind of sandbox runs later and
+    // the timezone information is not available (seccomp, namespace, landlock, whatever).
+    tzset();
 #endif
 
 #if defined(__OpenBSD__)
