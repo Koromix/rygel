@@ -7,6 +7,11 @@
             "path": "src/core/i18n"
         },
         {
+            "namespace": "web",
+            "sources": ["src/web"],
+            "path": "src/web/i18n"
+        },
+        {
             "namespace": "goupile",
             "sources": [
                 "src/goupile/server",

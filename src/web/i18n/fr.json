@@ -1,0 +1,9 @@
+{
+    "keys": {
+        "cancel": "Annuler",
+        "confirm": "Confirmer",
+        "confirm_not_reversible": "Attention, cette action n'est pas réversible !",
+        "filter": "Filtrer"
+    },
+    "messages": {}
+}
