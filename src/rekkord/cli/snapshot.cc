@@ -431,11 +431,13 @@ T(R"(Usage: %!..+%1 scan [-C filename] [option...]%!0)"), FelixTarget);
         LogError("Invalid content in snapshot '%1' (%2) from %3", snapshot.oid, snapshot.channel, FmtTimeNice(spec));
     }
 
-    if (!valid)
+    if (valid) {
+        LogInfo("Checked %1 snapshots, all clear!", snapshots.len);
+        return 0;
+    } else {
+        LogInfo("Checked %1 snapshots, %2 are invalid", snapshots.len, errors.len);
         return 1;
-
-    LogInfo("All clear!");
-    return 0;
+    }
 }
 
 }
