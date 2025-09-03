@@ -1056,14 +1056,14 @@ declare module "ace-builds" {
     export function edit(el?: string | (HTMLElement & {
         env?: any;
         value?: any;
-    }) | null, options?: any): Editor;
+    }) | null, options?: Partial<import("ace-builds").Ace.EditorOptions>): Editor;
     export function createEditSession(text: import("ace-builds-internal/document").Document | string, mode?: import("ace-builds").Ace.SyntaxMode): EditSession;
     import { Editor } from "ace-builds-internal/editor";
     import { EditSession } from "ace-builds-internal/edit_session";
     import { Range } from "ace-builds-internal/range";
     import { UndoManager } from "ace-builds-internal/undomanager";
     import { VirtualRenderer as Renderer } from "ace-builds-internal/virtual_renderer";
-    export var version: "1.43.2";
+    export var version: "1.43.3";
     export { Range, Editor, EditSession, UndoManager, Renderer as VirtualRenderer };
 }
 

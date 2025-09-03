@@ -375,7 +375,7 @@ declare module "ace-builds-internal/config" {
             string
         ], onLoad: (module: any) => void) => void;
         setModuleLoader: (moduleName: any, onLoad: any) => void;
-        version: "1.43.2";
+        version: "1.43.3";
     };
     export = _exports;
 }
@@ -2758,9 +2758,7 @@ declare module "ace-builds-internal/editor" {
          * Cleans up the entire editor.
          **/
         destroy(): void;
-        /**
-         * true if editor is destroyed
-         */
+        /** true if editor is destroyed */
         destroyed: boolean;
         /**
          * Enables automatic scrolling of the cursor into view when editor itself is inside scrollable element
