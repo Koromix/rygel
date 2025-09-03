@@ -188,7 +188,7 @@ function AppRunner(canvas) {
         }
 
         // Reduce flickering after resize
-        if (handle_draw != null)
+        if (update_counter && handle_draw != null)
             handle_draw();
 
         self.busy();
