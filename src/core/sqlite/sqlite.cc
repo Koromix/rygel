@@ -28,7 +28,9 @@ namespace K {
 
 K_INIT(SQLite)
 {
+#if defined(SQLITE_EXTENSIONS)
     sqlite3_auto_extension((void(*)())sqlite3_uuid_init);
+#endif
 }
 
 sq_Statement &sq_Statement::operator=(sq_Statement &&other)
@@ -174,7 +176,9 @@ bool sq_Database::Close()
 {
     bool success = true;
 
+#if defined(SQLITE_SNAPSHOTS)
     success &= StopSnapshot();
+#endif
 
     int ret = sqlite3_close(db);
     if (ret != SQLITE_OK) {
@@ -316,11 +320,16 @@ restart:
 
 bool sq_Database::Checkpoint(bool restart)
 {
+#if defined(SQLITE_SNAPSHOTS)
     if (snapshot) {
         return CheckpointSnapshot(restart);
     } else {
         return CheckpointDirect();
     }
+#else
+    (void)restart;
+    return CheckpointDirect();
+#endif
 }
 
 bool sq_Database::CheckpointDirect()
