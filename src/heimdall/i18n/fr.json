@@ -1,0 +1,25 @@
+{
+    "keys": {},
+    "messages": {
+        "Compiler: %1": null,
+        "Database schema is too recent (%1, expected %2)": null,
+        "Exit requested": null,
+        "Init HTTP server": null,
+        "Init assets": null,
+        "Init data": null,
+        "Init sandbox": null,
+        "Migrate database: %1 to %2": null,
+        "Missing database filename": null,
+        "Periodic timer set to %1 s": null,
+        "Process interrupted": null,
+        "Reload assets": null,
+        "Request is missing required Host header": null,
+        "Sandbox mode is not supported on this platform": null,
+        "Unexpected Host header '%1'": null,
+        "Unknown attribute '%1'": null,
+        "Unknown command '%1'": null,
+        "Unknown section '%1'": null,
+        "Usage: %!..+%1 [serve] [option...]%!0\n\nOptions:\n\n    %!..+-C, --config_file filename%!0     Set configuration file\n                                   %!D..(default: %2)%!0\n\n    %!..+-p, --port port%!0                Change web server port\n                                   %!D..(default: %3)%!0\n        %!..+--sandbox%!0                  Run sandboxed (on supported platforms)\n\nOther commands:\n\n    %!..+migrate%!0                        Create or migrate session database": null,
+        "Usage: %!..+%1 migrate [option...] filename%!0": null
+    }
+}
