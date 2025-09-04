@@ -23,9 +23,6 @@
 
 #include "src/core/base/base.hh"
 #include "vendor/sqlite3mc/sqlite3mc.h"
-#if defined(SQLITE_SNAPSHOTS)
-    #include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
-#endif
 
 // Work around -Wzero-as-null-pointer-constant warning
 #undef SQLITE_STATIC
@@ -139,22 +136,7 @@ class sq_Database {
     std::thread::id running_exclusive_thread;
     std::atomic_bool lock_reads { false };
 
- #if defined(SQLITE_SNAPSHOTS)
-    bool snapshot = false;
-    std::thread snapshot_thread;
-    std::mutex snapshot_mutex;
-    std::condition_variable snapshot_cv;
-    std::atomic_bool snapshot_checkpointing { false };
-    HeapArray<char> snapshot_path_buf;
-    StreamWriter snapshot_main_writer;
-    StreamReader snapshot_wal_reader;
-    StreamWriter snapshot_wal_writer;
-    crypto_hash_sha256_state snapshot_wal_state;
-    int64_t snapshot_full_delay;
-    int64_t snapshot_start;
-    Size snapshot_frame;
-    std::atomic_bool snapshot_data { false };
-#endif
+    struct sq_SnapshotPriv *snapshot = nullptr;
 
 public:
     sq_Database() {}
@@ -168,10 +150,9 @@ public:
 
     bool SetWAL(bool enable);
 
- #if defined(SQLITE_SNAPSHOTS)
+    // Cannot be used if core/sqlite is built without SQLITE_SNAPSHOTS, will trigger link error
     bool SetSnapshotDirectory(const char *directory, int64_t full_delay);
     bool UsesSnapshot() const { return snapshot; }
-#endif
 
     bool GetUserVersion(int *out_version);
     bool SetUserVersion(int version);

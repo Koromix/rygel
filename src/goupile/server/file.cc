@@ -19,6 +19,7 @@
 #include "instance.hh"
 #include "goupile.hh"
 #include "user.hh"
+#include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
 
 #if defined(_WIN32)
     #include <io.h>
