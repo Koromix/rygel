@@ -1133,7 +1133,7 @@ function FormBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
-            <input id=${id} type="file" size="${options.size || 30}"
+            <input id=${id} type="file" size=${options.size || 30}
                    placeholder=${options.placeholder || ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleFileInput(e, key)}
@@ -1195,7 +1195,7 @@ function FormBuilder(state, model, readonly = false) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
-            <span id="${id}" class="fm_calc">${text}</span>
+            <span id=${id} class="fm_calc">${text}</span>
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 

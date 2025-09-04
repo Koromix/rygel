@@ -1573,7 +1573,7 @@ async function configureTOTP(e) {
                 ` : ''}
 
                 ${enable ? html`
-                    <div style="text-align: center; margin-top: 2em;"><img src="${qrcode.image}" alt="" /></div>
+                    <div style="text-align: center; margin-top: 2em;"><img src=${qrcode.image} alt="" /></div>
                     <p style="text-align: center; font-size: 0.8em; margin-top: 0;">${qrcode.secret}</p>
 
                     <p>

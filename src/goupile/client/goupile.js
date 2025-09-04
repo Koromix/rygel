@@ -634,7 +634,7 @@ async function runResetTOTP(e) {
             <p>${unsafeHTML(T.confirm_secret_qr)}</p>
             <p><i>${T.applications_totp}</i></p>
 
-            <div style="text-align: center; margin-top: 2em;"><img src="${qrcode.image}" alt="" /></div>
+            <div style="text-align: center; margin-top: 2em;"><img src=${qrcode.image} alt="" /></div>
             <p style="text-align: center; font-size: 0.8em;">${qrcode.secret}</p>
         `);
 

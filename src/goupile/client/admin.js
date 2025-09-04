@@ -167,7 +167,7 @@ function renderUsers() {
                             <tr>
                                 <td style=${'text-align: left;' + (user.root ? ' color: #db0a0a;' : '')}>
                                     ${user.username}
-                                    ${user.root ? html`<span title="${T.root}">♛\uFE0E</span>` : ''}
+                                    ${user.root ? html`<span title=${T.root}>♛\uFE0E</span>` : ''}
                                 </td>
                                 ${selected_instance == null ? html`
                                     <td style="text-align: left;">${user.email != null ? html`<a href=${'mailto:' + user.email}>${user.email}</a>` : ''}</td>

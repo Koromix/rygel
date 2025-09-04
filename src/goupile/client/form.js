@@ -1149,7 +1149,7 @@ function FormBuilder(state, model, options = {}) {
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
             ${makeLabel(intf)}
-            <div id="${id}" class="fm_file">
+            <div id=${id} class="fm_file">
                 <span>
                     ${value == null ? html`<i>${options.placeholder || ''}</i>` : ''}
                     ${is_file ? html`<i>${T.send}${T._colon}</i> ${value.name}` : ''}
@@ -1233,7 +1233,7 @@ function FormBuilder(state, model, options = {}) {
         let render = (intf, id) => renderWrappedWidget(intf, html`
             ${makeLabel(intf)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
-            <span id="${id}" class="fm_calc">${text}</span>
+            <span id=${id} class="fm_calc">${text}</span>
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
