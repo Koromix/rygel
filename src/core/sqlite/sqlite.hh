@@ -137,6 +137,7 @@ class sq_Database {
     std::thread::id running_exclusive_thread;
     std::atomic_bool lock_reads { false };
 
+ #if defined(SQLITE_SNAPSHOTS)
     bool snapshot = false;
     std::thread snapshot_thread;
     std::mutex snapshot_mutex;
@@ -151,6 +152,7 @@ class sq_Database {
     int64_t snapshot_start;
     Size snapshot_frame;
     std::atomic_bool snapshot_data { false };
+#endif
 
 public:
     sq_Database() {}
@@ -163,9 +165,11 @@ public:
     bool Close();
 
     bool SetWAL(bool enable);
-    bool SetSnapshotDirectory(const char *directory, int64_t full_delay);
 
+ #if defined(SQLITE_SNAPSHOTS)
+    bool SetSnapshotDirectory(const char *directory, int64_t full_delay);
     bool UsesSnapshot() const { return snapshot; }
+#endif
 
     bool GetUserVersion(int *out_version);
     bool SetUserVersion(int version);

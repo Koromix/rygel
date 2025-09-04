@@ -19,6 +19,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+#if defined(SQLITE_SNAPSHOTS)
+
 #include "src/core/base/base.hh"
 #include "snapshot.hh"
 #include "sqlite.hh"
@@ -546,3 +548,5 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const c
 }
 
 }
+
+#endif
