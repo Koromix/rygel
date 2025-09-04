@@ -24,8 +24,8 @@
 
 namespace K {
 
-BucketArray<const char *> rcc_log_messages;
-bool rcc_log_missing_messages = false;
+static BucketArray<const char *> log_messages;
+static bool log_missing = false;
 
 void rcc_RedirectLog()
 {
@@ -34,12 +34,12 @@ void rcc_RedirectLog()
             case LogLevel::Warning:
             case LogLevel::Error: {
                 Allocator *alloc;
-                const char **ptr = rcc_log_messages.AppendDefault(&alloc);
+                const char **ptr = log_messages.AppendDefault(&alloc);
                 *ptr = DuplicateString(msg, alloc).ptr;
 
-                if (rcc_log_messages.count > 100) {
-                    rcc_log_messages.RemoveFirst();
-                    rcc_log_missing_messages = true;
+                if (log_messages.count > 100) {
+                    log_messages.RemoveFirst();
+                    log_missing = true;
                 }
             } break;
 
@@ -53,22 +53,22 @@ void rcc_RedirectLog()
 
 void rcc_DumpWarnings()
 {
-    for (const char *msg: rcc_log_messages) {
+    for (const char *msg: log_messages) {
         Rcpp::warning(msg);
     }
-    rcc_log_messages.Clear();
+    log_messages.Clear();
 
-    if (rcc_log_missing_messages) {
+    if (log_missing) {
         Rcpp::warning("There were too many warnings, some have been lost");
-        rcc_log_missing_messages = false;
+        log_missing = false;
     }
 }
 
 void rcc_StopWithLastError()
 {
-    if (rcc_log_messages.count) {
-        std::string error_msg = rcc_log_messages[rcc_log_messages.count - 1];
-        rcc_log_messages.RemoveLast();
+    if (log_messages.count) {
+        std::string error_msg = log_messages[log_messages.count - 1];
+        log_messages.RemoveLast();
         rcc_DumpWarnings();
         Rcpp::stop(error_msg);
     } else {

@@ -27,9 +27,6 @@
 
 namespace K {
 
-extern BucketArray<const char *> rcc_log_messages;
-extern bool rcc_log_missing_messages;
-
 void rcc_RedirectLog();
 void rcc_DumpWarnings();
 void rcc_StopWithLastError() __attribute__((noreturn));
