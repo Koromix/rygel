@@ -1,0 +1,11 @@
+Package: heimdallR
+Type: Package
+Title: Timeline visualization package
+Encoding: UTF-8
+Version: 0.0.0.9000
+Author: Niels Martignene
+Maintainer: Niels Martignene <niels.martignene@protonmail.com>
+Description: Timeline visualization package
+License: GPL-3
+Imports: Rcpp (>= 0.12.13)
+LinkingTo: Rcpp

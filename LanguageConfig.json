@@ -21,6 +21,11 @@
             "path": "src/goupile/i18n"
         },
         {
+            "namespace": "heimdall",
+            "sources": ["src/heimdall"],
+            "path": "src/heimdall/i18n"
+        },
+        {
             "namespace": "meestic",
             "sources": ["src/meestic"],
             "path": "src/meestic/i18n"
