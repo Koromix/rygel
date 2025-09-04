@@ -533,10 +533,13 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     }
 
     int dispense_mode = -1;
-    if (dispense_mode_str &&
-            !OptionToEnumI(mco_DispenseModeOptions, dispense_mode_str, &dispense_mode)) {
-        LogError("Unknown dispensation mode '%1'", dispense_mode_str);
-        rcc_StopWithLastError();
+    if (dispense_mode_str) {
+        mco_DispenseMode mode;
+        if (!OptionToEnumI(mco_DispenseModeOptions, dispense_mode_str, &mode)) {
+            LogError("Unknown dispensation mode '%1'", dispense_mode_str);
+            rcc_StopWithLastError();
+        }
+        dispense_mode = (int)mode;
     }
 
     bool export_supplement_cents;
@@ -1480,23 +1483,23 @@ RcppExport SEXP drdR_mco_CleanProcedures(SEXP procedures_xp)
 
 RcppExport void R_init_drdR(DllInfo *dll) {
     static const R_CallMethodDef call_entries[] = {
-        {"drdR_mco_Init", (DL_FUNC)&K::drdR_mco_Init, 4},
-        {"drdR_mco_Classify", (DL_FUNC)&K::drdR_mco_Classify, 10},
+        { "drdR_mco_Init", (DL_FUNC)&K::drdR_mco_Init, 4 },
+        { "drdR_mco_Classify", (DL_FUNC)&K::drdR_mco_Classify, 10 },
         // {"drdR_mco_Dispense", (DL_FUNC)&drdR_mco_Dispense, 3},
-        {"drdR_mco_Indexes", (DL_FUNC)&K::drdR_mco_Indexes, 1},
-        {"drdR_mco_GhmGhs", (DL_FUNC)&K::drdR_mco_GhmGhs, 4},
-        {"drdR_mco_Diagnoses", (DL_FUNC)&K::drdR_mco_Diagnoses, 2},
-        {"drdR_mco_Exclusions", (DL_FUNC)&K::drdR_mco_Exclusions, 2},
-        {"drdR_mco_Procedures", (DL_FUNC)&K::drdR_mco_Procedures, 2},
-        {"drdR_mco_LoadStays", (DL_FUNC)&K::drdR_mco_LoadStays, 1},
-        {"drdR_mco_SupplementTypes", (DL_FUNC)&K::drdR_mco_SupplementTypes, 0},
-        {"drdR_mco_CleanDiagnoses", (DL_FUNC)&K::drdR_mco_CleanDiagnoses, 1},
-        {"drdR_mco_CleanProcedures", (DL_FUNC)&K::drdR_mco_CleanProcedures, 1},
+        { "drdR_mco_Indexes", (DL_FUNC)&K::drdR_mco_Indexes, 1 },
+        { "drdR_mco_GhmGhs", (DL_FUNC)&K::drdR_mco_GhmGhs, 4 },
+        { "drdR_mco_Diagnoses", (DL_FUNC)&K::drdR_mco_Diagnoses, 2 },
+        { "drdR_mco_Exclusions", (DL_FUNC)&K::drdR_mco_Exclusions, 2 },
+        { "drdR_mco_Procedures", (DL_FUNC)&K::drdR_mco_Procedures, 2 },
+        { "drdR_mco_LoadStays", (DL_FUNC)&K::drdR_mco_LoadStays, 1 },
+        { "drdR_mco_SupplementTypes", (DL_FUNC)&K::drdR_mco_SupplementTypes, 0 },
+        { "drdR_mco_CleanDiagnoses", (DL_FUNC)&K::drdR_mco_CleanDiagnoses, 1 },
+        { "drdR_mco_CleanProcedures", (DL_FUNC)&K::drdR_mco_CleanProcedures, 1 },
         {}
     };
 
     R_registerRoutines(dll, nullptr, call_entries, nullptr, nullptr);
     R_useDynamicSymbols(dll, FALSE);
 
-    rcc_RedirectLog();
+    K::rcc_RedirectLog();
 }
