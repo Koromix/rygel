@@ -1,0 +1,14 @@
+[Unit]
+Description=Heimdall daemon
+Documentation=https://koromix.dev/
+
+[Service]
+Type=notify
+User=heimdall
+Group=heimdall
+ExecStart=/usr/bin/heimdall -C /etc/heimdall.ini
+Restart=on-failure
+RestartSec=20
+
+[Install]
+WantedBy = multi-user.target
