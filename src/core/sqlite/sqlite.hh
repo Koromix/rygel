@@ -23,7 +23,9 @@
 
 #include "src/core/base/base.hh"
 #include "vendor/sqlite3mc/sqlite3mc.h"
-#include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
+#if defined(SQLITE_SNAPSHOTS)
+    #include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
+#endif
 
 // Work around -Wzero-as-null-pointer-constant warning
 #undef SQLITE_STATIC

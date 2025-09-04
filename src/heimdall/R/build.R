@@ -54,7 +54,8 @@ bundle_heimdallR <- function(project_dir, version, build_dir) {
             filename <- str_interp('${build_dir}/src/${name}')
             lines <- readLines(filename)
 
-            lines <- sub('.o: ../', '.o: heimdall/R/', lines)
+            lines <- sub('.o: ../heimdallR.cc', '.o: R/heimdallR.cc', lines)
+            lines <- sub('.o: (../)+', '.o: ./', lines)
             lines <- lines[!grepl('../R', lines, fixed = TRUE)]
 
             writeLines(lines, filename)
@@ -78,13 +79,16 @@ bundle_heimdallR <- function(project_dir, version, build_dir) {
     })
 
     copy_files('src/heimdall/R/src/dummy.cc', 'src')
-    copy_files('src/heimdall/R/heimdallR.cc', 'src/heimdall/R')
+    copy_files('src/heimdall/R/heimdallR.cc', 'src/R')
+    copy_files(c('src/heimdall/server/database.cc',
+                 'src/heimdall/server/database.hh'), 'src/server')
     copy_files('src/heimdall/R/heimdallR.R', 'R')
     copy_files(list_files('src/core/base'), 'src/core/base')
+    copy_files(list_files('src/core/sqlite'), 'src/core/sqlite')
     copy_files(c('src/core/wrap/Rcc.cc',
                  'src/core/wrap/Rcc.hh'), 'src/core/wrap')
-    copy_files('vendor/dragonbox/include/dragonbox/dragonbox.h', 'vendor/dragonbox/include/dragonbox')
-    copy_files(list_files('vendor/sqlite3mc'), 'vendor/sqlite3mc')
+    copy_files('vendor/dragonbox/include/dragonbox/dragonbox.h', 'src/vendor/dragonbox/include/dragonbox')
+    copy_files(list_files('vendor/sqlite3mc'), 'src/vendor/sqlite3mc')
 
     return (build_dir)
 }
@@ -102,15 +106,12 @@ run_roxygen2 <- function(pkg_dir) {
 
 build_package <- function(pkg_dir, repo_dir) {
     pkg_src_filename <- devtools::build(pkg_dir)
-    if (Sys.info()[['sysname']] == 'Windows') {
-        pkg_win32_filename <- devtools::build(pkg_dir, binary = TRUE)
-    } else {
-        warning('Cannot build Win32 binary package on non-Windows platform')
-    }
+    pkg_bin_filename <- devtools::build(pkg_dir, binary = TRUE)
 
     drat::insertPackage(pkg_src_filename, repodir = repo_dir)
+
     if (Sys.info()[['sysname']] == 'Windows') {
-        drat::insertPackage(pkg_win32_filename, repodir = repo_dir)
+        drat::insertPackage(pkg_bin_filename, repodir = repo_dir)
     }
 }
 
