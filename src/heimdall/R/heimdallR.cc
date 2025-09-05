@@ -262,12 +262,13 @@ RcppExport SEXP hmR_SetView(SEXP inst_xp, SEXP name_xp, SEXP items_xp)
     END_RCPP
 }
 
-RcppExport SEXP hmR_AddEvents(SEXP inst_xp, SEXP events_xp)
+RcppExport SEXP hmR_AddEvents(SEXP inst_xp, SEXP events_xp, SEXP reset_xp)
 {
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
     InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
+    bool reset = Rcpp::as<bool>(reset_xp);
 
     struct {
         Rcpp::DataFrame df;
@@ -288,6 +289,8 @@ RcppExport SEXP hmR_AddEvents(SEXP inst_xp, SEXP events_xp)
     events.warning = events.df["warning"];
 
     bool success = inst->db.Transaction([&]() {
+        HashSet<int64_t> set;
+
         for (Size i = 0; i < events.len; i++) {
             const char *target = (const char *)events.entity[i];
             const char *domain = (const char *)events.domain[i];
@@ -302,6 +305,14 @@ RcppExport SEXP hmR_AddEvents(SEXP inst_xp, SEXP events_xp)
             int64_t cpt = FindConcept(&inst->db, domain, name);
             if (cpt < 0)
                 return false;
+
+            if (reset) {
+                bool inserted;
+                set.TrySet(entity, &inserted);
+
+                if (inserted && !inst->db.Run("DELETE FROM events WHERE entity = ?1", entity))
+                    return false;
+            }
 
             if (!inst->db.Run(R"(INSERT INTO events (entity, concept, timestamp, warning)
                                  VALUES (?1, ?2, ?3, ?4))",
@@ -319,12 +330,13 @@ RcppExport SEXP hmR_AddEvents(SEXP inst_xp, SEXP events_xp)
     END_RCPP
 }
 
-RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp)
+RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp)
 {
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
     InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
+    bool reset = Rcpp::as<bool>(reset_xp);
 
     struct {
         Rcpp::DataFrame df;
@@ -345,6 +357,8 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp)
     periods.duration = periods.df["duration"];
 
     bool success = inst->db.Transaction([&]() {
+        HashSet<int64_t> set;
+
         for (Size i = 0; i < periods.len; i++) {
             const char *target = (const char *)periods.entity[i];
             const char *domain = (const char *)periods.domain[i];
@@ -359,6 +373,14 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp)
             int64_t cpt = FindConcept(&inst->db, domain, name);
             if (cpt < 0)
                 return false;
+
+            if (reset) {
+                bool inserted;
+                set.TrySet(entity, &inserted);
+
+                if (inserted && !inst->db.Run("DELETE FROM periods WHERE entity = ?1", entity))
+                    return false;
+            }
 
             if (!inst->db.Run(R"(INSERT INTO periods (entity, concept, timestamp, duration)
                                  VALUES (?1, ?2, ?3, ?4))",
@@ -376,12 +398,13 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp)
     END_RCPP
 }
 
-RcppExport SEXP hmR_AddValues(SEXP inst_xp, SEXP values_xp)
+RcppExport SEXP hmR_AddValues(SEXP inst_xp, SEXP values_xp, SEXP reset_xp)
 {
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
     InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
+    bool reset = Rcpp::as<bool>(reset_xp);
 
     struct {
         Rcpp::DataFrame df;
@@ -404,6 +427,8 @@ RcppExport SEXP hmR_AddValues(SEXP inst_xp, SEXP values_xp)
     values.warning = values.df["warning"];
 
     bool success = inst->db.Transaction([&]() {
+        HashSet<int64_t> set;
+
         for (Size i = 0; i < values.len; i++) {
             const char *target = (const char *)values.entity[i];
             const char *domain = (const char *)values.domain[i];
@@ -419,6 +444,14 @@ RcppExport SEXP hmR_AddValues(SEXP inst_xp, SEXP values_xp)
             int64_t cpt = FindConcept(&inst->db, domain, name);
             if (cpt < 0)
                 return false;
+
+            if (reset) {
+                bool inserted;
+                set.TrySet(entity, &inserted);
+
+                if (inserted && !inst->db.Run("DELETE FROM measures WHERE entity = ?1", entity))
+                    return false;
+            }
 
             if (!inst->db.Run(R"(INSERT INTO measures (entity, concept, timestamp, value, warning)
                                  VALUES (?1, ?2, ?3, ?4, ?5))",
@@ -492,9 +525,9 @@ RcppExport void R_init_heimdallR(DllInfo *dll) {
         { "hmR_Close", (DL_FUNC)&K::hmR_Close, 1 },
         { "hmR_SetDomain", (DL_FUNC)&K::hmR_SetDomain, 3 },
         { "hmR_SetView", (DL_FUNC)&K::hmR_SetView, 3 },
-        { "hmR_AddEvents", (DL_FUNC)&K::hmR_AddEvents, 2 },
-        { "hmR_AddPeriods", (DL_FUNC)&K::hmR_AddPeriods, 2 },
-        { "hmR_AddValues", (DL_FUNC)&K::hmR_AddValues, 2 },
+        { "hmR_AddEvents", (DL_FUNC)&K::hmR_AddEvents, 3 },
+        { "hmR_AddPeriods", (DL_FUNC)&K::hmR_AddPeriods, 3 },
+        { "hmR_AddValues", (DL_FUNC)&K::hmR_AddValues, 3 },
         { "hmR_DeleteDomain", (DL_FUNC)&K::hmR_DeleteDomain, 1 },
         { "hmR_DeleteView", (DL_FUNC)&K::hmR_DeleteView, 1 },
         { "hmR_DeleteEntity", (DL_FUNC)&K::hmR_DeleteEntity, 1 },
