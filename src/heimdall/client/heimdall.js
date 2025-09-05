@@ -21,7 +21,7 @@ import en from '../i18n/en.json';
 import fr from '../i18n/fr.json';
 
 import '../../../vendor/opensans/OpenSans.css';
-import '../assets/heimdall.css';
+import './heimdall.css';
 
 // Constants
 const ROW_HEIGHT = 40;

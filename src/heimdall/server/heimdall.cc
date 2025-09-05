@@ -272,9 +272,9 @@ static void InitAssets()
                 const char *url = Fmt(&assets_alloc, "/static/%1/%2", shared_etag, name).ptr;
                 assets_map.Set(url, &asset);
 
-                if (name == "app.js") {
+                if (name == "heimdall.js") {
                     js = url;
-                } else if (name == "app.css") {
+                } else if (name == "heimdall.css") {
                     css = url;
                 }
             }
