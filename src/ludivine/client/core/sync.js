@@ -72,7 +72,7 @@ async function openVault(vid, key, lock) {
 
     let sql = `
         PRAGMA cipher = 'sqlcipher';
-        PRAGMA key = "x'${Hex.toHex(key)}'";
+        PRAGMA key = 'raw:${Hex.toHex(key)}';
     `;
     await db.exec(sql);
 
