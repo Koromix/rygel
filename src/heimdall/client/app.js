@@ -138,9 +138,11 @@ async function fetchProject(project) {
         view.expand = new Set;
 
     render(html`
-        <select @change=${e => { settings.view = e.target.value; runner.busy(); }}>
-            ${json.views.map(view => html`<option value=${view.name} ?selected=${view.name == settings.view}>${view.name}</option>`)}
-        </select>
+        ${json.views.length ? html`
+            <select @change=${e => { settings.view = e.target.value; runner.busy(); }}>
+                ${json.views.map(view => html`<option value=${view.name} ?selected=${view.name == settings.view}>${view.name}</option>`)}
+            </select>
+        ` : ''}
     `, config);
 }
 
@@ -158,7 +160,7 @@ function update() {
 
     if (view == null) {
         view = views.values().next().value;
-        settings.view = view.name;
+        settings.view = view?.name;
     }
 
     // Update layout
@@ -183,7 +185,7 @@ function update() {
 
     // Transform view tree into exhaustive levels
     let levels = [];
-    {
+    if (view != null) {
         let map = new Map;
 
         for (let key in view.items) {
