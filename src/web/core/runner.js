@@ -103,9 +103,9 @@ function AppRunner(canvas) {
         isTouch: { get: isTouchDevice, enumerable: true },
         isPortrait: { get: isPortrait, enumerable: true },
 
-        onUpdate: { get: () => handle_draw, set: func => { handle_update = func; }, enumerable: true },
+        onUpdate: { get: () => handle_update, set: func => { handle_update = func; }, enumerable: true },
         onDraw: { get: () => handle_draw, set: func => { handle_draw = func; }, enumerable: true },
-        onContextMenu: { get: () => handle_draw, set: func => { handle_context_menu = func; }, enumerable: true },
+        onContextMenu: { get: () => handle_context_menu, set: func => { handle_context_menu = func; }, enumerable: true },
 
         pressedKeys: { value: pressed_keys, writable: false, enumerable: true },
         mouseState: { value: mouse_state, writable: false, enumerable: true },

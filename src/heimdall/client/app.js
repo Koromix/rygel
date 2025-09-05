@@ -35,9 +35,11 @@ const SPACE_BETWEEN_ENTITIES = 8;
 let languages = {};
 
 // DOM nodes
-let main = null;
+let dom = {
+    main: null,
+    config: null
+};
 let canvas = null;
-let config = null;
 
 // Render and input API
 let runner = null;
@@ -53,11 +55,8 @@ let settings = {
     debug: false
 };
 
-// Data
-let views = null;
-let entities = null;
-
-// UI state
+// State
+let world = null;
 let layout = {
     tree: null,
     main: null,
@@ -95,9 +94,9 @@ async function start(root) {
             <div class="hm_config"></div>
         </div>
     `, root);
-    main = root.querySelector('.hm_main');
+    dom.main = root.querySelector('.hm_main');
+    dom.config = root.querySelector('.hm_config');
     canvas = root.querySelector('.hm_canvas');
-    config = root.querySelector('.hm_config');
 
     runner = new AppRunner(canvas);
     ctx = runner.ctx;
@@ -107,7 +106,7 @@ async function start(root) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    new ResizeObserver(syncSize).observe(main);
+    new ResizeObserver(syncSize).observe(dom.main);
     syncSize();
 
     let project = window.location.pathname.substr(1);
@@ -121,49 +120,11 @@ async function start(root) {
 }
 
 function syncSize() {
-    let rect = main.getBoundingClientRect();
+    let rect = dom.main.getBoundingClientRect();
     if (!rect.width && !rect.height)
         return;
     runner.resize(rect.width, rect.height, window.devicePixelRatio);
-}
 
-async function fetchProject(project) {
-    let url = Util.pasteURL('/api/data', { project: project });
-    let json = await Net.get(url);
-
-    views = new Map(json.views.map(view => [view.name, view]));
-    entities = json.entities;
-
-    for (let view of json.views)
-        view.expand = new Set;
-
-    render(html`
-        ${json.views.length ? html`
-            <select @change=${e => { settings.view = e.target.value; runner.busy(); }}>
-                ${json.views.map(view => html`<option value=${view.name} ?selected=${view.name == settings.view}>${view.name}</option>`)}
-            </select>
-        ` : ''}
-    `, config);
-}
-
-// ------------------------------------------------------------------------
-// Run
-// ------------------------------------------------------------------------
-
-function update() {
-    rows.length = 0;
-
-    if (pressed_keys.tab == 1)
-        settings.debug = !settings.debug;
-
-    let view = views.get(settings.view);
-
-    if (view == null) {
-        view = views.values().next().value;
-        settings.view = view?.name;
-    }
-
-    // Update layout
     layout.tree = {
         left: 0,
         top: 0,
@@ -182,6 +143,59 @@ function update() {
         width: canvas.width - settings.tree,
         height: 50
     };
+}
+
+async function fetchProject(project) {
+    let url = Util.pasteURL('/api/data', { project: project });
+    let json = await Net.get(url);
+
+    world = {
+        views: new Map(json.views.map(view => [view.name, view])),
+        entities: json.entities,
+
+        start: Number.MAX_SAFE_INTEGER,
+        end: Number.MIN_SAFE_INTEGER
+    };
+
+    for (let view of json.views)
+        view.expand = new Set;
+
+    for (let entity of json.entities) {
+        world.start = Math.min(world.start, entity.start);
+        world.end = Math.max(world.end, entity.end);
+    }
+
+    let range = world.end - world.start;
+    let start = world.start - range * 0.05;
+
+    position.zoom = scale2zoom(layout.main.width / range / 1.1);
+    position.x = time2position(start, 0);
+
+    render(html`
+        ${json.views.length ? html`
+            <select @change=${e => { settings.view = e.target.value; runner.busy(); }}>
+                ${json.views.map(view => html`<option value=${view.name} ?selected=${view.name == settings.view}>${view.name}</option>`)}
+            </select>
+        ` : ''}
+    `, dom.config);
+}
+
+// ------------------------------------------------------------------------
+// Run
+// ------------------------------------------------------------------------
+
+function update() {
+    rows.length = 0;
+
+    if (pressed_keys.tab == 1)
+        settings.debug = !settings.debug;
+
+    let view = world.views.get(settings.view);
+
+    if (view == null) {
+        view = world.views.values().next().value;
+        settings.view = view?.name;
+    }
 
     // Transform view tree into exhaustive levels
     let levels = [];
@@ -248,7 +262,7 @@ function update() {
             top -= SPACE_BETWEEN_ENTITIES;
         }
 
-        for (let i = position.entity, top = -position.y; i < entities.length; i++) {
+        for (let i = position.entity, top = -position.y; i < world.entities.length; i++) {
             let units = combine(i, levels);
 
             if (units.length) {
@@ -378,18 +392,6 @@ function update() {
     }
 }
 
-function rect(left, top, width, height) {
-    return { left: left, top: top, width: width, height: height };
-}
-
-function inside(pos, rect) {
-    let inside = (pos.x >= rect.left &&
-                  pos.x <= rect.left + rect.width &&
-                  pos.y >= rect.top &&
-                  pos.y <= rect.top + rect.height);
-    return inside;
-}
-
 function merge(after, before) {
     return after.x - before.x - before.width < MERGE_TRESHOLD;
 }
@@ -398,21 +400,16 @@ function zoom(delta, at) {
     if (position.zoom + delta < -200 || position.zoom + delta > 200)
         return;
 
-    let scale1 = scale(position.zoom);
-    let scale2 = scale(position.zoom + delta);
+    let scale1 = zoom2scale(position.zoom);
+    let scale2 = zoom2scale(position.zoom + delta);
     let transformed = at / scale1;
 
     position.x = position.x - transformed * scale1 + transformed * scale2;
     position.zoom += delta;
 }
 
-function scale(zoom) {
-    let scale = Math.pow(2, 5 + zoom / 5);
-    return scale;
-}
-
 function combine(idx, levels) {
-    let entity = entities[idx];
+    let entity = world.entities[idx];
     let rows = [];
 
     for (let level of levels) {
@@ -438,7 +435,7 @@ function combine(idx, levels) {
                 continue;
 
             row.events.push({
-                x: evt.time * scale(position.zoom) - position.x,
+                x: time2position(evt.time, position.x),
                 width: 0,
                 count: 1,
                 warning: evt.warning
@@ -450,8 +447,8 @@ function combine(idx, levels) {
                 continue;
 
             row.periods.push({
-                x: period.time * scale(position.zoom) - position.x,
-                width: period.duration * scale(position.zoom),
+                x: time2position(period.time, position.x),
+                width: period.duration * zoom2scale(position.zoom),
                 opacity: 0.2
             });
         }
@@ -478,7 +475,7 @@ function combine(idx, levels) {
 
                 for (let value of values) {
                     row.values.push({
-                        x: value.time * scale(position.zoom) - position.x,
+                        x: time2position(value.time, position.x),
                         y: row.height - (value.value - min) / range * row.height,
                         label: value.value,
                         warning: value.warning
@@ -491,7 +488,7 @@ function combine(idx, levels) {
                     continue;
 
                 row.events.push({
-                    x: value.time * scale(position.zoom) - position.x,
+                    x: time2position(value.time, position.x),
                     width: 0,
                     count: 1,
                     warning: value.warning
@@ -530,6 +527,32 @@ function combine(idx, levels) {
     }
 
     return rows;
+}
+
+function time2position(time, offset) {
+    return time * zoom2scale(position.zoom) - offset;
+}
+
+function zoom2scale(zoom) {
+    let scale = Math.pow(2, 5 + zoom / 5);
+    return scale;
+}
+
+function scale2zoom(scale) {
+    let zoom = 5 * (Math.log2(scale) - 5);
+    return zoom;
+}
+
+function rect(left, top, width, height) {
+    return { left: left, top: top, width: width, height: height };
+}
+
+function inside(pos, rect) {
+    let inside = (pos.x >= rect.left &&
+                  pos.x <= rect.left + rect.width &&
+                  pos.y >= rect.top &&
+                  pos.y <= rect.top + rect.height);
+    return inside;
 }
 
 function draw() {
@@ -746,13 +769,13 @@ function draw() {
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 1;
 
-        let factor = scale(position.zoom);
-        let start = Math.floor(position.x / factor);
-        let end = Math.ceil((position.x + layout.time.width) / factor);
+        let scale = zoom2scale(position.zoom);
+        let start = Math.floor(position.x / scale);
+        let end = Math.ceil((position.x + layout.time.width) / scale);
         let chars = Math.max(digits(start), digits(end));
 
-        let step1 = Math.ceil(5 / factor);
-        let step2 = Math.ceil(10 * chars / factor);
+        let step1 = Math.ceil(5 / scale);
+        let step2 = Math.ceil(10 * chars / scale);
 
         // Stabilize chosen start values to go through 0
         let start1 = start - start % step1 - step1;
@@ -760,7 +783,7 @@ function draw() {
         end += step2;
 
         for (let time = start1; time < end; time += step1) {
-            let x = time * factor - position.x;
+            let x = time * scale - position.x;
 
             ctx.beginPath();
             ctx.moveTo(x, 8);
@@ -769,7 +792,7 @@ function draw() {
         }
 
         for (let time = start2; time < end; time += step2) {
-            let x = time * factor - position.x;
+            let x = time * scale - position.x;
             runner.text(x, 24, time, { align: 8 });
         }
 

@@ -397,6 +397,9 @@ static void HandleData(http_IO *io)
             int64_t entity = sqlite3_column_int64(stmt, 0);
             const char *name = (const char *)sqlite3_column_text(stmt, 1);
 
+            int64_t start = INT64_MAX;
+            int64_t end = INT64_MIN;
+
             json.StartObject();
 
             json.Key("name"); json.String(name);
@@ -421,6 +424,9 @@ static void HandleData(http_IO *io)
                     json.Key("time"); json.Int64(time);
                     json.Key("warning"); json.Bool(warning);
                     json.EndObject();
+
+                    start = std::min(start, time);
+                    end = std::max(end, time);
                 }
                 if (!stmt.IsValid())
                     return;
@@ -447,6 +453,9 @@ static void HandleData(http_IO *io)
                     json.Key("time"); json.Int64(time);
                     json.Key("duration"); json.Int64(duration);
                     json.EndObject();
+
+                    start = std::min(start, time);
+                    end = std::max(end, time + duration);
                 }
                 if (!stmt.IsValid())
                     return;
@@ -475,10 +484,21 @@ static void HandleData(http_IO *io)
                     json.Key("value"); json.Double(value);
                     json.Key("warning"); json.Bool(warning);
                     json.EndObject();
+
+                    start = std::min(start, time);
+                    end = std::max(end, time);
                 }
                 if (!stmt.IsValid())
                     return;
                 json.EndArray();
+            }
+
+            if (start < INT64_MAX) {
+                json.Key("start"); json.Int64(start);
+                json.Key("end"); json.Int64(end);
+            } else {
+                json.Key("start"); json.Null();
+                json.Key("end"); json.Null();
             }
 
             json.EndObject();
