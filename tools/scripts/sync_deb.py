@@ -21,9 +21,11 @@ def move_packages(src, dest, ext):
         shutil.move(src_filename, dest_filename)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description = 'Update Debian and RPM repositories')
+    script_dir = os.path.dirname(__file__)
+
+    parser = argparse.ArgumentParser(description = 'Update Debian repository')
     parser.add_argument('directory', metavar = 'directory', type = str,
-                        help = 'main download directory')
+                        help = 'main repository directory')
     parser.add_argument('--name', type = str, default = DEFAULT_NAME,
                         help = 'change repository name')
     parser.add_argument('--user', type = str, default = DEFAULT_USER,
@@ -33,13 +35,7 @@ if __name__ == '__main__':
                         help = 'import additional packages')
     args = parser.parse_args()
 
-    script_dir = os.path.dirname(__file__)
-    debian_dir = os.path.join(args.directory, 'debian')
-    rpm_dir = os.path.join(args.directory, 'rpm')
-
     for src in args.imports:
-        move_packages(src, debian_dir + '/pool', '.deb')
-        move_packages(src, rpm_dir, '.rpm')
+        move_packages(src, args.directory + '/pool', '.deb')
 
-    subprocess.run([script_dir + '/../package/repo/debian/update.sh', args.name, args.user], check = True, cwd = debian_dir)
-    subprocess.run([script_dir + '/../package/repo/rpm/update.sh', args.name, args.user], check = True, cwd = rpm_dir)
+    subprocess.run([script_dir + '/../package/repo/debian/update.sh', args.name, args.user], check = True, cwd = args.directory)
