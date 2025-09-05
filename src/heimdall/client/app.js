@@ -24,11 +24,12 @@ import '../../../vendor/opensans/OpenSans.css';
 import '../assets/heimdall.css';
 
 // Constants
-const ROW_HEIGHT = 30;
-const ROW_HEIGHT_PLOT = 60;
-const EVENT_WIDTH = 32;
-const EVENT_HEIGHT = 28;
-const MERGE_TRESHOLD = 20;
+const ROW_HEIGHT = 40;
+const ROW_HEIGHT_PLOT = 80;
+const EVENT_WIDTH = 36;
+const EVENT_HEIGHT = 32;
+const PERIOD_HEIGHT = 4;
+const MERGE_TRESHOLD = 24;
 const SPACE_BETWEEN_ENTITIES = 8;
 
 // Assets
@@ -452,7 +453,7 @@ function combine(idx, levels) {
             row.periods.push({
                 x: time2position(period.time, position.x),
                 width: period.duration * zoom2scale(position.zoom),
-                opacity: 0.2
+                offset: 0
             });
         }
 
@@ -505,6 +506,17 @@ function combine(idx, levels) {
         row.events.sort((evt1, evt2) => evt1.x - evt2.x);
         row.periods.sort((period1, period2) => period1.x - period2.x);
         row.values.sort((value1, value2) => value1.x - value2.x);
+
+        // Make sure periods don't overlap vertically
+        {
+            let set = [];
+
+            for (let period of row.periods) {
+                set = set.filter(prev => prev.x + prev.width >= period.x);
+                period.offset = set.length;
+                set.push(period);
+            }
+        }
 
         // Merge events
         if (row.events.length) {
@@ -657,10 +669,13 @@ function draw() {
             for (let period of row.periods) {
                 ctx.save();
 
-                ctx.globalAlpha *= period.opacity;
-                ctx.fillStyle = 'black';
+                ctx.fillStyle = '#222222';
 
-                ctx.fillRect(period.x, 0, period.width, row.height);
+                let offset = (period.stack + 1) * PERIOD_HEIGHT * 2;
+
+                ctx.beginPath();
+                ctx.roundRect(period.x, row.height - offset, period.width, PERIOD_HEIGHT, PERIOD_HEIGHT / 2);
+                ctx.fill();
 
                 ctx.restore();
             }
