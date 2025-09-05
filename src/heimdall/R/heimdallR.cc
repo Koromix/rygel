@@ -501,15 +501,23 @@ RcppExport SEXP hmR_DeleteView(SEXP inst_xp, SEXP name_xp)
     END_RCPP
 }
 
-RcppExport SEXP hmR_DeleteEntity(SEXP inst_xp, SEXP name_xp)
+RcppExport SEXP hmR_DeleteEntities(SEXP inst_xp, SEXP names_xp)
 {
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
     InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
-    Rcpp::String name(name_xp);
+    Rcpp::CharacterVector names(names_xp);
 
-    if (!inst->db.Run("DELETE FROM entities WHERE name = ?1", (const char *)name.get_cstring()))
+    bool success = inst->db.Transaction([&]() {
+        for (const char *name: names) {
+            if (!inst->db.Run("DELETE FROM entities WHERE name = ?1", name))
+                return false;
+        }
+
+        return true;
+    });
+    if (!success)
         rcc_StopWithLastError();
 
     return R_NilValue;
@@ -530,7 +538,7 @@ RcppExport void R_init_heimdallR(DllInfo *dll) {
         { "hmR_AddValues", (DL_FUNC)&K::hmR_AddValues, 3 },
         { "hmR_DeleteDomain", (DL_FUNC)&K::hmR_DeleteDomain, 1 },
         { "hmR_DeleteView", (DL_FUNC)&K::hmR_DeleteView, 1 },
-        { "hmR_DeleteEntity", (DL_FUNC)&K::hmR_DeleteEntity, 1 },
+        { "hmR_DeleteEntities", (DL_FUNC)&K::hmR_DeleteEntities, 1 },
         {}
     };
 

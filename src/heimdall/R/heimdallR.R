@@ -41,14 +41,14 @@ hm_add_values <- function(inst, values, reset = TRUE) {
     .Call(`hmR_AddValues`, inst, values, reset)
 }
 
-hm_delete_entity <- function(inst, name) {
-    .Call(`hmR_DeleteEntity`, inst, name)
-}
-
 hm_delete_domain <- function(inst, name) {
     .Call(`hmR_DeleteDomain`, inst, name)
 }
 
 hm_delete_view <- function(inst, name) {
     .Call(`hmR_DeleteView`, inst, name)
+}
+
+hm_delete_entities <- function(inst, names) {
+    .Call(`hmR_DeleteEntities`, inst, names)
 }
