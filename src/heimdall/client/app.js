@@ -363,18 +363,16 @@ function update() {
 
     // Handle wheel actions (scroll or zoom)
     if (mouse_state.wheel) {
-        if (pressed_keys.ctrl) {
-            let zone = inside(mouse_state, layout.main) ||
-                       inside(mouse_state, layout.time);
+        let zone = inside(mouse_state, layout.main) ||
+                   inside(mouse_state, layout.time);
 
-            if (zone) {
-                let delta = Util.clamp(-mouse_state.wheel, -1, 1);
-                let at = position.x + mouse_state.x - settings.tree;
+        if (pressed_keys.ctrl && zone) {
+            let delta = Util.clamp(-mouse_state.wheel, -1, 1);
+            let at = position.x + mouse_state.x - settings.tree;
 
-                zoom(delta, at);
-            }
+            zoom(delta, at);
         } else {
-            let factor = pressed_keys.alt ? 100 : 10;
+            let factor = pressed_keys.ctrl ? 100 : 10;
             position.y += mouse_state.wheel * factor;
         }
     }
