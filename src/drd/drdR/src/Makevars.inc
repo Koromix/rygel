@@ -13,8 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-PKG_CPPFLAGS += -D_FILE_OFFSET_BITS=64 -D__STDC_FORMAT_MACROS -DLIBDRD_NO_WREN\
-				-Wstrict-overflow=0 -fno-strict-aliasing -I"$(realpath ../../../..)"
+PKG_CPPFLAGS += -D_FILE_OFFSET_BITS=64 -D__STDC_FORMAT_MACROS -DLIBDRD_NO_WREN \
+				-fno-strict-aliasing -fvisibility=hidden -fno-semantic-interposition \
+				-I . -I ../../../.. -Wstrict-overflow=0
 PKG_CFLAGS += -std=gnu99
 PKG_CXXFLAGS += -std=gnu++20
 
