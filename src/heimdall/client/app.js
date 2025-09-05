@@ -670,7 +670,7 @@ function draw() {
             for (let period of row.periods) {
                 ctx.save();
 
-                ctx.fillStyle = period.warning ? '#ff6600' : '#222222';
+                ctx.fillStyle = period.warning ? '#ff6600' : '#444444';
 
                 let offset = (period.stack + 1) * PERIOD_HEIGHT * 2;
 
@@ -685,7 +685,7 @@ function draw() {
             for (let evt of row.events) {
                 ctx.save();
 
-                ctx.fillStyle = evt.warning ? '#ff6600' : '#0000bb';
+                ctx.fillStyle = evt.warning ? '#ff6600' : '#4444cc';
 
                 ctx.beginPath();
                 ctx.moveTo(evt.x, row.height - EVENT_HEIGHT);
