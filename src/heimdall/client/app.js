@@ -539,6 +539,9 @@ function combine(idx, levels) {
             row.events.length = j;
         }
 
+        // Make sure event with warning flag come up on top
+        row.events.sort((evt1, evt2) => evt1.warning - evt2.warning);
+
         rows.push(row);
     }
 
