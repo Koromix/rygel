@@ -436,7 +436,7 @@ static void HandleData(http_IO *io)
             // Periods
             {
                 sq_Statement stmt;
-                if (!db.Prepare(R"(SELECT c.domain || '::' || c.name, p.timestamp, p.duration
+                if (!db.Prepare(R"(SELECT c.domain || '::' || c.name, p.timestamp, p.duration, p.warning
                                    FROM periods p
                                    INNER JOIN concepts c ON (c.concept = p.concept)
                                    WHERE entity = ?1)", &stmt, entity))
@@ -447,11 +447,13 @@ static void HandleData(http_IO *io)
                     const char *name = (const char *)sqlite3_column_text(stmt, 0);
                     int64_t time = sqlite3_column_int64(stmt, 1);
                     int64_t duration = sqlite3_column_int64(stmt, 2);
+                    bool warning = sqlite3_column_int(stmt, 3);
 
                     json.StartObject();
                     json.Key("concept"); json.String(name);
                     json.Key("time"); json.Int64(time);
                     json.Key("duration"); json.Int64(duration);
+                    json.Key("warning"); json.Bool(warning);
                     json.EndObject();
 
                     start = std::min(start, time);

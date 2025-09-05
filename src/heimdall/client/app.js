@@ -453,7 +453,8 @@ function combine(idx, levels) {
             row.periods.push({
                 x: time2position(period.time, position.x),
                 width: period.duration * zoom2scale(position.zoom),
-                offset: 0
+                warning: period.warning,
+                stack: 0
             });
         }
 
@@ -509,12 +510,12 @@ function combine(idx, levels) {
 
         // Make sure periods don't overlap vertically
         {
-            let set = [];
+            let overlaps = [];
 
             for (let period of row.periods) {
-                set = set.filter(prev => prev.x + prev.width >= period.x);
-                period.offset = set.length;
-                set.push(period);
+                overlaps = overlaps.filter(prev => prev.x + prev.width >= period.x);
+                period.stack = overlaps.length;
+                overlaps.push(period);
             }
         }
 
@@ -669,7 +670,7 @@ function draw() {
             for (let period of row.periods) {
                 ctx.save();
 
-                ctx.fillStyle = '#222222';
+                ctx.fillStyle = period.warning ? '#ff6600' : '#222222';
 
                 let offset = (period.stack + 1) * PERIOD_HEIGHT * 2;
 

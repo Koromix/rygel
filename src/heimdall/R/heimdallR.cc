@@ -346,6 +346,7 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp)
         Rcpp::CharacterVector name;
         Rcpp::NumericVector time;
         Rcpp::NumericVector duration;
+        Rcpp::LogicalVector warning;
     } periods;
 
     periods.df = Rcpp::DataFrame(periods_xp);
@@ -355,6 +356,7 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp)
     periods.name = periods.df["concept"];
     periods.time = periods.df["time"];
     periods.duration = periods.df["duration"];
+    periods.warning = periods.df["warning"];
 
     bool success = inst->db.Transaction([&]() {
         HashSet<int64_t> set;
@@ -365,6 +367,7 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp)
             const char *name = (const char *)periods.name[i];
             int64_t time = periods.time[i];
             int64_t duration = periods.duration[i];
+            bool warning = periods.warning[i];
 
             int64_t entity = FindOrCreateEntity(&inst->db, target);
             if (entity < 0)
@@ -382,9 +385,9 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp)
                     return false;
             }
 
-            if (!inst->db.Run(R"(INSERT INTO periods (entity, concept, timestamp, duration)
-                                 VALUES (?1, ?2, ?3, ?4))",
-                              entity, cpt, time, duration))
+            if (!inst->db.Run(R"(INSERT INTO periods (entity, concept, timestamp, duration, warning)
+                                 VALUES (?1, ?2, ?3, ?4, ?5))",
+                              entity, cpt, time, duration, 0 + warning))
                 return false;
         }
 
