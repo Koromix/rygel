@@ -316,6 +316,11 @@ static void AttachStatic(http_IO *io, const AssetInfo &asset, int64_t max_age, c
     }
 }
 
+static bool IsProjectNameSafe(const char *project)
+{
+    return !PathIsAbsolute(project) && !PathContainsDotDot(project);
+}
+
 static void HandleData(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
@@ -326,9 +331,9 @@ static void HandleData(http_IO *io)
         io->SendError(422);
         return;
     }
-    if (PathIsAbsolute(project) || PathContainsDotDot(project)) {
-        LogError("Unsafe project parameter");
-        io->SendError(422);
+    if (!IsProjectNameSafe(project)) {
+        LogError("Unsafe project name");
+        io->SendError(403);
         return;
     }
 
@@ -586,9 +591,35 @@ static void HandleRequest(http_IO *io)
 
     // Embedded static asset?
     {
-        const char *ext = GetPathExtension(request.path).ptr;
+        Span<const char> path = request.path;
+        const char *ext = GetPathExtension(path).ptr;
 
         if (!ext[0]) {
+            K_ASSERT(path.len && path[0] == '/');
+
+            if (path[path.len - 1] == '/') {
+                Span<const char> redirect = TrimStrRight(path, '/');
+                io->AddHeader("Location", redirect);
+                io->SendEmpty(302);
+                return;
+            }
+
+            const char *project = path.ptr + 1;
+
+            if (!IsProjectNameSafe(project)) {
+                LogError("Unsafe project name");
+                io->SendError(403);
+                return;
+            }
+
+            const char *filename = Fmt(io->Allocator(), "%1%/%2.db", config.project_directory, project).ptr;
+
+            if (!TestFile(filename)) {
+                LogError("Unknown project '%1'", project);
+                io->SendError(404);
+                return;
+            }
+
             AttachStatic(io, assets_index, 0, shared_etag);
             return;
         } else {
