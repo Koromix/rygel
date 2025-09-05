@@ -269,8 +269,10 @@ function update() {
                 break;
         }
 
-        position.entity = first ?? 0;
-        position.y = offset;
+        if (first != null) {
+            position.entity = first ?? 0;
+            position.y = offset;
+        }
     }
 
     // Resize tree panel
