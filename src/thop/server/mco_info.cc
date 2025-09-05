@@ -126,7 +126,7 @@ void ProduceMcoDiagnoses(http_IO *io, const User *)
     json.EndArray();
 
     io->AddCachingHeaders(thop_config.max_age, thop_etag);
-    return json.Finish();
+    return json.Send();
 }
 
 void ProduceMcoProcedures(http_IO *io, const User *)
@@ -178,7 +178,7 @@ void ProduceMcoProcedures(http_IO *io, const User *)
     json.EndArray();
 
     io->AddCachingHeaders(thop_config.max_age, thop_etag);
-    return json.Finish();
+    return json.Send();
 }
 
 void ProduceMcoGhmGhs(http_IO *io, const User *)
@@ -304,7 +304,7 @@ void ProduceMcoGhmGhs(http_IO *io, const User *)
     json.EndArray();
 
     io->AddCachingHeaders(thop_config.max_age, thop_etag);
-    return json.Finish();
+    return json.Send();
 }
 
 void ProduceMcoTree(http_IO *io, const User *)
@@ -342,7 +342,7 @@ void ProduceMcoTree(http_IO *io, const User *)
     json.EndArray();
 
     io->AddCachingHeaders(thop_config.max_age, thop_etag);
-    json.Finish();
+    json.Send();
 }
 
 struct HighlightContext {
@@ -623,7 +623,7 @@ void ProduceMcoHighlight(http_IO *io, const User *)
     json.EndObject();
 
     io->AddCachingHeaders(thop_config.max_age, thop_etag);
-    json.Finish();
+    json.Send();
 }
 
 }

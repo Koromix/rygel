@@ -139,7 +139,7 @@ static void ProduceSettings(http_IO *io, const User *user)
     if (!user) {
         io->AddCachingHeaders(thop_config.max_age, thop_etag);
     }
-    json.Finish();
+    json.Send();
 }
 
 static void ProduceStructures(http_IO *io, const User *user)
@@ -181,7 +181,7 @@ static void ProduceStructures(http_IO *io, const User *user)
     }
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 static bool InitDictionarySet(Span<const char *const> table_directories)

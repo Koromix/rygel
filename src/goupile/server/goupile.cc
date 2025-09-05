@@ -334,7 +334,7 @@ static void HandleFileStatic(http_IO *io, InstanceHolder *instance)
     }
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 static const AssetInfo *RenderTemplate(const char *key, const AssetInfo &asset,

@@ -359,7 +359,7 @@ static void SendProfile(http_IO *io, const SessionInfo *session, const InstanceH
         return;
 
     ExportProfile(session, instance, &json);
-    json.Finish();
+    json.Send();
 }
 
 static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid,
@@ -1662,7 +1662,7 @@ void HandleChangeExportKey(http_IO *io, InstanceHolder *instance)
         return;
 
     json.String(key_buf.ptr);
-    json.Finish();
+    json.Send();
 }
 
 int64_t CreateInstanceUser(InstanceHolder *instance, const char *username)

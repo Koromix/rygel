@@ -1120,7 +1120,7 @@ void HandleDemoCreate(http_IO *io)
     json.Key("url"); json.String(redirect);
     json.EndObject();
 
-    json.Finish();
+    json.Send();
 }
 
 void PruneDemos()
@@ -1928,7 +1928,7 @@ void HandleInstanceList(http_IO *io)
     }
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandleInstanceAssign(http_IO *io)
@@ -2206,7 +2206,7 @@ void HandleInstancePermissions(http_IO *io)
         return;
     json.EndObject();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandleInstanceMigrate(http_IO *io)
@@ -2475,7 +2475,7 @@ void HandleArchiveList(http_IO *io)
         return;
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandleArchiveDownload(http_IO *io)
@@ -3466,7 +3466,7 @@ void HandleUserList(http_IO *io)
         return;
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 }

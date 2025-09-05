@@ -572,7 +572,7 @@ void ProduceMcoAggregate(http_IO *io, const User *user)
 
     json.EndObject();
 
-    json.Finish();
+    json.Send();
 }
 
 void ProduceMcoResults(http_IO *io, const User *user)
@@ -801,7 +801,7 @@ void ProduceMcoResults(http_IO *io, const User *user)
     }
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 }

@@ -481,7 +481,7 @@ void HandlePassword(http_IO *io)
             json.Key("token"); json.Raw(token);
             json.EndObject();
 
-            json.Finish();
+            json.Send();
             return;
         }
     }

@@ -166,7 +166,7 @@ void HandleRepositoryList(http_IO *io)
         return;
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandleRepositoryGet(http_IO *io)
@@ -270,7 +270,7 @@ void HandleRepositoryGet(http_IO *io)
 
     json.EndObject();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandleRepositorySave(http_IO *io)
@@ -479,7 +479,7 @@ void HandleRepositorySnapshots(http_IO *io)
 
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 }

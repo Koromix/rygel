@@ -403,7 +403,7 @@ static void ExportSession(const SessionInfo *session, http_IO *io)
         json.Null();
     }
 
-    json.Finish();
+    json.Send();
 }
 
 void HandleUserSession(http_IO *io)
@@ -1516,7 +1516,7 @@ void HandleKeyList(http_IO *io)
         return;
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandleKeyCreate(http_IO *io)
@@ -1619,7 +1619,7 @@ void HandleKeyCreate(http_IO *io)
     json.Key("secret"); json.String(secret);
     json.EndObject();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandleKeyDelete(http_IO *io)

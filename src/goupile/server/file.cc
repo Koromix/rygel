@@ -524,7 +524,7 @@ void HandleFileList(http_IO *io, InstanceHolder *instance)
     json.EndArray();
     json.EndObject();
 
-    json.Finish();
+    json.Send();
 }
 
 // Returns true when request has been handled (file exists or an error has occured)
@@ -800,7 +800,7 @@ void HandleFileHistory(http_IO *io, InstanceHolder *instance)
         return;
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandleFileRestore(http_IO *io, InstanceHolder *instance)
@@ -998,7 +998,7 @@ void HandleFileDelta(http_IO *io, InstanceHolder *instance)
     }
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandleFilePublish(http_IO *io, InstanceHolder *instance)

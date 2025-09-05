@@ -149,7 +149,7 @@ void HandleLegacyLoad(http_IO *io, InstanceHolder *instance)
         return;
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 struct SaveRecord {

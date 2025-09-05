@@ -468,7 +468,7 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
         return;
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandleRecordGet(http_IO *io, InstanceHolder *instance)
@@ -606,7 +606,7 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
         return;
     json.EndObject();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
@@ -679,7 +679,7 @@ void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
         return;
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 static int64_t CheckExportPermission(http_IO *io, InstanceHolder *instance, UserPermission perm)
@@ -978,7 +978,7 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
         return;
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandleExportDownload(http_IO *io, InstanceHolder *instance)
@@ -2098,7 +2098,7 @@ void HandleRecordPublic(http_IO *io, InstanceHolder *instance)
         return;
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandleBlobGet(http_IO *io, InstanceHolder *instance)

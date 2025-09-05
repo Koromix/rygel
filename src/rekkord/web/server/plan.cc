@@ -82,7 +82,7 @@ void HandlePlanList(http_IO *io)
         return;
     json.EndArray();
 
-    json.Finish();
+    json.Send();
 }
 
 static bool DumpItems(json_Writer *json, int64_t id, bool details)
@@ -219,7 +219,7 @@ void HandlePlanGet(http_IO *io)
 
     json.EndObject();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandlePlanSave(http_IO *io)
@@ -462,7 +462,7 @@ void HandlePlanSave(http_IO *io)
     }
     json.EndObject();
 
-    json.Finish();
+    json.Send();
 }
 
 void HandlePlanDelete(http_IO *io)
@@ -607,7 +607,7 @@ void HandlePlanKey(http_IO *io)
     json.Key("secret"); json.String(secret);
     json.EndObject();
 
-    json.Finish();
+    json.Send();
 }
 
 static bool ValidateApiKey(http_IO *io, int64_t *out_plan = nullptr, int64_t *out_repository = nullptr)
@@ -678,7 +678,7 @@ void HandlePlanFetch(http_IO *io)
     if (!DumpItems(&json, plan, false))
         return;
 
-    json.Finish();
+    json.Send();
 }
 
 void HandlePlanReport(http_IO *io)

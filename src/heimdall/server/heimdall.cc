@@ -512,7 +512,7 @@ static void HandleData(http_IO *io)
 
     json.EndObject();
 
-    json.Finish();
+    json.Send();
 }
 
 static void HandleRequest(http_IO *io)

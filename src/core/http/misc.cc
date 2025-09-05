@@ -207,7 +207,7 @@ bool http_JsonPageBuilder::Init(http_IO *io)
     return true;
 }
 
-void http_JsonPageBuilder::Finish()
+void http_JsonPageBuilder::Send(int status)
 {
     Flush();
 
@@ -218,7 +218,7 @@ void http_JsonPageBuilder::Finish()
     allocator.GiveTo(io->Allocator());
 
     io->AddEncodingHeader(encoding);
-    io->SendBinary(200, data, "application/json");
+    io->SendBinary(status, data, "application/json");
 }
 
 }

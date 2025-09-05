@@ -52,7 +52,7 @@ public:
     http_JsonPageBuilder(): json_Writer(&st) {}
 
     bool Init(http_IO *io);
-    void Finish();
+    void Send(int status = 200);
 };
 
 }
