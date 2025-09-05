@@ -631,7 +631,7 @@ function draw() {
             runner.text(x + 20, row.top + row.height / 2 - 1, row.name, { align: 4 });
 
             if (!row.active) {
-                ctx.fillStyle = '#222222bb';
+                ctx.fillStyle = '#22222288';
                 ctx.fillRect(0, row.top, layout.tree.width, row.height);
             }
         }
@@ -764,7 +764,7 @@ function draw() {
             }
 
             if (!row.active) {
-                ctx.fillStyle = '#ffffffbb';
+                ctx.fillStyle = '#ffffff33';
                 ctx.fillRect(0, 0, layout.main.width, row.height);
             }
 
