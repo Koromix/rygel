@@ -356,9 +356,12 @@ function update() {
             let row = rows[idx];
 
             if (interaction?.type != 'move') {
+                row.hover = true;
+
                 for (let i = idx - row.index; i < rows.length && rows[i].entity == row.entity; i++)
                     rows[i].active = true;
-                row.hover = true;
+                for (let i = idx + 1; i < rows.length && rows[i].depth > row.depth; i++)
+                    rows[i].hover = true;
             }
 
             if (!row.leaf && cursor.x >= 0 && cursor.x <= layout.tree.width) {
