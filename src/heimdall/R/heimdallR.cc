@@ -38,6 +38,8 @@ RcppExport SEXP hmR_Open(SEXP filename_xp)
 
     if (!inst->db.Open(filename.get_cstring(), SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         rcc_StopWithLastError();
+    if (!inst->db.SetWAL(true))
+        rcc_StopWithLastError();
     if (!MigrateDatabase(&inst->db))
         rcc_StopWithLastError();
 

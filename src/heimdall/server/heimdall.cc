@@ -348,6 +348,8 @@ static void HandleData(http_IO *io)
     sq_Database db;
     if (!db.Open(filename, SQLITE_OPEN_READWRITE))
         return;
+    if (!db.SetWAL(true))
+        return;
 
     http_JsonPageBuilder json;
     if (!json.Init(io))
