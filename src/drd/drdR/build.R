@@ -107,17 +107,9 @@ run_roxygen2 <- function(pkg_dir) {
     roxygen2::roxygenize(pkg_dir, roclets = 'rd', load_code = env_legacy)
 }
 
-build_package <- function(pkg_dir, repo_dir) {
-    pkg_src_filename <- devtools::build(pkg_dir)
-    pkg_bin_filename <- devtools::build(pkg_dir, binary = TRUE)
-
-    drat::insertPackage(pkg_src_filename, repodir = repo_dir)
-
-    if (Sys.info()[['sysname']] == 'Windows') {
-        drat::insertPackage(pkg_bin_filename, repodir = repo_dir)
-    } else {
-        warning('Cannot insert binary package on non-Windows platform')
-    }
+build_package <- function(pkg_dir) {
+    devtools::build(pkg_dir)
+    devtools::build(pkg_dir, binary = TRUE)
 }
 
 # Parse arguments
@@ -130,9 +122,9 @@ local({
     src_dir <<- rprojroot::find_root('FelixBuild.ini')
 
     if (!is.null(args$options$destination)) {
-        repo_dir <<- args$options$destination
+        dest_dir <<- args$options$destination
     } else {
-        repo_dir <<- str_interp('${src_dir}/bin/R')
+        dest_dir <<- str_interp('${src_dir}/bin/R')
     }
 })
 
@@ -150,9 +142,9 @@ version <- trimws(system(str_interp('git -C "${src_dir}" log -n1 --pretty=format
 
 # Bundle, build and register packages
 local({
-    build_dir <- str_interp('${repo_dir}/tmp/drdR')
+    build_dir <- str_interp('${dest_dir}/drdR')
 
     bundle_drdR(src_dir, version, build_dir)
     run_roxygen2(build_dir)
-    build_package(build_dir, repo_dir)
+    build_package(build_dir)
 })
