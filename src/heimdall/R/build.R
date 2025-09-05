@@ -33,12 +33,15 @@ library(parallel)
 library(optparse)
 
 bundle_heimdallR <- function(project_dir, version, build_dir) {
+    unlink(build_dir, recursive = TRUE)
+
     list_files <- function(dir) {
         dir <- str_interp('${project_dir}/${dir}')
         files <- substring(list.files(dir, full.names = TRUE), nchar(project_dir) + 2)
 
         return (files)
     }
+
     copy_files <- function(src_files, dest_dir, recursive = FALSE) {
         src_files <- sapply(src_files, function(path) str_interp('${project_dir}/${path}'))
         dest_dir <- str_interp('${build_dir}/${dest_dir}/')
@@ -54,8 +57,9 @@ bundle_heimdallR <- function(project_dir, version, build_dir) {
             filename <- str_interp('${build_dir}/src/${name}')
             lines <- readLines(filename)
 
-            lines <- sub('.o: ../heimdallR.cc', '.o: R/heimdallR.cc', lines)
-            lines <- sub('.o: (../)+', '.o: ./', lines)
+            lines <- sub('.o: ../../../../vendor/', '.o: vendor/', lines, fixed = TRUE)
+            lines <- sub('.o: ../../../core/', '.o: src/core/', lines, fixed = TRUE)
+            lines <- sub('.o: ../', '.o: src/R/', lines, fixed = TRUE)
             lines <- lines[!grepl('../R', lines, fixed = TRUE)]
 
             writeLines(lines, filename)
@@ -65,6 +69,7 @@ bundle_heimdallR <- function(project_dir, version, build_dir) {
     copy_files(c('src/heimdall/R/DESCRIPTION',
                  'src/heimdall/R/NAMESPACE',
                  'src/heimdall/R/heimdallR.Rproj'), '.')
+
     local({
         filename <- str_interp('${build_dir}/DESCRIPTION')
         lines <- readLines(filename)
@@ -78,19 +83,16 @@ bundle_heimdallR <- function(project_dir, version, build_dir) {
         writeLines(lines, filename)
     })
 
-    copy_files('src/heimdall/R/src/dummy.cc', 'src')
-    copy_files('src/heimdall/R/heimdallR.cc', 'src/R')
+    copy_files('src/heimdall/R/heimdallR.cc', 'src/src/R')
     copy_files(c('src/heimdall/server/database.cc',
-                 'src/heimdall/server/database.hh'), 'src/server')
+                 'src/heimdall/server/database.hh'), 'src/src/server')
     copy_files('src/heimdall/R/heimdallR.R', 'R')
-    copy_files(list_files('src/core/base'), 'src/core/base')
-    copy_files(list_files('src/core/sqlite'), 'src/core/sqlite')
+    copy_files(list_files('src/core/base'), 'src/src/core/base')
+    copy_files(list_files('src/core/sqlite'), 'src/src/core/sqlite')
     copy_files(c('src/core/wrap/Rcc.cc',
-                 'src/core/wrap/Rcc.hh'), 'src/core/wrap')
+                 'src/core/wrap/Rcc.hh'), 'src/src/core/wrap')
     copy_files('vendor/dragonbox/include/dragonbox/dragonbox.h', 'src/vendor/dragonbox/include/dragonbox')
     copy_files(list_files('vendor/sqlite3mc'), 'src/vendor/sqlite3mc')
-
-    return (build_dir)
 }
 
 run_roxygen2 <- function(pkg_dir) {
@@ -112,6 +114,8 @@ build_package <- function(pkg_dir, repo_dir) {
 
     if (Sys.info()[['sysname']] == 'Windows') {
         drat::insertPackage(pkg_bin_filename, repodir = repo_dir)
+    } else {
+        warning('Cannot insert binary package on non-Windows platform')
     }
 }
 
@@ -123,24 +127,11 @@ local({
     args <- parse_args(opt_parser, positional_arguments = FALSE)
 
     src_dir <<- rprojroot::find_root('FelixBuild.ini')
+
     if (!is.null(args$options$destination)) {
         repo_dir <<- args$options$destination
     } else {
         repo_dir <<- str_interp('${src_dir}/bin/R')
-    }
-})
-
-# Put Rtools40 in PATH (Windows)
-local({
-    if (.Platform$OS.type == 'windows') {
-        path <- Sys.getenv('PATH')
-        rtools_home <- Sys.getenv('RTOOLS40_HOME', unset = NA)
-
-        if (is.na(rtools_home)) {
-            stop('Environment variable RTOOLS40_HOME is not set')
-        }
-
-        Sys.setenv(PATH = str_interp('${rtools_home}\\usr\\bin;${path}'))
     }
 })
 
@@ -158,7 +149,9 @@ version <- trimws(system(str_interp('git -C "${src_dir}" log -n1 --pretty=format
 
 # Bundle, build and register packages
 local({
-    pkg_dir <- bundle_heimdallR(src_dir, version, str_interp('${repo_dir}/tmp/heimdallR'))
+    pkg_dir <- str_interp('${repo_dir}/tmp/heimdallR')
+
+    bundle_heimdallR(src_dir, version, pkg_dir)
     run_roxygen2(pkg_dir)
     build_package(pkg_dir, repo_dir)
 })
