@@ -316,12 +316,14 @@ function update() {
         }
     } else if (interaction?.type == 'move') {
         if (mouse_state.left > 0) {
+            let factor = pressed_keys.ctrl ? 5 : 1;
+
             if (interaction.x != null) {
-                position.x += interaction.x - mouse_state.x;
+                position.x += (interaction.x - mouse_state.x) * factor;
                 interaction.x = mouse_state.x;
             }
             if (interaction.y != null) {
-                position.y += interaction.y - mouse_state.y;
+                position.y += (interaction.y - mouse_state.y) * factor;
                 interaction.y = mouse_state.y;
             }
         } else {
