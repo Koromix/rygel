@@ -699,12 +699,12 @@ function draw() {
                 ctx.fill();
 
                 if (evt.count > 1) {
-                    let size = 16 - 3 * Math.floor(Math.log10(evt.count));
+                    let size = Math.floor(EVENT_HEIGHT / 2) - 3 * Math.floor(Math.log10(evt.count));
 
                     ctx.font = `bold ${size}px Open Sans`;
                     ctx.fillStyle = 'white';
 
-                    runner.text(evt.x + evt.width / 2, row.height - 10, evt.count, { align: 5 });
+                    runner.text(evt.x + evt.width / 2, row.height - EVENT_HEIGHT / 4, evt.count, { align: 2 });
                 }
 
                 ctx.restore();
