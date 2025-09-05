@@ -334,11 +334,11 @@ function update() {
             let factor = pressed_keys.ctrl ? 5 : 1;
 
             if (interaction.x != null) {
-                position.x += (interaction.x - mouse_state.x) * factor;
+                position.x = Math.round(position.x + (interaction.x - mouse_state.x) * factor);
                 interaction.x = mouse_state.x;
             }
             if (interaction.y != null) {
-                position.y += (interaction.y - mouse_state.y) * factor;
+                position.y = Math.round(position.y + (interaction.y - mouse_state.y) * factor);
                 interaction.y = mouse_state.y;
             }
         } else {
@@ -408,7 +408,7 @@ function zoom(delta, at) {
     let scale2 = zoom2scale(position.zoom + delta);
     let transformed = at / scale1;
 
-    position.x = position.x - transformed * scale1 + transformed * scale2;
+    position.x = Math.round(position.x - transformed * scale1 + transformed * scale2);
     position.zoom += delta;
 }
 
@@ -549,7 +549,7 @@ function combine(idx, levels) {
 }
 
 function time2position(time, offset) {
-    return time * zoom2scale(position.zoom) - offset;
+    return Math.round(time * zoom2scale(position.zoom) - offset);
 }
 
 function zoom2scale(zoom) {
