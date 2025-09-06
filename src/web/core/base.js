@@ -524,15 +524,16 @@ const Util = new function() {
     };
 
     this.stringToID = function(str) {
-        str = str.replace(/[A-Z]/g, c => c.toLowerCase());
         str = str.normalize('NFD').replace(/\p{Diacritic}/gu, '');
-        str = str.replace(/[^a-z0-9]/g, '-');
+        str = str.replace(/[^A-Za-z0-9]/g, '-');
         str = str.replace(/-+/g, '-');
 
         if (str[0] == '-')
             str = str.substr(1);
         if (str[str.length - 1] == '-')
             str = str.substr(0, str.length - 1);
+
+        return str.toLowerCase();
     };
 
     this.getRandomInt = function(min, max) {
