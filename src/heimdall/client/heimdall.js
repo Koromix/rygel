@@ -166,11 +166,7 @@ async function fetchProject(project) {
         world.end = Math.max(world.end, entity.end);
     }
 
-    let range = world.end - world.start;
-    let start = world.start - range * 0.05;
-
-    position.zoom = scale2zoom(layout.main.width / range / 1.1);
-    position.x = time2position(start, 0);
+    center(world.start, world.end);
 
     render(html`
         ${json.views.length ? html`
@@ -290,6 +286,16 @@ function update() {
             position.entity = first ?? 0;
             position.y = offset;
         }
+    }
+
+    // Recenter time scale on visible rows
+    if (pressed_keys.h == -1 && rows.length) {
+        let left = Math.min(...rows.map(row => row.left));
+        let right = Math.max(...rows.map(row => row.right));
+        let start = position2time(left, position.x, position.zoom);
+        let end = position2time(right, position.x, position.zoom);
+
+        center(start, end);
     }
 
     // Resize tree panel
@@ -412,6 +418,15 @@ function zoom(delta, at) {
     position.zoom += delta;
 }
 
+function center(start, end) {
+    let range = end - start;
+    let time = start - range * 0.05;
+    let zoom = range ? scale2zoom(layout.main.width / range / 1.1) : 0;
+
+    position.x = time2position(time, 0, zoom);
+    position.zoom = zoom;
+}
+
 function combine(idx, levels) {
     let entity = world.entities[idx];
     let rows = [];
@@ -431,31 +446,41 @@ function combine(idx, levels) {
             hover: false,
             events: [],
             periods: [],
-            values: []
+            values: [],
+            left: Number.MAX_SAFE_INTEGER,
+            right: Number.MIN_SAFE_INTEGER
         };
 
         for (let evt of entity.events) {
             if (!level.concepts.has(evt.concept))
                 continue;
 
-            row.events.push({
-                x: time2position(evt.time, position.x),
+            let draw = {
+                x: time2position(evt.time, position.x, position.zoom),
                 width: 0,
                 count: 1,
                 warning: evt.warning
-            });
+            };
+            row.events.push(draw);
+
+            row.left = Math.min(row.left, draw.x);
+            row.right = Math.max(row.right, draw.x + draw.width);
         }
 
         for (let period of entity.periods) {
             if (!level.concepts.has(period.concept))
                 continue;
 
-            row.periods.push({
-                x: time2position(period.time, position.x),
+            let draw = {
+                x: time2position(period.time, position.x, position.zoom),
                 width: period.duration * zoom2scale(position.zoom),
                 warning: period.warning,
                 stack: 0
-            });
+            };
+            row.periods.push(draw);
+
+            row.left = Math.min(row.left, draw.x);
+            row.right = Math.max(row.right, draw.x + draw.width);
         }
 
         if (level.leaf) {
@@ -479,12 +504,16 @@ function combine(idx, levels) {
                 }
 
                 for (let value of values) {
-                    row.values.push({
-                        x: time2position(value.time, position.x),
+                    let draw = {
+                        x: time2position(value.time, position.x, position.zoom),
                         y: row.height - (value.value - min) / range * row.height,
                         label: value.value,
                         warning: value.warning
-                    })
+                    };
+                    row.values.push(draw);
+
+                    row.left = Math.min(row.left, draw.x);
+                    row.right = Math.max(row.right, draw.x);
                 }
             }
         } else {
@@ -492,12 +521,16 @@ function combine(idx, levels) {
                 if (!level.concepts.has(value.concept))
                     continue;
 
-                row.events.push({
-                    x: time2position(value.time, position.x),
+                let draw = {
+                    x: time2position(value.time, position.x, position.zoom),
                     width: 0,
                     count: 1,
                     warning: value.warning
-                });
+                };
+                row.events.push(draw);
+
+                row.left = Math.min(row.left, draw.x);
+                row.right = Math.max(row.right, draw.x);
             }
         }
 
@@ -548,8 +581,12 @@ function combine(idx, levels) {
     return rows;
 }
 
-function time2position(time, offset) {
-    return Math.round(time * zoom2scale(position.zoom) - offset);
+function time2position(time, offset, zoom) {
+    return Math.round(time * zoom2scale(zoom) - offset);
+}
+
+function position2time(x, offset, zoom) {
+    return Math.round((x + offset) / zoom2scale(zoom));
 }
 
 function zoom2scale(zoom) {
