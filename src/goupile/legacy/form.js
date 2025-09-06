@@ -1252,44 +1252,8 @@ function FormBuilder(state, model, readonly = false) {
     this.section = function(label, func, options = {}) {
         options = expandOptions(options);
 
-        if (typeof label === 'string' && options.anchor == null && !section_depth) {
-            let anchor = label;
-
-            anchor = anchor.replace(/[A-Z]/g, c => c.toLowerCase());
-            anchor = anchor.replace(/[^a-zA-Z0-9]/g, c => {
-                switch (c) {
-                    case 'ç': { c = 'c'; } break;
-                    case 'ê':
-                    case 'é':
-                    case 'è':
-                    case 'ë': { c = 'e'; } break;
-                    case 'à':
-                    case 'â':
-                    case 'ä':
-                    case 'å': { c = '[aàâäå]'; } break;
-                    case 'î':
-                    case 'ï': { c = '[iîï]'; } break;
-                    case 'ù':
-                    case 'ü': 
-                    case 'û':
-                    case 'ú': { c = 'u'; } break;
-                    case 'n':
-                    case 'ñ': { c = 'n'; } break;
-                    case 'ó':
-                    case 'ö':
-                    case 'ô': { c = 'o'; } break;
-                    case 'œ': { c = 'oe'; } break;
-                    case 'ÿ': { c = 'y'; } break;
-
-                    default: { c = '-'; } break;
-                }
-
-                return c;
-            });
-            anchor = anchor.replace(/-+/g, '-');
-
-            options.anchor = anchor;
-        }
+        if (typeof label === 'string' && options.anchor == null && !section_depth)
+            options.anchor = Util.stringToID(label);
 
         let deploy = state.state_sections[label];
         if (deploy == null) {
