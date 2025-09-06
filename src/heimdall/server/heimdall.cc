@@ -387,9 +387,9 @@ static void HandleData(http_IO *io)
 
                 json.EndObject();
             } while (stmt.IsRow());
-            if (!stmt.IsValid())
-                return;
         }
+        if (!stmt.IsValid())
+            return;
         json.EndArray();
     }
 
