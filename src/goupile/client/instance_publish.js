@@ -18,7 +18,7 @@ import { Util, Log, Net } from '../../web/core/base.js';
 import { Sha256 } from '../../web/core/mixer.js';
 import * as UI from './ui.js';
 
-function InstancePublisher(bundler) {
+function InstancePublisher(bundler = null) {
     let actions;
     let refresh;
 
@@ -194,7 +194,7 @@ function InstancePublisher(bundler) {
                     switch (action.type) {
                         case 'push': {
                             if (action.to != null) {
-                                if (action.to.bundle == null && shouldBundle(action.filename)) {
+                                if (shouldBundle(action.filename) && action.to.bundle == null) {
                                     let code = await fetchCode(action.filename);
 
                                     try {
@@ -256,6 +256,9 @@ function InstancePublisher(bundler) {
     }
 
     function shouldBundle(filename) {
+        if (bundler == null)
+            return false;
+
         if (filename == 'main.js')
             return true;
         if (filename.startsWith('pages/') && filename.endsWith('.js'))
