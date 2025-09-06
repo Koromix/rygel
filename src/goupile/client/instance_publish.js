@@ -194,7 +194,7 @@ function InstancePublisher(bundler) {
                     switch (action.type) {
                         case 'push': {
                             if (action.to != null) {
-                                if (action.to.bundle == null && action.filename.endsWith('.js')) {
+                                if (action.to.bundle == null && shouldBundle(action.filename)) {
                                     let code = await fetchCode(action.filename);
 
                                     try {
@@ -253,6 +253,15 @@ function InstancePublisher(bundler) {
             progress.close();
             throw err;
         }
+    }
+
+    function shouldBundle(filename) {
+        if (filename == 'main.js')
+            return true;
+        if (filename.startsWith('pages/') && filename.endsWith('.js'))
+            return true;
+
+        return false;
     }
 
     async function fetchCode(filename) {
