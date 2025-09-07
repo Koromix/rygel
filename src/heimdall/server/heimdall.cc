@@ -351,175 +351,171 @@ static void HandleData(http_IO *io)
     if (!db.SetWAL(true))
         return;
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
 
-    json.StartObject();
+        // Dump views
+        {
+            sq_Statement stmt;
+            if (!db.Prepare(R"(SELECT v.view, v.name, i.path, c.domain || '::' || c.name
+                               FROM views v
+                               INNER JOIN items i ON (i.view = v.view)
+                               INNER JOIN concepts c ON (c.concept = i.concept)
+                               ORDER BY v.view)", &stmt))
+                return;
 
-    // Dump views
-    {
-        sq_Statement stmt;
-        if (!db.Prepare(R"(SELECT v.view, v.name, i.path, c.domain || '::' || c.name
-                           FROM views v
-                           INNER JOIN items i ON (i.view = v.view)
-                           INNER JOIN concepts c ON (c.concept = i.concept)
-                           ORDER BY v.view)", &stmt))
-            return;
+            json->Key("views"); json->StartArray();
+            if (stmt.Step()) {
+                do {
+                    int64_t view = sqlite3_column_int64(stmt, 0);
+                    const char *name = (const char *)sqlite3_column_text(stmt, 1);
 
-        json.Key("views"); json.StartArray();
-        if (stmt.Step()) {
-            do {
-                int64_t view = sqlite3_column_int64(stmt, 0);
+                    json->StartObject();
+
+                    json->Key("name"); json->String(name);
+                    json->Key("items"); json->StartObject();
+                    do {
+                        const char *path = (const char *)sqlite3_column_text(stmt, 2);
+                        const char *name = (const char *)sqlite3_column_text(stmt, 3);
+
+                        json->Key(path); json->String(name);
+                    } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == view);
+                    json->EndObject();
+
+                    json->EndObject();
+                } while (stmt.IsRow());
+            }
+            if (!stmt.IsValid())
+                return;
+            json->EndArray();
+        }
+
+        // Dump entities
+        {
+            sq_Statement stmt;
+            if (!db.Prepare("SELECT entity, name FROM entities ORDER BY name", &stmt))
+                return;
+
+            json->Key("entities"); json->StartArray();
+            while (stmt.Step()) {
+                int64_t entity = sqlite3_column_int64(stmt, 0);
                 const char *name = (const char *)sqlite3_column_text(stmt, 1);
 
-                json.StartObject();
+                int64_t start = INT64_MAX;
+                int64_t end = INT64_MIN;
 
-                json.Key("name"); json.String(name);
-                json.Key("items"); json.StartObject();
-                do {
-                    const char *path = (const char *)sqlite3_column_text(stmt, 2);
-                    const char *name = (const char *)sqlite3_column_text(stmt, 3);
+                json->StartObject();
 
-                    json.Key(path); json.String(name);
-                } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == view);
-                json.EndObject();
+                json->Key("name"); json->String(name);
 
-                json.EndObject();
-            } while (stmt.IsRow());
+                // Events
+                {
+                    sq_Statement stmt;
+                    if (!db.Prepare(R"(SELECT c.domain || '::' || c.name, e.timestamp, e.warning
+                                       FROM events e
+                                       INNER JOIN concepts c ON (c.concept = e.concept)
+                                       WHERE entity = ?1)", &stmt, entity))
+                        return;
+
+                    json->Key("events"); json->StartArray();
+                    while (stmt.Step()) {
+                        const char *name = (const char *)sqlite3_column_text(stmt, 0);
+                        int64_t time = sqlite3_column_int64(stmt, 1);
+                        bool warning = sqlite3_column_int(stmt, 2);
+
+                        json->StartObject();
+                        json->Key("concept"); json->String(name);
+                        json->Key("time"); json->Int64(time);
+                        json->Key("warning"); json->Bool(warning);
+                        json->EndObject();
+
+                        start = std::min(start, time);
+                        end = std::max(end, time);
+                    }
+                    if (!stmt.IsValid())
+                        return;
+                    json->EndArray();
+                }
+
+                // Periods
+                {
+                    sq_Statement stmt;
+                    if (!db.Prepare(R"(SELECT c.domain || '::' || c.name, p.timestamp, p.duration, p.warning
+                                       FROM periods p
+                                       INNER JOIN concepts c ON (c.concept = p.concept)
+                                       WHERE entity = ?1)", &stmt, entity))
+                        return;
+
+                    json->Key("periods"); json->StartArray();
+                    while (stmt.Step()) {
+                        const char *name = (const char *)sqlite3_column_text(stmt, 0);
+                        int64_t time = sqlite3_column_int64(stmt, 1);
+                        int64_t duration = sqlite3_column_int64(stmt, 2);
+                        bool warning = sqlite3_column_int(stmt, 3);
+
+                        json->StartObject();
+                        json->Key("concept"); json->String(name);
+                        json->Key("time"); json->Int64(time);
+                        json->Key("duration"); json->Int64(duration);
+                        json->Key("warning"); json->Bool(warning);
+                        json->EndObject();
+
+                        start = std::min(start, time);
+                        end = std::max(end, time + duration);
+                    }
+                    if (!stmt.IsValid())
+                        return;
+                    json->EndArray();
+                }
+
+                // Values
+                {
+                    sq_Statement stmt;
+                    if (!db.Prepare(R"(SELECT c.domain || '::' || c.name, m.timestamp, m.value, m.warning
+                                       FROM measures m
+                                       INNER JOIN concepts c ON (c.concept = m.concept)
+                                       WHERE entity = ?1)", &stmt, entity))
+                        return;
+
+                    json->Key("values"); json->StartArray();
+                    while (stmt.Step()) {
+                        const char *name = (const char *)sqlite3_column_text(stmt, 0);
+                        int64_t time = sqlite3_column_int64(stmt, 1);
+                        double value = sqlite3_column_double(stmt, 2);
+                        bool warning = sqlite3_column_int(stmt, 3);
+
+                        json->StartObject();
+                        json->Key("concept"); json->String(name);
+                        json->Key("time"); json->Int64(time);
+                        json->Key("value"); json->Double(value);
+                        json->Key("warning"); json->Bool(warning);
+                        json->EndObject();
+
+                        start = std::min(start, time);
+                        end = std::max(end, time);
+                    }
+                    if (!stmt.IsValid())
+                        return;
+                    json->EndArray();
+                }
+
+                if (start < INT64_MAX) {
+                    json->Key("start"); json->Int64(start);
+                    json->Key("end"); json->Int64(end);
+                } else {
+                    json->Key("start"); json->Null();
+                    json->Key("end"); json->Null();
+                }
+
+                json->EndObject();
+            }
+            if (!stmt.IsValid())
+                return;
+            json->EndArray();
         }
-        if (!stmt.IsValid())
-            return;
-        json.EndArray();
-    }
 
-    // Dump entities
-    {
-        sq_Statement stmt;
-        if (!db.Prepare("SELECT entity, name FROM entities ORDER BY name", &stmt))
-            return;
-
-        json.Key("entities"); json.StartArray();
-        while (stmt.Step()) {
-            int64_t entity = sqlite3_column_int64(stmt, 0);
-            const char *name = (const char *)sqlite3_column_text(stmt, 1);
-
-            int64_t start = INT64_MAX;
-            int64_t end = INT64_MIN;
-
-            json.StartObject();
-
-            json.Key("name"); json.String(name);
-
-            // Events
-            {
-                sq_Statement stmt;
-                if (!db.Prepare(R"(SELECT c.domain || '::' || c.name, e.timestamp, e.warning
-                                   FROM events e
-                                   INNER JOIN concepts c ON (c.concept = e.concept)
-                                   WHERE entity = ?1)", &stmt, entity))
-                    return;
-
-                json.Key("events"); json.StartArray();
-                while (stmt.Step()) {
-                    const char *name = (const char *)sqlite3_column_text(stmt, 0);
-                    int64_t time = sqlite3_column_int64(stmt, 1);
-                    bool warning = sqlite3_column_int(stmt, 2);
-
-                    json.StartObject();
-                    json.Key("concept"); json.String(name);
-                    json.Key("time"); json.Int64(time);
-                    json.Key("warning"); json.Bool(warning);
-                    json.EndObject();
-
-                    start = std::min(start, time);
-                    end = std::max(end, time);
-                }
-                if (!stmt.IsValid())
-                    return;
-                json.EndArray();
-            }
-
-            // Periods
-            {
-                sq_Statement stmt;
-                if (!db.Prepare(R"(SELECT c.domain || '::' || c.name, p.timestamp, p.duration, p.warning
-                                   FROM periods p
-                                   INNER JOIN concepts c ON (c.concept = p.concept)
-                                   WHERE entity = ?1)", &stmt, entity))
-                    return;
-
-                json.Key("periods"); json.StartArray();
-                while (stmt.Step()) {
-                    const char *name = (const char *)sqlite3_column_text(stmt, 0);
-                    int64_t time = sqlite3_column_int64(stmt, 1);
-                    int64_t duration = sqlite3_column_int64(stmt, 2);
-                    bool warning = sqlite3_column_int(stmt, 3);
-
-                    json.StartObject();
-                    json.Key("concept"); json.String(name);
-                    json.Key("time"); json.Int64(time);
-                    json.Key("duration"); json.Int64(duration);
-                    json.Key("warning"); json.Bool(warning);
-                    json.EndObject();
-
-                    start = std::min(start, time);
-                    end = std::max(end, time + duration);
-                }
-                if (!stmt.IsValid())
-                    return;
-                json.EndArray();
-            }
-
-            // Values
-            {
-                sq_Statement stmt;
-                if (!db.Prepare(R"(SELECT c.domain || '::' || c.name, m.timestamp, m.value, m.warning
-                                   FROM measures m
-                                   INNER JOIN concepts c ON (c.concept = m.concept)
-                                   WHERE entity = ?1)", &stmt, entity))
-                    return;
-
-                json.Key("values"); json.StartArray();
-                while (stmt.Step()) {
-                    const char *name = (const char *)sqlite3_column_text(stmt, 0);
-                    int64_t time = sqlite3_column_int64(stmt, 1);
-                    double value = sqlite3_column_double(stmt, 2);
-                    bool warning = sqlite3_column_int(stmt, 3);
-
-                    json.StartObject();
-                    json.Key("concept"); json.String(name);
-                    json.Key("time"); json.Int64(time);
-                    json.Key("value"); json.Double(value);
-                    json.Key("warning"); json.Bool(warning);
-                    json.EndObject();
-
-                    start = std::min(start, time);
-                    end = std::max(end, time);
-                }
-                if (!stmt.IsValid())
-                    return;
-                json.EndArray();
-            }
-
-            if (start < INT64_MAX) {
-                json.Key("start"); json.Int64(start);
-                json.Key("end"); json.Int64(end);
-            } else {
-                json.Key("start"); json.Null();
-                json.Key("end"); json.Null();
-            }
-
-            json.EndObject();
-        }
-        if (!stmt.IsValid())
-            return;
-        json.EndArray();
-    }
-
-    json.EndObject();
-
-    json.Send();
+        json->EndObject();
+    });
 }
 
 static void HandleRequest(http_IO *io)

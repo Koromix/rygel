@@ -954,12 +954,7 @@ function computeGhsPrice(ghs, duration, apply_coeff) {
     let price_cents;
     let mode;
     if (ghs.exb_threshold && duration < ghs.exb_threshold) {
-        price_cents = ghs.ghs_cents;
-        if (ghs.exb_once) {
-            price_cents -= ghs.exb_cents;
-        } else {
-            price_cents -= (ghs.exb_threshold - duration) * ghs.exb_cents;
-        }
+        price_cents = ghs.ghs_cents - ghs.exb_cents * (ghs.exb_once ? 1 : ghs.exb_threshold - duration);
         mode = 'exb';
     } else if (ghs.exh_threshold && duration >= ghs.exh_threshold) {
         price_cents = ghs.ghs_cents + (duration - ghs.exh_threshold + 1) * ghs.exh_cents;

@@ -194,31 +194,21 @@ bool http_PreventCSRF(http_IO *io)
     return true;
 }
 
-bool http_JsonPageBuilder::Init(http_IO *io)
+bool http_SendJson(http_IO *io, int status, FunctionRef<void(json_Writer *json)> func)
 {
-    K_ASSERT(!this->io);
-
+    CompressionType encoding;
     if (!io->NegociateEncoding(CompressionType::Brotli, CompressionType::Gzip, &encoding))
         return false;
-    if (!st.Open(&buf, "<json>", 0, encoding))
+    io->AddHeader("Content-Type", "application/json");
+
+    StreamWriter st;
+    if (!io->OpenForWrite(status, encoding, -1, &st))
         return false;
 
-    this->io = io;
-    return true;
-}
+    json_Writer json(&st);
+    func(&json);
 
-void http_JsonPageBuilder::Send(int status)
-{
-    Flush();
-
-    bool success = st.Close();
-    K_ASSERT(success);
-
-    Span<const uint8_t> data = buf.Leak();
-    allocator.GiveTo(io->Allocator());
-
-    io->AddEncodingHeader(encoding);
-    io->SendBinary(status, data, "application/json");
+    return st.Close();
 }
 
 }

@@ -511,68 +511,64 @@ void ProduceMcoAggregate(http_IO *io, const User *user)
         GatherGhmGhsInfo(ghm_roots, min_date, max_date, thop_config.sector, &ghm_ghs);
     }
 
-    // Export data
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
-    char buf[32];
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        char buf[32];
 
-    json.StartObject();
+        json->StartObject();
 
-    json.Key("ghs"); json.StartArray();
-    for (const GhmGhsInfo &ghm_ghs_info: ghm_ghs) {
-        json.StartObject();
-        json.Key("ghm"); json.String(Fmt(buf, "%1", ghm_ghs_info.key.ghm).ptr);
-        json.Key("ghs"); json.Int(ghm_ghs_info.key.ghs.number);
-        json.Key("conditions"); json.Bool(ghm_ghs_info.ghm_to_ghs_info->conditions_count);
-        json.Key("durations"); json.Uint(ghm_ghs_info.durations);
+        json->Key("ghs"); json->StartArray();
+        for (const GhmGhsInfo &ghm_ghs_info: ghm_ghs) {
+            json->StartObject();
+            json->Key("ghm"); json->String(Fmt(buf, "%1", ghm_ghs_info.key.ghm).ptr);
+            json->Key("ghs"); json->Int(ghm_ghs_info.key.ghs.number);
+            json->Key("conditions"); json->Bool(ghm_ghs_info.ghm_to_ghs_info->conditions_count);
+            json->Key("durations"); json->Uint(ghm_ghs_info.durations);
 
-        if (ghm_ghs_info.exh_threshold) {
-            json.Key("exh_threshold"); json.Int(ghm_ghs_info.exh_threshold);
-        }
-        if (ghm_ghs_info.exb_threshold) {
-            json.Key("exb_threshold"); json.Int(ghm_ghs_info.exb_threshold);
-        }
-        json.EndObject();
-    }
-    json.EndArray();
-
-    json.Key("rows"); json.StartArray();
-    for (const Aggregate &agg: aggregate_set.aggregates) {
-        json.StartObject();
-        json.Key("ghm"); json.String(Fmt(buf, "%1", agg.key.ghm).ptr);
-        json.Key("ghs"); json.Int(agg.key.ghs.number);
-        if (flags & (int)AggregationFlag::KeyOnDuration) {
-            json.Key("duration"); json.Int(agg.key.duration);
-        }
-        if (flags & (int)AggregationFlag::KeyOnUnits) {
-            json.Key("unit"); json.StartArray();
-            for (drd_UnitCode unit: agg.key.units) {
-                json.Int(unit.number);
+            if (ghm_ghs_info.exh_threshold) {
+                json->Key("exh_threshold"); json->Int(ghm_ghs_info.exh_threshold);
             }
-            json.EndArray();
+            if (ghm_ghs_info.exb_threshold) {
+                json->Key("exb_threshold"); json->Int(ghm_ghs_info.exb_threshold);
+            }
+            json->EndObject();
         }
-        json.Key("count"); json.Int(agg.count);
-        json.Key("deaths"); json.Int64(agg.deaths);
-        json.Key("mono_count_total"); json.Int(agg.mono_count);
-        json.Key("price_cents_total"); json.Int64(agg.price_cents);
-        json.Key("mono_count"); json.StartArray();
-        for (const Aggregate::Part &part: agg.parts) {
-            json.Int(part.mono_count);
-        }
-        json.EndArray();
-        json.Key("price_cents"); json.StartArray();
-        for (const Aggregate::Part &part: agg.parts) {
-            json.Int64(part.price_cents);
-        }
-        json.EndArray();
-        json.EndObject();
-    }
-    json.EndArray();
+        json->EndArray();
 
-    json.EndObject();
+        json->Key("rows"); json->StartArray();
+        for (const Aggregate &agg: aggregate_set.aggregates) {
+            json->StartObject();
+            json->Key("ghm"); json->String(Fmt(buf, "%1", agg.key.ghm).ptr);
+            json->Key("ghs"); json->Int(agg.key.ghs.number);
+            if (flags & (int)AggregationFlag::KeyOnDuration) {
+                json->Key("duration"); json->Int(agg.key.duration);
+            }
+            if (flags & (int)AggregationFlag::KeyOnUnits) {
+                json->Key("unit"); json->StartArray();
+                for (drd_UnitCode unit: agg.key.units) {
+                    json->Int(unit.number);
+                }
+                json->EndArray();
+            }
+            json->Key("count"); json->Int(agg.count);
+            json->Key("deaths"); json->Int64(agg.deaths);
+            json->Key("mono_count_total"); json->Int(agg.mono_count);
+            json->Key("price_cents_total"); json->Int64(agg.price_cents);
+            json->Key("mono_count"); json->StartArray();
+            for (const Aggregate::Part &part: agg.parts) {
+                json->Int(part.mono_count);
+            }
+            json->EndArray();
+            json->Key("price_cents"); json->StartArray();
+            for (const Aggregate::Part &part: agg.parts) {
+                json->Int64(part.price_cents);
+            }
+            json->EndArray();
+            json->EndObject();
+        }
+        json->EndArray();
 
-    json.Send();
+        json->EndObject();
+    });
 }
 
 void ProduceMcoResults(http_IO *io, const User *user)
@@ -624,184 +620,201 @@ void ProduceMcoResults(http_IO *io, const User *user)
     HeapArray<mco_Pricing> pricings;
     HeapArray<mco_Pricing> mono_pricings;
 
-    // Export data
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    HeapArray<uint8_t> buf;
+    {
+        // Buffer JSON before sending because we may fail
+        buf.allocator = io->Allocator();
+        buf.Grow(Mebibytes(1));
 
-    json.StartArray();
-    bool success = provider.Run([&](Span<const mco_Result> results,
-                                    Span<const mco_Result> mono_results) {
-        // Compute prices
-        pricings.RemoveFrom(0);
-        mono_pricings.RemoveFrom(0);
-        mco_Price(results, apply_coefficent, &pricings);
-        mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
+        StreamWriter st;
+        CompressionType encoding;
+        if (!io->NegociateEncoding(CompressionType::Brotli, CompressionType::Gzip, &encoding))
+            return;
+        if (!st.Open(&buf, "<json>", 0, encoding))
+            return;
+        json_Writer json(&st);
 
-        for (Size i = 0, j = 0; i < results.len; i++) {
-            char buf[32];
+        json.StartArray();
 
-            const mco_Result &result = results[i];
-            const mco_Pricing &pricing = pricings[i];
-            Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
-            Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
-            j += result.stays.len;
+        bool success = provider.Run([&](Span<const mco_Result> results,
+                                        Span<const mco_Result> mono_results) {
+            // Compute prices
+            pricings.RemoveFrom(0);
+            mono_pricings.RemoveFrom(0);
+            mco_Price(results, apply_coefficent, &pricings);
+            mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
 
-            const mco_GhmRootInfo *ghm_root_info = nullptr;
-            const mco_DiagnosisInfo *main_diag_info = nullptr;
-            const mco_DiagnosisInfo *linked_diag_info = nullptr;
-            if (result.index) [[likely]] {
-                const mco_Stay &main_stay = result.stays[result.main_stay_idx];
+            for (Size i = 0, j = 0; i < results.len; i++) {
+                char buf[32];
 
-                ghm_root_info = result.index->FindGhmRoot(result.ghm.Root());
-                main_diag_info = result.index->FindDiagnosis(main_stay.main_diagnosis, main_stay.sex);
-                linked_diag_info = result.index->FindDiagnosis(main_stay.linked_diagnosis, main_stay.sex);
-            }
+                const mco_Result &result = results[i];
+                const mco_Pricing &pricing = pricings[i];
+                Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
+                Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
+                j += result.stays.len;
 
-            json.StartObject();
+                const mco_GhmRootInfo *ghm_root_info = nullptr;
+                const mco_DiagnosisInfo *main_diag_info = nullptr;
+                const mco_DiagnosisInfo *linked_diag_info = nullptr;
+                if (result.index) [[likely]] {
+                    const mco_Stay &main_stay = result.stays[result.main_stay_idx];
 
-            json.Key("admin_id"); json.Int(result.stays[0].admin_id);
-            json.Key("bill_id"); json.Int(result.stays[0].bill_id);
-            if (result.index) [[likely]] {
-                json.Key("index_date"); json.String(Fmt(buf, "%1", result.index->limit_dates[0]).ptr);
-            }
-            if (result.duration >= 0) {
-                json.Key("duration"); json.Int(result.duration);
-            }
-            json.Key("sex"); json.Int(result.stays[0].sex);
-            if (result.age >= 0) {
-                json.Key("age"); json.Int(result.age);
-            }
-            json.Key("main_stay"); json.Int(result.main_stay_idx);
-            json.Key("ghm"); json.String(result.ghm.ToString(buf).ptr);
-            json.Key("main_error"); json.Int(result.main_error);
-            json.Key("ghs"); json.Int(result.ghs.number);
-            json.Key("ghs_duration"); json.Int(result.ghs_duration);
-            json.Key("exb_exh"); json.Int(pricing.exb_exh);
-            json.Key("price_cents"); json.Int((int)pricing.price_cents);
-            json.Key("total_cents"); json.Int((int)pricing.total_cents);
-
-            json.Key("stays"); json.StartArray();
-            for (Size k = 0; k < result.stays.len; k++) {
-                const mco_Stay &stay = result.stays[k];
-                const mco_Result &mono_result = sub_mono_results[k];
-                const mco_Pricing &mono_pricing = sub_mono_pricings[k];
+                    ghm_root_info = result.index->FindGhmRoot(result.ghm.Root());
+                    main_diag_info = result.index->FindDiagnosis(main_stay.main_diagnosis, main_stay.sex);
+                    linked_diag_info = result.index->FindDiagnosis(main_stay.linked_diagnosis, main_stay.sex);
+                }
 
                 json.StartObject();
 
-                if (mono_result.duration >= 0) {
-                    json.Key("duration"); json.Int(mono_result.duration);
+                json.Key("admin_id"); json.Int(result.stays[0].admin_id);
+                json.Key("bill_id"); json.Int(result.stays[0].bill_id);
+                if (result.index) [[likely]] {
+                    json.Key("index_date"); json.String(Fmt(buf, "%1", result.index->limit_dates[0]).ptr);
                 }
-                json.Key("unit"); json.Int(stay.unit.number);
-                if (user->mco_allowed_units.Find(stay.unit)) {
-                    json.Key("sex"); json.Int(stay.sex);
-                    json.Key("age"); json.Int(mono_result.age);
-                    json.Key("birthdate"); json.String(Fmt(buf, "%1", stay.birthdate).ptr);
-                    json.Key("entry_date"); json.String(Fmt(buf, "%1", stay.entry.date).ptr);
-                    json.Key("entry_mode"); json.String(&stay.entry.mode, 1);
-                    if (stay.entry.origin) {
-                        json.Key("entry_origin"); json.String(&stay.entry.origin, 1);
-                    }
-                    json.Key("exit_date"); json.String(Fmt(buf, "%1", stay.exit.date).ptr);
-                    json.Key("exit_mode"); json.String(&stay.exit.mode, 1);
-                    if (stay.exit.destination) {
-                        json.Key("exit_destination"); json.String(&stay.exit.destination, 1);
-                    }
-                    if (stay.bed_authorization) {
-                        json.Key("bed_authorization"); json.Int(stay.bed_authorization);
-                    }
-                    if (stay.session_count) {
-                        json.Key("session_count"); json.Int(stay.session_count);
-                    }
-                    if (stay.igs2) {
-                        json.Key("igs2"); json.Int(stay.igs2);
-                    }
-                    if (stay.last_menstrual_period.value) {
-                        json.Key("last_menstrual_period"); json.String(Fmt(buf, "%1", stay.last_menstrual_period).ptr);
-                    }
-                    if (stay.gestational_age) {
-                        json.Key("gestational_age"); json.Int(stay.gestational_age);
-                    }
-                    if (stay.newborn_weight) {
-                        json.Key("newborn_weight"); json.Int(stay.newborn_weight);
-                    }
-                    if (stay.flags & (int)mco_Stay::Flag::Confirmed) {
-                        json.Key("confirm"); json.Bool(true);
-                    }
-                    if (stay.flags & (int)mco_Stay::Flag::RAAC) {
-                        json.Key("raac"); json.Bool(true);
-                    }
-                    if (stay.flags & (int)mco_Stay::Flag::UCD) {
-                        json.Key("ucd"); json.Bool(stay.flags & (int)mco_Stay::Flag::UCD);
-                    }
-                    if (stay.dip_count) {
-                        json.Key("dip_count"); json.Int(stay.dip_count);
-                    }
+                if (result.duration >= 0) {
+                    json.Key("duration"); json.Int(result.duration);
+                }
+                json.Key("sex"); json.Int(result.stays[0].sex);
+                if (result.age >= 0) {
+                    json.Key("age"); json.Int(result.age);
+                }
+                json.Key("main_stay"); json.Int(result.main_stay_idx);
+                json.Key("ghm"); json.String(result.ghm.ToString(buf).ptr);
+                json.Key("main_error"); json.Int(result.main_error);
+                json.Key("ghs"); json.Int(result.ghs.number);
+                json.Key("ghs_duration"); json.Int(result.ghs_duration);
+                json.Key("exb_exh"); json.Int(pricing.exb_exh);
+                json.Key("price_cents"); json.Int((int)pricing.price_cents);
+                json.Key("total_cents"); json.Int((int)pricing.total_cents);
 
-                    if (stay.main_diagnosis.IsValid()) [[likely]] {
-                        json.Key("main_diagnosis"); json.String(stay.main_diagnosis.str);
+                json.Key("stays"); json.StartArray();
+                for (Size k = 0; k < result.stays.len; k++) {
+                    const mco_Stay &stay = result.stays[k];
+                    const mco_Result &mono_result = sub_mono_results[k];
+                    const mco_Pricing &mono_pricing = sub_mono_pricings[k];
+
+                    json.StartObject();
+
+                    if (mono_result.duration >= 0) {
+                        json.Key("duration"); json.Int(mono_result.duration);
                     }
-                    if (stay.linked_diagnosis.IsValid()) {
-                        json.Key("linked_diagnosis"); json.String(stay.linked_diagnosis.str);
-                    }
+                    json.Key("unit"); json.Int(stay.unit.number);
+                    if (user->mco_allowed_units.Find(stay.unit)) {
+                        json.Key("sex"); json.Int(stay.sex);
+                        json.Key("age"); json.Int(mono_result.age);
+                        json.Key("birthdate"); json.String(Fmt(buf, "%1", stay.birthdate).ptr);
+                        json.Key("entry_date"); json.String(Fmt(buf, "%1", stay.entry.date).ptr);
+                        json.Key("entry_mode"); json.String(&stay.entry.mode, 1);
+                        if (stay.entry.origin) {
+                            json.Key("entry_origin"); json.String(&stay.entry.origin, 1);
+                        }
+                        json.Key("exit_date"); json.String(Fmt(buf, "%1", stay.exit.date).ptr);
+                        json.Key("exit_mode"); json.String(&stay.exit.mode, 1);
+                        if (stay.exit.destination) {
+                            json.Key("exit_destination"); json.String(&stay.exit.destination, 1);
+                        }
+                        if (stay.bed_authorization) {
+                            json.Key("bed_authorization"); json.Int(stay.bed_authorization);
+                        }
+                        if (stay.session_count) {
+                            json.Key("session_count"); json.Int(stay.session_count);
+                        }
+                        if (stay.igs2) {
+                            json.Key("igs2"); json.Int(stay.igs2);
+                        }
+                        if (stay.last_menstrual_period.value) {
+                            json.Key("last_menstrual_period"); json.String(Fmt(buf, "%1", stay.last_menstrual_period).ptr);
+                        }
+                        if (stay.gestational_age) {
+                            json.Key("gestational_age"); json.Int(stay.gestational_age);
+                        }
+                        if (stay.newborn_weight) {
+                            json.Key("newborn_weight"); json.Int(stay.newborn_weight);
+                        }
+                        if (stay.flags & (int)mco_Stay::Flag::Confirmed) {
+                            json.Key("confirm"); json.Bool(true);
+                        }
+                        if (stay.flags & (int)mco_Stay::Flag::RAAC) {
+                            json.Key("raac"); json.Bool(true);
+                        }
+                        if (stay.flags & (int)mco_Stay::Flag::UCD) {
+                            json.Key("ucd"); json.Bool(stay.flags & (int)mco_Stay::Flag::UCD);
+                        }
+                        if (stay.dip_count) {
+                            json.Key("dip_count"); json.Int(stay.dip_count);
+                        }
 
-                    json.Key("other_diagnoses"); json.StartArray();
-                    for (drd_DiagnosisCode diag: stay.other_diagnoses) {
-                        const mco_DiagnosisInfo *diag_info =
-                            result.index ? result.index->FindDiagnosis(diag, stay.sex) : nullptr;
+                        if (stay.main_diagnosis.IsValid()) [[likely]] {
+                            json.Key("main_diagnosis"); json.String(stay.main_diagnosis.str);
+                        }
+                        if (stay.linked_diagnosis.IsValid()) {
+                            json.Key("linked_diagnosis"); json.String(stay.linked_diagnosis.str);
+                        }
 
-                        json.StartObject();
-                        json.Key("diag"); json.String(diag.str);
-                        if (!result.ghm.IsError() && ghm_root_info && main_diag_info && diag_info) {
-                            json.Key("severity"); json.Int(diag_info->severity);
+                        json.Key("other_diagnoses"); json.StartArray();
+                        for (drd_DiagnosisCode diag: stay.other_diagnoses) {
+                            const mco_DiagnosisInfo *diag_info =
+                                result.index ? result.index->FindDiagnosis(diag, stay.sex) : nullptr;
 
-                            if (mco_TestExclusion(*result.index, result.age, *diag_info,
-                                                  *ghm_root_info, *main_diag_info, linked_diag_info)) {
-                                json.Key("exclude"); json.Bool(true);
+                            json.StartObject();
+                            json.Key("diag"); json.String(diag.str);
+                            if (!result.ghm.IsError() && ghm_root_info && main_diag_info && diag_info) {
+                                json.Key("severity"); json.Int(diag_info->severity);
+
+                                if (mco_TestExclusion(*result.index, result.age, *diag_info,
+                                                      *ghm_root_info, *main_diag_info, linked_diag_info)) {
+                                    json.Key("exclude"); json.Bool(true);
+                                }
                             }
+                            json.EndObject();
                         }
-                        json.EndObject();
-                    }
-                    json.EndArray();
+                        json.EndArray();
 
-                    json.Key("procedures"); json.StartArray();
-                    for (const mco_ProcedureRealisation &proc: stay.procedures) {
-                        json.StartObject();
-                        json.Key("proc"); json.String(proc.proc.str);
-                        if (proc.phase) {
-                            json.Key("phase"); json.Int(proc.phase);
+                        json.Key("procedures"); json.StartArray();
+                        for (const mco_ProcedureRealisation &proc: stay.procedures) {
+                            json.StartObject();
+                            json.Key("proc"); json.String(proc.proc.str);
+                            if (proc.phase) {
+                                json.Key("phase"); json.Int(proc.phase);
+                            }
+                            json.Key("activity"); json.Int(proc.activity);
+                            if (proc.extension) {
+                                json.Key("extension"); json.Int(proc.extension);
+                            }
+                            json.String("date"); json.String(Fmt(buf, "%1", proc.date).ptr);
+                            json.String("count"); json.Int(proc.count);
+                            if (proc.doc) {
+                                json.String("doc"); json.String(&proc.doc, 1);
+                            }
+                            json.EndObject();
                         }
-                        json.Key("activity"); json.Int(proc.activity);
-                        if (proc.extension) {
-                            json.Key("extension"); json.Int(proc.extension);
-                        }
-                        json.String("date"); json.String(Fmt(buf, "%1", proc.date).ptr);
-                        json.String("count"); json.Int(proc.count);
-                        if (proc.doc) {
-                            json.String("doc"); json.String(&proc.doc, 1);
-                        }
-                        json.EndObject();
+                        json.EndArray();
                     }
-                    json.EndArray();
+
+                    json.Key("price_cents"); json.Int64(mono_pricing.price_cents);
+                    json.Key("total_cents"); json.Int64(mono_pricing.total_cents);
+
+                    json.EndObject();
                 }
-
-                json.Key("price_cents"); json.Int64(mono_pricing.price_cents);
-                json.Key("total_cents"); json.Int64(mono_pricing.total_cents);
+                json.EndArray();
 
                 json.EndObject();
             }
-            json.EndArray();
-
-            json.EndObject();
+        });
+        if (!success) {
+            io->SendError(422);
+            return;
         }
-    });
-    if (!success) {
-        io->SendError(422);
-        return;
-    }
-    json.EndArray();
 
-    json.Send();
+        json.EndArray();
+
+        if (st.Close()) {
+            Span<const uint8_t> json = buf.Leak();
+
+            io->AddEncodingHeader(encoding);
+            io->SendBinary(200, json, "application/json");
+        }
+    }
 }
 
 }

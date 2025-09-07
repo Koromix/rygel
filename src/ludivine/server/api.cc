@@ -472,16 +472,15 @@ void HandlePassword(http_IO *io)
         const char *token = (const char *)sqlite3_column_text(stmt, 2);
 
         if (hash && crypto_pwhash_str_verify(hash, password, strlen(password)) == 0) {
-            http_JsonPageBuilder json;
-            if (!json.Init(io))
-                return;
+            http_SendJson(io, 200, [&](json_Writer *json) {
+                json->StartObject();
 
-            json.StartObject();
-            json.Key("uid"); json.String(uid);
-            json.Key("token"); json.Raw(token);
-            json.EndObject();
+                json->Key("uid"); json->String(uid);
+                json->Key("token"); json->Raw(token);
 
-            json.Send();
+                json->EndObject();
+            });
+
             return;
         }
     }

@@ -1111,16 +1111,13 @@ void HandleDemoCreate(http_IO *io)
 
     const char *redirect = Fmt(io->Allocator(), "/%1/", name).ptr;
 
-    // Export data
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
 
-    json.StartObject();
-    json.Key("url"); json.String(redirect);
-    json.EndObject();
+        json->Key("url"); json->String(redirect);
 
-    json.Send();
+        json->EndObject();
+    });
 }
 
 void PruneDemos()
@@ -1868,11 +1865,6 @@ void HandleInstanceList(http_IO *io)
     Span<InstanceHolder *> instances = gp_domain.LockInstances();
     K_DEFER { gp_domain.UnlockInstances(); };
 
-    // Export data
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
-
     // Check allowed instances
     HashSet<const char *> allowed_masters;
     if (!session->IsRoot()) {
@@ -1889,46 +1881,48 @@ void HandleInstanceList(http_IO *io)
         }
     }
 
-    json.StartArray();
-    for (InstanceHolder *instance: instances) {
-        if (!session->IsRoot() && !allowed_masters.Find(instance->master->key.ptr))
-            continue;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-        json.StartObject();
+        for (InstanceHolder *instance: instances) {
+            if (!session->IsRoot() && !allowed_masters.Find(instance->master->key.ptr))
+                continue;
 
-        json.Key("key"); json.String(instance->key.ptr);
-        if (instance->master != instance) {
-            json.Key("master"); json.String(instance->master->key.ptr);
-        } else {
-            json.Key("slaves"); json.Int64(instance->slaves.len);
-        }
-        json.Key("legacy"); json.Bool(instance->legacy);
-        json.Key("config"); json.StartObject();
-            json.Key("name"); json.String(instance->config.name);
-            json.Key("use_offline"); json.Bool(instance->config.use_offline);
-            json.Key("data_remote"); json.Bool(instance->config.data_remote);
-            if (instance->config.token_key) {
-                json.Key("token_key"); json.String(instance->config.token_key);
-            }
-            if (instance->config.auto_key) {
-                json.Key("auto_key"); json.String(instance->config.auto_key);
-            }
-            json.Key("allow_guests"); json.Bool(instance->config.allow_guests);
-            if (instance->config.export_days) {
-                json.Key("export_days"); json.Int(instance->config.export_days);
+            json->StartObject();
+
+            json->Key("key"); json->String(instance->key.ptr);
+            if (instance->master != instance) {
+                json->Key("master"); json->String(instance->master->key.ptr);
             } else {
-                json.Key("export_days"); json.Null();
+                json->Key("slaves"); json->Int64(instance->slaves.len);
             }
-            json.Key("export_time"); json.Int(instance->config.export_time);
-            json.Key("export_all"); json.Bool(instance->config.export_all);
-            json.Key("fs_version"); json.Int64(instance->fs_version);
-        json.EndObject();
+            json->Key("legacy"); json->Bool(instance->legacy);
+            json->Key("config"); json->StartObject();
+                json->Key("name"); json->String(instance->config.name);
+                json->Key("use_offline"); json->Bool(instance->config.use_offline);
+                json->Key("data_remote"); json->Bool(instance->config.data_remote);
+                if (instance->config.token_key) {
+                    json->Key("token_key"); json->String(instance->config.token_key);
+                }
+                if (instance->config.auto_key) {
+                    json->Key("auto_key"); json->String(instance->config.auto_key);
+                }
+                json->Key("allow_guests"); json->Bool(instance->config.allow_guests);
+                if (instance->config.export_days) {
+                    json->Key("export_days"); json->Int(instance->config.export_days);
+                } else {
+                    json->Key("export_days"); json->Null();
+                }
+                json->Key("export_time"); json->Int(instance->config.export_time);
+                json->Key("export_all"); json->Bool(instance->config.export_all);
+                json->Key("fs_version"); json->Int64(instance->fs_version);
+            json->EndObject();
 
-        json.EndObject();
-    }
-    json.EndArray();
+            json->EndObject();
+        }
 
-    json.Send();
+        json->EndArray();
+    });
 }
 
 void HandleInstanceAssign(http_IO *io)
@@ -2167,46 +2161,43 @@ void HandleInstancePermissions(http_IO *io)
         return;
     sqlite3_bind_text(stmt, 1, instance_key, -1, SQLITE_STATIC);
 
-    // Export data
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
 
-    json.StartObject();
-    while (stmt.Step()) {
-        int64_t userid = sqlite3_column_int64(stmt, 0);
-        uint32_t permissions = (uint32_t)sqlite3_column_int64(stmt, 1);
-        bool is_root = (sqlite3_column_int(stmt, 2) == 1);
-        char buf[128];
+        while (stmt.Step()) {
+            int64_t userid = sqlite3_column_int64(stmt, 0);
+            uint32_t permissions = (uint32_t)sqlite3_column_int64(stmt, 1);
+            bool is_root = (sqlite3_column_int(stmt, 2) == 1);
+            char buf[128];
 
-        if (is_root && !session->IsRoot())
-            continue;
-
-        if (instance->master != instance) {
-            permissions &= UserPermissionSlaveMask;
-        } else if (instance->slaves.len) {
-            permissions &= UserPermissionMasterMask;
-        }
-        if (!permissions)
-            continue;
-
-        json.Key(Fmt(buf, "%1", userid).ptr); json.StartArray();
-        for (Size i = 0; i < K_LEN(UserPermissionNames); i++) {
-            if (instance->legacy && !(LegacyPermissionMask & (1 << i)))
+            if (is_root && !session->IsRoot())
                 continue;
 
-            if (permissions & (1 << i)) {
-                Span<const char> str = json_ConvertToJsonName(UserPermissionNames[i], buf);
-                json.String(str.ptr, (size_t)str.len);
+            if (instance->master != instance) {
+                permissions &= UserPermissionSlaveMask;
+            } else if (instance->slaves.len) {
+                permissions &= UserPermissionMasterMask;
             }
-        }
-        json.EndArray();
-    }
-    if (!stmt.IsValid())
-        return;
-    json.EndObject();
+            if (!permissions)
+                continue;
 
-    json.Send();
+            json->Key(Fmt(buf, "%1", userid).ptr); json->StartArray();
+            for (Size i = 0; i < K_LEN(UserPermissionNames); i++) {
+                if (instance->legacy && !(LegacyPermissionMask & (1 << i)))
+                    continue;
+
+                if (permissions & (1 << i)) {
+                    Span<const char> str = json_ConvertToJsonName(UserPermissionNames[i], buf);
+                    json->String(str.ptr, (size_t)str.len);
+                }
+            }
+            json->EndArray();
+        }
+        if (!stmt.IsValid())
+            return;
+
+        json->EndObject();
+    });
 }
 
 void HandleInstanceMigrate(http_IO *io)
@@ -2439,43 +2430,48 @@ void HandleArchiveList(http_IO *io)
         return;
     }
 
-    // Export data
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
-    HeapArray<char> buf;
+    HeapArray<const char *> filenames;
+    HeapArray<FileInfo> infos;
+    {
+        EnumResult ret = EnumerateDirectory(gp_domain.config.archive_directory, nullptr, -1,
+                                            [&](const char *basename, FileType) {
+            Span<const char> extension = GetPathExtension(basename);
 
-    json.StartArray();
-    EnumResult ret = EnumerateDirectory(gp_domain.config.archive_directory, nullptr, -1,
-                                        [&](const char *basename, FileType) {
-        Span<const char> extension = GetPathExtension(basename);
+            if (extension == ".goarch" || extension == ".goupilearchive") {
+                const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
+                FileInfo file_info = {};
 
-        if (extension == ".goarch" || extension == ".goupilearchive") {
-            buf.RemoveFrom(0);
+                // Go on even if this fails, or archive is in creation. Errors end up in the log anyway
+                if (StatFile(filename, &file_info) != StatResult::Success)
+                    return true;
+                if (!file_info.size)
+                    return true;
 
-            const char *filename = Fmt(&buf, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
+                const char *basename = SplitStrReverseAny(filename, K_PATH_SEPARATORS).ptr;
 
-            FileInfo file_info;
-            if (StatFile(filename, &file_info) != StatResult::Success)
-                return false;
-
-            // Don't list archives currently in creation
-            if (file_info.size) {
-                json.StartObject();
-                json.Key("filename"); json.String(basename);
-                json.Key("size"); json.Int64(file_info.size);
-                json.Key("mtime"); json.Int64(file_info.mtime);
-                json.EndObject();
+                filenames.Append(basename);
+                infos.Append(file_info);
             }
+
+            return true;
+        });
+        if (ret != EnumResult::Success)
+            return;
+    }
+
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
+
+        for (Size i = 0; i < filenames.len; i++) {
+            json->StartObject();
+            json->Key("filename"); json->String(filenames[i]);
+            json->Key("size"); json->Int64(infos[i].size);
+            json->Key("mtime"); json->Int64(infos[i].mtime);
+            json->EndObject();
         }
 
-        return true;
+        json->EndArray();
     });
-    if (ret != EnumResult::Success)
-        return;
-    json.EndArray();
-
-    json.Send();
 }
 
 void HandleArchiveDownload(http_IO *io)
@@ -2515,13 +2511,9 @@ void HandleArchiveDownload(http_IO *io)
     }
 
     const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
+    const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1\"", basename).ptr;
 
-    // Ask browser to download
-    {
-        const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1\"", basename).ptr;
-        io->AddHeader("Content-Disposition", disposition);
-    }
-
+    io->AddHeader("Content-Disposition", disposition);
     io->SendFile(200, filename);
 }
 
@@ -3433,40 +3425,37 @@ void HandleUserList(http_IO *io)
                                  ORDER BY username)", &stmt))
         return;
 
-    // Export data
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-    json.StartArray();
-    while (stmt.Step()) {
-        bool is_root = (sqlite3_column_int(stmt, 4) == 1);
+        while (stmt.Step()) {
+            bool is_root = (sqlite3_column_int(stmt, 4) == 1);
 
-        if (is_root && !session->IsRoot())
-            continue;
+            if (is_root && !session->IsRoot())
+                continue;
 
-        json.StartObject();
-        json.Key("userid"); json.Int64(sqlite3_column_int64(stmt, 0));
-        json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 1));
-        if (sqlite3_column_type(stmt, 2) != SQLITE_NULL) {
-            json.Key("email"); json.String((const char *)sqlite3_column_text(stmt, 2));
-        } else {
-            json.Key("email"); json.Null();
+            json->StartObject();
+            json->Key("userid"); json->Int64(sqlite3_column_int64(stmt, 0));
+            json->Key("username"); json->String((const char *)sqlite3_column_text(stmt, 1));
+            if (sqlite3_column_type(stmt, 2) != SQLITE_NULL) {
+                json->Key("email"); json->String((const char *)sqlite3_column_text(stmt, 2));
+            } else {
+                json->Key("email"); json->Null();
+            }
+            if (sqlite3_column_type(stmt, 3) != SQLITE_NULL) {
+                json->Key("phone"); json->String((const char *)sqlite3_column_text(stmt, 3));
+            } else {
+                json->Key("phone"); json->Null();
+            }
+            json->Key("root"); json->Bool(is_root);
+            json->Key("confirm"); json->Bool(sqlite3_column_type(stmt, 5) != SQLITE_NULL);
+            json->EndObject();
         }
-        if (sqlite3_column_type(stmt, 3) != SQLITE_NULL) {
-            json.Key("phone"); json.String((const char *)sqlite3_column_text(stmt, 3));
-        } else {
-            json.Key("phone"); json.Null();
-        }
-        json.Key("root"); json.Bool(is_root);
-        json.Key("confirm"); json.Bool(sqlite3_column_type(stmt, 5) != SQLITE_NULL);
-        json.EndObject();
-    }
-    if (!stmt.IsValid())
-        return;
-    json.EndArray();
+        if (!stmt.IsValid())
+            return;
 
-    json.Send();
+        json->EndArray();
+    });
 }
 
 }

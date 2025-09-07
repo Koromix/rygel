@@ -50,39 +50,37 @@ void HandlePlanList(http_IO *io)
                        GROUP BY p.id)", &stmt, session->userid))
         return;
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-    json.StartArray();
-    while (stmt.Step()) {
-        int64_t id = sqlite3_column_int64(stmt, 0);
-        int64_t repository = sqlite3_column_int64(stmt, 1);
-        const char *name = (const char *)sqlite3_column_text(stmt, 2);
-        const char *key = (const char *)sqlite3_column_text(stmt, 3);
-        int scan = sqlite3_column_int(stmt, 4);
-        int items = sqlite3_column_int(stmt, 5);
+        while (stmt.Step()) {
+            int64_t id = sqlite3_column_int64(stmt, 0);
+            int64_t repository = sqlite3_column_int64(stmt, 1);
+            const char *name = (const char *)sqlite3_column_text(stmt, 2);
+            const char *key = (const char *)sqlite3_column_text(stmt, 3);
+            int scan = sqlite3_column_int(stmt, 4);
+            int items = sqlite3_column_int(stmt, 5);
 
-        json.StartObject();
+            json->StartObject();
 
-        json.Key("id"); json.Int64(id);
-        json.Key("repository"); json.Int64(repository);
-        json.Key("name"); json.String(name);
-        json.Key("key"); json.String(key);
-        if (scan) {
-            json.Key("scan"); json.Int(scan);
-        } else {
-            json.Key("scan"); json.Null();
+            json->Key("id"); json->Int64(id);
+            json->Key("repository"); json->Int64(repository);
+            json->Key("name"); json->String(name);
+            json->Key("key"); json->String(key);
+            if (scan) {
+                json->Key("scan"); json->Int(scan);
+            } else {
+                json->Key("scan"); json->Null();
+            }
+            json->Key("items"); json->Int(items);
+
+            json->EndObject();
         }
-        json.Key("items"); json.Int(items);
+        if (!stmt.IsValid())
+            return;
 
-        json.EndObject();
-    }
-    if (!stmt.IsValid())
-        return;
-    json.EndArray();
-
-    json.Send();
+        json->EndArray();
+    });
 }
 
 static bool DumpItems(json_Writer *json, int64_t id, bool details)
@@ -97,6 +95,7 @@ static bool DumpItems(json_Writer *json, int64_t id, bool details)
         return false;
 
     json->StartArray();
+
     if (stmt.Step()) {
         do {
             int64_t id = sqlite3_column_int64(stmt, 0);
@@ -147,9 +146,10 @@ static bool DumpItems(json_Writer *json, int64_t id, bool details)
 
             json->EndObject();
         } while (stmt.IsRow());
-        if (!stmt.IsValid())
-            return false;
     }
+    if (!stmt.IsValid())
+        return false;
+
     json->EndArray();
 
     return true;
@@ -192,34 +192,30 @@ void HandlePlanGet(http_IO *io)
         return;
     }
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        int64_t repository = sqlite3_column_int64(stmt, 0);
+        const char *name = (const char *)sqlite3_column_text(stmt, 1);
+        const char *key = (const char *)sqlite3_column_text(stmt, 2);
+        int scan = sqlite3_column_int(stmt, 3);
 
-    int64_t repository = sqlite3_column_int64(stmt, 0);
-    const char *name = (const char *)sqlite3_column_text(stmt, 1);
-    const char *key = (const char *)sqlite3_column_text(stmt, 2);
-    int scan = sqlite3_column_int(stmt, 3);
+        json->StartObject();
 
-    json.StartObject();
+        json->Key("id"); json->Int64(id);
+        json->Key("repository"); json->Int64(repository);
+        json->Key("name"); json->String(name);
+        json->Key("key"); json->String(key);
+        if (scan) {
+            json->Key("scan"); json->Int(scan);
+        } else {
+            json->Key("scan"); json->Null();
+        }
 
-    json.Key("id"); json.Int64(id);
-    json.Key("repository"); json.Int64(repository);
-    json.Key("name"); json.String(name);
-    json.Key("key"); json.String(key);
-    if (scan) {
-        json.Key("scan"); json.Int(scan);
-    } else {
-        json.Key("scan"); json.Null();
-    }
+        json->Key("items");
+        if (!DumpItems(json, id, true))
+            return;
 
-    json.Key("items");
-    if (!DumpItems(&json, id, true))
-        return;
-
-    json.EndObject();
-
-    json.Send();
+        json->EndObject();
+    });
 }
 
 void HandlePlanSave(http_IO *io)
@@ -450,19 +446,17 @@ void HandlePlanSave(http_IO *io)
     if (!success)
         return;
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
 
-    json.StartObject();
-    json.Key("id"); json.Int64(id);
-    if (key[0]) {
-        json.Key("key"); json.String(key);
-        json.Key("secret"); json.String(secret);
-    }
-    json.EndObject();
+        json->Key("id"); json->Int64(id);
+        if (key[0]) {
+            json->Key("key"); json->String(key);
+            json->Key("secret"); json->String(secret);
+        }
 
-    json.Send();
+        json->EndObject();
+    });
 }
 
 void HandlePlanDelete(http_IO *io)
@@ -598,16 +592,14 @@ void HandlePlanKey(http_IO *io)
                 id, session->userid, key, hash))
         return;
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
 
-    json.StartObject();
-    json.Key("key"); json.String(key);
-    json.Key("secret"); json.String(secret);
-    json.EndObject();
+        json->Key("key"); json->String(key);
+        json->Key("secret"); json->String(secret);
 
-    json.Send();
+        json->EndObject();
+    });
 }
 
 static bool ValidateApiKey(http_IO *io, int64_t *out_plan = nullptr, int64_t *out_repository = nullptr)
@@ -671,14 +663,9 @@ void HandlePlanFetch(http_IO *io)
     if (!ValidateApiKey(io, &plan))
         return;
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
-
-    if (!DumpItems(&json, plan, false))
-        return;
-
-    json.Send();
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        DumpItems(json, plan, false);
+    });
 }
 
 void HandlePlanReport(http_IO *io)

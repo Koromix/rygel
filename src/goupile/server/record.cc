@@ -341,15 +341,6 @@ again:
     return true;
 }
 
-static void JsonRawOrNull(Span<const char> str, json_Writer *json)
-{
-    if (str.ptr) {
-        json->Raw(str);
-    } else {
-        json->Null();
-    }
-}
-
 void HandleRecordList(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
@@ -409,11 +400,6 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
         }
     }
 
-    // Export data
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
-
     RecordWalker walker;
     {
         RecordFilter filter = {};
@@ -426,49 +412,55 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
             return;
     }
 
-    json.StartArray();
-    while (walker.Next()) {
-        const RecordInfo *cursor = walker.GetCursor();
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-        json.StartObject();
+        while (walker.Next()) {
+            const RecordInfo *cursor = walker.GetCursor();
 
-        json.Key("tid"); json.String(cursor->tid);
-        json.Key("sequence"); json.Int64(cursor->t);
-        json.Key("saved"); json.Bool(true);
-        json.Key("locked"); json.Bool(cursor->locked);
+            json->StartObject();
 
-        json.Key("entries"); json.StartArray();
-        do {
-            json.StartObject();
+            json->Key("tid"); json->String(cursor->tid);
+            json->Key("sequence"); json->Int64(cursor->t);
+            json->Key("saved"); json->Bool(true);
+            json->Key("locked"); json->Bool(cursor->locked);
 
-            json.Key("store"); json.String(cursor->store);
-            json.Key("eid"); json.String(cursor->eid);
-            if (stamp->HasPermission(UserPermission::DataAudit)) {
-                json.Key("deleted"); json.Bool(cursor->deleted);
-            } else {
-                K_ASSERT(!cursor->deleted);
-            }
-            json.Key("anchor"); json.Int64(cursor->anchor);
-            json.Key("ctime"); json.Int64(cursor->ctime);
-            json.Key("mtime"); json.Int64(cursor->mtime);
-            if (cursor->summary) {
-                json.Key("summary"); json.String(cursor->summary);
-            } else {
-                json.Key("summary"); json.Null();
-            }
-            json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
+            json->Key("entries"); json->StartArray();
+            do {
+                json->StartObject();
 
-            json.EndObject();
-        } while (walker.NextInThread());
-        json.EndArray();
+                json->Key("store"); json->String(cursor->store);
+                json->Key("eid"); json->String(cursor->eid);
+                if (stamp->HasPermission(UserPermission::DataAudit)) {
+                    json->Key("deleted"); json->Bool(cursor->deleted);
+                } else {
+                    K_ASSERT(!cursor->deleted);
+                }
+                json->Key("anchor"); json->Int64(cursor->anchor);
+                json->Key("ctime"); json->Int64(cursor->ctime);
+                json->Key("mtime"); json->Int64(cursor->mtime);
+                if (cursor->summary) {
+                    json->Key("summary"); json->String(cursor->summary);
+                } else {
+                    json->Key("summary"); json->Null();
+                }
+                if (cursor->tags.ptr) {
+                    json->Key("tags"); json->Raw(cursor->tags);
+                } else {
+                    json->Key("tags"); json->Null();
+                }
 
-        json.EndObject();
-    }
-    if (!walker.IsValid())
-        return;
-    json.EndArray();
+                json->EndObject();
+            } while (walker.NextInThread());
+            json->EndArray();
 
-    json.Send();
+            json->EndObject();
+        }
+        if (!walker.IsValid())
+            return;
+
+        json->EndArray();
+    });
 }
 
 void HandleRecordGet(http_IO *io, InstanceHolder *instance)
@@ -560,53 +552,56 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    // Export data
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
-
-    json.StartObject();
-    {
+    http_SendJson(io, 200, [&](json_Writer *json) {
         const RecordInfo *cursor = walker.GetCursor();
 
-        json.Key("tid"); json.String(cursor->tid);
-        json.Key("sequence"); json.Int64(cursor->t);
-        json.Key("counters"); json.Raw(cursor->counters);
-        json.Key("saved"); json.Bool(true);
-        json.Key("locked"); json.Bool(cursor->locked);
+        json->StartObject();
 
-        json.Key("entries"); json.StartArray();
+        json->Key("tid"); json->String(cursor->tid);
+        json->Key("sequence"); json->Int64(cursor->t);
+        json->Key("counters"); json->Raw(cursor->counters);
+        json->Key("saved"); json->Bool(true);
+        json->Key("locked"); json->Bool(cursor->locked);
+
+        json->Key("entries"); json->StartArray();
         do {
-            json.StartObject();
+            json->StartObject();
 
-            json.Key("store"); json.String(cursor->store);
-            json.Key("eid"); json.String(cursor->eid);
+            json->Key("store"); json->String(cursor->store);
+            json->Key("eid"); json->String(cursor->eid);
             if (stamp->HasPermission(UserPermission::DataAudit)) {
-                json.Key("deleted"); json.Bool(cursor->deleted);
+                json->Key("deleted"); json->Bool(cursor->deleted);
             } else {
                 K_ASSERT(!cursor->deleted);
             }
-            json.Key("anchor"); json.Int64(cursor->anchor);
-            json.Key("ctime"); json.Int64(cursor->ctime);
-            json.Key("mtime"); json.Int64(cursor->mtime);
+            json->Key("anchor"); json->Int64(cursor->anchor);
+            json->Key("ctime"); json->Int64(cursor->ctime);
+            json->Key("mtime"); json->Int64(cursor->mtime);
             if (cursor->summary) {
-                json.Key("summary"); json.String(cursor->summary);
+                json->Key("summary"); json->String(cursor->summary);
             } else {
-                json.Key("summary"); json.Null();
+                json->Key("summary"); json->Null();
             }
-            json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
+            if (cursor->tags.ptr) {
+                json->Key("tags"); json->Raw(cursor->tags);
+            } else {
+                json->Key("tags"); json->Null();
+            }
+            if (cursor->data.ptr) {
+                json->Key("data"); json->Raw(cursor->data);
+            } else {
+                json->Key("data"); json->Null();
+            }
 
-            json.Key("data"); JsonRawOrNull(cursor->data, &json);
-
-            json.EndObject();
+            json->EndObject();
         } while (walker.NextInThread());
-        json.EndArray();
-    }
-    if (!walker.IsValid())
-        return;
-    json.EndObject();
+        json->EndArray();
 
-    json.Send();
+        if (!walker.IsValid())
+            return;
+
+        json->EndObject();
+    });
 }
 
 void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
@@ -657,29 +652,26 @@ void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    // Export data
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-    json.StartArray();
-    do {
-        json.StartObject();
+        do {
+            json->StartObject();
 
-        json.Key("anchor"); json.Int64(sqlite3_column_int64(stmt, 0));
-        json.Key("eid"); json.String((const char *)sqlite3_column_text(stmt, 1));
-        json.Key("store"); json.String((const char *)sqlite3_column_text(stmt, 2));
-        json.Key("type"); json.String((const char *)sqlite3_column_text(stmt, 3));
-        json.Key("userid"); json.Int64(sqlite3_column_int64(stmt, 4));
-        json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 5));
+            json->Key("anchor"); json->Int64(sqlite3_column_int64(stmt, 0));
+            json->Key("eid"); json->String((const char *)sqlite3_column_text(stmt, 1));
+            json->Key("store"); json->String((const char *)sqlite3_column_text(stmt, 2));
+            json->Key("type"); json->String((const char *)sqlite3_column_text(stmt, 3));
+            json->Key("userid"); json->Int64(sqlite3_column_int64(stmt, 4));
+            json->Key("username"); json->String((const char *)sqlite3_column_text(stmt, 5));
 
-        json.EndObject();
-    } while (stmt.Step());
-    if (!stmt.IsValid())
-        return;
-    json.EndArray();
+            json->EndObject();
+        } while (stmt.Step());
+        if (!stmt.IsValid())
+            return;
 
-    json.Send();
+        json->EndArray();
+    });
 }
 
 static int64_t CheckExportPermission(http_IO *io, InstanceHolder *instance, UserPermission perm)
@@ -740,7 +732,7 @@ static int64_t CheckExportPermission(http_IO *io, InstanceHolder *instance, User
 static const char *MakeExportFileName(const char *instance_key, int64_t export_id, int64_t ctime, Allocator *alloc)
 {
     TimeSpec spec = DecomposeTimeUTC(ctime);
-    Span<char> basename = Fmt(alloc, "%1_%2_%3.json.gz", instance_key, export_id, FmtTimeISO(spec));
+    Span<char> basename = Fmt(alloc, "%1_%2_%3.json->gz", instance_key, export_id, FmtTimeISO(spec));
 
     for (char &c: basename) {
         c = (c == '/') ? '@' : c;
@@ -807,9 +799,16 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
             json.Key("anchor"); json.Int64(cursor->anchor);
             json.Key("ctime"); json.Int64(cursor->ctime);
             json.Key("mtime"); json.Int64(cursor->mtime);
-            json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
-
-            json.Key("data"); JsonRawOrNull(cursor->data, &json);
+            if (cursor->tags.ptr) {
+                json.Key("tags"); json.Raw(cursor->tags);
+            } else {
+                json.Key("tags"); json.Null();
+            }
+            if (cursor->data.ptr) {
+                json.Key("data"); json.Raw(cursor->data);
+            } else {
+                json.Key("data"); json.Null();
+            }
 
             json.EndObject();
 
@@ -950,35 +949,33 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
                                   ORDER BY export)", &stmt))
         return;
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-    json.StartArray();
-    while (stmt.Step()) {
-        int64_t export_id = sqlite3_column_int64(stmt, 0);
-        int64_t ctime = sqlite3_column_int64(stmt, 1);
-        int64_t userid = sqlite3_column_int64(stmt, 2);
-        int64_t sequence = sqlite3_column_int64(stmt, 3);
-        int64_t anchor = sqlite3_column_int64(stmt, 4);
-        int64_t threads = sqlite3_column_int64(stmt, 5);
-        bool scheduled = sqlite3_column_int(stmt, 6);
+        while (stmt.Step()) {
+            int64_t export_id = sqlite3_column_int64(stmt, 0);
+            int64_t ctime = sqlite3_column_int64(stmt, 1);
+            int64_t userid = sqlite3_column_int64(stmt, 2);
+            int64_t sequence = sqlite3_column_int64(stmt, 3);
+            int64_t anchor = sqlite3_column_int64(stmt, 4);
+            int64_t threads = sqlite3_column_int64(stmt, 5);
+            bool scheduled = sqlite3_column_int(stmt, 6);
 
-        json.StartObject();
-        json.Key("export"); json.Int64(export_id);
-        json.Key("ctime"); json.Int64(ctime);
-        json.Key("userid"); json.Int64(userid);
-        json.Key("sequence"); json.Int64(sequence);
-        json.Key("anchor"); json.Int64(anchor);
-        json.Key("threads"); json.Int64(threads);
-        json.Key("scheduled"); json.Bool(scheduled);
-        json.EndObject();
-    }
-    if (!stmt.IsValid())
-        return;
-    json.EndArray();
+            json->StartObject();
+            json->Key("export"); json->Int64(export_id);
+            json->Key("ctime"); json->Int64(ctime);
+            json->Key("userid"); json->Int64(userid);
+            json->Key("sequence"); json->Int64(sequence);
+            json->Key("anchor"); json->Int64(anchor);
+            json->Key("threads"); json->Int64(threads);
+            json->Key("scheduled"); json->Bool(scheduled);
+            json->EndObject();
+        }
+        if (!stmt.IsValid())
+            return;
 
-    json.Send();
+        json->EndArray();
+    });
 }
 
 void HandleExportDownload(http_IO *io, InstanceHolder *instance)
@@ -2068,37 +2065,34 @@ void HandleRecordPublic(http_IO *io, InstanceHolder *instance)
                                   ORDER BY e.rowid)", &stmt, store))
         return;
 
-    // Export data
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-    json.StartArray();
-    if (stmt.Step()) {
-        do {
-            int64_t e = sqlite3_column_int64(stmt, 0);
-
-            json.StartObject();
-
+        if (stmt.Step()) {
             do {
-                const char *key = (const char *)sqlite3_column_text(stmt, 1);
-                const char *value = (const char *)sqlite3_column_text(stmt, 2);
+                int64_t e = sqlite3_column_int64(stmt, 0);
 
-                if (value) {
-                    json.Key(key); json.Raw(value);
-                } else {
-                    json.Key(key); json.Null();
-                }
-            } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == e);
+                json->StartObject();
 
-            json.EndObject();
-        } while (stmt.IsRow());
-    }
-    if (!stmt.IsValid())
-        return;
-    json.EndArray();
+                do {
+                    const char *key = (const char *)sqlite3_column_text(stmt, 1);
+                    const char *value = (const char *)sqlite3_column_text(stmt, 2);
 
-    json.Send();
+                    if (value) {
+                        json->Key(key); json->Raw(value);
+                    } else {
+                        json->Key(key); json->Null();
+                    }
+                } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == e);
+
+                json->EndObject();
+            } while (stmt.IsRow());
+        }
+        if (!stmt.IsValid())
+            return;
+
+        json->EndArray();
+    });
 }
 
 void HandleBlobGet(http_IO *io, InstanceHolder *instance)

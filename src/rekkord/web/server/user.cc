@@ -378,38 +378,35 @@ RetainPtr<SessionInfo> GetNormalSession(http_IO *io)
     return session;
 }
 
-static void ExportSession(const SessionInfo *session, http_IO *io)
+static void ExportSession(const SessionInfo *session, json_Writer *json)
 {
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
-
     if (session) {
-        json.StartObject();
+        json->StartObject();
 
-        json.Key("userid"); json.Int64(session->userid);
-        json.Key("username"); json.String(session->username);
-        json.Key("totp"); json.Bool(session->totp);
+        json->Key("userid"); json->Int64(session->userid);
+        json->Key("username"); json->String(session->username);
+        json->Key("totp"); json->Bool(session->totp);
 
         if (session->confirmed) {
-            json.Key("confirmed"); json.Bool(true);
-            json.Key("picture"); json.Int(session->picture);
+            json->Key("confirmed"); json->Bool(true);
+            json->Key("picture"); json->Int(session->picture);
         } else {
-            json.Key("confirmed"); json.Bool(false);
+            json->Key("confirmed"); json->Bool(false);
         }
 
-        json.EndObject();
+        json->EndObject();
     } else {
-        json.Null();
+        json->Null();
     }
-
-    json.Send();
 }
 
 void HandleUserSession(http_IO *io)
 {
     RetainPtr<const SessionInfo> session = sessions.Find(io);
-    ExportSession(session.GetRaw(), io);
+
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        ExportSession(session.GetRaw(), json);
+    });
 }
 
 void HandleUserPing(http_IO *io)
@@ -586,7 +583,10 @@ void HandleUserLogin(http_IO *io)
             RetainPtr<SessionInfo> session = CreateUserSession(userid, username, secret, picture);
             sessions.Open(io, session);
 
-            ExportSession(session.GetRaw(), io);
+            http_SendJson(io, 200, [&](json_Writer *json) {
+                ExportSession(session.GetRaw(), json);
+            });
+
             return;
         } else {
             RegisterEvent(request.client_addr, mail);
@@ -1025,7 +1025,9 @@ void HandleTotpConfirm(http_IO *io)
         session->confirmed = true;
         ZeroSafe(session->secret, K_SIZE(session->secret));
 
-        ExportSession(session.GetRaw(), io);
+        http_SendJson(io, 200, [&](json_Writer *json) {
+            ExportSession(session.GetRaw(), json);
+        });
     }
 }
 
@@ -1494,29 +1496,27 @@ void HandleKeyList(http_IO *io)
     if (!db.Prepare(R"(SELECT id, title, key FROM keys WHERE owner = ?1)", &stmt, session->userid))
         return;
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-    json.StartArray();
-    while (stmt.Step()) {
-        int64_t id = sqlite3_column_int64(stmt, 0);
-        const char *title = (const char *)sqlite3_column_text(stmt, 1);
-        const char *key = (const char *)sqlite3_column_text(stmt, 2);
+        while (stmt.Step()) {
+            int64_t id = sqlite3_column_int64(stmt, 0);
+            const char *title = (const char *)sqlite3_column_text(stmt, 1);
+            const char *key = (const char *)sqlite3_column_text(stmt, 2);
 
-        json.StartObject();
+            json->StartObject();
 
-        json.Key("id"); json.Int64(id);
-        json.Key("title"); json.String(title);
-        json.Key("key"); json.String(key);
+            json->Key("id"); json->Int64(id);
+            json->Key("title"); json->String(title);
+            json->Key("key"); json->String(key);
 
-        json.EndObject();
-    }
-    if (!stmt.IsValid())
-        return;
-    json.EndArray();
+            json->EndObject();
+        }
+        if (!stmt.IsValid())
+            return;
 
-    json.Send();
+        json->EndArray();
+    });
 }
 
 void HandleKeyCreate(http_IO *io)
@@ -1609,17 +1609,15 @@ void HandleKeyCreate(http_IO *io)
     if (!success)
         return;
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
 
-    json.StartObject();
-    json.Key("id"); json.Int64(id);
-    json.Key("key"); json.String(key);
-    json.Key("secret"); json.String(secret);
-    json.EndObject();
+        json->Key("id"); json->Int64(id);
+        json->Key("key"); json->String(key);
+        json->Key("secret"); json->String(secret);
 
-    json.Send();
+        json->EndObject();
+    });
 }
 
 void HandleKeyDelete(http_IO *io)

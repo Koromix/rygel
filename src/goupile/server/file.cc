@@ -495,36 +495,34 @@ void HandleFileList(http_IO *io, InstanceHolder *instance)
         return;
     sqlite3_bind_int64(stmt, 1, fs_version);
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
 
-    json.StartObject();
-    json.Key("version"); json.Int64(fs_version);
-    json.Key("files"); json.StartArray();
-    while (stmt.Step()) {
-        const char *filename = (const char *)sqlite3_column_text(stmt, 0);
-        int64_t size = sqlite3_column_int64(stmt, 1);
-        const char *sha256 = (const char *)sqlite3_column_text(stmt, 2);
-        const char *bundle = (const char *)sqlite3_column_text(stmt, 3);
+        json->Key("version"); json->Int64(fs_version);
+        json->Key("files"); json->StartArray();
+        while (stmt.Step()) {
+            const char *filename = (const char *)sqlite3_column_text(stmt, 0);
+            int64_t size = sqlite3_column_int64(stmt, 1);
+            const char *sha256 = (const char *)sqlite3_column_text(stmt, 2);
+            const char *bundle = (const char *)sqlite3_column_text(stmt, 3);
 
-        json.StartObject();
-        json.Key("filename"); json.String(filename);
-        json.Key("size"); json.Int64(size);
-        json.Key("sha256"); json.String(sha256);
-        if (bundle) {
-            json.Key("bundle"); json.String(bundle);
-        } else {
-            json.Key("bundle"); json.Null();
+            json->StartObject();
+            json->Key("filename"); json->String(filename);
+            json->Key("size"); json->Int64(size);
+            json->Key("sha256"); json->String(sha256);
+            if (bundle) {
+                json->Key("bundle"); json->String(bundle);
+            } else {
+                json->Key("bundle"); json->Null();
+            }
+            json->EndObject();
         }
-        json.EndObject();
-    }
-    if (!stmt.IsValid())
-        return;
-    json.EndArray();
-    json.EndObject();
+        if (!stmt.IsValid())
+            return;
+        json->EndArray();
 
-    json.Send();
+        json->EndObject();
+    });
 }
 
 // Returns true when request has been handled (file exists or an error has occured)
@@ -784,23 +782,21 @@ void HandleFileHistory(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-    json.StartArray();
-    do {
-        json.StartObject();
-        json.Key("version"); json.Int64(sqlite3_column_int64(stmt, 0));
-        json.Key("mtime"); json.Int64(sqlite3_column_int64(stmt, 1));
-        json.Key("sha256"); json.String((const char *)sqlite3_column_text(stmt, 2));
-        json.EndObject();
-    } while (stmt.Step());
-    if (!stmt.IsValid())
-        return;
-    json.EndArray();
+        do {
+            json->StartObject();
+            json->Key("version"); json->Int64(sqlite3_column_int64(stmt, 0));
+            json->Key("mtime"); json->Int64(sqlite3_column_int64(stmt, 1));
+            json->Key("sha256"); json->String((const char *)sqlite3_column_text(stmt, 2));
+            json->EndObject();
+        } while (stmt.Step());
+        if (!stmt.IsValid())
+            return;
 
-    json.Send();
+        json->EndArray();
+    });
 }
 
 void HandleFileRestore(http_IO *io, InstanceHolder *instance)
@@ -946,59 +942,57 @@ void HandleFileDelta(http_IO *io, InstanceHolder *instance)
     if (!stmt2.Run())
         return;
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-    json.StartArray();
-    while (stmt1.IsRow() || stmt2.IsRow()) {
-        const char *from = stmt1.IsRow() ? (const char *)sqlite3_column_text(stmt1, 0) : nullptr;
-        const char *to = stmt2.IsRow() ? (const char *)sqlite3_column_text(stmt2, 0) : nullptr;
+        while (stmt1.IsRow() || stmt2.IsRow()) {
+            const char *from = stmt1.IsRow() ? (const char *)sqlite3_column_text(stmt1, 0) : nullptr;
+            const char *to = stmt2.IsRow() ? (const char *)sqlite3_column_text(stmt2, 0) : nullptr;
 
-        int cmp = (from && to) ? CmpStr(from, to) : (!from - !to);
-        K_ASSERT(from || to);
+            int cmp = (from && to) ? CmpStr(from, to) : (!from - !to);
+            K_ASSERT(from || to);
 
-        json.StartObject();
+            json->StartObject();
 
-        json.Key("filename"); json.String(cmp < 0 ? from : to);
+            json->Key("filename"); json->String(cmp < 0 ? from : to);
 
-        if (cmp <= 0) {
-            const char *bundle = (const char *)sqlite3_column_text(stmt1, 3);
+            if (cmp <= 0) {
+                const char *bundle = (const char *)sqlite3_column_text(stmt1, 3);
 
-            json.Key("from"); json.StartObject();
-            json.Key("size"); json.Int64(sqlite3_column_int64(stmt1, 1));
-            json.Key("sha256"); json.String((const char *)sqlite3_column_text(stmt1, 2));
-            if (bundle) {
-                json.Key("bundle"); json.String(bundle);
-            } else {
-                json.Key("bundle"); json.Null();
+                json->Key("from"); json->StartObject();
+                json->Key("size"); json->Int64(sqlite3_column_int64(stmt1, 1));
+                json->Key("sha256"); json->String((const char *)sqlite3_column_text(stmt1, 2));
+                if (bundle) {
+                    json->Key("bundle"); json->String(bundle);
+                } else {
+                    json->Key("bundle"); json->Null();
+                }
+                json->EndObject();
+
+                stmt1.Run();
             }
-            json.EndObject();
 
-            stmt1.Run();
+            if (cmp >= 0) {
+                const char *bundle = (const char *)sqlite3_column_text(stmt2, 3);
+
+                json->Key("to"); json->StartObject();
+                json->Key("size"); json->Int64(sqlite3_column_int64(stmt2, 1));
+                json->Key("sha256"); json->String((const char *)sqlite3_column_text(stmt2, 2));
+                if (bundle) {
+                    json->Key("bundle"); json->String(bundle);
+                } else {
+                    json->Key("bundle"); json->Null();
+                }
+                json->EndObject();
+
+                stmt2.Run();
+            }
+
+            json->EndObject();
         }
 
-        if (cmp >= 0) {
-            const char *bundle = (const char *)sqlite3_column_text(stmt2, 3);
-
-            json.Key("to"); json.StartObject();
-            json.Key("size"); json.Int64(sqlite3_column_int64(stmt2, 1));
-            json.Key("sha256"); json.String((const char *)sqlite3_column_text(stmt2, 2));
-            if (bundle) {
-                json.Key("bundle"); json.String(bundle);
-            } else {
-                json.Key("bundle"); json.Null();
-            }
-            json.EndObject();
-
-            stmt2.Run();
-        }
-
-        json.EndObject();
-    }
-    json.EndArray();
-
-    json.Send();
+        json->EndArray();
+    });
 }
 
 void HandleFilePublish(http_IO *io, InstanceHolder *instance)

@@ -39,20 +39,6 @@ bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 
 
 bool http_PreventCSRF(http_IO *io);
 
-class http_JsonPageBuilder: public json_Writer {
-    http_IO *io = nullptr;
-
-    BlockAllocator allocator;
-    HeapArray<uint8_t> buf { &allocator };
-
-    StreamWriter st;
-    CompressionType encoding;
-
-public:
-    http_JsonPageBuilder(): json_Writer(&st) {}
-
-    bool Init(http_IO *io);
-    void Send(int status = 200);
-};
+bool http_SendJson(http_IO *io, int status, FunctionRef<void(json_Writer *json)> func);
 
 }

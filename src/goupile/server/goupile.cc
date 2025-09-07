@@ -316,25 +316,24 @@ static void HandlePing(http_IO *io, InstanceHolder *instance)
 
 static void HandleFileStatic(http_IO *io, InstanceHolder *instance)
 {
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-    const char *base_url = Fmt(io->Allocator(), "/%1/", instance->key).ptr;
+        const char *base_url = Fmt(io->Allocator(), "/%1/", instance->key).ptr;
+        json->String(base_url);
 
-    json.StartArray();
-    json.String(base_url);
-    for (const InstanceHolder *slave: instance->slaves) {
-        const char *url = Fmt(io->Allocator(), "/%1/", slave->key).ptr;
-        json.String(url);
-    }
-    for (const char *path: assets_for_cache) {
-        const char *url = Fmt(io->Allocator(), "/%1%2", instance->key, path).ptr;
-        json.String(url);
-    }
-    json.EndArray();
+        for (const InstanceHolder *slave: instance->slaves) {
+            const char *url = Fmt(io->Allocator(), "/%1/", slave->key).ptr;
+            json->String(url);
+        }
 
-    json.Send();
+        for (const char *path: assets_for_cache) {
+            const char *url = Fmt(io->Allocator(), "/%1%2", instance->key, path).ptr;
+            json->String(url);
+        }
+
+        json->EndArray();
+    });
 }
 
 static const AssetInfo *RenderTemplate(const char *key, const AssetInfo &asset,

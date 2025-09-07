@@ -130,43 +130,41 @@ void HandleRepositoryList(http_IO *io)
                        WHERE owner = ?1)", &stmt, session->userid))
         return;
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-    json.StartArray();
-    while (stmt.Step()) {
-        int64_t id = sqlite3_column_int64(stmt, 0);
-        const char *name = (const char *)sqlite3_column_text(stmt, 1);
-        const char *url = (const char *)sqlite3_column_text(stmt, 2);
-        int64_t checked = sqlite3_column_int64(stmt, 3);
-        const char *failed = (const char *)sqlite3_column_text(stmt, 4);
-        int errors = sqlite3_column_int(stmt, 5);
+        while (stmt.Step()) {
+            int64_t id = sqlite3_column_int64(stmt, 0);
+            const char *name = (const char *)sqlite3_column_text(stmt, 1);
+            const char *url = (const char *)sqlite3_column_text(stmt, 2);
+            int64_t checked = sqlite3_column_int64(stmt, 3);
+            const char *failed = (const char *)sqlite3_column_text(stmt, 4);
+            int errors = sqlite3_column_int(stmt, 5);
 
-        json.StartObject();
+            json->StartObject();
 
-        json.Key("id"); json.Int64(id);
-        json.Key("name"); json.String(name);
-        json.Key("url"); json.String(url);
-        if (checked) {
-            json.Key("checked"); json.Int64(checked);
-        } else {
-            json.Key("checked"); json.Null();
+            json->Key("id"); json->Int64(id);
+            json->Key("name"); json->String(name);
+            json->Key("url"); json->String(url);
+            if (checked) {
+                json->Key("checked"); json->Int64(checked);
+            } else {
+                json->Key("checked"); json->Null();
+            }
+            if (failed) {
+                json->Key("failed"); json->String(failed);
+            } else {
+                json->Key("failed"); json->Null();
+            }
+            json->Key("errors"); json->Int(errors);
+
+            json->EndObject();
         }
-        if (failed) {
-            json.Key("failed"); json.String(failed);
-        } else {
-            json.Key("failed"); json.Null();
-        }
-        json.Key("errors"); json.Int(errors);
+        if (!stmt.IsValid())
+            return;
 
-        json.EndObject();
-    }
-    if (!stmt.IsValid())
-        return;
-    json.EndArray();
-
-    json.Send();
+        json->EndArray();
+    });
 }
 
 void HandleRepositoryGet(http_IO *io)
@@ -206,71 +204,67 @@ void HandleRepositoryGet(http_IO *io)
         return;
     }
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
 
-    json.StartObject();
-
-    // Main information
-    {
-        const char *name = (const char *)sqlite3_column_text(stmt, 0);
-        const char *url = (const char *)sqlite3_column_text(stmt, 1);
-        int64_t checked = sqlite3_column_int64(stmt, 2);
-        const char *failed = (const char *)sqlite3_column_text(stmt, 3);
-        int errors = sqlite3_column_int(stmt, 4);
-
-        json.Key("id"); json.Int64(id);
-        json.Key("name"); json.String(name);
-        json.Key("url"); json.String(url);
-        if (checked) {
-            json.Key("checked"); json.Int64(checked);
-        } else {
-            json.Key("checked"); json.Null();
-        }
-        if (failed) {
-            json.Key("failed"); json.String(failed);
-        } else {
-            json.Key("failed"); json.Null();
-        }
-        json.Key("errors"); json.Int(errors);
-    }
-
-    // Channels
-    {
-        sq_Statement stmt;
-        if (!db.Prepare(R"(SELECT name, oid, timestamp, size, count, ignore
-                           FROM channels
-                           WHERE repository = ?1)",
-                        &stmt, id))
-            return;
-
-        json.Key("channels"); json.StartArray();
-        while (stmt.Step()) {
+        // Main information
+        {
             const char *name = (const char *)sqlite3_column_text(stmt, 0);
-            const char *oid = (const char *)sqlite3_column_text(stmt, 1);
-            int64_t time = sqlite3_column_int64(stmt, 2);
-            int64_t size = sqlite3_column_int64(stmt, 3);
-            int64_t count = sqlite3_column_int64(stmt, 4);
-            bool ignore = sqlite3_column_int(stmt, 5);
+            const char *url = (const char *)sqlite3_column_text(stmt, 1);
+            int64_t checked = sqlite3_column_int64(stmt, 2);
+            const char *failed = (const char *)sqlite3_column_text(stmt, 3);
+            int errors = sqlite3_column_int(stmt, 4);
 
-            json.StartObject();
-            json.Key("name"); json.String(name);
-            json.Key("oid"); json.String(oid);
-            json.Key("time"); json.Int64(time);
-            json.Key("size"); json.Int64(size);
-            json.Key("count"); json.Int64(count);
-            json.Key("ignore"); json.Bool(ignore);
-            json.EndObject();
+            json->Key("id"); json->Int64(id);
+            json->Key("name"); json->String(name);
+            json->Key("url"); json->String(url);
+            if (checked) {
+                json->Key("checked"); json->Int64(checked);
+            } else {
+                json->Key("checked"); json->Null();
+            }
+            if (failed) {
+                json->Key("failed"); json->String(failed);
+            } else {
+                json->Key("failed"); json->Null();
+            }
+            json->Key("errors"); json->Int(errors);
         }
-        if (!stmt.IsValid())
-            return;
-        json.EndArray();
-    }
 
-    json.EndObject();
+        // Channels
+        {
+            sq_Statement stmt;
+            if (!db.Prepare(R"(SELECT name, oid, timestamp, size, count, ignore
+                               FROM channels
+                               WHERE repository = ?1)",
+                            &stmt, id))
+                return;
 
-    json.Send();
+            json->Key("channels"); json->StartArray();
+            while (stmt.Step()) {
+                const char *name = (const char *)sqlite3_column_text(stmt, 0);
+                const char *oid = (const char *)sqlite3_column_text(stmt, 1);
+                int64_t time = sqlite3_column_int64(stmt, 2);
+                int64_t size = sqlite3_column_int64(stmt, 3);
+                int64_t count = sqlite3_column_int64(stmt, 4);
+                bool ignore = sqlite3_column_int(stmt, 5);
+
+                json->StartObject();
+                json->Key("name"); json->String(name);
+                json->Key("oid"); json->String(oid);
+                json->Key("time"); json->Int64(time);
+                json->Key("size"); json->Int64(size);
+                json->Key("count"); json->Int64(count);
+                json->Key("ignore"); json->Bool(ignore);
+                json->EndObject();
+            }
+            if (!stmt.IsValid())
+                return;
+            json->EndArray();
+        }
+
+        json->EndObject();
+    });
 }
 
 void HandleRepositorySave(http_IO *io)
@@ -449,37 +443,33 @@ void HandleRepositorySnapshots(http_IO *io)
                     &stmt, session->userid, id, channel))
         return;
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-    json.StartArray();
+        while (stmt.Step()) {
+            const char *oid = (const char *)sqlite3_column_text(stmt, 0);
+            int64_t time = sqlite3_column_int64(stmt, 1);
+            int64_t size = sqlite3_column_int64(stmt, 2);
+            int64_t stored = sqlite3_column_int64(stmt, 3);
+            int64_t added = sqlite3_column_int64(stmt, 4);
 
-    while (stmt.Step()) {
-        const char *oid = (const char *)sqlite3_column_text(stmt, 0);
-        int64_t time = sqlite3_column_int64(stmt, 1);
-        int64_t size = sqlite3_column_int64(stmt, 2);
-        int64_t stored = sqlite3_column_int64(stmt, 3);
-        int64_t added = sqlite3_column_int64(stmt, 4);
-
-        json.StartObject();
-        json.Key("oid"); json.String(oid);
-        json.Key("time"); json.Int64(time);
-        json.Key("size"); json.Int64(size);
-        json.Key("stored"); json.Int64(stored);
-        if (added) {
-            json.Key("added"); json.Int64(added);
-        } else {
-            json.Key("added"); json.Null();
+            json->StartObject();
+            json->Key("oid"); json->String(oid);
+            json->Key("time"); json->Int64(time);
+            json->Key("size"); json->Int64(size);
+            json->Key("stored"); json->Int64(stored);
+            if (added) {
+                json->Key("added"); json->Int64(added);
+            } else {
+                json->Key("added"); json->Null();
+            }
+            json->EndObject();
         }
-        json.EndObject();
-    }
-    if (!stmt.IsValid())
-        return;
+        if (!stmt.IsValid())
+            return;
 
-    json.EndArray();
-
-    json.Send();
+        json->EndArray();
+    });
 }
 
 }

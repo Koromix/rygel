@@ -354,12 +354,9 @@ Span<const char> ExportProfile(const SessionInfo *session, const InstanceHolder 
 
 static void SendProfile(http_IO *io, const SessionInfo *session, const InstanceHolder *instance)
 {
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
-
-    ExportProfile(session, instance, &json);
-    json.Send();
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        ExportProfile(session, instance, json);
+    });
 }
 
 static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid,
@@ -1656,13 +1653,9 @@ void HandleChangeExportKey(http_IO *io, InstanceHolder *instance)
                           session->userid, instance->master->key, key_buf.ptr))
         return;
 
-    // Export data
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
-
-    json.String(key_buf.ptr);
-    json.Send();
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->String(key_buf.ptr);
+    });
 }
 
 int64_t CreateInstanceUser(InstanceHolder *instance, const char *username)

@@ -72,74 +72,73 @@ static BlockAllocator routes_alloc;
 
 static void ProduceSettings(http_IO *io, const User *user)
 {
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
-    char buf[128];
-
-    json.StartObject();
-
-    if (user) {
-        json.Key("username"); json.String(user->name);
-    }
-
-    json.Key("permissions"); json.StartObject();
-    {
-        unsigned int permissions = user ? user->permissions : 0;
-        for (Size i = 0; i < K_LEN(UserPermissionNames); i++) {
-            Span<const char> key = json_ConvertToJsonName(UserPermissionNames[i], buf);
-            json.Key(key.ptr, (size_t)key.len); json.Bool(permissions & (1 << i));
-        }
-    }
-    json.EndObject();
-
-    json.Key("mco"); json.StartObject();
-    {
-        json.Key("versions"); json.StartArray();
-        for (const mco_TableIndex &index: mco_table_set.indexes) {
-            if (!index.valid)
-                continue;
-
-            json.StartObject();
-            json.Key("begin_date"); json.String(Fmt(buf, "%1", index.limit_dates[0]).ptr);
-            json.Key("end_date"); json.String(Fmt(buf, "%1", index.limit_dates[1]).ptr);
-            if (index.changed_tables & ~MaskEnum(mco_TableType::PriceTablePublic)) {
-                json.Key("changed_tables"); json.Bool(true);
-            }
-            if (index.changed_tables & MaskEnum(mco_TableType::PriceTablePublic)) {
-                json.Key("changed_prices"); json.Bool(true);
-            }
-            json.EndObject();
-        }
-        json.EndArray();
-
-        json.Key("casemix"); json.StartObject();
-        if (user) {
-            json.Key("min_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[0]).ptr);
-            json.Key("max_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[1]).ptr);
-
-            json.Key("algorithms"); json.StartArray();
-            for (Size i = 0; i < K_LEN(mco_DispenseModeOptions); i++) {
-                if (user->CheckMcoDispenseMode((mco_DispenseMode)i)) {
-                    const OptionDesc &desc = mco_DispenseModeOptions[i];
-                    json.String(desc.name);
-                }
-            }
-            json.EndArray();
-
-            const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_config.mco_dispense_mode];
-            json.Key("default_algorithm"); json.String(default_desc.name);
-        }
-        json.EndObject();
-    }
-    json.EndObject();
-
-    json.EndObject();
-
     if (!user) {
         io->AddCachingHeaders(thop_config.max_age, thop_etag);
     }
-    json.Send();
+
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        char buf[128];
+
+        json->StartObject();
+
+        if (user) {
+            json->Key("username"); json->String(user->name);
+        }
+
+        json->Key("permissions"); json->StartObject();
+        {
+            unsigned int permissions = user ? user->permissions : 0;
+
+            for (Size i = 0; i < K_LEN(UserPermissionNames); i++) {
+                Span<const char> key = json_ConvertToJsonName(UserPermissionNames[i], buf);
+                json->Key(key.ptr, (size_t)key.len); json->Bool(permissions & (1 << i));
+            }
+        }
+        json->EndObject();
+
+        json->Key("mco"); json->StartObject();
+        {
+            json->Key("versions"); json->StartArray();
+            for (const mco_TableIndex &index: mco_table_set.indexes) {
+                if (!index.valid)
+                    continue;
+
+                json->StartObject();
+                json->Key("begin_date"); json->String(Fmt(buf, "%1", index.limit_dates[0]).ptr);
+                json->Key("end_date"); json->String(Fmt(buf, "%1", index.limit_dates[1]).ptr);
+                if (index.changed_tables & ~MaskEnum(mco_TableType::PriceTablePublic)) {
+                    json->Key("changed_tables"); json->Bool(true);
+                }
+                if (index.changed_tables & MaskEnum(mco_TableType::PriceTablePublic)) {
+                    json->Key("changed_prices"); json->Bool(true);
+                }
+                json->EndObject();
+            }
+            json->EndArray();
+
+            json->Key("casemix"); json->StartObject();
+            if (user) {
+                json->Key("min_date"); json->String(Fmt(buf, "%1", mco_stay_set_dates[0]).ptr);
+                json->Key("max_date"); json->String(Fmt(buf, "%1", mco_stay_set_dates[1]).ptr);
+
+                json->Key("algorithms"); json->StartArray();
+                for (Size i = 0; i < K_LEN(mco_DispenseModeOptions); i++) {
+                    if (user->CheckMcoDispenseMode((mco_DispenseMode)i)) {
+                        const OptionDesc &desc = mco_DispenseModeOptions[i];
+                        json->String(desc.name);
+                    }
+                }
+                json->EndArray();
+
+                const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_config.mco_dispense_mode];
+                json->Key("default_algorithm"); json->String(default_desc.name);
+            }
+            json->EndObject();
+        }
+        json->EndObject();
+
+        json->EndObject();
+    });
 }
 
 static void ProduceStructures(http_IO *io, const User *user)
@@ -150,38 +149,38 @@ static void ProduceStructures(http_IO *io, const User *user)
         return;
     }
 
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-    json.StartArray();
-    for (const Structure &structure: thop_structure_set.structures) {
-        json.StartObject();
-        json.Key("name"); json.String(structure.name);
-        json.Key("entities"); json.StartArray();
-        for (const StructureEntity &ent: structure.entities) {
-            if (user->mco_allowed_units.Find(ent.unit)) {
-                json.StartObject();
-                json.Key("unit"); json.Int(ent.unit.number);
-                json.Key("path"); json.StartArray();
-                {
-                    Span<const char> path = ent.path + 1;
-                    Span<const char> part;
-                    while (path.len) {
-                        part = SplitStr(path, '|', &path);
-                        json.String(part.ptr, (int)part.len);
+        for (const Structure &structure: thop_structure_set.structures) {
+            json->StartObject();
+
+            json->Key("name"); json->String(structure.name);
+            json->Key("entities"); json->StartArray();
+            for (const StructureEntity &ent: structure.entities) {
+                if (user->mco_allowed_units.Find(ent.unit)) {
+                    json->StartObject();
+                    json->Key("unit"); json->Int(ent.unit.number);
+                    json->Key("path"); json->StartArray();
+                    {
+                        Span<const char> path = ent.path + 1;
+                        Span<const char> part;
+                        while (path.len) {
+                            part = SplitStr(path, '|', &path);
+                            json->String(part.ptr, (int)part.len);
+                        }
                     }
+                    json->EndArray();
+                    json->EndObject();
                 }
-                json.EndArray();
-                json.EndObject();
             }
-        }
-        json.EndArray();
-        json.EndObject();
-    }
-    json.EndArray();
+            json->EndArray();
 
-    json.Send();
+            json->EndObject();
+        }
+
+        json->EndArray();
+    });
 }
 
 static bool InitDictionarySet(Span<const char *const> table_directories)

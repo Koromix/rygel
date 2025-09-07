@@ -86,70 +86,67 @@ void HandleLegacyLoad(http_IO *io, InstanceHolder *instance)
         sqlite3_bind_int64(stmt, 2, -session->userid);
     }
 
-    // Export data
-    http_JsonPageBuilder json;
-    if (!json.Init(io))
-        return;
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
 
-    json.StartArray();
-    if (stmt.Step()) {
-        do {
-            int64_t rowid = sqlite3_column_int64(stmt, 0);
+        if (stmt.Step()) {
+            do {
+                int64_t rowid = sqlite3_column_int64(stmt, 0);
 
-            json.StartObject();
+                json->StartObject();
 
-            json.Key("ulid"); json.String((const char *)sqlite3_column_text(stmt, 1));
-            json.Key("form"); json.String((const char *)sqlite3_column_text(stmt, 2));
-            json.Key("sequence"); json.Int64(sqlite3_column_int64(stmt, 3));
-            json.Key("hid"); switch (sqlite3_column_type(stmt, 4)) {
-                case SQLITE_NULL: { json.Null(); } break;
-                case SQLITE_INTEGER: { json.Int64(sqlite3_column_int64(stmt, 4)); } break;
-                default: { json.String((const char *)sqlite3_column_text(stmt, 4)); } break;
-            }
-            json.Key("anchor"); json.Int64(sqlite3_column_int64(stmt, 5));
-            if (sqlite3_column_type(stmt, 6) != SQLITE_NULL) {
-                json.Key("parent"); json.StartObject();
-                json.Key("ulid"); json.String((const char *)sqlite3_column_text(stmt, 6));
-                json.Key("version"); json.Int64(sqlite3_column_int64(stmt, 7));
-                json.EndObject();
-            } else {
-                json.Key("parent"); json.Null();
-            }
+                json->Key("ulid"); json->String((const char *)sqlite3_column_text(stmt, 1));
+                json->Key("form"); json->String((const char *)sqlite3_column_text(stmt, 2));
+                json->Key("sequence"); json->Int64(sqlite3_column_int64(stmt, 3));
+                json->Key("hid"); switch (sqlite3_column_type(stmt, 4)) {
+                    case SQLITE_NULL: { json->Null(); } break;
+                    case SQLITE_INTEGER: { json->Int64(sqlite3_column_int64(stmt, 4)); } break;
+                    default: { json->String((const char *)sqlite3_column_text(stmt, 4)); } break;
+                }
+                json->Key("anchor"); json->Int64(sqlite3_column_int64(stmt, 5));
+                if (sqlite3_column_type(stmt, 6) != SQLITE_NULL) {
+                    json->Key("parent"); json->StartObject();
+                    json->Key("ulid"); json->String((const char *)sqlite3_column_text(stmt, 6));
+                    json->Key("version"); json->Int64(sqlite3_column_int64(stmt, 7));
+                    json->EndObject();
+                } else {
+                    json->Key("parent"); json->Null();
+                }
 
-            json.Key("fragments"); json.StartArray();
-            if (sqlite3_column_type(stmt, 8) != SQLITE_NULL) {
-                do {
-                    json.StartObject();
+                json->Key("fragments"); json->StartArray();
+                if (sqlite3_column_type(stmt, 8) != SQLITE_NULL) {
+                    do {
+                        json->StartObject();
 
-                    const char *type = (const char *)sqlite3_column_text(stmt, 10);
+                        const char *type = (const char *)sqlite3_column_text(stmt, 10);
 
-                    json.Key("anchor"); json.Int64(sqlite3_column_int64(stmt, 8));
-                    json.Key("version"); json.Int64(sqlite3_column_int64(stmt, 9));
-                    json.Key("type"); json.String(type);
-                    json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 11));
-                    json.Key("mtime"); json.String((const char *)sqlite3_column_text(stmt, 12));
-                    json.Key("fs"); json.Int64(sqlite3_column_int64(stmt, 13));
-                    if (TestStr(type, "save")) {
-                        json.Key("page"); json.String((const char *)sqlite3_column_text(stmt, 14));
-                        json.Key("values"); json.Raw((const char *)sqlite3_column_text(stmt, 15));
-                        json.Key("tags"); json.Raw((const char *)sqlite3_column_text(stmt, 16));
-                    }
+                        json->Key("anchor"); json->Int64(sqlite3_column_int64(stmt, 8));
+                        json->Key("version"); json->Int64(sqlite3_column_int64(stmt, 9));
+                        json->Key("type"); json->String(type);
+                        json->Key("username"); json->String((const char *)sqlite3_column_text(stmt, 11));
+                        json->Key("mtime"); json->String((const char *)sqlite3_column_text(stmt, 12));
+                        json->Key("fs"); json->Int64(sqlite3_column_int64(stmt, 13));
+                        if (TestStr(type, "save")) {
+                            json->Key("page"); json->String((const char *)sqlite3_column_text(stmt, 14));
+                            json->Key("values"); json->Raw((const char *)sqlite3_column_text(stmt, 15));
+                            json->Key("tags"); json->Raw((const char *)sqlite3_column_text(stmt, 16));
+                        }
 
-                    json.EndObject();
-                } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == rowid);
-            } else {
-                stmt.Step();
-            }
-            json.EndArray();
+                        json->EndObject();
+                    } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == rowid);
+                } else {
+                    stmt.Step();
+                }
+                json->EndArray();
 
-            json.EndObject();
-        } while (stmt.IsRow());
-    }
-    if (!stmt.IsValid())
-        return;
-    json.EndArray();
+                json->EndObject();
+            } while (stmt.IsRow());
+        }
+        if (!stmt.IsValid())
+            return;
 
-    json.Send();
+        json->EndArray();
+    });
 }
 
 struct SaveRecord {
