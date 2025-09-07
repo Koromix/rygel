@@ -39,6 +39,7 @@ bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 
 
 bool http_PreventCSRF(http_IO *io);
 
+bool http_ParseJson(http_IO *io, int64_t max_len, FunctionRef<bool(json_Parser *json)> func);
 bool http_SendJson(http_IO *io, int status, FunctionRef<void(json_Writer *json)> func);
 
 }

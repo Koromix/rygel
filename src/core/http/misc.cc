@@ -194,6 +194,21 @@ bool http_PreventCSRF(http_IO *io)
     return true;
 }
 
+bool http_ParseJson(http_IO *io, int64_t max_len, FunctionRef<bool(json_Parser *json)> func)
+{
+    StreamReader st;
+    if (!io->OpenForRead(max_len, &st))
+        return false;
+    json_Parser json(&st, io->Allocator());
+
+    if (func(&json)) {
+        K_ASSERT(json.IsValid());
+        return true;
+    } else {
+        return false;
+    }
+}
+
 bool http_SendJson(http_IO *io, int status, FunctionRef<void(json_Writer *json)> func)
 {
     CompressionType encoding;
