@@ -233,30 +233,30 @@ function update() {
 
     // Combine view and entities into draw rows
     {
-        let top = -position.y;
-
         let first = null;
         let offset = 0;
 
         for (let i = position.entity - 1, top = -position.y - SPACE_BETWEEN_ENTITIES; i >= 0; i--) {
             let units = combine(i, levels);
 
-            for (let j = units.length - 1; j >= 0; j--) {
-                let row = units[j];
+            if (units.length) {
+                for (let j = units.length - 1; j >= 0; j--) {
+                    let row = units[j];
 
-                top -= row.height;
-                row.top = top;
+                    top -= row.height;
+                    row.top = top;
 
-                rows.unshift(row);
+                    rows.unshift(row);
+                }
+
+                if (top < 0)
+                    break;
+
+                first = i;
+                offset = -top;
+
+                top -= SPACE_BETWEEN_ENTITIES;
             }
-
-            if (top < 0)
-                break;
-
-            first = i;
-            offset = -top;
-
-            top -= SPACE_BETWEEN_ENTITIES;
         }
 
         for (let i = position.entity, top = -position.y; i < world.entities.length; i++) {
