@@ -23,7 +23,6 @@ import fr from '../i18n/fr.json';
 import '../../../vendor/opensans/OpenSans.css';
 import './heimdall.css';
 
-// Constants
 const ROW_HEIGHT = 40;
 const PLOT_HEIGHT = 80;
 const EVENT_WIDTH = 36;
@@ -31,6 +30,12 @@ const EVENT_HEIGHT = 32;
 const PERIOD_HEIGHT = 4;
 const MERGE_TRESHOLD = 24;
 const SPACE_BETWEEN_ENTITIES = 8;
+
+const DEFAULT_SETTINGS = {
+    tree: 240,
+    interpolation: 'linear',
+    view: ''
+};
 
 // Assets
 let languages = {};
@@ -49,12 +54,8 @@ let mouse_state = null;
 let pressed_keys = null;
 
 // User settings
-let settings = {
-    tree: 240,
-    interpolation: 'linear',
-    view: null,
-    debug: false
-};
+let settings = Object.assign({}, DEFAULT_SETTINGS);
+let show_debug = false;
 
 // State
 let world = null;
@@ -86,6 +87,68 @@ async function load(prefix, lang, progress = null) {
 
     if (window.createImageBitmap == null)
         throw new Error('ImageBitmap support is not available (old browser?)');
+
+    let project = window.location.pathname.substr(1);
+    await fetchProject(project);
+
+    loadSettings();
+}
+
+function loadSettings() {
+    let key = 'heimdall:' + world.project;
+    let user = {};
+
+    try {
+        let json = localStorage.getItem(key);
+
+        if (json != null) {
+            let obj = JSON.parse(json);
+
+            if (Util.isPodObject(obj))
+                user = obj;
+        }
+    } catch (err) {
+        console.error(err);
+        localStorage.removeItem(key);
+    }
+
+    for (let key in user) {
+        if (!settings.hasOwnProperty(key))
+            continue;
+        if (typeof user[key] != typeof settings[key])
+            continue;
+
+        settings[key] = user[key];
+    }
+}
+
+function saveSettings() {
+    let key = 'heimdall:' + world.project;
+    let json = JSON.stringify(settings);
+
+    localStorage.setItem(key, json);
+}
+
+async function fetchProject(project) {
+    let url = Util.pasteURL('/api/data', { project: project });
+    let json = await Net.get(url);
+
+    world = {
+        project: project,
+        views: new Map(json.views.map(view => [view.name, view])),
+        entities: json.entities,
+
+        start: Number.MAX_SAFE_INTEGER,
+        end: Number.MIN_SAFE_INTEGER
+    };
+
+    for (let view of json.views)
+        view.expand = new Set;
+
+    for (let entity of json.entities) {
+        world.start = Math.min(world.start, entity.start);
+        world.end = Math.max(world.end, entity.end);
+    }
 }
 
 async function start(root) {
@@ -110,14 +173,23 @@ async function start(root) {
     new ResizeObserver(syncSize).observe(dom.main);
     syncSize();
 
-    let project = window.location.pathname.substr(1);
-    await fetchProject(project);
+    center(world.start, world.end);
 
     runner.updateFrequency = 60;
     runner.idleTimeout = 5000;
     runner.onUpdate = update;
     runner.onDraw = draw;
     runner.start();
+
+    render(html`
+        ${world.views.size ? html`
+            <select @change=${e => { settings.view = e.target.value; saveSettings(); }}>
+                ${Array.from(world.views.values()).map(view => html`<option value=${view.name} ?selected=${view.name == settings.view}>${view.name}</option>`)}
+            </select>
+        ` : ''}
+    `, dom.config);
+
+    document.title = `${world.project} (Heimdall)`;
 }
 
 function syncSize() {
@@ -146,37 +218,6 @@ function syncSize() {
     };
 }
 
-async function fetchProject(project) {
-    let url = Util.pasteURL('/api/data', { project: project });
-    let json = await Net.get(url);
-
-    world = {
-        views: new Map(json.views.map(view => [view.name, view])),
-        entities: json.entities,
-
-        start: Number.MAX_SAFE_INTEGER,
-        end: Number.MIN_SAFE_INTEGER
-    };
-
-    for (let view of json.views)
-        view.expand = new Set;
-
-    for (let entity of json.entities) {
-        world.start = Math.min(world.start, entity.start);
-        world.end = Math.max(world.end, entity.end);
-    }
-
-    center(world.start, world.end);
-
-    render(html`
-        ${json.views.length ? html`
-            <select @change=${e => { settings.view = e.target.value; runner.busy(); }}>
-                ${json.views.map(view => html`<option value=${view.name} ?selected=${view.name == settings.view}>${view.name}</option>`)}
-            </select>
-        ` : ''}
-    `, dom.config);
-}
-
 // ------------------------------------------------------------------------
 // Run
 // ------------------------------------------------------------------------
@@ -185,13 +226,15 @@ function update() {
     rows.length = 0;
 
     if (pressed_keys.tab == 1)
-        settings.debug = !settings.debug;
+        show_debug = !show_debug;
 
     let view = world.views.get(settings.view);
 
     if (view == null) {
         view = world.views.values().next().value;
+
         settings.view = view?.name;
+        saveSettings();
     }
 
     // Transform view tree into exhaustive levels
@@ -311,11 +354,12 @@ function update() {
     } else if (interaction?.type == 'tree') {
         if (mouse_state.left > 0) {
             let split = Util.clamp(mouse_state.x - interaction.offset, 100, canvas.width / 2);
-            settings.tree = Math.floor(split);
 
+            settings.tree = Math.floor(split);
             syncSize();
         } else {
             interaction = null;
+            saveSettings();
         }
 
         runner.cursor = 'col-resize';
@@ -884,7 +928,7 @@ function draw() {
         ctx.stroke();
     }
 
-    if (settings.debug) {
+    if (show_debug) {
         ctx.font = '18px Open Sans';
         ctx.fillStyle = 'black';
 
