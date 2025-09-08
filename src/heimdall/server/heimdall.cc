@@ -350,6 +350,8 @@ static void HandleData(http_IO *io)
         return;
     if (!db.SetWAL(true))
         return;
+    if (!MigrateDatabase(&db))
+        return;
 
     http_SendJson(io, 200, [&](json_Writer *json) {
         json->StartObject();
