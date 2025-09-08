@@ -809,8 +809,7 @@ function draw() {
                 ctx.font = '12px Open Sans';
                 ctx.fillStyle = color;
 
-                let align = (value.y >= row.height / 2) ? 8 : 2;
-                runner.text(value.x, value.y, value.label, { background: background, align: align });
+                runner.text(value.x, value.y, value.label, { background: background, align: 5 });
 
                 ctx.restore();
             }
