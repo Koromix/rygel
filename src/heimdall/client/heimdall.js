@@ -292,14 +292,14 @@ function update() {
     if (pressed_keys.h == -1 && rows.length) {
         let left = Math.min(...rows.map(row => row.left));
         let right = Math.max(...rows.map(row => row.right));
-        let start = position2time(left, position.x, position.zoom);
-        let end = position2time(right, position.x, position.zoom);
+        let start = positionToTime(left, position.x, position.zoom);
+        let end = positionToTime(right, position.x, position.zoom);
 
         center(start, end);
     }
 
     // Resize tree panel
-    if (interaction == null && inside(mouse_state, rect(layout.main.left - 5, layout.main.top, 10, layout.main.height))) {
+    if (interaction == null && isInside(mouse_state, makeRect(layout.main.left - 5, layout.main.top, 10, layout.main.height))) {
         if (mouse_state.left > 0) {
             interaction = {
                 type: 'tree',
@@ -323,9 +323,9 @@ function update() {
 
     // Handle canvas grab
     if (interaction == null) {
-        let tree = inside(mouse_state, layout.tree);
-        let main = inside(mouse_state, layout.main);
-        let time = inside(mouse_state, layout.time);
+        let tree = isInside(mouse_state, layout.tree);
+        let main = isInside(mouse_state, layout.main);
+        let time = isInside(mouse_state, layout.time);
 
         if (mouse_state.left > 0 && mouse_state.moving) {
             interaction = {
@@ -389,8 +389,8 @@ function update() {
 
     // Handle wheel actions (scroll or zoom)
     if (mouse_state.wheel) {
-        let zone = inside(mouse_state, layout.main) ||
-                   inside(mouse_state, layout.time);
+        let zone = isInside(mouse_state, layout.main) ||
+                   isInside(mouse_state, layout.time);
 
         if (pressed_keys.ctrl && zone) {
             let delta = Util.clamp(-mouse_state.wheel, -1, 1);
@@ -404,7 +404,7 @@ function update() {
     }
 }
 
-function merge(after, before) {
+function shouldMerge(after, before) {
     return after.x - before.x - before.width < MERGE_TRESHOLD;
 }
 
@@ -412,8 +412,8 @@ function zoom(delta, at) {
     if (position.zoom + delta < -200 || position.zoom + delta > 200)
         return;
 
-    let scale1 = zoom2scale(position.zoom);
-    let scale2 = zoom2scale(position.zoom + delta);
+    let scale1 = zoomToScale(position.zoom);
+    let scale2 = zoomToScale(position.zoom + delta);
     let transformed = at / scale1;
 
     position.x = Math.round(position.x - transformed * scale1 + transformed * scale2);
@@ -423,9 +423,9 @@ function zoom(delta, at) {
 function center(start, end) {
     let range = end - start;
     let time = start - range * 0.05;
-    let zoom = range ? scale2zoom(layout.main.width / range / 1.1) : 0;
+    let zoom = range ? scaleToZoom(layout.main.width / range / 1.1) : 0;
 
-    position.x = time2position(time, 0, zoom);
+    position.x = timeToPosition(time, 0, zoom);
     position.zoom = zoom;
 }
 
@@ -458,7 +458,7 @@ function combine(idx, levels) {
                 continue;
 
             let draw = {
-                x: time2position(evt.time, position.x, position.zoom),
+                x: timeToPosition(evt.time, position.x, position.zoom),
                 width: 0,
                 count: 1,
                 warning: evt.warning
@@ -474,8 +474,8 @@ function combine(idx, levels) {
                 continue;
 
             let draw = {
-                x: time2position(period.time, position.x, position.zoom),
-                width: period.duration * zoom2scale(position.zoom),
+                x: timeToPosition(period.time, position.x, position.zoom),
+                width: period.duration * zoomToScale(position.zoom),
                 warning: period.warning,
                 stack: 0
             };
@@ -507,7 +507,7 @@ function combine(idx, levels) {
 
                 for (let value of values) {
                     let draw = {
-                        x: time2position(value.time, position.x, position.zoom),
+                        x: timeToPosition(value.time, position.x, position.zoom),
                         y: row.height - (value.value - min) / range * row.height,
                         label: value.value,
                         warning: value.warning
@@ -524,7 +524,7 @@ function combine(idx, levels) {
                     continue;
 
                 let draw = {
-                    x: time2position(value.time, position.x, position.zoom),
+                    x: timeToPosition(value.time, position.x, position.zoom),
                     width: 0,
                     count: 1,
                     warning: value.warning
@@ -563,7 +563,7 @@ function combine(idx, levels) {
 
                 row.events[j] = evt;
 
-                if (merge(evt, prev)) {
+                if (shouldMerge(evt, prev)) {
                     prev.width = evt.x - prev.x;
                     prev.count++;
                     prev.warning ||= evt.warning;
@@ -583,29 +583,29 @@ function combine(idx, levels) {
     return rows;
 }
 
-function time2position(time, offset, zoom) {
-    return Math.round(time * zoom2scale(zoom) - offset);
+function timeToPosition(time, offset, zoom) {
+    return Math.round(time * zoomToScale(zoom) - offset);
 }
 
-function position2time(x, offset, zoom) {
-    return Math.round((x + offset) / zoom2scale(zoom));
+function positionToTime(x, offset, zoom) {
+    return Math.round((x + offset) / zoomToScale(zoom));
 }
 
-function zoom2scale(zoom) {
+function zoomToScale(zoom) {
     let scale = Math.pow(2, 5 + zoom / 5);
     return scale;
 }
 
-function scale2zoom(scale) {
+function scaleToZoom(scale) {
     let zoom = 5 * (Math.log2(scale) - 5);
     return zoom;
 }
 
-function rect(left, top, width, height) {
+function makeRect(left, top, width, height) {
     return { left: left, top: top, width: width, height: height };
 }
 
-function inside(pos, rect) {
+function isInside(pos, rect) {
     let inside = (pos.x >= rect.left &&
                   pos.x <= rect.left + rect.width &&
                   pos.y >= rect.top &&
@@ -621,6 +621,10 @@ function canPlot(levels, level) {
 
     return true;
 }
+
+// ------------------------------------------------------------------------
+// Draw
+// ------------------------------------------------------------------------
 
 function draw() {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -839,10 +843,10 @@ function draw() {
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 1;
 
-        let scale = zoom2scale(position.zoom);
+        let scale = zoomToScale(position.zoom);
         let start = Math.floor(position.x / scale);
         let end = Math.ceil((position.x + layout.time.width) / scale);
-        let chars = Math.max(digits(start), digits(end));
+        let chars = Math.max(countDigits(start), countDigits(end));
 
         let step1 = Math.ceil(5 / scale);
         let step2 = Math.ceil(10 * chars / scale);
@@ -894,7 +898,7 @@ function draw() {
     }
 }
 
-function digits(value) {
+function countDigits(value) {
     if (value) {
         let digits = Math.floor(Math.log10(Math.abs(value)));
         return (value < 0) + digits;
