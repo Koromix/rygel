@@ -25,7 +25,7 @@ import './heimdall.css';
 
 // Constants
 const ROW_HEIGHT = 40;
-const ROW_HEIGHT_PLOT = 80;
+const PLOT_HEIGHT = 80;
 const EVENT_WIDTH = 36;
 const EVENT_HEIGHT = 32;
 const PERIOD_HEIGHT = 4;
@@ -485,12 +485,12 @@ function combine(idx, levels) {
             row.right = Math.max(row.right, draw.x + draw.width);
         }
 
-        if (level.leaf) {
+        if (canPlot(levels, level) && !row.events.length && !row.periods.length) {
             let concept = level.concepts.values().next().value;
             let values = entity.values.filter(value => value.concept == concept);
 
             if (values.length) {
-                row.height = ROW_HEIGHT_PLOT;
+                row.height = PLOT_HEIGHT;
 
                 let min = Math.min(...values.map(value => value.value));
                 let max = Math.max(...values.map(value => value.value));
@@ -611,6 +611,15 @@ function inside(pos, rect) {
                   pos.y >= rect.top &&
                   pos.y <= rect.top + rect.height);
     return inside;
+}
+
+function canPlot(levels, level) {
+    if (level.concepts.size > 1)
+        return false;
+    if (level.expand)
+        return false;
+
+    return true;
 }
 
 function draw() {
