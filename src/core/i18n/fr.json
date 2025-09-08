@@ -349,6 +349,7 @@
         "Unexpected control character in HTTP request line": "Caractère de contrôle inattendu dans la ligne de requête HTTP",
         "Unexpected data after request line": "Données inattendues après la ligne de requête",
         "Unexpected end of JSON file": "Fin inattendue du fichier JSON",
+        "Unexpected key '%1'": "Clé inattendue '%1'",
         "Unix socket path must be set": "Le chemin du socket Unix doit être défini",
         "Unknown HTTP property '%1'": "Propriété HTTP inconnue '%1'",
         "Unknown MIME type for extension '%1'": "Type MIME inconnu pour l'extension '%1'",

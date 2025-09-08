@@ -66,7 +66,6 @@
         "Speed must be between 0 and 2": "La vitesse doit être comprise entre 0 et 2",
         "Too many profiles (maximum = 128)": "Trop de profils (maximum = 128)",
         "Transition between colors": "Faire une transition entre couleurs",
-        "Unexpected key '%1'": "Clé inattendue '%1'",
         "Unknown attribute '%1'": "Attribut inconnu '%1'",
         "Unknown color '%1'": "Couleur inconnue '%1'",
         "Unknown command '%1'": "Commande inconnue '%1'",

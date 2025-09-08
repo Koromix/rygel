@@ -24,7 +24,7 @@
         "Unknown concept '%1' in domain '%2'": "Concept inconnu '%1' dans le domaine '%2'",
         "Unknown project '%1'": "Projet inconnu '%1'",
         "Unknown section '%1'": "Section inconnue '%1'",
-        "Unsafe project parameter": "Paramètre de projet dangereux",
+        "Unsafe project name": "Nom de projet dangereux (refusé)",
         "Usage: %!..+%1 [serve] [option...]%!0\n\nOptions:\n\n    %!..+-C, --config_file filename%!0     Set configuration file\n                                   %!D..(default: %2)%!0\n\n    %!..+-p, --port port%!0                Change web server port\n                                   %!D..(default: %3)%!0\n        %!..+--sandbox%!0                  Run sandboxed (on supported platforms)\n\nOther commands:\n\n    %!..+migrate%!0                        Create or migrate project database": "Utilisation : %!..+%1 [serve] [option...]%!0\n\nOptions :\n\n    %!..+-C, --config_file nom_fichier%!0  Définition du fichier de configuration\n                                   %!D..(par défaut : %2)%!0\n\n    %!..+-p, --port port%!0                Modification du port du serveur web\n                                   %!D..(par défaut : %3)%!0\n        %!..+--sandbox%!0                  Exécution en mode sandbox (sur les plateformes prises en charge)\n\nAutres commandes :\n\n    %!..+migrate%!0                        Création ou migration d'une base de données de projet",
         "Usage: %!..+%1 migrate [option...] filename%!0": "Utilisation : %!..+%1 migrate [option...] nom_fichier%!0"
     }
