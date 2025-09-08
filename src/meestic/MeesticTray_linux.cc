@@ -748,10 +748,10 @@ Options:
                     } else {
                         continue;
                     }
+                } else {
+                    LogError("Failed to poll I/O descriptors: %1", strerror(errno));
+                    return 1;
                 }
-
-                LogError("Failed to poll I/O descriptors: %1", strerror(errno));
-                return 1;
             }
 
             // Wait and try to reconnect to server when it restarts

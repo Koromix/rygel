@@ -513,7 +513,7 @@ static bool ServeRequests()
                 timeout = std::min(timeout, (unsigned int)delay);
             }
 
-            if (poll(&pfd, 1, (int)timeout) < 0) {
+            if (poll(&pfd, 1, (int)timeout) < 0 && errno != EINTR) {
                 LogError("Failed to poll in zygote process: %1", strerror(errno));
                 return false;
             }

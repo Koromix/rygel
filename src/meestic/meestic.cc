@@ -459,10 +459,10 @@ By default, the first of the following config files will be used:
                     } else {
                         continue;
                     }
+                } else {
+                    LogError("Failed to poll I/O descriptors: %1", strerror(errno));
+                    return 1;
                 }
-
-                LogError("Failed to poll I/O descriptors: %1", strerror(errno));
-                return 1;
             }
 
             // Handle input events
