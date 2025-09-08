@@ -617,39 +617,36 @@ static bool HandleServerData()
 
     // Don't try to fill buffer, which would block, return as soon as some data is available
     StreamReader reader(read, "<server>", (int)StreamReaderFlag::LazyFill);
-    json_Parser parser(&reader, &temp_alloc);
+    json_Parser json(&reader, &temp_alloc);
 
-    parser.ParseObject();
-    while (parser.InObject()) {
-        Span<const char> key = {};
-        parser.ParseKey(&key);
+    for (json.ParseObject(); json.InObject(); ) {
+        Span<const char> key = json.ParseKey();
 
         if (key == "profiles") {
             profiles.Clear();
             profiles_alloc.Reset();
 
-            parser.ParseArray();
-            while (parser.InArray()) {
+            for (json.ParseArray(); json.InArray(); ) {
                 Span<const char> name = {};
-                if (!parser.ParseString(&name))
+                if (!json.ParseString(&name))
                     return false;
                 profiles.Append(DuplicateString(name, &profiles_alloc).ptr);
             }
         } else if (key == "active") {
             int64_t idx = 0;
-            if (!parser.ParseInt(&idx))
+            if (!json.ParseInt(&idx))
                 return false;
             if (idx < 0 || idx > profiles.len) {
                 LogError("Server sent invalid profile index");
                 return false;
             }
             profile_idx = (Size)idx;
-        } else if (parser.IsValid()) {
-            LogError("Unexpected key '%1'", key);
+        } else {
+            json.UnexpectedKey(key);
             return false;
         }
     }
-    if (!parser.IsValid())
+    if (!json.IsValid())
         return false;
 
     profiles_revision++;

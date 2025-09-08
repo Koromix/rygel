@@ -259,16 +259,14 @@ static bool HandleClientData(int fd)
 
     // Don't try to fill buffer, which would block, return as soon as some data is available
     StreamReader reader(read, "<client>", (int)StreamReaderFlag::LazyFill);
-    json_Parser parser(&reader, &temp_alloc);
+    json_Parser json(&reader, &temp_alloc);
 
-    parser.ParseObject();
-    while (parser.InObject()) {
-        Span<const char> key = {};
-        parser.ParseKey(&key);
+    for (json.ParseObject(); json.InObject(); ) {
+        Span<const char> key = json.ParseKey();
 
         if (key == "apply") {
             int64_t idx;
-            if (!parser.ParseInt(&idx))
+            if (!json.ParseInt(&idx))
                 return false;
             if (idx < 0 || idx >= config.profiles.count) {
                 LogError("Client asked for invalid profile");
@@ -277,7 +275,7 @@ static bool HandleClientData(int fd)
             ApplyProfile(idx);
         } else if (key == "toggle") {
             Span<const char> type = {};
-            if (!parser.ParseString(&type))
+            if (!json.ParseString(&type))
                 return false;
 
             if (type == "previous") {
@@ -288,12 +286,12 @@ static bool HandleClientData(int fd)
                 LogError("Invalid value '%1' for toggle command", type);
                 return false;
             }
-        } else if (parser.IsValid()) {
-            LogError("Unexpected key '%1'", key);
+        } else {
+            json.UnexpectedKey(key);
             return false;
         }
     }
-    if (!parser.IsValid())
+    if (!json.IsValid())
         return false;
 
     return true;

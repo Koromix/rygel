@@ -147,6 +147,15 @@ bool json_Parser::ParseKey(const char **out_key)
     }
 }
 
+Span<const char> json_Parser::ParseKey()
+{
+    if (ConsumeToken(json_TokenType::Key)) {
+        return handler.u.str;
+    } else {
+        return {};
+    }
+}
+
 bool json_Parser::ParseObject()
 {
     return ConsumeToken(json_TokenType::StartObject) &&
@@ -250,6 +259,15 @@ bool json_Parser::ParseString(const char **out_str)
     }
 }
 
+Span<const char> json_Parser::ParseString()
+{
+    if (ConsumeToken(json_TokenType::String)) {
+        return handler.u.str;
+    } else {
+        return {};
+    }
+}
+
 bool json_Parser::IsNumberFloat() const
 {
     if (handler.token != json_TokenType::Number)
@@ -264,15 +282,13 @@ bool json_Parser::Skip()
         case json_TokenType::Invalid: return false;
 
         case json_TokenType::StartObject: {
-            ParseObject();
-            while (InObject()) {
+            for (ParseObject(); InObject(); ) {
                 Skip();
             }
         } break;
         case json_TokenType::EndObject: { K_ASSERT(error); } break;
         case json_TokenType::StartArray: {
-            ParseArray();
-            while (InArray()) {
+            for (ParseArray(); InArray(); ) {
                 Skip();
             }
         } break;
@@ -407,6 +423,15 @@ bool json_Parser::PassThrough(const char **out_str)
     return true;
 }
 
+void json_Parser::UnexpectedKey(Span<const char> key)
+{
+    if (!IsValid())
+        return;
+
+    LogError("Unexpected key '%1'", key);
+    Skip();
+}
+
 void json_Parser::PushLogFilter()
 {
     K::PushLogFilter([this](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
@@ -454,7 +479,7 @@ bool json_Parser::ConsumeToken(json_TokenType token)
 
 bool json_Parser::IncreaseDepth()
 {
-    if (depth >= 8) [[unlikely]] {
+    if (depth >= 16) [[unlikely]] {
         LogError("Excessive depth for JSON object or array");
         error = true;
         return false;

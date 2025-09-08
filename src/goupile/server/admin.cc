@@ -1163,52 +1163,45 @@ void HandleInstanceCreate(http_IO *io)
     const char *name = nullptr;
     bool populate = false;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "key") {
-                parser.ParseString(&instance_key);
-            } else if (key == "name") {
-                parser.SkipNull() || parser.ParseString(&name);
-            } else if (key == "populate") {
-                parser.ParseBool(&populate);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "key") {
+                    json->ParseString(&instance_key);
+                } else if (key == "name") {
+                    json->SkipNull() || json->ParseString(&name);
+                } else if (key == "populate") {
+                    json->ParseBool(&populate);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!instance_key) {
+                    LogError("Missing 'key' parameter");
+                    valid = false;
+                } else if (!CheckInstanceKey(instance_key)) {
+                    valid = false;
+                }
 
-        if (!instance_key) {
-            LogError("Missing 'key' parameter");
-            valid = false;
-        } else if (!CheckInstanceKey(instance_key)) {
-            valid = false;
-        }
-        if (!name) {
-            name = instance_key;
-        } else if (!name[0]) {
-            LogError("Application name cannot be empty");
-            valid = false;
-        }
+                if (!name) {
+                    name = instance_key;
+                } else if (!name[0]) {
+                    LogError("Application name cannot be empty");
+                    valid = false;
+                }
+            }
 
-        if (!valid) {
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -1501,35 +1494,35 @@ void HandleInstanceDelete(http_IO *io)
 
     const char *instance_key = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "instance") {
-                parser.ParseString(&instance_key);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "instance") {
+                    json->ParseString(&instance_key);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (!instance_key) {
+                    LogError("Missing 'instance' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
-    }
-
-    // Check missing values
-    if (!instance_key) {
-        LogError("Missing 'instance' parameter");
-        io->SendError(422);
-        return;
     }
 
     InstanceHolder *instance = gp_domain.Ref(instance_key);
@@ -1667,92 +1660,86 @@ void HandleInstanceConfigure(http_IO *io)
     bool change_export = false;
     int64_t fs_version = -1;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(4), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "instance") {
-                parser.ParseString(&instance_key);
-            } else if (key == "name") {
-                parser.SkipNull() || parser.ParseString(&config.name);
-            } else if (key == "use_offline") {
-                if (!parser.SkipNull()) {
-                    parser.ParseBool(&config.use_offline);
-                    change_use_offline = true;
+                if (key == "instance") {
+                    json->ParseString(&instance_key);
+                } else if (key == "name") {
+                    json->SkipNull() || json->ParseString(&config.name);
+                } else if (key == "use_offline") {
+                    if (!json->SkipNull()) {
+                        json->ParseBool(&config.use_offline);
+                        change_use_offline = true;
+                    }
+                } else if (key == "data_remote") {
+                    if (!json->SkipNull()) {
+                        json->ParseBool(&config.data_remote);
+                        change_data_remote = true;
+                    }
+                } else if (key == "token_key") {
+                    json->SkipNull() || json->ParseString(&config.token_key);
+                } else if (key == "auto_key") {
+                    json->SkipNull() || json->ParseString(&config.auto_key);
+                } else if (key == "allow_guests") {
+                    if (!json->SkipNull()) {
+                        json->ParseBool(&config.allow_guests);
+                        change_allow_guests = true;
+                    }
+                } else if (key == "fs_version") {
+                    json->SkipNull() || json->ParseInt(&fs_version);
+                } else if (key == "export_days") {
+                    if (!json->SkipNull()) {
+                        json->ParseInt(&config.export_days);
+                        change_export = true;
+                    }
+                } else if (key == "export_time") {
+                    if (!json->SkipNull()) {
+                        json->ParseInt(&config.export_time);
+                        change_export = true;
+                    }
+                } else if (key == "export_all") {
+                    if (!json->SkipNull()) {
+                        json->ParseBool(&config.export_all);
+                        change_export = true;
+                    }
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
                 }
-            } else if (key == "data_remote") {
-                if (!parser.SkipNull()) {
-                    parser.ParseBool(&config.data_remote);
-                    change_data_remote = true;
-                }
-            } else if (key == "token_key") {
-                parser.SkipNull() || parser.ParseString(&config.token_key);
-            } else if (key == "auto_key") {
-                parser.SkipNull() || parser.ParseString(&config.auto_key);
-            } else if (key == "allow_guests") {
-                if (!parser.SkipNull()) {
-                    parser.ParseBool(&config.allow_guests);
-                    change_allow_guests = true;
-                }
-            } else if (key == "fs_version") {
-                parser.SkipNull() || parser.ParseInt(&fs_version);
-            } else if (key == "export_days") {
-                if (!parser.SkipNull()) {
-                    parser.ParseInt(&config.export_days);
-                    change_export = true;
-                }
-            } else if (key == "export_time") {
-                if (!parser.SkipNull()) {
-                    parser.ParseInt(&config.export_time);
-                    change_export = true;
-                }
-            } else if (key == "export_all") {
-                if (!parser.SkipNull()) {
-                    parser.ParseBool(&config.export_all);
-                    change_export = true;
-                }
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!instance_key) {
+                    LogError("Missing 'instance' parameter");
+                    valid = false;
+                }
 
-        if (!instance_key) {
-            LogError("Missing 'instance' parameter");
-            valid = false;
-        }
-        if (config.name && !config.name[0]) {
-            LogError("Application name cannot be empty");
-            valid = false;
-        }
-        if (change_export) {
-            if (config.export_days < 0 || config.export_days > 127) {
-                LogError("Invalid value for export days");
-                valid = false;
+                if (config.name && !config.name[0]) {
+                    LogError("Application name cannot be empty");
+                    valid = false;
+                }
+
+                if (change_export) {
+                    if (config.export_days < 0 || config.export_days > 127) {
+                        LogError("Invalid value for export days");
+                        valid = false;
+                    }
+                    if (config.export_time < 0 || config.export_time >= 2400) {
+                        LogError("Invalid value for export time");
+                        valid = false;
+                    }
+                }
             }
-            if (config.export_time < 0 || config.export_time >= 2400) {
-                LogError("Invalid value for export time");
-                valid = false;
-            }
-        }
 
-        if (!valid) {
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -1945,69 +1932,60 @@ void HandleInstanceAssign(http_IO *io)
     const char *instance = nullptr;
     uint32_t permissions = UINT32_MAX;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "userid") {
-                parser.ParseInt(&userid);
-            } else if (key == "instance") {
-                parser.ParseString(&instance);
-            } else if (key == "permissions") {
-                if (!parser.SkipNull()) {
-                    permissions = 0;
+                if (key == "userid") {
+                    json->ParseInt(&userid);
+                } else if (key == "instance") {
+                    json->ParseString(&instance);
+                } else if (key == "permissions") {
+                    if (!json->SkipNull()) {
+                        permissions = 0;
 
-                    parser.ParseArray();
-                    while (parser.InArray()) {
-                        Span<const char> str = {};
-                        parser.ParseString(&str);
+                        for (json->ParseArray(); json->InArray(); ) {
+                            Span<const char> str = json->ParseString();
 
-                        char perm[128];
-                        json_ConvertFromJsonName(str, perm);
+                            char perm[128];
+                            json_ConvertFromJsonName(str, perm);
 
-                        if (!OptionToFlagI(UserPermissionNames, perm, &permissions)) {
-                            LogError("Unknown permission '%1'", str);
-                            io->SendError(422);
-                            return;
+                            if (!OptionToFlagI(UserPermissionNames, perm, &permissions)) {
+                                LogError("Unknown permission '%1'", str);
+                                valid = false;
+                            }
                         }
                     }
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
                 }
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing values
-    {
-        bool valid = true;
+            if (valid) {
+                if (userid < 0) {
+                    LogError("Missing or invalid 'userid' parameter");
+                    valid = false;
+                }
 
-        if (userid < 0) {
-            LogError("Missing or invalid 'userid' parameter");
-            valid = false;
-        }
-        if (!instance) {
-            LogError("Missing 'instance' parameter");
-            valid = false;
-        }
-        if (permissions == UINT32_MAX) {
-            LogError("Missing 'permissions' parameter");
-            valid = false;
-        }
+                if (!instance) {
+                    LogError("Missing 'instance' parameter");
+                    valid = false;
+                }
 
-        if (!valid) {
+                if (permissions == UINT32_MAX) {
+                    LogError("Missing 'permissions' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -2217,35 +2195,35 @@ void HandleInstanceMigrate(http_IO *io)
 
     const char *instance_key = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "instance") {
-                parser.ParseString(&instance_key);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "instance") {
+                    json->ParseString(&instance_key);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (!instance_key) {
+                    LogError("Missing 'instance' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
-    }
-
-    // Check missing values
-    if (!instance_key) {
-        LogError("Missing 'instance' parameter");
-        io->SendError(422);
-        return;
     }
 
     InstanceHolder *instance = gp_domain.Ref(instance_key);
@@ -2360,35 +2338,35 @@ void HandleArchiveDelete(http_IO *io)
 
     const char *basename = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "filename") {
-                parser.ParseString(&basename);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "filename") {
+                    json->ParseString(&basename);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (!basename) {
+                    LogError("Missing 'filename' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
-    }
-
-    // Check missing values
-    if (!basename) {
-        LogError("Missing 'filename' parameter");
-        io->SendError(422);
-        return;
     }
 
     // Safety checks
@@ -2605,48 +2583,40 @@ void HandleArchiveRestore(http_IO *io)
     const char *decrypt_key = nullptr;
     bool restore_users = false;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "filename") {
-                parser.ParseString(&basename);
-            } else if (key == "key") {
-                parser.ParseString(&decrypt_key);
-            } else if (key == "users") {
-                parser.ParseBool(&restore_users);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "filename") {
+                    json->ParseString(&basename);
+                } else if (key == "key") {
+                    json->ParseString(&decrypt_key);
+                } else if (key == "users") {
+                    json->ParseBool(&restore_users);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!basename) {
+                    LogError("Missing 'filename' parameter");
+                    valid = false;
+                }
+                if (!decrypt_key) {
+                    LogError("Missing 'key' parameter");
+                    valid = false;
+                }
+            }
 
-        if (!basename) {
-            LogError("Missing 'filename' parameter");
-            valid = false;
-        }
-        if (!decrypt_key) {
-            LogError("Missing 'key' parameter");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -2987,69 +2957,61 @@ void HandleUserCreate(http_IO *io)
     const char *phone = nullptr;
     bool root = false;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(4), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "username") {
-                parser.ParseString(&username);
-            } else if (key == "password") {
-                parser.ParseString(&password);
-            } else if (key == "change_password") {
-                parser.ParseBool(&change_password);
-            } else if (key == "confirm") {
-                parser.ParseBool(&confirm);
-            } else if (key == "email") {
-                parser.ParseString(&email);
-                email = email[0] ? email : nullptr;
-            } else if (key == "phone") {
-                parser.ParseString(&phone);
-                phone = phone[0] ? phone : nullptr;
-            } else if (key == "root") {
-                parser.ParseBool(&root);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "username") {
+                    json->ParseString(&username);
+                } else if (key == "password") {
+                    json->ParseString(&password);
+                } else if (key == "change_password") {
+                    json->ParseBool(&change_password);
+                } else if (key == "confirm") {
+                    json->ParseBool(&confirm);
+                } else if (key == "email") {
+                    json->ParseString(&email);
+                    email = email[0] ? email : nullptr;
+                } else if (key == "phone") {
+                    json->ParseString(&phone);
+                    phone = phone[0] ? phone : nullptr;
+                } else if (key == "root") {
+                    json->ParseBool(&root);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!username || !password) {
+                    LogError("Missing 'username' or 'password' parameter");
+                    valid = false;
+                }
+                if (username && !CheckUserName(username)) {
+                    valid = false;
+                }
+                if (password && strlen(password) < pwd_MinLength) {
+                    LogError("Password is too short");
+                    valid = false;
+                }
+                if (email && !strchr(email, '@')) {
+                    LogError("Invalid email address format");
+                    valid = false;
+                }
+                if (phone && phone[0] != '+') {
+                    LogError("Invalid phone number format (prefix is mandatory)");
+                    valid = false;
+                }
+            }
 
-        if (!username || !password) {
-            LogError("Missing 'username' or 'password' parameter");
-            valid = false;
-        }
-        if (username && !CheckUserName(username)) {
-            valid = false;
-        }
-        if (password && strlen(password) < pwd_MinLength) {
-            LogError("Password is too short");
-            valid = false;
-        }
-        if (email && !strchr(email, '@')) {
-            LogError("Invalid email address format");
-            valid = false;
-        }
-        if (phone && phone[0] != '+') {
-            LogError("Invalid phone number format (prefix is mandatory)");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -3139,87 +3101,79 @@ void HandleUserEdit(http_IO *io)
     const char *phone = nullptr; bool set_phone = false;
     bool root = false, set_root = false;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(4), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "userid") {
-                parser.ParseInt(&userid);
-            } else if (key == "username") {
-                parser.SkipNull() || parser.ParseString(&username);
-            } else if (key == "password") {
-                parser.SkipNull() || parser.ParseString(&password);
-            } else if (key == "change_password") {
-                parser.SkipNull() || parser.ParseBool(&change_password);
-            } else if (key == "confirm") {
-                if (!parser.SkipNull()) {
-                    parser.ParseBool(&confirm);
-                    set_confirm = true;
-                }
-            } else if (key == "reset_secret") {
-                parser.SkipNull() || parser.ParseBool(&reset_secret);
-            } else if (key == "email") {
-                if (!parser.SkipNull()) {
-                    parser.ParseString(&email);
+                if (key == "userid") {
+                    json->ParseInt(&userid);
+                } else if (key == "username") {
+                    json->SkipNull() || json->ParseString(&username);
+                } else if (key == "password") {
+                    json->SkipNull() || json->ParseString(&password);
+                } else if (key == "change_password") {
+                    json->SkipNull() || json->ParseBool(&change_password);
+                } else if (key == "confirm") {
+                    if (!json->SkipNull()) {
+                        json->ParseBool(&confirm);
+                        set_confirm = true;
+                    }
+                } else if (key == "reset_secret") {
+                    json->SkipNull() || json->ParseBool(&reset_secret);
+                } else if (key == "email") {
+                    if (!json->SkipNull()) {
+                        json->ParseString(&email);
 
-                    email = email[0] ? email : nullptr;
-                    set_email = true;
-                }
-            } else if (key == "phone") {
-                if (!parser.SkipNull()) {
-                    parser.ParseString(&phone);
+                        email = email[0] ? email : nullptr;
+                        set_email = true;
+                    }
+                } else if (key == "phone") {
+                    if (!json->SkipNull()) {
+                        json->ParseString(&phone);
 
-                    phone = phone[0] ? phone : nullptr;
-                    set_phone = true;
+                        phone = phone[0] ? phone : nullptr;
+                        set_phone = true;
+                    }
+                } else if (key == "root") {
+                    if (!json->SkipNull()) {
+                        json->ParseBool(&root);
+                        set_root = true;
+                    }
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
                 }
-            } else if (key == "root") {
-                if (!parser.SkipNull()) {
-                    parser.ParseBool(&root);
-                    set_root = true;
-                }
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                if (userid < 0) {
+                    LogError("Missing or invalid 'userid' parameter");
+                    valid = false;
+                }
+                if (username && !CheckUserName(username)) {
+                    valid = false;
+                }
+                if (password && strlen(password) < pwd_MinLength) {
+                    LogError("Password is too short");
+                    valid = false;
+                }
+                if (email && !strchr(email, '@')) {
+                    LogError("Invalid email address format");
+                    valid = false;
+                }
+                if (phone && phone[0] != '+') {
+                    LogError("Invalid phone number format (prefix is mandatory)");
+                    valid = false;
+                }
+            }
 
-        if (userid < 0) {
-            LogError("Missing or invalid 'userid' parameter");
-            valid = false;
-        }
-        if (username && !CheckUserName(username)) {
-            valid = false;
-        }
-        if (password && strlen(password) < pwd_MinLength) {
-            LogError("Password is too short");
-            valid = false;
-        }
-        if (email && !strchr(email, '@')) {
-            LogError("Invalid email address format");
-            valid = false;
-        }
-        if (phone && phone[0] != '+') {
-            LogError("Invalid phone number format (prefix is mandatory)");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -3318,35 +3272,35 @@ void HandleUserDelete(http_IO *io)
 
     int64_t userid = -1;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "userid") {
-                parser.ParseInt(&userid);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "userid") {
+                    json->ParseInt(&userid);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (userid < 0) {
+                    LogError("Missing or invalid 'userid' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
-    }
-
-    // Check missing values
-    if (userid < 0) {
-        LogError("Missing or invalid 'userid' parameter");
-        io->SendError(422);
-        return;
     }
 
     // Safety checks

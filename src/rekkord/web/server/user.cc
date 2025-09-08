@@ -419,43 +419,34 @@ void HandleUserPing(http_IO *io)
 
 void HandleUserRegister(http_IO *io)
 {
-    // Parse input data
     const char *mail = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "mail") {
-                parser.ParseString(&mail);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "mail") {
+                    json->ParseString(&mail);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!mail || !IsMailValid(mail)) {
+                    LogError("Missing or invalid mail address");
+                    valid = false;
+                }
+            }
 
-        if (!mail || !IsMailValid(mail)) {
-            LogError("Missing or invalid mail address");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -512,50 +503,41 @@ void HandleUserLogin(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
 
-    // Parse input data
     const char *mail = nullptr;
     const char *password = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "mail") {
-                parser.ParseString(&mail);
-            } else if (key == "password") {
-                parser.ParseString(&password);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "mail") {
+                    json->ParseString(&mail);
+                } else if (key == "password") {
+                    json->ParseString(&password);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!mail || !IsMailValid(mail)) {
+                    LogError("Missing or invalid mail address");
+                    valid = false;
+                }
+                if (!password) {
+                    LogError("Missing password");
+                    valid = false;
+                }
+            }
 
-        if (!mail || !IsMailValid(mail)) {
-            LogError("Missing or invalid mail address");
-            valid = false;
-        }
-        if (!password) {
-            LogError("Missing password");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -607,43 +589,34 @@ void HandleUserRecover(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
 
-    // Parse input data
     const char *mail = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "mail") {
-                parser.ParseString(&mail);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "mail") {
+                    json->ParseString(&mail);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!mail || !IsMailValid(mail)) {
+                    LogError("Missing or invalid mail address");
+                    valid = false;
+                }
+            }
 
-        if (!mail || !IsMailValid(mail)) {
-            LogError("Missing or invalid mail address");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -707,46 +680,37 @@ void HandleUserLogout(http_IO *io)
 
 void HandleUserReset(http_IO *io)
 {
-    // Parse input data
     const char *token = nullptr;
     const char *password = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "token") {
-                parser.ParseString(&token);
-            } else if (key == "password") {
-                parser.SkipNull() || parser.ParseString(&password);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "token") {
+                    json->ParseString(&token);
+                } else if (key == "password") {
+                    json->SkipNull() || json->ParseString(&password);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!token) {
+                    LogError("Missing token");
+                    valid = false;
+                }
+            }
 
-        if (!token) {
-            LogError("Missing token");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -822,50 +786,41 @@ void HandleUserPassword(http_IO *io)
         return;
     }
 
-    // Parse input data
     const char *old_password = nullptr;
     const char *new_password = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "old_password") {
-                parser.SkipNull() || parser.ParseString(&old_password);
-            } else if (key == "new_password") {
-                parser.ParseString(&new_password);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "old_password") {
+                    json->SkipNull() || json->ParseString(&old_password);
+                } else if (key == "new_password") {
+                    json->ParseString(&new_password);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!old_password) {
+                    LogError("Missing 'old_password' parameter");
+                    valid = false;
+                }
+                if (!new_password) {
+                    LogError("Missing 'new_password' parameter");
+                    valid = false;
+                }
+            }
 
-        if (!old_password) {
-            LogError("Missing 'old_password' parameter");
-            valid = false;
-        }
-        if (!new_password) {
-            LogError("Missing 'new_password' parameter");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -984,35 +939,35 @@ void HandleTotpConfirm(http_IO *io)
 
     const char *code = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "code") {
-                parser.ParseString(&code);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "code") {
+                    json->ParseString(&code);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (!code) {
+                    LogError("Missing 'code' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
-    }
-
-    // Check for missing values
-    if (!code) {
-        LogError("Missing 'code' parameter");
-        io->SendError(422);
-        return;
     }
 
     char secret[33];
@@ -1085,46 +1040,38 @@ void HandleTotpChange(http_IO *io)
     const char *password = nullptr;
     const char *code = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "password") {
-                parser.ParseString(&password);
-            } else if (key == "code") {
-                parser.ParseString(&code);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "password") {
+                    json->ParseString(&password);
+                } else if (key == "code") {
+                    json->ParseString(&code);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check for missing values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!password) {
+                    LogError("Missing 'password' parameter");
+                    valid = false;
+                }
+                if (!code) {
+                    LogError("Missing 'code' parameter");
+                    valid = false;
+                }
+            }
 
-        if (!password) {
-            LogError("Missing 'password' parameter");
-            valid = false;
-        }
-        if (!code) {
-            LogError("Missing 'code' parameter");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -1187,40 +1134,32 @@ void HandleTotpDisable(http_IO *io)
 
     const char *password = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "password") {
-                parser.ParseString(&password);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "password") {
+                    json->ParseString(&password);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check for missing values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!password) {
+                    LogError("Missing 'password' parameter");
+                    valid = false;
+                }
+            }
 
-        if (!password) {
-            LogError("Missing 'password' parameter");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -1529,43 +1468,34 @@ void HandleKeyCreate(http_IO *io)
         return;
     }
 
-    // Parse input data
     const char *title = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "title") {
-                parser.ParseString(&title);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "title") {
+                    json->ParseString(&title);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!IsNameValid(title)) {
+                    LogError("Missing or invalid key title");
+                    valid = false;
+                }
+            }
 
-        if (!IsNameValid(title)) {
-            LogError("Missing or invalid key title");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -1630,60 +1560,41 @@ void HandleKeyDelete(http_IO *io)
         return;
     }
 
-    // Parse input data
     int64_t id = -1;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "id") {
-                parser.ParseInt(&id);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "id") {
+                    json->ParseInt(&id);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (id < 0) {
+                    LogError("Missing or invalid 'id' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
     }
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
-
-        if (id <= 0) {
-            LogError("Missing or invalid key ID");
-            valid = false;
-        }
-
-        if (!valid) {
-            io->SendError(422);
-            return;
-        }
-    }
-
-    sq_Statement stmt;
-    if (!db.Prepare(R"(DELETE FROM keys
-                       WHERE id = ?1 AND owner = ?2
-                       RETURNING id)", &stmt, id, session->userid))
+    if (!db.Run("DELETE FROM keys WHERE id = ?1 AND owner = ?2", id, session->userid))
         return;
-    if (!stmt.Step()) {
-        if (stmt.IsValid()) {
-            LogError("Unknown key ID %1", id);
-            io->SendError(404);
-        }
-        return;
-    }
 
     io->SendText(200, "{}", "application/json");
 }

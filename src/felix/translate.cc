@@ -81,21 +81,20 @@ typedef struct TranslationTable {
     Span messages;
 } TranslationTable;)";
 
-static bool LoadStrings(json_Parser *parser, TranslationFile *out_file)
+static bool LoadStrings(json_Parser *json, TranslationFile *out_file)
 {
-    parser->ParseObject();
-    while (parser->InObject()) {
+    for (json->ParseObject(); json->InObject(); ) {
         TranslationMessage msg = {};
 
-        parser->ParseKey(&msg.key);
-        parser->SkipNull() || parser->ParseString(&msg.value);
+        json->ParseKey(&msg.key);
+        json->SkipNull() || json->ParseString(&msg.value);
 
         if (msg.value) {
             out_file->messages.Append(msg);
         }
     }
 
-    return parser->IsValid();
+    return json->IsValid();
 }
 
 bool LoadTranslations(Span<const char *const> filenames, TranslationSet *out_set)
@@ -108,7 +107,7 @@ bool LoadTranslations(Span<const char *const> filenames, TranslationSet *out_set
         StreamReader reader(filename);
         if (!reader.IsValid())
             return false;
-        json_Parser parser(&reader, &set.str_alloc);
+        json_Parser json(&reader, &set.str_alloc);
 
         Span<const char> basename = SplitStrReverseAny(filename, K_PATH_SEPARATORS);
         Span<const char> language = SplitStr(basename, '.');
@@ -128,23 +127,21 @@ bool LoadTranslations(Span<const char *const> filenames, TranslationSet *out_set
             }
         }
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+        for (json.ParseObject(); json.InObject(); ) {
+            Span<const char> key = json.ParseKey();
 
             if (key == "keys") {
                 // Not used in C++ code (yet?)
-                parser.Skip();
+                json.Skip();
             } else if (key == "messages") {
-                if (!LoadStrings(&parser, file))
+                if (!LoadStrings(&json, file))
                     return false;
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
+            } else {
+                json.UnexpectedKey(key);
                 return false;
             }
         }
-        if (!parser.IsValid())
+        if (!json.IsValid())
             return false;
     }
 

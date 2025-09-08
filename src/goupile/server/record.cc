@@ -91,7 +91,7 @@ struct DataConstraint {
 
 struct FragmentInfo {
     int64_t fs = -1;
-    char eid[27] = {};
+    const char *eid = nullptr;
     const char *store = nullptr;
     int64_t anchor = -1;
     const char *summary = nullptr;
@@ -896,27 +896,27 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
 
     ExportSettings settings;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(4), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "sequence") {
-                parser.SkipNull() || parser.ParseInt(&settings.sequence);
-            } else if (key == "anchor") {
-                parser.SkipNull() || parser.ParseInt(&settings.anchor);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "sequence") {
+                    json->SkipNull() || json->ParseInt(&settings.sequence);
+                } else if (key == "anchor") {
+                    json->SkipNull() || json->ParseInt(&settings.anchor);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
+            valid &= json->IsValid();
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -1164,7 +1164,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    char tid[27];
+    const char *tid = nullptr;
     FragmentInfo fragment = {};
     HeapArray<DataConstraint> constraints;
     HeapArray<CounterInfo> counters;
@@ -1173,278 +1173,226 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     HeapArray<BlobInfo> blobs;
     bool claim = true;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Mebibytes(8), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Mebibytes(8), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "tid") {
-                Span<const char> str = nullptr;
+                if (key == "tid") {
+                    json->ParseString(&tid);
+                } else if (key == "eid") {
+                    json->ParseString(&fragment.eid);
+                } else if (key == "store") {
+                    json->ParseString(&fragment.store);
+                } else if (key == "anchor") {
+                    json->ParseInt(&fragment.anchor);
+                } else if (key == "fs") {
+                    json->ParseInt(&fragment.fs);
+                } else if (key == "summary") {
+                    json->SkipNull() || json->ParseString(&fragment.summary);
+                } else if (key == "data") {
+                    switch (json->PeekToken()) {
+                        case json_TokenType::Null: {
+                            json->ParseNull();
 
-                if (parser.ParseString(&str)) {
-                    if (!CheckULID(str)) {
-                        io->SendError(422);
-                        return;
+                            fragment.data = {};
+                            fragment.has_data = true;
+                        } break;
+                        case json_TokenType::StartObject: {
+                            json->PassThrough(&fragment.data);
+                            fragment.has_data = true;
+                        } break;
+
+                        default: {
+                            LogError("Unexpected value type for fragment data");
+                            valid = false;
+                        } break;
                     }
-
-                    CopyString(str, tid);
-                }
-            } else if (key == "eid") {
-                Span<const char> str = nullptr;
-
-                if (parser.ParseString(&str)) {
-                    if (!CheckULID(str)) {
-                        io->SendError(422);
-                        return;
+                } else if (key == "tags") {
+                    for (json->ParseArray(); json->InArray(); ) {
+                        const char *tag = json->ParseString().ptr;
+                        fragment.tags.Append(tag);
                     }
+                } else if (key == "constraints") {
+                    for (json->ParseObject(); json->InObject(); ) {
+                        DataConstraint constraint = {};
 
-                    CopyString(str, fragment.eid);
-                }
-            } else if (key == "store") {
-                parser.ParseString(&fragment.store);
-            } else if (key == "anchor") {
-                parser.ParseInt(&fragment.anchor);
-            } else if (key == "fs") {
-                parser.ParseInt(&fragment.fs);
-            } else if (key == "summary") {
-                parser.SkipNull() || parser.ParseString(&fragment.summary);
-            } else if (key == "data") {
-                switch (parser.PeekToken()) {
-                    case json_TokenType::Null: {
-                        parser.ParseNull();
+                        json->ParseKey(&constraint.key);
+                        for (json->ParseObject(); json->InObject(); ) {
+                            Span<const char> type = json->ParseKey();
 
-                        fragment.data = {};
-                        fragment.has_data = true;
-                    } break;
-                    case json_TokenType::StartObject: {
-                        parser.PassThrough(&fragment.data);
-                        fragment.has_data = true;
-                    } break;
-
-                    default: {
-                        LogError("Unexpected value type for fragment data");
-                        io->SendError(422);
-                        return;
-                    } break;
-                }
-            } else if (key == "tags") {
-                parser.ParseArray();
-                while (parser.InArray()) {
-                    Span<const char> tag = {};
-
-                    if (parser.ParseString(&tag)) {
-                        if (!CheckTag(tag)) {
-                            io->SendError(422);
-                            return;
-                        }
-
-                        fragment.tags.Append(tag.ptr);
-                    }
-                }
-            } else if (key == "constraints") {
-                parser.ParseObject();
-                while (parser.InObject()) {
-                    DataConstraint constraint = {};
-
-                    parser.ParseKey(&constraint.key);
-                    parser.ParseObject();
-                    while (parser.InObject()) {
-                        Span<const char> type = {};
-                        parser.ParseKey(&type);
-
-                        if (type == "exists") {
-                            parser.ParseBool(&constraint.exists);
-                        } else if (type == "unique") {
-                            parser.ParseBool(&constraint.unique);
-                        } else {
-                            LogError("Unexpected key '%1'", key);
-                            io->SendError(422);
-                            return;
-                        }
-                    }
-
-                    constraints.Append(constraint);
-                }
-            } else if (key == "counters") {
-                parser.ParseObject();
-                while (parser.InObject()) {
-                    CounterInfo counter = {};
-
-                    parser.ParseKey(&counter.key);
-                    parser.ParseObject();
-                    while (parser.InObject()) {
-                        Span<const char> key = {};
-                        parser.ParseKey(&key);
-
-                        if (key == "key") {
-                            parser.ParseString(&counter.key);
-                        } else if (key == "max") {
-                            parser.SkipNull() || parser.ParseInt(&counter.max);
-                        } else if (key == "randomize") {
-                            parser.ParseBool(&counter.randomize);
-                        } else if (key == "secret") {
-                            parser.ParseBool(&counter.secret);
-                        } else {
-                            LogError("Unexpected key '%1'", key);
-                            io->SendError(422);
-                            return;
-                        }
-                    }
-
-                    counters.Append(counter);
-                }
-            } else if (key == "publics") {
-                parser.ParseArray();
-                while (parser.InArray()) {
-                    const char *key = nullptr;
-                    parser.ParseString(&key);
-
-                    publics.Append(key);
-                }
-            } else if (key == "signup") {
-                switch (parser.PeekToken()) {
-                    case json_TokenType::Null: {
-                        parser.ParseNull();
-                        signup.enable = false;
-                    } break;
-                    case json_TokenType::StartObject: {
-                        signup.enable = (session->userid >= 0);
-
-                        parser.ParseObject();
-                        while (parser.InObject()) {
-                            Span<const char> key = {};
-                            parser.ParseKey(&key);
-
-                            if (key == "url") {
-                                parser.ParseString(&signup.url);
-                            } else if (key == "to") {
-                                parser.ParseString(&signup.to);
-                            } else if (key == "subject") {
-                                parser.ParseString(&signup.subject);
-                            } else if (key == "html") {
-                                parser.ParseString(&signup.html);
-                            } else if (key == "text") {
-                                parser.ParseString(&signup.text);
-                            } else if (parser.IsValid()) {
-                                LogError("Unexpected key '%1'", key);
-                                io->SendError(422);
-                                return;
+                            if (type == "exists") {
+                                json->ParseBool(&constraint.exists);
+                            } else if (type == "unique") {
+                                json->ParseBool(&constraint.unique);
+                            } else {
+                                json->UnexpectedKey(key);
+                                valid = false;
                             }
                         }
-                    } break;
 
-                    default: {
-                        LogError("Unexpected value type for signup data");
-                        io->SendError(422);
-                        return;
-                    } break;
-                }
-            } else if (key == "blobs") {
-                parser.ParseArray();
-                while (parser.InArray()) {
-                    BlobInfo blob = {};
-
-                    parser.ParseObject();
-                    while (parser.InObject()) {
-                        Span<const char> key = {};
-                        parser.ParseKey(&key);
-
-                        if (key == "sha256") {
-                            parser.ParseString(&blob.sha256);
-                        } else if (key == "name") {
-                            parser.ParseString(&blob.name);
-                        } else {
-                            LogError("Unexpected key '%1'", key);
-                            io->SendError(422);
-                            return;
-                        }
+                        constraints.Append(constraint);
                     }
+                } else if (key == "counters") {
+                    for (json->ParseObject(); json->InObject(); ) {
+                        CounterInfo counter = {};
 
-                    blobs.Append(blob);
+                        json->ParseKey(&counter.key);
+                        for (json->ParseObject(); json->InObject(); ) {
+                            Span<const char> key = json->ParseKey();
+
+                            if (key == "key") {
+                                json->ParseString(&counter.key);
+                            } else if (key == "max") {
+                                json->SkipNull() || json->ParseInt(&counter.max);
+                            } else if (key == "randomize") {
+                                json->ParseBool(&counter.randomize);
+                            } else if (key == "secret") {
+                                json->ParseBool(&counter.secret);
+                            } else {
+                                json->UnexpectedKey(key);
+                                valid = false;
+                            }
+                        }
+
+                        counters.Append(counter);
+                    }
+                } else if (key == "publics") {
+                    for (json->ParseArray(); json->InArray(); ) {
+                        const char *key = json->ParseString().ptr;
+                        publics.Append(key);
+                    }
+                } else if (key == "signup") {
+                    switch (json->PeekToken()) {
+                        case json_TokenType::Null: {
+                            json->ParseNull();
+                            signup.enable = false;
+                        } break;
+                        case json_TokenType::StartObject: {
+                            signup.enable = (session->userid >= 0);
+
+                            for (json->ParseObject(); json->InObject(); ) {
+                                Span<const char> key = json->ParseKey();
+
+                                if (key == "url") {
+                                    json->ParseString(&signup.url);
+                                } else if (key == "to") {
+                                    json->ParseString(&signup.to);
+                                } else if (key == "subject") {
+                                    json->ParseString(&signup.subject);
+                                } else if (key == "html") {
+                                    json->ParseString(&signup.html);
+                                } else if (key == "text") {
+                                    json->ParseString(&signup.text);
+                                } else {
+                                    json->UnexpectedKey(key);
+                                    valid = false;
+                                }
+                            }
+                        } break;
+
+                        default: {
+                            LogError("Unexpected value type for signup data");
+                            valid = false;
+                        } break;
+                    }
+                } else if (key == "blobs") {
+                    for (json->ParseArray(); json->InArray(); ) {
+                        BlobInfo blob = {};
+
+                        for (json->ParseObject(); json->InObject(); ) {
+                            Span<const char> key = json->ParseKey();
+
+                            if (key == "sha256") {
+                                json->ParseString(&blob.sha256);
+                            } else if (key == "name") {
+                                json->ParseString(&blob.name);
+                            } else {
+                                json->UnexpectedKey(key);
+                                valid = false;
+                            }
+                        }
+
+                        blobs.Append(blob);
+                    }
+                } else if (key == "claim") {
+                    json->ParseBool(&claim);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
                 }
-            } else if (key == "claim") {
-                parser.ParseBool(&claim);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
             }
-        }
-        if (!parser.IsValid()) {
+            valid &= json->IsValid();
+
+            if (valid) {
+                valid &= CheckULID(tid);
+
+                if (fragment.fs < 0 || !CheckULID(fragment.eid) || !fragment.store || !fragment.has_data) {
+                    LogError("Missing or invalid fragment fields");
+                    valid = false;
+                }
+                for (const char *tag: fragment.tags) {
+                    valid &= CheckTag(tag);
+                }
+
+                for (const DataConstraint &constraint: constraints) {
+                    valid &= CheckKey(constraint.key);
+                }
+
+                for (const CounterInfo &counter: counters) {
+                    valid &= CheckKey(counter.key);
+
+                    if (counter.max < 0 || counter.max > 64) {
+                        LogError("Counter maximum must be between 1 and 64");
+                        valid = false;
+                    }
+                }
+
+                for (const char *key: publics) {
+                    valid &= CheckKey(key);
+                }
+
+                if (signup.enable) {
+                    bool content = signup.text.len || signup.html.len;
+
+                    if (!signup.url || !signup.to || !signup.subject || !content) {
+                        LogError("Missing signup fields");
+                        valid = false;
+                    }
+                }
+
+                for (const BlobInfo &blob: blobs) {
+                    valid &= CheckSha256(blob.sha256);
+
+                    if (!blob.name || !blob.name[0] || PathIsAbsolute(blob.name) || PathContainsDotDot(blob.name)) {
+                        LogError("Invalid blob filename");
+                        valid = false;
+                    }
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
     }
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
-
-        if (!tid[0]) {
-            LogError("Missing or empty 'tid' parameter");
-            valid = false;
-        }
-        if (fragment.fs < 0 || !fragment.eid[0] || !fragment.store || !fragment.has_data) {
-            LogError("Missing fragment fields");
-            valid = false;
-        }
-
-        for (const DataConstraint &constraint: constraints) {
-            valid &= CheckKey(constraint.key);
-        }
-
-        for (const CounterInfo &counter: counters) {
-            valid &= CheckKey(counter.key);
-
-            if (counter.max < 0 || counter.max > 64) {
-                LogError("Counter maximum must be between 1 and 64");
-                valid = false;
-            }
-        }
-
-        for (const char *key: publics) {
-            valid &= CheckKey(key);
-        }
-
-        if (signup.enable) {
-            if (!session->userid && !gp_domain.config.smtp.url) {
-                LogError("This domain is not configured to send mails");
-                io->SendError(403);
-                return;
-            }
-
-            bool content = signup.text.len || signup.html.len;
-
-            if (!signup.url || !signup.to || !signup.subject || !content) {
-                LogError("Missing signup fields");
-                valid = false;
-            }
-        }
-
-        for (const BlobInfo &blob: blobs) {
-            valid &= CheckSha256(blob.sha256);
-
-            if (!blob.name || !blob.name[0] || PathIsAbsolute(blob.name) || PathContainsDotDot(blob.name)) {
-                LogError("Invalid blob filename");
-                valid = false;
-            }
-        }
-
-        if (!valid) {
-            io->SendError(422);
+    // Safety checks
+    if (signup.enable) {
+        if (!session->userid && !gp_domain.config.smtp.url) {
+            LogError("This domain is not configured to send mails");
+            io->SendError(403);
             return;
         }
-    }
-
-    if (signup.enable && session->userid < 0) {
-        LogError("Cannot sign up from this session");
-        io->SendError(403);
-        return;
+        if (session->userid < 0) {
+            LogError("Cannot sign up from this session");
+            io->SendError(403);
+            return;
+        }
     }
 
     // Create full session for guests
@@ -1777,51 +1725,31 @@ void HandleRecordDelete(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    char tid[27];
+    const char *tid = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(64), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "tid") {
-                Span<const char> str = nullptr;
-
-                if (parser.ParseString(&str)) {
-                    if (!CheckULID(str)) {
-                        io->SendError(422);
-                        return;
-                    }
-
-                    CopyString(str, tid);
+                if (key == "tid") {
+                    json->ParseString(&tid);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
                 }
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                valid &= CheckULID(tid);
+            }
 
-        if (!tid[0]) {
-            LogError("Missing or empty 'tid' parameter");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -1932,51 +1860,35 @@ static void HandleLock(http_IO *io, InstanceHolder *instance, bool lock)
         return;
     }
 
-    char tid[27];
+    char tid[64] = {};
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(64), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "tid") {
-                Span<const char> str = nullptr;
+                if (key == "tid") {
+                    Span<const char> str = nullptr;
 
-                if (parser.ParseString(&str)) {
-                    if (!CheckULID(str)) {
-                        io->SendError(422);
-                        return;
+                    if (json->ParseString(&str)) {
+                        CopyString(str, tid);
                     }
-
-                    CopyString(str, tid);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
                 }
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                valid &= CheckULID(tid);
+            }
 
-        if (!tid[0]) {
-            LogError("Missing or empty 'tid' parameter");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }

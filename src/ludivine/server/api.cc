@@ -217,15 +217,13 @@ void HandleRegister(http_IO *io)
         bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
             bool valid = true;
 
-            json->ParseObject();
-            while (json->InObject()) {
-                Span<const char> key = {};
-                json->ParseKey(&key);
+        for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
                 if (key == "mail") {
                     json->ParseString(&mail);
-                } else if (json->IsValid()) {
-                    LogError("Unexpected key '%1'", key);
+                } else {
+                    json->UnexpectedKey(key);
                     valid = false;
                 }
             }
@@ -312,10 +310,8 @@ void HandleProtect(http_IO *io)
         bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
             bool valid = true;
 
-            json->ParseObject();
-            while (json->InObject()) {
-                Span<const char> key = {};
-                json->ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
                 if (key == "uid") {
                     json->ParseString(&uid);
@@ -323,8 +319,8 @@ void HandleProtect(http_IO *io)
                     json->ParseString(&password);
                 } else if (key == "token") {
                     json->PassThrough(&token);
-                } else if (json->IsValid()) {
-                    LogError("Unexpected key '%1'", key);
+                } else {
+                    json->UnexpectedKey(key);
                     valid = false;
                 }
             }
@@ -397,17 +393,15 @@ void HandlePassword(http_IO *io)
         bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
             bool valid = true;
 
-            json->ParseObject();
-            while (json->InObject()) {
-                Span<const char> key = {};
-                json->ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
                 if (key == "mail") {
                     json->ParseString(&mail);
                 } else if (key == "password") {
                     json->ParseString(&password);
-                } else if (json->IsValid()) {
-                    LogError("Unexpected key '%1'", key);
+                } else {
+                    json->UnexpectedKey(key);
                     valid = false;
                 }
             }
@@ -485,10 +479,8 @@ void HandleToken(http_IO *io)
         bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
             bool valid = true;
 
-            json->ParseObject();
-            while (json->InObject()) {
-                Span<const char> key = {};
-                json->ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
                 if (key == "uid") {
                     json->ParseString(&uid);
@@ -500,8 +492,8 @@ void HandleToken(http_IO *io)
                     json->ParseString(&rid);
                 } else if (key == "registration") {
                     json->ParseInt(&registration);
-                } else if (json->IsValid()) {
-                    LogError("Unexpected key '%1'", key);
+                } else {
+                    json->UnexpectedKey(key);
                     valid = false;
                 }
             }
@@ -783,7 +775,6 @@ static bool IsTitleValid(Span<const char> title)
 
 void HandleRemind(http_IO *io)
 {
-    // Parse input data
     const char *uid = nullptr;
     int64_t study = -1;
     const char *title = nullptr;
@@ -794,10 +785,8 @@ void HandleRemind(http_IO *io)
         bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
             bool valid = true;
 
-            json->ParseObject();
-            while (json->InObject()) {
-                Span<const char> key = {};
-                json->ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
                 if (key == "uid") {
                     json->ParseString(&uid);
@@ -816,26 +805,22 @@ void HandleRemind(http_IO *io)
                         start = {};
                     }
                 } else if (key == "events") {
-                    json->ParseArray();
-                    while (json->InArray()) {
+                    for (json->ParseArray(); json->InArray(); ) {
                         EventInfo evt = {};
 
-                        json->ParseObject();
-                        while (json->InObject()) {
-                            Span<const char> key = {};
-                            json->ParseKey(&key);
+                        for (json->ParseObject(); json->InObject(); ) {
+                            Span<const char> key = json->ParseKey();
 
                             if (key == "date") {
-                                const char *str = nullptr;
-                                json->ParseString(&str);
+                                const char *str = json->ParseString().ptr;
 
                                 if (str) {
                                     ParseDate(str, &evt.date);
                                 }
                             } else if (key == "partial") {
                                 json->ParseBool(&evt.partial);
-                            } else if (json->IsValid()) {
-                                LogError("Unexpected key '%1'", key);
+                            } else {
+                                json->UnexpectedKey(key);
                                 valid = false;
                             }
                         }
@@ -844,8 +829,8 @@ void HandleRemind(http_IO *io)
                     }
                 } else if (key == "offset") {
                     json->ParseInt(&offset);
-                } else if (json->IsValid()) {
-                    LogError("Unexpected key '%1'", key);
+                } else {
+                    json->UnexpectedKey(key);
                     valid = false;
                 }
             }
@@ -932,7 +917,6 @@ void HandleRemind(http_IO *io)
 
 void HandlePublish(http_IO *io)
 {
-    // Parse input data
     const char *rid = nullptr;
     int64_t study = -1;
     const char *test = nullptr;
@@ -941,10 +925,8 @@ void HandlePublish(http_IO *io)
         bool success = http_ParseJson(io, Mebibytes(2), [&](json_Parser *json) {
             bool valid = true;
 
-            json->ParseObject();
-            while (json->InObject()) {
-                Span<const char> key = {};
-                json->ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
                 if (key == "rid") {
                     json->ParseString(&rid);
@@ -954,8 +936,8 @@ void HandlePublish(http_IO *io)
                     json->ParseString(&test);
                 } else if (key == "values") {
                     json->PassThrough(&values);
-                } else if (json->IsValid()) {
-                    LogError("Unexpected key '%1'", key);
+                } else {
+                    json->UnexpectedKey(key);
                     valid = false;
                 }
             }

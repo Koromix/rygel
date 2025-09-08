@@ -1427,63 +1427,53 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
     StreamReader reader(filename);
     if (!reader.IsValid())
         return false;
-    json_Parser parser(&reader, alloc);
+    json_Parser json(&reader, alloc);
 
     HeapArray<Span<const char>> outputs;
     Span<const char> prefix = {};
 
-    parser.ParseObject();
-    while (parser.InObject()) {
-        Span<const char> key = {};
-        parser.ParseKey(&key);
+    for (json.ParseObject(); json.InObject(); ) {
+        Span<const char> key = json.ParseKey();
 
         if (key == "inputs") {
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> input = {};
-                parser.ParseKey(&input);
+            for (json.ParseObject(); json.InObject(); ) {
+                Span<const char> input = json.ParseKey();
 
                 const char *dep_filename = NormalizePath(input, alloc).ptr;
                 out_filenames->Append(dep_filename);
 
-                parser.Skip();
+                json.Skip();
             }
         } else if (key == "outputs") {
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> output = {};
-                parser.ParseKey(&output);
+            for (json.ParseObject(); json.InObject(); ) {
+                Span<const char> output = json.ParseKey();
 
                 const char *dep_filename = NormalizePath(output, alloc).ptr;
                 out_filenames->Append(dep_filename);
 
                 // Find entry with entryPoint, which we need to fix all paths
                 if (!prefix.ptr) {
-                    parser.ParseObject();
-                    while (parser.InObject()) {
-                        Span<const char> key = {};
-                        parser.ParseKey(&key);
+                    for (json.ParseObject(); json.InObject(); ) {
+                        Span<const char> key = json.ParseKey();
 
                         if (key == "entryPoint") {
-                            Span<const char> entry_point = {};
-                            parser.ParseString(&entry_point);
-
-                            prefix = output.Take(0, output.len - entry_point.len);
+                            Span<const char> entry = json.ParseString();
+                            prefix = output.Take(0, output.len - entry.len);
                         } else {
-                            parser.Skip();
+                            json.Skip();
                         }
                     }
                 } else {
-                    parser.Skip();
+                    json.Skip();
                 }
 
                 outputs.Append(output);
             }
         } else {
-            parser.Skip();
+            json.Skip();
         }
     }
-    if (!parser.IsValid())
+    if (!json.IsValid())
         return false;
     reader.Close();
 

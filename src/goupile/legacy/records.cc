@@ -209,135 +209,134 @@ void HandleLegacySave(http_IO *io, InstanceHolder *instance)
 
     // Parse records from JSON
     {
-        StreamReader st;
-        if (!io->OpenForRead(Megabytes(256), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Mebibytes(256), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseArray();
-        while (parser.InArray()) {
-            SaveRecord *record = records.AppendDefault();
+            for (json->ParseArray(); json->InArray(); ) {
+                SaveRecord *record = records.AppendDefault();
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+                for (json->ParseObject(); json->InObject(); ) {
+                    Span<const char> key = json->ParseKey();
 
-                if (key == "form") {
-                    parser.ParseString(&record->form);
-                } else if (key == "ulid") {
-                    parser.ParseString(&record->ulid);
-                } else if (key == "hid") {
-                    switch (parser.PeekToken()) {
-                        case json_TokenType::Null: {
-                            parser.ParseNull();
-                            record->hid = nullptr;
-                        } break;
-                        case json_TokenType::Number: {
-                            int64_t value;
-                            parser.ParseInt(&value);
-                            record->hid = Fmt(io->Allocator(), "%1", value).ptr;
-                        } break;
-                        default: {
-                            parser.ParseString(&record->hid);
-                        } break;
-                    }
-                } else if (key == "parent") {
-                    if (parser.PeekToken() == json_TokenType::Null) {
-                        parser.ParseNull();
-                        record->parent.ulid = nullptr;
-                        record->parent.version = -1;
-                    } else {
-                        parser.ParseObject();
-                        while (parser.InObject()) {
-                            Span<const char> key2 = {};
-                            parser.ParseKey(&key2);
-
-                            if (key2 == "ulid") {
-                                parser.ParseString(&record->parent.ulid);
-                            } else if (key2 == "version") {
-                                parser.ParseInt(&record->parent.version);
-                            } else if (parser.IsValid()) {
-                                LogError("Unknown key '%1' in parent object", key2);
-                                io->SendError(422);
-                                return;
-                            }
+                    if (key == "form") {
+                        json->ParseString(&record->form);
+                    } else if (key == "ulid") {
+                        json->ParseString(&record->ulid);
+                    } else if (key == "hid") {
+                        switch (json->PeekToken()) {
+                            case json_TokenType::Null: {
+                                json->ParseNull();
+                                record->hid = nullptr;
+                            } break;
+                            case json_TokenType::Number: {
+                                int64_t value;
+                                json->ParseInt(&value);
+                                record->hid = Fmt(io->Allocator(), "%1", value).ptr;
+                            } break;
+                            default: {
+                                json->ParseString(&record->hid);
+                            } break;
                         }
+                    } else if (key == "parent") {
+                        if (json->PeekToken() == json_TokenType::Null) {
+                            json->ParseNull();
+                            record->parent.ulid = nullptr;
+                            record->parent.version = -1;
+                        } else {
+                            for (json->ParseObject(); json->InObject(); ) {
+                                Span<const char> key = json->ParseKey();
 
-                        if (!record->parent.ulid || record->parent.version < 0) [[unlikely]] {
-                            LogError("Missing or invalid parent ULID or version");
-                            io->SendError(422);
-                            return;
-                        }
-                    }
-                } else if (key == "fragments") {
-                    parser.ParseArray();
-                    while (parser.InArray()) {
-                        SaveRecord::Fragment *fragment = record->fragments.AppendDefault();
-
-                        parser.ParseObject();
-                        while (parser.InObject()) {
-                            Span<const char> key2 = {};
-                            parser.ParseKey(&key2);
-
-                            if (key2 == "type") {
-                                parser.ParseString(&fragment->type);
-                            } else if (key2 == "mtime") {
-                                parser.ParseString(&fragment->mtime);
-                            } else if (key2 == "fs") {
-                                parser.ParseInt(&fragment->fs);
-                            } else if (key2 == "page") {
-                                if (parser.PeekToken() == json_TokenType::Null) {
-                                    parser.ParseNull();
-                                    fragment->page = nullptr;
+                                if (key == "ulid") {
+                                    json->ParseString(&record->parent.ulid);
+                                } else if (key == "version") {
+                                    json->ParseInt(&record->parent.version);
                                 } else {
-                                    parser.ParseString(&fragment->page);
+                                    json->UnexpectedKey(key);
+                                    valid = false;
                                 }
-                            } else if (key2 == "json") {
-                                parser.ParseString(&fragment->json);
-                            } else if (key2 == "tags") {
-                                parser.ParseString(&fragment->tags);
-                            } else if (parser.IsValid()) {
-                                LogError("Unknown key '%1' in fragment object", key2);
-                                io->SendError(422);
-                                return;
+                            }
+
+                            if (!record->parent.ulid || record->parent.version < 0) [[unlikely]] {
+                                LogError("Missing or invalid parent ULID or version");
+                                valid = false;
                             }
                         }
+                    } else if (key == "fragments") {
+                        for (json->ParseArray(); json->InArray(); ) {
+                            SaveRecord::Fragment *fragment = record->fragments.AppendDefault();
 
-                        if (!fragment->type || !fragment->mtime || fragment->fs < 0) [[unlikely]] {
+                            for (json->ParseObject(); json->InObject(); ) {
+                                Span<const char> key = json->ParseKey();
+
+                                if (key == "type") {
+                                    json->ParseString(&fragment->type);
+                                } else if (key == "mtime") {
+                                    json->ParseString(&fragment->mtime);
+                                } else if (key == "fs") {
+                                    json->ParseInt(&fragment->fs);
+                                } else if (key == "page") {
+                                    if (json->PeekToken() == json_TokenType::Null) {
+                                        json->ParseNull();
+                                        fragment->page = nullptr;
+                                    } else {
+                                        json->ParseString(&fragment->page);
+                                    }
+                                } else if (key == "json") {
+                                    json->ParseString(&fragment->json);
+                                } else if (key == "tags") {
+                                    json->ParseString(&fragment->tags);
+                                } else {
+                                    json->UnexpectedKey(key);
+                                    valid = false;
+                                }
+                            }
+                        }
+                    } else {
+                        json->UnexpectedKey(key);
+                        valid = false;
+                    }
+                }
+
+                record->deleted = record->fragments.len &&
+                                  TestStr(record->fragments[record->fragments.len - 1].type, "delete");
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                for (const SaveRecord &record: records) {
+                    if (!record.form || !record.ulid) [[unlikely]] {
+                        LogError("Missing form or ULID in record object");
+                        valid = false;
+                    }
+
+                    for (const SaveRecord::Fragment &fragment: record.fragments) {
+                        if (!fragment.mtime || fragment.fs < 0) [[unlikely]] {
                             LogError("Missing type, mtime or FS in fragment object");
-                            io->SendError(422);
-                            return;
+                            valid = false;
                         }
-                        if (!TestStr(fragment->type, "save") && !TestStr(fragment->type, "delete")) [[unlikely]] {
-                            LogError("Invalid fragment type '%1'", fragment->type);
-                            io->SendError(422);
-                            return;
-                        }
-                        if (TestStr(fragment->type, "save") && (!fragment->page || !fragment->json.IsValid() ||
-                                                                                   !fragment->tags.IsValid())) {
-                            LogError("Fragment 'save' is missing page or JSON data");
-                            io->SendError(422);
-                            return;
+
+                        if (!fragment.type) {
+                            LogError("Missing fragment type");
+                            valid = false;
+                        } else if (TestStr(fragment.type, "save")) {
+                            if (!fragment.page || !fragment.json.IsValid() || !fragment.tags.IsValid()) {
+                                LogError("Fragment 'save' is missing page or JSON data");
+                                valid = false;
+                            }
+                        } else if (TestStr(fragment.type, "delete")) {
+                            // Valid
+                        } else {
+                            LogError("Invalid fragment type '%1'", fragment.type);
+                            valid = false;
                         }
                     }
-                } else if (parser.IsValid()) {
-                    LogError("Unknown key '%1' in record object", key);
-                    io->SendError(422);
-                    return;
                 }
             }
 
-            if (!record->form || !record->ulid) [[unlikely]] {
-                LogError("Missing form or ULID in record object");
-                io->SendError(422);
-                return;
-            }
+            return valid;
+        });
 
-            record->deleted = record->fragments.len &&
-                              TestStr(record->fragments[record->fragments.len - 1].type, "delete");
-        }
-        if (!parser.IsValid()) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -563,7 +562,7 @@ class RecordExporter {
     int64_t schema;
     int64_t mtime;
 
-    json_Parser *parser;
+    json_Parser *json;
 
     BucketArray<Table> tables;
     HashTable<const char *, Table *> tables_map;
@@ -574,7 +573,7 @@ public:
     RecordExporter(InstanceHolder *instance);
 
     bool Parse(const char *root_ulid, const char *ulid, const char *hid,
-               const char *form, const char *mtime, Span<const char> json);
+               const char *form, const char *mtime, Span<const char> data);
     bool Export(const char *filename);
 
 private:
@@ -620,12 +619,12 @@ static void EncodeSqlName(const char *name, HeapArray<char> *out_buf)
 }
 
 bool RecordExporter::Parse(const char *root_ulid, const char *ulid, const char *hid, const char *form, 
-                           const char *mtime, Span<const char> json)
+                           const char *mtime, Span<const char> data)
 {
-    StreamReader reader(MakeSpan((const uint8_t *)json.ptr, json.len), "<json>");
-    json_Parser parser(&reader, &str_alloc);
+    StreamReader reader(MakeSpan((const uint8_t *)data.ptr, data.len), "<json>");
+    json_Parser json(&reader, &str_alloc);
 
-    this->parser = &parser;
+    this->json = &json;
 
     if (!ParseObject(root_ulid, form, ulid, hid, mtime, nullptr, 0))
         return false;
@@ -772,21 +771,19 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
     Table *table = GetTable(form, root);
     Row *row = GetRow(table, root_ulid, ulid, hid, mtime);
 
-    parser->ParseObject();
-    while (parser->InObject()) {
-        Span<const char> key = {};
-        parser->ParseKey(&key);
+    for (json->ParseObject(); json->InObject(); ) {
+        Span<const char> key = json->ParseKey();
 
-        switch (parser->PeekToken()) {
+        switch (json->PeekToken()) {
             case json_TokenType::Null: {
-                parser->ParseNull();
+                json->ParseNull();
 
                 Column *col = GetColumn(table, prefix, key.ptr, nullptr);
                 col->values[row->idx] = nullptr;
             } break;
             case json_TokenType::Bool: {
                 bool value = false;
-                parser->ParseBool(&value);
+                json->ParseBool(&value);
 
                 Column *col = GetColumn(table, prefix, key.ptr, nullptr);
                 col->type = (Type)std::max((int)col->type, (int)Type::Integer);
@@ -794,9 +791,9 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
                 col->valued = true;
             } break;
             case json_TokenType::Number: {
-                if (parser->IsNumberFloat()) {
+                if (json->IsNumberFloat()) {
                     double value = 0.0;
-                    parser->ParseDouble(&value);
+                    json->ParseDouble(&value);
 
                     Column *col = GetColumn(table, prefix, key.ptr, nullptr);
                     col->type = (Type)std::max((int)col->type, (int)Type::Double);
@@ -804,7 +801,7 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
                     col->valued = true;
                 } else {
                     int64_t value = 0;
-                    parser->ParseInt(&value);
+                    json->ParseInt(&value);
 
                     Column *col = GetColumn(table, prefix, key.ptr, nullptr);
                     col->type = (Type)std::max((int)col->type, (int)Type::Integer);
@@ -814,7 +811,7 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
             } break;
             case json_TokenType::String: {
                 const char *str = nullptr;
-                parser->ParseString(&str);
+                json->ParseString(&str);
 
                 Column *col = GetColumn(table, prefix, key.ptr, nullptr);
                 col->type = (Type)std::max((int)col->type, (int)Type::String);
@@ -823,11 +820,10 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
             } break;
 
             case json_TokenType::StartArray: {
-                parser->ParseArray();
-                while (parser->InArray()) {
-                    switch (parser->PeekToken()) {
+                for (json->ParseArray(); json->InArray(); ) {
+                    switch (json->PeekToken()) {
                         case json_TokenType::Null: {
-                            parser->ParseNull();
+                            json->ParseNull();
 
                             Column *col = GetColumn(table, prefix, key.ptr, "null");
                             col->type = (Type)std::max((int)col->type, (int)Type::Integer);
@@ -836,7 +832,7 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
                         } break;
                         case json_TokenType::Bool: {
                             bool value = false;
-                            parser->ParseBool(&value);
+                            json->ParseBool(&value);
 
                             Column *col = GetColumn(table, prefix, key.ptr, value ? "1" : "0");
                             col->type = (Type)std::max((int)col->type, (int)Type::Integer);
@@ -844,9 +840,9 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
                             col->valued = true;
                         } break;
                         case json_TokenType::Number: {
-                            if (parser->IsNumberFloat()) {
+                            if (json->IsNumberFloat()) {
                                 double value = 0.0;
-                                parser->ParseDouble(&value);
+                                json->ParseDouble(&value);
 
                                 char buf[64];
                                 Fmt(buf, "%1", value);
@@ -857,7 +853,7 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
                                 col->valued = true;
                             } else {
                                 int64_t value = 0;
-                                parser->ParseInt(&value);
+                                json->ParseInt(&value);
 
                                 char buf[64];
                                 Fmt(buf, "%1", value);
@@ -870,7 +866,7 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
                         } break;
                         case json_TokenType::String: {
                             const char *str = nullptr;
-                            parser->ParseString(&str);
+                            json->ParseString(&str);
 
                             Column *col = GetColumn(table, prefix, key.ptr, str);
                             col->type = (Type)std::max((int)col->type, (int)Type::String);
@@ -878,7 +874,7 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
                             col->valued = true;
                         } break;
 
-                        default: { parser->Skip(); } break;
+                        default: { json->Skip(); } break;
                     }
                 }
             } break;
@@ -907,14 +903,14 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
             } break;
 
             default: {
-                if (parser->IsValid()) {
+                if (json->IsValid()) {
                     LogError("Unexpected JSON token type for '%1'", key);
                 }
                 return false;
             } break;
         }
     }
-    if (!parser->IsValid())
+    if (!json->IsValid())
         return false;
 
     return true;
@@ -1121,9 +1117,9 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
         const char *mtime = (const char *)sqlite3_column_text(stmt, 5);
 
         if (TestStr(type, "save")) {
-            Span<const char> json = MakeSpan((const char *)sqlite3_column_blob(stmt, 6),
+            Span<const char> data = MakeSpan((const char *)sqlite3_column_blob(stmt, 6),
                                              sqlite3_column_bytes(stmt, 6));
-            if (!exporter.Parse(root_ulid, ulid, hid, form, mtime, json))
+            if (!exporter.Parse(root_ulid, ulid, hid, form, mtime, data))
                 return;
         }
     }

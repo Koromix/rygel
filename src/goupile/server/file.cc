@@ -816,53 +816,45 @@ void HandleFileRestore(http_IO *io, InstanceHolder *instance)
 
     PublishFile file = {};
     {
-        StreamReader st;
-        if (!io->OpenForRead(Megabytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "filename") {
-                parser.ParseString(&file.filename);
-            } else if (key == "sha256") {
-                parser.ParseString(&file.sha256);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "filename") {
+                    json->ParseString(&file.filename);
+                } else if (key == "sha256") {
+                    json->ParseString(&file.sha256);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!file.filename || !file.filename[0]) {
+                    LogError("Missing or empty 'filename' parameter");
+                    valid = false;
+                }
+                if (PathContainsDotDot(file.filename)) {
+                    LogError("File name must not contain any '..' component");
+                    valid = false;
+                }
 
-        if (!file.filename || !file.filename[0]) {
-            LogError("Missing or empty 'filename' parameter");
-            valid = false;
-        }
-        if (PathContainsDotDot(file.filename)) {
-            LogError("File name must not contain any '..' component");
-            valid = false;
-        }
+                if (file.sha256 && file.sha256[0]) {
+                    valid &= CheckSha256(file.sha256);
+                } else {
+                    LogError("Missing or empty file sha256");
+                    valid = false;
+                }
+            }
 
-        if (file.sha256 && file.sha256[0]) {
-            valid &= CheckSha256(file.sha256);
-        } else {
-            LogError("Missing or empty file sha256");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -1012,92 +1004,81 @@ void HandleFilePublish(http_IO *io, InstanceHolder *instance)
 
     HashTable<const char *, PublishFile> files;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Megabytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Mebibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            PublishFile file = {};
+            for (json->ParseObject(); json->InObject(); ) {
+                PublishFile file = {};
 
-            parser.ParseKey(&file.filename);
+                json->ParseKey(&file.filename);
 
-            switch (parser.PeekToken()) {
-                case json_TokenType::String: { parser.ParseString(&file.sha256); } break;
+                switch (json->PeekToken()) {
+                    case json_TokenType::String: { json->ParseString(&file.sha256); } break;
 
-                case json_TokenType::StartObject: {
-                    parser.ParseObject();
-                    while (parser.InObject()) {
-                        Span<const char> key = {};
-                        parser.ParseKey(&key);
+                    case json_TokenType::StartObject: {
+                        for (json->ParseObject(); json->InObject(); ) {
+                            Span<const char> key = json->ParseKey();
 
-                        if (key == "sha256") {
-                            parser.ParseString(&file.sha256);
-                        } else if (key == "bundle") {
-                            parser.SkipNull() || parser.ParseString(&file.bundle);
-                        } else if (parser.IsValid()) {
-                            LogError("Unexpected key '%1'", key);
-                            io->SendError(422);
-                            return;
+                            if (key == "sha256") {
+                                json->ParseString(&file.sha256);
+                            } else if (key == "bundle") {
+                                json->SkipNull() || json->ParseString(&file.bundle);
+                            } else {
+                                json->UnexpectedKey(key);
+                                valid = false;
+                            }
                         }
-                    }
-                } break;
+                    } break;
 
-                default: {
-                    LogError("Unexpected value type for file reference");
-                    io->SendError(422);
-                    return;
-                } break;
-            }
+                    default: {
+                        LogError("Unexpected value type for file reference");
+                        valid = false;
+                    } break;
+                }
 
-            bool inserted;
-            files.TrySet(file, &inserted);
+                bool inserted;
+                files.TrySet(file, &inserted);
 
-            if (!inserted) {
-                LogError("Duplicate file '%1'", file.filename);
-                io->SendError(422);
-                return;
-            }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
-
-    // Check missing or invalid values
-    {
-        bool valid = true;
-
-        for (const PublishFile &file: files) {
-            if (!file.filename || !file.filename[0]) {
-                LogError("Missing or empty file name");
-                valid = false;
-            }
-            if (PathContainsDotDot(file.filename)) {
-                LogError("File name must not contain any '..' component");
-                valid = false;
-            }
-
-            if (file.sha256 && file.sha256[0]) {
-                valid &= CheckSha256(file.sha256);
-            } else {
-                LogError("Missing or empty file sha256");
-                valid = false;
-            }
-
-            if (file.bundle) {
-                if (file.bundle[0]) {
-                    valid &= CheckSha256(file.bundle);
-                } else {
-                    LogError("Empty file bundle");
+                if (!inserted) {
+                    LogError("Duplicate file '%1'", file.filename);
                     valid = false;
                 }
             }
-        }
+            valid &= json->IsValid();
 
-        if (!valid) {
+            if (valid) {
+                for (const PublishFile &file: files) {
+                    if (!file.filename || !file.filename[0]) {
+                        LogError("Missing or empty file name");
+                        valid = false;
+                    }
+                    if (PathContainsDotDot(file.filename)) {
+                        LogError("File name must not contain any '..' component");
+                        valid = false;
+                    }
+
+                    if (file.sha256 && file.sha256[0]) {
+                        valid &= CheckSha256(file.sha256);
+                    } else {
+                        LogError("Missing or empty file sha256");
+                        valid = false;
+                    }
+
+                    if (file.bundle) {
+                        if (file.bundle[0]) {
+                            valid &= CheckSha256(file.bundle);
+                        } else {
+                            LogError("Empty file bundle");
+                            valid = false;
+                        }
+                    }
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }

@@ -371,26 +371,24 @@ static bool InitVM()
     return true;
 }
 
-static bool HandleMergeDataMeta(json_Parser *parser, Allocator *alloc, StreamWriter *writer)
+static bool HandleMergeDataMeta(json_Parser *json, Allocator *alloc, StreamWriter *writer)
 {
     Span<const char> data = {};
     Span<const char> meta = {};
     {
-        parser->ParseObject();
-        while (parser->InObject()) {
-            Span<const char> key = {};
-            parser->ParseKey(&key);
+        for (json->ParseObject(); json->InObject(); ) {
+            Span<const char> key = json->ParseKey();
 
             if (key == "data") {
-                parser->PassThrough(&data);
+                json->PassThrough(&data);
             } else if (key == "meta") {
-                parser->PassThrough(&meta);
+                json->PassThrough(&meta);
             } else {
                 LogError("Unexpected key '%1'", key);
                 return false;
             }
         }
-        if (!parser->IsValid())
+        if (!json->IsValid())
             return false;
 
         if (!data.len || !meta.len) {
@@ -455,10 +453,10 @@ static bool HandleRequest(int kind, struct cmsghdr *cmsg, pid_t *out_pid)
     {
         StreamReader reader(fd, "<server>");
         StreamWriter writer(fd, "<server>", (int)StreamWriterFlag::NoBuffer);
-        json_Parser parser(&reader, &temp_alloc);
+        json_Parser json(&reader, &temp_alloc);
 
         switch (kind) {
-            case (int)RequestType::MergeDataMeta: { HandleMergeDataMeta(&parser, &temp_alloc, &writer); } break;
+            case (int)RequestType::MergeDataMeta: { HandleMergeDataMeta(&json, &temp_alloc, &writer); } break;
             default: { LogError("Ignoring unknown message 0x%1 from server process", FmtHex(kind).Pad0(-2)); } break;
         }
 
@@ -775,11 +773,11 @@ static bool SendRequest(RequestType type, Allocator *alloc,
     // Receive payload
     {
         StreamReader st(pfd[0], "<zygote>");
-        json_Parser parser(&st, alloc);
+        json_Parser json(&st, alloc);
 
-        if (!receive(&parser))
+        if (!receive(&json))
             return false;
-        if (!parser.IsValid())
+        if (!json.IsValid())
             return false;
 
         shutdown(pfd[0], SHUT_RD);
@@ -811,8 +809,8 @@ Span<const char> MergeDataMeta(Span<const char> data, Span<const char> meta, All
             return true;
         },
 
-        [&](json_Parser *parser) {
-            parser->PassThrough(&result);
+        [&](json_Parser *json) {
+            json->PassThrough(&result);
             return true;
         }
     );

@@ -48,7 +48,7 @@ static bool FetchPlan(Allocator *alloc, HeapArray<ItemData> *out_items)
     Span<const char> api = rekkord_config.agent_url;
     const char *key = rekkord_config.api_key;
 
-    HeapArray<char> json;
+    HeapArray<char> body;
     {
         CURL *curl = curl_Init();
         if (!curl)
@@ -66,14 +66,14 @@ static bool FetchPlan(Allocator *alloc, HeapArray<ItemData> *out_items)
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, &headers);
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
-            HeapArray<char> *json = (HeapArray<char> *)udata;
+            HeapArray<char> *body = (HeapArray<char> *)udata;
 
             Span<const char> buf = MakeSpan(ptr, (Size)nmemb);
-            json->Append(buf);
+            body->Append(buf);
 
             return nmemb;
         });
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &json);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
 
         int status = curl_Perform(curl, "fetch");
 
@@ -87,47 +87,41 @@ static bool FetchPlan(Allocator *alloc, HeapArray<ItemData> *out_items)
 
     // Parse plan
     {
-        StreamReader st(json.As<uint8_t>(), "<plan>");
-        json_Parser parser(&st, alloc);
+        StreamReader st(body.As<uint8_t>(), "<plan>");
+        json_Parser json(&st, alloc);
 
-        parser.ParseArray();
-        while (parser.InArray()) {
+        for (json.ParseArray(); json.InArray(); ) {
             ItemData item = {};
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+            for (json.ParseObject(); json.InObject(); ) {
+                Span<const char> key = json.ParseKey();
 
                 if (key == "id") {
-                    parser.Skip();
+                    json.Skip();
                 } else if (key == "channel") {
-                    parser.ParseString(&item.channel);
+                    json.ParseString(&item.channel);
                 } else if (key == "clock") {
-                    parser.ParseInt(&item.clock);
+                    json.ParseInt(&item.clock);
                 } else if (key == "days") {
-                    parser.ParseInt(&item.days);
+                    json.ParseInt(&item.days);
                 } else if (key == "timestamp") {
-                    parser.SkipNull() || parser.ParseInt(&item.timestamp);
+                    json.SkipNull() || json.ParseInt(&item.timestamp);
                 } else if (key == "success") {
-                    parser.ParseBool(&item.success);
+                    json.ParseBool(&item.success);
                 } else if (key == "paths") {
-                    parser.ParseArray();
-                    while (parser.InArray()) {
-                        const char *path = nullptr;
-                        parser.ParseString(&path);
-
+                    for (json.ParseArray(); json.InArray(); ) {
+                        const char *path = json.ParseString().ptr;
                         item.paths.Append(path);
                     }
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
+                } else {
+                    json.UnexpectedKey(key);
                     return false;
                 }
             }
 
             out_items->Append(item);
         }
-        if (!parser.IsValid())
+        if (!json.IsValid())
             return false;
     }
 

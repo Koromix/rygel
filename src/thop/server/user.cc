@@ -326,37 +326,41 @@ void HandleLogin(http_IO *io, const User *)
     const char *username = nullptr;
     const char *password = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "username") {
-                parser.ParseString(&username);
-            } else if (key == "password") {
-                parser.ParseString(&password);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "username") {
+                    json->ParseString(&username);
+                } else if (key == "password") {
+                    json->ParseString(&password);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (!username) {
+                    LogError("Missing 'username' parameter");
+                    valid = false;
+                }
+                if (!password) {
+                    LogError("Missing 'password' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
-    }
-
-    // Check for missing values
-    if (!username || !password) {
-        LogError("Missing 'username' or 'password' parameter");
-        io->SendError(422);
-        return;
     }
 
     int64_t now = GetMonotonicTime();

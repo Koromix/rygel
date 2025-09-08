@@ -277,56 +277,47 @@ void HandleRepositorySave(http_IO *io)
         return;
     }
 
-    // Parse input data
     int64_t id = -1;
     const char *name = nullptr;
     const char *url = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(4), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "id") {
-                parser.SkipNull() || parser.ParseInt(&id);
-            } else if (key == "name") {
-                parser.ParseString(&name);
-            } else if (key == "url") {
-                parser.ParseString(&url);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "id") {
+                    json->SkipNull() || json->ParseInt(&id);
+                } else if (key == "name") {
+                    json->ParseString(&name);
+                } else if (key == "url") {
+                    json->ParseString(&url);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!name || !name[0]) {
+                    LogError("Missing or invalid 'name' parameter");
+                    valid = false;
+                }
 
-        if (!name || !name[0]) {
-            LogError("Missing or invalid 'name' parameter");
-            valid = false;
-        }
+                if (url) {
+                    valid = CheckURL(url);
+                } else {
+                    LogError("Missing 'url' value");
+                    valid = false;
+                }
+            }
 
-        if (url) {
-            valid = CheckURL(url);
-        } else {
-            LogError("Missing 'url' value");
-            valid = false;
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -363,38 +354,37 @@ void HandleRepositoryDelete(http_IO *io)
         return;
     }
 
-    // Parse input data
     int64_t id = -1;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "id") {
-                parser.ParseInt(&id);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "id") {
+                    json->ParseInt(&id);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (id < 0) {
+                    LogError("Missing or invalid 'id' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
-    }
-
-    // Check missing or invalid values
-    if (id < 0) {
-        LogError("Missing or invalid 'id' parameter");
-        io->SendError(422);
-        return;
     }
 
     if (!db.Run("DELETE FROM repositories WHERE id = ?1 AND owner = ?2", id, session->userid))

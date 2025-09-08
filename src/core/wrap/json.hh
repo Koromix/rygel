@@ -136,7 +136,7 @@ class json_Parser {
     Handler handler;
     rapidjson::Reader reader;
 
-    Size depth = 0;
+    int depth = 0;
 
     bool error = false;
     bool eof = false;
@@ -150,6 +150,7 @@ public:
 
     bool ParseKey(Span<const char> *out_key);
     bool ParseKey(const char **out_key);
+    Span<const char> ParseKey();
 
     bool ParseObject();
     bool InObject();
@@ -163,6 +164,7 @@ public:
     bool ParseDouble(double *out_value);
     bool ParseString(Span<const char> *out_str);
     bool ParseString(const char **out_str);
+    Span<const char> ParseString();
 
     bool IsNumberFloat() const;
 
@@ -172,6 +174,8 @@ public:
     bool PassThrough(Span<char> *out_buf);
     bool PassThrough(Span<const char> *out_buf) { return PassThrough((Span<char> *)out_buf); }
     bool PassThrough(const char **out_str);
+
+    void UnexpectedKey(Span<const char> key);
 
     void PushLogFilter();
 

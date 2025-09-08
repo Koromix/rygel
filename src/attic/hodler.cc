@@ -288,44 +288,35 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<B
     StreamReader reader(filename);
     if (!reader.IsValid())
         return false;
-    json_Parser parser(&reader, &temp_alloc);
+    json_Parser json(&reader, &temp_alloc);
 
-    parser.ParseObject();
-    while (parser.InObject()) {
-        Span<const char> key = {};
-        parser.ParseKey(&key);
+    for (json.ParseObject(); json.InObject(); ) {
+        Span<const char> key = json.ParseKey();
 
         if (key == "outputs") {
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> output = {};
+            for (json.ParseObject(); json.InObject(); ) {
+                Span<const char> output = json.ParseKey();
+
                 HeapArray<const char *> inputs;
                 const char *js = nullptr;
                 const char *css = nullptr;
 
-                parser.ParseKey(&output);
-
-                parser.ParseObject();
-                while (parser.InObject()) {
-                    Span<const char> key = {};
-                    parser.ParseKey(&key);
+                for (json.ParseObject(); json.InObject(); ) {
+                    Span<const char> key = json.ParseKey();
 
                     if (key == "entryPoint") {
-                        parser.ParseString(&js);
+                        json.ParseString(&js);
                     } else if (key == "cssBundle") {
-                        parser.ParseString(&css);
+                        json.ParseString(&css);
                     } else if (key == "inputs") {
-                        parser.ParseObject();
-                        while (parser.InObject()) {
-                            const char *input = nullptr;
-                            parser.ParseKey(&input);
-
+                        for (json.ParseObject(); json.InObject(); ) {
+                            const char *input = json.ParseKey().ptr;
                             inputs.Append(input);
 
-                            parser.Skip();
+                            json.Skip();
                         }
                     } else {
-                        parser.Skip();
+                        json.Skip();
                     }
                 }
 
@@ -355,10 +346,10 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<B
                 }
             }
         } else {
-            parser.Skip();
+            json.Skip();
         }
     }
-    if (!parser.IsValid())
+    if (!json.IsValid())
         return false;
     reader.Close();
 

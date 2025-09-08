@@ -228,124 +228,110 @@ void HandlePlanSave(http_IO *io)
         return;
     }
 
-    // Parse input data
     int64_t id = -1;
     const char *name = nullptr;
     int64_t repository = -1;
     int scan = -1;
     HeapArray<PlanItem> items;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(4), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "id") {
-                parser.SkipNull() || parser.ParseInt(&id);
-            } else if (key == "name") {
-                parser.ParseString(&name);
-            } else if (key == "repository") {
-                parser.SkipNull() || parser.ParseInt(&repository);
-            } else if (key == "scan") {
-                parser.SkipNull() || parser.ParseInt(&scan);
-            } else if (key == "items") {
-                parser.ParseArray();
-                while (parser.InArray()) {
-                    PlanItem item = {};
+                if (key == "id") {
+                    json->SkipNull() || json->ParseInt(&id);
+                } else if (key == "name") {
+                    json->ParseString(&name);
+                } else if (key == "repository") {
+                    json->SkipNull() || json->ParseInt(&repository);
+                } else if (key == "scan") {
+                    json->SkipNull() || json->ParseInt(&scan);
+                } else if (key == "items") {
+                    for (json->ParseArray(); json->InArray(); ) {
+                        PlanItem item = {};
 
-                    parser.ParseObject();
-                    while (parser.InObject()) {
-                        Span<const char> key = {};
-                        parser.ParseKey(&key);
+                        for (json->ParseObject(); json->InObject(); ) {
+                            Span<const char> key = json->ParseKey();
 
-                        if (key == "channel") {
-                            parser.ParseString(&item.channel);
-                        } else if (key == "clock") {
-                            parser.ParseInt(&item.clock);
-                        } else if (key == "days") {
-                            parser.ParseInt(&item.days);
-                        } else if (key == "paths") {
-                            parser.ParseArray();
-                            while (parser.InArray()) {
-                                const char *path = nullptr;
-                                parser.ParseString(&path);
+                            if (key == "channel") {
+                                json->ParseString(&item.channel);
+                            } else if (key == "clock") {
+                                json->ParseInt(&item.clock);
+                            } else if (key == "days") {
+                                json->ParseInt(&item.days);
+                            } else if (key == "paths") {
+                                for (json->ParseArray(); json->InArray(); ) {
+                                    const char *path = nullptr;
+                                    json->ParseString(&path);
 
-                                item.paths.Append(path);
+                                    item.paths.Append(path);
+                                }
+                            } else {
+                                json->UnexpectedKey(key);
+                                valid = false;
                             }
-                        } else if (parser.IsValid()) {
-                            LogError("Unexpected key '%1'", key);
-                            io->SendError(422);
-                            return;
                         }
+
+                        items.Append(item);
                     }
-
-                    items.Append(item);
-                }
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
-            }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
-
-    // Check missing or invalid values
-    {
-        bool valid = true;
-
-        if (!name || !name[0]) {
-            LogError("Missing or invalid 'name' parameter");
-            valid = false;
-        }
-        if (id < 0) {
-            if (repository < 0) {
-                LogError("Missing or invalid 'repository' parameter");
-                valid = false;
-            }
-        } else {
-            repository = -1;
-        }
-        if (scan >= 2400) {
-            LogError("Invalid 'scan' parameter");
-            valid = false;
-        }
-
-        for (const PlanItem &item: items) {
-            if (!item.channel || !item.channel[0]) {
-                LogError("Missing or invalid 'channel' parameter");
-                valid = false;
-            }
-            if (item.days < 1 || item.days >= 128) {
-                LogError("Missing or invalid 'days' parameter");
-                valid = false;
-            }
-            if (item.clock < 0 || item.clock >= 2400) {
-                LogError("Missing or invalid 'clock' parameter");
-                valid = false;
-            }
-
-            if (!item.paths.len) {
-                LogError("Missing item paths");
-                valid = false;
-            }
-            for (const char *path: item.paths) {
-                if (!path || !path[0]) {
-                    LogError("Missing or invalid item path");
+                } else {
+                    json->UnexpectedKey(key);
                     valid = false;
                 }
             }
-        }
+            valid &= json->IsValid();
 
-        if (!valid) {
+            if (valid) {
+                if (!name || !name[0]) {
+                    LogError("Missing or invalid 'name' parameter");
+                    valid = false;
+                }
+                if (id < 0) {
+                    if (repository < 0) {
+                        LogError("Missing or invalid 'repository' parameter");
+                        valid = false;
+                    }
+                } else {
+                    repository = -1;
+                }
+                if (scan >= 2400) {
+                    LogError("Invalid 'scan' parameter");
+                    valid = false;
+                }
+
+                for (const PlanItem &item: items) {
+                    if (!item.channel || !item.channel[0]) {
+                        LogError("Missing or invalid 'channel' parameter");
+                        valid = false;
+                    }
+                    if (item.days < 1 || item.days >= 128) {
+                        LogError("Missing or invalid 'days' parameter");
+                        valid = false;
+                    }
+                    if (item.clock < 0 || item.clock >= 2400) {
+                        LogError("Missing or invalid 'clock' parameter");
+                        valid = false;
+                    }
+
+                    if (!item.paths.len) {
+                        LogError("Missing item paths");
+                        valid = false;
+                    }
+                    for (const char *path: item.paths) {
+                        if (!path || !path[0]) {
+                            LogError("Missing or invalid item path");
+                            valid = false;
+                        }
+                    }
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
@@ -469,38 +455,37 @@ void HandlePlanDelete(http_IO *io)
         return;
     }
 
-    // Parse input data
     int64_t id = -1;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "id") {
-                parser.ParseInt(&id);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "id") {
+                    json->ParseInt(&id);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (id < 0) {
+                    LogError("Missing or invalid 'id' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
-    }
-
-    // Check missing or invalid values
-    if (id < 0) {
-        LogError("Missing or invalid 'id' parameter");
-        io->SendError(422);
-        return;
     }
 
     if (!db.Run("DELETE FROM plans WHERE id = ?1 AND owner = ?2", id, session->userid))
@@ -519,38 +504,37 @@ void HandlePlanKey(http_IO *io)
         return;
     }
 
-    // Parse input data
     int64_t id = -1;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(1), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "id") {
-                parser.ParseInt(&id);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "id") {
+                    json->ParseInt(&id);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (id < 0) {
+                    LogError("Missing or invalid 'id' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
             io->SendError(422);
             return;
         }
-    }
-
-    // Check missing or invalid values
-    if (id < 0) {
-        LogError("Missing or invalid 'id' parameter");
-        io->SendError(422);
-        return;
     }
 
     // Make sure plan exists
@@ -675,7 +659,6 @@ void HandlePlanReport(http_IO *io)
     if (!ValidateApiKey(io, &plan, &repository))
         return;
 
-    // Parse input data
     const char *channel = nullptr;
     int64_t timestamp = -1;
     const char *oid = nullptr;
@@ -684,75 +667,67 @@ void HandlePlanReport(http_IO *io)
     int64_t added = -1;
     const char *error = nullptr;
     {
-        StreamReader st;
-        if (!io->OpenForRead(Kibibytes(4), &st))
-            return;
-        json_Parser parser(&st, io->Allocator());
+        bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
+            bool valid = true;
 
-        parser.ParseObject();
-        while (parser.InObject()) {
-            Span<const char> key = {};
-            parser.ParseKey(&key);
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
 
-            if (key == "channel") {
-                parser.ParseString(&channel);
-            } else if (key == "timestamp") {
-                parser.ParseInt(&timestamp);
-            } else if (key == "oid") {
-                parser.SkipNull() || parser.ParseString(&oid);
-            } else if (key == "size") {
-                parser.ParseInt(&size);
-            } else if (key == "stored") {
-                parser.ParseInt(&stored);
-            } else if (key == "added") {
-                parser.ParseInt(&added);
-            } else if (key == "error") {
-                parser.ParseString(&error);
-            } else if (parser.IsValid()) {
-                LogError("Unexpected key '%1'", key);
-                io->SendError(422);
-                return;
+                if (key == "channel") {
+                    json->ParseString(&channel);
+                } else if (key == "timestamp") {
+                    json->ParseInt(&timestamp);
+                } else if (key == "oid") {
+                    json->SkipNull() || json->ParseString(&oid);
+                } else if (key == "size") {
+                    json->ParseInt(&size);
+                } else if (key == "stored") {
+                    json->ParseInt(&stored);
+                } else if (key == "added") {
+                    json->ParseInt(&added);
+                } else if (key == "error") {
+                    json->ParseString(&error);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
             }
-        }
-        if (!parser.IsValid()) {
-            io->SendError(422);
-            return;
-        }
-    }
+            valid &= json->IsValid();
 
-    // Check missing or invalid values
-    {
-        bool valid = true;
+            if (valid) {
+                if (!channel) {
+                    LogError("Missing or invalid 'channel' parameter");
+                    valid = false;
+                }
+                if (timestamp < 0) {
+                    LogError("Missing or invalid 'timestamp' parameter");
+                    valid = false;
+                }
+                if (oid) {
+                    if (!rk_ParseOID(oid)) {
+                        LogError("Invalid snapshot OID");
+                        valid = false;
+                    }
+                    if (size < 0 || stored < 0 || added < 0) {
+                        LogError("Missing or invalid size values");
+                        valid = false;
+                    }
+                    if (error) {
+                        LogError("Cannot specify OID and error at the same time");
+                        valid = false;
+                    }
+                } else {
+                    if (!error) {
+                        LogError("Missing both OID and error message");
+                        valid = false;
+                    }
+                }
+            }
 
-        if (!channel) {
-            LogError("Missing or invalid 'channel' parameter");
-            valid = false;
-        }
-        if (timestamp < 0) {
-            LogError("Missing or invalid 'timestamp' parameter");
-            valid = false;
-        }
-        if (oid) {
-            if (!rk_ParseOID(oid)) {
-                LogError("Invalid snapshot OID");
-                valid = false;
-            }
-            if (size < 0 || stored < 0 || added < 0) {
-                LogError("Missing or invalid size values");
-                valid = false;
-            }
-            if (error) {
-                LogError("Cannot specify OID and error at the same time");
-                valid = false;
-            }
-        } else {
-            if (!error) {
-                LogError("Missing both OID and error message");
-                valid = false;
-            }
-        }
+            return valid;
+        });
 
-        if (!valid) {
+        if (!success) {
             io->SendError(422);
             return;
         }
