@@ -92,6 +92,16 @@ async function load(prefix, lang, progress = null) {
     await fetchProject(project);
 
     loadSettings();
+
+    // Keep this around for gesture emulation on desktop
+    if (false) {
+        let script = document.createElement('script');
+
+        script.onload = () => TouchEmulator();
+        script.src = BUNDLES['touch-emulator.js'];
+
+        document.head.appendChild(script);
+    }
 }
 
 function loadSettings() {
@@ -445,6 +455,11 @@ function update() {
             let factor = pressed_keys.ctrl ? 100 : 10;
             position.y += mouse_state.wheel * factor;
         }
+    } else if (mouse_state.pinch) {
+        let delta = 10 * mouse_state.pinch;
+        let at = position.x + mouse_state.x - settings.tree;
+
+        zoom(delta, at);
     }
 }
 

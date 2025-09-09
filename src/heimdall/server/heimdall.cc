@@ -256,6 +256,7 @@ static void InitAssets()
         Fmt(shared_etag, "%1", FmtHex(buf).Pad0(-16));
     }
 
+    HeapArray<const char *> bundles;
     const char *js = nullptr;
     const char *css = nullptr;
 
@@ -276,6 +277,8 @@ static void InitAssets()
                     js = url;
                 } else if (name == "heimdall.css") {
                     css = url;
+                } else if (EndsWith(name, ".js")) {
+                    bundles.Append(url);
                 }
             }
         }
@@ -295,6 +298,17 @@ static void InitAssets()
             writer->Write(js);
         } else if (key == "CSS") {
             writer->Write(css);
+        } else if (key == "CSS") {
+            writer->Write(css);
+        }  else if (key == "BUNDLES") {
+            json_Writer json(writer);
+
+            json.StartObject();
+            for (const char *bundle: bundles) {
+                const char *name = SplitStrReverseAny(bundle, K_PATH_SEPARATORS).ptr;
+                json.Key(name); json.String(bundle);
+            }
+            json.EndObject();
         } else {
             Print(writer, "{{%1}}", expr);
         }
