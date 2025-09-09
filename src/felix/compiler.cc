@@ -841,6 +841,9 @@ public:
         AddClangTarget(&buf);
 
         // Build mode
+        if (!(features & (int)CompileFeature::DebugInfo)) {
+            Fmt(&buf, " -s");
+        }
         if (features & (int)CompileFeature::LTO) {
             Fmt(&buf, " -flto");
 
