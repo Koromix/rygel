@@ -381,7 +381,8 @@ function update() {
         runner.cursor = 'col-resize';
     } else if (interaction?.type == 'tree') {
         if (mouse_state.left > 0) {
-            let split = Util.clamp(mouse_state.x - interaction.offset, 100, canvas.width / 2);
+            let min = 140 * window.devicePixelRatio;
+            let split = Util.clamp(mouse_state.x - interaction.offset, min, canvas.width / 2);
 
             settings.tree = Math.floor(split / window.devicePixelRatio);
             syncSize();
