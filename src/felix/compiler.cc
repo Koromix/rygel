@@ -1159,7 +1159,11 @@ public:
 
         K_UNREACHABLE();
     }
-    const char *GetImportExtension() const override { return ".so"; }
+    const char *GetImportExtension() const override
+    {
+        const char *ext = (platform == HostPlatform::Windows) ? ".a" : ".so";
+        return ext;
+    }
     const char *GetLibPrefix() const override { return "lib"; }
     const char *GetArchiveExtension() const override { return ".a"; }
     const char *GetPostExtension(TargetType) const override { return nullptr; }
