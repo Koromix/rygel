@@ -56,6 +56,7 @@ let pressed_keys = null;
 // User settings
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let show_debug = false;
+let save_timer = null;
 
 // State
 let world = null;
@@ -91,8 +92,6 @@ async function load(prefix, lang, progress = null) {
     let project = window.location.pathname.substr(1);
     await fetchProject(project);
 
-    loadSettings();
-
     // Keep this around for gesture emulation on desktop
     if (false) {
         let script = document.createElement('script');
@@ -102,41 +101,6 @@ async function load(prefix, lang, progress = null) {
 
         document.head.appendChild(script);
     }
-}
-
-function loadSettings() {
-    let key = 'heimdall:' + world.project;
-    let user = {};
-
-    try {
-        let json = localStorage.getItem(key);
-
-        if (json != null) {
-            let obj = JSON.parse(json);
-
-            if (Util.isPodObject(obj))
-                user = obj;
-        }
-    } catch (err) {
-        console.error(err);
-        localStorage.removeItem(key);
-    }
-
-    for (let key in user) {
-        if (!settings.hasOwnProperty(key))
-            continue;
-        if (typeof user[key] != typeof settings[key])
-            continue;
-
-        settings[key] = user[key];
-    }
-}
-
-function saveSettings() {
-    let key = 'heimdall:' + world.project;
-    let json = JSON.stringify(settings);
-
-    localStorage.setItem(key, json);
 }
 
 async function fetchProject(project) {
@@ -184,6 +148,7 @@ async function start(root) {
     syncSize();
 
     revealTime(world.start, world.end);
+    restoreState();
 
     runner.updateFrequency = 60;
     runner.idleTimeout = 5000;
@@ -193,7 +158,7 @@ async function start(root) {
 
     render(html`
         ${world.views.size ? html`
-            <select @change=${e => { settings.view = e.target.value; saveSettings(); }}>
+            <select @change=${e => { settings.view = e.target.value; saveState(); }}>
                 ${Array.from(world.views.values()).map(view => html`<option value=${view.name} ?selected=${view.name == settings.view}>${view.name}</option>`)}
             </select>
         ` : ''}
@@ -203,18 +168,22 @@ async function start(root) {
 }
 
 function syncSize() {
-    if (runner.pixelRatio) {
-        let ratio = window.devicePixelRatio / runner.pixelRatio;
+    // Our position info is sensitive to pixel ratio
+    {
+        let ratio = window.devicePixelRatio / (runner.pixelRatio || 1);
 
         position.x *= ratio;
         position.y *= ratio;
         position.zoom *= ratio;
     }
 
-    let rect = dom.main.getBoundingClientRect();
-    if (!rect.width && !rect.height)
-        return;
-    runner.resize(rect.width, rect.height, window.devicePixelRatio);
+    // Resize canvas
+    {
+        let rect = dom.main.getBoundingClientRect();
+        if (!rect.width && !rect.height)
+            return;
+        runner.resize(rect.width, rect.height, window.devicePixelRatio);
+    }
 
     layout.tree = {
         left: 0,
@@ -236,6 +205,86 @@ function syncSize() {
     };
 }
 
+function restoreState() {
+    let key = 'heimdall:' + world.project;
+    let user = {};
+
+    try {
+        let json = localStorage.getItem(key);
+
+        if (json != null) {
+            let obj = JSON.parse(json);
+
+            if (Util.isPodObject(obj))
+                user = obj;
+        }
+    } catch (err) {
+        console.error(err);
+        localStorage.removeItem(key);
+    }
+
+    if (!Util.isPodObject(user.position))
+        user.position = {};
+    if (!Util.isPodObject(user.settings))
+        user.settings = {};
+    if (!Util.isPodObject(user.views))
+        user.views = {};
+
+    // Try to restore position, give up if stored entity is gone
+    if (user.position.entity != null) {
+        let idx = world.entities.findIndex(entity => entity.name == user.position.entity);
+
+        if (idx >= 0) {
+            position.x = (user.position.x ?? 0) * window.devicePixelRatio;
+            position.zoom = (user.position.zoom ?? 0) * window.devicePixelRatio;
+            position.entity = idx;
+            position.y = (user.position.y ?? 0) * window.devicePixelRatio;
+        }
+    }
+
+    for (let key in user.settings) {
+        if (!settings.hasOwnProperty(key))
+            continue;
+        if (typeof user.settings[key] != typeof settings[key])
+            continue;
+
+        settings[key] = user.settings[key];
+    }
+
+    for (let key in user.views) {
+        let expand = user.views[key];
+        let view = world.views.get(key);
+
+        if (Array.isArray(expand) && view != null)
+            view.expand = new Set(expand);
+    }
+}
+
+function saveState() {
+    if (save_timer != null)
+        return;
+
+    save_timer = setTimeout(() => {
+        save_timer = null;
+
+        let key = 'heimdall:' + world.project;
+
+        let state = {
+            position: {
+                x: position.x / window.devicePixelRatio,
+                zoom: position.zoom / window.devicePixelRatio,
+                entity: world.entities[position.entity]?.name,
+                y: position.y / window.devicePixelRatio
+            },
+            settings: settings,
+            views: Object.fromEntries(Util.map(world.views.values(), view => [view.name, Array.from(view.expand)]))
+        };
+        let json = JSON.stringify(state);
+
+        localStorage.setItem(key, json);
+    }, 200);
+}
+
 // ------------------------------------------------------------------------
 // Run
 // ------------------------------------------------------------------------
@@ -253,7 +302,7 @@ function update() {
         view = world.views.values().next().value;
 
         settings.view = view?.name;
-        saveSettings();
+        saveState();
     }
 
     if (isInside(mouse_state, layout.tree)) {
@@ -367,6 +416,7 @@ function update() {
         let end = positionToTime(right, position.x, position.zoom);
 
         revealTime(start, end);
+        saveState();
     }
 
     // Resize tree panel
@@ -388,7 +438,7 @@ function update() {
             syncSize();
         } else {
             interaction = null;
-            saveSettings();
+            saveState();
         }
 
         runner.cursor = 'col-resize';
@@ -418,6 +468,8 @@ function update() {
                 position.y = Math.round(position.y + (interaction.y - mouse_state.y) * factor);
                 interaction.y = mouse_state.y;
             }
+
+            saveState();
         } else {
             interaction = null;
         }
@@ -449,6 +501,8 @@ function update() {
 
                     if (!view.expand.delete(row.path))
                         view.expand.add(row.path);
+
+                    saveState();
                 }
 
                 runner.cursor = 'pointer';
@@ -466,15 +520,19 @@ function update() {
             let at = position.x + mouse_state.x - zone.left;
 
             zoomTime(delta, at);
+            saveState();
         } else {
             let factor = pressed_keys.ctrl ? 100 : 10;
+
             position.y += mouse_state.wheel * factor;
+            saveState();
         }
     } else if (mouse_state.pinch) {
         let delta = 10 * mouse_state.pinch;
         let at = position.x + mouse_state.x - layout.main.left;
 
         zoomTime(delta, at);
+        saveState();
     }
 }
 
