@@ -205,86 +205,6 @@ function syncSize() {
     };
 }
 
-function restoreState() {
-    let key = 'heimdall:' + world.project;
-    let user = {};
-
-    try {
-        let json = localStorage.getItem(key);
-
-        if (json != null) {
-            let obj = JSON.parse(json);
-
-            if (Util.isPodObject(obj))
-                user = obj;
-        }
-    } catch (err) {
-        console.error(err);
-        localStorage.removeItem(key);
-    }
-
-    if (!Util.isPodObject(user.position))
-        user.position = {};
-    if (!Util.isPodObject(user.settings))
-        user.settings = {};
-    if (!Util.isPodObject(user.views))
-        user.views = {};
-
-    // Try to restore position, give up if stored entity is gone
-    if (user.position.entity != null) {
-        let idx = world.entities.findIndex(entity => entity.name == user.position.entity);
-
-        if (idx >= 0) {
-            position.x = (user.position.x ?? 0) * window.devicePixelRatio;
-            position.zoom = (user.position.zoom ?? 0) * window.devicePixelRatio;
-            position.entity = idx;
-            position.y = (user.position.y ?? 0) * window.devicePixelRatio;
-        }
-    }
-
-    for (let key in user.settings) {
-        if (!settings.hasOwnProperty(key))
-            continue;
-        if (typeof user.settings[key] != typeof settings[key])
-            continue;
-
-        settings[key] = user.settings[key];
-    }
-
-    for (let key in user.views) {
-        let expand = user.views[key];
-        let view = world.views.get(key);
-
-        if (Array.isArray(expand) && view != null)
-            view.expand = new Set(expand);
-    }
-}
-
-function saveState() {
-    if (save_timer != null)
-        return;
-
-    save_timer = setTimeout(() => {
-        save_timer = null;
-
-        let key = 'heimdall:' + world.project;
-
-        let state = {
-            position: {
-                x: position.x / window.devicePixelRatio,
-                zoom: position.zoom / window.devicePixelRatio,
-                entity: world.entities[position.entity]?.name,
-                y: position.y / window.devicePixelRatio
-            },
-            settings: settings,
-            views: Object.fromEntries(Util.map(world.views.values(), view => [view.name, Array.from(view.expand)]))
-        };
-        let json = JSON.stringify(state);
-
-        localStorage.setItem(key, json);
-    }, 200);
-}
-
 // ------------------------------------------------------------------------
 // Run
 // ------------------------------------------------------------------------
@@ -750,6 +670,86 @@ function canPlot(level) {
         return false;
 
     return true;
+}
+
+function restoreState() {
+    let key = 'heimdall:' + world.project;
+    let user = {};
+
+    try {
+        let json = localStorage.getItem(key);
+
+        if (json != null) {
+            let obj = JSON.parse(json);
+
+            if (Util.isPodObject(obj))
+                user = obj;
+        }
+    } catch (err) {
+        console.error(err);
+        localStorage.removeItem(key);
+    }
+
+    if (!Util.isPodObject(user.position))
+        user.position = {};
+    if (!Util.isPodObject(user.settings))
+        user.settings = {};
+    if (!Util.isPodObject(user.views))
+        user.views = {};
+
+    // Try to restore position, give up if stored entity is gone
+    if (user.position.entity != null) {
+        let idx = world.entities.findIndex(entity => entity.name == user.position.entity);
+
+        if (idx >= 0) {
+            position.x = (user.position.x ?? 0) * window.devicePixelRatio;
+            position.zoom = (user.position.zoom ?? 0) * window.devicePixelRatio;
+            position.entity = idx;
+            position.y = (user.position.y ?? 0) * window.devicePixelRatio;
+        }
+    }
+
+    for (let key in user.settings) {
+        if (!settings.hasOwnProperty(key))
+            continue;
+        if (typeof user.settings[key] != typeof settings[key])
+            continue;
+
+        settings[key] = user.settings[key];
+    }
+
+    for (let key in user.views) {
+        let expand = user.views[key];
+        let view = world.views.get(key);
+
+        if (Array.isArray(expand) && view != null)
+            view.expand = new Set(expand);
+    }
+}
+
+function saveState() {
+    if (save_timer != null)
+        return;
+
+    save_timer = setTimeout(() => {
+        save_timer = null;
+
+        let key = 'heimdall:' + world.project;
+
+        let state = {
+            position: {
+                x: position.x / window.devicePixelRatio,
+                zoom: position.zoom / window.devicePixelRatio,
+                entity: world.entities[position.entity]?.name,
+                y: position.y / window.devicePixelRatio
+            },
+            settings: settings,
+            views: Object.fromEntries(Util.map(world.views.values(), view => [view.name, Array.from(view.expand)]))
+        };
+        let json = JSON.stringify(state);
+
+        localStorage.setItem(key, json);
+    }, 200);
 }
 
 // ------------------------------------------------------------------------
