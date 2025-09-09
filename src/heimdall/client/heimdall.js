@@ -704,17 +704,46 @@ function draw() {
     // Draw background
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#222222';
+    ctx.fillRect(layout.tree.left, layout.tree.top, layout.tree.width, layout.tree.height);
+    ctx.fillRect(layout.time.left, layout.time.top, layout.time.width, layout.time.height);
+
+    // Highlight rows
+    for (let row of rows) {
+        if (row.hover) {
+            ctx.fillStyle = '#555555';
+            ctx.fillRect(layout.tree.left, layout.tree.top + row.top, layout.tree.width, row.height);
+            ctx.fillStyle = '#dddddd';
+            ctx.fillRect(layout.main.left, layout.main.top + row.top, layout.main.width, row.height);
+        } else if (row.active) {
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(layout.tree.left, layout.tree.top + row.top, layout.tree.width, row.height);
+            ctx.fillStyle = '#eeeeee';
+            ctx.fillRect(layout.main.left, layout.main.top + row.top, layout.main.width, row.height);
+        }
+    }
+    // Highlight rows
+    for (let row of rows) {
+        if (row.hover) {
+            ctx.fillStyle = '#555555';
+            ctx.fillRect(layout.tree.left, layout.tree.top + row.top, layout.tree.width, row.height);
+            ctx.fillStyle = '#dddddd';
+            ctx.fillRect(layout.main.left, layout.main.top + row.top, layout.main.width, row.height);
+        } else if (row.active) {
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(layout.tree.left, layout.tree.top + row.top, layout.tree.width, row.height);
+            ctx.fillStyle = '#eeeeee';
+            ctx.fillRect(layout.main.left, layout.main.top + row.top, layout.main.width, row.height);
+        }
+    }
 
     // Draw entity tree
     {
         ctx.save();
         ctx.translate(layout.tree.left, layout.tree.top);
 
-        ctx.fillStyle = '#222222';
-
         ctx.beginPath();
         ctx.rect(0, 0, layout.tree.width, layout.tree.height);
-        ctx.fill();
         ctx.clip();
 
         ctx.font = `${18 * window.devicePixelRatio}px Open Sans`;
@@ -724,14 +753,6 @@ function draw() {
                 continue;
             if (row.top > layout.tree.height)
                 continue;
-
-            if (row.hover) {
-                ctx.fillStyle = '#555555';
-                ctx.fillRect(0, row.top, layout.tree.width, row.height);
-            } else if (row.active) {
-                ctx.fillStyle = '#333333';
-                ctx.fillRect(0, row.top, layout.tree.width, row.height);
-            }
 
             ctx.fillStyle = 'white';
 
@@ -764,14 +785,23 @@ function draw() {
         ctx.restore();
     }
 
+    // Draw vertical guide line at cursor
+    if (mouse_state.x > layout.main.left && mouse_state.x < layout.main.left + layout.main.width) {
+        ctx.strokeStyle = '#cccccc';
+        ctx.lineWidth = 1;
+
+        let x = Math.round(mouse_state.x);
+
+        ctx.beginPath();
+        ctx.moveTo(x, layout.main.top);
+        ctx.lineTo(x, layout.main.top + layout.main.height);
+        ctx.stroke();
+    }
+
     // Draw entity rows
     {
         ctx.save();
         ctx.translate(layout.main.left, layout.main.top);
-
-        ctx.beginPath();
-        ctx.rect(0, 0, layout.main.width, layout.main.height);
-        ctx.clip();
 
         for (let row of rows) {
             if (row.top + row.height < 0)
@@ -785,14 +815,6 @@ function draw() {
             ctx.beginPath();
             ctx.rect(0, 0, layout.main.width, row.height);
             ctx.clip();
-
-            if (row.hover) {
-                ctx.fillStyle = '#dddddd';
-                ctx.fillRect(0, 0, layout.main.width, row.height);
-            } else if (row.active) {
-                ctx.fillStyle = '#eeeeee';
-                ctx.fillRect(0, 0, layout.main.width, row.height);
-            }
 
             // Draw period
             for (let period of row.periods) {
@@ -909,7 +931,6 @@ function draw() {
 
         ctx.fillStyle = '#222222';
 
-        ctx.fillRect(0, 0, layout.time.width, layout.time.height);
         ctx.beginPath();
         ctx.rect(-5, 0, layout.time.width + 10, layout.time.height);
         ctx.clip();
