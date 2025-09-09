@@ -183,7 +183,7 @@ async function start(root) {
     new ResizeObserver(syncSize).observe(dom.main);
     syncSize();
 
-    center(world.start, world.end);
+    revealTime(world.start, world.end);
 
     runner.updateFrequency = 60;
     runner.idleTimeout = 5000;
@@ -239,12 +239,21 @@ function update() {
         show_debug = !show_debug;
 
     let view = world.views.get(settings.view);
+    let zone = null;
 
     if (view == null) {
         view = world.views.values().next().value;
 
         settings.view = view?.name;
         saveSettings();
+    }
+
+    if (isInside(mouse_state, layout.tree)) {
+        zone = layout.tree;
+    } else if (isInside(mouse_state, layout.time)) {
+        zone = layout.time;
+    } else {
+        zone = layout.main;
     }
 
     // Transform view tree into exhaustive levels
@@ -348,7 +357,7 @@ function update() {
         let start = positionToTime(left, position.x, position.zoom);
         let end = positionToTime(right, position.x, position.zoom);
 
-        center(start, end);
+        revealTime(start, end);
     }
 
     // Resize tree panel
@@ -377,15 +386,11 @@ function update() {
 
     // Handle canvas grab
     if (interaction == null) {
-        let tree = isInside(mouse_state, layout.tree);
-        let main = isInside(mouse_state, layout.main);
-        let time = isInside(mouse_state, layout.time);
-
         if (mouse_state.left > 0 && mouse_state.moving) {
             interaction = {
                 type: 'move',
-                x: main || time ? mouse_state.x : null,
-                y: main || tree ? mouse_state.y : null
+                x: (zone == layout.main || zone == layout.time) ? mouse_state.x : null,
+                y: (zone == layout.main || zone == layout.tree) ? mouse_state.y : null
             };
 
             if (interaction.x == null && interaction.y == null)
@@ -443,23 +448,22 @@ function update() {
 
     // Handle wheel actions (scroll or zoom)
     if (mouse_state.wheel) {
-        let zone = isInside(mouse_state, layout.main) ||
-                   isInside(mouse_state, layout.time);
+        let zoom = (zone == layout.time || (pressed_keys.ctrl && zone == layout.main));
 
-        if (pressed_keys.ctrl && zone) {
+        if (zoom) {
             let delta = Util.clamp(-mouse_state.wheel, -1, 1);
-            let at = position.x + mouse_state.x - settings.tree;
+            let at = position.x + mouse_state.x - zone.left;
 
-            zoom(delta, at);
+            zoomTime(delta, at);
         } else {
             let factor = pressed_keys.ctrl ? 100 : 10;
             position.y += mouse_state.wheel * factor;
         }
     } else if (mouse_state.pinch) {
         let delta = 10 * mouse_state.pinch;
-        let at = position.x + mouse_state.x - settings.tree;
+        let at = position.x + mouse_state.x - layout.main.left;
 
-        zoom(delta, at);
+        zoomTime(delta, at);
     }
 }
 
@@ -467,7 +471,7 @@ function shouldMerge(after, before) {
     return after.x - before.x - before.width < MERGE_TRESHOLD;
 }
 
-function zoom(delta, at) {
+function zoomTime(delta, at) {
     if (position.zoom + delta < -200 || position.zoom + delta > 200)
         return;
 
@@ -479,7 +483,7 @@ function zoom(delta, at) {
     position.zoom += delta;
 }
 
-function center(start, end) {
+function revealTime(start, end) {
     let range = end - start;
     let time = start - range * 0.05;
     let zoom = range ? scaleToZoom(layout.main.width / range / 1.1) : 0;
