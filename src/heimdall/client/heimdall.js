@@ -280,7 +280,7 @@ function update() {
         let offset = 0;
 
         for (let i = position.entity - 1, top = -position.y - SPACE_BETWEEN_ENTITIES; i >= 0; i--) {
-            let units = combine(i, levels);
+            let units = combine(world.entities, i, levels);
 
             if (units.length) {
                 for (let j = units.length - 1; j >= 0; j--) {
@@ -303,7 +303,7 @@ function update() {
         }
 
         for (let i = position.entity, top = -position.y; i < world.entities.length; i++) {
-            let units = combine(i, levels);
+            let units = combine(world.entities, i, levels);
 
             if (units.length) {
                 if (top >= 0 && first == null) {
@@ -473,8 +473,8 @@ function center(start, end) {
     position.zoom = zoom;
 }
 
-function combine(idx, levels) {
-    let entity = world.entities[idx];
+function combine(entities, idx, levels) {
+    let entity = entities[idx];
     let rows = [];
 
     for (let level of levels) {
@@ -529,7 +529,7 @@ function combine(idx, levels) {
             row.right = Math.max(row.right, draw.x + draw.width);
         }
 
-        if (canPlot(levels, level) && !row.events.length && !row.periods.length) {
+        if (canPlot(level) && !row.events.length && !row.periods.length) {
             let concept = level.concepts.values().next().value;
             let values = entity.values.filter(value => value.concept == concept);
 
@@ -657,7 +657,7 @@ function isInside(pos, rect) {
     return inside;
 }
 
-function canPlot(levels, level) {
+function canPlot(level) {
     if (level.concepts.size > 1)
         return false;
     if (level.expand)
