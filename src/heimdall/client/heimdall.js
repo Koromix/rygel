@@ -303,10 +303,11 @@ function update() {
 
     // Combine view and entities into draw rows
     {
+        let space = SPACE_BETWEEN_ENTITIES * window.devicePixelRatio;
         let first = null;
         let offset = 0;
 
-        for (let i = position.entity - 1, top = -position.y - SPACE_BETWEEN_ENTITIES; i >= 0; i--) {
+        for (let i = position.entity - 1, top = -position.y - space; i >= 0; i--) {
             let units = combine(world.entities, i, levels);
 
             if (units.length) {
@@ -325,7 +326,7 @@ function update() {
                 first = i;
                 offset = -top;
 
-                top -= SPACE_BETWEEN_ENTITIES;
+                top -= space;
             }
         }
 
@@ -345,7 +346,7 @@ function update() {
                     rows.push(row);
                 }
 
-                top += SPACE_BETWEEN_ENTITIES;
+                top += space;
             }
 
             if (top > canvas.height)
@@ -473,10 +474,6 @@ function update() {
 
         zoomTime(delta, at);
     }
-}
-
-function shouldMerge(after, before) {
-    return after.x - before.x - before.width < MERGE_TRESHOLD;
 }
 
 function zoomTime(delta, at) {
@@ -627,6 +624,8 @@ function combine(entities, idx, levels) {
 
         // Merge events
         if (row.events.length) {
+            let treshold = MERGE_TRESHOLD * window.devicePixelRatio;
+
             let j = 1;
             for (let i = 1; i < row.events.length; i++) {
                 let evt = row.events[i];
@@ -634,7 +633,7 @@ function combine(entities, idx, levels) {
 
                 row.events[j] = evt;
 
-                if (shouldMerge(evt, prev)) {
+                if (evt.x - prev.x - prev.width < treshold) {
                     prev.width = evt.x - prev.x;
                     prev.count++;
                     prev.warning ||= evt.warning;
