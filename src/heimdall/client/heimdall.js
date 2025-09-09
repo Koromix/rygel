@@ -210,8 +210,6 @@ function syncSize() {
 // ------------------------------------------------------------------------
 
 function update() {
-    rows.length = 0;
-
     if (pressed_keys.tab == 1)
         show_debug = !show_debug;
 
@@ -233,110 +231,14 @@ function update() {
         zone = layout.main;
     }
 
-    // Transform view tree into exhaustive levels
-    let levels = [];
-    if (view != null) {
-        let map = new Map;
+    let reset = (pressed_keys.r == -1);
+    let reveal = (pressed_keys.c == -1);
 
-        for (let key in view.items) {
-            let concept = view.items[key];
-            let parts = key.split('/');
+    if (reset) {
+        position.entity = 0;
+        position.y = 0;
 
-            for (let i = 0; i < parts.length; i++) {
-                let path = parts.slice(0, i + 1).join('/');
-                let level = map.get(path);
-
-                if (level == null) {
-                    level = {
-                        name: parts[i],
-                        path: path,
-                        depth: i,
-                        leaf: i == (parts.length - 1),
-                        expand: view.expand.has(path),
-                        concepts: new Set
-                    };
-
-                    levels.push(level);
-                    map.set(path, level);
-                }
-
-                level.concepts.add(concept);
-
-                if (!level.expand)
-                    break;
-            }
-        }
-
-        levels.sort(Util.makeComparator(level => level.path));
-    }
-
-    // Combine view and entities into draw rows
-    {
-        let space = SPACE_BETWEEN_ENTITIES * window.devicePixelRatio;
-        let first = null;
-        let offset = 0;
-
-        for (let i = position.entity - 1, top = -position.y - space; i >= 0; i--) {
-            let units = combine(world.entities, i, levels);
-
-            if (units.length) {
-                for (let j = units.length - 1; j >= 0; j--) {
-                    let row = units[j];
-
-                    top -= row.height;
-                    row.top = top;
-
-                    rows.unshift(row);
-                }
-
-                if (top < 0)
-                    break;
-
-                first = i;
-                offset = -top;
-
-                top -= space;
-            }
-        }
-
-        for (let i = position.entity, top = -position.y; i < world.entities.length; i++) {
-            let units = combine(world.entities, i, levels);
-
-            if (units.length) {
-                if (top >= 0 && first == null) {
-                    first = i;
-                    offset = -top;
-                }
-
-                for (let row of units) {
-                    row.top = top;
-                    top += row.height;
-
-                    rows.push(row);
-                }
-
-                top += space;
-            }
-
-            if (top > canvas.height)
-                break;
-        }
-
-        if (first != null) {
-            position.entity = first ?? 0;
-            position.y = offset;
-        }
-    }
-
-    // Recenter time scale on visible rows
-    if (pressed_keys.c == -1 && rows.length) {
-        let left = Math.min(...rows.map(row => row.left));
-        let right = Math.max(...rows.map(row => row.right));
-        let start = positionToTime(left, position.x, position.zoom);
-        let end = positionToTime(right, position.x, position.zoom);
-
-        revealTime(start, end);
-        saveState();
+        reveal = true;
     }
 
     // Resize tree panel
@@ -454,6 +356,114 @@ function update() {
         zoomTime(delta, at);
         saveState();
     }
+
+    // Transform view tree into exhaustive levels
+    let levels = [];
+    if (view != null) {
+        let map = new Map;
+
+        for (let key in view.items) {
+            let concept = view.items[key];
+            let parts = key.split('/');
+
+            for (let i = 0; i < parts.length; i++) {
+                let path = parts.slice(0, i + 1).join('/');
+                let level = map.get(path);
+
+                if (level == null) {
+                    level = {
+                        name: parts[i],
+                        path: path,
+                        depth: i,
+                        leaf: i == (parts.length - 1),
+                        expand: view.expand.has(path),
+                        concepts: new Set
+                    };
+
+                    levels.push(level);
+                    map.set(path, level);
+                }
+
+                level.concepts.add(concept);
+
+                if (!level.expand)
+                    break;
+            }
+        }
+
+        levels.sort(Util.makeComparator(level => level.path));
+    }
+
+    // Combine view and entities into draw rows
+    {
+        rows.length = 0;
+
+        let space = SPACE_BETWEEN_ENTITIES * window.devicePixelRatio;
+        let first = null;
+        let offset = 0;
+
+        for (let i = position.entity - 1, top = -position.y - space; i >= 0; i--) {
+            let units = combine(world.entities, i, levels);
+
+            if (units.length) {
+                for (let j = units.length - 1; j >= 0; j--) {
+                    let row = units[j];
+
+                    top -= row.height;
+                    row.top = top;
+
+                    rows.unshift(row);
+                }
+
+                if (top < 0)
+                    break;
+
+                first = i;
+                offset = -top;
+
+                top -= space;
+            }
+        }
+
+        for (let i = position.entity, top = -position.y; i < world.entities.length; i++) {
+            let units = combine(world.entities, i, levels);
+
+            if (units.length) {
+                if (top >= 0 && first == null) {
+                    first = i;
+                    offset = -top;
+                }
+
+                for (let row of units) {
+                    row.top = top;
+                    top += row.height;
+
+                    rows.push(row);
+                }
+
+                top += space;
+            }
+
+            if (top > canvas.height)
+                break;
+        }
+
+        if (first != null) {
+            position.entity = first ?? 0;
+            position.y = offset;
+        }
+    }
+
+    // Recenter view when user needs it
+    if (reveal) {
+        let left = Math.min(...rows.map(row => row.left));
+        let right = Math.max(...rows.map(row => row.right));
+        let start = positionToTime(left, position.zoom);
+        let end = positionToTime(right, position.zoom);
+
+        revealTime(start, end);
+        saveState();
+    }
 }
 
 function zoomTime(delta, at) {
@@ -473,7 +483,7 @@ function revealTime(start, end) {
     let time = start - range * 0.05;
     let zoom = range ? scaleToZoom(layout.main.width / range / 1.1) : 0;
 
-    position.x = timeToPosition(time, 0, zoom);
+    position.x = timeToPosition(time, zoom);
     position.zoom = zoom;
 }
 
@@ -506,7 +516,7 @@ function combine(entities, idx, levels) {
                 continue;
 
             let draw = {
-                x: timeToPosition(evt.time, position.x, position.zoom),
+                x: timeToPosition(evt.time, position.zoom),
                 width: 0,
                 count: 1,
                 warning: evt.warning
@@ -522,7 +532,7 @@ function combine(entities, idx, levels) {
                 continue;
 
             let draw = {
-                x: timeToPosition(period.time, position.x, position.zoom),
+                x: timeToPosition(period.time, position.zoom),
                 width: period.duration * zoomToScale(position.zoom),
                 warning: period.warning,
                 stack: 0
@@ -555,7 +565,7 @@ function combine(entities, idx, levels) {
 
                 for (let value of values) {
                     let draw = {
-                        x: timeToPosition(value.time, position.x, position.zoom),
+                        x: timeToPosition(value.time, position.zoom),
                         y: row.height - (value.value - min) / range * row.height,
                         label: value.value,
                         warning: value.warning
@@ -572,7 +582,7 @@ function combine(entities, idx, levels) {
                     continue;
 
                 let draw = {
-                    x: timeToPosition(value.time, position.x, position.zoom),
+                    x: timeToPosition(value.time, position.zoom),
                     width: 0,
                     count: 1,
                     warning: value.warning
@@ -633,12 +643,12 @@ function combine(entities, idx, levels) {
     return rows;
 }
 
-function timeToPosition(time, offset, zoom) {
-    return Math.round(time * zoomToScale(zoom) - offset);
+function timeToPosition(time, zoom) {
+    return Math.round(time * zoomToScale(zoom));
 }
 
-function positionToTime(x, offset, zoom) {
-    return Math.round((x + offset) / zoomToScale(zoom));
+function positionToTime(x, zoom) {
+    return Math.round(x / zoomToScale(zoom));
 }
 
 function zoomToScale(zoom) {
@@ -874,7 +884,7 @@ function draw() {
             ctx.rect(0, 0, layout.main.width, row.height);
             ctx.clip();
 
-            // Draw period
+            // Draw periods
             for (let period of row.periods) {
                 ctx.save();
 
@@ -884,7 +894,7 @@ function draw() {
                 let offset = (period.stack + 1) * height * 2;
 
                 ctx.beginPath();
-                ctx.roundRect(period.x, row.height - offset, period.width, height, height / 2);
+                ctx.roundRect(period.x - position.x, row.height - offset, period.width, height, height / 2);
                 ctx.fill();
 
                 ctx.restore();
@@ -896,14 +906,15 @@ function draw() {
 
                 ctx.fillStyle = evt.warning ? '#ff6600' : '#4444cc';
 
+                let x = evt.x - position.x;
                 let width = EVENT_WIDTH * window.devicePixelRatio;
                 let height = EVENT_HEIGHT * window.devicePixelRatio;
 
                 ctx.beginPath();
-                ctx.moveTo(evt.x, row.height - height);
-                ctx.lineTo(evt.x + evt.width, row.height - height);
-                ctx.lineTo(evt.x + evt.width + width / 2, row.height);
-                ctx.lineTo(evt.x - width / 2, row.height);
+                ctx.moveTo(x, row.height - height);
+                ctx.lineTo(x + evt.width, row.height - height);
+                ctx.lineTo(x + evt.width + width / 2, row.height);
+                ctx.lineTo(x - width / 2, row.height);
                 ctx.closePath();
                 ctx.fill();
 
@@ -913,7 +924,7 @@ function draw() {
                     ctx.font = `bold ${size}px Open Sans`;
                     ctx.fillStyle = 'white';
 
-                    runner.text(evt.x + evt.width / 2, row.height - height / 4, evt.count, { align: 2 });
+                    runner.text(x + evt.width / 2, row.height - height / 4, evt.count, { align: 2 });
                 }
 
                 ctx.restore();
@@ -931,19 +942,19 @@ function draw() {
                     ctx.lineWidth = 1;
 
                     ctx.beginPath();
-                    ctx.moveTo(values[idx].x, values[idx].y);
+                    ctx.moveTo(values[idx].x - position.x, values[idx].y);
                     while (++idx < values.length) {
                         if (values[idx].y == null)
                             break;
 
                         switch (settings.interpolation) {
                             case 'linear': {
-                                ctx.lineTo(values[idx].x, values[idx].y);
+                                ctx.lineTo(values[idx].x - position.x, values[idx].y);
                             } break;
 
                             case 'locf': {
-                                ctx.lineTo(values[idx].x, values[idx - 1].y);
-                                ctx.lineTo(values[idx].x, values[idx].y);
+                                ctx.lineTo(values[idx].x - position.x, values[idx - 1].y);
+                                ctx.lineTo(values[idx].x - position.x, values[idx].y);
                             } break;
                         }
                     }
@@ -966,7 +977,7 @@ function draw() {
                 ctx.font = `${12 * window.devicePixelRatio}px Open Sans`;
                 ctx.fillStyle = color;
 
-                runner.text(value.x, value.y, value.label, { background: background, align: 5 });
+                runner.text(value.x - position.x, value.y, value.label, { background: background, align: 5 });
 
                 ctx.restore();
             }
