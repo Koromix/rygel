@@ -169,23 +169,23 @@ function AppRunner(canvas) {
     };
 
     this.resize = function(width, height, ratio = 1) {
-        dpr = ratio;
-
         width = Math.round(width);
         height = Math.round(height);
 
-        if (width != prev_width) {
+        if (width != prev_width || ratio != dpr) {
             canvas.width = width * ratio;
             canvas.style.width = width + 'px';
 
             prev_width = width;
         }
-        if (height != prev_height) {
+        if (height != prev_height || ratio != dpr) {
             canvas.height = height * ratio;
             canvas.style.height = height + 'px';
 
             prev_height = height;
         }
+
+        dpr = ratio;
 
         // Reduce flickering after resize
         if (update_counter && handle_draw != null)
