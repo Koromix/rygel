@@ -460,7 +460,8 @@ function update() {
         let zoom = (zone == layout.time || (pressed_keys.ctrl && zone == layout.main));
 
         if (zoom) {
-            let delta = Util.clamp(-mouse_state.wheel, -1, 1);
+            let factor = (zone == layout.time && pressed_keys.ctrl) ? 5 : 1;
+            let delta = Util.clamp(-mouse_state.wheel, -1, 1) * factor;
             let at = position.x + mouse_state.x - zone.left;
 
             zoomTime(delta, at);
