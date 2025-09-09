@@ -203,6 +203,14 @@ async function start(root) {
 }
 
 function syncSize() {
+    if (runner.pixelRatio) {
+        let ratio = window.devicePixelRatio / runner.pixelRatio;
+
+        position.x *= ratio;
+        position.y *= ratio;
+        position.zoom *= ratio;
+    }
+
     let rect = dom.main.getBoundingClientRect();
     if (!rect.width && !rect.height)
         return;
@@ -211,20 +219,20 @@ function syncSize() {
     layout.tree = {
         left: 0,
         top: 0,
-        width: settings.tree,
+        width: settings.tree * window.devicePixelRatio,
         height: canvas.height
     };
     layout.main = {
-        left: settings.tree,
+        left: settings.tree * window.devicePixelRatio,
         top: 0,
-        width: canvas.width - settings.tree,
-        height: canvas.height - 50
+        width: canvas.width - settings.tree * window.devicePixelRatio,
+        height: canvas.height - 50 * window.devicePixelRatio
     };
     layout.time = {
-        left: settings.tree,
-        top: canvas.height - 50,
-        width: canvas.width - settings.tree,
-        height: 50
+        left: settings.tree * window.devicePixelRatio,
+        top: canvas.height - 50 * window.devicePixelRatio,
+        width: canvas.width - settings.tree * window.devicePixelRatio,
+        height: 50 * window.devicePixelRatio
     };
 }
 
@@ -365,7 +373,7 @@ function update() {
         if (mouse_state.left > 0) {
             interaction = {
                 type: 'tree',
-                offset: mouse_state.x - settings.tree
+                offset: mouse_state.x - settings.tree * window.devicePixelRatio
             };
         }
 
@@ -374,7 +382,7 @@ function update() {
         if (mouse_state.left > 0) {
             let split = Util.clamp(mouse_state.x - interaction.offset, 100, canvas.width / 2);
 
-            settings.tree = Math.floor(split);
+            settings.tree = Math.floor(split / window.devicePixelRatio);
             syncSize();
         } else {
             interaction = null;
@@ -506,7 +514,7 @@ function combine(entities, idx, levels) {
             leaf: level.leaf,
             expand: level.expand,
             top: 0,
-            height: ROW_HEIGHT,
+            height: ROW_HEIGHT * window.devicePixelRatio,
             active: false,
             hover: false,
             events: [],
@@ -553,7 +561,7 @@ function combine(entities, idx, levels) {
             let values = entity.values.filter(value => value.concept == concept);
 
             if (values.length) {
-                row.height = PLOT_HEIGHT;
+                row.height = PLOT_HEIGHT * window.devicePixelRatio;
 
                 let min = Math.min(...values.map(value => value.value));
                 let max = Math.max(...values.map(value => value.value));
@@ -708,7 +716,7 @@ function draw() {
         ctx.fill();
         ctx.clip();
 
-        ctx.font = '18px Open Sans';
+        ctx.font = `${18 * window.devicePixelRatio}px Open Sans`;
 
         for (let row of rows) {
             if (row.top + row.height < 0)
@@ -727,23 +735,24 @@ function draw() {
             ctx.fillStyle = 'white';
 
             let x = 10 + row.depth * 10;
+            let offset = 20 * window.devicePixelRatio;
 
             if (!row.leaf) {
                 ctx.beginPath();
                 if (row.expand) {
-                    ctx.moveTo(x, row.top + row.height / 2 - 3);
-                    ctx.lineTo(x + 12, row.top + row.height / 2 - 3);
-                    ctx.lineTo(x + 6, row.top + row.height / 2 + 5);
+                    ctx.moveTo(x, row.top + row.height / 2 - 3 * window.devicePixelRatio);
+                    ctx.lineTo(x + 12 * window.devicePixelRatio, row.top + row.height / 2 - 3 * window.devicePixelRatio);
+                    ctx.lineTo(x + 6 * window.devicePixelRatio, row.top + row.height / 2 + 5 * window.devicePixelRatio);
                 } else {
-                    ctx.moveTo(x + 2, row.top + row.height / 2 - 5);
-                    ctx.lineTo(x + 10, row.top + row.height / 2 + 1);
-                    ctx.lineTo(x + 2, row.top + row.height / 2 + 7);
+                    ctx.moveTo(x + 2 * window.devicePixelRatio, row.top + row.height / 2 - 5 * window.devicePixelRatio);
+                    ctx.lineTo(x + 10 * window.devicePixelRatio, row.top + row.height / 2 + 1 * window.devicePixelRatio);
+                    ctx.lineTo(x + 2 * window.devicePixelRatio, row.top + row.height / 2 + 7 * window.devicePixelRatio);
                 }
                 ctx.closePath();
                 ctx.fill();
             }
 
-            runner.text(x + 20, row.top + row.height / 2 - 1, row.name, { align: 4 });
+            runner.text(x + offset, row.top + row.height / 2, row.name, { align: 4 });
 
             if (!row.active) {
                 ctx.fillStyle = '#22222288';
@@ -790,10 +799,11 @@ function draw() {
 
                 ctx.fillStyle = period.warning ? '#ff6600' : '#444444';
 
-                let offset = (period.stack + 1) * PERIOD_HEIGHT * 2;
+                let height = PERIOD_HEIGHT * window.devicePixelRatio
+                let offset = (period.stack + 1) * height * 2;
 
                 ctx.beginPath();
-                ctx.roundRect(period.x, row.height - offset, period.width, PERIOD_HEIGHT, PERIOD_HEIGHT / 2);
+                ctx.roundRect(period.x, row.height - offset, period.width, height, height / 2);
                 ctx.fill();
 
                 ctx.restore();
@@ -805,21 +815,24 @@ function draw() {
 
                 ctx.fillStyle = evt.warning ? '#ff6600' : '#4444cc';
 
+                let width = EVENT_WIDTH * window.devicePixelRatio;
+                let height = EVENT_HEIGHT * window.devicePixelRatio;
+
                 ctx.beginPath();
-                ctx.moveTo(evt.x, row.height - EVENT_HEIGHT);
-                ctx.lineTo(evt.x + evt.width, row.height - EVENT_HEIGHT);
-                ctx.lineTo(evt.x + evt.width + EVENT_WIDTH / 2, row.height);
-                ctx.lineTo(evt.x - EVENT_WIDTH / 2, row.height);
+                ctx.moveTo(evt.x, row.height - height);
+                ctx.lineTo(evt.x + evt.width, row.height - height);
+                ctx.lineTo(evt.x + evt.width + width / 2, row.height);
+                ctx.lineTo(evt.x - width / 2, row.height);
                 ctx.closePath();
                 ctx.fill();
 
                 if (evt.count > 1) {
-                    let size = Math.floor(EVENT_HEIGHT / 2) - 3 * Math.floor(Math.log10(evt.count));
+                    let size = Math.floor(height / 2) - 3 * Math.floor(Math.log10(evt.count));
 
                     ctx.font = `bold ${size}px Open Sans`;
                     ctx.fillStyle = 'white';
 
-                    runner.text(evt.x + evt.width / 2, row.height - EVENT_HEIGHT / 4, evt.count, { align: 2 });
+                    runner.text(evt.x + evt.width / 2, row.height - height / 4, evt.count, { align: 2 });
                 }
 
                 ctx.restore();
@@ -869,7 +882,7 @@ function draw() {
                 let background = value.warning ? '#ff6600' : 'white';
                 let color = value.warning ? 'white' : 'black';
 
-                ctx.font = '12px Open Sans';
+                ctx.font = `${12 * window.devicePixelRatio}px Open Sans`;
                 ctx.fillStyle = color;
 
                 runner.text(value.x, value.y, value.label, { background: background, align: 5 });
@@ -900,7 +913,7 @@ function draw() {
         ctx.rect(-5, 0, layout.time.width + 10, layout.time.height);
         ctx.clip();
 
-        ctx.font = '12px Open Sans';
+        ctx.font = `${12 * window.devicePixelRatio}px Open Sans`;
         ctx.fillStyle = 'white';
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 1;
@@ -909,9 +922,10 @@ function draw() {
         let start = Math.floor(position.x / scale);
         let end = Math.ceil((position.x + layout.time.width) / scale);
         let chars = Math.max(countDigits(start), countDigits(end));
+        let height = 8 * window.devicePixelRatio;
 
-        let step1 = Math.ceil(5 / scale);
-        let step2 = Math.ceil(10 * chars / scale);
+        let step1 = Math.ceil(height / scale);
+        let step2 = Math.ceil(1.4 * height * chars / scale);
 
         // Stabilize chosen start values to go through 0
         let start1 = start - start % step1 - step1;
@@ -922,14 +936,14 @@ function draw() {
             let x = time * scale - position.x;
 
             ctx.beginPath();
-            ctx.moveTo(x, 8);
-            ctx.lineTo(x, 16);
+            ctx.moveTo(x, height);
+            ctx.lineTo(x, height * 2);
             ctx.stroke();
         }
 
         for (let time = start2; time < end; time += step2) {
             let x = time * scale - position.x;
-            runner.text(x, 24, time, { align: 8 });
+            runner.text(x, height * 3, time, { align: 8 });
         }
 
         ctx.restore();
@@ -948,7 +962,7 @@ function draw() {
     }
 
     if (show_debug) {
-        ctx.font = '18px Open Sans';
+        ctx.font = `${18 * window.devicePixelRatio}px Open Sans`;
         ctx.fillStyle = 'black';
 
         // FPS counter

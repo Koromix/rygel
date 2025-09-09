@@ -100,6 +100,10 @@ function AppRunner(canvas) {
         canvas: { value: canvas, writable: false, enumerable: true },
         ctx: { value: ctx, writable: false, enumerable: true },
 
+        width: { get: () => prev_width, enumerable: true },
+        height: { get: () => prev_height, enumerable: true },
+        pixelRatio: { get: () => dpr, enumerable: true },
+
         isTouch: { get: isTouchDevice, enumerable: true },
         isPortrait: { get: isPortrait, enumerable: true },
 
