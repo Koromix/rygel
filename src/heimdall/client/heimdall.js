@@ -360,7 +360,7 @@ function update() {
     }
 
     // Recenter time scale on visible rows
-    if (pressed_keys.h == -1 && rows.length) {
+    if (pressed_keys.c == -1 && rows.length) {
         let left = Math.min(...rows.map(row => row.left));
         let right = Math.max(...rows.map(row => row.right));
         let start = positionToTime(left, position.x, position.zoom);
