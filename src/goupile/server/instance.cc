@@ -246,7 +246,7 @@ bool InstanceHolder::PerformScheduledExport()
 
     ExportSettings settings = {};
 
-    settings.sequence = config.export_all ? -1 : last_export_sequence;
+    settings.sequence = config.export_all ? -1 : (last_export_sequence + 1);
     settings.scheduled = true;
 
     ExportInfo info;
