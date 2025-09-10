@@ -599,7 +599,7 @@ static int GetBusTimeout(sd_bus *bus)
     uint64_t timeout64;
     CALL_SDBUS(sd_bus_get_timeout(bus, &timeout64), T("Failed to get D-Bus connection timeout"), -1);
 
-    int timeout = (int)std::min(timeout64 / 1000, (uint64_t)INT_MAX);
+    int timeout = (int)std::min((timeout64 + 999) / 1000, (uint64_t)INT_MAX);
     return timeout;
 }
 
@@ -723,7 +723,7 @@ Options:
 
         // React to main service and D-Bus events
         while (run) {
-            struct pollfd pfds[3] = {
+            struct pollfd pfds[2] = {
                 { meestic_fd, POLLIN, 0 },
                 { sd_bus_get_fd(bus_user), (short)sd_bus_get_events(bus_user), 0 }
             };
