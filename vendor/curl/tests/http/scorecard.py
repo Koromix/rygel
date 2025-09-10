@@ -34,7 +34,7 @@ import sys
 from statistics import mean
 from typing import Dict, Any, Optional, List
 
-from testenv import Env, Httpd, CurlClient, Caddy, ExecResult, NghttpxQuic, RunProfile
+from testenv import Env, Httpd, CurlClient, Caddy, ExecResult, NghttpxQuic, RunProfile, Dante
 
 log = logging.getLogger(__name__)
 
@@ -61,7 +61,14 @@ class Card:
 
     @classmethod
     def fmt_mbs(cls, val):
-        return f'{val/(1024*1024):0.000f} MB/s' if val >= 0 else '--'
+        if val is None or val < 0:
+            return '--'
+        if val >= (1024*1024):
+            return f'{val/(1024*1024):0.000f} MB/s'
+        elif val >= 1024:
+            return f'{val / 1024:0.000f} KB/s'
+        else:
+            return f'{val:0.000f} B/s'
 
     @classmethod
     def fmt_reqs(cls, val):
@@ -119,6 +126,8 @@ class Card:
             print(f'Version: {score["meta"]["curl_V"]}')
         if 'curl_features' in score["meta"]:
             print(f'Features: {score["meta"]["curl_features"]}')
+        if 'limit-rate' in score['meta']:
+            print(f'--limit-rate: {score["meta"]["limit-rate"]}')
         print(f'Samples Size: {score["meta"]["samples"]}')
         if 'handshakes' in score:
             print(f'{"Handshakes":<24} {"ipv4":25} {"ipv6":28}')
@@ -187,7 +196,9 @@ class ScoreRunner:
                  download_parallel: int = 0,
                  server_addr: Optional[str] = None,
                  with_dtrace: bool = False,
-                 with_flame: bool = False):
+                 with_flame: bool = False,
+                 socks_args: Optional[List[str]] = None,
+                 limit_rate: Optional[str] = None):
         self.verbose = verbose
         self.env = env
         self.protocol = protocol
@@ -198,6 +209,8 @@ class ScoreRunner:
         self._download_parallel = download_parallel
         self._with_dtrace = with_dtrace
         self._with_flame = with_flame
+        self._socks_args = socks_args
+        self._limit_rate = limit_rate
 
     def info(self, msg):
         if self.verbose > 0:
@@ -208,7 +221,8 @@ class ScoreRunner:
         return CurlClient(env=self.env, silent=self._silent_curl,
                           server_addr=self.server_addr,
                           with_dtrace=self._with_dtrace,
-                          with_flame=self._with_flame)
+                          with_flame=self._with_flame,
+                          socks_args=self._socks_args)
 
     def handshakes(self) -> Dict[str, Any]:
         props = {}
@@ -286,7 +300,8 @@ class ScoreRunner:
             curl = self.mk_curl_client()
             r = curl.http_download(urls=[url], alpn_proto=self.protocol,
                                    no_save=True, with_headers=False,
-                                   with_profile=True)
+                                   with_profile=True,
+                                   limit_rate=self._limit_rate)
             err = self._check_downloads(r, count)
             if err:
                 errors.append(err)
@@ -306,7 +321,9 @@ class ScoreRunner:
             curl = self.mk_curl_client()
             r = curl.http_download(urls=[url], alpn_proto=self.protocol,
                                    no_save=True,
-                                   with_headers=False, with_profile=True)
+                                   with_headers=False,
+                                   with_profile=True,
+                                   limit_rate=self._limit_rate)
             err = self._check_downloads(r, count)
             if err:
                 errors.append(err)
@@ -329,6 +346,7 @@ class ScoreRunner:
                                    no_save=True,
                                    with_headers=False,
                                    with_profile=True,
+                                   limit_rate=self._limit_rate,
                                    extra_args=[
                                        '--parallel',
                                        '--parallel-max', str(max_parallel)
@@ -368,9 +386,12 @@ class ScoreRunner:
                 row.append(self.dl_parallel(url=url, count=count, nsamples=nsamples))
             rows.append(row)
             self.info('done.\n')
+        title = f'Downloads from {meta["server"]}'
+        if self._socks_args:
+            title += f' via {self._socks_args}'
         return {
             'meta': {
-                'title': f'Downloads from {meta["server"]}',
+                'title': title,
                 'count': count,
                 'max-parallel': max_parallel,
             },
@@ -477,9 +498,12 @@ class ScoreRunner:
                 row.append(self.ul_parallel(url=url, fpath=fpath, count=count, nsamples=nsamples))
             rows.append(row)
             self.info('done.\n')
+        title = f'Uploads to {meta["server"]}'
+        if self._socks_args:
+            title += f' via {self._socks_args}'
         return {
             'meta': {
-                'title': f'Uploads to {meta["server"]}',
+                'title': title,
                 'count': count,
                 'max-parallel': max_parallel,
             },
@@ -538,9 +562,12 @@ class ScoreRunner:
                     for mp in mparallel])
         rows.append(row)
         self.info('done.\n')
+        title = f'Requests in parallel to {meta["server"]}'
+        if self._socks_args:
+            title += f' via {self._socks_args}'
         return {
             'meta': {
-                'title': f'Requests in parallel to {meta["server"]}',
+                'title': title,
                 'count': count,
             },
             'cols': cols,
@@ -570,11 +597,14 @@ class ScoreRunner:
                 'date': f'{datetime.datetime.now(tz=datetime.timezone.utc).isoformat()}',
             }
         }
+        if self._limit_rate:
+            score['meta']['limit-rate'] = self._limit_rate
+
         if self.protocol == 'h3':
             score['meta']['protocol'] = 'h3'
             if not self.env.have_h3_curl():
                 raise ScoreCardError('curl does not support HTTP/3')
-            for lib in ['ngtcp2', 'quiche', 'msh3', 'nghttp3']:
+            for lib in ['ngtcp2', 'quiche', 'nghttp3']:
                 if self.env.curl_uses_lib(lib):
                     score['meta']['implementation'] = lib
                     break
@@ -660,6 +690,20 @@ def run_score(args, protocol):
     env = Env()
     env.setup()
     env.test_timeout = None
+
+    sockd = None
+    socks_args = None
+    if args.socks4 and args.socks5:
+        raise ScoreCardError('unable to run --socks4 and --socks5 together')
+    elif args.socks4 or args.socks5:
+        sockd = Dante(env=env)
+    if sockd:
+        assert sockd.initial_start()
+        socks_args = [
+            '--socks4' if args.socks4 else '--socks5',
+            f'127.0.0.1:{sockd.port}',
+        ]
+
     httpd = None
     nghttpx = None
     caddy = None
@@ -683,7 +727,9 @@ def run_score(args, protocol):
                                curl_verbose=args.curl_verbose,
                                download_parallel=args.download_parallel,
                                with_dtrace=args.dtrace,
-                               with_flame=args.flame)
+                               with_flame=args.flame,
+                               socks_args=socks_args,
+                               limit_rate=args.limit_rate)
             cards.append(card)
 
         if test_httpd:
@@ -709,7 +755,9 @@ def run_score(args, protocol):
                                verbose=args.verbose, curl_verbose=args.curl_verbose,
                                download_parallel=args.download_parallel,
                                with_dtrace=args.dtrace,
-                               with_flame=args.flame)
+                               with_flame=args.flame,
+                               socks_args=socks_args,
+                               limit_rate=args.limit_rate)
             card.setup_resources(server_docs, downloads)
             cards.append(card)
 
@@ -734,7 +782,9 @@ def run_score(args, protocol):
                                server_port=server_port,
                                verbose=args.verbose, curl_verbose=args.curl_verbose,
                                download_parallel=args.download_parallel,
-                               with_dtrace=args.dtrace)
+                               with_dtrace=args.dtrace,
+                               socks_args=socks_args,
+                               limit_rate=args.limit_rate)
             card.setup_resources(server_docs, downloads)
             cards.append(card)
 
@@ -774,6 +824,8 @@ def run_score(args, protocol):
             nghttpx.stop(wait_dead=False)
         if httpd:
             httpd.stop()
+        if sockd:
+            sockd.stop()
     return rv
 
 
@@ -816,6 +868,8 @@ def main():
                         default = False, help="produce dtrace of curl")
     parser.add_argument("--flame", action='store_true',
                         default = False, help="produce a flame graph on curl, implies --dtrace")
+    parser.add_argument("--limit-rate", action='store', type=str,
+                        default=None, help="use curl's --limit-rate")
 
     parser.add_argument("-H", "--handshakes", action='store_true',
                         default=False, help="evaluate handshakes only")
@@ -849,6 +903,10 @@ def main():
     parser.add_argument("--request-parallels", action='append', type=str,
                         metavar='numberlist',
                         default=None, help="evaluate request with these max-parallel numbers")
+    parser.add_argument("--socks4", action='store_true',
+                        default=False, help="test with SOCKS4 proxy")
+    parser.add_argument("--socks5", action='store_true',
+                        default=False, help="test with SOCKS5 proxy")
     args = parser.parse_args()
 
     if args.verbose > 0:

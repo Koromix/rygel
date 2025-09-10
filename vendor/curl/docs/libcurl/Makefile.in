@@ -315,6 +315,7 @@ CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX = @CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX@
 CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME = @CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME@
 CURL_NETWORK_AND_TIME_LIBS = @CURL_NETWORK_AND_TIME_LIBS@
 CYGPATH_W = @CYGPATH_W@
+DANTED = @DANTED@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
@@ -501,6 +502,7 @@ SUBDIRS = opts
 @BUILD_DOCS_TRUE@ curl_multi_cleanup.3 \
 @BUILD_DOCS_TRUE@ curl_multi_fdset.3 \
 @BUILD_DOCS_TRUE@ curl_multi_get_handles.3 \
+@BUILD_DOCS_TRUE@ curl_multi_get_offt.3 \
 @BUILD_DOCS_TRUE@ curl_multi_info_read.3 \
 @BUILD_DOCS_TRUE@ curl_multi_init.3 \
 @BUILD_DOCS_TRUE@ curl_multi_perform.3 \
@@ -537,6 +539,7 @@ SUBDIRS = opts
 @BUILD_DOCS_TRUE@ curl_ws_meta.3 \
 @BUILD_DOCS_TRUE@ curl_ws_recv.3 \
 @BUILD_DOCS_TRUE@ curl_ws_send.3 \
+@BUILD_DOCS_TRUE@ curl_ws_start_frame.3 \
 @BUILD_DOCS_TRUE@ libcurl-easy.3 \
 @BUILD_DOCS_TRUE@ libcurl-env-dbg.3 \
 @BUILD_DOCS_TRUE@ libcurl-env.3 \

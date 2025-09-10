@@ -254,6 +254,7 @@ CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX = @CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX@
 CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME = @CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME@
 CURL_NETWORK_AND_TIME_LIBS = @CURL_NETWORK_AND_TIME_LIBS@
 CYGPATH_W = @CYGPATH_W@
+DANTED = @DANTED@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
@@ -467,6 +468,7 @@ DPAGES = \
   fail-with-body.md \
   fail.md \
   false-start.md \
+  follow.md \
   form-escape.md \
   form-string.md \
   form.md \
@@ -547,8 +549,10 @@ DPAGES = \
   ntlm.md \
   oauth2-bearer.md \
   output-dir.md \
+  out-null.md \
   output.md \
   parallel-immediate.md \
+  parallel-max-host.md \
   parallel-max.md \
   parallel.md \
   pass.md \

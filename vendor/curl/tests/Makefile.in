@@ -255,6 +255,7 @@ CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX = @CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX@
 CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME = @CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME@
 CURL_NETWORK_AND_TIME_LIBS = @CURL_NETWORK_AND_TIME_LIBS@
 CYGPATH_W = @CYGPATH_W@
+DANTED = @DANTED@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
@@ -458,12 +459,12 @@ EXTRA_DIST = \
 @BUILD_UNITTESTS_TRUE@BUILD_UNIT = unit tunit
 @BUILD_UNITTESTS_FALSE@DIST_UNIT = unit tunit
 @BUILD_UNITTESTS_TRUE@DIST_UNIT = 
-SUBDIRS = certs data server libtest client http $(BUILD_UNIT)
+SUBDIRS = certs data server libtest http $(BUILD_UNIT)
 DIST_SUBDIRS = $(SUBDIRS) $(DIST_UNIT)
 PERLFLAGS = -I$(srcdir)
 CLEANFILES = .http.pid .https.pid .ftp.pid .ftps.pid
 TEST_COMMON = $(am__append_1)
-@CROSSCOMPILING_FALSE@TEST = srcdir=$(srcdir) $(PERL) $(PERLFLAGS) $(srcdir)/runtests.pl $(TEST_COMMON)
+@CROSSCOMPILING_FALSE@TEST = srcdir=$(srcdir) @PERL@ $(PERLFLAGS) $(srcdir)/runtests.pl $(TEST_COMMON)
 @CROSSCOMPILING_TRUE@TEST = @echo "NOTICE: we can't run the tests when cross-compiling!"
 @CROSSCOMPILING_FALSE@PYTEST = pytest
 @CROSSCOMPILING_TRUE@PYTEST = $(TEST)
@@ -478,7 +479,7 @@ TEST_COMMON = $(am__append_1)
 @CROSSCOMPILING_FALSE@TEST_NF = -a -p ~flaky ~timing-dependent
 
 # special CI target derived from nonflaky with CI-specific flags
-@CROSSCOMPILING_FALSE@TEST_CI = $(TEST_NF) -r --retry=5 -j20
+@CROSSCOMPILING_FALSE@TEST_CI = $(TEST_NF) -r --retry=5 -j20 --buildinfo
 all: all-recursive
 
 .SUFFIXES:
@@ -801,10 +802,13 @@ curl:
 
 # make sure that PERL is pointing to an executable
 perlcheck:
-	@if ! test -x "$(PERL)"; then echo "No perl!"; exit 2; fi
+	@if ! test -x "@PERL@"; then echo "No perl!"; exit 2; fi
 
-build-certs:
+build-certs: perlcheck
 	(cd certs && $(MAKE))
+
+# alias for 'test' to match CMake, where 'test' is a reserved target
+tests: test
 
 test: perlcheck all
 	$(TEST) $(TFLAGS)

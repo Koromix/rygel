@@ -12,9 +12,6 @@ TrackMemory
 
 # Client-side
 <client>
-<server>
-none
-</server>
 <features>
 TrackMemory
 </features>
@@ -33,6 +30,7 @@ curl memory tracking operational
 <file name="%LOGDIR/memdump">
 MEM tool_cfgable.c
 MEM tool_paramhlp.c
+MEM tool_cfgable.c
 MEM tool_cfgable.c
 MEM tool_cfgable.c
 MEM tool_cfgable.c

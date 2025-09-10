@@ -35,9 +35,9 @@ static int t578_progress_callback(void *clientp, double dltotal, double dlnow,
 {
   FILE *moo = fopen(libtest_arg2, "wb");
 
-  (void)clientp; /* UNUSED */
-  (void)dltotal; /* UNUSED */
-  (void)dlnow; /* UNUSED */
+  (void)clientp;
+  (void)dltotal;
+  (void)dlnow;
 
   if(moo) {
     if((size_t)ultotal == data_size && (size_t)ulnow == data_size)
@@ -50,7 +50,7 @@ static int t578_progress_callback(void *clientp, double dltotal, double dlnow,
   return 0;
 }
 
-static CURLcode test_lib578(char *URL)
+static CURLcode test_lib578(const char *URL)
 {
   CURL *curl;
   CURLcode res = CURLE_OK;

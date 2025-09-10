@@ -416,7 +416,6 @@ What server(s) this test case requires/uses. Available servers:
 - `http-unix`
 - `imap`
 - `mqtt`
-- `none`
 - `pop3`
 - `rtsp`
 - `rtsp-ipv6`
@@ -455,6 +454,7 @@ Features testable here are:
 - `codeset-utf8`. If the running codeset is UTF-8 capable.
 - `cookies`
 - `crypto`
+- `cygwin`
 - `Debug`
 - `digest`
 - `DoH`
@@ -747,3 +747,13 @@ should be cut off from the upload data before comparing it.
 
 ### `<valgrind>`
 disable - disables the valgrind log check for this test
+
+### `<dns [host="name"]>`
+
+This specify the input the DNS server is expected to get from curl. Because of
+differences in implementations, this section is sorted automatically before
+compared.
+
+Because of local configurations in machines running tests, there may be
+additional requests sent to `[host].[custom suffix]`. To prevent such requests
+to mess up comparisons, we can set the hostname to check in the `<dns>` tag.

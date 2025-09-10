@@ -22,6 +22,8 @@
 # SPDX-License-Identifier: curl
 #
 ###########################################################################
+use strict;
+use warnings;
 
 # Usage:
 #   perl mk-lib1521.pl < ../../include/curl/curl.h lib1521.c
@@ -324,7 +326,7 @@ static bool bad_long(CURLcode res, int check)
    non-existing function return code back */
 #define present(x) ((x != CURLE_NOT_BUILT_IN) && (x != CURLE_UNKNOWN_OPTION))
 
-static CURLcode test_lib1521(char *URL)
+static CURLcode test_lib1521(const char *URL)
 {
   CURL *curl = NULL;
   CURL *dep = NULL;
@@ -334,7 +336,7 @@ static CURLcode test_lib1521(char *URL)
   void *conv_to_network_cb = NULL;
   void *conv_from_utf8_cb = NULL;
   void *interleavecb = NULL;
-  char *stringpointerextra = (char *)CURL_UNCONST("moooo");
+  const char *stringpointerextra = "moooo";
   struct curl_slist *slist = NULL;
   struct curl_httppost *httppost = NULL;
   curl_mime *mimepost = NULL;
@@ -350,7 +352,7 @@ static CURLcode test_lib1521(char *URL)
   struct curl_tlssessioninfo *tlssession;
   struct curl_blob blob = { CURL_UNCONST("silly"), 5, 0};
   CURLcode res = CURLE_OK;
-  (void)URL; /* not used */
+  (void)URL;
   global_init(CURL_GLOBAL_ALL);
   easy_init(dep);
   easy_init(curl);
@@ -362,6 +364,8 @@ static CURLcode test_lib1521(char *URL)
 
 HEADER
     ;
+
+my $infomode = 0;
 
 while(<STDIN>) {
     s/^\s*(.*?)\s*$/$1/;      # Trim.

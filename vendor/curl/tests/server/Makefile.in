@@ -113,7 +113,6 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@DOING_NATIVE_WINDOWS_TRUE@am__append_1 = -DCURL_STATICLIB
 noinst_PROGRAMS = $(am__EXEEXT_1)
 subdir = tests/server
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -250,6 +249,7 @@ CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX = @CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX@
 CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME = @CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME@
 CURL_NETWORK_AND_TIME_LIBS = @CURL_NETWORK_AND_TIME_LIBS@
 CYGPATH_W = @CYGPATH_W@
+DANTED = @DANTED@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
@@ -419,9 +419,11 @@ AUTOMAKE_OPTIONS = foreign nostdinc
 # $(top_builddir)/lib is for libcurl's generated lib/curl_config.h file
 # $(top_srcdir)/lib for libcurl's lib/curl_setup.h and other "borrowed" files
 # $(srcdir) for the generated bundle source to find included test sources
-AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_builddir)/lib \
-	-I$(top_srcdir)/lib -I$(srcdir) -DWITHOUT_LIBCURL \
-	-DCURL_NO_OLDIES $(am__append_1)
+AM_CPPFLAGS = -I$(top_srcdir)/include        \
+              -I$(top_builddir)/lib          \
+              -I$(top_srcdir)/lib            \
+              -I$(srcdir)
+
 BUNDLE = servers
 
 # Files referenced from the bundle source

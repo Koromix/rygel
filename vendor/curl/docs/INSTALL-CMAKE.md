@@ -258,7 +258,7 @@ target_link_libraries(my_target PRIVATE CURL::libcurl)
 
 - `CURL_CA_BUNDLE`:                         Path to the CA bundle. Set `none` to disable or `auto` for auto-detection. Default: `auto`
 - `CURL_CA_EMBED`:                          Path to the CA bundle to embed in the curl tool. Default: (disabled)
-- `CURL_CA_FALLBACK`:                       Use built-in CA store of TLS backend. Default: `OFF`
+- `CURL_CA_FALLBACK`:                       Use built-in CA store of OpenSSL. Default: `OFF`
 - `CURL_CA_PATH`:                           Location of default CA path. Set `none` to disable or `auto` for auto-detection. Default: `auto`
 - `CURL_CA_SEARCH_SAFE`:                    Enable safe CA bundle search (within the curl tool directory) on Windows. Default: `OFF`
 
@@ -372,7 +372,6 @@ Details via CMake
 - `USE_APPLE_IDN`:                          Use Apple built-in IDN support. Default: `OFF`
 - `USE_LIBIDN2`:                            Use libidn2 for IDN support. Default: `ON`
 - `USE_LIBRTMP`:                            Enable librtmp from rtmpdump. Default: `OFF`
-- `USE_MSH3`:                               Use msh3/msquic library for HTTP/3 support. Default: `OFF`
 - `USE_NGHTTP2`:                            Use nghttp2 library. Default: `ON`
 - `USE_NGTCP2`:                             Use ngtcp2 and nghttp3 libraries for HTTP/3 support. Default: `OFF`
 - `USE_QUICHE`:                             Use quiche library for HTTP/3 support. Default: `OFF`
@@ -429,18 +428,17 @@ Details via CMake
 - `MBEDTLS_LIBRARY`:                        Path to `mbedtls` library.
 - `MBEDX509_LIBRARY`:                       Path to `mbedx509` library.
 - `MBEDCRYPTO_LIBRARY`:                     Path to `mbedcrypto` library.
-- `MSH3_INCLUDE_DIR`:                       The msh3 include directory.
-- `MSH3_LIBRARY`:                           Path to `msh3` library.
 - `NGHTTP2_INCLUDE_DIR`:                    The nghttp2 include directory.
 - `NGHTTP2_LIBRARY`:                        Path to `nghttp2` library.
 - `NGHTTP3_INCLUDE_DIR`:                    The nghttp3 include directory.
 - `NGHTTP3_LIBRARY`:                        Path to `nghttp3` library.
 - `NGTCP2_INCLUDE_DIR`:                     The ngtcp2 include directory.
 - `NGTCP2_LIBRARY`:                         Path to `ngtcp2` library.
-- `NGTCP2_CRYPTO_BORINGSSL_LIBRARY`:        Path to `ngtcp2_crypto_boringssl` library.
+- `NGTCP2_CRYPTO_BORINGSSL_LIBRARY`:        Path to `ngtcp2_crypto_boringssl` library. (also for AWS-LC)
 - `NGTCP2_CRYPTO_GNUTLS_LIBRARY`:           Path to `ngtcp2_crypto_gnutls` library.
+- `NGTCP2_CRYPTO_LIBRESSL_LIBRARY`:         Path to `ngtcp2_crypto_libressl` library. (requires ngtcp2 1.15.0+)
 - `NGTCP2_CRYPTO_OSSL_LIBRARY`:             Path to `ngtcp2_crypto_ossl` library.
-- `NGTCP2_CRYPTO_QUICTLS_LIBRARY`:          Path to `ngtcp2_crypto_quictls` library.
+- `NGTCP2_CRYPTO_QUICTLS_LIBRARY`:          Path to `ngtcp2_crypto_quictls` library. (also for LibreSSL with ngtcp2 <1.15.0)
 - `NGTCP2_CRYPTO_WOLFSSL_LIBRARY`:          Path to `ngtcp2_crypto_wolfssl` library.
 - `NETTLE_INCLUDE_DIR`:                     The nettle include directory.
 - `NETTLE_LIBRARY`:                         Path to `nettle` library.
@@ -463,6 +461,7 @@ Details via CMake
 - `CADDY`:                                  Default: `caddy`
 - `HTTPD_NGHTTPX`:                          Default: `nghttpx`
 - `HTTPD`:                                  Default: `apache2`
+- `DANTED`:                                 Default: `danted`
 - `TEST_NGHTTPX`:                           Default: `nghttpx`
 - `VSFTPD`:                                 Default: `vsftps`
 
@@ -576,7 +575,6 @@ winbuild options                  | Equivalent CMake options
 `RTLIBCFG`: `static`              | `CURL_STATIC_CRT=ON`
 `ENABLE_IDN`                      | `USE_WIN32_IDN=ON`
 `ENABLE_IPV6`                     | `ENABLE_IPV6=ON`
-`ENABLE_MSH3`                     | `USE_MSH3=ON`
 `ENABLE_NGHTTP2`                  | `USE_NGHTTP2=ON`
 `ENABLE_OPENSSL_AUTO_LOAD_CONFIG` | `CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG=OFF` (default)
 `ENABLE_SCHANNEL`                 | `CURL_USE_SCHANNEL=ON`
@@ -586,7 +584,6 @@ winbuild options                  | Equivalent CMake options
 `WITH_DEVEL`                      | see individual `*_INCLUDE_DIR` and `*_LIBRARY` options and `OPENSSL_ROOT_DIR`
 `WITH_CARES`, `CARES_PATH`        | `ENABLE_ARES=ON`, optional: `CARES_INCLUDE_DIR`, `CARES_LIBRARY`
 `WITH_MBEDTLS`, `MBEDTLS_PATH`    | `CURL_USE_MBEDTLS=ON`, optional: `MBEDTLS_INCLUDE_DIR`, `MBEDTLS_LIBRARY`, `MBEDX509_LIBRARY`, `MBEDCRYPTO_LIBRARY`
-`WITH_MSH3`, `MSH_PATH`           | `USE_MSH3=ON`, optional: `MSH3_INCLUDE_DIR`, `MSH3_LIBRARY`
 `WITH_NGHTTP2`, `NGHTTP2_PATH`    | `USE_NGHTTP2=ON`, optional: `NGHTTP2_INCLUDE_DIR`, `NGHTTP2_LIBRARY`
 `WITH_SSH`, `SSH_PATH`            | `CURL_USE_LIBSSH=ON`, optional: `LIBSSH_INCLUDE_DIR`, `LIBSSH_LIBRARY`
 `WITH_SSH2`, `SSH2_PATH`          | `CURL_USE_LIBSSH2=ON`, optional: `LIBSSH2_INCLUDE_DIR`, `LIBSSH2_LIBRARY`

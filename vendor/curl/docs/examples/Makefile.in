@@ -179,7 +179,7 @@ check_PROGRAMS = 10-at-a-time$(EXEEXT) address-scope$(EXEEXT) \
 	smtp-multi$(EXEEXT) smtp-ssl$(EXEEXT) smtp-tls$(EXEEXT) \
 	smtp-vrfy$(EXEEXT) sslbackend$(EXEEXT) unixsocket$(EXEEXT) \
 	url2file$(EXEEXT) urlapi$(EXEEXT) websocket$(EXEEXT) \
-	websocket-cb$(EXEEXT)
+	websocket-cb$(EXEEXT) websocket-updown$(EXEEXT)
 subdir = docs/examples
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/curl-amissl.m4 \
@@ -664,6 +664,10 @@ websocket_cb_SOURCES = websocket-cb.c
 websocket_cb_OBJECTS = websocket-cb.$(OBJEXT)
 websocket_cb_LDADD = $(LDADD)
 websocket_cb_DEPENDENCIES = $(top_builddir)/lib/libcurl.la
+websocket_updown_SOURCES = websocket-updown.c
+websocket_updown_OBJECTS = websocket-updown.$(OBJEXT)
+websocket_updown_LDADD = $(LDADD)
+websocket_updown_DEPENDENCIES = $(top_builddir)/lib/libcurl.la
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -736,7 +740,8 @@ am__depfiles_remade = ./$(DEPDIR)/10-at-a-time.Po \
 	./$(DEPDIR)/smtp-tls.Po ./$(DEPDIR)/smtp-vrfy.Po \
 	./$(DEPDIR)/sslbackend.Po ./$(DEPDIR)/unixsocket.Po \
 	./$(DEPDIR)/url2file.Po ./$(DEPDIR)/urlapi.Po \
-	./$(DEPDIR)/websocket-cb.Po ./$(DEPDIR)/websocket.Po
+	./$(DEPDIR)/websocket-cb.Po ./$(DEPDIR)/websocket-updown.Po \
+	./$(DEPDIR)/websocket.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -781,7 +786,8 @@ SOURCES = 10-at-a-time.c address-scope.c altsvc.c anyauthput.c \
 	shared-connection-cache.c simple.c simplepost.c simplessl.c \
 	smtp-authzid.c smtp-expn.c smtp-mail.c smtp-mime.c \
 	smtp-multi.c smtp-ssl.c smtp-tls.c smtp-vrfy.c sslbackend.c \
-	unixsocket.c url2file.c urlapi.c websocket.c websocket-cb.c
+	unixsocket.c url2file.c urlapi.c websocket.c websocket-cb.c \
+	websocket-updown.c
 DIST_SOURCES = 10-at-a-time.c address-scope.c altsvc.c anyauthput.c \
 	block_ip.c certinfo.c chkspeed.c connect-to.c \
 	cookie_interface.c debug.c default-scheme.c externalsocket.c \
@@ -807,7 +813,8 @@ DIST_SOURCES = 10-at-a-time.c address-scope.c altsvc.c anyauthput.c \
 	shared-connection-cache.c simple.c simplepost.c simplessl.c \
 	smtp-authzid.c smtp-expn.c smtp-mail.c smtp-mime.c \
 	smtp-multi.c smtp-ssl.c smtp-tls.c smtp-vrfy.c sslbackend.c \
-	unixsocket.c url2file.c urlapi.c websocket.c websocket-cb.c
+	unixsocket.c url2file.c urlapi.c websocket.c websocket-cb.c \
+	websocket-updown.c
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -866,6 +873,7 @@ CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX = @CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX@
 CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME = @CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME@
 CURL_NETWORK_AND_TIME_LIBS = @CURL_NETWORK_AND_TIME_LIBS@
 CYGPATH_W = @CYGPATH_W@
+DANTED = @DANTED@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
@@ -1025,7 +1033,6 @@ COMPLICATED_EXAMPLES = \
   evhiperfifo.c \
   ghiper.c \
   hiperfifo.c \
-  href_extractor.c \
   htmltidy.c \
   htmltitle.cpp \
   multi-event.c \
@@ -1535,6 +1542,10 @@ websocket-cb$(EXEEXT): $(websocket_cb_OBJECTS) $(websocket_cb_DEPENDENCIES) $(EX
 	@rm -f websocket-cb$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(websocket_cb_OBJECTS) $(websocket_cb_LDADD) $(LIBS)
 
+websocket-updown$(EXEEXT): $(websocket_updown_OBJECTS) $(websocket_updown_DEPENDENCIES) $(EXTRA_websocket_updown_DEPENDENCIES) 
+	@rm -f websocket-updown$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(websocket_updown_OBJECTS) $(websocket_updown_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -1652,6 +1663,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/url2file.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/urlapi.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/websocket-cb.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/websocket-updown.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/websocket.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -1928,6 +1940,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/url2file.Po
 	-rm -f ./$(DEPDIR)/urlapi.Po
 	-rm -f ./$(DEPDIR)/websocket-cb.Po
+	-rm -f ./$(DEPDIR)/websocket-updown.Po
 	-rm -f ./$(DEPDIR)/websocket.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
@@ -2085,6 +2098,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/url2file.Po
 	-rm -f ./$(DEPDIR)/urlapi.Po
 	-rm -f ./$(DEPDIR)/websocket-cb.Po
+	-rm -f ./$(DEPDIR)/websocket-updown.Po
 	-rm -f ./$(DEPDIR)/websocket.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic

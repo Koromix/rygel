@@ -544,6 +544,7 @@ CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX = @CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX@
 CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME = @CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME@
 CURL_NETWORK_AND_TIME_LIBS = @CURL_NETWORK_AND_TIME_LIBS@
 CYGPATH_W = @CYGPATH_W@
+DANTED = @DANTED@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
@@ -886,7 +887,7 @@ CS_1 =
 CS_ = $(CS_0)
 
 # disable the tests that are mostly causing false positives
-TIDYFLAGS := -checks=-clang-analyzer-security.insecureAPI.bzero,-clang-analyzer-security.insecureAPI.strcpy,-clang-analyzer-optin.performance.Padding,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
+TIDYFLAGS := -checks=-clang-analyzer-security.insecureAPI.bzero,-clang-analyzer-security.insecureAPI.strcpy,-clang-analyzer-optin.performance.Padding,-clang-analyzer-security.ArrayBound,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
 	-quiet $(am__append_9)
 TIDY := clang-tidy
 all: all-am
@@ -2827,30 +2828,41 @@ uninstall-am: uninstall-binPROGRAMS
 
 # This generates the tool_hugehelp.c file in both uncompressed and
 # compressed formats.
-@HAVE_LIBZ_TRUE@@USE_MANUAL_TRUE@$(HUGE): $(ASCIIPAGE) $(MKHELP)
-@HAVE_LIBZ_TRUE@@USE_MANUAL_TRUE@	$(HUGECMD)(                                                \
-@HAVE_LIBZ_TRUE@@USE_MANUAL_TRUE@	echo '/* !checksrc! disable COPYRIGHT all */' > $(HUGE);   \
-@HAVE_LIBZ_TRUE@@USE_MANUAL_TRUE@	echo '/* !checksrc! disable INCLUDEDUP all */' >> $(HUGE); \
-@HAVE_LIBZ_TRUE@@USE_MANUAL_TRUE@	echo '/* !checksrc! disable LONGLINE all */' >> $(HUGE);   \
-@HAVE_LIBZ_TRUE@@USE_MANUAL_TRUE@	echo '#include "tool_setup.h"' >> $(HUGE);                 \
-@HAVE_LIBZ_TRUE@@USE_MANUAL_TRUE@	echo '#ifndef HAVE_LIBZ' >> $(HUGE);                       \
-@HAVE_LIBZ_TRUE@@USE_MANUAL_TRUE@	$(PERL) $(MKHELP) < $(ASCIIPAGE) >> $(HUGE);               \
-@HAVE_LIBZ_TRUE@@USE_MANUAL_TRUE@	echo '#else' >> $(HUGE);                                   \
-@HAVE_LIBZ_TRUE@@USE_MANUAL_TRUE@	$(PERL) $(MKHELP) -c < $(ASCIIPAGE) >> $(HUGE);            \
-@HAVE_LIBZ_TRUE@@USE_MANUAL_TRUE@	echo '#endif /* HAVE_LIBZ */' >> $(HUGE) )
+@HAVE_LIBZ_TRUE@@PERL_TRUE@@USE_MANUAL_TRUE@$(HUGE): $(ASCIIPAGE) $(MKHELP)
+@HAVE_LIBZ_TRUE@@PERL_TRUE@@USE_MANUAL_TRUE@	$(HUGECMD)(                                                \
+@HAVE_LIBZ_TRUE@@PERL_TRUE@@USE_MANUAL_TRUE@	echo '/* !checksrc! disable COPYRIGHT all */' > $(HUGE);   \
+@HAVE_LIBZ_TRUE@@PERL_TRUE@@USE_MANUAL_TRUE@	echo '/* !checksrc! disable INCLUDEDUP all */' >> $(HUGE); \
+@HAVE_LIBZ_TRUE@@PERL_TRUE@@USE_MANUAL_TRUE@	echo '/* !checksrc! disable LONGLINE all */' >> $(HUGE);   \
+@HAVE_LIBZ_TRUE@@PERL_TRUE@@USE_MANUAL_TRUE@	echo '#include "tool_setup.h"' >> $(HUGE);                 \
+@HAVE_LIBZ_TRUE@@PERL_TRUE@@USE_MANUAL_TRUE@	echo '#ifndef HAVE_LIBZ' >> $(HUGE);                       \
+@HAVE_LIBZ_TRUE@@PERL_TRUE@@USE_MANUAL_TRUE@	@PERL@ $(MKHELP) < $(ASCIIPAGE) >> $(HUGE);                \
+@HAVE_LIBZ_TRUE@@PERL_TRUE@@USE_MANUAL_TRUE@	echo '#else' >> $(HUGE);                                   \
+@HAVE_LIBZ_TRUE@@PERL_TRUE@@USE_MANUAL_TRUE@	@PERL@ $(MKHELP) -c < $(ASCIIPAGE) >> $(HUGE);             \
+@HAVE_LIBZ_TRUE@@PERL_TRUE@@USE_MANUAL_TRUE@	echo '#endif /* HAVE_LIBZ */' >> $(HUGE) )
 # This generates the tool_hugehelp.c file uncompressed only
-@HAVE_LIBZ_FALSE@@USE_MANUAL_TRUE@$(HUGE): $(ASCIIPAGE) $(MKHELP)
-@HAVE_LIBZ_FALSE@@USE_MANUAL_TRUE@	$(HUGECMD)(                                                \
-@HAVE_LIBZ_FALSE@@USE_MANUAL_TRUE@	echo '/* !checksrc! disable COPYRIGHT all */' > $(HUGE);   \
-@HAVE_LIBZ_FALSE@@USE_MANUAL_TRUE@	echo '#include "tool_setup.h"' >> $(HUGE);                 \
-@HAVE_LIBZ_FALSE@@USE_MANUAL_TRUE@	$(PERL) $(MKHELP) < $(ASCIIPAGE) >> $(HUGE) )
+@HAVE_LIBZ_FALSE@@PERL_TRUE@@USE_MANUAL_TRUE@$(HUGE): $(ASCIIPAGE) $(MKHELP)
+@HAVE_LIBZ_FALSE@@PERL_TRUE@@USE_MANUAL_TRUE@	$(HUGECMD)(                                                \
+@HAVE_LIBZ_FALSE@@PERL_TRUE@@USE_MANUAL_TRUE@	echo '/* !checksrc! disable COPYRIGHT all */' > $(HUGE);   \
+@HAVE_LIBZ_FALSE@@PERL_TRUE@@USE_MANUAL_TRUE@	echo '#include "tool_setup.h"' >> $(HUGE);                 \
+@HAVE_LIBZ_FALSE@@PERL_TRUE@@USE_MANUAL_TRUE@	@PERL@ $(MKHELP) < $(ASCIIPAGE) >> $(HUGE) )
+@PERL_FALSE@@USE_MANUAL_TRUE@$(HUGE):
+@PERL_FALSE@@USE_MANUAL_TRUE@	$(HUGECMD)(                                                \
+@PERL_FALSE@@USE_MANUAL_TRUE@	if test ! -f "$(srcdir)/$(HUGE)"; then                     \
+@PERL_FALSE@@USE_MANUAL_TRUE@	  echo '/* !checksrc! disable COPYRIGHT all */' > $(HUGE); \
+@PERL_FALSE@@USE_MANUAL_TRUE@	  echo '#include "tool_hugehelp.h"' >> $(HUGE);            \
+@PERL_FALSE@@USE_MANUAL_TRUE@	  echo 'void hugehelp(void) {}' >> $(HUGE);                \
+@PERL_FALSE@@USE_MANUAL_TRUE@	  echo 'void showhelp(const char *trigger, const char *arg, const char *endarg)' >> $(HUGE); \
+@PERL_FALSE@@USE_MANUAL_TRUE@	  echo '{' >> $(HUGE);                                     \
+@PERL_FALSE@@USE_MANUAL_TRUE@	  echo '  (void)trigger; (void)arg; (void)endarg;' >> $(HUGE); \
+@PERL_FALSE@@USE_MANUAL_TRUE@	  echo '}' >> $(HUGE);                                     \
+@PERL_FALSE@@USE_MANUAL_TRUE@	fi)
 
 # built-in manual has been disabled, make a blank file
 @USE_MANUAL_FALSE@$(HUGE):
 @USE_MANUAL_FALSE@	echo '/* !checksrc! disable COPYRIGHT all */' > $(HUGE);   \
 @USE_MANUAL_FALSE@	echo '#include "tool_hugehelp.h"' >> $(HUGE)
 @CURL_CA_EMBED_SET_TRUE@$(CA_EMBED_CSOURCE): $(MK_FILE_EMBED) $(CURL_CA_EMBED)
-@CURL_CA_EMBED_SET_TRUE@	$(PERL) $(MK_FILE_EMBED) --var curl_ca_embed < $(CURL_CA_EMBED) > $(CA_EMBED_CSOURCE)
+@CURL_CA_EMBED_SET_TRUE@	@PERL@ $(MK_FILE_EMBED) --var curl_ca_embed < $(CURL_CA_EMBED) > $(CA_EMBED_CSOURCE)
 @CURL_CA_EMBED_SET_FALSE@$(CA_EMBED_CSOURCE):
 @CURL_CA_EMBED_SET_FALSE@	echo '/* !checksrc! disable COPYRIGHT all */' > $(CA_EMBED_CSOURCE)
 @CURL_CA_EMBED_SET_FALSE@	echo 'extern const void *curl_ca_embed; const void *curl_ca_embed;' >> $(CA_EMBED_CSOURCE)

@@ -253,6 +253,7 @@ CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX = @CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX@
 CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME = @CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME@
 CURL_NETWORK_AND_TIME_LIBS = @CURL_NETWORK_AND_TIME_LIBS@
 CYGPATH_W = @CYGPATH_W@
+DANTED = @DANTED@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
@@ -425,8 +426,7 @@ AUTOMAKE_OPTIONS = foreign nostdinc
 AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_builddir)/lib \
 	-I$(top_srcdir)/lib -I$(top_srcdir)/src \
 	-I$(top_srcdir)/tests/libtest -I$(srcdir) -DCURL_STATICLIB \
-	-DUNITTESTS $(am__append_1) $(am__append_2) -DCURL_NO_OLDIES \
-	-DCURL_DISABLE_DEPRECATION
+	-DUNITTESTS $(am__append_1) $(am__append_2)
 BUNDLE = tunits
 
 # Files referenced from the bundle source

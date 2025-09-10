@@ -35,8 +35,6 @@ in the curl-www repo
 
 - edit `Makefile` (version number and date),
 
-- edit `_newslog.html` (announce the new release) and
-
 - edit `_changes.html` (insert changes+bugfixes from RELEASE-NOTES)
 
 - commit all local changes
@@ -138,10 +136,11 @@ Coming dates
 
 Based on the description above, here are some planned future release dates:
 
-- May 28, 2025
-- July 16, 2025
 - September 10, 2025
 - November 5, 2025
 - January 7, 2026
 - March 4, 2026
 - April 29, 2026
+- June 24, 2026
+- August 19, 2026
+- October 14, 2026

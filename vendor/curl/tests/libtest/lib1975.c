@@ -27,14 +27,14 @@
 
 static size_t t1975_read_cb(char *ptr, size_t size, size_t nitems, void *userp)
 {
-  (void)ptr; /* unused */
-  (void)size; /* unused */
-  (void)nitems; /* unused */
-  (void)userp; /* unused */
+  (void)ptr;
+  (void)size;
+  (void)nitems;
+  (void)userp;
   return 0;
 }
 
-static CURLcode test_lib1975(char *URL)
+static CURLcode test_lib1975(const char *URL)
 {
   CURL *curl;
   CURLcode res = TEST_ERR_MAJOR_BAD;

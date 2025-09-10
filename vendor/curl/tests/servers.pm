@@ -380,7 +380,7 @@ sub startnew {
             logmsg "startnew: failed to write fake $pidfile with pid=$child\n";
         }
         # could/should do a while connect fails sleep a bit and loop
-        portable_sleep($timeout);
+        Time::HiRes::sleep($timeout);
         if(checkdied($child)) {
             logmsg "startnew: child process has failed to start\n" if($verbose);
             return (-1,-1);
@@ -2244,8 +2244,6 @@ sub runnegtelnetserver {
 }
 
 
-
-
 #######################################################################
 # Single shot http and gopher server responsiveness test. This should only
 # be used to verify that a server present in %run hash is still functional
@@ -3028,9 +3026,6 @@ sub startservers {
                 $run{'telnet'}="$pid $pid2";
             }
         }
-        elsif($what eq "none") {
-            logmsg "* starts no server\n" if($verbose);
-        }
         else {
             warn "we don't support a server for $what";
             return ("no server for $what", 4);
@@ -3184,6 +3179,8 @@ sub subvariables {
     $$thing =~ s/${prefix}CERTDIR/./g;
     $$thing =~ s/${prefix}USER/$USER/g;
     $$thing =~ s/${prefix}DEV_NULL/$dev_null/g;
+    my $libtests = $LIBDIR . 'libtests' . exe_ext('TOOL');
+    $$thing =~ s/${prefix}LIBTESTS/$libtests/g;
 
     $$thing =~ s/${prefix}SSHSRVMD5/$SSHSRVMD5/g;
     $$thing =~ s/${prefix}SSHSRVSHA256/$SSHSRVSHA256/g;

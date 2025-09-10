@@ -79,8 +79,6 @@ int tool_debug_cb(CURL *handle, curl_infotype type,
                   char *data, size_t size,
                   void *userdata)
 {
-  struct OperationConfig *operation = userdata;
-  struct GlobalConfig *global = operation->global;
   FILE *output = tool_stderr;
   const char *text;
   struct timeval tv;
@@ -93,7 +91,8 @@ int tool_debug_cb(CURL *handle, curl_infotype type,
   char idsbuf[60];
   curl_off_t xfer_id, conn_id;
 
-  (void)handle; /* not used */
+  (void)handle;
+  (void)userdata;
 
   if(global->tracetime) {
     tv = tvrealnow();
@@ -134,7 +133,7 @@ int tool_debug_cb(CURL *handle, curl_infotype type,
     output = global->trace_stream;
 
   if(!output) {
-    warnf(global, "Failed to create/open output");
+    warnf("Failed to create/open output");
     return 0;
   }
 

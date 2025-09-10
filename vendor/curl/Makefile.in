@@ -146,7 +146,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/lib/curl_config.h
-CONFIG_CLEAN_FILES = curl-config libcurl.pc
+CONFIG_CLEAN_FILES = libcurl.pc curl-config
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -308,6 +308,7 @@ CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX = @CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX@
 CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME = @CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME@
 CURL_NETWORK_AND_TIME_LIBS = @CURL_NETWORK_AND_TIME_LIBS@
 CYGPATH_W = @CYGPATH_W@
+DANTED = @DANTED@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
@@ -459,7 +460,6 @@ CMAKE_DIST = \
  CMake/FindLibssh.cmake                         \
  CMake/FindLibssh2.cmake                        \
  CMake/FindLibuv.cmake                          \
- CMake/FindMSH3.cmake                           \
  CMake/FindMbedTLS.cmake                        \
  CMake/FindNGHTTP2.cmake                        \
  CMake/FindNGHTTP3.cmake                        \
@@ -495,7 +495,7 @@ PLAN9_DIST = plan9/include/mkfile \
  plan9/src/mkfile.inc             \
  plan9/src/mkfile
 
-EXTRA_DIST = CHANGES.md COPYING RELEASE-NOTES Dockerfile \
+EXTRA_DIST = CHANGES.md COPYING RELEASE-NOTES Dockerfile .editorconfig \
  $(CMAKE_DIST) $(VC_DIST) $(WINBUILD_DIST) $(PLAN9_DIST)
 
 DISTCLEANFILES = buildinfo.txt
@@ -540,9 +540,9 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	$(am__cd) $(srcdir) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
 $(am__aclocal_m4_deps):
-curl-config: $(top_builddir)/config.status $(srcdir)/curl-config.in
-	cd $(top_builddir) && $(SHELL) ./config.status $@
 libcurl.pc: $(top_builddir)/config.status $(srcdir)/libcurl.pc.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+curl-config: $(top_builddir)/config.status $(srcdir)/curl-config.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 install-binSCRIPTS: $(bin_SCRIPTS)
 	@$(NORMAL_INSTALL)
@@ -1126,7 +1126,7 @@ rpms:
 	$(MAKE) RPMDIST=curl-ssl rpm
 
 rpm:
-	RPM_TOPDIR=`rpm --showrc | $(PERL) -n -e 'print if(s/.*_topdir\s+(.*)/$$1/)'` ; \
+	RPM_TOPDIR=`rpm --showrc | @PERL@ -n -e 'print if(s/.*_topdir\s+(.*)/$$1/)'` ; \
 	cp $(srcdir)/packages/Linux/RPM/$(RPMDIST).spec $$RPM_TOPDIR/SPECS ; \
 	cp $(PACKAGE)-$(VERSION).tar.gz $$RPM_TOPDIR/SOURCES ; \
 	rpm -ba --clean --rmsource $$RPM_TOPDIR/SPECS/$(RPMDIST).spec ; \

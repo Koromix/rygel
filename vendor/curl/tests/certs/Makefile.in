@@ -197,6 +197,7 @@ CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX = @CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX@
 CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME = @CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME@
 CURL_NETWORK_AND_TIME_LIBS = @CURL_NETWORK_AND_TIME_LIBS@
 CYGPATH_W = @CYGPATH_W@
+DANTED = @DANTED@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
@@ -621,7 +622,7 @@ all-am: test-ca.cacert
 # Generate all certs in a single shot, but declare just a single target file
 # to support GNU Make <4.3 without the "grouped explicit targets" feature.
 test-ca.cacert: $(CERTCONFIG_CA) $(CERTCONFIGS) genserv.pl
-	$(PERL) $(srcdir)/genserv.pl test $(CERTCONFIGS)
+	@PERL@ $(srcdir)/genserv.pl test $(CERTCONFIGS)
 
 clean-local:
 	rm -f $(GENERATEDCERTS) \

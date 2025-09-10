@@ -11,9 +11,6 @@ MULTI
 
 # Client-side
 <client>
-<server>
-none
-</server>
 # tool is what to use instead of 'curl'
 <tool>
 lib%TESTNUMBER
@@ -22,9 +19,6 @@ lib%TESTNUMBER
 <name>
 multi - add many easy handles
 </name>
-<command>
-</command>
-</file>
 </client>
 
 # 1000 easy handles needs memory
