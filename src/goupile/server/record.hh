@@ -31,6 +31,7 @@ struct ExportSettings {
 struct ExportInfo {
     int64_t max_sequence;
     int64_t max_anchor;
+    char secret[33];
 };
 
 void HandleRecordList(http_IO *io, InstanceHolder *instance);

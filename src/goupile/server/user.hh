@@ -33,7 +33,7 @@ enum class UserPermission {
     DataAudit = 1 << 7,
     DataAnnotate = 1 << 8,
     DataExport = 1 << 9,
-    DataFetch = 1 << 10,
+    DataDownload = 1 << 10,
     MiscMail = 1 << 11,
     MiscTexto = 1 << 12,
     MiscOffline = 1 << 13
@@ -49,7 +49,7 @@ static const char *const UserPermissionNames[] = {
     "DataAudit",
     "DataAnnotate",
     "DataExport",
-    "DataFetch",
+    "DataDownload",
     "MiscMail",
     "MiscTexto",
     "MiscOffline"

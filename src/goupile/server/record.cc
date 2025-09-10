@@ -674,10 +674,8 @@ void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
     });
 }
 
-static int64_t CheckExportPermission(http_IO *io, InstanceHolder *instance, UserPermission perm)
+static int64_t CheckExportPermission(http_IO *io, InstanceHolder *instance, uint32_t allow)
 {
-    K_ASSERT(perm == UserPermission::DataExport || perm == UserPermission::DataFetch);
-
     const http_RequestInfo &request = io->Request();
     const char *export_key = !instance->slaves.len ? request.GetHeaderValue("X-Export-Key") : nullptr;
 
@@ -697,8 +695,7 @@ static int64_t CheckExportPermission(http_IO *io, InstanceHolder *instance, User
             uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
             int64_t userid = sqlite3_column_int64(stmt, 1);
 
-            if (!(permissions & (int)UserPermission::DataExport) ||
-                    !(permissions & (int)UserPermission::DataFetch)) {
+            if (!(permissions & allow)) {
                 LogError("Missing data export or fetch permission");
                 io->SendError(403);
                 return -1;
@@ -714,12 +711,14 @@ static int64_t CheckExportPermission(http_IO *io, InstanceHolder *instance, User
         }
     } else {
        RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+       const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
        if (!session) {
             LogError("User is not logged in");
             io->SendError(401);
             return -1;
-        } else if (!session->HasPermission(instance, perm)) {
+        }
+        if (!stamp || !(stamp->permissions & allow)) {
             LogError("User is not allowed to export data");
             io->SendError(403);
             return -1;
@@ -848,17 +847,20 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
         }
     }
 
-    // We need the export ID to make it, see inside transaction
-    int64_t export_id = 0;
+    int64_t export_id;
+    char secret[33];
+
+    static_assert(K_SIZE(secret) == K_SIZE(ExportInfo::secret));
+    Fmt(secret, "%1", FmtRandom(32));
 
     bool success = instance->db->Transaction([&]() {
         // Create export metadata
         {
             sq_Statement stmt;
-            if (!instance->db->Prepare(R"(INSERT INTO rec_exports (ctime, userid, sequence, anchor, threads, scheduled)
-                                          VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            if (!instance->db->Prepare(R"(INSERT INTO rec_exports (ctime, userid, sequence, anchor, threads, scheduled, secret)
+                                          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
                                           RETURNING export)",
-                                       &stmt, now, userid, max_sequence, max_anchor, threads, 0 + settings.scheduled))
+                                       &stmt, now, userid, max_sequence, max_anchor, threads, 0 + settings.scheduled, secret))
                 return false;
             if (!stmt.GetSingleValue(&export_id))
                 return false;
@@ -877,6 +879,7 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
     if (out_info) {
         out_info->max_sequence = max_sequence;
         out_info->max_anchor = max_anchor;
+        CopyString(secret, out_info->secret);
     }
 
     return export_id;
@@ -890,7 +893,7 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    int64_t userid = CheckExportPermission(io, instance, UserPermission::DataExport);
+    int64_t userid = CheckExportPermission(io, instance, (int)UserPermission::DataExport);
     if (userid < 0)
         return;
 
@@ -927,7 +930,7 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
     if (export_id < 0)
         return;
 
-    const char *response = Fmt(io->Allocator(), "{ \"export\": %1 }", export_id).ptr;
+    const char *response = Fmt(io->Allocator(), "{ \"export\": %1, \"secret\": \"%2\" }", export_id, info.secret).ptr;
     io->SendText(200, response, "application/json");
 }
 
@@ -939,7 +942,7 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    if (CheckExportPermission(io, instance, UserPermission::DataFetch) < 0)
+    if (CheckExportPermission(io, instance, (int)UserPermission::DataExport | (int)UserPermission::DataDownload) < 0)
         return;
 
     sq_Statement stmt;
@@ -988,9 +991,6 @@ void HandleExportDownload(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    if (CheckExportPermission(io, instance, UserPermission::DataFetch) < 0)
-        return;
-
     int64_t export_id;
     if (const char *str = request.GetQueryValue("export"); str) {
         if (!ParseInt(str, &export_id)) {
@@ -1008,11 +1008,19 @@ void HandleExportDownload(http_IO *io, InstanceHolder *instance)
         return;
     }
 
+    // The secret value allows users without export but without fetch permission to download the export after it's made
+    const char *secret = request.GetHeaderValue("X-Export-Secret");
+
+    if (!secret && CheckExportPermission(io, instance, (int)UserPermission::DataDownload) < 0)
+        return;
+
     int64_t ctime;
     int64_t threads;
     {
         sq_Statement stmt;
-        if (!instance->db->Prepare("SELECT ctime, threads FROM rec_exports WHERE export = ?1", &stmt, export_id))
+        if (!instance->db->Prepare(R"(SELECT ctime, threads FROM rec_exports
+                                      WHERE export = ?1 AND secret = IFNULL(?2, secret))",
+                                   &stmt, export_id, secret))
             return;
 
         if (!stmt.Step()) {

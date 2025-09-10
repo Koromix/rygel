@@ -123,7 +123,7 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
                                      (int)UserPermission::DataDelete |
                                      (int)UserPermission::DataAnnotate |
                                      (int)UserPermission::DataExport |
-                                     (int)UserPermission::DataFetch;
+                                     (int)UserPermission::DataDownload;
             } else if (userid > 0) {
                 uint32_t permissions;
                 {

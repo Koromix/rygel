@@ -292,7 +292,7 @@ function renderMenu() {
                         <button @click=${UI.wrap(goupile.runChangePasswordDialog)}>${T.change_my_password}</button>
                         <button @click=${UI.wrap(goupile.runResetTOTP)}>${T.configure_my_totp}</button>
                         <hr/>
-                        ${goupile.hasPermission('data_export') && goupile.hasPermission('data_fetch') ? html`
+                        ${goupile.hasPermission('data_export') || goupile.hasPermission('data_download') ? html`
                             <button @click=${UI.wrap(generateExportKey)}>${T.generate_export_key}</button>
                             <hr/>
                         ` : ''}
@@ -713,7 +713,7 @@ function renderData() {
 
             <div class="ui_actions">
                 ${goupile.hasPermission('data_export') ? html`<button @click=${UI.wrap(runExportCreateDialog)}>${T.create_export}</button>` : ''}
-                ${goupile.hasPermission('data_fetch') ? html`<button @click=${UI.wrap(runExportListDialog)}>${T.list_exports}</button>` : ''}
+                ${goupile.hasPermission('data_download') ? html`<button @click=${UI.wrap(runExportListDialog)}>${T.list_exports}</button>` : ''}
             </div>
         </div>
     `;
@@ -737,7 +737,6 @@ function runDeleteRecordDialog(e, row) {
 
 async function runExportCreateDialog(e) {
     let downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
-    let stores = app.stores.map(store => store.key);
 
     if (!downloads.length) {
         await create(null, null);
@@ -786,10 +785,10 @@ async function runExportCreateDialog(e) {
         let progress = Log.progress(T.export_in_progress);
 
         try {
-            let export_id = await createExport(sequence, anchor);
+            let info = await createExport(sequence, anchor);
+            let stores = app.stores.map(store => store.key);
 
-            if (goupile.hasPermission('data_fetch'))
-                await exportRecords(export_id, stores);
+            await exportRecords(info.export, info.secret, stores);
 
             progress.success(T.export_done);
         } catch (err) {
@@ -831,7 +830,7 @@ async function runExportListDialog(e) {
                             <td>${download.threads}</td>
                             <td>${download.scheduled ? T.yes : T.no}</td>
                             <td>
-                                ${download.threads ? html`<a @click=${UI.wrap(e => exportRecords(download.export, stores))}>${T.download}</a>` : ''}
+                                ${download.threads ? html`<a @click=${UI.wrap(e => exportRecords(download.export, null, stores))}>${T.download}</a>` : ''}
                                 ${!download.threads ? '(' + T.not_available.toLowerCase() + ')' : ''}
                             </td>
                         </tr>

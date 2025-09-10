@@ -784,6 +784,12 @@ const Net = new function() {
         if (!options.headers.hasOwnProperty('X-Requested-With'))
             options.headers['X-Requested-With'] = 'XMLHTTPRequest';
 
+        for (let key in options.headers) {
+            let value = options.headers[key];
+            if (value == null)
+                delete options.headers[key];
+        }
+
         for (;;) {
             let timer = null;
             let response = null;

@@ -21,21 +21,20 @@ import { profile } from './goupile.js';
 import * as UI from './ui.js';
 
 async function createExport(sequence = null, anchor = null) {
-    let json = await Net.post(`${ENV.urls.instance}api/export/create`, {
+    let info = await Net.post(`${ENV.urls.instance}api/export/create`, {
         sequence: sequence,
         anchor: anchor
     });
-    let export_id = json.export;
 
-    return export_id;
+    return info;
 }
 
-async function exportRecords(export_id, stores, filter = null) {
+async function exportRecords(id, secret, stores, filter = null) {
     if (filter == null)
         filter = () => true;
 
     let XLSX = await import(`${ENV.urls.static}sheetjs/XLSX.bundle.js`);
-    let { name, threads, tables, counters } = await walkThreads(export_id);
+    let { name, threads, tables, counters } = await walkThreads(id, secret);
 
     // Metadata worksheets
     let meta = {
@@ -142,9 +141,11 @@ async function exportRecords(export_id, stores, filter = null) {
     XLSX.writeFile(wb, filename);
 }
 
-async function walkThreads(export_id) {
-    let url = Util.pasteURL(`${ENV.urls.instance}api/export/download`, { export: export_id });
-    let response = await Net.fetch(url);
+async function walkThreads(id, secret) {
+    let url = Util.pasteURL(`${ENV.urls.instance}api/export/download`, { export: id });
+    let response = await Net.fetch(url, {
+        headers: { 'X-Export-Secret': secret }
+    });
 
     if (!response.ok) {
         let err = await Net.readError(response);
