@@ -35,8 +35,7 @@ async function exportRecords(export_id, stores, filter = null) {
         filter = () => true;
 
     let XLSX = await import(`${ENV.urls.static}sheetjs/XLSX.bundle.js`);
-
-    let [threads, tables, counters] = await walkThreads(export_id);
+    let { name, threads, tables, counters } = await walkThreads(export_id);
 
     // Metadata worksheets
     let meta = {
@@ -139,7 +138,7 @@ async function exportRecords(export_id, stores, filter = null) {
     }
 
     // ... and export it!
-    let filename = `export_${ENV.key}_${LocalDate.today()}.xlsx`;
+    let filename = `export_${name}.xlsx`;
     XLSX.writeFile(wb, filename);
 }
 
@@ -153,6 +152,7 @@ async function walkThreads(export_id) {
     }
 
     let json = await response.json();
+    let name = response.headers.get('X-Export-Name');
     let threads = Array.isArray(json) ? json : json.threads;
 
     let tables = {};
@@ -239,7 +239,12 @@ async function walkThreads(export_id) {
 
     counters = Array.from(counters);
 
-    return [threads, tables, counters];
+    return {
+        name: name,
+        threads: threads,
+        tables: tables,
+        counters: counters
+    };
 }
 
 function expandColumns(variables) {

@@ -732,7 +732,7 @@ static int64_t CheckExportPermission(http_IO *io, InstanceHolder *instance, User
 static const char *MakeExportFileName(const char *instance_key, int64_t export_id, int64_t ctime, Allocator *alloc)
 {
     TimeSpec spec = DecomposeTimeUTC(ctime);
-    Span<char> basename = Fmt(alloc, "%1_%2_%3.json->gz", instance_key, export_id, FmtTimeISO(spec));
+    Span<char> basename = Fmt(alloc, "%1_%2_%3.json.gz", instance_key, export_id, FmtTimeISO(spec));
 
     for (char &c: basename) {
         c = (c == '/') ? '@' : c;
@@ -1033,9 +1033,12 @@ void HandleExportDownload(http_IO *io, InstanceHolder *instance)
         return;
     }
 
+    TimeSpec spec = DecomposeTimeLocal(ctime);
+    Span<const char> name = Fmt(io->Allocator(), "%1_%2_%3", instance->key, export_id, FmtTimeISO(spec));
     const char *filename = MakeExportFileName(instance->key.ptr, export_id, ctime, io->Allocator());
 
     io->AddHeader("Content-Encoding", "gzip");
+    io->AddHeader("X-Export-Name", name);
     io->SendFile(200, filename);
 }
 
