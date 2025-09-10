@@ -36,9 +36,10 @@
 }
 
 .hm_config {
-    background: #;
     position: absolute;
-    left: 8px;
-    bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #222222;
     z-index: 2;
 }

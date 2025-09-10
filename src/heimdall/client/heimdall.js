@@ -63,7 +63,8 @@ let world = null;
 let layout = {
     tree: null,
     main: null,
-    time: null
+    time: null,
+    config: null
 };
 let position = {
     entity: 0,
@@ -189,7 +190,7 @@ function syncSize() {
         left: 0,
         top: 0,
         width: settings.tree * window.devicePixelRatio,
-        height: canvas.height
+        height: canvas.height - 50 * window.devicePixelRatio
     };
     layout.main = {
         left: settings.tree * window.devicePixelRatio,
@@ -203,6 +204,15 @@ function syncSize() {
         width: canvas.width - settings.tree * window.devicePixelRatio,
         height: 50 * window.devicePixelRatio
     };
+    layout.config = {
+        left: 0,
+        top: canvas.height - 50 * window.devicePixelRatio,
+        width: settings.tree * window.devicePixelRatio,
+        height: 50 * window.devicePixelRatio
+    };
+
+    for (let key in layout.config)
+        dom.config.style[key] = layout.config[key] + 'px';
 }
 
 // ------------------------------------------------------------------------
@@ -210,6 +220,8 @@ function syncSize() {
 // ------------------------------------------------------------------------
 
 function update() {
+    rows.length = 0;
+
     if (pressed_keys.tab == 1)
         show_debug = !show_debug;
 
@@ -223,12 +235,9 @@ function update() {
         saveState();
     }
 
-    if (isInside(mouse_state, layout.tree)) {
-        zone = layout.tree;
-    } else if (isInside(mouse_state, layout.time)) {
-        zone = layout.time;
-    } else {
-        zone = layout.main;
+    for (let key in layout) {
+        if (isInside(mouse_state, layout[key]))
+            zone = layout[key];
     }
 
     let reset = (pressed_keys.r == -1);
@@ -239,97 +248,6 @@ function update() {
         position.y = 0;
 
         reveal = true;
-    }
-
-    // Resize tree panel
-    if (interaction == null && isInside(mouse_state, makeRect(layout.main.left - 5, layout.main.top, 10, layout.main.height))) {
-        if (mouse_state.left > 0) {
-            interaction = {
-                type: 'tree',
-                offset: mouse_state.x - settings.tree * window.devicePixelRatio
-            };
-        }
-
-        runner.cursor = 'col-resize';
-    } else if (interaction?.type == 'tree') {
-        if (mouse_state.left > 0) {
-            let min = 140 * window.devicePixelRatio;
-            let split = Util.clamp(mouse_state.x - interaction.offset, min, canvas.width / 2);
-
-            settings.tree = Math.floor(split / window.devicePixelRatio);
-            syncSize();
-        } else {
-            interaction = null;
-            saveState();
-        }
-
-        runner.cursor = 'col-resize';
-    }
-
-    // Handle canvas grab
-    if (interaction == null) {
-        if (mouse_state.left > 0 && mouse_state.moving) {
-            interaction = {
-                type: 'move',
-                x: (zone == layout.main || zone == layout.time) ? mouse_state.x : null,
-                y: (zone == layout.main || zone == layout.tree) ? mouse_state.y : null
-            };
-
-            if (interaction.x == null && interaction.y == null)
-                interaction = null;
-        }
-    } else if (interaction?.type == 'move') {
-        if (mouse_state.left > 0) {
-            let factor = pressed_keys.ctrl ? 5 : 1;
-
-            if (interaction.x != null) {
-                position.x = Math.round(position.x + (interaction.x - mouse_state.x) * factor);
-                interaction.x = mouse_state.x;
-            }
-            if (interaction.y != null) {
-                position.y = Math.round(position.y + (interaction.y - mouse_state.y) * factor);
-                interaction.y = mouse_state.y;
-            }
-
-            saveState();
-        } else {
-            interaction = null;
-        }
-
-        runner.cursor = 'grabbing';
-    }
-
-    // Handle deploy/collapse clicks
-    {
-        let cursor = { x: mouse_state.x - layout.tree.left, y: mouse_state.y - layout.tree.top };
-        let idx = rows.findIndex(row => cursor.y >= row.top && cursor.y < row.top + row.height);
-
-        if (idx >= 0) {
-            let row = rows[idx];
-
-            if (interaction?.type != 'move') {
-                row.hover = true;
-
-                for (let i = idx - row.index; i < rows.length && rows[i].entity == row.entity; i++)
-                    rows[i].active = true;
-                for (let i = idx + 1; i < rows.length && rows[i].depth > row.depth; i++)
-                    rows[i].hover = true;
-            }
-
-            if (!row.leaf && cursor.x >= 0 && cursor.x <= layout.tree.width) {
-                if (mouse_state.left == -1) {
-                    position.entity = row.entity;
-                    position.y = -rows[idx - row.index].top;
-
-                    if (!view.expand.delete(row.path))
-                        view.expand.add(row.path);
-
-                    saveState();
-                }
-
-                runner.cursor = 'pointer';
-            }
-        }
     }
 
     // Handle wheel actions (scroll or zoom)
@@ -396,8 +314,6 @@ function update() {
 
     // Combine view and entities into draw rows
     {
-        rows.length = 0;
-
         let space = SPACE_BETWEEN_ENTITIES * window.devicePixelRatio;
         let first = null;
         let offset = 0;
@@ -451,6 +367,97 @@ function update() {
         if (first != null) {
             position.entity = first ?? 0;
             position.y = offset;
+        }
+    }
+
+    // Resize tree panel
+    if (interaction == null && isInside(mouse_state, makeRect(layout.main.left - 5, layout.main.top, 10, layout.main.height))) {
+        if (mouse_state.left > 0) {
+            interaction = {
+                type: 'tree',
+                offset: mouse_state.x - settings.tree * window.devicePixelRatio
+            };
+        }
+
+        runner.cursor = 'col-resize';
+    } else if (interaction?.type == 'tree') {
+        if (mouse_state.left > 0) {
+            let min = 140 * window.devicePixelRatio;
+            let split = Util.clamp(mouse_state.x - interaction.offset, min, canvas.width / 2);
+
+            settings.tree = Math.floor(split / window.devicePixelRatio);
+            syncSize();
+        } else {
+            interaction = null;
+            saveState();
+        }
+
+        runner.cursor = 'col-resize';
+    }
+
+    // Handle canvas grab
+    if (interaction == null) {
+        if (mouse_state.left > 0 && mouse_state.moving) {
+            interaction = {
+                type: 'move',
+                x: (zone == layout.main || zone == layout.time) ? mouse_state.x : null,
+                y: (zone == layout.main || zone == layout.tree) ? mouse_state.y : null
+            };
+
+            if (interaction.x == null && interaction.y == null)
+                interaction = null;
+        }
+    } else if (interaction?.type == 'move') {
+        if (mouse_state.left > 0) {
+            let factor = pressed_keys.ctrl ? 5 : 1;
+
+            if (interaction.x != null) {
+                position.x = Math.round(position.x + (interaction.x - mouse_state.x) * factor);
+                interaction.x = mouse_state.x;
+            }
+            if (interaction.y != null) {
+                position.y = Math.round(position.y + (interaction.y - mouse_state.y) * factor);
+                interaction.y = mouse_state.y;
+            }
+
+            saveState();
+        } else {
+            interaction = null;
+        }
+
+        runner.cursor = 'grabbing';
+    }
+
+    // Handle deploy/collapse clicks
+    if (zone == layout.tree || zone == layout.main) {
+        let cursor = { x: mouse_state.x - layout.tree.left, y: mouse_state.y - layout.tree.top };
+        let idx = rows.findIndex(row => cursor.y >= row.top && cursor.y < row.top + row.height);
+
+        if (idx >= 0) {
+            let row = rows[idx];
+
+            if (interaction?.type != 'move') {
+                row.hover = true;
+
+                for (let i = idx - row.index; i < rows.length && rows[i].entity == row.entity; i++)
+                    rows[i].active = true;
+                for (let i = idx + 1; i < rows.length && rows[i].depth > row.depth; i++)
+                    rows[i].hover = true;
+            }
+
+            if (!row.leaf && cursor.x >= 0 && cursor.x <= layout.tree.width) {
+                if (mouse_state.left == -1) {
+                    position.entity = row.entity;
+                    position.y = -rows[idx - row.index].top;
+
+                    if (!view.expand.delete(row.path))
+                        view.expand.add(row.path);
+
+                    saveState();
+                }
+
+                runner.cursor = 'pointer';
+            }
         }
     }
 
@@ -774,35 +781,31 @@ function draw() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#222222';
     ctx.fillRect(layout.tree.left, layout.tree.top, layout.tree.width, layout.tree.height);
-    ctx.fillRect(layout.time.left, layout.time.top, layout.time.width, layout.time.height);
 
     // Highlight rows
-    for (let row of rows) {
-        if (row.hover) {
-            ctx.fillStyle = '#555555';
-            ctx.fillRect(layout.tree.left, layout.tree.top + row.top, layout.tree.width, row.height);
-            ctx.fillStyle = '#dddddd';
-            ctx.fillRect(layout.main.left, layout.main.top + row.top, layout.main.width, row.height);
-        } else if (row.active) {
-            ctx.fillStyle = '#333333';
-            ctx.fillRect(layout.tree.left, layout.tree.top + row.top, layout.tree.width, row.height);
-            ctx.fillStyle = '#eeeeee';
-            ctx.fillRect(layout.main.left, layout.main.top + row.top, layout.main.width, row.height);
+    {
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.rect(layout.tree.left, layout.tree.top, layout.tree.width, layout.tree.height);
+        ctx.rect(layout.main.left, layout.main.top, layout.main.width, layout.main.height);
+        ctx.clip();
+
+        for (let row of rows) {
+            if (row.hover) {
+                ctx.fillStyle = '#555555';
+                ctx.fillRect(layout.tree.left, layout.tree.top + row.top, layout.tree.width, row.height);
+                ctx.fillStyle = '#dddddd';
+                ctx.fillRect(layout.main.left, layout.main.top + row.top, layout.main.width, row.height);
+            } else if (row.active) {
+                ctx.fillStyle = '#333333';
+                ctx.fillRect(layout.tree.left, layout.tree.top + row.top, layout.tree.width, row.height);
+                ctx.fillStyle = '#eeeeee';
+                ctx.fillRect(layout.main.left, layout.main.top + row.top, layout.main.width, row.height);
+            }
         }
-    }
-    // Highlight rows
-    for (let row of rows) {
-        if (row.hover) {
-            ctx.fillStyle = '#555555';
-            ctx.fillRect(layout.tree.left, layout.tree.top + row.top, layout.tree.width, row.height);
-            ctx.fillStyle = '#dddddd';
-            ctx.fillRect(layout.main.left, layout.main.top + row.top, layout.main.width, row.height);
-        } else if (row.active) {
-            ctx.fillStyle = '#333333';
-            ctx.fillRect(layout.tree.left, layout.tree.top + row.top, layout.tree.width, row.height);
-            ctx.fillStyle = '#eeeeee';
-            ctx.fillRect(layout.main.left, layout.main.top + row.top, layout.main.width, row.height);
-        }
+
+        ctx.restore();
     }
 
     // Draw entity tree
@@ -880,9 +883,15 @@ function draw() {
             ctx.save();
             ctx.translate(0, row.top);
 
-            ctx.beginPath();
-            ctx.rect(0, 0, layout.main.width, row.height);
-            ctx.clip();
+            // Clip row but not beyond main zone
+            {
+                let bottom = Math.min(layout.main.height, row.top + row.height);
+                let clip = bottom - row.top;
+
+                ctx.beginPath();
+                ctx.rect(0, 0, layout.main.width, clip);
+                ctx.clip();
+            }
 
             // Draw periods
             for (let period of row.periods) {
@@ -999,6 +1008,7 @@ function draw() {
         ctx.translate(layout.time.left, layout.time.top);
 
         ctx.fillStyle = '#222222';
+        ctx.fillRect(0, 0, layout.time.width, layout.time.height);
 
         ctx.beginPath();
         ctx.rect(-5, 0, layout.time.width + 10, layout.time.height);
