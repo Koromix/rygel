@@ -3006,10 +3006,8 @@ bool MigrateInstance(sq_Database *db, int target)
             } [[fallthrough]];
 
             case 132: {
-                bool success = db->RunMany(R"(
-                    ALTER TABLE fs_index ADD COLUMN bundle TEXT REFERENCES fs_objects (sha256);
-                )");
-                if (!success)
+                if (!db->ColumnExists("fs_index", "bundle") &&
+                        !db->Run("ALTER TABLE fs_index ADD COLUMN bundle TEXT REFERENCES fs_objects (sha256)"))
                     return false;
             } [[fallthrough]];
 
