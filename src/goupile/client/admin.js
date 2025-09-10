@@ -180,6 +180,7 @@ function renderUsers() {
                                         style="white-space: normal;">
                                         ${selected_instance.master == null ? makePermissionsTag(permissions, 'build_', '#b518bf') : ''}
                                         ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : ''}
+                                        ${!selected_instance.slaves ? makePermissionsTag(permissions, 'export_', '#3364bd') : ''}
                                         ${!selected_instance.slaves ? makePermissionsTag(permissions, 'misc_', '#c97f1a') : ''}
                                         ${!permissions.length ? T.unassigned : ''}
                                     </td>
@@ -744,7 +745,7 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
                 disabled: instance.master != null
             });
         }, { color: '#b518bf' });
-        d.sameLine(true); d.section(T.data, () => {
+        d.sameLine(true); d.section(T.data_entry, () => {
             let props = listPermissions('data_', instance.legacy);
             let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('data_')) : null;
 
@@ -753,6 +754,15 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
                 disabled: instance.slaves > 0
             });
         }, { color: '#258264' });
+        d.sameLine(true); d.section(T.exports, () => {
+            let props = listPermissions('export_', instance.legacy);
+            let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('export_')) : null;
+
+            d.multiCheck('export_permissions', null, props, {
+                value: value,
+                disabled: instance.slaves > 0
+            });
+        }, { color: '#3364bd' });
         d.sameLine(true); d.section(T.other, () => {
             let props = listPermissions('misc_', instance.legacy);
             let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('misc_')) : null;
@@ -767,6 +777,7 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
         let permissions = [
             ...(d.values.build_permissions || []),
             ...(d.values.data_permissions || []),
+            ...(d.values.export_permissions || []),
             ...(d.values.misc_permissions || [])
         ];
 

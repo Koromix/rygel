@@ -122,8 +122,8 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
                                      (int)UserPermission::DataSave |
                                      (int)UserPermission::DataDelete |
                                      (int)UserPermission::DataAnnotate |
-                                     (int)UserPermission::DataExport |
-                                     (int)UserPermission::DataDownload;
+                                     (int)UserPermission::ExportCreate |
+                                     (int)UserPermission::ExportDownload;
             } else if (userid > 0) {
                 uint32_t permissions;
                 {
@@ -1611,13 +1611,14 @@ void HandleChangeMode(http_IO *io, InstanceHolder *instance)
 void HandleChangeExportKey(http_IO *io, InstanceHolder *instance)
 {
     RetainPtr<const SessionInfo> session = sessions.Find(io);
+    SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
     if (!session) {
         LogError("User is not logged in");
         io->SendError(401);
         return;
     }
-    if (!session->HasPermission(instance, UserPermission::DataExport)) {
+    if (!stamp || !(stamp->permissions & ((int)UserPermission::ExportCreate | (int)UserPermission::ExportDownload))) {
         LogError("User is not allowed to export data");
         io->SendError(403);
         return;

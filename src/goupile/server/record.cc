@@ -893,7 +893,7 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    int64_t userid = CheckExportPermission(io, instance, (int)UserPermission::DataExport);
+    int64_t userid = CheckExportPermission(io, instance, (int)UserPermission::ExportCreate);
     if (userid < 0)
         return;
 
@@ -942,7 +942,7 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    if (CheckExportPermission(io, instance, (int)UserPermission::DataExport | (int)UserPermission::DataDownload) < 0)
+    if (CheckExportPermission(io, instance, (int)UserPermission::ExportCreate | (int)UserPermission::ExportDownload) < 0)
         return;
 
     sq_Statement stmt;
@@ -1011,7 +1011,7 @@ void HandleExportDownload(http_IO *io, InstanceHolder *instance)
     // The secret value allows users without export but without fetch permission to download the export after it's made
     const char *secret = request.GetHeaderValue("X-Export-Secret");
 
-    if (!secret && CheckExportPermission(io, instance, (int)UserPermission::DataDownload) < 0)
+    if (!secret && CheckExportPermission(io, instance, (int)UserPermission::ExportDownload) < 0)
         return;
 
     int64_t ctime;
