@@ -1,4 +1,9 @@
 {
-    "keys": {},
+    "keys": {
+        "alignment": "Alignment",
+        "no_alignment": "No alignement",
+        "view": "View",
+        "with_warning": "With warning"
+    },
     "messages": {}
 }

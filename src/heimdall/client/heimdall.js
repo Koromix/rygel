@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html, live, unsafeHTML } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { render, html, live } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, HttpError } from '../../web/core/base.js';
 import { AppRunner } from '../../web/core/runner.js';
 
@@ -30,11 +30,14 @@ const EVENT_HEIGHT = 32;
 const PERIOD_HEIGHT = 4;
 const MERGE_TRESHOLD = 24;
 const SPACE_BETWEEN_ENTITIES = 8;
+const ALIGN_WIDTH = 16;
 
 const DEFAULT_SETTINGS = {
     tree: 240,
     interpolation: 'linear',
-    view: ''
+    view: '',
+    align: '',
+    warning: false
 };
 
 // Assets
@@ -57,14 +60,14 @@ let pressed_keys = null;
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let show_debug = false;
 let save_timer = null;
+let sync_config = false;
 
 // State
 let world = null;
 let layout = {
     tree: null,
     main: null,
-    time: null,
-    config: null
+    time: null
 };
 let position = {
     entity: 0,
@@ -124,6 +127,8 @@ async function fetchProject(project) {
         world.start = Math.min(world.start, entity.start);
         world.end = Math.max(world.end, entity.end);
     }
+
+    sync_config = true;
 }
 
 async function start(root) {
@@ -156,14 +161,6 @@ async function start(root) {
     runner.onUpdate = update;
     runner.onDraw = draw;
     runner.start();
-
-    render(html`
-        ${world.views.size ? html`
-            <select @change=${e => { settings.view = e.target.value; saveState(); }}>
-                ${Array.from(world.views.values()).map(view => html`<option value=${view.name} ?selected=${view.name == settings.view}>${view.name}</option>`)}
-            </select>
-        ` : ''}
-    `, dom.config);
 
     document.title = `${world.project} (Heimdall)`;
 }
@@ -204,15 +201,6 @@ function syncSize() {
         width: canvas.width - settings.tree * window.devicePixelRatio,
         height: 50 * window.devicePixelRatio
     };
-    layout.config = {
-        left: 0,
-        top: canvas.height - 50 * window.devicePixelRatio,
-        width: settings.tree * window.devicePixelRatio,
-        height: 50 * window.devicePixelRatio
-    };
-
-    for (let key in layout.config)
-        dom.config.style[key] = layout.config[key] + 'px';
 }
 
 // ------------------------------------------------------------------------
@@ -226,7 +214,6 @@ function update() {
         show_debug = !show_debug;
 
     let view = world.views.get(settings.view);
-    let zone = null;
 
     if (view == null) {
         view = world.views.values().next().value;
@@ -234,6 +221,8 @@ function update() {
         settings.view = view?.name;
         saveState();
     }
+
+    let zone = null;
 
     for (let key in layout) {
         if (isInside(mouse_state, layout[key]))
@@ -275,8 +264,10 @@ function update() {
         saveState();
     }
 
-    // Transform view tree into exhaustive levels
     let levels = [];
+    let align = null;
+
+    // Transform view tree into exhaustive levels
     if (view != null) {
         let map = new Map;
 
@@ -309,6 +300,20 @@ function update() {
             }
         }
 
+        if (settings.align) {
+            let item = view.items[settings.align];
+
+            if (item != null) {
+                align = {
+                    concepts: new Set([item]),
+                    warning: settings.warning
+                };
+            } else {
+                settings.align = '';
+                saveState();
+            }
+        }
+
         levels.sort(Util.makeComparator(level => level.path));
     }
 
@@ -319,7 +324,7 @@ function update() {
         let offset = 0;
 
         for (let i = position.entity - 1, top = -position.y - space; i >= 0; i--) {
-            let units = combine(world.entities, i, levels);
+            let units = combine(world.entities, i, levels, align);
 
             if (units.length) {
                 for (let j = units.length - 1; j >= 0; j--) {
@@ -342,7 +347,7 @@ function update() {
         }
 
         for (let i = position.entity, top = -position.y; i < world.entities.length; i++) {
-            let units = combine(world.entities, i, levels);
+            let units = combine(world.entities, i, levels, align);
 
             if (units.length) {
                 if (top >= 0 && first == null) {
@@ -471,6 +476,38 @@ function update() {
         revealTime(start, end);
         saveState();
     }
+
+    if (sync_config) {
+        render(html`
+            ${world.views.size ? html`
+                <label>
+                    <span>${T.view}</span>
+                    <select @change=${e => { settings.view = e.target.value; saveState(); }}>
+                        ${Array.from(world.views.values()).map(view => html`<option value=${view.name} .selected=${view.name == settings.view}>${view.name}</option>`)}
+                    </select>
+                </label>
+                <label>
+                    <span>${T.alignment}</span>
+                    <div>
+                        <select @change=${e => { settings.align = e.target.value; saveState(); }}>
+                            <option value="" .selected=${!settings.align}>-- ${T.no_alignment} --</option>
+                            ${Object.keys(view.items).map(item => {
+                                let text = item.substr(1).replaceAll('/', ' / ');
+                                return html`<option value=${item} .selected=${settings.align == item}>${text}</option>`;
+                            })}
+                        </select>
+                        <label>
+                            <input type="checkbox" ?disabled=${!settings.align} .checked=${settings.warning}
+                                   @change=${e => { settings.warning = e.target.checked; saveState(); }}>
+                            <span>${T.with_warning}</span>
+                        </label>
+                    </div>
+                </label>
+            ` : ''}
+        `, dom.config);
+
+        sync_config = false;
+    }
 }
 
 function zoomTime(delta, at) {
@@ -494,9 +531,49 @@ function revealTime(start, end) {
     position.zoom = zoom;
 }
 
-function combine(entities, idx, levels) {
+function combine(entities, idx, levels, align) {
     let entity = entities[idx];
+
     let rows = [];
+    let offset = 0;
+
+    if (align != null) {
+        let start = Number.MAX_SAFE_INTEGER;
+
+        for (let evt of entity.events) {
+            if (!align.concepts.has(evt.concept))
+                continue;
+            if (align.warning && !evt.warning)
+                continue;
+
+            start = Math.min(start, evt.time);
+        }
+        for (let period of entity.periods) {
+            if (!align.concepts.has(period.concept))
+                continue;
+            if (align.warning && !period.warning)
+                continue;
+
+            start = Math.min(start, period.time);
+        }
+        for (let value of entity.values) {
+            if (!align.concepts.has(value.concept))
+                continue;
+            if (align.warning && !value.warning)
+                continue;
+
+            start = Math.min(start, value.time);
+        }
+
+        if (start < Number.MAX_SAFE_INTEGER) {
+            offset = start;
+        } else {
+            let level = Object.assign({}, levels[0]);
+
+            level.concepts = new Set;
+            levels = [level];
+        }
+    }
 
     for (let level of levels) {
         let row = {
@@ -511,6 +588,7 @@ function combine(entities, idx, levels) {
             height: ROW_HEIGHT * window.devicePixelRatio,
             active: false,
             hover: false,
+            empty: false,
             events: [],
             periods: [],
             values: [],
@@ -523,7 +601,7 @@ function combine(entities, idx, levels) {
                 continue;
 
             let draw = {
-                x: timeToPosition(evt.time, position.zoom),
+                x: timeToPosition(evt.time - offset, position.zoom),
                 width: 0,
                 count: 1,
                 warning: evt.warning
@@ -539,7 +617,7 @@ function combine(entities, idx, levels) {
                 continue;
 
             let draw = {
-                x: timeToPosition(period.time, position.zoom),
+                x: timeToPosition(period.time - offset, position.zoom),
                 width: period.duration * zoomToScale(position.zoom),
                 warning: period.warning,
                 stack: 0
@@ -572,7 +650,7 @@ function combine(entities, idx, levels) {
 
                 for (let value of values) {
                     let draw = {
-                        x: timeToPosition(value.time, position.zoom),
+                        x: timeToPosition(value.time - offset, position.zoom),
                         y: row.height - (value.value - min) / range * row.height,
                         label: value.value,
                         warning: value.warning
@@ -589,7 +667,7 @@ function combine(entities, idx, levels) {
                     continue;
 
                 let draw = {
-                    x: timeToPosition(value.time, position.zoom),
+                    x: timeToPosition(value.time - offset, position.zoom),
                     width: 0,
                     count: 1,
                     warning: value.warning
@@ -601,8 +679,11 @@ function combine(entities, idx, levels) {
             }
         }
 
-        if (!row.events.length && !row.periods.length && !row.values.length)
-            continue;
+        if (!row.events.length && !row.periods.length && !row.values.length) {
+            if (row.depth)
+                continue;
+            row.empty = true;
+        }
 
         row.events.sort((evt1, evt2) => evt1.x - evt2.x);
         row.periods.sort((period1, period2) => period1.x - period2.x);
@@ -639,10 +720,10 @@ function combine(entities, idx, levels) {
                 }
             }
             row.events.length = j;
-        }
 
-        // Make sure event with warning flag come up on top
-        row.events.sort((evt1, evt2) => evt1.warning - evt2.warning);
+            // Make sure events with warning flag come up on top
+            row.events.sort((evt1, evt2) => evt1.warning - evt2.warning);
+        }
 
         rows.push(row);
     }
@@ -767,6 +848,9 @@ function saveState() {
 
         localStorage.setItem(key, json);
     }, 200);
+
+    sync_config = true;
+    runner.busy();
 }
 
 // ------------------------------------------------------------------------
@@ -777,10 +861,10 @@ function draw() {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     // Draw background
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#222222';
-    ctx.fillRect(layout.tree.left, layout.tree.top, layout.tree.width, layout.tree.height);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'white';
+    ctx.fillRect(layout.main.left, layout.main.top, layout.main.width, layout.main.height);
 
     // Highlight rows
     {
@@ -845,15 +929,33 @@ function draw() {
                 ctx.fill();
             }
 
-            runner.text(x + offset, row.top + row.height / 2, row.name, { align: 4 });
+            let size = runner.text(x + offset, row.top + row.height / 2, row.name, { align: 4 });
 
             if (!row.active) {
                 ctx.fillStyle = '#22222288';
                 ctx.fillRect(0, row.top, layout.tree.width, row.height);
             }
+
+            if (row.empty) {
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 1;
+
+                ctx.beginPath();
+                ctx.moveTo(x + offset - 2, row.top + row.height / 2);
+                ctx.lineTo(x + offset + size.width + 4, row.top + row.height / 2);
+                ctx.stroke();
+            }
         }
 
         ctx.restore();
+    }
+
+    // Draw alignment line
+    if (settings.align) {
+        ctx.fillStyle = '#faece1';
+
+        let x = timeToPosition(0, position.zoom) - position.x;
+        ctx.fillRect(layout.main.left + x - ALIGN_WIDTH / 2, layout.main.top, ALIGN_WIDTH, layout.main.height);
     }
 
     // Draw vertical guide line at cursor
@@ -1070,7 +1172,7 @@ function draw() {
         {
             let text = `FPS : ${(1000 / runner.frameTime).toFixed(0)} (${runner.frameTime.toFixed(1)} ms)` +
                        ` | Update : ${runner.updateTime.toFixed(1)} ms | Draw : ${runner.drawTime.toFixed(1)} ms`;
-            runner.text(canvas.width - 12, 12, text, { align: 9 });
+            runner.text(layout.main.left + 12, layout.main.top + 8, text, { align: 7 });
         }
     }
 }

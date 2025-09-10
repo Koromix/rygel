@@ -1,5 +1,10 @@
 {
-    "keys": {},
+    "keys": {
+        "alignment": "Alignement",
+        "no_alignment": "Pas d'alignement",
+        "view": "Vue",
+        "with_warning": "Avec alerte"
+    },
     "messages": {
         "Compiler: %1": "Compilateur : %1",
         "Database schema is too recent (%1, expected %2)": "Le schéma de la base de données est trop récent (%1, attendu %2)",

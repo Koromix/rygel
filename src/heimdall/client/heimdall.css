@@ -37,9 +37,59 @@
 
 .hm_config {
     position: absolute;
+    right: 10px;
+    top: 10px;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #222222;
+    align-items: start;
+    padding: 0.5em 0.8em;
+    background: #f8f8f8ee;
+    border: 1px solid #dddddd;
+    border-radius: 8px;
+    color: black;
     z-index: 2;
+
+    & label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 2px;
+    }
+
+    & > label {
+        gap: 1em;
+        align-items: start;
+    }
+    & > label + label {
+        border-left: 1px solid #ddd;
+        padding-left: 1em;
+    }
+    & > label:has(+ label) { margin-right: 1em; }
+
+    & select {
+        padding: 2px 4px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 0;
+    }
+    & select:not(:disabled) { cursor: pointer; }
+
+    & input[type=checkbox] {
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border: 1px solid #ddd;
+        position: relative;
+    }
+    & input[type=checkbox]:checked::after {
+        content: '';
+        position: absolute;
+        left: 2px;
+        top: 2px;
+        width: 10px;
+        height: 10px;
+        background: #aaa;
+    }
+    & label:has(> input[type=checkbox]:not(:disabled)) { cursor: pointer; }
+
+    label:has(> :is(input, select):disabled) { opacity: 0.5 }
 }
