@@ -18,7 +18,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 3;
+const int DatabaseVersion = 4;
 
 bool MigrateDatabase(sq_Database *db)
 {
@@ -139,9 +139,27 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 3: {
+                bool success = db->RunMany(R"(
+                    CREATE INDEX concepts_d ON concepts (domain);
+
+                    CREATE INDEX items_v ON items (view);
+                    CREATE INDEX items_c ON items (concept);
+
+                    CREATE INDEX events_e ON events (entity);
+                    CREATE INDEX events_c ON events (concept);
+                    CREATE INDEX periods_e ON periods (entity);
+                    CREATE INDEX periods_c ON periods (concept);
+                    CREATE INDEX measures_e ON measures (entity);
+                    CREATE INDEX measures_c ON measures (concept);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 3);
+            static_assert(DatabaseVersion == 4);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",
