@@ -527,8 +527,10 @@ function revealTime(start, end) {
     let time = start - range * 0.05;
     let zoom = range ? scaleToZoom(layout.main.width / range / 1.1) : 0;
 
-    position.x = timeToPosition(time, zoom);
-    position.zoom = zoom;
+    if (!Number.isNaN(zoom)) {
+        position.x = timeToPosition(time, zoom);
+        position.zoom = zoom;
+    }
 }
 
 function combine(entities, idx, levels, align) {
