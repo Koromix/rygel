@@ -21,9 +21,17 @@
 
 namespace K {
 
+struct StaticRoute {
+    const char *url;
+    const AssetInfo *asset;
+    const char *sourcemap;
+
+    K_HASHTABLE_HANDLER(StaticRoute, url);
+};
+
 Config config;
 
-static HashMap<const char *, const AssetInfo *> assets_map;
+static HashTable<const char *, StaticRoute> assets_map;
 static AssetInfo assets_index;
 static BlockAllocator assets_alloc;
 static char shared_etag[17];
@@ -268,10 +276,22 @@ static void InitAssets()
 
             if (NameContainsHash(name)) {
                 const char *url = Fmt(&assets_alloc, "/static/%1", name).ptr;
-                assets_map.Set(url, &asset);
+                StaticRoute route = { url, &asset, nullptr };
+
+                assets_map.Set(route);
             } else {
                 const char *url = Fmt(&assets_alloc, "/static/%1/%2", shared_etag, name).ptr;
-                assets_map.Set(url, &asset);
+                StaticRoute route = { url, &asset, nullptr };
+
+                if (EndsWith(name, ".js") || EndsWith(name, ".css")) {
+                    const char *sourcemap = Fmt(&assets_alloc, "%1.map", asset.name).ptr;
+
+                    if (FindEmbedAsset(sourcemap)) {
+                        route.sourcemap = Fmt(&assets_alloc, "%1.map", name).ptr;
+                    }
+                }
+
+                assets_map.Set(route);
 
                 if (name == "heimdall.js") {
                     js = url;
@@ -315,17 +335,21 @@ static void InitAssets()
     });
 }
 
-static void AttachStatic(http_IO *io, const AssetInfo &asset, int64_t max_age, const char *etag)
+static void AttachStatic(http_IO *io, const AssetInfo &asset, const char *sourcemap, int64_t max_age)
 {
     const http_RequestInfo &request = io->Request();
     const char *client_etag = request.GetHeaderValue("If-None-Match");
 
-    if (client_etag && TestStr(client_etag, etag)) {
+    if (client_etag && TestStr(client_etag, shared_etag)) {
         io->SendEmpty(304);
     } else {
         const char *mimetype = GetMimeType(GetPathExtension(asset.name));
 
-        io->AddCachingHeaders(max_age, etag);
+        if (sourcemap) {
+            io->AddHeader("SourceMap", sourcemap);
+        }
+        io->AddCachingHeaders(max_age, shared_etag);
+
         io->SendAsset(200, asset.data, mimetype, asset.compression_type);
     }
 }
@@ -648,14 +672,14 @@ static void HandleRequest(http_IO *io)
                 return;
             }
 
-            AttachStatic(io, assets_index, 0, shared_etag);
+            AttachStatic(io, assets_index, nullptr, 0);
             return;
         } else {
-            const AssetInfo *asset = assets_map.FindValue(request.path, nullptr);
+            const StaticRoute *route = assets_map.Find(request.path);
 
-            if (asset) {
+            if (route) {
                 int64_t max_age = StartsWith(request.path, "/static/") ? (28ll * 86400000) : 0;
-                AttachStatic(io, *asset, max_age, shared_etag);
+                AttachStatic(io, *route->asset, route->sourcemap, max_age);
 
                 return;
             }
