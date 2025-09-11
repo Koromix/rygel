@@ -39,7 +39,7 @@ if [ "$1" = "configure" ]; then
     fi
 
     mkdir -p /var/lib/heimdall
-    chmod 0755 /var/lib/heimdall
+    chmod 0775 /var/lib/heimdall
 fi
 
 exit 0' > ${DEBIAN_DIR}/postinst
