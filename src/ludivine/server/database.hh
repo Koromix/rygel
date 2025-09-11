@@ -22,6 +22,7 @@ namespace K {
 
 struct Config;
 
+int GetDatabaseVersion(sq_Database *db);
 bool MigrateDatabase(sq_Database *db, const char *vault_directory);
 bool MigrateDatabase(const Config &config);
 

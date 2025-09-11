@@ -22,6 +22,7 @@ namespace K {
 
 extern const int DatabaseVersion;
 
+int GetDatabaseVersion(sq_Database *db);
 bool MigrateDatabase(sq_Database *db);
 
 }

@@ -21,12 +21,20 @@ namespace K {
 
 static const int DatabaseVersion = 16;
 
+int GetDatabaseVersion(sq_Database *db)
+{
+    int version;
+    if (!db->GetUserVersion(&version))
+        return -1;
+    return version;
+}
+
 bool MigrateDatabase(sq_Database *db, const char *vault_directory)
 {
     BlockAllocator temp_alloc;
 
-    int version;
-    if (!db->GetUserVersion(&version))
+    int version = GetDatabaseVersion(db);
+    if (version < 0)
         return false;
 
     if (version > DatabaseVersion) {

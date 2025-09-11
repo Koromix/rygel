@@ -384,12 +384,22 @@ static void HandleData(http_IO *io)
     }
 
     sq_Database db;
-    if (!db.Open(filename, SQLITE_OPEN_READWRITE))
+    if (!db.Open(filename, SQLITE_OPEN_READONLY))
         return;
     if (!db.SetWAL(true))
         return;
-    if (!MigrateDatabase(&db))
-        return;
+
+    // Make sure we can read this database
+    {
+        int version = GetDatabaseVersion(&db);
+        if (version < 0)
+            return;
+        if (version != DatabaseVersion) {
+            LogError("Cannot read from database schema version %1 (expected %2)", version, DatabaseVersion);
+            io->SendError(403);
+            return;
+        }
+    }
 
     http_SendJson(io, 200, [&](json_Writer *json) {
         json->StartObject();
