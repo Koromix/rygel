@@ -894,6 +894,38 @@ function draw() {
         ctx.restore();
     }
 
+    // Draw vertical guides
+    if (settings.align) {
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.rect(layout.main.left, layout.main.top, layout.main.width, layout.main.height);
+        ctx.clip();
+
+        // Alignment guide
+        {
+            ctx.fillStyle = '#efcb99';
+
+            let x = timeToPosition(0, position.zoom) - position.x;
+            ctx.fillRect(layout.main.left + x - ALIGN_WIDTH / 2, layout.main.top, ALIGN_WIDTH, layout.main.height);
+        }
+
+        // Cursor guide
+        {
+            ctx.strokeStyle = '#cccccc';
+            ctx.lineWidth = 1;
+
+            let x = Math.round(mouse_state.x);
+
+            ctx.beginPath();
+            ctx.moveTo(x, layout.main.top);
+            ctx.lineTo(x, layout.main.top + layout.main.height);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
     // Draw entity tree
     {
         ctx.save();
@@ -952,31 +984,14 @@ function draw() {
         ctx.restore();
     }
 
-    // Draw alignment line
-    if (settings.align) {
-        ctx.fillStyle = '#faece1';
-
-        let x = timeToPosition(0, position.zoom) - position.x;
-        ctx.fillRect(layout.main.left + x - ALIGN_WIDTH / 2, layout.main.top, ALIGN_WIDTH, layout.main.height);
-    }
-
-    // Draw vertical guide line at cursor
-    if (mouse_state.x > layout.main.left && mouse_state.x < layout.main.left + layout.main.width) {
-        ctx.strokeStyle = '#cccccc';
-        ctx.lineWidth = 1;
-
-        let x = Math.round(mouse_state.x);
-
-        ctx.beginPath();
-        ctx.moveTo(x, layout.main.top);
-        ctx.lineTo(x, layout.main.top + layout.main.height);
-        ctx.stroke();
-    }
-
     // Draw entity rows
     {
         ctx.save();
         ctx.translate(layout.main.left, layout.main.top);
+
+        ctx.beginPath();
+        ctx.rect(0, 0, layout.main.width, layout.main.height);
+        ctx.clip();
 
         for (let row of rows) {
             if (row.top + row.height < 0)
@@ -987,15 +1002,9 @@ function draw() {
             ctx.save();
             ctx.translate(0, row.top);
 
-            // Clip row but not beyond main zone
-            {
-                let bottom = Math.min(layout.main.height, row.top + row.height);
-                let clip = bottom - row.top;
-
-                ctx.beginPath();
-                ctx.rect(0, 0, layout.main.width, clip);
-                ctx.clip();
-            }
+            ctx.beginPath();
+            ctx.rect(0, 0, layout.main.width, row.height);
+            ctx.clip();
 
             // Draw periods
             for (let period of row.periods) {
@@ -1095,12 +1104,20 @@ function draw() {
                 ctx.restore();
             }
 
-            if (!row.active) {
-                ctx.fillStyle = '#ffffff33';
-                ctx.fillRect(0, 0, layout.main.width, row.height);
-            }
-
             ctx.restore();
+
+            if (!row.active) {
+                let offset = row.depth ? 0 : -SPACE_BETWEEN_ENTITIES;
+                let height = row.height + (row.depth ? 0 : SPACE_BETWEEN_ENTITIES);
+
+                ctx.fillStyle = '#ffffff33';
+                ctx.fillRect(0, row.top + offset, layout.main.width, height);
+            } else if (!row.depth) {
+                // This is a stupid hack to paint over guide lines (such as the align guide) that
+                // show up above the first active entity row, to avoid opacity mismatch.
+                ctx.fillStyle = '#ffffff33';
+                ctx.fillRect(0, row.top - SPACE_BETWEEN_ENTITIES, layout.main.width, SPACE_BETWEEN_ENTITIES);
+            }
         }
 
         ctx.restore();
