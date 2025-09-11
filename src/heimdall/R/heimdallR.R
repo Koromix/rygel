@@ -29,16 +29,16 @@ hm_set_view <- function(inst, name, items) {
     .Call(`hmR_SetView`, inst, name, items)
 }
 
-hm_add_events <- function(inst, events, reset = TRUE) {
-    .Call(`hmR_AddEvents`, inst, events, reset)
+hm_add_events <- function(inst, events, reset = TRUE, strict = FALSE) {
+    .Call(`hmR_AddEvents`, inst, events, reset, strict)
 }
 
-hm_add_periods <- function(inst, periods, reset = TRUE) {
-    .Call(`hmR_AddPeriods`, inst, periods, reset)
+hm_add_periods <- function(inst, periods, reset = TRUE, strict = FALSE) {
+    .Call(`hmR_AddPeriods`, inst, periods, reset, strict)
 }
 
-hm_add_values <- function(inst, values, reset = TRUE) {
-    .Call(`hmR_AddValues`, inst, values, reset)
+hm_add_values <- function(inst, values, reset = TRUE, strict = FALSE) {
+    .Call(`hmR_AddValues`, inst, values, reset, strict)
 }
 
 hm_delete_domain <- function(inst, name) {

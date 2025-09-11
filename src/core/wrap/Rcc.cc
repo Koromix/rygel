@@ -35,6 +35,7 @@ void rcc_RedirectLog()
             case LogLevel::Error: {
                 Allocator *alloc;
                 const char **ptr = log_messages.AppendDefault(&alloc);
+
                 *ptr = DuplicateString(msg, alloc).ptr;
 
                 if (log_messages.count > 100) {

@@ -264,13 +264,14 @@ RcppExport SEXP hmR_SetView(SEXP inst_xp, SEXP name_xp, SEXP items_xp)
     END_RCPP
 }
 
-RcppExport SEXP hmR_AddEvents(SEXP inst_xp, SEXP events_xp, SEXP reset_xp)
+RcppExport SEXP hmR_AddEvents(SEXP inst_xp, SEXP events_xp, SEXP reset_xp, SEXP strict_xp)
 {
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
     InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
     bool reset = Rcpp::as<bool>(reset_xp);
+    bool strict = Rcpp::as<bool>(strict_xp);
 
     struct {
         Rcpp::DataFrame df;
@@ -305,8 +306,11 @@ RcppExport SEXP hmR_AddEvents(SEXP inst_xp, SEXP events_xp, SEXP reset_xp)
                 return false;
 
             int64_t cpt = FindConcept(&inst->db, domain, name);
-            if (cpt < 0)
-                return false;
+            if (cpt < 0) {
+                if (strict)
+                    return false;
+                continue;
+            }
 
             if (reset) {
                 bool inserted;
@@ -332,13 +336,14 @@ RcppExport SEXP hmR_AddEvents(SEXP inst_xp, SEXP events_xp, SEXP reset_xp)
     END_RCPP
 }
 
-RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp)
+RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp, SEXP strict_xp)
 {
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
     InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
     bool reset = Rcpp::as<bool>(reset_xp);
+    bool strict = Rcpp::as<bool>(strict_xp);
 
     struct {
         Rcpp::DataFrame df;
@@ -376,8 +381,11 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp)
                 return false;
 
             int64_t cpt = FindConcept(&inst->db, domain, name);
-            if (cpt < 0)
-                return false;
+            if (cpt < 0) {
+                if (strict)
+                    return false;
+                continue;
+            }
 
             if (reset) {
                 bool inserted;
@@ -403,13 +411,14 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp)
     END_RCPP
 }
 
-RcppExport SEXP hmR_AddValues(SEXP inst_xp, SEXP values_xp, SEXP reset_xp)
+RcppExport SEXP hmR_AddValues(SEXP inst_xp, SEXP values_xp, SEXP reset_xp, SEXP strict_xp)
 {
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
     InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
     bool reset = Rcpp::as<bool>(reset_xp);
+    bool strict = Rcpp::as<bool>(strict_xp);
 
     struct {
         Rcpp::DataFrame df;
@@ -447,8 +456,11 @@ RcppExport SEXP hmR_AddValues(SEXP inst_xp, SEXP values_xp, SEXP reset_xp)
                 return false;
 
             int64_t cpt = FindConcept(&inst->db, domain, name);
-            if (cpt < 0)
-                return false;
+            if (cpt < 0) {
+                if (strict)
+                    return false;
+                continue;
+            }
 
             if (reset) {
                 bool inserted;
@@ -538,9 +550,9 @@ RcppExport void R_init_heimdallR(DllInfo *dll) {
         { "hmR_Close", (DL_FUNC)&K::hmR_Close, 1 },
         { "hmR_SetDomain", (DL_FUNC)&K::hmR_SetDomain, 3 },
         { "hmR_SetView", (DL_FUNC)&K::hmR_SetView, 3 },
-        { "hmR_AddEvents", (DL_FUNC)&K::hmR_AddEvents, 3 },
-        { "hmR_AddPeriods", (DL_FUNC)&K::hmR_AddPeriods, 3 },
-        { "hmR_AddValues", (DL_FUNC)&K::hmR_AddValues, 3 },
+        { "hmR_AddEvents", (DL_FUNC)&K::hmR_AddEvents, 4 },
+        { "hmR_AddPeriods", (DL_FUNC)&K::hmR_AddPeriods, 4 },
+        { "hmR_AddValues", (DL_FUNC)&K::hmR_AddValues, 4 },
         { "hmR_DeleteDomain", (DL_FUNC)&K::hmR_DeleteDomain, 1 },
         { "hmR_DeleteView", (DL_FUNC)&K::hmR_DeleteView, 1 },
         { "hmR_DeleteEntities", (DL_FUNC)&K::hmR_DeleteEntities, 1 },
