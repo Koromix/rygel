@@ -115,8 +115,11 @@ static int ParseVersion(const char *cmd, Span<const char> output, const char *ma
     return -1;
 }
 
-static HostArchitecture ParseTarget(Span<const char> output)
+static HostArchitecture ParseTarget(Span<const char> output, Span<const char> *out_target = nullptr)
 {
+    Span<const char> target = {};
+    HostArchitecture architecture = HostArchitecture::Unknown;
+
     while (output.len) {
         Span<const char> line = SplitStrLine(output, &output);
 
@@ -128,28 +131,32 @@ static HostArchitecture ParseTarget(Span<const char> output)
             continue;
 
         if (key == "Target") {
-            if (StartsWith(value, "x86_64-") || StartsWith(value, "x86-64-")  || StartsWith(value, "amd64-")) {
-                return HostArchitecture::x86_64;
-            } else if (StartsWith(value, "i386-") || StartsWith(value, "i486-") || StartsWith(value, "i586-") ||
-                       StartsWith(value, "i686-") || StartsWith(value, "x86-")) {
-                return HostArchitecture::x86;
-            } else if (StartsWith(value, "aarch64-") || StartsWith(value, "arm64-")) {
-                return HostArchitecture::ARM64;
-            } else if (StartsWith(value, "arm-")) {
-                return HostArchitecture::ARM32;
-            } else if (StartsWith(value, "riscv64-")) {
-                return HostArchitecture::RISCV64;
-            } else if (StartsWith(value, "loongarch64-")) {
-                return HostArchitecture::Loong64;
-            } else if (StartsWith(value, "wasm32-")) {
-                return HostArchitecture::Web32;
-            } else {
-                break;
-            }
+            target = value;
+            break;
         }
     }
 
-    return HostArchitecture::Unknown;
+    if (StartsWith(target, "x86_64-") || StartsWith(target, "x86-64-")  || StartsWith(target, "amd64-")) {
+        architecture = HostArchitecture::x86_64;
+    } else if (StartsWith(target, "i386-") || StartsWith(target, "i486-") || StartsWith(target, "i586-") ||
+               StartsWith(target, "i686-") || StartsWith(target, "x86-")) {
+        architecture = HostArchitecture::x86;
+    } else if (StartsWith(target, "aarch64-") || StartsWith(target, "arm64-")) {
+        architecture = HostArchitecture::ARM64;
+    } else if (StartsWith(target, "arm-")) {
+        architecture = HostArchitecture::ARM32;
+    } else if (StartsWith(target, "riscv64-")) {
+        architecture = HostArchitecture::RISCV64;
+    } else if (StartsWith(target, "loongarch64-")) {
+        architecture = HostArchitecture::Loong64;
+    } else if (StartsWith(target, "wasm32-")) {
+        architecture = HostArchitecture::Web32;
+    }
+
+    if (out_target) {
+        *out_target = target;
+    }
+    return architecture;
 }
 
 static bool IdentifyCompiler(const char *bin, const char *needle)
@@ -191,6 +198,7 @@ class ClangCompiler final: public Compiler {
 
     int clang_ver = 0;
     int lld_ver = 0;
+    bool mingw = false;
 
     BlockAllocator str_alloc;
 
@@ -229,25 +237,26 @@ public:
             compiler->sysroot = sysroot ? DuplicateString(sysroot, &compiler->str_alloc).ptr : nullptr;
         }
 
-        Async async;
-
         // Determine Clang version and architecture (if needed)
-        async.Run([&]() {
+        {
             char cmd[2048];
             Fmt(cmd, "\"%1\" --version", compiler->cc);
 
             HeapArray<char> output;
             if (!ReadCommandOutput(cmd, &output))
-                return false;
+                return nullptr;
 
             compiler->clang_ver = ParseVersion(cmd, output, "version");
 
-            HostArchitecture architecture = ParseTarget(output);
+            Span<const char> target;
+            HostArchitecture architecture = ParseTarget(output, &target);
 
             if (architecture == HostArchitecture::Unknown) {
                 LogError("Cannot determine default Clang architecture");
-                return false;
+                return nullptr;
             }
+
+            compiler->mingw = EndsWith(target, "-w64-windows-gnu");
 
             if (compiler->architecture == HostArchitecture::Unknown) {
                 compiler->architecture = architecture;
@@ -263,7 +272,7 @@ public:
                     case HostArchitecture::ARM32:
                     case HostArchitecture::Web32: {
                         LogError("Cannot use Clang (Windows) to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
-                        return false;
+                        return nullptr;
                     } break;
 
                     case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
@@ -283,7 +292,7 @@ public:
 
                     case HostArchitecture::ARM32: {
                         LogError("Cannot use Clang to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
-                        return false;
+                        return nullptr;
                     } break;
 
                     case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
@@ -301,7 +310,7 @@ public:
 
                     default: {
                         LogError("Cannot use Clang to build for '%1'", HostPlatformNames[(int)compiler->platform]);
-                        return false;
+                        return nullptr;
                     } break;
                 }
 
@@ -310,25 +319,23 @@ public:
             } else if (compiler->architecture != architecture) {
                 LogError("Cannot use Clang (%1) compiler to build for '%2'",
                          HostArchitectureNames[(int)architecture], HostArchitectureNames[(int)compiler->architecture]);
-                return false;
+                return nullptr;
 #endif
             }
-
-            return true;
-        });
+        }
 
         // Determine LLD version
-        async.Run([&]() {
+        {
             if (compiler->ld && IdentifyCompiler(compiler->ld, "lld")) {
                 char cmd[4096];
                 if (PathIsAbsolute(compiler->ld)) {
+                    LogInfo("X");
                     Fmt(cmd, "\"%1\" --version", compiler->ld);
-                } else {
-#if defined(_WIN32)
+                } else if (compiler->platform == HostPlatform::Windows && !compiler->mingw) {
+                    LogInfo("Y");
                     Fmt(cmd, "\"%1-link\" --version", compiler->ld);
-#else
-                    Fmt(cmd, "\"ld.%1\" --version", compiler->ld);
-#endif
+                } else {
+                    Fmt(cmd, "\"ld.%1%2\" --version", compiler->ld, K_EXECUTABLE_EXTENSION);
                 }
 
                 HeapArray<char> output;
@@ -336,12 +343,7 @@ public:
                     compiler->lld_ver = ParseVersion(cmd, output, "LLD");
                 }
             }
-
-            return true;
-        });
-
-        if (!async.Sync())
-            return nullptr;
+        }
 
         Fmt(compiler->title, "%1 %2", compiler->name, FmtVersion(compiler->clang_ver, 3, 100));
 
@@ -898,13 +900,15 @@ public:
             case HostPlatform::Windows: {
                 const char *suffix = (features & (int)CompileFeature::Optimize) ? "" : "d";
 
-                Fmt(&buf, " -Wl,/NODEFAULTLIB:libcmt -Wl,/NODEFAULTLIB:msvcrt -Wl,setargv.obj -Wl,oldnames.lib");
-                Fmt(&buf, " -Wl,/OPT:ref");
+                if (!mingw) {
+                    Fmt(&buf, " -Wl,/NODEFAULTLIB:libcmt -Wl,/NODEFAULTLIB:msvcrt -Wl,setargv.obj -Wl,oldnames.lib");
+                    Fmt(&buf, " -Wl,/OPT:ref");
 
-                if (features & (int)CompileFeature::StaticRuntime) {
-                    Fmt(&buf, " -Wl,libcmt%1.lib", suffix);
-                } else {
-                    Fmt(&buf, " -Wl,msvcrt%1.lib", suffix);
+                    if (features & (int)CompileFeature::StaticRuntime) {
+                        Fmt(&buf, " -Wl,libcmt%1.lib", suffix);
+                    } else {
+                        Fmt(&buf, " -Wl,msvcrt%1.lib", suffix);
+                    }
                 }
 
                 if (features & (int)CompileFeature::DebugInfo) {

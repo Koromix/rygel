@@ -78,7 +78,6 @@ static bool AssembleResourceFile(const pugi::xml_document *doc, const char *icon
     };
 
     StaticWriter writer(out_buf);
-    writer.Append("#include <winuser.h>\n\n");
     if (icon_filename) {
         writer.Append("1 ICON \"");
         writer.Append(icon_filename);
