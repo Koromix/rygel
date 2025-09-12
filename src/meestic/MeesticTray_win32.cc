@@ -16,6 +16,7 @@
 #if defined(_WIN32)
 
 #include "src/core/base/base.hh"
+#include "src/core/gui/tray.hh"
 #include "config.hh"
 #include "light.hh"
 
@@ -32,18 +33,19 @@
 
 namespace K {
 
-#define WM_APP_TRAY (WM_APP + 1)
-#define WM_APP_REHOOK (WM_APP + 2)
+extern "C" const AssetInfo MeesticPng;
+
+#define WM_APP_REHOOK (WM_APP + 1)
 
 static Config config;
-static Size profile_idx = 0;
-
-static HWND main_hwnd;
-static NOTIFYICONDATAA notify;
-static HHOOK hook;
-static HANDLE toggle;
+static Size active_idx = 0;
 
 static hs_port *port = nullptr;
+
+static HWND hwnd;
+static HHOOK hook;
+static HANDLE toggle;
+static std::unique_ptr<gui_TrayIcon> tray;
 
 static void ShowDialog(const char *text)
 {
@@ -56,7 +58,7 @@ static void ShowDialog(const char *text)
     wchar_t content[2048]; ConvertUtf8ToWin32Wide(text, content);
 
     dialog.cbSize = K_SIZE(dialog);
-    dialog.hwndParent = main_hwnd;
+    dialog.hwndParent = hwnd;
     dialog.hInstance = module;
     dialog.dwCommonButtons = TDCBF_OK_BUTTON;
     dialog.pszWindowTitle = title;
@@ -71,7 +73,7 @@ static void ShowDialog(const char *text)
             ShellExecuteW(nullptr, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
 
             // Close the dialog by simulating a button click
-            PostMessageW(main_hwnd, TDM_CLICK_BUTTON, IDOK, 0);
+            PostMessageW(hwnd, TDM_CLICK_BUTTON, IDOK, 0);
         }
 
         return (HRESULT)S_OK;
@@ -82,7 +84,7 @@ static void ShowDialog(const char *text)
 
 static void ShowAboutDialog()
 {
-    const char *text = R"(<a href="https://koromix.dev/misc#meestic">https://koromix.dev/</a>)";
+    const char *text = R"(<a href="https://koromix.dev/meestic">https://koromix.dev/</a>)";
     ShowDialog(text);
 }
 
@@ -97,7 +99,7 @@ static bool ApplyProfile(Size idx)
             K_DEFER { PopLogFilter(); };
 
             if (ApplyLight(port, config.profiles[idx].settings)) {
-                profile_idx = idx;
+                active_idx = idx;
                 return true;
             }
         }
@@ -110,7 +112,7 @@ static bool ApplyProfile(Size idx)
             return false;
     }
 
-    profile_idx = idx;
+    active_idx = idx;
 
     return true;
 }
@@ -120,7 +122,7 @@ static bool ToggleProfile(int delta)
     if (!delta)
         return true;
 
-    Size next_idx = profile_idx;
+    Size next_idx = active_idx;
 
     do {
         next_idx += delta;
@@ -133,25 +135,6 @@ static bool ToggleProfile(int delta)
     } while (config.profiles[next_idx].manual);
 
     return ApplyProfile(next_idx);
-}
-
-static bool UpdateTrayIcon()
-{
-    HINSTANCE module = GetModuleHandle(nullptr);
-    HICON icon = LoadIcon(module, MAKEINTRESOURCE(1));
-
-    if (!icon) {
-        LogError("Failed to update tray icon: %1", GetWin32ErrorString());
-        icon = notify.hIcon;
-    }
-    notify.hIcon = icon;
-
-    if (!Shell_NotifyIconA(NIM_ADD, &notify)) {
-        LogError("Failed to restore tray icon: %1", GetWin32ErrorString());
-        return false;
-    }
-
-    return true;
 }
 
 static LRESULT __stdcall LowLevelKeyboardProc(int code, WPARAM wparam, LPARAM lparam)
@@ -169,59 +152,9 @@ static LRESULT __stdcall LowLevelKeyboardProc(int code, WPARAM wparam, LPARAM lp
 
 static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-    static UINT taskbar_created = RegisterWindowMessageA("TaskbarCreated");
-
     UINT msg_or_timer = (msg != WM_TIMER) ? msg : (UINT)wparam;
 
     switch (msg_or_timer) {
-        case WM_APP_TRAY: {
-            int button = LOWORD(lparam);
-
-            if (button == WM_LBUTTONDOWN) {
-                if (!ToggleProfile(1)) {
-                    PostQuitMessage(1);
-                }
-            } else if (button == WM_RBUTTONDOWN) {
-                POINT click;
-                GetCursorPos(&click);
-
-                HMENU menu = CreatePopupMenu();
-                K_DEFER { DestroyMenu(menu); };
-
-                for (Size i = 0; i < config.profiles.count; i++) {
-                    const ConfigProfile &profile = config.profiles[i];
-
-                    int flags = MF_STRING | (i == profile_idx ? MF_CHECKED : 0);
-                    AppendMenuA(menu, flags, i + 10, profile.name);
-                }
-                AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
-                AppendMenuA(menu, MF_STRING, 1, T("&About"));
-                AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
-                AppendMenuA(menu, MF_STRING, 2, T("&Exit"));
-
-                int align = GetSystemMetrics(SM_MENUDROPALIGNMENT) ? TPM_RIGHTALIGN : TPM_LEFTALIGN;
-                int action = (int)TrackPopupMenu(menu, align | TPM_BOTTOMALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD,
-                                                 click.x, click.y, 0, hwnd, nullptr);
-
-                switch (action) {
-                    case 0: {} break;
-
-                    case 1: { ShowAboutDialog(); } break;
-                    case 2: { PostQuitMessage(0); } break;
-
-                    default: {
-                        Size idx = action - 10;
-
-                        if (idx >= 0 && idx < config.profiles.count) {
-                            if (!ApplyProfile(idx)) {
-                                PostQuitMessage(1);
-                            }
-                        }
-                    } break;
-                }
-            }
-        } break;
-
         case WM_APP_REHOOK: {
             if (hook) {
                 UnhookWindowsHookEx(hook);
@@ -239,20 +172,6 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
         case WM_CLOSE: {
             PostQuitMessage(0);
             return 0;
-        } break;
-
-        case WM_DPICHANGED: {
-            if (!UpdateTrayIcon()) {
-                PostQuitMessage(1);
-            }
-        } break;
-
-        default: {
-            if (msg == taskbar_created) {
-                if (!UpdateTrayIcon()) {
-                    PostQuitMessage(1);
-                }
-            }
         } break;
     }
 
@@ -298,14 +217,19 @@ static void RedirectErrors() {
     }, false);
 }
 
-static inline ConfigProfile MakeDefaultProfile(const char *name, LightMode mode)
+static void UpdateTray()
 {
-    ConfigProfile profile = {};
+    tray->ClearMenu();
 
-    profile.name = name;
-    profile.settings.mode = mode;
+    for (Size i = 0; i < config.profiles.count; i++) {
+        const ConfigProfile &profile = config.profiles[i];
+        tray->AddAction(profile.name, i == active_idx, [i]() { ApplyProfile(i); });
+    }
 
-    return profile;
+    tray->AddSeparator();
+    tray->AddAction(T("&About"), ShowAboutDialog);
+    tray->AddSeparator();
+    tray->AddAction(T("&Exit"), []() { PostMessageA(hwnd, WM_QUIT, 0, 0); });
 }
 
 int Main(int argc, char **argv)
@@ -383,10 +307,18 @@ By default, the first of the following config files will be used:
         if (!LoadConfig(config_filename, &config))
             return 1;
 
-        profile_idx = config.default_idx;
+        active_idx = config.default_idx;
     } else {
         AddDefaultProfiles(&config);
     }
+
+    // Open the light MSI HID device ahead of time
+    if (!GetDebugFlag("FAKE_LIGHTS")) {
+        port = OpenLightDevice();
+        if (!port)
+            return 1;
+    }
+    K_DEFER { CloseLightDevice(port); };
 
     HINSTANCE module = GetModuleHandle(nullptr);
     const char *cls_name = FelixTarget;
@@ -410,13 +342,13 @@ By default, the first of the following config files will be used:
     K_DEFER { UnregisterClassA(cls_name, module); };
 
     // Create hidden window
-    main_hwnd = CreateWindowExA(0, cls_name, win_name, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-                                CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, module, nullptr);
-    if (!main_hwnd) {
+    hwnd = CreateWindowExA(0, cls_name, win_name, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
+                           CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, module, nullptr);
+    if (!hwnd) {
         LogError("Failed to create window named '%1': %2", win_name, GetLastError(), GetWin32ErrorString());
         return 1;
     }
-    K_DEFER { DestroyWindow(main_hwnd); };
+    K_DEFER { DestroyWindow(hwnd); };
 
     // We want to intercept Fn+F8, and this is not possible with RegisterHotKey because
     // it is not mapped to a virtual key. We want the raw scan code.
@@ -428,11 +360,11 @@ By default, the first of the following config files will be used:
     K_DEFER { if (hook) UnhookWindowsHookEx(hook); };
 
     // Unfortunately, Windows sometimes disconnects our hook for no good reason
-    if (!SetTimer(main_hwnd, WM_APP_REHOOK, 30000, nullptr)) {
+    if (!SetTimer(hwnd, WM_APP_REHOOK, 30000, nullptr)) {
         LogError("Failed to create Win32 timer: %1", GetWin32ErrorString());
         return 1;
     }
-    K_DEFER { KillTimer(main_hwnd, WM_APP_REHOOK); };
+    K_DEFER { KillTimer(hwnd, WM_APP_REHOOK); };
 
     toggle = CreateEvent(nullptr, TRUE, FALSE, nullptr);
     if (!toggle) {
@@ -441,30 +373,12 @@ By default, the first of the following config files will be used:
     }
     K_DEFER { CloseHandle(toggle); };
 
-    // Create tray icon
-    {
-        notify.cbSize = K_SIZE(notify);
-        notify.hWnd = main_hwnd;
-        notify.uID = 0xA56B96F2u;
-        notify.hIcon = LoadIcon(module, MAKEINTRESOURCE(1));
-        notify.uCallbackMessage = WM_APP_TRAY;
-        CopyString(FelixTarget, notify.szTip);
-        notify.uFlags = NIF_MESSAGE | NIF_TIP | NIF_ICON;
+    K_ASSERT(MeesticPng.compression_type == CompressionType::None);
 
-        if (!notify.hIcon || !Shell_NotifyIconA(NIM_ADD, &notify)) {
-            LogError("Failed to register tray icon: %1", GetWin32ErrorString());
-            return 1;
-        }
-    }
-    K_DEFER { Shell_NotifyIconA(NIM_DELETE, &notify); };
-
-    // Open the light MSI HID device ahead of time
-    if (!GetDebugFlag("FAKE_LIGHTS")) {
-        port = OpenLightDevice();
-        if (!port)
-            return 1;
-    }
-    K_DEFER { CloseLightDevice(port); };
+    tray = gui_CreateTrayIcon(MeesticPng.data);
+    if (!tray)
+        return 1;
+    tray->OnContext(UpdateTray);
 
     // Check that it works once, at least
     if (!ApplyProfile(config.default_idx))
