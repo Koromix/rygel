@@ -36,6 +36,7 @@ namespace K {
 extern "C" const AssetInfo MeesticPng;
 
 #define WM_APP_REHOOK (WM_APP + 1)
+#define WM_APP_TOGGLE (WM_APP + 2)
 
 static Config config;
 static Size active_idx = 0;
@@ -44,7 +45,6 @@ static hs_port *port = nullptr;
 
 static HWND hwnd;
 static HHOOK hook;
-static HANDLE toggle;
 static std::unique_ptr<gui_TrayIcon> tray;
 
 static void ShowDialog(const char *text)
@@ -143,7 +143,7 @@ static LRESULT __stdcall LowLevelKeyboardProc(int code, WPARAM wparam, LPARAM lp
         const KBDLLHOOKSTRUCT *kbd = (const KBDLLHOOKSTRUCT *)lparam;
 
         if (wparam == WM_KEYDOWN && kbd->vkCode == 255 && kbd->scanCode == 14) {
-            SetEvent(toggle);
+            PostMessageA(hwnd, WM_APP_TOGGLE, 0, 0);
         }
     }
 
@@ -167,6 +167,10 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                 LogError("Failed to insert low-level keyboard hook: %1", GetWin32ErrorString());
                 PostQuitMessage(1);
             }
+        } break;
+
+        case WM_APP_TOGGLE: {
+            ToggleProfile(1);
         } break;
 
         case WM_CLOSE: {
@@ -229,7 +233,7 @@ static void UpdateTray()
     tray->AddSeparator();
     tray->AddAction(T("&About"), ShowAboutDialog);
     tray->AddSeparator();
-    tray->AddAction(T("&Exit"), []() { PostMessageA(hwnd, WM_QUIT, 0, 0); });
+    tray->AddAction(T("&Exit"), []() { PostMessageA(hwnd, WM_CLOSE, 0, 0); });
 }
 
 int Main(int argc, char **argv)
@@ -366,13 +370,6 @@ By default, the first of the following config files will be used:
     }
     K_DEFER { KillTimer(hwnd, WM_APP_REHOOK); };
 
-    toggle = CreateEvent(nullptr, TRUE, FALSE, nullptr);
-    if (!toggle) {
-        LogError("Failed to create Win32 event object: %1", GetWin32ErrorString());
-        return 1;
-    }
-    K_DEFER { CloseHandle(toggle); };
-
     K_ASSERT(MeesticPng.compression_type == CompressionType::None);
 
     tray = gui_CreateTrayIcon(MeesticPng.data);
@@ -384,28 +381,13 @@ By default, the first of the following config files will be used:
     if (!ApplyProfile(config.default_idx))
         return 1;
 
-    // Run main message loop
-    for (;;) {
-        DWORD ret = MsgWaitForMultipleObjects(1, &toggle, FALSE, INFINITE, QS_ALLINPUT);
-
-        if (ret == WAIT_OBJECT_0) {
-            if (!ToggleProfile(1))
-                return 1;
-            ResetEvent(toggle);
-        } else if (ret == WAIT_OBJECT_0 + 1) {
-            MSG msg;
-            while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-                if (msg.message == WM_QUIT)
-                    return (int)msg.wParam;
-
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-            }
-        } else {
-            LogError("Failed in Win32 wait loop: %1", GetWin32ErrorString());
-            return 1;
-        }
+    MSG msg = {};
+    while (GetMessage(&msg, NULL, 0, 0) != 0) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
     }
+
+    return msg.wParam;
 }
 
 }
