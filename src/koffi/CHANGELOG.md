@@ -7,6 +7,13 @@
 
 ### Koffi 2.14
 
+#### Koffi 2.14.1
+
+*Released on 2025-09-13*
+
+- Recompile Linux (musl) ARM64 prebuild with Alpine 3.20 (instead of Alpine edge)
+- Clean up redundant code paths for handling string arguments
+
 #### Koffi 2.14.0
 
 *Released on 2025-08-17*
