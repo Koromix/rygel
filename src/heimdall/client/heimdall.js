@@ -272,7 +272,7 @@ function update() {
         let map = new Map;
 
         for (let key in view.items) {
-            let concept = view.items[key];
+            let concepts = view.items[key];
             let parts = key.split('/');
 
             for (let i = 0; i < parts.length; i++) {
@@ -293,7 +293,8 @@ function update() {
                     map.set(path, level);
                 }
 
-                level.concepts.add(concept);
+                for (let concept of concepts)
+                    level.concepts.add(concept);
 
                 if (!level.expand)
                     break;
@@ -301,11 +302,11 @@ function update() {
         }
 
         if (settings.align) {
-            let item = view.items[settings.align];
+            let concepts = view.items[settings.align];
 
-            if (item != null) {
+            if (concepts != null) {
                 align = {
-                    concepts: new Set([item]),
+                    concepts: new Set(concepts),
                     warning: settings.warning
                 };
             } else {

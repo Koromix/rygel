@@ -18,7 +18,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 4;
+const int DatabaseVersion = 5;
 
 int GetDatabaseVersion(sq_Database *db)
 {
@@ -165,9 +165,17 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 4: {
+                bool success = db->RunMany(R"(
+                    CREATE INDEX items_p ON items (path);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 4);
+            static_assert(DatabaseVersion == 5);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

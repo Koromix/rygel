@@ -407,11 +407,13 @@ static void HandleData(http_IO *io)
         // Dump views
         {
             sq_Statement stmt;
-            if (!db.Prepare(R"(SELECT v.view, v.name, i.path, c.domain || '::' || c.name
+            if (!db.Prepare(R"(SELECT v.view, v.name,
+                                      row_number() OVER (PARTITION BY i.view, i.path ORDER BY i.path),
+                                      i.path, c.domain || '::' || c.name
                                FROM views v
                                INNER JOIN items i ON (i.view = v.view)
                                INNER JOIN concepts c ON (c.concept = i.concept)
-                               ORDER BY v.view)", &stmt))
+                               ORDER BY v.view, i.path)", &stmt))
                 return;
 
             json->Key("views"); json->StartArray();
@@ -425,11 +427,16 @@ static void HandleData(http_IO *io)
                     json->Key("name"); json->String(name);
                     json->Key("items"); json->StartObject();
                     do {
-                        const char *path = (const char *)sqlite3_column_text(stmt, 2);
-                        const char *name = (const char *)sqlite3_column_text(stmt, 3);
+                        int number = sqlite3_column_int(stmt, 2);
+                        const char *path = (const char *)sqlite3_column_text(stmt, 3);
 
-                        json->Key(path); json->String(name);
-                    } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == view);
+                        json->Key(path); json->StartArray();
+                        do {
+                            const char *name = (const char *)sqlite3_column_text(stmt, 4);
+                            json->String(name);
+                        } while (stmt.Step() && sqlite3_column_int64(stmt, 2) > number);
+                        json->EndArray();
+                    } while (stmt.IsRow() && sqlite3_column_int64(stmt, 0) == view);
                     json->EndObject();
 
                     json->EndObject();
