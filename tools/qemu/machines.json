@@ -279,7 +279,7 @@
         "qemu": {
             "binary": "qemu-system-aarch64",
             "arguments": ["-M", "virt", "-m", "2G", "-smp", 2, "-cpu", "cortex-a57", "-drive", "if=pflash,format=raw,readonly,file=QEMU_EFI-pflash.raw", "-drive", "file=disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22213-:22", "-device", "virtio-net-device,netdev=mynet", "-vnc", "127.0.0.1:23"],
-            "version": 1,
+            "version": 2,
 
             "disk": "disk.qcow2",
 
