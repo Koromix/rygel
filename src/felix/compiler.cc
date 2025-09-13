@@ -330,10 +330,8 @@ public:
             if (compiler->ld && IdentifyCompiler(compiler->ld, "lld")) {
                 char cmd[4096];
                 if (PathIsAbsolute(compiler->ld)) {
-                    LogInfo("X");
                     Fmt(cmd, "\"%1\" --version", compiler->ld);
                 } else if (compiler->platform == HostPlatform::Windows && !compiler->mingw) {
-                    LogInfo("Y");
                     Fmt(cmd, "\"%1-link\" --version", compiler->ld);
                 } else {
                     Fmt(cmd, "\"ld.%1%2\" --version", compiler->ld, K_EXECUTABLE_EXTENSION);
