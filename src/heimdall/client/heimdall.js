@@ -124,6 +124,10 @@ async function fetchProject(project) {
         view.expand = new Set;
 
     for (let entity of json.entities) {
+        entity.events.sort((evt1, evt2) => evt1.time - evt2.time);
+        entity.periods.sort((period1, period2) => period1.time - period2.time);
+        entity.values.sort((value1, value2) => value1.time - value2.time);
+
         world.start = Math.min(world.start, entity.start);
         world.end = Math.max(world.end, entity.end);
     }
@@ -688,18 +692,31 @@ function combine(entities, idx, levels, align) {
             row.empty = true;
         }
 
-        row.events.sort((evt1, evt2) => evt1.x - evt2.x);
-        row.periods.sort((period1, period2) => period1.x - period2.x);
-        row.values.sort((value1, value2) => value1.x - value2.x);
-
         // Make sure periods don't overlap vertically
         {
             let overlaps = [];
 
             for (let period of row.periods) {
-                overlaps = overlaps.filter(prev => prev.x + prev.width >= period.x);
-                period.stack = overlaps.length;
-                overlaps.push(period);
+                let left = period.x;
+                let right = period.x + period.width;
+
+                let shift = 0;
+                while (shift < overlaps.length) {
+                    if (left < overlaps[shift])
+                        break;
+                    shift++;
+                }
+                overlaps.splice(0, shift);
+
+                let insert = 0;
+                while (insert < overlaps.length) {
+                    if (right < overlaps[insert])
+                        break;
+                    insert++;
+                }
+                overlaps.splice(insert, 0, right);
+
+                period.stack = overlaps.length - 1;
             }
         }
 
@@ -723,9 +740,6 @@ function combine(entities, idx, levels, align) {
                 }
             }
             row.events.length = j;
-
-            // Make sure events with warning flag come up on top
-            row.events.sort((evt1, evt2) => evt1.warning - evt2.warning);
         }
 
         rows.push(row);
