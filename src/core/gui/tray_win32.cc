@@ -107,8 +107,6 @@ private:
     bool UpdateIcon();
 };
 
-static thread_local WinTray *self;
-
 static bool PrepareIcons(Span<const uint8_t> png, IconSet *out_set)
 {
     IconSet set;
@@ -228,8 +226,6 @@ void WinTray::ClearMenu()
 
 void WinTray::RunMessageThread()
 {
-    self = this;
-
     static std::once_flag flag;
     static const char *ClassName = "TrayClass";
     static const char *WindowName = "TrayWindow";
@@ -266,6 +262,7 @@ void WinTray::RunMessageThread()
         DestroyWindow(hwnd);
         hwnd = nullptr;
     };
+    SetWindowLongPtrA(hwnd, GWLP_USERDATA, (LONG_PTR)this);
 
     // Prepare tray data
     notify.cbSize = K_SIZE(notify);
@@ -298,6 +295,8 @@ void WinTray::RunMessageThread()
 LRESULT __stdcall WinTray::TrayProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     static UINT TaskbarCreated = RegisterWindowMessageA("TaskbarCreated");
+
+    WinTray *self = (WinTray *)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
 
     if (msg == WM_APP_TRAY) {
         std::unique_lock<std::recursive_mutex> lock(self->mutex);
