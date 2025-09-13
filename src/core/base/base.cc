@@ -5566,15 +5566,31 @@ void WaitDelay(int64_t delay)
     }
 }
 
-WaitForResult WaitForInterrupt(int64_t timeout)
+WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t *out_ready)
 {
+    K_ASSERT(sources.len <= 62);
+
     ignore_ctrl_event = InitConsoleCtrlHandler();
     K_ASSERT(ignore_ctrl_event);
 
-    HANDLE events[] = {
-        console_ctrl_event,
-        wait_msg_event
-    };
+    LocalArray<HANDLE, 64> events;
+    DWORD wake = 0;
+
+    events.Append(console_ctrl_event);
+    events.Append(wait_msg_event);
+
+    // There is no way to get a waitable HANDLE for the Win32 GUI message pump.
+    // Instead, waitable sources (such as the system tray code) return NULL to indicate that
+    // they need to wait for messages on the message pump.
+    for (const WaitSource &src: sources) {
+        if (src.handle) {
+            events.Append(src.handle);
+        } else {
+            wake = QS_ALLINPUT;
+        }
+
+        timeout = (int64_t)std::min((uint64_t)timeout, (uint64_t)src.timeout);
+    }
 
     DWORD ret;
     if (timeout >= 0) {
@@ -5582,26 +5598,50 @@ WaitForResult WaitForInterrupt(int64_t timeout)
             DWORD timeout32 = (DWORD)std::min(timeout, (int64_t)UINT32_MAX);
             timeout -= timeout32;
 
-            ret = WaitForMultipleObjects(K_LEN(events), events, FALSE, timeout32);
+            ret = MsgWaitForMultipleObjects((DWORD)events.len, events.data, FALSE, timeout32, wake);
         } while (ret == WAIT_TIMEOUT && timeout);
     } else {
-        ret = WaitForMultipleObjects(K_LEN(events), events, FALSE, INFINITE);
+        ret = MsgWaitForMultipleObjects((DWORD)events.len, events.data, FALSE, INFINITE, wake);
     }
 
     switch (ret) {
-        case WAIT_OBJECT_0: return WaitForResult::Interrupt;
+        case WAIT_OBJECT_0: return WaitResult::Interrupt;
         case WAIT_OBJECT_0 + 1: {
             ResetEvent(wait_msg_event);
-            return WaitForResult::Message;
+            return WaitResult::Message;
         } break;
         default: {
-            K_ASSERT(ret == WAIT_TIMEOUT);
-            return WaitForResult::Timeout;
+            if (ret == WAIT_OBJECT_0 + events.len) {
+                // Mark all sources with an interest in the message pump as ready
+                if (out_ready) {
+                    uint64_t flags = 0;
+                    for (Size i = 0; i < sources.len; i++) {
+                        flags |= !sources[i].handle ? (1ull << i) : 0;
+                    }
+                    *out_ready = flags;
+                }
+                return WaitResult::Ready;
+            }
+
+            Size idx = (Size)ret - WAIT_OBJECT_0 - 2;
+            K_ASSERT(idx >= 0 && idx < sources.len);
+
+            if (out_ready) {
+                *out_ready |= 1ull << idx;
+            }
+            return WaitResult::Ready;
         } break;
+        case WAIT_TIMEOUT: return WaitResult::Timeout;
     }
 }
 
-void SignalWaitFor()
+WaitResult WaitEvents(int64_t timeout)
+{
+    Span<const WaitSource> sources = {};
+    return WaitEvents(sources, timeout);
+}
+
+void InterruptWait()
 {
     SetEvent(wait_msg_event);
 }
@@ -5626,42 +5666,72 @@ void WaitDelay(int64_t delay)
 
 #if !defined(__wasi__)
 
-WaitForResult WaitForInterrupt(int64_t timeout)
+WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t *out_ready)
 {
+    LocalArray<struct pollfd, 64> pfds;
+    K_ASSERT(sources.len <= K_LEN(pfds.data));
+
     static std::atomic_bool message { false };
 
     flag_signal = true;
     SetSignalHandler(SIGUSR1, [](int) { message = true; });
 
-    if (timeout >= 0) {
-        struct timespec ts;
-        ts.tv_sec = (int)(timeout / 1000);
-        ts.tv_nsec = (int)((timeout % 1000) * 1000000);
+    for (const WaitSource &src: sources) {
+        pfds.Append({ src.fd, (short)src.events, 0 });
+        timeout = (int64_t)std::min((uint64_t)timeout, (uint64_t)src.timeout);
+    }
 
-        struct timespec rem;
-        while (!explicit_signal && !message && nanosleep(&ts, &rem) < 0) {
-            K_ASSERT(errno == EINTR);
-            ts = rem;
+    int64_t start = (timeout >= 0) ? GetMonotonicTime() : 0;
+    int64_t until = start + timeout;
+    int timeout32 = (int)std::min(until - start, (int64_t)INT_MAX);
+
+    for (;;) {
+        if (explicit_signal == SIGTERM) {
+            return WaitResult::Exit;
+        } else if (explicit_signal) {
+            return WaitResult::Interrupt;
+        } else if (message) {
+            message = false;
+            return WaitResult::Message;
         }
-    } else {
-        while (!explicit_signal && !message) {
-            pause();
+
+        int ready = poll(pfds.data, (nfds_t)pfds.len, timeout32);
+
+        if (ready < 0) {
+            if (errno == EINTR)
+                continue;
+
+            LogError("Failed to poll for events: %1", strerror(errno));
+            return WaitResult::Error;
+        } else if (ready > 0) {
+            if (out_ready) {
+                uint64_t flags = 0;
+                for (Size i = 0; i < pfds.len; i++) {
+                    flags |= pfds[i].revents ? (1ull << i) : 0;
+                }
+                *out_ready = flags;
+            }
+            return WaitResult::Ready;
+        }
+
+        if (timeout >= 0) {
+            int64_t now = GetMonotonicTime();
+            if (now >= until)
+                break;
+            timeout32 = (int)std::min(until - now, (int64_t)INT_MAX);
         }
     }
 
-    if (explicit_signal == SIGTERM) {
-        return WaitForResult::Exit;
-    } else if (explicit_signal) {
-        return WaitForResult::Interrupt;
-    } else if (message) {
-        message = false;
-        return WaitForResult::Message;
-    } else {
-        return WaitForResult::Timeout;
-    }
+    return WaitResult::Timeout;
 }
 
-void SignalWaitFor()
+WaitResult WaitEvents(int64_t timeout)
+{
+    Span<const WaitSource> sources = {};
+    return WaitEvents(sources, timeout);
+}
+
+void InterruptWait()
 {
     pid_t pid = getpid();
     kill(pid, SIGUSR1);

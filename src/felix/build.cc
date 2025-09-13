@@ -776,6 +776,18 @@ bool Builder::UpdateVersionSource(const char *target, const char *version, const
     }
 }
 
+static bool DetectInterrupt()
+{
+    WaitResult ret = WaitEvents(0);
+
+    if (ret == WaitResult::Exit)
+        return true;
+    if (ret == WaitResult::Interrupt)
+        return true;
+
+    return false;
+}
+
 bool Builder::Build(int jobs, bool verbose)
 {
     K_ASSERT(jobs > 0);
@@ -911,7 +923,7 @@ bool Builder::Build(int jobs, bool verbose)
         }
 
         return true;
-    } else if (WaitForInterrupt(0) == WaitForResult::Interrupt) {
+    } else if (DetectInterrupt()) {
         LogError("Build was interrupted");
         return false;
     } else {
@@ -1507,7 +1519,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
 {
     if (build.stop_after_error && !async->IsSuccess())
         return false;
-    if (WaitForInterrupt(0) == WaitForResult::Interrupt)
+    if (DetectInterrupt())
         return false;
 
     const Command &cmd = node->cmd;
@@ -1617,7 +1629,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
         if (!started) {
             // Error already issued by ExecuteCommandLine()
             StdErr->Write(output);
-        } else if (WaitForInterrupt(0) != WaitForResult::Interrupt) {
+        } else if (DetectInterrupt()) {
             LogError("%1 %!..+(exit code %2)%!0", node->text, exit_code);
             StdErr->Write(output);
         }

@@ -371,19 +371,22 @@ T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
         return 1;
 
     // From here on, don't quit abruptly
-    WaitForInterrupt(0);
+    WaitEvents(0);
 
     int status = 0;
 
     // Run periodic tasks until exit
     for (;;) {
-        WaitForResult ret = WaitForInterrupt(rekkord_config.agent_period);
+        WaitResult ret = WaitEvents(rekkord_config.agent_period);
 
-        if (ret == WaitForResult::Exit) {
+        if (ret == WaitResult::Exit) {
             LogInfo("Exit requested");
             break;
-        } else if (ret == WaitForResult::Interrupt) {
+        } else if (ret == WaitResult::Interrupt) {
             LogInfo("Process interrupted");
+            status = 1;
+            break;
+        } else if (ret == WaitResult::Error) {
             status = 1;
             break;
         }

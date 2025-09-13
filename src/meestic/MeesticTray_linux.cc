@@ -134,7 +134,7 @@ static void UpdateTray()
     tray->AddSeparator();
     tray->AddAction(T("&Quit"), []() {
         run = false;
-        SignalWaitFor();
+        InterruptWait();
     });
 }
 
@@ -190,7 +190,7 @@ Options:
     tray->OnContext(UpdateTray);
 
     // From here on, don't quit abruptly
-    WaitForInterrupt(0);
+    WaitEvents(0);
 
     int status = 0;
     while (run) {
@@ -206,13 +206,16 @@ Options:
 
             if (poll(&pfd, 1, -1) < 0) {
                 if (errno == EINTR) {
-                    WaitForResult ret = WaitForResult(0);
+                    WaitResult ret = WaitEvents(0);
 
-                    if (ret == WaitForResult::Exit) {
+                    if (ret == WaitResult::Exit) {
                         LogInfo("Exit requested");
                         run = false;
-                    } else if (ret == WaitForResult::Interrupt) {
+                    } else if (ret == WaitResult::Interrupt) {
                         LogInfo("Process interrupted");
+                        status = 1;
+                        run = false;
+                    } else if (ret == WaitResult::Error) {
                         status = 1;
                         run = false;
                     } else {

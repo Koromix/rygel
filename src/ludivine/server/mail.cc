@@ -42,7 +42,7 @@ bool PostMail(const char *to, const smtp_MailContent &content)
         return false;
 
     // Run pending tasks
-    SignalWaitFor();
+    InterruptWait();
 
     return true;
 }

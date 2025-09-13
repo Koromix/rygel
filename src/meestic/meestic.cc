@@ -434,7 +434,7 @@ By default, the first of the following config files will be used:
     transmit_info = false;
 
     // From here on, don't quit abruptly
-    WaitForInterrupt(0);
+    WaitEvents(0);
 
     // Wait for events and clients
     int status = 0;
@@ -447,13 +447,16 @@ By default, the first of the following config files will be used:
         for (;;) {
             if (poll(pfds.ptr, pfds.len, -1) < 0) {
                 if (errno == EINTR) {
-                    WaitForResult ret = WaitForResult(0);
+                    WaitResult ret = WaitEvents(0);
 
-                    if (ret == WaitForResult::Exit) {
+                    if (ret == WaitResult::Exit) {
                         LogInfo("Exit requested");
                         break;
-                    } else if (ret == WaitForResult::Interrupt) {
+                    } else if (ret == WaitResult::Interrupt) {
                         LogInfo("Process interrupted");
+                        status = 1;
+                        break;
+                    } else if (ret == WaitResult::Error) {
                         status = 1;
                         break;
                     } else {

@@ -820,7 +820,7 @@ Other commands:
         return 1;
 
     // From here on, don't quit abruptly
-    WaitForInterrupt(0);
+    WaitEvents(0);
 
     // Run periodic tasks until exit
     int status = 0;
@@ -834,13 +834,16 @@ Other commands:
         LogInfo("Periodic timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
-            WaitForResult ret = WaitForInterrupt(timeout);
+            WaitResult ret = WaitEvents(timeout);
 
-            if (ret == WaitForResult::Exit) {
+            if (ret == WaitResult::Exit) {
                 LogInfo("Exit requested");
                 run = false;
-            } else if (ret == WaitForResult::Interrupt) {
+            } else if (ret == WaitResult::Interrupt) {
                 LogInfo("Process interrupted");
+                status = 1;
+                run = false;
+            } else if (ret == WaitResult::Error) {
                 status = 1;
                 run = false;
             }

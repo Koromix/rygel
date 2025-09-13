@@ -1347,11 +1347,11 @@ Available URL formats: %!..+%4%!0)",
                 LogError("Build failed");
             }
 
-            WaitForResult ret = WaitForInterrupt(1000);
+            WaitResult ret = WaitEvents(1000);
 
-            if (ret == WaitForResult::Exit) {
+            if (ret == WaitResult::Exit) {
                 break;
-            } else if (ret == WaitForResult::Interrupt) {
+            } else if (ret == WaitResult::Interrupt || ret == WaitResult::Error) {
                 return 1;
             }
         }

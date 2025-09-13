@@ -4494,18 +4494,40 @@ void WaitDelay(int64_t delay);
 
 #if !defined(__wasi__)
 
-enum class WaitForResult {
-    Exit,
+enum class WaitResult {
+    Ready,
+    Timeout,
     Interrupt,
     Message,
-    Timeout
+    Exit,
+    Error
 };
 
-// After WaitForInterrupt() has been called once (even with timeout 0), a few
-// signals (such as SIGINT, SIGHUP) and their Windows equivalent will be permanently ignored.
+#if defined(_WIN32)
+typedef void * WaitHandle; // HANDLE
+#else
+typedef int WaitHandle;
+#endif
+
+struct WaitSource {
+#if defined(_WIN32)
+    // Special-cased on Windows: set to NULL to wait for the Win32 message pump too
+    void *handle; // HANDLE
+#else
+    int fd;
+    int events;
+#endif
+
+    int timeout;
+};
+
+// After WaitEvents() has been called once (even with timeout 0), a few signals (such as SIGINT, SIGHUP)
+// and their Windows equivalent will be permanently ignored.
 // Beware, on Unix platforms, this may not work correctly if not called from the main thread.
-WaitForResult WaitForInterrupt(int64_t timeout = -1);
-void SignalWaitFor();
+WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t *out_ready = nullptr);
+WaitResult WaitEvents(int64_t timeout);
+
+void InterruptWait();
 
 #endif
 

@@ -874,12 +874,12 @@ Options:
         bool run = true;
 
         while (run) {
-            WaitForResult ret = WaitForInterrupt();
+            WaitResult ret = WaitEvents(-1);
 
-            if (ret == WaitForResult::Exit) {
+            if (ret == WaitResult::Exit) {
                 LogInfo("Exit requested");
                 run = false;
-            } else if (ret == WaitForResult::Interrupt) {
+            } else if (ret == WaitResult::Interrupt) {
                 LogInfo("Process interrupted");
                 status = 1;
                 run = false;

@@ -1110,8 +1110,8 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
 
     // From here on, don't quit abruptly
     // Trigger a check when something happens to the zygote process
-    WaitForInterrupt(0);
-    SetSignalHandler(SIGCHLD, [](int) { SignalWaitFor(); });
+    WaitEvents(0);
+    SetSignalHandler(SIGCHLD, [](int) { InterruptWait(); });
 
     // Run!
     if (!daemon.Start(HandleRequest))
@@ -1180,16 +1180,19 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
             if (!gp_domain.Checkpoint())
                 return 1;
 
-            WaitForResult ret = WaitForInterrupt(timeout);
+            WaitResult ret = WaitEvents(timeout);
 
-            if (ret == WaitForResult::Exit) {
+            if (ret == WaitResult::Exit) {
                 LogInfo("Exit requested");
                 run = false;
-            } else if (ret == WaitForResult::Interrupt) {
+            } else if (ret == WaitResult::Interrupt) {
                 LogInfo("Process interrupted");
                 status = 1;
                 run = false;
-            } else if (ret == WaitForResult::Message) {
+            } else if (ret == WaitResult::Error) {
+                status = 1;
+                run = false;
+            } else if (ret == WaitResult::Message) {
                 LogDebug("Syncing instances");
                 gp_domain.SyncAll(true);
             }
