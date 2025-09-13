@@ -6,6 +6,7 @@
         "with_warning": "Avec alerte"
     },
     "messages": {
+        "Cannot read from database schema version %1 (expected %2)": "Impossible de lire la base de données version %1 (attendu %2)",
         "Compiler: %1": "Compilateur : %1",
         "Database schema is too recent (%1, expected %2)": "Le schéma de la base de données est trop récent (%1, attendu %2)",
         "Exit requested": "Sortie demandée",
