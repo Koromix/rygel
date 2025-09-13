@@ -27,9 +27,6 @@
 #include "vendor/stb/stb_image.h"
 #include "vendor/stb/stb_image_resize2.h"
 
-#include <poll.h>
-#include <sys/eventfd.h>
-
 namespace K {
 
 struct IconSet {
@@ -64,13 +61,9 @@ static_assert(K_LEN(IconSizes) <= K_LEN(IconSet::pixmaps.data));
     } while (false)
 
 class LinuxTray: public gui_TrayIcon {
-    int efd = -1;
-    std::thread thread;
-
     sd_bus *bus = nullptr;
     char name[512];
 
-    std::mutex mutex;
     IconSet icons;
     std::function<void()> activate;
     std::function<void()> context;
@@ -92,6 +85,9 @@ public:
     void AddAction(const char *label, int check, std::function<void()> func) override;
     void AddSeparator() override;
     void ClearMenu() override;
+
+    WaitSource GetWaitSource() override;
+    bool ProcessEvents() override;
 
 private:
     bool RegisterIcon();
@@ -250,30 +246,16 @@ static void GeneratePNG(Span<const uint8_t> data, int32_t width, int32_t height,
 
 LinuxTray::~LinuxTray()
 {
-    // Stop background thread
-    {
-        int64_t dummy = 1;
-        write(efd, &dummy, K_SIZE(dummy));
-
-        if (thread.joinable())
-            thread.join();
-    }
-
     sd_bus_flush_close_unref(bus);
-    CloseDescriptor(efd);
 
-    UnlinkFile(icons.filename);
+    if (icons.filename) {
+        UnlinkFile(icons.filename);
+    }
 }
 
 bool LinuxTray::Init()
 {
     K_ASSERT(!bus);
-
-    efd = eventfd(0, EFD_CLOEXEC);
-    if (efd < 0) {
-        LogError("Failed to create eventfd: %1", strerror(errno));
-        return false;
-    }
 
     if (int ret = sd_bus_open_user_with_description(&bus, FelixTarget); ret < 0) {
         LogError("Failed to connect to session D-Bus bus: %1", strerror(-ret));
@@ -285,36 +267,30 @@ bool LinuxTray::Init()
     if (!RegisterMenu())
         return false;
 
-    thread = std::thread(&LinuxTray::RunBusThread, this);
-
     return true;
 }
 
 bool LinuxTray::SetIcon(Span<const uint8_t> png)
 {
-    std::lock_guard<std::mutex> lock(mutex);
-
     if (!PrepareIcons(png, &icons))
         return false;
+    sd_bus_emit_signal(bus, "/StatusNotifierItem", "org.kde.StatusNotifierItem", "NewIcon", "");
 
     return true;
 }
 
 void LinuxTray::OnActivation(std::function<void()> func)
 {
-    std::lock_guard<std::mutex> lock(mutex);
     activate = func;
 }
 
 void LinuxTray::OnContext(std::function<void()> func)
 {
-    std::lock_guard<std::mutex> lock(mutex);
     context = func;
 }
 
 void LinuxTray::OnScroll(std::function<void(int)> func)
 {
-    std::lock_guard<std::mutex> lock(mutex);
     scroll = func;
 }
 
@@ -322,8 +298,6 @@ void LinuxTray::AddAction(const char *label, int check, std::function<void()> fu
 {
     K_ASSERT(label);
     K_ASSERT(check <= 1);
-
-    std::lock_guard<std::mutex> lock(mutex);
 
     Allocator *alloc;
     MenuItem *item = items.AppendDefault(&alloc);
@@ -347,8 +321,6 @@ void LinuxTray::AddAction(const char *label, int check, std::function<void()> fu
 
 void LinuxTray::AddSeparator()
 {
-    std::lock_guard<std::mutex> lock(mutex);
-
     MenuItem *item = items.AppendDefault();
     item->label = "-";
 
@@ -357,10 +329,39 @@ void LinuxTray::AddSeparator()
 
 void LinuxTray::ClearMenu()
 {
-    std::lock_guard<std::mutex> lock(mutex);
-
     items.Clear();
     UpdateRevision();
+}
+
+static int GetBusTimeout(sd_bus *bus)
+{
+    uint64_t timeout64;
+    CALL_SDBUS(sd_bus_get_timeout(bus, &timeout64), -1);
+
+    int timeout = (int)std::min((timeout64 + 999) / 1000, (uint64_t)INT_MAX);
+    return timeout;
+}
+
+WaitSource LinuxTray::GetWaitSource()
+{
+    WaitSource src = { sd_bus_get_fd(bus), (short)sd_bus_get_events(bus), GetBusTimeout(bus) };
+    return src;
+}
+
+bool LinuxTray::ProcessEvents()
+{
+    self = this;
+
+    // If this fails the icon will become unresponsive, not much we can do.
+    // However this should not happen unless something extreme goes on!
+    int ret = sd_bus_process(bus, nullptr);
+
+    if (ret < 0) {
+        LogError("Failed to process D-Bus messages: %1", strerror(-ret));
+        return false;
+    }
+
+    return true;
 }
 
 bool LinuxTray::RegisterIcon()
@@ -459,8 +460,6 @@ bool LinuxTray::RegisterIcon()
 int LinuxTray::GetIconComplexProperty(sd_bus *, const char *, const char *, const char *property,
                                       sd_bus_message *reply, void *, sd_bus_error *)
 {
-    std::lock_guard<std::mutex> lock(self->mutex);
-
     if (TestStr(property, "ToolTip")) {
         const IconSet &icons = self->icons;
 
@@ -697,8 +696,6 @@ bool LinuxTray::RegisterMenu()
 int LinuxTray::GetMenuComplexProperty(sd_bus *, const char *, const char *, const char *property,
                                       sd_bus_message *reply, void *, sd_bus_error *)
 {
-    std::lock_guard<std::mutex> lock(self->mutex);
-
     if (TestStr(property, "IconThemePath")) {
         CALL_SDBUS(sd_bus_message_append(reply, "as", 0), -1);
         return 1;
@@ -709,8 +706,6 @@ int LinuxTray::GetMenuComplexProperty(sd_bus *, const char *, const char *, cons
 
 bool LinuxTray::DumpMenuItems(FunctionRef<bool(int, const char *, int)> func)
 {
-    std::lock_guard<std::mutex> lock(self->mutex);
-
     // Keep separate counter because BucketArray iterator is faster than direct indexing
     Size idx = 0;
 
@@ -725,8 +720,6 @@ bool LinuxTray::DumpMenuItems(FunctionRef<bool(int, const char *, int)> func)
 
 void LinuxTray::HandleMenuEvent(int id, const char *type)
 {
-    std::unique_lock<std::mutex> lock(self->mutex);
-
     if (!TestStr(type, "clicked"))
         return;
     if (id < 0 || id > items.count)
@@ -738,59 +731,14 @@ void LinuxTray::HandleMenuEvent(int id, const char *type)
         // Copy std::function (hopefully this is not expensive) because the handler might destroy it
         // if it uses ClearMenu(), for example. Unlikely but let's play it safe!
         std::function<void()> func = item.func;
-
-        lock.unlock();
         func();
     }
 }
 
-// Call with mutex locked
 void LinuxTray::UpdateRevision()
 {
     revision++;
     sd_bus_emit_signal(bus, "/MenuBar", "com.canonical.dbusmenu", "LayoutUpdated", "ui", revision, 0);
-}
-
-static int GetBusTimeout(sd_bus *bus)
-{
-    uint64_t timeout64;
-    CALL_SDBUS(sd_bus_get_timeout(bus, &timeout64), -1);
-
-    int timeout = (int)std::min((timeout64 + 999) / 1000, (uint64_t)INT_MAX);
-    return timeout;
-}
-
-void LinuxTray::RunBusThread()
-{
-    self = this;
-
-    for (;;) {
-        struct pollfd pfds[2] = {
-            { efd, POLLIN, 0 },
-            { sd_bus_get_fd(bus), (short)sd_bus_get_events(bus), 0 }
-        };
-
-        int timeout = GetBusTimeout(bus);
-        if (timeout < 0)
-            return;
-        if (timeout == INT_MAX)
-            timeout = -1;
-
-        if (K_RESTART_EINTR(poll(pfds, K_LEN(pfds), timeout), < 0) < 0) {
-            LogError("Failed to poll I/O descriptors: %1", strerror(errno));
-            return;
-        }
-
-        if (pfds[0].revents)
-            break;
-
-        // If this fails (or poll fails) the icon will become unresponsive, not much we can do.
-        // However this should not happen unless something extreme goes on!
-        if (int ret = sd_bus_process(bus, nullptr); ret < 0) {
-            LogError("Failed to process D-Bus messages: %1", strerror(-ret));
-            return;
-        }
-    }
 }
 
 std::unique_ptr<gui_TrayIcon> gui_CreateTrayIcon(Span<const uint8_t> png)

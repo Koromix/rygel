@@ -73,13 +73,8 @@ static const Vec2<int> IconSizes[] = {
 static_assert(K_LEN(IconSizes) <= K_LEN(IconSet::pixmaps.data));
 
 class WinTray: public gui_TrayIcon {
-    std::thread thread;
     HWND hwnd = nullptr;
     NOTIFYICONDATAA notify = {};
-
-    std::recursive_mutex mutex;
-    std::condition_variable_any cv;
-    bool ready = false;
 
     IconSet icons;
     std::function<void()> activate;
@@ -99,6 +94,9 @@ public:
     void AddAction(const char *label, int check, std::function<void()> func) override;
     void AddSeparator() override;
     void ClearMenu() override;
+
+    WaitSource GetWaitSource() override;
+    bool ProcessEvents() override;
 
 private:
     void RunMessageThread();
@@ -149,90 +147,28 @@ static bool PrepareIcons(Span<const uint8_t> png, IconSet *out_set)
 
 WinTray::~WinTray()
 {
-    if (hwnd) {
-        PostMessageA(hwnd, WM_QUIT, 0, 0);
-        thread.join();
+    if (notify.hIcon) {
+        Shell_NotifyIconA(NIM_DELETE, &notify);
+        DestroyIcon(notify.hIcon);
     }
 
-    // Resources (HICON, etc) are cleaned up by the thread
+    if (hwnd) {
+        DestroyWindow(hwnd);
+    }
 }
 
 bool WinTray::Init()
 {
-    K_ASSERT(!thread.joinable());
+    K_ASSERT(!hwnd);
 
-    std::unique_lock<std::recursive_mutex> lock(mutex);
-
-    thread = std::thread(&WinTray::RunMessageThread, this);
-
-    while (!ready) {
-        cv.wait(lock);
-    }
-
-    return hwnd;
-}
-
-bool WinTray::SetIcon(Span<const uint8_t> png)
-{
-    K_ASSERT(hwnd);
-
-    std::lock_guard<std::recursive_mutex> lock(mutex);
-
-    if (!PrepareIcons(png, &icons))
-        return false;
-    PostMessageA(hwnd, WM_APP_UPDATE, 0, 0);
-
-    return true;
-}
-
-void WinTray::OnActivation(std::function<void()> func)
-{
-    std::lock_guard<std::recursive_mutex> lock(mutex);
-    activate = func;
-}
-
-void WinTray::OnContext(std::function<void()> func)
-{
-    std::lock_guard<std::recursive_mutex> lock(mutex);
-    context = func;
-}
-
-void WinTray::AddAction(const char *label, int check, std::function<void()> func)
-{
-    K_ASSERT(label);
-    K_ASSERT(check <= 1);
-
-    std::lock_guard<std::recursive_mutex> lock(mutex);
-
-    Allocator *alloc;
-    MenuItem *item = items.AppendDefault(&alloc);
-
-    item->label = DuplicateString(label, alloc).ptr;
-    item->check = check;
-    item->func = func;
-}
-
-void WinTray::AddSeparator()
-{
-    std::lock_guard<std::recursive_mutex> lock(mutex);
-    items.AppendDefault();
-}
-
-void WinTray::ClearMenu()
-{
-    std::lock_guard<std::recursive_mutex> lock(mutex);
-    items.Clear();
-}
-
-void WinTray::RunMessageThread()
-{
     static std::once_flag flag;
     static const char *ClassName = "TrayClass";
     static const char *WindowName = "TrayWindow";
 
     HINSTANCE module = GetModuleHandle(nullptr);
 
-    // Register window class
+    // Register window class (once)
+    // It is local to the process, we can leak it. Windows will clean it up.
     std::call_once(flag, [&]() {
         WNDCLASSEXA wc = {};
 
@@ -247,21 +183,14 @@ void WinTray::RunMessageThread()
             return;
         }
     });
-    // XXX: K_DEFER { UnregisterClassA(cls_name, module); };
-
-    std::unique_lock<std::recursive_mutex> lock(mutex);
 
     // Create hidden window
     hwnd = CreateWindowExA(0, ClassName, WindowName, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
                            CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, module, nullptr);
     if (!hwnd) {
         LogError("Failed to create window named '%1': %2", WindowName, GetLastError(), GetWin32ErrorString());
-        return;
+        return false;
     }
-    K_DEFER {
-        DestroyWindow(hwnd);
-        hwnd = nullptr;
-    };
     SetWindowLongPtrA(hwnd, GWLP_USERDATA, (LONG_PTR)this);
 
     // Prepare tray data
@@ -272,24 +201,69 @@ void WinTray::RunMessageThread()
     CopyString(FelixTarget, notify.szTip);
     notify.uFlags = NIF_MESSAGE | NIF_TIP | NIF_ICON;
 
-    // Ready!
-    ready = true;
-    cv.notify_one();
-    lock.unlock();
+    return true;
+}
 
+bool WinTray::SetIcon(Span<const uint8_t> png)
+{
+    K_ASSERT(hwnd);
+
+    if (!PrepareIcons(png, &icons))
+        return false;
+    PostMessageA(hwnd, WM_APP_UPDATE, 0, 0);
+
+    return true;
+}
+
+void WinTray::OnActivation(std::function<void()> func)
+{
+    activate = func;
+}
+
+void WinTray::OnContext(std::function<void()> func)
+{
+    context = func;
+}
+
+void WinTray::AddAction(const char *label, int check, std::function<void()> func)
+{
+    K_ASSERT(label);
+    K_ASSERT(check <= 1);
+
+    Allocator *alloc;
+    MenuItem *item = items.AppendDefault(&alloc);
+
+    item->label = DuplicateString(label, alloc).ptr;
+    item->check = check;
+    item->func = func;
+}
+
+void WinTray::AddSeparator()
+{
+    items.AppendDefault();
+}
+
+void WinTray::ClearMenu()
+{
+    items.Clear();
+}
+
+WaitSource WinTray::GetWaitSource()
+{
+    // We need to run the Win32 message pump, not a specific HANDLE
+    WaitSource src = { nullptr, -1 };
+    return src;
+}
+
+bool WinTray::ProcessEvents()
+{
     MSG msg;
-    while (GetMessage(&msg, nullptr, 0, 0)) {
-        if (msg.message == WM_QUIT)
-            break;
-
+    while (PeekMessageA(&msg, hwnd, 0, 0, PM_REMOVE)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
 
-    if (notify.hIcon) {
-        Shell_NotifyIconA(NIM_DELETE, &notify);
-        DestroyIcon(notify.hIcon);
-    }
+    return true;
 }
 
 LRESULT __stdcall WinTray::TrayProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -299,7 +273,6 @@ LRESULT __stdcall WinTray::TrayProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
     WinTray *self = (WinTray *)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
 
     if (msg == WM_APP_TRAY) {
-        std::unique_lock<std::recursive_mutex> lock(self->mutex);
         int button = LOWORD(lparam);
 
         if (button == WM_LBUTTONDOWN) {
@@ -344,14 +317,11 @@ LRESULT __stdcall WinTray::TrayProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
                     // Copy std::function (hopefully this is not expensive) because the handler might destroy it
                     // if it uses ClearMenu(), for example. Unlikely but let's play it safe!
                     std::function<void()> func = item.func;
-
-                    lock.unlock();
                     func();
                 }
             }
         }
     } else if (msg == WM_APP_UPDATE || msg == WM_DPICHANGED || msg == TaskbarCreated) {
-        std::lock_guard<std::recursive_mutex> lock(self->mutex);
         self->UpdateIcon();
     }
 
@@ -379,7 +349,6 @@ static HICON CreateAlphaIcon(Span<const uint8_t> pixmap, int width, int height)
     return icon;
 }
 
-// Call with mutex locked
 bool WinTray::UpdateIcon()
 {
     int dpi = GetDpiForWindow(hwnd);

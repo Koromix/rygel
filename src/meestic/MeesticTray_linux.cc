@@ -31,7 +31,6 @@ extern "C" const AssetInfo MeesticPng;
 static bool run = true;
 static int meestic_fd = -1;
 
-static std::mutex mutex;
 static HeapArray<const char *> profiles;
 static BlockAllocator profiles_alloc;
 static Size active_idx = -1;
@@ -87,8 +86,6 @@ static bool HandleServerData()
         return received;
     };
 
-    std::lock_guard<std::mutex> lock(mutex);
-
     // Don't try to fill buffer, which would block, return as soon as some data is available
     StreamReader reader(read, "<server>", (int)StreamReaderFlag::LazyFill);
     json_Parser json(&reader, &temp_alloc);
@@ -114,16 +111,18 @@ static bool HandleServerData()
             return false;
         }
     }
-    if (!json.IsValid())
+    if (!json.IsValid()) {
+        if (!reader.GetRawRead()) {
+            LogError("Lost connection to server");
+        }
         return false;
+    }
 
     return true;
 }
 
 static void UpdateTray()
 {
-    std::lock_guard<std::mutex> lock(mutex);
-
     tray->ClearMenu();
 
     for (Size i = 0; i < profiles.len; i++) {
@@ -202,42 +201,32 @@ Options:
 
         // React to main service and D-Bus events
         while (run) {
-            struct pollfd pfd = { meestic_fd, POLLIN, 0 };
+            WaitSource sources[] = {
+                { meestic_fd, POLLIN, -1 },
+                tray->GetWaitSource()
+            };
 
-            if (poll(&pfd, 1, -1) < 0) {
-                if (errno == EINTR) {
-                    WaitResult ret = WaitEvents(0);
+            uint64_t ready = 0;
+            WaitResult ret = WaitEvents(sources, -1, &ready);
 
-                    if (ret == WaitResult::Exit) {
-                        LogInfo("Exit requested");
-                        run = false;
-                    } else if (ret == WaitResult::Interrupt) {
-                        LogInfo("Process interrupted");
-                        status = 1;
-                        run = false;
-                    } else if (ret == WaitResult::Error) {
-                        status = 1;
-                        run = false;
-                    } else {
-                        continue;
-                    }
-                } else {
-                    LogError("Failed to poll I/O descriptors: %1", strerror(errno));
-                    return 1;
-                }
+            if (ret == WaitResult::Exit) {
+                LogInfo("Exit requested");
+                run = false;
+            } else if (ret == WaitResult::Interrupt) {
+                LogInfo("Process interrupted");
+                status = 1;
+                run = false;
+            } else if (ret == WaitResult::Error) {
+                status = 1;
+                run = false;
             }
 
-            // Wait and try to reconnect to server when it restarts
-            if (pfd.revents & (POLLERR | POLLHUP)) {
-                LogError("Lost connection to server");
-
+            if ((ready & 1) && !HandleServerData()) {
                 WaitDelay(3000);
                 break;
             }
-            if (pfd.revents & POLLIN) {
-                if (!HandleServerData())
-                    break;
-            }
+
+            tray->ProcessEvents();
         }
     }
 

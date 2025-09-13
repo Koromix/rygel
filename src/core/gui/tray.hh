@@ -41,6 +41,10 @@ public:
     void AddAction(const char *label, std::function<void()> func) { AddAction(label, -1, func); }
     virtual void AddSeparator() = 0;
     virtual void ClearMenu() = 0;
+
+    // You can skip this on Windows if you run the Win32 message pump for some reason
+    virtual WaitSource GetWaitSource() = 0;
+    virtual bool ProcessEvents() = 0;
 };
 
 std::unique_ptr<gui_TrayIcon> gui_CreateTrayIcon(Span<const uint8_t> png);
