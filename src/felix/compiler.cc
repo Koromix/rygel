@@ -74,6 +74,7 @@ static void MakeEmbedCommand(Span<const char *const> embed_filenames, EmbedMode 
     out_cmd->cmd_line = buf.TrimAndLeak(1);
 }
 
+// Does not log anything it cannot find version
 static int ParseVersion(const char *cmd, Span<const char> output, const char *marker)
 {
     Span<const char> remain = output;
@@ -81,7 +82,7 @@ static int ParseVersion(const char *cmd, Span<const char> output, const char *ma
     while (remain.len) {
         Span<const char> token = SplitStr(remain, ' ', &remain);
 
-        if (token == marker) {
+        if (TestStrI(token, marker)) {
             int major = 0;
             int minor = 0;
             int patch = 0;
@@ -345,7 +346,11 @@ public:
             }
         }
 
-        Fmt(compiler->title, "%1 %2", compiler->name, FmtVersion(compiler->clang_ver, 3, 100));
+        if (compiler->clang_ver >= 0) {
+            Fmt(compiler->title, "%1 %2", compiler->name, FmtVersion(compiler->clang_ver, 3, 100));
+        } else {
+            CopyString(compiler->name, compiler->title);
+        }
 
         return compiler;
     }
@@ -1073,7 +1078,11 @@ public:
             }
         };
 
-        Fmt(compiler->title, "%1 %2", compiler->name, FmtVersion(compiler->gcc_ver, 3, 100));
+        if (compiler->gcc_ver >= 0) {
+            Fmt(compiler->title, "%1 %2", compiler->name, FmtVersion(compiler->gcc_ver, 3, 100));
+        } else {
+            CopyString(compiler->name, compiler->title);
+        }
 
         return compiler;
     }
@@ -1654,7 +1663,7 @@ public:
             if (!ReadCommandOutput(cmd, &output))
                 return nullptr;
 
-            compiler->cl_ver = ParseVersion(cmd, output, "Version");
+            compiler->cl_ver = ParseVersion(cmd, output, "version");
 
             Span<const char> intro = SplitStrLine(output.As<const char>());
             HostArchitecture architecture = {};
@@ -1701,7 +1710,11 @@ public:
             compiler->link = Fmt(&compiler->str_alloc, "%1link%2", prefix, version).ptr;
         }
 
-        Fmt(compiler->title, "%1 %2", compiler->name, FmtVersion(compiler->cl_ver, 3, 100));
+        if (compiler->cl_ver >= 0) {
+            Fmt(compiler->title, "%1 %2", compiler->name, FmtVersion(compiler->cl_ver, 3, 100));
+        } else {
+            CopyString(compiler->name, compiler->title);
+        }
 
         return compiler;
     }
