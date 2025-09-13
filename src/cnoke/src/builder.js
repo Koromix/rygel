@@ -309,8 +309,7 @@ function Builder(config = {}) {
         tools.unlink_recursive(build_dir);
     };
 
-    function find_parent_directory(dirname, basename)
-    {
+    function find_parent_directory(dirname, basename) {
         if (process.platform == 'win32')
             dirname = dirname.replace(/\\/g, '/');
 
