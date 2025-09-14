@@ -530,7 +530,7 @@ function zoomTime(delta, at) {
 }
 
 function revealTime(start, end) {
-    let range = end - start;
+    let range = Math.max(0, end - start);
     let time = start - range * 0.05;
     let zoom = range ? scaleToZoom(layout.main.width / range / 1.1) : 0;
 
@@ -621,20 +621,47 @@ function combine(entities, idx, levels, align) {
             row.right = Math.max(row.right, draw.x + draw.width);
         }
 
-        for (let period of entity.periods) {
-            if (!level.concepts.has(period.concept))
-                continue;
+        // Handle periods
+        {
+            let map = new Map;
 
-            let draw = {
-                x: timeToPosition(period.time - offset, position.zoom),
-                width: period.duration * zoomToScale(position.zoom),
-                color: period.color,
-                stack: 0
-            };
-            row.periods.push(draw);
+            for (let period of entity.periods) {
+                if (!level.concepts.has(period.concept))
+                    continue;
 
-            row.left = Math.min(row.left, draw.x);
-            row.right = Math.max(row.right, draw.x + draw.width);
+                let prev = map.get(period.concept);
+
+                // Merge overlapping periods with same concept
+                if (prev != null && period.time <= prev.end) {
+                    let end = period.time + period.duration;
+
+                    if (end > prev.end) {
+                        prev.end = end;
+                        prev.draw.width = (prev.end - prev.time) * zoomToScale(position.zoom);
+
+                        row.right = Math.max(row.right, prev.draw.x + prev.draw.width);
+                    }
+
+                    continue;
+                }
+
+                let draw = {
+                    x: timeToPosition(period.time - offset, position.zoom),
+                    width: period.duration * zoomToScale(position.zoom),
+                    color: period.color,
+                    stack: 0
+                };
+                row.periods.push(draw);
+
+                row.left = Math.min(row.left, draw.x);
+                row.right = Math.max(row.right, draw.x + draw.width);
+
+                map.set(period.concept, {
+                    time: period.time,
+                    end: period.time + period.duration,
+                    draw: draw
+                });
+            }
         }
 
         if (canPlot(level) && !row.events.length && !row.periods.length) {
