@@ -1629,7 +1629,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
         if (!started) {
             // Error already issued by ExecuteCommandLine()
             StdErr->Write(output);
-        } else if (DetectInterrupt()) {
+        } else if (!DetectInterrupt()) {
             LogError("%1 %!..+(exit code %2)%!0", node->text, exit_code);
             StdErr->Write(output);
         }
