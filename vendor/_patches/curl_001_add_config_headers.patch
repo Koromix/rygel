@@ -2008,7 +2008,7 @@ index 0000000000..e0996cb46e
 +/* #undef USE_SECTRANSP */
 +
 +/* if you want POSIX threaded DNS lookup */
-+#define USE_THREADS_POSIX 1
++/* #undef USE_THREADS_POSIX */
 +
 +/* if you want Win32 threaded DNS lookup */
 +/* #undef USE_THREADS_WIN32 */
@@ -3059,7 +3059,7 @@ index 0000000000..b7876ce6d4
 +/* #undef USE_SECTRANSP */
 +
 +/* if you want POSIX threaded DNS lookup */
-+#define USE_THREADS_POSIX 1
++/* #undef USE_THREADS_POSIX */
 +
 +/* if you want Win32 threaded DNS lookup */
 +/* #undef USE_THREADS_WIN32 */
@@ -5182,7 +5182,7 @@ index 0000000000..2ae6f39770
 +/* #undef USE_SECTRANSP */
 +
 +/* if you want POSIX threaded DNS lookup */
-+#define USE_THREADS_POSIX 1
++/* #undef USE_THREADS_POSIX */
 +
 +/* if you want Win32 threaded DNS lookup */
 +/* #undef USE_THREADS_WIN32 */
