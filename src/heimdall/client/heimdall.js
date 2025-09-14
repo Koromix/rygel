@@ -108,22 +108,24 @@ async function load(prefix, lang, progress = null) {
 }
 
 async function fetchProject(project) {
-    let url = Util.pasteURL('/api/data', { project: project });
-    let json = await Net.get(url);
+    let [views, entities] = await Promise.all([
+        Net.get(Util.pasteURL('/api/views', { project: project })),
+        Net.get(Util.pasteURL('/api/entities', { project: project }))
+    ]);
 
     world = {
         project: project,
-        views: new Map(json.views.map(view => [view.name, view])),
-        entities: json.entities,
+        views: new Map(views.map(view => [view.name, view])),
+        entities: entities,
 
         start: Number.MAX_SAFE_INTEGER,
         end: Number.MIN_SAFE_INTEGER
     };
 
-    for (let view of json.views)
+    for (let view of views)
         view.expand = new Set;
 
-    for (let entity of json.entities) {
+    for (let entity of entities) {
         entity.events.sort((evt1, evt2) => evt1.time - evt2.time);
         entity.periods.sort((period1, period2) => period1.time - period2.time);
         entity.values.sort((value1, value2) => value1.time - value2.time);
