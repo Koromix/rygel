@@ -548,25 +548,25 @@ function combine(entities, idx, levels, align) {
         let start = Number.MAX_SAFE_INTEGER;
 
         for (let evt of entity.events) {
-            if (!align.concepts.has(evt.concept))
-                continue;
             if (align.warning && !evt.warning)
+                continue;
+            if (!align.concepts.has(evt.concept))
                 continue;
 
             start = Math.min(start, evt.time);
         }
         for (let period of entity.periods) {
-            if (!align.concepts.has(period.concept))
-                continue;
             if (align.warning && !period.warning)
+                continue;
+            if (!align.concepts.has(period.concept))
                 continue;
 
             start = Math.min(start, period.time);
         }
         for (let value of entity.values) {
-            if (!align.concepts.has(value.concept))
-                continue;
             if (align.warning && !value.warning)
+                continue;
+            if (!align.concepts.has(value.concept))
                 continue;
 
             start = Math.min(start, value.time);
