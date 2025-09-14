@@ -26,12 +26,8 @@
 #include "vendor/stb/stb_image.h"
 #include "vendor/stb/stb_image_resize2.h"
 
-#if defined(WINVER)
-    #undef WINVER
-#endif
-#if defined(_WIN32_WINNT)
-    #undef _WIN32_WINNT
-#endif
+#undef WINVER
+#undef _WIN32_WINNT
 #define WINVER 0x0A000005
 #define _WIN32_WINNT 0x0A000005
 #if !defined(NOMINMAX)
