@@ -1063,9 +1063,7 @@ function draw() {
                 let height = PERIOD_HEIGHT * window.devicePixelRatio
                 let offset = (period.stack + 1) * height * 2;
 
-                ctx.beginPath();
-                ctx.roundRect(period.x - position.x, row.height - offset, period.width, height, height / 2);
-                ctx.fill();
+                ctx.fillRect(period.x - position.x, row.height - offset, period.width, height, height / 2);
             }
 
             // Draw events
