@@ -1056,6 +1056,30 @@ function draw() {
             ctx.rect(0, 0, layout.main.width, row.height);
             ctx.clip();
 
+            if (!row.empty && row.left - position.x > layout.main.width + EVENT_WIDTH / 2) {
+                let x = layout.main.width - 20;
+
+                ctx.strokeStyle = '#888888';
+                ctx.lineWidth = 2;
+
+                ctx.beginPath();
+                ctx.moveTo(x, row.height / 2 - 5 * window.devicePixelRatio);
+                ctx.lineTo(x + 8 * window.devicePixelRatio, row.height / 2 + 1 * window.devicePixelRatio);
+                ctx.lineTo(x, row.height / 2 + 7 * window.devicePixelRatio);
+                ctx.stroke();
+            } else if (!row.empty && row.right - position.x < EVENT_WIDTH / 2) {
+                let x = 20;
+
+                ctx.strokeStyle = '#888888';
+                ctx.lineWidth = 2;
+
+                ctx.beginPath();
+                ctx.moveTo(x, row.height / 2 - 5 * window.devicePixelRatio);
+                ctx.lineTo(x - 8 * window.devicePixelRatio, row.height / 2 + 1 * window.devicePixelRatio);
+                ctx.lineTo(x, row.height / 2 + 7 * window.devicePixelRatio);
+                ctx.stroke();
+            }
+
             // Draw periods
             for (let period of row.periods) {
                 ctx.fillStyle = period.color ?? '#444444';
