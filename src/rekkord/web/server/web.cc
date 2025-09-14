@@ -55,27 +55,11 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
     sb.MaskFiles(mask_files);
 
 #if defined(__linux__)
-    // Force glibc to load all the NSS crap beforehand, so we don't need to
-    // expose it in the sandbox...
-    // What a bunch of crap. Why does all this need to use shared libraries??
-    {
-        struct addrinfo *result = nullptr;
-        int err = getaddrinfo("www.example.com", nullptr, nullptr, &result);
-
-        if (err != 0) {
-            LogError("Failed to init DNS resolver: '%1'", gai_strerror(err));
-            return false;
-        }
-
-        freeaddrinfo(result);
-    }
-
     // More DNS resolving crap, the list was determined through an elaborate
     // process of trial and error.
     sb.RevealPaths({
         "/etc/resolv.conf",
-        "/etc/hosts",
-        "/etc/ld.so.cache"
+        "/etc/hosts"
     }, true);
 
     sb.FilterSyscalls({
