@@ -1058,8 +1058,6 @@ function draw() {
 
             // Draw periods
             for (let period of row.periods) {
-                ctx.save();
-
                 ctx.fillStyle = period.color ?? '#444444';
 
                 let height = PERIOD_HEIGHT * window.devicePixelRatio
@@ -1068,14 +1066,10 @@ function draw() {
                 ctx.beginPath();
                 ctx.roundRect(period.x - position.x, row.height - offset, period.width, height, height / 2);
                 ctx.fill();
-
-                ctx.restore();
             }
 
             // Draw events
             for (let evt of row.events) {
-                ctx.save();
-
                 ctx.fillStyle = evt.warning ? '#ff6600' : '#4444cc';
 
                 let x = evt.x - position.x;
@@ -1098,8 +1092,6 @@ function draw() {
 
                     runner.text(x + evt.width / 2, row.height - height / 4, evt.count, { align: 2 });
                 }
-
-                ctx.restore();
             }
 
             // Draw value graph
@@ -1108,8 +1100,6 @@ function draw() {
                 let idx = 0;
 
                 while (idx < values.length) {
-                    ctx.save();
-
                     ctx.strokeStyle = 'black';
                     ctx.lineWidth = 1;
 
@@ -1131,8 +1121,6 @@ function draw() {
                         }
                     }
                     ctx.stroke();
-
-                    ctx.restore();
                 }
             }
 
@@ -1141,8 +1129,6 @@ function draw() {
                 if (value.label == null)
                     continue;
 
-                ctx.save();
-
                 let background = value.warning ? '#ff6600' : 'white';
                 let color = value.warning ? 'white' : 'black';
 
@@ -1150,8 +1136,6 @@ function draw() {
                 ctx.fillStyle = color;
 
                 runner.text(value.x - position.x, value.y, value.label, { background: background, align: 5 });
-
-                ctx.restore();
             }
 
             ctx.restore();
