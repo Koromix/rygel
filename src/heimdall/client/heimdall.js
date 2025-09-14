@@ -457,7 +457,7 @@ function update() {
                     rows[i].hover = true;
             }
 
-            if (!row.leaf && cursor.x >= 0 && cursor.x <= layout.tree.width) {
+            if (!row.leaf && !row.empty && cursor.x >= 0 && cursor.x <= layout.tree.width) {
                 if (mouse_state.left == -1) {
                     position.entity = row.entity;
                     position.y = -rows[idx - row.index].top;
@@ -593,16 +593,16 @@ function combine(entities, idx, levels, align) {
             depth: level.depth,
             leaf: level.leaf,
             expand: level.expand,
-            top: 0,
-            height: ROW_HEIGHT * window.devicePixelRatio,
             active: false,
             hover: false,
             empty: false,
+            top: 0,
+            height: ROW_HEIGHT * window.devicePixelRatio,
+            left: Number.MAX_SAFE_INTEGER,
+            right: Number.MIN_SAFE_INTEGER,
             events: [],
             periods: [],
-            values: [],
-            left: Number.MAX_SAFE_INTEGER,
-            right: Number.MIN_SAFE_INTEGER
+            values: []
         };
 
         for (let evt of entity.events) {
@@ -965,7 +965,7 @@ function draw() {
             let x = 10 + row.depth * 10;
             let offset = 20 * window.devicePixelRatio;
 
-            if (!row.leaf) {
+            if (!row.leaf && !row.empty) {
                 ctx.beginPath();
                 if (row.expand) {
                     ctx.moveTo(x, row.top + row.height / 2 - 3 * window.devicePixelRatio);
