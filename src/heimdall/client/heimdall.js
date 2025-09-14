@@ -37,7 +37,8 @@ const DEFAULT_SETTINGS = {
     interpolation: 'linear',
     view: '',
     align: '',
-    warning: false
+    warning: false,
+    hide: false
 };
 
 // Assets
@@ -508,6 +509,11 @@ function update() {
                                    @change=${e => { settings.warning = e.target.checked; saveState(); }}>
                             <span>${T.with_warning}</span>
                         </label>
+                        <label>
+                            <input type="checkbox" ?disabled=${!settings.align} .checked=${!settings.hide}
+                                   @change=${e => { settings.hide = !e.target.checked; saveState(); }}>
+                            <span>${T.show_all}</span>
+                        </label>
                     </div>
                 </label>
             ` : ''}
@@ -716,7 +722,7 @@ function combine(entities, idx, levels, align) {
         }
 
         if (!row.events.length && !row.periods.length && !row.values.length) {
-            if (row.depth)
+            if (settings.hide || row.depth)
                 continue;
             row.empty = true;
         }

@@ -2,6 +2,7 @@
     "keys": {
         "alignment": "Alignment",
         "no_alignment": "No alignement",
+        "show_all": "Show all",
         "view": "View",
         "with_warning": "With warning"
     },
