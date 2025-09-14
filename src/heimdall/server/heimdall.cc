@@ -452,7 +452,7 @@ static void HandleData(http_IO *io)
             sq_Statement stmt;
             if (!db.Prepare(R"(SELECT en.entity, en.name,
                                       ev.event, ce.domain || '::' || ce.name, ev.timestamp, ev.warning,
-                                      p.period, cp.domain || '::' || cp.name, p.timestamp, p.duration, p.warning,
+                                      p.period, cp.domain || '::' || cp.name, p.timestamp, p.duration, p.color,
                                       m.measure, cm.domain || '::' || cm.name, m.timestamp, m.value, m.warning
                                FROM entities en
                                LEFT JOIN events ev ON (ev.entity = en.entity)
@@ -526,13 +526,17 @@ static void HandleData(http_IO *io)
                                 const char *name = (const char *)sqlite3_column_text(stmt, 7);
                                 int64_t time = sqlite3_column_int64(stmt, 8);
                                 int64_t duration = sqlite3_column_int64(stmt, 9);
-                                bool warning = sqlite3_column_int(stmt, 10);
+                                const char *color = (const char *)sqlite3_column_text(stmt, 10);
 
                                 json2.StartObject();
                                 json2.Key("concept"); json2.String(name);
                                 json2.Key("time"); json2.Int64(time);
                                 json2.Key("duration"); json2.Int64(duration);
-                                json2.Key("warning"); json2.Bool(warning);
+                                if (color) {
+                                    json2.Key("color"); json2.String(color);
+                                } else {
+                                    json2.Key("color"); json2.Null();
+                                }
                                 json2.EndObject();
 
                                 start = std::min(start, time);

@@ -556,7 +556,7 @@ function combine(entities, idx, levels, align) {
             start = Math.min(start, evt.time);
         }
         for (let period of entity.periods) {
-            if (align.warning && !period.warning)
+            if (align.warning)
                 continue;
             if (!align.concepts.has(period.concept))
                 continue;
@@ -626,7 +626,7 @@ function combine(entities, idx, levels, align) {
             let draw = {
                 x: timeToPosition(period.time - offset, position.zoom),
                 width: period.duration * zoomToScale(position.zoom),
-                warning: period.warning,
+                color: period.color,
                 stack: 0
             };
             row.periods.push(draw);
@@ -1025,7 +1025,7 @@ function draw() {
             for (let period of row.periods) {
                 ctx.save();
 
-                ctx.fillStyle = period.warning ? '#ff6600' : '#444444';
+                ctx.fillStyle = period.color ?? '#444444';
 
                 let height = PERIOD_HEIGHT * window.devicePixelRatio
                 let offset = (period.stack + 1) * height * 2;

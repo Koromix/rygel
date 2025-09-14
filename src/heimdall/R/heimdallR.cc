@@ -353,7 +353,7 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp, SEX
         Rcpp::CharacterVector name;
         Rcpp::NumericVector time;
         Rcpp::NumericVector duration;
-        Rcpp::LogicalVector warning;
+        Rcpp::CharacterVector color;
     } periods;
 
     periods.df = Rcpp::DataFrame(periods_xp);
@@ -363,7 +363,9 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp, SEX
     periods.name = periods.df["concept"];
     periods.time = periods.df["time"];
     periods.duration = periods.df["duration"];
-    periods.warning = periods.df["warning"];
+    if (periods.df.containsElementNamed("color")) {
+        periods.color = periods.df["color"];
+    }
 
     bool success = inst->db.Transaction([&]() {
         HashSet<int64_t> set;
@@ -374,7 +376,12 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp, SEX
             const char *name = (const char *)periods.name[i];
             int64_t time = periods.time[i];
             int64_t duration = periods.duration[i];
-            bool warning = periods.warning[i];
+            const char *color = nullptr;
+
+            if (periods.color.length()) {
+                const char *str = (const char *)periods.color[i];
+                color = (str != CHAR(NA_STRING)) ? str : nullptr;
+            }
 
             int64_t entity = FindOrCreateEntity(&inst->db, target);
             if (entity < 0)
@@ -395,9 +402,9 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp, SEX
                     return false;
             }
 
-            if (!inst->db.Run(R"(INSERT INTO periods (entity, concept, timestamp, duration, warning)
+            if (!inst->db.Run(R"(INSERT INTO periods (entity, concept, timestamp, duration, color)
                                  VALUES (?1, ?2, ?3, ?4, ?5))",
-                              entity, cpt, time, duration, 0 + warning))
+                              entity, cpt, time, duration, color))
                 return false;
         }
 
