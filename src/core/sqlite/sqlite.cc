@@ -143,7 +143,6 @@ bool sq_Database::Open(const char *filename, unsigned int flags)
         PRAGMA locking_mode = NORMAL;
         PRAGMA foreign_keys = ON;
         PRAGMA synchronous = FULL;
-        PRAGMA busy_timeout = 15000;
     )";
 
     K_ASSERT(!db);
@@ -153,6 +152,8 @@ bool sq_Database::Open(const char *filename, unsigned int flags)
         LogError("SQLite failed to open '%1': %2", filename, sqlite3_errmsg(db));
         return false;
     }
+
+    sqlite3_busy_timeout(db, 15000);
 
     char *error = nullptr;
     if (sqlite3_exec(db, sql, nullptr, nullptr, &error) != SQLITE_OK) {
