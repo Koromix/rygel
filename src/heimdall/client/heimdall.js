@@ -950,7 +950,7 @@ function draw() {
     }
 
     // Draw vertical guides
-    if (settings.align) {
+    {
         ctx.save();
 
         ctx.beginPath();
@@ -958,7 +958,7 @@ function draw() {
         ctx.clip();
 
         // Alignment guide
-        {
+        if (settings.align) {
             ctx.fillStyle = '#efcb99';
 
             let x = timeToPosition(0, position.zoom) - position.x;
