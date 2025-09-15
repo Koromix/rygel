@@ -37,6 +37,7 @@ void HandleInstanceList(http_IO *io);
 void HandleInstanceAssign(http_IO *io);
 void HandleInstancePermissions(http_IO *io);
 void HandleInstanceMigrate(http_IO *io);
+void HandleInstanceClear(http_IO *io);
 
 bool ArchiveDomain();
 

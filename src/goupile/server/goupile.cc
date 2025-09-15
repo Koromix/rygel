@@ -519,6 +519,8 @@ static void HandleAdminRequest(http_IO *io)
         HandleInstanceDelete(io);
     } else if (TestStr(admin_url, "/api/instances/migrate") && request.method == http_RequestMethod::Post) {
         HandleInstanceMigrate(io);
+    } else if (TestStr(admin_url, "/api/instances/clear") && request.method == http_RequestMethod::Post) {
+        HandleInstanceClear(io);
     } else if (TestStr(admin_url, "/api/instances/configure") && request.method == http_RequestMethod::Post) {
         HandleInstanceConfigure(io);
     } else if (TestStr(admin_url, "/api/instances/list") && request.method == http_RequestMethod::Get) {

@@ -2269,6 +2269,126 @@ void HandleInstanceMigrate(http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
+void HandleInstanceClear(http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
+        LogError("Non-admin users are not allowed to clear instance");
+        io->SendError(403);
+        return;
+    }
+
+    const char *instance_key = nullptr;
+    {
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
+
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
+
+                if (key == "instance") {
+                    json->ParseString(&instance_key);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (!instance_key) {
+                    LogError("Missing 'instance' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    InstanceHolder *instance = gp_domain.Ref(instance_key);
+    if (!instance) {
+        LogError("Instance '%1' does not exist", instance_key);
+        io->SendError(404);
+        return;
+    }
+    K_DEFER_N(ref_guard) { instance->Unref(); };
+
+    // Can this admin user touch this instance?
+    if (!session->IsRoot()) {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
+                                     WHERE userid = ?1 AND instance = ?2 AND
+                                           permissions & ?3)", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, session->userid);
+        sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Instance '%1' does not exist", instance_key);
+                io->SendError(404);
+            }
+            return;
+        }
+    }
+
+    // Make sure it is a legacy instance
+    if (instance->legacy) {
+        LogError("Cannot reset legacy instance '%1'", instance_key);
+        io->SendError(422);
+        return;
+    }
+
+    // Be safe...
+    {
+        bool conflict;
+        if (!ArchiveInstances(instance, &conflict)) {
+            if (conflict) {
+                io->SendError(409, "Archive already exists");
+            }
+            return;
+        }
+    }
+
+    bool success = instance->db->Transaction([&]() {
+        if (!instance->db->Run("DELETE FROM rec_threads"))
+            return false;
+        if (!instance->db->Run("DELETE FROM rec_entries"))
+            return false;
+        if (!instance->db->Run("DELETE FROM rec_fragments"))
+            return false;
+        if (!instance->db->Run("DELETE FROM rec_files"))
+            return false;
+        if (!instance->db->Run("DELETE FROM rec_publics"))
+            return false;
+        if (!instance->db->Run("DELETE FROM rec_tags"))
+            return false;
+        if (!instance->db->Run("DELETE FROM rec_exports"))
+            return false;
+        if (!instance->db->Run("DELETE FROM sqlite_sequence WHERE name LIKE 'rec_%'"))
+            return false;
+
+        return true;
+    });
+    if (!success)
+        return;
+
+    io->SendText(200, "{}", "application/json");
+}
+
 void HandleArchiveCreate(http_IO *io)
 {
     RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
