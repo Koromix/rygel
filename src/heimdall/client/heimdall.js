@@ -1261,8 +1261,9 @@ function draw() {
         // FPS counter
         {
             let text = `FPS : ${(1000 / runner.frameTime).toFixed(0)} (${runner.frameTime.toFixed(1)} ms)` +
-                       ` | Update : ${runner.updateTime.toFixed(1)} ms | Draw : ${runner.drawTime.toFixed(1)} ms`;
-            runner.text(layout.main.left + 12, layout.main.top + 8, text, { align: 7 });
+                       ` | Update : ${runner.updateTime.toFixed(1)} ms | Draw : ${runner.drawTime.toFixed(1)} ms` +
+                       ` | Entities : ${world.entities.length}`;
+            runner.text(layout.main.left + 12, layout.main.top + 8, text, { align: 7, background: '#ffffffcc' });
         }
     }
 }
