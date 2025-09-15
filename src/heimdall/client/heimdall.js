@@ -643,8 +643,10 @@ function combine(entities, idx, levels, align) {
                     let end = period.time + period.duration;
 
                     if (end > prev.end) {
+                        let duration = end - prev.time;
+
                         prev.end = end;
-                        prev.draw.width = (prev.end - prev.time) * zoomToScale(position.zoom);
+                        prev.draw.width = Math.round(duration * zoomToScale(position.zoom));
 
                         row.right = Math.max(row.right, prev.draw.x + prev.draw.width);
                     }
@@ -654,7 +656,7 @@ function combine(entities, idx, levels, align) {
 
                 let draw = {
                     x: timeToPosition(period.time - offset, position.zoom),
-                    width: period.duration * zoomToScale(position.zoom),
+                    width: Math.round(period.duration * zoomToScale(position.zoom)),
                     color: period.color,
                     stack: 0
                 };
@@ -971,8 +973,8 @@ function draw() {
             let x = Math.round(mouse_state.x);
 
             ctx.beginPath();
-            ctx.moveTo(x, layout.main.top);
-            ctx.lineTo(x, layout.main.top + layout.main.height);
+            ctx.moveTo(x + 0.5, layout.main.top);
+            ctx.lineTo(x + 0.5, layout.main.top + layout.main.height);
             ctx.stroke();
         }
 
@@ -1094,10 +1096,10 @@ function draw() {
                 let y = row.height - Math.round((period.stack + 1) * PERIOD_SPACING);
 
                 ctx.beginPath();
-                ctx.moveTo(x, y - 2);
-                ctx.lineTo(x, y + height / 2 + 4);
-                ctx.moveTo(x + period.width, y - 2);
-                ctx.lineTo(x + period.width, y + height / 2 + 4);
+                ctx.moveTo(x + 0.5, y - 2);
+                ctx.lineTo(x + 0.5, y + height / 2 + 4);
+                ctx.moveTo(x + 0.5 + period.width, y - 2);
+                ctx.lineTo(x + 0.5 + period.width, y + height / 2 + 4);
                 ctx.stroke();
 
                 ctx.fillRect(period.x - position.x, y, period.width, height, height / 2);
@@ -1224,11 +1226,11 @@ function draw() {
         end += step2;
 
         for (let time = start1; time < end; time += step1) {
-            let x = time * scale - position.x;
+            let x = Math.round(time * scale - position.x);
 
             ctx.beginPath();
-            ctx.moveTo(x, height);
-            ctx.lineTo(x, height * 2);
+            ctx.moveTo(x + 0.5, height);
+            ctx.lineTo(x + 0.5, height * 2);
             ctx.stroke();
         }
 
@@ -1246,9 +1248,9 @@ function draw() {
         ctx.lineWidth = 1;
 
         ctx.beginPath();
-        ctx.moveTo(layout.main.left, layout.main.top);
-        ctx.lineTo(layout.main.left, layout.main.top + layout.main.height);
-        ctx.lineTo(layout.main.left + layout.main.width, layout.main.top + layout.main.height);
+        ctx.moveTo(layout.main.left + 0.5, layout.main.top + 0.5);
+        ctx.lineTo(layout.main.left + 0.5, layout.main.top + layout.main.height + 0.5);
+        ctx.lineTo(layout.main.left + layout.main.width, layout.main.top + layout.main.height + 0.5);
         ctx.stroke();
     }
 
