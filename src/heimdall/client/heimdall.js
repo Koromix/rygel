@@ -28,6 +28,7 @@ const PLOT_HEIGHT = 80;
 const EVENT_WIDTH = 36;
 const EVENT_HEIGHT = 32;
 const PERIOD_HEIGHT = 4;
+const PERIOD_SPACING = 7;
 const MERGE_TRESHOLD = 24;
 const SPACE_BETWEEN_ENTITIES = 8;
 const ALIGN_WIDTH = 16;
@@ -1085,11 +1086,21 @@ function draw() {
             // Draw periods
             for (let period of row.periods) {
                 ctx.fillStyle = period.color ?? '#444444';
+                ctx.strokeStyle = period.color ?? '#444444';
+                ctx.lineWidth = 1;
 
-                let height = PERIOD_HEIGHT * window.devicePixelRatio
-                let offset = (period.stack + 1) * height * 2;
+                let x = period.x - position.x;
+                let height = PERIOD_HEIGHT * window.devicePixelRatio;
+                let y = row.height - Math.round((period.stack + 1) * PERIOD_SPACING);
 
-                ctx.fillRect(period.x - position.x, row.height - offset, period.width, height, height / 2);
+                ctx.beginPath();
+                ctx.moveTo(x, y - 2);
+                ctx.lineTo(x, y + height / 2 + 4);
+                ctx.moveTo(x + period.width, y - 2);
+                ctx.lineTo(x + period.width, y + height / 2 + 4);
+                ctx.stroke();
+
+                ctx.fillRect(period.x - position.x, y, period.width, height, height / 2);
             }
 
             // Draw events
