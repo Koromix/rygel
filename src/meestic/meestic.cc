@@ -321,7 +321,7 @@ static int RunDaemon(Span<const char *> arguments)
     HeapArray<const char *> config_filenames;
     const char *config_filename = FindConfigFile("meestic.ini", &temp_alloc, &config_filenames);
     const char *socket_filename = "/run/meestic.sock";
-    bool sandbox = true;
+    bool sandbox = false;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -334,7 +334,7 @@ Options:
     %!..+-S, --socket_file socket%!0       Change control socket
                                    %!D..(default: %2)%!0
 
-        %!..+--no_sandbox%!0               Disable use of sandboxing
+        %!..+--sandbox%!0                  Run in strict OS sandbox (if supported)
 
 By default, the first of the following config files will be used:
 )",
@@ -361,8 +361,8 @@ By default, the first of the following config files will be used:
                 }
             } else if (opt.Test("-S", "--socket_file", OptionType::Value)) {
                 socket_filename = opt.current_value;
-            } else if (opt.Test("--no_sandbox")) {
-                sandbox = false;
+            } else if (opt.Test("--sandbox")) {
+                sandbox = true;
             } else if (opt.TestHasFailed()) {
                 return 1;
             }

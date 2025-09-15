@@ -4,7 +4,7 @@ Documentation = https://koromix.dev/
 
 [Service]
 Type = notify
-ExecStart = /usr/bin/meestic daemon -C /etc/meestic.ini
+ExecStart = /usr/bin/meestic daemon -C /etc/meestic.ini --sandbox
 Restart = on-failure
 RestartSec = 20
 
