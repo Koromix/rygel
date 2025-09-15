@@ -2187,8 +2187,8 @@ void HandleInstanceMigrate(http_IO *io)
         io->SendError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to list users");
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to migrate instance");
         io->SendError(403);
         return;
     }
@@ -2233,26 +2233,6 @@ void HandleInstanceMigrate(http_IO *io)
         return;
     }
     K_DEFER_N(ref_guard) { instance->Unref(); };
-
-    // Can this admin user touch this instance?
-    if (!session->IsRoot()) {
-        sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
-                                     WHERE userid = ?1 AND instance = ?2 AND
-                                           permissions & ?3)", &stmt))
-            return;
-        sqlite3_bind_int64(stmt, 1, session->userid);
-        sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
-        sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
-
-        if (!stmt.Step()) {
-            if (stmt.IsValid()) {
-                LogError("Instance '%1' does not exist", instance_key);
-                io->SendError(404);
-            }
-            return;
-        }
-    }
 
     // Make sure it is a legacy instance
     if (!instance->legacy) {
