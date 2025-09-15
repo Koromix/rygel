@@ -4,7 +4,7 @@ set -e
 
 PKG_NAME=heimdall
 PKG_AUTHOR="Niels Martignène <niels.martignene@protonmail.com>"
-PKG_DESCRIPTION="Medical timeline visualization (proof-of-concept) "
+PKG_DESCRIPTION="Medical timeline visualization (proof-of-concept)"
 PKG_DEPENDENCIES=""
 PKG_LICENSE=GPL-3.0-or-later
 PKG_ARCHITECTURES="amd64 arm64"
@@ -37,7 +37,6 @@ if [ "$1" = "configure" ]; then
         adduser --system --ingroup heimdall --home /var/lib/heimdall heimdall \
             --gecos "heimdall visualizer daemon"
     fi
-
     mkdir -p /var/lib/heimdall
     chmod 0775 /var/lib/heimdall
 fi
