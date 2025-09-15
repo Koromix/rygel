@@ -703,7 +703,7 @@ function combine(entities, idx, levels, align) {
                     row.right = Math.max(row.right, draw.x);
                 }
             }
-        } else {
+        } else if (entity.values.length) {
             for (let value of entity.values) {
                 if (!level.concepts.has(value.concept))
                     continue;
@@ -719,6 +719,8 @@ function combine(entities, idx, levels, align) {
                 row.left = Math.min(row.left, draw.x);
                 row.right = Math.max(row.right, draw.x);
             }
+
+            row.events.sort((evt1, evt2) => evt1.x - evt2.x);
         }
 
         if (!row.events.length && !row.periods.length && !row.values.length) {
