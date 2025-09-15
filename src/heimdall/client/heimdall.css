@@ -65,10 +65,14 @@
     & > label:has(+ label) { margin-right: 1em; }
 
     & select {
+        max-width: 260px;
         padding: 2px 4px;
         background: white;
         border: 1px solid #ddd;
         border-radius: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     & select:not(:disabled) { cursor: pointer; }
 
