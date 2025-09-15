@@ -236,7 +236,7 @@ function update() {
     }
 
     // Recenter view when user needs it
-    {
+    if (!pressed_keys.ctrl) {
         let reset = (pressed_keys.r == -1);
         let reveal = (pressed_keys.c == -1);
 
