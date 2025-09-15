@@ -27,7 +27,7 @@
 namespace K {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 135;
+const int InstanceVersion = 136;
 const int LegacyVersion = 61;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
@@ -3031,6 +3031,8 @@ bool MigrateInstance(sq_Database *db, int target)
                     INSERT INTO fs_settings (key, value) VALUES ('ExportTime', 0);
                     INSERT INTO fs_settings (key, value) VALUES ('ExportDays', 0);
                     INSERT INTO fs_settings (key, value) VALUES ('ExportAll', 0);
+
+                    DROP TABLE rec_exports_BAK;
                 )");
                 if (!success)
                     return false;
@@ -3042,9 +3044,17 @@ bool MigrateInstance(sq_Database *db, int target)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 135: {
+                bool success = db->RunMany(R"(
+                    DROP TABLE IF EXISTS rec_exports_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 135);
+            static_assert(InstanceVersion == 136);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
