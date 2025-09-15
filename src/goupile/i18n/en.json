@@ -196,6 +196,7 @@
         "project_key_characters": "Allowed characters: a-z (lowercase), 0-9 and '-'",
         "project_key_length": "Maximum length: 24 characters",
         "project_x_created": "Project '{1}' created",
+        "project_x_deleted": "Project '{1}' deleted",
         "project_x_edited": "Project '{1}' modified",
         "project_x_migrated": "Project '{1}' migrated",
         "projects": "Projects",

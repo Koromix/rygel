@@ -340,7 +340,7 @@ function renderMenu() {
                             <button @click=${UI.wrap(goupile.runChangePasswordDialog)}>Modifier mon mot de passe</button>
                             <button @click=${UI.wrap(goupile.runResetTOTP)}>Configurer la double authentification</button>
                             <hr/>
-                            ${goupile.hasPermission('data_export') ? html`
+                            ${goupile.hasPermission('export_create') ? html`
                                 <button @click=${UI.wrap(generateExportKey)}>Générer une clé d'export</button>
                                 <hr/>
                             ` : ''}
@@ -693,7 +693,7 @@ function renderData() {
             </table>
 
             <div class="ui_actions">
-                ${goupile.hasPermission('data_export') ?
+                ${goupile.hasPermission('export_create') ?
                     html`<button @click=${e => { window.location.href = ENV.urls.instance + 'api/records/export'; }}>Exporter les données</button>` : ''}
                 ${ENV.backup_key != null ?
                     html`<button @click=${UI.wrap(backupRecords)}>Faire une sauvegarde chiffrée</button>` : ''}

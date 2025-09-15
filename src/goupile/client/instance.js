@@ -292,7 +292,7 @@ function renderMenu() {
                         <button @click=${UI.wrap(goupile.runChangePasswordDialog)}>${T.change_my_password}</button>
                         <button @click=${UI.wrap(goupile.runResetTOTP)}>${T.configure_my_totp}</button>
                         <hr/>
-                        ${goupile.hasPermission('data_export') || goupile.hasPermission('data_download') ? html`
+                        ${goupile.hasPermission('export_create') || goupile.hasPermission('export_download') ? html`
                             <button @click=${UI.wrap(generateExportKey)}>${T.generate_export_key}</button>
                             <hr/>
                         ` : ''}
@@ -712,8 +712,8 @@ function renderData() {
             </table>
 
             <div class="ui_actions">
-                ${goupile.hasPermission('data_export') ? html`<button @click=${UI.wrap(runExportCreateDialog)}>${T.create_export}</button>` : ''}
-                ${goupile.hasPermission('data_download') ? html`<button @click=${UI.wrap(runExportListDialog)}>${T.list_exports}</button>` : ''}
+                ${goupile.hasPermission('export_create') ? html`<button @click=${UI.wrap(runExportCreateDialog)}>${T.create_export}</button>` : ''}
+                ${goupile.hasPermission('export_download') ? html`<button @click=${UI.wrap(runExportListDialog)}>${T.list_exports}</button>` : ''}
             </div>
         </div>
     `;

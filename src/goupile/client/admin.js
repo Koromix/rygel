@@ -631,13 +631,13 @@ async function runMigrateDialog(e, instance) {
 }
 
 function runDeleteInstanceDialog(e, instance) {
-    return UI.confirm(e, T.format(T.confirm_project_deletion, filename),
+    return UI.confirm(e, T.format(T.confirm_project_deletion, instance.key),
                          T.delete, async () => {
         await Net.post('/admin/api/instances/delete', {
             instance: instance.key
         }, { timeout: 180000 });
 
-        Log.success(T.format(T.archive_x_deleted, filename));
+        Log.success(T.format(T.project_x_deleted, instance.key));
 
         instances = null;
         archives = null;
