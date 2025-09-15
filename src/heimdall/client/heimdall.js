@@ -216,8 +216,6 @@ function syncSize() {
 // ------------------------------------------------------------------------
 
 function update() {
-    rows.length = 0;
-
     if (pressed_keys.tab == 1)
         show_debug = !show_debug;
 
@@ -237,14 +235,27 @@ function update() {
             zone = layout[key];
     }
 
-    let reset = (pressed_keys.r == -1);
-    let reveal = (pressed_keys.c == -1);
+    // Recenter view when user needs it
+    {
+        let reset = (pressed_keys.r == -1);
+        let reveal = (pressed_keys.c == -1);
 
-    if (reset) {
-        position.entity = 0;
-        position.y = 0;
+        if (reset) {
+            position.entity = 0;
+            position.y = 0;
 
-        reveal = true;
+            reveal = true;
+        }
+
+        if (reveal) {
+            let left = Math.min(...rows.map(row => row.left));
+            let right = Math.max(...rows.map(row => row.right));
+            let start = positionToTime(left, position.zoom);
+            let end = positionToTime(right, position.zoom);
+
+            revealTime(start, end);
+            saveState();
+        }
     }
 
     // Handle wheel actions (scroll or zoom)
@@ -328,6 +339,8 @@ function update() {
 
     // Combine view and entities into draw rows
     {
+        rows.length = 0;
+
         let space = SPACE_BETWEEN_ENTITIES * window.devicePixelRatio;
         let first = null;
         let offset = 0;
@@ -473,17 +486,6 @@ function update() {
                 runner.cursor = 'pointer';
             }
         }
-    }
-
-    // Recenter view when user needs it
-    if (reveal) {
-        let left = Math.min(...rows.map(row => row.left));
-        let right = Math.max(...rows.map(row => row.right));
-        let start = positionToTime(left, position.zoom);
-        let end = positionToTime(right, position.zoom);
-
-        revealTime(start, end);
-        saveState();
     }
 
     if (sync_config) {
