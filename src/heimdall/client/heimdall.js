@@ -1074,7 +1074,7 @@ function draw() {
                 ctx.lineTo(x + 8 * window.devicePixelRatio, row.height / 2 + 1 * window.devicePixelRatio);
                 ctx.lineTo(x, row.height / 2 + 7 * window.devicePixelRatio);
                 ctx.stroke();
-            } else if (!row.empty && row.right - position.x < EVENT_WIDTH / 2) {
+            } else if (!row.empty && row.right - position.x < -EVENT_WIDTH / 2) {
                 let x = 20;
 
                 ctx.strokeStyle = '#888888';
