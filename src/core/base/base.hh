@@ -3905,6 +3905,16 @@ public:
     operator FmtArg() const { return FmtCustom(*this); }
 };
 
+class FmtHtmlSafe {
+    Span<const char> str;
+
+public:
+    FmtHtmlSafe(Span<const char> str) : str(str) {}
+
+    void Format(FunctionRef<void(Span<const char>)> append) const;
+    operator FmtArg() const { return FmtCustom(*this); }
+};
+
 FmtArg FmtVersion(int64_t version, int parts, int by);
 
 enum class LogLevel {

@@ -33,6 +33,7 @@ Config config;
 
 static HashTable<const char *, StaticRoute> assets_map;
 static AssetInfo assets_index;
+static AssetInfo assets_root;
 static BlockAllocator assets_alloc;
 static char shared_etag[17];
 
@@ -271,6 +272,8 @@ static void InitAssets()
     for (const AssetInfo &asset: GetEmbedAssets()) {
         if (TestStr(asset.name, "src/heimdall/client/index.html")) {
             assets_index = asset;
+        } else if (TestStr(asset.name, "src/heimdall/client/root.html")) {
+            assets_root = asset;
         } else {
             Span<const char> name = SplitStrReverseAny(asset.name, K_PATH_SEPARATORS);
 
@@ -318,8 +321,6 @@ static void InitAssets()
             writer->Write(js);
         } else if (key == "CSS") {
             writer->Write(css);
-        } else if (key == "CSS") {
-            writer->Write(css);
         }  else if (key == "BUNDLES") {
             json_Writer json(writer);
 
@@ -329,6 +330,20 @@ static void InitAssets()
                 json.Key(name); json.String(bundle);
             }
             json.EndObject();
+        } else {
+            Print(writer, "{{%1}}", expr);
+        }
+    });
+
+    assets_root.data = PatchFile(assets_root, &assets_alloc, [&](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
+        if (key == "VERSION") {
+            writer->Write(FelixVersion);
+        } else if (key == "COMPILER") {
+            writer->Write(FelixCompiler);
+        } else if (key == "CSS") {
+            writer->Write(css);
         } else {
             Print(writer, "{{%1}}", expr);
         }
@@ -352,6 +367,40 @@ static void AttachStatic(http_IO *io, const AssetInfo &asset, const char *source
 
         io->SendAsset(200, asset.data, mimetype, asset.compression_type);
     }
+}
+
+static void HandleIndex(http_IO *io)
+{
+    HeapArray<const char *> names;
+
+    EnumResult ret = EnumerateDirectory(config.project_directory, "*.db", 1024, [&](const char *basename, FileType) {
+        K_ASSERT(EndsWith(basename, ".db"));
+
+        Span<const char> name = MakeSpan(basename, strlen(basename) - 3);
+        const char *copy = DuplicateString(name, io->Allocator()).ptr;
+
+        names.Append(copy);
+
+        return true;
+    });
+    if (ret != EnumResult::Success)
+        return;
+
+    std::sort(names.begin(), names.end(), [](const char *str1, const char *str2) { return CmpStr(str1, str2) < 0; });
+
+    Span<const uint8_t> root = PatchFile(assets_root, io->Allocator(), [&](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
+        if (key == "PROJECTS") {
+            for (const char *name: names) {
+                Print(writer, "<a href=\"/%1\">%2</a>\n", FmtUrlSafe(name, "-._~"), FmtHtmlSafe(name));
+            }
+        } else {
+            Print(writer, "{{%1}}", expr);
+        }
+    });
+
+    io->SendAsset(200, root, "text/html", assets_root.compression_type);
 }
 
 static bool IsProjectNameSafe(const char *project)
@@ -656,10 +705,8 @@ static void HandleRequest(http_IO *io)
     io->AddHeader("X-Robots-Tag", "noindex");
     io->AddHeader("Permissions-Policy", "interest-cohort=()");
 
-    // Help user
     if (TestStr(request.path, "/")) {
-        LogError("Missing project name");
-        io->SendError(404);
+        HandleIndex(io);
         return;
     }
 

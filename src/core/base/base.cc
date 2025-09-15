@@ -1911,6 +1911,21 @@ void FmtUrlSafe::Format(FunctionRef<void(Span<const char>)> append) const
     }
 }
 
+void FmtHtmlSafe::Format(FunctionRef<void(Span<const char>)> append) const
+{
+    for (char c: str) {
+        switch (c) {
+            case '<': { append("&lt;"); } break;
+            case '>':  { append("&gt;"); } break;
+            case '"':  { append("&quot;"); } break;
+            case '\'': { append("&apos;"); } break;
+            case '&':  { append("&amp;"); } break;
+
+            default: { append(c); } break;
+        }
+    }
+}
+
 FmtArg FmtVersion(int64_t version, int parts, int by)
 {
     K_ASSERT(version >= 0);

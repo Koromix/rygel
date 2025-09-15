@@ -20,7 +20,6 @@
         "Init sandbox": "Initialisation de la sandbox",
         "Migrate database: %1 to %2": "Migration de la base de données : %1 vers %2",
         "Missing database filename": "Nom de fichier de base de données manquant",
-        "Missing project name": "Nom du projet manquant",
         "Missing project parameter": "Paramètre de projet manquant",
         "Path '%1' does not start with '/'": "Le chemin '%1' ne commence pas par '/'",
         "Periodic timer set to %1 s": "Minuterie périodique réglée sur %1 s",

@@ -19,6 +19,22 @@
    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
    OTHER DEALINGS IN THE SOFTWARE. */
 
+@import url('../../web/core/reset.css');
+
+html { height: 100%; }
+
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background: white;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #202020;
+}
+
 .hm_main {
     display: flex;
     position: relative;
