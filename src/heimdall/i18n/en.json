@@ -1,8 +1,11 @@
 {
     "keys": {
+        "align_first": "Align at 0",
         "alignment": "Alignment",
+        "concepts": "Concepts",
         "no_alignment": "No alignement",
         "show_all": "Show all",
+        "simple": "Simple",
         "view": "View",
         "with_warning": "With warning"
     },

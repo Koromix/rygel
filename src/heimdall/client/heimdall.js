@@ -36,8 +36,8 @@ const ALIGN_WIDTH = 16;
 const DEFAULT_SETTINGS = {
     tree: 240,
     interpolation: 'linear',
-    view: '',
-    align: '',
+    view: null,
+    align: false,
     warning: false,
     hide: false
 };
@@ -321,15 +321,24 @@ function update() {
         }
 
         if (settings.align) {
-            let concepts = view.items[settings.align];
+            if (typeof settings.align == 'string') {
+                let concepts = view.items[settings.align];
 
-            if (concepts != null) {
-                align = {
-                    concepts: new Set(concepts),
-                    warning: settings.warning
-                };
+                if (concepts != null) {
+                    align = {
+                        concepts: new Set(concepts),
+                        warning: settings.warning
+                    };
+                }
             } else {
-                settings.align = '';
+                align = {
+                    concepts: new Set,
+                    warning: settings.warning
+                }
+            }
+
+            if (align == null) {
+                settings.align = false;
                 saveState();
             }
         }
@@ -500,20 +509,24 @@ function update() {
                 <label>
                     <span>${T.alignment}</span>
                     <div>
-                        <select @change=${e => { settings.align = e.target.value; saveState(); }}>
-                            <option value="" .selected=${!settings.align}>-- ${T.no_alignment} --</option>
+                        <select @change=${e => { settings.align = JSON.parse(e.target.value); saveState(); }}>
+                            <optgroup label=${T.simple}>
+                                <option value=${JSON.stringify(false)} .selected=${settings.align === false}>${T.no_alignment}</option>
+                                <option value=${JSON.stringify(true)} .selected=${settings.align === true}>${T.align_first}</option>
+                            </optgroup>
+                            <optgroup label=${T.concepts}>
                             ${Object.keys(view.items).map(item => {
                                 let text = item.substr(1).replaceAll('/', ' / ');
-                                return html`<option value=${item} .selected=${settings.align == item}>${text}</option>`;
+                                return html`<option value=${JSON.stringify(item)} .selected=${settings.align === item}>${text}</option>`;
                             })}
                         </select>
                         <label>
-                            <input type="checkbox" ?disabled=${!settings.align} .checked=${settings.warning}
+                            <input type="checkbox" ?disabled=${settings.align === false} .checked=${settings.warning}
                                    @change=${e => { settings.warning = e.target.checked; saveState(); }}>
                             <span>${T.with_warning}</span>
                         </label>
                         <label>
-                            <input type="checkbox" ?disabled=${!settings.align} .checked=${!settings.hide}
+                            <input type="checkbox" ?disabled=${settings.align === false} .checked=${!settings.hide}
                                    @change=${e => { settings.hide = !e.target.checked; saveState(); }}>
                             <span>${T.show_all}</span>
                         </label>
@@ -561,7 +574,7 @@ function combine(entities, idx, levels, align) {
         for (let evt of entity.events) {
             if (align.warning && !evt.warning)
                 continue;
-            if (!align.concepts.has(evt.concept))
+            if (align.concepts.size && !align.concepts.has(evt.concept))
                 continue;
 
             start = Math.min(start, evt.time);
@@ -569,7 +582,7 @@ function combine(entities, idx, levels, align) {
         for (let period of entity.periods) {
             if (align.warning)
                 continue;
-            if (!align.concepts.has(period.concept))
+            if (align.concepts.size && !align.concepts.has(period.concept))
                 continue;
 
             start = Math.min(start, period.time);
@@ -577,7 +590,7 @@ function combine(entities, idx, levels, align) {
         for (let value of entity.values) {
             if (align.warning && !value.warning)
                 continue;
-            if (!align.concepts.has(value.concept))
+            if (align.concepts.size && !align.concepts.has(value.concept))
                 continue;
 
             start = Math.min(start, value.time);
@@ -869,9 +882,6 @@ function restoreState() {
     for (let key in user.settings) {
         if (!settings.hasOwnProperty(key))
             continue;
-        if (typeof user.settings[key] != typeof settings[key])
-            continue;
-
         settings[key] = user.settings[key];
     }
 
