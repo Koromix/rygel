@@ -289,7 +289,9 @@ RcppExport SEXP hmR_AddEvents(SEXP inst_xp, SEXP events_xp, SEXP reset_xp, SEXP 
     events.domain = events.df["domain"];
     events.name = events.df["concept"];
     events.time = events.df["time"];
-    events.warning = events.df["warning"];
+    if (events.df.containsElementNamed("warning")) {
+        events.warning = events.df["warning"];
+    }
 
     bool success = inst->db.Transaction([&]() {
         HashSet<int64_t> set;
@@ -299,7 +301,7 @@ RcppExport SEXP hmR_AddEvents(SEXP inst_xp, SEXP events_xp, SEXP reset_xp, SEXP 
             const char *domain = (const char *)events.domain[i];
             const char *name = (const char *)events.name[i];
             int64_t time = events.time[i];
-            bool warning = events.warning[i];
+            bool warning = events.warning.length() ? events.warning[i] : false;
 
             int64_t entity = FindOrCreateEntity(&inst->db, target);
             if (entity < 0)
@@ -445,7 +447,9 @@ RcppExport SEXP hmR_AddValues(SEXP inst_xp, SEXP values_xp, SEXP reset_xp, SEXP 
     values.name = values.df["concept"];
     values.time = values.df["time"];
     values.value = values.df["value"];
-    values.warning = values.df["warning"];
+    if (values.df.containsElementNamed("warning")) {
+        values.warning = values.df["warning"];
+    }
 
     bool success = inst->db.Transaction([&]() {
         HashSet<int64_t> set;
@@ -456,7 +460,7 @@ RcppExport SEXP hmR_AddValues(SEXP inst_xp, SEXP values_xp, SEXP reset_xp, SEXP 
             const char *name = (const char *)values.name[i];
             int64_t time = values.time[i];
             double value = values.value[i];
-            bool warning = values.warning[i];
+            bool warning = values.warning.length() ? values.warning[i] : false;
 
             int64_t entity = FindOrCreateEntity(&inst->db, target);
             if (entity < 0)
