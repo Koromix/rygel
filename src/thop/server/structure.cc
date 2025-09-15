@@ -123,7 +123,7 @@ bool StructureSetBuilder::LoadFiles(Span<const char *const> filenames)
             continue;
         }
 
-        StreamReader st(filename, 0, compression_type);
+        StreamReader st(filename, compression_type);
         if (!st.IsValid()) {
             success = false;
             continue;

@@ -132,10 +132,7 @@ static bool UpdateResourceFile(const char *target_name, const char *icon_filenam
     bool new_manifest;
     if (TestFile(dest_filename, FileType::File)) {
         char old_res[2048] = {};
-        {
-            StreamReader reader(dest_filename);
-            reader.Read(K_SIZE(old_res) - 1, old_res);
-        }
+        ReadFile(dest_filename, MakeSpan(old_res, K_SIZE(old_res) - 1));
 
         new_manifest = !TestStr(old_res, res);
     } else {

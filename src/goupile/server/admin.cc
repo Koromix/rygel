@@ -325,7 +325,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                 char sha256[65];
                 Size total_len = 0;
                 {
-                    StreamReader reader(asset.data, "<asset>", 0, asset.compression_type);
+                    StreamReader reader(asset.data, "<asset>", asset.compression_type);
                     StreamWriter writer(&blob, "<blob>", 0, compression_type);
 
                     crypto_hash_sha256_state state;
@@ -910,7 +910,7 @@ static UnsealResult UnsealArchive(StreamReader *reader, StreamWriter *writer, co
 
     // Read archive header
     ArchiveIntro intro;
-    if (reader->Read(K_SIZE(intro), &intro) != K_SIZE(intro)) {
+    if (reader->ReadFill(K_SIZE(intro), &intro) != K_SIZE(intro)) {
         if (reader->IsValid()) {
             LogError("Truncated archive");
         }
@@ -944,7 +944,7 @@ static UnsealResult UnsealArchive(StreamReader *reader, StreamWriter *writer, co
     // Write cleartext ZIP archive
     for (;;) {
         LocalArray<uint8_t, 4096> cypher;
-        cypher.len = reader->Read(cypher.data);
+        cypher.len = reader->ReadFill(cypher.data);
         if (cypher.len < 0)
             return UnsealResult::Error;
 

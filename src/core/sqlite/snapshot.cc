@@ -388,7 +388,7 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
             return false;
 
         SnapshotHeader sh;
-        if (st.Read(K_SIZE(sh), &sh) != K_SIZE(sh)) {
+        if (st.ReadFill(K_SIZE(sh), &sh) != K_SIZE(sh)) {
             LogError("Truncated snapshot header in '%1' (skipping)", filename);
             continue;
         }
@@ -404,7 +404,7 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
 
         // Read original filename
         char *orig_filename = (char *)AllocateRaw(&out_set->str_alloc, sh.filename_len + 1);
-        if (st.Read(sh.filename_len, orig_filename) != sh.filename_len) {
+        if (st.ReadFill(sh.filename_len, orig_filename) != sh.filename_len) {
             LogError("Truncated snapshot header in '%1' (skipping)", filename);
             continue;
         }
@@ -439,7 +439,7 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
             sq_SnapshotFrame frame = {};
 
             FrameData raw_frame;
-            if (Size read_len = st.Read(K_SIZE(raw_frame), &raw_frame); read_len != K_SIZE(raw_frame)) {
+            if (Size read_len = st.ReadFill(K_SIZE(raw_frame), &raw_frame); read_len != K_SIZE(raw_frame)) {
                 if (read_len) {
                     LogError("Truncated snapshot frame in '%1' (ignoring)", filename);
                 }
@@ -522,7 +522,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const c
         K_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
         Fmt(&path_buf, ".%1", FmtArg(0).Pad0(-16));
 
-        StreamReader reader(path_buf.ptr, 0, CompressionType::LZ4);
+        StreamReader reader(path_buf.ptr, CompressionType::LZ4);
         StreamWriter writer(dest_filename);
         uint8_t sha256[32];
 
@@ -542,7 +542,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const c
         K_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
         Fmt(&path_buf, ".%1", FmtArg(i).Pad0(-16));
 
-        StreamReader reader(path_buf.ptr, 0, CompressionType::LZ4);
+        StreamReader reader(path_buf.ptr, CompressionType::LZ4);
         StreamWriter writer(wal_filename);
         uint8_t sha256[32];
 

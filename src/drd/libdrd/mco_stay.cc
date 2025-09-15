@@ -112,7 +112,7 @@ bool mco_StaySetBuilder::LoadPack(StreamReader *st, HashTable<int32_t, mco_Test>
     HeapArray<mco_ProcedureRealisation> procedures(&procedures_alloc);
 
     PackHeader bh;
-    if (st->Read(K_SIZE(bh), &bh) != K_SIZE(bh))
+    if (st->ReadFill(K_SIZE(bh), &bh) != K_SIZE(bh))
         goto corrupt_error;
 
     if (strncmp(bh.signature, PACK_SIGNATURE, K_SIZE(bh.signature)) != 0) {
@@ -133,20 +133,20 @@ bool mco_StaySetBuilder::LoadPack(StreamReader *st, HashTable<int32_t, mco_Test>
     }
 
     set.stays.Grow((Size)bh.stays_len);
-    if (st->Read(K_SIZE(*set.stays.ptr) * (Size)bh.stays_len,
-                 set.stays.end()) != K_SIZE(*set.stays.ptr) * (Size)bh.stays_len)
+    if (st->ReadFill(K_SIZE(*set.stays.ptr) * (Size)bh.stays_len,
+                     set.stays.end()) != K_SIZE(*set.stays.ptr) * (Size)bh.stays_len)
         goto corrupt_error;
     set.stays.len += (Size)bh.stays_len;
 
     other_diagnoses.Reserve((Size)bh.diagnoses_len);
-    if (st->Read(K_SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len,
-                 other_diagnoses.ptr) != K_SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len)
+    if (st->ReadFill(K_SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len,
+                     other_diagnoses.ptr) != K_SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len)
         goto corrupt_error;
     other_diagnoses.len += (Size)bh.diagnoses_len;
 
     procedures.Grow((Size)bh.procedures_len);
-    if (st->Read(K_SIZE(*procedures.ptr) * (Size)bh.procedures_len,
-                procedures.ptr) != K_SIZE(*procedures.ptr) * (Size)bh.procedures_len)
+    if (st->ReadFill(K_SIZE(*procedures.ptr) * (Size)bh.procedures_len,
+                     procedures.ptr) != K_SIZE(*procedures.ptr) * (Size)bh.procedures_len)
         goto corrupt_error;
     procedures.len += (Size)bh.procedures_len;
 
@@ -970,7 +970,7 @@ bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
             continue;
         }
 
-        StreamReader st(filename, 0, compression_type);
+        StreamReader st(filename, compression_type);
         if (!st.IsValid()) {
             success = false;
             continue;

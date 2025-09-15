@@ -86,8 +86,7 @@ static bool HandleServerData()
         return received;
     };
 
-    // Don't try to fill buffer, which would block, return as soon as some data is available
-    StreamReader reader(read, "<server>", (int)StreamReaderFlag::LazyFill);
+    StreamReader reader(read, "<server>");
     json_Parser json(&reader, &temp_alloc);
 
     for (json.ParseObject(); json.InObject(); ) {

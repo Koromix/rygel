@@ -453,7 +453,7 @@ bool GitVersioneer::ReadAttributes(const GitHash &hash, FunctionRef<bool(Span<co
 
 bool GitVersioneer::ReadLooseAttributes(const char *filename, FunctionRef<bool(Span<const char> key, Span<const char> value)> func)
 {
-    StreamReader st(filename, 0, CompressionType::Zlib);
+    StreamReader st(filename, CompressionType::Zlib);
     LineReader reader(&st);
 
     Span<char> line = {};
@@ -840,7 +840,7 @@ bool GitVersioneer::ReadPackObject(int fd, int64_t offset, int *out_type, HeapAr
         out_obj->Append(hash);
     }
 
-    StreamReader reader(fd, "<pack>", 0, CompressionType::Zlib);
+    StreamReader reader(fd, "<pack>", CompressionType::Zlib);
     {
         Size prev_len = out_obj->len;
         if (reader.ReadAll(Mebibytes(2), out_obj) < 0)

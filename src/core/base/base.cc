@@ -7613,14 +7613,12 @@ void StreamReader::SetDecoder(StreamDecoder *decoder)
     this->decoder = decoder;
 }
 
-bool StreamReader::Open(Span<const uint8_t> buf, const char *filename, unsigned int flags,
-                        CompressionType compression_type)
+bool StreamReader::Open(Span<const uint8_t> buf, const char *filename, CompressionType compression_type)
 {
     Close(true);
 
     K_DEFER_N(err_guard) { error = true; };
 
-    lazy = flags & (int)StreamReaderFlag::LazyFill;
     error = false;
     raw_read = 0;
     read_total = 0;
@@ -7640,13 +7638,12 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename, unsigned 
     return true;
 }
 
-bool StreamReader::Open(int fd, const char *filename, unsigned int flags, CompressionType compression_type)
+bool StreamReader::Open(int fd, const char *filename, CompressionType compression_type)
 {
     Close(true);
 
     K_DEFER_N(err_guard) { error = true; };
 
-    lazy = flags & (int)StreamReaderFlag::LazyFill;
     error = false;
     raw_read = 0;
     read_total = 0;
@@ -7667,13 +7664,12 @@ bool StreamReader::Open(int fd, const char *filename, unsigned int flags, Compre
     return true;
 }
 
-OpenResult StreamReader::Open(const char *filename, unsigned int flags, CompressionType compression_type)
+OpenResult StreamReader::Open(const char *filename, CompressionType compression_type)
 {
     Close(true);
 
     K_DEFER_N(err_guard) { error = true; };
 
-    lazy = flags & (int)StreamReaderFlag::LazyFill;
     error = false;
     raw_read = 0;
     read_total = 0;
@@ -7697,14 +7693,12 @@ OpenResult StreamReader::Open(const char *filename, unsigned int flags, Compress
     return OpenResult::Success;
 }
 
-bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename, unsigned int flags,
-                        CompressionType compression_type)
+bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename, CompressionType compression_type)
 {
     Close(true);
 
     K_DEFER_N(err_guard) { error = true; };
 
-    lazy = flags & (int)StreamReaderFlag::LazyFill;
     error = false;
     raw_read = 0;
     read_total = 0;
@@ -7748,7 +7742,6 @@ bool StreamReader::Close(bool implicit)
     bool ret = !filename || !error;
 
     filename = nullptr;
-    lazy = false;
     error = true;
     source.type = SourceType::Memory;
     source.eof = false;
@@ -7814,6 +7807,40 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
     if (error) [[unlikely]]
         return -1;
 
+    Size len = 0;
+
+    if (decoder) {
+        len = decoder->Read(out_buf.len, out_buf.ptr);
+        if (len < 0) [[unlikely]] {
+            error = true;
+            return -1;
+        }
+    } else {
+        len = ReadRaw(out_buf.len, out_buf.ptr);
+        if (len < 0) [[unlikely]]
+            return -1;
+        eof = source.eof;
+    }
+
+    if (!error && read_max >= 0 && len > read_max - read_total) [[unlikely]] {
+        LogError("Exceeded max stream size of %1", FmtDiskSize(read_max));
+        error = true;
+        return -1;
+    }
+
+    read_total += len;
+    return len;
+}
+
+Size StreamReader::ReadFill(Span<uint8_t> out_buf)
+{
+#if !defined(__wasm__)
+    std::lock_guard<std::mutex> lock(mutex);
+#endif
+
+    if (error) [[unlikely]]
+        return -1;
+
     Size read_len = 0;
 
     while (out_buf.len) {
@@ -7842,7 +7869,7 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
             return -1;
         }
 
-        if (lazy || eof)
+        if (eof)
             break;
     }
 
@@ -7883,10 +7910,10 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
         // who need/want to append a NUL character.
         out_buf->Grow((Size)raw_len + 1);
 
-        Size read_len = Read((Size)raw_len, out_buf->end());
+        Size read_len = ReadFill(out_buf->TakeAvailable());
         if (read_len < 0)
             return -1;
-        out_buf->len += read_len;
+        out_buf->len += (Size)std::min(raw_len, (int64_t)read_len);
 
         buf_guard.Disable();
         return read_len;
@@ -7897,7 +7924,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
             Size grow = std::min(total_len ? Megabytes(1) : Kibibytes(64), K_SIZE_MAX - out_buf->len);
             out_buf->Grow(grow);
 
-            Size read_len = Read(out_buf->Available(), out_buf->end());
+            Size read_len = Read(out_buf->TakeAvailable());
             if (read_len < 0)
                 return -1;
 
@@ -8032,7 +8059,9 @@ bool LineReader::Next(Span<char> *out_line)
         if (!view.len) {
             buf.Grow(K_LINE_READER_STEP_SIZE + 1);
 
-            Size read_len = st->Read(K_LINE_READER_STEP_SIZE, buf.end());
+            Span<char> available = MakeSpan(buf.end(), K_LINE_READER_STEP_SIZE);
+
+            Size read_len = st->Read(available);
             if (read_len < 0) {
                 error = true;
                 return false;
@@ -8960,7 +8989,7 @@ bool PatchFile(Span<const uint8_t> data, StreamWriter *writer,
 bool PatchFile(const AssetInfo &asset, StreamWriter *writer,
                FunctionRef<void(Span<const char>, StreamWriter *)> func)
 {
-    StreamReader reader(asset.data, "<asset>", 0, asset.compression_type);
+    StreamReader reader(asset.data, "<asset>", asset.compression_type);
 
     if (!PatchFile(&reader, writer, func)) {
         K_ASSERT(reader.IsValid());
@@ -9792,7 +9821,7 @@ bool ConsolePrompter::ReadBuffered(Span<const char> *out_str)
 
     do {
         uint8_t c = 0;
-        if (StdIn->Read(1, &c) < 0)
+        if (StdIn->Read(MakeSpan(&c, 1)) < 0)
             return false;
 
         if (c == '\n') {
@@ -9823,7 +9852,7 @@ Size ConsolePrompter::ReadBufferedEnum(Span<const PromptChoice> choices)
 
     do {
         uint8_t c = 0;
-        if (StdIn->Read(1, &c) < 0)
+        if (StdIn->Read(MakeSpan(&c, 1)) < 0)
             return -1;
 
         if (c == '\n') {

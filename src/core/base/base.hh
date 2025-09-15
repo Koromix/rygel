@@ -4898,10 +4898,6 @@ enum class CompressionSpeed {
 class StreamDecoder;
 class StreamEncoder;
 
-enum class StreamReaderFlag {
-    LazyFill = 1 << 0
-};
-
 class StreamReader {
     K_DELETE_COPY(StreamReader)
 
@@ -4912,7 +4908,6 @@ class StreamReader {
     };
 
     const char *filename = nullptr;
-    bool lazy = false;
     bool error = true;
 
     int64_t read_total = 0;
@@ -4952,30 +4947,24 @@ class StreamReader {
 
 public:
     StreamReader() { Close(true); }
-    StreamReader(Span<const uint8_t> buf, const char *filename, unsigned int flags = 0,
+    StreamReader(Span<const uint8_t> buf, const char *filename, CompressionType compression_type = CompressionType::None)
+        : StreamReader() { Open(buf, filename, compression_type); }
+    StreamReader(int fd, const char *filename, CompressionType compression_type = CompressionType::None)
+        : StreamReader() { Open(fd, filename, compression_type); }
+    StreamReader(const char *filename, CompressionType compression_type = CompressionType::None)
+        : StreamReader() { Open(filename, compression_type); }
+    StreamReader(const std::function<Size(Span<uint8_t>)> &func, const char *filename,
                  CompressionType compression_type = CompressionType::None)
-        : StreamReader() { Open(buf, filename, flags, compression_type); }
-    StreamReader(int fd, const char *filename, unsigned int flags = 0,
-                 CompressionType compression_type = CompressionType::None)
-        : StreamReader() { Open(fd, filename, flags, compression_type); }
-    StreamReader(const char *filename, unsigned int flags = 0,
-                 CompressionType compression_type = CompressionType::None)
-        : StreamReader() { Open(filename, flags, compression_type); }
-    StreamReader(const std::function<Size(Span<uint8_t>)> &func, const char *filename, unsigned int flags = 0,
-                 CompressionType compression_type = CompressionType::None)
-        : StreamReader() { Open(func, filename, flags, compression_type); }
+        : StreamReader() { Open(func, filename, compression_type); }
     ~StreamReader() { Close(true); }
 
     // Call before Open. Takes ownership and deletes the decoder at the end.
     void SetDecoder(StreamDecoder *decoder);
 
-    bool Open(Span<const uint8_t> buf, const char *filename, unsigned int flags = 0,
-              CompressionType compression_type = CompressionType::None);
-    bool Open(int fd, const char *filename, unsigned int flags = 0,
-              CompressionType compression_type = CompressionType::None);
-    OpenResult Open(const char *filename, unsigned int flags = 0,
-                    CompressionType compression_type = CompressionType::None);
-    bool Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename, unsigned int flags = 0,
+    bool Open(Span<const uint8_t> buf, const char *filename, CompressionType compression_type = CompressionType::None);
+    bool Open(int fd, const char *filename, CompressionType compression_type = CompressionType::None);
+    OpenResult Open(const char *filename, CompressionType compression_type = CompressionType::None);
+    bool Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename,
               CompressionType compression_type = CompressionType::None);
     bool Close() { return Close(false); }
 
@@ -4995,7 +4984,11 @@ public:
     // Thread safe methods
     Size Read(Span<uint8_t> out_buf);
     Size Read(Span<char> out_buf) { return Read(out_buf.As<uint8_t>()); }
-    Size Read(Size buf_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, buf_len)); }
+
+    // Thread safe methods
+    Size ReadFill(Span<uint8_t> out_buf);
+    Size ReadFill(Span<char> out_buf) { return ReadFill(out_buf.As<uint8_t>()); }
+    Size ReadFill(Size buf_len, void *out_buf) { return ReadFill(MakeSpan((uint8_t *)out_buf, buf_len)); }
 
     Size ReadAll(Size max_len, HeapArray<uint8_t> *out_buf);
     Size ReadAll(Size max_len, HeapArray<char> *out_buf)
@@ -5017,12 +5010,12 @@ private:
 static inline Size ReadFile(const char *filename, Span<uint8_t> out_buf)
 {
     StreamReader st(filename);
-    return st.Read(out_buf);
+    return st.ReadFill(out_buf);
 }
 static inline Size ReadFile(const char *filename, Span<char> out_buf)
 {
     StreamReader st(filename);
-    return st.Read(out_buf);
+    return st.ReadFill(out_buf);
 }
 static inline Size ReadFile(const char *filename, Size max_len, HeapArray<uint8_t> *out_buf)
 {

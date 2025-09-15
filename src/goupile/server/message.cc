@@ -230,7 +230,7 @@ void HandleSendTokenize(http_IO *io, InstanceHolder *instance)
         StreamReader reader;
         if (!io->OpenForRead(msg.len, &reader))
             return;
-        msg.len = reader.Read(msg);
+        msg.len = reader.ReadFill(msg);
         if (msg.len < 0)
             return;
     }

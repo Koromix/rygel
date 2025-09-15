@@ -341,11 +341,13 @@ bool InstanceHolder::SyncViews(const char *directory)
 
                     offset += copy_len;
                     return copy_len;
-                }, filename, 0, src_encoding);
+                }, filename, src_encoding);
 
                 bool success = mz_zip_writer_add_read_buf_callback(&zip, filename, [](void *ctx, mz_uint64, void *buf, size_t len) {
                     StreamReader *reader = (StreamReader *)ctx;
-                    return (size_t)reader->Read(len, buf);
+                    Span<uint8_t> dest = MakeSpan((uint8_t *)buf, len);
+
+                    return (size_t)reader->Read(dest);
                 }, &reader, size, &mtime, nullptr, 0, 0, nullptr, 0, nullptr, 0);
                 if (!success)
                     return false;
@@ -987,7 +989,7 @@ bool MigrateInstance(sq_Database *db, int target)
 
                             offset += copy_len;
                             return copy_len;
-                        }, path, 0, compression_type);
+                        }, path, compression_type);
 
                         do {
                             LocalArray<uint8_t, 16384> buf;
@@ -1243,7 +1245,7 @@ bool MigrateInstance(sq_Database *db, int target)
 
                             offset += copy_len;
                             return copy_len;
-                        }, filename, 0, compression_type);
+                        }, filename, compression_type);
                         if (!reader.IsValid())
                             return false;
                     }
