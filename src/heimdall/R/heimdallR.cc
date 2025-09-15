@@ -18,6 +18,9 @@
 #include "src/core/sqlite/sqlite.hh"
 #include "../server/database.hh"
 
+#if !defined(_WIN32)
+    #include <sys/stat.h>
+#endif
 #include <thread>
 
 namespace K {
@@ -32,6 +35,23 @@ static inline SEXP GetInstanceTag()
     return tag;
 }
 
+// Give read/write permissions to owner and group.
+// This makes it easier to share project databases between the user running R and the web server.
+// SQLite copies the main file mode to the WAL and other files.
+static void AdjustMode(const char *filename)
+{
+#if !defined(_WIN32)
+    struct stat sb;
+    if (stat(filename, &sb) < 0)
+        return;
+
+    mode_t mode = sb.st_mode | 0660;
+    chmod(filename, mode);
+#else
+    (void)filename;
+#endif
+}
+
 RcppExport SEXP hmR_Open(SEXP filename_xp)
 {
     BEGIN_RCPP
@@ -42,8 +62,11 @@ RcppExport SEXP hmR_Open(SEXP filename_xp)
     InstanceData *inst = new InstanceData;
     K_DEFER_N(inst_guard) { delete inst; };
 
+    AdjustMode(filename.get_cstring());
     if (!inst->db.Open(filename.get_cstring(), SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         rcc_StopWithLastError();
+    AdjustMode(filename.get_cstring());
+
     if (!inst->db.SetWAL(true))
         rcc_StopWithLastError();
     if (!MigrateDatabase(&inst->db))
