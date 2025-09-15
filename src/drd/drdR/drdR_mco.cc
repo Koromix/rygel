@@ -43,6 +43,12 @@ static drd_Sector GetSectorFromString(SEXP sector_xp, drd_Sector default_sector)
     }
 }
 
+static SEXP GetClassifierTag()
+{
+    static SEXP tag = Rf_install("hmR_InstanceData");
+    return tag;
+}
+
 RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
                               SEXP authorization_filename_xp, SEXP default_sector_xp)
 {
@@ -84,7 +90,7 @@ RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
     if (!mco_LoadAuthorizationSet(nullptr, authorization_filename2, &classifier->authorization_set))
         rcc_StopWithLastError();
 
-    SEXP classifier_xp = R_MakeExternalPtr(classifier, R_NilValue, R_NilValue);
+    SEXP classifier_xp = R_MakeExternalPtr(classifier, GetClassifierTag(), R_NilValue);
     R_RegisterCFinalizerEx(classifier_xp, [](SEXP classifier_xp) {
         ClassifierInstance *classifier = (ClassifierInstance *)R_ExternalPtrAddr(classifier_xp);
         delete classifier;
@@ -512,7 +518,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     static const int task_size = 2048;
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
+        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp, GetClassifierTag());
     Rcpp::DataFrame stays_df(stays_xp);
     Rcpp::DataFrame diagnoses_df(diagnoses_xp);
     Rcpp::DataFrame procedures_df(procedures_xp);
@@ -777,7 +783,7 @@ RcppExport SEXP drdR_mco_Indexes(SEXP classifier_xp)
     K_DEFER { rcc_DumpWarnings(); };
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
+        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp, GetClassifierTag());
 
     rcc_AutoSexp indexes_df;
     {
@@ -818,7 +824,7 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp
     K_DEFER { rcc_DumpWarnings(); };
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
+        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp, GetClassifierTag());
 
     LocalDate date = rcc_Vector<LocalDate>(date_xp).Value();
     if (!date.value)
@@ -1007,7 +1013,7 @@ RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
     K_DEFER { rcc_DumpWarnings(); };
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
+        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp, GetClassifierTag());
 
     LocalDate date = rcc_Vector<LocalDate>(date_xp).Value();
     if (!date.value)
@@ -1052,7 +1058,7 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
     K_DEFER { rcc_DumpWarnings(); };
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
+        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp, GetClassifierTag());
 
     LocalDate date = rcc_Vector<LocalDate>(date_xp).Value();
     if (!date.value)
@@ -1197,7 +1203,7 @@ RcppExport SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
     K_DEFER { rcc_DumpWarnings(); };
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
+        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp, GetClassifierTag());
 
     LocalDate date = rcc_Vector<LocalDate>(date_xp).Value();
     if (!date.value)

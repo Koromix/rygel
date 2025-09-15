@@ -77,14 +77,18 @@ void rcc_StopWithLastError()
     }
 }
 
-void *rcc_GetPointerSafe(SEXP xp)
+void *rcc_GetPointerSafe(SEXP xp, SEXP tag)
 {
-    if (TYPEOF(xp) != EXTPTRSXP)
+    if (TYPEOF(xp) != EXTPTRSXP) [[unlikely]]
         Rcpp::stop("Argument is not an object instance");
 
     void *ptr = R_ExternalPtrAddr(xp);
-    if (!ptr)
+    SEXP cmp = R_ExternalPtrTag(xp);
+
+    if (!ptr) [[unlikely]]
         Rcpp::stop("Object instance is not valid");
+    if (tag != cmp) [[unlikely]]
+        Rcpp::stop("Unexpected object instance tag");
 
     return ptr;
 }

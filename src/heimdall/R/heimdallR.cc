@@ -26,6 +26,12 @@ struct InstanceData {
     sq_Database db;
 };
 
+static inline SEXP GetInstanceTag()
+{
+    static SEXP tag = Rf_install("hmR_InstanceData");
+    return tag;
+}
+
 RcppExport SEXP hmR_Open(SEXP filename_xp)
 {
     BEGIN_RCPP
@@ -43,7 +49,7 @@ RcppExport SEXP hmR_Open(SEXP filename_xp)
     if (!MigrateDatabase(&inst->db))
         rcc_StopWithLastError();
 
-    SEXP inst_xp = R_MakeExternalPtr(inst, R_NilValue, R_NilValue);
+    SEXP inst_xp = R_MakeExternalPtr(inst, GetInstanceTag(), R_NilValue);
     R_RegisterCFinalizerEx(inst_xp, [](SEXP inst_xp) {
         InstanceData *inst = (InstanceData *)R_ExternalPtrAddr(inst_xp);
         delete inst;
@@ -60,7 +66,7 @@ RcppExport SEXP hmR_Close(SEXP inst_xp)
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
-    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
+    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp, GetInstanceTag());
 
     inst->db.Close();
 
@@ -111,7 +117,7 @@ RcppExport SEXP hmR_SetDomain(SEXP inst_xp, SEXP name_xp, SEXP concepts_xp)
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
-    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
+    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp, GetInstanceTag());
     Rcpp::String name(name_xp);
 
     struct {
@@ -203,7 +209,7 @@ RcppExport SEXP hmR_SetView(SEXP inst_xp, SEXP name_xp, SEXP items_xp)
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
-    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
+    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp, GetInstanceTag());
     Rcpp::String name(name_xp);
 
     struct {
@@ -269,7 +275,7 @@ RcppExport SEXP hmR_AddEvents(SEXP inst_xp, SEXP events_xp, SEXP reset_xp, SEXP 
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
-    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
+    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp, GetInstanceTag());
     bool reset = Rcpp::as<bool>(reset_xp);
     bool strict = Rcpp::as<bool>(strict_xp);
 
@@ -343,7 +349,7 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp, SEX
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
-    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
+    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp, GetInstanceTag());
     bool reset = Rcpp::as<bool>(reset_xp);
     bool strict = Rcpp::as<bool>(strict_xp);
 
@@ -425,7 +431,7 @@ RcppExport SEXP hmR_AddValues(SEXP inst_xp, SEXP values_xp, SEXP reset_xp, SEXP 
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
-    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
+    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp, GetInstanceTag());
     bool reset = Rcpp::as<bool>(reset_xp);
     bool strict = Rcpp::as<bool>(strict_xp);
 
@@ -502,7 +508,7 @@ RcppExport SEXP hmR_DeleteDomain(SEXP inst_xp, SEXP name_xp)
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
-    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
+    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp, GetInstanceTag());
     Rcpp::String name(name_xp);
 
     if (!inst->db.Run("DELETE FROM domains WHERE name = ?1", (const char *)name.get_cstring()))
@@ -518,7 +524,7 @@ RcppExport SEXP hmR_DeleteView(SEXP inst_xp, SEXP name_xp)
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
-    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
+    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp, GetInstanceTag());
     Rcpp::String name(name_xp);
 
     if (!inst->db.Run("DELETE FROM views WHERE name = ?1", (const char *)name.get_cstring()))
@@ -534,7 +540,7 @@ RcppExport SEXP hmR_DeleteEntities(SEXP inst_xp, SEXP names_xp)
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
-    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp);
+    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp, GetInstanceTag());
     Rcpp::CharacterVector names(names_xp);
 
     bool success = inst->db.Transaction([&]() {

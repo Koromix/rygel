@@ -31,7 +31,7 @@ void rcc_RedirectLog();
 void rcc_DumpWarnings();
 void rcc_StopWithLastError() __attribute__((noreturn));
 
-void *rcc_GetPointerSafe(SEXP xp);
+void *rcc_GetPointerSafe(SEXP xp, SEXP tag);
 
 template <typename T, typename U>
 U rcc_GetOptional(T &vec, Size idx, U default_value)
