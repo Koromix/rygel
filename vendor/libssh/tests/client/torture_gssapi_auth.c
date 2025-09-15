@@ -272,5 +272,5 @@ torture_run_tests(void)
     rc = cmocka_run_group_tests(tests, sshd_setup, sshd_teardown);
     ssh_finalize();
 
-    pthread_exit((void *)&rc);
+    return rc;
 }

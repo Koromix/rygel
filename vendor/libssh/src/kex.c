@@ -1487,6 +1487,8 @@ int ssh_make_sessionid(ssh_session session)
     ssh_log_hexdump("hash buffer", ssh_buffer_get(buf), ssh_buffer_get_len(buf));
 #endif
 
+    /* Set rc for the following switch statement in case we goto error. */
+    rc = SSH_ERROR;
     switch (session->next_crypto->kex_type) {
     case SSH_KEX_DH_GROUP1_SHA1:
     case SSH_KEX_DH_GROUP14_SHA1:
@@ -1546,6 +1548,7 @@ int ssh_make_sessionid(ssh_session session)
                session->next_crypto->secret_hash);
         break;
     }
+
     /* During the first kex, secret hash and session ID are equal. However, after
      * a key re-exchange, a new secret hash is calculated. This hash will not replace
      * but complement existing session id.
@@ -1554,6 +1557,7 @@ int ssh_make_sessionid(ssh_session session)
         session->next_crypto->session_id = malloc(session->next_crypto->digest_len);
         if (session->next_crypto->session_id == NULL) {
             ssh_set_error_oom(session);
+            rc = SSH_ERROR;
             goto error;
         }
         memcpy(session->next_crypto->session_id, session->next_crypto->secret_hash,

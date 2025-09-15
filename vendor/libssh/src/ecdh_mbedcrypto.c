@@ -70,6 +70,12 @@ int ssh_client_ecdh_init(ssh_session session)
         return SSH_ERROR;
     }
 
+    /* Free any previously allocated privkey */
+    if (session->next_crypto->ecdh_privkey != NULL) {
+        mbedtls_ecp_keypair_free(session->next_crypto->ecdh_privkey);
+        SAFE_FREE(session->next_crypto->ecdh_privkey);
+    }
+
     session->next_crypto->ecdh_privkey = malloc(sizeof(mbedtls_ecp_keypair));
     if (session->next_crypto->ecdh_privkey == NULL) {
         return SSH_ERROR;
@@ -110,6 +116,7 @@ int ssh_client_ecdh_init(ssh_session session)
         goto out;
     }
 
+    SSH_STRING_FREE(session->next_crypto->ecdh_client_pubkey);
     session->next_crypto->ecdh_client_pubkey = client_pubkey;
     client_pubkey = NULL;
 

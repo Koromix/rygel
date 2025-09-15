@@ -11,7 +11,8 @@ set(server_SRCS
 add_library(testserver STATIC
             test_server.c
             default_cb.c
-            sftpserver_cb.c)
+            sftpserver_cb.c
+            testserver_common.c)
 if (WITH_COVERAGE)
     append_coverage_compiler_flags_to_target(testserver)
 endif (WITH_COVERAGE)
@@ -32,7 +33,7 @@ if (UNIX AND NOT WIN32)
     add_executable(test_server ${server_SRCS})
     target_compile_options(test_server PRIVATE ${DEFAULT_C_COMPILE_FLAGS})
     target_link_libraries(test_server
-        PRIVATE testserver ssh::ssh ${ARGP_LIBRARIES} util)
+        PRIVATE testserver ${TORTURE_LINK_LIBRARIES} ${ARGP_LIBRARIES} util)
     if (WITH_COVERAGE)
         append_coverage_compiler_flags_to_target(test_server)
     endif (WITH_COVERAGE)

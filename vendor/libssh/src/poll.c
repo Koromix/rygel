@@ -426,7 +426,7 @@ void ssh_poll_set_events(ssh_poll_handle p, short events)
 {
     p->events = events;
     if (p->ctx != NULL) {
-        if (p->lock_cnt == 0) {
+        if (!ssh_poll_is_locked(p)) {
             p->ctx->pollfds[p->x.idx].events = events;
         } else if (!(p->ctx->pollfds[p->x.idx].events & POLLOUT)) {
             /* if locked, allow only setting POLLOUT to prevent recursive
@@ -674,6 +674,20 @@ void ssh_poll_ctx_remove(ssh_poll_ctx ctx, ssh_poll_handle p)
 }
 
 /**
+ * @brief  Returns if a poll object is locked.
+ *
+ * @param  p            Pointer to an already allocated poll object.
+ * @returns true if the poll object is locked; false otherwise.
+ */
+bool ssh_poll_is_locked(ssh_poll_handle p)
+{
+    if (p == NULL) {
+        return false;
+    }
+    return p->lock_cnt > 0;
+}
+
+/**
  * @brief  Poll all the sockets associated through a poll object with a
  *         poll context. If any of the events are set after the poll, the
  *         call back function of the socket will be called.
@@ -707,7 +721,7 @@ int ssh_poll_ctx_dopoll(ssh_poll_ctx ctx, int timeout)
      * output buffer */
     for (i = 0; i < ctx->polls_used; i++) {
         /* The lock allows only POLLOUT events: drop the rest */
-        if (ctx->pollptrs[i]->lock_cnt > 0) {
+        if (ssh_poll_is_locked(ctx->pollptrs[i])) {
             ctx->pollfds[i].events &= POLLOUT;
         }
     }

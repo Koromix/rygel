@@ -22,6 +22,11 @@
 #include "pkd_keyutil.h"
 #include "pkd_util.h"
 
+#if defined(HAVE_LIBCRYPTO)
+/* for OPENSSL_cleanup() of OpenSSL context */
+#include <openssl/crypto.h>
+#endif
+
 #define DEFAULT_ITERATIONS 10
 static struct pkd_daemon_args pkd_dargs;
 
@@ -410,22 +415,32 @@ static int torture_pkd_setup_ecdsa_521(void **state) {
     f(client, ecdsa_521_aes192_ctr,    ciphercmd("aes192-ctr"),    setup_ecdsa_521,  teardown)
 
 
-#define PKDTESTS_MAC_FIPS(f, client, maccmd) \
+#define PKDTESTS_MAC_FIPS_BASE(f, client, maccmd) \
     f(client, ecdsa_256_hmac_sha2_256,      maccmd("hmac-sha2-256"),                  setup_ecdsa_256,  teardown) \
     f(client, ecdsa_384_hmac_sha2_256,      maccmd("hmac-sha2-256"),                  setup_ecdsa_384,  teardown) \
     f(client, ecdsa_521_hmac_sha2_256,      maccmd("hmac-sha2-256"),                  setup_ecdsa_521,  teardown) \
     f(client, rsa_hmac_sha2_256,            maccmd("hmac-sha2-256"),                  setup_rsa,        teardown)
 
-/* TODO: Include these tests when an older version of dropbear is used. Currently, they have been removed as the latest dropbear version
-does not support these MACs.
+#define PKDTESTS_MAC_FIPS_SHA1(f, client, maccmd) \
+    f(client, ecdsa_256_hmac_sha1,          maccmd("hmac-sha1"),                      setup_ecdsa_256,  teardown) \
+    f(client, ecdsa_384_hmac_sha1,          maccmd("hmac-sha1"),                      setup_ecdsa_384,  teardown) \
+    f(client, ecdsa_521_hmac_sha1,          maccmd("hmac-sha1"),                      setup_ecdsa_521,  teardown) \
+    f(client, rsa_hmac_sha1,                maccmd("hmac-sha1"),                      setup_rsa,        teardown)
 
-f(client, ecdsa_256_hmac_sha1,          maccmd("hmac-sha1"),                      setup_ecdsa_256,  teardown) \
-f(client, ecdsa_384_hmac_sha1,          maccmd("hmac-sha1"),                      setup_ecdsa_384,  teardown) \
-f(client, ecdsa_521_hmac_sha1,          maccmd("hmac-sha1"),                      setup_ecdsa_521,  teardown) \
-f(client, rsa_hmac_sha1,                maccmd("hmac-sha1"),                      setup_rsa,        teardown) \
-*/
+#ifdef DROPBEAR_SUPPORTS_HMAC_SHA1
+#define PKDTESTS_MAC_FIPS(f, client, maccmd)  \
+    PKDTESTS_MAC_FIPS_BASE(f, client, maccmd) \
+    PKDTESTS_MAC_FIPS_SHA1(f, client, maccmd)
+#define PKDTESTS_MAC_OPENSSHONLY_FIPS_SHA1(f, client, maccmd)
+#else
+#define PKDTESTS_MAC_FIPS(f, client, maccmd) \
+    PKDTESTS_MAC_FIPS_BASE(f, client, maccmd)
+#define PKDTESTS_MAC_OPENSSHONLY_FIPS_SHA1(f, client, maccmd) \
+    PKDTESTS_MAC_FIPS_SHA1(f, client, maccmd)
+#endif
 
 #define PKDTESTS_MAC_OPENSSHONLY_FIPS(f, client, maccmd) \
+    PKDTESTS_MAC_OPENSSHONLY_FIPS_SHA1(f, client, maccmd) \
     f(client, ecdsa_256_hmac_sha1_etm,      maccmd("hmac-sha1-etm@openssh.com"),      setup_ecdsa_256,  teardown) \
     f(client, ecdsa_256_hmac_sha2_256_etm,  maccmd("hmac-sha2-256-etm@openssh.com"),  setup_ecdsa_256,  teardown) \
     f(client, ecdsa_256_hmac_sha2_512,      maccmd("hmac-sha2-512"),                  setup_ecdsa_256,  teardown) \
@@ -990,6 +1005,9 @@ out_finalize:
     if (rc != 0) {
         fprintf(stderr, "ssh_finalize: %d\n", rc);
     }
+#if defined(HAVE_LIBCRYPTO)
+    OPENSSL_cleanup();
+#endif
 out:
     return exit_code;
 }

@@ -1409,6 +1409,8 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
     if (buffer == NULL) {
         return NULL;
     }
+    /* The buffer will contain sensitive information. Make sure it is erased */
+    ssh_buffer_set_secure(buffer);
 
     if (key->cert != NULL) {
         rc = ssh_buffer_add_buffer(buffer, key->cert);

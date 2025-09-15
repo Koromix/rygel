@@ -101,8 +101,15 @@ int ssh_client_ecdh_init(ssh_session session)
         goto out;
     }
 
+    /* Free any previously allocated privkey */
+    if (session->next_crypto->ecdh_privkey != NULL) {
+        gcry_sexp_release(session->next_crypto->ecdh_privkey);
+        session->next_crypto->ecdh_privkey = NULL;
+    }
     session->next_crypto->ecdh_privkey = key;
     key = NULL;
+
+    SSH_STRING_FREE(session->next_crypto->ecdh_client_pubkey);
     session->next_crypto->ecdh_client_pubkey = client_pubkey;
     client_pubkey = NULL;
 

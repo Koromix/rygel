@@ -1,6 +1,15 @@
 CHANGELOG
 =========
 
+version 0.11.3 (released 2025-09-09)
+ * Security:
+   * CVE-2025-8114: Fix NULL pointer dereference after allocation failure
+   * CVE-2025-8277: Fix memory leak of ephemeral key pair during repeated wrong KEX
+   * Potential UAF when send() fails during key exchange
+ * Fix possible timeout during KEX if client sends authentication too early (#311)
+ * Cleanup OpenSSL PKCS#11 provider when loaded
+ * Zeroize buffers containing private key blobs during export
+
 version 0.11.2 (released 2025-06-24)
  * Security:
    * CVE-2025-4877 - Write beyond bounds in binary to base64 conversion

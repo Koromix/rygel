@@ -5,7 +5,7 @@ index 000000000..d814d770b
 +++ a/vendor/libssh/config.h
 @@ -0,0 +1,175 @@
 +#define PACKAGE "libssh"
-+#define VERSION "0.11.1"
++#define VERSION "0.11.3"
 +
 +#if defined(_WIN32)
 +    #define GLOBAL_BIND_CONFIG "/etc/ssh/libssh_server_config"

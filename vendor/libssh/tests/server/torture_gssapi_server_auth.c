@@ -451,5 +451,5 @@ torture_run_tests(void)
                                 teardown_default_server);
     ssh_finalize();
 
-    pthread_exit((void *)&rc);
+    return rc;
 }

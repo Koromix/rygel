@@ -181,7 +181,10 @@ void crypto_free(struct ssh_crypto_struct *crypto)
 #endif /* OPENSSL_VERSION_NUMBER */
 #elif defined HAVE_GCRYPT_ECC
         gcry_sexp_release(crypto->ecdh_privkey);
-#endif
+#elif defined HAVE_LIBMBEDCRYPTO
+        mbedtls_ecp_keypair_free(crypto->ecdh_privkey);
+        SAFE_FREE(crypto->ecdh_privkey);
+#endif /* HAVE_LIBGCRYPT */
         crypto->ecdh_privkey = NULL;
     }
 #endif

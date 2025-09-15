@@ -248,23 +248,9 @@
    Reachable memory from getaddrinfo
    Memcheck:Leak
    match-leak-kinds: reachable
-   fun:malloc
-   fun:UnknownInlinedFun
-   fun:_dl_new_object
-   fun:_dl_map_object_from_fd
-   fun:_dl_map_object
-   fun:dl_open_worker_begin
-   fun:_dl_catch_exception
-   fun:dl_open_worker
-   fun:_dl_catch_exception
-   fun:_dl_open
-   fun:do_dlopen
-   fun:_dl_catch_exception
-   fun:_dl_catch_error
-   fun:dlerror_run
-   fun:__libc_dlopen_mode
-   fun:module_load
+   ...
    fun:__nss_module_get_function
+   ...
    fun:getaddrinfo
    ...
    fun:krb5_sname_to_principal
@@ -285,7 +271,6 @@
    fun:torture_run_tests
    fun:main
 }
-
 ## libkrb5
 # krb5_mcc_generate_new allocates a hashtab on a static global variable
 # It doesn't get freed.
@@ -297,4 +282,31 @@
    fun:k5_hashtab_create
    ...
    fun:krb5_mcc_generate_new*
+}
+{
+   Error string from acquire creds in krb5
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   ...
+   fun:krb5_gss_save_error_string
+   fun:UnknownInlinedFun
+   fun:acquire_cred_context.isra.0
+   fun:acquire_cred_from.isra.0
+   fun:gss_add_cred_from
+   fun:gss_acquire_cred_from
+   ...
+   fun:gss_acquire_cred
+}
+{
+   error string from gss init sec context
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   ...
+   fun:krb5_gss_save_error_string
+   fun:UnknownInlinedFun
+   fun:krb5_gss_init_sec_context_ext
+   fun:krb5_gss_init_sec_context
+   fun:gss_init_sec_context
 }

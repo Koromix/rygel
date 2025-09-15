@@ -46,7 +46,6 @@
 #include <openssl/param_build.h>
 #if defined(WITH_PKCS11_URI) && defined(WITH_PKCS11_PROVIDER)
 #include <openssl/store.h>
-#include <openssl/provider.h>
 #endif
 #endif /* OPENSSL_VERSION_NUMBER */
 
@@ -1429,6 +1428,8 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
     if (buffer == NULL) {
         return NULL;
     }
+    /* The buffer will contain sensitive information. Make sure it is erased */
+    ssh_buffer_set_secure(buffer);
 
     if (key->cert != NULL) {
         rc = ssh_buffer_add_buffer(buffer, key->cert);
@@ -2719,9 +2720,6 @@ error:
 }
 
 #ifdef WITH_PKCS11_URI
-#ifdef WITH_PKCS11_PROVIDER
-static bool pkcs11_provider_failed = false;
-#endif
 
 /**
  * @internal
@@ -2787,19 +2785,10 @@ int pki_uri_import(const char *uri_name,
 
     /* The provider can be either configured in openssl.cnf or dynamically
      * loaded, assuming it does not need any special configuration */
-    if (OSSL_PROVIDER_available(NULL, "pkcs11") == 0 &&
-        !pkcs11_provider_failed) {
-        OSSL_PROVIDER *pkcs11_provider = NULL;
-
-        pkcs11_provider = OSSL_PROVIDER_try_load(NULL, "pkcs11", 1);
-        if (pkcs11_provider == NULL) {
-            SSH_LOG(SSH_LOG_TRACE,
-                    "Failed to initialize provider: %s",
-                    ERR_error_string(ERR_get_error(), NULL));
-            /* Do not attempt to load it again */
-            pkcs11_provider_failed = true;
-            goto fail;
-        }
+    rv = pki_load_pkcs11_provider();
+    if (rv != SSH_OK) {
+        SSH_LOG(SSH_LOG_TRACE, "Failed to load or initialize pkcs11 provider");
+        goto fail;
     }
 
     store = OSSL_STORE_open(uri_name, NULL, NULL, NULL, NULL);

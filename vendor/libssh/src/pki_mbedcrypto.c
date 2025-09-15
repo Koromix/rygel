@@ -864,7 +864,12 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
     ssh_string type_s = NULL;
     ssh_string e = NULL;
     ssh_string n = NULL;
+    ssh_string p = NULL;
+    ssh_string q = NULL;
+    ssh_string d = NULL;
+    ssh_string iqmp = NULL;
     ssh_string str = NULL;
+    int rc;
 #if MBEDTLS_VERSION_MAJOR > 2
     mbedtls_mpi E = {0};
     mbedtls_mpi N = {0};
@@ -872,18 +877,21 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
     mbedtls_mpi IQMP = {0};
     mbedtls_mpi P = {0};
     mbedtls_mpi Q = {0};
-#endif
-    int rc;
 
-#if MBEDTLS_VERSION_MAJOR > 2
     mbedtls_mpi_init(&E);
     mbedtls_mpi_init(&N);
+    mbedtls_mpi_init(&D);
+    mbedtls_mpi_init(&IQMP);
+    mbedtls_mpi_init(&P);
+    mbedtls_mpi_init(&Q);
 #endif
 
     buffer = ssh_buffer_new();
     if (buffer == NULL) {
         return NULL;
     }
+    /* The buffer will contain sensitive information. Make sure it is erased */
+    ssh_buffer_set_secure(buffer);
 
     if (key->cert != NULL) {
         rc = ssh_buffer_add_buffer(buffer, key->cert);
@@ -909,279 +917,241 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
     }
 
     switch (key->type) {
-        case SSH_KEYTYPE_RSA: {
-            mbedtls_rsa_context *rsa;
-            if (mbedtls_pk_can_do(key->pk, MBEDTLS_PK_RSA) == 0) {
-                SSH_BUFFER_FREE(buffer);
-                return NULL;
-            }
+    case SSH_KEYTYPE_RSA: {
+        mbedtls_rsa_context *rsa = NULL;
+        mbedtls_mpi *E_ptr = NULL, *N_ptr = NULL;
 
-            rsa = mbedtls_pk_rsa(*key->pk);
-
-#if MBEDTLS_VERSION_MAJOR > 2
-            rc = mbedtls_rsa_export(rsa, &N, NULL, NULL, NULL, &E);
-            if (rc != 0) {
-                goto fail;
-            }
-
-            e = ssh_make_bignum_string(&E);
-            if (e == NULL) {
-                goto fail;
-            }
-
-            n = ssh_make_bignum_string(&N);
-            if (n == NULL) {
-                goto fail;
-            }
-#else
-            e = ssh_make_bignum_string(&rsa->E);
-            if (e == NULL) {
-                goto fail;
-            }
-
-            n = ssh_make_bignum_string(&rsa->N);
-            if (n == NULL) {
-                goto fail;
-            }
-#endif
-
-            if (type == SSH_KEY_PUBLIC) {
-                /* The N and E parts are swapped in the public key export ! */
-                rc = ssh_buffer_add_ssh_string(buffer, e);
-                if (rc < 0) {
-                    goto fail;
-                }
-
-                rc = ssh_buffer_add_ssh_string(buffer, n);
-                if (rc < 0) {
-                    goto fail;
-                }
-            } else if (type == SSH_KEY_PRIVATE) {
-                ssh_string p = NULL;
-                ssh_string q = NULL;
-                ssh_string d = NULL;
-                ssh_string iqmp = NULL;
-
-                rc = ssh_buffer_add_ssh_string(buffer, n);
-                if (rc < 0) {
-                    goto fail;
-                }
-
-                rc = ssh_buffer_add_ssh_string(buffer, e);
-                if (rc < 0) {
-                    goto fail;
-                }
-
-#if MBEDTLS_VERSION_MAJOR > 2
-                rc = mbedtls_rsa_export(rsa, NULL, &P, &Q, &D, NULL);
-                if (rc != 0) {
-                    goto fail;
-                }
-
-                p = ssh_make_bignum_string(&P);
-                if (p == NULL) {
-                    goto fail;
-                }
-
-                q = ssh_make_bignum_string(&Q);
-                if (q == NULL) {
-                    goto fail;
-                }
-
-                d = ssh_make_bignum_string(&D);
-                if (d == NULL) {
-                    goto fail;
-                }
-                rc = mbedtls_rsa_export_crt(rsa, NULL, NULL, &IQMP);
-                if (rc != 0) {
-                    goto fail;
-                }
-
-                iqmp = ssh_make_bignum_string(&IQMP);
-                if (iqmp == NULL) {
-                    goto fail;
-                }
-
-#else
-                p = ssh_make_bignum_string(&rsa->P);
-                if (p == NULL) {
-                    goto fail;
-                }
-
-                q = ssh_make_bignum_string(&rsa->Q);
-                if (q == NULL) {
-                    goto fail;
-                }
-
-                d = ssh_make_bignum_string(&rsa->D);
-                if (d == NULL) {
-                    goto fail;
-                }
-
-                iqmp = ssh_make_bignum_string(&rsa->QP);
-                if (iqmp == NULL) {
-                    goto fail;
-                }
-#endif
-
-                rc = ssh_buffer_add_ssh_string(buffer, d);
-                if (rc < 0) {
-                    goto fail;
-                }
-
-                rc = ssh_buffer_add_ssh_string(buffer, iqmp);
-                if (rc < 0) {
-                    goto fail;
-                }
-
-                rc = ssh_buffer_add_ssh_string(buffer, p);
-                if (rc < 0) {
-                    goto fail;
-                }
-
-                rc = ssh_buffer_add_ssh_string(buffer, q);
-                if (rc < 0) {
-                    goto fail;
-                }
-
-                ssh_string_burn(d);
-                SSH_STRING_FREE(d);
-                d = NULL;
-                ssh_string_burn(iqmp);
-                SSH_STRING_FREE(iqmp);
-                iqmp = NULL;
-                ssh_string_burn(p);
-                SSH_STRING_FREE(p);
-                p = NULL;
-                ssh_string_burn(q);
-                SSH_STRING_FREE(q);
-                q = NULL;
-            }
-            ssh_string_burn(e);
-            SSH_STRING_FREE(e);
-            e = NULL;
-            ssh_string_burn(n);
-            SSH_STRING_FREE(n);
-            n = NULL;
-            break;
+        if (mbedtls_pk_can_do(key->pk, MBEDTLS_PK_RSA) == 0) {
+            SSH_BUFFER_FREE(buffer);
+            return NULL;
         }
-        case SSH_KEYTYPE_ECDSA_P256:
-        case SSH_KEYTYPE_ECDSA_P384:
-        case SSH_KEYTYPE_ECDSA_P521:
-        case SSH_KEYTYPE_SK_ECDSA:
-            type_s =
-                ssh_string_from_char(pki_key_ecdsa_nid_to_char(key->ecdsa_nid));
-            if (type_s == NULL) {
-                SSH_BUFFER_FREE(buffer);
-                return NULL;
-            }
 
-            rc = ssh_buffer_add_ssh_string(buffer, type_s);
-            SSH_STRING_FREE(type_s);
+        rsa = mbedtls_pk_rsa(*key->pk);
+#if MBEDTLS_VERSION_MAJOR > 2
+        rc = mbedtls_rsa_export(rsa, &N, NULL, NULL, NULL, &E);
+        if (rc != 0) {
+            goto out;
+        }
+
+        E_ptr = &E;
+        N_ptr = &N;
+#else
+        E_ptr = &rsa->E;
+        N_ptr = &rsa->N;
+#endif
+
+        e = ssh_make_bignum_string(E_ptr);
+        if (e == NULL) {
+            goto out;
+        }
+
+        n = ssh_make_bignum_string(N_ptr);
+        if (n == NULL) {
+            goto out;
+        }
+
+        if (type == SSH_KEY_PUBLIC) {
+            /* The N and E parts are swapped in the public key export ! */
+            rc = ssh_buffer_add_ssh_string(buffer, e);
             if (rc < 0) {
-                SSH_BUFFER_FREE(buffer);
-                return NULL;
+                goto out;
             }
 
-            e = make_ecpoint_string(&key->ecdsa->MBEDTLS_PRIVATE(grp),
-                            &key->ecdsa->MBEDTLS_PRIVATE(Q));
+            rc = ssh_buffer_add_ssh_string(buffer, n);
+            if (rc < 0) {
+                goto out;
+            }
+        } else if (type == SSH_KEY_PRIVATE) {
+            mbedtls_mpi *P_ptr = NULL, *Q_ptr = NULL, *D_ptr = NULL;
+            mbedtls_mpi *IQMP_ptr = NULL;
 
-            if (e == NULL) {
-                SSH_BUFFER_FREE(buffer);
-                return NULL;
+            rc = ssh_buffer_add_ssh_string(buffer, n);
+            if (rc < 0) {
+                goto out;
             }
 
             rc = ssh_buffer_add_ssh_string(buffer, e);
             if (rc < 0) {
-                goto fail;
+                goto out;
             }
 
-            ssh_string_burn(e);
-            SSH_STRING_FREE(e);
-            e = NULL;
+#if MBEDTLS_VERSION_MAJOR > 2
+            rc = mbedtls_rsa_export(rsa, NULL, &P, &Q, &D, NULL);
+            if (rc != 0) {
+                goto out;
+            }
 
-            if (type == SSH_KEY_PRIVATE) {
-                ssh_string d = NULL;
-                d = ssh_make_bignum_string(&key->ecdsa->MBEDTLS_PRIVATE(d));
+            rc = mbedtls_rsa_export_crt(rsa, NULL, NULL, &IQMP);
+            if (rc != 0) {
+                goto out;
+            }
 
-                if (d == NULL) {
-                    SSH_BUFFER_FREE(buffer);
-                    return NULL;
-                }
+            P_ptr = &P;
+            Q_ptr = &Q;
+            D_ptr = &D;
+            IQMP_ptr = &IQMP;
+#else
+            P_ptr = &rsa->P;
+            Q_ptr = &rsa->Q;
+            D_ptr = &rsa->D;
+            IQMP_ptr = &rsa->QP;
+#endif
 
-                rc = ssh_buffer_add_ssh_string(buffer, d);
-                if (rc < 0) {
-                    goto fail;
-                }
+            p = ssh_make_bignum_string(P_ptr);
+            if (p == NULL) {
+                goto out;
+            }
 
-                ssh_string_burn(d);
-                SSH_STRING_FREE(d);
-                d = NULL;
-            } else if (key->type == SSH_KEYTYPE_SK_ECDSA) {
-                /* public key can contain certificate sk information */
+            q = ssh_make_bignum_string(Q_ptr);
+            if (q == NULL) {
+                goto out;
+            }
+
+            d = ssh_make_bignum_string(D_ptr);
+            if (d == NULL) {
+                goto out;
+            }
+
+            iqmp = ssh_make_bignum_string(IQMP_ptr);
+            if (iqmp == NULL) {
+                goto out;
+            }
+
+            rc = ssh_buffer_add_ssh_string(buffer, d);
+            if (rc < 0) {
+                goto out;
+            }
+
+            rc = ssh_buffer_add_ssh_string(buffer, iqmp);
+            if (rc < 0) {
+                goto out;
+            }
+
+            rc = ssh_buffer_add_ssh_string(buffer, p);
+            if (rc < 0) {
+                goto out;
+            }
+
+            rc = ssh_buffer_add_ssh_string(buffer, q);
+            if (rc < 0) {
+                goto out;
+            }
+        }
+        break;
+    }
+    case SSH_KEYTYPE_ECDSA_P256:
+    case SSH_KEYTYPE_ECDSA_P384:
+    case SSH_KEYTYPE_ECDSA_P521:
+    case SSH_KEYTYPE_SK_ECDSA:
+        type_s =
+            ssh_string_from_char(pki_key_ecdsa_nid_to_char(key->ecdsa_nid));
+        if (type_s == NULL) {
+            SSH_BUFFER_FREE(buffer);
+            return NULL;
+        }
+
+        rc = ssh_buffer_add_ssh_string(buffer, type_s);
+        SSH_STRING_FREE(type_s);
+        if (rc < 0) {
+            SSH_BUFFER_FREE(buffer);
+            return NULL;
+        }
+
+        e = make_ecpoint_string(&key->ecdsa->MBEDTLS_PRIVATE(grp),
+                                &key->ecdsa->MBEDTLS_PRIVATE(Q));
+
+        if (e == NULL) {
+            SSH_BUFFER_FREE(buffer);
+            return NULL;
+        }
+
+        rc = ssh_buffer_add_ssh_string(buffer, e);
+        if (rc < 0) {
+            goto out;
+        }
+
+        if (type == SSH_KEY_PRIVATE) {
+            d = ssh_make_bignum_string(&key->ecdsa->MBEDTLS_PRIVATE(d));
+
+            if (d == NULL) {
+                SSH_BUFFER_FREE(buffer);
+                goto out;
+            }
+
+            rc = ssh_buffer_add_ssh_string(buffer, d);
+            if (rc < 0) {
+                goto out;
+            }
+        } else if (key->type == SSH_KEYTYPE_SK_ECDSA) {
+            /* public key can contain certificate sk information */
+            rc = ssh_buffer_add_ssh_string(buffer, key->sk_application);
+            if (rc < 0) {
+                goto out;
+            }
+        }
+        break;
+    case SSH_KEYTYPE_ED25519:
+    case SSH_KEYTYPE_SK_ED25519:
+        if (type == SSH_KEY_PUBLIC) {
+            rc = pki_ed25519_public_key_to_blob(buffer, key);
+            if (rc == SSH_ERROR) {
+                goto out;
+            }
+            /* public key can contain certificate sk information */
+            if (key->type == SSH_KEYTYPE_SK_ED25519) {
                 rc = ssh_buffer_add_ssh_string(buffer, key->sk_application);
                 if (rc < 0) {
-                    goto fail;
-                }
-
-            }
-            break;
-        case SSH_KEYTYPE_ED25519:
-        case SSH_KEYTYPE_SK_ED25519:
-            if (type == SSH_KEY_PUBLIC) {
-                rc = pki_ed25519_public_key_to_blob(buffer, key);
-                if (rc == SSH_ERROR) {
-                    goto fail;
-                }
-                /* public key can contain certificate sk information */
-                if (key->type == SSH_KEYTYPE_SK_ED25519) {
-                    rc = ssh_buffer_add_ssh_string(buffer, key->sk_application);
-                    if (rc < 0) {
-                        goto fail;
-                    }
-                }
-            } else {
-                rc = pki_ed25519_private_key_to_blob(buffer, key);
-                if (rc == SSH_ERROR) {
-                    goto fail;
+                    goto out;
                 }
             }
-            break;
-        default:
-            goto fail;
+        } else {
+            rc = pki_ed25519_private_key_to_blob(buffer, key);
+            if (rc == SSH_ERROR) {
+                goto out;
+            }
+        }
+        break;
+    default:
+        goto out;
     }
 makestring:
     str = ssh_string_new(ssh_buffer_get_len(buffer));
     if (str == NULL) {
-        goto fail;
+        goto out;
     }
 
-    rc = ssh_string_fill(str, ssh_buffer_get(buffer),
-            ssh_buffer_get_len(buffer));
+    rc = ssh_string_fill(str,
+                         ssh_buffer_get(buffer),
+                         ssh_buffer_get_len(buffer));
     if (rc < 0) {
-        goto fail;
+        ssh_string_burn(str);
+        SSH_STRING_FREE(str);
     }
 
+out:
     SSH_BUFFER_FREE(buffer);
-#if MBEDTLS_VERSION_MAJOR > 2
-    mbedtls_mpi_free(&N);
-    mbedtls_mpi_free(&E);
-#endif
-    return str;
-fail:
-    SSH_BUFFER_FREE(buffer);
-    ssh_string_burn(str);
-    SSH_STRING_FREE(str);
     ssh_string_burn(e);
     SSH_STRING_FREE(e);
     ssh_string_burn(n);
     SSH_STRING_FREE(n);
+    ssh_string_burn(d);
+    SSH_STRING_FREE(d);
+    ssh_string_burn(iqmp);
+    SSH_STRING_FREE(iqmp);
+    ssh_string_burn(p);
+    SSH_STRING_FREE(p);
+    ssh_string_burn(q);
+    SSH_STRING_FREE(q);
 #if MBEDTLS_VERSION_MAJOR > 2
     mbedtls_mpi_free(&N);
     mbedtls_mpi_free(&E);
+    mbedtls_mpi_free(&D);
+    mbedtls_mpi_free(&IQMP);
+    mbedtls_mpi_free(&P);
+    mbedtls_mpi_free(&Q);
 #endif
 
-    return NULL;
+    return str;
 }
 
 ssh_string pki_signature_to_blob(const ssh_signature sig)

@@ -21,9 +21,11 @@
  * MA 02111-1307, USA.
  */
 
+
 #include "config.h"
 #include "test_server.h"
 #include "default_cb.h"
+#include "testserver_common.h"
 
 #include <libssh/callbacks.h>
 #include <libssh/server.h>
@@ -448,9 +450,11 @@ static int exec_pty(const char *mode,
     case 0:
         close(cdata->pty_master);
         if (login_tty(cdata->pty_slave) != 0) {
+            finalize_openssl();
             exit(1);
         }
         execl("/bin/sh", "sh", mode, command, NULL);
+        finalize_openssl();
         exit(0);
     default:
         close(cdata->pty_slave);
@@ -500,6 +504,7 @@ static int exec_nopty(const char *command, struct channel_data_st *cdata)
             close(err[1]);
             /* exec the requested command. */
             execl("/bin/sh", "sh", "-c", command, NULL);
+            finalize_openssl();
             exit(0);
     }
 

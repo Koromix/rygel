@@ -2468,9 +2468,9 @@ static void torture_config_make_absolute_int(void **state, bool no_sshdir_fails)
     char *home = NULL;
     struct passwd *pw = getpwuid(getuid());
     assert_non_null(pw);
-    user = pw->pw_name;
+    user = strdup(pw->pw_name);
     assert_non_null(user);
-    home = pw->pw_dir;
+    home = strdup(pw->pw_dir);
     assert_non_null(home);
 #endif
 
@@ -2528,6 +2528,8 @@ static void torture_config_make_absolute_int(void **state, bool no_sshdir_fails)
     snprintf(h, 256 - 1, "/etc/ssh/~%s/.ssh/config.d/*.conf", user);
     assert_string_equal(result, h);
     free(result);
+    free(home);
+    free(user);
 #endif
 }
 

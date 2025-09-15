@@ -28,9 +28,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#ifdef _WIN32
-#include <winsock2.h>
-#else
+#ifndef _WIN32
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #endif

@@ -523,6 +523,7 @@ static int ssh_server_kex_termination(void *s){
   ssh_session session = s;
   if (session->session_state != SSH_SESSION_STATE_ERROR &&
       session->session_state != SSH_SESSION_STATE_AUTHENTICATING &&
+      session->session_state != SSH_SESSION_STATE_AUTHENTICATED &&
       session->session_state != SSH_SESSION_STATE_DISCONNECTED)
     return 0;
   else

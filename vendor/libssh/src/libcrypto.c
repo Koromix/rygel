@@ -49,8 +49,9 @@
 #include <openssl/rsa.h>
 #include <openssl/hmac.h>
 #else
-#include <openssl/param_build.h>
 #include <openssl/core_names.h>
+#include <openssl/param_build.h>
+#include <openssl/provider.h>
 #endif /* OPENSSL_VERSION_NUMBER */
 #include <openssl/rand.h>
 #if defined(WITH_PKCS11_URI) && !defined(WITH_PKCS11_PROVIDER)
@@ -96,7 +97,37 @@ void ssh_reseed(void){
 #endif
 }
 
-#if defined(WITH_PKCS11_URI) && !defined(WITH_PKCS11_PROVIDER)
+#if defined(WITH_PKCS11_URI)
+#if defined(WITH_PKCS11_PROVIDER)
+static OSSL_PROVIDER *provider = NULL;
+static bool pkcs11_provider_failed = false;
+
+int pki_load_pkcs11_provider(void)
+{
+    if (OSSL_PROVIDER_available(NULL, "pkcs11") == 1) {
+        /* the provider is already available.
+         * Loaded through a configuration file? */
+        return SSH_OK;
+    }
+
+    if (pkcs11_provider_failed) {
+        /* the loading failed previously -- do not retry */
+        return SSH_ERROR;
+    }
+
+    provider = OSSL_PROVIDER_try_load(NULL, "pkcs11", 1);
+    if (provider != NULL) {
+        return SSH_OK;
+    }
+
+    SSH_LOG(SSH_LOG_TRACE,
+            "Failed to load the pkcs11 provider: %s",
+            ERR_error_string(ERR_get_error(), NULL));
+    /* Do not attempt to load it again */
+    pkcs11_provider_failed = true;
+    return SSH_ERROR;
+}
+#else
 static ENGINE *engine = NULL;
 
 ENGINE *pki_get_engine(void)
@@ -128,7 +159,8 @@ ENGINE *pki_get_engine(void)
     }
     return engine;
 }
-#endif /* defined(WITH_PKCS11_URI) && !defined(WITH_PKCS11_PROVIDER) */
+#endif /* defined(WITH_PKCS11_PROVIDER) */
+#endif /* defined(WITH_PKCS11_URI) */
 
 #ifdef HAVE_OPENSSL_EVP_KDF_CTX
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
@@ -1402,6 +1434,14 @@ void ssh_crypto_finalize(void)
         engine = NULL;
     }
 #endif
+#if defined(WITH_PKCS11_URI)
+#if defined(WITH_PKCS11_PROVIDER)
+    if (provider != NULL) {
+        OSSL_PROVIDER_unload(provider);
+        provider = NULL;
+    }
+#endif /* WITH_PKCS11_PROVIDER */
+#endif /* WITH_PKCS11_URI */
 
     libcrypto_initialized = 0;
 }

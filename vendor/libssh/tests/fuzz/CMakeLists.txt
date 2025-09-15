@@ -2,9 +2,7 @@ project(fuzzing CXX)
 
 macro(fuzzer name)
     add_executable(${name} ${name}.c)
-    target_link_libraries(${name}
-                          PRIVATE
-                              ssh::static pthread)
+    target_link_libraries(${name} PRIVATE ${TORTURE_LINK_LIBRARIES})
     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         set_target_properties(${name}
                               PROPERTIES

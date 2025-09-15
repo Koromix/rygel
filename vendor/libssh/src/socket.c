@@ -478,7 +478,7 @@ void ssh_socket_close(ssh_socket s)
 #endif
     }
 
-    if (s->poll_handle != NULL) {
+    if (s->poll_handle != NULL && !ssh_poll_is_locked(s->poll_handle)) {
         ssh_poll_free(s->poll_handle);
         s->poll_handle = NULL;
     }

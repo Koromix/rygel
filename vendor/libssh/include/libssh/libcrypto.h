@@ -121,6 +121,15 @@ typedef BN_CTX* bignum_CTX;
 
 ssh_string pki_key_make_ecpoint_string(const EC_GROUP *g, const EC_POINT *p);
 int pki_key_ecgroup_name_to_nid(const char *group);
+
+#if defined(WITH_PKCS11_URI)
+#if defined(WITH_PKCS11_PROVIDER)
+int pki_load_pkcs11_provider(void);
+#else
+ENGINE *pki_get_engine(void);
+#endif
+#endif /* WITH_PKCS11_PROVIDER */
+
 #endif /* HAVE_LIBCRYPTO */
 
 #endif /* LIBCRYPTO_H_ */

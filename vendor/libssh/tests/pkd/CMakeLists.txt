@@ -17,10 +17,8 @@ set(pkd_hello_src
 )
 
 set(pkd_libs
-    ${CMOCKA_LIBRARY}
-    ssh::static
+    ${TORTURE_LINK_LIBRARIES}
     ${ARGP_LIBRARIES}
-    pthread
 )
 
 add_executable(pkd_hello ${pkd_hello_src})

@@ -23,6 +23,12 @@ if (NOT WIN32)
         ${TORTURE_LINK_LIBRARIES}
         pthread)
 endif(NOT WIN32)
+if (WITH_GSSAPI AND GSSAPI_FOUND)
+    find_package(OpenSSL 1.1.1 REQUIRED)
+    set(TORTURE_LINK_LIBRARIES
+        ${TORTURE_LINK_LIBRARIES}
+        OpenSSL::Crypto)
+endif (WITH_GSSAPI AND GSSAPI_FOUND)
 
 # create test library
 add_library(${TORTURE_LIBRARY}
@@ -99,6 +105,7 @@ add_subdirectory(unittests)
 # OpenSSH Capabilities are required for all unit tests
 find_program(SSH_EXECUTABLE NAMES ssh)
 if (SSH_EXECUTABLE)
+    file(SIZE ${SSH_EXECUTABLE} SSH_EXECUTABLE_SIZE)
     execute_process(COMMAND ${SSH_EXECUTABLE} -V ERROR_VARIABLE OPENSSH_VERSION_STR)
     string(REGEX REPLACE "^.*OpenSSH_([0-9]+).[0-9].*$" "\\1" OPENSSH_VERSION_MAJOR "${OPENSSH_VERSION_STR}")
     string(REGEX REPLACE "^.*OpenSSH_[0-9]+.([0-9]).*$" "\\1" OPENSSH_VERSION_MINOR "${OPENSSH_VERSION_STR}")
@@ -161,6 +168,22 @@ if (SSH_EXECUTABLE)
     string(REPLACE "\n" "," OPENSSH_KEX "${OPENSSH_KEX}")
     string(REPLACE "\n" "," OPENSSH_KEYS "${OPENSSH_KEYS}")
 
+endif()
+
+find_program(DROPBEAR_EXECUTABLE NAMES dbclient)
+if (DROPBEAR_EXECUTABLE)
+    execute_process(COMMAND ${DROPBEAR_EXECUTABLE} -V ERROR_VARIABLE DROPBEAR_VERSION_STR)
+    string(REGEX REPLACE "^.*Dropbear v([0-9]+)\\.([0-9]+).*$" "\\1.\\2" DROPBEAR_VERSION "${DROPBEAR_VERSION_STR}")
+    set(DROPBEAR_VERSION "${DROPBEAR_VERSION}")
+
+    # HMAC-SHA1 support was removed in version 2025.87
+    if("${DROPBEAR_VERSION}" VERSION_LESS "2025.87")
+        message("Dropbear Version less than 2025.87, enabling dropbear HMAC-SHA1 tests")
+        add_definitions(-DDROPBEAR_SUPPORTS_HMAC_SHA1)
+    endif()
+else()
+    message(STATUS "Could NOT find Dropbear (missing: dbclient executable)")
+    set(DROPBEAR_EXECUTABLE "/bin/false")
 endif()
 
 find_program(SSHD_EXECUTABLE

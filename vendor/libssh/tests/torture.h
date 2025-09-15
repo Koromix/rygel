@@ -178,4 +178,6 @@ int torture_change_dir(char *path);
 void torture_setenv(char const* variable, char const* value);
 void torture_unsetenv(char const* variable);
 
+void torture_finalize(void);
+
 #endif /* _TORTURE_H */

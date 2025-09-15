@@ -22,6 +22,7 @@
  */
 
 #include "test_server.h"
+#include "testserver_common.h"
 
 #include <libssh/priv.h>
 #include <libssh/libssh.h>
@@ -288,6 +289,7 @@ int run_server(struct server_state_st *state)
 
                 free_server_state(state);
                 SAFE_FREE(state);
+                finalize_openssl();
                 exit(0);
             case -1:
                 fprintf(stderr, "Failed to fork\n");
@@ -355,11 +357,8 @@ fork_run_server(struct server_state_st *state,
 
         /* The child process starts a server which will listen for connections */
         rc = run_server(state);
-        if (rc != 0) {
-            exit(rc);
-        }
-
-        exit(0);
+        finalize_openssl();
+        exit(rc);
     case -1:
         strerror_r(errno, err_str, 1024);
         fprintf(stderr, "Failed to fork: %s\n",

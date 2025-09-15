@@ -223,9 +223,6 @@ int sshkdf_derive_key(struct ssh_crypto_struct *crypto,
                       size_t requested_len);
 
 int secure_memcmp(const void *s1, const void *s2, size_t n);
-#if defined(HAVE_LIBCRYPTO) && !defined(WITH_PKCS11_PROVIDER)
-ENGINE *pki_get_engine(void);
-#endif /* HAVE_LIBCRYPTO */
 
 void compress_cleanup(struct ssh_crypto_struct *crypto);
 
