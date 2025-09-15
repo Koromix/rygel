@@ -628,7 +628,7 @@ retry_pwd:
 
     // Create archive key pair
     if (!archive_key[0]) {
-        GenerateKeyPair(archive_key, decrypt_key);
+        GenerateKeyPair(decrypt_key, archive_key);
     }
 
     // Create domain config
