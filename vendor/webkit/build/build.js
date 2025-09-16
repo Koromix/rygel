@@ -15,17 +15,27 @@ function main() {
     process.chdir(__dirname)
 
     // Cleanup
+    if (fs.existsSync('cmake'))
+        fs.rmdirSync('cmake', { recursive: true });
     if (fs.existsSync('icu'))
         fs.rmdirSync('icu', { recursive: true });
     if (fs.existsSync('webkit'))
         fs.rmdirSync('webkit', { recursive: true });
 
+    // Get recent CMake build
+    fs.mkdirSync('cmake');
+    switch (ARCHITECTURE) {
+        case 'x86_64': { run('.', 'curl', ['-L', '-o', 'cmake.tar.gz', 'https://github.com/Kitware/CMake/releases/download/v3.31.8/cmake-3.31.8-linux-x86_64.tar.gz']); } break;
+        case 'ARM64': { run('.', 'curl', ['-L', '-o', 'cmake.tar.gz', 'https://github.com/Kitware/CMake/releases/download/v3.31.8/cmake-3.31.8-linux-aarch64.tar.gz']); } break;
+    }
+    run('cmake', '/bin/tar', ['-x', '--strip-components=1', '-f', '../cmake.tar.gz']);
+
     // Clone ICU repository
-    run('.', 'git', ['clone', '--branch', ICU, '--depth', '1', 'https://github.com/unicode-org/icu.git', 'icu'])
+    run('.', 'git', ['clone', '--branch', ICU, '--depth', '1', 'https://github.com/unicode-org/icu.git', 'icu']);
     fs.rmdirSync('icu/.git', { recursive: true });
 
     // Clone WebKit repository
-    run('.', 'git', ['clone', '--branch', WEBKIT, '--depth', '1', 'https://github.com/WebKit/WebKit.git', 'webkit'])
+    run('.', 'git', ['clone', '--branch', WEBKIT, '--depth', '1', 'https://github.com/WebKit/WebKit.git', 'webkit']);
     fs.rmdirSync('webkit/.git', { recursive: true });
 
     buildICU();
@@ -39,7 +49,7 @@ function buildICU() {
             continue;
 
         let filename = 'patches/' + basename;
-        run('git', ['apply', '-p3', filename]);
+        run('.', 'patch', ['-f', '-p3'], { input: filename });
     }
 
     // Build ICU
@@ -97,7 +107,7 @@ function buildWebKit() {
             continue;
 
         let filename = 'patches/' + basename;
-        run('.', 'git', ['apply', '-p3', filename]);
+        run('.', 'patch', ['-f', '-p3'], { input: filename });
     }
 
     // Build JSCore
@@ -106,7 +116,7 @@ function buildWebKit() {
             fs.rmdirSync('webkit/build', { recursive: true });
         fs.mkdirSync('webkit/build', { mode: 0o755 });
 
-        run('webkit/build', 'cmake', [
+        run('webkit/build', '../../cmake/bin/cmake', [
             '-G', 'Ninja',
             '-DPORT=JSCOnly',
             '-DICU_INCLUDE_DIR=../../icu/build/include',
@@ -118,7 +128,9 @@ function buildWebKit() {
             '-DDEVELOPER_MODE=OFF', '-DENABLE_FTL_JIT=ON',
             '-DENABLE_STATIC_JSC=ON', '-DUSE_THIN_ARCHIVES=OFF',
             '..'
-        ], { CC: 'clang-18', CXX: 'clang++-18' });
+        ], {
+            env: { CC: 'clang-18', CXX: 'clang++-18' }
+        });
         run('webkit/build', 'ninja');
     }
 
@@ -164,13 +176,21 @@ function buildWebKit() {
     }
 }
 
-function run(cwd, cmd, args = [], env = {}) {
-    env = Object.assign(process.env, env);
+function run(cwd, cmd, args = [], options = {}) {
+    let stdio = ['inherit', 'inherit', 'inherit'];
+    let env = Object.assign({}, process.env, options.env);
+
+    if (options.input != null) {
+        let fd = fs.openSync(options.input, 'r');
+        let stdin = fs.createReadStream(null, { fd: fd });
+
+        stdio[0] = stdin;
+    }
 
     let proc = spawnSync(cmd, args, {
         cwd: cwd,
         env: env,
-        stdio: 'inherit'
+        stdio: stdio
     });
 
     if (proc.status !== 0)

@@ -1,7 +1,7 @@
 diff --git a/vendor/webkit/webkit/Source/WTF/wtf/CMakeLists.txt b/vendor/webkit/webkit/Source/WTF/wtf/CMakeLists.txt
 --- a/vendor/webkit/webkit/Source/WTF/wtf/CMakeLists.txt
 +++ b/vendor/webkit/webkit/Source/WTF/wtf/CMakeLists.txt
-@@ -598,9 +598,9 @@
+@@ -736,9 +736,9 @@ set(WTF_PRIVATE_INCLUDE_DIRECTORIES
  
  set(WTF_LIBRARIES
      ${CMAKE_DL_LIBS}

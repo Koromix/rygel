@@ -2,7 +2,7 @@ diff --git a/vendor/webkit/webkit/Source/JavaScriptCore/API/JSStringRef.cpp b/ve
 index a13221422c..7206407a93 100644
 --- a/vendor/webkit/webkit/Source/JavaScriptCore/API/JSStringRef.cpp
 +++ b/vendor/webkit/webkit/Source/JavaScriptCore/API/JSStringRef.cpp
-@@ -59,6 +59,22 @@ JSStringRef JSStringCreateWithUTF8CString(const char* string)
+@@ -58,6 +58,22 @@ JSStringRef JSStringCreateWithUTF8CString(const char* string)
      return &OpaqueJSString::create().leakRef();
  }
  
