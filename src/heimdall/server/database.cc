@@ -48,6 +48,12 @@ bool MigrateDatabase(sq_Database *db)
     bool success = db->Transaction([&]() {
         int64_t time = GetUnixTime();
 
+        // Maybe someone else has migrated the database...
+        // So check again!
+        int version = GetDatabaseVersion(db);
+        if (version < 0)
+            return false;
+
         switch (version) {
             case 0: {
                 bool success = db->RunMany(R"(
