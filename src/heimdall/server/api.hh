@@ -20,7 +20,7 @@
 
 namespace K {
 
-bool IsProjectNameSafe(const char *project);
+bool IsProjectNameSafe(const char *name);
 
 void HandleViews(http_IO *io);
 void HandleEntities(http_IO *io);

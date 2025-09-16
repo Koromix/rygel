@@ -381,10 +381,12 @@ static void HandleIndex(http_IO *io)
     EnumResult ret = EnumerateDirectory(config.project_directory, "*.db", 1024, [&](const char *basename, FileType) {
         K_ASSERT(EndsWith(basename, ".db"));
 
-        Span<const char> name = MakeSpan(basename, strlen(basename) - 3);
-        const char *copy = DuplicateString(name, io->Allocator()).ptr;
+        Span<const char> prefix = MakeSpan(basename, strlen(basename) - 3);
+        const char *name = DuplicateString(prefix, io->Allocator()).ptr;
 
-        names.Append(copy);
+        if (IsProjectNameSafe(name)) {
+            names.Append(name);
+        }
 
         return true;
     });

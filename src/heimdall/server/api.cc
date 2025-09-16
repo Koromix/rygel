@@ -20,9 +20,14 @@
 
 namespace K {
 
-bool IsProjectNameSafe(const char *project)
+bool IsProjectNameSafe(const char *name)
 {
-    return !PathIsAbsolute(project) && !PathContainsDotDot(project);
+    if (PathIsAbsolute(name))
+        return false;
+    if (PathContainsDotDot(name))
+        return false;
+
+    return true;
 }
 
 static bool OpenProjectDatabase(http_IO *io, sq_Database *db)
