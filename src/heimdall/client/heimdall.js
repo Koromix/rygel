@@ -127,13 +127,18 @@ async function fetchProject(project) {
     for (let view of views)
         view.expand = new Set;
 
-    for (let entity of entities) {
-        entity.events.sort((evt1, evt2) => evt1.time - evt2.time);
-        entity.periods.sort((period1, period2) => period1.time - period2.time);
-        entity.values.sort((value1, value2) => value1.time - value2.time);
+    if (entities.length) {
+        for (let entity of entities) {
+            entity.events.sort((evt1, evt2) => evt1.time - evt2.time);
+            entity.periods.sort((period1, period2) => period1.time - period2.time);
+            entity.values.sort((value1, value2) => value1.time - value2.time);
 
-        world.start = Math.min(world.start, entity.start);
-        world.end = Math.max(world.end, entity.end);
+            world.start = Math.min(world.start, entity.start);
+            world.end = Math.max(world.end, entity.end);
+        }
+    } else {
+        world.start = null;
+        world.end = null;
     }
 
     sync_config = true;
