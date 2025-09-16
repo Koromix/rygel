@@ -98,6 +98,31 @@ RcppExport SEXP hmR_Close(SEXP inst_xp)
     END_RCPP
 }
 
+RcppExport SEXP hmR_Reset(SEXP inst_xp)
+{
+    BEGIN_RCPP
+    K_DEFER { rcc_DumpWarnings(); };
+
+    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp, GetInstanceTag());
+
+    bool success = inst->db.Transaction([&]() {
+        if (!inst->db.Run("DELETE FROM entities"))
+            return false;
+        if (!inst->db.Run("DELETE FROM views"))
+            return false;
+        if (!inst->db.Run("DELETE FROM domains"))
+            return false;
+
+        return true;
+    });
+    if (!success)
+        rcc_StopWithLastError();
+
+    return R_NilValue;
+
+    END_RCPP
+}
+
 static int64_t FindOrCreateEntity(sq_Database *db, const char *name)
 {
     sq_Statement stmt;
@@ -588,6 +613,7 @@ RcppExport void R_init_heimdallR(DllInfo *dll) {
     static const R_CallMethodDef call_entries[] = {
         { "hmR_Open", (DL_FUNC)&K::hmR_Open, 1 },
         { "hmR_Close", (DL_FUNC)&K::hmR_Close, 1 },
+        { "hmR_Reset", (DL_FUNC)&K::hmR_Reset, 1 },
         { "hmR_SetDomain", (DL_FUNC)&K::hmR_SetDomain, 3 },
         { "hmR_SetView", (DL_FUNC)&K::hmR_SetView, 3 },
         { "hmR_AddEvents", (DL_FUNC)&K::hmR_AddEvents, 4 },

@@ -21,6 +21,10 @@ hm_close <- function(inst) {
     .Call(`hmR_Close`, inst)
 }
 
+hm_reset <- function(inst) {
+    .Call(`hmR_Reset`, inst)
+}
+
 hm_set_domain <- function(inst, name, concepts) {
     .Call(`hmR_SetDomain`, inst, name, concepts)
 }
