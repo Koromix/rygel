@@ -176,6 +176,21 @@ void HandleEntities(http_IO *io)
                 json->Key("id"); json->Int64(entity);
                 json->Key("name"); json->String(name);
 
+                // Report mark information
+                if (sqlite3_column_type(stmt, 16) != SQLITE_NULL) {
+                    int64_t time = sqlite3_column_int64(stmt, 16);
+                    const char *status = (const char *)sqlite3_column_text(stmt, 17);
+                    const char *comment = (const char *)sqlite3_column_text(stmt, 18);
+
+                    json->Key("mark"); json->StartObject();
+                        json->Key("time"); json->Int64(time);
+                        json->Key("status"); json->String(status);
+                        json->Key("comment"); json->String(comment);
+                    json->EndObject();
+                } else {
+                    json->Key("mark"); json->Null();
+                }
+
                 int64_t start = INT64_MAX;
                 int64_t end = INT64_MIN;
 
@@ -272,21 +287,6 @@ void HandleEntities(http_IO *io)
                 } else {
                     json->Key("start"); json->Null();
                     json->Key("end"); json->Null();
-                }
-
-                // Report mark information
-                if (sqlite3_column_type(stmt, 16) != SQLITE_NULL) {
-                    int64_t time = sqlite3_column_int64(stmt, 16);
-                    const char *status = (const char *)sqlite3_column_text(stmt, 17);
-                    const char *comment = (const char *)sqlite3_column_text(stmt, 18);
-
-                    json->Key("mark"); json->StartObject();
-                        json->Key("time"); json->Int64(time);
-                        json->Key("status"); json->String(status);
-                        json->Key("comment"); json->String(comment);
-                    json->EndObject();
-                } else {
-                    json->Key("mark"); json->Null();
                 }
 
                 json->EndObject();
