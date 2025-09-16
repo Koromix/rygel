@@ -1162,7 +1162,7 @@ function FormBuilder(state, model, options = {}) {
                     </button>
                     ${value != null ? html`
                         <button type="button" ?disabled=${options.disabled || options.readonly}
-                                @click=${e => clearFileInput(e, key)}>Supprimer</button>
+                                @click=${e => clearFileInput(e, key, value.name)}>${T.delete}</button>
                     ` : ''}
                 </div>
                 <input type="file" ?disabled=${options.disabled}
@@ -1186,12 +1186,14 @@ function FormBuilder(state, model, options = {}) {
         updateValue(key, e.target.files[0] || undefined);
     }
 
-    function clearFileInput(e, key) {
+    async function clearFileInput(e, key, name) {
         if (!isModifiable(key))
             return;
 
-        key.retain.file_lists.delete(key.name);
-        updateValue(key, undefined);
+        await UI.confirm(e, T.format(T.confirm_file_deletion, name), T.delete, () => {
+            key.retain.file_lists.delete(key.name);
+            updateValue(key, undefined);
+        });
     }
 
     this.calc = function(key, label, value, options = {}) {
