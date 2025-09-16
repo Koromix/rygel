@@ -38,6 +38,7 @@
                 background: #fafafa;
                 border: 1px solid #eee;
             }
+            main:empty { display: none; }
 
             main > a {
                 display: block;
@@ -81,9 +82,7 @@
     </head>
 
     <body>
-        <main>
-            {{ PROJECTS }}
-        </main>
+        <main>{{ PROJECTS }}</main>
 
         <a id="hm_version" href="https://koromix.dev/heimdall" target="_blank">Heimdall {{ VERSION }}</a>
         <a id="hm_by" href="https://koromix.dev" target="_blank">Niels Martignène (Koromix)</a>
