@@ -5,16 +5,18 @@
         "cancel": "Annuler",
         "comment": "Commentaire",
         "concepts": "Concepts",
-        "invalid": "Invalide",
         "mark": "Marquer",
         "mark_entity_x": "Marquer l'entité {1}",
         "no_alignment": "Pas d'alignement",
         "show_all": "Afficher tout",
         "simple": "Simple",
         "status": "Statut",
-        "valid": "Valide",
+        "statuses": {
+            "invalid": "Refusé",
+            "valid": "Accepté",
+            "wip": "Non décidé"
+        },
         "view": "Vue",
-        "wip": "WIP",
         "with_warning": "Avec alerte"
     },
     "messages": {

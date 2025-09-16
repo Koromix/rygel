@@ -966,9 +966,9 @@ async function markEntity(entity) {
                     <label>
                         <span>${T.status}</span>
                         <select name="status" @change=${e => { mark.status = e.target.value; render(); }}>
-                            <option value="valid" ?selected=${mark.status == 'valid'}>${T.valid}</option>
-                            <option value="invalid" ?selected=${mark.status == 'invalid'}>${T.invalid}</option>
-                            <option value="wip" ?selected=${mark.status == 'wip'}>${T.wip}</option>
+                            <option value="valid" ?selected=${mark.status == 'valid'}>${T.statuses.valid}</option>
+                            <option value="invalid" ?selected=${mark.status == 'invalid'}>${T.statuses.invalid}</option>
+                            <option value="wip" ?selected=${mark.status == 'wip'}>${T.statuses.wip}</option>
                         </select>
                     </label>
                     <label>
