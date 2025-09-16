@@ -371,7 +371,7 @@ form {
     }
     & * + .section { margin-top: 12px; }
 
-    & :is(label:not([for]), .widget) {
+    & label {
         display: flex;
         gap: 0.43em;
         align-items: center;
@@ -379,27 +379,8 @@ form {
 
         & > span:first-child { width: 180px; }
     }
-    & :not(.section) + :is(label, .widget) { margin-top: 1em; }
+    & :not(.section) + label { margin-top: 1em; }
     & label:empty { display: none; }
-
-    & .widget.annotate {
-        padding: 1em;
-        background: #ff660022;
-        border: 2px dashed #ff6600;
-        border-radius: 8px;
-    }
-    & .widget.annotate > label:first-of-type {
-        display: inline;
-
-        &::before {
-            content: '⚠\FE0E';
-            margin-right: 6px;
-        }
-    }
-    & .widget > .error {
-        margin-top: 0.5em;
-        color: #ff6600;
-    }
 
     & input {
         padding: 0.4em 0.6em;
@@ -503,44 +484,6 @@ form {
     & input[type=checkbox]:checked::before { box-shadow: inset 1em 1em var(--check_color); }
     & label:has(> input[type=checkbox]:disabled) { color: #979797 !important; }
 
-    & .number {
-        display: flex;
-        gap: 6px;
-        align-items: center;
-
-        & > span { font-size: 0.8em; }
-    }
-
-    & .enum {
-        display: flex;
-        gap: 0.5em;
-        flex-wrap: wrap;
-    }
-    & .enum > button {
-        padding: 0.2em 1.4em 0.35em 1.4em;
-        border-radius: 8px;
-        background: white;
-        color: var(--top_color);
-    }
-    & .enum > button:not(.active):hover {
-        background: color-mix(in srgb, var(--bar_color), white 25%);
-        color: white;
-    }
-    & .enum > button.active {
-        background: var(--bar_color);
-        color: white;
-    }
-    & .enum > button:disabled { color: #bbb; }
-
-    & .slider {
-        align-self: stretch;
-        display: flex;
-        gap: 12px;
-        align-items: center;
-
-        & > span { font-size: 0.8em; }
-        & > input[type=range] { flex: 1; }
-    }
     & input[type=range] {
         appearance: none;
         -webkit-appearance: none;
@@ -585,15 +528,5 @@ form {
 
         &.missing::-webkit-slider-thumb { visibility: hidden; }
         &.missing::-moz-range-thumb { visibility: hidden; }
-    }
-
-    & .tip {
-        font-size: 0.9em;
-        font-style: italic;
-        margin-top: 0.4em;
-    }
-    & .tip::before {
-        content: '☞\FE0E';
-        padding-right: 5px;
     }
 }
