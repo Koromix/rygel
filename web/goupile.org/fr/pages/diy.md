@@ -2,7 +2,7 @@
 
 ## Linux (Debian)
 
-Un dépôt Debian signé est disponible et peut être utilisé avec Debian 11 and les dérivés Debian (par exemple Ubuntu).
+Un dépôt Debian signé est disponible et peut être utilisé avec Debian 12 and les dérivés Debian (par exemple Ubuntu).
 
 Exécutez les commandes suivantes (en tant que root) pour ajouter le dépôt à votre système :
 
@@ -133,7 +133,7 @@ The VirtualHost block should you something like this:
 
 Le serveur Goupile est multi-plateforme, mais il est **recommandé de l'utiliser sur Linux** pour une sécurité maximale.
 
-En effet, sur Linux Goupile peut fonctionner en mode sandboxé grâce à seccomp et les espaces de noms Linux (appel système unshare). Le support du sandboxing est envisagé à long terme pour d'autres systèmes d'exploitation mais n'est pas disponible pour le moment. L'utilisation de la distribution Debian 11+ est recommandée.
+En effet, sur Linux Goupile peut fonctionner en mode sandboxé grâce à seccomp et les espaces de noms Linux (appel système unshare). Le support du sandboxing est envisagé à long terme pour d'autres systèmes d'exploitation mais n'est pas disponible pour le moment. L'utilisation de la distribution Debian 12+ est recommandée.
 
 Goupile repose sur du C++ (côté serveur) et HTML/CSS/JS (côté client). La compilation de Goupile utilise un outil dédié qui est inclus directement dans le dépôt.
 
@@ -156,7 +156,7 @@ Pour compiler une **version de développement** et de test procédez comme ceci 
 ./felix
 ```
 
-Pour une **utilisation en production**, il est recommandé de compiler Goupile [en mode Paranoid](technical/architecture.md#options-de-compilation) à l'aide de Clang 18+ et le lieur LLD 18+. Sous Debian 11, vous pouvez faire comme ceci :
+Pour une **utilisation en production**, il est recommandé de compiler Goupile [en mode Paranoid](technical/architecture.md#options-de-compilation) à l'aide de Clang 18+ et le lieur LLD 18+. Sous Debian 12, vous pouvez faire comme ceci :
 
 ```sh
 # Préparation de l'outil felix utilisé pour compiler Goupile
