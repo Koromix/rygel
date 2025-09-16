@@ -53,22 +53,12 @@ static bool OpenProjectDatabase(http_IO *io, sq_Database *db)
         return false;
     }
 
-    if (!db->Open(filename, SQLITE_OPEN_READONLY))
+    if (!db->Open(filename, SQLITE_OPEN_READWRITE))
         return false;
     if (!db->SetWAL(true))
         return false;
-
-    // Make sure we can read this database
-    {
-        int version = GetDatabaseVersion(db);
-        if (version < 0)
-            return false;
-        if (version != DatabaseVersion) {
-            LogError("Cannot read from database schema version %1 (expected %2)", version, DatabaseVersion);
-            io->SendError(403);
-            return false;
-        }
-    }
+    if (!MigrateDatabase(db))
+        return true;
 
     err_guard.Disable();
     return true;
