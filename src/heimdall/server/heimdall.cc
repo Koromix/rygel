@@ -20,6 +20,10 @@
 #include "database.hh"
 #include "src/core/sandbox/sandbox.hh"
 
+#if !defined(_WIN32)
+    #include <sys/stat.h>
+#endif
+
 namespace K {
 
 struct StaticRoute {
@@ -599,6 +603,19 @@ Other commands:
         return 1;
     if (!MakeDirectory(config.tmp_directory, false))
         return 1;
+
+#if !defined(_WIN32)
+    {
+        struct stat sb;
+        if (stat(config.project_directory, &sb)) {
+            LogError("Failed to stat '%1': %2", config.project_directory, strerror(errno));
+            return 1;
+        }
+
+        mode_t mode = sb.st_mode | S_ISGID;
+        chmod(config.project_directory, mode);
+    }
+#endif
 
     LogInfo("Init assets");
     InitAssets();
