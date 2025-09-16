@@ -25,4 +25,6 @@ bool IsProjectNameSafe(const char *name);
 void HandleViews(http_IO *io);
 void HandleEntities(http_IO *io);
 
+void HandleMark(http_IO *io);
+
 }

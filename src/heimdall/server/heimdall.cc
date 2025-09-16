@@ -472,6 +472,8 @@ static void HandleRequest(http_IO *io)
             HandleViews(io);
         } else if (TestStr(request.path, "/api/entities") && request.method == http_RequestMethod::Get) {
             HandleEntities(io);
+        } else if (TestStr(request.path, "/api/mark") && request.method == http_RequestMethod::Post) {
+            HandleMark(io);
         } else {
             io->SendError(404);
         }

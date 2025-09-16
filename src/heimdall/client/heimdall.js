@@ -15,6 +15,7 @@
 
 import { render, html, live } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, HttpError } from '../../web/core/base.js';
+import * as UI from '../../web/core/ui.js';
 import { AppRunner } from '../../web/core/runner.js';
 
 import en from '../i18n/en.json';
@@ -31,6 +32,7 @@ const PERIOD_HEIGHT = 4;
 const PERIOD_SPACING = 7;
 const MERGE_TRESHOLD = 24;
 const SPACE_BETWEEN_ENTITIES = 8;
+const MARK_OFFSET = 36;
 const ALIGN_WIDTH = 16;
 
 const DEFAULT_SETTINGS = {
@@ -145,15 +147,17 @@ async function fetchProject(project) {
 }
 
 async function start(root) {
+    UI.init();
+
     render(html`
-        <div class="hm_main">
-            <canvas class="hm_canvas"></canvas>
-            <div class="hm_config"></div>
+        <div class="playground">
+            <canvas></canvas>
+            <div class="config"></div>
         </div>
     `, root);
-    dom.main = root.querySelector('.hm_main');
-    dom.config = root.querySelector('.hm_config');
-    canvas = root.querySelector('.hm_canvas');
+    dom.playground = root.querySelector('.playground');
+    dom.config = root.querySelector('.config');
+    canvas = root.querySelector('canvas');
 
     runner = new AppRunner(canvas);
     ctx = runner.ctx;
@@ -163,7 +167,7 @@ async function start(root) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    new ResizeObserver(syncSize).observe(dom.main);
+    new ResizeObserver(syncSize).observe(dom.playground);
     syncSize();
 
     revealTime(world.start, world.end);
@@ -190,7 +194,7 @@ function syncSize() {
 
     // Resize canvas
     {
-        let rect = dom.main.getBoundingClientRect();
+        let rect = dom.playground.getBoundingClientRect();
         if (!rect.width && !rect.height)
             return;
         runner.resize(rect.width, rect.height, window.devicePixelRatio);
@@ -469,13 +473,14 @@ function update() {
         runner.cursor = 'grabbing';
     }
 
-    // Handle deploy/collapse clicks
+    // Handle entity hover and clicks
     if (zone == layout.tree || zone == layout.main) {
         let cursor = { x: mouse_state.x - layout.tree.left, y: mouse_state.y - layout.tree.top };
         let idx = rows.findIndex(row => cursor.y >= row.top && cursor.y < row.top + row.height);
 
         if (idx >= 0) {
             let row = rows[idx];
+            let right = layout.tree.width;
 
             if (interaction?.type != 'move') {
                 row.hover = true;
@@ -486,15 +491,26 @@ function update() {
                     rows[i].hover = true;
             }
 
-            if (!row.leaf && !row.empty && cursor.x >= 0 && cursor.x <= layout.tree.width) {
+            if (row.leaf || row.empty) {
+                right = 0;
+            } else if (row.depth) {
+                right -= MARK_OFFSET;
+            }
+
+            if (cursor.x >= 0 && cursor.x < right) {
                 if (mouse_state.left == -1) {
-                    position.entity = row.entity;
-                    position.y = -rows[idx - row.index].top;
+                    if (cursor.x >= layout.tree.width - MARK_OFFSET) {
+                        let entity = world.entities[row.entity];
+                        markEntity(entity);
+                    } else {
+                        position.entity = row.entity;
+                        position.y = -rows[idx - row.index].top;
 
-                    if (!view.expand.delete(row.path))
-                        view.expand.add(row.path);
+                        if (!view.expand.delete(row.path))
+                            view.expand.add(row.path);
 
-                    saveState();
+                        saveState();
+                    }
                 }
 
                 runner.cursor = 'pointer';
@@ -614,6 +630,7 @@ function combine(entities, idx, levels, align) {
     for (let level of levels) {
         let row = {
             entity: idx,
+            mark: null,
             index: rows.length,
             name: level.depth ? level.name : entity.name,
             path: level.path,
@@ -631,6 +648,9 @@ function combine(entities, idx, levels, align) {
             periods: [],
             values: []
         };
+
+        if (!row.depth && entity.mark != null)
+            row.mark = statusColor(entity.mark.status);
 
         for (let evt of entity.events) {
             if (!level.concepts.has(evt.concept))
@@ -927,6 +947,56 @@ function saveState() {
     runner.busy();
 }
 
+async function markEntity(entity) {
+    let mark = Object.assign({
+        status: 'valid',
+        comment: ''
+    }, entity.mark);
+
+    await UI.dialog({
+        run: (render, close) => {
+            return html`
+                <div class="title">
+                    ${T.format(T.mark_entity_x, entity.name)}
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                </div>
+
+                <div class="main">
+                    <label>
+                        <span>${T.status}</span>
+                        <select name="status" @change=${e => { mark.status = e.target.value; render(); }}>
+                            <option value="valid" ?selected=${mark.status == 'valid'}>${T.valid}</option>
+                            <option value="invalid" ?selected=${mark.status == 'invalid'}>${T.invalid}</option>
+                            <option value="wip" ?selected=${mark.status == 'wip'}>${T.wip}</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>${T.comment}</span>
+                        <textarea name="comment" columns="30" rows="3"
+                                  @change=${e => { mark.comment = e.target.value; }}>${mark.comment}</textarea>
+                    </label>
+                </div>
+
+                <div class="footer">
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
+                    <button type="submit" style=${'--background:' + statusColor(mark.status)}>${T.mark}</button>
+                </div>
+            `
+        },
+
+        submit: async () => {
+            let url = Util.pasteURL('/api/mark', { project: world.project });
+
+            entity.mark = await Net.post(url, {
+                entity: entity.id,
+                status: mark.status,
+                comment: mark.comment
+            });
+        }
+    });
+}
+
 // ------------------------------------------------------------------------
 // Draw
 // ------------------------------------------------------------------------
@@ -1042,9 +1112,28 @@ function draw() {
                 ctx.fillRect(0, row.top, layout.tree.width, row.height);
             }
 
+            if (!row.depth) {
+                if (row.mark != null) {
+                    ctx.fillStyle = row.mark;
+                    ctx.strokeStyle = row.mark;
+                    ctx.lineWidth = 1;
+                } else {
+                    ctx.fillStyle = '#00000000';
+                    ctx.strokeStyle = '#dddddd';
+                    ctx.lineWidth = 1;
+                }
+
+                let x = layout.tree.width - MARK_OFFSET;
+
+                ctx.beginPath();
+                ctx.arc(layout.tree.width - MARK_OFFSET / 2, row.top + row.height / 2, 6, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
+            }
+
             if (row.empty) {
                 ctx.strokeStyle = 'white';
-                ctx.lineWidth = 1;
+                ctx.lineWidth = 2;
 
                 ctx.beginPath();
                 ctx.moveTo(x + offset - 2, row.top + row.height / 2);
@@ -1288,6 +1377,14 @@ function countDigits(value) {
         return (value < 0) + digits;
     } else {
         return 1;
+    }
+}
+
+function statusColor(status) {
+    switch (status) {
+        case 'valid': return '#2d8261';
+        case 'invalid': return '#db0a0a';
+        case 'wip': return '#ff6600';
     }
 }
 

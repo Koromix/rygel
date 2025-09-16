@@ -30,6 +30,20 @@ bool IsProjectNameSafe(const char *name)
     return true;
 }
 
+static bool IsStatusValid(const char *status)
+{
+    if (status) {
+        if (TestStr(status, "valid"))
+            return true;
+        if (TestStr(status, "invalid"))
+            return true;
+        if (TestStr(status, "wip"))
+            return true;
+    }
+
+    return false;
+}
+
 static bool OpenProjectDatabase(http_IO *io, sq_Database *db)
 {
     K_ASSERT(!db->IsValid());
@@ -123,20 +137,22 @@ void HandleEntities(http_IO *io)
     sq_Database db;
     if (!OpenProjectDatabase(io, &db))
         return;
-
+ 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT en.entity, en.name,
+    if (!db.Prepare(R"(SELECT e.entity, e.name,
                               ev.event, ce.domain || '::' || ce.name, ev.timestamp, ev.warning,
-                              p.period, cp.domain || '::' || cp.name, p.timestamp, p.duration, p.color,
-                              m.measure, cm.domain || '::' || cm.name, m.timestamp, m.value, m.warning
-                       FROM entities en
-                       LEFT JOIN events ev ON (ev.entity = en.entity)
+                              pe.period, cp.domain || '::' || cp.name, pe.timestamp, pe.duration, pe.color,
+                              me.measure, cm.domain || '::' || cm.name, me.timestamp, me.value, me.warning,
+                              m.timestamp, m.status, m.comment
+                       FROM entities e
+                       LEFT JOIN events ev ON (ev.entity = e.entity)
                        LEFT JOIN concepts ce ON (ce.concept = ev.concept)
-                       LEFT JOIN periods p ON (p.entity = en.entity)
-                       LEFT JOIN concepts cp ON (cp.concept = p.concept)
-                       LEFT JOIN measures m ON (m.entity = en.entity)
-                       LEFT JOIN concepts cm ON (cm.concept = m.concept)
-                       ORDER BY en.name)", &stmt))
+                       LEFT JOIN periods pe ON (pe.entity = e.entity)
+                       LEFT JOIN concepts cp ON (cp.concept = pe.concept)
+                       LEFT JOIN measures me ON (me.entity = e.entity)
+                       LEFT JOIN concepts cm ON (cm.concept = me.concept)
+                       LEFT JOIN marks m ON (m.entity = e.entity)
+                       ORDER BY e.name)", &stmt))
         return;
 
     // Reuse for performance
@@ -157,6 +173,7 @@ void HandleEntities(http_IO *io)
 
                 json->StartObject();
 
+                json->Key("id"); json->Int64(entity);
                 json->Key("name"); json->String(name);
 
                 int64_t start = INT64_MAX;
@@ -257,12 +274,131 @@ void HandleEntities(http_IO *io)
                     json->Key("end"); json->Null();
                 }
 
+                // Report mark information
+                if (sqlite3_column_type(stmt, 16) != SQLITE_NULL) {
+                    int64_t time = sqlite3_column_int64(stmt, 16);
+                    const char *status = (const char *)sqlite3_column_text(stmt, 17);
+                    const char *comment = (const char *)sqlite3_column_text(stmt, 18);
+
+                    json->Key("mark"); json->StartObject();
+                        json->Key("time"); json->Int64(time);
+                        json->Key("status"); json->String(status);
+                        json->Key("comment"); json->String(comment);
+                    json->EndObject();
+                } else {
+                    json->Key("mark"); json->Null();
+                }
+
                 json->EndObject();
             } while (stmt.IsRow());
         }
         if (!stmt.IsValid())
             return;
         json->EndArray();
+    });
+}
+
+void HandleMark(http_IO *io)
+{
+    sq_Database db;
+    if (!OpenProjectDatabase(io, &db))
+        return;
+
+    int64_t entity = -1;
+    const char *status = nullptr;
+    const char *comment = nullptr;
+    {
+        bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
+            bool valid = true;
+
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
+
+                if (key == "entity") {
+                    json->ParseInt(&entity);
+                } else if (key == "status") {
+                    json->ParseString(&status);
+                } else if (key == "comment") {
+                    json->ParseString(&comment);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (entity < 0) {
+                    LogError("Missing or invalid 'entity' parameter");
+                    valid = false;
+                }
+
+                if (!IsStatusValid(status)) {
+                    LogError("Missing or invalid 'status' parameter");
+                    valid = false;
+                }
+
+                if (!comment) {
+                    LogError("Missing 'comment' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    const char *name;
+    {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT name FROM entities WHERE entity = ?1", &stmt, entity))
+            return;
+
+        if (stmt.Step()) {
+            name = DuplicateString((const char *)sqlite3_column_text(stmt, 0), io->Allocator()).ptr;
+        } else {
+            if (stmt.IsValid()) {
+                LogError("Entity %1 does not exist", entity);
+                io->SendError(404);
+            }
+            return;
+        }
+    }
+
+    int64_t now = GetUnixTime();
+
+    bool success = db.Transaction([&]() {
+        if (!db.Run("UPDATE marks SET entity = NULL WHERE entity = ?1", entity))
+            return false;
+
+        if (!db.Run(R"(INSERT INTO marks (entity, name, timestamp, status, comment)
+                       VALUES (?1, ?2, ?3, ?4, ?5))", entity, name, now, status, comment)) {
+            // Entity could have been deleted in the mean time
+            if (sqlite3_errcode(db) == SQLITE_CONSTRAINT) {
+                LogError("Entity %1 does not exist", entity);
+                io->SendError(404);
+            }
+            return false;
+        }
+
+        return true;
+    });
+    if (!success)
+        return;
+
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
+
+        json->Key("time"); json->Int64(now);
+        json->Key("status"); json->String(status);
+        json->Key("comment"); json->String(comment);
+
+        json->EndObject();
     });
 }
 

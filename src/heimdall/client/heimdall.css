@@ -30,86 +30,225 @@ body {
     box-sizing: border-box;
     background: white;
     font-family: 'Open Sans', sans-serif;
-    font-size: 16px;
+    font-size: 14px;
     line-height: 1.5;
     color: #202020;
 }
 
-.hm_main {
+& :is(input[type="text"], select, textarea) {
+    max-width: 260px;
+    padding: 2px 4px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+& select:not(:disabled) { cursor: pointer; }
+
+button {
+    --background: #2d8261;
+    --color: white;
+
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+
+    background: var(--background);
+    color: var(--color);
+}
+button.secondary {
+    --background: #ddd;
+    --color: black;
+}
+button:not(:disabled):hover { background: color-mix(in srgb, var(--background) 90%, black); }
+
+#log {
+    position: fixed;
+    left: 50%;
+    top: 1em;
+    width: calc(100vw - 2em);
+    max-width: 600px;
+    z-index: 99999;
+    user-select: none;
+    -webkit-user-select: none;
+    font-size: 15px;
+    transform: translateX(-50%);
+}
+
+#log > div {
+    margin-bottom: 8px;
+    padding: 8px;
+    background: #373737;
+    color: white;
+    border-radius: 20px;
+    text-align: center;
+    cursor: pointer;
+}
+@media (hover: hover) {
+    #log > div:hover { filter: opacity(40%); }
+}
+#log > div.error { background: #ff6600; }
+#log > div.success { background: #2d8261; }
+
+.playground {
     display: flex;
     position: relative;
     width: 100%;
     height: 100%;
     touch-action: none;
     user-select: none;
+
+    canvas {
+        position: absolute;
+        left: 0;
+        top: 0;
+        z-index: 1;
+    }
+
+    .config {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+        display: flex;
+        align-items: start;
+        padding: 0.5em 0.8em;
+        background: #f8f8f8ee;
+        border: 1px solid #dddddd;
+        color: black;
+        z-index: 2;
+
+        & label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin: 2px;
+        }
+
+        & > label {
+            gap: 1em;
+            align-items: start;
+
+            & > span { margin-top: 2px; }
+        }
+        & > label + label {
+            border-left: 1px solid #ddd;
+            padding-left: 1em;
+        }
+        & > label:has(+ label) { margin-right: 1em; }
+
+        & select {
+            max-width: 260px;
+            padding: 2px 4px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        & select:not(:disabled) { cursor: pointer; }
+
+        & input[type=checkbox] {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 1px solid #ddd;
+            position: relative;
+            cursor: pointer;
+        }
+        & input[type=checkbox]:checked::after {
+            content: '';
+            position: absolute;
+            left: 2px;
+            top: 2px;
+            width: 10px;
+            height: 10px;
+            background: #aaa;
+        }
+        & label:has(> input[type=checkbox]:not(:disabled)) { cursor: pointer; }
+
+        label:has(> :is(input, select):disabled) { opacity: 0.5 }
+    }
 }
 
-.hm_canvas {
-    position: absolute;
+dialog {
+    position: fixed;
+    z-index: 9999;
     left: 0;
     top: 0;
-    z-index: 1;
-}
-
-.hm_config {
-    position: absolute;
-    right: 10px;
-    top: 10px;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    padding-top: 44px;
     display: flex;
     align-items: start;
-    padding: 0.5em 0.8em;
-    background: #f8f8f8ee;
-    border: 1px solid #dddddd;
-    color: black;
-    z-index: 2;
+    justify-content: center;
+    background: #ffffffcc;
+    border: none;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+
+    & > form {
+        background-color: white;
+        border: 1px solid #ededf0;
+        border-radius: 6px;
+        max-width: 80%;
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+    }
+}
+dialog ~ .dialog { padding-top: 66px; }
+
+form {
+    & > .title {
+        display: flex;
+        position: sticky;
+        top: 0;
+        z-index: 9999;
+        font-weight: bold;
+        border-bottom: 1px solid #ededf0;
+        background: #eee;
+        padding: 10px;
+        align-items: center;
+        justify-content: center;
+        gap: 0.71em;
+
+        & > span {
+            padding-left: 5px;
+            flex: 1;
+        }
+        & > span + button { margin-left: 50px; }
+    }
+    & > .main {
+        display: flex;
+        box-sizing: border-box;
+        max-width: 100%;
+        flex-direction: column;
+        gap: 0.71em;
+        overflow-y: auto;
+        padding: 16px;
+    }
+    & > .footer {
+        display: flex;
+        position: sticky;
+        bottom: 0;
+        z-index: 9999;
+        border-top: 1px solid #ededf0;
+        background: #eee;
+        padding: 10px;
+        align-items: center;
+        justify-content: right;
+        gap: 0.71em;
+    }
 
     & label {
         display: flex;
-        align-items: center;
-        gap: 4px;
-        margin: 2px;
-    }
+        gap: 0.43em;
 
-    & > label {
-        gap: 1em;
-        align-items: start;
+        & > span:first-child { width: 180px; }
     }
-    & > label + label {
-        border-left: 1px solid #ddd;
-        padding-left: 1em;
-    }
-    & > label:has(+ label) { margin-right: 1em; }
-
-    & select {
-        max-width: 260px;
-        padding: 2px 4px;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    & select:not(:disabled) { cursor: pointer; }
-
-    & input[type=checkbox] {
-        appearance: none;
-        width: 16px;
-        height: 16px;
-        border: 1px solid #ddd;
-        position: relative;
-        cursor: pointer;
-    }
-    & input[type=checkbox]:checked::after {
-        content: '';
-        position: absolute;
-        left: 2px;
-        top: 2px;
-        width: 10px;
-        height: 10px;
-        background: #aaa;
-    }
-    & label:has(> input[type=checkbox]:not(:disabled)) { cursor: pointer; }
-
-    label:has(> :is(input, select):disabled) { opacity: 0.5 }
+    & label:empty { display: none; }
 }
