@@ -91,8 +91,8 @@ The projects on this page are provided as-is, and are in **various states of com
 
 Project | Description | Language
 ------- | ----------- | --------
-[Staks](misc#staks) | Simple stacker-like game for web browsers | JS
 [Nestor](misc#nestor) | Nestor is a small HTTP server made for local testing with customizable headers | C++
 [SeatSH](misc#seatsh) | SeatSH is a Windows service that enables you to launch graphical programs from an SSH connection on Windows 10, for automated test systems. | C++
 [SaneBB](misc#sanebb) | Small (single-file) and fast BBCode parser in Java | Java
 [DRD](misc#drd) | Alternative french PMSI MCO classifier<br>*Library (libdrd), command-line tool (drdc) and R package (drdR)* | C++
+[Staks](misc#staks) | Simple stacker-like game for web browsers | JS

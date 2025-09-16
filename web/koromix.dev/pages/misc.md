@@ -1,13 +1,3 @@
-# Staks
-
-Staks is a simple staker game playable in a browser.
-
-<div class="actions">
-    <a href="https://games.koromix.dev/staks">Play Staks</a>
-</div>
-
-Explore the source code in the [code repository](https://codeberg.org/Koromix/rygel/src/branch/master/src/staks).
-
 # Nestor
 
 Nestor is a **small HTTP server made for local testing**. It can serve static file, proxy remote websites (GET only), and you can customize the headers with a simple config file.
@@ -91,3 +81,13 @@ It can be used in three ways:
 The classifier was carefully assembled from the documentation and through retro-engineering of the official classifier (GenRSA), without source code access.
 
 You can find out more [in the code repository](https://codeberg.org/Koromix/rygel/src/branch/master/src/drd).
+
+# Staks
+
+Staks is a simple staker game playable in a browser.
+
+<div class="actions">
+    <a href="https://games.koromix.dev/staks">Play Staks</a>
+</div>
+
+Explore the source code in the [code repository](https://codeberg.org/Koromix/rygel/src/branch/master/src/staks).
