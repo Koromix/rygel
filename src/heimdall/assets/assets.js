@@ -13,19 +13,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#pragma once
+import asset0 from './ui/move.webp';
 
-#include "src/core/base/base.hh"
-#include "src/core/http/http.hh"
+const ASSETS = {
+    'ui/move': asset0,
+};
 
-namespace K {
-
-bool IsProjectNameSafe(const char *name);
-
-void HandleDomains(http_IO *io);
-void HandleViews(http_IO *io);
-void HandleEntities(http_IO *io);
-
-void HandleMark(http_IO *io);
-
-}
+export { ASSETS }

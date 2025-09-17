@@ -17,6 +17,7 @@ import { render, html, live } from '../../../vendor/lit-html/lit-html.bundle.js'
 import { Util, Log, Net, HttpError } from '../../web/core/base.js';
 import * as UI from '../../web/core/ui.js';
 import { AppRunner } from '../../web/core/runner.js';
+import { ASSETS } from '../assets/assets.js';
 
 import en from '../i18n/en.json';
 import fr from '../i18n/fr.json';
@@ -952,6 +953,7 @@ function renderConfig(view) {
                     <select @change=${e => { settings.view = e.target.value; saveState(); }}>
                         ${Array.from(world.views.values()).map(view => html`<option value=${view.name} .selected=${view.name == settings.view}>${view.name}</option>`)}
                     </select>
+                    <button type="button" class="secondary" @click=${UI.wrap(editViews)}>${T.edit}</button>
                 </label>
             </div>
             <div class="section">
@@ -1103,6 +1105,136 @@ async function runMark(entity) {
             });
         }
     });
+}
+
+// ------------------------------------------------------------------------
+// Views
+// ------------------------------------------------------------------------
+
+async function editViews() {
+    let domains = await Net.get(Util.pasteURL('/api/domains', { project: world.project }));
+    let views = Array.from(world.views.values());
+
+    if (!domains.length)
+        throw new Error(T.message('Cannot customize views without any defined domain'));
+    if (!views.length)
+        throw new Error(T.message('Cannot customize views without any defined view'));
+
+    let view = world.views.get(settings.view) ?? views[0];
+
+    await UI.dialog({
+        run: (render, close) => {
+            let rows = flattenItems(view.items);
+
+            return html`
+                <div class="title">
+                    ${T.views}
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
+                </div>
+
+                <div class="main">
+                    <select @change=${UI.wrap(e => toggle_view(e.target.value))}>
+                        ${views.map(it => html`<option value=${it.id} ?selected=${it == view}>${it.name}</option>`)}
+                    </select>
+                    <table style="table-layout: fixed;">
+                        <colgroup>
+                            <col></col>
+                            <col style="width: 400px;"></col>
+                            <col style="width: 200px;"></col>
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>${T.name}</th>
+                                <th>${T.concept}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows.map(row => html`
+                                <tr>
+                                    <td class="grab"><img src=${ASSETS['ui/move']} width="16" height="16" alt=${T.move} /></td>
+                                    <td style=${`padding-left: ${0.5 + 1.5 * row.depth}em;`}
+                                        colspan=${row.concept == null ? 2 : 1}>
+                                        <input type="text" value=${row.name}>
+                                    </td>
+                                    ${row.concept != null ? html`<td>${select_concept(row.concept)}</td>` : ''}
+                                </tr>
+                            `)}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            function select_concept(value) {
+                return html`
+                    <select>
+                        ${domains.map(domain => html`
+                            <optgroup label=${domain.name}>
+                                ${domain.concepts.map(concept => {
+                                    let key = domain.id + ':' + concept;
+                                    return html`<option value=${key} ?selected=${key == value}>${concept}</option>`;
+                                })}
+                            </optgroup>
+                        `)}
+                    </select>
+                `;
+            }
+
+            function toggle_domain(id) {
+                domain = domains.find(domain => domain.id == id);
+                render();
+            }
+
+            function toggle_view(id) {
+                view = views.find(view => view.id == id);
+                render();
+            }
+        },
+
+        submit: (elements) => {
+            throw new Error('Not implemented');
+        }
+    });
+}
+
+function flattenItems(items) {
+    let rows = [];
+    let stack = [];
+
+    for (let path in items) {
+        let concepts = items[path];
+        let parts = path.substr(1).split('/');
+
+        for (let i = 0; i < parts.length - 1; i++) {
+            if (parts[i] != stack[i]) {
+                stack.length = i;
+                break;
+            }
+        }
+
+        for (let i = stack.length; i < parts.length - 1; i++) {
+            let part = parts[i];
+
+            rows.push({
+                depth: stack.length,
+                name: part,
+                concept: null
+            });
+
+            stack.push(part);
+        }
+
+        for (let concept of concepts) {
+            rows.push({
+                depth: stack.length,
+                name: parts[parts.length - 1],
+                concept: concept
+            });
+        }
+    }
+
+    return rows;
 }
 
 // ------------------------------------------------------------------------

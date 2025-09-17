@@ -5,11 +5,15 @@
         "apply": "Apply",
         "cancel": "Cancel",
         "comment": "Comment",
+        "concept": "Concept",
         "concepts": "Concepts",
         "display_options": "Display options",
+        "edit": "Edit",
         "hide_empty_entities": "Hide filtered out entities",
         "language": "Language",
         "mark_entity_x": "Mark entity {1}",
+        "move": "Move",
+        "name": "Name",
         "no_alignment": "No alignement",
         "save": "Save",
         "settings": "Settings",
@@ -21,6 +25,7 @@
             "wip": "Undecided"
         },
         "view": "View",
+        "views": "Views",
         "with_warning": "With warning"
     },
     "messages": {}

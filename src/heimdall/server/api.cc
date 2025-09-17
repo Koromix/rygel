@@ -69,6 +69,46 @@ static bool OpenProjectDatabase(http_IO *io, sq_Database *db)
     return true;
 }
 
+void HandleDomains(http_IO *io)
+{
+    sq_Database db;
+    if (!OpenProjectDatabase(io, &db))
+        return;
+
+    sq_Statement stmt;
+    if (!db.Prepare(R"(SELECT d.domain, d.name, c.name AS concept
+                       FROM domains d
+                       INNER JOIN concepts c ON (c.domain = d.domain)
+                       ORDER BY d.name, c.name)", &stmt))
+        return;
+
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
+        if (stmt.Step()) {
+            do {
+                int64_t domain = sqlite3_column_int64(stmt, 0);
+                const char *name = (const char *)sqlite3_column_text(stmt, 1);
+
+                json->StartObject();
+
+                json->Key("id"); json->Int64(domain);
+                json->Key("name"); json->String(name);
+                json->Key("concepts"); json->StartArray();
+                do {
+                    const char *name = (const char *)sqlite3_column_text(stmt, 2);
+                    json->String(name);
+                } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == domain);
+                json->EndArray();
+
+                json->EndObject();
+            } while (stmt.IsRow());
+        }
+        if (!stmt.IsValid())
+            return;
+        json->EndArray();
+    });
+}
+
 void HandleViews(http_IO *io)
 {
     sq_Database db;
@@ -78,7 +118,7 @@ void HandleViews(http_IO *io)
     sq_Statement stmt;
     if (!db.Prepare(R"(SELECT v.view, v.name,
                               row_number() OVER (PARTITION BY i.view, i.path ORDER BY i.path),
-                              i.path, c.domain || '::' || c.name
+                              i.path, c.domain || ':' || c.name
                        FROM views v
                        INNER JOIN items i ON (i.view = v.view)
                        INNER JOIN concepts c ON (c.concept = i.concept)
@@ -94,6 +134,7 @@ void HandleViews(http_IO *io)
 
                 json->StartObject();
 
+                json->Key("id"); json->Int64(view);
                 json->Key("name"); json->String(name);
                 json->Key("items"); json->StartObject();
                 do {
@@ -126,9 +167,9 @@ void HandleEntities(http_IO *io)
  
     sq_Statement stmt;
     if (!db.Prepare(R"(SELECT e.entity, e.name,
-                              ev.event, ce.domain || '::' || ce.name, ev.timestamp, ev.warning,
-                              pe.period, cp.domain || '::' || cp.name, pe.timestamp, pe.duration, pe.color,
-                              me.measure, cm.domain || '::' || cm.name, me.timestamp, me.value, me.warning,
+                              ev.event, ce.domain || ':' || ce.name, ev.timestamp, ev.warning,
+                              pe.period, cp.domain || ':' || cp.name, pe.timestamp, pe.duration, pe.color,
+                              me.measure, cm.domain || ':' || cm.name, me.timestamp, me.value, me.warning,
                               m.timestamp, IFNULL(m.status, -1), m.comment
                        FROM entities e
                        LEFT JOIN events ev ON (ev.entity = e.entity)

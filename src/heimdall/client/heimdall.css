@@ -306,3 +306,45 @@ form {
     }
     & :is(label:not([for]), .widget):empty { display: none; }
 }
+
+table {
+    margin: 0 auto;
+    border-collapse: collapse;
+    empty-cells: show;
+}
+* + :is(table, .table) { margin-top: 1em; }
+tr {
+    border-bottom: 1px solid #ededf0;
+    vertical-align: middle;
+}
+th, td {
+    height: 1.5em;
+    padding: 0.5em;
+    vertical-align: middle;
+}
+th {
+    background: #f8f8f8;
+    font-size: 0.9em;
+    font-variant: small-caps;
+    text-align: left;
+    user-select: none;
+    -webkit-user-select: none;
+}
+td {
+    background: white;
+    border: 1px solid #ebebeb;
+}
+thead > tr { border: 1px solid #ededf0; }
+thead th { text-align: center; }
+tbody th {
+    text-align: left;
+    font-weight: normal;
+    font-style: italic;
+}
+table .grab {
+    cursor: grab;
+    padding-top: 5px;
+    padding-bottom: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
