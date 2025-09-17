@@ -1220,7 +1220,15 @@ function draw() {
                 ctx.fillRect(0, row.top, layout.tree.width, row.height);
             }
 
-            if (!row.depth) {
+            if (row.empty) {
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+
+                ctx.beginPath();
+                ctx.moveTo(x + offset - 2, row.top + row.height / 2);
+                ctx.lineTo(x + offset + size.width + 4, row.top + row.height / 2);
+                ctx.stroke();
+            } else if (!row.depth) {
                 let x = layout.tree.width - MARK_OFFSET;
                 let color = statusColor(row.mark);
 
@@ -1231,16 +1239,6 @@ function draw() {
                 ctx.beginPath();
                 ctx.arc(layout.tree.width - MARK_OFFSET / 2, row.top + row.height / 2, 6, 0, 2 * Math.PI);
                 ctx.fill();
-                ctx.stroke();
-            }
-
-            if (row.empty) {
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 2;
-
-                ctx.beginPath();
-                ctx.moveTo(x + offset - 2, row.top + row.height / 2);
-                ctx.lineTo(x + offset + size.width + 4, row.top + row.height / 2);
                 ctx.stroke();
             }
         }
