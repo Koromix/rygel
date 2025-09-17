@@ -445,7 +445,6 @@ const Util = new function() {
             str = table.messages[str] ?? str;
             return T.format(str, ...args);
         };
-        T.lang = lang;
 
         document.documentElement.lang = lang;
     };

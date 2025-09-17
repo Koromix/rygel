@@ -298,7 +298,7 @@ function renderApp(el) {
             </div>
             <select id="language" aria-label=${T.language} @change=${UI.wrap(e => switchLanguage(e.target.value))}>
                 ${Object.keys(languages).map(lang =>
-                    html`<option value=${lang} .selected=${lang == T.lang}>${lang.toUpperCase()}</option>`)}
+                    html`<option value=${lang} .selected=${lang == document.documentElement.lang}>${lang.toUpperCase()}</option>`)}
             </select>
         </footer>
     `, root_el);
