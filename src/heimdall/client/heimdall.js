@@ -36,7 +36,7 @@ const MARK_OFFSET = 36;
 const ALIGN_WIDTH = 16;
 
 const DEFAULT_SETTINGS = {
-    tree: 240,
+    tree: 300,
     interpolation: 'linear',
     view: null,
     align: false,
