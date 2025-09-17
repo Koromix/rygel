@@ -154,8 +154,6 @@ async function fetchProject(project) {
 }
 
 async function start(root) {
-    UI.init();
-
     render(html`
         <div class="playground"><canvas></canvas></div>
         <div class="config"></div>
@@ -183,6 +181,8 @@ async function start(root) {
     runner.onUpdate = update;
     runner.onDraw = draw;
     runner.start();
+
+    UI.init(runner.busy);
 
     document.title = `${world.project} (Heimdall)`;
 }
@@ -1047,9 +1047,15 @@ function switchLanguage(lang) {
 
 async function runMark(entity) {
     let mark = Object.assign({
-        status: true,
+        status: null,
         comment: ''
     }, entity.mark);
+
+    let statuses = [
+        [true, T.statuses.positive],
+        [false, T.statuses.negative],
+        [null, T.statuses.wip],
+    ];
 
     await UI.dialog({
         run: (render, close) => {
@@ -1061,17 +1067,15 @@ async function runMark(entity) {
                 </div>
 
                 <div class="main">
-                    <label>
-                        <span>${T.status}</span>
-                        <select name="status" @change=${e => set_status(e.target.value)}>
-                            <option value="1" ?selected=${mark.status == 1}>${T.statuses.positive}</option>
-                            <option value="0" ?selected=${mark.status == 0}>${T.statuses.negative}</option>
-                            <option value="-1" ?selected=${mark.status == null}>${T.statuses.wip}</option>
-                        </select>
-                    </label>
+                    <div class="widget">
+                        <label for="status">${T.status}</label>
+                        ${statuses.map((it, idx) =>
+                            html`<label><input id=${!idx ? 'status' : ''} name="status" type="radio"
+                                               ?checked=${mark.status == it[0]} @change=${UI.wrap(e => set_status(it[0]))}><span>${it[1]}</span></label>`)}
+                    </div>
                     <label>
                         <span>${T.comment}</span>
-                        <textarea name="comment" columns="30" rows="3"
+                        <textarea name="comment" cols="30" rows="3"
                                   @change=${e => { mark.comment = e.target.value; }}>${mark.comment}</textarea>
                     </label>
                 </div>
@@ -1083,15 +1087,8 @@ async function runMark(entity) {
                 </div>
             `;
 
-            function set_status(value) {
-                value = parseInt(value, 10);
-
-                switch (value) {
-                    case 1: { mark.status = true; } break;
-                    case 0: { mark.status = false; } break;
-                    case -1: { mark.status = null; } break;
-                }
-
+            function set_status(status) {
+                mark.status = status;
                 render();
             }
         },

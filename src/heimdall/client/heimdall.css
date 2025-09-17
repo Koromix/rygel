@@ -35,8 +35,7 @@ body {
     color: #202020;
 }
 
-& :is(input[type="text"], select, textarea) {
-    max-width: 260px;
+& :is(input[type=text], select, textarea) {
     padding: 2px 4px;
     background: white;
     border: 1px solid #ddd;
@@ -47,10 +46,45 @@ body {
 }
 & select:not(:disabled) { cursor: pointer; }
 
+& label:has(> input[type=radio]) {
+    flex-direction: row;
+    gap: 0.4em;
+    align-items: center;
+}
+& input[type=radio] {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+}
+& input[type=radio]:checked::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 10px;
+    height: 10px;
+    background: #aaa;
+    border-radius: 50%;
+}
+& label:has(> input[type=radio]) + label:has(> input[type=radio]) { margin-left: 0.8em; }
+& label:has(> input[type=radio]:not(:disabled)) { cursor: pointer; }
+
+& label:has(> input[type=checkbox]) {
+    flex-direction: row;
+    gap: 0.4em;
+    align-items: center;
+}
 & input[type=checkbox] {
     appearance: none;
     width: 16px;
     height: 16px;
+    margin: 0;
     background: white;
     border: 1px solid #ddd;
     position: relative;
@@ -163,6 +197,8 @@ button:not(:disabled):hover { background: color-mix(in srgb, var(--background) 9
         justify-content: end;
         gap: 0.4em;
     }
+
+    & select { max-width: 260px; }
 }
 
 @media screen and (max-width: 960px) {
@@ -263,11 +299,11 @@ form {
     }
     & * + .section { margin-top: 12px; }
 
-    & label {
+    & :is(label:not([for]), .widget) {
         display: flex;
         gap: 0.43em;
 
-        & > span:first-child { width: 180px; }
+        & > :is(span, label):first-child { width: 180px; }
     }
-    & label:empty { display: none; }
+    & :is(label:not([for]), .widget):empty { display: none; }
 }
