@@ -7,12 +7,12 @@
         "comment": "Comment",
         "concepts": "Concepts",
         "display_options": "Display options",
+        "hide_empty_entities": "Hide filtered out entities",
         "language": "Language",
         "mark_entity_x": "Mark entity {1}",
         "no_alignment": "No alignement",
         "save": "Save",
         "settings": "Settings",
-        "show_empty_entities": "Show filtered out entities",
         "simple": "Simple",
         "status": "Status",
         "statuses": {

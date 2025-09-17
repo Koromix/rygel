@@ -1007,8 +1007,8 @@ async function runSettings() {
                             </select>
                         </label>
                         <label>
-                            <input name="show_all" type="checkbox" ?checked=${!settings.hide}>
-                            <span>${T.show_empty_entities}</span>
+                            <input name="hide" type="checkbox" ?checked=${settings.hide}>
+                            <span>${T.hide_empty_entities}</span>
                         </label>
                     </div>
 
@@ -1026,7 +1026,7 @@ async function runSettings() {
 
             submit: (elements) => {
                 switchLanguage(elements.language.value);
-                settings.hide = !elements.show_all.checked;
+                settings.hide = elements.hide.checked;
 
                 saveState();
             }

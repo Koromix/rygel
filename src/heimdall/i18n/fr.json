@@ -7,12 +7,12 @@
         "comment": "Commentaire",
         "concepts": "Concepts",
         "display_options": "Options d'affichage",
+        "hide_empty_entities": "Cacher les entités filtrées",
         "language": "Langage",
         "mark_entity_x": "Marquer l'entité {1}",
         "no_alignment": "Pas d'alignement",
         "save": "Enregistrer",
         "settings": "Options",
-        "show_empty_entities": "Afficher les entités filtrées",
         "simple": "Simple",
         "status": "Statut",
         "statuses": {
