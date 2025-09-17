@@ -5,11 +5,15 @@
         "apply": "Appliquer",
         "cancel": "Annuler",
         "comment": "Commentaire",
+        "concept": "Concept",
         "concepts": "Concepts",
         "display_options": "Options d'affichage",
+        "edit": "Modifier",
         "hide_empty_entities": "Cacher les entités filtrées",
         "language": "Langage",
         "mark_entity_x": "Marquer l'entité {1}",
+        "move": "Déplacer",
+        "name": "Nom",
         "no_alignment": "Pas d'alignement",
         "save": "Enregistrer",
         "settings": "Options",
@@ -21,6 +25,7 @@
             "wip": "Non décidé"
         },
         "view": "Vue",
+        "views": "Vues",
         "with_warning": "Avec alerte"
     },
     "messages": {

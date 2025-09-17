@@ -466,7 +466,9 @@ static void HandleRequest(http_IO *io)
 
     // API endpoint?
     if (StartsWith(request.path, "/api/")) {
-        if (TestStr(request.path, "/api/views") && request.method == http_RequestMethod::Get) {
+        if (TestStr(request.path, "/api/domains") && request.method == http_RequestMethod::Get) {
+            HandleDomains(io);
+        } else if (TestStr(request.path, "/api/views") && request.method == http_RequestMethod::Get) {
             HandleViews(io);
         } else if (TestStr(request.path, "/api/entities") && request.method == http_RequestMethod::Get) {
             HandleEntities(io);
