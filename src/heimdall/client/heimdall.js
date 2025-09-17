@@ -985,8 +985,8 @@ async function markEntity(entity) {
 
                 <div class="footer">
                     <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
-                    ${mark.status != null ? html`<button type="submit" style=${'--background:' + statusColor(mark.status)}>${T.mark}</button>` : ''}
-                    ${mark.status == null ? html`<button type="submit" class="secondary">${T.mark}</button>` : ''}
+                    ${mark.status != null ? html`<button type="submit" style=${'--background:' + statusColor(mark.status)}>${T.save}</button>` : ''}
+                    ${mark.status == null ? html`<button type="submit" class="secondary">${T.save}</button>` : ''}
                 </div>
             `;
 
