@@ -53,7 +53,7 @@ async function calibrate(video, draw, input) {
                     <div class="title">
                         Clé SeeSo
                         <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                        <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
                     </div>
 
                     <div class="main">

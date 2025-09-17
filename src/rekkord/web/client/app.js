@@ -819,7 +819,7 @@ async function configureRepository(repo) {
                 <div class="title">
                     ${ptr != null ? T.edit_repository : T.create_repository}
                     <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
                 </div>
 
                 <div class="main">
@@ -947,7 +947,7 @@ async function runChannel(repo, channel) {
                 <div class="title">
                     ${T.format(T.x_snapshots, channel)}
                     <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
                 </div>
 
                 <div class="main">
@@ -1211,7 +1211,7 @@ async function configurePlan(plan) {
                 <div class="title">
                     ${ptr != null ? T.edit_plan : T.create_plan}
                     <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
                 </div>
 
                 <div class="main">
@@ -1412,7 +1412,7 @@ async function showKey(plan, key, secret) {
                 <div class="title">
                     ${T.api_key}
                     <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
                 </div>
 
                 <div class="main">
@@ -1551,7 +1551,7 @@ async function configureTOTP(e) {
             <div class="title">
                 Configure TOTP
                 <div style="flex: 1;"></div>
-                <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
             </div>
 
             <div class="main">

@@ -987,7 +987,7 @@ async function runSettings() {
                     <div class="title">
                         ${T.settings}
                         <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                        <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
                     </div>
 
                     <div class="main">
@@ -1050,7 +1050,7 @@ async function runMark(entity) {
                 <div class="title">
                     ${T.format(T.mark_entity_x, entity.name)}
                     <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
                 </div>
 
                 <div class="main">

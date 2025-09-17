@@ -206,7 +206,7 @@ async function login() {
             <div class="title">
                 Se connecter
                 <div style="flex: 1;"></div>
-                <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
             </div>
 
             <div class="main">
@@ -357,7 +357,7 @@ async function handleClick(markers, clickable) {
                     <div class="title">
                         Plusieurs entrées disponibles
                         <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                        <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
                     </div>
 
                     <div class="main" @click=${handlePopupClick}>
@@ -384,7 +384,7 @@ async function handleClick(markers, clickable) {
                         ${edit_key == 'name' ? makeField(entry, 'name', 'markdown') : ''}
                         ${edit_key != 'name' ? html`<div style="max-width: 660px;">${makeField(entry, 'name', 'markdown')}</div>` : ''}
                         <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                        <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
                     </div>
 
                     <div class="main" @click=${handlePopupClick}>
