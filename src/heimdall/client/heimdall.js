@@ -1416,10 +1416,11 @@ function draw() {
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 1;
 
+        let relative = !!settings.align;
         let scale = zoomToScale(position.zoom);
         let start = Math.floor(position.x / scale);
         let end = Math.ceil((position.x + layout.time.width) / scale);
-        let chars = Math.max(countDigits(start), countDigits(end));
+        let chars = Math.max(countDigits(start, relative), countDigits(end, relative));
         let height = 8 * window.devicePixelRatio;
 
         let step1 = Math.ceil(height / scale);
@@ -1441,7 +1442,9 @@ function draw() {
 
         for (let time = start2; time < end; time += step2) {
             let x = time * scale - position.x;
-            runner.text(x, height * 3, time, { align: 8 });
+            let text = (relative && time > 0 ? '+' : '') + time;
+
+            runner.text(x, height * 3, text, { align: 8 });
         }
 
         ctx.restore();
@@ -1470,10 +1473,12 @@ function draw() {
     }
 }
 
-function countDigits(value) {
+function countDigits(value, relative) {
     if (value) {
+        let symbol = (relative && value > 0) || value < 0;
         let digits = Math.floor(Math.log10(Math.abs(value)));
-        return (value < 0) + digits;
+
+        return symbol + digits;
     } else {
         return 1;
     }
