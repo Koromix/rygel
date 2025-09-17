@@ -38,7 +38,7 @@ if [ "$1" = "configure" ]; then
             --gecos "heimdall visualizer daemon"
     fi
     mkdir -p /var/lib/heimdall
-    chmod 0775 /var/lib/heimdall
+    chmod g+w /var/lib/heimdall
 fi
 
 exit 0' > ${DEBIAN_DIR}/postinst

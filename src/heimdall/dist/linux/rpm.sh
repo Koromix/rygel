@@ -32,7 +32,7 @@ if ! getent passwd heimdall >/dev/null; then
     adduser --system --gid heimdall --home-dir /var/lib/heimdall heimdall
 fi
 mkdir -p /var/lib/heimdall
-chmod 0775 /var/lib/heimdall
+chmod g+w /var/lib/heimdall
 
 %preun
 %systemd_preun heimdall.service
