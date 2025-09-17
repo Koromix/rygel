@@ -49,7 +49,7 @@ let languages = {};
 
 // DOM nodes
 let dom = {
-    main: null,
+    playground: null,
     config: null
 };
 let canvas = null;
@@ -150,10 +150,8 @@ async function start(root) {
     UI.init();
 
     render(html`
-        <div class="playground">
-            <canvas></canvas>
-            <div class="config"></div>
-        </div>
+        <div class="playground"><canvas></canvas></div>
+        <div class="config"></div>
     `, root);
     dom.playground = root.querySelector('.playground');
     dom.config = root.querySelector('.config');
@@ -518,46 +516,8 @@ function update() {
         }
     }
 
-    if (sync_config) {
-        render(html`
-            ${world.views.size ? html`
-                <label>
-                    <span>${T.view}</span>
-                    <select @change=${e => { settings.view = e.target.value; saveState(); }}>
-                        ${Array.from(world.views.values()).map(view => html`<option value=${view.name} .selected=${view.name == settings.view}>${view.name}</option>`)}
-                    </select>
-                </label>
-                <label>
-                    <span>${T.alignment}</span>
-                    <div>
-                        <select @change=${e => { settings.align = JSON.parse(e.target.value); saveState(); }}>
-                            <optgroup label=${T.simple}>
-                                <option value=${JSON.stringify(false)} .selected=${settings.align === false}>${T.no_alignment}</option>
-                                <option value=${JSON.stringify(true)} .selected=${settings.align === true}>${T.align_first}</option>
-                            </optgroup>
-                            <optgroup label=${T.concepts}>
-                            ${Object.keys(view.items).map(item => {
-                                let text = item.substr(1).replaceAll('/', ' / ');
-                                return html`<option value=${JSON.stringify(item)} .selected=${settings.align === item}>${text}</option>`;
-                            })}
-                        </select>
-                        <label>
-                            <input type="checkbox" ?disabled=${settings.align === false} .checked=${settings.warning}
-                                   @change=${e => { settings.warning = e.target.checked; saveState(); }}>
-                            <span>${T.with_warning}</span>
-                        </label>
-                        <label>
-                            <input type="checkbox" ?disabled=${settings.align === false} .checked=${!settings.hide}
-                                   @change=${e => { settings.hide = !e.target.checked; saveState(); }}>
-                            <span>${T.show_all}</span>
-                        </label>
-                    </div>
-                </label>
-            ` : ''}
-        `, dom.config);
-
-        sync_config = false;
-    }
+    if (sync_config)
+        renderConfig(view);
 }
 
 function zoomTime(delta, at) {
@@ -867,6 +827,10 @@ function canPlot(level) {
     return true;
 }
 
+// ------------------------------------------------------------------------
+// Config / UI
+// ------------------------------------------------------------------------
+
 function restoreState() {
     let key = 'heimdall:' + world.project;
     let user = {};
@@ -945,6 +909,47 @@ function saveState() {
 
     sync_config = true;
     runner.busy();
+}
+
+function renderConfig(view) {
+    render(html`
+        ${world.views.size ? html`
+            <label>
+                <span>${T.view}</span>
+                <select @change=${e => { settings.view = e.target.value; saveState(); }}>
+                    ${Array.from(world.views.values()).map(view => html`<option value=${view.name} .selected=${view.name == settings.view}>${view.name}</option>`)}
+                </select>
+            </label>
+            <label>
+                <span>${T.alignment}</span>
+                <div>
+                    <select @change=${e => { settings.align = JSON.parse(e.target.value); saveState(); }}>
+                        <optgroup label=${T.simple}>
+                            <option value=${JSON.stringify(false)} .selected=${settings.align === false}>${T.no_alignment}</option>
+                            <option value=${JSON.stringify(true)} .selected=${settings.align === true}>${T.align_first}</option>
+                        </optgroup>
+                        <optgroup label=${T.concepts}>
+                        ${Object.keys(view.items).map(item => {
+                            let text = item.substr(1).replaceAll('/', ' / ');
+                            return html`<option value=${JSON.stringify(item)} .selected=${settings.align === item}>${text}</option>`;
+                        })}
+                    </select>
+                    <label>
+                        <input type="checkbox" ?disabled=${settings.align === false} .checked=${settings.warning}
+                               @change=${e => { settings.warning = e.target.checked; saveState(); }}>
+                        <span>${T.with_warning}</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" ?disabled=${settings.align === false} .checked=${!settings.hide}
+                               @change=${e => { settings.hide = !e.target.checked; saveState(); }}>
+                        <span>${T.show_all}</span>
+                    </label>
+                </div>
+            </label>
+        ` : ''}
+    `, dom.config);
+
+    sync_config = false;
 }
 
 async function markEntity(entity) {
