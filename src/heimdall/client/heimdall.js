@@ -262,10 +262,8 @@ function update() {
         }
 
         if (reveal) {
-            let left = Math.min(...rows.map(row => row.left));
-            let right = Math.max(...rows.map(row => row.right));
-            let start = positionToTime(left, position.zoom);
-            let end = positionToTime(right, position.zoom);
+            let start = Math.min(...rows.map(row => row.start));
+            let end = Math.max(...rows.map(row => row.end));
 
             revealTime(start, end);
             saveState();
@@ -603,16 +601,22 @@ function combine(entities, idx, levels, align) {
             index: rows.length,
             name: level.depth ? level.name : entity.name,
             path: level.path,
+
             depth: level.depth,
             leaf: level.leaf,
             expand: level.expand,
             active: false,
             hover: false,
             empty: false,
+
             top: 0,
             height: ROW_HEIGHT * window.devicePixelRatio,
-            left: Number.MAX_SAFE_INTEGER,
-            right: Number.MIN_SAFE_INTEGER,
+
+            start: Number.MAX_SAFE_INTEGER,
+            end: Number.MIN_SAFE_INTEGER,
+            left: null,
+            right: null,
+
             events: [],
             periods: [],
             values: []
@@ -625,16 +629,18 @@ function combine(entities, idx, levels, align) {
             if (!level.concepts.has(evt.concept))
                 continue;
 
+            let time = evt.time - offset;
+
             let draw = {
-                x: timeToPosition(evt.time - offset, position.zoom),
+                x: timeToPosition(time, position.zoom),
                 width: 0,
                 count: 1,
                 warning: evt.warning
             };
             row.events.push(draw);
 
-            row.left = Math.min(row.left, draw.x);
-            row.right = Math.max(row.right, draw.x + draw.width);
+            row.start = Math.min(row.start, time);
+            row.end = Math.max(row.end, time);
         }
 
         // Handle periods
@@ -657,22 +663,24 @@ function combine(entities, idx, levels, align) {
                         prev.end = end;
                         prev.draw.width = Math.round(duration * zoomToScale(position.zoom));
 
-                        row.right = Math.max(row.right, prev.draw.x + prev.draw.width);
+                        row.end = Math.max(row.end, end);
                     }
 
                     continue;
                 }
 
+                let time = period.time - offset;
+
                 let draw = {
-                    x: timeToPosition(period.time - offset, position.zoom),
+                    x: timeToPosition(time, position.zoom),
                     width: Math.round(period.duration * zoomToScale(position.zoom)),
                     color: period.color,
                     stack: 0
                 };
                 row.periods.push(draw);
 
-                row.left = Math.min(row.left, draw.x);
-                row.right = Math.max(row.right, draw.x + draw.width);
+                row.start = Math.min(row.start, time);
+                row.end = Math.max(row.end, time + period.duration);
 
                 map.set(period.concept, {
                     time: period.time,
@@ -703,16 +711,18 @@ function combine(entities, idx, levels, align) {
                 }
 
                 for (let value of values) {
+                    let time = value.time - offset;
+
                     let draw = {
-                        x: timeToPosition(value.time - offset, position.zoom),
+                        x: timeToPosition(time, position.zoom),
                         y: row.height - (value.value - min) / range * row.height,
                         label: value.value,
                         warning: value.warning
                     };
                     row.values.push(draw);
 
-                    row.left = Math.min(row.left, draw.x);
-                    row.right = Math.max(row.right, draw.x);
+                    row.start = Math.min(row.start, time);
+                    row.end = Math.max(row.end, time);
                 }
             }
         } else if (entity.values.length) {
@@ -720,16 +730,18 @@ function combine(entities, idx, levels, align) {
                 if (!level.concepts.has(value.concept))
                     continue;
 
+                let time = value.time - offset;
+
                 let draw = {
-                    x: timeToPosition(value.time - offset, position.zoom),
+                    x: timeToPosition(time, position.zoom),
                     width: 0,
                     count: 1,
                     warning: value.warning
                 };
                 row.events.push(draw);
 
-                row.left = Math.min(row.left, draw.x);
-                row.right = Math.max(row.right, draw.x);
+                row.start = Math.min(row.start, time);
+                row.end = Math.max(row.end, time);
             }
 
             row.events.sort((evt1, evt2) => evt1.x - evt2.x);
@@ -791,6 +803,14 @@ function combine(entities, idx, levels, align) {
             row.events.length = j;
         }
 
+        if (row.start < Number.MAX_SAFE_INTEGER) {
+            row.left = timeToPosition(row.start, position.zoom);
+            row.right = timeToPosition(row.end, position.zoom);
+        } else {
+            row.start = null;
+            row.end = null;
+        }
+
         rows.push(row);
     }
 
@@ -799,10 +819,6 @@ function combine(entities, idx, levels, align) {
 
 function timeToPosition(time, zoom) {
     return Math.round(time * zoomToScale(zoom));
-}
-
-function positionToTime(x, zoom) {
-    return Math.round(x / zoomToScale(zoom));
 }
 
 function zoomToScale(zoom) {
