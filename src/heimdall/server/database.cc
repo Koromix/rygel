@@ -18,7 +18,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 7;
+const int DatabaseVersion = 8;
 
 int GetDatabaseVersion(sq_Database *db)
 {
@@ -204,9 +204,34 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 7: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX marks_e;
+
+                    ALTER TABLE marks RENAME TO marks_BAK;
+
+                    CREATE TABLE marks (
+                        mark INTEGER NOT NULL PRIMARY KEY,
+                        entity REFERENCES entities (entity) ON DELETE SET NULL,
+                        name TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        status INTEGER CHECK (status IN (0, 1)),
+                        comment TEXT NOT NULL
+                    );
+                    CREATE UNIQUE INDEX marks_e ON marks (entity);
+
+                    INSERT INTO marks (mark, entity, name, timestamp, status, comment)
+                        SELECT mark, entity, name, timestamp, CASE status WHEN 'valid' THEN 1 WHEN 'invalid' THEN 0 END, comment FROM marks_BAK;
+
+                    DROP TABLE marks_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 7);
+            static_assert(DatabaseVersion == 8);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

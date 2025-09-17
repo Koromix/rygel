@@ -12,8 +12,8 @@
         "simple": "Simple",
         "status": "Statut",
         "statuses": {
-            "invalid": "Refusé",
-            "valid": "Accepté",
+            "negative": "Négatif",
+            "positive": "Positif",
             "wip": "Non décidé"
         },
         "view": "Vue",

@@ -650,7 +650,7 @@ function combine(entities, idx, levels, align) {
         };
 
         if (!row.depth && entity.mark != null)
-            row.mark = statusColor(entity.mark.status);
+            row.mark = entity.mark.status;
 
         for (let evt of entity.events) {
             if (!level.concepts.has(evt.concept))
@@ -949,7 +949,7 @@ function saveState() {
 
 async function markEntity(entity) {
     let mark = Object.assign({
-        status: 'valid',
+        status: true,
         comment: ''
     }, entity.mark);
 
@@ -965,10 +965,10 @@ async function markEntity(entity) {
                 <div class="main">
                     <label>
                         <span>${T.status}</span>
-                        <select name="status" @change=${e => { mark.status = e.target.value; render(); }}>
-                            <option value="valid" ?selected=${mark.status == 'valid'}>${T.statuses.valid}</option>
-                            <option value="invalid" ?selected=${mark.status == 'invalid'}>${T.statuses.invalid}</option>
-                            <option value="wip" ?selected=${mark.status == 'wip'}>${T.statuses.wip}</option>
+                        <select name="status" @change=${e => set_status(e.target.value)}>
+                            <option value="1" ?selected=${mark.status == 1}>${T.statuses.positive}</option>
+                            <option value="0" ?selected=${mark.status == 0}>${T.statuses.negative}</option>
+                            <option value="-1" ?selected=${mark.status == null}>${T.statuses.wip}</option>
                         </select>
                     </label>
                     <label>
@@ -980,9 +980,22 @@ async function markEntity(entity) {
 
                 <div class="footer">
                     <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
-                    <button type="submit" style=${'--background:' + statusColor(mark.status)}>${T.mark}</button>
+                    ${mark.status != null ? html`<button type="submit" style=${'--background:' + statusColor(mark.status)}>${T.mark}</button>` : ''}
+                    ${mark.status == null ? html`<button type="submit" class="secondary">${T.mark}</button>` : ''}
                 </div>
-            `
+            `;
+
+            function set_status(value) {
+                value = parseInt(value, 10);
+
+                switch (value) {
+                    case 1: { mark.status = true; } break;
+                    case 0: { mark.status = false; } break;
+                    case -1: { mark.status = null; } break;
+                }
+
+                render();
+            }
         },
 
         submit: async () => {
@@ -1113,17 +1126,12 @@ function draw() {
             }
 
             if (!row.depth) {
-                if (row.mark != null) {
-                    ctx.fillStyle = row.mark;
-                    ctx.strokeStyle = row.mark;
-                    ctx.lineWidth = 1;
-                } else {
-                    ctx.fillStyle = '#00000000';
-                    ctx.strokeStyle = '#dddddd';
-                    ctx.lineWidth = 1;
-                }
-
                 let x = layout.tree.width - MARK_OFFSET;
+                let color = statusColor(row.mark);
+
+                ctx.fillStyle = color + (row.mark == null ? '00' : '');
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
 
                 ctx.beginPath();
                 ctx.arc(layout.tree.width - MARK_OFFSET / 2, row.top + row.height / 2, 6, 0, 2 * Math.PI);
@@ -1382,9 +1390,9 @@ function countDigits(value) {
 
 function statusColor(status) {
     switch (status) {
-        case 'valid': return '#2d8261';
-        case 'invalid': return '#db0a0a';
-        case 'wip': return '#ff6600';
+        case true: return '#2d8261';
+        case false: return '#db0a0a';
+        default: return '#dddddd';
     }
 }
 

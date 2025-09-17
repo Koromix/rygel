@@ -30,20 +30,6 @@ bool IsProjectNameSafe(const char *name)
     return true;
 }
 
-static bool IsStatusValid(const char *status)
-{
-    if (status) {
-        if (TestStr(status, "valid"))
-            return true;
-        if (TestStr(status, "invalid"))
-            return true;
-        if (TestStr(status, "wip"))
-            return true;
-    }
-
-    return false;
-}
-
 static bool OpenProjectDatabase(http_IO *io, sq_Database *db)
 {
     K_ASSERT(!db->IsValid());
@@ -143,7 +129,7 @@ void HandleEntities(http_IO *io)
                               ev.event, ce.domain || '::' || ce.name, ev.timestamp, ev.warning,
                               pe.period, cp.domain || '::' || cp.name, pe.timestamp, pe.duration, pe.color,
                               me.measure, cm.domain || '::' || cm.name, me.timestamp, me.value, me.warning,
-                              m.timestamp, m.status, m.comment
+                              m.timestamp, IFNULL(m.status, -1), m.comment
                        FROM entities e
                        LEFT JOIN events ev ON (ev.entity = e.entity)
                        LEFT JOIN concepts ce ON (ce.concept = ev.concept)
@@ -179,13 +165,19 @@ void HandleEntities(http_IO *io)
                 // Report mark information
                 if (sqlite3_column_type(stmt, 16) != SQLITE_NULL) {
                     int64_t time = sqlite3_column_int64(stmt, 16);
-                    const char *status = (const char *)sqlite3_column_text(stmt, 17);
+                    int status = sqlite3_column_int(stmt, 17);
                     const char *comment = (const char *)sqlite3_column_text(stmt, 18);
 
                     json->Key("mark"); json->StartObject();
-                        json->Key("time"); json->Int64(time);
-                        json->Key("status"); json->String(status);
-                        json->Key("comment"); json->String(comment);
+
+                    json->Key("time"); json->Int64(time);
+                    if (status >= 0) {
+                        json->Key("status"); json->Bool(status);
+                    } else {
+                        json->Key("status"); json->Null();
+                    }
+                    json->Key("comment"); json->String(comment);
+
                     json->EndObject();
                 } else {
                     json->Key("mark"); json->Null();
@@ -305,7 +297,7 @@ void HandleMark(http_IO *io)
         return;
 
     int64_t entity = -1;
-    const char *status = nullptr;
+    int status = -1;
     const char *comment = nullptr;
     {
         bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
@@ -317,7 +309,13 @@ void HandleMark(http_IO *io)
                 if (key == "entity") {
                     json->ParseInt(&entity);
                 } else if (key == "status") {
-                    json->ParseString(&status);
+                    if (json->SkipNull()) {
+                        status = -1;
+                    } else {
+                        bool value;
+                        json->ParseBool(&value);
+                        status = value;
+                    }
                 } else if (key == "comment") {
                     json->ParseString(&comment);
                 } else {
@@ -330,11 +328,6 @@ void HandleMark(http_IO *io)
             if (valid) {
                 if (entity < 0) {
                     LogError("Missing or invalid 'entity' parameter");
-                    valid = false;
-                }
-
-                if (!IsStatusValid(status)) {
-                    LogError("Missing or invalid 'status' parameter");
                     valid = false;
                 }
 
@@ -377,7 +370,8 @@ void HandleMark(http_IO *io)
             return false;
 
         if (!db.Run(R"(INSERT INTO marks (entity, name, timestamp, status, comment)
-                       VALUES (?1, ?2, ?3, ?4, ?5))", entity, name, now, status, comment)) {
+                       VALUES (?1, ?2, ?3, ?4, ?5))",
+                    entity, name, now, status >= 0 ? sq_Binding(status) : sq_Binding(), comment)) {
             // Entity could have been deleted in the mean time
             if (sqlite3_errcode(db) == SQLITE_CONSTRAINT) {
                 LogError("Entity %1 does not exist", entity);
@@ -395,7 +389,11 @@ void HandleMark(http_IO *io)
         json->StartObject();
 
         json->Key("time"); json->Int64(now);
-        json->Key("status"); json->String(status);
+        if (status >= 0) {
+            json->Key("status"); json->Bool(status);
+        } else {
+            json->Key("status"); json->Null();
+        }
         json->Key("comment"); json->String(comment);
 
         json->EndObject();

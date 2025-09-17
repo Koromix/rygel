@@ -12,8 +12,8 @@
         "simple": "Simple",
         "status": "Status",
         "statuses": {
-            "invalid": "Refused",
-            "valid": "Accepted",
+            "negative": "Negative",
+            "positive": "Positive",
             "wip": "Undecided"
         },
         "view": "View",
