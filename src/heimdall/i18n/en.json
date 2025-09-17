@@ -2,13 +2,17 @@
     "keys": {
         "align_first": "Align at 0",
         "alignment": "Alignment",
+        "apply": "Apply",
         "cancel": "Cancel",
         "comment": "Comment",
         "concepts": "Concepts",
+        "display_options": "Display options",
+        "language": "Language",
         "mark_entity_x": "Mark entity {1}",
         "no_alignment": "No alignement",
         "save": "Save",
-        "show_all": "Show all",
+        "settings": "Settings",
+        "show_empty_entities": "Show filtered out entities",
         "simple": "Simple",
         "status": "Status",
         "statuses": {

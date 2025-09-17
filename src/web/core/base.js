@@ -408,11 +408,11 @@ const Util = new function() {
         }, { capture: true });
     };
 
-    this.initLocales = function(tables, default_lang) {
+    this.initLocales = function(tables, default_lang, lang = null) {
         locales = tables;
         default_locale = default_lang;
 
-        self.setLocale(null);
+        self.setLocale(lang);
     };
 
     this.setLocale = function(lang) {

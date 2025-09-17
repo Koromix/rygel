@@ -89,10 +89,7 @@ let rows = [];
 // ------------------------------------------------------------------------
 
 async function load(prefix, lang, progress = null) {
-    languages.en = en;
-    languages.fr = fr;
-
-    Util.initLocales(languages, lang);
+    initLanguages(lang);
 
     if (window.createImageBitmap == null)
         throw new Error('ImageBitmap support is not available (old browser?)');
@@ -109,6 +106,16 @@ async function load(prefix, lang, progress = null) {
 
         document.head.appendChild(script);
     }
+}
+
+function initLanguages(default_lang) {
+    languages.en = en;
+    languages.fr = fr;
+
+    let lang = Util.getCookie('language');
+
+    Util.initLocales(languages, default_lang, lang);
+    Util.setCookie('language', document.documentElement.lang, '/', 365 * 86400);
 }
 
 async function fetchProject(project) {
@@ -499,7 +506,9 @@ function update() {
                 if (mouse_state.left == -1) {
                     if (cursor.x >= layout.tree.width - MARK_OFFSET) {
                         let entity = world.entities[row.entity];
-                        markEntity(entity);
+                        let mark = UI.wrap(() => runMark(entity));
+
+                        mark();
                     } else {
                         position.entity = row.entity;
                         position.y = -rows[idx - row.index].top;
@@ -914,15 +923,17 @@ function saveState() {
 function renderConfig(view) {
     render(html`
         ${world.views.size ? html`
-            <label>
-                <span>${T.view}</span>
-                <select @change=${e => { settings.view = e.target.value; saveState(); }}>
-                    ${Array.from(world.views.values()).map(view => html`<option value=${view.name} .selected=${view.name == settings.view}>${view.name}</option>`)}
-                </select>
-            </label>
-            <label>
-                <span>${T.alignment}</span>
-                <div>
+            <div class="section">
+                <label>
+                    <span>${T.view}</span>
+                    <select @change=${e => { settings.view = e.target.value; saveState(); }}>
+                        ${Array.from(world.views.values()).map(view => html`<option value=${view.name} .selected=${view.name == settings.view}>${view.name}</option>`)}
+                    </select>
+                </label>
+            </div>
+            <div class="section">
+                <label>
+                    <span>${T.alignment}</span>
                     <select @change=${e => { settings.align = JSON.parse(e.target.value); saveState(); }}>
                         <optgroup label=${T.simple}>
                             <option value=${JSON.stringify(false)} .selected=${settings.align === false}>${T.no_alignment}</option>
@@ -934,25 +945,84 @@ function renderConfig(view) {
                             return html`<option value=${JSON.stringify(item)} .selected=${settings.align === item}>${text}</option>`;
                         })}
                     </select>
-                    <label>
-                        <input type="checkbox" ?disabled=${settings.align === false} .checked=${settings.warning}
-                               @change=${e => { settings.warning = e.target.checked; saveState(); }}>
-                        <span>${T.with_warning}</span>
-                    </label>
-                    <label>
-                        <input type="checkbox" ?disabled=${settings.align === false} .checked=${!settings.hide}
-                               @change=${e => { settings.hide = !e.target.checked; saveState(); }}>
-                        <span>${T.show_all}</span>
-                    </label>
-                </div>
-            </label>
+                </label>
+                <label>
+                    <input type="checkbox" ?disabled=${settings.align === false} .checked=${settings.warning}
+                           @change=${e => { settings.warning = e.target.checked; saveState(); }}>
+                    <span>${T.with_warning}</span>
+                </label>
+            </div>
+            <div class="section">
+                <button class="secondary" @click=${UI.wrap(runSettings)}>${T.settings}</button>
+            </div>
         ` : ''}
     `, dom.config);
 
     sync_config = false;
 }
 
-async function markEntity(entity) {
+async function runSettings() {
+    let lang = document.documentElement.lang;
+
+    try {
+        await UI.dialog({
+            run: (render, close) => {
+                return html`
+                    <div class="title">
+                        ${T.settings}
+                        <div style="flex: 1;"></div>
+                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                    </div>
+
+                    <div class="main">
+                        <div class="section">${T.display_options}</div>
+                        <label>
+                            <span>${T.language}</span>
+                            <select name="language" aria-label=${T.language} @change=${UI.wrap(e => set_language(e.target.value))}>
+                                ${Object.keys(languages).map(lang =>
+                                    html`<option value=${lang} .selected=${lang == document.documentElement.lang}>${lang.toUpperCase()}</option>`)}
+                            </select>
+                        </label>
+                        <label>
+                            <input name="show_all" type="checkbox" ?checked=${!settings.hide}>
+                            <span>${T.show_empty_entities}</span>
+                        </label>
+                    </div>
+
+                    <div class="footer">
+                        <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
+                        <button type="submit">${T.apply}</button>
+                    </div>
+                `;
+
+                function set_language(lang) {
+                    Util.setLocale(lang);
+                    render();
+                }
+            },
+
+            submit: (elements) => {
+                switchLanguage(elements.language.value);
+                settings.hide = !elements.show_all.checked;
+
+                saveState();
+            }
+        });
+    } catch (err) {
+        Util.setLocale(lang);
+        throw err;
+    }
+}
+
+function switchLanguage(lang) {
+    Util.setLocale(lang);
+    Util.setCookie('language', document.documentElement.lang, '/', 365 * 86400);
+
+    sync_config = true;
+    runner.busy();
+}
+
+async function runMark(entity) {
     let mark = Object.assign({
         status: true,
         comment: ''

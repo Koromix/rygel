@@ -115,24 +115,28 @@ function renderLog() {
 
 function wrap(func) {
     return async e => {
-        let target = e.currentTarget || e.target;
+        let target = e?.currentTarget ?? e?.target;
         let busy = target;
 
-        if (target.tagName == 'FORM') {
-            e.preventDefault();
+        if (target != null) {
+            if (target.tagName == 'FORM') {
+                e.preventDefault();
 
-            // Make submit button (if any) busy
-            busy = target.querySelector('button[type=submit]') || busy;
+                // Make submit button (if any) busy
+                busy = target.querySelector('button[type=submit]') ?? busy;
+            }
+            e.stopPropagation();
+
+            if (busy.disabled || busy.classList.contains('busy'))
+                return;
         }
-        e.stopPropagation();
-
-        if (busy.disabled || busy.classList.contains('busy'))
-            return;
 
         try {
-            if (busy.disabled != null)
-                busy.disabled = true;
-            busy.classList.add('busy');
+            if (busy != null) {
+                if (busy.disabled != null)
+                    busy.disabled = true;
+                busy.classList.add('busy');
+            }
 
             await func(e);
         } catch (err) {
@@ -141,9 +145,11 @@ function wrap(func) {
                 throw err;
             }
         } finally {
-            if (busy.disabled != null)
-                busy.disabled = false;
-            busy.classList.remove('busy');
+            if (busy != null) {
+                if (busy.disabled != null)
+                    busy.disabled = false;
+                busy.classList.remove('busy');
+            }
 
             setTimeout(run_func, 0);
         }
