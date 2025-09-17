@@ -304,20 +304,15 @@ function dialog(options = {}) {
         dlg.resolve = resolve;
         dlg.reject = reject;
 
-        window.requestAnimationFrame(() => {
+        setTimeout(() => {
             let widget0 = dlg.el.querySelector('label > *[autofocus]') ||
                           dlg.el.querySelector(`label > input:not(:disabled),
                                                 label > select:not(:disabled),
                                                 label > textarea:not(:disabled)`);
 
-            if (widget0 != null) {
-                if (typeof widget0.select == 'function') {
-                    widget0.select();
-                } else {
-                    widget0.focus();
-                }
-            }
-        });
+            if (widget0 != null)
+                widget0.focus();
+        }, 0);
     });
 
     p.finally(() => {
