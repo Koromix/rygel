@@ -857,8 +857,10 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
             valid &= json->IsValid();
 
             if (valid) {
-                LogError("Missing 'token' parameter");
-                valid = false;
+                if (!token.len) {
+                    LogError("Missing 'token' parameter");
+                    valid = false;
+                }
             }
 
             return valid;
