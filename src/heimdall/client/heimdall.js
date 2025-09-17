@@ -500,6 +500,13 @@ function update() {
                 right -= MARK_OFFSET;
             }
 
+            if (pressed_keys.m == -1) {
+                let entity = world.entities[row.entity];
+                let mark = UI.wrap(() => runMark(entity));
+
+                mark();
+            }
+
             if (cursor.x >= 0 && cursor.x < right) {
                 if (mouse_state.left == -1) {
                     if (cursor.x >= layout.tree.width - MARK_OFFSET) {
