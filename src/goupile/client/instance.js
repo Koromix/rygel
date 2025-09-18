@@ -1917,23 +1917,13 @@ async function run(push_history = true) {
 
     // Update URL and title
     {
+        let defaults = profile.develop ? 'editor|view' : 'view';
+
         let url = contextualizeURL(route.page.url, form_thread);
         let panels = UI.getPanels().join('|');
 
-        {
-            let defaults = null;
-
-            if (profile.develop) {
-                defaults = 'editor|view';
-            } else if (form_thread.saved) {
-                defaults = 'view';
-            } else {
-                defaults = 'data';
-            }
-
-            if (panels == defaults)
-                panels = null;
-        }
+        if (panels == defaults)
+            panels = null;
 
         url = Util.pasteURL(url, { p: panels });
         goupile.syncHistory(url, push_history);
