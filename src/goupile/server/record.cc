@@ -1837,6 +1837,38 @@ void HandleRecordDelete(http_IO *io, InstanceHolder *instance)
         if (!stmt.IsValid())
             return false;
 
+        // Delete thread itself
+        {
+            int64_t negative;
+
+            sq_Statement stmt;
+            if (!instance->db->Prepare("SELECT MIN(sequence) FROM rec_threads", &stmt))
+                return false;
+            if (!stmt.GetSingleValue(&negative))
+                return false;
+
+            negative = std::min(negative, (int64_t)0) - 1;
+
+            if (!instance->db->Run(R"(UPDATE rec_threads SET deleted = sequence,
+                                                             sequence = ?2
+                                      WHERE tid = ?1)", tid, negative))
+                return false;
+        }
+
+        // Restart sequence if no thread remains
+        {
+            sq_Statement stmt;
+            if (!instance->db->Prepare("SELECT sequence FROM rec_threads WHERE sequence >= 0", &stmt))
+                return false;
+
+            if (!stmt.Step()) {
+                if (!stmt.IsValid())
+                    return false;
+                if (!instance->db->Run("UPDATE sqlite_sequence SET seq = 0 WHERE name = 'rec_threads'"))
+                    return false;
+            }
+        }
+
         return true;
     });
     if (!success)
