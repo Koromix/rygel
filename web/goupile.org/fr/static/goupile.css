@@ -28,6 +28,10 @@ html {
     --button_color: #2170b9;
 }
 
+@media screen and (min-width: 961px) {
+    #logo { margin-right: 1em; }
+}
+
 #flag { margin-left: 1em; }
 
 @media screen and (max-width: 960px) {
