@@ -108,8 +108,6 @@ html.mobile .fm_section {
     margin-right: -12px;
 }
 
-.fm_wrap.disabled { opacity: 0.6; }
-
 /* -------------------- Widgets -------------------- */
 
 .fm_widget { position: relative; }

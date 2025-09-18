@@ -47,6 +47,11 @@ a:hover { color: var(--anchor_color_n1); }
     z-index: 99999;
 }
 
+.disabled {
+    opacity: 0.5;
+    filter: saturate(0%);
+}
+
 button {
     padding: 0.3em 10px;
     background: white;
