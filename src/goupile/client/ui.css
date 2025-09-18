@@ -184,7 +184,11 @@ html.small .ui_toolbar button.icon {
     height: 2.4em;
     min-height: 2.4em;
     text-align: left;
+    text-indent: 0 !important;
+    max-width: unset !important;
+    background-position-x: 6px !important;
 }
+.ui_toolbar > .drop > div button.icon { padding-left: 36px !important; }
 .ui_toolbar > .drop > div hr {
     width: 94%;
     border: none;
@@ -199,6 +203,7 @@ html.small .ui_toolbar button.icon {
     flex-direction: column;
 }
 .ui_toolbar > .drop > div button:not(.active):hover { background-color: var(--menu_color_n2); }
+html.small .ui_toolbar > .drop > button.icon:empty { background-position-x: center; }
 html.small .ui_toolbar > .drop > button.icon::after { display: none; }
 
 .ui_toolbar > .drop .expand {
