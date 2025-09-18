@@ -62,6 +62,7 @@ PublicKey = %2
 # RetentionDays = 7
 
 [Defaults]
+Language = en
 # DefaultUser =
 # DefaultPassword =
 
@@ -101,9 +102,13 @@ struct ArchiveIntro {
 #define ARCHIVE_VERSION 1
 #define ARCHIVE_SIGNATURE "GOUPILE_BACKUP"
 
-enum class InstanceFlag {
-    DefaultProject = 1 << 0,
-    DemoInstance = 1 << 1
+struct InstanceOptions {
+    bool populate = false;
+    bool demo = false;
+    const char *lang = nullptr;
+
+    int64_t userid = 0;
+    uint32_t permissions = 0;
 };
 
 static bool CheckInstanceKey(Span<const char> key)
@@ -222,13 +227,10 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 
 #endif
 
-static bool CreateInstance(DomainHolder *domain, const char *instance_key,
-                           const char *name, int64_t userid, uint32_t permissions,
-                           unsigned int flags, int *out_error)
+static bool CreateInstance(DomainHolder *domain, const char *instance_key, const char *name,
+                           const InstanceOptions &options, int *out_error = nullptr)
 {
     BlockAllocator temp_alloc;
-
-    *out_error = 500;
 
     // Check for existing instance
     {
@@ -239,7 +241,9 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
 
         if (stmt.Step()) {
             LogError("Instance '%1' already exists", instance_key);
-            *out_error = 409;
+            if (out_error) {
+                *out_error = 409;
+            }
             return false;
         } else if (!stmt.IsValid()) {
             return false;
@@ -249,7 +253,9 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
     const char *database_filename = MakeInstanceFileName(domain->config.instances_directory, instance_key, &temp_alloc);
     if (TestFile(database_filename)) {
         LogError("Database '%1' already exists (old deleted instance?)", database_filename);
-        *out_error = 409;
+        if (out_error) {
+            *out_error = 409;
+        }
         return false;
     }
     K_DEFER_N(db_guard) { UnlinkFile(database_filename); };
@@ -286,6 +292,9 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
         bool success = true;
 
         success &= db.Run(sql, "Name", name);
+        if (options.lang) {
+            success &= db.Run(sql, "Language", options.lang);
+        }
 
         if (!success)
             return false;
@@ -304,7 +313,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
         return false;
 
     // Create default files
-    if (flags & (int)InstanceFlag::DefaultProject) {
+    if (options.populate) {
         sq_Statement stmt1;
         sq_Statement stmt2;
         if (!db.Prepare(R"(INSERT INTO fs_objects (sha256, mtime, compression, size, blob)
@@ -380,7 +389,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
 
     bool success = domain->db.Transaction([&]() {
         int64_t now = GetUnixTime();
-        sq_Binding demo = (flags & (int)InstanceFlag::DemoInstance) ? sq_Binding(now) : sq_Binding();
+        sq_Binding demo = options.demo ? sq_Binding(now) : sq_Binding();
 
         if (!domain->db.Run(R"(INSERT INTO dom_instances (instance, demo)
                                VALUES (?1, ?2))", instance_key, demo)) {
@@ -389,18 +398,20 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                 Span<const char> master = SplitStr(instance_key, '/');
 
                 LogError("Master instance '%1' does not exist", master);
-                *out_error = 404;
+                if (out_error) {
+                    *out_error = 404;
+                }
             }
 
             return false;
         }
 
-        if (userid > 0) {
-            K_ASSERT(permissions);
+        if (options.userid > 0) {
+            K_ASSERT(options.permissions);
 
             if (!domain->db.Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
                                    VALUES (?1, ?2, ?3))",
-                                userid, instance_key, permissions))
+                                options.userid, instance_key, options.permissions))
                 return false;
         }
 
@@ -704,11 +715,13 @@ retry_pwd:
 
     // Create default instance
     {
-        unsigned int flags = (int)InstanceFlag::DefaultProject;
-        uint32_t permissions = (1u << K_LEN(UserPermissionNames)) - 1;
+        InstanceOptions options = {
+            .populate = true,
+            .userid = 1,
+            .permissions = (1u << K_LEN(UserPermissionNames)) - 1
+        };
 
-        int dummy;
-        if (demo && !CreateInstance(&domain, demo, demo, 1, permissions, flags, &dummy))
+        if (demo && !CreateInstance(&domain, demo, demo, options))
             return 1;
     }
 
@@ -1078,10 +1091,12 @@ void HandleDemoCreate(http_IO *io)
     Fmt(name, "%1", FmtRandom(K_SIZE(name) - 1));
 
     bool success = gp_domain.db.Transaction([&]() {
-        unsigned int flags = (int)InstanceFlag::DefaultProject | (int)InstanceFlag::DemoInstance;
+        InstanceOptions options = {
+            .populate = true,
+            .demo = true
+        };
 
-        int error;
-        if (!CreateInstance(&gp_domain, name, name, -1, 0, flags, &error)) {
+        if (int error = 500; !CreateInstance(&gp_domain, name, name, options, &error)) {
             io->SendError(error);
             return false;
         }
@@ -1162,6 +1177,7 @@ void HandleInstanceCreate(http_IO *io)
     const char *instance_key = nullptr;
     const char *name = nullptr;
     bool populate = false;
+    const char *lang = nullptr;
     {
         bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
             bool valid = true;
@@ -1175,6 +1191,8 @@ void HandleInstanceCreate(http_IO *io)
                     json->SkipNull() || json->ParseString(&name);
                 } else if (key == "populate") {
                     json->ParseBool(&populate);
+                } else if (key == "lang") {
+                    json->ParseString(&lang);
                 } else {
                     json->UnexpectedKey(key);
                     valid = false;
@@ -1244,11 +1262,14 @@ void HandleInstanceCreate(http_IO *io)
                               instance_key))
             return false;
 
-        unsigned int flags = populate ? (int)InstanceFlag::DefaultProject : 0;
-        uint32_t permissions = (1u << K_LEN(UserPermissionNames)) - 1;
+        InstanceOptions options = {
+            .populate = populate,
+            .lang = lang,
+            .userid = session->userid,
+            .permissions = (1u << K_LEN(UserPermissionNames)) - 1
+        };
 
-        int error;
-        if (!CreateInstance(&gp_domain, instance_key, name, session->userid, permissions, flags, &error)) {
+        if (int error = 500; !CreateInstance(&gp_domain, instance_key, name, options, &error)) {
             io->SendError(error);
             return false;
         }
@@ -1670,6 +1691,8 @@ void HandleInstanceConfigure(http_IO *io)
                     json->ParseString(&instance_key);
                 } else if (key == "name") {
                     json->SkipNull() || json->ParseString(&config.name);
+                } else if (key == "lang") {
+                    json->SkipNull() || json->ParseString(&config.lang);
                 } else if (key == "use_offline") {
                     if (!json->SkipNull()) {
                         json->ParseBool(&config.use_offline);
@@ -1788,6 +1811,7 @@ void HandleInstanceConfigure(http_IO *io)
 
         success &= !config.name || instance->db->Run(sql, "Name", config.name);
         if (instance->master == instance) {
+            success &= !config.lang || instance->db->Run(sql, "Language", config.lang);
             success &= !change_use_offline || instance->db->Run(sql, "UseOffline", 0 + config.use_offline);
             success &= !change_data_remote || instance->db->Run(sql, "DataRemote", 0 + config.data_remote);
             success &= !config.token_key || instance->db->Run(sql, "TokenKey", config.token_key);
@@ -1886,6 +1910,7 @@ void HandleInstanceList(http_IO *io)
             json->Key("legacy"); json->Bool(instance->legacy);
             json->Key("config"); json->StartObject();
                 json->Key("name"); json->String(instance->config.name);
+                json->Key("lang"); json->String(instance->config.lang);
                 json->Key("use_offline"); json->Bool(instance->config.use_offline);
                 json->Key("data_remote"); json->Bool(instance->config.data_remote);
                 if (instance->config.token_key) {

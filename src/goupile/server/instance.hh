@@ -43,6 +43,7 @@ public:
 
     struct {
         const char *name = nullptr;
+        const char *lang = nullptr;
         bool use_offline = false;
         bool data_remote = true;
         int64_t max_file_size = Megabytes(16);

@@ -27,7 +27,7 @@
 namespace K {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 137;
+const int InstanceVersion = 138;
 const int LegacyVersion = 61;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
@@ -82,7 +82,9 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
             const char *value = (const char *)sqlite3_column_text(stmt, 1);
 
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
-                if (TestStr(setting, "UseOffline")) {
+                if (TestStr(setting, "Language")) {
+                    config.lang = DuplicateString(value, &str_alloc).ptr;
+                } else if (TestStr(setting, "UseOffline")) {
                     valid &= ParseBool(value, &config.use_offline);
                 } else if (TestStr(setting, "DataRemote")) {
                     valid &= ParseBool(value, &config.data_remote);
@@ -3066,9 +3068,14 @@ bool MigrateInstance(sq_Database *db, int target)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 137: {
+                if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('Language', ?1)", gp_domain.config.default_lang))
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 137);
+            static_assert(InstanceVersion == 138);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

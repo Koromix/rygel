@@ -52,7 +52,6 @@ struct DomainConfig {
 
     const char *title = nullptr;
     bool demo_mode = false;
-    const char *default_lang = "fr";
 
     uint8_t archive_key[32] = {}; // crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES
     bool enable_archives = false;
@@ -67,6 +66,7 @@ struct DomainConfig {
     PasswordComplexity admin_password = PasswordComplexity::Moderate;
     PasswordComplexity root_password = PasswordComplexity::Hard;
 
+    const char *default_lang = "fr"; // Used to be french only, keep this value for compatibility
     const char *default_username = nullptr;
     const char *default_password = nullptr;
 

@@ -458,15 +458,20 @@ function runCreateInstanceDialog(e) {
                 T.project_key_characters
             ]
         });
+
         d.text('name', T.name, { value: d.values.key });
         d.boolean('populate', T.populate_demo, { value: true, untoggle: false });
+
+        let langs = Object.keys(goupile.languages).map(lang => [lang, lang.toUpperCase()]);
+        d.enumDrop('lang', T.language, langs, { value: document.documentElement.lang });
 
         d.action(T.create, { disabled: !d.isValid() }, async () => {
             try {
                 await Net.post('/admin/api/instances/create', {
                     key: d.values.key,
                     name: d.values.name,
-                    populate: d.values.populate
+                    populate: d.values.populate,
+                    lang: d.values.lang
                 });
 
                 resolve();
@@ -493,6 +498,10 @@ function runConfigureInstanceDialog(e, instance) {
             d.tabs('tabs', () => {
                 d.tab(T.basic, () => {
                     d.text('*name', T.name, { value: instance.config.name });
+
+                    let langs = Object.keys(goupile.languages).map(lang => [lang, lang.toUpperCase()]);
+                    d.enumDrop('lang', T.language, langs, { value: instance.config.lang });
+
                     d.boolean('*use_offline', T.use_offline, { value: instance.config.use_offline });
                     d.boolean('*allow_guests', T.allow_guests, { value: instance.config.allow_guests });
                 });
@@ -550,6 +559,7 @@ function runConfigureInstanceDialog(e, instance) {
                     await Net.post('/admin/api/instances/configure', {
                         instance: instance.key,
                         name: d.values.name,
+                        lang: d.values.lang,
                         use_offline: d.values.use_offline,
                         data_remote: d.values.data_remote,
                         token_key: d.values.token_key,

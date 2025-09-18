@@ -142,8 +142,8 @@ function initLanguages() {
     languages.en = en;
     languages.fr = fr;
 
-    Util.initLocales(languages, ENV.lang);
-    Util.setCookie('language', document.documentElement.lang, '/', 365 * 86400);
+    Util.initLocales(languages, 'en', ENV.lang);
+    Util.setCookie('lang', document.documentElement.lang, ENV.urls.base, 365 * 86400);
 }
 
 async function registerSW() {
@@ -444,11 +444,13 @@ async function runPasswordScreen(e, initial) {
                 <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
                 <div id="gp_login">
                     <span class="title">${ENV.title}</span>
-                    <div style="flex: 1;"></div>
-                    <select aria-label=${T.language} @change=${UI.wrap(e => switchLanguage(e.target.value))}>
-                        ${Object.keys(languages).map(lang =>
-                            html`<option value=${lang} .selected=${lang == document.documentElement.lang}>${lang.toUpperCase()}</option>`)}
-                    </select>
+                    ${ENV.lang == null ? html`
+                        <div style="flex: 1;"></div>
+                        <select aria-label=${T.language} @change=${UI.wrap(e => switchLanguage(e.target.value))}>
+                            ${Object.keys(languages).map(lang =>
+                                html`<option value=${lang} .selected=${lang == document.documentElement.lang}>${lang.toUpperCase()}</option>`)}
+                        </select>
+                    ` : ''}
                 </div>
             `);
             d.text('*username', T.username);
@@ -476,7 +478,7 @@ async function runPasswordScreen(e, initial) {
 
 async function switchLanguage(lang) {
     Util.setLocale(lang);
-    Util.setCookie('language', document.documentElement.lang, '/', 365 * 86400);
+    Util.setCookie('lang', document.documentElement.lang, ENV.urls.base, 365 * 86400);
 
     if (UI.isDialogOpen()) {
         UI.refreshDialog();
@@ -1090,6 +1092,8 @@ function decryptSecretBox(enc, key) {
 }
 
 export {
+    languages as languages,
+
     profile,
     profile_keys as profileKeys,
 

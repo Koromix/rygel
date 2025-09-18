@@ -101,8 +101,6 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         config.title = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "DemoMode") {
                         valid &= ParseBool(prop.value, &config.demo_mode);
-                    } else if (prop.key == "DefaultLang") {
-                        config.default_lang = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -204,7 +202,9 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "Defaults") {
                 do {
-                    if (prop.key == "DefaultUser") {
+                    if (prop.key == "Language") {
+                        config.default_lang = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "DefaultUser") {
                         config.default_username = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "DefaultPassword") {
                         config.default_password = DuplicateString(prop.value, &config.str_alloc).ptr;
