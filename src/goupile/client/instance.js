@@ -1260,9 +1260,9 @@ function addAutomaticTags(variables) {
                 status.filling = null;
             }
         } else if (intf.missing && intf.options.mandatory) {
-            if (form_entry.anchor >= 0 || intf.errors.some(err => !err.delay))
+            if (form_entry.anchor >= 0 || intf.errors.some(err => !err.delayed))
                 tags.push('incomplete');
-        } else if (intf.errors.some(err => !err.delay)) {
+        } else if (intf.errors.some(err => !err.delayed)) {
             tags.push('error');
         }
 
