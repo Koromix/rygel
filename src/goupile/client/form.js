@@ -571,6 +571,20 @@ function FormBuilder(state, model, options = {}) {
 
     this.enum = function(key, label, props = [], options = {}) {
         options = expandOptions(options);
+
+        if (options.enum == null)
+            options.enum = 'buttons';
+
+        switch (options.enum) {
+            case 'buttons': return self.enumButtons(key, label, props, options);
+            case 'radio': return self.enumRadio(key, label, props, options);
+            case 'drop': return self.enumDrop(key, label, props, options);
+            default: throw new Error(T.message(`Invalid enum layout '{1}'`, options.enum));
+        }
+    };
+
+    this.enumButtons = function(key, label, props = [], options = {}) {
+        options = expandOptions(options);
         key = decodeKey(key, options);
 
         props = normalizePropositions(props);
@@ -734,6 +748,19 @@ function FormBuilder(state, model, options = {}) {
     }
 
     this.multi = function(key, label, props = [], options = {}) {
+        options = expandOptions(options);
+
+        if (options.multi == null)
+            options.multi = 'buttons';
+
+        switch (options.multi) {
+            case 'buttons': return self.multiButtons(key, label, props, options);
+            case 'check': return self.multiCheck(key, label, props, options);
+            default: throw new Error(T.message(`Invalid multi layout '{1}'`, options.multi));
+        }
+    };
+
+    this.multiButtons = function(key, label, props = [], options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
