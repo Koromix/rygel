@@ -122,6 +122,8 @@ static bool ApplySandbox(Span<const char *const> reveal_paths)
         { "sysinfo", sb_FilterAction::Allow },
         { "kill", sb_FilterAction::Allow },
         { "tgkill", sb_FilterAction::Allow },
+        { "unlink", sb_FilterAction::Allow },
+        { "unlinkat", sb_FilterAction::Allow },
         { "fork", sb_FilterAction::Allow },
         { "clone", sb_FilterAction::Allow },
         { "clone3", sb_FilterAction::Allow },
@@ -472,6 +474,18 @@ static bool HandleRequest(int kind, struct cmsghdr *cmsg, pid_t *out_pid)
     exit(0);
 }
 
+static bool DetectInterrupt()
+{
+    WaitResult ret = WaitEvents(0);
+
+    if (ret == WaitResult::Exit)
+        return true;
+    if (ret == WaitResult::Interrupt)
+        return true;
+
+    return false;
+}
+
 static bool ServeRequests()
 {
     struct RunningFork {
@@ -484,7 +498,7 @@ static bool ServeRequests()
 
     pfds.Append({ main_pfd[1], POLLIN, 0 });
 
-    for (;;) {
+    while (!DetectInterrupt()) {
         uint8_t kind = 0;
         uint8_t control[256];
 
