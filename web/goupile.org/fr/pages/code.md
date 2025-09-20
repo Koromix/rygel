@@ -1,17 +1,6 @@
-
-# Manipulation des valeurs
-
-## Données d'autres pages
-
-thread
-
-## Profil de l'utilisateur
-
-profile
-
 # Identifiants des enregistrements
 
-## Identifiants standards
+## TID et séquence
 
 Chaque enregistrement dans Goupile dispose de deux identifiants uniques :
 
@@ -29,9 +18,7 @@ form.number("num_inclusion", "Numero d'inclusion")
 meta.summary = values.num_inclusion
 ```
 
-## Compteurs
-
-
+## Compteurs personnalisés
 
 TODO
 
@@ -81,6 +68,16 @@ if (values.num_inclusion && !values.num_inclusion.match(/^[0-9]{5}$/))
 ## Annotations de saisie
 
 *Rédaction en cours*
+
+# Manipulation des valeurs
+
+## Données d'autres pages
+
+thread
+
+## Profil de l'utilisateur
+
+profile
 
 # Ajout de fichiers et d'images
 
