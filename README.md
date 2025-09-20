@@ -2,7 +2,7 @@
 
 # Projects
 
-Most projects are licensed under the [GPL 3.0 license](https://www.gnu.org/licenses/gpl-3.0.html), with a few exceptions listed below.
+As a general rule, applications are licensed under the [GPL 3.0 license](https://www.gnu.org/licenses/gpl-3.0.html), whereas library code is licensed under the [MIT license](https://opensource.org/license/mit).
 
 | Project    | Description                                                                      | Build tool | Quality  | License   |
 | ---------- | -------------------------------------------------------------------------------- | ---------- | -------- | --------- |
