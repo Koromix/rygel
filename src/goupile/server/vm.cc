@@ -48,12 +48,10 @@ static BlockAllocator fs_alloc;
 
 static bool ApplySandbox(Span<const char *const> reveal_paths)
 {
-    if (!sb_IsSandboxSupported()) {
-        LogError("Sandbox mode is not supported on this platform");
-        return false;
-    }
-
     sb_SandboxBuilder sb;
+
+    if (!sb.Init())
+        return false;
 
     sb.RevealPaths(reveal_paths, true);
 

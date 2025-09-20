@@ -41,12 +41,10 @@ static char shared_etag[17];
 
 static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *const> mask_files)
 {
-    if (!sb_IsSandboxSupported()) {
-        LogError("Sandbox mode is not supported on this platform");
-        return false;
-    }
-
     sb_SandboxBuilder sb;
+
+    if (!sb.Init())
+        return false;
 
     sb.RevealPaths(reveal_paths, false);
     sb.MaskFiles(mask_files);

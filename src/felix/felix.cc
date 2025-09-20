@@ -295,6 +295,37 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
     return true;
 }
 
+static bool LoadVersionFile(const char *filename, Allocator *alloc, HashMap<const char *, const char *> *out_versions)
+{
+    StreamReader st(filename);
+    if (!st.IsValid())
+        return false;
+
+    IniParser ini(&st);
+    ini.PushLogFilter();
+    K_DEFER { PopLogFilter(); };
+
+    bool valid = true;
+    {
+        IniProperty prop;
+        while (ini.Next(&prop)) {
+            if (prop.section.len) {
+                LogError("Version files must not use sections");
+                return false;
+            }
+
+            const char *target = DuplicateString(prop.key, alloc).ptr;
+            const char *version = DuplicateString(prop.value, alloc).ptr;
+
+            out_versions->Set(target, version);
+        }
+    }
+    if (!ini.IsValid() || !valid)
+        return false;
+
+    return true;
+}
+
 static int RunBuild(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -311,6 +342,7 @@ static int RunBuild(Span<const char *> arguments)
     int jobs = std::min(GetCoreCount() + 1, K_ASYNC_MAX_THREADS);
     int quiet = 0;
     bool verbose = false;
+    const char *version_filename = nullptr;
     const char *run_target_name = nullptr;
     Span<const char *> run_arguments = {};
     bool run_here = false;
@@ -347,6 +379,8 @@ Options:
     %!..+-q, --quiet%!0                    Reduce felix verbosity (use -qq for silence)
     %!..+-v, --verbose%!0                  Show detailed build commands
     %!..+-n, --dry_run%!0                  Fake command execution
+
+        %!..+--version_file filename%!0    Load target versions from file instead of using git tags
 
         %!..+--run target%!0               Run target after successful build
                                    %!D..(all remaining arguments are passed as-is)%!0
@@ -567,6 +601,8 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
                 verbose = true;
             } else if (opt.Test("-n", "--dry_run")) {
                 build.fake = true;
+            } else if (opt.Test("--version_file", OptionType::Value)) {
+                version_filename = opt.current_value;
             } else if (opt.Test("--run", OptionType::Value)) {
                 run_target_name = opt.current_value;
                 break;
@@ -739,37 +775,51 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
         }
     }
 
-    // Find git repository
-    for (int i = 0; i < 4; i++) {
-        LocalArray<char, 256> git;
-        git.len = Fmt(git.data, ".%1/.git", FmtArg("/..").Repeat(i)).len;
+    // Compute version strings
+    if (version_filename) {
+        HashMap<const char *, const char *> versions;
+        if (!LoadVersionFile(version_filename, &temp_alloc, &versions))
+            return 1;
 
-        if (TestFile(git.data)) {
-            git[git.len - 4] = 0;
+        for (Size i = 0; i < enabled_targets.len; i++) {
+            EnabledTarget *it = &enabled_targets[i];
 
-            if (!quiet) {
-                LogInfo("Computing versions...");
-            }
-            if (GitVersioneer::IsAvailable()) {
-                GitVersioneer versioneer;
+            if (it->target->type != TargetType::Executable)
+                continue;
 
-                if (versioneer.Prepare(git.data)) {
-                    for (Size i = 0; i < enabled_targets.len; i++) {
-                        EnabledTarget *it = &enabled_targets[i];
+            it->version = versions.FindValue(it->target->name, nullptr);
+        }
+    } else {
+        for (int i = 0; i < 4; i++) {
+            LocalArray<char, 256> git;
+            git.len = Fmt(git.data, ".%1/.git", FmtArg("/..").Repeat(i)).len;
 
-                        if (it->target->type != TargetType::Executable)
-                            continue;
+            if (TestFile(git.data)) {
+                git[git.len - 4] = 0;
 
-                        // Continue even if versioning fails
-                        const char *version = versioneer.Version(it->target->version_tag);
-                        it->version = version ? DuplicateString(version, &temp_alloc).ptr : nullptr;
-                    }
+                if (!quiet) {
+                    LogInfo("Computing versions...");
                 }
-            } else {
-                LogWarning("Built without git versioning support");
-            }
+                if (GitVersioneer::IsAvailable()) {
+                    GitVersioneer versioneer;
 
-            break;
+                    if (versioneer.Prepare(git.data)) {
+                        for (Size i = 0; i < enabled_targets.len; i++) {
+                            EnabledTarget *it = &enabled_targets[i];
+
+                            if (it->target->type != TargetType::Executable)
+                                continue;
+
+                            // Continue even if versioning fails
+                            it->version = versioneer.Version(it->target->version_tag, &temp_alloc);
+                        }
+                    }
+                } else {
+                    LogWarning("Built without git versioning support");
+                }
+
+                break;
+            }
         }
     }
 

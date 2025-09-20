@@ -280,7 +280,7 @@ bool GitVersioneer::Prepare(const char *root_directory)
     return true;
 }
 
-const char *GitVersioneer::Version(Span<const char> key)
+const char *GitVersioneer::Version(Span<const char> key, Allocator *alloc)
 {
     K_ASSERT(commits.len);
 
@@ -304,10 +304,10 @@ const char *GitVersioneer::Version(Span<const char> key)
                 for (const char *tag: *tags) {
                     if (tag && StartsWith(tag, prefix) && tag[prefix.len]) {
                         if (idx) {
-                            const char *version = Fmt(&str_alloc, "%1-%2_%3", tag + prefix.len, idx, id).ptr;
+                            const char *version = Fmt(alloc, "%1-%2_%3", tag + prefix.len, idx, id).ptr;
                             return version;
                         } else {
-                            const char *version = DuplicateString(tag + prefix.len, &str_alloc).ptr;
+                            const char *version = DuplicateString(tag + prefix.len, alloc).ptr;
                             return version;
                         }
                     }
@@ -355,7 +355,7 @@ const char *GitVersioneer::Version(Span<const char> key)
         }
     }
 
-    const char *version = Fmt(&str_alloc, "dev-%1", id).ptr;
+    const char *version = Fmt(alloc, "dev-%1", id).ptr;
     return version;
 }
 

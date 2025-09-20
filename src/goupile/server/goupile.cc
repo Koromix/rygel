@@ -65,12 +65,13 @@ static const int64_t MaxRenderDelay = 20 * 60000;
 
 static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *const> mask_files)
 {
-    if (!sb_IsSandboxSupported()) {
-        LogError("Sandbox mode is not supported on this platform");
-        return false;
-    }
-
     sb_SandboxBuilder sb;
+
+    // We need to send signals to the zygote
+    unsigned int flags = UINT_MAX & ~(int)sb_IsolationFlag::Signals;
+
+    if (!sb.Init(flags))
+        return false;
 
     sb.RevealPaths(reveal_paths, false);
     sb.MaskFiles(mask_files);
@@ -993,8 +994,6 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
                 } else {
                     config_filename = opt.current_value;
                 }
-            } else if (opt.Test("--sandbox")) {
-                sandbox = true;
             } else if (opt.TestHasFailed()) {
                 return 1;
             }
@@ -1024,7 +1023,7 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
                 if (!gp_domain.config.http.SetPortOrPath(opt.current_value))
                     return 1;
             } else if (opt.Test("--sandbox")) {
-                // Already handled
+                sandbox = true;
             } else {
                 opt.LogUnknownError();
                 return 1;

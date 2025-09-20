@@ -19,11 +19,5 @@ RestartSec=20
 TimeoutStopSec=30
 LimitNOFILE=4096
 
-# Allow Goupile to manipulate namespaces despite
-# kernel.unprivileged_userns_clone=0.
-SecureBits=keep-caps
-CapabilityBoundingSet=CAP_SYS_ADMIN
-AmbientCapabilities=CAP_SYS_ADMIN
-
 [Install]
 WantedBy=multi-user.target

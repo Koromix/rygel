@@ -26,14 +26,10 @@
 
 namespace K {
 
-bool sb_IsSandboxSupported()
+bool sb_SandboxBuilder::Init(unsigned int)
 {
+    LogError("Sandbox mode is not supported on this platform");
     return false;
-}
-
-void sb_SandboxBuilder::SetIsolationFlags(unsigned int)
-{
-    K_ASSERT(false);
 }
 
 void sb_SandboxBuilder::RevealPaths(Span<const char *const>, bool)

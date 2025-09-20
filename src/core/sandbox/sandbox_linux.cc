@@ -52,444 +52,193 @@ struct cap_user_data {
     uint32_t inheritable;
 };
 
+// Distribution is probably shipping an old linux/landlock.h header version.
+#define LANDLOCK_ABI_WARN 6
+#define LANDLOCK_CREATE_RULESET_VERSION (1u << 0)
+enum landlock_rule_type {
+    LANDLOCK_RULE_PATH_BENEATH = 1,
+    LANDLOCK_RULE_NET_PORT,
+};
+struct landlock_ruleset_attr {
+    uint64_t handled_access_fs;
+    uint64_t handled_access_net;
+    uint64_t scoped;
+} __attribute__((packed));
+struct landlock_path_beneath_attr {
+    uint64_t allowed_access;
+    int32_t parent_fd;
+} __attribute__((packed));
+struct landlock_net_port_attr {
+    uint64_t allowed_access;
+    uint64_t port;
+} __attribute__((packed));
+#define LANDLOCK_ACCESS_FS_EXECUTE          (1ull << 0)
+#define LANDLOCK_ACCESS_FS_WRITE_FILE       (1ull << 1)
+#define LANDLOCK_ACCESS_FS_READ_FILE        (1ull << 2)
+#define LANDLOCK_ACCESS_FS_READ_DIR         (1ull << 3)
+#define LANDLOCK_ACCESS_FS_REMOVE_DIR       (1ull << 4)
+#define LANDLOCK_ACCESS_FS_REMOVE_FILE      (1ull << 5)
+#define LANDLOCK_ACCESS_FS_MAKE_CHAR        (1ull << 6)
+#define LANDLOCK_ACCESS_FS_MAKE_DIR         (1ull << 7)
+#define LANDLOCK_ACCESS_FS_MAKE_REG         (1ull << 8)
+#define LANDLOCK_ACCESS_FS_MAKE_SOCK        (1ull << 9)
+#define LANDLOCK_ACCESS_FS_MAKE_FIFO        (1ull << 10)
+#define LANDLOCK_ACCESS_FS_MAKE_BLOCK       (1ull << 11)
+#define LANDLOCK_ACCESS_FS_MAKE_SYM         (1ull << 12)
+#define LANDLOCK_ACCESS_FS_REFER            (1ull << 13)
+#define LANDLOCK_ACCESS_FS_TRUNCATE         (1ull << 14)
+#define LANDLOCK_ACCESS_FS_IOCTL_DEV        (1ull << 15)
+#define LANDLOCK_ACCESS_NET_BIND_TCP        (1ull << 0)
+#define LANDLOCK_ACCESS_NET_CONNECT_TCP     (1ull << 1)
+#define LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET (1ull << 0)
+#define LANDLOCK_SCOPE_SIGNAL               (1ull << 1)
+
+#define ACCESS_FS_READ (LANDLOCK_ACCESS_FS_EXECUTE | \
+                        LANDLOCK_ACCESS_FS_READ_FILE | \
+                        LANDLOCK_ACCESS_FS_READ_DIR)
+#define ACCESS_FS_WRITE (LANDLOCK_ACCESS_FS_WRITE_FILE | \
+                         LANDLOCK_ACCESS_FS_REMOVE_DIR | \
+                         LANDLOCK_ACCESS_FS_REMOVE_FILE | \
+                         LANDLOCK_ACCESS_FS_MAKE_CHAR | \
+                         LANDLOCK_ACCESS_FS_MAKE_DIR | \
+                         LANDLOCK_ACCESS_FS_MAKE_REG | \
+                         LANDLOCK_ACCESS_FS_MAKE_SOCK | \
+                         LANDLOCK_ACCESS_FS_MAKE_FIFO | \
+                         LANDLOCK_ACCESS_FS_MAKE_BLOCK | \
+                         LANDLOCK_ACCESS_FS_MAKE_SYM | \
+                         LANDLOCK_ACCESS_FS_REFER | \
+                         LANDLOCK_ACCESS_FS_TRUNCATE | \
+                         LANDLOCK_ACCESS_FS_IOCTL_DEV)
+#define ACCESS_FILE (LANDLOCK_ACCESS_FS_EXECUTE | \
+                     LANDLOCK_ACCESS_FS_WRITE_FILE | \
+                     LANDLOCK_ACCESS_FS_READ_FILE | \
+                     LANDLOCK_ACCESS_FS_TRUNCATE | \
+                     LANDLOCK_ACCESS_FS_IOCTL_DEV)
+
 namespace K {
 
-bool sb_IsSandboxSupported()
+bool sb_SandboxBuilder::Init(unsigned int flags)
 {
+    K_ASSERT(!isolation);
+    K_ASSERT(flags);
+
 #if defined(__SANITIZE_ADDRESS__)
     LogError("Sandboxing does not support AddressSanitizer");
     return false;
 #elif defined(__SANITIZE_THREAD__)
     LogError("Sandboxing does not support ThreadSanitizer");
     return false;
-#else
-    return true;
 #endif
-}
 
-void sb_SandboxBuilder::SetIsolationFlags(unsigned int flags)
-{
-    isolation_flags = flags;
+    isolation = flags;
+    return true;
 }
 
 void sb_SandboxBuilder::RevealPaths(Span<const char *const> paths, bool readonly)
 {
     for (const char *path: paths) {
-        MountPath(path, path, readonly);
+        K_ASSERT(path[0] == '/');
+
+        RevealedPath reveal = {};
+
+        reveal.path = DuplicateString(TrimStrRight(path, K_PATH_SEPARATORS), &str_alloc).ptr;
+        reveal.readonly = readonly;
+
+        reveals.Append(reveal);
     }
 }
 
 void sb_SandboxBuilder::MaskFiles(Span<const char *const> filenames)
 {
-    masked_filenames.Grow(filenames.len);
     for (const char *filename: filenames) {
         K_ASSERT(filename[0] == '/');
 
         const char *copy = DuplicateString(filename, &str_alloc).ptr;
-        masked_filenames.Append(copy);
+        masks.Append(copy);
     }
 }
 
-void sb_SandboxBuilder::MountPath(const char *src, const char *dest, bool readonly)
+void sb_SandboxBuilder::FilterSyscalls(Span<const sb_SyscallFilter> filters)
 {
-    K_ASSERT(src[0] == '/');
-    K_ASSERT(dest[0] == '/' && dest[1]);
-
-    BindMount bind = {};
-
-    bind.src = DuplicateString(TrimStrRight(src, K_PATH_SEPARATORS), &str_alloc).ptr;
-    bind.dest = DuplicateString(TrimStrRight(dest, K_PATH_SEPARATORS), &str_alloc).ptr;
-    bind.readonly = readonly;
-
-    mounts.Append(bind);
-}
-
-void sb_SandboxBuilder::FilterSyscalls(Span<const sb_FilterItem> items)
-{
-    filter_syscalls = true;
-
-    filter_items.Reserve(items.len);
-    for (sb_FilterItem item: items) {
-        item.name = DuplicateString(item.name, &str_alloc).ptr;
-        filter_items.Append(item);
+    for (sb_SyscallFilter filter: filters) {
+        filter.name = DuplicateString(filter.name, &str_alloc).ptr;
+        this->filters.Append(filter);
     }
 }
 
-static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
+static int InitLandlock(unsigned int flags, landlock_ruleset_attr *out_attr)
 {
-    int uid_fd;
-    {
-        char buf[512];
-        Fmt(buf, "/proc/%1/uid_map", pid);
+    landlock_ruleset_attr attr = {};
 
-        uid_fd = K_RESTART_EINTR(open(buf, O_CLOEXEC | O_WRONLY), < 0);
-        if (uid_fd < 0) {
-            LogError("Failed to open '%1' for writing: %2", buf, strerror(errno));
-            return false;
-        }
-    }
-    K_DEFER { close(uid_fd); };
+    attr.handled_access_fs = ACCESS_FS_READ | ACCESS_FS_WRITE;
+    attr.handled_access_net = LANDLOCK_ACCESS_NET_BIND_TCP | LANDLOCK_ACCESS_NET_CONNECT_TCP;
+    attr.scoped = LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET;
 
-    int gid_fd;
-    {
-        char buf[512];
-        Fmt(buf, "/proc/%1/gid_map", pid);
-
-        gid_fd = K_RESTART_EINTR(open(buf, O_CLOEXEC | O_WRONLY), < 0);
-        if (gid_fd < 0) {
-            LogError("Failed to open '%1' for writing: %2", buf, strerror(errno));
-            return false;
-        }
-    }
-    K_DEFER { close(gid_fd); };
-
-    // More random crap Linux wants us to do, or writing GID map fails in unprivileged mode
-    {
-        char buf[512];
-        Fmt(buf, "/proc/%1/setgroups", pid);
-
-        if (!WriteFile("deny", buf))
-            return false;
+    if (flags & (int)sb_IsolationFlag::Signals) {
+        attr.scoped |= LANDLOCK_SCOPE_SIGNAL;
     }
 
-    // Write UID map
-    {
-        LocalArray<char, 512> buf;
-
-        buf.len = Fmt(buf.data, "%1 %1 1\n", uid).len;
-        if (K_RESTART_EINTR(write(uid_fd, buf.data, buf.len), < 0) < 0) {
-            LogError("Failed to write UID map: %1", strerror(errno));
-            return false;
-        }
+    int abi = syscall(__NR_landlock_create_ruleset, nullptr, 0, LANDLOCK_CREATE_RULESET_VERSION);
+    if (abi < 0) {
+        LogError("Failed to use Landlock for sandboxing: %1", strerror(errno));
+        return -1;
     }
 
-    // Write GID map
-    {
-        LocalArray<char, 512> buf;
-
-        buf.len = Fmt(buf.data, "%1 %1 1\n", gid).len;
-        if (K_RESTART_EINTR(write(gid_fd, buf.data, buf.len), < 0) < 0) {
-            LogError("Failed to write GID map: %1", strerror(errno));
-            return false;
-        }
+    switch (abi) {
+        case 1: {
+            attr.handled_access_fs &= ~LANDLOCK_ACCESS_FS_REFER;
+        } [[fallthrough]];
+        case 2: {
+            attr.handled_access_fs &= ~LANDLOCK_ACCESS_FS_TRUNCATE;
+        } [[fallthrough]];
+        case 3: {
+            attr.handled_access_net &= ~LANDLOCK_ACCESS_NET_BIND_TCP;
+            attr.handled_access_net &= ~LANDLOCK_ACCESS_NET_CONNECT_TCP;
+        } [[fallthrough]];
+        case 4: {
+            attr.handled_access_fs &= ~LANDLOCK_ACCESS_FS_IOCTL_DEV;
+        } [[fallthrough]];
+        case 5: {
+            attr.scoped &= ~LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET;
+            attr.scoped &= ~LANDLOCK_SCOPE_SIGNAL;
+        } // [[fallthrough]];
     }
 
-    return true;
-}
-
-static bool InitNamespaces(unsigned int flags)
-{
-    uint32_t unshare_flags = CLONE_NEWNS | CLONE_NEWUSER | CLONE_NEWIPC |
-                             CLONE_NEWUTS | CLONE_NEWCGROUP | CLONE_THREAD;
-
-    if (flags & (int)sb_IsolationFlag::Network) {
-        unshare_flags |= CLONE_NEWNET;
+    if (abi < LANDLOCK_ABI_WARN) {
+        LogWarning("Update the running kernel to leverage Landlock features provided by ABI version %1", LANDLOCK_ABI_WARN);
     }
 
-    if (unshare(unshare_flags) < 0) {
-        LogError("Failed to create namespace: %1", strerror(errno));
-        return false;
+    int fd = syscall(__NR_landlock_create_ruleset, &attr, K_SIZE(attr), 0);
+    if (fd < 0) {
+        LogError("Failed to create landlock ruleset: %1", strerror(errno));
+        return -1;
     }
 
-    return true;
+    *out_attr = attr;
+    return fd;
 }
 
 bool sb_SandboxBuilder::Apply()
 {
-    uid_t uid = getuid();
-    gid_t gid = getgid();
-
-    if (!uid) {
-        int random_id = GetRandomInt(58000, 60000);
-
-        static_assert(K_SIZE(uid_t) >= K_SIZE(int));
-        static_assert(K_SIZE(gid_t) >= K_SIZE(int));
-
-        uid = random_id;
-        gid = random_id;
-    }
-
-    // Start new namespace
-    {
-        // We support two namespacing code paths: unprivileged, or CAP_SYS_ADMIN (root).
-        // First, decide between the two. Unprivileged is simpler but it requires a
-        // relatively recent kernel, and may be disabled (Debian). If we have CAP_SYS_ADMIN,
-        // or if we can acquire it, use it instead.
-        bool privileged = !geteuid();
-        if (!privileged) {
-            cap_user_header hdr = {_LINUX_CAPABILITY_VERSION_3, 0};
-            cap_user_data data[2];
-
-            if (syscall(__NR_capget, &hdr, data) < 0) {
-                LogError("Failed to read process capabilities: %1", strerror(errno));
-                return false;
-            }
-
-            if (data[0].effective & (1u << 21)) { // CAP_SYS_ADMIN
-                privileged = true;
-            } else if (data[0].permitted & (1u << 21)) {
-                data[0].effective |= 1u << 21;
-
-                if (syscall(__NR_capset, &hdr, data) >= 0) {
-                    privileged = true;
-                } else {
-                    LogDebug("Failed to enable CAP_SYS_ADMIN (despite it being permitted): %1", strerror(errno));
-                }
-            }
-        }
-
-        // Setup user namespace
-        if (privileged) {
-            // In the privileged path, we need to fork a child process, which keeps root privileges
-            // and writes the UID and GID map of the namespaced parent process, because I can't find
-            // any way to do it simply otherwise (EPERM). The child process exits immediately
-            // once this is done.
-            LogDebug("Trying CAP_SYS_ADMIN (root) sandbox method");
-
-            // We use this dummy event to wait in the child process until the parent
-            // process has called unshare() successfully.
-            int efd = eventfd(0, EFD_CLOEXEC);
-            if (efd < 0) {
-                LogError("Failed to create eventfd: %1", strerror(errno));
-                return false;
-            }
-            K_DEFER { close(efd); };
-
-            pid_t child_pid = fork();
-            if (child_pid < 0) {
-                LogError("Failed to fork: %1", strerror(errno));
-                return false;
-            }
-
-            if (child_pid) {
-                K_DEFER_N(kill_guard) {
-                    kill(child_pid, SIGKILL);
-                    waitpid(child_pid, nullptr, 0);
-                };
-
-                // This allows the sandbox helper to write to our /proc files even when
-                // running as non-root in the CAP_SYS_ADMIN sandbox path.
-                prctl(PR_SET_DUMPABLE, 1, 0, 0, 0);
-
-                int64_t dummy = 1;
-                if (!InitNamespaces(isolation_flags))
-                    return false;
-                if (K_RESTART_EINTR(write(efd, &dummy, K_SIZE(dummy)), < 0) < 0) {
-                    LogError("Failed to write to eventfd: %1", strerror(errno));
-                    return false;
-                }
-
-                // Good to go! After a successful write to eventfd, the child WILL exit
-                // so we can just wait for that.
-                kill_guard.Disable();
-
-                int wstatus;
-                if (waitpid(child_pid, &wstatus, 0) < 0) {
-                    LogError("Failed to wait for sandbox helper: %1", strerror(errno));
-                    return false;
-                }
-                if (!WIFEXITED(wstatus) || WEXITSTATUS(wstatus) != 0) {
-                    LogDebug("Something went wrong in the sandbox helper");
-                    return false;
-                }
-
-                LogDebug("Change UID/GID to %1/%2", uid, gid);
-
-                // Set non-root container UID and GID
-                if (setresuid(uid, uid, uid) < 0 || setresgid(gid, gid, gid) < 0) {
-                    LogError("Cannot change UID or GID: %1", strerror(errno));
-                    return false;
-                }
-            } else {
-                int64_t dummy;
-                if (K_RESTART_EINTR(read(efd, &dummy, K_SIZE(dummy)), < 0) < 0) {
-                    LogError("Failed to read eventfd: %1", strerror(errno));
-                    _exit(1);
-                }
-
-                bool success = WriteUidGidMap(getppid(), uid, gid);
-                _exit(!success);
-            }
-        } else {
-            LogDebug("Trying unprivileged sandbox method");
-
-            if (!InitNamespaces(isolation_flags))
-                return false;
-            if (!WriteUidGidMap(getpid(), uid, gid))
-                return false;
-        }
-
-        // Set up FS namespace
-        {
-            if (!MakeDirectory("/tmp/sandbox", false))
-                return false;
-            if (mount("tmpfs", "/tmp/sandbox", "tmpfs", 0, "size=4k") < 0 && errno != EBUSY) {
-                LogError("Failed to mount tmpfs on '/tmp/sandbox': %1", strerror(errno));
-                return false;
-            }
-            if (mount(nullptr, "/tmp/sandbox", nullptr, MS_PRIVATE, nullptr) < 0) {
-                LogError("Failed to set MS_PRIVATE on '/tmp/sandbox': %1", strerror(errno));
-                return false;
-            }
-
-            // Create root FS with tmpfs
-            const char *fs_root = CreateUniqueDirectory("/tmp/sandbox", nullptr, &str_alloc);
-            if (!fs_root)
-                return false;
-            if (mount("tmpfs", fs_root, "tmpfs", 0, "size=1M,mode=0700") < 0) {
-                LogError("Failed to mount tmpfs on '%1': %2", fs_root, strerror(errno));
-                return false;
-            }
-            if (mount(nullptr, fs_root, nullptr, MS_PRIVATE, nullptr) < 0) {
-                LogError("Failed to set MS_PRIVATE on '%1': %2", fs_root, strerror(errno));
-                return false;
-            }
-            LogDebug("Sandbox FS root: '%1'", fs_root);
-
-            // Mount requested paths
-            for (const BindMount &bind: mounts) {
-                const char *dest = Fmt(&str_alloc, "%1%2", fs_root, bind.dest).ptr;
-                int flags = MS_BIND | MS_REC | (bind.readonly ? MS_RDONLY : 0);
-
-                // Deal with special cases
-                if (TestStr(bind.src, "/proc/self")) {
-                    char path[256];
-                    Fmt(path, "/proc/%1", getpid());
-
-                    if (!MakeDirectoryRec(dest))
-                        return false;
-
-                    if (mount(path, dest, nullptr, flags, nullptr) < 0) {
-                        LogError("Failed to mount '/proc/self': %1", strerror(errno));
-                        return false;
-                    }
-
-                    continue;
-                }
-
-                // Ensure destination exists
-                {
-                    FileInfo src_info;
-                    if (StatFile(bind.src, &src_info) != StatResult::Success)
-                        return false;
-
-                    if (src_info.type == FileType::Directory) {
-                        if (!MakeDirectoryRec(dest))
-                            return false;
-                    } else {
-                        if (!EnsureDirectoryExists(dest))
-                            return false;
-
-                        int fd = OpenFile(dest, (int)OpenFlag::Write);
-                        if (fd < 0)
-                            return false;
-                        close(fd);
-                    }
-                }
-
-                if (mount(bind.src, dest, nullptr, flags, nullptr) < 0) {
-                    LogError("Failed to mount '%1' to '%2': %3", bind.src, dest, strerror(errno));
-                    return false;
-                }
-            }
-
-            // Hide masked paths
-            for (const char *filename: masked_filenames) {
-                const char *dest = Fmt(&str_alloc, "%1%2", fs_root, filename).ptr;
-
-                // No need to mask it if it does not exist
-                if (!TestFile(dest))
-                    continue;
-
-                if (mount("/dev/null", dest, nullptr, MS_BIND, nullptr) < 0) {
-                    LogError("Failed to mask '%1': %2", dest, strerror(errno));
-                    return false;
-                }
-            }
-
-            // Do the silly pivot_root dance
-            {
-                int old_root_fd = K_RESTART_EINTR(open("/", O_DIRECTORY | O_PATH), < 0);
-                if (old_root_fd < 0) {
-                    LogError("Failed to open directory '/': %1", strerror(errno));
-                    return false;
-                }
-                K_DEFER { close(old_root_fd); };
-
-                int new_root_fd = K_RESTART_EINTR(open(fs_root, O_DIRECTORY | O_PATH), < 0);
-                if (new_root_fd < 0) {
-                    LogError("Failed to open directory '%1': %2", fs_root, strerror(errno));
-                    return false;
-                }
-                K_DEFER { close(new_root_fd); };
-
-                if (fchdir(new_root_fd) < 0) {
-                    LogError("Failed to change current directory to '%1': %2", fs_root, strerror(errno));
-                    return false;
-                }
-                if (syscall(__NR_pivot_root, ".", ".") < 0) {
-                    LogError("Failed to pivot root mount point: %1", strerror(errno));
-                    return false;
-                }
-                if (fchdir(old_root_fd) < 0) {
-                    LogError("Failed to change current directory to old '/': %1", strerror(errno));
-                    return false;
-                }
-
-                if (mount(nullptr, ".", nullptr, MS_REC | MS_PRIVATE, nullptr) < 0) {
-                    LogError("Failed to set MS_PRIVATE on '%1': %2", fs_root, strerror(errno));
-                    return false;
-                }
-
-                // I don't know why there's a loop below but I've seen it done.
-                // But at least this is true to the real Unix and Linux philosophy: silly nonsensical API
-                // and complete lack of taste and foresight.
-                if (umount2(".", MNT_DETACH) < 0) {
-                    LogError("Failed to unmount old root mount point: %1", strerror(errno));
-                    return false;
-                }
-                for (;;) {
-                    if (umount2(".", MNT_DETACH) < 0) {
-                        if (errno == EINVAL) {
-                            break;
-                        } else {
-                            LogError("Failed to unmount old root mount point: %1", strerror(errno));
-                            return false;
-                        }
-                    }
-                }
-            }
-
-            // Set current working directory
-            if (chdir("/") < 0) {
-                LogError("Failed to change current directory to new '/': %1", strerror(errno));
-                return false;
-            }
-        }
-    }
+    K_ASSERT(isolation);
 
     // Drop all capabilities
     {
         LogDebug("Dropping all capabilities");
 
-        // PR_CAPBSET_DROP is thread-specific, so hopefully the sandbox is run before any thread
-        // has been created. Who designs this crap??
         for (int i = 0; i < 64; i++) {
-            if (prctl(PR_CAPBSET_DROP, i, 0, 0, 0) < 0 && errno != EINVAL) {
+            if (prctl(PR_CAPBSET_DROP, i, 0, 0, 0) < 0 && errno != EINVAL && errno != EPERM) {
                 LogError("Failed to drop bounding capability set: %1", strerror(errno));
                 return false;
             }
         }
-
-        // This is recent (Linux 4.3), so ignore EINVAL
         if (prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_CLEAR_ALL, 0, 0, 0) < 0 && errno != EINVAL) {
             LogError("Failed to clear ambient capability set: %1", strerror(errno));
             return false;
         }
 
-        cap_user_header hdr = {_LINUX_CAPABILITY_VERSION_3, 0};
-        cap_user_data data[2];
-        MemSet(data, 0, K_SIZE(data));
+        cap_user_header hdr = { _LINUX_CAPABILITY_VERSION_3, 0 };
+        cap_user_data data[2] = {};
 
         if (syscall(__NR_capset, &hdr, data) < 0) {
             LogError("Failed to drop capabilities: %1", strerror(errno));
@@ -506,8 +255,57 @@ bool sb_SandboxBuilder::Apply()
         }
     }
 
+    int landlock_fd = -1;
+    struct landlock_ruleset_attr landlock_attr;
+    K_DEFER { CloseDescriptor(landlock_fd); };
+
+    // Prepare filesystem isolation
+    if (isolation & (int)sb_IsolationFlag::Filesystem) {
+        if (landlock_fd < 0) {
+            landlock_fd = InitLandlock(isolation, &landlock_attr);
+            if (landlock_fd < 0)
+                return false;
+        }
+
+        for (const RevealedPath &reveal: reveals) {
+            struct landlock_path_beneath_attr beneath = {};
+
+            beneath.parent_fd = open(reveal.path, O_PATH | O_CLOEXEC);
+            if (beneath.parent_fd < 0) {
+                LogError("Failed to open '%1': %2", reveal.path, strerror(errno));
+                return false;
+            }
+            K_DEFER { close(beneath.parent_fd); };
+
+            struct stat sb;
+            if (fstat(beneath.parent_fd, &sb) < 0) {
+                LogError("Failed to stat '%1': %2", reveal.path, strerror(errno));
+                return false;
+            }
+
+            beneath.allowed_access = ACCESS_FS_READ;
+            if (!reveal.readonly) {
+                beneath.allowed_access |= ACCESS_FS_WRITE;
+            }
+            if (!S_ISDIR(sb.st_mode)) {
+                beneath.allowed_access &= ACCESS_FILE;
+            }
+            beneath.allowed_access &= landlock_attr.handled_access_fs;
+
+            if (syscall(__NR_landlock_add_rule, landlock_fd, LANDLOCK_RULE_PATH_BENEATH, &beneath, 0) < 0) {
+                LogError("Failed to add landlock rule for '%1': %2", reveal.path, strerror(errno));
+                return false;
+            }
+        }
+    }
+
+    if (landlock_fd >= 0 && syscall(__NR_landlock_restrict_self, landlock_fd, 0) < 0) {
+        LogError("Failed to apply landlock restrictions: %1", strerror(errno));
+        return false;
+    }
+
     // Install syscall filters
-    if (filter_syscalls) {
+    if (isolation & (int)sb_IsolationFlag::Syscalls) {
         LogDebug("Applying syscall filters");
 
         sb_FilterAction default_action;
@@ -561,17 +359,17 @@ bool sb_SandboxBuilder::Apply()
         }
         K_DEFER { seccomp_release(ctx); };
 
-        for (const sb_FilterItem &item: filter_items) {
-            if (item.action != default_action) {
+        for (const sb_SyscallFilter &filter: filters) {
+            if (filter.action != default_action) {
                 int ret = 0;
 
-                if (TestStr(item.name, "ioctl/tty")) {
+                if (TestStr(filter.name, "ioctl/tty")) {
                     int syscall = seccomp_syscall_resolve_name("ioctl");
                     K_ASSERT(syscall != __NR_SCMP_ERROR);
 
-                    ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 1,
+                    ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 1,
                                            SCMP_A1(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFFFFFFF00ul, 0x5400u));
-                } else if (TestStr(item.name, "mmap/anon")) {
+                } else if (TestStr(filter.name, "mmap/anon")) {
                     int syscall = seccomp_syscall_resolve_name("mmap");
                     K_ASSERT(syscall != __NR_SCMP_ERROR);
 
@@ -590,7 +388,7 @@ bool sb_SandboxBuilder::Apply()
 
                     for (unsigned int prot_flags: prot_combinations) {
                         for (unsigned int map_flags: map_combinations) {
-                            ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 3,
+                            ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 3,
                                                    SCMP_A2(SCMP_CMP_MASKED_EQ, prot_mask, prot_flags),
                                                    SCMP_A3(SCMP_CMP_EQ, map_flags, 0),
                                                    SCMP_A4(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFu, 0xFFFFFFFFu));
@@ -598,7 +396,7 @@ bool sb_SandboxBuilder::Apply()
                                 break;
                         }
                     }
-                } else if (TestStr(item.name, "mmap/shared")) {
+                } else if (TestStr(filter.name, "mmap/shared")) {
                     int syscall = seccomp_syscall_resolve_name("mmap");
                     K_ASSERT(syscall != __NR_SCMP_ERROR);
 
@@ -611,13 +409,13 @@ bool sb_SandboxBuilder::Apply()
                     };
 
                     for (unsigned int flags: combinations) {
-                        ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 2,
+                        ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 2,
                                                SCMP_A2(SCMP_CMP_MASKED_EQ, mask, flags),
                                                SCMP_A3(SCMP_CMP_EQ, MAP_SHARED, 0));
                         if (ret < 0)
                             break;
                     }
-                } else if (TestStr(item.name, "mprotect/noexec")) {
+                } else if (TestStr(filter.name, "mprotect/noexec")) {
                     int syscall = seccomp_syscall_resolve_name("mprotect");
                     K_ASSERT(syscall != __NR_SCMP_ERROR);
 
@@ -630,12 +428,12 @@ bool sb_SandboxBuilder::Apply()
                     };
 
                     for (unsigned int flags: combinations) {
-                        ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 1,
+                        ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 1,
                                                SCMP_A2(SCMP_CMP_MASKED_EQ, mask, flags));
                         if (ret < 0)
                             break;
                     }
-                } else if (TestStr(item.name, "clone/fork")) {
+                } else if (TestStr(filter.name, "clone/fork")) {
                     int syscall = seccomp_syscall_resolve_name("clone");
                     K_ASSERT(syscall != __NR_SCMP_ERROR);
 
@@ -646,28 +444,28 @@ bool sb_SandboxBuilder::Apply()
                     };
 
                     for (unsigned int flags: combinations) {
-                        ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 1,
+                        ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 1,
                                                SCMP_A1(SCMP_CMP_MASKED_EQ, mask, flags));
                         if (ret < 0)
                             break;
                     }
                 } else {
-                    int syscall = seccomp_syscall_resolve_name(item.name);
+                    int syscall = seccomp_syscall_resolve_name(filter.name);
 
                     if (syscall != __NR_SCMP_ERROR) {
-                        ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 0);
+                        ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 0);
                     } else {
-                        if (strchr(item.name, '/')) {
-                            LogError("Unknown syscall specifier '%1'", item.name);
+                        if (strchr(filter.name, '/')) {
+                            LogError("Unknown syscall specifier '%1'", filter.name);
                             return false;
                         } else {
-                            LogDebug("Ignoring unknown syscall '%1'", item.name);
+                            LogDebug("Ignoring unknown syscall '%1'", filter.name);
                         }
                     }
                 }
 
                 if (ret < 0) {
-                    LogError("Invalid seccomp syscall '%1': %2", item.name, strerror(-ret));
+                    LogError("Invalid seccomp syscall '%1': %2", filter.name, strerror(-ret));
                     return false;
                 }
             }

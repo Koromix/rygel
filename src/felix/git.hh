@@ -70,7 +70,7 @@ public:
     bool IsValid() const { return commits.len; }
 
     // String remains valid until object is destroyed
-    const char *Version(Span<const char> key);
+    const char *Version(Span<const char> key, Allocator *alloc);
 
 private:
     bool CacheTagInfo(Span<const char> tag, Span<const char> id);

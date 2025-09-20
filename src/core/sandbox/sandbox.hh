@@ -26,7 +26,14 @@
 namespace K {
 
 enum class sb_IsolationFlag {
-    Network = 1 << 0
+    Filesystem = 1 << 0,
+    Signals = 1 << 1,
+    Syscalls = 1 << 2
+};
+static const char *const sb_IsolationFlagNames[] = {
+    "Filesystem",
+    "Signals",
+    "Syscalls"
 };
 
 enum class sb_FilterAction {
@@ -37,45 +44,40 @@ enum class sb_FilterAction {
     Kill
 };
 
-struct sb_FilterItem {
+struct sb_SyscallFilter {
     const char *name;
     sb_FilterAction action;
 };
 
-bool sb_IsSandboxSupported();
-
-class sb_SandboxBuilder final {
+class sb_SandboxBuilder {
     K_DELETE_COPY(sb_SandboxBuilder)
 
 #if defined(__linux__)
-    struct BindMount {
-        const char *src;
-        const char *dest;
+    struct RevealedPath {
+        const char *path;
         bool readonly;
     };
 
-    unsigned int isolation_flags = 0;
+    unsigned int isolation = 0;
 
-    HeapArray<BindMount> mounts;
-    HeapArray<const char *> masked_filenames;
+    HeapArray<RevealedPath> reveals;
+    HeapArray<const char *> masks;
 
-    bool filter_syscalls = false;
-    HeapArray<sb_FilterItem> filter_items;
+    HeapArray<sb_SyscallFilter> filters;
 #endif
 
     BlockAllocator str_alloc;
 
 public:
-    sb_SandboxBuilder() {};
+    sb_SandboxBuilder() = default;
 
-    void SetIsolationFlags(unsigned int flags);
+    bool Init(unsigned int flags = UINT_MAX);
 
     void RevealPaths(Span<const char *const> paths, bool readonly);
     void MaskFiles(Span<const char *const> filenames);
 
 #if defined(__linux__)
-    void MountPath(const char *src, const char *dest, bool readonly);
-    void FilterSyscalls(Span<const sb_FilterItem> items);
+    void FilterSyscalls(Span<const sb_SyscallFilter> filters);
 #endif
 
     // If this fails, just exit; the process is probably in a half-sandboxed

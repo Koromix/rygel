@@ -41,12 +41,10 @@ static hs_port *port = nullptr;
 
 static bool ApplySandbox()
 {
-    if (!sb_IsSandboxSupported()) {
-        LogError("Sandbox mode is not supported on this platform");
-        return false;
-    }
-
     sb_SandboxBuilder sb;
+
+    if (!sb.Init())
+        return false;
 
     sb.FilterSyscalls({
         { "exit", sb_FilterAction::Allow },

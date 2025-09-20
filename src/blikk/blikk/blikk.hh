@@ -21,7 +21,6 @@
 namespace K {
 
 struct Config {
-    bool sandbox = false;
     bool try_expression = true;
     bool execute = true;
     bool debug = false;
