@@ -393,7 +393,7 @@ form.columns(() => {
 > [!NOTE]
 > Sur les petits écrans (tablette, téléphone), les colonnes sont ignorées et les widgets sont disposés verticalement.
 
-Pour les cas simples, Goupile propose un raccourci avec la fonction `form.sameLine()`. Celle-ci permet d'afficher un widget à droite du widget défini précédemment, en évitant d'avoir à englober ces deux widget par un appell à `form.columns()`.
+Pour les cas simples, Goupile propose un raccourci avec la fonction `form.sameLine()`. Celle-ci permet d'afficher un widget à droite du widget défini précédemment, en évitant d'avoir à englober ces deux widget par un appel à `form.columns()`.
 
 <p class="call"><span style="color: #888;">widget1("var", "Libellé")</span>
 <span style="color: #24579d;">form.sameLine();</span> <span style="color: #888;">widget2("var", "Libellé")</span></p>
@@ -432,7 +432,7 @@ form.number("*age", "Âge")
 
 ## Message d'aide
 
-L'option `help` permet d'ajouter un texte d'aide qui s'affiche en petit caractère sous le widget concerné. Utilisez cette option pour apporter une précision, guider la saisie de l'utilisateur, ou proposer des exemples.
+L'option `help` permet d'ajouter un texte d'aide qui s'affiche en petit caractères sous le widget concerné. Utilisez cette option pour apporter une précision, guider la saisie de l'utilisateur, ou proposer des exemples.
 
 ```js
 form.number("pseudonyme", "Pseudonyme", {
@@ -444,7 +444,7 @@ form.number("pseudonyme", "Pseudonyme", {
 
 ## Préfixe et suffixe
 
-Utilisez les options `prefix` et `suffix` pour afficher un texte à gauche et à droite du widget (respectivement). Ce texte peut être statique ou dynamique, et calculée à partir de la valeur elle-même à l'aide d'une fonction. C'est ce qu'illustre l'exemple ci-dessous, dans lequel le suffixe affiché pour la saisie de l'âge dépend de la valeur.
+Utilisez les options `prefix` et `suffix` pour afficher un texte à gauche et à droite du widget (respectivement). Ce texte peut être statique ou dynamique, et calculé à partir de la valeur elle-même à l'aide d'une fonction. C'est ce qu'illustre l'exemple ci-dessous, dans lequel le suffixe affiché pour la saisie de l'âge dépend de la valeur.
 
 ```js
 form.number("age", "Âge", { suffix: value > 1 ? "ans" : "an" })
