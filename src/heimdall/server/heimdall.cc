@@ -691,7 +691,7 @@ Other commands:
         }
     }
 
-    LogDebug("Stop HTTP server");
+    LogInfo("Stop HTTP server");
     daemon.Stop();
 
     return status;

@@ -1199,10 +1199,10 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
         }
     }
 
-    LogDebug("Stop zygote");
+    LogInfo("Stop zygote");
     StopZygote();
 
-    LogDebug("Stop HTTP server");
+    LogInfo("Stop HTTP server");
     daemon.Stop();
 
     return status;
