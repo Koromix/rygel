@@ -1,7 +1,7 @@
 #ifndef MINIZ_EXPORT
 #define MINIZ_EXPORT
 #endif
-/* miniz.c 3.0.2 - public domain deflate/inflate, zlib-subset, ZIP reading/writing/appending, PNG writing
+/* miniz.c 3.1.0 - public domain deflate/inflate, zlib-subset, ZIP reading/writing/appending, PNG writing
    See "unlicense" statement at the end of this file.
    Rich Geldreich <richgel99@gmail.com>, last updated Oct. 13, 2013
    Implements RFC 1950: http://www.ietf.org/rfc/rfc1950.txt and RFC 1951: http://www.ietf.org/rfc/rfc1951.txt
@@ -276,10 +276,10 @@ extern "C"
         MZ_DEFAULT_COMPRESSION = -1
     };
 
-#define MZ_VERSION "11.0.2"
-#define MZ_VERNUM 0xB002
+#define MZ_VERSION "11.3.0"
+#define MZ_VERNUM 0xB300
 #define MZ_VER_MAJOR 11
-#define MZ_VER_MINOR 2
+#define MZ_VER_MINOR 3
 #define MZ_VER_REVISION 0
 #define MZ_VER_SUBREVISION 0
 
@@ -482,44 +482,116 @@ extern "C"
 #define Z_FIXED MZ_FIXED
 #define Z_DEFLATED MZ_DEFLATED
 #define Z_DEFAULT_WINDOW_BITS MZ_DEFAULT_WINDOW_BITS
-#define alloc_func mz_alloc_func
-#define free_func mz_free_func
+    /* See mz_alloc_func */
+    typedef void *(*alloc_func)(void *opaque, size_t items, size_t size);
+    /* See mz_free_func */
+    typedef void (*free_func)(void *opaque, void *address);
+
 #define internal_state mz_internal_state
 #define z_stream mz_stream
 
 #ifndef MINIZ_NO_DEFLATE_APIS
-#define deflateInit mz_deflateInit
-#define deflateInit2 mz_deflateInit2
-#define deflateReset mz_deflateReset
-#define deflate mz_deflate
-#define deflateEnd mz_deflateEnd
-#define deflateBound mz_deflateBound
-#define compress mz_compress
-#define compress2 mz_compress2
-#define compressBound mz_compressBound
+    /* Compatiblity with zlib API. See called functions for documentation */
+    static int deflateInit(mz_streamp pStream, int level)
+    {
+        return mz_deflateInit(pStream, level);
+    }
+    static int deflateInit2(mz_streamp pStream, int level, int method, int window_bits, int mem_level, int strategy)
+    {
+        return mz_deflateInit2(pStream, level, method, window_bits, mem_level, strategy);
+    }
+    static int deflateReset(mz_streamp pStream)
+    {
+        return mz_deflateReset(pStream);
+    }
+    static int deflate(mz_streamp pStream, int flush)
+    {
+        return mz_deflate(pStream, flush);
+    }
+    static int deflateEnd(mz_streamp pStream)
+    {
+        return mz_deflateEnd(pStream);
+    }
+    static mz_ulong deflateBound(mz_streamp pStream, mz_ulong source_len)
+    {
+        return mz_deflateBound(pStream, source_len);
+    }
+    static int compress(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char *pSource, mz_ulong source_len)
+    {
+        return mz_compress(pDest, pDest_len, pSource, source_len);
+    }
+    static int compress2(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char *pSource, mz_ulong source_len, int level)
+    {
+        return mz_compress2(pDest, pDest_len, pSource, source_len, level);
+    }
+    static mz_ulong compressBound(mz_ulong source_len)
+    {
+        return mz_compressBound(source_len);
+    }
 #endif /*#ifndef MINIZ_NO_DEFLATE_APIS*/
 
 #ifndef MINIZ_NO_INFLATE_APIS
-#define inflateInit mz_inflateInit
-#define inflateInit2 mz_inflateInit2
-#define inflateReset mz_inflateReset
-#define inflate mz_inflate
-#define inflateEnd mz_inflateEnd
-#define uncompress mz_uncompress
-#define uncompress2 mz_uncompress2
+    /* Compatiblity with zlib API. See called functions for documentation */
+    static int inflateInit(mz_streamp pStream)
+    {
+        return mz_inflateInit(pStream);
+    }
+
+    static int inflateInit2(mz_streamp pStream, int window_bits)
+    {
+        return mz_inflateInit2(pStream, window_bits);
+    }
+
+    static int inflateReset(mz_streamp pStream)
+    {
+        return mz_inflateReset(pStream);
+    }
+
+    static int inflate(mz_streamp pStream, int flush)
+    {
+        return mz_inflate(pStream, flush);
+    }
+
+    static int inflateEnd(mz_streamp pStream)
+    {
+        return mz_inflateEnd(pStream);
+    }
+
+    static int uncompress(unsigned char* pDest, mz_ulong* pDest_len, const unsigned char* pSource, mz_ulong source_len)
+    {
+        return mz_uncompress(pDest, pDest_len, pSource, source_len);
+    }
+
+    static int uncompress2(unsigned char* pDest, mz_ulong* pDest_len, const unsigned char* pSource, mz_ulong* pSource_len)
+    {
+        return mz_uncompress2(pDest, pDest_len, pSource, pSource_len);
+    }
 #endif /*#ifndef MINIZ_NO_INFLATE_APIS*/
 
-#define crc32 mz_crc32
-#define adler32 mz_adler32
+    static mz_ulong crc32(mz_ulong crc, const unsigned char *ptr, size_t buf_len)
+    {
+        return mz_crc32(crc, ptr, buf_len);
+    }
+
+    static mz_ulong adler32(mz_ulong adler, const unsigned char *ptr, size_t buf_len)
+    {
+        return mz_adler32(adler, ptr, buf_len);
+    }
+    
 #define MAX_WBITS 15
 #define MAX_MEM_LEVEL 9
-#define zError mz_error
+
+    static const char* zError(int err)
+    {
+        return mz_error(err);
+    }
 #define ZLIB_VERSION MZ_VERSION
 #define ZLIB_VERNUM MZ_VERNUM
 #define ZLIB_VER_MAJOR MZ_VER_MAJOR
 #define ZLIB_VER_MINOR MZ_VER_MINOR
 #define ZLIB_VER_REVISION MZ_VER_REVISION
 #define ZLIB_VER_SUBREVISION MZ_VER_SUBREVISION
+
 #define zlibVersion mz_version
 #define zlib_version mz_version()
 #endif /* #ifndef MINIZ_NO_ZLIB_COMPATIBLE_NAMES */
@@ -529,7 +601,6 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
-
 
 
 
@@ -1086,7 +1157,8 @@ extern "C"
         MZ_ZIP_FLAG_ASCII_FILENAME = 0x10000,
         /*After adding a compressed file, seek back
         to local file header and set the correct sizes*/
-        MZ_ZIP_FLAG_WRITE_HEADER_SET_SIZE = 0x20000
+        MZ_ZIP_FLAG_WRITE_HEADER_SET_SIZE = 0x20000,
+        MZ_ZIP_FLAG_READ_ALLOW_WRITING = 0x40000
     } mz_zip_flags;
 
     typedef enum
