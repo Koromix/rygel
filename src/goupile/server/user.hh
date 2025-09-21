@@ -63,7 +63,6 @@ static const int PasswordHashBytes = 128;
 enum class SessionType {
     Login,
     Token,
-    Key,
     Auto
 };
 
@@ -133,7 +132,6 @@ bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes]);
 
 void HandleSessionLogin(http_IO *io, InstanceHolder *instance);
 void HandleSessionToken(http_IO *io, InstanceHolder *instance);
-void HandleSessionKey(http_IO *io, InstanceHolder *instance);
 void HandleSessionConfirm(http_IO *io, InstanceHolder *instance);
 void HandleSessionLogout(http_IO *io);
 void HandleSessionProfile(http_IO *io, InstanceHolder *instance);

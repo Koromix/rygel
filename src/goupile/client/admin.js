@@ -514,7 +514,6 @@ function runConfigureInstanceDialog(e, instance) {
                     d.text('token_key', T.session_by_token, { value: instance.config.token_key });
                     if (d.values.token_key != null && !checkCryptoKey(d.values.token_key))
                         d.error('token_key', T.invalid_key_format);
-                    d.text('auto_key', T.session_by_key, { value: instance.config.auto_key });
 
                     d.number('fs_version', T.fs_version, {
                         suffix: T.format(T.current_fs_x, instance.config.fs_version),
@@ -565,7 +564,6 @@ function runConfigureInstanceDialog(e, instance) {
                         use_offline: d.values.use_offline,
                         data_remote: d.values.data_remote,
                         token_key: d.values.token_key,
-                        auto_key: d.values.auto_key,
                         allow_guests: d.values.allow_guests,
                         fs_version: d.values.fs_version,
                         export_days: export_days,

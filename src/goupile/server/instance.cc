@@ -27,7 +27,7 @@
 namespace K {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 138;
+const int InstanceVersion = 139;
 const int LegacyVersion = 61;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
@@ -104,8 +104,6 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                         LogError("Malformed TokenKey value");
                         valid = false;
                     }
-                } else if (TestStr(setting, "AutoKey")) {
-                    config.auto_key = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(setting, "AllowGuests")) {
                     valid &= ParseBool(value, &config.allow_guests);
                 } else if (TestStr(setting, "ExportDays")) {
@@ -3065,9 +3063,17 @@ bool MigrateInstance(sq_Database *db, int target)
             case 137: {
                 if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('Language', ?1)", gp_domain.config.default_lang))
                     return false;
+            } [[fallthrough]];
+
+            case 138: {
+                bool success = db->RunMany(R"(
+                    DELETE FROM fs_settings WHERE key = 'AutoKey';
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 138);
+            static_assert(InstanceVersion == 139);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

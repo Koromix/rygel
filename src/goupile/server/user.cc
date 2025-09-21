@@ -262,10 +262,6 @@ void ExportProfile(const SessionInfo *session, const InstanceHolder *instance, j
                 switch (session->type) {
                     case SessionType::Login: { json->Key("type"); json->String("login"); } break;
                     case SessionType::Token: { json->Key("type"); json->String("token"); } break;
-                    case SessionType::Key: {
-                        K_ASSERT(instance->config.auto_key);
-                        json->Key("type"); json->String("key");
-                    } break;
                     case SessionType::Auto: { json->Key("type"); json->String("auto"); } break;
                 }
 
@@ -1029,50 +1025,6 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
         }
     }
 
-    sessions.Open(io, session);
-
-    io->SendText(200, "{}", "application/json");
-}
-
-void HandleSessionKey(http_IO *io, InstanceHolder *instance)
-{
-    const char *session_key = nullptr;
-    {
-        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
-            bool valid = true;
-
-            for (json->ParseObject(); json->InObject(); ) {
-                Span<const char> key = json->ParseKey();
-
-                if (key == "key") {
-                    json->ParseString(&session_key);
-                } else {
-                    json->UnexpectedKey(key);
-                    valid = false;
-                }
-            }
-            valid &= json->IsValid();
-
-            if (valid) {
-                if (!session_key) {
-                    LogError("Missing 'key' parameter");
-                    valid = false;
-                }
-            }
-
-            return valid;
-        });
-
-        if (!success) {
-            io->SendError(422);
-            return;
-        }
-    }
-
-    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, session_key, session_key,
-                                                       nullptr, nullptr, true, nullptr);
-    if (!session)
-        return;
     sessions.Open(io, session);
 
     io->SendText(200, "{}", "application/json");

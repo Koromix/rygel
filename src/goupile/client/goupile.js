@@ -89,11 +89,6 @@ async function start() {
             token: url.searchParams.get('token')
         });
         await syncProfile();
-    } else if (ENV.auto_key && url.searchParams.has(ENV.auto_key)) {
-        await Net.post(`${ENV.urls.instance}api/session/key`, {
-            key: url.searchParams.get(ENV.auto_key)
-        });
-        await syncProfile();
     } else {
         await syncProfile();
     }

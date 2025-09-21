@@ -51,7 +51,6 @@ public:
         const char *token_key = nullptr;
         uint8_t token_skey[32];
         uint8_t token_pkey[32];
-        const char *auto_key = nullptr;
         const char *shared_key = nullptr;
         bool allow_guests = false;
         int export_days = 0;

@@ -693,9 +693,6 @@ static void HandleInstanceRequest(http_IO *io)
                     json.Key("buster"); json.String(instance_etag);
                     json.Key("use_offline"); json.Bool(master->config.use_offline);
                     json.Key("data_remote"); json.Bool(master->config.data_remote);
-                    if (master->config.auto_key) {
-                        json.Key("auto_key"); json.String(master->config.auto_key);
-                    }
                     json.EndObject();
                 } else if (key == "HEAD_TAGS") {
                     if (master->config.use_offline) {
@@ -729,8 +726,6 @@ static void HandleInstanceRequest(http_IO *io)
         HandleSessionLogin(io, instance);
     } else if (TestStr(instance_url, "/api/session/token") && request.method == http_RequestMethod::Post) {
         HandleSessionToken(io, instance);
-    } else if (TestStr(instance_url, "/api/session/key") && request.method == http_RequestMethod::Post) {
-        HandleSessionKey(io, instance);
     } else if (TestStr(instance_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {
         HandleSessionConfirm(io, instance);
     } else if (TestStr(instance_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {

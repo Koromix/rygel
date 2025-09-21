@@ -1705,8 +1705,6 @@ void HandleInstanceConfigure(http_IO *io)
                     }
                 } else if (key == "token_key") {
                     json->SkipNull() || json->ParseString(&config.token_key);
-                } else if (key == "auto_key") {
-                    json->SkipNull() || json->ParseString(&config.auto_key);
                 } else if (key == "allow_guests") {
                     if (!json->SkipNull()) {
                         json->ParseBool(&config.allow_guests);
@@ -1815,7 +1813,6 @@ void HandleInstanceConfigure(http_IO *io)
             success &= !change_use_offline || instance->db->Run(sql, "UseOffline", 0 + config.use_offline);
             success &= !change_data_remote || instance->db->Run(sql, "DataRemote", 0 + config.data_remote);
             success &= !config.token_key || instance->db->Run(sql, "TokenKey", config.token_key);
-            success &= !config.auto_key || instance->db->Run(sql, "AutoKey", config.auto_key);
             success &= !change_allow_guests || instance->db->Run(sql, "AllowGuests", 0 + config.allow_guests);
             success &= !change_export || instance->db->Run(sql, "ExportDays", config.export_days);
             success &= !change_export || instance->db->Run(sql, "ExportTime", config.export_time);
@@ -1917,9 +1914,6 @@ void HandleInstanceList(http_IO *io)
                 json->Key("data_remote"); json->Bool(instance->config.data_remote);
                 if (instance->config.token_key) {
                     json->Key("token_key"); json->String(instance->config.token_key);
-                }
-                if (instance->config.auto_key) {
-                    json->Key("auto_key"); json->String(instance->config.auto_key);
                 }
                 json->Key("allow_guests"); json->Bool(instance->config.allow_guests);
                 if (instance->config.export_days) {
