@@ -778,79 +778,71 @@ bool MigrateInstance(sq_Database *db, int target)
                     IniProperty prop;
                     while (ini.Next(&prop)) {
                         if (prop.section == "Application") {
-                            do {
-                                if (prop.key == "Key") {
-                                    success &= db->Run(sql, "Application.ClientKey", prop.value);
-                                } else if (prop.key == "Name") {
-                                    success &= db->Run(sql, "Application.Name", prop.value);
-                                } else {
-                                    LogError("Unknown attribute '%1'", prop.key);
-                                    success = false;
-                                }
-                            } while (ini.NextInSection(&prop));
+                            if (prop.key == "Key") {
+                                success &= db->Run(sql, "Application.ClientKey", prop.value);
+                            } else if (prop.key == "Name") {
+                                success &= db->Run(sql, "Application.Name", prop.value);
+                            } else {
+                                LogError("Unknown attribute '%1'", prop.key);
+                                success = false;
+                            }
                         } else if (prop.section == "Data") {
-                            do {
-                                if (prop.key == "FilesDirectory") {
-                                    // Ignored
-                                } else if (prop.key == "DatabaseFile") {
-                                    // Ignored
-                                } else {
-                                    LogError("Unknown attribute '%1'", prop.key);
-                                    success = false;
-                                }
-                            } while (ini.NextInSection(&prop));
+                            if (prop.key == "FilesDirectory") {
+                                // Ignored
+                            } else if (prop.key == "DatabaseFile") {
+                                // Ignored
+                            } else {
+                                LogError("Unknown attribute '%1'", prop.key);
+                                success = false;
+                            }
                         } else if (prop.section == "Sync") {
-                            do {
-                                if (prop.key == "UseOffline") {
-                                    bool value;
-                                    success &= ParseBool(prop.value, &value);
-                                    success &= db->Run(sql, "Application.UseOffline", 0 + value);
-                                } else if (prop.key == "MaxFileSize") {
-                                    int value;
-                                    success &= ParseInt(prop.value, &value);
-                                    success &= db->Run(sql, "Application.MaxFileSize", value);
-                                } else if (prop.key == "SyncMode") {
-                                    success &= db->Run(sql, "Application.SyncMode", prop.value);
-                                } else {
-                                    LogError("Unknown attribute '%1'", prop.key);
-                                    success = false;
-                                }
-                            } while (ini.NextInSection(&prop));
+                            if (prop.key == "UseOffline") {
+                                bool value;
+                                success &= ParseBool(prop.value, &value);
+                                success &= db->Run(sql, "Application.UseOffline", 0 + value);
+                            } else if (prop.key == "MaxFileSize") {
+                                int value;
+                                success &= ParseInt(prop.value, &value);
+                                success &= db->Run(sql, "Application.MaxFileSize", value);
+                            } else if (prop.key == "SyncMode") {
+                                success &= db->Run(sql, "Application.SyncMode", prop.value);
+                            } else {
+                                LogError("Unknown attribute '%1'", prop.key);
+                                success = false;
+                            }
                         } else if (prop.section == "HTTP") {
-                            do {
-                                if (prop.key == "SocketType") {
-                                    success &= db->Run(sql, "HTTP.SocketType", prop.value);
-                                } else if (prop.key == "Port") {
-                                    int value;
-                                    success &= ParseInt(prop.value, &value);
-                                    success &= db->Run(sql, "HTTP.Port", value);
-                                } else if (prop.key == "MaxConnections") {
-                                    int value;
-                                    success &= ParseInt(prop.value, &value);
-                                    success &= db->Run(sql, "HTTP.MaxConnections", value);
-                                } else if (prop.key == "IdleTimeout") {
-                                    int value;
-                                    success &= ParseInt(prop.value, &value);
-                                    success &= db->Run(sql, "HTTP.IdleTimeout", value);
-                                } else if (prop.key == "Threads") {
-                                    int value;
-                                    success &= ParseInt(prop.value, &value);
-                                    success &= db->Run(sql, "HTTP.Threads", value);
-                                } else if (prop.key == "AsyncThreads") {
-                                    int value;
-                                    success &= ParseInt(prop.value, &value);
-                                    success &= db->Run(sql, "HTTP.AsyncThreads", value);
-                                } else if (prop.key == "BaseUrl") {
-                                    success &= db->Run(sql, "HTTP.BaseUrl", prop.value);
-                                } else if (prop.key == "MaxAge") {
-                                    int value;
-                                    success &= ParseInt(prop.value, &value);
-                                    success &= db->Run(sql, "HTTP.MaxAge", value);
-                                } else {
-                                    LogError("Unknown attribute '%1'", prop.key);
-                                    success = false;
-                                }
-                            } while (ini.NextInSection(&prop));
+                            if (prop.key == "SocketType") {
+                                success &= db->Run(sql, "HTTP.SocketType", prop.value);
+                            } else if (prop.key == "Port") {
+                                int value;
+                                success &= ParseInt(prop.value, &value);
+                                success &= db->Run(sql, "HTTP.Port", value);
+                            } else if (prop.key == "MaxConnections") {
+                                int value;
+                                success &= ParseInt(prop.value, &value);
+                                success &= db->Run(sql, "HTTP.MaxConnections", value);
+                            } else if (prop.key == "IdleTimeout") {
+                                int value;
+                                success &= ParseInt(prop.value, &value);
+                                success &= db->Run(sql, "HTTP.IdleTimeout", value);
+                            } else if (prop.key == "Threads") {
+                                int value;
+                                success &= ParseInt(prop.value, &value);
+                                success &= db->Run(sql, "HTTP.Threads", value);
+                            } else if (prop.key == "AsyncThreads") {
+                                int value;
+                                success &= ParseInt(prop.value, &value);
+                                success &= db->Run(sql, "HTTP.AsyncThreads", value);
+                            } else if (prop.key == "BaseUrl") {
+                                success &= db->Run(sql, "HTTP.BaseUrl", prop.value);
+                            } else if (prop.key == "MaxAge") {
+                                int value;
+                                success &= ParseInt(prop.value, &value);
+                                success &= db->Run(sql, "HTTP.MaxAge", value);
+                            } else {
+                                LogError("Unknown attribute '%1'", prop.key);
+                                success = false;
+                            }
                         } else {
                             LogError("Unknown section '%1'", prop.section);
                             while (ini.NextInSection(&prop));

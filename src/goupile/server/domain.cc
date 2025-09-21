@@ -97,16 +97,14 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
         IniProperty prop;
         while (ini.Next(&prop)) {
             if (prop.section == "Domain") {
-                do {
-                    if (prop.key == "Title") {
-                        config.title = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "DemoMode") {
-                        valid &= ParseBool(prop.value, &config.demo_mode);
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
+                if (prop.key == "Title") {
+                    config.title = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "DemoMode") {
+                    valid &= ParseBool(prop.value, &config.demo_mode);
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "Data" || prop.section == "Paths") {
                 bool first = true;
 
@@ -153,128 +151,116 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                     first = false;
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "Archives") {
-                do {
-                    if (prop.key == "PublicKey") {
-                        static_assert(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
+                if (prop.key == "PublicKey") {
+                    static_assert(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
 
-                        size_t key_len;
-                        int ret = sodium_base642bin(config.archive_key, K_SIZE(config.archive_key),
-                                                    prop.value.ptr, (size_t)prop.value.len, nullptr, &key_len,
-                                                    nullptr, sodium_base64_VARIANT_ORIGINAL);
-                        if (!ret && key_len == 32) {
-                            config.enable_archives = true;
-                        } else {
-                            LogError("Malformed archive PublicKey value");
+                    size_t key_len;
+                    int ret = sodium_base642bin(config.archive_key, K_SIZE(config.archive_key),
+                                                prop.value.ptr, (size_t)prop.value.len, nullptr, &key_len,
+                                                nullptr, sodium_base64_VARIANT_ORIGINAL);
+                    if (!ret && key_len == 32) {
+                        config.enable_archives = true;
+                    } else {
+                        LogError("Malformed archive PublicKey value");
+                        valid = false;
+                    }
+                } else if (prop.key == "AutoHour") {
+                    if (ParseInt(prop.value, &config.archive_hour, (int)ParseFlag::End)) {
+                        if (config.archive_hour < 0 || config.archive_hour > 23) {
+                            LogError("AutoHour is outside of 0-23 (inclusive) range");
                             valid = false;
                         }
-                    } else if (prop.key == "AutoHour") {
-                        if (ParseInt(prop.value, &config.archive_hour, (int)ParseFlag::End)) {
-                            if (config.archive_hour < 0 || config.archive_hour > 23) {
-                                LogError("AutoHour is outside of 0-23 (inclusive) range");
-                                valid = false;
-                            }
-                        } else {
-                            bool enable = false;
+                    } else {
+                        bool enable = false;
 
-                            if (ParseBool(prop.value, &enable, (int)ParseFlag::End) && !enable) {
-                                config.archive_hour = -1;
-                            } else {
-                                LogError("AutoHour must be an integer or 'Off'");
-                                valid = false;
-                            }
-                        }
-                    } else if (prop.key == "AutoZone") {
-                        LogWarning("Ignoring obsolete AutoZone setting");
-                    } else if (prop.key == "RetentionDays") {
-                        if (prop.value == "Forever") {
+                        if (ParseBool(prop.value, &enable, (int)ParseFlag::End) && !enable) {
                             config.archive_hour = -1;
-                        } else if (ParseInt(prop.value, &config.archive_retention)) {
-                            if (config.archive_retention < 1 || config.archive_retention > 365) {
-                                LogError("RetentionDays is outside of 1-365 (inclusive) range");
-                                valid = false;
-                            }
                         } else {
+                            LogError("AutoHour must be an integer or 'Off'");
+                            valid = false;
+                        }
+                    }
+                } else if (prop.key == "AutoZone") {
+                    LogWarning("Ignoring obsolete AutoZone setting");
+                } else if (prop.key == "RetentionDays") {
+                    if (prop.value == "Forever") {
+                        config.archive_hour = -1;
+                    } else if (ParseInt(prop.value, &config.archive_retention)) {
+                        if (config.archive_retention < 1 || config.archive_retention > 365) {
+                            LogError("RetentionDays is outside of 1-365 (inclusive) range");
                             valid = false;
                         }
                     } else {
-                        LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
                     }
-                } while (ini.NextInSection(&prop));
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "Defaults") {
-                do {
-                    if (prop.key == "Language") {
-                        config.default_lang = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "DefaultUser") {
-                        config.default_username = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "DefaultPassword") {
-                        config.default_password = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
+                if (prop.key == "Language") {
+                    config.default_lang = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "DefaultUser") {
+                    config.default_username = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "DefaultPassword") {
+                    config.default_password = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "Security") {
-                do {
-                    PasswordComplexity *ptr = nullptr;
+                PasswordComplexity *ptr = nullptr;
 
-                    if (prop.key == "UserPassword") {
-                        ptr = &config.user_password;
-                    } else if (prop.key == "AdminPassword") {
-                        ptr = &config.admin_password;
-                    } else if (prop.key == "RootPassword") {
-                        ptr = &config.root_password;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
+                if (prop.key == "UserPassword") {
+                    ptr = &config.user_password;
+                } else if (prop.key == "AdminPassword") {
+                    ptr = &config.admin_password;
+                } else if (prop.key == "RootPassword") {
+                    ptr = &config.root_password;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
 
-                    if (ptr && !OptionToEnumI(PasswordComplexityNames, prop.value, ptr)) {
-                        LogError("Unknown password complexity setting '%1'", prop.value);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
+                if (ptr && !OptionToEnumI(PasswordComplexityNames, prop.value, ptr)) {
+                    LogError("Unknown password complexity setting '%1'", prop.value);
+                    valid = false;
+                }
             } else if (prop.section == "HTTP") {
-                do {
-                    if (prop.key == "RequireHost") {
-                        config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else {
-                        valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
-                    }
-                } while (ini.NextInSection(&prop));
+                if (prop.key == "RequireHost") {
+                    config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else {
+                    valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
+                }
             } else if (prop.section == "SMTP") {
-                do {
-                    if (prop.key == "URL") {
-                        config.smtp.url = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "Username") {
-                        config.smtp.username = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "Password") {
-                        config.smtp.password = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "From") {
-                        config.smtp.from = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
+                if (prop.key == "URL") {
+                    config.smtp.url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "Username") {
+                    config.smtp.username = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "Password") {
+                    config.smtp.password = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "From") {
+                    config.smtp.from = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "SMS") {
-                do {
-                    if (prop.key == "Provider") {
-                        if (!OptionToEnumI(sms_ProviderNames, prop.value, &config.sms.provider)) {
-                            LogError("Unknown SMS provider '%1'", prop.value);
-                            valid = false;
-                        }
-                    } else if (prop.key == "AuthID") {
-                        config.sms.authid = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "AuthToken") {
-                        config.sms.token = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "From") {
-                        config.sms.from = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
+                if (prop.key == "Provider") {
+                    if (!OptionToEnumI(sms_ProviderNames, prop.value, &config.sms.provider)) {
+                        LogError("Unknown SMS provider '%1'", prop.value);
                         valid = false;
                     }
-                } while (ini.NextInSection(&prop));
+                } else if (prop.key == "AuthID") {
+                    config.sms.authid = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "AuthToken") {
+                    config.sms.token = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "From") {
+                    config.sms.from = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else {
                 LogError("Unknown section '%1'", prop.section);
                 while (ini.NextInSection(&prop));

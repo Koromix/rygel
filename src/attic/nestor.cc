@@ -187,57 +187,49 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
         IniProperty prop;
         while (ini.Next(&prop)) {
             if (prop.section == "HTTP") {
-                do {
-                    valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
-                } while (ini.NextInSection(&prop));
+                valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
             } else if (prop.section == "Settings") {
-                do {
-                    if (prop.key == "AutoIndex") {
-                        if (ParseBool(prop.value, &config.auto_index)) {
-                            config.explicit_index = true;
-                        } else {
+                if (prop.key == "AutoIndex") {
+                    if (ParseBool(prop.value, &config.auto_index)) {
+                        config.explicit_index = true;
+                    } else {
+                        valid = false;
+                    }
+                } else if (prop.key == "AutoHtml") {
+                    valid &= ParseBool(prop.value, &config.auto_html);
+                } else if (prop.key == "MaxAge") {
+                    valid &= ParseDuration(prop.value, &config.max_age);
+                } else if (prop.key == "ETag") {
+                    valid &= ParseBool(prop.value, &config.set_etag);
+                } else if (prop.key == "ConnectTimeout") {
+                    valid &= ParseDuration(prop.value, &config.connect_timeout);
+                } else if (prop.key == "RetryCount") {
+                    if (ParseInt(prop.value, &config.connect_retries)) {
+                        if (config.connect_retries < 0) {
+                            LogError("Invalid RetryCount value");
                             valid = false;
                         }
-                    } else if (prop.key == "AutoHtml") {
-                        valid &= ParseBool(prop.value, &config.auto_html);
-                    } else if (prop.key == "MaxAge") {
-                        valid &= ParseDuration(prop.value, &config.max_age);
-                    } else if (prop.key == "ETag") {
-                        valid &= ParseBool(prop.value, &config.set_etag);
-                    } else if (prop.key == "ConnectTimeout") {
-                        valid &= ParseDuration(prop.value, &config.connect_timeout);
-                    } else if (prop.key == "RetryCount") {
-                        if (ParseInt(prop.value, &config.connect_retries)) {
-                            if (config.connect_retries < 0) {
-                                LogError("Invalid RetryCount value");
-                                valid = false;
-                            }
-                        }
-                    } else if (prop.key == "MaxTime") {
-                        valid &= ParseDuration(prop.value, &config.max_time);
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
                     }
-                } while (ini.NextInSection(&prop));
+                } else if (prop.key == "MaxTime") {
+                    valid &= ParseDuration(prop.value, &config.max_time);
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "Sources") {
-                do {
-                    if (prop.key == "Source") {
-                        config.AppendSource(prop.value.ptr, root_directory);
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
+                if (prop.key == "Source") {
+                    config.AppendSource(prop.value.ptr, root_directory);
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "Headers") {
-                do {
-                    http_KeyValue header = {};
+                http_KeyValue header = {};
 
-                    header.key = DuplicateString(prop.key, &config.str_alloc).ptr;
-                    header.value = DuplicateString(prop.value, &config.str_alloc).ptr;
+                header.key = DuplicateString(prop.key, &config.str_alloc).ptr;
+                header.value = DuplicateString(prop.value, &config.str_alloc).ptr;
 
-                    config.headers.Append(header);
-                } while (ini.NextInSection(&prop));
+                config.headers.Append(header);
             } else {
                 LogError("Unknown section '%1'", prop.section);
                 while (ini.NextInSection(&prop));

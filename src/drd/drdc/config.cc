@@ -35,31 +35,27 @@ bool LoadConfig(StreamReader *st, Config *out_config)
         IniProperty prop;
         while (ini.Next(&prop)) {
             if (prop.section == "Resources") {
-                do {
-                    if (prop.key == "TableDirectory") {
-                        const char *directory = NormalizePath(prop.value, root_directory,
-                                                              &config.str_alloc).ptr;
-                        config.table_directories.Append(directory);
-                    } else if (prop.key == "ProfileDirectory") {
-                        config.profile_directory = NormalizePath(prop.value, root_directory,
-                                                                 &config.str_alloc).ptr;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
+                if (prop.key == "TableDirectory") {
+                    const char *directory = NormalizePath(prop.value, root_directory,
+                                                          &config.str_alloc).ptr;
+                    config.table_directories.Append(directory);
+                } else if (prop.key == "ProfileDirectory") {
+                    config.profile_directory = NormalizePath(prop.value, root_directory,
+                                                             &config.str_alloc).ptr;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "Institution") {
-                do {
-                    if (prop.key == "Sector") {
-                        if (!OptionToEnumI(drd_SectorNames, prop.value, &config.sector)) {
-                            LogError("Unkown sector '%1'", prop.value);
-                            valid = false;
-                        }
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
+                if (prop.key == "Sector") {
+                    if (!OptionToEnumI(drd_SectorNames, prop.value, &config.sector)) {
+                        LogError("Unkown sector '%1'", prop.value);
                         valid = false;
                     }
-                } while (ini.NextInSection(&prop));
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "MCO") {
                 if (prop.key == "AuthorizationFile") {
                     config.mco_authorization_filename = NormalizePath(prop.value, root_directory,

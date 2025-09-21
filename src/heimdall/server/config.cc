@@ -63,13 +63,11 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     first = false;
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
-                do {
-                    if (prop.key == "RequireHost") {
-                        config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else {
-                        valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
-                    }
-                } while (ini.NextInSection(&prop));
+                if (prop.key == "RequireHost") {
+                    config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else {
+                    valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
+                }
             } else {
                 LogError("Unknown section '%1'", prop.section);
                 while (ini.NextInSection(&prop));

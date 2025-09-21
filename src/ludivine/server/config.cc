@@ -105,28 +105,24 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     first = false;
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
-                do {
-                    if (prop.key == "RequireHost") {
-                        config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else {
-                        valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
-                    }
-                } while (ini.NextInSection(&prop));
+                if (prop.key == "RequireHost") {
+                    config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else {
+                    valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
+                }
             } else if (prop.section == "SMTP") {
-                do {
-                    if (prop.key == "URL") {
-                        config.smtp.url = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "Username") {
-                        config.smtp.username = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "Password") {
-                        config.smtp.password = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "From") {
-                        config.smtp.from = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
+                if (prop.key == "URL") {
+                    config.smtp.url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "Username") {
+                    config.smtp.username = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "Password") {
+                    config.smtp.password = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "From") {
+                    config.smtp.from = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else {
                 LogError("Unknown section '%1'", prop.section);
                 while (ini.NextInSection(&prop));

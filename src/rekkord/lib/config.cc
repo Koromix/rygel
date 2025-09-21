@@ -212,94 +212,82 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
         IniProperty prop;
         while (ini.Next(&prop)) {
             if (prop.section == "Repository") {
-                do {
-                    if (prop.key == "URL") {
-                        valid &= rk_DecodeURL(prop.value, &config);
-                    } else if (prop.key == "KeyFile") {
-                        config.key_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
+                if (prop.key == "URL") {
+                    valid &= rk_DecodeURL(prop.value, &config);
+                } else if (prop.key == "KeyFile") {
+                    config.key_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "Settings") {
-                do {
-                    if (prop.key == "Threads") {
-                        if (ParseInt(prop.value, &config.threads)) {
-                            if (config.threads < 1) {
-                                LogError("Threads count cannot be < 1");
-                                valid = false;
-                            }
-                        } else {
+                if (prop.key == "Threads") {
+                    if (ParseInt(prop.value, &config.threads)) {
+                        if (config.threads < 1) {
+                            LogError("Threads count cannot be < 1");
                             valid = false;
                         }
-                    } else if (prop.key == "CompressionLevel") {
-                        valid &= ParseInt(prop.value, &config.compression_level);
                     } else {
-                        LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
                     }
-                } while (ini.NextInSection(&prop));
+                } else if (prop.key == "CompressionLevel") {
+                    valid &= ParseInt(prop.value, &config.compression_level);
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "Protection") {
-                do {
-                    if (prop.key == "RetainDuration") {
-                        if (prop.value == "Disabled") {
-                            config.retain = 0;
-                        } else if (ParseDuration(prop.value, &config.retain)) {
-                            if (config.retain < 0) {
-                                LogError("Retain duration cannot be negative");
-                                valid = false;
-                            }
-                        } else {
+                if (prop.key == "RetainDuration") {
+                    if (prop.value == "Disabled") {
+                        config.retain = 0;
+                    } else if (ParseDuration(prop.value, &config.retain)) {
+                        if (config.retain < 0) {
+                            LogError("Retain duration cannot be negative");
                             valid = false;
                         }
-                    } else if (prop.key == "DurationSafety") {
-                        valid &= ParseBool(prop.value, &config.safety);
                     } else {
-                        LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
                     }
-                } while (ini.NextInSection(&prop));
+                } else if (prop.key == "DurationSafety") {
+                    valid &= ParseBool(prop.value, &config.safety);
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "Agent") {
-                do {
-                    if (prop.key == "URL") {
-                        config.agent_url = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "ApiKey") {
-                        config.api_key = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "CheckPeriod") {
-                        if (ParseDuration(prop.value, &config.agent_period)) {
-                            if (config.retain <= 0) {
-                                LogError("Check period cannot be negative or zero");
-                                valid = false;
-                            }
-                        } else {
+                if (prop.key == "URL") {
+                    config.agent_url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "ApiKey") {
+                    config.api_key = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "CheckPeriod") {
+                    if (ParseDuration(prop.value, &config.agent_period)) {
+                        if (config.retain <= 0) {
+                            LogError("Check period cannot be negative or zero");
                             valid = false;
                         }
                     } else {
-                        LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
                     }
-                } while (ini.NextInSection(&prop));
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "S3") {
-                do {
-                    if (prop.key == "LockMode") {
-                        if (!OptionToEnumI(s3_LockModeNames, prop.value, &config.s3.lock)) {
-                            LogError("Invalid lock mode '%1'", prop.value);
-                            valid = false;
-                        }
-                    } else if (prop.key == "ChecksumType") {
-                        if (!OptionToEnumI(rk_ChecksumTypeNames, prop.value, &config.s3.checksum)) {
-                            LogError("Invalid checksum type '%1'", prop.value);
-                            valid = false;
-                        }
-                    } else {
-                        valid &= config.s3.remote.SetProperty(prop.key, prop.value, root_directory);
+                if (prop.key == "LockMode") {
+                    if (!OptionToEnumI(s3_LockModeNames, prop.value, &config.s3.lock)) {
+                        LogError("Invalid lock mode '%1'", prop.value);
+                        valid = false;
                     }
-                } while (ini.NextInSection(&prop));
+                } else if (prop.key == "ChecksumType") {
+                    if (!OptionToEnumI(rk_ChecksumTypeNames, prop.value, &config.s3.checksum)) {
+                        LogError("Invalid checksum type '%1'", prop.value);
+                        valid = false;
+                    }
+                } else {
+                    valid &= config.s3.remote.SetProperty(prop.key, prop.value, root_directory);
+                }
             } else if (prop.section == "SSH" || prop.section == "SFTP") {
-                do {
-                    valid &= config.ssh.SetProperty(prop.key, prop.value, root_directory);
-                } while (ini.NextInSection(&prop));
+                valid &= config.ssh.SetProperty(prop.key, prop.value, root_directory);
             } else {
                 LogError("Unknown section '%1'", prop.section);
                 while (ini.NextInSection(&prop));
