@@ -1910,7 +1910,9 @@ void HandleInstanceList(http_IO *io)
             json->Key("legacy"); json->Bool(instance->legacy);
             json->Key("config"); json->StartObject();
                 json->Key("name"); json->String(instance->config.name);
-                json->Key("lang"); json->String(instance->config.lang);
+                if (instance->config.lang) {
+                    json->Key("lang"); json->String(instance->config.lang);
+                }
                 json->Key("use_offline"); json->Bool(instance->config.use_offline);
                 json->Key("data_remote"); json->Bool(instance->config.data_remote);
                 if (instance->config.token_key) {

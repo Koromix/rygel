@@ -499,8 +499,10 @@ function runConfigureInstanceDialog(e, instance) {
                 d.tab(T.basic, () => {
                     d.text('*name', T.name, { value: instance.config.name });
 
-                    let langs = Object.keys(goupile.languages).map(lang => [lang, lang.toUpperCase()]);
-                    d.enumDrop('lang', T.language, langs, { value: instance.config.lang });
+                    if (!instance.legacy) {
+                        let langs = Object.keys(goupile.languages).map(lang => [lang, lang.toUpperCase()]);
+                        d.enumDrop('lang', T.language, langs, { value: instance.config.lang });
+                    }
 
                     d.boolean('*use_offline', T.use_offline, { value: instance.config.use_offline });
                     d.boolean('*allow_guests', T.allow_guests, { value: instance.config.allow_guests });
