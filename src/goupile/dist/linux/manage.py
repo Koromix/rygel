@@ -263,7 +263,8 @@ def run_service_command(name, cmd):
     execute_command(['systemctl', cmd, '--quiet', service])
 
 def derive_public_key(key):
-    output = subprocess.check_output([GOUPILE_BINARY, 'keys', '-k', key], env = { 'LANG': 'C' }, stderr = subprocess.STDOUT)
+    env = os.environ | { 'LANGUAGE': 'C' }
+    output = subprocess.check_output([GOUPILE_BINARY, 'keys', '-k', key], env = env, stderr = subprocess.STDOUT)
 
     m = re.search('Public key: ([a-zA-Z0-9+/=]+)', output.decode('UTF-8'))
     archive_key = m.group(1)
