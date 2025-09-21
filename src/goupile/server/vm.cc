@@ -675,10 +675,9 @@ void StopZygote()
     // Terminate after delay
     {
         int64_t start = GetMonotonicTime();
-        bool terminate = false;
 
         for (;;) {
-            int ret = K_RESTART_EINTR(waitpid(main_pid, nullptr, terminate ? WNOHANG : 0), < 0);
+            int ret = K_RESTART_EINTR(waitpid(main_pid, nullptr, WNOHANG), < 0);
 
             if (ret < 0) {
                 LogError("Failed to wait for process exit: %1", strerror(errno));
@@ -691,7 +690,6 @@ void StopZygote()
                     WaitDelay(10);
                 } else {
                     kill(main_pid, SIGKILL);
-                    terminate = false;
                 }
             } else {
                 break;
