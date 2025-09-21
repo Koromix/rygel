@@ -86,6 +86,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
     config.config_filename = NormalizePath(st->GetFileName(), GetWorkingDirectory(), &config.str_alloc).ptr;
 
     Span<const char> root_directory = GetPathDirectory(config.config_filename);
+    Span<const char> data_directory = root_directory;
 
     IniParser ini(st);
     ini.PushLogFilter();
@@ -112,17 +113,17 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                 do {
                     if (prop.key == "RootDirectory") {
                         if (first) {
-                            root_directory = NormalizePath(prop.value, root_directory, &config.str_alloc);
+                            data_directory = NormalizePath(prop.value, root_directory, &config.str_alloc);
                         } else {
                             LogError("RootDirectory must be first of section");
                             valid = false;
                         }
                     } else if (prop.key == "DatabaseFile") {
-                        config.database_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                        config.database_filename = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "ArchiveDirectory" || prop.key == "BackupDirectory") {
-                        config.archive_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                        config.archive_directory = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "SnapshotDirectory") {
-                        config.snapshot_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                        config.snapshot_directory = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "ArchiveKey" || prop.key == "BackupKey") {
                         static_assert(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
 
@@ -297,19 +298,19 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
         }
     }
     if (!config.database_filename) {
-        config.database_filename = NormalizePath("goupile.db", root_directory, &config.str_alloc).ptr;
+        config.database_filename = NormalizePath("goupile.db", data_directory, &config.str_alloc).ptr;
     }
     config.database_directory = DuplicateString(GetPathDirectory(config.database_filename), &config.str_alloc).ptr;
-    config.instances_directory = NormalizePath("instances", root_directory, &config.str_alloc).ptr;
-    config.tmp_directory = NormalizePath("tmp", root_directory, &config.str_alloc).ptr;
+    config.instances_directory = NormalizePath("instances", data_directory, &config.str_alloc).ptr;
+    config.tmp_directory = NormalizePath("tmp", data_directory, &config.str_alloc).ptr;
     if (!config.archive_directory) {
-        config.archive_directory = NormalizePath("archives", root_directory, &config.str_alloc).ptr;
+        config.archive_directory = NormalizePath("archives", data_directory, &config.str_alloc).ptr;
     }
     if (!config.snapshot_directory) {
-        config.snapshot_directory = NormalizePath("snapshots", root_directory, &config.str_alloc).ptr;
+        config.snapshot_directory = NormalizePath("snapshots", data_directory, &config.str_alloc).ptr;
     }
-    config.view_directory = NormalizePath("views", root_directory, &config.str_alloc).ptr;
-    config.export_directory = NormalizePath("exports", root_directory, &config.str_alloc).ptr;
+    config.view_directory = NormalizePath("views", data_directory, &config.str_alloc).ptr;
+    config.export_directory = NormalizePath("exports", data_directory, &config.str_alloc).ptr;
 
     if (!config.Validate())
         return false;

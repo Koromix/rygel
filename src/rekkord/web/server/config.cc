@@ -41,8 +41,9 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 {
     Config config;
 
-    Span<const char> root_directory = GetPathDirectory(st->GetFileName());
-    root_directory = NormalizePath(root_directory, GetWorkingDirectory(), &config.str_alloc);
+    const char *config_filename = NormalizePath(st->GetFileName(), GetWorkingDirectory(), &config.str_alloc).ptr;
+    Span<const char> root_directory = GetPathDirectory(config_filename);
+    Span<const char> data_directory = root_directory;
 
     IniParser ini(st);
     ini.PushLogFilter();
@@ -63,14 +64,27 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     valid = false;
                 }
             } else if (prop.section == "Data") {
-                if (prop.key == "DatabaseFile") {
-                    config.database_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
-                } else if (prop.key == "TempDirectory") {
-                    config.tmp_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
-                }
+                bool first = true;
+
+                do {
+                    if (prop.key == "RootDirectory") {
+                        if (first) {
+                            data_directory = NormalizePath(prop.value, root_directory, &config.str_alloc);
+                        } else {
+                            LogError("RootDirectory must be first of section");
+                            valid = false;
+                        }
+                    } else if (prop.key == "DatabaseFile") {
+                        config.database_filename = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
+                    } else if (prop.key == "TempDirectory") {
+                        config.tmp_directory = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+
+                    first = false;
+                } while (ini.NextInSection(&prop));
             } else if (prop.section == "Repositories") {
                 do {
                     if (prop.key == "UpdatePeriod") {
@@ -130,10 +144,10 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
     // Default values
     if (!config.database_filename) {
-        config.database_filename = NormalizePath("rekkow.db", root_directory, &config.str_alloc).ptr;
+        config.database_filename = NormalizePath("rekkow.db", data_directory, &config.str_alloc).ptr;
     }
     if (!config.tmp_directory) {
-        config.tmp_directory = NormalizePath("tmp", root_directory, &config.str_alloc).ptr;
+        config.tmp_directory = NormalizePath("tmp", data_directory, &config.str_alloc).ptr;
     }
     if (!config.Validate())
         return false;
