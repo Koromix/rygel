@@ -1,5 +1,59 @@
 # Changelog
 
+## 0.25.10
+
+* Fix a panic in a minification edge case ([#4287](https://github.com/evanw/esbuild/issues/4287))
+
+    This release fixes a panic due to a null pointer that could happen when esbuild inlines a doubly-nested identity function and the final result is empty. It was fixed by emitting the value `undefined` in this case, which avoids the panic. This case must be rare since it hasn't come up until now. Here is an example of code that previously triggered the panic (which only happened when minifying):
+
+    ```js
+    function identity(x) { return x }
+    identity({ y: identity(123) })
+    ```
+
+* Fix `@supports` nested inside pseudo-element ([#4265](https://github.com/evanw/esbuild/issues/4265))
+
+    When transforming nested CSS to non-nested CSS, esbuild is supposed to filter out pseudo-elements such as `::placeholder` for correctness. The [CSS nesting specification](https://www.w3.org/TR/css-nesting-1/) says the following:
+
+    > The nesting selector cannot represent pseudo-elements (identical to the behavior of the ':is()' pseudo-class). We’d like to relax this restriction, but need to do so simultaneously for both ':is()' and '&', since they’re intentionally built on the same underlying mechanisms.
+
+    However, it seems like this behavior is different for nested at-rules such as `@supports`, which do work with pseudo-elements. So this release modifies esbuild's behavior to now take that into account:
+
+    ```css
+    /* Original code */
+    ::placeholder {
+      color: red;
+      body & { color: green }
+      @supports (color: blue) { color: blue }
+    }
+
+    /* Old output (with --supported:nesting=false) */
+    ::placeholder {
+      color: red;
+    }
+    body :is() {
+      color: green;
+    }
+    @supports (color: blue) {
+       {
+        color: blue;
+      }
+    }
+
+    /* New output (with --supported:nesting=false) */
+    ::placeholder {
+      color: red;
+    }
+    body :is() {
+      color: green;
+    }
+    @supports (color: blue) {
+      ::placeholder {
+        color: blue;
+      }
+    }
+    ```
+
 ## 0.25.9
 
 * Better support building projects that use Yarn on Windows ([#3131](https://github.com/evanw/esbuild/issues/3131), [#3663](https://github.com/evanw/esbuild/issues/3663))

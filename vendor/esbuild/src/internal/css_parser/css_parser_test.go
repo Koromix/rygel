@@ -2,6 +2,7 @@ package css_parser
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/evanw/esbuild/internal/ast"
@@ -19,11 +20,11 @@ func expectPrintedCommon(t *testing.T, name string, contents string, expected st
 		log := logger.NewDeferLog(logger.DeferLogNoVerboseOrDebug, nil)
 		tree := Parse(log, test.SourceForTest(contents), OptionsFromConfig(loader, &options))
 		msgs := log.Done()
-		text := ""
+		var text strings.Builder
 		for _, msg := range msgs {
-			text += msg.String(logger.OutputOptions{}, logger.TerminalInfo{})
+			text.WriteString(msg.String(logger.OutputOptions{}, logger.TerminalInfo{}))
 		}
-		test.AssertEqualWithDiff(t, text, expectedLog)
+		test.AssertEqualWithDiff(t, text.String(), expectedLog)
 		symbols := ast.NewSymbolMap(1)
 		symbols.SymbolsForSource[0] = tree.Symbols
 		result := css_printer.Print(tree, symbols, css_printer.Options{
@@ -1345,6 +1346,15 @@ func TestNestedSelector(t *testing.T) {
 	// https://github.com/w3c/csswg-drafts/issues/7961#issuecomment-1549874958
 	expectPrinted(t, "@media screen { a { x: y } x: y; b { x: y } }", "@media screen {\n  a {\n    x: y;\n  }\n  x: y;\n  b {\n    x: y;\n  }\n}\n", "")
 	expectPrinted(t, ":root { @media screen { a { x: y } x: y; b { x: y } } }", ":root {\n  @media screen {\n    a {\n      x: y;\n    }\n    x: y;\n    b {\n      x: y;\n    }\n  }\n}\n", "")
+
+	// Nested at-rules work with pseudo-elements while nested "&" rules do not
+	// See: https://github.com/evanw/esbuild/issues/4265
+	expectPrintedLower(t, "::placeholder { color: red; body & { color: green } }",
+		"::placeholder {\n  color: red;\n}\nbody :is() {\n  color: green;\n}\n", "")
+	expectPrintedLower(t, "::placeholder { color: red; @supports (color: green) { color: green } }",
+		"::placeholder {\n  color: red;\n}\n@supports (color: green) {\n  ::placeholder {\n    color: green;\n  }\n}\n", "")
+	expectPrintedLower(t, "::placeholder { opacity: 0.5; @layer base { color: green } }",
+		"::placeholder {\n  opacity: 0.5;\n}\n@layer base {\n  ::placeholder {\n    color: green;\n  }\n}\n", "")
 }
 
 func TestBadQualifiedRules(t *testing.T) {
