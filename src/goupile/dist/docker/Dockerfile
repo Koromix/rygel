@@ -1,0 +1,15 @@
+FROM rygel/debian12 AS build
+ADD repo.tar repo
+COPY versions.txt repo/versions.txt
+RUN repo/bootstrap.sh
+RUN repo/felix -C repo/FelixBuild.ini -pParanoid --version_file versions.txt --host=:clang-18:lld-18 goupile
+COPY isolate.sh isolate.sh
+RUN ./isolate.sh repo/bin/Paranoid/goupile app
+RUN mkdir empty
+
+FROM scratch
+COPY --from=build app app
+COPY --from=build repo/src/goupile/dist/docker/goupile.ini app/goupile.ini
+COPY --from=build empty data
+COPY --from=build empty tmp
+CMD ["app/goupile", "-C", "/app/goupile.ini", "--sandbox"]
