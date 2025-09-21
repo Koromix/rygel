@@ -130,6 +130,7 @@
         "identity_confirmation": "Confirmation d'identité",
         "invalid_format": "Format non valide",
         "invalid_format_use_prefix": "Format non valide (préfixe obligatoire)",
+        "invalid_key_format": "Format de clé non valide",
         "item": "Item",
         "items": "Items",
         "label_check": "À vérifier",

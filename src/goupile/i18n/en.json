@@ -130,6 +130,7 @@
         "identity_confirmation": "Confirm identity",
         "invalid_format": "Invalid format",
         "invalid_format_use_prefix": "Invalid phone format (prefix is mandatory)",
+        "invalid_key_format": "Invalid key format",
         "item": "Item",
         "items": "Items",
         "label_check": "To check",
