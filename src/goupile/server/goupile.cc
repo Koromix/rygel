@@ -518,7 +518,7 @@ static void HandleAdminRequest(http_IO *io)
     } else if (TestStr(admin_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
         HandleSessionProfile(io, nullptr);
         return;
-    } else if (TestStr(admin_url, "/api/domain/configure")) {
+    } else if (TestStr(admin_url, "/api/domain/configure") && request.method == http_RequestMethod::Post) {
         HandleDomainConfigure(io);
         return;
     } else if (!domain) {
