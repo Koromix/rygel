@@ -52,13 +52,6 @@
                 flex-direction: column;
             }
 
-            #ro_admin {
-                display: none;
-                position: absolute;
-                right: 6px;
-                top: 6px;
-            }
-
             #ro_icon {
                 width: 256px;
                 height: 256px;
@@ -72,12 +65,23 @@
                 text-decoration: none;
                 color: inherit;
             }
-
             #ro_version {
                 margin-top: 2em;
                 font-size: 0.8em;
                 color: #999;
                 text-decoration: none;
+            }
+            #ro_by {
+                margin-top: 0.2em;
+                font-style: italic;
+                font-size: 0.8em;
+                color: #999;
+                text-decoration: none;
+            }
+            #ro_admin {
+                display: none;
+                margin-top: 2em;
+                font-size: 0.9em;
             }
 
             #ro_fatal {
@@ -110,10 +114,11 @@
     </head>
 
     <body>
-        <a id="ro_admin" href="/admin/" style="">Administration</a>
         <img id="ro_icon" src="/favicon.png" alt="" title="" />
         <a id="ro_web" href="https://goupile.org/" target="_blank">Goupile</a>
         <a id="ro_version" href="https://goupile.org/changelog" target="_blank">Version {{ VERSION }}</a>
+        <a id="ro_by" href="https://koromix.dev" target="_blank">Niels Martignène (Koromix)</a>
+        <a id="ro_admin" href="/admin/" style="">Administration</a>
 
         <script>
             if (DEMO) {
