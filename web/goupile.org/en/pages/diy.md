@@ -4,7 +4,7 @@ Okay, here is the English translation of the provided technical documentation.
 
 ## Linux (Debian)
 
-A signed Debian repository is available and can be used with Debian 11 and Debian derivatives (e.g., Ubuntu).
+A signed Debian repository is available and can be used with Debian 12 and Debian derivatives (e.g., Ubuntu).
 
 Run the following commands (as root) to add the repository to your system:
 
@@ -136,7 +136,7 @@ The VirtualHost block should look something like this:
 The Goupile server is cross-platform, but it is **recommended to use it on Linux** for maximum security.
 
 > [!NOTE]
-> Indeed, on Linux, Goupile can run in a sandboxed mode thanks to seccomp and Linux namespaces (unshare system call). Support for sandboxing on other operating systems is considered a long-term goal but is not currently available. Using the Debian 11 or a later distribution is recommended.
+> Indeed, on Linux, Goupile can run in a sandboxed mode thanks to seccomp and Linux namespaces (unshare system call). Support for sandboxing on other operating systems is considered a long-term goal but is not currently available. Using the Debian 12 or a later distribution is recommended.
 
 Goupile relies on C++ (server-side) and HTML/CSS/JS (client-side). Compiling Goupile uses a dedicated tool included directly in the repository.
 
@@ -159,7 +159,7 @@ To compile a **development and test version**, proceed as follows from the root 
 ./felix
 ```
 
-For **production use**, it is recommended to compile Goupile [in Paranoid mode](technical/architecture.md#compilation-options) using Clang 18+ and the LLD 18+ linker. On Debian 11, you can do the following:
+For **production use**, it is recommended to compile Goupile [in Paranoid mode](technical/architecture.md#compilation-options) using Clang 18+ and the LLD 18+ linker. On Debian 12, you can do the following:
 
 ```sh
 # Prepare the felix tool used to compile Goupile

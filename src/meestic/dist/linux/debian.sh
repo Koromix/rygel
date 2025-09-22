@@ -11,7 +11,7 @@ PKG_ARCHITECTURES="amd64 arm64"
 
 SCRIPT_PATH=src/meestic/dist/linux/debian.sh
 VERSION_TARGET=meestic
-DOCKER_IMAGE=debian11
+DOCKER_IMAGE=debian12
 
 build() {
     apt install -y libudev-dev libudev-dev:$1

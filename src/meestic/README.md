@@ -17,7 +17,7 @@ Download ready-to-use binaries here: [https://download.koromix.dev/windows/](htt
 
 ## Linux (Debian)
 
-A signed Debian repository is provided, and should work with Debian 11 and Debian derivatives (such as Ubuntu).
+A signed Debian repository is provided, and should work with Debian 12 and Debian derivatives (such as Ubuntu).
 
 Execute the following commands (as root) to add the repository to your system:
 

@@ -18,7 +18,7 @@ This project is sponsored by NLnet: https://nlnet.nl/project/Goupile/
 
 ### Linux (Debian)
 
-A signed Debian repository is provided, and should work with Debian 11 and Debian derivatives (such as Ubuntu).
+A signed Debian repository is provided, and should work with Debian 12 and Debian derivatives (such as Ubuntu).
 
 Execute the following commands (as root) to add the repository to your system:
 

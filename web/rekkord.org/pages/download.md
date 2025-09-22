@@ -22,7 +22,7 @@ Ready-to-use binaries will be provided once the software stabilizes. In the mean
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
-A signed Debian repository is provided, and should work with Debian 11 and Debian derivatives (such as Ubuntu).
+A signed Debian repository is provided, and should work with Debian 12 and Debian derivatives (such as Ubuntu).
 
 Execute the following commands (as root) to add the repository to your system:
 

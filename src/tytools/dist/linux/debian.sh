@@ -11,7 +11,7 @@ PKG_ARCHITECTURES="amd64 arm64"
 
 SCRIPT_PATH=src/tytools/dist/linux/debian.sh
 VERSION_TARGET=tycmd
-DOCKER_IMAGE=debian11
+DOCKER_IMAGE=debian12
 
 build() {
     apt update
