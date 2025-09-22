@@ -60,8 +60,10 @@ async function start() {
     languages.en = en;
     languages.fr = fr;
 
-    Util.initLocales(languages, 'en');
-    Util.setCookie('language', document.documentElement.lang, '/', 365 * 86400);
+    let lang = Util.getCookie('lang');
+
+    Util.initLocales(languages, 'en', lang);
+    Util.setCookie('lang', document.documentElement.lang, '/', 365 * 86400);
 
     UI.init(run, renderApp);
 
@@ -306,7 +308,7 @@ function renderApp(el) {
 
 async function switchLanguage(lang) {
     Util.setLocale(lang);
-    Util.setCookie('language', document.documentElement.lang, '/', 365 * 86400);
+    Util.setCookie('lang', document.documentElement.lang, '/', 365 * 86400);
 
     await run({}, false);
 }

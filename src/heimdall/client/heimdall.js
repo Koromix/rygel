@@ -112,10 +112,10 @@ function initLanguages(default_lang) {
     languages.en = en;
     languages.fr = fr;
 
-    let lang = Util.getCookie('language');
+    let lang = Util.getCookie('lang');
 
     Util.initLocales(languages, default_lang, lang);
-    Util.setCookie('language', document.documentElement.lang, '/', 365 * 86400);
+    Util.setCookie('lang', document.documentElement.lang, '/', 365 * 86400);
 }
 
 async function fetchProject(project) {
@@ -1039,7 +1039,7 @@ async function runSettings() {
 
 function switchLanguage(lang) {
     Util.setLocale(lang);
-    Util.setCookie('language', document.documentElement.lang, '/', 365 * 86400);
+    Util.setCookie('lang', document.documentElement.lang, '/', 365 * 86400);
 
     sync_config = true;
     runner.busy();
