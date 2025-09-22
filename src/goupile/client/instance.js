@@ -1742,7 +1742,7 @@ async function go(e, url = null, options = {}) {
                         await saveRecord(form_thread.tid, form_entry, form_raw, form_meta, true);
                     } else {
                         await UI.dialog(e, T.context_confirm, {}, (d, resolve, reject) => {
-                            d.output(html`Si vous continuez, vos <b>modifications seront enregistrées</b>.`);
+                            d.output(unsafeHTML(T.context_continue));
 
                             d.enumRadio('save', T.context_action, [
                                 [true, T.context_save],

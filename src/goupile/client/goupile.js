@@ -1010,10 +1010,7 @@ function confirmDangerousAction(e) {
     if (controller.hasUnsavedData == null || !controller.hasUnsavedData())
         return;
 
-    return UI.confirm(e, html`Si vous continuez, vous <span style="color: red; font-weight: bold;">PERDREZ les modifications en cours</span>.
-                              Voulez-vous continuer ?<br/>
-                              Si vous souhaitez les conserver, <b>annulez cette action</b> et cliquez sur le bouton d'enregistrement.`,
-                            T.abandon_changes, () => {});
+    return UI.confirm(e, unsafeHTML(T.confirm_dangerous_action), T.abandon_changes, () => {});
 }
 
 function hasPermission(perm) {
