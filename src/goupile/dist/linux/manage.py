@@ -16,11 +16,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
-import base64
 import configparser
 import os
 import re
-import secrets
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -41,7 +39,6 @@ FIRST_PORT = 8889
 @dataclass
 class DomainConfig:
     name = None
-    archive_key = None
     port = None
     demo_mode = False
 
@@ -68,12 +65,8 @@ def create(args):
             port += 1
         port = str(port)
 
-    sk = secrets.token_bytes(32)
-    decrypt_key = base64.b64encode(sk).decode('UTF-8')
-    archive_key = derive_public_key(decrypt_key)
-
     ini_filename = os.path.join(DOMAINS_DIRECTORY, args.name) + '.ini'
-    config = make_domain_config(archive_key, port)
+    config = make_domain_config(port)
 
     if os.path.exists(ini_filename) and not args.force:
         raise ValueError(f'Domain {args.name} already exists');
@@ -126,7 +119,6 @@ def load_domains(path):
         domain = DomainConfig()
 
         domain.name = name
-        domain.archive_key = decode_key(section['ArchiveKey'])
         domain.port = decode_port(section['Port'])
         if 'DemoMode' in section:
             domain.demo_mode = decode_bool(section['DemoMode'])
@@ -142,12 +134,6 @@ def load_domains(path):
         domains.append(domain)
 
     return domains
-
-def decode_key(s):
-    key = base64.b64decode(s)
-    if len(key) != 32:
-        raise ValueError(f'Malformed archive key "{s}"');
-    return key
 
 def decode_port(port):
     if port.isnumeric():
@@ -179,14 +165,12 @@ def sync_domains(path, domains, template):
 
         data = list(config['Data'].items())
 
-        config['Domain']['Title'] = domain.name
-        config['Domain']['DemoMode'] = 'On' if domain.demo_mode else 'Off'
         config['Data']['RootDirectory'] = root_directory
         config['Data']['UseSnapshots'] = 'Off' if domain.demo_mode else 'On'
         for key, value in data:
             if not key in config['Data']:
                 config['Data'][key] = value
-        config['Archives']['PublicKey'] = base64.b64encode(domain.archive_key).decode('UTF-8')
+        config['Demo']['DemoMode'] = 'On' if domain.demo_mode else 'Off'
         if domain.port.isnumeric():
             config['HTTP']['SocketType'] = 'Dual'
             config['HTTP']['Port'] = domain.port
@@ -262,21 +246,11 @@ def run_service_command(name, cmd):
     service = f'goupile@{name}.service'
     execute_command(['systemctl', cmd, '--quiet', service])
 
-def derive_public_key(key):
-    env = os.environ | { 'LANGUAGE': 'C' }
-    output = subprocess.check_output([GOUPILE_BINARY, 'keys', '-k', key], env = env, stderr = subprocess.STDOUT)
-
-    m = re.search('Public key: ([a-zA-Z0-9+/=]+)', output.decode('UTF-8'))
-    archive_key = m.group(1)
-
-    return archive_key
-
-def make_domain_config(archive_key, port):
+def make_domain_config(port):
     config = configparser.ConfigParser()
     config.optionxform = str
 
     config.add_section('Domain')
-    config['Domain']['ArchiveKey'] = archive_key
     config['Domain']['Port'] = port
 
     return config

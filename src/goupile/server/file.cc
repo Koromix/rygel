@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "config.hh"
 #include "domain.hh"
 #include "file.hh"
 #include "instance.hh"
@@ -329,7 +330,7 @@ bool PutFile(http_IO *io, InstanceHolder *instance, CompressionType compression_
 
     // Create temporary file
     int fd = -1;
-    const char *tmp_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
+    const char *tmp_filename = CreateUniqueFile(gp_config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
     if (!tmp_filename)
         return false;
     K_DEFER {
@@ -343,7 +344,7 @@ bool PutFile(http_IO *io, InstanceHolder *instance, CompressionType compression_
     {
         StreamWriter writer(fd, "<temp>", 0, compression_type);
         StreamReader reader;
-        if (!io->OpenForRead(instance->config.max_file_size, &reader))
+        if (!io->OpenForRead(instance->settings.max_file_size, &reader))
             return false;
 
         crypto_hash_sha256_state state;
@@ -1137,7 +1138,7 @@ void HandleFilePublish(http_IO *io, InstanceHolder *instance)
         return;
 
     K_ASSERT(version >= 0);
-    if (!instance->SyncViews(gp_domain.config.view_directory))
+    if (!instance->SyncViews(gp_config.view_directory))
         return;
     instance->fs_version = version;
 }

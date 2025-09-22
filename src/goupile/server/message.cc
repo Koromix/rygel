@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "config.hh"
 #include "domain.hh"
 #include "goupile.hh"
 #include "message.hh"
@@ -49,7 +50,7 @@ bool SendSMS(const char *to, const char *message)
 
 void HandleSendMail(http_IO *io, InstanceHolder *instance)
 {
-    if (!gp_domain.config.smtp.url) {
+    if (!gp_config.smtp.url) {
         LogError("This domain is not configured to send mails");
         io->SendError(403);
         return;
@@ -131,7 +132,7 @@ void HandleSendMail(http_IO *io, InstanceHolder *instance)
 
 void HandleSendSMS(http_IO *io, InstanceHolder *instance)
 {
-    if (gp_domain.config.sms.provider == sms_Provider::None) {
+    if (gp_config.sms.provider == sms_Provider::None) {
         LogError("This domain is not configured to send SMS messages");
         io->SendError(403);
         return;
@@ -240,7 +241,7 @@ void HandleSendTokenize(http_IO *io, InstanceHolder *instance)
     {
         cypher = AllocateSpan<uint8_t>(io->Allocator(), msg.len + crypto_box_SEALBYTES);
 
-        if (crypto_box_seal((uint8_t *)cypher.ptr, msg.ptr, msg.len, instance->config.token_pkey) != 0) {
+        if (crypto_box_seal((uint8_t *)cypher.ptr, msg.ptr, msg.len, instance->settings.token_pkey) != 0) {
             LogError("Failed to seal token");
             io->SendError(403);
             return;

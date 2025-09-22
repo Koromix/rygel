@@ -14,54 +14,360 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "config.hh"
 #include "domain.hh"
+#include "goupile.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace K {
 
-const int DomainVersion = 111;
+const int DomainVersion = 112;
+const int MaxInstances = 1024;
 
-const int MaxInstancesPerDomain = 1024;
-const int64_t FullSnapshotDelay = 86400 * 1000;
-const int DemoPruneDelay = 7 * 86400 * 1000;
+static std::mutex mutex;
+static std::condition_variable cv;
 
-// Process-wide unique instance identifier
-static std::atomic_int64_t next_unique = 0;
+static HeapArray<sq_Database *> databases;
+static HeapArray<DomainHolder *> domains;
+static HashSet<void *> reloads;
 
-bool CheckDomainTitle(Span<const char> title)
+static DomainHolder *domain_ptr;
+static int64_t inits = 0;
+
+bool InitDomain()
 {
-    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_' || c == '.' || c == '-'; };
+    BlockAllocator temp_alloc;
 
-    if (!title.len) {
-        LogError("Domain title cannot be empty");
-        return false;
+    // Wake up threads waiting in SyncDomain, even if we fail
+    K_DEFER {
+        std::lock_guard<std::mutex> lock(mutex);
+
+        inits++;
+        cv.notify_all();
+    };
+
+    struct LoadInfo {
+        const char *instance_key;
+        const char *master_key;
+        bool demo;
+
+        sq_Database *db;
+        InstanceHolder *prev;
+    };
+
+    HeapArray<LoadInfo> loads;
+    HashSet<void *> keeps;
+    HashSet<void *> changes;
+
+    DomainHolder *domain = RefDomain();
+    if (!domain) {
+        domain = new DomainHolder();
+
+        domains.Append(domain);
+        LogDebug("Add domain 0x%1", domain);
     }
-    if (title.len > 64) {
-        LogError("Domain title cannot be have more than 64 characters");
-        return false;
-    }
-    if (!std::all_of(title.begin(), title.end(), test_char)) {
-        LogError("Domain title must only contain alphanumeric, '_', '.' or '-' characters");
-        return false;
+    K_DEFER_N(domain_guard) { UnrefDomain(domain); };
+
+    // Steal list of reloads
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        std::swap(changes, reloads);
     }
 
-    return true;
+    // Step 1
+    {
+        sq_Statement stmt;
+        if (!gp_db.Prepare(R"(WITH RECURSIVE rec (instance, master, demo) AS (
+                                  SELECT instance, master, demo FROM dom_instances WHERE master IS NULL
+                                  UNION ALL
+                                  SELECT i.instance, i.master, i.demo FROM dom_instances i, rec WHERE i.master = rec.instance
+                                  ORDER BY 2 DESC, 1
+                              )
+                              SELECT instance, master, demo FROM rec)", &stmt))
+            return false;
+
+        while (stmt.Step()) {
+            Span<const char> instance_key = (const char *)sqlite3_column_text(stmt, 0);
+            const char *master_key = (const char *)sqlite3_column_text(stmt, 1);
+            bool demo = (sqlite3_column_type(stmt, 2) != SQLITE_NULL);
+
+            InstanceHolder *instance = domain->map.FindValue(instance_key, nullptr);
+
+            if (instance) {
+                keeps.Set(instance);
+            } else {
+                LoadInfo load = {};
+
+                load.instance_key = DuplicateString(instance_key, &temp_alloc).ptr;
+                load.master_key = master_key ? DuplicateString(master_key, &temp_alloc).ptr : nullptr;
+                load.demo = demo;
+
+                loads.Append(load);
+            }
+        }
+    }
+
+    // Step 2
+    for (const LoadInfo &load: loads) {
+        InstanceHolder *master = load.master_key ? domain->map.FindValue(load.master_key, nullptr) : nullptr;
+        changes.Set(master);
+    }
+    for (Size i = domain->instances.len - 1; i >= 0; i--) {
+        InstanceHolder *instance = domain->instances[i];
+
+        if (!keeps.Find(instance) || changes.Find(instance)) {
+            changes.Set(instance->master);
+        }
+    }
+    for (InstanceHolder *instance: domain->instances) {
+        if (!keeps.Find(instance))
+            continue;
+
+        LoadInfo load = {};
+
+        load.instance_key = DuplicateString(instance->key, &temp_alloc).ptr;
+        load.master_key = (instance->master != instance) ? DuplicateString(instance->master->key, &temp_alloc).ptr : nullptr;
+        load.demo = instance->demo;
+
+        load.db = instance->db;
+
+        if (changes.Find(instance)) {
+            for (InstanceHolder *slave: instance->slaves) {
+                changes.Set(slave);
+            }
+        } else {
+            load.prev = instance;
+        }
+
+        loads.Append(load);
+    }
+
+    // Step 3
+    std::sort(loads.begin(), loads.end(),
+              [](const LoadInfo &load1, const LoadInfo &load2) {
+        const char *master1 = load1.master_key ? load1.master_key : load1.instance_key;
+        const char *master2 = load2.master_key ? load2.master_key : load2.instance_key;
+
+        return MultiCmp(CmpStr(master1, master2),
+                        CmpStr(load1.instance_key, load2.instance_key)) < 0;
+    });
+
+    if (domain) {
+        domain->Unref();
+        domain = nullptr;
+    }
+
+    domain = new DomainHolder();
+    if (!domain->Open())
+        return false;
+
+    bool complete = true;
+
+    // Start or reload instances
+    for (const LoadInfo &load: loads) {
+        InstanceHolder *instance = load.prev;
+        sq_Database *db = load.db;
+
+        if (!db) {
+            db = new sq_Database;
+            K_DEFER_N(db_guard) { delete db; };
+
+            const char *filename = MakeInstanceFileName(gp_config.instances_directory, load.instance_key, &temp_alloc);
+
+            LogDebug("Open database '%1'", filename);
+            if (!db->Open(filename, SQLITE_OPEN_READWRITE)) {
+                complete = false;
+                continue;
+            }
+            if (!db->SetWAL(true)) {
+                complete = false;
+                continue;
+            }
+            if (gp_config.use_snapshots && !db->SetSnapshotDirectory(gp_config.snapshot_directory, FullSnapshotDelay)) {
+                complete = false;
+                continue;
+            }
+
+            db_guard.Disable();
+            databases.Append(db);
+        }
+
+        if (instance) {
+            instance->Ref();
+        } else {
+            instance = new InstanceHolder();
+            K_DEFER_N(instance_guard) { delete instance; };
+
+            InstanceHolder *master = load.master_key ? domain->map.FindValue(load.master_key, nullptr) : nullptr;
+
+            if (!instance->Open(domain, master, db, load.instance_key, load.demo)) {
+                complete = false;
+                continue;
+            }
+            if (instance->master == instance && !instance->SyncViews(gp_config.view_directory)) {
+                complete = false;
+                continue;
+            }
+
+            instance_guard.Disable();
+        }
+
+        domain->instances.Append(instance);
+        domain->map.Set(instance);
+
+        if (instance->master != instance) {
+            instance->master->slaves.Append(instance);
+        }
+    }
+
+    // Commit domain
+    domain_guard.Disable();
+    domains.Append(domain);
+    LogDebug("Add domain 0x%1", domain);
+
+    // Replace current domain
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+
+        if (domain_ptr) {
+            domain_ptr->Unref();
+        }
+
+        domain_ptr = domain;
+    }
+
+    return complete;
 }
 
-bool DomainConfig::Validate() const
+void CloseDomain()
 {
-    bool valid = true;
+    // Prevent others from getting the current domain
+    {
+        std::lock_guard<std::mutex> lock(mutex);
 
-    valid &= CheckDomainTitle(title);
-    if (!enable_archives) {
-        LogError("Domain archive key is not set");
-        valid = false;
+        if (domain_ptr) {
+            domain_ptr->Unref();
+            domain_ptr = nullptr;
+        }
     }
-    valid &= http.Validate();
-    valid &= !smtp.url || smtp.Validate();
-    valid &= (sms.provider == sms_Provider::None) || sms.Validate();
 
-    return valid;
+    PruneDomain();
+
+    while (domains.len) {
+        WaitDelay(100);
+        PruneDomain();
+    }
+}
+
+void PruneDomain()
+{
+    HeapArray<InstanceHolder *> drops;
+    HashSet<void *> keeps;
+
+    // Clear unused domains
+    {
+        Size j = 0;
+        for (Size i = 0; i < domains.len; i++) {
+            DomainHolder *domain = domains[i];
+
+            domains[j] = domain;
+
+            for (InstanceHolder *instance: domain->instances) {
+                if (instance->refcount) {
+                    keeps.Set(instance);
+                    keeps.Set(instance->db);
+                } else {
+                    drops.Append(instance);
+                }
+            }
+
+            if (domain->refcount) {
+                j++;
+            } else {
+                LogDebug("Delete domain 0x%1", domain);
+                delete domain;
+            }
+        }
+        domains.len = j;
+    }
+
+    // Delete unused instances
+    for (InstanceHolder *instance: drops) {
+        if (keeps.Find(instance))
+            continue;
+
+        keeps.Set(instance);
+        delete instance;
+    }
+
+    // Close unused databases
+    {
+        Size j = 0;
+        for (Size i = 0; i < databases.len; i++) {
+            sq_Database *db = databases[i];
+
+            databases[j] = db;
+
+            if (keeps.Find(db)) {
+                j++;
+            } else {
+                const char *filename = sqlite3_db_filename(*db, "main");
+                LogDebug("Close database '%1'", filename);
+
+                delete db;
+            }
+        }
+        databases.len = j;
+    }
+}
+
+void SyncDomain(bool wait, Span<InstanceHolder *> changes)
+{
+    std::unique_lock<std::mutex> lock(mutex);
+    int64_t prev_inits = inits;
+
+    for (InstanceHolder *instance: changes) {
+        reloads.Set(instance);
+    }
+
+    // Signal main thread to reload domain
+    InterruptWait();
+
+    if (wait) {
+        do {
+            cv.wait(lock);
+        } while (inits == prev_inits);
+    }
+}
+
+DomainHolder *RefDomain()
+{
+    std::lock_guard<std::mutex> lock(mutex);
+
+    if (!domain_ptr)
+        return nullptr;
+
+    domain_ptr->Ref();
+    return domain_ptr;
+}
+
+void UnrefDomain(DomainHolder *domain)
+{
+    if (!domain)
+        return;
+
+    domain->Unref();
+}
+
+InstanceHolder *RefInstance(const char *key)
+{
+    DomainHolder *domain = RefDomain();
+    K_DEFER { UnrefDomain(domain); };
+
+    if (!domain) [[unlikely]]
+        return nullptr;
+
+    return domain->Ref(key);
 }
 
 const char *MakeInstanceFileName(const char *directory, const char *key, Allocator *alloc)
@@ -79,386 +385,143 @@ const char *MakeInstanceFileName(const char *directory, const char *key, Allocat
     return buf.Leak().ptr;
 }
 
-bool LoadConfig(StreamReader *st, DomainConfig *out_config)
+static bool CheckDomainName(Span<const char> name)
 {
-    DomainConfig config;
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_' || c == '.' || c == '-'; };
 
-    config.config_filename = NormalizePath(st->GetFileName(), GetWorkingDirectory(), &config.str_alloc).ptr;
+    if (!name.len) {
+        LogError("Domain name cannot be empty");
+        return false;
+    }
+    if (name.len > 64) {
+        LogError("Domain name cannot be have more than 64 characters");
+        return false;
+    }
+    if (!std::all_of(name.begin(), name.end(), test_char)) {
+        LogError("Domain name must only contain alphanumeric, '_', '.' or '-' characters");
+        return false;
+    }
 
-    Span<const char> root_directory = GetPathDirectory(config.config_filename);
-    Span<const char> data_directory = root_directory;
+    return true;
+}
 
-    IniParser ini(st);
-    ini.PushLogFilter();
-    K_DEFER { PopLogFilter(); };
+static bool CheckDomainTitle(Span<const char> title)
+{
+    if (!title.len) {
+        LogError("Domain title cannot be empty");
+        return false;
+    }
+    if (title.len > 64) {
+        LogError("Domain title cannot be have more than 64 characters");
+        return false;
+    }
 
+    return true;
+}
+
+static inline bool IsZero(const void *ptr, Size len)
+{
+    K_ASSERT(len >= 0);
+
+    const uint8_t *raw = (const uint8_t *)ptr;
+
+    for (Size i = 0; i < len; i++) {
+        if (raw[i])
+            return false;
+    }
+
+    return true;
+}
+
+bool DomainSettings::Validate() const
+{
     bool valid = true;
+
+    valid &= CheckDomainName(name);
+    valid &= CheckDomainTitle(title);
+
+    if (IsZero(archive_key, K_SIZE(archive_key))) {
+        LogError("Domain archive key is not set");
+        valid = false;
+    }
+
+    return valid;
+}
+
+bool DomainHolder::Open()
+{
+    // Load high-level settings
     {
-        IniProperty prop;
-        while (ini.Next(&prop)) {
-            if (prop.section == "Domain") {
-                if (prop.key == "Title") {
-                    config.title = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "DemoMode") {
-                    valid &= ParseBool(prop.value, &config.demo_mode);
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
-                }
-            } else if (prop.section == "Data" || prop.section == "Paths") {
-                bool first = true;
+        sq_Statement stmt;
+        if (!gp_db.Prepare("SELECT key, value FROM dom_settings", &stmt))
+            return false;
 
-                do {
-                    if (prop.key == "RootDirectory") {
-                        if (first) {
-                            data_directory = NormalizePath(prop.value, root_directory, &config.str_alloc);
-                        } else {
-                            LogError("RootDirectory must be first of section");
-                            valid = false;
-                        }
-                    } else if (prop.key == "DatabaseFile") {
-                        config.database_filename = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
-                    } else if (prop.key == "ArchiveDirectory" || prop.key == "BackupDirectory") {
-                        config.archive_directory = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
-                    } else if (prop.key == "SnapshotDirectory") {
-                        config.snapshot_directory = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
-                    } else if (prop.key == "ArchiveKey" || prop.key == "BackupKey") {
-                        static_assert(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
+        bool valid = true;
 
-                        LogError("Setting Data.ArchiveKey should be moved to Archives.PublicKey");
+        while (stmt.Step()) {
+            const char *setting = (const char *)sqlite3_column_text(stmt, 0);
+            const char *value = (const char *)sqlite3_column_text(stmt, 1);
 
-                        size_t key_len;
-                        int ret = sodium_base642bin(config.archive_key, K_SIZE(config.archive_key),
-                                                    prop.value.ptr, (size_t)prop.value.len, nullptr, &key_len,
-                                                    nullptr, sodium_base64_VARIANT_ORIGINAL);
-                        if (!ret && key_len == 32) {
-                            config.enable_archives = true;
-                        } else {
-                            LogError("Malformed ArchiveKey value");
-                            valid = false;
-                        }
-                    } else if (prop.key == "UseSnapshots") {
-                        valid &= ParseBool(prop.value, &config.use_snapshots);
-                    } else if (prop.key == "AutoCreate") {
-                        valid &= ParseBool(prop.value, &config.auto_create);
-                    } else if (prop.key == "AutoMigrate") {
-                        valid &= ParseBool(prop.value, &config.auto_migrate);
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-
-                    first = false;
-                } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Archives") {
-                if (prop.key == "PublicKey") {
+            if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
+                if (TestStr(setting, "Name")) {
+                    settings.name = DuplicateString(value, &settings.str_alloc).ptr;
+                } else if (TestStr(setting, "Title")) {
+                    settings.title = DuplicateString(value, &settings.str_alloc).ptr;
+                } else if (TestStr(setting, "DefaultLanguage")) {
+                    settings.default_lang = DuplicateString(value, &settings.str_alloc).ptr;
+                } else if (TestStr(setting, "ArchiveKey")) {
                     static_assert(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
 
                     size_t key_len;
-                    int ret = sodium_base642bin(config.archive_key, K_SIZE(config.archive_key),
-                                                prop.value.ptr, (size_t)prop.value.len, nullptr, &key_len,
+                    int ret = sodium_base642bin(settings.archive_key, K_SIZE(settings.archive_key),
+                                                value, strlen(value), nullptr, &key_len,
                                                 nullptr, sodium_base64_VARIANT_ORIGINAL);
-                    if (!ret && key_len == 32) {
-                        config.enable_archives = true;
-                    } else {
+
+                    if (ret || key_len != 32) {
                         LogError("Malformed archive PublicKey value");
                         valid = false;
                     }
-                } else if (prop.key == "AutoHour") {
-                    if (ParseInt(prop.value, &config.archive_hour, (int)ParseFlag::End)) {
-                        if (config.archive_hour < 0 || config.archive_hour > 23) {
-                            LogError("AutoHour is outside of 0-23 (inclusive) range");
-                            valid = false;
-                        }
-                    } else {
-                        bool enable = false;
-
-                        if (ParseBool(prop.value, &enable, (int)ParseFlag::End) && !enable) {
-                            config.archive_hour = -1;
-                        } else {
-                            LogError("AutoHour must be an integer or 'Off'");
-                            valid = false;
-                        }
-                    }
-                } else if (prop.key == "AutoZone") {
-                    LogWarning("Ignoring obsolete AutoZone setting");
-                } else if (prop.key == "RetentionDays") {
-                    if (prop.value == "Forever") {
-                        config.archive_hour = -1;
-                    } else if (ParseInt(prop.value, &config.archive_retention)) {
-                        if (config.archive_retention < 1 || config.archive_retention > 365) {
-                            LogError("RetentionDays is outside of 1-365 (inclusive) range");
-                            valid = false;
-                        }
-                    } else {
-                        valid = false;
-                    }
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
                 }
-            } else if (prop.section == "Defaults") {
-                if (prop.key == "Language") {
-                    config.default_lang = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "DefaultUser") {
-                    config.default_username = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "DefaultPassword") {
-                    config.default_password = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
-                }
-            } else if (prop.section == "Security") {
-                PasswordComplexity *ptr = nullptr;
-
-                if (prop.key == "UserPassword") {
-                    ptr = &config.user_password;
-                } else if (prop.key == "AdminPassword") {
-                    ptr = &config.admin_password;
-                } else if (prop.key == "RootPassword") {
-                    ptr = &config.root_password;
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
-                }
-
-                if (ptr && !OptionToEnumI(PasswordComplexityNames, prop.value, ptr)) {
-                    LogError("Unknown password complexity setting '%1'", prop.value);
-                    valid = false;
-                }
-            } else if (prop.section == "HTTP") {
-                if (prop.key == "RequireHost") {
-                    config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else {
-                    valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
-                }
-            } else if (prop.section == "SMTP") {
-                if (prop.key == "URL") {
-                    config.smtp.url = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "Username") {
-                    config.smtp.username = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "Password") {
-                    config.smtp.password = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "From") {
-                    config.smtp.from = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
-                }
-            } else if (prop.section == "SMS") {
-                if (prop.key == "Provider") {
-                    if (!OptionToEnumI(sms_ProviderNames, prop.value, &config.sms.provider)) {
-                        LogError("Unknown SMS provider '%1'", prop.value);
-                        valid = false;
-                    }
-                } else if (prop.key == "AuthID") {
-                    config.sms.authid = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "AuthToken") {
-                    config.sms.token = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "From") {
-                    config.sms.from = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
-                }
-            } else {
-                LogError("Unknown section '%1'", prop.section);
-                while (ini.NextInSection(&prop));
-                valid = false;
             }
         }
-    }
-    if (!ini.IsValid() || !valid)
-        return false;
-
-    // Default values
-    if (!config.title) {
-        Span<const char> basename = SplitStrReverseAny(root_directory, K_PATH_SEPARATORS);
-
-        if (CheckDomainTitle(basename)) {
-            LogError("Domain title is not set, using '%1'", basename);
-            config.title = DuplicateString(basename, &config.str_alloc).ptr;
-        } else {
-            LogError("Domain title is not set");
+        if (!stmt.IsValid() || !valid)
             return false;
+
+        // Default values
+        if (!settings.name) {
+            LogWarning("Using default 'goupile' name for domain");
+            settings.name = "goupile";
         }
-    }
-    if (!config.database_filename) {
-        config.database_filename = NormalizePath("goupile.db", data_directory, &config.str_alloc).ptr;
-    }
-    config.database_directory = DuplicateString(GetPathDirectory(config.database_filename), &config.str_alloc).ptr;
-    config.instances_directory = NormalizePath("instances", data_directory, &config.str_alloc).ptr;
-    config.tmp_directory = NormalizePath("tmp", data_directory, &config.str_alloc).ptr;
-    if (!config.archive_directory) {
-        config.archive_directory = NormalizePath("archives", data_directory, &config.str_alloc).ptr;
-    }
-    if (!config.snapshot_directory) {
-        config.snapshot_directory = NormalizePath("snapshots", data_directory, &config.str_alloc).ptr;
-    }
-    config.view_directory = NormalizePath("views", data_directory, &config.str_alloc).ptr;
-    config.export_directory = NormalizePath("exports", data_directory, &config.str_alloc).ptr;
+        if (!settings.title) {
+            settings.title = settings.name;
+        }
 
-    if (!config.Validate())
-        return false;
+        if (!settings.Validate())
+            return false;
+    }
 
-    std::swap(*out_config, config);
     return true;
 }
 
-bool LoadConfig(const char *filename, DomainConfig *out_config)
+void DomainHolder::Ref()
 {
-    StreamReader st(filename);
-    return LoadConfig(&st, out_config);
+    refcount++;
 }
 
-bool DomainHolder::Open(const char *filename)
+void DomainHolder::Unref()
 {
-    K_DEFER_N(err_guard) { Close(); };
-    Close();
+    if (--refcount)
+        return;
 
-    // Load config file
-    if (!LoadConfig(filename, &config))
-        return false;
-
-    // Make sure directories exist
-    if (!MakeDirectory(config.instances_directory, false))
-        return false;
-    if (!MakeDirectory(config.tmp_directory, false))
-        return false;
-    if (!MakeDirectory(config.archive_directory, false))
-        return false;
-    if (!MakeDirectory(config.snapshot_directory, false))
-        return false;
-    if (!MakeDirectory(config.view_directory, false))
-        return false;
-    if (!MakeDirectory(config.export_directory, false))
-        return false;
-
-    // Open and configure main database
-    {
-        int flags = SQLITE_OPEN_READWRITE | (config.auto_create ? SQLITE_OPEN_CREATE : 0);
-
-        if (!db.Open(config.database_filename, flags))
-            return false;
-        if (!db.SetWAL(true))
-            return false;
+    for (InstanceHolder *instance: instances) {
+        instance->Unref();
     }
-
-    // Make sure tmp and instances live on the same volume, because we need to
-    // perform atomic renames in some cases.
-    {
-        const char *tmp_filename1 = CreateUniqueFile(config.tmp_directory, nullptr, ".tmp", &config.str_alloc);
-        const char *tmp_filename2 = CreateUniqueFile(config.instances_directory, "", ".tmp", &config.str_alloc);
-        K_DEFER { UnlinkFile(tmp_filename2); };
-
-        if (RenameFile(tmp_filename1, tmp_filename2, (int)RenameFlag::Overwrite) != RenameResult::Success) {
-            UnlinkFile(tmp_filename1);
-            return false;
-        }
-    }
-
-    // Check schema version
-    {
-        int version;
-        if (!db.GetUserVersion(&version))
-            return false;
-
-        if (version > DomainVersion) {
-            LogError("Domain schema is too recent (%1, expected %2)", version, DomainVersion);
-            return false;
-        } else if (version < DomainVersion) {
-            if (config.auto_migrate) {
-                if (!MigrateDomain(&db, config.instances_directory))
-                    return false;
-            } else {
-                LogError("Domain schema is outdated");
-                return false;
-            }
-        }
-    }
-
-    // Make sure we have at least one user
-    if (config.default_username && config.default_password) {
-        sq_Statement stmt;
-        if (!db.Prepare("SELECT userid FROM dom_users", &stmt))
-            return false;
-
-        if (!stmt.Step()) {
-            if (!stmt.IsValid())
-                return false;
-
-            LogWarning("Creating default user '%1'", config.default_username);
-
-            char hash[PasswordHashBytes];
-            if (!HashPassword(config.default_password, hash))
-                return false;
-
-            // Create local key
-            char local_key[45];
-            {
-                uint8_t buf[32];
-                FillRandomSafe(buf);
-                sodium_bin2base64(local_key, K_SIZE(local_key), buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
-            }
-
-            if (!db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
-                                                  change_password, root, local_key, confirm)
-                           VALUES (1, ?1, ?2, 1, 1, ?3, ?4))",
-                        config.default_username, hash, local_key, nullptr))
-                return false;
-        }
-    }
-
-    // Don't keep this in memory!
-    if (config.default_password) {
-        Size len = strlen(config.default_password);
-        ZeroSafe((void *)config.default_password, len);
-    }
-    config.default_password = nullptr;
-
-    err_guard.Disable();
-    return true;
-}
-
-void DomainHolder::Close()
-{
-    db.Close();
-    config = {};
-
-    // This is called when goupile exits and we don't really need the lock
-    // at this point, but take if for consistency.
-    std::lock_guard<std::shared_mutex> lock_excl(mutex);
-
-    for (Size i = instances.len - 1; i >= 0; i--) {
-        InstanceHolder *instance = instances[i];
-        delete instance;
-    }
-    instances.Clear();
-    instances_map.Clear();
-
-    for (sq_Database *db: databases) {
-        delete db;
-    }
-    databases.Clear();
-}
-
-bool DomainHolder::SyncAll(bool thorough)
-{
-    return Sync(nullptr, thorough);
-}
-
-bool DomainHolder::SyncInstance(const char *key)
-{
-    return Sync(key, true);
 }
 
 bool DomainHolder::Checkpoint()
 {
-    std::shared_lock<std::shared_mutex> lock_shr(mutex);
-
     Async async;
 
-    async.Run([&]() { return db.Checkpoint(); });
     for (InstanceHolder *instance: instances) {
         async.Run([instance]() { return instance->Checkpoint(); });
     }
@@ -466,28 +529,9 @@ bool DomainHolder::Checkpoint()
     return async.Sync();
 }
 
-Span<InstanceHolder *> DomainHolder::LockInstances()
-{
-    mutex.lock_shared();
-    return instances;
-}
-
-void DomainHolder::UnlockInstances()
-{
-    mutex.unlock_shared();
-}
-
-Size DomainHolder::CountInstances() const
-{
-    std::shared_lock<std::shared_mutex> lock_shr(mutex);
-    return instances.len;
-}
-
 InstanceHolder *DomainHolder::Ref(Span<const char> key)
 {
-    std::shared_lock<std::shared_mutex> lock_shr(mutex);
-
-    InstanceHolder *instance = instances_map.FindValue(key, nullptr);
+    InstanceHolder *instance = map.FindValue(key, nullptr);
 
     if (instance) {
         instance->Ref();
@@ -495,331 +539,6 @@ InstanceHolder *DomainHolder::Ref(Span<const char> key)
     } else {
         return nullptr;
     }
-}
-
-bool DomainHolder::Sync(const char *filter_key, bool thorough)
-{
-    BlockAllocator temp_alloc;
-
-    struct StartInfo {
-        const char *instance_key;
-        const char *master_key;
-        InstanceHolder *prev_instance;
-        bool demo;
-    };
-
-    // Delay this so that the SQLite background thread does not run when domain is opened,
-    // which prevents unshare() from working on Linux.
-    if (config.use_snapshots && !db.UsesSnapshot() &&
-            !db.SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay))
-        return false;
-
-    int64_t prev_unique = next_unique;
-
-    HeapArray<InstanceHolder *> new_instances;
-    HashTable<Span<const char>, InstanceHolder *> new_map;
-    HeapArray<StartInfo> registry_start;
-    HeapArray<InstanceHolder *> registry_unload;
-    {
-        std::shared_lock<std::shared_mutex> lock_shr(mutex);
-        Size offset = 0;
-
-        sq_Statement stmt;
-        if (!db.Prepare(R"(WITH RECURSIVE rec (instance, master, demo) AS (
-                               SELECT instance, master, demo FROM dom_instances WHERE master IS NULL
-                               UNION ALL
-                               SELECT i.instance, i.master, i.demo FROM dom_instances i, rec WHERE i.master = rec.instance
-                               ORDER BY 2 DESC, 1
-                           )
-                           SELECT instance, master, demo FROM rec)", &stmt))
-            return false;
-
-        while (stmt.Step()) {
-            Span<const char> instance_key = (const char *)sqlite3_column_text(stmt, 0);
-            const char *master_key = (const char *)sqlite3_column_text(stmt, 1);
-            bool demo = (sqlite3_column_type(stmt, 2) != SQLITE_NULL);
-
-            for (;;) {
-                InstanceHolder *instance = (offset < instances.len) ? instances[offset] : nullptr;
-                int cmp = instance ? CmpStr(instance->key, instance_key) : 1;
-
-                if (cmp < 0) {
-                    bool match = !filter_key || TestStr(filter_key, instance->key) ||
-                                                TestStr(filter_key, instance->master->key);
-
-                    if (match) {
-                        registry_unload.Append(instance);
-                    } else {
-                        new_instances.Append(instance);
-                        new_map.Set(instance);
-                    }
-
-                    offset++;
-                } else if (!cmp) {
-                    bool match = !filter_key || TestStr(filter_key, instance->key) ||
-                                                TestStr(filter_key, instance->master->key);
-
-                    // Reload instance for thorough syncs or if the master instance is being
-                    // reconfigured itself for some reason.
-                    match &= thorough | (master_key && !new_map.Find(master_key));
-
-                    if (match) {
-                        StartInfo start = {};
-
-                        start.instance_key = DuplicateString(instance_key, &temp_alloc).ptr;
-                        start.master_key = master_key ? DuplicateString(master_key, &temp_alloc).ptr : nullptr;
-                        start.prev_instance = instance;
-                        start.demo = demo;
-
-                        registry_start.Append(start);
-                    } else {
-                        new_instances.Append(instance);
-                        new_map.Set(instance);
-                    }
-
-                    offset++;
-                    break;
-                } else {
-                    bool match = !filter_key || TestStr(filter_key, instance_key) ||
-                                 (master_key && TestStr(filter_key, master_key));
-
-                    if (match) {
-                        StartInfo start = {};
-
-                        start.instance_key = DuplicateString(instance_key, &temp_alloc).ptr;
-                        start.master_key = master_key ? DuplicateString(master_key, &temp_alloc).ptr : nullptr;
-                        start.demo = demo;
-
-                        registry_start.Append(start);
-                    } else if (instance) {
-                        new_instances.Append(instance);
-                        new_map.Set(instance);
-                    }
-
-                    break;
-                }
-            }
-        }
-        if (!stmt.IsValid())
-            return false;
-
-        while (offset < instances.len) {
-            InstanceHolder *instance = instances[offset];
-            bool match = !filter_key || TestStr(filter_key, instance->key) ||
-                                        TestStr(filter_key, instance->master->key);
-
-            if (match) {
-                registry_unload.Append(instance);
-            } else {
-                new_instances.Append(instance);
-                new_map.Set(instance);
-            }
-
-            offset++;
-        }
-    }
-
-    // Most (non-thorough) calls should follow this path
-    if (!registry_start.len && !registry_unload.len)
-        return true;
-
-    std::unique_lock<std::shared_mutex> lock_excl(mutex);
-    bool complete = true;
-
-    // Drop removed instances (if any)
-    for (Size i = registry_unload.len - 1; i >= 0; i--) {
-        InstanceHolder *instance = registry_unload[i];
-
-        while (instance->master->refcount) {
-            WaitDelay(100);
-        }
-
-        if (instance->master != instance) {
-            InstanceHolder *master = instance->master;
-
-            Size remove_idx = std::find(master->slaves.begin(), master->slaves.end(), instance) - master->slaves.ptr;
-            K_ASSERT(remove_idx < master->slaves.len);
-
-            MemMove(master->slaves.ptr + remove_idx, master->slaves.ptr + remove_idx + 1,
-                        (master->slaves.len - remove_idx - 1) * K_SIZE(*master->slaves.ptr));
-            master->slaves.len--;
-
-            if (master->unique < prev_unique) {
-                master->unique = next_unique++;
-            }
-        }
-
-        LogDebug("Close instance '%1' @%2", instance->key, instance->unique);
-        delete instance;
-    }
-
-    // Start new instances
-    for (const StartInfo &start: registry_start) {
-        if (new_instances.len >= MaxInstancesPerDomain) {
-            LogError("Too many instances on this domain");
-            complete = false;
-            continue;
-        }
-
-        InstanceHolder *master;
-        if (start.master_key) {
-            master = new_map.FindValue(start.master_key, nullptr);
-
-            if (!master) {
-                LogError("Cannot open instance '%1' because master is not available", start.instance_key);
-                complete = false;
-                continue;
-            }
-        } else {
-            master = nullptr;
-        }
-
-        InstanceHolder *instance = new InstanceHolder();
-        int64_t unique = next_unique++;
-        K_DEFER_N(instance_guard) { delete instance; };
-
-        if (start.prev_instance) {
-            InstanceHolder *prev_instance = start.prev_instance;
-
-            while (prev_instance->master->refcount) {
-                WaitDelay(100);
-            }
-
-            LogDebug("Reconfigure instance '%1' @%2", start.instance_key, unique);
-
-            if (!instance->Open(unique, master, start.instance_key, prev_instance->db, false)) {
-                complete = false;
-                continue;
-            }
-        } else {
-            sq_Database *db = new sq_Database;
-            K_DEFER_N(db_guard) { delete db; };
-
-            const char *db_filename = MakeInstanceFileName(config.instances_directory, start.instance_key, &temp_alloc);
-
-            LogDebug("Open database '%1'", db_filename);
-            if (!db->Open(db_filename, SQLITE_OPEN_READWRITE)) {
-                complete = false;
-                continue;
-            }
-            if (!db->SetWAL(true)) {
-                complete = false;
-                continue;
-            }
-            if (config.use_snapshots && !db->SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay)) {
-                complete = false;
-                continue;
-            }
-
-            LogDebug("Open instance '%1' @%2", start.instance_key, unique);
-
-            if (!instance->Open(unique, master, start.instance_key, db, config.auto_migrate)) {
-                complete = false;
-                continue;
-            }
-            if (instance->master == instance && !instance->SyncViews(config.view_directory)) {
-                complete = false;
-                continue;
-            }
-
-            db_guard.Disable();
-            databases.Append(db);
-        }
-
-        instance->demo = start.demo;
-
-        instance_guard.Disable();
-        new_instances.Append(instance);
-        new_map.Set(instance);
-
-        if (start.prev_instance) {
-            InstanceHolder *prev_instance = start.prev_instance;
-            K_ASSERT(prev_instance->key == instance->key);
-
-            while (prev_instance->master->refcount) {
-                WaitDelay(100);
-            }
-
-            // Fix pointers to previous instance
-            if (prev_instance->master != prev_instance) {
-                for (Size i = 0; i < prev_instance->master->slaves.len; i++) {
-                    InstanceHolder *slave = prev_instance->master->slaves[i];
-
-                    if (slave == prev_instance) {
-                        prev_instance->master->slaves[i] = instance;
-                        break;
-                    }
-                }
-            }
-            for (InstanceHolder *slave: prev_instance->slaves) {
-                slave->master = instance;
-                instance->slaves.Append(slave);
-            }
-
-            delete prev_instance;
-        } else if (master) {
-            while (master->refcount) {
-                WaitDelay(100);
-            }
-
-            if (master->unique >= prev_unique) {
-                // Fast path for new masters
-                master->slaves.Append(instance);
-            } else {
-                Size insert_idx = std::find_if(master->slaves.begin(), master->slaves.end(),
-                                               [&](InstanceHolder *slave) { return CmpStr(slave->key, instance->key) > 0; }) - master->slaves.ptr;
-
-                // Add instance to parent list
-                master->slaves.Grow(1);
-                MemMove(master->slaves.ptr + insert_idx + 1, master->slaves.ptr + insert_idx,
-                            (master->slaves.len - insert_idx) * K_SIZE(*master->slaves.ptr));
-                master->slaves.ptr[insert_idx] = instance;
-                master->slaves.len++;
-
-                master->unique = next_unique++;
-            }
-        }
-    }
-
-    // Close unused databases
-    {
-        HashSet<const void *> used_databases;
-
-        for (const InstanceHolder *instance: new_instances) {
-            used_databases.Set(instance->db);
-        }
-
-        Size j = 0;
-        for (Size i = 0; i < databases.len; i++) {
-            sq_Database *db = databases[i];
-            databases[j] = db;
-
-            if (used_databases.Find(db)) {
-                j++;
-            } else {
-                const char *filename = sqlite3_db_filename(*db, "main");
-                LogDebug("Close unused database '%1'", filename);
-
-                complete &= db->Close();
-                delete db;
-            }
-        }
-        databases.RemoveFrom(j);
-    }
-
-    // Commit changes
-    std::sort(new_instances.begin(), new_instances.end(),
-              [](InstanceHolder *instance1, InstanceHolder *instance2) {
-        InstanceHolder *master1 = instance1->master;
-        InstanceHolder *master2 = instance2->master;
-
-        return MultiCmp(CmpStr(master1->key, master2->key),
-                        CmpStr(instance1->key, instance2->key)) < 0;
-    });
-    std::swap(instances, new_instances);
-    std::swap(instances_map, new_map);
-
-    return complete;
 }
 
 bool MigrateDomain(sq_Database *db, const char *instances_directory)
@@ -1777,9 +1496,27 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     if (!success)
                         return false;
                 }
+            } [[fallthrough]];
+
+            case 111: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE dom_settings (
+                        key TEXT NOT NULL,
+                        value TEXT
+                    );
+
+                    CREATE UNIQUE INDEX dom_settings_k ON dom_settings (key);
+
+                    INSERT INTO dom_settings (key, value) VALUES ('Name', NULL);
+                    INSERT INTO dom_settings (key, value) VALUES ('Title', NULL);
+                    INSERT INTO dom_settings (key, value) VALUES ('DefaultLang', 'fr');
+                    INSERT INTO dom_settings (key, value) VALUES ('ArchiveKey', NULL);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DomainVersion == 111);
+            static_assert(DomainVersion == 112);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
@@ -1794,7 +1531,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
     return success;
 }
 
-bool MigrateDomain(const DomainConfig &config)
+bool MigrateDomain(const Config &config)
 {
     sq_Database db;
 

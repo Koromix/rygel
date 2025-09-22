@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "../server/config.hh"
 #include "../server/domain.hh"
 #include "../server/goupile.hh"
 #include "../server/instance.hh"
@@ -32,7 +33,7 @@ void HandleLegacyLoad(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
 
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
@@ -172,7 +173,7 @@ struct SaveRecord {
 
 void HandleLegacySave(http_IO *io, InstanceHolder *instance)
 {
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
@@ -590,9 +591,9 @@ RecordExporter::RecordExporter(InstanceHolder *instance)
     InstanceHolder *master = instance->master;
 
     instance_key = DuplicateString(instance->key, &str_alloc).ptr;
-    project = DuplicateString(master->config.name, &str_alloc).ptr;
+    project = DuplicateString(master->settings.name, &str_alloc).ptr;
     if (master != instance) {
-        center = DuplicateString(instance->config.name, &str_alloc).ptr;
+        center = DuplicateString(instance->settings.name, &str_alloc).ptr;
     } else {
         center = nullptr;
     }
@@ -1049,7 +1050,7 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
 
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
@@ -1075,8 +1076,8 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
         }
 
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
-                                     WHERE instance = ?1 AND export_key = ?2)", &stmt))
+        if (!gp_db.Prepare(R"(SELECT permissions FROM dom_permissions
+                              WHERE instance = ?1 AND export_key = ?2)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
         sqlite3_bind_text(stmt, 2, export_key, -1, SQLITE_STATIC);
@@ -1100,7 +1101,7 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
                                   ORDER BY f.anchor)", &stmt))
         return;
 
-    const char *export_filename = CreateUniqueFile(gp_domain.config.tmp_directory, "", ".tmp", io->Allocator());
+    const char *export_filename = CreateUniqueFile(gp_config.tmp_directory, "", ".tmp", io->Allocator());
     K_DEFER { UnlinkFile(export_filename); };
 
     RecordExporter exporter(instance);

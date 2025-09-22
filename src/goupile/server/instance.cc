@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "config.hh"
 #include "domain.hh"
 #include "file.hh"
 #include "goupile.hh"
@@ -30,14 +31,22 @@ namespace K {
 const int InstanceVersion = 139;
 const int LegacyVersion = 61;
 
-bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
+// Process-wide unique instance identifier
+static std::atomic_int64_t next_unique { 0 };
+
+bool InstanceHolder::Open(DomainHolder *domain, InstanceHolder *master, sq_Database *db, const char *key, bool demo)
 {
     master = master ? master : this;
 
-    this->unique = unique;
-    this->master = master;
-    this->key = DuplicateString(key, &str_alloc);
+    this->unique = next_unique++;
+
     this->db = db;
+    this->key = DuplicateString(key, &str_alloc);
+    this->demo = demo;
+
+    this->master = master;
+
+    LogDebug("Open instance '%1' @%2", key, unique);
 
     // Check schema version
     {
@@ -55,19 +64,12 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
 
             int target = legacy ? LegacyVersion : InstanceVersion;
 
-            if (version < target) {
-                if (migrate) {
-                    if (!MigrateInstance(db, target))
-                        return false;
-                } else {
-                    const char *filename = sqlite3_db_filename(*db, "main");
-
-                    LogError("Schema of '%1' is outdated", filename);
-                    return false;
-                }
-            }
+            if (version < target && !MigrateInstance(db, target))
+                return false;
         }
     }
+
+    settings.lang = domain->settings.default_lang;
 
     // Get whole project settings
     {
@@ -83,32 +85,32 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
 
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
                 if (TestStr(setting, "Language")) {
-                    config.lang = DuplicateString(value, &str_alloc).ptr;
+                    settings.lang = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(setting, "UseOffline")) {
-                    valid &= ParseBool(value, &config.use_offline);
+                    valid &= ParseBool(value, &settings.use_offline);
                 } else if (TestStr(setting, "DataRemote")) {
-                    valid &= ParseBool(value, &config.data_remote);
+                    valid &= ParseBool(value, &settings.data_remote);
                 } else if (TestStr(setting, "MaxFileSize")) {
-                    valid &= ParseSize(value, &config.max_file_size);
+                    valid &= ParseSize(value, &settings.max_file_size);
                 } else if (TestStr(setting, "TokenKey")) {
                     size_t key_len;
-                    int ret = sodium_base642bin(config.token_skey, K_SIZE(config.token_skey),
+                    int ret = sodium_base642bin(settings.token_skey, K_SIZE(settings.token_skey),
                                                 value, strlen(value), nullptr, &key_len,
                                                 nullptr, sodium_base64_VARIANT_ORIGINAL);
                     if (!ret && key_len == 32) {
-                        static_assert(K_SIZE(config.token_pkey) == crypto_scalarmult_BYTES);
-                        crypto_scalarmult_base(config.token_pkey, config.token_skey);
+                        static_assert(K_SIZE(settings.token_pkey) == crypto_scalarmult_BYTES);
+                        crypto_scalarmult_base(settings.token_pkey, settings.token_skey);
 
-                        config.token_key = DuplicateString(value, &str_alloc).ptr;
+                        settings.token_key = DuplicateString(value, &str_alloc).ptr;
                     } else {
                         LogError("Malformed TokenKey value");
                         valid = false;
                     }
                 } else if (TestStr(setting, "AllowGuests")) {
-                    valid &= ParseBool(value, &config.allow_guests);
+                    valid &= ParseBool(value, &settings.allow_guests);
                 } else if (TestStr(setting, "ExportDays")) {
-                    if (ParseInt(value, &config.export_days)) {
-                        if (config.export_days < 0 || config.export_days > 127) {
+                    if (ParseInt(value, &settings.export_days)) {
+                        if (settings.export_days < 0 || settings.export_days > 127) {
                             LogError("Invalid auto-export days");
                             valid = false;
                         }
@@ -116,8 +118,8 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                         valid = false;
                     }
                 } else if (TestStr(setting, "ExportTime")) {
-                    if (ParseInt(value, &config.export_time)) {
-                        if (config.export_time < 0 || config.export_time >= 2400) {
+                    if (ParseInt(value, &settings.export_time)) {
+                        if (settings.export_time < 0 || settings.export_time >= 2400) {
                             LogError("Invalid auto-export time");
                             valid = false;
                         }
@@ -125,7 +127,7 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                         valid = false;
                     }
                 } else if (TestStr(setting, "ExportAll")) {
-                    valid &= ParseBool(value, &config.export_all);
+                    valid &= ParseBool(value, &settings.export_all);
                 } else if (TestStr(setting, "FsVersion")) {
                     int version = -1;
                     valid &= ParseInt(value, &version);
@@ -151,11 +153,11 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
 
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
                 if (TestStr(setting, "Name")) {
-                    config.name = DuplicateString(value, &str_alloc).ptr;
+                    settings.name = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(setting, "LockKey")) {
-                    config.lock_key = DuplicateString(value, &str_alloc).ptr;
+                    settings.lock_key = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(setting, "SharedKey")) {
-                    config.shared_key = DuplicateString(value, &str_alloc).ptr;
+                    settings.shared_key = DuplicateString(value, &str_alloc).ptr;
                 }
             }
         }
@@ -167,11 +169,11 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
     {
         bool valid = true;
 
-        if (!config.name) {
+        if (!settings.name) {
             LogError("Missing instance name");
             valid = false;
         }
-        if (config.max_file_size <= 0) {
+        if (settings.max_file_size <= 0) {
             LogError("Maximum file size must be >= 0");
             valid = false;
         }
@@ -203,16 +205,19 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
 
     // Instance title
     if (master != this) {
-        title = Fmt(&str_alloc, "%1 (%2)", master->title, config.name).ptr;
+        title = Fmt(&str_alloc, "%1 (%2)", master->title, settings.name).ptr;
     } else {
-        title = config.name;
+        title = settings.name;
     }
 
-    // Create challenge key
-    static_assert(K_SIZE(challenge_key) == crypto_secretbox_KEYBYTES);
-    FillRandomSafe(challenge_key, K_SIZE(challenge_key));
-
     return true;
+}
+
+void InstanceHolder::Close()
+{
+    if (key.len) {
+        LogDebug("Close instance '%1' @%2", key, unique);
+    }
 }
 
 bool InstanceHolder::Checkpoint()
@@ -229,7 +234,7 @@ bool InstanceHolder::PerformScheduledExport()
 {
     K_ASSERT(!legacy);
 
-    if (!config.export_days)
+    if (!settings.export_days)
         return true;
 
     int64_t now = GetUnixTime();
@@ -239,18 +244,18 @@ bool InstanceHolder::PerformScheduledExport()
 
     if (last_export_day == today)
         return true;
-    if (!(config.export_days & (1 << today.GetWeekDay())))
+    if (!(settings.export_days & (1 << today.GetWeekDay())))
         return true;
-    if (hhmm < config.export_time)
+    if (hhmm < settings.export_time)
         return true;
 
-    ExportSettings settings = {};
+    ExportSettings exp = {};
 
-    settings.sequence = config.export_all ? -1 : (last_export_sequence + 1);
-    settings.scheduled = true;
+    exp.sequence = settings.export_all ? -1 : (last_export_sequence + 1);
+    exp.scheduled = true;
 
     ExportInfo info;
-    if (ExportRecords(this, 0, settings, &info) < 0)
+    if (ExportRecords(this, 0, exp, &info) < 0)
         return false;
 
     last_export_day = today;
@@ -739,8 +744,8 @@ bool MigrateInstance(sq_Database *db, int target)
 
                 // Default settings
                 {
-                    decltype(DomainHolder::config) fake1;
-                    decltype(InstanceHolder::config) fake2;
+                    Config fake1;
+                    decltype(InstanceHolder::settings) fake2;
 
                     const char *sql = "INSERT INTO fs_settings (key, value) VALUES (?, ?)";
                     success &= db->Run(sql, "Application.Name", fake2.name);
@@ -1133,7 +1138,7 @@ bool MigrateInstance(sq_Database *db, int target)
             } [[fallthrough]];
 
             case 27: {
-                decltype(InstanceHolder::config) fake;
+                decltype(InstanceHolder::settings) fake;
                 if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('SyncMode', ?1)",
                              fake.data_remote ? "Online" : "Offline"))
                     return false;
@@ -3061,7 +3066,7 @@ bool MigrateInstance(sq_Database *db, int target)
             } [[fallthrough]];
 
             case 137: {
-                if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('Language', ?1)", gp_domain.config.default_lang))
+                if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('Language', NULL)"))
                     return false;
             } [[fallthrough]];
 

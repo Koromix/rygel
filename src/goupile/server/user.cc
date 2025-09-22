@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "config.hh"
 #include "domain.hh"
 #include "goupile.hh"
 #include "instance.hh"
@@ -128,8 +129,8 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
                 uint32_t permissions;
                 {
                     sq_Statement stmt;
-                    if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
-                                                 WHERE userid = ?1 AND instance = ?2)", &stmt))
+                    if (!gp_db.Prepare(R"(SELECT permissions FROM dom_permissions
+                                          WHERE userid = ?1 AND instance = ?2)", &stmt))
                         return nullptr;
                     sqlite3_bind_int64(stmt, 1, userid);
                     sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
@@ -144,8 +145,8 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
                     InstanceHolder *master = instance->master;
 
                     sq_Statement stmt;
-                    if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
-                                                 WHERE userid = ?1 AND instance = ?2)", &stmt))
+                    if (!gp_db.Prepare(R"(SELECT permissions FROM dom_permissions
+                                          WHERE userid = ?1 AND instance = ?2)", &stmt))
                         return nullptr;
                     sqlite3_bind_int64(stmt, 1, userid);
                     sqlite3_bind_text(stmt, 2, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
@@ -161,7 +162,7 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
 
                 stamp->authorized = true;
                 stamp->permissions = permissions;
-            } else if (instance->config.allow_guests) {
+            } else if (instance->settings.allow_guests) {
                 stamp->authorized = true;
                 stamp->permissions = (int)UserPermission::DataSave;
                 stamp->single = true;
@@ -176,11 +177,11 @@ void SessionInfo::InvalidateStamps()
 {
     if (is_admin && !is_root) {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT IIF(a.permissions IS NOT NULL, 1, 0) AS admin
-                                     FROM dom_users u
-                                     INNER JOIN dom_permissions a ON (a.userid = u.userid AND
-                                                                      a.permissions & ?2)
-                                     WHERE u.userid = ?1)", &stmt))
+        if (!gp_db.Prepare(R"(SELECT IIF(a.permissions IS NOT NULL, 1, 0) AS admin
+                              FROM dom_users u
+                              INNER JOIN dom_permissions a ON (a.userid = u.userid AND
+                                                               a.permissions & ?2)
+                              WHERE u.userid = ?1)", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, userid);
         sqlite3_bind_int(stmt, 2, (int)UserPermission::BuildAdmin);
@@ -267,20 +268,20 @@ void ExportProfile(const SessionInfo *session, const InstanceHolder *instance, j
 
                 if (!instance->slaves.len) {
                     json->Key("namespaces"); json->StartObject();
-                    if (instance->config.shared_key) {
+                    if (instance->settings.shared_key) {
                         json->Key("records"); json->String("global");
                     } else {
                         json->Key("records"); json->Int64(session->userid);
                     }
                     json->EndObject();
                     json->Key("keys"); json->StartObject();
-                    if (instance->config.shared_key) {
-                        json->Key("records"); json->String(instance->config.shared_key);
+                    if (instance->settings.shared_key) {
+                        json->Key("records"); json->String(instance->settings.shared_key);
                     } else if (session->local_key[0]) {
                         json->Key("records"); json->String(session->local_key);
                     }
                     if (session->type == SessionType::Login) {
-                        json->Key("lock"); json->String(instance->config.lock_key);
+                        json->Key("lock"); json->String(instance->settings.lock_key);
                     }
                     json->EndObject();
                 }
@@ -292,7 +293,7 @@ void ExportProfile(const SessionInfo *session, const InstanceHolder *instance, j
                             json->StartObject();
                             json->Key("key"); json->String(slave->key.ptr);
                             json->Key("title"); json->String(slave->title);
-                            json->Key("name"); json->String(slave->config.name);
+                            json->Key("name"); json->String(slave->settings.name);
                             json->Key("url"); json->String(Fmt(buf, "/%1/", slave->key).ptr);
                             json->EndObject();
                         }
@@ -399,7 +400,7 @@ RetainPtr<const SessionInfo> GetNormalSession(http_IO *io, InstanceHolder *insta
 
             session = CreateUserSession(SessionType::Auto, userid, instance->key.ptr, nullptr);
             sessions.Open(io, session);
-        } else if (instance->config.allow_guests) {
+        } else if (instance->settings.allow_guests) {
             // Create local key
             char local_key[45];
             {
@@ -512,11 +513,11 @@ static bool CheckPasswordComplexity(const SessionInfo &session, Span<const char>
     unsigned int flags = 0;
 
     if (session.is_root) {
-        treshold = gp_domain.config.root_password;
+        treshold = gp_config.root_password;
     } else if (session.is_admin) {
-        treshold = gp_domain.config.admin_password;
+        treshold = gp_config.admin_password;
     } else {
-        treshold = gp_domain.config.user_password;
+        treshold = gp_config.user_password;
     }
 
     switch (treshold) {
@@ -581,16 +582,16 @@ void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
         InstanceHolder *master = instance->master;
 
         if (!instance->slaves.len) {
-            if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
-                                                u.root, IIF(a.permissions IS NOT NULL, 1, 0) AS admin,
-                                                u.local_key, u.confirm, u.secret, p.permissions
-                                         FROM dom_users u
-                                         INNER JOIN dom_permissions p ON (p.userid = u.userid)
-                                         INNER JOIN dom_instances i ON (i.instance = p.instance)
-                                         LEFT JOIN dom_permissions a ON (a.userid = u.userid AND
-                                                                         a.permissions & ?3)
-                                         WHERE u.username = ?1 AND i.instance = ?2 AND
-                                               p.permissions > 0)", &stmt))
+            if (!gp_db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
+                                         u.root, IIF(a.permissions IS NOT NULL, 1, 0) AS admin,
+                                         u.local_key, u.confirm, u.secret, p.permissions
+                                  FROM dom_users u
+                                  INNER JOIN dom_permissions p ON (p.userid = u.userid)
+                                  INNER JOIN dom_instances i ON (i.instance = p.instance)
+                                  LEFT JOIN dom_permissions a ON (a.userid = u.userid AND
+                                                                  a.permissions & ?3)
+                                  WHERE u.username = ?1 AND i.instance = ?2 AND
+                                        p.permissions > 0)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
             sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
@@ -602,16 +603,16 @@ void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
         if (!stmt.IsRow() && master->slaves.len) {
             instance = master;
 
-            if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
-                                                u.root, IIF(a.permissions IS NOT NULL, 1, 0) AS admin,
-                                                u.local_key, u.confirm, u.secret
-                                         FROM dom_users u
-                                         INNER JOIN dom_permissions p ON (p.userid = u.userid)
-                                         INNER JOIN dom_instances i ON (i.instance = p.instance)
-                                         LEFT JOIN dom_permissions a ON (a.userid = u.userid AND
-                                                                         a.permissions & ?3)
-                                         WHERE u.username = ?1 AND i.master = ?2 AND
-                                               p.permissions > 0)", &stmt))
+            if (!gp_db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
+                                         u.root, IIF(a.permissions IS NOT NULL, 1, 0) AS admin,
+                                         u.local_key, u.confirm, u.secret
+                                  FROM dom_users u
+                                  INNER JOIN dom_permissions p ON (p.userid = u.userid)
+                                  INNER JOIN dom_instances i ON (i.instance = p.instance)
+                                  LEFT JOIN dom_permissions a ON (a.userid = u.userid AND
+                                                                  a.permissions & ?3)
+                                  WHERE u.username = ?1 AND i.master = ?2 AND
+                                        p.permissions > 0)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
             sqlite3_bind_text(stmt, 2, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
@@ -620,14 +621,14 @@ void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
             stmt.Run();
         }
     } else {
-        if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
-                                            u.root, IIF(a.permissions IS NOT NULL, 1, 0) AS admin,
-                                            u.local_key, u.confirm, u.secret
-                                     FROM dom_users u
-                                     LEFT JOIN dom_permissions a ON (a.userid = u.userid AND
-                                                                     a.permissions & ?2)
-                                     WHERE u.username = ?1 AND (u.root = 1 OR
-                                                                a.permissions IS NOT NULL))", &stmt))
+        if (!gp_db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
+                                     u.root, IIF(a.permissions IS NOT NULL, 1, 0) AS admin,
+                                     u.local_key, u.confirm, u.secret
+                              FROM dom_users u
+                              LEFT JOIN dom_permissions a ON (a.userid = u.userid AND
+                                                              a.permissions & ?2)
+                              WHERE u.username = ?1 AND (u.root = 1 OR
+                                                         a.permissions IS NOT NULL))", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
         sqlite3_bind_int(stmt, 2, (int)UserPermission::BuildAdmin);
@@ -654,9 +655,9 @@ void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
         if (password_hash && crypto_pwhash_str_verify(password_hash, password.ptr, (size_t)password.len) == 0) {
             int64_t time = GetUnixTime();
 
-            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
-                                     VALUES (?1, ?2, ?3, ?4))",
-                                  time, request.client_addr, "login", username))
+            if (!gp_db.Run(R"(INSERT INTO adm_events (time, address, type, username)
+                              VALUES (?1, ?2, ?3, ?4))",
+                           time, request.client_addr, "login", username))
                 return;
 
             RetainPtr<SessionInfo> session;
@@ -764,7 +765,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
     RetainPtr<SessionInfo> session;
 
     if (email) {
-        if (!gp_domain.config.smtp.url) [[unlikely]] {
+        if (!gp_config.smtp.url) [[unlikely]] {
             LogError("This domain is not configured to send mails");
             return nullptr;
         }
@@ -794,7 +795,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         if (!SendMail(email, content))
             return nullptr;
     } else if (sms) {
-        if (gp_domain.config.sms.provider == sms_Provider::None) [[unlikely]] {
+        if (gp_config.sms.provider == sms_Provider::None) [[unlikely]] {
             LogError("This domain is not configured to send SMS messages");
             return nullptr;
         }
@@ -829,7 +830,7 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
 
-    if (!instance->config.token_key) {
+    if (!instance->settings.token_key) {
         LogError("This instance does not use tokens");
         io->SendError(403);
         return;
@@ -895,7 +896,7 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
         json = AllocateSpan<uint8_t>(io->Allocator(), cypher.len - crypto_box_SEALBYTES);
 
         if (crypto_box_seal_open((uint8_t *)json.ptr, cypher.ptr, cypher.len,
-                                 instance->config.token_pkey, instance->config.token_skey) != 0) {
+                                 instance->settings.token_pkey, instance->settings.token_skey) != 0) {
             LogError("Failed to unseal token");
             io->SendError(403);
             return;
@@ -1146,8 +1147,8 @@ void HandleSessionConfirm(http_IO *io, InstanceHolder *instance)
         case SessionConfirm::QRcode: {
             if (CheckTotp(io, *session, instance, code)) {
                 if (session->confirm == SessionConfirm::QRcode) {
-                    if (!gp_domain.db.Run("UPDATE dom_users SET secret = ?2 WHERE userid = ?1",
-                                          session->userid, session->secret))
+                    if (!gp_db.Run("UPDATE dom_users SET secret = ?2 WHERE userid = ?1",
+                                   session->userid, session->secret))
                         return;
                 }
 
@@ -1259,8 +1260,7 @@ void HandleChangePassword(http_IO *io, InstanceHolder *instance)
         int64_t now = GetMonotonicTime();
 
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT password_hash FROM dom_users
-                                     WHERE userid = ?1)", &stmt))
+        if (!gp_db.Prepare("SELECT password_hash FROM dom_users WHERE userid = ?1", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, session->userid);
 
@@ -1304,15 +1304,15 @@ void HandleChangePassword(http_IO *io, InstanceHolder *instance)
     if (!HashPassword(new_password, new_hash))
         return;
 
-    bool success = gp_domain.db.Transaction([&]() {
+    bool success = gp_db.Transaction([&]() {
         int64_t time = GetUnixTime();
 
-        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
-                                 VALUES (?1, ?2, ?3, ?4))",
-                              time, request.client_addr, "change_password", session->username))
+        if (!gp_db.Run(R"(INSERT INTO adm_events (time, address, type, username)
+                          VALUES (?1, ?2, ?3, ?4))",
+                       time, request.client_addr, "change_password", session->username))
             return false;
-        if (!gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2, change_password = 0 WHERE userid = ?1",
-                              session->userid, new_hash))
+        if (!gp_db.Run("UPDATE dom_users SET password_hash = ?2, change_password = 0 WHERE userid = ?1",
+                       session->userid, new_hash))
             return false;
 
         return true;
@@ -1332,7 +1332,7 @@ void HandleChangePassword(http_IO *io, InstanceHolder *instance)
 
 // This does not make any persistent change and it needs to return an image
 // so it is a GET even though it performs an action (change the secret).
-void HandleChangeQRcode(http_IO *io)
+void HandleChangeQRcode(http_IO *io, const char *title)
 {
     RetainPtr<SessionInfo> session = sessions.Find(io);
 
@@ -1357,7 +1357,7 @@ void HandleChangeQRcode(http_IO *io)
 
     pwd_GenerateSecret(session->secret);
 
-    const char *url = pwd_GenerateHotpUrl(gp_domain.config.title, session->username, gp_domain.config.title,
+    const char *url = pwd_GenerateHotpUrl(title, session->username, title,
                                           pwd_HotpAlgorithm::SHA1, session->secret, 6, io->Allocator());
     if (!url)
         return;
@@ -1451,8 +1451,7 @@ void HandleChangeTOTP(http_IO *io)
     // Authenticate with password
     {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT password_hash FROM dom_users
-                                     WHERE userid = ?1)", &stmt))
+        if (!gp_db.Prepare("SELECT password_hash FROM dom_users WHERE userid = ?1", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, session->userid);
 
@@ -1481,15 +1480,15 @@ void HandleChangeTOTP(http_IO *io)
     if (!CheckTotp(io, *session, nullptr, code))
         return;
 
-    bool success = gp_domain.db.Transaction([&]() {
+    bool success = gp_db.Transaction([&]() {
         int64_t time = GetUnixTime();
 
-        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
-                                 VALUES (?1, ?2, ?3, ?4))",
-                              time, request.client_addr, "change_totp", session->username))
+        if (!gp_db.Run(R"(INSERT INTO adm_events (time, address, type, username)
+                          VALUES (?1, ?2, ?3, ?4))",
+                       time, request.client_addr, "change_totp", session->username))
             return false;
-        if (!gp_domain.db.Run("UPDATE dom_users SET confirm = 'TOTP', secret = ?2 WHERE userid = ?1",
-                              session->userid, session->secret))
+        if (!gp_db.Run("UPDATE dom_users SET confirm = 'TOTP', secret = ?2 WHERE userid = ?1",
+                       session->userid, session->secret))
             return false;
 
         return true;
@@ -1587,9 +1586,9 @@ void HandleChangeExportKey(http_IO *io, InstanceHolder *instance)
         sodium_bin2base64(key_buf.ptr, (size_t)key_buf.len, buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
     }
 
-    if (!gp_domain.db.Run(R"(UPDATE dom_permissions SET export_key = ?3
-                             WHERE userid = ?1 AND instance = ?2)",
-                          session->userid, instance->master->key, key_buf.ptr))
+    if (!gp_db.Run(R"(UPDATE dom_permissions SET export_key = ?3
+                      WHERE userid = ?1 AND instance = ?2)",
+                   session->userid, instance->master->key, key_buf.ptr))
         return;
 
     http_SendJson(io, 200, [&](json_Writer *json) {

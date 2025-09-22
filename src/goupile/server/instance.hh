@@ -22,19 +22,21 @@
 
 namespace K {
 
+class DomainHolder;
+
 extern const int InstanceVersion;
 extern const int LegacyVersion;
 
 class InstanceHolder {
-    mutable std::atomic_int refcount { 0 };
+    std::atomic_int refcount { 1 };
 
 public:
     int64_t unique = -1;
 
-    Span<const char> key = {};
     sq_Database *db = nullptr;
-    const char *title = nullptr;
+    Span<const char> key = {};
 
+    const char *title = nullptr;
     bool legacy = false;
     bool demo = false;
 
@@ -56,10 +58,9 @@ public:
         int export_days = 0;
         int export_time = 0;
         bool export_all = false;
-    } config;
+    } settings;
 
     std::atomic_int64_t fs_version { 0 };
-    uint8_t challenge_key[32];
 
     LocalDate last_export_day = {};
     int64_t last_export_sequence = -1;
@@ -68,21 +69,24 @@ public:
 
     K_HASHTABLE_HANDLER(InstanceHolder, key);
 
+    ~InstanceHolder() { Close(); }
+
     bool Checkpoint();
 
-    void Ref() const { master->refcount++; }
-    void Unref() const { master->refcount--; }
+    void Ref() { refcount++; }
+    void Unref() { refcount--; }
 
     bool SyncViews(const char *directory);
 
 private:
-    InstanceHolder() {};
-
-    bool Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate);
+    bool Open(DomainHolder *domain, InstanceHolder *master, sq_Database *db, const char *key, bool demo);
+    void Close();
 
     bool PerformScheduledExport();
 
-    friend class DomainHolder;
+    friend bool InitDomain();
+    friend void CloseDomain();
+    friend void PruneDomain();
 };
 
 bool MigrateInstance(sq_Database *db, int target = 0);

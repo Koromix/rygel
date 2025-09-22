@@ -19,7 +19,14 @@
 
 namespace K {
 
+struct Config;
+class sq_Database;
 class DomainHolder;
-extern DomainHolder gp_domain;
+class InstanceHolder;
+
+extern const int64_t FullSnapshotDelay;
+
+extern Config gp_config;
+extern sq_Database gp_db;
 
 }

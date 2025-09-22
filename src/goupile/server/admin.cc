@@ -15,6 +15,7 @@
 
 #include "src/core/base/base.hh"
 #include "admin.hh"
+#include "config.hh"
 #include "domain.hh"
 #include "file.hh"
 #include "goupile.hh"
@@ -42,29 +43,15 @@
 namespace K {
 
 static const char *DefaultConfig =
-R"([Domain]
-Title = %1
-# DemoMode = Off
-
-[Data]
+R"([Data]
 # RootDirectory = .
 # DatabaseFile = goupile.db
 # ArchiveDirectory = archives
 # SnapshotDirectory = snapshots
-# SynchronousFull = Off
 # UseSnapshots = On
-# AutoCreate = On
-# AutoMigrate = On
 
-[Archives]
-PublicKey = %2
-# AutoHour = 0
-# RetentionDays = 7
-
-[Defaults]
-Language = en
-# DefaultUser =
-# DefaultPassword =
+[Demo]
+# DemoMode = Off
 
 [Security]
 # UserPassword = Moderate
@@ -227,15 +214,15 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 
 #endif
 
-static bool CreateInstance(DomainHolder *domain, const char *instance_key, const char *name,
-                           const InstanceOptions &options, int *out_error = nullptr)
+static bool CreateInstance(sq_Database *domain, const char *instance_key,
+                           const char *name, const InstanceOptions &options, int *out_error = nullptr)
 {
     BlockAllocator temp_alloc;
 
     // Check for existing instance
     {
         sq_Statement stmt;
-        if (!domain->db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?1", &stmt))
+        if (!domain->Prepare("SELECT instance FROM dom_instances WHERE instance = ?1", &stmt))
             return false;
         sqlite3_bind_text(stmt, 1, instance_key, -1, SQLITE_STATIC);
 
@@ -250,7 +237,9 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key, const
         }
     }
 
-    const char *database_filename = MakeInstanceFileName(domain->config.instances_directory, instance_key, &temp_alloc);
+    sq_Database db;
+    const char *database_filename = MakeInstanceFileName(gp_config.instances_directory, instance_key, &temp_alloc);
+
     if (TestFile(database_filename)) {
         LogError("Database '%1' already exists (old deleted instance?)", database_filename);
         if (out_error) {
@@ -258,14 +247,18 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key, const
         }
         return false;
     }
-    K_DEFER_N(db_guard) { UnlinkFile(database_filename); };
+
+    K_DEFER_N(db_guard) {
+        db.Close();
+        UnlinkFile(database_filename);
+    };
 
     uid_t owner_uid = 0;
     gid_t owner_gid = 0;
 #if !defined(_WIN32)
     {
         struct stat sb;
-        if (stat(domain->config.database_filename, &sb) < 0) {
+        if (stat(gp_config.database_filename, &sb) < 0) {
             LogError("Failed to stat '%1': %2", database_filename, strerror(errno));
             return false;
         }
@@ -276,7 +269,6 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key, const
 #endif
 
     // Create instance database
-    sq_Database db;
     if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         return false;
     if (!db.SetWAL(true))
@@ -387,14 +379,14 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key, const
     if (!db.Close())
         return false;
 
-    bool success = domain->db.Transaction([&]() {
+    bool success = domain->Transaction([&]() {
         int64_t now = GetUnixTime();
         sq_Binding demo = options.demo ? sq_Binding(now) : sq_Binding();
 
-        if (!domain->db.Run(R"(INSERT INTO dom_instances (instance, demo)
-                               VALUES (?1, ?2))", instance_key, demo)) {
+        if (!domain->Run(R"(INSERT INTO dom_instances (instance, demo)
+                            VALUES (?1, ?2))", instance_key, demo)) {
             // Master does not exist
-            if (sqlite3_errcode(domain->db) == SQLITE_CONSTRAINT) {
+            if (sqlite3_errcode(*domain) == SQLITE_CONSTRAINT) {
                 Span<const char> master = SplitStr(instance_key, '/');
 
                 LogError("Master instance '%1' does not exist", master);
@@ -409,9 +401,9 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key, const
         if (options.userid > 0) {
             K_ASSERT(options.permissions);
 
-            if (!domain->db.Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
-                                   VALUES (?1, ?2, ?3))",
-                                options.userid, instance_key, options.permissions))
+            if (!domain->Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
+                                VALUES (?1, ?2, ?3))",
+                             options.userid, instance_key, options.permissions))
                 return false;
         }
 
@@ -473,13 +465,10 @@ int RunInit(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *title = nullptr;
     const char *username = nullptr;
     const char *password = nullptr;
     bool check_password = true;
     bool totp = false;
-    char decrypt_key[45] = {};
-    char archive_key[45] = {};
     const char *demo = nullptr;
     bool change_owner = false;
     uid_t owner_uid = 0;
@@ -492,15 +481,11 @@ T(R"(Usage: %!..+%1 init [option...] [directory]%!0
 
 Options:
 
-    %!..+-t, --title title%!0              Set domain title
-
     %!..+-u, --username username%!0        Name of default user
         %!..+--password password%!0        Password of default user
         %!..+--totp%!0                     Enable TOTP for root user
 
         %!..+--allow_unsafe_password%!0    Allow unsafe passwords
-
-        %!..+--archive_key key%!0          Set domain public archive key
 
         %!..+--demo [name]%!0              Create default instance)"), FelixTarget);
 
@@ -518,8 +503,6 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
-            } else if (opt.Test("-t", "--title", OptionType::Value)) {
-                title = opt.current_value;
             } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
@@ -528,12 +511,6 @@ Options:
                 check_password = false;
             } else if (opt.Test("--totp")) {
                 totp = true;
-            } else if (opt.Test("--archive_key", OptionType::Value)) {
-                if (!ParseKeyString(opt.current_value))
-                    return 1;
-
-                K_ASSERT(strlen(opt.current_value) < K_SIZE(archive_key));
-                CopyString(opt.current_value, archive_key);
             } else if (opt.Test("--demo", OptionType::OptionalValue)) {
                 demo = opt.current_value ? opt.current_value : "demo";
 #if !defined(_WIN32)
@@ -561,13 +538,13 @@ Options:
         return 1;
     }
 
-    DomainHolder domain;
+    sq_Database db;
 
     // Drop created files and directories if anything fails
     HeapArray<const char *> directories;
     HeapArray<const char *> files;
     K_DEFER_N(root_guard) {
-        domain.db.Close();
+        db.Close();
 
         for (const char *filename: files) {
             UnlinkFile(filename);
@@ -592,21 +569,6 @@ Options:
         return 1;
 
     // Gather missing information
-    if (!title) {
-        title = SplitStrReverseAny(root_directory, K_PATH_SEPARATORS).ptr;
-
-retry_title:
-        title = Prompt(T("Domain title:"), title, nullptr, &temp_alloc);
-        if (!title)
-            return 1;
-
-        if (!CheckDomainTitle(title))
-            goto retry_title;
-    }
-    if (!title[0]) {
-        LogError("Empty domain title is not allowed");
-        return 1;
-    }
     if (!username) {
         username = Prompt(T("Admin user:"), &temp_alloc);
         if (!username)
@@ -637,22 +599,14 @@ retry_pwd:
     }
     LogInfo();
 
-    // Create archive key pair
-    if (!archive_key[0]) {
-        GenerateKeyPair(decrypt_key, archive_key);
-    }
-
     // Create domain config
     {
         const char *filename = Fmt(&temp_alloc, "%1%/goupile.ini", root_directory).ptr;
         files.Append(filename);
 
-        StreamWriter writer(filename);
-        Print(&writer, DefaultConfig, title, archive_key);
-        if (!writer.Close())
+        if (!WriteFile(filename, DefaultConfig))
             return 1;
-
-        if (!LoadConfig(filename, &domain.config))
+        if (!LoadConfig(filename, &gp_config))
             return 1;
     }
 
@@ -668,29 +622,29 @@ retry_pwd:
             return true;
         };
 
-        if (!make_directory(domain.config.instances_directory))
+        if (!make_directory(gp_config.instances_directory))
             return 1;
-        if (!make_directory(domain.config.tmp_directory))
+        if (!make_directory(gp_config.tmp_directory))
             return 1;
-        if (!make_directory(domain.config.archive_directory))
+        if (!make_directory(gp_config.archive_directory))
             return 1;
-        if (!make_directory(domain.config.snapshot_directory))
+        if (!make_directory(gp_config.snapshot_directory))
             return 1;
-        if (!make_directory(domain.config.view_directory))
+        if (!make_directory(gp_config.view_directory))
             return 1;
-        if (!make_directory(domain.config.export_directory))
+        if (!make_directory(gp_config.export_directory))
             return 1;
     }
 
     // Create database
-    if (!domain.db.Open(domain.config.database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+    if (!db.Open(gp_config.database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         return 1;
-    files.Append(domain.config.database_filename);
-    if (!domain.db.SetWAL(true))
+    files.Append(gp_config.database_filename);
+    if (!db.SetWAL(true))
         return 1;
-    if (!MigrateDomain(&domain.db, domain.config.instances_directory))
+    if (!MigrateDomain(&db, gp_config.instances_directory))
         return 1;
-    if (change_owner && !ChangeFileOwner(domain.config.database_filename, owner_uid, owner_gid))
+    if (change_owner && !ChangeFileOwner(gp_config.database_filename, owner_uid, owner_gid))
         return 1;
 
     // Create default root user
@@ -707,9 +661,9 @@ retry_pwd:
             sodium_bin2base64(local_key, K_SIZE(local_key), buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 
-        if (!domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
-                                                     change_password, root, local_key, confirm)
-                              VALUES (1, ?1, ?2, 0, 1, ?3, ?4))", username, hash, local_key, totp ? "TOTP" : nullptr))
+        if (!db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
+                                              change_password, root, local_key, confirm)
+                       VALUES (1, ?1, ?2, 0, 1, ?3, ?4))", username, hash, local_key, totp ? "TOTP" : nullptr))
             return 1;
     }
 
@@ -721,17 +675,12 @@ retry_pwd:
             .permissions = (1u << K_LEN(UserPermissionNames)) - 1
         };
 
-        if (demo && !CreateInstance(&domain, demo, demo, options))
+        if (demo && !CreateInstance(&db, demo, demo, options))
             return 1;
     }
 
-    if (!domain.db.Close())
+    if (!db.Close())
         return 1;
-
-    if (decrypt_key[0]) {
-        LogInfo();
-        LogKeyPair(decrypt_key, archive_key);
-    }
 
     root_guard.Disable();
     return 0;
@@ -777,15 +726,14 @@ Options:
         opt.LogUnusedArguments();
     }
 
-    DomainConfig config;
-    if (!LoadConfig(config_filename, &config))
+    if (!LoadConfig(config_filename, &gp_config))
         return 1;
 
     // Migrate and open main database
     sq_Database db;
-    if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
+    if (!db.Open(gp_config.database_filename, SQLITE_OPEN_READWRITE))
         return 1;
-    if (!MigrateDomain(&db, config.instances_directory))
+    if (!MigrateDomain(&db, gp_config.instances_directory))
         return 1;
 
     // Migrate instances
@@ -798,7 +746,7 @@ Options:
 
         while (stmt.Step()) {
             const char *key = (const char *)sqlite3_column_text(stmt, 0);
-            const char *filename = MakeInstanceFileName(config.instances_directory, key, &temp_alloc);
+            const char *filename = MakeInstanceFileName(gp_config.instances_directory, key, &temp_alloc);
 
             success &= MigrateInstance(filename);
         }
@@ -1079,218 +1027,9 @@ Options:
     return 0;
 }
 
-void HandleDemoCreate(http_IO *io)
-{
-    if (!gp_domain.config.demo_mode) {
-        LogError("Demo mode is not enabled");
-        io->SendError(403);
-        return;
-    }
-
-    char name[9];
-    Fmt(name, "%1", FmtRandom(K_SIZE(name) - 1));
-
-    bool success = gp_domain.db.Transaction([&]() {
-        InstanceOptions options = {
-            .populate = true,
-            .demo = true
-        };
-
-        if (int error = 500; !CreateInstance(&gp_domain, name, name, options, &error)) {
-            io->SendError(error);
-            return false;
-        }
-
-        return true;
-    });
-    if (!success)
-        return;
-
-    if (!gp_domain.SyncInstance(name))
-        return;
-
-    InstanceHolder *instance = gp_domain.Ref(name);
-    if (!instance)
-        return;
-    K_DEFER { instance->Unref(); };
-
-    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
-    if (!session) [[unlikely]]
-        return;
-    SessionStamp *stamp = session->GetStamp(instance);
-    if (!stamp) [[unlikely]] {
-        LogError("Failed to set session mode");
-        return;
-    }
-    stamp->develop = true;
-
-    const char *redirect = Fmt(io->Allocator(), "/%1/", name).ptr;
-
-    http_SendJson(io, 200, [&](json_Writer *json) {
-        json->StartObject();
-
-        json->Key("url"); json->String(redirect);
-
-        json->EndObject();
-    });
-}
-
-void PruneDemos()
-{
-    K_ASSERT(gp_domain.config.demo_mode);
-
-    // Best effort
-    gp_domain.db.Transaction([&] {
-        int64_t treshold = GetUnixTime() - DemoPruneDelay;
-
-        if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE demo IS NOT NULL AND demo < ?1", treshold))
-            return false;
-        if (sqlite3_changes(gp_domain.db) && !gp_domain.SyncAll(true))
-            return false;
-
-        return true;
-    });
-}
-
-void HandleInstanceCreate(http_IO *io)
-{
-    const http_RequestInfo &request = io->Request();
-    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
-
-    if (!session) {
-        LogError("User is not logged in");
-        io->SendError(401);
-        return;
-    }
-    if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to create instances");
-        io->SendError(403);
-        return;
-    }
-
-    if (gp_domain.CountInstances() >= MaxInstancesPerDomain) {
-        LogError("This domain has too many instances");
-        io->SendError(403);
-        return;
-    }
-
-    const char *instance_key = nullptr;
-    const char *name = nullptr;
-    bool populate = false;
-    const char *lang = nullptr;
-    {
-        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
-            bool valid = true;
-
-            for (json->ParseObject(); json->InObject(); ) {
-                Span<const char> key = json->ParseKey();
-
-                if (key == "key") {
-                    json->ParseString(&instance_key);
-                } else if (key == "name") {
-                    json->SkipNull() || json->ParseString(&name);
-                } else if (key == "populate") {
-                    json->ParseBool(&populate);
-                } else if (key == "lang") {
-                    json->ParseString(&lang);
-                } else {
-                    json->UnexpectedKey(key);
-                    valid = false;
-                }
-            }
-            valid &= json->IsValid();
-
-            if (valid) {
-                if (!instance_key) {
-                    LogError("Missing 'key' parameter");
-                    valid = false;
-                } else if (!CheckInstanceKey(instance_key)) {
-                    valid = false;
-                }
-
-                if (!name) {
-                    name = instance_key;
-                } else if (!name[0]) {
-                    LogError("Application name cannot be empty");
-                    valid = false;
-                }
-            }
-
-            return valid;
-        });
-
-        if (!success) {
-            io->SendError(422);
-            return;
-        }
-    }
-
-    // Can this admin user touch this instance?
-    if (!session->IsRoot()) {
-        if (!strchr(instance_key, '/')) {
-            LogError("Instance '%1' does not exist", instance_key);
-            io->SendError(404);
-            return;
-        }
-
-        Span<const char> master = SplitStr(instance_key, '/');
-
-        sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
-                                     WHERE userid = ?1 AND instance = ?2 AND
-                                           permissions & ?3)", &stmt))
-            return;
-        sqlite3_bind_int64(stmt, 1, session->userid);
-        sqlite3_bind_text(stmt, 2, master.ptr, (int)master.len, SQLITE_STATIC);
-        sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
-
-        if (!stmt.Step()) {
-            if (stmt.IsValid()) {
-                LogError("Instance '%1' does not exist", instance_key);
-                io->SendError(404);
-            }
-            return;
-        }
-    }
-
-    bool success = gp_domain.db.Transaction([&]() {
-        // Log action
-        int64_t time = GetUnixTime();
-        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                 VALUES (?1, ?2, ?3, ?4, ?5))",
-                              time, request.client_addr, "create_instance", session->username,
-                              instance_key))
-            return false;
-
-        InstanceOptions options = {
-            .populate = populate,
-            .lang = lang,
-            .userid = session->userid,
-            .permissions = (1u << K_LEN(UserPermissionNames)) - 1
-        };
-
-        if (int error = 500; !CreateInstance(&gp_domain, instance_key, name, options, &error)) {
-            io->SendError(error);
-            return false;
-        }
-
-        return true;
-    });
-    if (!success)
-        return;
-
-    if (!gp_domain.SyncInstance(instance_key))
-        return;
-
-    io->SendText(200, "{}", "application/json");
-}
-
 static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = nullptr)
 {
     BlockAllocator temp_alloc;
-
-    Span<InstanceHolder *> instances = gp_domain.LockInstances();
-    K_DEFER { gp_domain.UnlockInstances(); };
 
     if (out_conflict) {
         *out_conflict = false;
@@ -1302,8 +1041,15 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
         const char *filename;
     };
 
+    DomainHolder *domain = RefDomain();
+    K_DEFER { UnrefDomain(domain); };
+
     HeapArray<BackupEntry> entries;
-    K_DEFER { for (const BackupEntry &entry: entries) UnlinkFile(entry.filename); };
+    K_DEFER {
+        for (const BackupEntry &entry: entries) {
+            UnlinkFile(entry.filename);
+        }
+    };
 
     // Make archive filename
     const char *archive_filename;
@@ -1334,7 +1080,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
         }
 
         HeapArray<char> buf(&temp_alloc);
-        Fmt(&buf, "%1%/%2_%3", gp_domain.config.archive_directory, gp_domain.config.title, mtime_str);
+        Fmt(&buf, "%1%/%2_%3", gp_config.archive_directory, domain->settings.name, mtime_str);
         if (filter) {
             const char *filename = sqlite3_db_filename(*filter->db, "main");
 
@@ -1360,8 +1106,8 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
     }
 
     // Generate backup entries
-    entries.Append({ &gp_domain.db, "goupile.db", nullptr });
-    for (InstanceHolder *instance: instances) {
+    entries.Append({ &gp_db, "goupile.db", nullptr });
+    for (InstanceHolder *instance: domain->instances) {
         if (filter == nullptr || instance == filter || instance->master == filter) {
             const char *filename = sqlite3_db_filename(*instance->db, "main");
 
@@ -1372,7 +1118,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
         }
     }
     for (BackupEntry &entry: entries) {
-        entry.filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", &temp_alloc);
+        entry.filename = CreateUniqueFile(gp_config.tmp_directory, nullptr, ".tmp", &temp_alloc);
         if (!entry.filename)
             return false;
     }
@@ -1405,7 +1151,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
             LogError("Failed to initialize symmetric encryption");
             return false;
         }
-        if (crypto_box_seal(intro.eskey, skey, K_SIZE(skey), gp_domain.config.archive_key) != 0) {
+        if (crypto_box_seal(intro.eskey, skey, K_SIZE(skey), domain->settings.archive_key) != 0) {
             LogError("Failed to seal symmetric key");
             return false;
         }
@@ -1497,6 +1243,562 @@ bool ArchiveDomain()
     return ArchiveInstances(nullptr, &conflict) || conflict;
 }
 
+void HandleDomainDemo(http_IO *io)
+{
+    if (!gp_config.demo_mode) {
+        LogError("Demo mode is not enabled");
+        io->SendError(403);
+        return;
+    }
+
+    char name[9];
+    Fmt(name, "%1", FmtRandom(K_SIZE(name) - 1));
+
+    // Create instance database
+    {
+        InstanceOptions options = {
+            .populate = true,
+            .demo = true
+        };
+
+        if (int error = 500; !CreateInstance(&gp_db, name, name, options, &error)) {
+            io->SendError(error);
+            return;
+        }
+    }
+
+    SyncDomain(true);
+
+    InstanceHolder *instance = RefInstance(name);
+    if (!instance)
+        return;
+    K_DEFER { instance->Unref(); };
+
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+    if (!session) [[unlikely]]
+        return;
+    SessionStamp *stamp = session->GetStamp(instance);
+    if (!stamp) [[unlikely]] {
+        LogError("Failed to set session mode");
+        return;
+    }
+    stamp->develop = true;
+
+    const char *redirect = Fmt(io->Allocator(), "/%1/", name).ptr;
+
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
+
+        json->Key("url"); json->String(redirect);
+
+        json->EndObject();
+    });
+}
+
+void HandleDomainRestore(http_IO *io)
+{
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to upload archives");
+        io->SendError(403);
+        return;
+    }
+
+    const char *basename = nullptr;
+    const char *decrypt_key = nullptr;
+    bool restore_users = false;
+    {
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
+
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
+
+                if (key == "filename") {
+                    json->ParseString(&basename);
+                } else if (key == "key") {
+                    json->ParseString(&decrypt_key);
+                } else if (key == "users") {
+                    json->ParseBool(&restore_users);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (!basename) {
+                    LogError("Missing 'filename' parameter");
+                    valid = false;
+                }
+                if (!decrypt_key) {
+                    LogError("Missing 'key' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Safety checks
+    if (PathIsAbsolute(basename)) {
+        LogError("Path must not be absolute");
+        io->SendError(403);
+        return;
+    }
+    if (PathContainsDotDot(basename)) {
+        LogError("Path must not contain any '..' component");
+        io->SendError(403);
+        return;
+    }
+    if (GetPathExtension(basename) != ".goarch" &&
+            GetPathExtension(basename) != ".goupilearchive") {
+        LogError("Path must end with '.goarch' or '.goupilearchive' extension");
+        io->SendError(403);
+        return;
+    }
+
+    // Create directory for instance files
+    const char *tmp_directory = CreateUniqueDirectory(gp_config.tmp_directory, nullptr, io->Allocator());
+    HeapArray<const char *> tmp_filenames;
+    K_DEFER {
+        for (const char *filename: tmp_filenames) {
+            UnlinkFile(filename);
+        }
+        if (tmp_directory) {
+            UnlinkDirectory(tmp_directory);
+        }
+    };
+
+    // Extract archive to unencrypted ZIP file
+    const char *extract_filename;
+    {
+        const char *src_filename = Fmt(io->Allocator(), "%1%/%2", gp_config.archive_directory, basename).ptr;
+
+        int fd = -1;
+        extract_filename = CreateUniqueFile(gp_config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
+        if (!extract_filename)
+            return;
+        tmp_filenames.Append(extract_filename);
+        K_DEFER { CloseDescriptor(fd); };
+
+        StreamReader reader(src_filename);
+        StreamWriter writer(fd, extract_filename);
+        if (!reader.IsValid()) {
+            if (errno == ENOENT) {
+                LogError("Archive '%1' does not exist", basename);
+                io->SendError(404);
+            }
+            return;
+        }
+        if (!writer.IsValid())
+            return;
+
+        UnsealResult ret = UnsealArchive(&reader, &writer, decrypt_key);
+        if (ret != UnsealResult::Success) {
+            if (reader.IsValid()) {
+                io->SendError(ret == UnsealResult::WrongKey ? 403 : 422);
+            }
+            return;
+        }
+        if (!writer.Close())
+            return;
+    }
+
+    // Open ZIP file
+    mz_zip_archive zip;
+    mz_zip_zero_struct(&zip);
+    if (!mz_zip_reader_init_file(&zip, extract_filename, 0)) {
+        LogError("Failed to open ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
+        return;
+    }
+    K_DEFER { mz_zip_reader_end(&zip); };
+
+    // Extract and open archived main database (goupile.db)
+    sq_Database main_db;
+    {
+        int fd = -1;
+        const char *main_filename = CreateUniqueFile(gp_config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
+        if (!main_filename)
+            return;
+        tmp_filenames.Append(main_filename);
+        K_DEFER { CloseDescriptor(fd); };
+
+        int success = mz_zip_reader_extract_file_to_callback(&zip, "goupile.db", [](void *udata, mz_uint64, const void *ptr, size_t len) {
+            K_ASSERT(len <= K_SIZE_MAX);
+
+            int fd = *(int *)udata;
+            Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)len);
+
+            while (buf.len) {
+#if defined(_WIN32)
+                Size write_len = _write(fd, buf.ptr, (unsigned int)buf.len);
+#else
+                Size write_len = K_RESTART_EINTR(write(fd, buf.ptr, (size_t)buf.len), < 0);
+#endif
+                if (write_len < 0) {
+                    LogError("Failed to write to ZIP: %1", strerror(errno));
+                    return (size_t)0;
+                }
+
+                buf.ptr += write_len;
+                buf.len -= write_len;
+            }
+
+            return len;
+        }, &fd, 0);
+        if (!success) {
+            if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
+                LogError("Failed to extract 'goupile.db' from archive: %1", mz_zip_get_error_string(zip.m_last_error));
+            }
+            return;
+        }
+
+        if (!main_db.Open(main_filename, SQLITE_OPEN_READWRITE))
+            return;
+        if (!MigrateDomain(&main_db, nullptr))
+            return;
+    }
+
+    struct RestoreEntry {
+        const char *key;
+        const char *basename;
+        const char *filename;
+    };
+
+    // Gather information from goupile.db
+    HeapArray<RestoreEntry> entries;
+    {
+        sq_Statement stmt;
+        if (!main_db.Prepare("SELECT instance, master FROM dom_instances ORDER BY instance", &stmt))
+            return;
+
+        while (stmt.Step()) {
+            const char *instance_key = (const char *)sqlite3_column_text(stmt, 0);
+
+            RestoreEntry entry = {};
+
+            entry.key = DuplicateString(instance_key, io->Allocator()).ptr;
+            entry.basename = MakeInstanceFileName("instances", instance_key, io->Allocator());
+#if defined(_WIN32)
+            for (Size i = 0; entry.basename[i]; i++) {
+                char *ptr = (char *)entry.basename;
+                int c = entry.basename[i];
+
+                ptr[i] = (char)(c == '\\' ? '/' : c);
+            }
+#endif
+            entry.filename = MakeInstanceFileName(tmp_directory, instance_key, io->Allocator());
+
+            entries.Append(entry);
+            tmp_filenames.Append(entry.filename);
+        }
+        if (!stmt.IsValid())
+            return;
+    }
+
+    // Extract and migrate individual database files
+    for (const RestoreEntry &entry: entries) {
+        if (!mz_zip_reader_extract_file_to_file(&zip, entry.basename, entry.filename, 0)) {
+            LogError("Failed to extract '%1' from archive: %2", entry.basename, mz_zip_get_error_string(zip.m_last_error));
+            return;
+        }
+
+        if (!MigrateInstance(entry.filename))
+            return;
+    }
+
+    // Save current instances
+    if (bool conflict = false; !ArchiveInstances(nullptr, &conflict)) {
+        if (conflict) {
+            io->SendError(409, "Archive already exists");
+        }
+        return;
+    }
+
+    // Prepare for cleanup up of old instance directory
+    const char *swap_directory = nullptr;
+    K_DEFER {
+        if (swap_directory) {
+            EnumerateDirectory(swap_directory, nullptr, -1, [&](const char *filename, FileType) {
+                filename = Fmt(io->Allocator(), "%1%/%2", swap_directory, filename).ptr;
+                UnlinkFile(filename);
+
+                return true;
+            });
+            UnlinkDirectory(swap_directory);
+        }
+    };
+
+    // Replace running instances
+    bool success = gp_db.Transaction([&]() {
+        // Log action
+        int64_t time = GetUnixTime();
+        if (!gp_db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                          VALUES (?1, ?2, ?3, ?4, ?5))",
+                       time, request.client_addr, "restore", session->username,
+                       basename))
+            return false;
+
+        if (!gp_db.Run("DELETE FROM dom_instances"))
+            return false;
+        SyncDomain(true);
+        for (const RestoreEntry &entry: entries) {
+            if (!gp_db.Run("INSERT INTO dom_instances (instance) VALUES (?1)", entry.key))
+                return false;
+        }
+
+        // It would be much better to do this by ATTACHing the old database and do the copy
+        // in SQL. Unfortunately this triggers memory problems in SQLite Multiple Ciphers and
+        // I don't have time to investigate this right now.
+        if (restore_users) {
+            bool success = gp_db.RunMany(R"(
+                DELETE FROM dom_permissions;
+                DELETE FROM dom_users;
+                DELETE FROM sqlite_sequence WHERE name = 'dom_users';
+            )");
+            if (!success)
+                return false;
+
+            // Copy users
+            {
+                sq_Statement stmt;
+                if (!main_db.Prepare(R"(SELECT userid, username, password_hash,
+                                               root, local_key, email, phone
+                                        FROM dom_users)", &stmt))
+                    return false;
+
+                while (stmt.Step()) {
+                    int64_t userid = sqlite3_column_int64(stmt, 0);
+                    const char *username = (const char *)sqlite3_column_text(stmt, 1);
+                    const char *password_hash = (const char *)sqlite3_column_text(stmt, 2);
+                    int root = sqlite3_column_int(stmt, 3);
+                    const char *local_key = (const char *)sqlite3_column_text(stmt, 4);
+                    const char *email = (const char *)sqlite3_column_text(stmt, 5);
+                    const char *phone = (const char *)sqlite3_column_text(stmt, 6);
+
+                    if (!gp_db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
+                                                             change_password, root, local_key, email, phone)
+                                      VALUES (?1, ?2, ?3, 0, ?4, ?5, ?6, ?7))",
+                                   userid, username, password_hash, root, local_key, email, phone))
+                        return false;
+                }
+                if (!stmt.IsValid())
+                    return false;
+            }
+
+            // Copy permissions
+            {
+                sq_Statement stmt;
+                if (!main_db.Prepare("SELECT userid, instance, permissions FROM dom_permissions", &stmt))
+                    return false;
+
+                while (stmt.Step()) {
+                    int64_t userid = sqlite3_column_int64(stmt, 0);
+                    const char *instance_key = (const char *)sqlite3_column_text(stmt, 1);
+                    int64_t permissions = sqlite3_column_int(stmt, 2);
+
+                    if (!gp_db.Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
+                                      VALUES (?1, ?2, ?3))",
+                                          userid, instance_key, permissions))
+                        return false;
+                }
+                if (!stmt.IsValid())
+                    return false;
+            }
+        }
+
+#if defined(__linux__) && defined(RENAME_EXCHANGE)
+        if (renameat2(AT_FDCWD, gp_config.instances_directory,
+                      AT_FDCWD, tmp_directory, RENAME_EXCHANGE) < 0) {
+            LogDebug("Failed to swap directories atomically: %1", strerror(errno));
+#else
+        if (true) {
+#endif
+            swap_directory = Fmt(io->Allocator(), "%1%/%2", gp_config.tmp_directory, FmtRandom(24)).ptr;
+
+            unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
+
+            // Non-atomic swap but it is hard to do better here
+            if (RenameFile(gp_config.instances_directory, swap_directory, flags) != RenameResult::Success)
+                return false;
+            if (RenameFile(tmp_directory, gp_config.instances_directory, flags) != RenameResult::Success) {
+                // If this goes wrong, we're completely screwed :)
+                // At least on Linux we have some hope to avoid this problem
+                RenameFile(swap_directory, gp_config.instances_directory, flags);
+                return false;
+            }
+        } else {
+            swap_directory = tmp_directory;
+        }
+
+        K_ASSERT(tmp_filenames.len == entries.len + 2);
+        tmp_filenames.RemoveFrom(2);
+        tmp_directory = nullptr;
+
+        return true;
+    });
+
+    SyncDomain(true);
+
+    if (!success)
+        return;
+
+    io->SendText(200, "{}", "application/json");
+}
+
+void HandleInstanceCreate(http_IO *io)
+{
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
+        LogError("Non-admin users are not allowed to create instances");
+        io->SendError(403);
+        return;
+    }
+
+    // Enforce limits
+    {
+        DomainHolder *domain = RefDomain();
+        K_DEFER { UnrefDomain(domain); };
+
+        if (domain->instances.len >= MaxInstances) {
+            LogError("This domain has too many instances");
+            io->SendError(403);
+            return;
+        }
+    }
+
+    const char *instance_key = nullptr;
+    const char *name = nullptr;
+    bool populate = false;
+    const char *lang = nullptr;
+    {
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
+
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
+
+                if (key == "key") {
+                    json->ParseString(&instance_key);
+                } else if (key == "name") {
+                    json->SkipNull() || json->ParseString(&name);
+                } else if (key == "populate") {
+                    json->ParseBool(&populate);
+                } else if (key == "lang") {
+                    json->ParseString(&lang);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (!instance_key) {
+                    LogError("Missing 'key' parameter");
+                    valid = false;
+                } else if (!CheckInstanceKey(instance_key)) {
+                    valid = false;
+                }
+
+                if (!name) {
+                    name = instance_key;
+                } else if (!name[0]) {
+                    LogError("Application name cannot be empty");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Can this admin user touch this instance?
+    if (!session->IsRoot()) {
+        if (!strchr(instance_key, '/')) {
+            LogError("Instance '%1' does not exist", instance_key);
+            io->SendError(404);
+            return;
+        }
+
+        Span<const char> master = SplitStr(instance_key, '/');
+
+        sq_Statement stmt;
+        if (!gp_db.Prepare(R"(SELECT instance FROM dom_permissions
+                              WHERE userid = ?1 AND instance = ?2 AND
+                                    permissions & ?3)", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, session->userid);
+        sqlite3_bind_text(stmt, 2, master.ptr, (int)master.len, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Instance '%1' does not exist", instance_key);
+                io->SendError(404);
+            }
+            return;
+        }
+    }
+
+    bool success = gp_db.Transaction([&]() {
+        // Log action
+        int64_t time = GetUnixTime();
+        if (!gp_db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                          VALUES (?1, ?2, ?3, ?4, ?5))",
+                       time, request.client_addr, "create_instance", session->username,
+                       instance_key))
+            return false;
+
+        InstanceOptions options = {
+            .populate = populate,
+            .lang = lang,
+            .userid = session->userid,
+            .permissions = (1u << K_LEN(UserPermissionNames)) - 1
+        };
+
+        if (int error = 500; !CreateInstance(&gp_db, instance_key, name, options, &error)) {
+            io->SendError(error);
+            return false;
+        }
+
+        return true;
+    });
+    if (!success)
+        return;
+
+    SyncDomain(true);
+
+    io->SendText(200, "{}", "application/json");
+}
+
 void HandleInstanceDelete(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
@@ -1546,7 +1848,7 @@ void HandleInstanceDelete(http_IO *io)
         }
     }
 
-    InstanceHolder *instance = gp_domain.Ref(instance_key);
+    InstanceHolder *instance = RefInstance(instance_key);
     if (!instance) {
         LogError("Instance '%1' does not exist", instance_key);
         io->SendError(404);
@@ -1557,9 +1859,9 @@ void HandleInstanceDelete(http_IO *io)
     // Can this admin user touch this instance?
     if (!session->IsRoot()) {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
-                                     WHERE userid = ?1 AND instance = ?2 AND
-                                           permissions & ?3)", &stmt))
+        if (!gp_db.Prepare(R"(SELECT instance FROM dom_permissions
+                              WHERE userid = ?1 AND instance = ?2 AND
+                                    permissions & ?3)", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, session->userid);
         sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
@@ -1575,14 +1877,11 @@ void HandleInstanceDelete(http_IO *io)
     }
 
     // Be safe...
-    {
-        bool conflict;
-        if (!ArchiveInstances(instance, &conflict)) {
-            if (conflict) {
-                io->SendError(409, "Archive already exists");
-            }
-            return;
+    if (bool conflict = false; !ArchiveInstances(instance, &conflict)) {
+        if (conflict) {
+            io->SendError(409, "Archive already exists");
         }
+        return;
     }
 
     // Copy filenames to avoid use-after-free
@@ -1597,27 +1896,27 @@ void HandleInstanceDelete(http_IO *io)
         unlink_filenames.Append(filename);
     }
 
-    bool success = gp_domain.db.Transaction([&]() {
+    bool success = gp_db.Transaction([&]() {
         int64_t time = GetUnixTime();
 
         for (Size i = instance->slaves.len - 1; i >= 0; i--) {
             InstanceHolder *slave = instance->slaves[i];
 
-            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5))",
-                                  time, request.client_addr, "delete_instance", session->username,
-                                  slave->key))
+            if (!gp_db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                              VALUES (?1, ?2, ?3, ?4, ?5))",
+                           time, request.client_addr, "delete_instance", session->username,
+                           slave->key))
                 return false;
-            if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1", slave->key))
+            if (!gp_db.Run("DELETE FROM dom_instances WHERE instance = ?1", slave->key))
                 return false;
         }
 
-        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                 VALUES (?1, ?2, ?3, ?4, ?5))",
-                              time, request.client_addr, "delete_instance", session->username,
-                              instance_key))
+        if (!gp_db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                          VALUES (?1, ?2, ?3, ?4, ?5))",
+                       time, request.client_addr, "delete_instance", session->username,
+                       instance_key))
             return false;
-        if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1", instance_key))
+        if (!gp_db.Run("DELETE FROM dom_instances WHERE instance = ?1", instance_key))
             return false;
 
         // Don't use instance after that!
@@ -1630,31 +1929,9 @@ void HandleInstanceDelete(http_IO *io)
     if (!success)
         return;
 
-    if (!gp_domain.SyncInstance(instance_key))
-        return;
+    SyncDomain(true);
 
-    bool complete = true;
-    for (const char *filename: unlink_filenames) {
-        // Not much we can do if this fails to succeed anyway; the backup is okay and the
-        // instance is deleted. We're mostly successful and we can't go back.
-
-        // Switch off WAL to make sure new databases with the same name don't get into trouble
-        sq_Database db;
-        if (!db.Open(filename, SQLITE_OPEN_READWRITE)) {
-            complete = false;
-            continue;
-        }
-        if (!db.RunMany(R"(PRAGMA locking_mode = EXCLUSIVE;
-                           PRAGMA journal_mode = DELETE;)")) {
-            complete = false;
-            continue;
-        }
-        db.Close();
-
-        complete &= UnlinkFile(filename);
-    }
-
-    io->SendText(complete ? 200 : 202, "{}", "application/json");
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleInstanceConfigure(http_IO *io)
@@ -1674,7 +1951,7 @@ void HandleInstanceConfigure(http_IO *io)
     }
 
     const char *instance_key = nullptr;
-    decltype(InstanceHolder::config) config;
+    decltype(InstanceHolder::settings) settings;
     bool change_use_offline = false;
     bool change_data_remote = false;
     bool change_allow_guests = false;
@@ -1690,41 +1967,41 @@ void HandleInstanceConfigure(http_IO *io)
                 if (key == "instance") {
                     json->ParseString(&instance_key);
                 } else if (key == "name") {
-                    json->SkipNull() || json->ParseString(&config.name);
+                    json->SkipNull() || json->ParseString(&settings.name);
                 } else if (key == "lang") {
-                    json->SkipNull() || json->ParseString(&config.lang);
+                    json->SkipNull() || json->ParseString(&settings.lang);
                 } else if (key == "use_offline") {
                     if (!json->SkipNull()) {
-                        json->ParseBool(&config.use_offline);
+                        json->ParseBool(&settings.use_offline);
                         change_use_offline = true;
                     }
                 } else if (key == "data_remote") {
                     if (!json->SkipNull()) {
-                        json->ParseBool(&config.data_remote);
+                        json->ParseBool(&settings.data_remote);
                         change_data_remote = true;
                     }
                 } else if (key == "token_key") {
-                    json->SkipNull() || json->ParseString(&config.token_key);
+                    json->SkipNull() || json->ParseString(&settings.token_key);
                 } else if (key == "allow_guests") {
                     if (!json->SkipNull()) {
-                        json->ParseBool(&config.allow_guests);
+                        json->ParseBool(&settings.allow_guests);
                         change_allow_guests = true;
                     }
                 } else if (key == "fs_version") {
                     json->SkipNull() || json->ParseInt(&fs_version);
                 } else if (key == "export_days") {
                     if (!json->SkipNull()) {
-                        json->ParseInt(&config.export_days);
+                        json->ParseInt(&settings.export_days);
                         change_export = true;
                     }
                 } else if (key == "export_time") {
                     if (!json->SkipNull()) {
-                        json->ParseInt(&config.export_time);
+                        json->ParseInt(&settings.export_time);
                         change_export = true;
                     }
                 } else if (key == "export_all") {
                     if (!json->SkipNull()) {
-                        json->ParseBool(&config.export_all);
+                        json->ParseBool(&settings.export_all);
                         change_export = true;
                     }
                 } else {
@@ -1740,17 +2017,17 @@ void HandleInstanceConfigure(http_IO *io)
                     valid = false;
                 }
 
-                if (config.name && !config.name[0]) {
+                if (settings.name && !settings.name[0]) {
                     LogError("Application name cannot be empty");
                     valid = false;
                 }
 
                 if (change_export) {
-                    if (config.export_days < 0 || config.export_days > 127) {
+                    if (settings.export_days < 0 || settings.export_days > 127) {
                         LogError("Invalid value for export days");
                         valid = false;
                     }
-                    if (config.export_time < 0 || config.export_time >= 2400) {
+                    if (settings.export_time < 0 || settings.export_time >= 2400) {
                         LogError("Invalid value for export time");
                         valid = false;
                     }
@@ -1766,20 +2043,20 @@ void HandleInstanceConfigure(http_IO *io)
         }
     }
 
-    InstanceHolder *instance = gp_domain.Ref(instance_key);
+    InstanceHolder *instance = RefInstance(instance_key);
     if (!instance) {
         LogError("Instance '%1' does not exist", instance_key);
         io->SendError(404);
         return;
     }
-    K_DEFER_N(ref_guard) { instance->Unref(); };
+    K_DEFER { instance->Unref(); };
 
     // Can this admin user touch this instance?
     if (!session->IsRoot()) {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
-                                     WHERE userid = ?1 AND instance = ?2 AND
-                                           permissions & ?3)", &stmt))
+        if (!gp_db.Prepare(R"(SELECT instance FROM dom_permissions
+                              WHERE userid = ?1 AND instance = ?2 AND
+                                    permissions & ?3)", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, session->userid);
         sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
@@ -1798,8 +2075,8 @@ void HandleInstanceConfigure(http_IO *io)
     bool success = instance->db->Transaction([&]() {
         // Log action
         int64_t time = GetUnixTime();
-        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                 VALUES (?1, ?2, ?3, ?4, ?5))",
+        if (!gp_db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                          VALUES (?1, ?2, ?3, ?4, ?5))",
                               time, request.client_addr, "edit_instance", session->username,
                               instance_key))
             return false;
@@ -1807,16 +2084,16 @@ void HandleInstanceConfigure(http_IO *io)
         const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1";
         bool success = true;
 
-        success &= !config.name || instance->db->Run(sql, "Name", config.name);
+        success &= !settings.name || instance->db->Run(sql, "Name", settings.name);
         if (instance->master == instance) {
-            success &= !config.lang || instance->db->Run(sql, "Language", config.lang);
-            success &= !change_use_offline || instance->db->Run(sql, "UseOffline", 0 + config.use_offline);
-            success &= !change_data_remote || instance->db->Run(sql, "DataRemote", 0 + config.data_remote);
-            success &= !config.token_key || instance->db->Run(sql, "TokenKey", config.token_key);
-            success &= !change_allow_guests || instance->db->Run(sql, "AllowGuests", 0 + config.allow_guests);
-            success &= !change_export || instance->db->Run(sql, "ExportDays", config.export_days);
-            success &= !change_export || instance->db->Run(sql, "ExportTime", config.export_time);
-            success &= !change_export || instance->db->Run(sql, "ExportAll", 0 + config.export_all);
+            success &= !settings.lang || instance->db->Run(sql, "Language", settings.lang);
+            success &= !change_use_offline || instance->db->Run(sql, "UseOffline", 0 + settings.use_offline);
+            success &= !change_data_remote || instance->db->Run(sql, "DataRemote", 0 + settings.data_remote);
+            success &= !settings.token_key || instance->db->Run(sql, "TokenKey", settings.token_key);
+            success &= !change_allow_guests || instance->db->Run(sql, "AllowGuests", 0 + settings.allow_guests);
+            success &= !change_export || instance->db->Run(sql, "ExportDays", settings.export_days);
+            success &= !change_export || instance->db->Run(sql, "ExportTime", settings.export_time);
+            success &= !change_export || instance->db->Run(sql, "ExportAll", 0 + settings.export_all);
 
             if (fs_version > 0) {
                 success &= instance->db->Run(sql, "FsVersion", fs_version);
@@ -1839,18 +2116,12 @@ void HandleInstanceConfigure(http_IO *io)
         if (!success)
             return false;
 
-        // Don't use instance after that!
-        instance->Unref();
-        instance = nullptr;
-        ref_guard.Disable();
-
         return true;
     });
     if (!success)
         return;
 
-    if (!gp_domain.SyncInstance(instance_key))
-        return;
+    SyncDomain(true, instance);
 
     io->SendText(200, "{}", "application/json");
 }
@@ -1870,15 +2141,15 @@ void HandleInstanceList(http_IO *io)
         return;
     }
 
-    Span<InstanceHolder *> instances = gp_domain.LockInstances();
-    K_DEFER { gp_domain.UnlockInstances(); };
+    DomainHolder *domain = RefDomain();
+    K_DEFER { UnrefDomain(domain); };
 
     // Check allowed instances
     HashSet<const char *> allowed_masters;
     if (!session->IsRoot()) {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
-                                     WHERE userid = ?1 AND permissions & ?2)", &stmt))
+        if (!gp_db.Prepare(R"(SELECT instance FROM dom_permissions
+                              WHERE userid = ?1 AND permissions & ?2)", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, session->userid);
         sqlite3_bind_int(stmt, 2, (int)UserPermission::BuildAdmin);
@@ -1892,7 +2163,7 @@ void HandleInstanceList(http_IO *io)
     http_SendJson(io, 200, [&](json_Writer *json) {
         json->StartArray();
 
-        for (InstanceHolder *instance: instances) {
+        for (InstanceHolder *instance: domain->instances) {
             if (!session->IsRoot() && !allowed_masters.Find(instance->master->key.ptr))
                 continue;
 
@@ -1906,23 +2177,21 @@ void HandleInstanceList(http_IO *io)
             }
             json->Key("legacy"); json->Bool(instance->legacy);
             json->Key("config"); json->StartObject();
-                json->Key("name"); json->String(instance->config.name);
-                if (instance->config.lang) {
-                    json->Key("lang"); json->String(instance->config.lang);
+                json->Key("name"); json->String(instance->settings.name);
+                json->Key("lang"); json->String(instance->settings.lang);
+                json->Key("use_offline"); json->Bool(instance->settings.use_offline);
+                json->Key("data_remote"); json->Bool(instance->settings.data_remote);
+                if (instance->settings.token_key) {
+                    json->Key("token_key"); json->String(instance->settings.token_key);
                 }
-                json->Key("use_offline"); json->Bool(instance->config.use_offline);
-                json->Key("data_remote"); json->Bool(instance->config.data_remote);
-                if (instance->config.token_key) {
-                    json->Key("token_key"); json->String(instance->config.token_key);
-                }
-                json->Key("allow_guests"); json->Bool(instance->config.allow_guests);
-                if (instance->config.export_days) {
-                    json->Key("export_days"); json->Int(instance->config.export_days);
+                json->Key("allow_guests"); json->Bool(instance->settings.allow_guests);
+                if (instance->settings.export_days) {
+                    json->Key("export_days"); json->Int(instance->settings.export_days);
                 } else {
                     json->Key("export_days"); json->Null();
                 }
-                json->Key("export_time"); json->Int(instance->config.export_time);
-                json->Key("export_all"); json->Bool(instance->config.export_all);
+                json->Key("export_time"); json->Int(instance->settings.export_time);
+                json->Key("export_all"); json->Bool(instance->settings.export_all);
                 json->Key("fs_version"); json->Int64(instance->fs_version);
             json->EndObject();
 
@@ -2015,16 +2284,16 @@ void HandleInstanceAssign(http_IO *io)
     // Does instance exist?
     {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?1", &stmt))
+        if (!gp_db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?1", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, instance, -1, SQLITE_STATIC);
 
         if (stmt.Step() && !session->IsRoot()) {
             Span<const char> master = SplitStr(instance, '/');
 
-            if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
-                                         WHERE userid = ?1 AND instance = ?2 AND
-                                               permissions & ?3)", &stmt))
+            if (!gp_db.Prepare(R"(SELECT instance FROM dom_permissions
+                                  WHERE userid = ?1 AND instance = ?2 AND
+                                        permissions & ?3)", &stmt))
                 return;
             sqlite3_bind_int64(stmt, 1, session->userid);
             sqlite3_bind_text(stmt, 2, master.ptr, (int)master.len, SQLITE_STATIC);
@@ -2046,7 +2315,7 @@ void HandleInstanceAssign(http_IO *io)
     const char *username;
     {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare("SELECT root, username FROM dom_users WHERE userid = ?1", &stmt))
+        if (!gp_db.Prepare("SELECT root, username FROM dom_users WHERE userid = ?1", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, userid);
 
@@ -2071,33 +2340,36 @@ void HandleInstanceAssign(http_IO *io)
         username = DuplicateString((const char *)sqlite3_column_text(stmt, 1), io->Allocator()).ptr;
     }
 
-    gp_domain.db.Transaction([&]() {
+    bool success = gp_db.Transaction([&]() {
         // Log action
         int64_t time = GetUnixTime();
-        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                 VALUES (?1, ?2, ?3, ?4, ?5 || '+' || ?6 || ':' || ?7))",
-                              time, request.client_addr, "assign_user", session->username,
-                              instance, username, permissions))
+        if (!gp_db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                          VALUES (?1, ?2, ?3, ?4, ?5 || '+' || ?6 || ':' || ?7))",
+                       time, request.client_addr, "assign_user", session->username,
+                       instance, username, permissions))
             return false;
 
         // Adjust permissions
         if (permissions) {
-            if (!gp_domain.db.Run(R"(INSERT INTO dom_permissions (instance, userid, permissions)
-                                     VALUES (?1, ?2, ?3)
-                                     ON CONFLICT (instance, userid) DO UPDATE SET permissions = excluded.permissions)",
-                                  instance, userid, permissions))
+            if (!gp_db.Run(R"(INSERT INTO dom_permissions (instance, userid, permissions)
+                              VALUES (?1, ?2, ?3)
+                              ON CONFLICT (instance, userid) DO UPDATE SET permissions = excluded.permissions)",
+                           instance, userid, permissions))
                 return false;
         } else {
-            if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?1 AND userid = ?2",
-                                  instance, userid))
+            if (!gp_db.Run("DELETE FROM dom_permissions WHERE instance = ?1 AND userid = ?2",
+                           instance, userid))
                 return false;
         }
 
         InvalidateUserStamps(userid);
 
-        io->SendText(200, "{}", "application/json");
         return true;
     });
+    if (!success)
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleInstancePermissions(http_IO *io)
@@ -2123,7 +2395,7 @@ void HandleInstancePermissions(http_IO *io)
         return;
     }
 
-    InstanceHolder *instance = gp_domain.Ref(instance_key);
+    InstanceHolder *instance = RefInstance(instance_key);
     if (!instance) {
         LogError("Instance '%1' does not exist", instance_key);
         io->SendError(404);
@@ -2134,9 +2406,9 @@ void HandleInstancePermissions(http_IO *io)
     // Can this admin user touch this instance?
     if (!session->IsRoot()) {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
-                                     WHERE userid = ?1 AND instance = ?2 AND
-                                           permissions & ?3)", &stmt))
+        if (!gp_db.Prepare(R"(SELECT instance FROM dom_permissions
+                              WHERE userid = ?1 AND instance = ?2 AND
+                                    permissions & ?3)", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, session->userid);
         sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
@@ -2152,11 +2424,11 @@ void HandleInstancePermissions(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!gp_domain.db.Prepare(R"(SELECT p.userid, p.permissions, u.root
-                                 FROM dom_permissions p
-                                 INNER JOIN dom_users u ON (u.userid = p.userid)
-                                 WHERE p.instance = ?1
-                                 ORDER BY p.instance)", &stmt))
+    if (!gp_db.Prepare(R"(SELECT p.userid, p.permissions, u.root
+                          FROM dom_permissions p
+                          INNER JOIN dom_users u ON (u.userid = p.userid)
+                          WHERE p.instance = ?1
+                          ORDER BY p.instance)", &stmt))
         return;
     sqlite3_bind_text(stmt, 1, instance_key, -1, SQLITE_STATIC);
 
@@ -2247,13 +2519,13 @@ void HandleInstanceMigrate(http_IO *io)
         }
     }
 
-    InstanceHolder *instance = gp_domain.Ref(instance_key);
+    InstanceHolder *instance = RefInstance(instance_key);
     if (!instance) {
         LogError("Instance '%1' does not exist", instance_key);
         io->SendError(404);
         return;
     }
-    K_DEFER_N(ref_guard) { instance->Unref(); };
+    K_DEFER { instance->Unref(); };
 
     // Make sure it is a legacy instance
     if (!instance->legacy) {
@@ -2266,26 +2538,17 @@ void HandleInstanceMigrate(http_IO *io)
     io->ExtendTimeout(120000);
 
     // Be safe...
-    {
-        bool conflict;
-        if (!ArchiveInstances(instance, &conflict)) {
-            if (conflict) {
-                io->SendError(409, "Archive already exists");
-            }
-            return;
+    if (bool conflict = false; !ArchiveInstances(instance, &conflict)) {
+        if (conflict) {
+            io->SendError(409, "Archive already exists");
         }
+        return;
     }
 
     if (!MigrateInstance(instance->db, InstanceVersion))
         return;
 
-    // Don't use instance after that!
-    instance->Unref();
-    instance = nullptr;
-    ref_guard.Disable();
-
-    if (!gp_domain.SyncInstance(instance_key))
-        return;
+    SyncDomain(true, instance);
 
     io->SendText(200, "{}", "application/json");
 }
@@ -2338,7 +2601,7 @@ void HandleInstanceClear(http_IO *io)
         }
     }
 
-    InstanceHolder *instance = gp_domain.Ref(instance_key);
+    InstanceHolder *instance = RefInstance(instance_key);
     if (!instance) {
         LogError("Instance '%1' does not exist", instance_key);
         io->SendError(404);
@@ -2349,9 +2612,9 @@ void HandleInstanceClear(http_IO *io)
     // Can this admin user touch this instance?
     if (!session->IsRoot()) {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
-                                     WHERE userid = ?1 AND instance = ?2 AND
-                                           permissions & ?3)", &stmt))
+        if (!gp_db.Prepare(R"(SELECT instance FROM dom_permissions
+                              WHERE userid = ?1 AND instance = ?2 AND
+                                    permissions & ?3)", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, session->userid);
         sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
@@ -2374,14 +2637,11 @@ void HandleInstanceClear(http_IO *io)
     }
 
     // Be safe...
-    {
-        bool conflict;
-        if (!ArchiveInstances(instance, &conflict)) {
-            if (conflict) {
-                io->SendError(409, "Archive already exists");
-            }
-            return;
+    if (bool conflict = false; !ArchiveInstances(instance, &conflict)) {
+        if (conflict) {
+            io->SendError(409, "Archive already exists");
         }
+        return;
     }
 
     bool success = instance->db->Transaction([&]() {
@@ -2429,14 +2689,11 @@ void HandleArchiveCreate(http_IO *io)
     io->ExtendTimeout(60000);
 
     // Do the work
-    {
-        bool conflict;
-        if (!ArchiveInstances(nullptr, &conflict)) {
-            if (conflict) {
-                io->SendError(409, "Archive already exists");
-            }
-            return;
+    if (bool conflict = false; !ArchiveInstances(nullptr, &conflict)) {
+        if (conflict) {
+            io->SendError(409, "Archive already exists");
         }
+        return;
     }
 
     io->SendText(200, "{}", "application/json");
@@ -2502,7 +2759,7 @@ void HandleArchiveDelete(http_IO *io)
         return;
     }
 
-    const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
+    const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_config.archive_directory, basename).ptr;
 
     if (!TestFile(filename, FileType::File)) {
         io->SendError(404);
@@ -2532,12 +2789,12 @@ void HandleArchiveList(http_IO *io)
     HeapArray<const char *> filenames;
     HeapArray<FileInfo> infos;
     {
-        EnumResult ret = EnumerateDirectory(gp_domain.config.archive_directory, nullptr, -1,
+        EnumResult ret = EnumerateDirectory(gp_config.archive_directory, nullptr, -1,
                                             [&](const char *basename, FileType) {
             Span<const char> extension = GetPathExtension(basename);
 
             if (extension == ".goarch" || extension == ".goupilearchive") {
-                const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
+                const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_config.archive_directory, basename).ptr;
                 FileInfo file_info = {};
 
                 // Go on even if this fails, or archive is in creation. Errors end up in the log anyway
@@ -2609,7 +2866,7 @@ void HandleArchiveDownload(http_IO *io)
         return;
     }
 
-    const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
+    const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_config.archive_directory, basename).ptr;
     const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1\"", basename).ptr;
 
     io->AddHeader("Content-Disposition", disposition);
@@ -2651,7 +2908,7 @@ void HandleArchiveUpload(http_IO *io)
         return;
     }
 
-    const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
+    const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_config.archive_directory, basename).ptr;
 
     StreamWriter writer;
     if (!writer.Open(filename, (int)StreamWriterFlag::Exclusive |
@@ -2679,376 +2936,6 @@ void HandleArchiveUpload(http_IO *io)
     } while (!reader.IsEOF());
 
     if (!writer.Close())
-        return;
-
-    io->SendText(200, "{}", "application/json");
-}
-
-void HandleArchiveRestore(http_IO *io)
-{
-    const http_RequestInfo &request = io->Request();
-    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
-
-    if (!session) {
-        LogError("User is not logged in");
-        io->SendError(401);
-        return;
-    }
-    if (!session->IsRoot()) {
-        LogError("Non-root users are not allowed to upload archives");
-        io->SendError(403);
-        return;
-    }
-
-    const char *basename = nullptr;
-    const char *decrypt_key = nullptr;
-    bool restore_users = false;
-    {
-        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
-            bool valid = true;
-
-            for (json->ParseObject(); json->InObject(); ) {
-                Span<const char> key = json->ParseKey();
-
-                if (key == "filename") {
-                    json->ParseString(&basename);
-                } else if (key == "key") {
-                    json->ParseString(&decrypt_key);
-                } else if (key == "users") {
-                    json->ParseBool(&restore_users);
-                } else {
-                    json->UnexpectedKey(key);
-                    valid = false;
-                }
-            }
-            valid &= json->IsValid();
-
-            if (valid) {
-                if (!basename) {
-                    LogError("Missing 'filename' parameter");
-                    valid = false;
-                }
-                if (!decrypt_key) {
-                    LogError("Missing 'key' parameter");
-                    valid = false;
-                }
-            }
-
-            return valid;
-        });
-
-        if (!success) {
-            io->SendError(422);
-            return;
-        }
-    }
-
-    // Safety checks
-    if (PathIsAbsolute(basename)) {
-        LogError("Path must not be absolute");
-        io->SendError(403);
-        return;
-    }
-    if (PathContainsDotDot(basename)) {
-        LogError("Path must not contain any '..' component");
-        io->SendError(403);
-        return;
-    }
-    if (GetPathExtension(basename) != ".goarch" &&
-            GetPathExtension(basename) != ".goupilearchive") {
-        LogError("Path must end with '.goarch' or '.goupilearchive' extension");
-        io->SendError(403);
-        return;
-    }
-
-    // Create directory for instance files
-    const char *tmp_directory = CreateUniqueDirectory(gp_domain.config.tmp_directory, nullptr, io->Allocator());
-    HeapArray<const char *> tmp_filenames;
-    K_DEFER {
-        for (const char *filename: tmp_filenames) {
-            UnlinkFile(filename);
-        }
-        if (tmp_directory) {
-            UnlinkDirectory(tmp_directory);
-        }
-    };
-
-    // Extract archive to unencrypted ZIP file
-    const char *extract_filename;
-    {
-        const char *src_filename = Fmt(io->Allocator(), "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
-
-        int fd = -1;
-        extract_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
-        if (!extract_filename)
-            return;
-        tmp_filenames.Append(extract_filename);
-        K_DEFER { CloseDescriptor(fd); };
-
-        StreamReader reader(src_filename);
-        StreamWriter writer(fd, extract_filename);
-        if (!reader.IsValid()) {
-            if (errno == ENOENT) {
-                LogError("Archive '%1' does not exist", basename);
-                io->SendError(404);
-            }
-            return;
-        }
-        if (!writer.IsValid())
-            return;
-
-        UnsealResult ret = UnsealArchive(&reader, &writer, decrypt_key);
-        if (ret != UnsealResult::Success) {
-            if (reader.IsValid()) {
-                io->SendError(ret == UnsealResult::WrongKey ? 403 : 422);
-            }
-            return;
-        }
-        if (!writer.Close())
-            return;
-    }
-
-    // Open ZIP file
-    mz_zip_archive zip;
-    mz_zip_zero_struct(&zip);
-    if (!mz_zip_reader_init_file(&zip, extract_filename, 0)) {
-        LogError("Failed to open ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
-        return;
-    }
-    K_DEFER { mz_zip_reader_end(&zip); };
-
-    // Extract and open archived main database (goupile.db)
-    sq_Database main_db;
-    {
-        int fd = -1;
-        const char *main_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
-        if (!main_filename)
-            return;
-        tmp_filenames.Append(main_filename);
-        K_DEFER { CloseDescriptor(fd); };
-
-        int success = mz_zip_reader_extract_file_to_callback(&zip, "goupile.db", [](void *udata, mz_uint64, const void *ptr, size_t len) {
-            K_ASSERT(len <= K_SIZE_MAX);
-
-            int fd = *(int *)udata;
-            Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)len);
-
-            while (buf.len) {
-#if defined(_WIN32)
-                Size write_len = _write(fd, buf.ptr, (unsigned int)buf.len);
-#else
-                Size write_len = K_RESTART_EINTR(write(fd, buf.ptr, (size_t)buf.len), < 0);
-#endif
-                if (write_len < 0) {
-                    LogError("Failed to write to ZIP: %1", strerror(errno));
-                    return (size_t)0;
-                }
-
-                buf.ptr += write_len;
-                buf.len -= write_len;
-            }
-
-            return len;
-        }, &fd, 0);
-        if (!success) {
-            if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
-                LogError("Failed to extract 'goupile.db' from archive: %1", mz_zip_get_error_string(zip.m_last_error));
-            }
-            return;
-        }
-
-        if (!main_db.Open(main_filename, SQLITE_OPEN_READWRITE))
-            return;
-        if (!MigrateDomain(&main_db, nullptr))
-            return;
-    }
-
-    struct RestoreEntry {
-        const char *key;
-        const char *basename;
-        const char *filename;
-    };
-
-    // Gather information from goupile.db
-    HeapArray<RestoreEntry> entries;
-    {
-        sq_Statement stmt;
-        if (!main_db.Prepare("SELECT instance, master FROM dom_instances ORDER BY instance", &stmt))
-            return;
-
-        while (stmt.Step()) {
-            const char *instance_key = (const char *)sqlite3_column_text(stmt, 0);
-
-            RestoreEntry entry = {};
-
-            entry.key = DuplicateString(instance_key, io->Allocator()).ptr;
-            entry.basename = MakeInstanceFileName("instances", instance_key, io->Allocator());
-#if defined(_WIN32)
-            for (Size i = 0; entry.basename[i]; i++) {
-                char *ptr = (char *)entry.basename;
-                int c = entry.basename[i];
-
-                ptr[i] = (char)(c == '\\' ? '/' : c);
-            }
-#endif
-            entry.filename = MakeInstanceFileName(tmp_directory, instance_key, io->Allocator());
-
-            entries.Append(entry);
-            tmp_filenames.Append(entry.filename);
-        }
-        if (!stmt.IsValid())
-            return;
-    }
-
-    // Extract and migrate individual database files
-    for (const RestoreEntry &entry: entries) {
-        if (!mz_zip_reader_extract_file_to_file(&zip, entry.basename, entry.filename, 0)) {
-            LogError("Failed to extract '%1' from archive: %2", entry.basename, mz_zip_get_error_string(zip.m_last_error));
-            return;
-        }
-
-        if (!MigrateInstance(entry.filename))
-            return;
-    }
-
-    // Save current instances
-    {
-        bool conflict;
-        if (!ArchiveInstances(nullptr, &conflict)) {
-            if (conflict) {
-                io->SendError(409, "Archive already exists");
-            }
-            return;
-        }
-    }
-
-    // Prepare for cleanup up of old instance directory
-    const char *swap_directory = nullptr;
-    K_DEFER {
-        if (swap_directory) {
-            EnumerateDirectory(swap_directory, nullptr, -1, [&](const char *filename, FileType) {
-                filename = Fmt(io->Allocator(), "%1%/%2", swap_directory, filename).ptr;
-                UnlinkFile(filename);
-
-                return true;
-            });
-            UnlinkDirectory(swap_directory);
-        }
-    };
-
-    // Replace running instances
-    bool success = gp_domain.db.Transaction([&]() {
-        // Log action
-        int64_t time = GetUnixTime();
-        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                 VALUES (?1, ?2, ?3, ?4, ?5))",
-                              time, request.client_addr, "restore", session->username,
-                              basename))
-            return false;
-
-        if (!gp_domain.db.Run("DELETE FROM dom_instances"))
-            return false;
-        if (!gp_domain.SyncAll())
-            return false;
-        for (const RestoreEntry &entry: entries) {
-            if (!gp_domain.db.Run("INSERT INTO dom_instances (instance) VALUES (?1)", entry.key))
-                return false;
-        }
-
-        // It would be much better to do this by ATTACHing the old database and do the copy
-        // in SQL. Unfortunately this triggers memory problems in SQLite Multiple Ciphers and
-        // I don't have time to investigate this right now.
-        if (restore_users) {
-            bool success = gp_domain.db.RunMany(R"(
-                DELETE FROM dom_permissions;
-                DELETE FROM dom_users;
-                DELETE FROM sqlite_sequence WHERE name = 'dom_users';
-            )");
-            if (!success)
-                return false;
-
-            // Copy users
-            {
-                sq_Statement stmt;
-                if (!main_db.Prepare(R"(SELECT userid, username, password_hash,
-                                               root, local_key, email, phone
-                                        FROM dom_users)", &stmt))
-                    return false;
-
-                while (stmt.Step()) {
-                    int64_t userid = sqlite3_column_int64(stmt, 0);
-                    const char *username = (const char *)sqlite3_column_text(stmt, 1);
-                    const char *password_hash = (const char *)sqlite3_column_text(stmt, 2);
-                    int root = sqlite3_column_int(stmt, 3);
-                    const char *local_key = (const char *)sqlite3_column_text(stmt, 4);
-                    const char *email = (const char *)sqlite3_column_text(stmt, 5);
-                    const char *phone = (const char *)sqlite3_column_text(stmt, 6);
-
-                    if (!gp_domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
-                                                                    change_password, root, local_key, email, phone)
-                                             VALUES (?1, ?2, ?3, 0, ?4, ?5, ?6, ?7))",
-                                          userid, username, password_hash, root, local_key, email, phone))
-                        return false;
-                }
-                if (!stmt.IsValid())
-                    return false;
-            }
-
-            // Copy permissions
-            {
-                sq_Statement stmt;
-                if (!main_db.Prepare("SELECT userid, instance, permissions FROM dom_permissions", &stmt))
-                    return false;
-
-                while (stmt.Step()) {
-                    int64_t userid = sqlite3_column_int64(stmt, 0);
-                    const char *instance_key = (const char *)sqlite3_column_text(stmt, 1);
-                    int64_t permissions = sqlite3_column_int(stmt, 2);
-
-                    if (!gp_domain.db.Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
-                                             VALUES (?1, ?2, ?3))",
-                                          userid, instance_key, permissions))
-                        return false;
-                }
-                if (!stmt.IsValid())
-                    return false;
-            }
-        }
-
-#if defined(__linux__) && defined(RENAME_EXCHANGE)
-        if (renameat2(AT_FDCWD, gp_domain.config.instances_directory,
-                      AT_FDCWD, tmp_directory, RENAME_EXCHANGE) < 0) {
-            LogDebug("Failed to swap directories atomically: %1", strerror(errno));
-#else
-        if (true) {
-#endif
-            swap_directory = Fmt(io->Allocator(), "%1%/%2", gp_domain.config.tmp_directory, FmtRandom(24)).ptr;
-
-            unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
-
-            // Non atomic swap but it is hard to do better here
-            if (RenameFile(gp_domain.config.instances_directory, swap_directory, flags) != RenameResult::Success)
-                return false;
-            if (RenameFile(tmp_directory, gp_domain.config.instances_directory, flags) != RenameResult::Success) {
-                // If this goes wrong, we're completely screwed :)
-                // At least on Linux we have some hope to avoid this problem
-                RenameFile(swap_directory, gp_domain.config.instances_directory, flags);
-                return false;
-            }
-        } else {
-            swap_directory = tmp_directory;
-        }
-
-        K_ASSERT(tmp_filenames.len == entries.len + 2);
-        tmp_filenames.RemoveFrom(2);
-        tmp_directory = nullptr;
-
-        return true;
-    });
-    if (!success)
-        return;
-
-    if (!gp_domain.SyncAll(true))
         return;
 
     io->SendText(200, "{}", "application/json");
@@ -3158,11 +3045,11 @@ void HandleUserCreate(http_IO *io)
         sodium_bin2base64(local_key, K_SIZE(local_key), buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
     }
 
-    gp_domain.db.Transaction([&]() {
+    bool success = gp_db.Transaction([&]() {
         // Check for existing user
         {
             sq_Statement stmt;
-            if (!gp_domain.db.Prepare("SELECT userid FROM dom_users WHERE username = ?1", &stmt))
+            if (!gp_db.Prepare("SELECT userid FROM dom_users WHERE username = ?1", &stmt))
                 return false;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
@@ -3177,23 +3064,26 @@ void HandleUserCreate(http_IO *io)
 
         // Log action
         int64_t time = GetUnixTime();
-        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                 VALUES (?1, ?2, ?3, ?4, ?5))",
-                              time, request.client_addr, "create_user", session->username,
-                              username))
+        if (!gp_db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                          VALUES (?1, ?2, ?3, ?4, ?5))",
+                       time, request.client_addr, "create_user", session->username,
+                       username))
             return false;
 
         // Create user
-        if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, change_password,
-                                                        email, phone, root, local_key, confirm)
-                                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
-                              username, hash, 0 + change_password, email, phone, 0 + root, local_key,
-                              confirm ? "TOTP" : nullptr))
+        if (!gp_db.Run(R"(INSERT INTO dom_users (username, password_hash, change_password,
+                                                 email, phone, root, local_key, confirm)
+                          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
+                       username, hash, 0 + change_password, email, phone, 0 + root, local_key,
+                       confirm ? "TOTP" : nullptr))
             return false;
 
-        io->SendText(200, "{}", "application/json");
         return true;
     });
+    if (!success)
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleUserEdit(http_IO *io)
@@ -3320,7 +3210,7 @@ void HandleUserEdit(http_IO *io)
     // Check for existing user
     {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare("SELECT root FROM dom_users WHERE userid = ?1", &stmt))
+        if (!gp_db.Prepare("SELECT root FROM dom_users WHERE userid = ?1", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, userid);
 
@@ -3343,36 +3233,38 @@ void HandleUserEdit(http_IO *io)
         }
     }
 
-    gp_domain.db.Transaction([&]() {
+    bool success = gp_db.Transaction([&]() {
         // Log action
         int64_t time = GetUnixTime();
-        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                 VALUES (?1, ?2, ?3, ?4, ?5))",
-                              time, request.client_addr, "edit_user", session->username,
-                              username))
+        if (!gp_db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                          VALUES (?1, ?2, ?3, ?4, ?5))",
+                       time, request.client_addr, "edit_user", session->username, username))
             return false;
 
         // Edit user
-        if (username && !gp_domain.db.Run("UPDATE dom_users SET username = ?2 WHERE userid = ?1", userid, username))
+        if (username && !gp_db.Run("UPDATE dom_users SET username = ?2 WHERE userid = ?1", userid, username))
             return false;
-        if (password && !gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2 WHERE userid = ?1", userid, hash))
+        if (password && !gp_db.Run("UPDATE dom_users SET password_hash = ?2 WHERE userid = ?1", userid, hash))
             return false;
-        if (change_password && !gp_domain.db.Run("UPDATE dom_users SET change_password = ?2 WHERE userid = ?1", userid, 0 + change_password))
+        if (change_password && !gp_db.Run("UPDATE dom_users SET change_password = ?2 WHERE userid = ?1", userid, 0 + change_password))
             return false;
-        if (set_confirm && !gp_domain.db.Run("UPDATE dom_users SET confirm = ?2 WHERE userid = ?1", userid, confirm ? "TOTP" : nullptr))
+        if (set_confirm && !gp_db.Run("UPDATE dom_users SET confirm = ?2 WHERE userid = ?1", userid, confirm ? "TOTP" : nullptr))
             return false;
-        if (reset_secret && !gp_domain.db.Run("UPDATE dom_users SET secret = NULL WHERE userid = ?1", userid))
+        if (reset_secret && !gp_db.Run("UPDATE dom_users SET secret = NULL WHERE userid = ?1", userid))
             return false;
-        if (set_email && !gp_domain.db.Run("UPDATE dom_users SET email = ?2 WHERE userid = ?1", userid, email))
+        if (set_email && !gp_db.Run("UPDATE dom_users SET email = ?2 WHERE userid = ?1", userid, email))
             return false;
-        if (set_phone && !gp_domain.db.Run("UPDATE dom_users SET phone = ?2 WHERE userid = ?1", userid, phone))
+        if (set_phone && !gp_db.Run("UPDATE dom_users SET phone = ?2 WHERE userid = ?1", userid, phone))
             return false;
-        if (set_root && !gp_domain.db.Run("UPDATE dom_users SET root = ?2 WHERE userid = ?1", userid, 0 + root))
+        if (set_root && !gp_db.Run("UPDATE dom_users SET root = ?2 WHERE userid = ?1", userid, 0 + root))
             return false;
 
-        io->SendText(200, "{}", "application/json");
         return true;
     });
+    if (!success)
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleUserDelete(http_IO *io)
@@ -3436,7 +3328,7 @@ void HandleUserDelete(http_IO *io)
     const char *local_key;
     {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare("SELECT username, local_key, root FROM dom_users WHERE userid = ?1", &stmt))
+        if (!gp_db.Prepare("SELECT username, local_key, root FROM dom_users WHERE userid = ?1", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, userid);
 
@@ -3462,21 +3354,23 @@ void HandleUserDelete(http_IO *io)
         local_key = DuplicateString((const char *)sqlite3_column_text(stmt, 1), io->Allocator()).ptr;
     }
 
-    gp_domain.db.Transaction([&]() {
+    bool success = gp_db.Transaction([&]() {
         // Log action
         int64_t time = GetUnixTime();
-        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+        if (!gp_db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
                                  VALUES (?1, ?2, ?3, ?4, ?5 || ':' || ?6))",
-                              time, request.client_addr, "delete_user", session->username,
-                              username, local_key))
+                              time, request.client_addr, "delete_user", session->username, username, local_key))
             return false;
 
-        if (!gp_domain.db.Run("DELETE FROM dom_users WHERE userid = ?1", userid))
+        if (!gp_db.Run("DELETE FROM dom_users WHERE userid = ?1", userid))
             return false;
 
-        io->SendText(200, "{}", "application/json");
         return true;
     });
+    if (!success)
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleUserList(http_IO *io)
@@ -3495,9 +3389,9 @@ void HandleUserList(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!gp_domain.db.Prepare(R"(SELECT userid, username, email, phone, root, LOWER(confirm)
-                                 FROM dom_users
-                                 ORDER BY username)", &stmt))
+    if (!gp_db.Prepare(R"(SELECT userid, username, email, phone, root, LOWER(confirm)
+                          FROM dom_users
+                          ORDER BY username)", &stmt))
         return;
 
     http_SendJson(io, 200, [&](json_Writer *json) {

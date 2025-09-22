@@ -137,7 +137,7 @@ void HandleSessionLogout(http_IO *io);
 void HandleSessionProfile(http_IO *io, InstanceHolder *instance);
 
 void HandleChangePassword(http_IO *io, InstanceHolder *instance);
-void HandleChangeQRcode(http_IO *io);
+void HandleChangeQRcode(http_IO *io, const char *title);
 void HandleChangeTOTP(http_IO *io);
 void HandleChangeMode(http_IO *io, InstanceHolder *instance);
 void HandleChangeExportKey(http_IO *io, InstanceHolder *instance);

@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "config.hh"
 #include "domain.hh"
 #include "file.hh"
 #include "goupile.hh"
@@ -345,7 +346,7 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
 
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
@@ -467,7 +468,7 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
 
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
@@ -608,7 +609,7 @@ void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
 
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
@@ -683,10 +684,10 @@ static int64_t CheckExportPermission(http_IO *io, InstanceHolder *instance, uint
         const InstanceHolder *master = instance->master;
 
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT p.permissions, u.userid
-                                     FROM dom_permissions p
-                                     INNER JOIN dom_users ON (u.userid = p.userid)
-                                     WHERE p.instance = ?1 AND p.export_key = ?2)", &stmt))
+        if (!gp_db.Prepare(R"(SELECT p.permissions, u.userid
+                              FROM dom_permissions p
+                              INNER JOIN dom_users ON (u.userid = p.userid)
+                              WHERE p.instance = ?1 AND p.export_key = ?2)", &stmt))
             return -1;
         sqlite3_bind_text(stmt, 1, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
         sqlite3_bind_text(stmt, 2, export_key, -1, SQLITE_STATIC);
@@ -737,7 +738,7 @@ static const char *MakeExportFileName(const char *instance_key, int64_t export_i
         c = (c == '/') ? '@' : c;
     }
 
-    const char *filename = Fmt(alloc, "%1%/%2", gp_domain.config.export_directory, basename).ptr;
+    const char *filename = Fmt(alloc, "%1%/%2", gp_config.export_directory, basename).ptr;
     return filename;
 }
 
@@ -746,7 +747,7 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
     BlockAllocator temp_alloc;
 
     int fd = -1;
-    const char *tmp_filename = CreateUniqueFile(gp_domain.config.export_directory, nullptr, ".tmp", &temp_alloc, &fd);
+    const char *tmp_filename = CreateUniqueFile(gp_config.export_directory, nullptr, ".tmp", &temp_alloc, &fd);
     if (!tmp_filename)
         return -1;
     K_DEFER {
@@ -887,7 +888,7 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
 
 void HandleExportCreate(http_IO *io, InstanceHolder *instance)
 {
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
@@ -936,7 +937,7 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
 
 void HandleExportList(http_IO *io, InstanceHolder *instance)
 {
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
@@ -985,7 +986,7 @@ void HandleExportDownload(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
 
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
@@ -1112,7 +1113,7 @@ static bool PrepareSignup(const InstanceHolder *instance, const char *username,
         Span<uint8_t> cypher = AllocateSpan<uint8_t>(alloc, msg.len + crypto_box_SEALBYTES);
 
         // Encode token
-        if (crypto_box_seal((uint8_t *)cypher.ptr, (const uint8_t *)msg.ptr, msg.len, instance->config.token_pkey) != 0) {
+        if (crypto_box_seal((uint8_t *)cypher.ptr, (const uint8_t *)msg.ptr, msg.len, instance->settings.token_pkey) != 0) {
             LogError("Failed to seal token");
             return false;
         }
@@ -1155,7 +1156,7 @@ static bool PrepareSignup(const InstanceHolder *instance, const char *username,
 
 void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 {
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
@@ -1394,7 +1395,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
     // Safety checks
     if (signup.enable) {
-        if (!session->userid && !gp_domain.config.smtp.url) {
+        if (!session->userid && !gp_config.smtp.url) {
             LogError("This domain is not configured to send mails");
             io->SendError(403);
             return;
@@ -1716,7 +1717,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
 void HandleRecordDelete(http_IO *io, InstanceHolder *instance)
 {
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
@@ -1879,7 +1880,7 @@ void HandleRecordDelete(http_IO *io, InstanceHolder *instance)
 
 static void HandleLock(http_IO *io, InstanceHolder *instance, bool lock)
 {
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
@@ -1985,7 +1986,7 @@ void HandleRecordPublic(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
 
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
@@ -2055,7 +2056,7 @@ void HandleBlobGet(http_IO *io, InstanceHolder *instance)
     const http_RequestInfo &request = io->Request();
     const char *url = request.path + 1 + instance->key.len;
 
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
@@ -2137,7 +2138,7 @@ void HandleBlobPost(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
 
-    if (!instance->config.data_remote) {
+    if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;

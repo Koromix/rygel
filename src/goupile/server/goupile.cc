@@ -15,6 +15,7 @@
 
 #include "src/core/base/base.hh"
 #include "admin.hh"
+#include "config.hh"
 #include "domain.hh"
 #include "file.hh"
 #include "goupile.hh"
@@ -49,7 +50,10 @@ struct RenderInfo {
     K_HASHTABLE_HANDLER(RenderInfo, key);
 };
 
-DomainHolder gp_domain;
+Config gp_config;
+sq_Database gp_db;
+
+const int64_t FullSnapshotDelay = 86400 * 1000;
 
 static HashMap<const char *, const AssetInfo *> assets_map;
 static const AssetInfo *assets_root;
@@ -61,6 +65,7 @@ static std::shared_mutex render_mutex;
 static BucketArray<RenderInfo, 8> render_cache;
 static HashTable<const char *, RenderInfo *> render_map;
 
+static const int DemoPruneDelay = 7 * 86400 * 1000;
 static const int64_t MaxRenderDelay = 20 * 60000;
 
 static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *const> mask_files)
@@ -417,6 +422,9 @@ static void HandleAdminRequest(http_IO *io)
         return;
     }
 
+    DomainHolder *domain = RefDomain();
+    K_DEFER { UnrefDomain(domain); };
+
     // Try static assets
     {
         if (TestStr(admin_url, "/")) {
@@ -462,7 +470,7 @@ static void HandleAdminRequest(http_IO *io)
                         json.Bool(legacy);
                     }
                     json.EndObject();
-                    json.Key("retention"); json.Int(gp_domain.config.archive_retention);
+                    json.Key("retention"); json.Int(domain->settings.archive_retention);
                     json.EndObject();
                 } else if (key == "HEAD_TAGS") {
                     // Nothing to add
@@ -510,11 +518,13 @@ static void HandleAdminRequest(http_IO *io)
     } else if (TestStr(admin_url, "/api/change/password") && request.method == http_RequestMethod::Post) {
         HandleChangePassword(io, nullptr);
     } else if (TestStr(admin_url, "/api/change/qrcode") && request.method == http_RequestMethod::Get) {
-        HandleChangeQRcode(io);
+        HandleChangeQRcode(io, domain->settings.title);
     } else if (TestStr(admin_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
         HandleChangeTOTP(io);
-    } else if (TestStr(admin_url, "/api/demo/create") && request.method == http_RequestMethod::Post) {
-        HandleDemoCreate(io);
+    } else if (TestStr(admin_url, "/api/domain/demo") && request.method == http_RequestMethod::Post) {
+        HandleDomainDemo(io);
+    } else if (TestStr(admin_url, "/api/domain/restore") && request.method == http_RequestMethod::Post) {
+        HandleDomainRestore(io);
     } else if (TestStr(admin_url, "/api/instances/create") && request.method == http_RequestMethod::Post) {
         HandleInstanceCreate(io);
     } else if (TestStr(admin_url, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
@@ -541,8 +551,6 @@ static void HandleAdminRequest(http_IO *io)
         HandleArchiveDownload(io);
     } else if (StartsWith(admin_url, "/api/archives/files") && request.method == http_RequestMethod::Put) {
         HandleArchiveUpload(io);
-    } else if (TestStr(admin_url, "/api/archives/restore") && request.method == http_RequestMethod::Post) {
-        HandleArchiveRestore(io);
     } else if (TestStr(admin_url, "/api/users/create") && request.method == http_RequestMethod::Post) {
         HandleUserCreate(io);
     } else if (TestStr(admin_url, "/api/users/edit") && request.method == http_RequestMethod::Post) {
@@ -564,21 +572,14 @@ static void HandleAdminRequest(http_IO *io)
     } else {
         io->SendError(404);
     }
-
-    // Send internal error details to root users for debug
-    if (!io->HasResponded()) {
-        RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
-
-        if (session && session->IsRoot()) {
-            const char *msg = io->LastError();
-            io->SendError(500, msg);
-        }
-    }
 }
 
 static void HandleInstanceRequest(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
+
+    DomainHolder *domain = RefDomain();
+    K_DEFER { UnrefDomain(domain); };
 
     InstanceHolder *instance = nullptr;
     const char *instance_url = request.path;
@@ -590,7 +591,7 @@ static void HandleInstanceRequest(http_IO *io)
         const char *new_url = instance_url + offset;
         Span<const char> new_key = MakeSpan(request.path + 1, new_url - request.path - 1);
 
-        InstanceHolder *ref = gp_domain.Ref(new_key);
+        InstanceHolder *ref = domain->Ref(new_key);
         if (!ref)
             break;
 
@@ -628,7 +629,7 @@ static void HandleInstanceRequest(http_IO *io)
     }
 
     // Enable COEP for offlines instances to get SharedArrayBuffer
-    if (instance->config.use_offline) {
+    if (instance->settings.use_offline) {
         io->AddHeader("Cross-Origin-Embedder-Policy", "require-corp");
     }
 
@@ -684,18 +685,16 @@ static void HandleInstanceRequest(http_IO *io)
                         json.Key("files"); json.String(Fmt(buf, "/%1/files/%2/", master->key, fs_version).ptr);
                     json.EndObject();
                     json.Key("title"); json.String(master->title);
-                    if (master->config.lang) {
-                        json.Key("lang"); json.String(master->config.lang);
-                    }
+                    json.Key("lang"); json.String(master->settings.lang);
                     json.Key("legacy"); json.Bool(master->legacy);
                     json.Key("demo"); json.Bool(instance->demo);
                     json.Key("version"); json.Int64(fs_version);
                     json.Key("buster"); json.String(instance_etag);
-                    json.Key("use_offline"); json.Bool(master->config.use_offline);
-                    json.Key("data_remote"); json.Bool(master->config.data_remote);
+                    json.Key("use_offline"); json.Bool(master->settings.use_offline);
+                    json.Key("data_remote"); json.Bool(master->settings.data_remote);
                     json.EndObject();
                 } else if (key == "HEAD_TAGS") {
-                    if (master->config.use_offline) {
+                    if (master->settings.use_offline) {
                         Print(writer, "<link rel=\"manifest\" href=\"/%1/manifest.json\"/>", master->key);
                     }
                 } else {
@@ -733,7 +732,7 @@ static void HandleInstanceRequest(http_IO *io)
     } else if (TestStr(instance_url, "/api/change/password") && request.method == http_RequestMethod::Post) {
         HandleChangePassword(io, instance);
     } else if (TestStr(instance_url, "/api/change/qrcode") && request.method == http_RequestMethod::Get) {
-        HandleChangeQRcode(io);
+        HandleChangeQRcode(io, domain->settings.title);
     } else if (TestStr(instance_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
         HandleChangeTOTP(io);
     } else if (TestStr(instance_url, "/api/change/mode") && request.method == http_RequestMethod::Post) {
@@ -821,7 +820,7 @@ static void HandleRequest(http_IO *io)
     }
 #endif
 
-    if (gp_domain.config.require_host) {
+    if (gp_config.require_host) {
         const char *host = request.GetHeaderValue("Host");
 
         if (!host) {
@@ -829,7 +828,7 @@ static void HandleRequest(http_IO *io)
             io->SendError(400);
             return;
         }
-        if (!TestStr(host, gp_domain.config.require_host)) {
+        if (!TestStr(host, gp_config.require_host)) {
             LogError("Unexpected Host header '%1'", host);
             io->SendError(403);
             return;
@@ -862,7 +861,7 @@ static void HandleRequest(http_IO *io)
             } else if (key == "COMPILER") {
                 writer->Write(FelixCompiler);
             } else if (key == "DEMO") {
-                writer->Write(gp_domain.config.demo_mode ? "true" : "false");
+                writer->Write(gp_config.demo_mode ? "true" : "false");
             } else {
                 Print(writer, "{{%1}}", expr);
             }
@@ -944,6 +943,124 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
     return complete;
 }
 
+void PruneDemos()
+{
+    // Best effort
+    gp_db.Transaction([&] {
+        int64_t treshold = GetUnixTime() - DemoPruneDelay;
+
+        if (!gp_db.Run("DELETE FROM dom_instances WHERE demo IS NOT NULL AND demo < ?1", treshold))
+            return false;
+        if (!sqlite3_changes(gp_db))
+            return true;
+
+        SyncDomain(false);
+        return true;
+    });
+}
+
+static bool OpenMainDatabase()
+{
+    K_DEFER_N(db_guard) { gp_db.Close(); };
+
+    // Open the database
+    if (!gp_db.Open(gp_config.database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        return false;
+    if (!gp_db.SetWAL(true))
+        return false;
+
+    // Check schema version
+    {
+        int version;
+        if (!gp_db.GetUserVersion(&version))
+            return false;
+
+        if (version > DomainVersion) {
+            LogError("Domain schema is too recent (%1, expected %2)", version, DomainVersion);
+            return false;
+        } else if (version < DomainVersion) {
+            if (!MigrateDomain(&gp_db, gp_config.instances_directory))
+                return false;
+        }
+    }
+
+    db_guard.Disable();
+    return true;
+}
+
+static bool PerformDuties(bool first)
+{
+    DomainHolder *domain = RefDomain();
+    K_DEFER { UnrefDomain(domain); };
+
+    if (gp_config.demo_mode) {
+        LogDebug("Prune demos");
+        PruneDemos();
+    }
+
+    // In theory, all temporary files are deleted. But if any remain behind (crash, etc.)
+    // we need to make sure they get deleted eventually.
+    LogDebug("Prune temporary files");
+    PruneOldFiles(gp_config.database_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
+    PruneOldFiles(gp_config.tmp_directory, nullptr, true, first ? 0 : 7200 * 1000);
+    PruneOldFiles(gp_config.snapshot_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
+    PruneOldFiles(gp_config.archive_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
+    PruneOldFiles(gp_config.export_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
+
+    LogDebug("Prune old snapshot files");
+    PruneOldFiles(gp_config.snapshot_directory, nullptr, true, 3 * 86400 * 1000);
+
+    LogDebug("Prune old archives");
+    if (domain) {
+        int64_t time = GetUnixTime();
+        int64_t snapshot = 0;
+
+        if (domain->settings.archive_retention > 0) {
+            PruneOldFiles(gp_config.archive_directory, "*.goupilearchive", false,
+                          domain->settings.archive_retention * 86400 * 1000);
+            PruneOldFiles(gp_config.archive_directory, "*.goarch", false,
+                          domain->settings.archive_retention * 86400 * 1000, &snapshot);
+        }
+
+        if (domain->settings.archive_hour >= 0) {
+            TimeSpec spec = DecomposeTimeLocal(time);
+
+            if (spec.hour == domain->settings.archive_hour && time - snapshot > 2 * 3600 * 1000) {
+                LogInfo("Creating daily snapshot");
+                if (!ArchiveDomain())
+                    return false;
+            } else if (time - snapshot > 25 * 3600 * 1000) {
+                LogInfo("Creating forced snapshot (previous one is old)");
+                if (!ArchiveDomain())
+                    return false;
+            }
+        }
+    }
+
+    // Make sure data loss (if it happens) is very limited in time.
+    // If it fails, exit; something is really wrong and we don't fake to it.
+    LogDebug("Checkpoint databases");
+    if (!gp_db.Checkpoint())
+        return false;
+    if (domain && !domain->Checkpoint())
+        return false;
+
+    LogDebug("Prune domain");
+    PruneDomain();
+
+    LogDebug("Prune sessions");
+    PruneSessions();
+
+    LogDebug("Prune template renders");
+    PruneRenders();
+
+    LogDebug("Check zygote");
+    if (!CheckZygote())
+        return false;
+
+    return true;
+}
+
 static int RunServe(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -972,7 +1089,7 @@ Other commands:
     %!..+unseal%!0                         Unseal domain archive
 
 For help about those commands, type: %!..+%1 command --help%!0)"),
-                FelixTarget, config_filename, gp_domain.config.http.port);
+                FelixTarget, config_filename, gp_config.http.port);
     };
 
     // Find config filename
@@ -1000,11 +1117,8 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
     RaiseMaximumOpenFiles(4096);
 #endif
 
-    LogInfo("Init assets");
-    InitAssets();
-
-    LogInfo("Init domain");
-    if (!gp_domain.Open(config_filename))
+    LogInfo("Init config");
+    if (!LoadConfig(config_filename, &gp_config))
         return 1;
 
     // Parse arguments
@@ -1015,7 +1129,7 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
             } else if (opt.Test("-p", "--port", OptionType::Value)) {
-                if (!gp_domain.config.http.SetPortOrPath(opt.current_value))
+                if (!gp_config.http.SetPortOrPath(opt.current_value))
                     return 1;
             } else if (opt.Test("--sandbox")) {
                 sandbox = true;
@@ -1028,20 +1142,58 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
         opt.LogUnusedArguments();
 
         // We may have changed some stuff (such as HTTP port), so revalidate
-        if (!gp_domain.config.Validate())
+        if (!gp_config.Validate())
             return 1;
     }
 
-    LogInfo("Init messaging");
-    if (gp_domain.config.sms.provider != sms_Provider::None && !InitSMS(gp_domain.config.sms))
+    LogInfo("Init assets");
+    InitAssets();
+
+    LogInfo("Init directories");
+    if (!MakeDirectory(gp_config.instances_directory, false))
+        return false;
+    if (!MakeDirectory(gp_config.tmp_directory, false))
+        return false;
+    if (!MakeDirectory(gp_config.archive_directory, false))
+        return false;
+    if (!MakeDirectory(gp_config.snapshot_directory, false))
+        return false;
+    if (!MakeDirectory(gp_config.view_directory, false))
+        return false;
+    if (!MakeDirectory(gp_config.export_directory, false))
+        return false;
+
+    // Make sure tmp and instances live on the same volume, because we need to
+    // perform atomic renames in some cases.
+    {
+        const char *tmp_filename1 = CreateUniqueFile(gp_config.tmp_directory, nullptr, ".tmp", &temp_alloc);
+        if (!tmp_filename1)
+            return 1;
+        K_DEFER { UnlinkFile(tmp_filename1); };
+
+        const char *tmp_filename2 = CreateUniqueFile(gp_config.instances_directory, "", ".tmp", &temp_alloc);
+        if (!tmp_filename2)
+            return 1;
+        K_DEFER { UnlinkFile(tmp_filename2); };
+
+        if (RenameFile(tmp_filename1, tmp_filename2, (int)RenameFlag::Overwrite) != RenameResult::Success)
+            return 1;
+    }
+
+    LogInfo("Init main database");
+    if (!OpenMainDatabase())
         return 1;
-    if (gp_domain.config.smtp.url && !InitSMTP(gp_domain.config.smtp))
+
+    LogInfo("Init messaging");
+    if (gp_config.sms.provider != sms_Provider::None && !InitSMS(gp_config.sms))
+        return 1;
+    if (gp_config.smtp.url && !InitSMTP(gp_config.smtp))
         return 1;
 
     // We need to bind the socket before sandboxing
     LogInfo("Init HTTP server");
     http_Daemon daemon;
-    if (!daemon.Bind(gp_domain.config.http))
+    if (!daemon.Bind(gp_config.http))
         return 1;
 
 #if defined(__linux__)
@@ -1051,7 +1203,7 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
 
     LogInfo("Init zygote");
     {
-        ZygoteResult ret = RunZygote(sandbox, gp_domain.config.view_directory);
+        ZygoteResult ret = RunZygote(sandbox, gp_config.view_directory);
 
         switch (ret) {
             case ZygoteResult::Parent: {} break;
@@ -1066,30 +1218,36 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
         LogInfo("Init sandbox");
 
         // We use temp_store = MEMORY but, just in case...
-        sqlite3_temp_directory = sqlite3_mprintf("%s", gp_domain.config.tmp_directory);
+        sqlite3_temp_directory = sqlite3_mprintf("%s", gp_config.tmp_directory);
 
         const char *const reveal_paths[] = {
 #if defined(FELIX_HOT_ASSETS)
             // Needed for asset module
             GetApplicationDirectory(),
 #endif
-            gp_domain.config.database_directory,
-            gp_domain.config.archive_directory,
-            gp_domain.config.snapshot_directory,
-            gp_domain.config.tmp_directory,
-            gp_domain.config.view_directory
+            gp_config.database_directory,
+            gp_config.archive_directory,
+            gp_config.snapshot_directory,
+            gp_config.tmp_directory,
+            gp_config.view_directory
         };
         const char *const mask_files[] = {
-            gp_domain.config.config_filename
+            gp_config.config_filename
         };
 
         if (!ApplySandbox(reveal_paths, mask_files))
             return 1;
     }
 
-    LogInfo("Init instances");
-    if (!gp_domain.SyncAll())
+    // Delay this so that the SQLite background thread does not run when domain is opened,
+    // which prevents unshare() from working on Linux.
+    if (gp_config.use_snapshots && !gp_db.SetSnapshotDirectory(gp_config.snapshot_directory, FullSnapshotDelay))
         return 1;
+
+    LogInfo("Init domain");
+    if (!InitDomain())
+        return 1;
+    K_DEFER { CloseDomain(); };
 
     // From here on, don't quit abruptly
     // Trigger a check when something happens to the zygote process
@@ -1113,54 +1271,7 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
         LogInfo("Periodic timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
-            if (gp_domain.config.demo_mode) {
-                LogDebug("Prune demos");
-                PruneDemos();
-            }
-
-            // In theory, all temporary files are deleted. But if any remain behind (crash, etc.)
-            // we need to make sure they get deleted eventually.
-            LogDebug("Prune temporary files");
-            PruneOldFiles(gp_domain.config.database_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
-            PruneOldFiles(gp_domain.config.tmp_directory, nullptr, true, first ? 0 : 7200 * 1000);
-            PruneOldFiles(gp_domain.config.snapshot_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
-            PruneOldFiles(gp_domain.config.archive_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
-            PruneOldFiles(gp_domain.config.export_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
-
-            LogDebug("Prune old snapshot files");
-            PruneOldFiles(gp_domain.config.snapshot_directory, nullptr, true, 3 * 86400 * 1000);
-
-            LogDebug("Prune old archives");
-            {
-                int64_t time = GetUnixTime();
-                int64_t snapshot = 0;
-
-                if (gp_domain.config.archive_retention > 0) {
-                    PruneOldFiles(gp_domain.config.archive_directory, "*.goupilearchive", false,
-                                  gp_domain.config.archive_retention * 86400 * 1000);
-                    PruneOldFiles(gp_domain.config.archive_directory, "*.goarch", false,
-                                  gp_domain.config.archive_retention * 86400 * 1000, &snapshot);
-                }
-
-                if (gp_domain.config.archive_hour >= 0) {
-                    TimeSpec spec = DecomposeTimeLocal(time);
-
-                    if (spec.hour == gp_domain.config.archive_hour && time - snapshot > 2 * 3600 * 1000) {
-                        LogInfo("Creating daily snapshot");
-                        if (!ArchiveDomain())
-                            return 1;
-                    } else if (time - snapshot > 25 * 3600 * 1000) {
-                        LogInfo("Creating forced snapshot (previous one is old)");
-                        if (!ArchiveDomain())
-                            return 1;
-                    }
-                }
-            }
-
-            // Make sure data loss (if it happens) is very limited in time.
-            // If it fails, exit; something is really wrong and we don't fake to it.
-            LogDebug("Checkpoint databases");
-            if (!gp_domain.Checkpoint())
+            if (!PerformDuties(first))
                 return 1;
 
             WaitResult ret = WaitEvents(timeout);
@@ -1176,19 +1287,9 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
                 status = 1;
                 run = false;
             } else if (ret == WaitResult::Message) {
-                LogDebug("Syncing instances");
-                gp_domain.SyncAll(true);
+                LogDebug("Reload domain");
+                InitDomain();
             }
-
-            LogDebug("Prune sessions");
-            PruneSessions();
-
-            LogDebug("Prune template renders");
-            PruneRenders();
-
-            LogDebug("Check zygote");
-            if (!CheckZygote())
-                return 1;
 
             first = false;
         }

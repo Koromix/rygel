@@ -17,111 +17,65 @@
 
 #include "src/core/base/base.hh"
 #include "instance.hh"
-#include "src/core/http/http.hh"
-#include "src/core/request/sms.hh"
-#include "src/core/request/smtp.hh"
 #include "src/core/sqlite/sqlite.hh"
 
 namespace K {
 
+struct Config;
+
 extern const int DomainVersion;
-extern const int MaxInstancesPerDomain;
-extern const int DemoPruneDelay;
+extern const int MaxInstances;
 
-enum class PasswordComplexity {
-    Easy,
-    Moderate,
-    Hard
-};
-static const char *const PasswordComplexityNames[] = {
-    "Easy",
-    "Moderate",
-    "Hard"
-};
-
-struct DomainConfig {
-    const char *config_filename = nullptr;
-    const char *database_filename = nullptr;
-    const char *database_directory = nullptr;
-    const char *instances_directory = nullptr;
-    const char *tmp_directory = nullptr;
-    const char *archive_directory = nullptr;
-    const char *snapshot_directory = nullptr;
-    const char *view_directory = nullptr;
-    const char *export_directory = nullptr;
-
+struct DomainSettings {
+    const char *name = nullptr;
     const char *title = nullptr;
-    bool demo_mode = false;
+    const char *default_lang = "fr"; // Used to be french only, keep this value for compatibility
 
     uint8_t archive_key[32] = {}; // crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES
-    bool enable_archives = false;
-    bool use_snapshots = true;
-    bool auto_create = true;
-    bool auto_migrate = true;
-
     int archive_hour = 0;
     int archive_retention = 7;
-
-    PasswordComplexity user_password = PasswordComplexity::Moderate;
-    PasswordComplexity admin_password = PasswordComplexity::Moderate;
-    PasswordComplexity root_password = PasswordComplexity::Hard;
-
-    const char *default_lang = "fr"; // Used to be french only, keep this value for compatibility
-    const char *default_username = nullptr;
-    const char *default_password = nullptr;
-
-    http_Config http { 8889 };
-    const char *require_host = nullptr;
-
-    smtp_Config smtp;
-    sms_Config sms;
 
     bool Validate() const;
 
     BlockAllocator str_alloc;
 };
 
-bool CheckDomainTitle(Span<const char> title);
+bool InitDomain();
+void CloseDomain();
+void PruneDomain();
+
+void SyncDomain(bool wait, Span<InstanceHolder *> changes = {});
+
+DomainHolder *RefDomain();
+void UnrefDomain(DomainHolder *domain);
+InstanceHolder *RefInstance(const char *key);
 
 const char *MakeInstanceFileName(const char *directory, const char *key, Allocator *alloc);
 
-bool LoadConfig(StreamReader *st, DomainConfig *out_config);
-bool LoadConfig(const char *filename, DomainConfig *out_config);
-
 class DomainHolder {
-    mutable std::shared_mutex mutex;
+    std::atomic_int refcount { 1 };
 
-    HeapArray<InstanceHolder *> instances;
-    HashTable<Span<const char>, InstanceHolder *> instances_map;
-
-    HeapArray<sq_Database *> databases;
+    HashTable<Span<const char>, InstanceHolder *> map;
 
 public:
-    sq_Database db;
+    HeapArray<InstanceHolder *> instances;
+    DomainSettings settings;
 
-    DomainConfig config = {};
+    bool Open();
 
-    ~DomainHolder() { Close(); }
-
-    bool Open(const char *filename);
-    void Close();
-
-    bool SyncAll(bool thorough = false);
-    bool SyncInstance(const char *key);
+    void Ref();
+    void Unref();
 
     bool Checkpoint();
 
-    Span<InstanceHolder *> LockInstances();
-    void UnlockInstances();
-    Size CountInstances() const;
-
     InstanceHolder *Ref(Span<const char> key);
 
-private:
-    bool Sync(const char *key, bool thorough);
+    friend bool InitDomain();
+    friend void CloseDomain();
+    friend void PruneDomain();
 };
 
 bool MigrateDomain(sq_Database *db, const char *instances_directory);
-bool MigrateDomain(const DomainConfig &config);
+bool MigrateDomain(const Config &config);
 
 }

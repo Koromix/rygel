@@ -317,7 +317,7 @@ async function runRestoreBackupDialog(e, filename) {
             let progress = Log.progress(T.restore_in_progress);
 
             try {
-                await Net.post('/admin/api/archives/restore', {
+                await Net.post('/admin/api/domain/restore', {
                     filename: filename,
                     key: d.values.key,
                     users: d.values.restore_users

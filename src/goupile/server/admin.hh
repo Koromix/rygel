@@ -23,12 +23,12 @@ namespace K {
 int RunInit(Span<const char *> arguments);
 int RunMigrate(Span<const char *> arguments);
 int RunKeys(Span<const char *> arguments);
-
 int RunUnseal(Span<const char *> arguments);
 
-void HandleDemoCreate(http_IO *io);
+bool ArchiveDomain();
 
-void PruneDemos();
+void HandleDomainDemo(http_IO *io);
+void HandleDomainRestore(http_IO *io);
 
 void HandleInstanceCreate(http_IO *io);
 void HandleInstanceDelete(http_IO *io);
@@ -39,14 +39,11 @@ void HandleInstancePermissions(http_IO *io);
 void HandleInstanceMigrate(http_IO *io);
 void HandleInstanceClear(http_IO *io);
 
-bool ArchiveDomain();
-
 void HandleArchiveCreate(http_IO *io);
 void HandleArchiveDelete(http_IO *io);
 void HandleArchiveList(http_IO *io);
 void HandleArchiveDownload(http_IO *io);
 void HandleArchiveUpload(http_IO *io);
-void HandleArchiveRestore(http_IO *io);
 
 void HandleUserCreate(http_IO *io);
 void HandleUserEdit(http_IO *io);
