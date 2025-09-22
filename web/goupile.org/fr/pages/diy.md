@@ -83,13 +83,13 @@ dpkg-reconfigure -pmedium unattended-upgrades
 
 Les données de Goupile sont stockées dans le répertoire `/var/lib/goupile`. Vous devriez régulièrement faire des copies de ce dossier.
 
-# Reverse proxy
+# Proxy inversé
 
 ## NGINX
 
-Edit your NGINX config (directly or in a server file in `/etc/nginx/sites-available`) to make it work as a reverse proxy for Goupile.
+Modifiez votre configuration NGINX (directement ou dans un fichier de serveur dans `/etc/nginx/sites-available`) pour qu'elle fonctionne comme un proxy inversé (*reverse proxy*) pour Goupile.
 
-The server block should you something like this:
+Le bloc `server` devrait ressembler à ceci :
 
 ```
 server {
@@ -113,9 +113,9 @@ server {
 
 ## Apache 2
 
-Edit your Apache 2 config (directly or in a server file in `/etc/apache2/sites-available`) to make it work as a reverse proxy for Goupile.
+Modifiez votre configuration Apache 2 (directement ou dans un fichier de serveur dans `/etc/apache2/sites-available`) pour qu'elle fonctionne comme un proxy inversé (*reverse proxy*) pour Goupile.
 
-The VirtualHost block should you something like this:
+Le bloc `VirtualHost` devrait ressembler à ceci :
 
 ```
 <VirtualHost *:443>
