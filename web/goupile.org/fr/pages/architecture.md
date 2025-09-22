@@ -18,7 +18,7 @@ instances/projet2@paris.db
 
 # Isolation des services
 
-Chaque domaine est géré par un service dédié (par exemple lancé par systemd), qui est capable de s'auto-containériser sur Linux (utilisation des capabilities POSIX, des namespaces et filtres seccomp) dans un namespace avec pratiquement aucun accès sauf aux fichiers SQLite.
+Chaque domaine est géré par un service dédié (par exemple lancé par systemd), qui est capable de s'auto-containériser sur Linux (utilisation des filtres seccomp et de Landlock LSM) pour limiter l'accès aux fichiers SQLite.
 
 Ce processus garde malgré tout la capacité de se diviser (fork), et un processus enfant est créé pour gérer chaque projet présent sur le domaine. Ceci permet une isolation de chaque projet dans un processus dédié, qui a en charge les accès HTTP (statiques et API) pour ce projet.
 

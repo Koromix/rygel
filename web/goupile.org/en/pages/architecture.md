@@ -18,7 +18,7 @@ instances/projet2@paris.db
 
 # Service Isolation
 
-Each domain is managed by a dedicated service (for example, launched by systemd), which can self-containerize on Linux (using POSIX capabilities, namespaces, and seccomp filters) in a namespace with virtually no access other than to the SQLite files.
+Each domain is managed by a dedicated service (for example, launched by systemd), which can self-containerize on Linux (using seccomp filters and Landlock LSM) to restrict access to SQLite databases.
 
 This process still retains the ability to fork, and a child process is created to handle each project within the domain. This ensures isolation of each project in its own dedicated process, responsible for handling HTTP requests (static files and API) for that project.
 
