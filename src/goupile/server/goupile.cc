@@ -431,7 +431,10 @@ static void HandleAdminRequest(http_IO *io)
             const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
             K_ASSERT(asset);
 
-            const AssetInfo *render = RenderTemplate(request.path, *asset,
+            char etag[64];
+            Fmt(etag, "%1_%2", shared_etag, domain ? domain->unique : 0);
+
+            const AssetInfo *render = RenderTemplate(etag, *asset,
                                                      [&](Span<const char> expr, StreamWriter *writer) {
                 Span<const char> key = TrimStr(expr);
 
@@ -453,6 +456,7 @@ static void HandleAdminRequest(http_IO *io)
                     TimeSpec spec = DecomposeTimeLocal(now);
 
                     json.StartObject();
+                    json.Key("ready"); json.Bool(domain);
                     json.Key("key"); json.String("admin");
                     json.Key("urls"); json.StartObject();
                         json.Key("base"); json.String("/admin/");
@@ -470,7 +474,9 @@ static void HandleAdminRequest(http_IO *io)
                         json.Bool(legacy);
                     }
                     json.EndObject();
-                    json.Key("retention"); json.Int(domain->settings.archive_retention);
+                    if (domain) {
+                        json.Key("retention"); json.Int(domain->settings.archive_retention);
+                    }
                     json.EndObject();
                 } else if (key == "HEAD_TAGS") {
                     // Nothing to add
@@ -478,7 +484,7 @@ static void HandleAdminRequest(http_IO *io)
                     Print(writer, "{{%1}}", expr);
                 }
             });
-            AttachStatic(io, *render, 0, shared_etag);
+            AttachStatic(io, *render, 0, etag);
 
             return;
         } else if (TestStr(admin_url, "/favicon.png")) {
@@ -504,12 +510,23 @@ static void HandleAdminRequest(http_IO *io)
     if (request.method != http_RequestMethod::Get && !http_PreventCSRF(io))
         return;
 
-    // And now, API endpoints
+    // Minimal endpoints available even before initial configuration
     if (TestStr(admin_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
         HandlePing(io, nullptr);
+        return;
     } else if (TestStr(admin_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
         HandleSessionProfile(io, nullptr);
-    } else if (TestStr(admin_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
+        return;
+    } else if (TestStr(admin_url, "/api/domain/configure")) {
+        HandleDomainConfigure(io);
+        return;
+    } else if (!domain) {
+        io->SendError(404);
+        return;
+    }
+
+    // And now, admin endpoints
+    if (TestStr(admin_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
         HandleSessionLogin(io, nullptr);
     } else if (TestStr(admin_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {
         HandleSessionConfirm(io, nullptr);
@@ -580,6 +597,11 @@ static void HandleInstanceRequest(http_IO *io)
 
     DomainHolder *domain = RefDomain();
     K_DEFER { UnrefDomain(domain); };
+
+    if (!domain) [[unlikely]] {
+        io->SendError(404);
+        return;
+    }
 
     InstanceHolder *instance = nullptr;
     const char *instance_url = request.path;
@@ -655,11 +677,10 @@ static void HandleInstanceRequest(http_IO *io)
             const InstanceHolder *master = instance->master;
             int64_t fs_version = master->fs_version.load(std::memory_order_relaxed);
 
-            char instance_etag[64];
-            Fmt(instance_etag, "%1_%2_%3_%4", shared_etag, (const void *)asset, instance->unique, fs_version);
+            char etag[64];
+            Fmt(etag, "%1_%2_%3_%4", shared_etag, (const void *)asset, instance->unique, fs_version);
 
-            const AssetInfo *render = RenderTemplate(instance_etag, *asset,
-                                                     [&](Span<const char> expr, StreamWriter *writer) {
+            const AssetInfo *render = RenderTemplate(etag, *asset, [&](Span<const char> expr, StreamWriter *writer) {
                 Span<const char> key = TrimStr(expr);
 
                 if (key == "VERSION") {
@@ -677,6 +698,7 @@ static void HandleInstanceRequest(http_IO *io)
                     char buf[512];
 
                     json.StartObject();
+                    json.Key("ready"); json.Bool(true);
                     json.Key("key"); json.String(master->key.ptr);
                     json.Key("urls"); json.StartObject();
                         json.Key("base"); json.String(Fmt(buf, "/%1/", master->key).ptr);
@@ -689,7 +711,7 @@ static void HandleInstanceRequest(http_IO *io)
                     json.Key("legacy"); json.Bool(master->legacy);
                     json.Key("demo"); json.Bool(instance->demo);
                     json.Key("version"); json.Int64(fs_version);
-                    json.Key("buster"); json.String(instance_etag);
+                    json.Key("buster"); json.String(etag);
                     json.Key("use_offline"); json.Bool(master->settings.use_offline);
                     json.Key("data_remote"); json.Bool(master->settings.data_remote);
                     json.EndObject();
@@ -701,7 +723,7 @@ static void HandleInstanceRequest(http_IO *io)
                     Print(writer, "{{%1}}", expr);
                 }
             });
-            AttachStatic(io, *render, 0, instance_etag);
+            AttachStatic(io, *render, 0, etag);
 
             return;
         } else if (asset) {
@@ -993,6 +1015,9 @@ static bool PerformDuties(bool first)
     DomainHolder *domain = RefDomain();
     K_DEFER { UnrefDomain(domain); };
 
+    if (!domain)
+        return true;
+
     if (gp_config.demo_mode) {
         LogDebug("Prune demos");
         PruneDemos();
@@ -1083,8 +1108,6 @@ Options:
 
 Other commands:
 
-    %!..+init%!0                           Create new domain
-    %!..+migrate%!0                        Migrate existing domain
     %!..+keys%!0                           Generate archive key pairs
     %!..+unseal%!0                         Unseal domain archive
 
@@ -1341,16 +1364,12 @@ int Main(int argc, char **argv)
         cmd = "serve";
     }
 
-    if (TestStr(cmd, "init")) {
-        return RunInit(arguments);
-    } else if (TestStr(cmd, "migrate")) {
-        return RunMigrate(arguments);
+    if (TestStr(cmd, "serve")) {
+        return RunServe(arguments);
     } else if (TestStr(cmd, "keys")) {
         return RunKeys(arguments);
     } else if (TestStr(cmd, "unseal")) {
         return RunUnseal(arguments);
-    } else if (TestStr(cmd, "serve")) {
-        return RunServe(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;

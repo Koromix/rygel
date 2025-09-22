@@ -31,7 +31,7 @@ struct DomainSettings {
     const char *title = nullptr;
     const char *default_lang = "fr"; // Used to be french only, keep this value for compatibility
 
-    uint8_t archive_key[32] = {}; // crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES
+    const char *archive_key = nullptr;
     int archive_hour = 0;
     int archive_retention = 7;
 
@@ -55,11 +55,15 @@ const char *MakeInstanceFileName(const char *directory, const char *key, Allocat
 class DomainHolder {
     std::atomic_int refcount { 1 };
 
+    bool installed = false;
     HashTable<Span<const char>, InstanceHolder *> map;
 
 public:
+    int64_t unique = -1;
+
     HeapArray<InstanceHolder *> instances;
     DomainSettings settings;
+    uint8_t archive_key[32] = {};
 
     bool Open();
 
@@ -68,6 +72,7 @@ public:
 
     bool Checkpoint();
 
+    bool IsInstalled() const { return installed; }
     InstanceHolder *Ref(Span<const char> key);
 
     friend bool InitDomain();

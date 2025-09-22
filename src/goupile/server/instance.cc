@@ -38,7 +38,7 @@ bool InstanceHolder::Open(DomainHolder *domain, InstanceHolder *master, sq_Datab
 {
     master = master ? master : this;
 
-    this->unique = next_unique++;
+    this->unique = ++next_unique;
 
     this->db = db;
     this->key = DuplicateString(key, &str_alloc);

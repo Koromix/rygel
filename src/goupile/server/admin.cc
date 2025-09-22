@@ -30,53 +30,11 @@
 #include <time.h>
 #if defined(_WIN32)
     #include <io.h>
-
-    typedef unsigned int uid_t;
-    typedef unsigned int gid_t;
 #else
-    #include <sys/types.h>
-    #include <sys/stat.h>
     #include <fcntl.h>
-    #include <pwd.h>
 #endif
 
 namespace K {
-
-static const char *DefaultConfig =
-R"([Data]
-# RootDirectory = .
-# DatabaseFile = goupile.db
-# ArchiveDirectory = archives
-# SnapshotDirectory = snapshots
-# UseSnapshots = On
-
-[Demo]
-# DemoMode = Off
-
-[Security]
-# UserPassword = Moderate
-# AdminPassword = Moderate
-# RootPassword = Hard
-
-[SMS]
-# Provider = Twilio
-# AuthID = <AuthID>
-# AuthToken = <AuthToken>
-# From = <Phone number or alphanumeric sender>
-
-[SMTP]
-# URL = <Curl URL>
-# Username = <Username> (if any)
-# Password = <Password> (if any)
-# From = <Sender email address>
-
-[HTTP]
-# SocketType = Dual
-# Port = 8889
-# Threads =
-# AsyncThreads =
-# ClientAddress = Socket
-)";
 
 #pragma pack(push, 1)
 struct ArchiveIntro {
@@ -163,57 +121,6 @@ static bool CheckUserName(Span<const char> username)
     return true;
 }
 
-#if !defined(_WIN32)
-static bool FindPosixUser(const char *username, uid_t *out_uid, gid_t *out_gid)
-{
-    struct passwd pwd_buf;
-    HeapArray<char> buf;
-    struct passwd *pwd;
-
-again:
-    buf.Grow(1024);
-    buf.len += 1024;
-
-    int ret = getpwnam_r(username, &pwd_buf, buf.ptr, buf.len, &pwd);
-    if (ret != 0) {
-        if (ret == ERANGE)
-            goto again;
-
-        LogError("getpwnam('%1') failed: %2", username, strerror(errno));
-        return false;
-    }
-    if (!pwd) {
-        LogError("Could not find system user '%1'", username);
-        return false;
-    }
-
-    *out_uid = pwd->pw_uid;
-    *out_gid = pwd->pw_gid;
-    return true;
-}
-#endif
-
-#if defined(_WIN32)
-
-static bool ChangeFileOwner(const char *, uid_t, gid_t)
-{
-    return true;
-}
-
-#else
-
-static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
-{
-    if (chown(filename, uid, gid) < 0) {
-        LogError("Failed to change '%1' owner: %2", filename, strerror(errno));
-        return false;
-    }
-
-    return true;
-}
-
-#endif
-
 static bool CreateInstance(sq_Database *domain, const char *instance_key,
                            const char *name, const InstanceOptions &options, int *out_error = nullptr)
 {
@@ -253,29 +160,12 @@ static bool CreateInstance(sq_Database *domain, const char *instance_key,
         UnlinkFile(database_filename);
     };
 
-    uid_t owner_uid = 0;
-    gid_t owner_gid = 0;
-#if !defined(_WIN32)
-    {
-        struct stat sb;
-        if (stat(gp_config.database_filename, &sb) < 0) {
-            LogError("Failed to stat '%1': %2", database_filename, strerror(errno));
-            return false;
-        }
-
-        owner_uid = sb.st_uid;
-        owner_gid = sb.st_gid;
-    }
-#endif
-
     // Create instance database
     if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         return false;
     if (!db.SetWAL(true))
         return false;
     if (!MigrateInstance(&db, InstanceVersion))
-        return false;
-    if (!ChangeFileOwner(database_filename, owner_uid, owner_gid))
         return false;
 
     // Set default settings
@@ -458,309 +348,6 @@ static bool ParseKeyString(Span<const char> str, uint8_t out_key[32] = nullptr)
         MemCpy(out_key, key, K_SIZE(key));
     }
     return true;
-}
-
-int RunInit(Span<const char *> arguments)
-{
-    BlockAllocator temp_alloc;
-
-    // Options
-    const char *username = nullptr;
-    const char *password = nullptr;
-    bool check_password = true;
-    bool totp = false;
-    const char *demo = nullptr;
-    bool change_owner = false;
-    uid_t owner_uid = 0;
-    gid_t owner_gid = 0;
-    const char *root_directory = nullptr;
-
-    const auto print_usage = [](StreamWriter *st) {
-        PrintLn(st,
-T(R"(Usage: %!..+%1 init [option...] [directory]%!0
-
-Options:
-
-    %!..+-u, --username username%!0        Name of default user
-        %!..+--password password%!0        Password of default user
-        %!..+--totp%!0                     Enable TOTP for root user
-
-        %!..+--allow_unsafe_password%!0    Allow unsafe passwords
-
-        %!..+--demo [name]%!0              Create default instance)"), FelixTarget);
-
-#if !defined(_WIN32)
-        PrintLn(st, T(R"(
-    %!..+-o, --owner owner%!0              Change directory and file owner)"));
-#endif
-    };
-
-    // Parse arguments
-    {
-        OptionParser opt(arguments);
-
-        while (opt.Next()) {
-            if (opt.Test("--help")) {
-                print_usage(StdOut);
-                return 0;
-            } else if (opt.Test("-u", "--username", OptionType::Value)) {
-                username = opt.current_value;
-            } else if (opt.Test("--password", OptionType::Value)) {
-                password = opt.current_value;
-            } else if (opt.Test("--allow_unsafe_password")) {
-                check_password = false;
-            } else if (opt.Test("--totp")) {
-                totp = true;
-            } else if (opt.Test("--demo", OptionType::OptionalValue)) {
-                demo = opt.current_value ? opt.current_value : "demo";
-#if !defined(_WIN32)
-            } else if (opt.Test("-o", "--owner", OptionType::Value)) {
-                change_owner = true;
-
-                if (!FindPosixUser(opt.current_value, &owner_uid, &owner_gid))
-                    return 1;
-#endif
-            } else {
-                opt.LogUnknownError();
-                return 1;
-            }
-        }
-
-        root_directory = opt.ConsumeNonOption();
-        root_directory = NormalizePath(root_directory ? root_directory : ".", GetWorkingDirectory(), &temp_alloc).ptr;
-
-        opt.LogUnusedArguments();
-    }
-
-    // Errors and defaults
-    if (password && !username) {
-        LogError("Option --password cannot be used without --username");
-        return 1;
-    }
-
-    sq_Database db;
-
-    // Drop created files and directories if anything fails
-    HeapArray<const char *> directories;
-    HeapArray<const char *> files;
-    K_DEFER_N(root_guard) {
-        db.Close();
-
-        for (const char *filename: files) {
-            UnlinkFile(filename);
-        }
-        for (Size i = directories.len - 1; i >= 0; i--) {
-            UnlinkDirectory(directories[i]);
-        }
-    };
-
-    // Make or check instance directory
-    if (TestFile(root_directory)) {
-        if (!IsDirectoryEmpty(root_directory)) {
-            LogError("Directory '%1' exists and is not empty", root_directory);
-            return 1;
-        }
-    } else {
-        if (!MakeDirectory(root_directory))
-            return 1;
-        directories.Append(root_directory);
-    }
-    if (change_owner && !ChangeFileOwner(root_directory, owner_uid, owner_gid))
-        return 1;
-
-    // Gather missing information
-    if (!username) {
-        username = Prompt(T("Admin user:"), &temp_alloc);
-        if (!username)
-            return 1;
-    }
-    if (!CheckUserName(username))
-        return 1;
-    if (password) {
-        if (check_password && !pwd_CheckPassword(password, username))
-            return 1;
-    } else {
-retry_pwd:
-        password = Prompt(T("Admin password:"), nullptr, "*", &temp_alloc);
-        if (!password)
-            return 1;
-
-        if (check_password && !pwd_CheckPassword(password, username))
-            goto retry_pwd;
-
-        const char *password2 = Prompt(T("Confirm:"), nullptr, "*", &temp_alloc);
-        if (!password2)
-            return 1;
-
-        if (!TestStr(password, password2)) {
-            LogError("Password mismatch");
-            goto retry_pwd;
-        }
-    }
-    LogInfo();
-
-    // Create domain config
-    {
-        const char *filename = Fmt(&temp_alloc, "%1%/goupile.ini", root_directory).ptr;
-        files.Append(filename);
-
-        if (!WriteFile(filename, DefaultConfig))
-            return 1;
-        if (!LoadConfig(filename, &gp_config))
-            return 1;
-    }
-
-    // Create directories
-    {
-        const auto make_directory = [&](const char *path) {
-            if (!MakeDirectory(path))
-                return false;
-            directories.Append(path);
-            if (change_owner && !ChangeFileOwner(path, owner_uid, owner_gid))
-                return false;
-
-            return true;
-        };
-
-        if (!make_directory(gp_config.instances_directory))
-            return 1;
-        if (!make_directory(gp_config.tmp_directory))
-            return 1;
-        if (!make_directory(gp_config.archive_directory))
-            return 1;
-        if (!make_directory(gp_config.snapshot_directory))
-            return 1;
-        if (!make_directory(gp_config.view_directory))
-            return 1;
-        if (!make_directory(gp_config.export_directory))
-            return 1;
-    }
-
-    // Create database
-    if (!db.Open(gp_config.database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-        return 1;
-    files.Append(gp_config.database_filename);
-    if (!db.SetWAL(true))
-        return 1;
-    if (!MigrateDomain(&db, gp_config.instances_directory))
-        return 1;
-    if (change_owner && !ChangeFileOwner(gp_config.database_filename, owner_uid, owner_gid))
-        return 1;
-
-    // Create default root user
-    {
-        char hash[PasswordHashBytes];
-        if (!HashPassword(password, hash))
-            return 1;
-
-        // Create local key
-        char local_key[45];
-        {
-            uint8_t buf[32];
-            FillRandomSafe(buf);
-            sodium_bin2base64(local_key, K_SIZE(local_key), buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
-        }
-
-        if (!db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
-                                              change_password, root, local_key, confirm)
-                       VALUES (1, ?1, ?2, 0, 1, ?3, ?4))", username, hash, local_key, totp ? "TOTP" : nullptr))
-            return 1;
-    }
-
-    // Create default instance
-    {
-        InstanceOptions options = {
-            .populate = true,
-            .userid = 1,
-            .permissions = (1u << K_LEN(UserPermissionNames)) - 1
-        };
-
-        if (demo && !CreateInstance(&db, demo, demo, options))
-            return 1;
-    }
-
-    if (!db.Close())
-        return 1;
-
-    root_guard.Disable();
-    return 0;
-}
-
-int RunMigrate(Span<const char *> arguments)
-{
-    BlockAllocator temp_alloc;
-
-    // Options
-    const char *config_filename = "goupile.ini";
-
-    const auto print_usage = [=](StreamWriter *st) {
-        PrintLn(st,
-T(R"(Usage: %!..+%1 migrate [option...]%!0
-
-Options:
-
-    %!..+-C, --config_file filename%!0     Set configuration file
-                                   %!D..(default: %2)%!0)"), FelixTarget, config_filename);
-    };
-
-    // Parse arguments
-    {
-        OptionParser opt(arguments);
-
-        while (opt.Next()) {
-            if (opt.Test("--help")) {
-                print_usage(StdOut);
-                return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                if (IsDirectory(opt.current_value)) {
-                    config_filename = Fmt(&temp_alloc, "%1%/goupile.ini", TrimStrRight(opt.current_value, K_PATH_SEPARATORS)).ptr;
-                } else {
-                    config_filename = opt.current_value;
-                }
-            } else {
-                opt.LogUnknownError();
-                return 1;
-            }
-        }
-
-        opt.LogUnusedArguments();
-    }
-
-    if (!LoadConfig(config_filename, &gp_config))
-        return 1;
-
-    // Migrate and open main database
-    sq_Database db;
-    if (!db.Open(gp_config.database_filename, SQLITE_OPEN_READWRITE))
-        return 1;
-    if (!MigrateDomain(&db, gp_config.instances_directory))
-        return 1;
-
-    // Migrate instances
-    {
-        sq_Statement stmt;
-        if (!db.Prepare("SELECT instance FROM dom_instances", &stmt))
-            return 1;
-
-        bool success = true;
-
-        while (stmt.Step()) {
-            const char *key = (const char *)sqlite3_column_text(stmt, 0);
-            const char *filename = MakeInstanceFileName(gp_config.instances_directory, key, &temp_alloc);
-
-            success &= MigrateInstance(filename);
-        }
-        if (!stmt.IsValid())
-            return 1;
-
-        if (!success)
-            return 1;
-    }
-
-    if (!db.Close())
-        return 1;
-
-    return 0;
 }
 
 int RunKeys(Span<const char *> arguments)
@@ -1151,7 +738,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
             LogError("Failed to initialize symmetric encryption");
             return false;
         }
-        if (crypto_box_seal(intro.eskey, skey, K_SIZE(skey), domain->settings.archive_key) != 0) {
+        if (crypto_box_seal(intro.eskey, skey, K_SIZE(skey), domain->archive_key) != 0) {
             LogError("Failed to seal symmetric key");
             return false;
         }
@@ -1241,6 +828,131 @@ bool ArchiveDomain()
 {
     bool conflict = false;
     return ArchiveInstances(nullptr, &conflict) || conflict;
+}
+
+void HandleDomainConfigure(http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
+
+    DomainHolder *domain = RefDomain();
+    K_DEFER { UnrefDomain(domain); };
+
+    if (domain) {
+        if (!session) {
+            LogError("User is not logged in");
+            io->SendError(401);
+            return;
+        }
+        if (!session->IsRoot()) {
+            LogError("Non-root users are not allowed to upload archives");
+            io->SendError(403);
+            return;
+        }
+    }
+
+    DomainSettings settings;
+    const char *username = nullptr;
+    const char *password = nullptr;
+    {
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
+
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
+
+                if (key == "name") {
+                    json->ParseString(&settings.name);
+                } else if (key == "title") {
+                    json->ParseString(&settings.title);
+                } else if (key == "archive_key") {
+                    json->ParseString(&settings.archive_key);
+                } else if (key == "username") {
+                    json->ParseString(&username);
+                } else if (key == "password") {
+                    json->ParseString(&password);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                valid &= settings.Validate();
+
+                if (domain) {
+                    if (username || password) {
+                        LogError("Cannot create default user in installed domain");
+                        valid = false;
+                    }
+                } else {
+                    if (!username) {
+                        LogError("Missing default username");
+                        valid = false;
+                    }
+                    if (password) {
+                        if (strlen(password) < pwd_MinLength) {
+                            LogError("Password is too short");
+                            valid = false;
+                        }
+                    } else {
+                        LogError("Missing default password");
+                        valid = false;
+                    }
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    bool success = gp_db.Transaction([&]() {
+        // Update settings
+        {
+            const char *sql = "UPDATE dom_settings SET value = ?2 WHERE key = ?1";
+            bool success = true;
+
+            success &= gp_db.Run(sql, "Name", settings.name);
+            success &= gp_db.Run(sql, "Title", settings.title);
+            success &= gp_db.Run(sql, "ArchiveKey", settings.archive_key);
+        }
+
+        // Create default user (initial install)
+        if (username) {
+            K_ASSERT(!domain);
+
+            char hash[PasswordHashBytes];
+            if (!HashPassword(password, hash))
+                return false;
+
+            // Create local key
+            char local_key[45];
+            {
+                uint8_t buf[32];
+                FillRandomSafe(buf);
+                sodium_bin2base64(local_key, K_SIZE(local_key), buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+            }
+
+            if (!gp_db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
+                                                     change_password, root, local_key)
+                              VALUES (1, ?1, ?2, 0, 1, ?3))",
+                           username, hash, local_key))
+                return false;
+        }
+
+        return true;
+    });
+    if (!success)
+        return;
+
+    SyncDomain(true);
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleDomainDemo(http_IO *io)

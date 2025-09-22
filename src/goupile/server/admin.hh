@@ -20,13 +20,12 @@
 
 namespace K {
 
-int RunInit(Span<const char *> arguments);
-int RunMigrate(Span<const char *> arguments);
 int RunKeys(Span<const char *> arguments);
 int RunUnseal(Span<const char *> arguments);
 
 bool ArchiveDomain();
 
+void HandleDomainConfigure(http_IO *io);
 void HandleDomainDemo(http_IO *io);
 void HandleDomainRestore(http_IO *io);
 

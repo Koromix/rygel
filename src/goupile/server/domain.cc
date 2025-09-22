@@ -34,6 +34,9 @@ static HashSet<void *> reloads;
 static DomainHolder *domain_ptr;
 static int64_t inits = 0;
 
+// Process-wide unique domain identifier
+static std::atomic_int64_t next_unique { 0 };
+
 bool InitDomain()
 {
     BlockAllocator temp_alloc;
@@ -346,6 +349,8 @@ DomainHolder *RefDomain()
 
     if (!domain_ptr)
         return nullptr;
+    if (!domain_ptr->IsInstalled())
+        return nullptr;
 
     domain_ptr->Ref();
     return domain_ptr;
@@ -419,20 +424,6 @@ static bool CheckDomainTitle(Span<const char> title)
     return true;
 }
 
-static inline bool IsZero(const void *ptr, Size len)
-{
-    K_ASSERT(len >= 0);
-
-    const uint8_t *raw = (const uint8_t *)ptr;
-
-    for (Size i = 0; i < len; i++) {
-        if (raw[i])
-            return false;
-    }
-
-    return true;
-}
-
 bool DomainSettings::Validate() const
 {
     bool valid = true;
@@ -440,7 +431,7 @@ bool DomainSettings::Validate() const
     valid &= CheckDomainName(name);
     valid &= CheckDomainTitle(title);
 
-    if (IsZero(archive_key, K_SIZE(archive_key))) {
+    if (!archive_key) {
         LogError("Domain archive key is not set");
         valid = false;
     }
@@ -450,6 +441,8 @@ bool DomainSettings::Validate() const
 
 bool DomainHolder::Open()
 {
+    unique = ++next_unique;
+
     // Load high-level settings
     {
         sq_Statement stmt;
@@ -470,17 +463,7 @@ bool DomainHolder::Open()
                 } else if (TestStr(setting, "DefaultLanguage")) {
                     settings.default_lang = DuplicateString(value, &settings.str_alloc).ptr;
                 } else if (TestStr(setting, "ArchiveKey")) {
-                    static_assert(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
-
-                    size_t key_len;
-                    int ret = sodium_base642bin(settings.archive_key, K_SIZE(settings.archive_key),
-                                                value, strlen(value), nullptr, &key_len,
-                                                nullptr, sodium_base64_VARIANT_ORIGINAL);
-
-                    if (ret || key_len != 32) {
-                        LogError("Malformed archive PublicKey value");
-                        valid = false;
-                    }
+                    settings.archive_key = DuplicateString(value, &settings.str_alloc).ptr;
                 }
             }
         }
@@ -495,9 +478,32 @@ bool DomainHolder::Open()
         if (!settings.title) {
             settings.title = settings.name;
         }
+    }
 
+    // Detect valid installation (at least one user)
+    {
+        sq_Statement stmt;
+        if (!gp_db.Prepare("SELECT userid FROM dom_users", &stmt))
+            return false;
+        if (!stmt.Run())
+            return false;
+
+        installed = stmt.IsRow();
+    }
+
+    if (installed) {
         if (!settings.Validate())
             return false;
+
+        size_t key_len;
+        int ret = sodium_base642bin(archive_key, K_SIZE(archive_key),
+                                    settings.archive_key, strlen(settings.archive_key), nullptr, &key_len,
+                                    nullptr, sodium_base64_VARIANT_ORIGINAL);
+
+        if (ret || key_len != 32) {
+            LogError("Malformed archive key value");
+            return false;
+        }
     }
 
     return true;

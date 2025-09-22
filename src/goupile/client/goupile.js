@@ -96,8 +96,10 @@ async function start() {
     // Authorize user
     if (profile.authorized) {
         url = await syncInstance();
-    } else {
+    } else if (ENV.ready) {
         url = await runLoginScreen(null, true);
+    } else {
+        url = await runInstallScreen();
     }
 
     // Run controller now
@@ -374,6 +376,55 @@ async function pingServer() {
     } catch (err) {
         online = false;
     }
+}
+
+async function runInstallScreen(e) {
+    let keys = nacl.box.keyPair();
+
+    let archive_key = Base64.toBase64(keys.publicKey);
+    let decrypt_key = Base64.toBase64(keys.secretKey);
+
+    await UI.dialog(e, T.goupile_installation, { type: 'screen' }, (d, resolve, reject) => {
+        d.text('*name', T.domain_name, { help: T.domain_name_help });
+        d.text('*title', T.domain_title, { help: T.domain_title_help });
+
+        d.text('*username', T.root_account, { value: 'admin' });
+        d.password('*password', T.password);
+        d.password('*password2', null, {
+            placeholder: T.confirmation,
+            help: T.password_complexity_help
+        });
+        if (d.values.password != null && d.values.password2 != null &&
+                                         d.values.password !== d.values.password2)
+            d.error('password2', T.password_mismatch);
+
+        d.text('*secret_key', T.decrypt_key, {
+            value: decrypt_key,
+            readonly: true,
+            help: [
+                unsafeHTML(T.keep_decrypt_key1),
+                unsafeHTML(T.keep_decrypt_key2)
+            ]
+        });
+
+        d.action(T.install, { disabled: !d.isValid() }, async () => {
+            try {
+                await Net.post('/admin/api/domain/configure', {
+                    name: d.values.name,
+                    title: d.values.title,
+                    archive_key: archive_key,
+                    username: d.values.username,
+                    password: d.values.password
+                });
+
+                window.onbeforeunload = null;
+                window.location.href = window.location.href;
+            } catch (err) {
+                Log.error(err);
+                d.refresh();
+            }
+        });
+    });
 }
 
 async function runLoginScreen(e, initial) {
