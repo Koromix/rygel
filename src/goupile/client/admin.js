@@ -97,13 +97,14 @@ function renderInstances() {
                     ${!instances.length ? html`<tr><td colspan="5">${T.no_project}</td></tr>` : ''}
                     ${instances.map(instance => html`
                         <tr class=${instance === selected_instance ? 'active' : ''}>
-                            <td style="text-align: left;" class=${instance.master != null ? 'child' : ''}>
+                            <td style="text-align: left;" class=${instance.master != null ? 'child' : ''} colspan=${instance.master != null ? 2 : 1}>
                                 ${instance.master == null && instance.legacy ? html`<span class="ui_tag" style="background: #bbb;">v2</span>`  : ''}
                                 ${instance.master != null ? html`<span style="color: #ccc;">${instance.master} / </span>${instance.key.replace(/^.*\//, '')}` : ''}
                                 ${instance.master == null ? instance.key : ''}
                                 (<a href=${'/' + instance.key} target="_blank">${T.access.toLowerCase()}</a>)
                             </td>
-                            <td><a role="button" tabindex="0" @click=${UI.wrap(e => runSplitInstanceDialog(e, instance.key))}>${T.split}</a></td>
+                            ${instance.master == null ?
+                                html`<td><a role="button" tabindex="0" @click=${UI.wrap(e => runSplitInstanceDialog(e, instance.key))}>${T.split}</a></td>` : ''}
                             <td><a role="button" tabindex="0" href=${Util.pasteURL('/admin/', { select: instance.key })}
                                    @click=${UI.wrap(instance != selected_instance ? (e => togglePanel('users', true))
                                                                                         : (e => { go(e, '/admin/'); e.preventDefault(); }))}>${T.permissions}</a></td>
