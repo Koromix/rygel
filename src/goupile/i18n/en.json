@@ -46,7 +46,7 @@
         "configure": "Configure",
         "configure_domain": "Configure domain",
         "configure_my_totp": "Configure two-factor authentication",
-        "configure_x": "Configure de {1}",
+        "configure_x": "Configuration de {1}",
         "confirm": "Confirm",
         "confirm_archive_deletion": "Do you really want to delete archive '{1}'?",
         "confirm_file_deletion": "Do you really want to delete file '{1}'?",
