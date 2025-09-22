@@ -139,7 +139,9 @@ function initLanguages() {
     languages.en = en;
     languages.fr = fr;
 
-    Util.initLocales(languages, 'en', ENV.lang);
+    let lang = Util.getCookie('lang') ?? ENV.default_lang;
+
+    Util.initLocales(languages, 'en', lang);
     Util.setCookie('lang', document.documentElement.lang, ENV.urls.base, 365 * 86400);
 }
 
