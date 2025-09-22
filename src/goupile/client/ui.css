@@ -358,7 +358,7 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
     border-bottom: 1px dotted #ccc;
 }
 
-.ui_table + .ui_quick { margin-top: 4px; }
+.ui_table + .ui_quick { margin-top: 8px; }
 .ui_table + .ui_actions { margin-top: 16px; }
 
 html.mobile .ui_table.fixed { table-layout: auto; }

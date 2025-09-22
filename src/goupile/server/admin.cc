@@ -806,6 +806,43 @@ bool ArchiveDomain()
     return ArchiveInstances(nullptr, &conflict) || conflict;
 }
 
+void HandleDomainInfo(http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
+        LogError("Non-admin users are not allowed to get domain info=");
+        io->SendError(403);
+        return;
+    }
+
+    DomainHolder *domain = RefDomain();
+    K_DEFER { UnrefDomain(domain); };
+
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
+
+        json->Key("name"); json->String(domain->settings.name);
+        json->Key("title"); json->String(domain->settings.title);
+        json->Key("default_lang"); json->String(domain->settings.default_lang);
+
+        if (session->IsRoot()) {
+            json->Key("archive"); json->StartObject();
+                json->Key("key"); json->String(domain->settings.archive_key);
+                json->Key("hour"); json->Int(domain->settings.archive_hour);
+                json->Key("retention"); json->Int(domain->settings.archive_retention);
+            json->EndObject();
+        }
+
+        json->EndObject();
+    });
+}
+
 void HandleDomainConfigure(http_IO *io)
 {
     RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);

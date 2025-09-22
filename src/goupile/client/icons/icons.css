@@ -25,10 +25,10 @@ button.icon { text-align: right; }
 .icon.code { background-image: url('code.webp'); }
 .icon.data { background-image: url('data.webp'); }
 .icon.design { background-image: url('design.webp'); }
+.icon.domain { background-image: url('domain.webp'); }
 .icon.down { background-image: url('down.webp'); }
 .icon.dual { background-image: url('dual.webp'); }
 .icon.home { background-image: url('home.webp'); }
-.icon.instances { background-image: url('instances.webp'); }
 .icon.lines { background-image: url('lines.webp'); }
 .icon.lock { background-image: url('lock.webp'); }
 .icon.microphone { background-image: url('microphone.webp'); }

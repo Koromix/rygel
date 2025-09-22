@@ -474,10 +474,6 @@ static void HandleAdminRequest(http_IO *io)
                         json.Bool(legacy);
                     }
                     json.EndObject();
-                    if (domain) {
-                        json.Key("default_lang"); json.String(domain->settings.default_lang);
-                        json.Key("retention"); json.Int(domain->settings.archive_retention);
-                    }
                     json.EndObject();
                 } else if (key == "HEAD_TAGS") {
                     // Nothing to add
@@ -539,6 +535,8 @@ static void HandleAdminRequest(http_IO *io)
         HandleChangeQRcode(io, domain->settings.title);
     } else if (TestStr(admin_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
         HandleChangeTOTP(io);
+    } else if (TestStr(admin_url, "/api/domain/info") && request.method == http_RequestMethod::Get) {
+        HandleDomainInfo(io);
     } else if (TestStr(admin_url, "/api/domain/demo") && request.method == http_RequestMethod::Post) {
         HandleDomainDemo(io);
     } else if (TestStr(admin_url, "/api/domain/restore") && request.method == http_RequestMethod::Post) {

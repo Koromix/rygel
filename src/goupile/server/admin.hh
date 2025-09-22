@@ -25,6 +25,7 @@ int RunUnseal(Span<const char *> arguments);
 
 bool ArchiveDomain();
 
+void HandleDomainInfo(http_IO *io);
 void HandleDomainConfigure(http_IO *io);
 void HandleDomainDemo(http_IO *io);
 void HandleDomainRestore(http_IO *io);

@@ -22,6 +22,7 @@ import * as UI from './ui.js';
 
 import './admin.css';
 
+let domain;
 let instances;
 let users;
 let archives;
@@ -36,20 +37,20 @@ let mutex = new Mutex;
 async function init(fallback) {
     UI.setMenu(renderMenu);
 
-    UI.createPanel('instances', 0, renderInstances);
+    UI.createPanel('domain', 0, renderDomain);
     UI.createPanel('users', 1, renderUsers);
     if (profile.root)
         UI.createPanel('archives', 1, renderArchives);
 
-    UI.setPanels(['instances','users']);
+    UI.setPanels(['domain','users']);
 }
 
 function renderMenu() {
     return html`
         <nav class="ui_toolbar" id="ui_top" style="z-index: 999999;">
             <button class="icon lines" @click=${UI.wrap(e => go(e, '/admin/'))}>${T.admin}</button>
-            <button class=${'icon instances' + (UI.isPanelActive('instances') ? ' active' : '')}
-                    @click=${UI.wrap(e => togglePanel('instances'))}>${T.projects}</button>
+            <button class=${'icon domain' + (UI.isPanelActive('domain') ? ' active' : '')}
+                    @click=${UI.wrap(e => togglePanel('domain'))}>${T.domain}</button>
             <button class=${'icon users' + (UI.isPanelActive('users') ? ' active' : '')}
                     @click=${UI.wrap(e => togglePanel('users'))}>${T.users}</button>
             ${profile.root ? html`
@@ -75,7 +76,7 @@ function togglePanel(key, enable = null) {
     return go();
 }
 
-function renderInstances() {
+function renderDomain() {
     return html`
         <div class="padded" style="background: #f8f8f8;">
             <div class="ui_quick">
@@ -94,10 +95,10 @@ function renderInstances() {
                 </colgroup>
 
                 <tbody>
-                    ${!instances.length ? html`<tr><td colspan="5">${T.no_project}</td></tr>` : ''}
                     ${instances.map(instance => html`
                         <tr class=${instance === selected_instance ? 'active' : ''}>
-                            <td style="text-align: left;" class=${instance.master != null ? 'child' : ''} colspan=${instance.master != null ? 2 : 1}>
+                            <td style="text-align: left;" class=${instance.master != null ? 'child' : ''}
+                                colspan=${instance.master != null ? 2 : 1}>
                                 ${instance.master == null && instance.legacy ? html`<span class="ui_tag" style="background: #bbb;">v2</span>`  : ''}
                                 ${instance.master != null ? html`<span style="color: #ccc;">${instance.master} / </span>${instance.key.replace(/^.*\//, '')}` : ''}
                                 ${instance.master == null ? instance.key : ''}
@@ -112,8 +113,17 @@ function renderInstances() {
                             <td>${profile.root || instance.master != null ? html`<a role="button" tabindex="0" @click=${UI.wrap(e => runDeleteInstanceDialog(e, instance))}>${T.delete}</a>` : ''}</td>
                         </tr>
                     `)}
+                    ${!instances.length ? html`<tr><td colspan="5">${T.no_project}</td></tr>` : ''}
                 </tbody>
             </table>
+
+            ${profile.root ? html`
+                <div class="ui_quick">
+                    <div style="flex: 1;"></div>
+                    <a @click=${UI.wrap(runConfigureDomainDialog)}>${T.configure_domain}</a>
+                    <div style="flex: 1;"></div>
+                </div>
+            ` : ''}
         </div>
     `;
 }
@@ -216,7 +226,7 @@ function renderArchives() {
     return html`
         <div class="padded">
             <div style="margin-bottom: 2em;">
-                <p>${unsafeHTML(T.format(T.archive_retention_period, ENV.retention))}</p>
+                <p>${unsafeHTML(T.format(T.archive_retention_period, domain.archive.retention))}</p>
                 <p>${unsafeHTML(T.remember_restore_key)}</p>
             </div>
 
@@ -358,6 +368,7 @@ async function go(e, url = null, options = {}) {
     await mutex.run(async () => {
         options = Object.assign({ push_history: true }, options);
 
+        let new_domain = domain;
         let new_instances = instances;
         let new_users = users;
         let new_archives = archives;
@@ -366,6 +377,8 @@ async function go(e, url = null, options = {}) {
         let new_permissions = selected_permissions;
         let explicit_panels = false;
 
+        if (new_domain == null)
+            new_domain = await Net.get('/admin/api/domain/info');
         if (new_instances == null)
             new_instances = await Net.get('/admin/api/instances/list');
         if (new_users == null)
@@ -427,6 +440,7 @@ async function go(e, url = null, options = {}) {
         }
 
         // Commit
+        domain = new_domain;
         instances = new_instances;
         users = new_users;
         archives = new_archives;
@@ -464,7 +478,7 @@ function runCreateInstanceDialog(e) {
         d.boolean('populate', T.populate_demo, { value: true, untoggle: false });
 
         let langs = Object.keys(goupile.languages).map(lang => [lang, lang.toUpperCase()]);
-        d.enumDrop('lang', T.language, langs, { value: ENV.default_lang });
+        d.enumDrop('lang', T.language, langs, { value: domain.default_lang });
 
         d.action(T.create, { disabled: !d.isValid() }, async () => {
             try {
@@ -680,6 +694,46 @@ function runSplitInstanceDialog(e, master) {
 
                 let url = Util.pasteURL('/admin/', { select: full_key });
                 go(null, url);
+            } catch (err) {
+                Log.error(err);
+                d.refresh();
+            }
+        });
+    });
+}
+
+function runConfigureDomainDialog(e) {
+    return UI.dialog(e, T.format(T.configure_x, domain.name), {}, (d, resolve, reject) => {
+        d.pushOptions({ untoggle: false });
+
+        d.tabs('tabs', () => {
+            d.tab(T.domain, () => {
+                d.text('*name', T.domain_name, { value: domain.name });
+                d.text('*title', T.domain_title, { value: domain.title });
+
+                let langs = Object.keys(goupile.languages).map(lang => [lang, lang.toUpperCase()]);
+                d.enumDrop('default_lang', T.default_language, langs, {
+                    value: domain.default_lang,
+                    help: T.default_project_language
+                });
+            });
+        });
+
+        d.action(T.configure, { disabled: !d.isValid() }, async () => {
+            try {
+                await Net.post('/admin/api/domain/configure', {
+                    name: d.values.name,
+                    title: d.values.title,
+                    default_lang: d.values.default_lang,
+                    archive_key: domain.archive.key
+                });
+
+                resolve();
+                Log.success(T.domain_edited);
+
+                domain = null;
+
+                go();
             } catch (err) {
                 Log.error(err);
                 d.refresh();
