@@ -304,7 +304,7 @@ const char *GitVersioneer::Version(Span<const char> key, Allocator *alloc)
                 for (const char *tag: *tags) {
                     if (tag && StartsWith(tag, prefix) && tag[prefix.len]) {
                         if (idx) {
-                            const char *version = Fmt(alloc, "%1-%2_%3", tag + prefix.len, idx, id).ptr;
+                            const char *version = Fmt(alloc, "%1-dev-%2_%3", tag + prefix.len, idx, id).ptr;
                             return version;
                         } else {
                             const char *version = DuplicateString(tag + prefix.len, alloc).ptr;
