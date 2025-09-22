@@ -936,6 +936,9 @@ void HandleDomainConfigure(http_IO *io)
             success &= gp_db.Run(sql, "Title", settings.title);
             success &= gp_db.Run(sql, "DefaultLang", settings.default_lang);
             success &= gp_db.Run(sql, "ArchiveKey", settings.archive_key);
+
+            if (!success)
+                return false;
         }
 
         // Create default user (initial install)
