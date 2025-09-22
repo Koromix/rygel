@@ -1,6 +1,7 @@
 PKG_DIR=bin/Packages
 DEST_DIR=${PKG_DIR}/${TARGET}/docker
 DOCKER_IMAGE=debian12
+IMAGE_PREFIX=koromix/
 
 docker build -t rygel/${DOCKER_IMAGE} tools/docker/${DOCKER_IMAGE}
 
@@ -18,6 +19,5 @@ cp tools/package/build/docker/isolate.sh $DEST_DIR/isolate.sh
 echo "$TARGET = $VERSION" > $DEST_DIR/versions.txt
 
 cd $DEST_DIR
-docker build -t $TARGET:$VERSION .
-docker image tag $TARGET:$VERSION $TARGET:dev
-
+docker build -t $IMAGE_PREFIX$TARGET:$VERSION .
+docker image tag $IMAGE_PREFIX$TARGET:$VERSION $IMAGE_PREFIX$TARGET:dev
