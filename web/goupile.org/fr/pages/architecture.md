@@ -69,10 +69,11 @@ Une fois cette étape terminée, vous pouvez utiliser felix pour compiler et ex�
 
 ```sh
 cd rygel
-mkdir tmp
 
-./felix --run goupile init tmp/domain # Crée le domaine
-./felix --run goupile -C tmp/domain   # Exécute le domaine
+mkdir -p tmp/test
+touch tmp/test/goupile.ini
+
+./felix --run goupile -C tmp/test
 ```
 
 Vous pouvez ensuite accéder à Goupile depuis votre navigateur. Par défaut, il fonctionne sur le port 8889, donc l’adresse est `http://localhost:8889/`. Accédez au panneau d’administration via `http://localhost:8889/admin/`.

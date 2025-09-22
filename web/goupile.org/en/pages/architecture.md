@@ -69,10 +69,11 @@ After this is done, you can use felix to build and directly run the goupile bina
 
 ```sh
 cd rygel
-mkdir tmp
 
-./felix --run goupile init tmp/domain # Create the domain
-./felix --run goupile -C tmp/domain   # Run the domain
+mkdir -p tmp/test
+touch tmp/test/goupile.ini
+
+./felix --run goupile -C tmp/test
 ```
 
 You can then open Goupile with your browser, by default it runs on port 8889, so the address is `http://localhost:8889/`. Access the admin panel at `http://localhost:8889/admin/`.
