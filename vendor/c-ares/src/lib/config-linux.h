@@ -399,7 +399,7 @@
 /* #undef HAVE___SYSTEM_PROPERTY_GET */
 
 /* Define if have arc4random_buf() */
-#define HAVE_ARC4RANDOM_BUF 1
+/* #undef HAVE_ARC4RANDOM_BUF */
 
 /* Define if have getifaddrs() */
 #define HAVE_GETIFADDRS 1
