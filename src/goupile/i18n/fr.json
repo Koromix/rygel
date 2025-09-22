@@ -88,7 +88,9 @@
             "wednesday": "Mercredi"
         },
         "decrypt_key": "Clé de déchiffrement",
+        "default_language": "Langue par défaut",
         "default_page": "Page par défaut",
+        "default_project_language": "Langue par défaut des nouveaux projets",
         "delete": "Supprimer",
         "demo_mode_warning": "Mode de démonstration... Attention, les formulaires et les données peuvent disparaître à tout moment !",
         "document": "Document",

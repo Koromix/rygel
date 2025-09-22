@@ -840,6 +840,8 @@ void HandleDomainConfigure(http_IO *io)
                     json->ParseString(&settings.name);
                 } else if (key == "title") {
                     json->ParseString(&settings.title);
+                } else if (key == "default_lang") {
+                    json->ParseString(&settings.default_lang);
                 } else if (key == "archive_key") {
                     json->ParseString(&settings.archive_key);
                 } else if (key == "username") {
@@ -895,6 +897,7 @@ void HandleDomainConfigure(http_IO *io)
 
             success &= gp_db.Run(sql, "Name", settings.name);
             success &= gp_db.Run(sql, "Title", settings.title);
+            success &= gp_db.Run(sql, "DefaultLang", settings.default_lang);
             success &= gp_db.Run(sql, "ArchiveKey", settings.archive_key);
         }
 

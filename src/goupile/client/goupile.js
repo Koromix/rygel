@@ -398,6 +398,12 @@ async function runInstallScreen(e) {
                                          d.values.password !== d.values.password2)
             d.error('password2', T.password_mismatch);
 
+        let langs = Object.keys(goupile.languages).map(lang => [lang, lang.toUpperCase()]);
+        d.enumDrop('default_lang', T.default_language, langs, {
+            value: document.documentElement.lang,
+            help: T.default_project_language
+        });
+
         d.text('*secret_key', T.decrypt_key, {
             value: decrypt_key,
             readonly: true,
@@ -412,6 +418,7 @@ async function runInstallScreen(e) {
                 await Net.post('/admin/api/domain/configure', {
                     name: d.values.name,
                     title: d.values.title,
+                    default_lang: d.values.default_lang,
                     archive_key: archive_key,
                     username: d.values.username,
                     password: d.values.password

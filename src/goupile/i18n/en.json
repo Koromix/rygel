@@ -88,7 +88,9 @@
             "wednesday": "Wednesday"
         },
         "decrypt_key": "Decryption key",
+        "default_language": "Default language",
         "default_page": "Default page",
+        "default_project_language": "Default language of new projects",
         "delete": "Delete",
         "demo_mode_warning": "Demo mode... Please note that forms and data may disappear at any time!",
         "document": "Document",

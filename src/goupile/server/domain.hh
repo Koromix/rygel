@@ -29,7 +29,7 @@ extern const int MaxInstances;
 struct DomainSettings {
     const char *name = nullptr;
     const char *title = nullptr;
-    const char *default_lang = "fr"; // Used to be french only, keep this value for compatibility
+    const char *default_lang = nullptr;
 
     const char *archive_key = nullptr;
     int archive_hour = 0;

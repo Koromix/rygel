@@ -475,6 +475,7 @@ static void HandleAdminRequest(http_IO *io)
                     }
                     json.EndObject();
                     if (domain) {
+                        json.Key("default_lang"); json.String(domain->settings.default_lang);
                         json.Key("retention"); json.Int(domain->settings.archive_retention);
                     }
                     json.EndObject();

@@ -454,6 +454,10 @@ bool DomainSettings::Validate() const
 
     valid &= CheckDomainName(name);
     valid &= CheckDomainTitle(title);
+    if (!default_lang) {
+        LogError("Missing default language");
+        valid = false;
+    }
     valid &= ParseKeyString(archive_key);
 
     return valid;
@@ -480,7 +484,7 @@ bool DomainHolder::Open()
                     settings.name = DuplicateString(value, &settings.str_alloc).ptr;
                 } else if (TestStr(setting, "Title")) {
                     settings.title = DuplicateString(value, &settings.str_alloc).ptr;
-                } else if (TestStr(setting, "DefaultLanguage")) {
+                } else if (TestStr(setting, "DefaultLang")) {
                     settings.default_lang = DuplicateString(value, &settings.str_alloc).ptr;
                 } else if (TestStr(setting, "ArchiveKey")) {
                     settings.archive_key = DuplicateString(value, &settings.str_alloc).ptr;

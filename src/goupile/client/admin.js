@@ -463,7 +463,7 @@ function runCreateInstanceDialog(e) {
         d.boolean('populate', T.populate_demo, { value: true, untoggle: false });
 
         let langs = Object.keys(goupile.languages).map(lang => [lang, lang.toUpperCase()]);
-        d.enumDrop('lang', T.language, langs, { value: document.documentElement.lang });
+        d.enumDrop('lang', T.language, langs, { value: ENV.default_lang });
 
         d.action(T.create, { disabled: !d.isValid() }, async () => {
             try {
