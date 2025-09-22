@@ -18,4 +18,6 @@ cp tools/package/build/docker/isolate.sh $DEST_DIR/isolate.sh
 echo "$TARGET = $VERSION" > $DEST_DIR/versions.txt
 
 cd $DEST_DIR
-docker build -t $TARGET .
+docker build -t $TARGET:$VERSION .
+docker image tag $TARGET:$VERSION $TARGET:dev
+
