@@ -1,5 +1,3 @@
-Okay, here is the English translation of the provided technical documentation.
-
 # Installation
 
 ## Linux (Debian)
