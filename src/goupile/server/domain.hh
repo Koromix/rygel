@@ -51,6 +51,7 @@ void UnrefDomain(DomainHolder *domain);
 InstanceHolder *RefInstance(const char *key);
 
 const char *MakeInstanceFileName(const char *directory, const char *key, Allocator *alloc);
+bool ParseKeyString(Span<const char> str, uint8_t out_key[32] = nullptr);
 
 class DomainHolder {
     std::atomic_int refcount { 1 };
@@ -63,7 +64,6 @@ public:
 
     HeapArray<InstanceHolder *> instances;
     DomainSettings settings;
-    uint8_t archive_key[32] = {};
 
     bool Open();
 

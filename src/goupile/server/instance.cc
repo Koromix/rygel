@@ -93,17 +93,9 @@ bool InstanceHolder::Open(DomainHolder *domain, InstanceHolder *master, sq_Datab
                 } else if (TestStr(setting, "MaxFileSize")) {
                     valid &= ParseSize(value, &settings.max_file_size);
                 } else if (TestStr(setting, "TokenKey")) {
-                    size_t key_len;
-                    int ret = sodium_base642bin(settings.token_skey, K_SIZE(settings.token_skey),
-                                                value, strlen(value), nullptr, &key_len,
-                                                nullptr, sodium_base64_VARIANT_ORIGINAL);
-                    if (!ret && key_len == 32) {
-                        static_assert(K_SIZE(settings.token_pkey) == crypto_scalarmult_BYTES);
-                        crypto_scalarmult_base(settings.token_pkey, settings.token_skey);
-
+                    if (ParseKeyString(value)) {
                         settings.token_key = DuplicateString(value, &str_alloc).ptr;
                     } else {
-                        LogError("Malformed TokenKey value");
                         valid = false;
                     }
                 } else if (TestStr(setting, "AllowGuests")) {

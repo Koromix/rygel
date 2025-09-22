@@ -390,6 +390,30 @@ const char *MakeInstanceFileName(const char *directory, const char *key, Allocat
     return buf.Leak().ptr;
 }
 
+bool ParseKeyString(Span<const char> str, uint8_t out_key[32])
+{
+    static_assert(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
+
+    if (!str.len) {
+        LogError("Empty or missing encryption key");
+        return false;
+    }
+
+    uint8_t key[32];
+    size_t key_len;
+    int ret = sodium_base642bin(key, K_SIZE(key), str.ptr, (size_t)str.len,
+                                nullptr, &key_len, nullptr, sodium_base64_VARIANT_ORIGINAL);
+    if (ret || key_len != 32) {
+        LogError("Malformed encryption key");
+        return false;
+    }
+
+    if (out_key) {
+        MemCpy(out_key, key, K_SIZE(key));
+    }
+    return true;
+}
+
 static bool CheckDomainName(Span<const char> name)
 {
     const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_' || c == '.' || c == '-'; };
@@ -430,11 +454,7 @@ bool DomainSettings::Validate() const
 
     valid &= CheckDomainName(name);
     valid &= CheckDomainTitle(title);
-
-    if (!archive_key) {
-        LogError("Domain archive key is not set");
-        valid = false;
-    }
+    valid &= ParseKeyString(archive_key);
 
     return valid;
 }
@@ -491,20 +511,8 @@ bool DomainHolder::Open()
         installed = stmt.IsRow();
     }
 
-    if (installed) {
-        if (!settings.Validate())
-            return false;
-
-        size_t key_len;
-        int ret = sodium_base642bin(archive_key, K_SIZE(archive_key),
-                                    settings.archive_key, strlen(settings.archive_key), nullptr, &key_len,
-                                    nullptr, sodium_base64_VARIANT_ORIGINAL);
-
-        if (ret || key_len != 32) {
-            LogError("Malformed archive key value");
-            return false;
-        }
-    }
+    if (installed && !settings.Validate())
+        return false;
 
     return true;
 }

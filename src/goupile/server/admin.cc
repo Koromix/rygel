@@ -331,25 +331,6 @@ static void LogKeyPair(const char *decrypt_key, const char *archive_key)
     LogInfo("There is no way to get it back, without it the archives are lost.");
 }
 
-static bool ParseKeyString(Span<const char> str, uint8_t out_key[32] = nullptr)
-{
-    static_assert(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
-
-    uint8_t key[32];
-    size_t key_len;
-    int ret = sodium_base642bin(key, K_SIZE(key), str.ptr, (size_t)str.len,
-                                nullptr, &key_len, nullptr, sodium_base64_VARIANT_ORIGINAL);
-    if (ret || key_len != 32) {
-        LogError("Malformed key value");
-        return false;
-    }
-
-    if (out_key) {
-        MemCpy(out_key, key, K_SIZE(key));
-    }
-    return true;
-}
-
 int RunKeys(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -412,10 +393,7 @@ again:
                 goto again;
         } else {
             // Already checked it is well formed
-            size_t key_len;
-            int ret = sodium_base642bin(sk, K_SIZE(sk), decrypt_key, strlen(decrypt_key),
-                                        nullptr, &key_len, nullptr, sodium_base64_VARIANT_ORIGINAL);
-            K_ASSERT(!ret && key_len == 32);
+            ParseKeyString(decrypt_key, sk);
         }
 
         crypto_scalarmult_base(pk, sk);
@@ -444,14 +422,8 @@ static UnsealResult UnsealArchive(StreamReader *reader, StreamWriter *writer, co
         static_assert(crypto_scalarmult_SCALARBYTES == crypto_box_SECRETKEYBYTES);
         static_assert(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
 
-        size_t key_len;
-        int ret = sodium_base642bin(askey, K_SIZE(askey),
-                                    decrypt_key, strlen(decrypt_key), nullptr, &key_len,
-                                    nullptr, sodium_base64_VARIANT_ORIGINAL);
-        if (ret || key_len != 32) {
-            LogError("Malformed decryption key");
+        if (!ParseKeyString(decrypt_key, askey))
             return UnsealResult::Error;
-        }
 
         crypto_scalarmult_base(apkey, askey);
     }
@@ -725,6 +697,10 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
     BackupContext ctx = {};
     ctx.writer = &writer;
 
+    uint8_t apkey[crypto_box_PUBLICKEYBYTES];
+    if (!ParseKeyString(domain->settings.archive_key, apkey))
+        return false;
+
     // Write archive intro
     {
         ArchiveIntro intro = {};
@@ -738,7 +714,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
             LogError("Failed to initialize symmetric encryption");
             return false;
         }
-        if (crypto_box_seal(intro.eskey, skey, K_SIZE(skey), domain->archive_key) != 0) {
+        if (crypto_box_seal(intro.eskey, skey, K_SIZE(skey), apkey) != 0) {
             LogError("Failed to seal symmetric key");
             return false;
         }
