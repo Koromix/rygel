@@ -355,7 +355,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         if (config.sock_type == SocketType::Unix) {
             LogInfo("Listening on socket '%!..+%1%!0' (Unix stack)", config.unix_path);
         } else {
-            LogInfo("Listening on %!..+http://localhost:%1/%!0 (%2 stack)",
+            LogInfo("Listening on HTTP port %1 (%2 stack)",
                     config.port, SocketTypeNames[(int)config.sock_type]);
         }
     }
