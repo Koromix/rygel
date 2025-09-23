@@ -83,6 +83,7 @@ let position = {
 let interaction = null;
 
 // Draw data
+let view = null;
 let rows = [];
 
 // ------------------------------------------------------------------------
@@ -234,7 +235,7 @@ function update() {
     if (pressed_keys.tab == 1)
         show_debug = !show_debug;
 
-    let view = world.views.get(settings.view);
+    view = world.views.get(settings.view);
 
     if (view == null) {
         view = world.views.values().next().value;
@@ -510,6 +511,9 @@ function update() {
                 right -= MARK_OFFSET;
             }
 
+            if (right && pressed_keys.space == -1)
+                toggleRow(idx);
+
             if (pressed_keys.m == -1) {
                 let entity = world.entities[row.entity];
                 let mark = UI.wrap(() => runMark(entity));
@@ -525,13 +529,7 @@ function update() {
 
                         mark();
                     } else {
-                        position.entity = row.entity;
-                        position.y = -rows[idx - row.index].top;
-
-                        if (!view.expand.delete(row.path))
-                            view.expand.add(row.path);
-
-                        saveState();
+                        toggleRow(idx);
                     }
                 }
 
@@ -565,6 +563,16 @@ function revealTime(start, end) {
         position.x = timeToPosition(time, zoom);
         position.zoom = zoom;
     }
+}
+
+function toggleRow(idx) {
+    let row = rows[idx];
+
+    position.entity = row.entity;
+    position.y = -rows[idx - row.index].top;
+
+    if (!view.expand.delete(row.path))
+        view.expand.add(row.path);
 }
 
 function combine(entities, idx, levels, align) {
