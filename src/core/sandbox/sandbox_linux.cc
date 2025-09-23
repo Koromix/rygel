@@ -53,6 +53,15 @@ struct cap_user_data {
 };
 
 // Distribution is probably shipping an old linux/landlock.h header version.
+#if !defined(__NR_landlock_create_ruleset)
+    #define __NR_landlock_create_ruleset 444
+#endif
+#if !defined(__NR_landlock_add_rule)
+    #define __NR_landlock_add_rule 445
+#endif
+#if !defined(__NR_landlock_restrict_self)
+    #define __NR_landlock_restrict_self 446
+#endif
 #define LANDLOCK_ABI_WARN 6
 #define LANDLOCK_CREATE_RULESET_VERSION (1u << 0)
 enum landlock_rule_type {
