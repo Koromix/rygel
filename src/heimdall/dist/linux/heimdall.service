@@ -7,7 +7,7 @@ Type=notify
 User=heimdall
 Group=heimdall
 UMask=0002
-ExecStart=/usr/bin/heimdall -C /etc/heimdall.ini --sandbox
+ExecStart=/usr/bin/heimdall -C /etc/heimdall.ini
 Restart=on-failure
 RestartSec=20
 

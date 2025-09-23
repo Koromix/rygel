@@ -11,7 +11,7 @@ PKG_ARCHITECTURES="amd64 arm64"
 
 SCRIPT_PATH=src/heimdall/dist/linux/debian.sh
 VERSION_TARGET=heimdall
-DOCKER_IMAGE=debian12
+DOCKER_IMAGE=debian11
 
 build() {
     ./bootstrap.sh
