@@ -26,18 +26,57 @@
 
 namespace K {
 
+static bool CheckURL(const char *url)
+{
+    CURLU *h = curl_url();
+    K_DEFER { curl_url_cleanup(h); };
+
+    // Parse URL
+    {
+        CURLUcode ret = curl_url_set(h, CURLUPART_URL, url, CURLU_NON_SUPPORT_SCHEME);
+
+        if (ret == CURLUE_OUT_OF_MEMORY)
+            K_BAD_ALLOC();
+        if (ret != CURLUE_OK) {
+            LogError("Malformed SMTP URL '%1'", url);
+            return false;
+        }
+    }
+
+    // Check scheme
+    {
+        char *scheme = nullptr;
+
+        CURLUcode ret = curl_url_get(h, CURLUPART_SCHEME, &scheme, 0);
+        if (ret == CURLUE_OUT_OF_MEMORY)
+            K_BAD_ALLOC();
+        K_DEFER { curl_free(scheme); };
+
+        if (scheme && !TestStr(scheme, "smtp") && !TestStr(scheme, "smtps")) {
+            LogError("Unsupported SMTP scheme '%1'", scheme);
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool smtp_Config::Validate() const
 {
     bool valid = true;
 
-    if (!url) {
+    if (url) {
+        valid = CheckURL(url);
+    } else {
         LogError("SMTP URL is not set");
         valid = false;
     }
+
     if (username && !password) {
         LogError("SMTP username is set without password");
         valid = false;
     }
+
     if (!from) {
         LogError("SMTP From setting is not set");
         valid = false;
