@@ -41,7 +41,8 @@ const DEFAULT_SETTINGS = {
     view: null,
     align: false,
     warning: false,
-    hide: false
+    filter: false,
+    highlight: false
 };
 
 // Assets
@@ -247,6 +248,15 @@ function update() {
     for (let key in layout) {
         if (isInside(mouse_state, layout[key]))
             zone = layout[key];
+    }
+
+    if (pressed_keys.f == -1) {
+        settings.filter = !settings.filter;
+        saveState();
+    }
+    if (pressed_keys.h == -1) {
+        settings.highlight = !settings.highlight;
+        saveState();
     }
 
     // Recenter view when user needs it
@@ -629,7 +639,7 @@ function combine(entities, idx, levels, align) {
             values: []
         };
 
-        if (!row.depth && entity.mark != null)
+        if (!row.index && entity.mark != null)
             row.mark = entity.mark.status;
 
         for (let evt of entity.events) {
@@ -755,7 +765,7 @@ function combine(entities, idx, levels, align) {
         }
 
         if (!row.events.length && !row.periods.length && !row.values.length) {
-            if (settings.hide || row.depth)
+            if (settings.filter || row.depth)
                 continue;
             row.empty = true;
         }
@@ -1007,8 +1017,12 @@ async function runSettings() {
                             </select>
                         </label>
                         <label>
-                            <input name="hide" type="checkbox" ?checked=${settings.hide}>
-                            <span>${T.hide_empty_entities}</span>
+                            <input name="filter" type="checkbox" ?checked=${settings.filter}>
+                            <span>${T.filter_empty_entities}</span>
+                        </label>
+                        <label>
+                            <input name="highlight" type="checkbox" ?checked=${settings.highlight}>
+                            <span>${T.highlight_current_entity}</span>
                         </label>
                     </div>
 
@@ -1026,7 +1040,8 @@ async function runSettings() {
 
             submit: (elements) => {
                 switchLanguage(elements.language.value);
-                settings.hide = elements.hide.checked;
+                settings.filter = elements.filter.checked;
+                settings.highlight = elements.highlight.checked;
 
                 saveState();
             }
@@ -1215,20 +1230,7 @@ function draw() {
 
             let size = runner.text(x + offset, row.top + row.height / 2, row.name, { align: 4 });
 
-            if (!row.active) {
-                ctx.fillStyle = '#22222288';
-                ctx.fillRect(0, row.top, layout.tree.width, row.height);
-            }
-
-            if (row.empty) {
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 2;
-
-                ctx.beginPath();
-                ctx.moveTo(x + offset - 2, row.top + row.height / 2);
-                ctx.lineTo(x + offset + size.width + 4, row.top + row.height / 2);
-                ctx.stroke();
-            } else if (!row.depth) {
+            if (!row.index && !row.empty) {
                 let x = layout.tree.width - MARK_OFFSET;
                 let color = statusColor(row.mark);
 
@@ -1239,6 +1241,21 @@ function draw() {
                 ctx.beginPath();
                 ctx.arc(layout.tree.width - MARK_OFFSET / 2, row.top + row.height / 2, 6, 0, 2 * Math.PI);
                 ctx.fill();
+                ctx.stroke();
+            }
+
+            if (!row.active) {
+                ctx.fillStyle = settings.highlight ? '#222222dd' : '#22222266';
+                ctx.fillRect(0, row.top, layout.tree.width, row.height);
+            }
+
+            if (row.empty) {
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+
+                ctx.beginPath();
+                ctx.moveTo(x + offset - 2, row.top + row.height / 2);
+                ctx.lineTo(x + offset + size.width + 4, row.top + row.height / 2);
                 ctx.stroke();
             }
         }
@@ -1388,12 +1405,12 @@ function draw() {
                 let offset = row.depth ? 0 : -SPACE_BETWEEN_ENTITIES;
                 let height = row.height + (row.depth ? 0 : SPACE_BETWEEN_ENTITIES);
 
-                ctx.fillStyle = '#ffffff33';
+                ctx.fillStyle = settings.highlight ? '#ffffffee' : '#ffffff33';
                 ctx.fillRect(0, row.top + offset, layout.main.width, height);
-            } else if (!row.depth) {
+            } else if (!row.index) {
                 // This is a stupid hack to paint over guide lines (such as the align guide) that
                 // show up above the first active entity row, to avoid opacity mismatch.
-                ctx.fillStyle = '#ffffff33';
+                ctx.fillStyle = settings.highlight ? '#ffffffee' : '#ffffff33';
                 ctx.fillRect(0, row.top - SPACE_BETWEEN_ENTITIES, layout.main.width, SPACE_BETWEEN_ENTITIES);
             }
         }
