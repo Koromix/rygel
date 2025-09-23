@@ -1,6 +1,6 @@
 {
     "keys": {
-        "align_first": "Aligner à zéro",
+        "align_first": "Aligner à la première occurence",
         "alignment": "Alignement",
         "apply": "Appliquer",
         "cancel": "Annuler",
