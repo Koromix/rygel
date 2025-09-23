@@ -20,4 +20,11 @@ echo "$TARGET = $VERSION" > $DEST_DIR/versions.txt
 
 cd $DEST_DIR
 docker build -t $IMAGE_PREFIX$TARGET:$VERSION .
-docker image tag $IMAGE_PREFIX$TARGET:$VERSION $IMAGE_PREFIX$TARGET:dev
+
+if echo "$VERSION" | grep -qv dev; then
+    docker image tag $IMAGE_PREFIX$TARGET:$VERSION $IMAGE_PREFIX$TARGET:latest
+    echo "Alias $IMAGE_PREFIX$TARGET:latest"
+else
+    docker image tag $IMAGE_PREFIX$TARGET:$VERSION $IMAGE_PREFIX$TARGET:dev
+    echo "Alias $IMAGE_PREFIX$TARGET:dev"
+fi
