@@ -1206,12 +1206,6 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
     if (!OpenMainDatabase())
         return 1;
 
-    LogInfo("Init messaging");
-    if (gp_config.sms.provider != sms_Provider::None && !InitSMS(gp_config.sms))
-        return 1;
-    if (gp_config.smtp.url && !InitSMTP(gp_config.smtp))
-        return 1;
-
     // We need to bind the socket before sandboxing
     LogInfo("Init HTTP server");
     http_Daemon daemon;

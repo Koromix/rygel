@@ -17,6 +17,7 @@
 
 #include "src/core/base/base.hh"
 #include "instance.hh"
+#include "src/core/request/smtp.hh"
 #include "src/core/sqlite/sqlite.hh"
 
 namespace K {
@@ -34,6 +35,8 @@ struct DomainSettings {
     const char *archive_key = nullptr;
     int archive_hour = 0;
     int archive_retention = 7;
+
+    smtp_Config smtp;
 
     bool Validate() const;
 

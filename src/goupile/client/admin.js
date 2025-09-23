@@ -717,6 +717,19 @@ function runConfigureDomainDialog(e) {
                     help: T.default_project_language
                 });
             });
+
+            d.tab(T.smtp, () => {
+                d.text('smtp_url', T.url, {
+                    value: domain.smtp.url,
+                    help: html`${T.smtp_url_help} <a href="https://everything.curl.dev/usingcurl/smtp.html" target="_blank">CURL SMTP</a>`
+                });
+                d.text('smtp_user', T.username, {
+                    value: domain.smtp.user,
+                    help: T.smtp_auth_help
+                });
+                d.password('smtp_password', T.password, { value: domain.smtp.password });
+                d.text('smtp_from', T.smtp_from, { value: domain.smtp.from });
+            });
         });
 
         d.action(T.configure, { disabled: !d.isValid() }, async () => {
@@ -725,7 +738,14 @@ function runConfigureDomainDialog(e) {
                     name: d.values.name,
                     title: d.values.title,
                     default_lang: d.values.default_lang,
-                    archive_key: domain.archive.key
+                    archive_key: domain.archive.key,
+
+                    smtp: {
+                        url: d.values.smtp_url,
+                        user: d.values.smtp_user,
+                        password: d.values.smtp_password,
+                        from: d.values.smtp_from
+                    }
                 });
 
                 resolve();

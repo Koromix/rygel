@@ -837,6 +837,13 @@ void HandleDomainInfo(http_IO *io)
                 json->Key("hour"); json->Int(domain->settings.archive_hour);
                 json->Key("retention"); json->Int(domain->settings.archive_retention);
             json->EndObject();
+
+            json->Key("smtp"); json->StartObject();
+                json->Key("url"); json->StringOrNull(domain->settings.smtp.url);
+                json->Key("user"); json->StringOrNull(domain->settings.smtp.username);
+                json->Key("password"); json->StringOrNull(domain->settings.smtp.password);
+                json->Key("from"); json->StringOrNull(domain->settings.smtp.from);
+            json->EndObject();
         }
 
         json->EndObject();
@@ -885,6 +892,23 @@ void HandleDomainConfigure(http_IO *io)
                     json->ParseString(&username);
                 } else if (key == "password") {
                     json->ParseString(&password);
+                } else if (key == "smtp") {
+                    for (json->ParseObject(); json->InObject(); ) {
+                        Span<const char> key = json->ParseKey();
+
+                        if (key == "url") {
+                            json->SkipNull() || json->ParseString(&settings.smtp.url);
+                        } else if (key == "user") {
+                            json->SkipNull() || json->ParseString(&settings.smtp.username);
+                        } else if (key == "password") {
+                            json->SkipNull() || json->ParseString(&settings.smtp.password);
+                        } else if (key == "from") {
+                            json->SkipNull() || json->ParseString(&settings.smtp.from);
+                        } else {
+                            json->UnexpectedKey(key);
+                            valid = false;
+                        }
+                    }
                 } else {
                     json->UnexpectedKey(key);
                     valid = false;
@@ -936,6 +960,13 @@ void HandleDomainConfigure(http_IO *io)
             success &= gp_db.Run(sql, "Title", settings.title);
             success &= gp_db.Run(sql, "DefaultLang", settings.default_lang);
             success &= gp_db.Run(sql, "ArchiveKey", settings.archive_key);
+
+            if (settings.smtp.url) {
+                success &= gp_db.Run(sql, "SmtpUrl", settings.smtp.url);
+                success &= gp_db.Run(sql, "SmtpUser", settings.smtp.username);
+                success &= gp_db.Run(sql, "SmtpPassword", settings.smtp.password);
+                success &= gp_db.Run(sql, "SmtpFrom", settings.smtp.from);
+            }
 
             if (!success)
                 return false;

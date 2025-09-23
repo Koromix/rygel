@@ -21,12 +21,7 @@
 namespace K {
 
 class InstanceHolder;
-struct smtp_Config;
 struct smtp_MailContent;
-struct sms_Config;
-
-bool InitSMTP(const smtp_Config &config);
-bool InitSMS(const sms_Config &config);
 
 bool SendMail(const char *to, const smtp_MailContent &content);
 bool SendSMS(const char *to, const char *message);

@@ -233,6 +233,17 @@ public:
 
     bool IsValid() const { return writer.IsValid(); }
 
+    bool StringOrNull(const char *str)
+    {
+        if (str) {
+            T::String(str);
+        } else {
+            T::Null();
+        }
+
+        return true;
+    }
+
     // Hacky helpers to write long strings: call StartString() and write directly to
     // the stream. Call EndString() when done. Make sure you escape properly!
     bool StartString()
@@ -249,7 +260,6 @@ public:
         writer.Put('"');
         return true;
     }
-
 
     // Same thing for raw JSON (e.g. JSON pulled from database)
     bool StartRaw()

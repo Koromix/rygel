@@ -1394,17 +1394,10 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     }
 
     // Safety checks
-    if (signup.enable) {
-        if (!session->userid && !gp_config.smtp.url) {
-            LogError("This domain is not configured to send mails");
-            io->SendError(403);
-            return;
-        }
-        if (session->userid < 0) {
-            LogError("Cannot sign up from this session");
-            io->SendError(403);
-            return;
-        }
+    if (signup.enable && session->userid < 0) {
+        LogError("Cannot sign up from this session");
+        io->SendError(403);
+        return;
     }
 
     // Create full session for guests
@@ -1704,8 +1697,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
             if (!PrepareSignup(instance, session->username, signup, io->Allocator(), &content))
                 break;
-            if (!SendMail(signup.to, content))
-                break;
+            SendMail(signup.to, content);
 
             LogDebug("Sent signup mail to '%1'", signup.to);
         } while (false);

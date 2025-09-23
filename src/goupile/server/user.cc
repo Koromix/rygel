@@ -765,11 +765,6 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
     RetainPtr<SessionInfo> session;
 
     if (email) {
-        if (!gp_config.smtp.url) [[unlikely]] {
-            LogError("This domain is not configured to send mails");
-            return nullptr;
-        }
-
         char code[9];
         {
             static_assert(K_SIZE(code) <= K_SIZE(SessionInfo::secret));
@@ -792,8 +787,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
             </div>
         )", code).ptr;
 
-        if (!SendMail(email, content))
-            return nullptr;
+        SendMail(email, content);
     } else if (sms) {
         if (gp_config.sms.provider == sms_Provider::None) [[unlikely]] {
             LogError("This domain is not configured to send SMS messages");
@@ -814,8 +808,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
 
         const char *message = Fmt(&temp_alloc, "Code: %1", code).ptr;
 
-        if (!SendSMS(sms, message))
-            return nullptr;
+        SendSMS(sms, message);
     } else {
         session = CreateUserSession(type, userid, username, local_key);
     }

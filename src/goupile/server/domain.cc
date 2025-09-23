@@ -21,7 +21,7 @@
 
 namespace K {
 
-const int DomainVersion = 112;
+const int DomainVersion = 113;
 const int MaxInstances = 1024;
 
 static std::mutex mutex;
@@ -459,6 +459,7 @@ bool DomainSettings::Validate() const
         valid = false;
     }
     valid &= ParseKeyString(archive_key);
+    valid &= !smtp.url || smtp.Validate();
 
     return valid;
 }
@@ -488,6 +489,14 @@ bool DomainHolder::Open()
                     settings.default_lang = DuplicateString(value, &settings.str_alloc).ptr;
                 } else if (TestStr(setting, "ArchiveKey")) {
                     settings.archive_key = DuplicateString(value, &settings.str_alloc).ptr;
+                } else if (TestStr(setting, "SmtpUrl")) {
+                    settings.smtp.url = DuplicateString(value, &settings.str_alloc).ptr;
+                } else if (TestStr(setting, "SmtpUser")) {
+                    settings.smtp.username = DuplicateString(value, &settings.str_alloc).ptr;
+                } else if (TestStr(setting, "SmtpPassword")) {
+                    settings.smtp.password = DuplicateString(value, &settings.str_alloc).ptr;
+                } else if (TestStr(setting, "SmtpFrom")) {
+                    settings.smtp.from = DuplicateString(value, &settings.str_alloc).ptr;
                 }
             }
         }
@@ -501,6 +510,9 @@ bool DomainHolder::Open()
         }
         if (!settings.title) {
             settings.title = settings.name;
+        }
+        if (!settings.smtp.url) {
+            settings.smtp = gp_config.smtp;
         }
     }
 
@@ -1532,9 +1544,20 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 112: {
+                bool success = db->RunMany(R"(
+                    INSERT INTO dom_settings (key, value) VALUES ('SmtpUrl', NULL);
+                    INSERT INTO dom_settings (key, value) VALUES ('SmtpUser', NULL);
+                    INSERT INTO dom_settings (key, value) VALUES ('SmtpPassword', NULL);
+                    INSERT INTO dom_settings (key, value) VALUES ('SmtpFrom', NULL);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DomainVersion == 112);
+            static_assert(DomainVersion == 113);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

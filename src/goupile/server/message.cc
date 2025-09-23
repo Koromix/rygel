@@ -25,37 +25,27 @@
 
 namespace K {
 
-static smtp_Sender smtp;
-static sms_Sender sms;
-
-bool InitSMTP(const smtp_Config &config)
-{
-    return smtp.Init(config);
-}
-
-bool InitSMS(const sms_Config &config)
-{
-    return sms.Init(config);
-}
-
 bool SendMail(const char *to, const smtp_MailContent &content)
 {
+    DomainHolder *domain = RefDomain();
+    K_DEFER { UnrefDomain(domain); };
+
+    smtp_Sender smtp;
+    if (!smtp.Init(domain->settings.smtp))
+        return false;
     return smtp.Send(to, content);
 }
 
 bool SendSMS(const char *to, const char *message)
 {
+    sms_Sender sms;
+    if (!sms.Init(gp_config.sms))
+        return false;
     return sms.Send(to, message);
 }
 
 void HandleSendMail(http_IO *io, InstanceHolder *instance)
 {
-    if (!gp_config.smtp.url) {
-        LogError("This domain is not configured to send mails");
-        io->SendError(403);
-        return;
-    }
-
     RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
     if (!session) {
@@ -124,14 +114,14 @@ void HandleSendMail(http_IO *io, InstanceHolder *instance)
         }
     }
 
-    if (!SendMail(to, content))
-        return;
+    SendMail(to, content);
 
     io->SendText(200, "{}", "application/json");
 }
 
 void HandleSendSMS(http_IO *io, InstanceHolder *instance)
 {
+    // Check configuration
     if (gp_config.sms.provider == sms_Provider::None) {
         LogError("This domain is not configured to send SMS messages");
         io->SendError(403);
@@ -202,8 +192,7 @@ void HandleSendSMS(http_IO *io, InstanceHolder *instance)
         }
     }
 
-    if (!SendSMS(to, message))
-        return;
+    SendSMS(to, message);
 
     io->SendText(200, "{}", "application/json");
 }
