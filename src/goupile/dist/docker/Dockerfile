@@ -1,7 +1,7 @@
 FROM rygel/debian12 AS build
 ADD repo.tar repo
-COPY versions.txt repo/versions.txt
 RUN repo/bootstrap.sh
+COPY versions.txt repo/versions.txt
 RUN repo/felix -C repo/FelixBuild.ini -pParanoid --version_file versions.txt --host=:clang-18:lld-18 goupile
 COPY isolate.sh isolate.sh
 RUN ./isolate.sh repo/bin/Paranoid/goupile app
