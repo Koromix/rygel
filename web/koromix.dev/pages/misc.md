@@ -1,3 +1,13 @@
+# Heimdall
+
+Heimdall is an interactive timeline visualizer app that works in tandem with R data frames to visualize and annotate entities.
+
+<div class="illustrations">
+    <img src="{{ ASSET static/heimdall/screenshot.webp }}" width="265" height="160" alt=""/>
+</div>
+
+Find out more on the [page dedicated to Heimdall](heimdall).
+
 # Nestor
 
 Nestor is a **small HTTP server made for local testing**. It can serve static file, proxy remote websites (GET only), and you can customize the headers with a simple config file.
