@@ -183,7 +183,14 @@ async function start(root) {
     runner.onDraw = draw;
     runner.start();
 
-    UI.init(runner.busy);
+    UI.init(() => {
+        if (UI.isDialogOpen())  {
+            UI.runDialog();
+            return;
+        }
+
+        runner.busy();
+    });
 
     document.title = `${world.project} (Heimdall)`;
 }
@@ -1121,10 +1128,37 @@ async function editViews() {
         throw new Error(T.message('Cannot customize views without any defined view'));
 
     let view = world.views.get(settings.view) ?? views[0];
+    let rows = flattenItems(view.items);
+    // let tree = asTree(view.items);
 
     await UI.dialog({
         run: (render, close) => {
-            let rows = flattenItems(view.items);
+            {
+                let depth = 0;
+
+                for (let row of rows) {
+                    row.depth = depth;
+                    depth += row.delta;
+                }
+            }
+
+            // Count children for each level
+            {
+                let depth = 0;
+                let count = 0;
+
+                for (let i = rows.length - 1; i >= 0; i--) {
+                    let row = rows[i];
+
+                    if (row.depth > depth)
+                        count = 0;
+                    if (row.depth < depth)
+                        row.children = count;
+
+                    depth = row.depth;
+                    count++;
+                }
+            }
 
             return html`
                 <div class="title">
@@ -1152,7 +1186,7 @@ async function editViews() {
                         </thead>
                         <tbody>
                             ${rows.map(row => html`
-                                <tr>
+                                <tr ${UI.reorderItems(rows, row, 1 + row.children)}>
                                     <td class="grab"><img src=${ASSETS['ui/move']} width="16" height="16" alt=${T.move} /></td>
                                     <td style=${`padding-left: ${0.5 + 1.5 * row.depth}em;`}
                                         colspan=${row.concept == null ? 2 : 1}>
@@ -1188,6 +1222,8 @@ async function editViews() {
 
             function toggle_view(id) {
                 view = views.find(view => view.id == id);
+                rows = flattenItems(view.items);
+
                 render();
             }
         },
@@ -1200,39 +1236,53 @@ async function editViews() {
 
 function flattenItems(items) {
     let rows = [];
-    let stack = [];
 
-    for (let path in items) {
-        let concepts = items[path];
-        let parts = path.substr(1).split('/');
+    // Split paths into individual rows
+    {
+        let stack = [];
 
-        for (let i = 0; i < parts.length - 1; i++) {
-            if (parts[i] != stack[i]) {
-                stack.length = i;
-                break;
+        for (let path in items) {
+            let concepts = items[path];
+            let parts = path.substr(1).split('/');
+
+            for (let i = 0; i < parts.length - 1; i++) {
+                if (parts[i] != stack[i]) {
+                    stack.length = i;
+                    break;
+                }
+            }
+
+            for (let i = stack.length; i < parts.length - 1; i++) {
+                let part = parts[i];
+
+                rows.push({
+                    name: part,
+                    concept: null,
+                    delta: stack.length,
+
+                    depth: 0,
+                    children: 0
+                });
+
+                stack.push(part);
+            }
+
+            for (let concept of concepts) {
+                rows.push({
+                    name: parts[parts.length - 1],
+                    concept: concept,
+                    delta: stack.length,
+
+                    depth: 0,
+                    children: 0
+                });
             }
         }
-
-        for (let i = stack.length; i < parts.length - 1; i++) {
-            let part = parts[i];
-
-            rows.push({
-                depth: stack.length,
-                name: part,
-                concept: null
-            });
-
-            stack.push(part);
-        }
-
-        for (let concept of concepts) {
-            rows.push({
-                depth: stack.length,
-                name: parts[parts.length - 1],
-                concept: concept
-            });
-        }
     }
+
+    for (let i = 0; i < rows.length - 1; i++)
+        rows[i].delta = rows[i + 1].delta - rows[i].delta;
+    rows[rows.length - 1].delta *= -1;
 
     return rows;
 }

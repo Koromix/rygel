@@ -43,6 +43,7 @@ let current_popup = null;
 
 let drag_items = null;
 let drag_src = null;
+let drag_count = null;
 let drag_restore = null;
 
 let table_orders = {};
@@ -512,18 +513,19 @@ class ReorderDirective extends Directive {
 
     items = null;
     item = null;
+    count = null;
     finalize = null;
 
-    update(part, [items, item, enable, finalize]) {
+    update(part, [items, item, count, finalize]) {
         let el = part.element;
         let grab = el.querySelector('.grab') || el;
 
-        if (enable == null)
-            enable = true;
+        if (count == null)
+            count = 1;
 
         if (!this.installed) {
-            grab.addEventListener('dragstart', wrap(e => dragStart(e, this.items, this.item)));
-            grab.addEventListener('dragover', wrap(e => dragOver(e, this.items, this.item)));
+            grab.addEventListener('dragstart', wrap(e => dragStart(e, this.items, this.item, this.count)));
+            grab.addEventListener('dragover', wrap(e => dragOver(e, this.items, this.item, this.count)));
             grab.addEventListener('dragend', wrap(e => dragEnd(e, this.finalize)));
 
             this.installed = true;
@@ -531,9 +533,10 @@ class ReorderDirective extends Directive {
 
         this.items = items;
         this.item = item;
+        this.count = count;
         this.finalize = finalize;
 
-        grab.setAttribute('draggable', enable ? 'true' : 'false');
+        grab.setAttribute('draggable', 'true');
 
         return noChange;
     }
@@ -541,9 +544,10 @@ class ReorderDirective extends Directive {
 
 const reorderItems = directive(ReorderDirective);
 
-function dragStart(e, items, src) {
+function dragStart(e, items, src, count) {
     drag_items = items;
     drag_src = src;
+    drag_count = count;
     drag_restore = items.indexOf(src);
 
     e.dataTransfer.setData('dummy', 'value');
@@ -565,7 +569,7 @@ function dragOver(e, items, dest) {
     if (idx1 == idx2)
         return;
 
-    reorder(drag_items, idx1, idx2);
+    reorder(drag_items, idx1, idx2, drag_count);
 
     return run_func();
 }
@@ -573,11 +577,12 @@ function dragOver(e, items, dest) {
 function dragEnd(e, finalize) {
     if (e.dataTransfer.dropEffect != 'move') {
         let idx = drag_items.indexOf(drag_src);
-        reorder(drag_items, idx, drag_restore);
+        reorder(drag_items, idx, drag_restore, drag_count);
     }
 
     drag_items = null;
     drag_src = null;
+    drag_count = null;
 
     if (finalize != null)
         finalize();
@@ -585,13 +590,13 @@ function dragEnd(e, finalize) {
     return run_func();
 }
 
-function reorder(items, idx1, idx2) {
+function reorder(items, idx1, idx2, count) {
     if (idx1 < idx2) {
         let reordered = [
             ...items.slice(0, idx1),
-            ...items.slice(idx1 + 1, idx2 + 1),
-            items[idx1],
-            ...items.slice(idx2 + 1)
+            ...items.slice(idx1 + count, idx2 + count),
+            ...items.slice(idx1, idx1 + count),
+            ...items.slice(idx2 + count)
         ];
 
         items.length = 0;
@@ -599,9 +604,9 @@ function reorder(items, idx1, idx2) {
     } else if (idx1 > idx2) {
         let reordered = [
             ...items.slice(0, idx2),
-            items[idx1],
+            ...items.slice(idx1, idx1 + count),
             ...items.slice(idx2, idx1),
-            ...items.slice(idx1 + 1)
+            ...items.slice(idx1 + count)
         ];
 
         items.length = 0;
