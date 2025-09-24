@@ -191,7 +191,7 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
     if (qt->shared) {
         for (const char *component: target.qt_components) {
             if (build.compiler->platform == HostPlatform::macOS) {
-                Span<char> framework = Fmt(&str_alloc, "!%1%/Qt%2.framework", qt->libraries, component);
+                Span<char> framework = Fmt(&str_alloc, "@%1%/Qt%2.framework", qt->libraries, component);
                 const char *prl_filename = Fmt(&str_alloc, "%1%/Resources/Qt%2.prl", framework.ptr + 1, component).ptr;
 
                 if (TestFile(framework.ptr + 1)) {
@@ -233,11 +233,11 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
         for (Size i = prev_len; i < link_libraries->len; i++) {
             const char *library = (*link_libraries)[i];
 
-            if (library[0] == '!') {
+            if (library[0] == '@') {
                 Span<const char> name = SplitStrReverseAny(library + 1, K_PATH_SEPARATORS);
 
                 if (name == "QtGui") {
-                    link_libraries->Append("!QtDBus");
+                    link_libraries->Append("@QtDBus");
                     break;
                 }
             }
@@ -307,7 +307,7 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
                 if (TestStr(basename, "qdirect2d.lib"))
                     continue;
             } else if (build.compiler->platform == HostPlatform::macOS) {
-                basename += (basename[0] == '!');
+                basename += (basename[0] == '@');
             }
 
             bool inserted;
@@ -465,7 +465,7 @@ void Builder::ParsePrlFile(const char *filename, HeapArray<const char *> *out_li
                     }
 
                     if (qt->shared || !StartsWith(framework, "Qt")) {
-                        const char *copy = Fmt(&str_alloc, "!%1", framework).ptr;
+                        const char *copy = Fmt(&str_alloc, "@%1", framework).ptr;
                         out_libraries->Append(copy);
                     }
                 }
