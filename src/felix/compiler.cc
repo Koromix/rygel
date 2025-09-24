@@ -278,7 +278,24 @@ public:
 
                     case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
                 }
-#elif !defined(__APPLE_)
+#elif defined(__APPLE__)
+            } else {
+                switch (compiler->architecture) {
+                    case HostArchitecture::x86_64: { compiler->target = "-arch x86_64"; } break;
+                    case HostArchitecture::ARM64: { compiler->target = "-arch arm64"; } break;
+
+                    case HostArchitecture::x86:
+                    case HostArchitecture::RISCV64:
+                    case HostArchitecture::Loong64:
+                    case HostArchitecture::ARM32:
+                    case HostArchitecture::Web32: {
+                        LogError("Cannot use Clang (Apple) to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
+                        return nullptr;
+                    } break;
+
+                    case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
+                }
+#else
             } else {
                 const char *prefix = nullptr;
                 const char *suffix = nullptr;
@@ -316,11 +333,6 @@ public:
                 }
 
                 compiler->target = Fmt(&compiler->str_alloc, "--target=%1-%2", prefix, suffix).ptr;
-#else
-            } else if (compiler->architecture != architecture) {
-                LogError("Cannot use Clang (%1) compiler to build for '%2'",
-                         HostArchitectureNames[(int)architecture], HostArchitectureNames[(int)compiler->architecture]);
-                return nullptr;
 #endif
             }
         }
