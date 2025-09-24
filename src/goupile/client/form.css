@@ -118,6 +118,7 @@ html.mobile .fm_section {
 }
 .fm_label {
     display: flex;
+    height: 1em;
     margin-bottom: 6px;
     padding-top: 4px;
     font-weight: bold;
