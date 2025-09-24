@@ -1706,7 +1706,11 @@ instead of:
         if (!restart) {
             state.just_triggered = false;
 
-            setTimeout(() => state.changeHandler(), 0);
+            setTimeout(async () => {
+                await state.changeHandler();
+                restart = false;
+            }, 0);
+
             restart = true;
         }
     };
