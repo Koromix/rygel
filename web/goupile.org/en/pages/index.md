@@ -15,5 +15,3 @@ You can test some features on our online demo instance:
 
 > [!WARNING]
 > Please note: sessions and data on the demo version are reset regularly!
-
-We also offer paid hosting services based on Goupile, tailored to your needs. Check out our [pricing page](pricing).

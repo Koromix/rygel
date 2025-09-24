@@ -15,5 +15,3 @@ Vous pouvez tester certaines fonctionnalités dans notre instance de démonstrat
 
 > [!WARNING]
 > Attention, les sessions et les données de la version de démonstration sont régulièrement remises à zéro !
-
-Nous proposons également des prestations d'hébergement payantes basées sur Goupile adaptées à vos besoins, consultez la [page des tarifs](pricing).
