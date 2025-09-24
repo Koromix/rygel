@@ -51,8 +51,6 @@ mkdir -p tmp/test
 touch tmp/test/goupile.ini
 ```
 
-L'initialisation de ce domaine va créer une clé de récupération d'archive que vous devez stocker afin de pouvoir restaurer une archive créée dans le panneau d'administration du domaine Goupile. Si elle est perdue, cette clé peut être modifiée mais les archives créées avec la clé précédente ne seront pas récupérables !
-
 Pour accéder à ce domaine via un navigateur web, vous pouvez le lancer à l'aide de la commande suivante :
 
 ```sh

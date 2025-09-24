@@ -51,8 +51,6 @@ mkdir -p tmp/test
 touch tmp/test/goupile.ini
 ```
 
-Initializing this domain will create an archive recovery key that you must store in order to restore an archive created in the Goupile domain's admin panel. If this key is lost, it can be changed, but archives created with the previous key will not be recoverable!
-
 To access this domain via a web browser, you can start it using the following command:
 
 ```sh
