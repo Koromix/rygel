@@ -3552,6 +3552,13 @@ static inline int64_t GetClockCounter()
     int64_t counter = ((int64_t)counter_high << 32) | counter_low;
     return counter;
 }
+#elif defined(__aarch64__)
+static inline int64_t GetClockCounter()
+{
+    uint64_t counter;
+    __asm__ __volatile__ ("mrs %0, cntvct_el0" : "=r" (counter));
+    return counter;
+}
 #endif
 
 struct TimeSpec {
