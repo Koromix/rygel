@@ -141,7 +141,7 @@
         "historical": "History",
         "id": "ID",
         "identity_confirmation": "Confirm identity",
-        "install": "Installer",
+        "install": "Install",
         "invalid_format": "Invalid format",
         "invalid_format_use_prefix": "Invalid phone format (prefix is mandatory)",
         "invalid_key_format": "Invalid key format",
