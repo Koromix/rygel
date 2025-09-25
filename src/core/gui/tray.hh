@@ -42,7 +42,7 @@ public:
     virtual void AddSeparator() = 0;
     virtual void ClearMenu() = 0;
 
-    // You can skip this on Windows if you run the Win32 message pump for some reason
+    // Skip this if you run the message pump (Win32) or the event loop (macOS)
     virtual WaitSource GetWaitSource() = 0;
     virtual bool ProcessEvents() = 0;
 };
