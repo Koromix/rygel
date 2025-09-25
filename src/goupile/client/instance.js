@@ -898,10 +898,12 @@ async function renderPage() {
         render(model.renderWidgets(), page_div);
         page_div.classList.remove('disabled');
 
-        // Map widget code lines for developers
+        // Try to map widget code lines for developers
         if (build?.map != null) {
             for (let intf of model.widgets) {
                 if (intf.id == null)
+                    continue;
+                if (intf.location == null)
                     continue;
 
                 let el = page_div.querySelector('#' + intf.id);
