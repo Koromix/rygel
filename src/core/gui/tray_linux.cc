@@ -101,8 +101,6 @@ private:
     bool DumpMenuItems(FunctionRef<bool(int, const char *, int)> func);
     void HandleMenuEvent(int id, const char *type);
     void UpdateRevision();
-
-    void RunBusThread();
 };
 
 static thread_local LinuxTray *self;

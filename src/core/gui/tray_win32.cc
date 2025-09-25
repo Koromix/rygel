@@ -95,8 +95,6 @@ public:
     bool ProcessEvents() override;
 
 private:
-    void RunMessageThread();
-
     static LRESULT __stdcall TrayProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
     bool UpdateIcon();
 };
