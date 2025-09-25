@@ -42,15 +42,14 @@ static AssetInfo assets_index;
 static BlockAllocator assets_alloc;
 static char shared_etag[17];
 
-static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *const> mask_files)
+static bool ApplySandbox(Span<const char *const> reveals)
 {
     sb_SandboxBuilder sb;
 
     if (!sb.Init())
         return false;
 
-    sb.RevealPaths(reveal_paths, false);
-    sb.MaskFiles(mask_files);
+    sb.RevealPaths(reveals, false);
 
 #if defined(__linux__)
     // More DNS resolving crap, the list was determined through an elaborate
@@ -559,7 +558,7 @@ Options:
 
         const char *database_directory = DuplicateString(GetPathDirectory(config.database_filename), &temp_alloc).ptr;
 
-        const char *const reveal_paths[] = {
+        const char *const reveals[] = {
 #if defined(FELIX_HOT_ASSETS)
             // Needed for asset module
             GetApplicationDirectory(),
@@ -567,11 +566,8 @@ Options:
             database_directory,
             config.tmp_directory,
         };
-        const char *const mask_files[] = {
-            config_filename
-        };
 
-        if (!ApplySandbox(reveal_paths, mask_files))
+        if (!ApplySandbox(reveals))
             return 1;
     }
 

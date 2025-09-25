@@ -39,15 +39,14 @@ static AssetInfo assets_index;
 static BlockAllocator assets_alloc;
 static char shared_etag[17];
 
-static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *const> mask_files)
+static bool ApplySandbox(Span<const char *const> reveals)
 {
     sb_SandboxBuilder sb;
 
     if (!sb.Init())
         return false;
 
-    sb.RevealPaths(reveal_paths, false);
-    sb.MaskFiles(mask_files);
+    sb.RevealPaths(reveals, false);
 
 #if defined(__linux__)
     sb.RevealPaths({
@@ -547,26 +546,23 @@ Options:
         // We use temp_store = MEMORY but, just in case...
         sqlite3_temp_directory = sqlite3_mprintf("%s", config.tmp_directory);
 
-        HeapArray<const char *> reveal_paths;
-        HeapArray<const char *> mask_files;
+        HeapArray<const char *> reveals;
 
 #if defined(FELIX_HOT_ASSETS)
         // Needed for asset module
-        reveal_paths.Append(GetApplicationDirectory());
+        reveals.Append(GetApplicationDirectory());
 #endif
 
         const char *database_directory = DuplicateString(GetPathDirectory(config.database_filename), &temp_alloc).ptr;
 
-        reveal_paths.Append(database_directory);
-        reveal_paths.Append(config.vault_directory);
-        reveal_paths.Append(config.tmp_directory);
+        reveals.Append(database_directory);
+        reveals.Append(config.vault_directory);
+        reveals.Append(config.tmp_directory);
         if (config.static_directory) {
-            reveal_paths.Append(config.static_directory);
+            reveals.Append(config.static_directory);
         }
 
-        mask_files.Append(config_filename);
-
-        if (!ApplySandbox(reveal_paths, mask_files))
+        if (!ApplySandbox(reveals))
             return 1;
     }
 

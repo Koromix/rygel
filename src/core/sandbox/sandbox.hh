@@ -36,6 +36,11 @@ static const char *const sb_IsolationFlagNames[] = {
     "Syscalls"
 };
 
+struct sb_RevealedPath {
+    const char *path;
+    bool readonly;
+};
+
 enum class sb_FilterAction {
     Allow,
     Log,
@@ -53,16 +58,9 @@ class sb_SandboxBuilder {
     K_DELETE_COPY(sb_SandboxBuilder)
 
 #if defined(__linux__)
-    struct RevealedPath {
-        const char *path;
-        bool readonly;
-    };
-
     unsigned int isolation = 0;
 
-    HeapArray<RevealedPath> reveals;
-    HeapArray<const char *> masks;
-
+    HeapArray<sb_RevealedPath> reveals;
     HeapArray<sb_SyscallFilter> filters;
 #endif
 
@@ -73,8 +71,8 @@ public:
 
     bool Init(unsigned int flags = UINT_MAX);
 
+    void RevealPaths(Span<const sb_RevealedPath> reveals);
     void RevealPaths(Span<const char *const> paths, bool readonly);
-    void MaskFiles(Span<const char *const> filenames);
 
 #if defined(__linux__)
     void FilterSyscalls(Span<const sb_SyscallFilter> filters);

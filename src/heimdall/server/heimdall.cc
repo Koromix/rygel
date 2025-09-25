@@ -90,7 +90,7 @@ T(R"(Usage: %!..+%1 migrate [option...] filename%!0)"), FelixTarget);
     return 0;
 }
 
-static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *const> mask_files)
+static bool ApplySandbox(Span<const char *const> reveal_paths)
 {
     sb_SandboxBuilder sb;
 
@@ -98,7 +98,6 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         return false;
 
     sb.RevealPaths(reveal_paths, false);
-    sb.MaskFiles(mask_files);
 
 #if defined(__linux__)
     sb.FilterSyscalls({
@@ -648,11 +647,8 @@ Other commands:
             config.project_directory,
             config.tmp_directory,
         };
-        const char *const mask_files[] = {
-            config_filename
-        };
 
-        if (!ApplySandbox(reveal_paths, mask_files))
+        if (!ApplySandbox(reveal_paths))
             return 1;
     }
 

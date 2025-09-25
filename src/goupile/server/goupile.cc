@@ -68,7 +68,7 @@ static HashTable<const char *, RenderInfo *> render_map;
 static const int DemoPruneDelay = 7 * 86400 * 1000;
 static const int64_t MaxRenderDelay = 20 * 60000;
 
-static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *const> mask_files)
+static bool ApplySandbox(Span<const char *const> reveals)
 {
     sb_SandboxBuilder sb;
 
@@ -78,8 +78,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
     if (!sb.Init(flags))
         return false;
 
-    sb.RevealPaths(reveal_paths, false);
-    sb.MaskFiles(mask_files);
+    sb.RevealPaths(reveals, false);
 
 #if defined(__linux__)
     // More DNS resolving crap, the list was determined through an elaborate
@@ -1236,7 +1235,7 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
         // We use temp_store = MEMORY but, just in case...
         sqlite3_temp_directory = sqlite3_mprintf("%s", gp_config.tmp_directory);
 
-        const char *const reveal_paths[] = {
+        const char *const reveals[] = {
 #if defined(FELIX_HOT_ASSETS)
             // Needed for asset module
             GetApplicationDirectory(),
@@ -1247,11 +1246,8 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
             gp_config.tmp_directory,
             gp_config.view_directory
         };
-        const char *const mask_files[] = {
-            gp_config.config_filename
-        };
 
-        if (!ApplySandbox(reveal_paths, mask_files))
+        if (!ApplySandbox(reveals))
             return 1;
     }
 
