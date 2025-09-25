@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
 
 #include "src/core/base/base.hh"
 #include "config.hh"
@@ -186,7 +186,6 @@ Options:
     tray = gui_CreateTrayIcon(MeesticPng.data);
     if (!tray)
         return 1;
-    tray->OnScroll(ToggleProfile);
     tray->OnContext(UpdateTray);
 
     // From here on, don't quit abruptly

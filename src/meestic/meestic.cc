@@ -20,18 +20,17 @@
 #include "src/core/sandbox/sandbox.hh"
 #include "src/core/wrap/json.hh"
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
     #include <sys/types.h>
     #include <sys/stat.h>
     #include <sys/poll.h>
     #include <sys/socket.h>
     #include <fcntl.h>
-    #include <linux/input.h>
 #endif
 
 namespace K {
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
 
 static Config config;
 static Size profile_idx = 0;
@@ -39,97 +38,11 @@ static bool transmit_info = false;
 
 static hs_port *port = nullptr;
 
-static bool ApplySandbox()
-{
-    sb_SandboxBuilder sb;
-
-    if (!sb.Init())
-        return false;
-
-    sb.FilterSyscalls({
-        { "exit", sb_FilterAction::Allow },
-        { "exit_group", sb_FilterAction::Allow },
-        { "brk", sb_FilterAction::Allow },
-        { "mmap/anon", sb_FilterAction ::Allow},
-        { "munmap", sb_FilterAction::Allow },
-        { "mprotect/noexec", sb_FilterAction::Allow },
-        { "madvise", sb_FilterAction::Allow },
-        { "close", sb_FilterAction::Allow },
-        { "fcntl", sb_FilterAction::Allow },
-        { "read", sb_FilterAction::Allow },
-        { "readv", sb_FilterAction::Allow },
-        { "write", sb_FilterAction::Allow },
-        { "writev", sb_FilterAction::Allow },
-        { "pread64", sb_FilterAction::Allow },
-        { "fsync", sb_FilterAction::Allow },
-        { "poll", sb_FilterAction::Allow },
-        { "ppoll", sb_FilterAction::Allow },
-        { "clock_nanosleep", sb_FilterAction::Allow },
-        { "clock_gettime", sb_FilterAction::Allow },
-        { "clock_gettime64", sb_FilterAction::Allow },
-        { "clock_nanosleep", sb_FilterAction::Allow },
-        { "clock_nanosleep_time64", sb_FilterAction::Allow },
-        { "nanosleep", sb_FilterAction::Allow },
-        { "ioctl", sb_FilterAction::Allow },
-        { "getpid", sb_FilterAction::Allow },
-        { "accept", sb_FilterAction::Allow },
-        { "accept4", sb_FilterAction::Allow },
-        { "shutdown", sb_FilterAction::Allow },
-        { "recv", sb_FilterAction::Allow },
-        { "recvfrom", sb_FilterAction::Allow },
-        { "recvmmsg", sb_FilterAction::Allow },
-        { "recvmmsg_time64", sb_FilterAction::Allow },
-        { "recvmsg", sb_FilterAction::Allow },
-        { "sendmsg", sb_FilterAction::Allow },
-        { "sendmmsg", sb_FilterAction::Allow },
-        { "sendto", sb_FilterAction::Allow },
-        { "rt_sigaction", sb_FilterAction::Allow },
-        { "rt_sigpending", sb_FilterAction::Allow },
-        { "rt_sigprocmask", sb_FilterAction::Allow },
-        { "rt_sigqueueinfo", sb_FilterAction::Allow },
-        { "rt_sigreturn", sb_FilterAction::Allow },
-        { "rt_sigsuspend", sb_FilterAction::Allow },
-        { "rt_sigtimedwait", sb_FilterAction::Allow },
-        { "rt_sigtimedwait_time64", sb_FilterAction::Allow },
-        { "kill", sb_FilterAction::Allow },
-        { "tgkill", sb_FilterAction::Allow }
-    });
-
-    return sb.Apply();
-}
-
 static int OpenInputDevice(const char *needle, int flags)
 {
     BlockAllocator temp_alloc;
 
     int ret_fd = -1;
-
-    EnumerateDirectory("/dev/input", "event*", 1024, [&](const char *basename, FileType) {
-        const char *filename = Fmt(&temp_alloc, "/dev/input/%1", basename).ptr;
-
-        // Open device
-        int fd = K_RESTART_EINTR(open(filename, O_RDONLY | O_CLOEXEC | flags), < 0);
-        if (fd < 0) {
-            LogError("Failed to open '%1': %2", filename, strerror(errno));
-            return true;
-        }
-        K_DEFER_N(fd_guard) { close(fd); };
-
-        char name[256];
-        if (ioctl(fd, EVIOCGNAME(K_LEN(name)), name) < 0) {
-            LogError("Failed to get device name of '%1': %2", filename, strerror(errno));
-            return true;
-        }
-
-        if (TestStr(name, needle)) {
-            ret_fd = fd;
-            fd_guard.Disable();
-
-            return false;
-        }
-
-        return true;
-    });
 
     if (ret_fd < 0) {
         LogError("Cannot find input device '%1'", needle);
@@ -174,22 +87,6 @@ static bool ToggleProfile(int delta)
 
 static bool HandleInputEvent(int fd)
 {
-    struct input_event ev = {};
-    Size len = read(fd, &ev, K_SIZE(ev));
-
-    if (len < 0) {
-        if (errno == EAGAIN)
-            return true;
-
-        LogError("Failed to read evdev event: %1", strerror(errno));
-        return false;
-    }
-    K_ASSERT(len == K_SIZE(ev));
-
-    if (ev.type == EV_KEY && ev.code == BTN_TRIGGER_HAPPY40 && ev.value == 1) {
-        ToggleProfile(1);
-    }
-
     return true;
 }
 
@@ -385,7 +282,7 @@ By default, the first of the following config files will be used:
     int input_fd = -1;
     if (GetDebugFlag("FAKE_KEYBOARD")) {
         static int pipe_fd[2];
-        if (pipe2(pipe_fd, O_CLOEXEC) < 0) {
+        if (pipe(pipe_fd) < 0) {
             LogError("pipe2() failed: %1", strerror(errno));
             return 1;
         }
@@ -418,12 +315,6 @@ By default, the first of the following config files will be used:
         LogError("listen() failed: %1", strerror(errno));
         return 1;
     }
-
-    if (!NotifySystemd())
-        return 1;
-
-    if (sandbox && !ApplySandbox())
-        return 1;
 
     // Check that it works once, at least
     if (!ApplyProfile(config.default_idx))
@@ -471,9 +362,11 @@ By default, the first of the following config files will be used:
 
             // Accept new clients
             if (pfds[1].revents) {
-                int fd = accept4(listen_fd, nullptr, nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
+                int fd = accept(listen_fd, nullptr, nullptr);
 
                 if (fd >= 0) {
+                    SetDescriptorNonBlock(fd, true);
+
                     if (SendInfo(fd, true)) {
                         pfds.Append({ fd, POLLIN, 0 });
                     } else {
@@ -658,10 +551,8 @@ int Main(int argc, char **argv)
 
     if (TestStr(cmd, "set")) {
         return RunSet(arguments);
-#if defined(__linux__)
     } else if (TestStr(cmd, "daemon")) {
         return RunDaemon(arguments);
-#endif
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;
