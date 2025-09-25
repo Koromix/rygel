@@ -37,11 +37,6 @@ void sb_SandboxBuilder::RevealPaths(Span<const char *const>, bool)
     K_ASSERT(false);
 }
 
-void sb_SandboxBuilder::MaskFiles(Span<const char *const>)
-{
-    K_ASSERT(false);
-}
-
 bool sb_SandboxBuilder::Apply()
 {
     K_ASSERT(false);
