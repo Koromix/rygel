@@ -4,6 +4,7 @@
 /felix.exe
 /*.sublime-*
 /rygel.*
+.DS_Store
 
 **/tmp/*
 
