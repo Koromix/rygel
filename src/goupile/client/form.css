@@ -118,12 +118,15 @@ html.mobile .fm_section {
 }
 .fm_label {
     display: flex;
-    height: 1em;
     margin-bottom: 6px;
     padding-top: 4px;
     font-weight: bold;
     column-gap: 16px;
     flex-wrap: wrap;
+}
+.fm_label > label {
+    min-height: 1.5em;
+    min-height: 1lh;
 }
 .fm_label > label:empty::before { content: '\200b'; }
 .fm_widget.mandatory > .fm_label > label:not(:empty)::after {
