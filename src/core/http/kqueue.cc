@@ -138,6 +138,7 @@ void http_Daemon::Stop()
 
     handle_func = {};
 }
+
 void http_Daemon::StartRead(http_Socket *socket)
 {
     (void)socket;
