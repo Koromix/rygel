@@ -7041,13 +7041,27 @@ bool BindUnixSocket(int sock, const char *path)
 {
     struct sockaddr_un addr = {};
 
+    // Protect against abtract Unix sockets on Linux
+    if (!path[0]) {
+        LogError("Cannot open empty UNIX socket");
+        return false;
+    }
+
     addr.sun_family = AF_UNIX;
     if (!CopyString(path, addr.sun_path)) {
         LogError("Excessive UNIX socket path length");
         return false;
     }
 
-    unlink(path);
+    // Remove existing socket (if any)
+    {
+        struct stat sb;
+        if (!stat(path, &sb) && S_ISSOCK(sb.st_mode)) {
+            LogDebug("Removing existing socket '%1'", path);
+            unlink(path);
+        }
+    }
+
     if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 #if defined(_WIN32)
         LogError("Failed to bind socket to '%1': %2", path, GetWin32ErrorString());
@@ -7057,6 +7071,7 @@ bool BindUnixSocket(int sock, const char *path)
         return false;
 #endif
     }
+
     chmod(path, 0666);
 
     return true;
