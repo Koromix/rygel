@@ -1322,7 +1322,7 @@ Available URL formats: %!..+%4%!0)",
             } else if (opt.Test("-l", "--loop")) {
                 loop = true;
             } else {
-                LogError("Cannot handle option '%1'", opt.current_option);
+                opt.LogUnknownError();
                 return 1;
             }
         }
