@@ -4852,6 +4852,7 @@ int CreateSocket(SocketType type, int flags);
 
 bool BindIPSocket(int sock, SocketType type, int port);
 bool BindUnixSocket(int sock, const char *path);
+bool ConnectIPSocket(int sock, const char *host, int port);
 bool ConnectUnixSocket(int sock, const char *path);
 
 // Only for sockets on Windows

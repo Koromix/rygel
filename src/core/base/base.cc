@@ -7077,6 +7077,55 @@ bool BindUnixSocket(int sock, const char *path)
     return true;
 }
 
+bool ConnectIPSocket(int sock, const char *host, int port)
+{
+    if (strchr(host, ':')) {
+        struct sockaddr_in6 addr = {};
+
+        addr.sin6_family = AF_INET6;
+
+        if (inet_pton(AF_INET6, host, &addr.sin6_addr) <= 0) {
+            LogError("Invalid IP address '%1'", host);
+            return false;
+        }
+
+        addr.sin6_port = htons(port);
+
+        if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+#if defined(_WIN32)
+            LogError("Failed to connect to '%1' (%2): %3", host, port, GetWin32ErrorString());
+            return false;
+#else
+            LogError("Failed to connect to '%1' (%2): %3", host, port, strerror(errno));
+            return false;
+#endif
+        }
+    } else {
+        struct sockaddr_in addr = {};
+
+        addr.sin_family = AF_INET;
+
+        if (inet_pton(AF_INET, host, &addr.sin_addr) <= 0) {
+            LogError("Invalid IP address '%1'", host);
+            return false;
+        }
+
+        addr.sin_port = htons(port);
+
+       if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+#if defined(_WIN32)
+            LogError("Failed to connect to '%1' (%2): %3", host, port, GetWin32ErrorString());
+            return false;
+#else
+            LogError("Failed to connect to '%1' (%2): %3", host, port, strerror(errno));
+            return false;
+#endif
+        }
+    }
+
+    return true;
+}
+
 bool ConnectUnixSocket(int sock, const char *path)
 {
     struct sockaddr_un addr = {};
