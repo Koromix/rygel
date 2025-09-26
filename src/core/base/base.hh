@@ -4852,10 +4852,7 @@ int CreateSocket(SocketType type, int flags);
 
 bool BindIPSocket(int sock, SocketType type, int port);
 bool BindUnixSocket(int sock, const char *path);
-
-int OpenIPSocket(SocketType type, int port, int flags);
-int OpenUnixSocket(const char *path, int flags);
-int ConnectToUnixSocket(const char *path, int flags);
+bool ConnectUnixSocket(int sock, const char *path);
 
 // Only for sockets on Windows
 void SetDescriptorNonBlock(int fd, bool enable);

@@ -407,11 +407,14 @@ By default, the first of the following config files will be used:
     }
     K_DEFER { CloseLightDevice(port); };
 
-    // Open control socket
-    int listen_fd = OpenUnixSocket(socket_filename, SOCK_STREAM);
+    int listen_fd = CreateSocket(SocketType::Unix, SOCK_STREAM);
     if (listen_fd < 0)
         return 1;
     K_DEFER { close(listen_fd); };
+
+    // Open control socket
+    if (!BindUnixSocket(listen_fd, socket_filename))
+        return 1;
 
     // Listen for clients
     if (listen(listen_fd, 4) < 0) {

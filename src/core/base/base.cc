@@ -7077,63 +7077,27 @@ bool BindUnixSocket(int sock, const char *path)
     return true;
 }
 
-int OpenIPSocket(SocketType type, int port, int flags)
-{
-    K_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
-
-    int sock = CreateSocket(type, flags);
-    if (sock < 0)
-        return -1;
-    K_DEFER_N(err_guard) { CloseSocket(sock); };
-
-    if (!BindIPSocket(sock, type, port))
-        return -1;
-
-    err_guard.Disable();
-    return sock;
-}
-
-int OpenUnixSocket(const char *path, int flags)
-{
-    int sock = CreateSocket(SocketType::Unix, flags);
-    if (sock < 0)
-        return -1;
-    K_DEFER_N(err_guard) { CloseSocket(sock); };
-
-    if (!BindUnixSocket(sock, path))
-        return -1;
-
-    err_guard.Disable();
-    return sock;
-}
-
-int ConnectToUnixSocket(const char *path, int flags)
+bool ConnectUnixSocket(int sock, const char *path)
 {
     struct sockaddr_un addr = {};
 
     addr.sun_family = AF_UNIX;
     if (!CopyString(path, addr.sun_path)) {
         LogError("Excessive UNIX socket path length");
-        return -1;
+        return false;
     }
-
-    int sock = CreateSocket(SocketType::Unix, flags);
-    if (sock < 0)
-        return -1;
-    K_DEFER_N(err_guard) { CloseSocket(sock); };
 
     if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 #if defined(_WIN32)
-        LogError("Failed to connect to '%1': %2", path, GetWin32ErrorString());
-        return -1;
+        LogError("Failed to connect to UNIX socket '%1': %2", path, GetWin32ErrorString());
+        return false;
 #else
-        LogError("Failed to connect to '%1': %2", path, strerror(errno));
-        return -1;
+        LogError("Failed to connect to UNIX socket '%1': %2", path, strerror(errno));
+        return false;
 #endif
     }
 
-    err_guard.Disable();
-    return sock;
+    return true;
 }
 
 void SetDescriptorNonBlock(int fd, bool enable)

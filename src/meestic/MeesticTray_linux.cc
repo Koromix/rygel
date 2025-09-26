@@ -194,11 +194,13 @@ Options:
 
     int status = 0;
     while (run) {
-        // Open Meestic socket
-        meestic_fd = ConnectToUnixSocket(socket_filename, SOCK_STREAM);
+        meestic_fd = CreateSocket(SocketType::Unix, SOCK_STREAM);
         if (meestic_fd < 0)
             return 1;
         K_DEFER { close(meestic_fd); };
+
+        if (!ConnectUnixSocket(meestic_fd, socket_filename))
+            return 1;
 
         // React to main service and D-Bus events
         while (run) {
