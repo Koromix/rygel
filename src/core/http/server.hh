@@ -80,6 +80,7 @@ struct http_Socket;
 class http_Daemon {
     K_DELETE_COPY(http_Daemon)
 
+    Size workers = 0;
     HeapArray<int> listeners;
 
 #if defined(_WIN32)

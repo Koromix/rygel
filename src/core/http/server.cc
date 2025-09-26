@@ -341,15 +341,18 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         listeners.Clear();
     };
 
-    Size workers = 2 * GetCoreCount();
+    workers = 2 * GetCoreCount();
 
     for (Size i = 0; i < workers; i++) {
         int listener = CreateListenSocket(config, !i);
         if (listener < 0)
             return false;
         listeners.Append(listener);
+
+        // One cannot bind to the same UNIX socket multiple times
+        if (config.sock_type == SocketType::Unix)
+            break;
     }
-    err_guard.Disable();
 
     if (log_addr) {
         if (config.sock_type == SocketType::Unix) {
