@@ -7053,6 +7053,7 @@ bool BindUnixSocket(int sock, const char *path)
         return false;
     }
 
+#if !defined(_WIN32)
     // Remove existing socket (if any)
     {
         struct stat sb;
@@ -7061,6 +7062,7 @@ bool BindUnixSocket(int sock, const char *path)
             unlink(path);
         }
     }
+#endif
 
     if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 #if defined(_WIN32)
@@ -7072,7 +7074,9 @@ bool BindUnixSocket(int sock, const char *path)
 #endif
     }
 
+#if !defined(_WIN32)
     chmod(path, 0666);
+#endif
 
     return true;
 }
