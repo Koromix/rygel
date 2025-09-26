@@ -5159,6 +5159,7 @@ static const pthread_t main_thread = pthread_self();
 static std::atomic_bool flag_signal { false };
 static std::atomic_int explicit_signal { 0 };
 static int interrupt_pfd[2] = {-1, -1};
+static bool kill_group = false;
 
 void SetSignalHandler(int signal, void (*func)(int), struct sigaction *prev)
 {
@@ -5279,6 +5280,9 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                 CloseDescriptorSafe(&interrupt_pfd[0]);
                 CloseDescriptorSafe(&interrupt_pfd[1]);
             });
+
+            // Best effort
+            kill_group = !setpgid(0, 0);
 
             return true;
         })();
@@ -5942,9 +5946,6 @@ void InitApp()
 #endif
 
 #if !defined(_WIN32) && !defined(__wasi__)
-    // Best effort
-    setpgid(0, 0);
-
     // Setup default signal handlers
     SetSignalHandler(SIGINT, DefaultSignalHandler);
     SetSignalHandler(SIGTERM, DefaultSignalHandler);
@@ -5953,9 +5954,8 @@ void InitApp()
 
     // Kill children on exit
     atexit([]() {
-        if (interrupt_pfd[1] >= 0) {
+        if (kill_group) {
             pid_t pid = getpid();
-            K_ASSERT(pid > 1);
 
             SetSignalHandler(SIGTERM, [](int) {});
             kill(-pid, SIGTERM);
