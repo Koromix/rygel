@@ -5856,30 +5856,30 @@ error:
 
 bool NotifySystemd()
 {
-    const char *addr_str = GetEnv("NOTIFY_SOCKET");
-    if (!addr_str)
+    const char *addr = GetEnv("NOTIFY_SOCKET");
+    if (!addr)
         return true;
 
-    struct sockaddr_un addr;
-    if (addr_str[0] == '@') {
-        addr_str++;
+    struct sockaddr_un sa;
+    if (addr[0] == '@') {
+        addr++;
 
-        if (strlen(addr_str) >= sizeof(addr.sun_path) - 1) {
+        if (strlen(addr) >= sizeof(sa.sun_path) - 1) {
             LogError("Abstract socket address in NOTIFY_SOCKET is too long");
             return false;
         }
 
-        addr.sun_family = AF_UNIX;
-        addr.sun_path[0] = 0;
-        CopyString(addr_str, MakeSpan(addr.sun_path + 1, K_SIZE(addr.sun_path) - 1));
-    } else if (addr_str[0] == '/') {
-        if (strlen(addr_str) >= sizeof(addr.sun_path)) {
+        sa.sun_family = AF_UNIX;
+        sa.sun_path[0] = 0;
+        CopyString(addr, MakeSpan(sa.sun_path + 1, K_SIZE(sa.sun_path) - 1));
+    } else if (addr[0] == '/') {
+        if (strlen(addr) >= sizeof(sa.sun_path)) {
             LogError("Socket pathname in NOTIFY_SOCKET is too long");
             return false;
         }
 
-        addr.sun_family = AF_UNIX;
-        CopyString(addr_str, addr.sun_path);
+        sa.sun_family = AF_UNIX;
+        CopyString(addr, sa.sun_path);
     } else {
         LogError("Invalid socket address in NOTIFY_SOCKET");
         return false;
@@ -5896,8 +5896,8 @@ bool NotifySystemd()
     struct msghdr msg = {};
     iov.iov_base = (void *)"READY=1";
     iov.iov_len = strlen("READY=1");
-    msg.msg_name = &addr;
-    msg.msg_namelen = offsetof(struct sockaddr_un, sun_path) + strlen(addr_str);
+    msg.msg_name = &sa;
+    msg.msg_namelen = offsetof(struct sockaddr_un, sun_path) + strlen(addr);
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
 
@@ -7001,13 +7001,13 @@ bool BindIPSocket(int sock, SocketType type, int port)
     K_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
 
     if (type == SocketType::IPv4) {
-        struct sockaddr_in addr = {};
+        struct sockaddr_in sa = {};
 
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons((uint16_t)port);
-        addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        sa.sin_family = AF_INET;
+        sa.sin_port = htons((uint16_t)port);
+        sa.sin_addr.s_addr = htonl(INADDR_ANY);
 
-        if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        if (bind(sock, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
 #if defined(_WIN32)
             LogError("Failed to bind to port %1: %2", port, GetWin32ErrorString());
             return false;
@@ -7017,13 +7017,13 @@ bool BindIPSocket(int sock, SocketType type, int port)
 #endif
         }
     } else {
-        struct sockaddr_in6 addr = {};
+        struct sockaddr_in6 sa = {};
 
-        addr.sin6_family = AF_INET6;
-        addr.sin6_port = htons((uint16_t)port);
-        addr.sin6_addr = IN6ADDR_ANY_INIT;
+        sa.sin6_family = AF_INET6;
+        sa.sin6_port = htons((uint16_t)port);
+        sa.sin6_addr = IN6ADDR_ANY_INIT;
 
-        if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        if (bind(sock, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
 #if defined(_WIN32)
             LogError("Failed to bind to port %1: %2", port, GetWin32ErrorString());
             return false;
@@ -7039,7 +7039,7 @@ bool BindIPSocket(int sock, SocketType type, int port)
 
 bool BindUnixSocket(int sock, const char *path)
 {
-    struct sockaddr_un addr = {};
+    struct sockaddr_un sa = {};
 
     // Protect against abtract Unix sockets on Linux
     if (!path[0]) {
@@ -7047,8 +7047,8 @@ bool BindUnixSocket(int sock, const char *path)
         return false;
     }
 
-    addr.sun_family = AF_UNIX;
-    if (!CopyString(path, addr.sun_path)) {
+    sa.sun_family = AF_UNIX;
+    if (!CopyString(path, sa.sun_path)) {
         LogError("Excessive UNIX socket path length");
         return false;
     }
@@ -7064,7 +7064,7 @@ bool BindUnixSocket(int sock, const char *path)
     }
 #endif
 
-    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+    if (bind(sock, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
 #if defined(_WIN32)
         LogError("Failed to bind socket to '%1': %2", path, GetWin32ErrorString());
         return false;
@@ -7081,47 +7081,47 @@ bool BindUnixSocket(int sock, const char *path)
     return true;
 }
 
-bool ConnectIPSocket(int sock, const char *host, int port)
+bool ConnectIPSocket(int sock, const char *addr, int port)
 {
-    if (strchr(host, ':')) {
-        struct sockaddr_in6 addr = {};
+    if (strchr(addr, ':')) {
+        struct sockaddr_in6 sa = {};
 
-        addr.sin6_family = AF_INET6;
+        sa.sin6_family = AF_INET6;
 
-        if (inet_pton(AF_INET6, host, &addr.sin6_addr) <= 0) {
-            LogError("Invalid IP address '%1'", host);
+        if (inet_pton(AF_INET6, addr, &sa.sin6_addr) <= 0) {
+            LogError("Invalid IP address '%1'", addr);
             return false;
         }
 
-        addr.sin6_port = htons(port);
+        sa.sin6_port = htons(port);
 
-        if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        if (connect(sock, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
 #if defined(_WIN32)
-            LogError("Failed to connect to '%1' (%2): %3", host, port, GetWin32ErrorString());
+            LogError("Failed to connect to '%1' (%2): %3", addr, port, GetWin32ErrorString());
             return false;
 #else
-            LogError("Failed to connect to '%1' (%2): %3", host, port, strerror(errno));
+            LogError("Failed to connect to '%1' (%2): %3", addr, port, strerror(errno));
             return false;
 #endif
         }
     } else {
-        struct sockaddr_in addr = {};
+        struct sockaddr_in sa = {};
 
-        addr.sin_family = AF_INET;
+        sa.sin_family = AF_INET;
 
-        if (inet_pton(AF_INET, host, &addr.sin_addr) <= 0) {
-            LogError("Invalid IP address '%1'", host);
+        if (inet_pton(AF_INET, addr, &sa.sin_addr) <= 0) {
+            LogError("Invalid IP address '%1'", addr);
             return false;
         }
 
-        addr.sin_port = htons(port);
+        sa.sin_port = htons(port);
 
-       if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+       if (connect(sock, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
 #if defined(_WIN32)
-            LogError("Failed to connect to '%1' (%2): %3", host, port, GetWin32ErrorString());
+            LogError("Failed to connect to '%1' (%2): %3", addr, port, GetWin32ErrorString());
             return false;
 #else
-            LogError("Failed to connect to '%1' (%2): %3", host, port, strerror(errno));
+            LogError("Failed to connect to '%1' (%2): %3", addr, port, strerror(errno));
             return false;
 #endif
         }
@@ -7132,15 +7132,15 @@ bool ConnectIPSocket(int sock, const char *host, int port)
 
 bool ConnectUnixSocket(int sock, const char *path)
 {
-    struct sockaddr_un addr = {};
+    struct sockaddr_un sa = {};
 
-    addr.sun_family = AF_UNIX;
-    if (!CopyString(path, addr.sun_path)) {
+    sa.sun_family = AF_UNIX;
+    if (!CopyString(path, sa.sun_path)) {
         LogError("Excessive UNIX socket path length");
         return false;
     }
 
-    if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+    if (connect(sock, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
 #if defined(_WIN32)
         LogError("Failed to connect to UNIX socket '%1': %2", path, GetWin32ErrorString());
         return false;
