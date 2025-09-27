@@ -381,98 +381,64 @@ public:
     }
 };
 
+struct rcc_ListMember {
+    const char *name;
+    rcc_AutoSexp vec;
+};
+
 class rcc_ListBuilder {
     K_DELETE_COPY(rcc_ListBuilder)
 
-    struct Variable {
-        const char *name;
-        SEXP vec;
-    };
-
-    LocalArray<Variable, 64> variables;
+    LocalArray<rcc_ListMember, 64> members;
     BlockAllocator str_alloc;
 
 public:
     rcc_ListBuilder() = default;
 
-    SEXP Add(const char *name, SEXP vec)
-    {
-        name = DuplicateString(name, &str_alloc).ptr;
-        variables.Append({ name, vec });
-        return vec;
-    }
+    rcc_ListMember *begin() { return members.begin(); }
+    rcc_ListMember *end() { return members.end(); }
+
+    SEXP Add(const char *name, SEXP vec);
 
     template <typename T>
-    SEXP Set(const char *name, T value)
+    SEXP AddValue(const char *name, T value)
     {
         rcc_Vector<T> vec(1);
         vec.Set(0, value);
         return Add(name, vec);
     }
 
-    SEXP BuildList()
-    {
-        rcc_AutoSexp list = Rf_allocVector(VECSXP, variables.len);
-
-        {
-            rcc_AutoSexp names = Rf_allocVector(STRSXP, variables.len);
-            for (Size i = 0; i < variables.len; i++) {
-                SET_STRING_ELT(names, i, Rf_mkChar(variables[i].name));
-                SET_VECTOR_ELT(list, i, variables[i].vec);
-            }
-            Rf_setAttrib(list, R_NamesSymbol, names);
-        }
-
-        return list;
-    }
-
-    SEXP BuildDataFrame()
-    {
-        Size nrow;
-        if (variables.len >= 2) {
-            nrow = Rf_xlength(variables[0].vec);
-            for (Size i = 1; i < variables.len; i++) {
-                if (Rf_xlength(variables[i].vec) != nrow) {
-                    Rcpp::stop("Cannot create data.frame from vectors of unequal length");
-                }
-            }
-        } else {
-            nrow = 0;
-        }
-
-        rcc_AutoSexp df = BuildList();
-
-        // Class
-        {
-            rcc_AutoSexp cls = Rf_mkString("data.frame");
-            Rf_setAttrib(df, R_ClassSymbol, cls);
-        }
-
-        // Compact row names
-        {
-            rcc_AutoSexp row_names = Rf_allocVector(INTSXP, 2);
-            INTEGER(row_names)[0] = NA_INTEGER;
-            INTEGER(row_names)[1] = (int)nrow;
-            Rf_setAttrib(df, R_RowNamesSymbol, row_names);
-        }
-
-        return df;
-    }
+    SEXP Build();
 };
 
 class rcc_DataFrameBuilder {
     K_DELETE_COPY(rcc_DataFrameBuilder)
 
-    rcc_ListBuilder list_builder;
+    rcc_ListBuilder builder;
     Size len;
 
 public:
     rcc_DataFrameBuilder(Size len) : len(len) {}
 
     template <typename T>
-    rcc_Vector<T> Add(const char *name) { return list_builder.Add(name, rcc_Vector<T>(len)); }
+    rcc_Vector<T> Add(const char *name)
+    {
+        rcc_Vector<T> vec(len);
+        return builder.Add(name, vec);
+    }
 
-    SEXP Build() { return list_builder.BuildDataFrame(); }
+    template <typename T>
+    SEXP AddValue(const char *name, T value)
+    {
+        K_ASSERT(len == 1);
+        rcc_Vector<T> vec = Add<T>(name);
+        vec.Set(0, value);
+        return vec;
+    }
+
+    // Don't reuse after this
+    SEXP Build();
+    SEXP Build(Size shrink); // Shrink only
 };
 
 }

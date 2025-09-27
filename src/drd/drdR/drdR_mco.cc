@@ -723,28 +723,28 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
     rcc_AutoSexp summary_df;
     {
-        rcc_ListBuilder df_builder;
-        df_builder.Set("results", (int)summary.results_count);
-        df_builder.Set("stays", (int)summary.stays_count);
-        df_builder.Set("failures", (int)summary.failures_count);
-        df_builder.Set("total_cents", (double)summary.total_cents);
-        df_builder.Set("price_cents", (double)summary.price_cents);
-        df_builder.Set("ghs_cents", (double)summary.ghs_cents);
+        rcc_DataFrameBuilder df_builder(1);
+        df_builder.AddValue("results", (int)summary.results_count);
+        df_builder.AddValue("stays", (int)summary.stays_count);
+        df_builder.AddValue("failures", (int)summary.failures_count);
+        df_builder.AddValue("total_cents", (double)summary.total_cents);
+        df_builder.AddValue("price_cents", (double)summary.price_cents);
+        df_builder.AddValue("ghs_cents", (double)summary.ghs_cents);
         if (export_supplement_cents) {
             for (Size i = 0; i < K_LEN(mco_SupplementTypeNames); i++) {
                 char name_buf[32];
                 MakeSupplementColumnName(mco_SupplementTypeNames[i], "_cents", name_buf);
-                df_builder.Set(name_buf, (double)summary.supplement_cents.values[i]);
+                df_builder.AddValue(name_buf, (double)summary.supplement_cents.values[i]);
             }
         }
         if (export_supplement_counts) {
             for (Size i = 0; i < K_LEN(mco_SupplementTypeNames); i++) {
                 char name_buf[32];
                 MakeSupplementColumnName(mco_SupplementTypeNames[i], "_count", name_buf);
-                df_builder.Set(name_buf, (int)summary.supplement_days.values[i]);
+                df_builder.AddValue(name_buf, (int)summary.supplement_days.values[i]);
             }
         }
-        summary_df = df_builder.BuildDataFrame();
+        summary_df = df_builder.Build();
     }
 
     rcc_AutoSexp results_df;
@@ -769,7 +769,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
         if (mono_results_df) {
             ret_builder.Add("mono_results", mono_results_df);
         }
-        ret_list = ret_builder.BuildList();
+        ret_list = ret_builder.Build();
     }
 
     return ret_list;
@@ -1189,7 +1189,7 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
         ret_builder.Add("ghm_roots", ghm_roots_df);
         ret_builder.Add("diagnoses", diagnoses_df);
         ret_builder.Add("conditions", conditions_df);
-        ret_list = ret_builder.BuildList();
+        ret_list = ret_builder.Build();
     }
 
     return ret_list;
@@ -1423,7 +1423,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
         list_builder.Add("stays", stays_df);
         list_builder.Add("diagnoses", diagnoses_df);
         list_builder.Add("procedures", procedures_df);
-        list = list_builder.BuildList();
+        list = list_builder.Build();
     }
 
     return list;

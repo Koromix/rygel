@@ -166,4 +166,62 @@ void rcc_Vector<LocalDate>::Set(Size idx, LocalDate date)
     }
 }
 
+SEXP rcc_ListBuilder::Add(const char *name, SEXP vec)
+{
+    name = DuplicateString(name, &str_alloc).ptr;
+    members.Append({ name, vec });
+    return vec;
+}
+
+SEXP rcc_ListBuilder::Build()
+{
+    rcc_AutoSexp list = Rf_allocVector(VECSXP, members.len);
+    rcc_AutoSexp names = Rf_allocVector(STRSXP, members.len);
+
+    for (Size i = 0; i < members.len; i++) {
+        SET_STRING_ELT(names, i, Rf_mkChar(members[i].name));
+        SET_VECTOR_ELT(list, i, members[i].vec);
+    }
+
+    Rf_setAttrib(list, R_NamesSymbol, names);
+
+    return list;
+}
+
+SEXP rcc_DataFrameBuilder::Build()
+{
+    rcc_AutoSexp df = builder.Build();
+
+    // Add class
+    {
+        rcc_AutoSexp cls = Rf_mkString("data.frame");
+        Rf_setAttrib(df, R_ClassSymbol, cls);
+    }
+
+    // Compact row names
+    {
+        rcc_AutoSexp row_names = Rf_allocVector(INTSXP, 2);
+        INTEGER(row_names)[0] = NA_INTEGER;
+        INTEGER(row_names)[1] = (int)len;
+        Rf_setAttrib(df, R_RowNamesSymbol, row_names);
+    }
+
+    return df;
+}
+
+SEXP rcc_DataFrameBuilder::Build(Size shrink)
+{
+    K_ASSERT(shrink <= len);
+
+    if (shrink < len) {
+        for (rcc_ListMember &member: builder) {
+            member.vec = Rf_lengthgets(member.vec, shrink);
+        }
+
+        len = shrink;
+    }
+
+    return Build();
+}
+
 }
