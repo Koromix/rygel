@@ -619,9 +619,9 @@ RcppExport void R_init_heimdallR(DllInfo *dll) {
         { "hmR_AddEvents", (DL_FUNC)&K::hmR_AddEvents, 4 },
         { "hmR_AddPeriods", (DL_FUNC)&K::hmR_AddPeriods, 4 },
         { "hmR_AddValues", (DL_FUNC)&K::hmR_AddValues, 4 },
-        { "hmR_DeleteDomain", (DL_FUNC)&K::hmR_DeleteDomain, 1 },
-        { "hmR_DeleteView", (DL_FUNC)&K::hmR_DeleteView, 1 },
-        { "hmR_DeleteEntities", (DL_FUNC)&K::hmR_DeleteEntities, 1 },
+        { "hmR_DeleteDomain", (DL_FUNC)&K::hmR_DeleteDomain, 2 },
+        { "hmR_DeleteView", (DL_FUNC)&K::hmR_DeleteView, 2 },
+        { "hmR_DeleteEntities", (DL_FUNC)&K::hmR_DeleteEntities, 2 },
         {}
     };
 
