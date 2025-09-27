@@ -607,6 +607,72 @@ RcppExport SEXP hmR_DeleteEntities(SEXP inst_xp, SEXP names_xp)
     END_RCPP
 }
 
+RcppExport SEXP hmR_ExportMarks(SEXP inst_xp, SEXP first_xp, SEXP limit_xp)
+{
+    BEGIN_RCPP
+    K_DEFER { rcc_DumpWarnings(); };
+
+    InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp, GetInstanceTag());
+    int first = !Rf_isNull(first_xp) ? Rcpp::as<int>(first_xp) : 0;
+    int limit = Rcpp::as<int>(limit_xp);
+
+    int64_t nrow;
+    {
+        sq_Statement stmt;
+        if (!inst->db.Prepare(R"(SELECT COUNT(*) FROM marks
+                                 WHERE entity IS NOT NULL AND mark >= IFNULL(?1, 0))", &stmt, first))
+            rcc_StopWithLastError();
+        if (!stmt.GetSingleValue(&nrow))
+            rcc_StopWithLastError();
+    }
+
+    nrow = std::min(nrow, (int64_t)limit);
+
+    rcc_DataFrameBuilder df_builder(nrow);
+    rcc_Vector<int> id = df_builder.Add<int>("id");
+    rcc_Vector<const char *> name = df_builder.Add<const char *>("name");
+    rcc_Vector<int> timestamp = df_builder.Add<int>("timestamp");
+    rcc_Vector<bool> status = df_builder.Add<bool>("status");
+    rcc_Vector<const char *> comment = df_builder.Add<const char *>("comment");
+
+    Size count = 0;
+    {
+        sq_Statement stmt;
+        if (!inst->db.Prepare(R"(SELECT mark, name, timestamp, status, comment
+                                 FROM marks
+                                 WHERE entity IS NOT NULL AND mark >= IFNULL(?1, 0))", &stmt, first))
+            rcc_StopWithLastError();
+
+        while (stmt.Step() && count < nrow) {
+            id[count] = sqlite3_column_int(stmt, 0);
+            name.Set(count, (const char *)sqlite3_column_text(stmt, 1));
+            timestamp[count] = (int)(sqlite3_column_int64(stmt, 2) / 1000);
+            if (sqlite3_column_type(stmt, 3) != SQLITE_NULL) {
+                status.Set(count, sqlite3_column_int(stmt, 3));
+            } else {
+                status.SetNA(count);
+            }
+            comment.Set(count, sqlite3_column_bytes(stmt, 4) ? (const char *)sqlite3_column_text(stmt, 4) : nullptr);
+
+            count++;
+        }
+        if (!stmt.IsValid())
+            rcc_StopWithLastError();
+    }
+
+    // Set time class on timestamp
+    {
+        rcc_AutoSexp cls = Rf_allocVector(STRSXP, 2);
+        SET_STRING_ELT(cls, 0, Rf_mkChar("POSIXct"));
+        SET_STRING_ELT(cls, 1, Rf_mkChar("POSIXt"));
+        Rf_setAttrib(timestamp, R_ClassSymbol, cls);
+    }
+
+    return df_builder.Build(count);
+
+    END_RCPP
+}
+
 }
 
 RcppExport void R_init_heimdallR(DllInfo *dll) {
@@ -622,6 +688,7 @@ RcppExport void R_init_heimdallR(DllInfo *dll) {
         { "hmR_DeleteDomain", (DL_FUNC)&K::hmR_DeleteDomain, 2 },
         { "hmR_DeleteView", (DL_FUNC)&K::hmR_DeleteView, 2 },
         { "hmR_DeleteEntities", (DL_FUNC)&K::hmR_DeleteEntities, 2 },
+        { "hmR_ExportMarks", (DL_FUNC)&K::hmR_ExportMarks, 3 },
         {}
     };
 

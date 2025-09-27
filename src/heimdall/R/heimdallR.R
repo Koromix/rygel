@@ -56,3 +56,7 @@ hm_delete_view <- function(inst, name) {
 hm_delete_entities <- function(inst, names) {
     .Call(`hmR_DeleteEntities`, inst, names)
 }
+
+hm_export_marks <- function(inst, first = NULL, limit = 10000) {
+    .Call(`hmR_ExportMarks`, inst, first, limit)
+}
