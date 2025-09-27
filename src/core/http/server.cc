@@ -127,11 +127,19 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
         }
 
         return true;
-    } else if (key == "UnixPath") {
-        unix_path = NormalizePath(value, root_directory, &str_alloc).ptr;
+    } else if (key == "BindIP") {
+        if (value == "*") {
+            bind_addr = nullptr;
+        } else {
+            bind_addr = DuplicateString(value, &str_alloc).ptr;
+        }
+
         return true;
     } else if (key == "Port") {
         return ParseInt(value, &port);
+    } else if (key == "UnixPath") {
+        unix_path = NormalizePath(value, root_directory, &str_alloc).ptr;
+        return true;
     } else if (key == "ClientAddress") {
         if (!OptionToEnumI(http_AddressModeNames, value, &addr_mode)) {
             LogError("Unknown client address mode '%1'", value);
@@ -274,7 +282,7 @@ static int CreateListenSocket(const http_Config &config, bool first)
         case SocketType::Dual:
         case SocketType::IPv4:
         case SocketType::IPv6: {
-            if (!BindIPSocket(sock, config.sock_type, config.port))
+            if (!BindIPSocket(sock, config.sock_type, config.bind_addr, config.port))
                 return -1;
         } break;
         case SocketType::Unix: {

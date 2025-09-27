@@ -46,6 +46,7 @@ struct http_Config {
 #else
     SocketType sock_type = SocketType::Dual;
 #endif
+    const char *bind_addr = nullptr;
     int port = 8888;
     const char *unix_path = nullptr;
 

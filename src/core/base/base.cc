@@ -6996,7 +6996,7 @@ int CreateSocket(SocketType type, int flags)
 
 #endif
 
-bool BindIPSocket(int sock, SocketType type, int port)
+bool BindIPSocket(int sock, SocketType type, const char *addr, int port)
 {
     K_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
 
@@ -7005,14 +7005,22 @@ bool BindIPSocket(int sock, SocketType type, int port)
 
         sa.sin_family = AF_INET;
         sa.sin_port = htons((uint16_t)port);
-        sa.sin_addr.s_addr = htonl(INADDR_ANY);
+
+        if (addr) {
+            if (inet_pton(AF_INET, addr, &sa.sin_addr) <= 0) {
+                LogError("Invalid IPv4 address '%1'", addr);
+                return false;
+            }
+        } else {
+            sa.sin_addr.s_addr = htonl(INADDR_ANY);
+        }
 
         if (bind(sock, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
 #if defined(_WIN32)
-            LogError("Failed to bind to port %1: %2", port, GetWin32ErrorString());
+            LogError("Failed to bind to '%1:%2': %3", addr ? addr : "*", port, GetWin32ErrorString());
             return false;
 #else
-            LogError("Failed to bind to port %1: %2", port, strerror(errno));
+            LogError("Failed to bind to '%1:%2': %2", addr ? addr : "*", port, strerror(errno));
             return false;
 #endif
         }
@@ -7021,14 +7029,25 @@ bool BindIPSocket(int sock, SocketType type, int port)
 
         sa.sin6_family = AF_INET6;
         sa.sin6_port = htons((uint16_t)port);
-        sa.sin6_addr = IN6ADDR_ANY_INIT;
+
+        if (addr) {
+            char buf[512];
+            Fmt(buf, "%1%2", strchr(addr, ':') ? "" : "::FFFF:", addr);
+
+            if (inet_pton(AF_INET6, buf, &sa.sin6_addr) <= 0) {
+                LogError("Invalid IPv6 address '%1'", addr);
+                return false;
+            }
+        } else {
+            sa.sin6_addr = IN6ADDR_ANY_INIT;
+        }
 
         if (bind(sock, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
 #if defined(_WIN32)
-            LogError("Failed to bind to port %1: %2", port, GetWin32ErrorString());
+            LogError("Failed to bind to '%1:%2': %3", addr ? addr : "*", port, GetWin32ErrorString());
             return false;
 #else
-            LogError("Failed to bind to port %1: %2", port, strerror(errno));
+            LogError("Failed to bind to '%1:%2': %3", addr ? addr : "*", port, strerror(errno));
             return false;
 #endif
         }
@@ -7087,13 +7106,12 @@ bool ConnectIPSocket(int sock, const char *addr, int port)
         struct sockaddr_in6 sa = {};
 
         sa.sin6_family = AF_INET6;
+        sa.sin6_port = htons(port);
 
         if (inet_pton(AF_INET6, addr, &sa.sin6_addr) <= 0) {
-            LogError("Invalid IP address '%1'", addr);
+            LogError("Invalid IPv6 address '%1'", addr);
             return false;
         }
-
-        sa.sin6_port = htons(port);
 
         if (connect(sock, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
 #if defined(_WIN32)
@@ -7108,15 +7126,14 @@ bool ConnectIPSocket(int sock, const char *addr, int port)
         struct sockaddr_in sa = {};
 
         sa.sin_family = AF_INET;
+        sa.sin_port = htons(port);
 
         if (inet_pton(AF_INET, addr, &sa.sin_addr) <= 0) {
-            LogError("Invalid IP address '%1'", addr);
+            LogError("Invalid IPv4 address '%1'", addr);
             return false;
         }
 
-        sa.sin_port = htons(port);
-
-       if (connect(sock, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+        if (connect(sock, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
 #if defined(_WIN32)
             LogError("Failed to connect to '%1' (%2): %3", addr, port, GetWin32ErrorString());
             return false;

@@ -4850,7 +4850,7 @@ bool InitWinsock();
 
 int CreateSocket(SocketType type, int flags);
 
-bool BindIPSocket(int sock, SocketType type, int port);
+bool BindIPSocket(int sock, SocketType type, const char *addr, int port);
 bool BindUnixSocket(int sock, const char *path);
 bool ConnectIPSocket(int sock, const char *addr, int port);
 bool ConnectUnixSocket(int sock, const char *path);
