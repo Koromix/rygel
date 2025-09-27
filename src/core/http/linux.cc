@@ -442,8 +442,11 @@ bool http_Dispatcher::Run()
                     status = client->ParseRequest();
                 } else if (!bytes || errno != EAGAIN) {
                     if (client->IsBusy()) {
-                        const char *reason = bytes ? strerror(errno) : "closed unexpectedly";
-                        LogError("Client connection failed: %1", reason);
+                        if (bytes) {
+                            LogError("Connection failed: %1", strerror(errno));
+                        } else {
+                            LogError("Connection closed unexpectedly");
+                        }
                     }
 
                     status = http_RequestStatus::Close;

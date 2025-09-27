@@ -431,8 +431,11 @@ bool http_Dispatcher::Run()
 
                     if (!bytes || error != WSAEWOULDBLOCK) {
                         if (client->IsBusy()) {
-                            const char *reason = bytes ? GetWin32ErrorString() : "closed unexpectedly";
-                            LogError("Client connection failed: %1", reason);
+                            if (bytes) {
+                                LogError("Connection failed: %1", GetWin32ErrorString());
+                            } else {
+                                LogError("Connection closed unexpectedly");
+                            }
                         }
 
                         status = http_RequestStatus::Close;
