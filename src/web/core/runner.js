@@ -62,6 +62,7 @@ function AppRunner(canvas) {
         escape: 0,
         ctrl: 0,
         alt: 0,
+        backspace: 0,
         delete: 0,
         return: 0,
         pause: 0,
@@ -241,6 +242,8 @@ function AppRunner(canvas) {
             updateKey('ctrl', e.type);
         } else if (code == 18) {
             updateKey('alt', e.type);
+        } else if (code == 8) {
+            updateKey('backspace', e.type);
         } else if (code == 46) {
             updateKey('delete', e.type);
         } else if (code == 13) {
