@@ -52,18 +52,21 @@ static void AdjustMode(const char *filename)
 #endif
 }
 
-RcppExport SEXP hmR_Open(SEXP filename_xp)
+RcppExport SEXP hmR_Open(SEXP filename_xp, SEXP create_xp)
 {
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
     Rcpp::String filename(filename_xp);
+    bool create = Rcpp::as<bool>(create_xp);
 
     InstanceData *inst = new InstanceData;
     K_DEFER_N(inst_guard) { delete inst; };
 
+    int flags = SQLITE_OPEN_READWRITE | (create ? SQLITE_OPEN_CREATE : 0);
+
     AdjustMode(filename.get_cstring());
-    if (!inst->db.Open(filename.get_cstring(), SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+    if (!inst->db.Open(filename.get_cstring(), flags))
         rcc_StopWithLastError();
     AdjustMode(filename.get_cstring());
 
@@ -677,7 +680,7 @@ RcppExport SEXP hmR_ExportMarks(SEXP inst_xp, SEXP first_xp, SEXP limit_xp)
 
 RcppExport void R_init_heimdallR(DllInfo *dll) {
     static const R_CallMethodDef call_entries[] = {
-        { "hmR_Open", (DL_FUNC)&K::hmR_Open, 1 },
+        { "hmR_Open", (DL_FUNC)&K::hmR_Open, 2 },
         { "hmR_Close", (DL_FUNC)&K::hmR_Close, 1 },
         { "hmR_Reset", (DL_FUNC)&K::hmR_Reset, 1 },
         { "hmR_SetDomain", (DL_FUNC)&K::hmR_SetDomain, 3 },

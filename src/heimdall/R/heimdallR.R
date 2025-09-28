@@ -13,8 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-hm_open <- function(filename) {
-    .Call(`hmR_Open`, filename)
+hm_open <- function(filename, create = TRUE) {
+    .Call(`hmR_Open`, filename, create)
 }
 
 hm_close <- function(inst) {
