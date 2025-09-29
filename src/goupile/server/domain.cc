@@ -416,7 +416,7 @@ bool ParseKeyString(Span<const char> str, uint8_t out_key[32])
 
 static bool CheckDomainName(Span<const char> name)
 {
-    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_' || c == '.' || c == '-'; };
+    const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_' || c == '.' || c == '-'; };
 
     if (!name.len) {
         LogError("Domain name cannot be empty");
@@ -427,7 +427,7 @@ static bool CheckDomainName(Span<const char> name)
         return false;
     }
     if (!std::all_of(name.begin(), name.end(), test_char)) {
-        LogError("Domain name must only contain alphanumeric, '_', '.' or '-' characters");
+        LogError("Domain name must only contain lowercase alphanumeric, '_', '.' or '-' characters");
         return false;
     }
 
