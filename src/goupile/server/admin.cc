@@ -854,10 +854,10 @@ void HandleDomainConfigure(http_IO *io)
 {
     RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
-    DomainHolder *domain = RefDomain();
+    DomainHolder *domain = RefDomain(false);
     K_DEFER { UnrefDomain(domain); };
 
-    if (domain) {
+    if (domain->IsInstalled()) {
         if (!session) {
             LogError("User is not logged in");
             io->SendError(401);
@@ -919,8 +919,8 @@ void HandleDomainConfigure(http_IO *io)
             if (valid) {
                 valid &= settings.Validate();
 
-                if (domain) {
-                    if (username || password) {
+                if (domain->GetUpgrade() != 0) {
+                    if (username) {
                         LogError("Cannot create default user in installed domain");
                         valid = false;
                     }
@@ -951,6 +951,23 @@ void HandleDomainConfigure(http_IO *io)
     }
 
     bool success = gp_db.Transaction([&]() {
+        // Make sure there's no user!
+        if (username) {
+            K_ASSERT(domain->GetUpgrade() == 0);
+
+            sq_Statement stmt;
+            if (!gp_db.Prepare("SELECT userid FROM dom_users", &stmt))
+                return false;
+
+            if (stmt.Step()) {
+                LogError("Cannot create default user on domain with exisiting users");
+                io->SendError(403);
+                return false;
+            } else if (!stmt.IsValid()) {
+                return false;
+            }
+        }
+
         // Update settings
         {
             const char *sql = "UPDATE dom_settings SET value = ?2 WHERE key = ?1";
@@ -974,8 +991,6 @@ void HandleDomainConfigure(http_IO *io)
 
         // Create default user (initial install)
         if (username) {
-            K_ASSERT(!domain);
-
             char hash[PasswordHashBytes];
             if (!HashPassword(password, hash))
                 return false;

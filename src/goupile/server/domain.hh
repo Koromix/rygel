@@ -49,7 +49,7 @@ void PruneDomain();
 
 void SyncDomain(bool wait, Span<InstanceHolder *> changes = {});
 
-DomainHolder *RefDomain();
+DomainHolder *RefDomain(bool installed = true);
 void UnrefDomain(DomainHolder *domain);
 InstanceHolder *RefInstance(const char *key);
 
@@ -59,7 +59,7 @@ bool ParseKeyString(Span<const char> str, uint8_t out_key[32] = nullptr);
 class DomainHolder {
     std::atomic_int refcount { 1 };
 
-    bool installed = false;
+    int upgrade = -1;
     HashTable<Span<const char>, InstanceHolder *> map;
 
 public:
@@ -75,7 +75,9 @@ public:
 
     bool Checkpoint();
 
-    bool IsInstalled() const { return installed; }
+    bool IsInstalled() { return upgrade < 0; }
+    int GetUpgrade() { return upgrade; }
+
     InstanceHolder *Ref(Span<const char> key);
 
     friend bool InitDomain();

@@ -421,7 +421,7 @@ static void HandleAdminRequest(http_IO *io)
         return;
     }
 
-    DomainHolder *domain = RefDomain();
+    DomainHolder *domain = RefDomain(false);
     K_DEFER { UnrefDomain(domain); };
 
     // Try static assets
@@ -431,7 +431,7 @@ static void HandleAdminRequest(http_IO *io)
             K_ASSERT(asset);
 
             char etag[64];
-            Fmt(etag, "%1_%2", shared_etag, domain ? domain->unique : 0);
+            Fmt(etag, "%1_%2", shared_etag, domain->unique);
 
             const AssetInfo *render = RenderTemplate(etag, *asset,
                                                      [&](Span<const char> expr, StreamWriter *writer) {
@@ -455,7 +455,9 @@ static void HandleAdminRequest(http_IO *io)
                     TimeSpec spec = DecomposeTimeLocal(now);
 
                     json.StartObject();
-                    json.Key("ready"); json.Bool(domain);
+                    if (!domain->IsInstalled()) {
+                        json.Key("upgrade"); json.Int(domain->GetUpgrade());
+                    }
                     json.Key("key"); json.String("admin");
                     json.Key("urls"); json.StartObject();
                         json.Key("base"); json.String("/admin/");
@@ -516,7 +518,7 @@ static void HandleAdminRequest(http_IO *io)
     } else if (TestStr(admin_url, "/api/domain/configure") && request.method == http_RequestMethod::Post) {
         HandleDomainConfigure(io);
         return;
-    } else if (!domain) {
+    } else if (!domain->IsInstalled()) [[unlikely]] {
         io->SendError(404);
         return;
     }
@@ -696,7 +698,6 @@ static void HandleInstanceRequest(http_IO *io)
                     char buf[512];
 
                     json.StartObject();
-                    json.Key("ready"); json.Bool(true);
                     json.Key("key"); json.String(master->key.ptr);
                     json.Key("urls"); json.StartObject();
                         json.Key("base"); json.String(Fmt(buf, "/%1/", master->key).ptr);

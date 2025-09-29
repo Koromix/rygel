@@ -343,13 +343,13 @@ void SyncDomain(bool wait, Span<InstanceHolder *> changes)
     }
 }
 
-DomainHolder *RefDomain()
+DomainHolder *RefDomain(bool installed)
 {
     std::lock_guard<std::mutex> lock(mutex);
 
     if (!domain_ptr)
         return nullptr;
-    if (!domain_ptr->IsInstalled())
+    if (installed && !domain_ptr->IsInstalled())
         return nullptr;
 
     domain_ptr->Ref();
@@ -516,7 +516,7 @@ bool DomainHolder::Open()
         }
     }
 
-    // Detect valid installation (at least one user)
+    // Detect valid installation (at least one user, archive key is set)
     {
         sq_Statement stmt;
         if (!gp_db.Prepare("SELECT userid FROM dom_users", &stmt))
@@ -524,11 +524,13 @@ bool DomainHolder::Open()
         if (!stmt.Run())
             return false;
 
-        installed = stmt.IsRow();
+        upgrade = stmt.IsRow() ? -1 : 0;
     }
 
-    if (installed && !settings.Validate())
-        return false;
+    if (upgrade < 0 && !settings.Validate()) {
+        // Configure name, title and archive key
+        upgrade = 1;
+    }
 
     return true;
 }

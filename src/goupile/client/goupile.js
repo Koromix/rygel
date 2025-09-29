@@ -94,12 +94,12 @@ async function start() {
     }
 
     // Authorize user
-    if (profile.authorized) {
-        url = await syncInstance();
-    } else if (ENV.ready) {
-        url = await runLoginScreen(null, true);
-    } else {
+    if (ENV.upgrade != null) {
         url = await runInstallScreen();
+    } else if (profile.authorized) {
+        url = await syncInstance();
+    } else {
+        url = await runLoginScreen(null, true);
     }
 
     // Run controller now
@@ -390,15 +390,17 @@ async function runInstallScreen(e) {
         d.text('*name', T.domain_name, { help: T.domain_name_help });
         d.text('*title', T.domain_title, { help: T.domain_title_help });
 
-        d.text('*username', T.root_account, { value: 'admin' });
-        d.password('*password', T.password);
-        d.password('*password2', null, {
-            placeholder: T.confirmation,
-            help: T.password_complexity_help
-        });
-        if (d.values.password != null && d.values.password2 != null &&
-                                         d.values.password !== d.values.password2)
-            d.error('password2', T.password_mismatch);
+        if (ENV.upgrade == 0) {
+            d.text('*username', T.root_account, { value: 'admin' });
+            d.password('*password', T.password);
+            d.password('*password2', null, {
+                placeholder: T.confirmation,
+                help: T.password_complexity_help
+            });
+            if (d.values.password != null && d.values.password2 != null &&
+                                             d.values.password !== d.values.password2)
+                d.error('password2', T.password_mismatch);
+        }
 
         let langs = Object.keys(goupile.languages).map(lang => [lang, lang.toUpperCase()]);
         d.enumDrop('default_lang', T.default_language, langs, {
