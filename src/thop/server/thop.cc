@@ -533,7 +533,7 @@ Options:
                 if (!thop_config.http.SetPortOrPath(opt.current_value))
                     return 1;
             } else if (opt.Test("--bind", OptionType::Value)) {
-                config.http.bind_addr = opt.current_value;
+                thop_config.http.bind_addr = opt.current_value;
             } else if (opt.Test("--base_url", OptionType::Value)) {
                 thop_config.base_url = opt.current_value;
             } else {
