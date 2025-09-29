@@ -1102,6 +1102,8 @@ Options:
 
     %!..+-p, --port port%!0                Change web server port
                                    %!D..(default: %3)%!0
+        %!..+--bind IP%!0                  Bind to specific IP
+
         %!..+--sandbox%!0                  Run sandboxed (on supported platforms)
 
 Other commands:
@@ -1152,6 +1154,8 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
             } else if (opt.Test("-p", "--port", OptionType::Value)) {
                 if (!gp_config.http.SetPortOrPath(opt.current_value))
                     return 1;
+            } else if (opt.Test("--bind", OptionType::Value)) {
+                config.http.bind_addr = opt.current_value;
             } else if (opt.Test("--sandbox")) {
                 sandbox = true;
             } else {

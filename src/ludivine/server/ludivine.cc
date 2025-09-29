@@ -452,6 +452,8 @@ Options:
 
     %!..+-p, --port port%!0                Change web server port
                                    %!D..(default: %3)%!0
+        %!..+--bind IP%!0                  Bind to specific IP
+
         %!..+--sandbox%!0                  Run sandboxed (on supported platforms))",
                 FelixTarget, config_filename, config.http.port);
     };
@@ -497,6 +499,8 @@ Options:
             } else if (opt.Test("-p", "--port", OptionType::Value)) {
                 if (!config.http.SetPortOrPath(opt.current_value))
                     return 1;
+            } else if (opt.Test("--bind", OptionType::Value)) {
+                config.http.bind_addr = opt.current_value;
             } else if (opt.Test("--sandbox")) {
                 sandbox = true;
             } else {

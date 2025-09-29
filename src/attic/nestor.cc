@@ -757,6 +757,7 @@ Options:
 
     %!..+-p, --port port%!0                Change web server port
                                    %!D..(default: %3)%!0
+        %!..+--bind IP%!0                  Bind to specific IP
 
         %!..+--sab%!0                      Set headers for SharedArrayBuffer support
 
@@ -810,6 +811,8 @@ Options:
             } else if (opt.Test("-p", "--port", OptionType::Value)) {
                 if (!config.http.SetPortOrPath(opt.current_value))
                     return 1;
+            } else if (opt.Test("--bind", OptionType::Value)) {
+                config.http.bind_addr = opt.current_value;
             } else if (opt.Test("--sab")) {
                 Size j = 0;
                 for (Size i = 0; i < config.headers.len; i++) {

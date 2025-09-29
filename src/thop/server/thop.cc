@@ -479,6 +479,7 @@ Options:
 
     %!..+-p, --port port%!0                Change web server port
                                    %!D..(default: %3)%!0
+        %!..+--bind IP%!0                  Bind to specific IP
         %!..+--base_url URL%!0             Change base URL
                                    %!D..(default: %4)%!0)",
                 FelixTarget, config_filename, thop_config.http.port, thop_config.base_url);
@@ -531,6 +532,8 @@ Options:
             } else if (opt.Test("-p", "--port", OptionType::Value)) {
                 if (!thop_config.http.SetPortOrPath(opt.current_value))
                     return 1;
+            } else if (opt.Test("--bind", OptionType::Value)) {
+                config.http.bind_addr = opt.current_value;
             } else if (opt.Test("--base_url", OptionType::Value)) {
                 thop_config.base_url = opt.current_value;
             } else {
