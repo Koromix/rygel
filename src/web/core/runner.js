@@ -47,7 +47,7 @@ function AppRunner(canvas) {
     let handle_draw = null;
     let handle_context_menu = null;
 
-    let touch_digits = -1;
+    let touch_digits = null;
     let touch_start = null;
     let touch_distance = 0;
 
@@ -333,68 +333,72 @@ function AppRunner(canvas) {
         e.preventDefault();
         e.stopPropagation();
 
-        if (e.type == 'touchstart' || e.type == 'touchmove') {
-            if (e.type == 'touchstart')
-                touch_digits = e.touches.length;
-            if (e.touches.length != touch_digits)
-                return;
+        if (e.type == 'touchstart') {
+            touch_digits = e.touches;
+            touch_start = draw_counter;
 
-            mouse_state.contact = true;
-
-            if (e.type == 'touchmove') {
-                skip_clicks = 1;
-                mouse_state.moving = true;
-            } else {
-                touch_start = {
-                    x: mouse_state.x,
-                    y: mouse_state.y,
-                    counter: draw_counter
-                };
-
+            if (e.touches.length == 1) {
+                mouse_state.contact = true;
                 mouse_state.moving = false;
-            }
 
-            if (touch_digits == 1) {
+                mouse_state.left = 1;
+                skip_clicks = 0;
+            } else {
+                mouse_state.contact = false;
+                mouse_state.moving = false;
+
+                mouse_state.left = 0;
+                skip_clicks = 1;
+            }
+        }
+
+        if (e.type == 'touchmove') {
+            if (e.touches.length == 1) {
                 mouse_state.x = (e.touches[0].pageX - rect.left + body.left) * dpr;
                 mouse_state.y = (e.touches[0].pageY - rect.top + body.top) * dpr;
 
-                if (e.type == 'touchstart' && !mouse_state.left)
-                    mouse_state.left = 1;
-            } else if (touch_digits == 2) {
+                if (!mouse_state.moving && touch_digits?.length == e.touches.length) {
+                    let start = { x: touch_digits[0].pageX, y: touch_digits[0].pageY };
+                    let at = { x: e.touches[0].pageX, y: e.touches[0].pageY };
+                    let distance = computeDistance(start, at);
+
+                    if (distance > 5) {
+                        skip_clicks = 1;
+                        mouse_state.moving = true;
+                    }
+                }
+            } else if (e.touches.length == 2) {
                 let p1 = { x: e.touches[0].pageX - rect.left + body.left, y: e.touches[0].pageY - rect.top + body.top };
                 let p2 = { x: e.touches[1].pageX - rect.left + body.left, y: e.touches[1].pageY - rect.top + body.top };
 
                 mouse_state.x = (p1.x + p2.x) / 2 * dpr;
                 mouse_state.y = (p1.y + p2.y) / 2 * dpr;
 
-                let new_distance = computeDistance(p1, p2);
+                if (touch_digits?.length == e.touches.length) {
+                    let new_distance = computeDistance(p1, p2);
 
-                mouse_state.left = 0;
+                    // Give some time for stabilisation :)
+                    if (draw_counter - touch_start >= 6) {
+                        let pinch = mouse_state.pinch ?? 0;
+                        mouse_state.pinch = pinch + Math.log2(new_distance / touch_distance);
+                    }
 
-                // Give some time for stabilisation :)
-                if (draw_counter - touch_start.counter >= 6) {
-                    let pinch = mouse_state.pinch ?? 0;
-                    mouse_state.pinch = pinch + Math.log2(new_distance / touch_distance);
+                    touch_distance = new_distance;
                 }
-
-                touch_distance = new_distance;
             }
-        } else if (e.type == 'touchend') {
-            if (touch_start == null)
-                return;
+        }
 
+        if (e.type == 'touchend') {
             mouse_state.contact = false;
+            mouse_state.moving = false;
 
-            if (draw_counter - touch_start.counter >= 20)
+            if (draw_counter - touch_start >= 20)
                 skip_clicks = 1;
-            if (touch_digits == 1) {
-                if (mouse_state.left)
-                    mouse_state.left = skip_clicks ? 0 : -1;
-                mouse_state.moving = false;
-            }
-            skip_clicks = 0;
+            if (mouse_state.left)
+                mouse_state.left = skip_clicks ? 0 : -1;
 
             touch_start = null;
+            touch_digits = null;
             touch_distance = null;
 
             mouse_state.pinch = null;
