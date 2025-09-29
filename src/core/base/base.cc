@@ -7031,12 +7031,19 @@ bool BindIPSocket(int sock, SocketType type, const char *addr, int port)
         sa.sin6_port = htons((uint16_t)port);
 
         if (addr) {
-            char buf[512];
-            Fmt(buf, "%1%2", strchr(addr, ':') ? "" : "::FFFF:", addr);
+            if (!strchr(addr, ':')) {
+                char buf[512];
+                Fmt(buf, "::FFFF:%1", addr);
 
-            if (inet_pton(AF_INET6, buf, &sa.sin6_addr) <= 0) {
-                LogError("Invalid IPv6 address '%1'", addr);
-                return false;
+                if (inet_pton(AF_INET6, buf, &sa.sin6_addr) <= 0) {
+                    LogError("Invalid IPv4 or IPv6 address '%1'", addr);
+                    return false;
+                }
+            } else {
+                if (inet_pton(AF_INET6, addr, &sa.sin6_addr) <= 0) {
+                    LogError("Invalid IPv6 address '%1'", addr);
+                    return false;
+                }
             }
         } else {
             sa.sin6_addr = IN6ADDR_ANY_INIT;
