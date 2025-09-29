@@ -89,16 +89,6 @@ async function start() {
             return T.confirm_or_close_dialog;
     };
 
-    // Keep this around for gesture emulation on desktop
-    if (false) {
-        let script = document.createElement('script');
-
-        script.onload = () => TouchEmulator();
-        script.src = BUNDLES['touch-emulator.js'];
-
-        document.head.appendChild(script);
-    }
-
     // Retrieve session if there seems to be one
     {
         let rnd = Util.getCookie('session_rnd');
