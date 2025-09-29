@@ -816,7 +816,7 @@ void HandleDomainInfo(http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to get domain info=");
+        LogError("Non-admin users are not allowed to get domain info");
         io->SendError(403);
         return;
     }

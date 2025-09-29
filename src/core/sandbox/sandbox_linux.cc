@@ -266,7 +266,7 @@ static bool InitLandlock(unsigned int flags, Span<const sb_RevealedPath> reveals
 
     int fd = syscall(__NR_landlock_create_ruleset, &attr, K_SIZE(attr), 0);
     if (fd < 0) {
-        LogError("Failed to create landlock ruleset: %1", strerror(errno));
+        LogError("Failed to create Landlock ruleset: %1", strerror(errno));
         return false;
     }
     K_DEFER { CloseDescriptor(fd); };
@@ -297,13 +297,13 @@ static bool InitLandlock(unsigned int flags, Span<const sb_RevealedPath> reveals
         beneath.allowed_access &= attr.handled_access_fs;
 
         if (syscall(__NR_landlock_add_rule, fd, LANDLOCK_RULE_PATH_BENEATH, &beneath, 0) < 0) {
-            LogError("Failed to add landlock rule for '%1': %2", reveal.path, strerror(errno));
+            LogError("Failed to add Landlock rule for '%1': %2", reveal.path, strerror(errno));
             return false;
         }
     }
 
     if (syscall(__NR_landlock_restrict_self, fd, 0) < 0) {
-        LogError("Failed to apply landlock restrictions: %1", strerror(errno));
+        LogError("Failed to apply Landlock restrictions: %1", strerror(errno));
         return false;
     }
 
@@ -842,7 +842,7 @@ bool sb_SandboxBuilder::Apply()
                 if (!InitNamespaces(isolation, reveals))
                     return false;
             } else {
-                LogError("Invalid sandbox system '%1'", str);
+                LogError("Invalid sandbox method '%1'", str);
                 return false;
             }
         } else {

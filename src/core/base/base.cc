@@ -7020,7 +7020,7 @@ bool BindIPSocket(int sock, SocketType type, const char *addr, int port)
             LogError("Failed to bind to '%1:%2': %3", addr ? addr : "*", port, GetWin32ErrorString());
             return false;
 #else
-            LogError("Failed to bind to '%1:%2': %2", addr ? addr : "*", port, strerror(errno));
+            LogError("Failed to bind to '%1:%2': %3", addr ? addr : "*", port, strerror(errno));
             return false;
 #endif
         }
