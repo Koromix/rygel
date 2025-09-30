@@ -1426,6 +1426,28 @@ function draw() {
         ctx.restore();
     }
 
+    // Cover empty top/bottom zone
+    {
+        ctx.save();
+        ctx.translate(layout.main.left, layout.main.top);
+
+        ctx.fillStyle = '#fafafa';
+
+        if (rows.length) {
+            let top = rows[0].top;
+            let bottom = rows[rows.length - 1].top + rows[rows.length - 1].height;
+
+            if (top > 0)
+                ctx.fillRect(0, 0, layout.main.width, top);
+            if (bottom < layout.main.height)
+                ctx.fillRect(0, bottom, layout.main.width, layout.main.height - bottom);
+        } else {
+            ctx.fillRect(0, 0, layout.main.width, layout.main.height);
+        }
+
+        ctx.restore();
+    }
+
     // Draw time scale
     {
         ctx.save();
