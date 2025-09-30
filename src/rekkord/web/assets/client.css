@@ -371,7 +371,7 @@ form {
     }
     & * + .section { margin-top: 12px; }
 
-    & label:not[for] {
+    & label {
         display: flex;
         gap: 0.43em;
         align-items: center;
