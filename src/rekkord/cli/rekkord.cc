@@ -117,7 +117,7 @@ Management commands:
 Snapshot commands:
 
     %!..+save%!0                           Store directory or file and make snapshot
-    %!..+restore%!0                        Get and decrypt snapshot, directory or file
+    %!..+restore%!0                        Restore snapshot, directory or file
 
     %!..+scan%!0                           Check snapshots and blobs
 
