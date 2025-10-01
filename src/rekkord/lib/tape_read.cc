@@ -97,6 +97,7 @@ class GetContext {
 public:
     GetContext(rk_Repository *repo, const rk_RestoreSettings &settings, int64_t entries, int64_t size);
 
+    // These functions run asynchronously, use Sync() to wait
     bool ExtractEntries(Span<const uint8_t> blob, bool allow_separators, const char *dest_dirname);
     bool ExtractEntries(Span<const uint8_t> blob, bool allow_separators, const EntryInfo &dest);
 
@@ -1377,8 +1378,6 @@ class CheckContext {
     int64_t total_blobs = 0;
     std::atomic_int64_t checked_blobs = 0;
 
-    Async tasks;
-
 public:
     CheckContext(rk_Repository *repo, rk_Cache *cache, int64_t mark, int64_t checked, int64_t blobs);
 
@@ -1394,7 +1393,7 @@ private:
 };
 
 CheckContext::CheckContext(rk_Repository *repo, rk_Cache *cache, int64_t mark, int64_t checked, int64_t blobs)
-    : repo(repo), cache(cache), mark(mark), total_blobs(blobs), checked_blobs(checked), tasks(repo->GetAsync())
+    : repo(repo), cache(cache), mark(mark), total_blobs(blobs), checked_blobs(checked)
 {
     repo->MakeSalt(rk_SaltKind::BlobHash, salt32);
 }
@@ -1450,7 +1449,7 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
             if (file_size < 0)
                 return false;
 
-            Async async(&tasks);
+            Async async(repo->GetAsync());
 
             for (const FileChunk &chunk: chunks) {
                 async.Run([=, this]() {
@@ -1551,7 +1550,7 @@ bool CheckContext::RecurseEntries(Span<const uint8_t> blob, bool allow_separator
         entries.len = j;
     }
 
-    Async async(&tasks);
+    Async async(repo->GetAsync());
 
     for (Size i = 0; i < entries.len; i++) {
         const EntryInfo *entry = &entries[i];
