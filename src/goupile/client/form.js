@@ -246,9 +246,8 @@ function FormBuilder(state, model, options = {}) {
             ${makeLabel(intf, extra)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="text" class="fm_input" style=${makeInputStyle(options)}
-                   placeholder=${options.placeholder || ''}
-                   .value=${value || ''}
-                   ?disabled=${options.disabled} ?readonly=${options.readonly}
+                   placeholder=${options.placeholder || ''} .value=${value || ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly} ?autofocus=${options.focus}
                    @input=${e => handleTextInput(e, key)} />
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
@@ -271,9 +270,8 @@ function FormBuilder(state, model, options = {}) {
             ${makeLabel(intf, extra)}
             <textarea id=${id} class="fm_input" style=${makeInputStyle(options)}
                    rows=${options.rows || 3} cols=${options.cols || 30}
-                   placeholder=${options.placeholder || ''}
-                   .value=${value || ''}
-                   ?disabled=${options.disabled} ?readonly=${options.readonly}
+                   placeholder=${options.placeholder || ''} .value=${value || ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly} ?autofocus=${options.focus}
                    @input=${e => handleTextInput(e, key)}></textarea>
         `);
 
@@ -294,9 +292,8 @@ function FormBuilder(state, model, options = {}) {
             ${makeLabel(intf)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="password" class="fm_input" style=${makeInputStyle(options)}
-                   placeholder=${options.placeholder || ''}
-                   .value=${value || ''}
-                   ?disabled=${options.disabled} ?readonly=${options.readonly}
+                   placeholder=${options.placeholder || ''} .value=${value || ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly} ?autofocus=${options.focus}
                    @input=${e => handleTextInput(e, key)} />
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
@@ -325,9 +322,9 @@ function FormBuilder(state, model, options = {}) {
             ${makeLabel(intf)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="password" class="fm_input" style=${makeInputStyle(options)}
-                   inputmode="none" autocomplete="new-password" .value=${value || ''}
-                   placeholder=${options.placeholder || ''}
-                   ?disabled=${options.disabled} ?readonly=${options.readonly}
+                   inputmode="none" autocomplete="new-password"
+                   placeholder=${options.placeholder || ''} .value=${value || ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly} ?autofocus=${options.focus}
                    @input=${e => handleTextInput(e, key)} />
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
             ${!options.readonly ? html`
@@ -377,9 +374,9 @@ function FormBuilder(state, model, options = {}) {
             ${makeLabel(intf)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="number" class="fm_input" style=${makeInputStyle(options)}
-                   step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
-                   placeholder=${options.placeholder || ''}
-                   ?disabled=${options.disabled} ?readonly=${options.readonly}
+                   step=${1 / Math.pow(10, options.decimals || 0)}
+                   placeholder=${options.placeholder || ''} .value=${value}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly} ?autofocus=${options.focus}
                    @input=${e => handleNumberChange(e, key)}/>
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
@@ -491,9 +488,9 @@ function FormBuilder(state, model, options = {}) {
                 <div>
                     <input id=${id} type="range" style=${`--progress: ${1 + fake_progress * 98}%; z-index: 999;`}
                            min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
-                           .value=${value} data-value=${value}
-                           placeholder=${options.placeholder || ''}
-                           ?disabled=${options.disabled} title=${value?.toFixed?.(options.decimals) ?? ''}
+                           placeholder=${options.placeholder || ''} .value=${value} data-value=${value}
+                           ?disabled=${options.disabled} ?autofocus=${options.focus}
+                           title=${value?.toFixed?.(options.decimals) ?? ''}
                            @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
                            @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
                            @input=${e => handleSliderChange(e, key)}/>
@@ -603,7 +600,7 @@ function FormBuilder(state, model, options = {}) {
                 ${props.map((p, i) =>
                     html`<button type="button" data-value=${Util.valueToStr(p.value)}
                                  .className=${value === p.value ? 'active' : ''}
-                                 ?disabled=${options.disabled}
+                                 ?disabled=${options.disabled} ?autofocus=${!i && options.focus}
                                  @click=${e => handleEnumChange(e, key, options.untoggle)}
                                  @keydown=${handleEnumOrMultiKey} tabindex=${i ? -1 : 0}>${p.label}</button>`)}
                 ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
@@ -663,7 +660,8 @@ function FormBuilder(state, model, options = {}) {
             ${makeLabel(intf)}
             <div style=${'display: inline-block; max-width: 100%; ' + makeInputStyle(options)}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
-                <select id=${id} class="fm_select" ?disabled=${options.disabled}
+                <select id=${id} class="fm_select"
+                        ?disabled=${options.disabled} ?autofocus=${options.focus}
                         @change=${e => handleEnumDropChange(e, key)}>
                     ${options.untoggle || !props.some(p => p != null && value === p.value) ?
                         html`<option value="undefined" .selected=${value == null}
@@ -719,7 +717,8 @@ function FormBuilder(state, model, options = {}) {
                     // can unset a previous one when it's name is updated but the checked value is
                     // still true, meaning '.checked=false' hasn't run yet.
                     return html`<input type="radio" value=${Util.valueToStr(p.value)}
-                                       ?disabled=${options.disabled || false} .checked=${value === p.value}
+                                       ?disabled=${options.disabled || false} ?autofocus=${!i && options.focus}
+                                       .checked=${value === p.value}
                                        name=${id} id=${`${id}.${i}`}
                                        @click=${e => handleEnumRadioChange(e, key, options.untoggle && value === p.value)}
                                        @keydown=${handleRadioOrCheckKey} tabindex=${tab ? 0 : -1} />
@@ -786,7 +785,7 @@ function FormBuilder(state, model, options = {}) {
                 ${props.map((p, i) =>
                     html`<button type="button" data-value=${Util.valueToStr(p.value)}
                                  .className=${value?.includes?.(p.value) ? 'active' : ''}
-                                 ?disabled=${options.disabled}
+                                 ?disabled=${options.disabled} ?autofocus=${options.focus}
                                  @click=${e => handleMultiChange(e, key)}
                                  @keydown=${handleEnumOrMultiKey} tabindex=${i ? -1 : 0}>${p.label}</button>`)}
                 ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
@@ -869,7 +868,8 @@ function FormBuilder(state, model, options = {}) {
                  style=${makeRadioStyle(options)} id=${id}>
                 ${props.map((p, i) =>
                     html`<input type="checkbox" id=${`${id}.${i}`} value=${Util.valueToStr(p.value)}
-                                ?disabled=${options.disabled} .checked=${value?.includes?.(p.value)}
+                                ?disabled=${options.disabled} ?autofocus=${options.focus}
+                                .checked=${value?.includes?.(p.value)}
                                 @click=${e => handleMultiCheckChange(e, key)}
                                 @keydown=${handleRadioOrCheckKey} tabindex=${i ? -1 : 0} />
                          <label for=${`${id}.${i}`}>${p.label}</label><br/>`)}
@@ -978,9 +978,9 @@ function FormBuilder(state, model, options = {}) {
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type=${has_input_date ? 'date' : 'text'}
                    class="fm_input" style=${makeInputStyle(options)}
-                   .value=${value ? (has_input_date ? value.toString() : value.toLocaleString()) : ''}
                    placeholder=${!has_input_date ? 'DD/MM/YYYY' : ''}
-                   ?disabled=${options.disabled} ?readonly=${options.readonly}
+                   .value=${value ? (has_input_date ? value.toString() : value.toLocaleString()) : ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly} ?autofocus=${options.focus}
                    @input=${e => handleDateInput(e, key)}/>
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
@@ -1041,9 +1041,9 @@ function FormBuilder(state, model, options = {}) {
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type=${has_input_month ? 'month' : 'text'}
                    class="fm_input" style=${makeInputStyle(options)}
-                   .value=${value ? (has_input_month ? value.toString() : value.toLocaleString()) : ''}
                    placeholder=${!has_input_month ? 'MM/YYYY' : ''}
-                   ?disabled=${options.disabled} ?readonly=${options.readonly}
+                   .value=${value ? (has_input_month ? value.toString() : value.toLocaleString()) : ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly} ?autofocus=${options.focus}
                    @input=${e => handleMonthInput(e, key)}/>
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
@@ -1105,7 +1105,7 @@ function FormBuilder(state, model, options = {}) {
                    .value=${value ? value.toString().substr(0, options.seconds ? 8 : 5) : ''}
                    placeholder=${!has_input_date ? 'HH:MM:SS'.substr(0, options.seconds ? 8 : 5) : ''}
                    step=${options.seconds ? 1 : 60}
-                   ?disabled=${options.disabled} ?readonly=${options.readonly}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly} ?autofocus=${options.focus}
                    @input=${e => handleTimeInput(e, key)} />
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
@@ -1183,7 +1183,8 @@ function FormBuilder(state, model, options = {}) {
                     ${is_ref ? html`<i>${T.document}${T._colon}</i> ${value.name} (<a href=${value.url} download>${T.download.toLowerCase()}</a>)` : ''}
                 </span>
                 <div>
-                    <button type="button" ?disabled=${options.disabled || options.readonly}
+                    <button type="button"
+                            ?disabled=${options.disabled || options.readonly} ?autofocus=${options.focus}
                             @click=${e => e.currentTarget.parentNode.parentNode.querySelector('[type=file]').click() }>
                         ${value != null ? T.replace : T.browse}
                     </button>

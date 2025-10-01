@@ -340,8 +340,9 @@ function buildDialog(dialog, e, func) {
         </div>
     `, dialog.el);
 
-    // We need to know popup width and height
     let give_focus = !dialog.el.classList.contains('active');
+
+    // We need to know popup width and height
     dialog.el.style.visibility = 'hidden';
     dialog.el.classList.add('active');
     if (dialog.fixed)
@@ -388,8 +389,11 @@ function buildDialog(dialog, e, func) {
 
     // Reveal!
     dialog.el.style.visibility = 'visible';
+
     if (give_focus) {
-        let widget0 = dialog.el.querySelector('input, select, button, textarea');
+        let widget0 = dialog.el.querySelector('*[autofocus]') ??
+                      dialog.el.querySelector('input, select, button, textarea');
+
         if (widget0 != null)
             setTimeout(() => widget0.focus(), 0);
     }

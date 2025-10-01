@@ -510,7 +510,7 @@ async function runPasswordScreen(e, initial) {
                     ` : ''}
                 </div>
             `);
-            d.text('*username', T.username);
+            d.text('*username', T.username, { focus: true });
         } else {
             d.output(unsafeHTML(T.please_confirm_identity));
             d.calc('*username', T.username, profile.username);
