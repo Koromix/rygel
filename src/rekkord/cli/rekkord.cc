@@ -38,7 +38,6 @@ int RunChannels(Span<const char *> arguments);
 int RunList(Span<const char *> arguments);
 int RunMount(Span<const char *> arguments);
 
-int RunWeb(Span<const char *> arguments);
 int RunAgent(Span<const char *> arguments);
 
 int RunChangeCID(Span<const char *> arguments);
@@ -129,9 +128,8 @@ Exploration commands:
 
     %!..+mount%!0                          Mount repository readonly as user filesystem
 
-Web commands:
+Agent commands:
 
-    %!..+web%!0                            Run Rekkord Web server
     %!..+agent%!0                          Run cloud-connected automated agent
 
 Advanced commands:
@@ -253,7 +251,6 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
     HANDLE_COMMAND(channels, RunChannels, true);
     HANDLE_COMMAND(list, RunList, true);
     HANDLE_COMMAND(mount, RunMount, true);
-    HANDLE_COMMAND(web, RunWeb, false);
     HANDLE_COMMAND(agent, RunAgent, true);
     HANDLE_COMMAND(change_cid, RunChangeCID, true);
     HANDLE_COMMAND(reset_cache, RunResetCache, true);

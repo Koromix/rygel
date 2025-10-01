@@ -452,7 +452,7 @@ static void HandleRequest(http_IO *io)
     io->SendError(404);
 }
 
-int RunWeb(Span<const char *> arguments)
+int Main(int argc, char **argv)
 {
     BlockAllocator temp_alloc;
 
@@ -462,7 +462,7 @@ int RunWeb(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-T(R"(Usage: %!..+%1 web [option...]%!0
+T(R"(Usage: %!..+%1 [option...]%!0
 
 Options:
 
@@ -479,7 +479,7 @@ Options:
 
     // Find config filename
     {
-        OptionParser opt(arguments, OptionMode::Skip);
+        OptionParser opt(argc, argv, OptionMode::Skip);
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
@@ -503,7 +503,7 @@ Options:
 
     // Parse arguments
     {
-        OptionParser opt(arguments);
+        OptionParser opt(argc, argv);
 
         while (opt.Next()) {
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
@@ -629,3 +629,6 @@ Options:
 }
 
 }
+
+// C++ namespaces are stupid
+int main(int argc, char **argv) { return K::RunApp(argc, argv); }
