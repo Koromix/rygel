@@ -34,6 +34,7 @@ let log_entries = [];
 
 let main_el = null;
 let fullscreen = false;
+let prev_main = null;
 
 let init_dialogs = false;
 let dialogs = [];
@@ -221,8 +222,14 @@ function main(content = null) {
         main_el.classList.toggle('fullscreen', fullscreen);
     }
 
-    if (content != null)
+    if (content != null) {
         render(content, main_el);
+
+        if (content != prev_main) {
+            autoFocus(main_el);
+            prev_main = content;
+        }
+    }
 }
 
 async function toggleFullscreen(enable = null) {
@@ -304,15 +311,7 @@ function dialog(options = {}) {
         dlg.resolve = resolve;
         dlg.reject = reject;
 
-        setTimeout(() => {
-            let widget0 = dlg.el.querySelector('label > *[autofocus]') ||
-                          dlg.el.querySelector(`label > input:not(:disabled),
-                                                label > select:not(:disabled),
-                                                label > textarea:not(:disabled)`);
-
-            if (widget0 != null)
-                widget0.focus();
-        }, 0);
+        autoFocus(dlg.el);
     });
 
     p.finally(() => {
@@ -379,6 +378,18 @@ async function handleSubmit(e, dlg) {
         window.requestAnimationFrame(dlg.update);
         throw err;
     }
+}
+
+function autoFocus(el) {
+    setTimeout(() => {
+        let widget0 = el.querySelector('label > *[autofocus]') ||
+                      el.querySelector(`label > input:not(:disabled),
+                                        label > select:not(:disabled),
+                                        label > textarea:not(:disabled)`);
+
+        if (widget0 != null)
+            widget0.focus();
+    }, 0);
 }
 
 async function runDialog() {
