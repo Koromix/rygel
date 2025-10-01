@@ -304,6 +304,39 @@ var require_dayjs_min = __commonJS({
   }
 });
 
+// node_modules/dayjs/locale/en.js
+var require_en = __commonJS({
+  "node_modules/dayjs/locale/en.js"(exports, module) {
+    !(function(e, n) {
+      "object" == typeof exports && "undefined" != typeof module ? module.exports = n() : "function" == typeof define && define.amd ? define(n) : (e = "undefined" != typeof globalThis ? globalThis : e || self).dayjs_locale_en = n();
+    })(exports, (function() {
+      "use strict";
+      return { name: "en", weekdays: "Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday".split("_"), months: "January_February_March_April_May_June_July_August_September_October_November_December".split("_"), ordinal: function(e) {
+        var n = ["th", "st", "nd", "rd"], t = e % 100;
+        return "[" + e + (n[(t - 20) % 10] || n[t] || n[0]) + "]";
+      } };
+    }));
+  }
+});
+
+// node_modules/dayjs/locale/fr.js
+var require_fr = __commonJS({
+  "node_modules/dayjs/locale/fr.js"(exports, module) {
+    !(function(e, n) {
+      "object" == typeof exports && "undefined" != typeof module ? module.exports = n(require_dayjs_min()) : "function" == typeof define && define.amd ? define(["dayjs"], n) : (e = "undefined" != typeof globalThis ? globalThis : e || self).dayjs_locale_fr = n(e.dayjs);
+    })(exports, (function(e) {
+      "use strict";
+      function n(e2) {
+        return e2 && "object" == typeof e2 && "default" in e2 ? e2 : { default: e2 };
+      }
+      var t = n(e), i = { name: "fr", weekdays: "dimanche_lundi_mardi_mercredi_jeudi_vendredi_samedi".split("_"), weekdaysShort: "dim._lun._mar._mer._jeu._ven._sam.".split("_"), weekdaysMin: "di_lu_ma_me_je_ve_sa".split("_"), months: "janvier_f\xE9vrier_mars_avril_mai_juin_juillet_ao\xFBt_septembre_octobre_novembre_d\xE9cembre".split("_"), monthsShort: "janv._f\xE9vr._mars_avr._mai_juin_juil._ao\xFBt_sept._oct._nov._d\xE9c.".split("_"), weekStart: 1, yearStart: 4, formats: { LT: "HH:mm", LTS: "HH:mm:ss", L: "DD/MM/YYYY", LL: "D MMMM YYYY", LLL: "D MMMM YYYY HH:mm", LLLL: "dddd D MMMM YYYY HH:mm" }, relativeTime: { future: "dans %s", past: "il y a %s", s: "quelques secondes", m: "une minute", mm: "%d minutes", h: "une heure", hh: "%d heures", d: "un jour", dd: "%d jours", M: "un mois", MM: "%d mois", y: "un an", yy: "%d ans" }, ordinal: function(e2) {
+        return "" + e2 + (1 === e2 ? "er" : "");
+      } };
+      return t.default.locale(i, null, true), i;
+    }));
+  }
+});
+
 // node_modules/dayjs/plugin/utc.js
 var require_utc = __commonJS({
   "node_modules/dayjs/plugin/utc.js"(exports, module) {
@@ -446,12 +479,293 @@ var require_timezone = __commonJS({
   }
 });
 
+// node_modules/dayjs/plugin/customParseFormat.js
+var require_customParseFormat = __commonJS({
+  "node_modules/dayjs/plugin/customParseFormat.js"(exports, module) {
+    !(function(e, t) {
+      "object" == typeof exports && "undefined" != typeof module ? module.exports = t() : "function" == typeof define && define.amd ? define(t) : (e = "undefined" != typeof globalThis ? globalThis : e || self).dayjs_plugin_customParseFormat = t();
+    })(exports, (function() {
+      "use strict";
+      var e = { LTS: "h:mm:ss A", LT: "h:mm A", L: "MM/DD/YYYY", LL: "MMMM D, YYYY", LLL: "MMMM D, YYYY h:mm A", LLLL: "dddd, MMMM D, YYYY h:mm A" }, t = /(\[[^[]*\])|([-_:/.,()\s]+)|(A|a|Q|YYYY|YY?|ww?|MM?M?M?|Do|DD?|hh?|HH?|mm?|ss?|S{1,3}|z|ZZ?)/g, n = /\d/, r = /\d\d/, i = /\d\d?/, o = /\d*[^-_:/,()\s\d]+/, s = {}, a = function(e2) {
+        return (e2 = +e2) + (e2 > 68 ? 1900 : 2e3);
+      };
+      var f = function(e2) {
+        return function(t2) {
+          this[e2] = +t2;
+        };
+      }, h = [/[+-]\d\d:?(\d\d)?|Z/, function(e2) {
+        (this.zone || (this.zone = {})).offset = (function(e3) {
+          if (!e3) return 0;
+          if ("Z" === e3) return 0;
+          var t2 = e3.match(/([+-]|\d\d)/g), n2 = 60 * t2[1] + (+t2[2] || 0);
+          return 0 === n2 ? 0 : "+" === t2[0] ? -n2 : n2;
+        })(e2);
+      }], u = function(e2) {
+        var t2 = s[e2];
+        return t2 && (t2.indexOf ? t2 : t2.s.concat(t2.f));
+      }, d = function(e2, t2) {
+        var n2, r2 = s.meridiem;
+        if (r2) {
+          for (var i2 = 1; i2 <= 24; i2 += 1) if (e2.indexOf(r2(i2, 0, t2)) > -1) {
+            n2 = i2 > 12;
+            break;
+          }
+        } else n2 = e2 === (t2 ? "pm" : "PM");
+        return n2;
+      }, c = { A: [o, function(e2) {
+        this.afternoon = d(e2, false);
+      }], a: [o, function(e2) {
+        this.afternoon = d(e2, true);
+      }], Q: [n, function(e2) {
+        this.month = 3 * (e2 - 1) + 1;
+      }], S: [n, function(e2) {
+        this.milliseconds = 100 * +e2;
+      }], SS: [r, function(e2) {
+        this.milliseconds = 10 * +e2;
+      }], SSS: [/\d{3}/, function(e2) {
+        this.milliseconds = +e2;
+      }], s: [i, f("seconds")], ss: [i, f("seconds")], m: [i, f("minutes")], mm: [i, f("minutes")], H: [i, f("hours")], h: [i, f("hours")], HH: [i, f("hours")], hh: [i, f("hours")], D: [i, f("day")], DD: [r, f("day")], Do: [o, function(e2) {
+        var t2 = s.ordinal, n2 = e2.match(/\d+/);
+        if (this.day = n2[0], t2) for (var r2 = 1; r2 <= 31; r2 += 1) t2(r2).replace(/\[|\]/g, "") === e2 && (this.day = r2);
+      }], w: [i, f("week")], ww: [r, f("week")], M: [i, f("month")], MM: [r, f("month")], MMM: [o, function(e2) {
+        var t2 = u("months"), n2 = (u("monthsShort") || t2.map((function(e3) {
+          return e3.slice(0, 3);
+        }))).indexOf(e2) + 1;
+        if (n2 < 1) throw new Error();
+        this.month = n2 % 12 || n2;
+      }], MMMM: [o, function(e2) {
+        var t2 = u("months").indexOf(e2) + 1;
+        if (t2 < 1) throw new Error();
+        this.month = t2 % 12 || t2;
+      }], Y: [/[+-]?\d+/, f("year")], YY: [r, function(e2) {
+        this.year = a(e2);
+      }], YYYY: [/\d{4}/, f("year")], Z: h, ZZ: h };
+      function l(n2) {
+        var r2, i2;
+        r2 = n2, i2 = s && s.formats;
+        for (var o2 = (n2 = r2.replace(/(\[[^\]]+])|(LTS?|l{1,4}|L{1,4})/g, (function(t2, n3, r3) {
+          var o3 = r3 && r3.toUpperCase();
+          return n3 || i2[r3] || e[r3] || i2[o3].replace(/(\[[^\]]+])|(MMMM|MM|DD|dddd)/g, (function(e2, t3, n4) {
+            return t3 || n4.slice(1);
+          }));
+        }))).match(t), a2 = o2.length, f2 = 0; f2 < a2; f2 += 1) {
+          var h2 = o2[f2], u2 = c[h2], d2 = u2 && u2[0], l2 = u2 && u2[1];
+          o2[f2] = l2 ? { regex: d2, parser: l2 } : h2.replace(/^\[|\]$/g, "");
+        }
+        return function(e2) {
+          for (var t2 = {}, n3 = 0, r3 = 0; n3 < a2; n3 += 1) {
+            var i3 = o2[n3];
+            if ("string" == typeof i3) r3 += i3.length;
+            else {
+              var s2 = i3.regex, f3 = i3.parser, h3 = e2.slice(r3), u3 = s2.exec(h3)[0];
+              f3.call(t2, u3), e2 = e2.replace(u3, "");
+            }
+          }
+          return (function(e3) {
+            var t3 = e3.afternoon;
+            if (void 0 !== t3) {
+              var n4 = e3.hours;
+              t3 ? n4 < 12 && (e3.hours += 12) : 12 === n4 && (e3.hours = 0), delete e3.afternoon;
+            }
+          })(t2), t2;
+        };
+      }
+      return function(e2, t2, n2) {
+        n2.p.customParseFormat = true, e2 && e2.parseTwoDigitYear && (a = e2.parseTwoDigitYear);
+        var r2 = t2.prototype, i2 = r2.parse;
+        r2.parse = function(e3) {
+          var t3 = e3.date, r3 = e3.utc, o2 = e3.args;
+          this.$u = r3;
+          var a2 = o2[1];
+          if ("string" == typeof a2) {
+            var f2 = true === o2[2], h2 = true === o2[3], u2 = f2 || h2, d2 = o2[2];
+            h2 && (d2 = o2[2]), s = this.$locale(), !f2 && d2 && (s = n2.Ls[d2]), this.$d = (function(e4, t4, n3, r4) {
+              try {
+                if (["x", "X"].indexOf(t4) > -1) return new Date(("X" === t4 ? 1e3 : 1) * e4);
+                var i3 = l(t4)(e4), o3 = i3.year, s2 = i3.month, a3 = i3.day, f3 = i3.hours, h3 = i3.minutes, u3 = i3.seconds, d3 = i3.milliseconds, c3 = i3.zone, m2 = i3.week, M2 = /* @__PURE__ */ new Date(), Y = a3 || (o3 || s2 ? 1 : M2.getDate()), p = o3 || M2.getFullYear(), v = 0;
+                o3 && !s2 || (v = s2 > 0 ? s2 - 1 : M2.getMonth());
+                var D, w = f3 || 0, g = h3 || 0, y = u3 || 0, L = d3 || 0;
+                return c3 ? new Date(Date.UTC(p, v, Y, w, g, y, L + 60 * c3.offset * 1e3)) : n3 ? new Date(Date.UTC(p, v, Y, w, g, y, L)) : (D = new Date(p, v, Y, w, g, y, L), m2 && (D = r4(D).week(m2).toDate()), D);
+              } catch (e5) {
+                return /* @__PURE__ */ new Date("");
+              }
+            })(t3, a2, r3, n2), this.init(), d2 && true !== d2 && (this.$L = this.locale(d2).$L), u2 && t3 != this.format(a2) && (this.$d = /* @__PURE__ */ new Date("")), s = {};
+          } else if (a2 instanceof Array) for (var c2 = a2.length, m = 1; m <= c2; m += 1) {
+            o2[1] = a2[m - 1];
+            var M = n2.apply(this, o2);
+            if (M.isValid()) {
+              this.$d = M.$d, this.$L = M.$L, this.init();
+              break;
+            }
+            m === c2 && (this.$d = /* @__PURE__ */ new Date(""));
+          }
+          else i2.call(this, e3);
+        };
+      };
+    }));
+  }
+});
+
+// node_modules/dayjs/plugin/quarterOfYear.js
+var require_quarterOfYear = __commonJS({
+  "node_modules/dayjs/plugin/quarterOfYear.js"(exports, module) {
+    !(function(t, n) {
+      "object" == typeof exports && "undefined" != typeof module ? module.exports = n() : "function" == typeof define && define.amd ? define(n) : (t = "undefined" != typeof globalThis ? globalThis : t || self).dayjs_plugin_quarterOfYear = n();
+    })(exports, (function() {
+      "use strict";
+      var t = "month", n = "quarter";
+      return function(e, i) {
+        var r = i.prototype;
+        r.quarter = function(t2) {
+          return this.$utils().u(t2) ? Math.ceil((this.month() + 1) / 3) : this.month(this.month() % 3 + 3 * (t2 - 1));
+        };
+        var s = r.add;
+        r.add = function(e2, i2) {
+          return e2 = Number(e2), this.$utils().p(i2) === n ? this.add(3 * e2, t) : s.bind(this)(e2, i2);
+        };
+        var u = r.startOf;
+        r.startOf = function(e2, i2) {
+          var r2 = this.$utils(), s2 = !!r2.u(i2) || i2;
+          if (r2.p(e2) === n) {
+            var o = this.quarter() - 1;
+            return s2 ? this.month(3 * o).startOf(t).startOf("day") : this.month(3 * o + 2).endOf(t).endOf("day");
+          }
+          return u.bind(this)(e2, i2);
+        };
+      };
+    }));
+  }
+});
+
+// node_modules/dayjs/plugin/advancedFormat.js
+var require_advancedFormat = __commonJS({
+  "node_modules/dayjs/plugin/advancedFormat.js"(exports, module) {
+    !(function(e, t) {
+      "object" == typeof exports && "undefined" != typeof module ? module.exports = t() : "function" == typeof define && define.amd ? define(t) : (e = "undefined" != typeof globalThis ? globalThis : e || self).dayjs_plugin_advancedFormat = t();
+    })(exports, (function() {
+      "use strict";
+      return function(e, t) {
+        var r = t.prototype, n = r.format;
+        r.format = function(e2) {
+          var t2 = this, r2 = this.$locale();
+          if (!this.isValid()) return n.bind(this)(e2);
+          var s = this.$utils(), a = (e2 || "YYYY-MM-DDTHH:mm:ssZ").replace(/\[([^\]]+)]|Q|wo|ww|w|WW|W|zzz|z|gggg|GGGG|Do|X|x|k{1,2}|S/g, (function(e3) {
+            switch (e3) {
+              case "Q":
+                return Math.ceil((t2.$M + 1) / 3);
+              case "Do":
+                return r2.ordinal(t2.$D);
+              case "gggg":
+                return t2.weekYear();
+              case "GGGG":
+                return t2.isoWeekYear();
+              case "wo":
+                return r2.ordinal(t2.week(), "W");
+              case "w":
+              case "ww":
+                return s.s(t2.week(), "w" === e3 ? 1 : 2, "0");
+              case "W":
+              case "WW":
+                return s.s(t2.isoWeek(), "W" === e3 ? 1 : 2, "0");
+              case "k":
+              case "kk":
+                return s.s(String(0 === t2.$H ? 24 : t2.$H), "k" === e3 ? 1 : 2, "0");
+              case "X":
+                return Math.floor(t2.$d.getTime() / 1e3);
+              case "x":
+                return t2.$d.getTime();
+              case "z":
+                return "[" + t2.offsetName() + "]";
+              case "zzz":
+                return "[" + t2.offsetName("long") + "]";
+              default:
+                return e3;
+            }
+          }));
+          return n.bind(this)(a);
+        };
+      };
+    }));
+  }
+});
+
+// node_modules/dayjs/plugin/localizedFormat.js
+var require_localizedFormat = __commonJS({
+  "node_modules/dayjs/plugin/localizedFormat.js"(exports, module) {
+    !(function(e, t) {
+      "object" == typeof exports && "undefined" != typeof module ? module.exports = t() : "function" == typeof define && define.amd ? define(t) : (e = "undefined" != typeof globalThis ? globalThis : e || self).dayjs_plugin_localizedFormat = t();
+    })(exports, (function() {
+      "use strict";
+      var e = { LTS: "h:mm:ss A", LT: "h:mm A", L: "MM/DD/YYYY", LL: "MMMM D, YYYY", LLL: "MMMM D, YYYY h:mm A", LLLL: "dddd, MMMM D, YYYY h:mm A" };
+      return function(t, o, n) {
+        var r = o.prototype, i = r.format;
+        n.en.formats = e, r.format = function(t2) {
+          void 0 === t2 && (t2 = "YYYY-MM-DDTHH:mm:ssZ");
+          var o2 = this.$locale().formats, n2 = (function(t3, o3) {
+            return t3.replace(/(\[[^\]]+])|(LTS?|l{1,4}|L{1,4})/g, (function(t4, n3, r2) {
+              var i2 = r2 && r2.toUpperCase();
+              return n3 || o3[r2] || e[r2] || o3[i2].replace(/(\[[^\]]+])|(MMMM|MM|DD|dddd)/g, (function(e2, t5, o4) {
+                return t5 || o4.slice(1);
+              }));
+            }));
+          })(t2, void 0 === o2 ? {} : o2);
+          return i.call(this, n2);
+        };
+      };
+    }));
+  }
+});
+
+// node_modules/dayjs/plugin/isoWeek.js
+var require_isoWeek = __commonJS({
+  "node_modules/dayjs/plugin/isoWeek.js"(exports, module) {
+    !(function(e, t) {
+      "object" == typeof exports && "undefined" != typeof module ? module.exports = t() : "function" == typeof define && define.amd ? define(t) : (e = "undefined" != typeof globalThis ? globalThis : e || self).dayjs_plugin_isoWeek = t();
+    })(exports, (function() {
+      "use strict";
+      var e = "day";
+      return function(t, i, s) {
+        var a = function(t2) {
+          return t2.add(4 - t2.isoWeekday(), e);
+        }, d = i.prototype;
+        d.isoWeekYear = function() {
+          return a(this).year();
+        }, d.isoWeek = function(t2) {
+          if (!this.$utils().u(t2)) return this.add(7 * (t2 - this.isoWeek()), e);
+          var i2, d2, n2, o, r = a(this), u = (i2 = this.isoWeekYear(), d2 = this.$u, n2 = (d2 ? s.utc : s)().year(i2).startOf("year"), o = 4 - n2.isoWeekday(), n2.isoWeekday() > 4 && (o += 7), n2.add(o, e));
+          return r.diff(u, "week") + 1;
+        }, d.isoWeekday = function(e2) {
+          return this.$utils().u(e2) ? this.day() || 7 : this.day(this.day() % 7 ? e2 : e2 - 7);
+        };
+        var n = d.startOf;
+        d.startOf = function(e2, t2) {
+          var i2 = this.$utils(), s2 = !!i2.u(t2) || t2;
+          return "isoweek" === i2.p(e2) ? s2 ? this.date(this.date() - (this.isoWeekday() - 1)).startOf("day") : this.date(this.date() - 1 - (this.isoWeekday() - 1) + 7).endOf("day") : n.bind(this)(e2, t2);
+        };
+      };
+    }));
+  }
+});
+
 // dayjs.js
 var import_dayjs = __toESM(require_dayjs_min());
+var import_en = __toESM(require_en());
+var import_fr = __toESM(require_fr());
 var import_utc = __toESM(require_utc());
 var import_timezone = __toESM(require_timezone());
+var import_customParseFormat = __toESM(require_customParseFormat());
+var import_quarterOfYear = __toESM(require_quarterOfYear());
+var import_advancedFormat = __toESM(require_advancedFormat());
+var import_localizedFormat = __toESM(require_localizedFormat());
+var import_isoWeek = __toESM(require_isoWeek());
+import_dayjs.default.locale("en");
 import_dayjs.default.extend(import_utc.default);
 import_dayjs.default.extend(import_timezone.default);
+import_dayjs.default.extend(import_customParseFormat.default);
+import_dayjs.default.extend(import_quarterOfYear.default);
+import_dayjs.default.extend(import_advancedFormat.default);
+import_dayjs.default.extend(import_localizedFormat.default);
+import_dayjs.default.extend(import_isoWeek.default);
 var dayjs_default = import_dayjs.default;
 export {
   dayjs_default as default
