@@ -454,6 +454,8 @@ static void HandleRequest(http_IO *io)
 
 int Main(int argc, char **argv)
 {
+    InitLocales(TranslationTables);
+
     BlockAllocator temp_alloc;
 
     // Options
