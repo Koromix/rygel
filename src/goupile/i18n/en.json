@@ -222,7 +222,7 @@
         "publishing_done": "Publishing done",
         "publishing_in_progress": "Publishing in progress",
         "refresh": "Refresh",
-        "remember_restore_key": "Please note that <b>without the decryption key</b> that was provided to you when you opened the domain, the contents of these archives cannot be restored.",
+        "remember_restore_key": "Please note that <b>without the decryption key</b> that was provided to you when you installed the domain, the contents of these archives cannot be restored.",
         "replace": "Replace",
         "require_password_change": "Require password change",
         "reset_totp": "Reset TOTP secret",
