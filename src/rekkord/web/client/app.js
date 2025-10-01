@@ -20,6 +20,7 @@ import * as UI from '../../../web/core/ui.js';
 import { deploy } from '../../../web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';
 import { PictureCropper } from './picture.js';
+import dayjs from '../../../../vendor/dayjs/dayjs.bundle.js';
 
 import en from '../../i18n/en.json';
 import fr from '../../i18n/fr.json';
@@ -60,10 +61,14 @@ async function start() {
     languages.en = en;
     languages.fr = fr;
 
-    let lang = Util.getCookie('lang');
+    // Init locale
+    {
+        let lang = Util.getCookie('lang');
+        Util.initLocales(languages, 'en', lang);
 
-    Util.initLocales(languages, 'en', lang);
-    Util.setCookie('lang', document.documentElement.lang, '/', 365 * 86400);
+        dayjs.locale(document.documentElement.lang);
+        Util.setCookie('lang', document.documentElement.lang, '/', 365 * 86400);
+    }
 
     UI.init(run, renderApp);
 
@@ -298,6 +303,8 @@ function renderApp(el) {
 
 async function switchLanguage(lang) {
     Util.setLocale(lang);
+
+    dayjs.locale(document.documentElement.lang);
     Util.setCookie('lang', document.documentElement.lang, '/', 365 * 86400);
 
     await run({}, false);
@@ -700,7 +707,7 @@ async function runRepositories() {
                                         ${!repo.checked ? T.valid : ''}
                                         ${repo.checked && !repo.errors ? T.success : ''}
                                         ${repo.errors ? html`<span style="color: red;">${repo.failed || T.unknown_error}</span>` : ''}
-                                        <br><span class="sub">${repo.checked ? (new Date(repo.checked)).toLocaleString() : T.check_pending}</span>
+                                        <br><span class="sub">${repo.checked ? dayjs(repo.checked).format('lll') : T.check_pending}</span>
                                     </td>
                                 </tr>
                             `;
@@ -779,7 +786,7 @@ async function runRepository() {
                                 <tr style="cursor: pointer;" @click=${UI.wrap(e => runChannel(cache.repository, channel.name))}>
                                     <td>${channel.name} <span class="sub">(${channel.count})</span></td>
                                     <td style="text-align: right;">${formatSize(channel.size)}</td>
-                                    <td style="text-align: right;">${(new Date(channel.time)).toLocaleString()}</td>
+                                    <td style="text-align: right;">${dayjs(channel.time).format('lll')}</td>
                                 </tr>
                             `)}
                             ${!channels.length ? html`<tr><td colspan="3" style="text-align: center;">${T.no_channel}</td></tr>` : ''}
@@ -874,7 +881,10 @@ async function runChannel(repo, channel) {
     let canvas = null;
 
     if (snapshots.length >= 2) {
-        const { Chart } = await import(BUNDLES['chart.bundle.js']);
+        const { Chart, adaptDayjs } = await import(BUNDLES['chart.bundle.js']).then(obj => {
+            obj.adaptDayjs(dayjs);
+            return obj;
+        });
 
         let sets = {
             size: { label: T.size, data: [], fill: false },
@@ -883,10 +893,10 @@ async function runChannel(repo, channel) {
         };
 
         for (let snapshot of snapshots) {
-            sets.size.data.push({ x: snapshot.time, y: snapshot.size });
-            sets.stored.data.push({ x: snapshot.time, y: snapshot.stored });
+            sets.size.data.push({ x: dayjs(snapshot.time), y: snapshot.size });
+            sets.stored.data.push({ x: dayjs(snapshot.time), y: snapshot.stored });
             if (snapshot.added != null)
-                sets.added.data.push({ x: snapshot.time, y: snapshot.added });
+                sets.added.data.push({ x: dayjs(snapshot.time), y: snapshot.added });
         }
 
         canvas = document.createElement('canvas');
@@ -905,18 +915,14 @@ async function runChannel(repo, channel) {
                     },
                     tooltip: {
                         callbacks: {
-                            title: items => (new Date(items[0].parsed.x)).toLocaleString(),
                             label: item => `${item.dataset.label}: ${formatSize(item.parsed.y)}`
                         }
                     }
                 },
                 scales: {
                     x: {
-                        type: 'linear',
-                        min: snapshots[0].time,
-                        max: snapshots[snapshots.length - 1].time,
+                        type: 'time',
                         ticks: {
-                            callback: value => (new Date(value)).toLocaleDateString()
                         }
                     },
                     y: {
@@ -965,7 +971,7 @@ async function runChannel(repo, channel) {
                         <tbody>
                             ${snapshots.map(snapshot => html`
                                 <tr>
-                                    <td>${(new Date(snapshot.time)).toLocaleString()}</td>
+                                    <td>${dayjs(snapshot.time).format('lll')}</td>
                                     <td><span class="sub">${snapshot.oid}</span></td>
                                     <td style="text-align: right;">${formatSize(snapshot.size)}</td>
                                     <td style="text-align: right;">${formatSize(snapshot.stored)}</td>
@@ -1158,7 +1164,7 @@ async function runPlan() {
                                     <td>${item.paths.map(path => html`${path}<br>`)}</td>
                                     <td style=${'text-align: right;' + (item.error != null ? ' color: var(--color, red);' : '')}>
                                         ${item.timestamp == null ? T.never : ''}
-                                        ${item.timestamp != null ? new Date(item.timestamp).toLocaleString() : ''}
+                                        ${item.timestamp != null ? dayjs(item.timestamp).format('lll') : ''}
                                         <br>${item.error || ''}
                                     </td>
                                 </tr>
