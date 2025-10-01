@@ -10,7 +10,6 @@ fi
 cd "$(dirname $0)"
 
 npm install "chart.js@$VERSION"
-npm install chartjs-adapter-dayjs-4
 npx esbuild --bundle --platform=browser --format=esm chart.js --outfile=chart.bundle.js
 
 rm -rf package*.json
