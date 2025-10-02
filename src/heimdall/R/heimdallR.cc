@@ -356,7 +356,9 @@ RcppExport SEXP hmR_AddEvents(SEXP inst_xp, SEXP events_xp, SEXP reset_xp, SEXP 
     events.domain = events.df["domain"];
     events.name = events.df["concept"];
     events.time = events.df["time"];
-    if (events.df.containsElementNamed("warning")) {
+    if (events.df.containsElementNamed("alert")) {
+        events.warning = events.df["alert"];
+    } else if (events.df.containsElementNamed("warning")) {
         events.warning = events.df["warning"];
     }
 
@@ -514,7 +516,9 @@ RcppExport SEXP hmR_AddValues(SEXP inst_xp, SEXP values_xp, SEXP reset_xp, SEXP 
     values.name = values.df["concept"];
     values.time = values.df["time"];
     values.value = values.df["value"];
-    if (values.df.containsElementNamed("warning")) {
+    if (values.df.containsElementNamed("alert")) {
+        values.warning = values.df["alert"];
+    } else if (values.df.containsElementNamed("warning")) {
         values.warning = values.df["warning"];
     }
 
