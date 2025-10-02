@@ -101,12 +101,13 @@ RcppExport SEXP hmR_Close(SEXP inst_xp)
     END_RCPP
 }
 
-RcppExport SEXP hmR_Reset(SEXP inst_xp)
+RcppExport SEXP hmR_Reset(SEXP inst_xp, SEXP marks_xp)
 {
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
     InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp, GetInstanceTag());
+    bool marks = Rcpp::as<bool>(marks_xp);
 
     bool success = inst->db.Transaction([&]() {
         if (!inst->db.Run("DELETE FROM entities"))
@@ -114,6 +115,8 @@ RcppExport SEXP hmR_Reset(SEXP inst_xp)
         if (!inst->db.Run("DELETE FROM views"))
             return false;
         if (!inst->db.Run("DELETE FROM domains"))
+            return false;
+        if (marks && !inst->db.Run("DELETE FROM marks"))
             return false;
 
         return true;
@@ -223,6 +226,7 @@ RcppExport SEXP hmR_SetDomain(SEXP inst_xp, SEXP name_xp, SEXP concepts_xp)
         for (Size i = 0; i < concepts.len; i++) {
             const char *name = (const char *)concepts.name[i];
             const char *description = concepts.description.length() ? (const char *)concepts.description[i] : "";
+            const char *path = concepts.path.length() ? (const char *)concepts.path[i] : CHAR(NA_STRING);
 
             int64_t cpt;
             {
@@ -238,9 +242,7 @@ RcppExport SEXP hmR_SetDomain(SEXP inst_xp, SEXP name_xp, SEXP concepts_xp)
                     return false;
             }
 
-            if (view >= 0) {
-                const char *path = (const char *)concepts.path[i];
-
+            if (path != CHAR(NA_STRING)) {
                 if (path[0] != '/') {
                     LogError("Path '%1' does not start with '/'", path);
                     return false;
@@ -663,7 +665,7 @@ RcppExport SEXP hmR_ExportMarks(SEXP inst_xp, SEXP first_xp, SEXP limit_xp)
 
     rcc_DataFrameBuilder df_builder(nrow);
     rcc_Vector<int> id = df_builder.Add<int>("id");
-    rcc_Vector<const char *> name = df_builder.Add<const char *>("name");
+    rcc_Vector<const char *> name = df_builder.Add<const char *>("entity");
     rcc_Vector<int> timestamp = df_builder.Add<int>("timestamp");
     rcc_Vector<bool> status = df_builder.Add<bool>("status");
     rcc_Vector<const char *> comment = df_builder.Add<const char *>("comment");
@@ -712,7 +714,7 @@ RcppExport void R_init_heimdallR(DllInfo *dll) {
     static const R_CallMethodDef call_entries[] = {
         { "hmR_Open", (DL_FUNC)&K::hmR_Open, 2 },
         { "hmR_Close", (DL_FUNC)&K::hmR_Close, 1 },
-        { "hmR_Reset", (DL_FUNC)&K::hmR_Reset, 1 },
+        { "hmR_Reset", (DL_FUNC)&K::hmR_Reset, 2 },
         { "hmR_SetDomain", (DL_FUNC)&K::hmR_SetDomain, 3 },
         { "hmR_SetView", (DL_FUNC)&K::hmR_SetView, 3 },
         { "hmR_AddEvents", (DL_FUNC)&K::hmR_AddEvents, 4 },
