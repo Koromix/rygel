@@ -175,13 +175,19 @@ RcppExport SEXP hmR_SetDomain(SEXP inst_xp, SEXP name_xp, SEXP concepts_xp)
         Rcpp::DataFrame df;
         Size len;
         Rcpp::CharacterVector name;
+        Rcpp::CharacterVector description;
         Rcpp::CharacterVector path;
     } concepts;
 
     concepts.df = Rcpp::DataFrame(concepts_xp);
     concepts.len = concepts.df.nrow();
     concepts.name = concepts.df["name"];
-    concepts.path = concepts.df["path"];
+    if (concepts.df.containsElementNamed("description")) {
+        concepts.description = concepts.df["description"];
+    }
+    if (concepts.df.containsElementNamed("path")) {
+        concepts.path = concepts.df["path"];
+    }
 
     uint8_t changeset[32];
     FillRandomSafe(changeset);
@@ -199,8 +205,8 @@ RcppExport SEXP hmR_SetDomain(SEXP inst_xp, SEXP name_xp, SEXP concepts_xp)
                 return false;
         }
 
-        int64_t view;
-        {
+        int64_t view = -1;
+        if (concepts.path.length()) {
             sq_Statement stmt;
             if (!inst->db.Prepare(R"(INSERT INTO views (name)
                                      VALUES (?1)
@@ -216,29 +222,33 @@ RcppExport SEXP hmR_SetDomain(SEXP inst_xp, SEXP name_xp, SEXP concepts_xp)
 
         for (Size i = 0; i < concepts.len; i++) {
             const char *name = (const char *)concepts.name[i];
-            const char *path = (const char *)concepts.path[i];
-
-            if (path[0] != '/') {
-                LogError("Path '%1' does not start with '/'", path);
-                return false;
-            }
+            const char *description = concepts.description.length() ? (const char *)concepts.description[i] : "";
 
             int64_t cpt;
             {
                 sq_Statement stmt;
-                if (!inst->db.Prepare(R"(INSERT INTO concepts (domain, name, changeset)
-                                         VALUES (?1, ?2, ?3)
-                                         ON CONFLICT DO UPDATE SET name = excluded.name,
+                if (!inst->db.Prepare(R"(INSERT INTO concepts (domain, name, description, changeset)
+                                         VALUES (?1, ?2, ?3, ?4)
+                                         ON CONFLICT DO UPDATE SET description = excluded.description,
                                                                    changeset = excluded.changeset
                                          RETURNING concept)",
-                                      &stmt, domain, name, sq_Binding(changeset)))
+                                      &stmt, domain, name, description, sq_Binding(changeset)))
                     return false;
                 if (!stmt.GetSingleValue(&cpt))
                     return false;
             }
 
-            if (!inst->db.Run("INSERT INTO items (view, path, concept) VALUES (?1, ?2, ?3)", view, path, cpt))
-                return false;
+            if (view >= 0) {
+                const char *path = (const char *)concepts.path[i];
+
+                if (path[0] != '/') {
+                    LogError("Path '%1' does not start with '/'", path);
+                    return false;
+                }
+
+                if (!inst->db.Run("INSERT INTO items (view, path, concept) VALUES (?1, ?2, ?3)", view, path, cpt))
+                    return false;
+            }
         }
 
         if (!inst->db.Run("DELETE FROM concepts WHERE domain = ?1 AND changeset IS NOT ?2",

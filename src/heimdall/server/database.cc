@@ -18,7 +18,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 8;
+const int DatabaseVersion = 9;
 
 int GetDatabaseVersion(sq_Database *db)
 {
@@ -229,9 +229,103 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 8: {
+                // I just wanted to add a NOT NULL column to the "concepts" table... damn (o_o')
+
+                bool success = db->RunMany(R"(
+                    DROP INDEX concepts_d;
+                    DROP INDEX concepts_dn;
+                    DROP INDEX items_v;
+                    DROP INDEX items_c;
+                    DROP INDEX IF EXISTS items_p;
+                    DROP INDEX events_e;
+                    DROP INDEX events_c;
+                    DROP INDEX periods_e;
+                    DROP INDEX periods_c;
+                    DROP INDEX measures_e;
+                    DROP INDEX measures_c;
+
+                    ALTER TABLE concepts RENAME TO concepts_BAK;
+                    ALTER TABLE items RENAME TO items_BAK;
+                    ALTER TABLE events RENAME TO events_BAK;
+                    ALTER TABLE periods RENAME TO periods_BAK;
+                    ALTER TABLE measures RENAME TO measures_BAK;
+
+                    CREATE TABLE concepts (
+                        concept INTEGER PRIMARY KEY NOT NULL,
+                        domain INTEGER NOT NULL REFERENCES domains (domain) ON DELETE CASCADE,
+                        name TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        changeset BLOB
+                    );
+                    CREATE UNIQUE INDEX concepts_dn ON concepts (domain, name);
+
+                    CREATE TABLE items (
+                        item INTEGER PRIMARY KEY NOT NULL,
+                        view INTEGER NOT NULL REFERENCES views (view) ON DELETE CASCADE,
+                        path TEXT NOT NULL,
+                        concept INTEGER NOT NULL REFERENCES concepts (concept) ON DELETE SET NULL
+                    );
+                    CREATE INDEX items_v ON items (view);
+                    CREATE INDEX items_c ON items (concept);
+                    CREATE INDEX items_p ON items (path);
+
+                    CREATE TABLE events (
+                        event INTEGER PRIMARY KEY NOT NULL,
+                        entity INTEGER NOT NULL REFERENCES entities (entity) ON DELETE CASCADE,
+                        concept INTEGER NOT NULL REFERENCES concepts (concept) ON DELETE CASCADE,
+                        timestamp INTEGER NOT NULL,
+                        warning CHECK (warning IN (0, 1)) NOT NULL
+                    );
+                    CREATE INDEX events_e ON events (entity);
+                    CREATE INDEX events_c ON events (concept);
+
+                    CREATE TABLE periods (
+                        period INTEGER PRIMARY KEY NOT NULL,
+                        entity INTEGER NOT NULL REFERENCES entities (entity) ON DELETE CASCADE,
+                        concept INTEGER NOT NULL REFERENCES concepts (concept) ON DELETE CASCADE,
+                        timestamp INTEGER NOT NULL,
+                        duration INTEGER NOT NULL,
+                        color TEXT
+                    );
+                    CREATE INDEX periods_e ON periods (entity);
+                    CREATE INDEX periods_c ON periods (concept);
+
+                    CREATE TABLE measures (
+                        measure INTEGER PRIMARY KEY NOT NULL,
+                        entity INTEGER NOT NULL REFERENCES entities (entity) ON DELETE CASCADE,
+                        concept INTEGER NOT NULL REFERENCES concepts (concept) ON DELETE CASCADE,
+                        timestamp INTEGER NOT NULL,
+                        value REAL NOT NULL,
+                        warning CHECK (warning IN (0, 1)) NOT NULL
+                    );
+                    CREATE INDEX measures_e ON measures (entity);
+                    CREATE INDEX measures_c ON measures (concept);
+
+                    INSERT INTO concepts (concept, domain, name, description)
+                        SELECT concept, domain, name, '' FROM concepts_BAK;
+                    INSERT INTO items (item, view, path, concept)
+                        SELECT item, view, path, concept FROM items_BAK;
+                    INSERT INTO events (event, entity, concept, timestamp, warning)
+                        SELECT event, entity, concept, timestamp, warning FROM events_BAK;
+                    INSERT INTO periods (period, entity, concept, timestamp, duration, color)
+                        SELECT period, entity, concept, timestamp, duration, color FROM periods_BAK;
+                    INSERT INTO measures (measure, entity, concept, timestamp, value, warning)
+                        SELECT measure, entity, concept, timestamp, value, warning FROM measures_BAK;
+
+                    DROP TABLE events_BAK;
+                    DROP TABLE periods_BAK;
+                    DROP TABLE measures_BAK;
+                    DROP TABLE items_BAK;
+                    DROP TABLE concepts_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 8);
+            static_assert(DatabaseVersion == 9);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",
