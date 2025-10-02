@@ -251,19 +251,19 @@ function update() {
             zone = layout[key];
     }
 
-    if (pressed_keys.f == -1) {
+    if (!pressed_keys.ctrl && pressed_keys.f == -1) {
         settings.filter = !settings.filter;
         saveState();
     }
-    if (pressed_keys.h == -1) {
+    if (!pressed_keys.ctrl && pressed_keys.h == -1) {
         settings.highlight = !settings.highlight;
         saveState();
     }
 
     // Recenter view when user needs it
-    if (!pressed_keys.ctrl) {
-        let reset = (pressed_keys.r == -1);
-        let reveal = (pressed_keys.c == -1);
+    {
+        let reset = (!pressed_keys.ctrl && pressed_keys.r == -1);
+        let reveal = (!pressed_keys.ctrl && pressed_keys.c == -1);
 
         if (reset) {
             position.entity = 0;
@@ -1026,12 +1026,22 @@ async function runSettings() {
                         </label>
                         <label>
                             <input name="filter" type="checkbox" ?checked=${settings.filter}>
-                            <span>${T.filter_empty_entities}</span>
+                            <span>${T.filter_empty_entities} (F)</span>
                         </label>
                         <label>
                             <input name="highlight" type="checkbox" ?checked=${settings.highlight}>
-                            <span>${T.highlight_current_entity}</span>
+                            <span>${T.highlight_current_entity} (H)</span>
                         </label>
+
+                        <div class="section">${T.shortcuts}</div>
+                        <table class="shortcuts">
+                            <tr><th>R</th><td>${T.actions.r}</td></tr>
+                            <tr><th>C</th><td>${T.actions.c}</td></tr>
+                            <tr><th>F</th><td>${T.actions.f}</td></tr>
+                            <tr><th>H</th><td>${T.actions.h}</td></tr>
+                            <tr><th>${T.space}</th><td>${T.actions.space}</td></tr>
+                            <tr><th>M</th><td>${T.actions.m}</td></tr>
+                        </table>
                     </div>
 
                     <div class="footer">

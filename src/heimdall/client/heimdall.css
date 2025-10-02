@@ -306,3 +306,18 @@ form {
     }
     & :is(label:not([for]), .widget):empty { display: none; }
 }
+
+.shortcuts {
+    border-collapse: collapse;
+
+    & :is(th, td) {
+        padding: 0.6em;
+        font-size: 0.9em;
+        text-align: left;
+    }
+    & th { font-weight: normal; }
+    & td { font-style: italic; }
+
+    & tr:nth-child(2n + 1) { background: #fafafa; }
+    & tr:nth-child(2n) { background: #fdfdfd; }
+}

@@ -1,5 +1,13 @@
 {
     "keys": {
+        "actions": {
+            "c": "Focus time zoom on visible entities",
+            "f": "Show/hide entities filtered out by alignment",
+            "h": "Show/hide entities outside the cursor",
+            "m": "Mark entity under the cursor",
+            "r": "Reset horizontal and vertical scroll to first entity (top left)",
+            "space": "Deploy/collapse item under the cursor"
+        },
         "align_first": "Align at first occurrence",
         "alignment": "Alignment",
         "apply": "Apply",
@@ -7,14 +15,16 @@
         "comment": "Comment",
         "concepts": "Concepts",
         "display_options": "Display options",
-        "filter_empty_entities": "Hide filtered out entities (F)",
-        "highlight_current_entity": "Highlight hovered entity (H)",
+        "filter_empty_entities": "Hide filtered out entities",
+        "highlight_current_entity": "Highlight hovered entity",
         "language": "Language",
         "mark_entity_x": "Mark entity {1}",
         "no_alignment": "No alignement",
         "save": "Save",
         "settings": "Settings",
+        "shortcuts": "Shortcuts",
         "simple": "Simple",
+        "space": "Space",
         "status": "Status",
         "statuses": {
             "negative": "Negative",

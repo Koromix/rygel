@@ -1,5 +1,13 @@
 {
     "keys": {
+        "actions": {
+            "c": "Centrer le zoom temporal sur les entités visibles",
+            "f": "Afficher/cacher les entités filtrées par l'alignement",
+            "h": "Afficher/cacher les entités en dehors du curseur",
+            "m": "Marquer l'entité survolée par le curseur",
+            "r": "Remettre à zéro la vue sur la première entité (en haut à gauche)",
+            "space": "Déployer/plier le niveau sous le curseur"
+        },
         "align_first": "Aligner à la première occurence",
         "alignment": "Alignement",
         "apply": "Appliquer",
@@ -7,14 +15,16 @@
         "comment": "Commentaire",
         "concepts": "Concepts",
         "display_options": "Options d'affichage",
-        "filter_empty_entities": "Cacher les entités filtrées (F)",
-        "highlight_current_entity": "Renforcer l'entité survolée (H)",
+        "filter_empty_entities": "Cacher les entités filtrées",
+        "highlight_current_entity": "Renforcer l'entité survolée",
         "language": "Langage",
         "mark_entity_x": "Marquer l'entité {1}",
         "no_alignment": "Pas d'alignement",
         "save": "Enregistrer",
         "settings": "Options",
+        "shortcuts": "Raccourcis",
         "simple": "Simple",
+        "space": "Espace",
         "status": "Statut",
         "statuses": {
             "negative": "Négatif",
