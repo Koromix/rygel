@@ -643,6 +643,7 @@ function combine(entities, idx, levels, align) {
             right: null,
 
             events: [],
+            alerts: [],
             periods: [],
             values: []
         };
@@ -659,10 +660,11 @@ function combine(entities, idx, levels, align) {
             let draw = {
                 x: timeToPosition(time, position.zoom),
                 width: 0,
-                count: 1,
-                warning: evt.warning
+                count: 1
             };
             row.events.push(draw);
+            if (evt.warning)
+                row.alerts.push(draw);
 
             row.start = Math.min(row.start, time);
             row.end = Math.max(row.end, time);
@@ -760,16 +762,18 @@ function combine(entities, idx, levels, align) {
                 let draw = {
                     x: timeToPosition(time, position.zoom),
                     width: 0,
-                    count: 1,
-                    warning: value.warning
+                    count: 1
                 };
                 row.events.push(draw);
+                if (value.warning)
+                    row.alerts.push(draw);
 
                 row.start = Math.min(row.start, time);
                 row.end = Math.max(row.end, time);
             }
 
             row.events.sort((evt1, evt2) => evt1.x - evt2.x);
+            row.alerts.sort((evt1, evt2) => evt1.x - evt2.x);
         }
 
         if (!row.events.length && !row.periods.length && !row.values.length) {
@@ -779,54 +783,11 @@ function combine(entities, idx, levels, align) {
         }
 
         // Make sure periods don't overlap vertically
-        {
-            let overlaps = [];
+        stackPeriods(row.periods);
 
-            for (let period of row.periods) {
-                let left = period.x;
-                let right = period.x + period.width;
-
-                let shift = 0;
-                while (shift < overlaps.length) {
-                    if (left < overlaps[shift])
-                        break;
-                    shift++;
-                }
-                overlaps.splice(0, shift);
-
-                let insert = 0;
-                while (insert < overlaps.length) {
-                    if (right < overlaps[insert])
-                        break;
-                    insert++;
-                }
-                overlaps.splice(insert, 0, right);
-
-                period.stack = overlaps.length - 1;
-            }
-        }
-
-        // Merge events
-        if (row.events.length) {
-            let treshold = MERGE_TRESHOLD * window.devicePixelRatio;
-
-            let j = 1;
-            for (let i = 1; i < row.events.length; i++) {
-                let evt = row.events[i];
-                let prev = row.events[j - 1];
-
-                row.events[j] = evt;
-
-                if (evt.x - prev.x - prev.width < treshold) {
-                    prev.width = evt.x - prev.x;
-                    prev.count++;
-                    prev.warning ||= evt.warning;
-                } else {
-                    j++;
-                }
-            }
-            row.events.length = j;
-        }
+        // Merge horizontally close events
+        mergeEvents(row.events);
+        mergeEvents(row.alerts);
 
         if (row.start < Number.MAX_SAFE_INTEGER) {
             row.left = timeToPosition(row.start, position.zoom);
@@ -875,6 +836,57 @@ function canPlot(level) {
         return false;
 
     return true;
+}
+
+function stackPeriods(periods) {
+    let overlaps = [];
+
+    for (let period of periods) {
+        let left = period.x;
+        let right = period.x + period.width;
+
+        let shift = 0;
+        while (shift < overlaps.length) {
+            if (left < overlaps[shift])
+                break;
+            shift++;
+        }
+        overlaps.splice(0, shift);
+
+        let insert = 0;
+        while (insert < overlaps.length) {
+            if (right < overlaps[insert])
+                break;
+            insert++;
+        }
+        overlaps.splice(insert, 0, right);
+
+        period.stack = overlaps.length - 1;
+    }
+}
+
+function mergeEvents(events) {
+    if (!events.length)
+        return;
+
+    let treshold = MERGE_TRESHOLD * window.devicePixelRatio;
+
+    let j = 1;
+    for (let i = 1; i < events.length; i++) {
+        let evt = events[i];
+        let prev = events[j - 1];
+
+        events[j] = evt;
+
+        if (evt.x - prev.x - prev.width < treshold) {
+            prev.width = evt.x - prev.x;
+            prev.count++;
+            prev.warning ||= evt.warning;
+        } else {
+            j++;
+        }
+    }
+    events.length = j;
 }
 
 // ------------------------------------------------------------------------
@@ -1347,30 +1359,54 @@ function draw() {
                 ctx.fillRect(period.x - position.x, y, period.width, height, height / 2);
             }
 
-            // Draw events
+            // Draw event shapes
+            {
+                ctx.fillStyle = '#4444cc';
+
+                for (let evt of row.events) {
+                    let x = evt.x - position.x;
+                    let width = EVENT_WIDTH * window.devicePixelRatio;
+                    let height = EVENT_HEIGHT * window.devicePixelRatio;
+
+                    ctx.beginPath();
+                    ctx.moveTo(x, row.height - height);
+                    ctx.lineTo(x + evt.width, row.height - height);
+                    ctx.lineTo(x + evt.width + width / 2, row.height);
+                    ctx.lineTo(x - width / 2, row.height);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = '#ff6600';
+
+                for (let evt of row.alerts) {
+                    let x = evt.x - position.x;
+                    let width = EVENT_WIDTH * window.devicePixelRatio;
+                    let height = EVENT_HEIGHT * window.devicePixelRatio;
+
+                    ctx.beginPath();
+                    ctx.moveTo(x, row.height - height);
+                    ctx.lineTo(x + evt.width, row.height - height);
+                    ctx.lineTo(x + evt.width + width / 2, row.height);
+                    ctx.lineTo(x - width / 2, row.height);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+
+            // Draw event counts
             for (let evt of row.events) {
-                ctx.fillStyle = evt.warning ? '#ff6600' : '#4444cc';
+                if (evt.count < 2)
+                    continue;
 
                 let x = evt.x - position.x;
-                let width = EVENT_WIDTH * window.devicePixelRatio;
                 let height = EVENT_HEIGHT * window.devicePixelRatio;
+                let size = Math.floor(height / 2) - 3 * Math.floor(Math.log10(evt.count));
 
-                ctx.beginPath();
-                ctx.moveTo(x, row.height - height);
-                ctx.lineTo(x + evt.width, row.height - height);
-                ctx.lineTo(x + evt.width + width / 2, row.height);
-                ctx.lineTo(x - width / 2, row.height);
-                ctx.closePath();
-                ctx.fill();
+                ctx.font = `bold ${size}px Open Sans`;
+                ctx.fillStyle = 'white';
 
-                if (evt.count > 1) {
-                    let size = Math.floor(height / 2) - 3 * Math.floor(Math.log10(evt.count));
-
-                    ctx.font = `bold ${size}px Open Sans`;
-                    ctx.fillStyle = 'white';
-
-                    runner.text(x + evt.width / 2, row.height - height / 4, evt.count, { align: 2 });
-                }
+                runner.text(x + evt.width / 2, row.height - height / 4, evt.count, { align: 2 });
             }
 
             // Draw value graph
