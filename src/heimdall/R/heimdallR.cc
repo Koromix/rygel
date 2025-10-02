@@ -554,15 +554,23 @@ RcppExport SEXP hmR_AddValues(SEXP inst_xp, SEXP values_xp, SEXP reset_xp, SEXP 
     END_RCPP
 }
 
-RcppExport SEXP hmR_DeleteDomain(SEXP inst_xp, SEXP name_xp)
+RcppExport SEXP hmR_DeleteDomains(SEXP inst_xp, SEXP names_xp)
 {
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
     InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp, GetInstanceTag());
-    Rcpp::String name(name_xp);
+    Rcpp::CharacterVector names(names_xp);
 
-    if (!inst->db.Run("DELETE FROM domains WHERE name = ?1", (const char *)name.get_cstring()))
+    bool success = inst->db.Transaction([&]() {
+        for (const char *name: names) {
+            if (!inst->db.Run("DELETE FROM domains WHERE name = ?1", name))
+                return false;
+        }
+
+        return true;
+    });
+    if (!success)
         rcc_StopWithLastError();
 
     return R_NilValue;
@@ -570,15 +578,23 @@ RcppExport SEXP hmR_DeleteDomain(SEXP inst_xp, SEXP name_xp)
     END_RCPP
 }
 
-RcppExport SEXP hmR_DeleteView(SEXP inst_xp, SEXP name_xp)
+RcppExport SEXP hmR_DeleteViews(SEXP inst_xp, SEXP names_xp)
 {
     BEGIN_RCPP
     K_DEFER { rcc_DumpWarnings(); };
 
     InstanceData *inst = (InstanceData *)rcc_GetPointerSafe(inst_xp, GetInstanceTag());
-    Rcpp::String name(name_xp);
+    Rcpp::CharacterVector names(names_xp);
 
-    if (!inst->db.Run("DELETE FROM views WHERE name = ?1", (const char *)name.get_cstring()))
+    bool success = inst->db.Transaction([&]() {
+        for (const char *name: names) {
+            if (!inst->db.Run("DELETE FROM views WHERE name = ?1", name))
+                return false;
+        }
+
+        return true;
+    });
+    if (!success)
         rcc_StopWithLastError();
 
     return R_NilValue;
@@ -688,8 +704,8 @@ RcppExport void R_init_heimdallR(DllInfo *dll) {
         { "hmR_AddEvents", (DL_FUNC)&K::hmR_AddEvents, 4 },
         { "hmR_AddPeriods", (DL_FUNC)&K::hmR_AddPeriods, 4 },
         { "hmR_AddValues", (DL_FUNC)&K::hmR_AddValues, 4 },
-        { "hmR_DeleteDomain", (DL_FUNC)&K::hmR_DeleteDomain, 2 },
-        { "hmR_DeleteView", (DL_FUNC)&K::hmR_DeleteView, 2 },
+        { "hmR_DeleteDomains", (DL_FUNC)&K::hmR_DeleteDomains, 2 },
+        { "hmR_DeleteViews", (DL_FUNC)&K::hmR_DeleteViews, 2 },
         { "hmR_DeleteEntities", (DL_FUNC)&K::hmR_DeleteEntities, 2 },
         { "hmR_ExportMarks", (DL_FUNC)&K::hmR_ExportMarks, 3 },
         {}

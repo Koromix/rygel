@@ -45,12 +45,12 @@ hm_add_values <- function(inst, values, reset = TRUE, strict = FALSE) {
     .Call(`hmR_AddValues`, inst, values, reset, strict)
 }
 
-hm_delete_domain <- function(inst, name) {
-    .Call(`hmR_DeleteDomain`, inst, name)
+hm_delete_domains <- function(inst, names) {
+    .Call(`hmR_DeleteDomains`, inst, names)
 }
 
-hm_delete_view <- function(inst, name) {
-    .Call(`hmR_DeleteView`, inst, name)
+hm_delete_views <- function(inst, names) {
+    .Call(`hmR_DeleteViews`, inst, names)
 }
 
 hm_delete_entities <- function(inst, names) {
