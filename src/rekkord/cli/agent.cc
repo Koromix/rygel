@@ -18,6 +18,8 @@
 #include "src/core/request/curl.hh"
 #include "src/core/wrap/json.hh"
 
+#include <poll.h>
+
 namespace K {
 
 struct ItemData {
@@ -29,6 +31,10 @@ struct ItemData {
     int64_t timestamp;
     bool success;
 };
+
+static std::mutex plan_mutex;
+static HeapArray<ItemData> plan_items;
+static BlockAllocator plan_alloc;
 
 static void LinkHeaders(Span<curl_slist> headers)
 {
@@ -216,6 +222,26 @@ static bool SendReport(Span<const char> json)
     return true;
 }
 
+static bool UpdatePlan()
+{
+    LogInfo("Fetching backup plan...");
+
+    HeapArray<ItemData> items;
+    BlockAllocator str_alloc;
+
+    if (!FetchPlan(&str_alloc, &items))
+        return false;
+
+    std::lock_guard<std::mutex> lock(plan_mutex);
+
+    std::swap(items, plan_items);
+    std::swap(str_alloc, plan_alloc);
+
+    InterruptWait();
+
+    return true;
+}
+
 static bool ReportSuccess(const char *channel, const rk_SaveInfo &info)
 {
     HeapArray<char> body;
@@ -270,18 +296,11 @@ static bool RunSnapshot(const char *channel, Span<const char *const> paths, rk_S
     return rk_Save(repo.get(), channel, paths, {}, out_info);
 }
 
-static bool CheckPlan()
+static bool RunPlan()
 {
-    BlockAllocator temp_alloc;
+    bool busy = false;
 
-    HeapArray<ItemData> items;
-    bool nothing = true;
-
-    LogInfo("Fetching backup plan...");
-    if (!FetchPlan(&temp_alloc, &items))
-        return false;
-
-    for (const ItemData &item: items) {
+    for (ItemData &item: plan_items) {
         bool run = ShouldRun(item);
 
         if (run) {
@@ -290,7 +309,7 @@ static bool CheckPlan()
             const char *last_err = "Unknown error";
             PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
                 if (level == LogLevel::Error) {
-                    last_err = DuplicateString(msg, &temp_alloc).ptr;
+                    last_err = DuplicateString(msg, &plan_alloc).ptr;
                 }
 
                 func(level, ctx, msg);
@@ -302,27 +321,206 @@ static bool CheckPlan()
 
             if (success) {
                 ReportSuccess(item.channel, info);
+
+                item.timestamp = info.time;
+                item.success = true;
             } else {
                 int64_t now = GetUnixTime();
                 ReportError(item.channel, now, last_err);
+
+                item.timestamp = now;
+                item.success = false;
             }
         }
 
-        nothing &= !run;
+        busy |= run;
     }
-    if (nothing) {
+
+    if (busy) {
+        InterruptWait();
+    } else {
         LogInfo("Nothing to do");
     }
 
     return true;
 }
 
+#if !defined(_WIN32)
+
+static int OpenControl(const char *filename)
+{
+    int fd = CreateSocket(SocketType::Unix, SOCK_STREAM);
+    if (fd < 0)
+        return -1;
+    K_DEFER_N(err_guard) { close(fd); };
+
+    if (!BindUnixSocket(fd, filename))
+        return -1;
+    if (listen(fd, 4) < 0) {
+        LogError("listen() failed: %1", strerror(errno));
+        return -1;
+    }
+
+    err_guard.Disable();
+    return fd;
+}
+
+static int AcceptClient(int fd)
+{
+#if defined(SOCK_CLOEXEC)
+    int sock = accept4(fd, nullptr, nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
+#else
+    int sock = accept(fd, nullptr, nullptr);
+#endif
+
+    if (sock < 0) {
+        LogError("Failed to accept client: %1", strerror(errno));
+        return -1;
+    }
+
+#if !defined(SOCK_CLOEXEC)
+    fcntl(sock, F_SETFD, FD_CLOEXEC);
+#endif
+#if !defined(MSG_DONTWAIT)
+    SetDescriptorNonBlock(sock, true);
+#endif
+
+    return sock;
+}
+
+static void CloseClient(int fd)
+{
+    CloseDescriptor(fd);
+}
+
+static Size DoForClients(Span<WaitSource> sources, FunctionRef<bool(Size idx, int fd)> func)
+{
+    Size j = 1;
+    for (Size i = 1; i < sources.len; i++) {
+        sources[j] = sources[i];
+
+        if (!func(i, sources[i].fd)) {
+            close(sources[i].fd);
+            continue;
+        }
+
+        j++;
+    }
+    return j;
+}
+
+static void OpenClientRead(int sock, StreamReader *out_st)
+{
+    const auto read = [sock](Span<uint8_t> out_buf) {
+        struct pollfd pfd = { sock, POLLIN, 0 };
+        int ret = poll(&pfd, 1, 1000);
+
+        if (!ret) {
+            LogError("Client has timed out");
+            return (Size)-1;
+        } else if (ret < 0) {
+            LogError("poll() failed: %1", strerror(errno));
+            return (Size)-1;
+        }
+
+        Size received = recv(sock, out_buf.ptr, out_buf.len, 0);
+        if (received < 0) {
+            LogError("Failed to receive data from client: %1", strerror(errno));
+        }
+        return received;
+    };
+
+    bool success = out_st->Open(read, "<client>");
+    K_ASSERT(success);
+}
+
+static void OpenClientWrite(int sock, StreamWriter *out_st)
+{
+    const auto write = [sock](Span<const uint8_t> buf) {
+        while (buf.len) {
+            Size sent = send(sock, buf.ptr, (size_t)buf.len, 0);
+            if (sent < 0) {
+                LogError("Failed to send data to client: %1", strerror(errno));
+                return false;
+            }
+
+            buf.ptr += sent;
+            buf.len -= sent;
+        }
+
+        return true;
+    };
+
+    bool success = out_st->Open(write, "<client>");
+    K_ASSERT(success);
+}
+
+#endif
+
+// Call with plan_mutex locked
+static bool SendInfo(StreamWriter *writer)
+{
+    json_Writer json(writer);
+
+    json.StartObject();
+
+    json.Key("items"); json.StartArray();
+    for (const ItemData &item: plan_items) {
+        json.StartObject();
+
+        json.Key("channel"); json.String(item.channel);
+        json.Key("clock"); json.Int(item.clock);
+        json.Key("days"); json.Int(item.days);
+
+        json.Key("timestamp"); json.Int64(item.timestamp);
+        json.Key("success"); json.Bool(item.success);
+
+        json.EndObject();
+    }
+    json.EndArray();
+
+    json.EndObject();
+
+    if (!writer->Write('\n'))
+        return false;
+
+    return true;
+}
+
+static bool ReadClient(StreamReader *reader)
+{
+    BlockAllocator temp_alloc;
+
+    json_Parser json(reader, &temp_alloc);
+
+    // Only empty objects for now
+    for (json.ParseObject(); json.InObject(); ) {
+        Span<const char> key = json.ParseKey();
+
+        json.UnexpectedKey(key);
+        return false;
+    }
+    if (!json.IsValid())
+        return false;
+
+    return true;
+}
+
 int RunAgent(Span<const char *> arguments)
 {
+    // Options
+    const char *control_path = "/run/rekkord.sock";
+
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
         PrintCommonOptions(st);
+        PrintLn(st, T(R"(
+Agent options:
+
+    %!..+-S, --socket_file socket%!0       Change control socket
+                                   %!D..(default: %1)%!0)"),
+                control_path);
     };
 
     // Parse arguments
@@ -333,6 +531,8 @@ T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("-S", "--socket_file", OptionType::Value)) {
+                control_path = opt.current_value;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
@@ -366,29 +566,94 @@ T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
         LogInfo();
     }
 
-    // Check plan once at start
-    if (!CheckPlan())
+    // Open control socket or pipe
+    auto control = OpenControl(control_path);
+    if (control < 0)
         return 1;
+    K_DEFER { CloseDescriptor(control); };
 
     // From here on, don't quit abruptly
     WaitEvents(0);
 
-    int status = 0;
+    // Make sure we can fetch plan (valid URL and credentials)
+    if (!UpdatePlan())
+        return 1;
 
-    // Run periodic tasks until exit
-    for (;;) {
-        WaitResult ret = WaitEvents(rk_config.agent_period);
+    // Run two event loops: one for plan fetch and execution, one for clients.
+    // Makes things easier, with a simple mutex for synchronization.
+    std::thread thread([&]() {
+        for (;;) {
+            RunPlan();
 
-        if (ret == WaitResult::Exit) {
-            LogInfo("Exit requested");
-            break;
-        } else if (ret == WaitResult::Interrupt) {
-            LogInfo("Process interrupted");
-            status = 1;
-            break;
+            WaitResult ret = WaitEvents(rk_config.agent_period);
+
+            if (ret == WaitResult::Exit || ret == WaitResult::Interrupt)
+                break;
+            K_ASSERT(ret != WaitResult::Message);
+
+            UpdatePlan();
         }
+    });
+    K_DEFER { thread.join(); };
 
-        CheckPlan();
+    // Handle clients (such as RekkordTray)
+    int status = 0;
+    {
+        LocalArray<WaitSource, 32> sources;
+
+        sources.Append({ control, -1 });
+
+        for (;;) {
+            uint64_t ready = 0;
+            WaitResult ret = WaitEvents(sources, -1, &ready);
+
+            if (ret == WaitResult::Exit) {
+                LogInfo("Exit requested");
+                break;
+            } else if (ret == WaitResult::Interrupt) {
+                LogInfo("Process interrupted");
+                status = 1;
+                break;
+            }
+
+            if (ready & 1) {
+                auto desc = AcceptClient(control);
+
+                if (desc >= 0) {
+                    if (sources.Available()) {
+                        sources.Append({ desc, -1 });
+
+                        StreamWriter writer;
+                        OpenClientWrite(desc, &writer);
+
+                        std::unique_lock<std::mutex> lock(plan_mutex);
+                        SendInfo(&writer);
+                    } else {
+                        LogError("Cannot handle new client (too many)");
+                        CloseClient(desc);
+                    }
+                }
+            }
+
+            sources.len = DoForClients(sources, [&](Size idx, auto desc) {
+                if (!(ready & (1u << idx)))
+                    return true;
+
+                StreamReader reader;
+                OpenClientRead(desc, &reader);
+
+                return ReadClient(&reader);
+            });
+
+            if (ret == WaitResult::Message) {
+                sources.len = DoForClients(sources, [&](Size, auto desc) {
+                    StreamWriter writer;
+                    OpenClientWrite(desc, &writer);
+
+                    return SendInfo(&writer);
+                });
+            }
+        }
     }
 
     return status;
