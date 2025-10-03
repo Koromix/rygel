@@ -283,17 +283,17 @@ function update() {
 
     // Handle wheel actions (scroll or zoom)
     if (mouse_state.wheel) {
-        let zoom = (zone == layout.time || (pressed_keys.ctrl && zone == layout.main));
+        let zoom = (zone == layout.time || zone == layout.main);
 
         if (zoom) {
-            let factor = (zone == layout.time && pressed_keys.ctrl) ? 5 : 1;
+            let factor = pressed_keys.ctrl ? 3 : 1;
             let delta = Util.clamp(-mouse_state.wheel, -1, 1) * factor;
             let at = position.x + mouse_state.x - zone.left;
 
             zoomTime(delta, at);
             saveState();
         } else {
-            let factor = pressed_keys.ctrl ? 100 : 10;
+            let factor = pressed_keys.ctrl ? 200 : 20;
 
             position.y += mouse_state.wheel * factor;
             saveState();
