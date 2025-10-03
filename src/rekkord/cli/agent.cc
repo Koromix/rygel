@@ -18,6 +18,8 @@
 #include "src/core/request/curl.hh"
 #include "src/core/wrap/json.hh"
 
+#include <poll.h>
+
 namespace K {
 
 struct ItemData {
@@ -317,12 +319,49 @@ static bool CheckPlan()
     return true;
 }
 
+static int AcceptClient(int fd)
+{
+#if defined(SOCK_CLOEXEC)
+    int sock = accept4(fd, nullptr, nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
+#else
+    int sock = accept(fd, nullptr, nullptr);
+#endif
+
+    if (sock < 0) {
+        static_assert(EAGAIN == EWOULDBLOCK);
+
+        if (errno != EAGAIN) {
+            LogError("Failed to accept client: %1", strerror(errno));
+        }
+
+        return -1;
+    }
+
+#if !defined(SOCK_CLOEXEC)
+    fcntl(sock, F_SETFD, FD_CLOEXEC);
+#endif
+#if !defined(MSG_DONTWAIT)
+    SetDescriptorNonBlock(sock, true);
+#endif
+
+    return sock;
+}
+
 int RunAgent(Span<const char *> arguments)
 {
+    // Options
+    const char *socket_filename = "/run/rekkord.sock";
+
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
         PrintCommonOptions(st);
+        PrintLn(st, T(R"(
+Agent options:
+
+    %!..+-S, --socket_file socket%!0       Change control socket
+                                   %!D..(default: %1)%!0)"),
+                socket_filename);
     };
 
     // Parse arguments
@@ -333,6 +372,8 @@ T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("-S", "--socket_file", OptionType::Value)) {
+                socket_filename = opt.current_value;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
@@ -366,6 +407,20 @@ T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
         LogInfo();
     }
 
+    int listen_fd = CreateSocket(SocketType::Unix, SOCK_STREAM);
+    if (listen_fd < 0)
+        return 1;
+    K_DEFER { close(listen_fd); };
+
+    // Open control socket
+    if (!BindUnixSocket(listen_fd, socket_filename))
+        return 1;
+    if (listen(listen_fd, 4) < 0) {
+        LogError("listen() failed: %1", strerror(errno));
+        return 1;
+    }
+    SetDescriptorNonBlock(listen_fd, true);
+
     // Check plan once at start
     if (!CheckPlan())
         return 1;
@@ -374,24 +429,42 @@ T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
     WaitEvents(0);
 
     int status = 0;
+    {
+        LocalArray<WaitSource, 32> sources;
 
-    // Run periodic tasks until exit
-    for (;;) {
-        WaitResult ret = WaitEvents(rekkord_config.agent_period);
+        sources.Append({ listen_fd, POLLIN, -1 });
 
-        if (ret == WaitResult::Exit) {
-            LogInfo("Exit requested");
-            break;
-        } else if (ret == WaitResult::Interrupt) {
-            LogInfo("Process interrupted");
-            status = 1;
-            break;
-        } else if (ret == WaitResult::Error) {
-            status = 1;
-            break;
+        for (;;) {
+            WaitResult ret = WaitEvents(sources, rekkord_config.agent_period);
+
+            if (ret == WaitResult::Exit) {
+                LogInfo("Exit requested");
+                break;
+            } else if (ret == WaitResult::Interrupt) {
+                LogInfo("Process interrupted");
+                status = 1;
+                break;
+            } else if (ret == WaitResult::Error) {
+                status = 1;
+                break;
+            }
+
+            CheckPlan();
+
+            // Accept new clients (if any)
+            {
+                int sock = AcceptClient(listen_fd);
+
+                if (sock >= 0) {
+                    if (sources.Available()) {
+                        sources.Append({ sock, POLLIN, -1 });
+                    } else {
+                        LogError("Cannot handle new client (too many)");
+                        CloseSocket(sock);
+                    }
+                }
+            }
         }
-
-        CheckPlan();
     }
 
     return status;
