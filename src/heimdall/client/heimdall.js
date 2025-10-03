@@ -1026,6 +1026,9 @@ function renderConfig(view) {
     render(html`
         ${world.views.size ? html`
             <div class="section">
+                <button class="secondary" @click=${UI.wrap(runHelp)}>?</button>
+            </div>
+            <div class="section">
                 <label>
                     <span>${T.view}</span>
                     <select @change=${e => { settings.view = e.target.value; saveState(); }}>
@@ -1101,16 +1104,6 @@ async function runSettings() {
                                 <option value="locf" ?selected=${settings.interpolation == 'locf'}>${T.interpolations.locf}</option>
                             </select>
                         </label>
-
-                        <div class="section">${T.shortcuts}</div>
-                        <table class="shortcuts">
-                            <tr><th>R</th><td>${T.actions.r}</td></tr>
-                            <tr><th>C</th><td>${T.actions.c}</td></tr>
-                            <tr><th>F</th><td>${T.actions.f}</td></tr>
-                            <tr><th>H</th><td>${T.actions.h}</td></tr>
-                            <tr><th>${T.space}</th><td>${T.actions.space}</td></tr>
-                            <tr><th>M</th><td>${T.actions.m}</td></tr>
-                        </table>
                     </div>
 
                     <div class="footer">
@@ -1146,6 +1139,40 @@ function switchLanguage(lang) {
 
     sync_config = true;
     runner.busy();
+}
+
+async function runHelp() {
+    await UI.dialog({
+        run: (render, close) => {
+            return html`
+                <div class="title">
+                    ${T.help}
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
+                </div>
+
+                <div class="main">
+                    <div class="section">${T.navigation}</div>
+                    <table class="shortcuts">
+                        <tr><th>${T.left_click}</th><td>${T.actions.move}</td></tr>
+                        <tr><th>${T.wheel} (${T.main_area.toLowerCase()})</th><td>${T.actions.zoom}</td></tr>
+                        <tr><th>${T.wheel} (${T.tree_area.toLowerCase()})</th><td>${T.actions.scroll}</td></tr>
+                        <tr><th>Ctrl</th><td>${T.actions.faster}</td></tr>
+                    </table>
+
+                    <div class="section">${T.shortcuts}</div>
+                    <table class="shortcuts">
+                        <tr><th>R</th><td>${T.actions.reset}</td></tr>
+                        <tr><th>C</th><td>${T.actions.center}</td></tr>
+                        <tr><th>F</th><td>${T.actions.filter}</td></tr>
+                        <tr><th>H</th><td>${T.actions.highlight}</td></tr>
+                        <tr><th>${T.space}</th><td>${T.actions.toggle}</td></tr>
+                        <tr><th>M</th><td>${T.actions.mark}</td></tr>
+                    </table>
+                </div>
+            `;
+        }
+    });
 }
 
 async function runMark(entity) {

@@ -1,12 +1,16 @@
 {
     "keys": {
         "actions": {
-            "c": "Focus time zoom on visible entities",
-            "f": "Show/hide entities filtered out by alignment",
-            "h": "Show/hide entities outside the cursor",
-            "m": "Mark entity under the cursor",
-            "r": "Reset horizontal and vertical scroll to first entity (top left)",
-            "space": "Deploy/collapse item under the cursor"
+            "center": "Focus time zoom on visible entities",
+            "faster": "Move, scroll or zoom faster",
+            "filter": "Show/hide entities filtered out by alignment",
+            "highlight": "Show/hide entities outside the cursor",
+            "mark": "Mark entity under the cursor",
+            "move": "Grab and move canvas",
+            "reset": "Reset horizontal and vertical scroll to first entity (top left)",
+            "scroll": "Scroll through entities",
+            "toggle": "Deploy/collapse item under the cursor",
+            "zoom": "Zoom time scale"
         },
         "align_first": "Align at first occurrence",
         "alignment": "Alignment",
@@ -16,6 +20,7 @@
         "concepts": "Concepts",
         "display_options": "Display options",
         "filter_empty_entities": "Hide filtered out entities",
+        "help": "Help",
         "highlight_current_entity": "Highlight hovered entity",
         "interpolation": "Interpolation",
         "interpolations": {
@@ -24,7 +29,10 @@
             "none": "None"
         },
         "language": "Language",
+        "left_click": "Left click",
+        "main_area": "Main area",
         "mark_entity_x": "Mark entity {1}",
+        "navigation": "Navigation",
         "no_alignment": "No alignement",
         "save": "Save",
         "settings": "Settings",
@@ -37,7 +45,9 @@
             "positive": "Positive",
             "wip": "Undecided"
         },
+        "tree_area": "Tree area / left panel",
         "view": "View",
+        "wheel": "Wheel",
         "with_warning": "With warning"
     },
     "messages": {}

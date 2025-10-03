@@ -1,12 +1,16 @@
 {
     "keys": {
         "actions": {
-            "c": "Centrer le zoom temporal sur les entités visibles",
-            "f": "Afficher/cacher les entités filtrées par l'alignement",
-            "h": "Afficher/cacher les entités en dehors du curseur",
-            "m": "Marquer l'entité survolée par le curseur",
-            "r": "Remettre à zéro la vue sur la première entité (en haut à gauche)",
-            "space": "Déployer/plier le niveau sous le curseur"
+            "center": "Centrer le zoom temporal sur les entités visibles",
+            "faster": "Se déplacer, faire défiler ou zoomer plus rapidement",
+            "filter": "Afficher/cacher les entités filtrées par l'alignement",
+            "highlight": "Afficher/cacher les entités en dehors du curseur",
+            "mark": "Marquer l'entité survolée par le curseur",
+            "move": "Saisir et déplacer la toile",
+            "reset": "Remettre à zéro la vue sur la première entité (en haut à gauche)",
+            "scroll": "Faire défiler les entités",
+            "toggle": "Déployer/plier le niveau sous le curseur",
+            "zoom": "Zoom sur l'échelle de temps"
         },
         "align_first": "Aligner à la première occurence",
         "alignment": "Alignement",
@@ -16,6 +20,7 @@
         "concepts": "Concepts",
         "display_options": "Options d'affichage",
         "filter_empty_entities": "Cacher les entités filtrées",
+        "help": "Aide",
         "highlight_current_entity": "Renforcer l'entité survolée",
         "interpolation": "Interpolation",
         "interpolations": {
@@ -24,7 +29,10 @@
             "none": "Aucune"
         },
         "language": "Langage",
+        "left_click": "Clic gauche",
+        "main_area": "Panneau principal",
         "mark_entity_x": "Marquer l'entité {1}",
+        "navigation": "Navigation",
         "no_alignment": "Pas d'alignement",
         "save": "Enregistrer",
         "settings": "Options",
@@ -37,7 +45,9 @@
             "positive": "Positif",
             "wip": "Non décidé"
         },
+        "tree_area": "Arbre / panneau gauche",
         "view": "Vue",
+        "wheel": "Molette",
         "with_warning": "Avec alerte"
     },
     "messages": {
