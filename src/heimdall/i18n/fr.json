@@ -17,6 +17,12 @@
         "display_options": "Options d'affichage",
         "filter_empty_entities": "Cacher les entités filtrées",
         "highlight_current_entity": "Renforcer l'entité survolée",
+        "interpolation": "Interpolation",
+        "interpolations": {
+            "linear": "Linéaire",
+            "locf": "LOCF",
+            "none": "Aucune"
+        },
         "language": "Langage",
         "mark_entity_x": "Marquer l'entité {1}",
         "no_alignment": "Pas d'alignement",
