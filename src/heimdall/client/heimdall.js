@@ -225,6 +225,8 @@ function syncSize() {
         width: canvas.width - settings.tree * window.devicePixelRatio,
         height: 50 * window.devicePixelRatio
     };
+
+    canvas.focus();
 }
 
 // ------------------------------------------------------------------------
