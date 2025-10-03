@@ -643,7 +643,7 @@ function combine(entities, idx, levels, align) {
             right: null,
 
             events: [],
-            alerts: [],
+            counts: null,
             periods: [],
             values: []
         };
@@ -660,11 +660,9 @@ function combine(entities, idx, levels, align) {
             let draw = {
                 x: timeToPosition(time, position.zoom),
                 width: 0,
-                count: 1
+                warning: evt.warning
             };
             row.events.push(draw);
-            if (evt.warning)
-                row.alerts.push(draw);
 
             row.start = Math.min(row.start, time);
             row.end = Math.max(row.end, time);
@@ -762,18 +760,15 @@ function combine(entities, idx, levels, align) {
                 let draw = {
                     x: timeToPosition(time, position.zoom),
                     width: 0,
-                    count: 1
+                    warning: value.warning
                 };
                 row.events.push(draw);
-                if (value.warning)
-                    row.alerts.push(draw);
 
                 row.start = Math.min(row.start, time);
                 row.end = Math.max(row.end, time);
             }
 
             row.events.sort((evt1, evt2) => evt1.x - evt2.x);
-            row.alerts.sort((evt1, evt2) => evt1.x - evt2.x);
         }
 
         if (!row.events.length && !row.periods.length && !row.values.length) {
@@ -786,8 +781,7 @@ function combine(entities, idx, levels, align) {
         stackPeriods(row.periods);
 
         // Merge horizontally close events
-        mergeEvents(row.events);
-        mergeEvents(row.alerts);
+        row.counts = mergeEvents(row.events);
 
         if (row.start < Number.MAX_SAFE_INTEGER) {
             row.left = timeToPosition(row.start, position.zoom);
@@ -866,27 +860,82 @@ function stackPeriods(periods) {
 }
 
 function mergeEvents(events) {
-    if (!events.length)
-        return;
+    let counts = [];
+
+    let i = 0;
+    let j = 0;
+    let back = [];
+    let front = [];
 
     let treshold = MERGE_TRESHOLD * window.devicePixelRatio;
 
-    let j = 1;
-    for (let i = 1; i < events.length; i++) {
-        let evt = events[i];
-        let prev = events[j - 1];
+    while (i < events.length) {
+        let first = events[i];
+        let evt = first;
 
-        events[j] = evt;
+        let end = evt.x + evt.width;
+        let k = i + 1;
 
-        if (evt.x - prev.x - prev.width < treshold) {
-            prev.width = evt.x - prev.x;
-            prev.count++;
-            prev.warning ||= evt.warning;
-        } else {
-            j++;
+        while (k < events.length) {
+            let next = events[k];
+
+            if (next.x - end > treshold)
+                break;
+
+            end = Math.max(end, next.x + next.width);
+            k++;
         }
+
+        if (k - i == 1) {
+            events[j++] = evt;
+            i = k;
+
+            continue;
+        }
+
+        let count = {
+            x: first.x + (end - first.x) / 2,
+            value: k - i
+        };
+        counts.push(count);
+
+        front.length = 0;
+        back.length = 0;
+
+        for (let l = i + 1; l < k; l++) {
+            let next = events[l];
+
+            if (next.x == evt.x) {
+                evt.width = Math.max(evt.width, next.width);
+                evt.warning |= next.warning;
+
+                continue;
+            }
+            if (evt.warning == next.warning) {
+                evt.width = Math.max(evt.width, next.x + next.width - evt.x);
+                continue;
+            }
+
+            next.width = Math.max(next.width, evt.x + evt.width - next.x);
+            evt.width = next.x - evt.x;
+
+            (evt.warning ? front : back).push(evt);
+            evt = next;
+        }
+
+        (evt.warning ? front : back).push(evt);
+
+        for (let evt of back)
+            events[j++] = evt;
+        for (let evt of front)
+            events[j++] = evt;
+
+        i = k;
     }
+
     events.length = j;
+
+    return counts;
 }
 
 // ------------------------------------------------------------------------
@@ -1360,53 +1409,36 @@ function draw() {
             }
 
             // Draw event shapes
-            {
-                ctx.fillStyle = '#4444cc';
+            for (let evt of row.events) {
+                ctx.fillStyle = evt.warning ? '#ff6600' : '#4444cc';
 
-                for (let evt of row.events) {
-                    let x = evt.x - position.x;
-                    let width = EVENT_WIDTH * window.devicePixelRatio;
-                    let height = EVENT_HEIGHT * window.devicePixelRatio;
+                // The small offsets when drawing a warning mostly hide the "paint over" effect
+                // when a warning is painted over a normal event with the same start or and coordinate.
+                // And it is barely visible (the top angle looks a bit rounder), most people won't notice!
+                let x = evt.x - position.x - (evt.warning ? 0.5 : 0);
+                let width = evt.width + (evt.warning ? 1 : 0);
+                let base = (EVENT_WIDTH * window.devicePixelRatio) + (evt.warning ? 1 : 0);
+                let height = EVENT_HEIGHT * window.devicePixelRatio;
 
-                    ctx.beginPath();
-                    ctx.moveTo(x, row.height - height);
-                    ctx.lineTo(x + evt.width, row.height - height);
-                    ctx.lineTo(x + evt.width + width / 2, row.height);
-                    ctx.lineTo(x - width / 2, row.height);
-                    ctx.closePath();
-                    ctx.fill();
-                }
-
-                ctx.fillStyle = '#ff6600';
-
-                for (let evt of row.alerts) {
-                    let x = evt.x - position.x;
-                    let width = EVENT_WIDTH * window.devicePixelRatio;
-                    let height = EVENT_HEIGHT * window.devicePixelRatio;
-
-                    ctx.beginPath();
-                    ctx.moveTo(x, row.height - height);
-                    ctx.lineTo(x + evt.width, row.height - height);
-                    ctx.lineTo(x + evt.width + width / 2, row.height);
-                    ctx.lineTo(x - width / 2, row.height);
-                    ctx.closePath();
-                    ctx.fill();
-                }
+                ctx.beginPath();
+                ctx.moveTo(x, row.height - height);
+                ctx.lineTo(x + width, row.height - height);
+                ctx.lineTo(x + width + base / 2, row.height);
+                ctx.lineTo(x - base / 2, row.height);
+                ctx.closePath();
+                ctx.fill();
             }
 
             // Draw event counts
-            for (let evt of row.events) {
-                if (evt.count < 2)
-                    continue;
-
-                let x = evt.x - position.x;
+            for (let count of row.counts) {
+                let x = count.x - position.x;
                 let height = EVENT_HEIGHT * window.devicePixelRatio;
-                let size = Math.floor(height / 2) - 3 * Math.floor(Math.log10(evt.count));
+                let size = Math.floor(height / 2) - 3 * Math.floor(Math.log10(count.value));
 
                 ctx.font = `bold ${size}px Open Sans`;
                 ctx.fillStyle = 'white';
 
-                runner.text(x + evt.width / 2, row.height - height / 4, evt.count, { align: 2 });
+                runner.text(x, row.height - height / 4, count.value, { align: 2 });
             }
 
             // Draw value graph
