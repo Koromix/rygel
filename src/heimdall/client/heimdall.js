@@ -262,6 +262,11 @@ function update() {
         saveState();
     }
 
+    if (!pressed_keys.ctrl && pressed_keys.l == -1) {
+        let locate = UI.wrap(runLocate);
+        locate();
+    }
+
     // Recenter view when user needs it
     {
         let reset = (!pressed_keys.ctrl && pressed_keys.r == -1);
@@ -1031,6 +1036,9 @@ function renderConfig(view) {
                 <button class="secondary" @click=${UI.wrap(runHelp)}>?</button>
             </div>
             <div class="section">
+                <button class="secondary" @click=${UI.wrap(runLocate)}>${T.search}</button>
+            </div>
+            <div class="section">
                 <label>
                     <span>${T.view}</span>
                     <select @change=${e => { settings.view = e.target.value; saveState(); }}>
@@ -1170,9 +1178,51 @@ async function runHelp() {
                         <tr><th>H</th><td>${T.actions.highlight}</td></tr>
                         <tr><th>${T.space}</th><td>${T.actions.toggle}</td></tr>
                         <tr><th>M</th><td>${T.actions.mark}</td></tr>
+                        <tr><th>L</th><td>${T.actions.locate}</td></tr>
                     </table>
                 </div>
             `;
+        }
+    });
+}
+
+async function runLocate() {
+    await UI.dialog({
+        run: (render, close) => html`
+            <div class="title">
+                ${T.locate_entity}
+                <div style="flex: 1;"></div>
+                <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
+            </div>
+
+            <div class="main">
+                <label>
+                    <span>${T.search}</span>
+                    <input type="text" name="search">
+                </label>
+            </div>
+
+            <div class="footer">
+                <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
+                <button type="submit">${T.locate}</button>
+            </div>
+        `,
+
+        submit: (elements) => {
+            let search = elements.search.value.trim().toLowerCase();
+
+            if (!search)
+                throw new Error(T.message('Missing search value'));
+
+            let idx = world.entities.findIndex(entity => entity.name.toLowerCase().includes(search));
+
+            if (idx < 0)
+                throw new Error(T.message('Cannot find matching entity'));
+
+            position.entity = idx;
+            position.y = -Util.clamp(mouse_state.y - layout.main.top - ROW_HEIGHT / 2, 0, layout.main.height - ROW_HEIGHT);
+
+            saveState();
         }
     });
 }
