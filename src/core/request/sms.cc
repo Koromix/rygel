@@ -86,7 +86,7 @@ bool sms_Sender::SendTwilio(const char *to, const char *message)
     K_DEFER { curl_easy_cleanup(curl); };
 
     const char *url = Fmt(&temp_alloc, "https://api.twilio.com/2010-04-01/Accounts/%1/Messages", config.authid).ptr;
-    const char *body = Fmt(&temp_alloc, "To=%1&From=%2&Body=%3", to, config.from, FmtUrlSafe(message, "-._~")).ptr;
+    const char *body = Fmt(&temp_alloc, "To=%1&From=%2&Body=%3", FmtUrlSafe(to, "-._~"), config.from, FmtUrlSafe(message, "-._~")).ptr;
 
     // Set CURL options
     {
