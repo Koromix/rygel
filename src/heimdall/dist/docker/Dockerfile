@@ -9,10 +9,11 @@ RUN mkdir empty
 
 FROM scratch AS app
 COPY --from=build app app
-COPY --from=build repo/src/heimdall/dist/docker/heimdall.ini app/heimdall.ini
+COPY --from=build empty config
 COPY --from=build empty data
 COPY --from=build empty tmp
+COPY --from=build repo/src/heimdall/dist/docker/heimdall.ini config/heimdall.ini
 
 FROM scratch
 COPY --from=app . .
-CMD ["app/heimdall", "-C", "/app/heimdall.ini", "--sandbox"]
+CMD ["app/heimdall", "-C", "/config/heimdall.ini", "--sandbox"]

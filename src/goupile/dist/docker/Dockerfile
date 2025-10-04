@@ -9,10 +9,11 @@ RUN mkdir empty
 
 FROM scratch AS app
 COPY --from=build app app
-COPY --from=build repo/src/goupile/dist/docker/goupile.ini app/goupile.ini
+COPY --from=build empty config
 COPY --from=build empty data
 COPY --from=build empty tmp
+COPY --from=build repo/src/goupile/dist/docker/goupile.ini config/goupile.ini
 
 FROM scratch
 COPY --from=app . .
-CMD ["app/goupile", "-C", "/app/goupile.ini", "--sandbox"]
+CMD ["app/goupile", "-C", "/config/goupile.ini", "--sandbox"]
