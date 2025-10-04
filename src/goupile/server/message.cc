@@ -42,6 +42,21 @@ bool IsMailValid(Span<const char> address)
     return true;
 }
 
+bool IsPhoneValid(Span<const char> number)
+{
+    if (number.len < 3 || number.len > 16)
+        return false;
+
+    if (number[0] != '+')
+        return false;
+    if (number[1] < '1' || number[1] > '9')
+        return false;
+    if (!std::all_of(number.begin() + 2, number.end(), IsAsciiDigit))
+        return false;
+
+    return true;
+}
+
 bool SendMail(const char *to, const smtp_MailContent &content)
 {
     K_ASSERT(IsMailValid(to));
@@ -57,6 +72,8 @@ bool SendMail(const char *to, const smtp_MailContent &content)
 
 bool SendSMS(const char *to, const char *message)
 {
+    K_ASSERT(IsPhoneValid(to));
+
     sms_Sender sms;
     if (!sms.Init(gp_config.sms))
         return false;

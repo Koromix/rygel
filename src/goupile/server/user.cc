@@ -956,7 +956,7 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
             LogError("Empty or invalid email address");
             valid = false;
         }
-        if (sms && !sms[0]) {
+        if (sms && !IsPhoneValid(sms)) {
             LogError("Empty or invalid SMS phone number");
             valid = false;
         }

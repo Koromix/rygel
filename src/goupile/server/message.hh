@@ -24,6 +24,7 @@ class InstanceHolder;
 struct smtp_MailContent;
 
 bool IsMailValid(Span<const char> address);
+bool IsPhoneValid(Span<const char> number);
 
 bool SendMail(const char *to, const smtp_MailContent &content);
 bool SendSMS(const char *to, const char *message);
