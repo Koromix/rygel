@@ -101,12 +101,12 @@ struct EventInfo {
     bool partial = false;
 };
 
-static bool IsMailValid(const char *mail)
+static bool IsMailValid(Span<const char> address)
 {
     const auto test_char = [](char c) { return strchr("<>& ", c) || (uint8_t)c < 32; };
 
     Span<const char> domain;
-    Span<const char> prefix = SplitStr(mail, '@', &domain);
+    Span<const char> prefix = SplitStr(address, '@', &domain);
 
     if (!prefix.len || !domain.len)
         return false;
@@ -230,7 +230,7 @@ void HandleRegister(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!mail || !IsMailValid(mail)) {
+                if (!IsMailValid(mail)) {
                     LogError("Missing or invalid mail address");
                     valid = false;
                 }
@@ -408,7 +408,7 @@ void HandlePassword(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!mail || !IsMailValid(mail)) {
+                if (!IsMailValid(mail)) {
                     LogError("Missing or invalid mail address");
                     valid = false;
                 }

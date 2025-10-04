@@ -25,8 +25,27 @@
 
 namespace K {
 
+bool IsMailValid(Span<const char> address)
+{
+    const auto test_char = [](char c) { return strchr("<>& ", c) || (uint8_t)c < 32; };
+
+    Span<const char> domain;
+    Span<const char> prefix = SplitStr(address, '@', &domain);
+
+    if (!prefix.len || !domain.len)
+        return false;
+    if (std::any_of(prefix.begin(), prefix.end(), test_char))
+        return false;
+    if (std::any_of(domain.begin(), domain.end(), test_char))
+        return false;
+
+    return true;
+}
+
 bool SendMail(const char *to, const smtp_MailContent &content)
 {
+    K_ASSERT(IsMailValid(to));
+
     DomainHolder *domain = RefDomain();
     K_DEFER { UnrefDomain(domain); };
 

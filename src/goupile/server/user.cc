@@ -952,12 +952,12 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
             LogError("Missing or empty key");
             valid = false;
         }
-        if (email && !email[0]) {
-            LogError("Empty email address");
+        if (email && !IsMailValid(email)) {
+            LogError("Empty or invalid email address");
             valid = false;
         }
         if (sms && !sms[0]) {
-            LogError("Empty SMS phone number");
+            LogError("Empty or invalid SMS phone number");
             valid = false;
         }
         for (const char *claim: claims) {

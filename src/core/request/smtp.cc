@@ -61,6 +61,35 @@ static bool CheckURL(const char *url)
     return true;
 }
 
+static bool IsAddressSafe(const char *mail)
+{
+    const auto test_char = [](char c) { return strchr("<>& ", c) || (uint8_t)c < 32; };
+
+    Span<const char> domain;
+    Span<const char> prefix = SplitStr(mail, '@', &domain);
+
+    if (!prefix.len || !domain.len)
+        return false;
+    if (std::any_of(prefix.begin(), prefix.end(), test_char))
+        return false;
+    if (std::any_of(domain.begin(), domain.end(), test_char))
+        return false;
+
+    return true;
+}
+
+static bool IsFileHeaderSafe(Span<const char> str)
+{
+    const auto test_char = [](char c) { return ((uint8_t)c < 32); };
+
+    if (!str.len)
+        return false;
+    if (std::any_of(str.begin(), str.end(), test_char))
+        return false;
+
+    return true;
+}
+
 bool smtp_Config::Validate() const
 {
     bool valid = true;
@@ -77,7 +106,12 @@ bool smtp_Config::Validate() const
         valid = false;
     }
 
-    if (!from) {
+    if (from) {
+        if (!IsAddressSafe(from)) {
+            LogError("SMTP From address is invalid");
+            valid = false;
+        }
+    } else {
         LogError("SMTP From setting is not set");
         valid = false;
     }
@@ -100,62 +134,86 @@ bool smtp_Sender::Init(const smtp_Config &config)
     return true;
 }
 
-static void EncodeRfc2047(const char *str, HeapArray<char> *out_buf)
-{
-    out_buf->Append("=?utf-8?Q?");
-    for (Size i = 0; str[i]; i++) {
-        int c = str[i];
+class FmtRfc2047 {
+    Span<const char> str;
 
+public:
+    FmtRfc2047(Span<const char> str) : str(str) {}
+
+    void Format(FunctionRef<void(Span<const char>)> append) const;
+    operator FmtArg() const { return FmtCustom(*this); }
+};
+
+class FmtRfcDate {
+    int64_t time;
+
+public:
+    FmtRfcDate(int64_t time) : time(time) {}
+
+    void Format(FunctionRef<void(Span<const char>)> append) const;
+    operator FmtArg() const { return FmtCustom(*this); }
+};
+
+void FmtRfc2047::Format(FunctionRef<void(Span<const char>)> append) const
+{
+    static const char literals[] = "0123456789ABCDEF";
+
+    append("=?utf-8?Q?");
+    for (int c: str) {
         if (c == ' ') {
-            out_buf->Append('_');
+            append('_');
         } else if (c >= 32 && c < 128 && c != '=' && c != '?' && c != '_') {
-            out_buf->Append((char)c);
+            append((char)c);
         } else {
-            Fmt(out_buf, "=%1", FmtHex((uint8_t)c).Pad0(-2));
+            char encoded[3];
+
+            encoded[0] = '=';
+            encoded[1] = literals[((uint8_t)c >> 4) & 0xF];
+            encoded[2] = literals[((uint8_t)c >> 0) & 0xF];
+
+            Span<const char> buf = MakeSpan(encoded, 3);
+            append(buf);
         }
     }
-    out_buf->Append("?=");
-
-    out_buf->Grow(1);
-    out_buf->ptr[out_buf->len] = 0;
+    append("?=");
 }
 
-static void FormatRfcDate(int64_t time, HeapArray<char> *out_buf)
+void FmtRfcDate::Format(FunctionRef<void(Span<const char>)> append) const
 {
     TimeSpec spec = DecomposeTimeLocal(time);
 
     switch (spec.week_day) {
-        case 1: { out_buf->Append("Mon, "); } break;
-        case 2: { out_buf->Append("Tue, "); } break;
-        case 3: { out_buf->Append("Wed, "); } break;
-        case 4: { out_buf->Append("Thu, "); } break;
-        case 5: { out_buf->Append("Fri, "); } break;
-        case 6: { out_buf->Append("Sat, "); } break;
-        case 7: { out_buf->Append("Sun, "); } break;
+        case 1: { append("Mon, "); } break;
+        case 2: { append("Tue, "); } break;
+        case 3: { append("Wed, "); } break;
+        case 4: { append("Thu, "); } break;
+        case 5: { append("Fri, "); } break;
+        case 6: { append("Sat, "); } break;
+        case 7: { append("Sun, "); } break;
     }
 
-    Fmt(out_buf, "%1 ", spec.day);
+    Fmt(append, "%1 ", spec.day);
 
     switch (spec.month) {
-        case 1: { out_buf->Append("Jan "); } break;
-        case 2: { out_buf->Append("Feb "); } break;
-        case 3: { out_buf->Append("Mar "); } break;
-        case 4: { out_buf->Append("Apr "); } break;
-        case 5: { out_buf->Append("May "); } break;
-        case 6: { out_buf->Append("Jun "); } break;
-        case 7: { out_buf->Append("Jul "); } break;
-        case 8: { out_buf->Append("Aug "); } break;
-        case 9: { out_buf->Append("Sep "); } break;
-        case 10: { out_buf->Append("Oct "); } break;
-        case 11: { out_buf->Append("Nov "); } break;
-        case 12: { out_buf->Append("Dec "); } break;
+        case 1: { append("Jan "); } break;
+        case 2: { append("Feb "); } break;
+        case 3: { append("Mar "); } break;
+        case 4: { append("Apr "); } break;
+        case 5: { append("May "); } break;
+        case 6: { append("Jun "); } break;
+        case 7: { append("Jul "); } break;
+        case 8: { append("Aug "); } break;
+        case 9: { append("Sep "); } break;
+        case 10: { append("Oct "); } break;
+        case 11: { append("Nov "); } break;
+        case 12: { append("Dec "); } break;
     }
 
     int offset = (spec.offset / 60) * 100 + (spec.offset % 60);
 
-    Fmt(out_buf, "%1 %2:%3:%4 %5%6",
-                 spec.year, FmtArg(spec.hour).Pad0(-2), FmtArg(spec.min).Pad0(-2),
-                 FmtArg(spec.sec).Pad0(-2), offset >= 0 ? "+" : "", FmtArg(offset).Pad0(-4));
+    Fmt(append, "%1 %2:%3:%4 %5%6",
+                spec.year, FmtArg(spec.hour).Pad0(-2), FmtArg(spec.min).Pad0(-2),
+                FmtArg(spec.sec).Pad0(-2), offset >= 0 ? "+" : "", FmtArg(offset).Pad0(-4));
 }
 
 bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
@@ -171,6 +229,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
 bool smtp_Sender::Send(const char *to, Span<const char> mail)
 {
     K_ASSERT(config.url);
+    K_ASSERT(IsAddressSafe(to));
 
     CURL *curl = curl_Init();
     if (!curl)
@@ -226,6 +285,9 @@ bool smtp_Sender::Send(const char *to, Span<const char> mail)
 
 Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_MailContent &content, Allocator *alloc)
 {
+    K_ASSERT(IsAddressSafe(from));
+    K_ASSERT(IsAddressSafe(to));
+
     HeapArray<char> buf(alloc);
 
     char id[33];
@@ -239,11 +301,11 @@ Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_Mai
     }
 
     Fmt(&buf, "Message-ID: <%1@%2>\r\n", id, domain);
-    Fmt(&buf, "Date: "); FormatRfcDate(GetUnixTime(), &buf); buf.Append("\r\n");
+    Fmt(&buf, "Date: %1\r\n", FmtRfcDate(GetUnixTime()));
     Fmt(&buf, "From: %1\r\n", from);
     Fmt(&buf, "To: %1\r\n", to);
     if (content.subject) {
-        Fmt(&buf, "Subject: "); EncodeRfc2047(content.subject, &buf); buf.Append("\r\n");
+        Fmt(&buf, "Subject: %1\r\n", FmtRfc2047(content.subject));
     }
     Fmt(&buf, "MIME-version: 1.0\r\n");
 
@@ -251,18 +313,14 @@ Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_Mai
     char alternative[32] = {};
 
     if (content.files.len) {
-        uint64_t rnd;
-        FillRandomSafe(&rnd, K_SIZE(rnd));
-        Fmt(mixed, "=_%1", FmtHex(rnd).Pad0(-16));
+        Fmt(mixed, "=_%1", FmtRandom(28));
 
         Fmt(&buf, "Content-Type: multipart/mixed; boundary=\"%1\";\r\n\r\n", mixed);
         Fmt(&buf, "--%1\r\n", mixed);
     }
 
     if (content.text && content.html) {
-        uint64_t rnd;
-        FillRandomSafe(&rnd, K_SIZE(rnd));
-        Fmt(alternative, "=_%1", FmtHex(rnd).Pad0(-16));
+        Fmt(alternative, "=_%1", FmtRandom(28));
 
         Fmt(&buf, "Content-Type: multipart/alternative; boundary=\"%1\";\r\n\r\n", alternative);
         Fmt(&buf, "--%1\r\n", alternative);
@@ -282,8 +340,10 @@ Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_Mai
 
     if (content.files.len) {
         for (const smtp_AttachedFile &file: content.files) {
-            K_ASSERT(file.mimetype);
+            K_ASSERT(IsFileHeaderSafe(file.mimetype));
             K_ASSERT(file.id || !file.inlined);
+            K_ASSERT(!file.id || IsFileHeaderSafe(file.id));
+            K_ASSERT(!file.name || IsFileHeaderSafe(file.name));
 
             Fmt(&buf, "--%1\r\n", mixed);
             Fmt(&buf, "Content-Type: %1\r\n", file.mimetype);
@@ -293,7 +353,7 @@ Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_Mai
             }
             if (file.name) {
                 const char *disposition = file.inlined ? "inline" : "attachment";
-                Fmt(&buf, "Content-Disposition: %1; filename=\"%2\"\r\n\r\n", disposition, file.name);
+                Fmt(&buf, "Content-Disposition: %1; filename=\"%2\"\r\n\r\n", disposition, FmtEscape(file.name));
             } else {
                 const char *disposition = file.inlined ? "inline" : "attachment";
                 Fmt(&buf, "Content-Disposition: %1\r\n\r\n", disposition);

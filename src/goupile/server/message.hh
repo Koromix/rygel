@@ -23,6 +23,8 @@ namespace K {
 class InstanceHolder;
 struct smtp_MailContent;
 
+bool IsMailValid(Span<const char> address);
+
 bool SendMail(const char *to, const smtp_MailContent &content);
 bool SendSMS(const char *to, const char *message);
 

@@ -1368,8 +1368,8 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 if (signup.enable) {
                     bool content = signup.text.len || signup.html.len;
 
-                    if (!signup.url || !signup.to || !signup.subject || !content) {
-                        LogError("Missing signup fields");
+                    if (!signup.url || !IsMailValid(signup.to) || !signup.subject || !content) {
+                        LogError("Missing or invalid signup fields");
                         valid = false;
                     }
                 }
