@@ -28,6 +28,9 @@ namespace K {
 
 K_INIT(SQLite)
 {
+    int ret = sqlite3_initialize();
+    K_CRITICAL(ret == SQLITE_OK, "Failed to initialize SQLite");
+
 #if defined(SQLITE_EXTENSIONS)
     sqlite3_auto_extension((void(*)())sqlite3_uuid_init);
 #endif
