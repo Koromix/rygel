@@ -461,6 +461,16 @@ void HandleFileList(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
 
+    if (!instance->settings.allow_guests && !instance->settings.use_offline) {
+        RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+
+        if (!session) {
+            LogError("User is not logged in");
+            io->SendError(401);
+            return;
+        }
+    }
+
     if (instance->master != instance) {
         LogError("Cannot list files through slave instance");
         io->SendError(403);
@@ -537,21 +547,25 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
 
     const char *client_sha256 = request.GetQueryValue("sha256");
 
-    // Handle special paths
-    if (TestStr(url, "/favicon.png")) {
-        url ="/files/favicon.png";
-    } else if (TestStr(url, "/manifest.json")) {
-        url = "/files/manifest.json";
-    }
-
-    // Safety checks
-    if (!StartsWith(url, "/files/"))
-        return false;
     if (instance->master != instance) {
         LogError("Cannot get files through slave instance");
         io->SendError(403);
         return true;
     }
+
+    // Handle various paths
+    if (TestStr(url, "/favicon.png")) {
+        url ="/files/favicon.png";
+    } else if (TestStr(url, "/manifest.json")) {
+        url = "/files/manifest.json";
+    } else if (!instance->settings.allow_guests && !instance->settings.use_offline) {
+        RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+
+        if (!session)
+            return false;
+    }
+    if (!StartsWith(url, "/files/"))
+        return false;
 
     Span<const char> filename = url + 7;
 
