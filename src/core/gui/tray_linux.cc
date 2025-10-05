@@ -342,7 +342,7 @@ static int GetBusTimeout(sd_bus *bus)
 
 WaitSource LinuxTray::GetWaitSource()
 {
-    WaitSource src = { sd_bus_get_fd(bus), (short)sd_bus_get_events(bus), GetBusTimeout(bus) };
+    WaitSource src = { sd_bus_get_fd(bus), GetBusTimeout(bus), (short)sd_bus_get_events(bus) };
     return src;
 }
 

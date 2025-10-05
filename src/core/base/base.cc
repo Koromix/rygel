@@ -5696,7 +5696,9 @@ WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t 
     SetSignalHandler(SIGUSR1, [](int) { message = true; });
 
     for (const WaitSource &src: sources) {
-        pfds.Append({ src.fd, (short)src.events, 0 });
+        short events = src.events ? (short)src.events : POLLIN;
+        pfds.Append({ src.fd, events, 0 });
+
         timeout = (int64_t)std::min((uint64_t)timeout, (uint64_t)src.timeout);
     }
 

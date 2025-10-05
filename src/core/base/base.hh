@@ -4530,12 +4530,12 @@ struct WaitSource {
 #if defined(_WIN32)
     // Special-cased on Windows: set to NULL to wait for the Win32 message pump too
     void *handle; // HANDLE
+    int timeout;
 #else
     int fd;
-    int events;
-#endif
-
     int timeout;
+    int events = 0;
+#endif
 };
 
 // After WaitEvents() has been called once (even with timeout 0), a few signals (such as SIGINT, SIGHUP)

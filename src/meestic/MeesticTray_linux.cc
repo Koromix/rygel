@@ -21,7 +21,6 @@
 #include "src/core/wrap/json.hh"
 #include "src/core/gui/tray.hh"
 
-#include <poll.h>
 #include <sys/socket.h>
 
 namespace K {
@@ -205,7 +204,7 @@ Options:
         // React to main service and D-Bus events
         while (run) {
             WaitSource sources[] = {
-                { meestic_fd, POLLIN, -1 },
+                { meestic_fd, -1 },
                 tray->GetWaitSource()
             };
 

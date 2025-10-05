@@ -439,8 +439,8 @@ By default, the first of the following config files will be used:
     {
         LocalArray<WaitSource, 32> sources;
 
-        sources.Append({ input_fd, POLLIN, -1 });
-        sources.Append({ listen_fd, POLLIN, -1 });
+        sources.Append({ input_fd, -1 });
+        sources.Append({ listen_fd, -1 });
 
         for (;;) {
             uint64_t ready = 0;
@@ -470,7 +470,7 @@ By default, the first of the following config files will be used:
 
                 if (sock >= 0) {
                     if (sources.Available()) {
-                        sources.Append({ sock, POLLIN, -1 });
+                        sources.Append({ sock, -1 });
                         SendInfo(sock, true);
                     } else {
                         LogError("Cannot handle new client (too many)");
