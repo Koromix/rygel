@@ -21,9 +21,9 @@
 #include "src/core/wrap/json.hh"
 
 #if defined(__linux__)
+    #include <poll.h>
     #include <sys/types.h>
     #include <sys/stat.h>
-    #include <sys/poll.h>
     #include <sys/socket.h>
     #include <fcntl.h>
     #include <linux/input.h>
@@ -193,11 +193,11 @@ static bool HandleInputEvent(int fd)
     return true;
 }
 
-static bool SendInfo(int fd, bool profiles)
+static bool SendInfo(int sock, bool profiles)
 {
     const auto write = [&](Span<const uint8_t> buf) {
         while (buf.len) {
-            Size sent = send(fd, buf.ptr, (size_t)buf.len, 0);
+            Size sent = send(sock, buf.ptr, (size_t)buf.len, 0);
             if (sent < 0) {
                 LogError("Failed to send data to client: %1", strerror(errno));
                 return false;
@@ -232,12 +232,12 @@ static bool SendInfo(int fd, bool profiles)
     return true;
 }
 
-static bool HandleClientData(int fd)
+static bool HandleClientData(int sock)
 {
     BlockAllocator temp_alloc;
 
-    const auto read = [&](Span<uint8_t> out_buf) {
-        struct pollfd pfd = { fd, POLLIN, 0 };
+    const auto read = [sock](Span<uint8_t> out_buf) {
+        struct pollfd pfd = { sock, POLLIN, 0 };
         int ret = poll(&pfd, 1, 1000);
 
         if (!ret) {
@@ -248,7 +248,7 @@ static bool HandleClientData(int fd)
             return (Size)-1;
         }
 
-        Size received = recv(fd, out_buf.ptr, out_buf.len, 0);
+        Size received = recv(sock, out_buf.ptr, out_buf.len, 0);
         if (received < 0) {
             LogError("Failed to receive data from client: %1", strerror(errno));
         }
@@ -294,14 +294,14 @@ static bool HandleClientData(int fd)
     return true;
 }
 
-static Size DoForClients(Span<struct pollfd> pfds, FunctionRef<bool(int fd, int revents)> func)
+static Size DoForClients(Span<WaitSource> sources, FunctionRef<bool(Size idx, int fd)> func)
 {
     Size j = 2;
-    for (Size i = 2; i < pfds.len; i++) {
-        pfds[j] = pfds[i];
+    for (Size i = 2; i < sources.len; i++) {
+        sources[j] = sources[i];
 
-        if (!func(pfds[i].fd, pfds[i].revents)) {
-            close(pfds[i].fd);
+        if (!func(i, sources[i].fd)) {
+            close(sources[i].fd);
             continue;
         }
 
@@ -415,8 +415,6 @@ By default, the first of the following config files will be used:
     // Open control socket
     if (!BindUnixSocket(listen_fd, socket_filename))
         return 1;
-
-    // Listen for clients
     if (listen(listen_fd, 4) < 0) {
         LogError("listen() failed: %1", strerror(errno));
         return 1;
@@ -439,48 +437,44 @@ By default, the first of the following config files will be used:
     // Wait for events and clients
     int status = 0;
     {
-        HeapArray<struct pollfd> pfds;
+        LocalArray<WaitSource, 32> sources;
 
-        pfds.Append({ input_fd, POLLIN, 0 });
-        pfds.Append({ listen_fd, POLLIN, 0 });
+        sources.Append({ input_fd, POLLIN, -1 });
+        sources.Append({ listen_fd, POLLIN, -1 });
 
         for (;;) {
-            if (poll(pfds.ptr, pfds.len, -1) < 0) {
-                if (errno == EINTR) {
-                    WaitResult ret = WaitEvents(0);
+            uint64_t ready = 0;
+            WaitResult ret = WaitEvents(sources, -1, &ready);
 
-                    if (ret == WaitResult::Exit) {
-                        LogInfo("Exit requested");
-                        break;
-                    } else if (ret == WaitResult::Interrupt) {
-                        LogInfo("Process interrupted");
-                        status = 1;
-                        break;
-                    } else if (ret == WaitResult::Error) {
-                        status = 1;
-                        break;
-                    } else {
-                        continue;
-                    }
-                } else {
-                    LogError("Failed to poll I/O descriptors: %1", strerror(errno));
-                    return 1;
-                }
+            if (ret == WaitResult::Exit) {
+                LogInfo("Exit requested");
+                break;
+            } else if (ret == WaitResult::Interrupt) {
+                LogInfo("Process interrupted");
+                status = 1;
+                break;
+            } else if (ret == WaitResult::Error) {
+                status = 1;
+                break;
             }
 
             // Handle input events
-            if (pfds[0].revents && !HandleInputEvent(input_fd))
-                return 1;
+            if (ready & 1) {
+                if (!HandleInputEvent(input_fd))
+                    return 1;
+            }
 
             // Accept new clients
-            if (pfds[1].revents) {
-                int fd = accept4(listen_fd, nullptr, nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
+            if (ready & 2) {
+                int sock = accept4(listen_fd, nullptr, nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
 
-                if (fd >= 0) {
-                    if (SendInfo(fd, true)) {
-                        pfds.Append({ fd, POLLIN, 0 });
+                if (sock >= 0) {
+                    if (sources.Available()) {
+                        sources.Append({ sock, POLLIN, -1 });
+                        SendInfo(sock, true);
                     } else {
-                        close(fd);
+                        LogError("Cannot handle new client (too many)");
+                        CloseSocket(sock);
                     }
                 } else {
                     LogError("Failed to accept new client: %1", strerror(errno));
@@ -488,19 +482,14 @@ By default, the first of the following config files will be used:
             }
 
             // Handle client data
-            pfds.len = DoForClients(pfds, [&](int fd, int revents) {
-                if (revents & (POLLERR | POLLHUP)) {
-                    return false;
-                } else if (revents & POLLIN) {
-                    return HandleClientData(fd);
-                } else {
-                    return true;
-                }
+            sources.len = DoForClients(sources, [&](Size idx, int sock) {
+                bool process = (ready & (1u << idx));
+                return process ? HandleClientData(sock) : true;
             });
 
             // Send updates
             if (transmit_info) {
-                pfds.len = DoForClients(pfds, [&](int fd, int) { return SendInfo(fd, false); });
+                sources.len = DoForClients(sources, [&](Size, int sock) { return SendInfo(sock, false); });
                 transmit_info = false;
             }
         }
