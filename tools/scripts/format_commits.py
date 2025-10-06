@@ -25,7 +25,7 @@ for commit in sys.stdin.readlines():
 
     if commit:
         env = os.environ | { 'LANG': 'C', 'LANGUAGE': 'C' }
-        log = subprocess.check_output(['git', 'show', commit, '--stat'], ).decode('utf-8').splitlines()
+        log = subprocess.check_output(['git', 'show', commit, '--stat'], env = env).decode('utf-8').splitlines()
 
         commit = log[0][7:].strip()
         meta = []
