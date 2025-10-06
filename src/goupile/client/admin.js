@@ -286,7 +286,7 @@ async function runUploadBackupDialog(e) {
     return UI.dialog(e, T.upload_archive, {}, (d, resolve, reject) => {
         d.file('*archive', T.archive);
 
-        d.action('Envoyer', { disabled: !d.isValid() }, async () => {
+        d.action(T.send, { disabled: !d.isValid() }, async () => {
             let progress = Log.progress(T.sending_in_progress);
 
             try {
@@ -324,7 +324,7 @@ async function runRestoreBackupDialog(e, filename) {
         d.password('*key', T.restore_key);
         d.boolean('*restore_users', T.restore_users_and_permissions, { value: false, untoggle: false });
 
-        d.action('Restaurer', { disabled: !d.isValid() }, async () => {
+        d.action(T.restore, { disabled: !d.isValid() }, async () => {
             let progress = Log.progress(T.restore_in_progress);
 
             try {
@@ -866,7 +866,7 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
             ...(d.values.misc_permissions || [])
         ];
 
-        d.action('Modifier', { disabled: !d.isValid() }, async () => {
+        d.action(t.edit, { disabled: !d.isValid() }, async () => {
             try {
                 await Net.post('/admin/api/instances/assign', {
                     instance: instance.key,
@@ -958,7 +958,7 @@ function runEditUserDialog(e, user) {
             });
         });
 
-        d.action('Modifier', { disabled: !d.isValid() }, async () => {
+        d.action(T.edit, { disabled: !d.isValid() }, async () => {
             try {
                 await Net.post('/admin/api/users/edit', {
                     userid: user.userid,
