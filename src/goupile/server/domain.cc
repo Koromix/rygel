@@ -77,7 +77,7 @@ bool InitDomain()
         std::swap(changes, reloads);
     }
 
-    // Step 1
+    // List known instances
     {
         sq_Statement stmt;
         if (!gp_db.Prepare(R"(WITH RECURSIVE rec (instance, master, demo) AS (
@@ -110,7 +110,7 @@ bool InitDomain()
         }
     }
 
-    // Step 2
+    // Reuse or reload existing instances
     for (const LoadInfo &load: loads) {
         InstanceHolder *master = load.master_key ? domain->map.FindValue(load.master_key, nullptr) : nullptr;
         changes.Set(master);
@@ -145,7 +145,7 @@ bool InitDomain()
         loads.Append(load);
     }
 
-    // Step 3
+    // Sort alphabetically, while respecting instance tree ordering
     std::sort(loads.begin(), loads.end(),
               [](const LoadInfo &load1, const LoadInfo &load2) {
         const char *master1 = load1.master_key ? load1.master_key : load1.instance_key;
