@@ -1,10 +1,11 @@
-FROM rygel/debian12 AS build
+FROM --platform=$BUILDPLATFORM rygel/debian12 AS build
 ADD repo.tar repo
 RUN repo/bootstrap.sh
 COPY versions.txt repo/versions.txt
-RUN repo/felix -C repo/FelixBuild.ini -pParanoid --version_file versions.txt --host=:clang-18:lld-18 goupile
-COPY isolate.sh isolate.sh
-RUN ./isolate.sh repo/bin/Paranoid/goupile app
+ARG TARGETARCH
+RUN repo/felix -C repo/FelixBuild.ini -pParanoid --version_file versions.txt --host=$TARGETARCH:clang-18:lld-18 goupile
+COPY isolate.py isolate.py
+RUN ./isolate.py -p /app -O app repo/bin/Paranoid/goupile
 RUN mkdir empty
 
 FROM scratch AS app
