@@ -1,5 +1,95 @@
 # Historique des versions
 
+## Goupile 3.11
+
+### Goupile 3.11
+
+*Sortie le 06/10/2025*
+
+> [!IMPORTANT]
+> Le **déploiement et la configuration de Goupile** ont évolué avec cette version. Certains réglages ne sont pas repris automatiquement, et doivent être configurés graphiquement après la mise à jour.
+> 
+> Après la mise à jour, vous **devez ouvrir le panneau d'administration** de Goupile pour terminer la configuration !
+
+**Corrections majeures :**
+
+- *[CRITIQUE]* Correction d'un crash (dépassement de mémoire tampon) avec les valeurs numériques JSON excessives
+- Protection du code et de l'API des courriels/messages contre les valeurs malformées
+- Protection de l'API des SMS/messages contre les numéros de téléphone malformés
+- Blocage de l'accès aux fichiers sauf si le mode invité ou hors ligne est activé
+- Correction des plantages causés par des appels système manquants dans la liste de confinement (sandbox) seccomp
+- Correction du problème des administrateurs non-root pouvant voir la liste complète des projets
+
+**Configuration et installation initiale :**
+
+- Mise à disposition d'images Docker de développement (tag *dev*) et de production (tag *latest*)
+- Remplacement de `goupile init` par une étape d'installation graphique
+- Remise à zéro et reconfiguration de la clé publique d'archivage lors de la mise à jour
+- Remplacement des paramètres INI de bas niveau par une installation et une configuration graphique
+- Abandon de divers paramètres INI de bas niveau obscurs et/ou inutilisés
+- Supplémentation des paramètres SMTP INI par un paramétrage graphique
+- Ajout et adoption par défaut de Linux Landlock pour le confinement du système de fichiers
+- Réécriture du code d'initialisation de domaine et d'instance
+
+**Fonctionnalités et améliorations relatives aux formulaires/pages :**
+
+- Ajout de la prise en charge du stockage de fichiers et de blobs
+- Ajout d'un widget simplifié pour les fichiers déposés par les répondants
+- Ajout d'un système d'inscription personnalisé
+- Ajout d'un système de variables publiques pour les études de type DELPHI
+- Utilisation de compteurs randomisés non-cachés par défaut
+- Ajout de la prise en charge de la sauvegarde automatique pour les instances récentes
+- Prise en charge des sessions à jeton à thread unique (single-thread)
+- Prise en charge des appels multiples à `form.restart()`
+- Amélioration de l'alignement vertical des widgets côte à côte avec des étiquettes vides
+- Ajout d'un objet `cache` stable à utiliser dans les scripts de formulaire
+- Correction d'erreurs `querySelector()` causée par certains titres de section (en mode conception)
+
+**Stockage des données :**
+
+- Préservation et restauration des objets LocalDate/LocalTime
+- Réinitialisation du numéro de séquence lorsque tous les enregistrements sont supprimés
+- Réduction de l'apparition non souhaitée de numéros de séquence non consécutifs
+- Suppression de l'étiquette de brouillon implicite pour les enregistrements non verrouillés
+- Réécriture du format et du code d'annotation des données
+- Distribution du code empaqueté pour le script principal et les scripts de pages aux répondants
+- Correction d'un bug empêchant la conception de formulaire sur Safari
+- Amélioration de la cohérence entre le code et la surbrillance des widgets
+
+**Nouvelles fonctionnalités d'export :**
+
+- Conservation de la liste des exports de données effectués par le passé
+- Séparation des permissions d'export en deux (*ExportCreate* et *ExportDownload*)
+- Prise en charge de multiples modes d'export (tous les enregistrements, nouveaux enregistrements, enregistrements modifiés)
+- Ajout d'exports de données automatiques/planifiés
+
+**Prise en charge multilingue :**
+
+- Traduction de l'interface front-end de Goupile en anglais et en français
+- Traduction de l'interface back-end de Goupile en anglais et en français
+- Ajout d'un paramètre de langue par instance / par projet
+
+**Modifications et améliorations de l'interface utilisateur :**
+
+- Augmentation de la taille/du contraste des widgets radio et case à cocher
+- Amélioration de la navigation entre les panneaux de données/formulaires en mode conception
+- Correction de divers problèmes de mise en page des menus sur les petits écrans
+- Correction des changements de panneaux lors de l'actualisation de la page
+- Grisage des widgets désactivés
+- Amélioration de la mise en page de la page racine "/" de Goupile et mention de moi-même ;)
+
+**Autres modifications :**
+
+- Écriture des sorties JSON en flux continu sans mise en mémoire préalable
+- Correction de diverses erreurs de migration de schéma d'instance
+- Application du mode `synchronous = FULL` sur les bases de données SQLite
+- Passage à c-ares (au lieu de libc/libresolv) pour toutes les résolutions de domaine
+- Nettoyage de l'initialisation des bibliothèques externes (curl, libsodium, SQLite)
+- Utilisation de notre propre routine de génération aléatoire dans la plupart des endroits
+- Prise en charge de la liaison du serveur HTTP à une IP spécifique
+- Amélioration des performances du serveur HTTP
+- Retrait du code Vosklet inutilisé dans goupile
+
 ## Goupile 3.10
 
 ### Goupile 3.10.2

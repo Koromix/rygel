@@ -1,5 +1,96 @@
 # Goupile changelog
 
+## Goupile 3.11
+
+### Goupile 3.11
+
+*Released on 2025-10-06*
+
+> [!IMPORTANT]
+> The **deployment and initial configuration** of Goupile have changed with this version.
+>
+> Some settings are not carried over automatically and must be configured graphically after the update.
+> After updating, you **must open the Goupile admin panel** to complete the configuration!
+
+**Major bug fixes:**
+
+- *[CRITICAL]* Fix JSON parsing crash (buffer overflow) with long number literals
+- Protect mail/message code and API from dangerous values
+- Protect SMS/message API from weird phone numbers
+- Block access to files unless guest or offline mode is enabled
+- Fix crashes caused by missing syscalls in sandbox seccomp list
+- Fix non-root admin users being able to see list of all projects
+
+**Initial setup and configuration:**
+
+- Provide Docker development (*dev* tag) and release (*latest* tag) images
+- Replace `goupile init` system with graphical setup
+- Require root user to update public archive key for all domains
+- Replace low-level INI domain settings with graphical setup and configuration
+- Drop various obscure and/or unused low-level INI settings
+- Replace low-level INI SMTP settings with graphical settings
+- Add and default to Linux Landlock for filesystem sandboxing
+- Rewrite domain and instance initialization code
+
+**New or improved form/page features:**
+
+- Add support for storing files and blobs
+- Add proper widget for user-uploaded files
+- Add basic user-controlled signup system
+- Add public variable system for DELPHI-like studies
+- Default to non-secret random counters
+- Add stable `cache` object for use by form scripts
+- Add per-page autosave support for modern projects
+- Add proper support for single-thread token sessions
+- Support calling `form.restart()` multiple times
+- Improve vertical alignment of side-by-side widgets with empty labels
+- Fix `querySelector()` errors caused by some section titles in conception mode
+
+**Data changes and fixes:**
+
+- Preserve and restore LocalDate/LocalTime objects
+- Reset sequence number when all records are deleted
+- Reduce unwanted occurence of non-consecutive sequence numbers
+- Remove implicit draft tag for non-locked records
+- Rewrite data annotation format and code
+- Serve bundled main and page scripts to end users
+- Fix blocking form conception bug in Safari
+- Improve coherence between code and widget highlighting
+
+**New export system features:**
+
+- Keep list of past data exports
+- Split export permissions in two (*ExportCreate* and *ExportDownload*)
+- Support multiple exports modes (all records, new records, changed recorss)
+- Add automatic/scheduled data exports
+
+**Multi-language support:**
+
+- Translate Goupile front-end in english and french
+- Translate Goupile back-end in english and french
+- Add per-instance (or per project) language setting
+
+**UI changes and improvements:**
+
+- Increase size/contrast of radio and checkbox widgets
+- Improve navigation between data/form panels in conception mode
+- Fix various menu layout issues on small screens
+- Fix cases of changing panels when refreshing page
+- Properly gray out disabled widgets
+- Streamline layout of root "/" Goupile page and mention myself ;)
+
+**Other changes:**
+
+- Stream JSON writes instead of buffering them
+- Fix various instance schema migration errors
+- Enforce `synchronous = FULL` mode on SQLite databases
+- Switch to c-ares (instead of libc/libresolv) for all domain resolutions
+- Clean up init of external libraries (curl, libsodium, SQLite)
+- Use our own random buffer filling routine in most places
+- Support binding HTTP server to specific IP
+- Improve HTTP server performance
+- Remove unused Vosklet code in goupile
+
 ## Goupile 3.10
 
 ### Goupile 3.10.2
