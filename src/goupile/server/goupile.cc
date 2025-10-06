@@ -990,9 +990,6 @@ static bool OpenMainDatabase()
     if (!gp_db.SetWAL(true))
         return false;
 
-    if (gp_config.use_snapshots && !gp_db.SetSnapshotDirectory(gp_config.snapshot_directory, FullSnapshotDelay))
-        return 1;
-
     // Check schema version
     {
         int version;
@@ -1007,6 +1004,9 @@ static bool OpenMainDatabase()
                 return false;
         }
     }
+
+    if (gp_config.use_snapshots && !gp_db.SetSnapshotDirectory(gp_config.snapshot_directory, FullSnapshotDelay))
+        return 1;
 
     db_guard.Disable();
     return true;
