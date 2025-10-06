@@ -32,9 +32,49 @@
     #include <io.h>
 #else
     #include <fcntl.h>
+    #include <sys/stat.h>
 #endif
 
 namespace K {
+
+static const char *DefaultConfig =
+R"([Data]
+# RootDirectory = .
+# DatabaseFile = goupile.db
+# ArchiveDirectory = archives
+# SnapshotDirectory = snapshots
+# SynchronousFull = Off
+# UseSnapshots = On
+# AutoCreate = On
+# AutoMigrate = On
+
+[Security]
+# UserPassword = Moderate
+# AdminPassword = Moderate
+# RootPassword = Hard
+
+[Demo]
+# DemoMode = Off
+
+[SMS]
+# Provider = Twilio
+# AuthID = <AuthID>
+# AuthToken = <AuthToken>
+# From = <Phone number or alphanumeric sender>
+
+[SMTP]
+# URL = <Curl URL>
+# Username = <Username> (if any)
+# Password = <Password> (if any)
+# From = <Sender email address>
+
+[HTTP]
+# SocketType = Dual
+# Port = 8889
+# Threads =
+# AsyncThreads =
+# ClientAddress = Socket
+)";
 
 #pragma pack(push, 1)
 struct ArchiveIntro {
@@ -121,214 +161,77 @@ static bool CheckUserName(Span<const char> username)
     return true;
 }
 
-static bool CreateInstance(sq_Database *domain, const char *instance_key,
-                           const char *name, const InstanceOptions &options, int *out_error = nullptr)
+int RunInit(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
-    // Check for existing instance
-    {
-        sq_Statement stmt;
-        if (!domain->Prepare("SELECT instance FROM dom_instances WHERE instance = ?1", &stmt))
-            return false;
-        sqlite3_bind_text(stmt, 1, instance_key, -1, SQLITE_STATIC);
+    // Options
+    const char *root_directory = nullptr;
 
-        if (stmt.Step()) {
-            LogError("Instance '%1' already exists", instance_key);
-            if (out_error) {
-                *out_error = 409;
-            }
-            return false;
-        } else if (!stmt.IsValid()) {
-            return false;
-        }
-    }
-
-    sq_Database db;
-    const char *database_filename = MakeInstanceFileName(gp_config.instances_directory, instance_key, &temp_alloc);
-
-    if (TestFile(database_filename)) {
-        LogError("Database '%1' already exists (old deleted instance?)", database_filename);
-        if (out_error) {
-            *out_error = 409;
-        }
-        return false;
-    }
-
-    K_DEFER_N(db_guard) {
-        db.Close();
-        UnlinkFile(database_filename);
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+T(R"(Usage: %!..+%1 init [option...] [directory]%!0)"), FelixTarget);
     };
 
-    // Create instance database
-    if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-        return false;
-    if (!db.SetWAL(true))
-        return false;
-    if (!MigrateInstance(&db, InstanceVersion))
-        return false;
-
-    // Set default settings
+    // Parse arguments
     {
-        const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1";
-        bool success = true;
+        OptionParser opt(arguments);
 
-        success &= db.Run(sql, "Name", name);
-        if (options.lang) {
-            success &= db.Run(sql, "Language", options.lang);
-        }
-
-        if (!success)
-            return false;
-    }
-
-    // Use same modification time for all files
-    int64_t mtime = GetUnixTime();
-
-    if (!db.Run(R"(INSERT INTO fs_versions (version, mtime, userid, username, atomic)
-                   VALUES (1, ?1, 0, 'goupile', 1))", mtime))
-        return false;
-    if (!db.Run(R"(INSERT INTO fs_versions (version, mtime, userid, username, atomic)
-                   VALUES (0, ?1, 0, 'goupile', 0))", mtime))
-        return false;
-    if (!db.Run("UPDATE fs_settings SET value = 1 WHERE key = 'FsVersion'"))
-        return false;
-
-    // Create default files
-    if (options.populate) {
-        sq_Statement stmt1;
-        sq_Statement stmt2;
-        if (!db.Prepare(R"(INSERT INTO fs_objects (sha256, mtime, compression, size, blob)
-                           VALUES (?1, ?2, ?3, ?4, ?5))", &stmt1))
-            return false;
-        if (!db.Prepare(R"(INSERT INTO fs_index (version, filename, sha256)
-                           VALUES (1, ?1, ?2))", &stmt2))
-            return false;
-
-        for (const AssetInfo &asset: GetEmbedAssets()) {
-            if (StartsWith(asset.name, "src/goupile/server/default/")) {
-                const char *filename = asset.name + 27;
-
-                CompressionType compression_type = CanCompressFile(filename) ? CompressionType::Gzip
-                                                                                : CompressionType::None;
-
-                HeapArray<uint8_t> blob;
-                char sha256[65];
-                Size total_len = 0;
-                {
-                    StreamReader reader(asset.data, "<asset>", asset.compression_type);
-                    StreamWriter writer(&blob, "<blob>", 0, compression_type);
-
-                    crypto_hash_sha256_state state;
-                    crypto_hash_sha256_init(&state);
-
-                    while (!reader.IsEOF()) {
-                        LocalArray<uint8_t, 16384> buf;
-                        buf.len = reader.Read(buf.data);
-                        if (buf.len < 0)
-                            return false;
-                        total_len += buf.len;
-
-                        writer.Write(buf);
-                        crypto_hash_sha256_update(&state, buf.data, buf.len);
-                    }
-
-                    bool success = writer.Close();
-                    K_ASSERT(success);
-
-                    uint8_t hash[crypto_hash_sha256_BYTES];
-                    crypto_hash_sha256_final(&state, hash);
-                    FormatSha256(hash, sha256);
-                }
-
-                stmt1.Reset();
-                stmt2.Reset();
-                sqlite3_bind_text(stmt1, 1, sha256, -1, SQLITE_STATIC);
-                sqlite3_bind_int64(stmt1, 2, mtime);
-                sqlite3_bind_text(stmt1, 3, CompressionTypeNames[(int)compression_type], -1, SQLITE_STATIC);
-                sqlite3_bind_int64(stmt1, 4, total_len);
-                sqlite3_bind_blob64(stmt1, 5, blob.ptr, blob.len, SQLITE_STATIC);
-                sqlite3_bind_text(stmt2, 1, filename, -1, SQLITE_STATIC);
-                sqlite3_bind_text(stmt2, 2, sha256, -1, SQLITE_STATIC);
-
-                if (!stmt1.Run())
-                    return false;
-                if (!stmt2.Run())
-                    return false;
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else {
+                opt.LogUnknownError();
+                return 1;
             }
         }
 
-        bool success = db.RunMany(R"(
-            INSERT INTO fs_index (version, filename, sha256)
-                SELECT 0, filename, sha256 FROM fs_index WHERE version = 1;
-        )");
-        if (!success)
-            return false;
+        root_directory = opt.ConsumeNonOption();
+        root_directory = NormalizePath(root_directory ? root_directory : ".", GetWorkingDirectory(), &temp_alloc).ptr;
+
+        opt.LogUnusedArguments();
     }
 
-    if (!db.Close())
-        return false;
-
-    bool success = domain->Transaction([&]() {
-        int64_t now = GetUnixTime();
-        sq_Binding demo = options.demo ? sq_Binding(now) : sq_Binding();
-
-        if (!domain->Run(R"(INSERT INTO dom_instances (instance, demo)
-                            VALUES (?1, ?2))", instance_key, demo)) {
-            // Master does not exist
-            if (sqlite3_errcode(*domain) == SQLITE_CONSTRAINT) {
-                Span<const char> master = SplitStr(instance_key, '/');
-
-                LogError("Master instance '%1' does not exist", master);
-                if (out_error) {
-                    *out_error = 404;
-                }
-            }
-
-            return false;
+    // Drop created files and directories if anything fails
+    HeapArray<const char *> directories;
+    HeapArray<const char *> files;
+    K_DEFER_N(root_guard) {
+        for (const char *filename: files) {
+            UnlinkFile(filename);
         }
-
-        if (options.userid > 0) {
-            K_ASSERT(options.permissions);
-
-            if (!domain->Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
-                                VALUES (?1, ?2, ?3))",
-                             options.userid, instance_key, options.permissions))
-                return false;
+        for (Size i = directories.len - 1; i >= 0; i--) {
+            UnlinkDirectory(directories[i]);
         }
+    };
 
-        return true;
-    });
-    if (!success)
-        return false;
+    // Make or check root directory
+    if (TestFile(root_directory)) {
+        if (!IsDirectoryEmpty(root_directory)) {
+            LogError("Directory '%1' exists and is not empty", root_directory);
+            return 1;
+        }
+    } else {
+        if (!MakeDirectory(root_directory))
+            return 1;
+        directories.Append(root_directory);
+    }
 
-    db_guard.Disable();
-    return true;
-}
+    // Create main config file
+    {
+        const char *filename = Fmt(&temp_alloc, "%1%/goupile.ini", root_directory).ptr;
+        files.Append(filename);
 
-static void GenerateKeyPair(Span<char> out_decrypt, Span<char> out_archive)
-{
-    static_assert(crypto_box_PUBLICKEYBYTES == 32);
-    static_assert(crypto_box_SECRETKEYBYTES == 32);
+        if (!WriteFile(DefaultConfig, filename))
+            return 1;
 
-    K_ASSERT(out_decrypt.len >= 45);
-    K_ASSERT(out_archive.len >= 45);
+#if !defined(_WIN32)
+        chmod(filename, 0600);
+#endif
+    }
 
-    uint8_t sk[crypto_box_SECRETKEYBYTES];
-    uint8_t pk[crypto_box_PUBLICKEYBYTES];
-    crypto_box_keypair(pk, sk);
-
-    sodium_bin2base64(out_decrypt.ptr, out_decrypt.len, sk, K_SIZE(sk), sodium_base64_VARIANT_ORIGINAL);
-    sodium_bin2base64(out_archive.ptr, out_archive.len, pk, K_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
-}
-
-static void LogKeyPair(const char *decrypt_key, const char *archive_key)
-{
-    LogInfo("Archive decryption key: %!..+%1%!0", decrypt_key);
-    LogInfo("            Public key: %!..+%1%!0", archive_key);
-    LogInfo();
-    LogInfo("You need this key to restore Goupile archives, %!..+you must not lose it!%!0");
-    LogInfo("There is no way to get it back, without it the archives are lost.");
+    root_guard.Disable();
+    return 0;
 }
 
 int RunKeys(Span<const char *> arguments)
@@ -379,7 +282,15 @@ Options:
     }
 
     if (random_key) {
-        GenerateKeyPair(decrypt_key, archive_key);
+        static_assert(crypto_box_PUBLICKEYBYTES == 32);
+        static_assert(crypto_box_SECRETKEYBYTES == 32);
+
+        uint8_t sk[crypto_box_SECRETKEYBYTES];
+        uint8_t pk[crypto_box_PUBLICKEYBYTES];
+        crypto_box_keypair(pk, sk);
+
+        sodium_bin2base64(decrypt_key, K_SIZE(decrypt_key), sk, K_SIZE(sk), sodium_base64_VARIANT_ORIGINAL);
+        sodium_bin2base64(archive_key, K_SIZE(archive_key), pk, K_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
     } else {
         uint8_t sk[crypto_box_SECRETKEYBYTES];
         uint8_t pk[crypto_box_PUBLICKEYBYTES];
@@ -402,7 +313,11 @@ again:
         sodium_bin2base64(archive_key, K_SIZE(archive_key), pk, K_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
     }
 
-    LogKeyPair(decrypt_key, archive_key);
+    LogInfo("Archive decryption key: %!..+%1%!0", decrypt_key);
+    LogInfo("            Public key: %!..+%1%!0", archive_key);
+    LogInfo();
+    LogInfo("You need this key to restore Goupile archives, %!..+you must not lose it!%!0");
+    LogInfo("There is no way to get it back, without it the archives are lost.");
 
     return 0;
 }
@@ -1018,6 +933,191 @@ void HandleDomainConfigure(http_IO *io)
     SyncDomain(true);
 
     io->SendText(200, "{}", "application/json");
+}
+
+static bool CreateInstance(sq_Database *domain, const char *instance_key,
+                           const char *name, const InstanceOptions &options, int *out_error = nullptr)
+{
+    BlockAllocator temp_alloc;
+
+    // Check for existing instance
+    {
+        sq_Statement stmt;
+        if (!domain->Prepare("SELECT instance FROM dom_instances WHERE instance = ?1", &stmt))
+            return false;
+        sqlite3_bind_text(stmt, 1, instance_key, -1, SQLITE_STATIC);
+
+        if (stmt.Step()) {
+            LogError("Instance '%1' already exists", instance_key);
+            if (out_error) {
+                *out_error = 409;
+            }
+            return false;
+        } else if (!stmt.IsValid()) {
+            return false;
+        }
+    }
+
+    sq_Database db;
+    const char *database_filename = MakeInstanceFileName(gp_config.instances_directory, instance_key, &temp_alloc);
+
+    if (TestFile(database_filename)) {
+        LogError("Database '%1' already exists (old deleted instance?)", database_filename);
+        if (out_error) {
+            *out_error = 409;
+        }
+        return false;
+    }
+
+    K_DEFER_N(db_guard) {
+        db.Close();
+        UnlinkFile(database_filename);
+    };
+
+    // Create instance database
+    if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        return false;
+    if (!db.SetWAL(true))
+        return false;
+    if (!MigrateInstance(&db, InstanceVersion))
+        return false;
+
+    // Set default settings
+    {
+        const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1";
+        bool success = true;
+
+        success &= db.Run(sql, "Name", name);
+        if (options.lang) {
+            success &= db.Run(sql, "Language", options.lang);
+        }
+
+        if (!success)
+            return false;
+    }
+
+    // Use same modification time for all files
+    int64_t mtime = GetUnixTime();
+
+    if (!db.Run(R"(INSERT INTO fs_versions (version, mtime, userid, username, atomic)
+                   VALUES (1, ?1, 0, 'goupile', 1))", mtime))
+        return false;
+    if (!db.Run(R"(INSERT INTO fs_versions (version, mtime, userid, username, atomic)
+                   VALUES (0, ?1, 0, 'goupile', 0))", mtime))
+        return false;
+    if (!db.Run("UPDATE fs_settings SET value = 1 WHERE key = 'FsVersion'"))
+        return false;
+
+    // Create default files
+    if (options.populate) {
+        sq_Statement stmt1;
+        sq_Statement stmt2;
+        if (!db.Prepare(R"(INSERT INTO fs_objects (sha256, mtime, compression, size, blob)
+                           VALUES (?1, ?2, ?3, ?4, ?5))", &stmt1))
+            return false;
+        if (!db.Prepare(R"(INSERT INTO fs_index (version, filename, sha256)
+                           VALUES (1, ?1, ?2))", &stmt2))
+            return false;
+
+        for (const AssetInfo &asset: GetEmbedAssets()) {
+            if (StartsWith(asset.name, "src/goupile/server/default/")) {
+                const char *filename = asset.name + 27;
+
+                CompressionType compression_type = CanCompressFile(filename) ? CompressionType::Gzip
+                                                                                : CompressionType::None;
+
+                HeapArray<uint8_t> blob;
+                char sha256[65];
+                Size total_len = 0;
+                {
+                    StreamReader reader(asset.data, "<asset>", asset.compression_type);
+                    StreamWriter writer(&blob, "<blob>", 0, compression_type);
+
+                    crypto_hash_sha256_state state;
+                    crypto_hash_sha256_init(&state);
+
+                    while (!reader.IsEOF()) {
+                        LocalArray<uint8_t, 16384> buf;
+                        buf.len = reader.Read(buf.data);
+                        if (buf.len < 0)
+                            return false;
+                        total_len += buf.len;
+
+                        writer.Write(buf);
+                        crypto_hash_sha256_update(&state, buf.data, buf.len);
+                    }
+
+                    bool success = writer.Close();
+                    K_ASSERT(success);
+
+                    uint8_t hash[crypto_hash_sha256_BYTES];
+                    crypto_hash_sha256_final(&state, hash);
+                    FormatSha256(hash, sha256);
+                }
+
+                stmt1.Reset();
+                stmt2.Reset();
+                sqlite3_bind_text(stmt1, 1, sha256, -1, SQLITE_STATIC);
+                sqlite3_bind_int64(stmt1, 2, mtime);
+                sqlite3_bind_text(stmt1, 3, CompressionTypeNames[(int)compression_type], -1, SQLITE_STATIC);
+                sqlite3_bind_int64(stmt1, 4, total_len);
+                sqlite3_bind_blob64(stmt1, 5, blob.ptr, blob.len, SQLITE_STATIC);
+                sqlite3_bind_text(stmt2, 1, filename, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt2, 2, sha256, -1, SQLITE_STATIC);
+
+                if (!stmt1.Run())
+                    return false;
+                if (!stmt2.Run())
+                    return false;
+            }
+        }
+
+        bool success = db.RunMany(R"(
+            INSERT INTO fs_index (version, filename, sha256)
+                SELECT 0, filename, sha256 FROM fs_index WHERE version = 1;
+        )");
+        if (!success)
+            return false;
+    }
+
+    if (!db.Close())
+        return false;
+
+    bool success = domain->Transaction([&]() {
+        int64_t now = GetUnixTime();
+        sq_Binding demo = options.demo ? sq_Binding(now) : sq_Binding();
+
+        if (!domain->Run(R"(INSERT INTO dom_instances (instance, demo)
+                            VALUES (?1, ?2))", instance_key, demo)) {
+            // Master does not exist
+            if (sqlite3_errcode(*domain) == SQLITE_CONSTRAINT) {
+                Span<const char> master = SplitStr(instance_key, '/');
+
+                LogError("Master instance '%1' does not exist", master);
+                if (out_error) {
+                    *out_error = 404;
+                }
+            }
+
+            return false;
+        }
+
+        if (options.userid > 0) {
+            K_ASSERT(options.permissions);
+
+            if (!domain->Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
+                                VALUES (?1, ?2, ?3))",
+                             options.userid, instance_key, options.permissions))
+                return false;
+        }
+
+        return true;
+    });
+    if (!success)
+        return false;
+
+    db_guard.Disable();
+    return true;
 }
 
 void HandleDomainDemo(http_IO *io)

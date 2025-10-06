@@ -1112,6 +1112,7 @@ Options:
 
 Other commands:
 
+    %!..+init%!0                           Create empty new domain
     %!..+keys%!0                           Generate archive key pairs
     %!..+unseal%!0                         Unseal domain archive
 
@@ -1358,6 +1359,8 @@ int Main(int argc, char **argv)
 
     if (TestStr(cmd, "serve")) {
         return RunServe(arguments);
+    } else if (TestStr(cmd, "init")) {
+        return RunInit(arguments);
     } else if (TestStr(cmd, "keys")) {
         return RunKeys(arguments);
     } else if (TestStr(cmd, "unseal")) {

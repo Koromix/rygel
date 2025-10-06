@@ -20,6 +20,7 @@
 
 namespace K {
 
+int RunInit(Span<const char *> arguments);
 int RunKeys(Span<const char *> arguments);
 int RunUnseal(Span<const char *> arguments);
 
