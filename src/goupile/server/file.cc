@@ -463,10 +463,16 @@ void HandleFileList(http_IO *io, InstanceHolder *instance)
 
     if (!instance->settings.allow_guests && !instance->settings.use_offline) {
         RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+        const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
         if (!session) {
             LogError("User is not logged in");
             io->SendError(401);
+            return;
+        }
+        if (!stamp) {
+            LogError("User is not allowed to list files");
+            io->SendError(403);
             return;
         }
     }
@@ -560,8 +566,9 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
         url = "/files/manifest.json";
     } else if (!instance->settings.allow_guests && !instance->settings.use_offline) {
         RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+        const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
-        if (!session)
+        if (!stamp)
             return false;
     }
     if (!StartsWith(url, "/files/"))
