@@ -124,25 +124,24 @@ enum class CompileFeature {
     Optimize = 1 << 5,
     MinimizeSize = 1 << 6,
     HotAssets = 1 << 7,
-    ASan = 1 << 8,
-    TSan = 1 << 9,
-    UBSan = 1 << 10,
-    LTO = 1 << 11,
-    SafeStack = 1 << 12,
-    ZeroInit = 1 << 13,
-    CFI = 1 << 14,
-    ShuffleCode = 1 << 15,
-    StaticRuntime = 1 << 16,
-    LinkLibrary = 1 << 17,
-    NoConsole = 1 << 18,
-    AESNI = 1 << 19,
-    AVX2 = 1 << 20,
-    AVX512 = 1 << 21,
-
-    ESM = 1 << 22
+    MaxCompression = 1 << 8,
+    ASan = 1 << 9,
+    TSan = 1 << 10,
+    UBSan = 1 << 11,
+    LTO = 1 << 12,
+    SafeStack = 1 << 13,
+    ZeroInit = 1 << 14,
+    CFI = 1 << 15,
+    ShuffleCode = 1 << 16,
+    StaticRuntime = 1 << 17,
+    LinkLibrary = 1 << 18,
+    NoConsole = 1 << 19,
+    AESNI = 1 << 20,
+    AVX2 = 1 << 21,
+    AVX512 = 1 << 22,
+    ESM = 1 << 23
 };
 static const OptionDesc CompileFeatureOptions[] = {
-    // C++ features
     {"PCH",            "Use precompiled headers for faster compilation"},
     {"DistCC",         "Use distcc for distributed compilation (must be in PATH)"},
     {"Ccache",         "Use ccache accelerator (must be in PATH)"},
@@ -151,6 +150,7 @@ static const OptionDesc CompileFeatureOptions[] = {
     {"Optimize",       "Optimize generated builds"},
     {"MinimizeSize",   "Prefer small size over bigger code"},
     {"HotAssets",      "Embed assets in reloadable shared library"},
+    {"MaxCompression", "Maximize compression of assets (slow)"},
     {"ASan",           "Enable AdressSanitizer (ASan)"},
     {"TSan",           "Enable ThreadSanitizer (TSan)"},
     {"UBSan",          "Enable UndefinedBehaviorSanitizer (UBSan)"},
@@ -165,8 +165,6 @@ static const OptionDesc CompileFeatureOptions[] = {
     {"AESNI",          "Enable AES-NI generation and instrinsics (x86 and x86_64)"},
     {"AVX2",           "Enable AVX2 generation and instrinsics (x86_64)"},
     {"AVX512",         "Enable AVX512 generation and instrinsics (x86_64)"},
-
-    // JS bundling
     {"ESM",            "Bundle JS in ESM format instead of IIFE"}
 };
 
@@ -233,8 +231,8 @@ public:
     virtual bool GetCore(Span<const char *const> definitions, Allocator *alloc, const char **out_ns,
                          HeapArray<const char *> *out_filenames, HeapArray<const char *> *out_definitions) const = 0;
 
-    virtual void MakeEmbedCommand(Span<const char *const> embed_filenames,
-                                  const char *embed_options, const char *dest_filename,
+    virtual void MakeEmbedCommand(Span<const char *const> embed_filenames, const char *embed_options,
+                                  uint32_t features, const char *dest_filename,
                                   Allocator *alloc, Command *out_cmd) const = 0;
 
     virtual void MakePchCommand(const char *pch_filename, SourceType src_type,

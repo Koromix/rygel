@@ -47,9 +47,8 @@ static bool SplitPrefixSuffix(const char *binary, const char *needle,
     return true;
 }
 
-static void MakeEmbedCommand(Span<const char *const> embed_filenames, EmbedMode mode,
-                             const char *embed_options, const char *dest_filename,
-                             Allocator *alloc, Command *out_cmd)
+static void MakeEmbedCommand(Span<const char *const> embed_filenames, EmbedMode mode, const char *embed_options,
+                             uint32_t features, const char *dest_filename, Allocator *alloc, Command *out_cmd)
 {
     K_ASSERT(alloc);
 
@@ -61,6 +60,9 @@ static void MakeEmbedCommand(Span<const char *const> embed_filenames, EmbedMode 
         case EmbedMode::Arrays: {} break;
         case EmbedMode::Literals: { Fmt(&buf, " -fUseLiterals"); } break;
         case EmbedMode::Embed: { Fmt(&buf, " -fUseEmbed"); } break;
+    }
+    if (features & (int)CompileFeature::MaxCompression) {
+        Fmt(&buf, " -fMaxCompression");
     }
     if (embed_options) {
         Fmt(&buf, " %1", embed_options);
@@ -380,6 +382,7 @@ public:
         if (platform != HostPlatform::WasmWasi) {
             supported |= (int)CompileFeature::HotAssets;
         }
+        supported |= (int)CompileFeature::MaxCompression;
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
@@ -479,14 +482,13 @@ public:
         return true;
     }
 
-    void MakeEmbedCommand(Span<const char *const> embed_filenames,
-                          const char *embed_options, const char *dest_filename,
-                          Allocator *alloc, Command *out_cmd) const override
+    void MakeEmbedCommand(Span<const char *const> embed_filenames, const char *embed_options, uint32_t features,
+                          const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         K_ASSERT(alloc);
 
         EmbedMode mode = (clang_ver >= 190000) ? EmbedMode::Embed : EmbedMode::Literals;
-        K::MakeEmbedCommand(embed_filenames, mode, embed_options, dest_filename, alloc, out_cmd);
+        K::MakeEmbedCommand(embed_filenames, mode, embed_options, features, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
@@ -1110,6 +1112,7 @@ public:
             supported |= (int)CompileFeature::DistCC;
         }
         supported |= (int)CompileFeature::HotAssets;
+        supported |= (int)CompileFeature::MaxCompression;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
         if (platform != HostPlatform::Windows) {
@@ -1198,14 +1201,13 @@ public:
         return true;
     }
 
-    void MakeEmbedCommand(Span<const char *const> embed_filenames,
-                          const char *embed_options, const char *dest_filename,
-                          Allocator *alloc, Command *out_cmd) const override
+    void MakeEmbedCommand(Span<const char *const> embed_filenames, const char *embed_options, uint32_t features,
+                          const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         K_ASSERT(alloc);
 
         EmbedMode mode = (gcc_ver >= 150000) ? EmbedMode::Embed : EmbedMode::Literals;
-        K::MakeEmbedCommand(embed_filenames, mode, embed_options, dest_filename, alloc, out_cmd);
+        K::MakeEmbedCommand(embed_filenames, mode, embed_options, features, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
@@ -1736,6 +1738,7 @@ public:
         supported |= (int)CompileFeature::Optimize;
         supported |= (int)CompileFeature::MinimizeSize;
         supported |= (int)CompileFeature::HotAssets;
+        supported |= (int)CompileFeature::MaxCompression;
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
@@ -1791,15 +1794,14 @@ public:
         return true;
     }
 
-    void MakeEmbedCommand(Span<const char *const> embed_filenames,
-                          const char *embed_options, const char *dest_filename,
-                          Allocator *alloc, Command *out_cmd) const override
+    void MakeEmbedCommand(Span<const char *const> embed_filenames, const char *embed_options, uint32_t features,
+                          const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         K_ASSERT(alloc);
 
         // Strings literals were limited in length before MSVC 2022
         EmbedMode mode = (cl_ver >= 193000) ? EmbedMode::Literals : EmbedMode::Arrays;
-        K::MakeEmbedCommand(embed_filenames, mode, embed_options, dest_filename, alloc, out_cmd);
+        K::MakeEmbedCommand(embed_filenames, mode, embed_options, features, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
@@ -2169,6 +2171,7 @@ public:
 
         supported |= (int)CompileFeature::Optimize;
         supported |= (int)CompileFeature::MinimizeSize;
+        supported |= (int)CompileFeature::MaxCompression;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
 
@@ -2205,12 +2208,11 @@ public:
         return true;
     }
 
-    void MakeEmbedCommand(Span<const char *const> embed_filenames,
-                          const char *embed_options, const char *dest_filename,
-                          Allocator *alloc, Command *out_cmd) const override
+    void MakeEmbedCommand(Span<const char *const> embed_filenames, const char *embed_options, uint32_t features,
+                          const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         K_ASSERT(alloc);
-        K::MakeEmbedCommand(embed_filenames, EmbedMode::Literals, embed_options, dest_filename, alloc, out_cmd);
+        K::MakeEmbedCommand(embed_filenames, EmbedMode::Literals, embed_options, features, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,
@@ -2452,6 +2454,7 @@ public:
 
         supported |= (int)CompileFeature::Optimize;
         supported |= (int)CompileFeature::MinimizeSize;
+        supported |= (int)CompileFeature::MaxCompression;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::LTO;
@@ -2533,12 +2536,11 @@ public:
         return true;
     }
 
-    void MakeEmbedCommand(Span<const char *const> embed_filenames,
-                          const char *embed_options, const char *dest_filename,
-                          Allocator *alloc, Command *out_cmd) const override
+    void MakeEmbedCommand(Span<const char *const> embed_filenames, const char *embed_options, uint32_t features,
+                          const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         K_ASSERT(alloc);
-        K::MakeEmbedCommand(embed_filenames, EmbedMode::Literals, embed_options, dest_filename, alloc, out_cmd);
+        K::MakeEmbedCommand(embed_filenames, EmbedMode::Literals, embed_options, features, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,

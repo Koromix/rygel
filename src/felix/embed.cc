@@ -199,7 +199,7 @@ bool ResolveAssets(Span<const char *const> filenames, int strip_count,
     return true;
 }
 
-static Size WriteAsset(const EmbedAsset &asset, FunctionRef<void(Span<const uint8_t> buf)> func)
+static Size WriteAsset(const EmbedAsset &asset, CompressionSpeed speed, FunctionRef<void(Span<const uint8_t> buf)> func)
 {
     Size compressed_len = 0;
     StreamWriter compressor([&](Span<const uint8_t> buf) {
@@ -207,7 +207,7 @@ static Size WriteAsset(const EmbedAsset &asset, FunctionRef<void(Span<const uint
         compressed_len += buf.len;
 
         return true;
-    }, "<asset>", 0, asset.compression_type);
+    }, "<asset>", 0, asset.compression_type, speed);
 
     if (!compressor.IsValid())
         return -1;
@@ -394,6 +394,8 @@ bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *o
             return false;
     }
 
+    CompressionSpeed speed = (flags & (int)EmbedFlag::MaxCompression) ? CompressionSpeed::Slow : CompressionSpeed::Default;
+
     PrintLn(&c, CodePrefix);
 
     // Work around the ridiculousness of C++ not liking empty arrays
@@ -421,7 +423,7 @@ static const uint8_t raw_data[] = {)");
             blob.compression_type = asset.compression_type;
 
             if (flags & (int)EmbedFlag::UseEmbed) {
-                blob.len = WriteAsset(asset, print);
+                blob.len = WriteAsset(asset, speed, print);
                 if (blob.len < 0)
                     return false;
 
@@ -430,7 +432,7 @@ static const uint8_t raw_data[] = {)");
             } else {
                 PrintLn(&c, "    // %1", blob.name);
                 Print(&c, "    ");
-                blob.len = WriteAsset(asset, print);
+                blob.len = WriteAsset(asset, speed, print);
                 if (blob.len < 0)
                     return false;
 

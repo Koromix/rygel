@@ -42,7 +42,7 @@ Features = Warnings, DebugInfo, Optimize, LTO
 
 [Paranoid]
 Host = :clang:lld
-Features = Warnings, Optimize, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
+Features = Warnings, Optimize, LTO, SafeStack, CFI, ZeroInit, ShuffleCode, MaxCompression
 
 [DebugParanoid]
 Template = Paranoid

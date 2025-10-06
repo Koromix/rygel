@@ -35,13 +35,15 @@ enum class EmbedFlag {
     UseEmbed = 1 << 0,
     UseLiterals = 1 << 1,
     NoSymbols = 1 << 2,
-    NoArray = 1 << 3
+    NoArray = 1 << 3,
+    MaxCompression = 1 << 4
 };
 static const char *const EmbedFlagNames[] = {
     "UseEmbed",
     "UseLiterals",
     "NoSymbols",
-    "NoArray"
+    "NoArray",
+    "MaxCompression"
 };
 
 bool ResolveAssets(Span<const char *const> filenames, int strip_count, CompressionType compression_type, EmbedAssetSet *out_set);

@@ -395,7 +395,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         // Make C file
         {
             Command cmd = InitCommand();
-            build.compiler->MakeEmbedCommand(embed_filenames, target.embed_options, src_filename, &str_alloc, &cmd);
+            build.compiler->MakeEmbedCommand(embed_filenames, target.embed_options, features, src_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Embed %!..+%1%!0 assets", target.name).ptr;
             AppendNode(text, src_filename, cmd, embed_filenames);
