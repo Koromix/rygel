@@ -990,6 +990,9 @@ static bool OpenMainDatabase()
     if (!gp_db.SetWAL(true))
         return false;
 
+    if (gp_config.use_snapshots && !gp_db.SetSnapshotDirectory(gp_config.snapshot_directory, FullSnapshotDelay))
+        return 1;
+
     // Check schema version
     {
         int version;
@@ -1206,10 +1209,6 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
             return 1;
     }
 
-    LogInfo("Init main database");
-    if (!OpenMainDatabase())
-        return 1;
-
     // We need to bind the socket before sandboxing
     LogInfo("Init HTTP server");
     http_Daemon daemon;
@@ -1256,9 +1255,8 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
             return 1;
     }
 
-    // Delay this so that the SQLite background thread does not run when domain is opened,
-    // which prevents unshare() from working on Linux.
-    if (gp_config.use_snapshots && !gp_db.SetSnapshotDirectory(gp_config.snapshot_directory, FullSnapshotDelay))
+    LogInfo("Init main database");
+    if (!OpenMainDatabase())
         return 1;
 
     LogInfo("Init domain");
