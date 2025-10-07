@@ -1327,7 +1327,7 @@ function FormBuilder(state, model, options = {}) {
             label = null;
         }
 
-        if (typeof label === 'string' && options.anchor == null && !section_depth)
+        if (typeof label === 'string' && label.length && options.anchor == null && !section_depth)
             options.anchor = Util.stringToID(label);
 
         let deploy = state.state_sections[label];
