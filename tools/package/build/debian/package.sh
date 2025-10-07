@@ -10,9 +10,11 @@ if [ "$1" = "" -o "$1" = "package" ]; then
     VERSION=$(./felix -pDebug --run ${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}")
     DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
 
-    sudo rm -rf ${DEST_DIR}
+    if [ -d ${DEST_DIR} ]; then
+        find ${DEST_DIR} -type d -exec chmod u+rwx {} \;
+        rm -rf ${DEST_DIR}
+    fi
     mkdir -p ${DEBIAN_DIR} ${ROOT_DIR}
-    mkdir -p ${CLIENT_DIR}/upper ${CLIENT_DIR}/work
 
     install -D -m0755 tools/package/build/debian/rules ${DEBIAN_DIR}/rules
     install -D -m0644 tools/package/build/debian/compat ${DEBIAN_DIR}/compat
@@ -45,30 +47,26 @@ License: ${PKG_LICENSE}" > ${DEBIAN_DIR}/copyright
 
     podman build -t rygel/${DOCKER_IMAGE} tools/docker/${DOCKER_IMAGE}
     if echo "${PKG_ARCHITECTURES}" | grep -q -w amd64; then
-        podman run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build x86_64-linux-gnu amd64
+        mkdir -p ${CLIENT_DIR}/amd64/upper ${CLIENT_DIR}/amd64/work
+        podman run -t -i --rm -v $(pwd):/repo:O,upperdir=$(pwd)/${CLIENT_DIR}/amd64/upper,workdir=$(pwd)/${CLIENT_DIR}/amd64/work rygel/${DOCKER_IMAGE} /repo/${SCRIPT_PATH} build x86_64-linux-gnu amd64
     fi
     if echo "${PKG_ARCHITECTURES}" | grep -q -w arm64; then
-        podman run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build aarch64-linux-gnu arm64
+        mkdir -p ${CLIENT_DIR}/arm64/upper ${CLIENT_DIR}/arm64/work
+        podman run -t -i --rm -v $(pwd):/repo:O,upperdir=$(pwd)/${CLIENT_DIR}/arm64/upper,workdir=$(pwd)/${CLIENT_DIR}/arm64/work rygel/${DOCKER_IMAGE} /repo/${SCRIPT_PATH} build aarch64-linux-gnu arm64
     fi
 
-    cp ${CLIENT_DIR}/upper/*/${DEST_DIR}/${PKG_NAME}_*.deb ${PKG_DIR}/
+    cp ${CLIENT_DIR}/*/upper/${DEST_DIR}/${PKG_NAME}_*.deb ${PKG_DIR}/
 elif [ "$1" = "build" ]; then
     # Fix git error about dubious repository ownership
     git config --global safe.directory '*'
 
-    mkdir -p /repo /io/client/upper/$3 /io/client/work/$3
-    mount -t overlay overlay -o lowerdir=/io/host,upperdir=/io/client/upper/$3,workdir=/io/client/work/$3 /repo
-    rm -f /repo/FelixBuild.ini.user
-
     cd /repo
+    rm -f FelixBuild.ini.user
+
     build "$3"
 
     (cd ${ROOT_DIR} && find \( -type f -o -type l \) -printf "%h/%f %h\n" | awk -F ' ' '{print "root/" substr($1, 3) " " substr($2, 3)}') | sort > ${DEBIAN_DIR}/install
     (cd ${DEBIAN_DIR}/.. && dpkg-buildpackage -uc -us -b -t "$2" -a "$3")
-
-    cd /
-    umount /repo
-    rm -rf /io/client/work
 else
     echo "Unknown command '$1'" >&2
     exit 1

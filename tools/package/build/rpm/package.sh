@@ -14,9 +14,11 @@ if [ "$1" = "" -o "$1" = "package" ]; then
     VERSION=$(echo $VERSION | sed 's/-.*$//')
     [ "$RELEASE" = "$VERSION" ] && RELEASE=1
 
-    sudo rm -rf ${DEST_DIR}
+    if [ -d ${DEST_DIR} ]; then
+        find ${DEST_DIR} -type d -exec chmod u+rwx {} \;
+        rm -rf ${DEST_DIR}
+    fi
     mkdir -p ${RPM_DIR} ${ROOT_DIR}
-    mkdir -p ${CLIENT_DIR}/upper
 
     echo "\
 Name: ${PKG_NAME}
@@ -35,18 +37,18 @@ ${PKG_DESCRIPTION}
 # Not needed" > ${RPM_DIR}/${PKG_NAME}.spec
 
     podman build -t rygel/${DOCKER_IMAGE} tools/docker/${DOCKER_IMAGE}
-    podman run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build
+
+    mkdir -p ${CLIENT_DIR}/upper ${CLIENT_DIR}/work
+    podman run -t -i --rm -v $(pwd):/repo:O,upperdir=$(pwd)/${CLIENT_DIR}/upper,workdir=$(pwd)/${CLIENT_DIR}/work rygel/${DOCKER_IMAGE} /repo/${SCRIPT_PATH} build
 
     cp ${CLIENT_DIR}/upper/${DEST_DIR}/${PKG_NAME}-*.rpm ${PKG_DIR}/
 elif [ "$1" = "build" ]; then
     # Fix git error about dubious repository ownership
     git config --global safe.directory '*'
 
-    mkdir -p /repo /io/client/work
-    mount -t overlay overlay -o lowerdir=/io/host,upperdir=/io/client/upper,workdir=/io/client/work /repo
-    rm -f /repo/FelixBuild.ini.user
-
     cd /repo
+    rm -f FelixBuild.ini.user
+
     build
 
 echo "
@@ -65,10 +67,6 @@ echo "
 
     (cd ${RPM_DIR} && rpmbuild -ba ${PKG_NAME}.spec)
     (cd ${DEST_DIR} && find $HOME/rpmbuild/RPMS/ -name "${PKG_NAME}-*.rpm" -exec cp {} ./ \;)
-
-    cd /
-    umount /repo
-    rm -rf /io/client/work
 else
     echo "Unknown command '$1'" >&2
     exit 1
