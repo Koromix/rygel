@@ -24,14 +24,12 @@ cd $DEST_DIR
 podman manifest create $IMAGE_PREFIX$TARGET:$VERSION
 podman build --platform "$PLATFORMS" --manifest $IMAGE_PREFIX$TARGET:$VERSION .
 
+echo "podman manifest push --all $IMAGE_PREFIX$TARGET:$VERSION docker.io/$IMAGE_PREFIX$TARGET:$VERSION"
+
+podman image tag $IMAGE_PREFIX$TARGET:$VERSION $IMAGE_PREFIX$TARGET:dev
+echo "podman manifest push --all $IMAGE_PREFIX$TARGET:dev docker.io/$IMAGE_PREFIX$TARGET:dev"
+
 if echo "$VERSION" | grep -qv dev; then
     podman image tag $IMAGE_PREFIX$TARGET:$VERSION $IMAGE_PREFIX$TARGET:latest
-
-    echo "podman manifest push --all $IMAGE_PREFIX$TARGET:$VERSION docker.io/$IMAGE_PREFIX$TARGET:$VERSION"
     echo "podman manifest push --all $IMAGE_PREFIX$TARGET:latest docker.io/$IMAGE_PREFIX$TARGET:latest"
-else
-    podman image tag $IMAGE_PREFIX$TARGET:$VERSION $IMAGE_PREFIX$TARGET:dev
-
-    echo "podman manifest push --all $IMAGE_PREFIX$TARGET:$VERSION docker.io/$IMAGE_PREFIX$TARGET:$VERSION"
-    echo "podman manifest push --all $IMAGE_PREFIX$TARGET:dev docker.io/$IMAGE_PREFIX$TARGET:dev"
 fi
