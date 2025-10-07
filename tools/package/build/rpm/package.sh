@@ -34,8 +34,8 @@ ${PKG_DESCRIPTION}
 %build
 # Not needed" > ${RPM_DIR}/${PKG_NAME}.spec
 
-    docker build -t rygel/${DOCKER_IMAGE} tools/docker/${DOCKER_IMAGE}
-    docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build
+    podman build -t rygel/${DOCKER_IMAGE} tools/docker/${DOCKER_IMAGE}
+    podman run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build
 
     cp ${CLIENT_DIR}/upper/${DEST_DIR}/${PKG_NAME}-*.rpm ${PKG_DIR}/
 elif [ "$1" = "build" ]; then

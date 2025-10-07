@@ -43,12 +43,12 @@ ${PKG_NAME} ($VERSION) unstable; urgency=low
     echo "\
 License: ${PKG_LICENSE}" > ${DEBIAN_DIR}/copyright
 
-    docker build -t rygel/${DOCKER_IMAGE} tools/docker/${DOCKER_IMAGE}
+    podman build -t rygel/${DOCKER_IMAGE} tools/docker/${DOCKER_IMAGE}
     if echo "${PKG_ARCHITECTURES}" | grep -q -w amd64; then
-        docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build x86_64-linux-gnu amd64
+        podman run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build x86_64-linux-gnu amd64
     fi
     if echo "${PKG_ARCHITECTURES}" | grep -q -w arm64; then
-        docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build aarch64-linux-gnu arm64
+        podman run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build aarch64-linux-gnu arm64
     fi
 
     cp ${CLIENT_DIR}/upper/*/${DEST_DIR}/${PKG_NAME}_*.deb ${PKG_DIR}/
