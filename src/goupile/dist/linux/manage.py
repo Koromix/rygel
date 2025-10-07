@@ -17,6 +17,7 @@
 
 import argparse
 import configparser
+import io
 import os
 import re
 import subprocess
@@ -40,12 +41,14 @@ FIRST_PORT = 8889
 class DomainConfig:
     name = None
     port = None
-    demo_mode = False
+    demo = False
+    mtime = None
 
 @dataclass
 class ServiceStatus:
     running = False
     inode = None
+    since = None
 
 def create(args):
     if not re.match(r'^[a-zA-Z0-9_\-\.]+$', args.name):
@@ -120,7 +123,7 @@ def load_domains(path):
         domain.name = name
         domain.port = decode_port(section['Port'])
         if 'DemoMode' in section:
-            domain.demo_mode = decode_bool(section['DemoMode'])
+            domain.demo = decode_bool(section['DemoMode'])
 
         if domain.name in used_names:
             raise ValueError(f'Name "{domain.name}" used multiple times')
@@ -165,11 +168,11 @@ def sync_domains(path, domains, template):
         data = list(config['Data'].items())
 
         config['Data']['RootDirectory'] = root_directory
-        config['Data']['UseSnapshots'] = 'Off' if domain.demo_mode else 'On'
+        config['Data']['UseSnapshots'] = 'Off' if domain.demo else 'On'
         for key, value in data:
             if not key in config['Data']:
                 config['Data'][key] = value
-        config['Demo']['DemoMode'] = 'On' if domain.demo_mode else 'Off'
+        config['Demo']['DemoMode'] = 'On' if domain.demo else 'Off'
         if domain.port.isnumeric():
             config['HTTP']['SocketType'] = 'Dual'
             config['HTTP']['Port'] = domain.port
@@ -177,8 +180,19 @@ def sync_domains(path, domains, template):
             config['HTTP']['SocketType'] = 'Unix'
             config['HTTP']['UnixPath'] = domain.port
 
-        with open(ini_filename, 'w') as f:
+        with io.StringIO() as f:
             config.write(f)
+            buf = f.getvalue()
+        if os.path.exists(ini_filename):
+            with open(ini_filename, 'r') as f:
+                prev = f.read()
+        else:
+            prev = None
+        if buf != prev:
+            with open(ini_filename, 'w') as f:
+                f.write(buf)
+
+        domain.mtime = int(os.path.getmtime(ini_filename))
 
 def sync_units(path, domains):
     directory = os.path.join(path, 'multi-user.target.wants')
@@ -219,9 +233,13 @@ def sync_services(domains):
                 if status.running:
                     try:
                         pid = int(subprocess.check_output(['systemctl', 'show', '-p', 'ExecMainPID', '--value', parts[1]]))
-
                         sb = os.stat(f'/proc/{pid}/exe')
+
+                        start = subprocess.check_output(['systemctl', 'show', '-p', 'ExecMainStartTimestamp', '--value', parts[1]]).decode('utf-8').strip()
+                        since = int(subprocess.check_output(['date', '--date=' + start, '+%s']))
+
                         status.inode = sb.st_ino
+                        status.since = since
                     except Exception:
                         status.running = False
 
@@ -238,11 +256,19 @@ def sync_services(domains):
     for domain in domains.values():
         status = services.get(domain.name)
 
-        if status is None or not status.running or status.inode != binary_inode:
+        if status is None:
+            run_service_command(domain.name, 'restart')
+        elif not status.running:
+            run_service_command(domain.name, 'restart')
+        elif status.inode != binary_inode:
+            run_service_command(domain.name, 'restart')
+        elif domain.mtime is not None and status.since < domain.mtime:
             run_service_command(domain.name, 'restart')
 
 def run_service_command(name, cmd):
     service = f'goupile@{name}.service'
+
+    print(f'{cmd.capitalize()} {service}')
     execute_command(['systemctl', cmd, '--quiet', service])
 
 def make_domain_config(port):
@@ -251,6 +277,7 @@ def make_domain_config(port):
 
     config.add_section('Domain')
     config['Domain']['Port'] = port
+    config['Domain']['DemoMode'] = 'Off'
 
     return config
 
