@@ -866,7 +866,7 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
             ...(d.values.misc_permissions || [])
         ];
 
-        d.action(t.edit, { disabled: !d.isValid() }, async () => {
+        d.action(T.edit, { disabled: !d.isValid() }, async () => {
             try {
                 await Net.post('/admin/api/instances/assign', {
                     instance: instance.key,
