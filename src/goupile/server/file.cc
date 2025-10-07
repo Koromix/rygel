@@ -553,12 +553,6 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
 
     const char *client_sha256 = request.GetQueryValue("sha256");
 
-    if (instance->master != instance) {
-        LogError("Cannot get files through slave instance");
-        io->SendError(403);
-        return true;
-    }
-
     // Handle various paths
     if (TestStr(url, "/favicon.png")) {
         url ="/files/favicon.png";
@@ -573,6 +567,12 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
     }
     if (!StartsWith(url, "/files/"))
         return false;
+
+    if (instance->master != instance) {
+        LogError("Cannot get files through slave instance");
+        io->SendError(403);
+        return true;
+    }
 
     Span<const char> filename = url + 7;
 
