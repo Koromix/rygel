@@ -57,7 +57,7 @@ To create a new domain, run the following command:
 /usr/lib/goupile/manage.py create <name> [-p <HTTP port>]
 ```
 
-Remember to **securely store** the decryption key provided to you when the domain is created!
+Once the domain is created, open it in your web browser (the port is indicated after running `manage.py create`), click on *Administration* and configure your new Goupile domain.
 
 ## Deleting a Domain
 

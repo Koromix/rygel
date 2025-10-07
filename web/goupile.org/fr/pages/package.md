@@ -57,11 +57,11 @@ Pour créer un nouveau domaine, exécutez la commande suivante :
 /usr/lib/goupile/manage.py create <name> [-p <HTTP port>]
 ```
 
-N'oubliez pas de **stocker de manière sécurisée** la clé de décryption qui vous est communiquée lors de la création du domaine !
+Une fois le domain créé, ouvrez le dans un navigateur (le port est indiqué après l'exécution de `manage.py create`), cliquez sur *Administration* et paramétrez votre domaine Goupile.
 
 ## Supprimer un domaine
 
-Supprimez le fichier INI correspondand dans `/etc/goupile/domains.d` et stoppez le service :
+Supprimez le fichier INI correspondant dans `/etc/goupile/domains.d` et stoppez le service :
 
 ```sh
 rm /etc/goupile/domains.d/<name>.ini
