@@ -62,7 +62,7 @@ bool InitDomain()
     HashSet<void *> keeps;
     HashSet<void *> changes;
 
-    DomainHolder *domain = RefDomain();
+    DomainHolder *domain = RefDomain(false);
     if (!domain) {
         domain = new DomainHolder();
 
