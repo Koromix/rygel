@@ -350,9 +350,23 @@ function AppRunner(canvas) {
                 mouse_state.left = 0;
                 skip_clicks = 1;
             }
+        } else if (e.type == 'touchend') {
+            mouse_state.contact = false;
+            mouse_state.moving = false;
+
+            if (draw_counter - touch_start >= 20)
+                skip_clicks = 1;
+            if (mouse_state.left)
+                mouse_state.left = skip_clicks ? 0 : -1;
+
+            touch_start = null;
+            touch_digits = null;
+            touch_distance = null;
+
+            mouse_state.pinch = null;
         }
 
-        if (e.type == 'touchmove') {
+        if (e.type == 'touchstart' || e.type == 'touchmove') {
             if (e.touches.length == 1) {
                 mouse_state.x = (e.touches[0].pageX - rect.left + body.left) * dpr;
                 mouse_state.y = (e.touches[0].pageY - rect.top + body.top) * dpr;
@@ -386,22 +400,6 @@ function AppRunner(canvas) {
                     touch_distance = new_distance;
                 }
             }
-        }
-
-        if (e.type == 'touchend') {
-            mouse_state.contact = false;
-            mouse_state.moving = false;
-
-            if (draw_counter - touch_start >= 20)
-                skip_clicks = 1;
-            if (mouse_state.left)
-                mouse_state.left = skip_clicks ? 0 : -1;
-
-            touch_start = null;
-            touch_digits = null;
-            touch_distance = null;
-
-            mouse_state.pinch = null;
         }
     }
 
