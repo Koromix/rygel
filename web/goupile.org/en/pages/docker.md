@@ -57,6 +57,38 @@ services:
 > [!TIP]
 > It is recommended to use a **specific version tag** (such as *3.11*) instead of `latest` and update manually, even though it is used in the documentation to make things simpler.
 
+## Podman Quadlet
+
+Here is a sample Quadlet unit file for use with Podman Quadlet:
+
+```ini
+[Unit]
+Description=Goupile eCRF
+After=local-fs.target
+
+[Container]
+Image=docker.io/koromix/goupile:latest
+PublishPort=8889:80
+Volume=/srv/goupile:/data
+Volume=/etc/localtime:/etc/localtime:ro
+Volume=/etc/timezone:/etc/timezone:ro
+
+[Install]
+WantedBy=multi-user.target
+```
+
+> [!NOTE]
+> This unit stores data in `/srv/goupile`, change it or make sure this directory exists.
+
+Save this file somewhere the quadlet systemd generator can find it, such as `/etc/containers/systemd/goupile.container`.
+
+Start it with the following commands:
+
+```sh
+systemctl daemon-reload
+systemctl start goupile.service
+```
+
 ## Development image
 
 Development images are regularly pushed to the Docker Hub with the `dev` tag, use it with the following command:
