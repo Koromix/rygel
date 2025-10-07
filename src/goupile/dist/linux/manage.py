@@ -48,7 +48,7 @@ class ServiceStatus:
     inode = None
 
 def create(args):
-    if not re.match('^[a-zA-Z0-9_\-\.]+$', args.name):
+    if not re.match(r'^[a-zA-Z0-9_\-\.]+$', args.name):
         raise ValueError('Name must only contain alphanumeric, \'.\', \'-\' or \'_\' characters')
 
     domains = load_domains(DOMAINS_DIRECTORY)
@@ -74,8 +74,7 @@ def create(args):
         config.write(f)
 
     print(f'Domain config file: {ini_filename}', file = sys.stderr)
-    print(f'HTTP port: {port}\n', file = sys.stderr)
-    execute_command([GOUPILE_BINARY, 'keys', '-k', decrypt_key])
+    print(f'HTTP port: {port}', file = sys.stderr)
 
     if args.sync:
         domains = load_domains(DOMAINS_DIRECTORY)
