@@ -1,24 +1,71 @@
-# Development image
+# Get started
 
-Run the most recent development image with the following command:
+> [!NOTE]
+> Goupile in Docker requires a Linux kernel with **Landlock support**. Use a distribution with Linux 5.13 or newer to run Goupile inside Docker or Podman, such as *Debian 12*.
+
+## Manual command
+
+Run the most recent release with the following command:
 
 ```sh
-docker run -p 8888:80 koromix/goupile:dev
+docker run -p 8889:80 koromix/goupile:latest
 ```
 
-Once Goupile is running, open http://localhost:8888/ in your browser and click on the Administration button.
+Once Goupile is running, open http://localhost:8889/ in your browser and click on the Administration button.
 
-> [!IMPORTANT]
-> Goupile requires a Linux kernel with Landlock support, you must use Linux 5.13 or newer.
-
-With this command, the data will be saved inside the container and will be lost once the container is destroyed!
+> [!CAUTION]
+> With this command, the data will be saved inside the container and may be **lost once the container is destroyed!**
+>
+> Follow on to prevent this from occuring.
 
 Mount a volume on `/data` to prevent this:
 
 ```sh
-mkdir $PWD/goupile
-docker run -p 8888:80 -v $PWD/goupile:/data koromix/goupile:dev
+mkdir -p data
+docker run -p 8889:80 -v $PWD/data:/data koromix/goupile:latest
 ```
+
+Some features, such as scheduled exports, rely on the local timezone to work correctly. It is not available in the container by default, which means Goupile will run in the GMT timezone (UTC+0).
+
+Mount the server localtime and timezone config files (read-only) to fix this:
+
+```sh
+mkdir -p data
+docker run -p 8889:80 -v $PWD/data:/data -v /etc/localtime:/etc/localtime:ro -v /etc/timezone:/etc/timezone:ro koromix/goupile:latest
+```
+
+## Docker Compose
+
+Here is a sample `docker-compose.yml` file for use with Docker Compose:
+
+```yaml
+services:
+  goupile:
+    container_name: goupile
+    image: koromix/goupile:latest
+
+    restart: on-failure:3
+
+    ports:
+      - 8889:80
+    volumes:
+      - ./data:/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+```
+
+> [!TIP]
+> It is recommended to use a **specific version tag** (such as *3.11*) instead of `latest` and update manually, even though it is used in the documentation to make things simpler.
+
+## Development image
+
+Development images are regularly pushed to the Docker Hub with the `dev` tag, use it with the following command:
+
+```sh
+docker run -p 8889:80 koromix/goupile:dev
+```
+
+Use this for evaluation only, please **don't run this in production**!
 
 # Reverse proxy
 

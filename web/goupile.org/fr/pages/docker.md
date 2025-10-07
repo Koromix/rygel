@@ -1,24 +1,72 @@
-# Image de développement
+# Démarrage rapide
 
-Exécutez une version de développement récente de Goupile avec la commande suivante :
+> [!NOTE]
+> Goupile dans Docker nécessite un noyau Linux avec le **support de Landlock**. Utilisez une distribution basée sur Linux 5.13 ou plus récent pour exécuter Goupile dans Docker ou Podman, par exemple *Debian 12*.
 
-```sh
-docker run -p 8888:80 koromix/goupile:dev
-```
+## Commande manuelle
 
-Une fois Goupile en cours d'exécution, ouvrez http://localhost:8888/ dans votre navigateur et cliquez sur le bouton `Administration`.
-
-> [!IMPORTANT]
-> Goupile nécessite un noyau Linux avec le support de Landlock, soit la version Linux 5.13 ou plus récent.
-
-Avec cette commande, les données seront enregistrées dans le conteneur, et seront perdues une fois celui-ci détruit !
-
-Montez un volume sur `/data` pour éviter cela :
+Exécutez la version la plus récente avec la commande suivante :
 
 ```sh
-mkdir $PWD/goupile
-docker run -p 8888:80 -v $PWD/goupile:/data koromix/goupile:dev
+docker run -p 8889:80 koromix/goupile:latest
 ```
+
+Une fois Goupile démarré, ouvrez http://localhost:8889/ dans votre navigateur et cliquez sur le bouton Administration pour configurer Goupile.
+
+> [!CAUTION]
+> Avec cette commande, les données seront sauvegardées dans le conteneur et pourront être **perdues si le conteneur est détruit !**
+>
+> Lisez la suite pour éviter cela.
+
+Montez un volume sur `/data` pour stocker les données en dehors du conteneur :
+
+```sh
+mkdir -p data
+docker run -p 8889:80 -v $PWD/data:/data koromix/goupile:latest
+```
+
+Certaines fonctionnalités, comme les exports planifiés, dépendent du fuseau horaire local pour fonctionner correctement. Celui-ci n'est pas disponible dans le conteneur par défaut, ce qui signifie que Goupile fonctionnera avec le fuseau horaire GMT (UTC+0).
+
+Montez les fichiers de configuration du fuseau horaire et de l'heure locale du serveur (en lecture seule) pour éviter ce problème :
+
+```sh
+mkdir -p data
+docker run -p 8889:80 -v $PWD/data:/data -v /etc/localtime:/etc/localtime:ro -v /etc/timezone:/etc/timezone:ro koromix/goupile:latest
+```
+
+## Docker Compose
+
+Voici un exemple de fichier `docker-compose.yml` qui peut être utilisé avec Docker Compose :
+
+```yaml
+services:
+  goupile:
+    container_name: goupile
+    image: koromix/goupile:latest
+
+    restart: on-failure:3
+
+    ports:
+      - 8889:80
+
+    volumes:
+      - ./data:/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+```
+
+> [!TIP]
+> Il est recommandé d'utiliser une **étiquette de version spécifique** (comme *3.11*) au lieu de `latest` et de mettre à jour manuellement, même si ce tag est utilisé dans la documentation pour simplifier.
+
+## Image de développement
+
+Les images de développement sont régulièrement déployées sur le Docker Hub avec l'étiquette `dev`, testez-les avec la commande suivante :
+
+```sh
+docker run -p 8889:80 koromix/goupile:dev
+```
+
+Utilisez les versions dévéloppement pour faire des tests, **ne les utilisez pas en production !**
 
 # Proxy inversé
 
