@@ -231,10 +231,10 @@ static void InitAssets()
     const char *css = nullptr;
 
     for (const AssetInfo &asset: GetEmbedAssets()) {
-        if (TestStr(asset.name, "src/rekkord/web/client/index.html")) {
+        if (TestStr(asset.name, "src/rokkerd/client/index.html")) {
             assets_index = asset;
             assets_map.Set("/", &assets_index);
-        } else if (TestStr(asset.name, "src/rekkord/web/assets/main/rekkord.png")) {
+        } else if (TestStr(asset.name, "src/rokkerd/assets/main/rekkord.png")) {
             assets_map.Set("/favicon.png", &asset);
         } else {
             Span<const char> name = SplitStrReverseAny(asset.name, K_PATH_SEPARATORS);

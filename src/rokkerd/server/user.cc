@@ -1201,10 +1201,10 @@ void HandleTotpDisable(http_IO *io)
 static void SendDefaultPicture(http_IO *io)
 {
 #if defined(FELIX_HOT_ASSETS)
-    const AssetInfo *DefaultPicture = FindEmbedAsset("src/rekkord/web/assets/ui/anonymous.png");
+    const AssetInfo *DefaultPicture = FindEmbedAsset("src/rokkerd/assets/ui/anonymous.png");
     K_ASSERT(DefaultPicture);
 #else
-    static const AssetInfo *DefaultPicture = FindEmbedAsset("src/rekkord/web/assets/ui/anonymous.png");
+    static const AssetInfo *DefaultPicture = FindEmbedAsset("src/rokkerd/assets/ui/anonymous.png");
     K_ASSERT(DefaultPicture);
 #endif
 
