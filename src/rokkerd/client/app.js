@@ -13,17 +13,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html, live, unsafeHTML } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, HttpError } from '../../../web/core/base.js';
-import { Base64 } from '../../../web/core/mixer.js';
-import * as UI from '../../../web/core/ui.js';
-import { deploy } from '../../../web/flat/static.js';
+import { render, html, live, unsafeHTML } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net, HttpError } from '../../web/core/base.js';
+import { Base64 } from '../../web/core/mixer.js';
+import * as UI from '../../web/core/ui.js';
+import { deploy } from '../../web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';
 import { PictureCropper } from './picture.js';
-import dayjs from '../../../../vendor/dayjs/dayjs.bundle.js';
+import dayjs from '../../../vendor/dayjs/dayjs.bundle.js';
 
-import en from '../../i18n/en.json';
-import fr from '../../i18n/fr.json';
+import en from '../i18n/en.json';
+import fr from '../i18n/fr.json';
 
 import '../assets/client.css';
 

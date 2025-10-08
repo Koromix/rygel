@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
-#include "web.hh"
+#include "rokkerd.hh"
 #include "mail.hh"
 #include "user.hh"
 #include "src/core/http/http.hh"

@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
-#include "web.hh"
+#include "rokkerd.hh"
 #include "alert.hh"
 #include "config.hh"
 #include "database.hh"
@@ -459,7 +459,7 @@ int Main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *config_filename = "rekkow.ini";
+    const char *config_filename = "rokkerd.ini";
     bool sandbox = false;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -479,6 +479,13 @@ Options:
                 FelixTarget, config_filename, config.http.port);
     };
 
+    // Handle version
+    if (argc >= 2 && TestStr(argv[1], "--version")) {
+        PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
+        PrintLn(T("Compiler: %1"), FelixCompiler);
+        return 0;
+    }
+
     // Find config filename
     {
         OptionParser opt(argc, argv, OptionMode::Skip);
@@ -489,7 +496,7 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
-                    config_filename = Fmt(&temp_alloc, "%1%/rekkow.ini", TrimStrRight(opt.current_value, K_PATH_SEPARATORS)).ptr;
+                    config_filename = Fmt(&temp_alloc, "%1%/rokkerd.ini", TrimStrRight(opt.current_value, K_PATH_SEPARATORS)).ptr;
                 } else {
                     config_filename = opt.current_value;
                 }
