@@ -1,0 +1,14 @@
+[Unit]
+Description=rokkerd daemon
+Documentation=https://rekkord.org/
+
+[Service]
+Type=notify
+User=rokkerd
+Group=rokkerd
+ExecStart=/usr/bin/rokkerd -C /etc/rokkerd.ini
+Restart=on-failure
+RestartSec=20
+
+[Install]
+WantedBy = multi-user.target
