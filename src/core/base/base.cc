@@ -5733,7 +5733,7 @@ WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t 
             return WaitResult::Exit;
         } else if (explicit_signal) {
             return WaitResult::Interrupt;
-        } else if (pthread_self() == main_thread) {
+        } else if (message && pthread_self() == main_thread) {
             message = false;
             return WaitResult::Message;
         }
