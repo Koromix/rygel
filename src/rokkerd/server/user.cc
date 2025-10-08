@@ -645,16 +645,11 @@ void HandleUserRecover(http_IO *io)
         if (!db.Prepare("SELECT id FROM users WHERE mail = ?1", &stmt, mail))
             return;
 
-        if (!stmt.Step()) {
-            if (stmt.IsValid()) {
-                LogError("User does not exist");
-                io->SendError(404);
-            }
-
+        if (stmt.Step()) {
+            userid = sqlite3_column_int64(stmt, 0);
+        } else if (!stmt.IsValid()) {
             return;
         }
-
-        userid = sqlite3_column_int64(stmt, 0);
     }
 
     // Create recovery token
