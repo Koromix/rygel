@@ -419,7 +419,7 @@ bool http_Dispatcher::Run()
         kqueue_fd = -1;
     };
 
-    if (!CreatePipe(pair_fd))
+    if (!CreatePipe(false, pair_fd))
         return false;
     K_DEFER {
         CloseDescriptor(pair_fd[0]);

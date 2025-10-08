@@ -115,6 +115,7 @@
 #if defined(__linux__)
     #include <sys/syscall.h>
     #include <sys/sendfile.h>
+    #include <sys/eventfd.h>
 #endif
 #if defined(__APPLE__)
     #include <sys/random.h>
@@ -5197,26 +5198,30 @@ static void DefaultSignalHandler(int signal)
     }
 }
 
-bool CreatePipe(int pfd[2])
+bool CreatePipe(bool block, int out_pfd[2])
 {
 #if defined(__APPLE__)
-    if (pipe(pfd) < 0) {
+    if (pipe(out_pfd) < 0) {
         LogError("Failed to create pipe: %1", strerror(errno));
         return false;
     }
 
-    if (fcntl(pfd[0], F_SETFD, FD_CLOEXEC) < 0 || fcntl(pfd[1], F_SETFD, FD_CLOEXEC) < 0) {
+    if (fcntl(out_pfd[0], F_SETFD, FD_CLOEXEC) < 0 || fcntl(out_pfd[1], F_SETFD, FD_CLOEXEC) < 0) {
         LogError("Failed to set FD_CLOEXEC on pipe: %1", strerror(errno));
         return false;
     }
-    if (fcntl(pfd[0], F_SETFL, O_NONBLOCK) < 0 || fcntl(pfd[1], F_SETFL, O_NONBLOCK) < 0) {
-        LogError("Failed to set O_NONBLOCK on pipe: %1", strerror(errno));
-        return false;
+    if (!block) {
+        if (fcntl(out_pfd[0], F_SETFL, O_NONBLOCK) < 0 || fcntl(out_pfd[1], F_SETFL, O_NONBLOCK) < 0) {
+            LogError("Failed to set O_NONBLOCK on pipe: %1", strerror(errno));
+            return false;
+        }
     }
 
     return true;
 #else
-    if (pipe2(pfd, O_CLOEXEC | O_NONBLOCK) < 0)  {
+    int flags = O_CLOEXEC | (block ? 0 : O_NONBLOCK);
+
+    if (pipe2(out_pfd, flags) < 0)  {
         LogError("Failed to create pipe: %1", strerror(errno));
         return false;
     }
@@ -5247,12 +5252,8 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
         CloseDescriptorSafe(&in_pfd[1]);
     };
     if (in_func.IsValid()) {
-        if (!CreatePipe(in_pfd))
+        if (!CreatePipe(false, in_pfd))
             return false;
-        if (fcntl(in_pfd[1], F_SETFL, O_NONBLOCK) < 0) {
-            LogError("Failed to set O_NONBLOCK on pipe: %1", strerror(errno));
-            return false;
-        }
     }
 
     // Create write pipes
@@ -5262,18 +5263,14 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
         CloseDescriptorSafe(&out_pfd[1]);
     };
     if (out_func.IsValid()) {
-        if (!CreatePipe(out_pfd))
+        if (!CreatePipe(false, out_pfd))
             return false;
-        if (fcntl(out_pfd[0], F_SETFL, O_NONBLOCK) < 0) {
-            LogError("Failed to set O_NONBLOCK on pipe: %1", strerror(errno));
-            return false;
-        }
     }
 
     // Create child termination pipe
     {
         static bool success = ([]() {
-            if (!CreatePipe(interrupt_pfd))
+            if (!CreatePipe(false, interrupt_pfd))
                 return false;
 
             atexit([]() {
@@ -5665,6 +5662,32 @@ void InterruptWait()
     SetEvent(wait_msg_event);
 }
 
+TriggerEvent::TriggerEvent()
+{
+    event = CreateEventA(nullptr, TRUE, FALSE, nullptr);
+    K_CRITICAL(event, "Failed to create event: %1", GetWin32ErrorString());
+}
+
+TriggerEvent::~TriggerEvent()
+{
+    CloseHandle(event);
+}
+
+void TriggerEvent::Trigger()
+{
+    SetEvent(event);
+}
+
+void TriggerEvent::Rearm()
+{
+    ResetEvent(event);
+}
+
+WaitSource TriggerEvent::GetWaitSource()
+{
+    return { event, -1 };
+}
+
 #else
 
 void WaitDelay(int64_t delay)
@@ -5757,6 +5780,69 @@ void InterruptWait()
     pid_t pid = getpid();
     kill(pid, SIGUSR1);
 }
+
+#if defined(__linux__)
+
+TriggerEvent::TriggerEvent()
+{
+    efd = eventfd(0, EFD_CLOEXEC);
+    K_CRITICAL(efd >= 0, "Failed to create eventfd: %1", strerror(errno));
+}
+
+TriggerEvent::~TriggerEvent()
+{
+    CloseDescriptor(efd);
+}
+
+void TriggerEvent::Trigger()
+{
+    uint64_t dummy = 1;
+    K_IGNORE write(efd, &dummy, K_SIZE(dummy));
+}
+
+void TriggerEvent::Rearm()
+{
+    uint64_t dummy = 0;
+    K_IGNORE read(efd, &dummy, K_SIZE(dummy));
+}
+
+WaitSource TriggerEvent::GetWaitSource()
+{
+    return { efd, -1 };
+}
+
+#else
+
+TriggerEvent::TriggerEvent()
+{
+    bool success = CreatePipe(false, pfd);
+    K_CRITICAL(success, "Failed to create TriggerEvent pipe");
+}
+
+TriggerEvent::~TriggerEvent()
+{
+    CloseDescriptor(pfd[0]);
+    CloseDescriptor(pfd[1]);
+}
+
+void TriggerEvent::Trigger()
+{
+    uint8_t dummy = 1;
+    K_IGNORE write(pfd[1], &dummy, 1);
+}
+
+void TriggerEvent::Rearm()
+{
+    uint8_t dummy[32];
+    while (!read(pfd[0], buf, K_SIZE(buf)));
+}
+
+WaitSource TriggerEvent::GetWaitSource()
+{
+    return { pfd[0], -1 };
+}
+
+#endif
 
 #endif
 

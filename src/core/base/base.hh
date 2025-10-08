@@ -4447,7 +4447,7 @@ void CloseHandleSafe(void **handle_ptr); // HANDLE
 #else
 void SetSignalHandler(int signal, void (*func)(int), struct sigaction *prev = nullptr);
 
-bool CreatePipe(int pfd[2]);
+bool CreatePipe(bool block, int out_pfd[2]);
 void CloseDescriptorSafe(int *fd_ptr);
 #endif
 
@@ -4545,6 +4545,25 @@ WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t 
 WaitResult WaitEvents(int64_t timeout);
 
 void InterruptWait();
+
+class TriggerEvent {
+#if defined(_WIN32)
+    void *event = nullptr; // HANDLE
+#elif defined(__linux__)
+    int efd = -1;
+#else
+    int pfd[2] = { -1, -1 };
+#endif
+
+public:
+    TriggerEvent();
+    ~TriggerEvent();
+
+    void Trigger();
+    void Rearm();
+
+    WaitSource GetWaitSource();
+};
 
 #endif
 
