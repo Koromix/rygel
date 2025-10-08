@@ -1072,7 +1072,7 @@ function renderPage() {
                 <div id="ins_menu">${menu ? html`
                     ${Util.mapRange(1 - wide, route.form.chain.length, idx => renderFormMenu(route.form.chain[idx]))}
                     ${sections.length > 1 ? html`
-                        <h1>${route.page.title}</h1>
+                        <a>${route.page.title}</a>
                         <ul>${sections.map(section => html`<li><a href=${'#' + section.anchor}>${section.title}</a></li>`)}</ul>
                     ` : ''}
                 ` : ''}</div>
@@ -1170,7 +1170,7 @@ function renderFormMenu(form) {
 
     return html`
         ${show ? html`
-            <h1>${title}</h1>
+            <a>${title}</a>
             <ul>
                 ${Util.map(form.menu, item => {
                     if (item.type === 'page') {
