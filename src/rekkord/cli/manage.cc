@@ -357,21 +357,21 @@ Options:
         opt.LogUnusedArguments();
     }
 
-    if (!rekkord_config.Complete(0))
+    if (!rk_config.Complete(0))
         return 1;
-    if (!rekkord_config.Validate(0))
+    if (!rk_config.Validate(0))
         return 1;
 
     // Reuse common -K option even if we use it slightly differently
-    key_filename = rekkord_config.key_filename;
+    key_filename = rk_config.key_filename;
 
     if (!key_filename && !generate_key) {
         LogError("Missing master key filename");
         return 1;
     }
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, false);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rk_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rk_config, false);
     if (!repo)
         return 1;
 
@@ -503,13 +503,13 @@ Available key types: %!..+%1%!0)"), FmtSpan(types));
         return 1;
     }
 
-    if (!rekkord_config.Complete())
+    if (!rk_config.Complete())
         return 1;
-    if (!rekkord_config.Validate())
+    if (!rk_config.Validate())
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rk_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rk_config, true);
     if (!repo)
         return 1;
 
@@ -566,18 +566,18 @@ Identify options:
         opt.LogUnusedArguments();
     }
 
-    if (!rekkord_config.Complete())
+    if (!rk_config.Complete())
         return 1;
 
     rk_KeySet *keyset = (rk_KeySet *)AllocateSafe(K_SIZE(rk_KeySet));
     K_DEFER { ReleaseSafe(keyset, K_SIZE(*keyset)); };
 
     if (online) {
-        if (!rekkord_config.Validate())
+        if (!rk_config.Validate())
             return 1;
 
-        std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
-        std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
+        std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rk_config);
+        std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rk_config, true);
         if (!repo)
             return 1;
 
@@ -586,12 +586,12 @@ Identify options:
 
         *keyset = repo->GetKeys();
     } else {
-        if (!rekkord_config.key_filename) {
+        if (!rk_config.key_filename) {
             LogError("Missing repository key file");
             return 1;
         }
 
-        if (!rk_LoadKeyFile(rekkord_config.key_filename, keyset))
+        if (!rk_LoadKeyFile(rk_config.key_filename, keyset))
             return 1;
     }
 

@@ -61,21 +61,21 @@ Common options:
                                    %!D..(default: automatic)%!0)"));
 }
 
-rk_Config rekkord_config;
+rk_Config rk_config;
 
 bool HandleCommonOption(OptionParser &opt, bool ignore_unknown)
 {
     if (opt.Test("-C", "--config_file", OptionType::Value)) {
         // Already handled
     } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-        if (!rk_DecodeURL(opt.current_value, &rekkord_config))
+        if (!rk_DecodeURL(opt.current_value, &rk_config))
             return 1;
     } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
-        rekkord_config.key_filename = opt.current_value;
+        rk_config.key_filename = opt.current_value;
     } else if (opt.Test("-j", "--threads", OptionType::Value)) {
-        if (!ParseInt(opt.current_value, &rekkord_config.threads))
+        if (!ParseInt(opt.current_value, &rk_config.threads))
             return 1;
-        if (rekkord_config.threads < 1) {
+        if (rk_config.threads < 1) {
             LogError("Threads count cannot be < 1");
             return 1;
         }
@@ -221,7 +221,7 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         do { \
             if (TestStr(cmd, K_STRINGIFY(Cmd))) { \
                 if ((ReadConfig) && config_filename) { \
-                    if (!rk_LoadConfig(config_filename, &rekkord_config)) \
+                    if (!rk_LoadConfig(config_filename, &rk_config)) \
                         return 1; \
                      \
                     /* Reload common options to override config file values */ \

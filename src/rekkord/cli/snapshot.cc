@@ -194,13 +194,13 @@ Available metadata save options:
         }
     }
 
-    if (!rekkord_config.Complete())
+    if (!rk_config.Complete())
         return 1;
-    if (!rekkord_config.Validate())
+    if (!rk_config.Validate())
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rk_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rk_config, true);
     if (!repo)
         return 1;
 
@@ -330,13 +330,13 @@ If you use a snapshot channel, the most recent snapshot object that matches will
         return 1;
     }
 
-    if (!rekkord_config.Complete())
+    if (!rk_config.Complete())
         return 1;
-    if (!rekkord_config.Validate())
+    if (!rk_config.Validate())
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rk_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rk_config, true);
     if (!repo)
         return 1;
 
@@ -398,13 +398,13 @@ T(R"(Usage: %!..+%1 scan [-C filename] [option...]%!0)"), FelixTarget);
         opt.LogUnusedArguments();
     }
 
-    if (!rekkord_config.Complete())
+    if (!rk_config.Complete())
         return 1;
-    if (!rekkord_config.Validate())
+    if (!rk_config.Validate())
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rk_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rk_config, true);
     if (!repo)
         return 1;
 

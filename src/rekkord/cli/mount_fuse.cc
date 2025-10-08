@@ -549,15 +549,15 @@ If you use a snapshot channel, the most recent snapshot object that matches will
         }
     }
 
-    if (!rekkord_config.Complete())
+    if (!rk_config.Complete())
         return 1;
-    if (!rekkord_config.Validate())
+    if (!rk_config.Validate())
         return 1;
 
     // We keep these objects in globals for simplicity, but we need to destroy them at the end
     // of this function, before some exit functions (such as ssh_finalize) are called.
-    disk = rk_OpenDisk(rekkord_config);
-    repo = rk_OpenRepository(disk.get(), rekkord_config, true);
+    disk = rk_OpenDisk(rk_config);
+    repo = rk_OpenRepository(disk.get(), rk_config, true);
     if (!repo)
         return 1;
     K_DEFER {

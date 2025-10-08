@@ -45,8 +45,8 @@ static bool FetchPlan(Allocator *alloc, HeapArray<ItemData> *out_items)
 {
     K_DEFER_NC(err_guard, len = out_items->len) { out_items->RemoveFrom(len); };
 
-    Span<const char> api = rekkord_config.agent_url;
-    const char *key = rekkord_config.api_key;
+    Span<const char> api = rk_config.agent_url;
+    const char *key = rk_config.api_key;
 
     HeapArray<char> body;
     {
@@ -169,8 +169,8 @@ static bool SendReport(Span<const char> json)
 {
     BlockAllocator temp_alloc;
 
-    Span<const char> api = rekkord_config.agent_url;
-    const char *key = rekkord_config.api_key;
+    Span<const char> api = rk_config.agent_url;
+    const char *key = rk_config.api_key;
 
     CURL *curl = curl_Init();
     if (!curl)
@@ -262,8 +262,8 @@ static bool ReportError(const char *channel, int64_t time, const char *message)
 
 static bool RunSnapshot(const char *channel, Span<const char *const> paths, rk_SaveInfo *out_info)
 {
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
+    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rk_config);
+    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rk_config, true);
     if (!repo)
         return false;
 
@@ -345,16 +345,16 @@ T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
     {
         unsigned int flags = (int)rk_ConfigFlag::RequireAuth | (int)rk_ConfigFlag::RequireAgent;
 
-        if (!rekkord_config.Complete(flags))
+        if (!rk_config.Complete(flags))
             return 1;
-        if (!rekkord_config.Validate(flags))
+        if (!rk_config.Validate(flags))
             return 1;
     }
 
     // Check repository connection
     {
-        std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rekkord_config);
-        std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rekkord_config, true);
+        std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rk_config);
+        std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rk_config, true);
         if (!repo)
             return 1;
 
@@ -377,7 +377,7 @@ T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
 
     // Run periodic tasks until exit
     for (;;) {
-        WaitResult ret = WaitEvents(rekkord_config.agent_period);
+        WaitResult ret = WaitEvents(rk_config.agent_period);
 
         if (ret == WaitResult::Exit) {
             LogInfo("Exit requested");
