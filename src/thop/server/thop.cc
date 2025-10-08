@@ -599,9 +599,6 @@ Options:
                 LogInfo("Process interrupted");
                 status = 1;
                 run = false;
-            } else if (ret == WaitResult::Error) {
-                status = 1;
-                run = false;
             }
 
             LogDebug("Prune sessions");

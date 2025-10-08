@@ -1299,9 +1299,6 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
                 LogInfo("Process interrupted");
                 status = 1;
                 run = false;
-            } else if (ret == WaitResult::Error) {
-                status = 1;
-                run = false;
             } else if (ret == WaitResult::Message) {
                 LogDebug("Reload domain");
                 InitDomain();

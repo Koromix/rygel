@@ -4516,8 +4516,7 @@ enum class WaitResult {
     Timeout,
     Interrupt,
     Message,
-    Exit,
-    Error
+    Exit
 };
 
 #if defined(_WIN32)

@@ -453,9 +453,6 @@ By default, the first of the following config files will be used:
                 LogInfo("Process interrupted");
                 status = 1;
                 break;
-            } else if (ret == WaitResult::Error) {
-                status = 1;
-                break;
             }
 
             // Handle input events

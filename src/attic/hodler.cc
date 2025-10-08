@@ -1351,7 +1351,7 @@ Available URL formats: %!..+%4%!0)",
 
             if (ret == WaitResult::Exit) {
                 break;
-            } else if (ret == WaitResult::Interrupt || ret == WaitResult::Error) {
+            } else if (ret == WaitResult::Interrupt) {
                 return 1;
             }
         }

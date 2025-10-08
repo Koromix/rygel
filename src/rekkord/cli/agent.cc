@@ -386,9 +386,6 @@ T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
             LogInfo("Process interrupted");
             status = 1;
             break;
-        } else if (ret == WaitResult::Error) {
-            status = 1;
-            break;
         }
 
         CheckPlan();

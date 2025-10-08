@@ -4793,6 +4793,7 @@ bool EnsureDirectoryExists(const char *filename)
 
 #if defined(_WIN32)
 
+static const int main_thread = GetCurrentThreadId();
 static HANDLE console_ctrl_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
 static bool ignore_ctrl_event = false;
 
@@ -5154,9 +5155,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
 
 #else
 
-#if defined(__OpenBSD__) || defined(__FreeBSD__)
 static const pthread_t main_thread = pthread_self();
-#endif
 static std::atomic_bool flag_signal { false };
 static std::atomic_int explicit_signal { 0 };
 static int interrupt_pfd[2] = {-1, -1};
@@ -5175,12 +5174,10 @@ void SetSignalHandler(int signal, void (*func)(int), struct sigaction *prev)
 
 static void DefaultSignalHandler(int signal)
 {
-#if defined(__OpenBSD__) || defined(__FreeBSD__)
-    if (!pthread_main_np()) {
+    if (pthread_self() != main_thread) {
         pthread_kill(main_thread, signal);
         return;
     }
-#endif
 
     pid_t pid = getpid();
     K_ASSERT(pid > 1);
@@ -5591,9 +5588,9 @@ WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t 
 
     LocalArray<HANDLE, 64> events;
     DWORD wake = 0;
+    DWORD wait_ret = 0;
 
     events.Append(console_ctrl_event);
-    events.Append(wait_msg_event);
 
     // There is no way to get a waitable HANDLE for the Win32 GUI message pump.
     // Instead, waitable sources (such as the system tray code) return NULL to indicate that
@@ -5608,6 +5605,11 @@ WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t 
         timeout = (int64_t)std::min((uint64_t)timeout, (uint64_t)src.timeout);
     }
 
+    if (main_thread == GetCurrentThreadId()) {
+        wait_ret = WAIT_OBJECT_0 + (DWORD)events.len;
+        events.Append(wait_msg_event);
+    }
+
     DWORD ret;
     if (timeout >= 0) {
         do {
@@ -5620,34 +5622,31 @@ WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t 
         ret = MsgWaitForMultipleObjects((DWORD)events.len, events.data, FALSE, INFINITE, wake);
     }
 
-    switch (ret) {
-        case WAIT_OBJECT_0: return WaitResult::Interrupt;
-        case WAIT_OBJECT_0 + 1: {
-            ResetEvent(wait_msg_event);
-            return WaitResult::Message;
-        } break;
-        default: {
-            if (ret == WAIT_OBJECT_0 + events.len) {
-                // Mark all sources with an interest in the message pump as ready
-                if (out_ready) {
-                    uint64_t flags = 0;
-                    for (Size i = 0; i < sources.len; i++) {
-                        flags |= !sources[i].handle ? (1ull << i) : 0;
-                    }
-                    *out_ready = flags;
-                }
-                return WaitResult::Ready;
+    if (ret == WAIT_TIMEOUT) {
+        return WaitResult::Timeout;
+    } else if (ret == WAIT_OBJECT_0) {
+        return WaitResult::Interrupt;
+    } else if (ret == wait_ret) {
+        ResetEvent(wait_msg_event);
+        return WaitResult::Message;
+    } else if (ret == WAIT_OBJECT_0 + events.len) {
+        // Mark all sources with an interest in the message pump as ready
+        if (out_ready) {
+            uint64_t flags = 0;
+            for (Size i = 0; i < sources.len; i++) {
+                flags |= !sources[i].handle ? (1ull << i) : 0;
             }
+            *out_ready = flags;
+        }
+        return WaitResult::Ready;
+    } else {
+        Size idx = (Size)ret - WAIT_OBJECT_0 - (main ? 2 : 0);
+        K_ASSERT(idx >= 0 && idx < sources.len);
 
-            Size idx = (Size)ret - WAIT_OBJECT_0 - 2;
-            K_ASSERT(idx >= 0 && idx < sources.len);
-
-            if (out_ready) {
-                *out_ready |= 1ull << idx;
-            }
-            return WaitResult::Ready;
-        } break;
-        case WAIT_TIMEOUT: return WaitResult::Timeout;
+        if (out_ready) {
+            *out_ready |= 1ull << idx;
+        }
+        return WaitResult::Ready;
     }
 }
 
@@ -5734,7 +5733,7 @@ WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t 
             return WaitResult::Exit;
         } else if (explicit_signal) {
             return WaitResult::Interrupt;
-        } else if (message) {
+        } else if (pthread_self() == main_thread) {
             message = false;
             return WaitResult::Message;
         }
@@ -5746,7 +5745,7 @@ WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t 
                 continue;
 
             LogError("Failed to poll for events: %1", strerror(errno));
-            return WaitResult::Error;
+            abort();
         } else if (ready > 0) {
             if (out_ready) {
                 uint64_t flags = 0;
