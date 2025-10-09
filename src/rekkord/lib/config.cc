@@ -213,7 +213,14 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
         while (ini.Next(&prop)) {
             if (prop.section == "Repository") {
                 if (prop.key == "URL") {
-                    valid &= rk_DecodeURL(prop.value, &config);
+                    if (rk_DecodeURL(prop.value, &config)) {
+                        if (config.type == rk_DiskType::Local && !IsPathAbsolute(config.url)) {
+                            // Fix local repository URLs to be relative to the INI file directory
+                            config.url = NormalizePath(config.url, root_directory, &config.str_alloc).ptr;
+                        }
+                    } else {
+                        valid = false;
+                    }
                 } else if (prop.key == "KeyFile") {
                     config.key_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                 } else {
