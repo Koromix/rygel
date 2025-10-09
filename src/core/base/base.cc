@@ -5156,10 +5156,11 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
 #else
 
 static const pthread_t main_thread = pthread_self();
+
 static std::atomic_bool flag_signal { false };
 static std::atomic_int explicit_signal { 0 };
-static int interrupt_pfd[2] = {-1, -1};
-static bool kill_group = false;
+static std::atomic_int interrupt_pfd[2] { -1, -1 };
+static std::atomic_bool kill_group { false };
 
 void SetSignalHandler(int signal, void (*func)(int), struct sigaction *prev)
 {
@@ -5182,9 +5183,9 @@ static void DefaultSignalHandler(int signal)
     pid_t pid = getpid();
     K_ASSERT(pid > 1);
 
-    if (interrupt_pfd[1] >= 0) {
+    if (int fd = interrupt_pfd[1].load(); fd >= 0) {
         char dummy = 0;
-        K_IGNORE write(interrupt_pfd[1], &dummy, 1);
+        K_IGNORE write(fd, &dummy, 1);
     }
 
     if (flag_signal) {
@@ -5236,6 +5237,28 @@ void CloseDescriptorSafe(int *fd_ptr)
     *fd_ptr = -1;
 }
 
+static void InitInterruptPipe()
+{
+    static bool success = ([]() {
+        static int pfd[2];
+
+        if (!CreatePipe(false, pfd))
+            return false;
+
+        atexit([]() {
+            CloseDescriptor(pfd[0]);
+            CloseDescriptor(pfd[1]);
+        });
+
+        interrupt_pfd[0] = pfd[0];
+        interrupt_pfd[1] = pfd[1];
+
+        return true;
+    })();
+
+    K_CRITICAL(success, "Failed to create interrupt pipe");
+}
+
 bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                         FunctionRef<Span<const uint8_t>()> in_func,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
@@ -5264,27 +5287,12 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
             return false;
     }
 
-    // Create child termination pipe
+    InitInterruptPipe();
+
+    // Best effort
     {
-        static bool success = ([]() {
-            if (!CreatePipe(false, interrupt_pfd))
-                return false;
-
-            atexit([]() {
-                CloseDescriptorSafe(&interrupt_pfd[0]);
-                CloseDescriptorSafe(&interrupt_pfd[1]);
-            });
-
-            // Best effort
-            kill_group = !setpgid(0, 0);
-
-            return true;
-        })();
-
-        if (!success) {
-            LogError("Failed to create termination pipe");
-            return false;
-        }
+        static std::once_flag flag;
+        std::call_once(flag, []() { kill_group = !setpgid(0, 0); });
     }
 
     // Prepare new environment (if needed)
@@ -5358,9 +5366,9 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
             out_idx = pfds.len;
             pfds.Append({ out_pfd[0], POLLIN, 0 });
         }
-        if (interrupt_pfd[0] >= 0) {
+        if (int fd = interrupt_pfd[0].load(); fd >= 0) {
             term_idx = pfds.len;
-            pfds.Append({ interrupt_pfd[0], POLLIN, 0 });
+            pfds.Append({ fd, POLLIN, 0 });
         }
 
         if (K_RESTART_EINTR(poll(pfds.data, (nfds_t)pfds.len, -1), < 0) < 0) {
@@ -5710,11 +5718,12 @@ void WaitDelay(int64_t delay)
 WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t *out_ready)
 {
     LocalArray<struct pollfd, 64> pfds;
-    K_ASSERT(sources.len <= K_LEN(pfds.data));
+    K_ASSERT(sources.len <= K_LEN(pfds.data) - 1);
+
+    // Don't exit after SIGINT/SIGTERM, just signal us
+    flag_signal = true;
 
     static std::atomic_bool message { false };
-
-    flag_signal = true;
     SetSignalHandler(SIGUSR1, [](int) { message = true; });
 
     for (const WaitSource &src: sources) {
@@ -5723,6 +5732,9 @@ WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t 
 
         timeout = (int64_t)std::min((uint64_t)timeout, (uint64_t)src.timeout);
     }
+
+    InitInterruptPipe();
+    pfds.Append({ interrupt_pfd[0], POLLIN, 0 });
 
     int64_t start = (timeout >= 0) ? GetMonotonicTime() : 0;
     int64_t until = start + timeout;
@@ -5747,14 +5759,17 @@ WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t 
             LogError("Failed to poll for events: %1", strerror(errno));
             abort();
         } else if (ready > 0) {
-            if (out_ready) {
-                uint64_t flags = 0;
-                for (Size i = 0; i < pfds.len; i++) {
-                    flags |= pfds[i].revents ? (1ull << i) : 0;
-                }
-                *out_ready = flags;
+            uint64_t flags = 0;
+            for (Size i = 0; i < pfds.len - 1; i++) {
+                flags |= pfds[i].revents ? (1ull << i) : 0;
             }
-            return WaitResult::Ready;
+
+            if (flags) {
+                if (out_ready) {
+                    *out_ready = flags;
+                }
+                return WaitResult::Ready;
+            }
         }
 
         if (timeout >= 0) {
@@ -6038,6 +6053,8 @@ void InitApp()
     SetSignalHandler(SIGTERM, DefaultSignalHandler);
     SetSignalHandler(SIGHUP, DefaultSignalHandler);
     SetSignalHandler(SIGPIPE, [](int) {});
+
+    InitInterruptPipe();
 
     // Kill children on exit
     atexit([]() {
