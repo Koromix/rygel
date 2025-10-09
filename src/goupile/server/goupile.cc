@@ -1268,7 +1268,7 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
     // From here on, don't quit abruptly
     // Trigger a check when something happens to the zygote process
     WaitEvents(0);
-    SetSignalHandler(SIGCHLD, [](int) { InterruptWait(); });
+    SetSignalHandler(SIGCHLD, [](int) { PostWaitMessage(); });
 
     // Run!
     if (!daemon.Start(HandleRequest))

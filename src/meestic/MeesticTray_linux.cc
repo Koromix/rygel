@@ -133,7 +133,7 @@ static void UpdateTray()
     tray->AddSeparator();
     tray->AddAction(T("&Exit"), []() {
         run = false;
-        InterruptWait();
+        PostWaitMessage();
     });
 }
 

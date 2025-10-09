@@ -4539,11 +4539,11 @@ struct WaitSource {
 
 // After WaitEvents() has been called once (even with timeout 0), a few signals (such as SIGINT, SIGHUP)
 // and their Windows equivalent will be permanently ignored.
-// Beware, on Unix platforms, this may not work correctly if not called from the main thread.
+// Only the main thread (running main) will get WaitResult::Message events (and SIGUSR1).
 WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t *out_ready = nullptr);
 WaitResult WaitEvents(int64_t timeout);
 
-void InterruptWait();
+void PostWaitMessage();
 
 #endif
 

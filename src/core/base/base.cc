@@ -5664,7 +5664,7 @@ WaitResult WaitEvents(int64_t timeout)
     return WaitEvents(sources, timeout);
 }
 
-void InterruptWait()
+void PostWaitMessage()
 {
     SetEvent(wait_msg_event);
 }
@@ -5763,7 +5763,7 @@ WaitResult WaitEvents(int64_t timeout)
     return WaitEvents(sources, timeout);
 }
 
-void InterruptWait()
+void PostWaitMessage()
 {
     pid_t pid = getpid();
     kill(pid, SIGUSR1);

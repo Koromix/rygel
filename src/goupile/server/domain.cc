@@ -334,7 +334,7 @@ void SyncDomain(bool wait, Span<InstanceHolder *> changes)
     }
 
     // Signal main thread to reload domain
-    InterruptWait();
+    PostWaitMessage();
 
     if (wait) {
         do {
