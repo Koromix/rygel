@@ -5669,32 +5669,6 @@ void InterruptWait()
     SetEvent(wait_msg_event);
 }
 
-TriggerEvent::TriggerEvent()
-{
-    event = CreateEventA(nullptr, TRUE, FALSE, nullptr);
-    K_CRITICAL(event, "Failed to create event: %1", GetWin32ErrorString());
-}
-
-TriggerEvent::~TriggerEvent()
-{
-    CloseHandle(event);
-}
-
-void TriggerEvent::Trigger()
-{
-    SetEvent(event);
-}
-
-void TriggerEvent::Rearm()
-{
-    ResetEvent(event);
-}
-
-WaitSource TriggerEvent::GetWaitSource()
-{
-    return { event, -1 };
-}
-
 #else
 
 void WaitDelay(int64_t delay)
@@ -5794,69 +5768,6 @@ void InterruptWait()
     pid_t pid = getpid();
     kill(pid, SIGUSR1);
 }
-
-#if defined(__linux__)
-
-TriggerEvent::TriggerEvent()
-{
-    efd = eventfd(0, EFD_CLOEXEC);
-    K_CRITICAL(efd >= 0, "Failed to create eventfd: %1", strerror(errno));
-}
-
-TriggerEvent::~TriggerEvent()
-{
-    CloseDescriptor(efd);
-}
-
-void TriggerEvent::Trigger()
-{
-    uint64_t dummy = 1;
-    K_IGNORE write(efd, &dummy, K_SIZE(dummy));
-}
-
-void TriggerEvent::Rearm()
-{
-    uint64_t dummy = 0;
-    K_IGNORE read(efd, &dummy, K_SIZE(dummy));
-}
-
-WaitSource TriggerEvent::GetWaitSource()
-{
-    return { efd, -1 };
-}
-
-#else
-
-TriggerEvent::TriggerEvent()
-{
-    bool success = CreatePipe(false, pfd);
-    K_CRITICAL(success, "Failed to create TriggerEvent pipe");
-}
-
-TriggerEvent::~TriggerEvent()
-{
-    CloseDescriptor(pfd[0]);
-    CloseDescriptor(pfd[1]);
-}
-
-void TriggerEvent::Trigger()
-{
-    uint8_t dummy = 1;
-    K_IGNORE write(pfd[1], &dummy, 1);
-}
-
-void TriggerEvent::Rearm()
-{
-    uint8_t dummy[32];
-    while (!read(pfd[0], buf, K_SIZE(buf)));
-}
-
-WaitSource TriggerEvent::GetWaitSource()
-{
-    return { pfd[0], -1 };
-}
-
-#endif
 
 #endif
 

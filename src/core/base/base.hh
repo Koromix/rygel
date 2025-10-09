@@ -4545,25 +4545,6 @@ WaitResult WaitEvents(int64_t timeout);
 
 void InterruptWait();
 
-class TriggerEvent {
-#if defined(_WIN32)
-    void *event = nullptr; // HANDLE
-#elif defined(__linux__)
-    int efd = -1;
-#else
-    int pfd[2] = { -1, -1 };
-#endif
-
-public:
-    TriggerEvent();
-    ~TriggerEvent();
-
-    void Trigger();
-    void Rearm();
-
-    WaitSource GetWaitSource();
-};
-
 #endif
 
 int GetCoreCount();
