@@ -13,7 +13,7 @@ VERSION_TARGET=goupile
 DOCKER_IMAGE=rocky9
 
 build() {
-    dnf install -y clang lld gcc-toolset-13-libatomic-devel
+    dnf install -y clang lld gcc-toolset-14-libatomic-devel
 
     ./bootstrap.sh
     ./felix -pParanoid --host=:clang:lld goupile
