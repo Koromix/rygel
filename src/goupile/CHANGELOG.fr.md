@@ -2,14 +2,22 @@
 
 ## Goupile 3.11
 
-### Goupile 3.11
-
-*Sortie le 06/10/2025*
-
 > [!IMPORTANT]
 > Le **déploiement et la configuration de Goupile** ont évolué avec cette version. Certains réglages ne sont pas repris automatiquement, et doivent être configurés graphiquement après la mise à jour.
 > 
 > Après la mise à jour, vous **devez ouvrir le panneau d'administration** de Goupile pour terminer la configuration !
+
+### Goupile 3.11.1
+
+*Sortie le 09/10/2025*
+
+- Évite le rechargement de la page lors de l'enregistrement en mode invité
+- Respect de la navigation séquentielle après un enregistrement en mode invité
+- Correction du style de titre dans le menu latéral des instances v2
+
+### Goupile 3.11
+
+*Sortie le 06/10/2025*
 
 **Corrections majeures :**
 

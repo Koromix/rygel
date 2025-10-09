@@ -2,15 +2,23 @@
 
 ## Goupile 3.11
 
-### Goupile 3.11
-
-*Released on 2025-10-06*
-
 > [!IMPORTANT]
 > The **deployment and initial configuration** of Goupile have changed with this version.
 >
 > Some settings are not carried over automatically and must be configured graphically after the update.
 > After updating, you **must open the Goupile admin panel** to complete the configuration!
+
+### Goupile 3.11.1
+
+*Released on 2025-10-09*
+
+- Avoid page refresh when saving as guest
+- Follow sequence navigation when saving as guest
+- Fix title style in left menu of legacy instances
+
+### Goupile 3.11
+
+*Released on 2025-10-06*
 
 **Major bug fixes:**
 
