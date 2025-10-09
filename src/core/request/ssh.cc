@@ -95,22 +95,35 @@ bool ssh_Config::Complete()
     return true;
 }
 
+static bool CheckURLComponents(const ssh_Config &config)
+{
+    bool valid = true;
+
+    if (!config.host) {
+        LogError("Missing SFTP host name");
+        valid = false;
+    }
+    if (!config.port || config.port > 65535) {
+        LogError("Invalid SFTP port");
+        valid = false;
+    }
+    if (!config.username) {
+        LogError("Missing SFTP username");
+        valid = false;
+    }
+    if (!config.path) {
+        LogError("Missing SFTP remote path");
+        valid = false;
+    }
+
+    return valid;
+}
+
 bool ssh_Config::Validate() const
 {
     bool valid = true;
 
-    if (!host) {
-        LogError("Missing SFTP host name");
-        valid = false;
-    }
-    if (!port || port > 65535) {
-        LogError("Invalid SFTP port");
-        valid = false;
-    }
-    if (!username) {
-        LogError("Missing SFTP username");
-        valid = false;
-    }
+    valid &= CheckURLComponents(*this);
 
     if (!known_hosts && !fingerprint) {
         LogError("Cannot use SFTP without known Fingerprint and without using KnownHosts");
@@ -161,7 +174,10 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
         out_config->path = curl_GetUrlPartStr(h, CURLUPART_PATH, &out_config->str_alloc).ptr;
 
         // The first '/' separates the host from the path, use '//' for absolute path
-        if (out_config->path && out_config->path[0] == '/') {
+        if (!out_config->path) {
+            out_config->path = "";
+        }
+        if (out_config->path[0] == '/') {
             out_config->path++;
         }
     } else {
@@ -183,6 +199,22 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
     }
 
     return true;
+}
+
+const char *ssh_MakeURL(const ssh_Config &config, Allocator *alloc)
+{
+    if (!CheckURLComponents(config))
+        return nullptr;
+
+    const char *url = nullptr;
+
+    if (config.port > 0 && config.port != 22) {
+        url = Fmt(alloc, "sftp://%1@%2:%3/%4", config.username, config.host, config.port, config.path).ptr;
+    } else {
+        url = Fmt(alloc, "sftp://%1@%2/%3", config.username, config.host, config.path).ptr;
+    }
+
+    return url;
 }
 
 static bool SetStringOption(ssh_session ssh, ssh_options_e type, const char *str)

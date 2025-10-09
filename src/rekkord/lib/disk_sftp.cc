@@ -89,13 +89,9 @@ SftpDisk::SftpDisk(const ssh_Config &config)
 {
     config.Clone(&this->config);
 
-    if (!this->config.path || !this->config.path[0]) {
-        this->config.path = ".";
-    }
-
     // Sanity checks
-    if (strlen(this->config.path) > MaxPathSize) {
-        LogError("Directory path '%1' is too long", this->config.path);
+    if (strlen(config.path) > MaxPathSize) {
+        LogError("Directory path '%1' is too long", config.path);
         return;
     }
 
@@ -106,11 +102,7 @@ SftpDisk::SftpDisk(const ssh_Config &config)
     ReleaseConnection(conn);
 
     // We're good!
-    if (config.port > 0 && config.port != 22) {
-        url = Fmt(&this->config.str_alloc, "sftp://%1@%2:%3/%4", config.username, config.host, config.port, config.path ? config.path : "").ptr;
-    } else {
-        url = Fmt(&this->config.str_alloc, "sftp://%1@%2/%3", config.username, config.host, config.path ? config.path : "").ptr;
-    }
+    url = ssh_MakeURL(config, &this->config.str_alloc);
     default_threads = std::min(8 * GetCoreCount(), 64);
 }
 

@@ -73,6 +73,7 @@ struct rk_Config {
 };
 
 bool rk_DecodeURL(Span<const char> url, rk_Config *out_config);
+const char *rk_MakeURL(const rk_Config &config, Allocator *alloc);
 
 bool rk_LoadConfig(StreamReader *st, rk_Config *out_config);
 bool rk_LoadConfig(const char *filename, rk_Config *out_config);

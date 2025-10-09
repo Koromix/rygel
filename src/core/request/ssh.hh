@@ -51,6 +51,7 @@ struct ssh_Config {
 };
 
 bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config);
+const char *ssh_MakeURL(const ssh_Config &config, Allocator *alloc);
 
 ssh_session ssh_Connect(const ssh_Config &config);
 

@@ -49,6 +49,7 @@ struct s3_Config {
 };
 
 bool s3_DecodeURL(Span<const char> url, s3_Config *out_config);
+const char *s3_MakeURL(const s3_Config &config, Allocator *alloc);
 
 enum class s3_LockMode {
     Governance,

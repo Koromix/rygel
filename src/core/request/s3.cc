@@ -106,6 +106,34 @@ bool s3_Config::Complete()
     return true;
 }
 
+static bool CheckURLComponents(const s3_Config &config)
+{
+    bool valid = true;
+
+    if (!TestStr(config.scheme, "http") && !TestStr(config.scheme, "https")) {
+        LogError("Invalid S3 scheme '%1'", config.scheme);
+        valid = false;
+    }
+    if (!config.host) {
+        LogError("Missing S3 host");
+        valid = false;
+    }
+    if (!config.port || config.port > 65535) {
+        LogError("Invalid S3 port");
+        valid = false;
+    }
+    if (config.bucket && !config.bucket[0]) {
+        LogError("Empty S3 bucket name");
+        valid = false;
+    }
+    if (config.prefix && !config.prefix[0]) {
+        LogError("Empty S3 prefix");
+        valid = false;
+    }
+
+    return valid;
+}
+
 bool s3_Config::Validate() const
 {
     bool valid = true;
@@ -147,7 +175,7 @@ void s3_Config::Clone(s3_Config *out_config) const
 {
     out_config->str_alloc.Reset();
 
-    out_config->scheme = scheme ? DuplicateString(scheme, &out_config->str_alloc).ptr : nullptr;
+    out_config->scheme = scheme ? DuplicateString(scheme, &out_config->str_alloc).ptr : "https";
     out_config->host = host ? DuplicateString(host, &out_config->str_alloc).ptr : nullptr;
     out_config->port = port;
     out_config->region = region ? DuplicateString(region, &out_config->str_alloc).ptr : nullptr;
@@ -223,7 +251,7 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
         }
     }
 
-    out_config->scheme = scheme;
+    out_config->scheme = scheme ? scheme : "https";
     out_config->host = host.ptr;
     out_config->port = port;
     if (!out_config->region) {
@@ -233,6 +261,38 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
     out_config->prefix = prefix;
 
     return true;
+}
+
+static int GetDefaultSchemePort(Span<const char> scheme)
+{
+    if (TestStr(scheme, "http")) {
+        return 80;
+    } else if (TestStr(scheme, "https")) {
+        return 443;
+    } else {
+        // Garbage in, garbage out
+        return -1;
+    }
+}
+
+const char *s3_MakeURL(const s3_Config &config, Allocator *alloc)
+{
+    if (!CheckURLComponents(config))
+        return nullptr;
+
+    const char *url = nullptr;
+
+    if (config.port > 0 && config.port != GetDefaultSchemePort(config.scheme)) {
+        url = Fmt(alloc, "s3:%1://%2:%3%4%5%6%7", config.scheme, config.host, config.port,
+                         config.bucket ? "/" : "", config.bucket ? config.bucket : "",
+                         config.prefix ? "/" : "", config.prefix ? config.prefix : "").ptr;
+    } else {
+        url = Fmt(alloc, "s3:%1://%2%3%4%5%6", config.scheme, config.host,
+                         config.bucket ? "/" : "", config.bucket ? config.bucket : "",
+                         config.prefix ? "/" : "", config.prefix ? config.prefix : "").ptr;
+    }
+
+    return url;
 }
 
 static FmtArg FormatSha256(const uint8_t sha256[32])
@@ -286,14 +346,7 @@ bool s3_Client::Open(const s3_Config &config)
 
     config.Clone(&this->config);
 
-    // Skip explicit port when not needed
-    if (config.port == 80 && TestStr(config.scheme, "http")) {
-        this->config.port = -1;
-    } else if (config.port == 443 && TestStr(config.scheme, "https")) {
-        this->config.port = -1;
-    }
-
-    if (!this->config.region) {
+    if (!config.region) {
         const char *region1 = GetS3Env("REGION");
         const char *region2 = GetS3Env("DEFAULT_REGION");
 
@@ -304,14 +357,14 @@ bool s3_Client::Open(const s3_Config &config)
         }
     }
 
-    if (this->config.port > 0) {
-        host = Fmt(&this->config.str_alloc, "%1:%2", config.host, this->config.port).ptr;
+    if (config.port > 0 && config.port != GetDefaultSchemePort(config.scheme)) {
+        host = Fmt(&this->config.str_alloc, "%1:%2", config.host, config.port).ptr;
     } else {
         host = this->config.host;
     }
-    url = Fmt(&this->config.str_alloc, "%1://%2%3%4%5%6", this->config.scheme, host,
-              config.bucket ? "/" : "", config.bucket ? config.bucket : "",
-              config.prefix ? "/" : "", config.prefix ? config.prefix : "").ptr;
+
+    url = s3_MakeURL(config, &this->config.str_alloc);
+    url += StartsWith(url, "s3:") ? 3 : 0;
 
     return OpenAccess();
 }

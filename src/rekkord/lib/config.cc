@@ -100,14 +100,7 @@ bool rk_Config::Validate(unsigned int flags) const
     switch (type) {
         case rk_DiskType::Local: {} break;
         case rk_DiskType::S3: { valid &= s3.remote.Validate(); } break;
-        case rk_DiskType::SFTP: {
-            valid &= ssh.Validate();
-
-            if (!ssh.path) {
-                LogError("Missing SFTP remote path");
-                valid = false;
-            }
-        } break;
+        case rk_DiskType::SFTP: { valid &= ssh.Validate(); } break;
     }
 
     return valid;
@@ -196,6 +189,19 @@ bool rk_DecodeURL(Span<const char> url, rk_Config *out_config)
     }
 }
 
+const char *rk_MakeURL(const rk_Config &config, Allocator *alloc)
+{
+    K_ASSERT(config.url);
+
+    switch (config.type) {
+        case rk_DiskType::Local: return NormalizePath(config.url, alloc).ptr;
+        case rk_DiskType::S3: return s3_MakeURL(config.s3.remote, alloc);
+        case rk_DiskType::SFTP: return ssh_MakeURL(config.ssh, alloc);
+    }
+
+    K_UNREACHABLE();
+}
+
 bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
 {
     rk_Config config;
@@ -214,7 +220,7 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
             if (prop.section == "Repository") {
                 if (prop.key == "URL") {
                     if (rk_DecodeURL(prop.value, &config)) {
-                        if (config.type == rk_DiskType::Local && !IsPathAbsolute(config.url)) {
+                        if (config.type == rk_DiskType::Local && !PathIsAbsolute(config.url)) {
                             // Fix local repository URLs to be relative to the INI file directory
                             config.url = NormalizePath(config.url, root_directory, &config.str_alloc).ptr;
                         }

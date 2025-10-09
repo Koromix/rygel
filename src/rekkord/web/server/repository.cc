@@ -23,27 +23,24 @@
 
 namespace K {
 
-static bool CheckURL(const char *url)
+static const char *NormalizeURL(const char *url, Allocator *alloc)
 {
     rk_Config config;
 
     if (!rk_DecodeURL(url, &config))
-        return false;
-
-    bool valid = false;
+        return nullptr;
 
     switch (config.type) {
-        case rk_DiskType::Local: {} break;
-        case rk_DiskType::S3: { valid = config.s3.remote.host; } break;
-        case rk_DiskType::SFTP: { valid = config.ssh.host; } break;
+        case rk_DiskType::Local: {
+            LogError("Unsupported local URL '%1'", url);
+            return nullptr;
+        } break;
+
+        case rk_DiskType::S3:
+        case rk_DiskType::SFTP: {} break;
     }
 
-    if (!valid) {
-        LogError("Unsupported URL '%1'", url);
-        return false;
-    }
-
-    return true;
+    return rk_MakeURL(config, alloc);
 }
 
 static bool UpdateSnapshots(int64_t id, int64_t now,
@@ -307,9 +304,10 @@ void HandleRepositorySave(http_IO *io)
                 }
 
                 if (url) {
-                    valid = CheckURL(url);
-                } else {
-                    LogError("Missing 'url' value");
+                    url = NormalizeURL(url, io->Allocator());
+                }
+                if (!url) {
+                    LogError("Missing or invalid 'url' value");
                     valid = false;
                 }
             }
