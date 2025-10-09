@@ -2324,12 +2324,8 @@ async function saveRecord(tid, entry, raw, meta, draft) {
 
     await records.save(tid, entry, frag, ENV.version, meta.signup, route.page.claim);
 
-    if (!profile.userid) {
-        let url = route.page.url + `/${form_thread.tid}`;
-
-        window.onbeforeunload = null;
-        window.location.href = url;
-    }
+    if (!profile.userid)
+        await goupile.syncProfile();
 }
 
 export {
