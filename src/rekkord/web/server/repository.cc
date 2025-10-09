@@ -15,7 +15,7 @@
 
 #include "src/core/base/base.hh"
 #include "src/core/http/http.hh"
-#include "src/rekkord/lib/librekkord.hh"
+#include "../../lib/librekkord.hh"
 #include "rokkerd.hh"
 #include "mail.hh"
 #include "repository.hh"

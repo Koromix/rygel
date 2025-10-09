@@ -36,11 +36,6 @@
             "path": "src/rekkord/i18n"
         },
         {
-            "namespace": "rokkerd",
-            "sources": ["src/rokkerd"],
-            "path": "src/rokkerd/i18n"
-        },
-        {
             "namespace": "staks",
             "sources": ["src/staks/src"],
             "path": "src/staks/i18n"

@@ -16,7 +16,7 @@
 #include "src/core/base/base.hh"
 #include "src/core/http/http.hh"
 #include "src/core/password/password.hh"
-#include "src/rekkord/lib/librekkord.hh"
+#include "../../lib/librekkord.hh"
 #include "rokkerd.hh"
 #include "plan.hh"
 #include "user.hh"
