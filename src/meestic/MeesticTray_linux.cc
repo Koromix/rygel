@@ -16,6 +16,7 @@
 #if defined(__linux__)
 
 #include "src/core/base/base.hh"
+#include "src/core/base/tower.hh"
 #include "config.hh"
 #include "light.hh"
 #include "src/core/wrap/json.hh"
@@ -28,7 +29,7 @@ namespace K {
 extern "C" const AssetInfo MeesticPng;
 
 static bool run = true;
-static int meestic_fd = -1;
+static TowerClient client;
 
 static HeapArray<const char *> profiles;
 static BlockAllocator profiles_alloc;
@@ -43,12 +44,7 @@ static bool ApplyProfile(Size idx)
     LocalArray<char, 128> buf;
     buf.len = Fmt(buf.data, "{\"apply\": %1}\n", idx).len;
 
-    if (send(meestic_fd, buf.data, (size_t)buf.len, 0) < 0) {
-        LogError("Failed to send message to server: %1", strerror(errno));
-        return false;
-    }
-
-    return true;
+    return client.Send(buf);
 }
 
 static bool ToggleProfile(int direction)
@@ -65,28 +61,14 @@ static bool ToggleProfile(int direction)
         K_UNREACHABLE();
     }
 
-    if (send(meestic_fd, buf.ptr, (size_t)buf.len, 0) < 0) {
-        LogError("Failed to send message to server: %1", strerror(errno));
-        return false;
-    }
-
-    return true;
+    return client.Send(buf);
 }
 
-static bool HandleServerData()
+static bool HandleServerData(StreamReader *reader)
 {
     BlockAllocator temp_alloc;
 
-    const auto read = [&](Span<uint8_t> out_buf) {
-        Size received = recv(meestic_fd, out_buf.ptr, out_buf.len, 0);
-        if (received < 0) {
-            LogError("Failed to receive data from server: %1", strerror(errno));
-        }
-        return received;
-    };
-
-    StreamReader reader(read, "<server>");
-    json_Parser json(&reader, &temp_alloc);
+    json_Parser json(reader, &temp_alloc);
 
     for (json.ParseObject(); json.InObject(); ) {
         Span<const char> key = json.ParseKey();
@@ -109,12 +91,8 @@ static bool HandleServerData()
             return false;
         }
     }
-    if (!json.IsValid()) {
-        if (!reader.GetRawRead()) {
-            LogError("Lost connection to server");
-        }
+    if (!json.IsValid())
         return false;
-    }
 
     return true;
 }
@@ -144,7 +122,7 @@ int Main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *socket_filename = "/run/meestic.sock";
+    const char *socket_filename = GetControlSocketPath(ControlScope::System, "meestic", &temp_alloc);
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -193,18 +171,19 @@ Options:
 
     int status = 0;
     while (run) {
-        meestic_fd = CreateSocket(SocketType::Unix, SOCK_STREAM);
-        if (meestic_fd < 0)
+        if (!client.Connect(socket_filename))
             return 1;
-        K_DEFER { close(meestic_fd); };
+        client.Start(HandleServerData);
 
-        if (!ConnectUnixSocket(meestic_fd, socket_filename))
-            return 1;
+        if (!client.Send("{\"refresh\": true}\n")) {
+            WaitDelay(3000);
+            continue;
+        }
 
         // React to main service and D-Bus events
         while (run) {
             WaitSource sources[] = {
-                { meestic_fd, -1 },
+                client.GetWaitSource(),
                 tray->GetWaitSource()
             };
 
@@ -220,7 +199,7 @@ Options:
                 run = false;
             }
 
-            if ((ready & 1) && !HandleServerData()) {
+            if (!client.Process()) {
                 WaitDelay(3000);
                 break;
             }

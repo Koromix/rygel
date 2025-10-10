@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "src/core/base/tower.hh"
 #include "config.hh"
 #include "light.hh"
 #include "src/tytools/libhs/libhs.h"
@@ -35,7 +36,8 @@ namespace K {
 
 static Config config;
 static Size profile_idx = 0;
-static bool transmit_info = false;
+
+static TowerServer server;
 
 static hs_port *port = nullptr;
 
@@ -139,7 +141,7 @@ static int OpenInputDevice(const char *needle, int flags)
     return ret_fd;
 }
 
-static bool ApplyProfile(Size idx)
+static bool ApplyProfile(Size idx, bool post)
 {
     LogInfo("Applying profile %1", idx);
 
@@ -147,7 +149,10 @@ static bool ApplyProfile(Size idx)
         return false;
 
     profile_idx = idx;
-    transmit_info = true;
+
+    if (post) {
+        PostWaitMessage();
+    }
 
     return true;
 }
@@ -169,7 +174,7 @@ static bool ToggleProfile(int delta)
         }
     } while (config.profiles[next_idx].manual);
 
-    return ApplyProfile(next_idx);
+    return ApplyProfile(next_idx, true);
 }
 
 static bool HandleInputEvent(int fd)
@@ -193,25 +198,9 @@ static bool HandleInputEvent(int fd)
     return true;
 }
 
-static bool SendInfo(int sock, bool profiles)
+static void SendInfo(StreamWriter *writer, bool profiles)
 {
-    const auto write = [&](Span<const uint8_t> buf) {
-        while (buf.len) {
-            Size sent = send(sock, buf.ptr, (size_t)buf.len, 0);
-            if (sent < 0) {
-                LogError("Failed to send data to client: %1", strerror(errno));
-                return false;
-            }
-
-            buf.ptr += sent;
-            buf.len -= sent;
-        }
-
-        return true;
-    };
-
-    StreamWriter writer(write, "<client>");
-    json_Writer json(&writer);
+    json_Writer json(writer);
 
     json.StartObject();
 
@@ -226,42 +215,22 @@ static bool SendInfo(int sock, bool profiles)
 
     json.EndObject();
 
-    if (!writer.Write('\n'))
-        return false;
-
-    return true;
+    writer->Write('\n');
 }
 
-static bool HandleClientData(int sock)
+static bool HandleClientData(StreamReader *reader, StreamWriter *writer)
 {
     BlockAllocator temp_alloc;
 
-    const auto read = [sock](Span<uint8_t> out_buf) {
-        struct pollfd pfd = { sock, POLLIN, 0 };
-        int ret = poll(&pfd, 1, 1000);
-
-        if (!ret) {
-            LogError("Client has timed out");
-            return (Size)-1;
-        } else if (ret < 0) {
-            LogError("poll() failed: %1", strerror(errno));
-            return (Size)-1;
-        }
-
-        Size received = recv(sock, out_buf.ptr, out_buf.len, 0);
-        if (received < 0) {
-            LogError("Failed to receive data from client: %1", strerror(errno));
-        }
-        return received;
-    };
-
-    StreamReader reader(read, "<client>");
-    json_Parser json(&reader, &temp_alloc);
+    json_Parser json(reader, &temp_alloc);
+    bool refresh = false;
 
     for (json.ParseObject(); json.InObject(); ) {
         Span<const char> key = json.ParseKey();
 
-        if (key == "apply") {
+        if (key == "refresh") {
+            json.ParseBool(&refresh);
+        } else if (key == "apply") {
             int64_t idx;
             if (!json.ParseInt(&idx))
                 return false;
@@ -269,7 +238,7 @@ static bool HandleClientData(int sock)
                 LogError("Client asked for invalid profile");
                 return false;
             }
-            ApplyProfile(idx);
+            ApplyProfile(idx, true);
         } else if (key == "toggle") {
             Span<const char> type = {};
             if (!json.ParseString(&type))
@@ -291,23 +260,11 @@ static bool HandleClientData(int sock)
     if (!json.IsValid())
         return false;
 
-    return true;
-}
-
-static Size DoForClients(Span<WaitSource> sources, FunctionRef<bool(Size idx, int fd)> func)
-{
-    Size j = 2;
-    for (Size i = 2; i < sources.len; i++) {
-        sources[j] = sources[i];
-
-        if (!func(i, sources[i].fd)) {
-            close(sources[i].fd);
-            continue;
-        }
-
-        j++;
+    if (refresh) {
+        SendInfo(writer, true);
     }
-    return j;
+
+    return true;
 }
 
 static int RunDaemon(Span<const char *> arguments)
@@ -317,7 +274,7 @@ static int RunDaemon(Span<const char *> arguments)
     // Default config filename
     HeapArray<const char *> config_filenames;
     const char *config_filename = FindConfigFile("meestic.ini", &temp_alloc, &config_filenames);
-    const char *socket_filename = "/run/meestic.sock";
+    const char *socket_filename = GetControlSocketPath(ControlScope::System, "meestic", &temp_alloc);
     bool sandbox = false;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -328,7 +285,7 @@ Options:
 
     %!..+-C, --config_file filename%!0     Set configuration file
                                    %!D..(default: see below)%!0
-    %!..+-S, --socket_file socket%!0       Change control socket
+    %!..+-S, --socket_file socket%!0       Use specific control socket
                                    %!D..(default: %2)%!0
 
         %!..+--sandbox%!0                  Run in strict OS sandbox (if supported)
@@ -407,18 +364,9 @@ By default, the first of the following config files will be used:
     }
     K_DEFER { CloseLightDevice(port); };
 
-    int listen_fd = CreateSocket(SocketType::Unix, SOCK_STREAM);
-    if (listen_fd < 0)
+    if (!server.Bind(socket_filename))
         return 1;
-    K_DEFER { close(listen_fd); };
-
-    // Open control socket
-    if (!BindUnixSocket(listen_fd, socket_filename))
-        return 1;
-    if (listen(listen_fd, 4) < 0) {
-        LogError("listen() failed: %1", strerror(errno));
-        return 1;
-    }
+    server.Start(HandleClientData);
 
     if (!NotifySystemd())
         return 1;
@@ -427,68 +375,45 @@ By default, the first of the following config files will be used:
         return 1;
 
     // Check that it works once, at least
-    if (!ApplyProfile(config.default_idx))
+    if (!ApplyProfile(config.default_idx, false))
         return 1;
-    transmit_info = false;
 
     // From here on, don't quit abruptly
     WaitEvents(0);
 
     // Wait for events and clients
     int status = 0;
-    {
+    for (;;) {
         LocalArray<WaitSource, 32> sources;
+        static_assert(K_LEN(sources.data) >= 1 + MaxTowerSources);
 
         sources.Append({ input_fd, -1 });
-        sources.Append({ listen_fd, -1 });
+        sources.Append(server.GetWaitSources());
 
-        for (;;) {
-            uint64_t ready = 0;
-            WaitResult ret = WaitEvents(sources, -1, &ready);
+        uint64_t ready = 0;
+        WaitResult ret = WaitEvents(sources, -1, &ready);
 
-            if (ret == WaitResult::Exit) {
-                LogInfo("Exit requested");
-                break;
-            } else if (ret == WaitResult::Interrupt) {
-                LogInfo("Process interrupted");
-                status = 1;
-                break;
-            }
+        if (ret == WaitResult::Exit) {
+            LogInfo("Exit requested");
+            break;
+        } else if (ret == WaitResult::Interrupt) {
+            LogInfo("Process interrupted");
+            status = 1;
+            break;
+        }
 
-            // Handle input events
-            if (ready & 1) {
-                if (!HandleInputEvent(input_fd))
-                    return 1;
-            }
+        // Handle input events
+        if (ready & 1) {
+            if (!HandleInputEvent(input_fd))
+                return 1;
+        }
 
-            // Accept new clients
-            if (ready & 2) {
-                int sock = accept4(listen_fd, nullptr, nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
+        if (!server.Process(ready >> 1))
+            return 1;
 
-                if (sock >= 0) {
-                    if (sources.Available()) {
-                        sources.Append({ sock, -1 });
-                        SendInfo(sock, true);
-                    } else {
-                        LogError("Cannot handle new client (too many)");
-                        CloseSocket(sock);
-                    }
-                } else {
-                    LogError("Failed to accept new client: %1", strerror(errno));
-                }
-            }
-
-            // Handle client data
-            sources.len = DoForClients(sources, [&](Size idx, int sock) {
-                bool process = (ready & (1u << idx));
-                return process ? HandleClientData(sock) : true;
-            });
-
-            // Send updates
-            if (transmit_info) {
-                sources.len = DoForClients(sources, [&](Size, int sock) { return SendInfo(sock, false); });
-                transmit_info = false;
-            }
+        // Send updates
+        if (ret == WaitResult::Message) {
+            server.Send([](StreamWriter *writer) { return SendInfo(writer, false); });
         }
     }
 
