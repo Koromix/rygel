@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "src/core/base/tower.hh"
 #include "rekkord.hh"
 #include "src/core/request/curl.hh"
 #include "src/core/wrap/json.hh"
@@ -29,6 +30,12 @@ struct ItemData {
     int64_t timestamp;
     bool success;
 };
+
+static std::mutex plan_mutex;
+static HeapArray<ItemData> plan_items;
+static BlockAllocator plan_alloc;
+
+static TowerServer server;
 
 static void LinkHeaders(Span<curl_slist> headers)
 {
@@ -216,6 +223,28 @@ static bool SendReport(Span<const char> json)
     return true;
 }
 
+static bool UpdatePlan(bool post)
+{
+    LogInfo("Fetching backup plan...");
+
+    HeapArray<ItemData> items;
+    BlockAllocator str_alloc;
+
+    if (!FetchPlan(&str_alloc, &items))
+        return false;
+
+    std::lock_guard<std::mutex> lock(plan_mutex);
+
+    std::swap(items, plan_items);
+    std::swap(str_alloc, plan_alloc);
+
+    if (post) {
+        PostWaitMessage();
+    }
+
+    return true;
+}
+
 static bool ReportSuccess(const char *channel, const rk_SaveInfo &info)
 {
     HeapArray<char> body;
@@ -270,18 +299,11 @@ static bool RunSnapshot(const char *channel, Span<const char *const> paths, rk_S
     return rk_Save(repo.get(), channel, paths, {}, out_info);
 }
 
-static bool CheckPlan()
+static bool RunPlan()
 {
-    BlockAllocator temp_alloc;
+    bool busy = false;
 
-    HeapArray<ItemData> items;
-    bool nothing = true;
-
-    LogInfo("Fetching backup plan...");
-    if (!FetchPlan(&temp_alloc, &items))
-        return false;
-
-    for (const ItemData &item: items) {
+    for (ItemData &item: plan_items) {
         bool run = ShouldRun(item);
 
         if (run) {
@@ -290,7 +312,7 @@ static bool CheckPlan()
             const char *last_err = "Unknown error";
             PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
                 if (level == LogLevel::Error) {
-                    last_err = DuplicateString(msg, &temp_alloc).ptr;
+                    last_err = DuplicateString(msg, &plan_alloc).ptr;
                 }
 
                 func(level, ctx, msg);
@@ -302,16 +324,80 @@ static bool CheckPlan()
 
             if (success) {
                 ReportSuccess(item.channel, info);
+
+                item.timestamp = info.time;
+                item.success = true;
             } else {
                 int64_t now = GetUnixTime();
                 ReportError(item.channel, now, last_err);
+
+                item.timestamp = now;
+                item.success = false;
             }
         }
 
-        nothing &= !run;
+        busy |= run;
     }
-    if (nothing) {
+
+    if (busy) {
+        PostWaitMessage();
+    } else {
         LogInfo("Nothing to do");
+    }
+
+    return true;
+}
+
+// Call with plan_mutex locked
+static void SendInfo(StreamWriter *writer)
+{
+    json_Writer json(writer);
+
+    json.StartObject();
+
+    json.Key("items"); json.StartArray();
+    for (const ItemData &item: plan_items) {
+        json.StartObject();
+
+        json.Key("channel"); json.String(item.channel);
+        json.Key("clock"); json.Int(item.clock);
+        json.Key("days"); json.Int(item.days);
+
+        json.Key("timestamp"); json.Int64(item.timestamp);
+        json.Key("success"); json.Bool(item.success);
+
+        json.EndObject();
+    }
+    json.EndArray();
+
+    json.EndObject();
+
+    writer->Write('\n');
+}
+
+static bool HandleClientData(StreamReader *reader, StreamWriter *writer)
+{
+    BlockAllocator temp_alloc;
+
+    json_Parser json(reader, &temp_alloc);
+    bool refresh = false;
+
+    for (json.ParseObject(); json.InObject(); ) {
+        Span<const char> key = json.ParseKey();
+
+        if (key == "refresh") {
+            json.ParseBool(&refresh);
+        } else {
+            json.UnexpectedKey(key);
+            return false;
+        }
+    }
+    if (!json.IsValid())
+        return false;
+
+    if (refresh) {
+        std::unique_lock<std::mutex> lock(plan_mutex);
+        SendInfo(writer);
     }
 
     return true;
@@ -319,10 +405,21 @@ static bool CheckPlan()
 
 int RunAgent(Span<const char *> arguments)
 {
+    BlockAllocator temp_alloc;
+
+    // Options
+    const char *socket_filename = GetControlSocketPath(ControlScope::System, "rekkord", &temp_alloc);
+
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
         PrintCommonOptions(st);
+        PrintLn(st, T(R"(
+Agent options:
+
+    %!..+-S, --socket_file socket%!0       Change control socket
+                                   %!D..(default: %1)%!0)"),
+                socket_filename);
     };
 
     // Parse arguments
@@ -333,6 +430,8 @@ T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("-S", "--socket_file", OptionType::Value)) {
+                socket_filename = opt.current_value;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
@@ -366,18 +465,39 @@ T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
         LogInfo();
     }
 
-    // Check plan once at start
-    if (!CheckPlan())
+    if (!server.Bind(socket_filename))
+        return 1;
+    server.Start(HandleClientData);
+
+    // Make sure we can fetch plan (valid URL and credentials)
+    if (!UpdatePlan(false))
         return 1;
 
     // From here on, don't quit abruptly
     WaitEvents(0);
 
-    int status = 0;
+    // Run two event loops: one for plan fetch and execution, one for clients.
+    // Makes things easier, with a simple mutex for synchronization.
+    std::thread thread([&]() {
+        for (;;) {
+            RunPlan();
 
-    // Run periodic tasks until exit
+            WaitResult ret = WaitEvents(rk_config.agent_period);
+
+            if (ret == WaitResult::Exit || ret == WaitResult::Interrupt)
+                break;
+            K_ASSERT(ret != WaitResult::Message);
+
+            UpdatePlan(true);
+        }
+    });
+    K_DEFER { thread.join(); };
+
+    // Handle clients (such as RekkordTray)
+    int status = 0;
     for (;;) {
-        WaitResult ret = WaitEvents(rk_config.agent_period);
+        uint64_t ready = 0;
+        WaitResult ret = WaitEvents(server.GetWaitSources(), -1, &ready);
 
         if (ret == WaitResult::Exit) {
             LogInfo("Exit requested");
@@ -388,7 +508,12 @@ T(R"(Usage: %!..+%1 agent [-C filename] [option...]%!0)"), FelixTarget);
             break;
         }
 
-        CheckPlan();
+        if (!server.Process(ready))
+            return 1;
+
+        if (ret == WaitResult::Message) {
+            server.Send([](StreamWriter *writer) { return SendInfo(writer); });
+        }
     }
 
     return status;
