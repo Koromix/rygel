@@ -4519,12 +4519,6 @@ enum class WaitResult {
     Exit
 };
 
-#if defined(_WIN32)
-typedef void * WaitHandle; // HANDLE
-#else
-typedef int WaitHandle;
-#endif
-
 struct WaitSource {
 #if defined(_WIN32)
     // Special-cased on Windows: set to NULL to wait for the Win32 message pump too
