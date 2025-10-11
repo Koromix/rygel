@@ -83,7 +83,7 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
     K_ASSERT(!handle_func);
     K_ASSERT(func);
 
-    async = new Async(1 + listeners.len);
+    async = new Async(1 + (int)listeners.len);
 
     handle_func = func;
 
@@ -419,7 +419,7 @@ bool http_Dispatcher::Run()
                 client->incoming.buf.Grow(Kibibytes(8));
 
                 Size available = client->incoming.buf.Available() - 1;
-                Size bytes = recv(socket->sock, (char *)client->incoming.buf.ptr, available, 0);
+                Size bytes = recv(socket->sock, (char *)client->incoming.buf.ptr, (int)available, 0);
 
                 if (bytes > 0) {
                     client->incoming.buf.len += bytes;
@@ -497,7 +497,7 @@ bool http_Dispatcher::Run()
 
         // The timeout is unsigned to make it easier to use with std::min() without dealing
         // with the default value -1. If it stays at UINT_MAX, the (int) cast results in -1.
-        int ready = WSAPoll(pfds.ptr, pfds.len, (int)timeout);
+        int ready = WSAPoll(pfds.ptr, (unsigned long)pfds.len, (int)timeout);
 
         if (ready < 0) {
             LogError("Failed to poll descriptors: %1", GetWin32ErrorString());
