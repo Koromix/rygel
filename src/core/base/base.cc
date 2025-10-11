@@ -3764,7 +3764,7 @@ const char *GetApplicationExecutable()
 
         size_t argc;
         {
-            int ret = sysctl(name, K_LEN(name), nullptr, &argc, NULL, 0);
+            int ret = sysctl(name, K_LEN(name), nullptr, &argc, nullptr, 0);
             K_ASSERT(ret >= 0);
             K_ASSERT(argc >= 1);
         }
@@ -3799,7 +3799,7 @@ const char *GetApplicationExecutable()
         int name[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
         size_t len = sizeof(executable_path);
 
-        int ret = sysctl(name, K_LEN(name), executable_path, &len, NULL, 0);
+        int ret = sysctl(name, K_LEN(name), executable_path, &len, nullptr, 0);
         K_ASSERT(ret >= 0);
         K_ASSERT(len < K_SIZE(executable_path));
     }

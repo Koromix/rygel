@@ -382,7 +382,7 @@ By default, the first of the following config files will be used:
         return 1;
 
     MSG msg = {};
-    while (GetMessage(&msg, NULL, 0, 0) != 0) {
+    while (GetMessage(&msg, nullptr, 0, 0) != 0) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
