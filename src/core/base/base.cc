@@ -4793,7 +4793,7 @@ bool EnsureDirectoryExists(const char *filename)
 
 #if defined(_WIN32)
 
-static const int main_thread = GetCurrentThreadId();
+static const DWORD main_thread = GetCurrentThreadId();
 static HANDLE console_ctrl_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
 static bool ignore_ctrl_event = false;
 
@@ -7128,7 +7128,7 @@ bool ConnectIPSocket(int sock, const char *addr, int port)
         struct sockaddr_in6 sa = {};
 
         sa.sin6_family = AF_INET6;
-        sa.sin6_port = htons(port);
+        sa.sin6_port = htons((unsigned short)port);
 
         if (inet_pton(AF_INET6, addr, &sa.sin6_addr) <= 0) {
             LogError("Invalid IPv6 address '%1'", addr);
@@ -7148,7 +7148,7 @@ bool ConnectIPSocket(int sock, const char *addr, int port)
         struct sockaddr_in sa = {};
 
         sa.sin_family = AF_INET;
-        sa.sin_port = htons(port);
+        sa.sin_port = htons((unsigned short)port);
 
         if (inet_pton(AF_INET, addr, &sa.sin_addr) <= 0) {
             LogError("Invalid IPv4 address '%1'", addr);

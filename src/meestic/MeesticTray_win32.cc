@@ -387,7 +387,7 @@ By default, the first of the following config files will be used:
         DispatchMessage(&msg);
     }
 
-    return msg.wParam;
+    return (int)msg.wParam;
 }
 
 }
