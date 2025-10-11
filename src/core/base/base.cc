@@ -5648,7 +5648,7 @@ WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t 
         }
         return WaitResult::Ready;
     } else {
-        Size idx = (Size)ret - WAIT_OBJECT_0 - (main ? 2 : 0);
+        Size idx = (Size)ret - WAIT_OBJECT_0 - 1;
         K_ASSERT(idx >= 0 && idx < sources.len);
 
         if (out_ready) {
