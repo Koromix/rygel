@@ -180,12 +180,14 @@ bool PackTranslations(Span<const TranslationFile> files, unsigned int flags, con
     for (Size i = 0; i < files.len; i++) {
         const TranslationFile &file = files[i];
 
-        PrintLn(&c);
-        PrintLn(&c, "static const TranslationMessage messages%1[] = {", i);
-        for (const TranslationMessage &msg: file.messages) {
-            PrintLn(&c, "    { \"%1\", \"%2\" },", FmtEscape(msg.key), FmtEscape(msg.value));
+        if (file.messages.len) {
+            PrintLn(&c);
+            PrintLn(&c, "static const TranslationMessage messages%1[] = {", i);
+            for (const TranslationMessage &msg: file.messages) {
+                PrintLn(&c, "    { \"%1\", \"%2\" },", FmtEscape(msg.key), FmtEscape(msg.value));
+            }
+            PrintLn(&c, "};");
         }
-        PrintLn(&c, "};");
     }
 
     if (!(flags & (int)TranslationFlag::NoArray)) {
@@ -196,7 +198,12 @@ bool PackTranslations(Span<const TranslationFile> files, unsigned int flags, con
             PrintLn(&c, "const TranslationTable tables[%1] = {", files.len);
             for (Size i = 0; i < files.len; i++) {
                 const TranslationFile &file = files[i];
-                PrintLn(&c, "    { \"%1\", { messages%2, %3 } },", file.language, i, file.messages.len);
+
+                if (file.messages.len) {
+                    PrintLn(&c, "    { \"%1\", { messages%2, %3 } },", file.language, i, file.messages.len);
+                } else {
+                    PrintLn(&c, "    { \"%1\", { (void *)0, 0 } },", file.language);
+                }
             }
             PrintLn(&c, "};");
         }
@@ -210,7 +217,11 @@ bool PackTranslations(Span<const TranslationFile> files, unsigned int flags, con
             const TranslationFile &file = files[i];
 
             PrintLn(&c, "EXPORT_SYMBOL EXTERN const TranslationTable TranslationTable%1;", FmtUpperAscii(file.language));
-            PrintLn(&c, "const TranslationTable TranslationTable%1 = { \"%2\", { messages%3, %4 } };", FmtUpperAscii(file.language), file.language, i, file.messages.len);
+            if (file.messages.len) {
+                PrintLn(&c, "const TranslationTable TranslationTable%1 = { \"%2\", { messages%3, %4 } };", FmtUpperAscii(file.language), file.language, i, file.messages.len);
+            } else {
+                PrintLn(&c, "const TranslationTable TranslationTable%1 = { \"%2\", { (void *)0, 0 } };", FmtUpperAscii(file.language), file.language);
+            }
         }
     }
 
