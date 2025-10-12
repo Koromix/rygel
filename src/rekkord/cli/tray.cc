@@ -124,7 +124,7 @@ static void UpdateTray()
 #if defined(_WIN32)
         ShellExecuteA(nullptr, "open", "https://rekkord.org", nullptr, nullptr, SW_SHOWNORMAL);
 #else
-        system("xdg-open https://rekkord.org");
+        K_IGNORE system("xdg-open https://rekkord.org");
 #endif
     });
     tray->AddSeparator();

@@ -109,7 +109,7 @@ static void UpdateTray()
     }
 
     tray->AddSeparator();
-    tray->AddAction(T("&About"), []() { system("xdg-open https://koromix.dev/meestic"); });
+    tray->AddAction(T("&About"), []() { K_IGNORE system("xdg-open https://koromix.dev/meestic"); });
     tray->AddSeparator();
     tray->AddAction(T("&Exit"), []() {
         run = false;
