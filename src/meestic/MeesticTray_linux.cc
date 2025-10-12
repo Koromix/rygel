@@ -39,8 +39,6 @@ static std::unique_ptr<gui_TrayIcon> tray;
 
 static bool ApplyProfile(Size idx)
 {
-    LogInfo("Applying profile %1", idx);
-
     LocalArray<char, 128> buf;
     buf.len = Fmt(buf.data, "{\"apply\": %1}\n", idx).len;
 
@@ -52,10 +50,8 @@ static bool ToggleProfile(int direction)
     Span<const char> buf = {};
 
     if (direction > 0) {
-        LogInfo("Applying next profile");
         buf = "{\"toggle\": \"next\"}\n";
     } else if (direction < 0) {
-        LogInfo("Applying previous profile");
         buf = "{\"toggle\": \"previous\"}\n";
     } else {
         K_UNREACHABLE();
@@ -69,6 +65,8 @@ static bool HandleServerData(StreamReader *reader)
     BlockAllocator temp_alloc;
 
     json_Parser json(reader, &temp_alloc);
+
+    Size prev_idx = active_idx;
 
     for (json.ParseObject(); json.InObject(); ) {
         Span<const char> key = json.ParseKey();
@@ -93,6 +91,10 @@ static bool HandleServerData(StreamReader *reader)
     }
     if (!json.IsValid())
         return false;
+
+    if (active_idx != prev_idx) {
+        LogInfo("Applying profile %1", active_idx);
+    }
 
     return true;
 }
