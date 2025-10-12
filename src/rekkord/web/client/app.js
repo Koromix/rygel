@@ -1161,7 +1161,7 @@ async function runPlan() {
                                     <td>${item.channel}</td>
                                     <td>${formatDays(item.days)}</td>
                                     <td style="text-align: center;">${formatClock(item.clock)}</td>
-                                    <td>${item.paths.map(path => html`${path}<br>`)}</td>
+                                    <td class="nowrap">${item.paths.map(path => html`${path}<br>`)}</td>
                                     <td style=${'text-align: right;' + (item.error != null ? ' color: var(--color, red);' : '')}>
                                         ${item.timestamp == null ? T.never : ''}
                                         ${item.timestamp != null ? dayjs(item.timestamp).format('lll') : ''}
