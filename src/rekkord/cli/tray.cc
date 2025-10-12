@@ -123,6 +123,8 @@ static void UpdateTray()
     tray->AddAction(T("&About"), []() {
 #if defined(_WIN32)
         ShellExecuteA(nullptr, "open", "https://rekkord.org", nullptr, nullptr, SW_SHOWNORMAL);
+#elif defined(__APPLE__)
+        K_IGNORE system("open https://rekkord.org");
 #else
         K_IGNORE system("xdg-open https://rekkord.org");
 #endif
