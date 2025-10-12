@@ -79,7 +79,7 @@ static bool WriteSync(HANDLE h, const void *buf, Size buf_len)
 
 static HANDLE ConnectToServer(Span<const uint8_t> msg)
 {
-    HANDLE pipe = CreateFileA("\\\\.\\pipe\\SeatSH", GENERIC_READ | GENERIC_WRITE,
+    HANDLE pipe = CreateFileA("\\\\.\\pipe\\seatsh", GENERIC_READ | GENERIC_WRITE,
                               0, nullptr, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr);
     if (pipe == INVALID_HANDLE_VALUE) {
         if (GetLastError() == ERROR_FILE_NOT_FOUND) {
@@ -863,7 +863,7 @@ static void WINAPI RunService(DWORD, char **)
     ReportStatus(SERVICE_RUNNING);
 
     for (;;) {
-        HANDLE pipe = CreateNamedPipeA("\\\\.\\pipe\\SeatSH", PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
+        HANDLE pipe = CreateNamedPipeA("\\\\.\\pipe\\seatsh", PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
                                        PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
                                        PIPE_UNLIMITED_INSTANCES, 8192, 8192, 0, &sa);
         if (pipe == INVALID_HANDLE_VALUE) {

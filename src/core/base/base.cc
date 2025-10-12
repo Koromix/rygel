@@ -4828,7 +4828,7 @@ bool CreateOverlappedPipe(bool overlap0, bool overlap1, PipeMode mode, HANDLE ou
 
     char pipe_name[128];
     do {
-        Fmt(pipe_name, "\\\\.\\Pipe\\libcc.%1.%2",
+        Fmt(pipe_name, "\\\\.\\pipe\\kcc.%1.%2",
             GetCurrentProcessId(), InterlockedIncrement(&pipe_idx));
 
         DWORD open_mode = PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE | (overlap0 ? FILE_FLAG_OVERLAPPED : 0);
