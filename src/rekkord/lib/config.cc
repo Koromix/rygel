@@ -274,7 +274,7 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                     config.api_key = DuplicateString(prop.value, &config.str_alloc).ptr;
                 } else if (prop.key == "CheckPeriod") {
                     if (ParseDuration(prop.value, &config.agent_period)) {
-                        if (config.retain <= 0) {
+                        if (config.agent_period <= 0) {
                             LogError("Check period cannot be negative or zero");
                             valid = false;
                         }
