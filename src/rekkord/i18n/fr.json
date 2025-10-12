@@ -120,7 +120,7 @@
         "zoom": "Zoom"
     },
     "messages": {
-        "\nAgent options:\n\n    %!..+-S, --socket_file socket%!0       Change control socket\n                                   %!D..(default: %1)%!0": null,
+        "\nAgent options:\n\n    %!..+-S, --socket_file socket%!0       Change control socket\n                                   %!D..(default: %1)%!0": "\nOptions de l'agent :\n\n    %!..+-S, --socket_file socket%!0       Changer le contrôle du socket\n                                   %!D..(par défaut : %1)%!0",
         "\nCache options:\n\n        %!..+--list%!0                     List existing blobs": "\nOptions de cache :\n\n        %!..+--list%!0                     Lister les blobs existants",
         "\nChannel options:\n\n    %!..+-f, --format format%!0            Change output format\n                                   %!D..(default: %1)%!0\n    %!..+-v, --verbose%!0                  Enable verbose output (plain only)\n\nAvailable output formats: %!..+%2%!0": "\nOptions de canaux :\n\n    %!..+-f, --format format%!0            Modifier le format de sortie\n                                   %!D..(par défaut : %1)%!0\n    %!..+-v, --verbose%!0                  Activer la sortie détaillée (format texte uniquement)\n\nFormats de sortie disponibles : %!..+%2%!0\n",
         "\nCommon options:\n\n    %!..+-C, --config_file filename%!0     Set configuration file\n\n    %!..+-R, --repository URL%!0           Set repository URL\n    %!..+-K, --key_file filename%!0        Set file containing repository keys\n\n    %!..+-j, --threads threads%!0          Change number of threads\n                                   %!D..(default: automatic)%!0": "\nOptions communes :\n\n    %!..+-C, --config_file nom_fichier%!0  Définir le fichier de configuration\n\n    %!..+-R, --repository URL%!0           Définir l'URL du dépôt\n    %!..+-K, --key_file nom_fichier%!0     Définir le fichier contenant les clés du référentiel\n\n    %!..+-j, --threads threads%!0          Modifier le nombre de threads\n                                   %!D..(par défaut : automatique)%!0",
@@ -148,6 +148,8 @@
         "%1 cached": "%1 mis en cache",
         "%1 entries": "%1 entrées",
         "%1 stored": "%1 stocké",
+        "&About": "&A propos",
+        "&Exit": "&Quitter",
         "0 / %1 snapshots": "0 / %1 instantanés",
         "Backing up...": "Sauvegarde...",
         "Blob '%1' is not a Chunk": "Le blob '%1' n'est pas un fragment (Chunk)",
@@ -318,9 +320,7 @@
         "Missing 'new_password' parameter": "Paramètre 'new_password' manquant",
         "Missing 'old_password' parameter": "Paramètre 'old_password' manquant",
         "Missing 'password' parameter": "Paramètre 'password' manquant",
-        "Missing 'url' value": "Valeur 'url' manquante",
         "Missing API key": "Clé d'API manquante",
-        "Missing SFTP remote path": "Chemin d'accès distant SFTP manquant",
         "Missing agent API key": "Clé d'API de l'agent manquante",
         "Missing agent URL": "URL de l'agent manquant",
         "Missing both OID and error message": "OID et message d'erreur manquants",
@@ -337,6 +337,7 @@
         "Missing or invalid 'name' parameter": "Paramètre 'name' manquant ou non valide",
         "Missing or invalid 'repository' parameter": "Paramètre 'repository' manquant ou non valide",
         "Missing or invalid 'timestamp' parameter": "Paramètre 'timestamp' manquant ou non valide",
+        "Missing or invalid 'url' value": "Valeur 'url' manquante ou invalide",
         "Missing or invalid channel name": "Nom de canal manquant ou invalide",
         "Missing or invalid item path": "Chemin d'accès à l'item manquant ou invalide",
         "Missing or invalid key title": "Titre de clé manquant ou invalide",
@@ -368,6 +369,9 @@
         "Path '%1' is not a directory": "Le chemin '%1' n'est pas un répertoire",
         "Path '%1' is not a file": "Le chemin '%1' n'est pas un fichier",
         "Periodic timer set to %1 s": "Minuterie périodique réglée sur %1 s",
+        "Plan %1 : error occured at %2": "Plan %1 : erreur à %2",
+        "Plan %1 : last run %2": "Plan %1 : dernière exécution %2",
+        "Plan %1 : never executed": "Plan %1 : jamais exécuté",
         "Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even derived keys are lost or deleted.": "Veuillez %!.._sauvegarder la clé principale dans un endroit sûr%!0, vous pourrez l'utiliser pour décrypter les données même si les clés dérivées sont perdues ou supprimées.",
         "Please wait for the next code": "Veuillez attendre le prochain code",
         "Process interrupted": "Processus interrompu",
@@ -441,9 +445,9 @@
         "Unknown sort order '%1'": "Ordre de tri inconnu '%1'",
         "Unsafe object name '%1'": "Nom d'objet non sûr '%1'",
         "Unsupported ACL version in '%1'": "Version d'ACL non prise en charge dans '%1'",
-        "Unsupported URL '%1'": "URL non pris en charge '%1'",
+        "Unsupported local URL '%1'": "URL locale non pris en charge '%1'",
         "Usage: %!..+%1 [option...]%!0\n\nOptions:\n\n    %!..+-C, --config_file filename%!0     Set configuration file\n                                   %!D..(default: %2)%!0\n\n    %!..+-p, --port port%!0                Change web server port\n                                   %!D..(default: %3)%!0\n        %!..+--bind IP%!0                  Bind to specific IP\n\n        %!..+--sandbox%!0                  Run sandboxed (on supported platforms)": "Utilisation : %!..+%1 [option...]%!0\n\nOptions :\n\n    %!..+-C, --config_file nom_fichier%!0  Définir le fichier de configuration\n                                   %!D..(par défaut : %2)%!0\n\n    %!..+-p, --port port%!0                Modifier le port du serveur web\n                                   %!D..(par défaut : %3)%!0\n        %!..+--bind IP%!0                  Lier le socket à une adresse IP spécifique\n\n        %!..+--sandbox%!0                  Exécuter en mode sandbox (sur les plateformes prises en charge)",
-        "Usage: %!..+%1 [option...]%!0\n\nOptions:\n\n    %!..+-S, --socket_file socket%!0       Change control socket\n                                   %!D..(default: %2)%!0": null,
+        "Usage: %!..+%1 [option...]%!0\n\nOptions:\n\n    %!..+-S, --socket_file socket%!0       Change control socket\n                                   %!D..(default: %2)%!0": "Utilisation : %!..+%1 [option...]%!0\n\nOptions :\n\n    %!..+-S, --socket_file socket%!0       Modifier le contrôle de la socket\n                                   %!D..(par défaut : %2)%!0",
         "Usage: %!..+%1 agent [-C filename] [option...]%!0": "Utilisation : %!..+%1 agent [-C nom_fichier] [option...]%!0",
         "Usage: %!..+%1 change_cid [-C filename] [option...]%!0": "Utilisation : %!..+%1 change_cid [-C nom_fichier] [option...]%!0",
         "Usage: %!..+%1 channels [-C filename] [option...]%!0": "Utilisation : %!..+%1 channels [-C nom_fichier] [option...]%!0",
@@ -467,8 +471,6 @@
         "You cannot use --channel and --pattern options at the same time": "Vous ne pouvez pas utiliser les options --channel et --pattern en même temps",
         "You must start over to fix this situation.": "Vous devez recommencer la sauvegarde pour remédier à cette situation.",
         "You should prefer write-only keys for this command": "Il est préférable d'utiliser des clés en écriture seule pour cette commande",
-        "listen() failed: %1": null,
-        "lseek('<temp>') failed: %1": "lseek('<temp>') failed : %1",
-        "poll() failed: %1": null
+        "lseek('<temp>') failed: %1": "lseek('<temp>') failed : %1"
     }
 }

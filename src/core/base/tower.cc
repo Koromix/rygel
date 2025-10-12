@@ -63,7 +63,7 @@ OverlappedPipe::~OverlappedPipe()
 static bool CheckPipePath(const char *path)
 {
     if (!StartsWith(path, "\\\\.\\pipe\\")) {
-        LogError("Control pipe names must start with '\\\\.\\pipe\\'");
+        LogError("Control pipe names must start with '%1'", "\\\\.\\pipe\\");
         return false;
     }
     if (!path[9]) {
@@ -97,7 +97,7 @@ static OverlappedPipe *BindPipe(const char *path)
     if (ConnectNamedPipe(pipe->h, &pipe->ov) || GetLastError() == ERROR_PIPE_CONNECTED) {
         SetEvent(pipe->ov.hEvent);
     } else if (GetLastError() != ERROR_IO_PENDING) {
-        LogError("Failed to connect named pipe: %1", GetWin32ErrorString());
+        LogError("Failed to connect to named pipe: %1", GetWin32ErrorString());
         return nullptr;
     }
 

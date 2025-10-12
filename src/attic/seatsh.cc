@@ -880,7 +880,7 @@ static void WINAPI RunService(DWORD, char **)
         ov.hEvent = connect_event;
 
         if (!ConnectNamedPipe(pipe, &ov) && GetLastError() != ERROR_IO_PENDING) {
-            LogError("Failed to connect named pipe: %1", GetWin32ErrorString());
+            LogError("Failed to connect to named pipe: %1", GetWin32ErrorString());
             ReportError(__LINE__);
             return;
         }
@@ -895,7 +895,7 @@ static void WINAPI RunService(DWORD, char **)
             DWORD dummy;
 
             if (!GetOverlappedResult(pipe, &ov, &dummy, TRUE)) {
-                LogError("Failed to connect named pipe: %1", GetWin32ErrorString());
+                LogError("Failed to connect to named pipe: %1", GetWin32ErrorString());
                 ReportError(__LINE__);
                 return;
             }
