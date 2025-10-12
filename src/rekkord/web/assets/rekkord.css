@@ -70,7 +70,10 @@ li + .picture { margin-left: -1em; }
         gap: 2em;
         text-transform: none;
     }
-    & li > a { border-bottom: none; }
+    & li > a {
+        border-bottom: none;
+        margin-bottom: 1px;
+    }
     & .picture { --size: 48px; }
 
     &.border { border-bottom-color: var(--top_background); }
