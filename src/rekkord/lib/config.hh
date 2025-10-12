@@ -64,7 +64,7 @@ struct rk_Config {
 
     const char *agent_url = nullptr;
     const char *api_key = nullptr;
-    int64_t agent_period = 1 * 3600000;
+    int64_t agent_period = 20 * 60000; // 20 minutes
 
     BlockAllocator str_alloc;
 
