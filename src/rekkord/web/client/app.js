@@ -343,7 +343,7 @@ async function logout() {
 async function runRegister() {
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Register</a>
+            <a class="active">${T.new_account}</a>
         </div>
 
         <div class="tab">
