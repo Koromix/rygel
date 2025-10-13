@@ -102,7 +102,7 @@ Rekkord uses **multiple encryption keys** which are derived from this master key
 
 For simple use cases, you can simply use the master key for everything. However, we recommend that you create restricted keyfiles, for two reasons:
 
-- Each restricted keyfile can have limited capabilities: *Admin, ReadWrite, WriteOnly or LogOnly*
+- Each restricted keyfile can have limited capabilities: *ReadWrite, WriteOnly or LogOnly*
 - Snapshots are signed with each keyfile-specific signing key, this can be used to detect cross-server tampering during repository checks
 
 # Restricted keys
