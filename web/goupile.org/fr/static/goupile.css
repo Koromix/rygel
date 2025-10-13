@@ -80,12 +80,6 @@ html {
     text-align: center;
 }
 
-.alert.note { --text: 'Note'; }
-.alert.tip { --text: 'Conseil'; }
-.alert.important { --text: '⚠\FE0E  Important'; }
-.alert.warning { --text: '⚠\FE0E  Attention'; }
-.alert.caution { --text: '⚠\FE0E  Danger'; }
-
 #veil {
     display: none;
     position: fixed;

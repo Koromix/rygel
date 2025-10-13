@@ -424,6 +424,14 @@ pre {
     --text: '⚠\FE0E  Caution';
 }
 
+html[lang=fr] {
+    & .alert.note { --text: 'Note'; }
+    & .alert.tip { --text: 'Conseil'; }
+    & .alert.important { --text: '⚠\FE0E  Important'; }
+    & .alert.warning { --text: '⚠\FE0E  Attention'; }
+    & .alert.caution { --text: '⚠\FE0E  Danger'; }
+}
+
 .footnotes {
     margin: 2em 1em;
     font-style: italic;
