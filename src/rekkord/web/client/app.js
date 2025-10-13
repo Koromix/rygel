@@ -462,24 +462,22 @@ async function runLogin() {
             <a class="active">${T.login}</a>
         </div>
 
-        <div class="tab">
-            <div class="box" style="align-items: center;">
-                <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
+        <div class="tab" style="align-items: center;">
+            <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
 
-                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
-                    <label>
-                        <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
-                    </label>
-                    <label>
-                        <input type="password" name="password" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
-                    </label>
-                    <div class="actions">
-                        <button type="submit">${T.login}</button>
-                        <a href="/register">${T.maybe_create_account}</a>
-                        <a href="/recover">${T.maybe_lost_password}</a>
-                    </div>
-                </form>
-            </div>
+            <form style="text-align: center;" @submit=${UI.wrap(submit)}>
+                <label>
+                    <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
+                </label>
+                <label>
+                    <input type="password" name="password" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
+                </label>
+                <div class="actions">
+                    <button type="submit">${T.login}</button>
+                    <a href="/register">${T.maybe_create_account}</a>
+                    <a href="/recover">${T.maybe_lost_password}</a>
+                </div>
+            </form>
         </div>
     `);
 
@@ -505,21 +503,19 @@ async function runConfirm() {
             <a class="active">${T.login}</a>
         </div>
 
-        <div class="tab">
-            <div class="box" style="align-items: center;">
-                <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
+        <div class="tab" style="align-items: center;">
+            <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
 
-                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
-                    <p>${T.two_factor_authentication}</p>
-                    <label>
-                        <input type="text" name="code" style="width: 20em;" placeholder=${T.totp_digits} />
-                    </label>
-                    <div class="actions">
-                        <button type="submit">${T.confirm}</button>
-                        <button type="button" class="secondary" @click=${UI.insist(logout)}>${T.cancel}</button>
-                    </div>
-                </form>
-            </div>
+            <form style="text-align: center;" @submit=${UI.wrap(submit)}>
+                <p>${T.two_factor_authentication}</p>
+                <label>
+                    <input type="text" name="code" style="width: 20em;" placeholder=${T.totp_digits} />
+                </label>
+                <div class="actions">
+                    <button type="submit">${T.confirm}</button>
+                    <button type="button" class="secondary" @click=${UI.insist(logout)}>${T.cancel}</button>
+                </div>
+            </form>
         </div>
     `);
 
@@ -542,19 +538,17 @@ async function runRecover() {
             <a class="active">${T.recover_account}</a>
         </div>
 
-        <div class="tab">
-            <div class="box" style="align-items: center;">
-                <div class="header">${T.recover_account}</div>
+        <div class="tab" style="align-items: center;">
+            <div class="header">${T.recover_account}</div>
 
-                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
-                    <label>
-                        <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
-                    </label>
-                    <div class="actions">
-                        <button type="submit">${T.reset_password}</button>
-                    </div>
-                </form>
-            </div>
+            <form style="text-align: center;" @submit=${UI.wrap(submit)}>
+                <label>
+                    <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
+                </label>
+                <div class="actions">
+                    <button type="submit">${T.reset_password}</button>
+                </div>
+            </form>
         </div>
     `);
 
@@ -602,27 +596,25 @@ async function runReset() {
             <a class="active">${T.recover_account}</a>
         </div>
 
-        <div class="tab">
-            <div class="box" style="align-items: center;">
-                <div class="header">${T.recover_account}</div>
+        <div class="tab" style="align-items: center;">
+            <div class="header">${T.recover_account}</div>
 
-                <form @submit=${UI.wrap(submit)}>
-                    ${error == null ? html`
-                        <label>
-                            <span>New password</span>
-                            <input type="password" name="password1" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
-                        </label>
-                        <label>
-                            <span>Confirm</span>
-                            <input type="password" name="password2" style="width: 20em;" placeholder=${T.confirmation.toLowerCase()} />
-                        </label>
-                        <div class="actions">
-                            <button type="submit">${T.confirm_password}</button>
-                        </div>
-                    ` : ''}
-                    ${error != null ? html`<p>${error}</p>` : ''}
-                </form>
-            </div>
+            <form @submit=${UI.wrap(submit)}>
+                ${error == null ? html`
+                    <label>
+                        <span>New password</span>
+                        <input type="password" name="password1" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
+                    </label>
+                    <label>
+                        <span>Confirm</span>
+                        <input type="password" name="password2" style="width: 20em;" placeholder=${T.confirmation.toLowerCase()} />
+                    </label>
+                    <div class="actions">
+                        <button type="submit">${T.confirm_password}</button>
+                    </div>
+                ` : ''}
+                ${error != null ? html`<p>${error}</p>` : ''}
+            </form>
         </div>
     `);
 
@@ -674,50 +666,48 @@ async function runRepositories() {
         </div>
 
         <div class="tab">
-            <div class="box">
-                <div class="header">${T.repositories}</div>
-                <table style="table-layout: fixed; width: 100%;">
-                    <colgroup>
-                        <col style="width: 30%;"></col>
-                        <col></col>
-                        <col style="width: 140px;"></col>
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            ${UI.tableHeader('repositories', 'name', 'Name')}
-                            ${UI.tableHeader('repositories', 'url', 'URL')}
-                            ${UI.tableHeader('repositories', repo => {
-                                if (repo.errors) {
-                                    return 1;
-                                } else {
-                                    return repo.checked ?? 0;
-                                }
-                            }, 'Status')}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${repositories.map(repo => {
-                            let url = makeURL({ mode: 'repository', repository: repo.id });
+            <div class="header">${T.repositories}</div>
+            <table style="table-layout: fixed; width: 100%;">
+                <colgroup>
+                    <col style="width: 30%;"></col>
+                    <col></col>
+                    <col style="width: 140px;"></col>
+                </colgroup>
+                <thead>
+                    <tr>
+                        ${UI.tableHeader('repositories', 'name', 'Name')}
+                        ${UI.tableHeader('repositories', 'url', 'URL')}
+                        ${UI.tableHeader('repositories', repo => {
+                            if (repo.errors) {
+                                return 1;
+                            } else {
+                                return repo.checked ?? 0;
+                            }
+                        }, 'Status')}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${repositories.map(repo => {
+                        let url = makeURL({ mode: 'repository', repository: repo.id });
 
-                            return html`
-                                <tr style="cursor: pointer;" @click=${UI.wrap(e => go(url))}>
-                                    <td><a href=${url}>${repo.name}</a></td>
-                                    <td>${repo.url}</td>
-                                    <td style="text-align: right;">
-                                        ${!repo.checked ? T.valid : ''}
-                                        ${repo.checked && !repo.errors ? T.success : ''}
-                                        ${repo.errors ? html`<span style="color: red;">${repo.failed || T.unknown_error}</span>` : ''}
-                                        <br><span class="sub">${repo.checked ? dayjs(repo.checked).format('lll') : T.check_pending}</span>
-                                    </td>
-                                </tr>
-                            `;
-                        })}
-                        ${!repositories.length ? html`<tr><td colspan="3" style="text-align: center;">${T.no_repository}</td></tr>` : ''}
-                    </tbody>
-                </table>
-                <div class="actions">
-                    <button type="button" @click=${UI.wrap(e => configureRepository(null))}>${T.add_repository}</button>
-                </div>
+                        return html`
+                            <tr style="cursor: pointer;" @click=${UI.wrap(e => go(url))}>
+                                <td><a href=${url}>${repo.name}</a></td>
+                                <td>${repo.url}</td>
+                                <td style="text-align: right;">
+                                    ${!repo.checked ? T.valid : ''}
+                                    ${repo.checked && !repo.errors ? T.success : ''}
+                                    ${repo.errors ? html`<span style="color: red;">${repo.failed || T.unknown_error}</span>` : ''}
+                                    <br><span class="sub">${repo.checked ? dayjs(repo.checked).format('lll') : T.check_pending}</span>
+                                </td>
+                            </tr>
+                        `;
+                    })}
+                    ${!repositories.length ? html`<tr><td colspan="3" style="text-align: center;">${T.no_repository}</td></tr>` : ''}
+                </tbody>
+            </table>
+            <div class="actions">
+                <button type="button" @click=${UI.wrap(e => configureRepository(null))}>${T.add_repository}</button>
             </div>
         </div>
     `);
@@ -1029,43 +1019,41 @@ async function runPlans() {
         </div>
 
         <div class="tab">
-            <div class="box">
-                <div class="header">${T.plans}</div>
-                <table style="table-layout: fixed; width: 100%;">
-                    <colgroup>
-                        <col/>
-                        <col/>
-                        <col/>
-                        <col/>
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            ${UI.tableHeader('plans', 'name', T.name)}
-                            ${UI.tableHeader('plans', 'repository', T.repository)}
-                            <th>${T.key_prefix}</th>
-                            ${UI.tableHeader('plans', makePlanTasks, T.tasks)}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${plans.map(plan => {
-                            let url = makeURL({ mode: 'plan', plan: plan.id });
-                            let repo = cache.repositories.find(repo => repo.id == plan.repository);
+            <div class="header">${T.plans}</div>
+            <table style="table-layout: fixed; width: 100%;">
+                <colgroup>
+                    <col/>
+                    <col/>
+                    <col/>
+                    <col/>
+                </colgroup>
+                <thead>
+                    <tr>
+                        ${UI.tableHeader('plans', 'name', T.name)}
+                        ${UI.tableHeader('plans', 'repository', T.repository)}
+                        <th>${T.key_prefix}</th>
+                        ${UI.tableHeader('plans', makePlanTasks, T.tasks)}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${plans.map(plan => {
+                        let url = makeURL({ mode: 'plan', plan: plan.id });
+                        let repo = cache.repositories.find(repo => repo.id == plan.repository);
 
-                            return html`
-                                <tr style="cursor: pointer;" @click=${UI.wrap(e => go(url))}>
-                                    <td><a href=${url}>${plan.name}</a></td>
-                                    <td><a href=${makeURL({ mode: 'repository', repository: plan.repository })}>${repo?.name}</a></td>
-                                    <td><span class="sub">${plan.key}</sub></td>
-                                    <td>${makePlanTasks(plan)}</td>
-                                </tr>
-                            `;
-                        })}
-                        ${!plans.length ? html`<tr><td colspan="4" style="text-align: center;">${T.no_plan}</td></tr>` : ''}
-                    </tbody>
-                </table>
-                <div class="actions">
-                    <button type="button" @click=${UI.wrap(e => configurePlan(null))}>${T.add_plan}</button>
-                </div>
+                        return html`
+                            <tr style="cursor: pointer;" @click=${UI.wrap(e => go(url))}>
+                                <td><a href=${url}>${plan.name}</a></td>
+                                <td><a href=${makeURL({ mode: 'repository', repository: plan.repository })}>${repo?.name}</a></td>
+                                <td><span class="sub">${plan.key}</sub></td>
+                                <td>${makePlanTasks(plan)}</td>
+                            </tr>
+                        `;
+                    })}
+                    ${!plans.length ? html`<tr><td colspan="4" style="text-align: center;">${T.no_plan}</td></tr>` : ''}
+                </tbody>
+            </table>
+            <div class="actions">
+                <button type="button" @click=${UI.wrap(e => configurePlan(null))}>${T.add_plan}</button>
             </div>
         </div>
     `);
@@ -1473,16 +1461,14 @@ async function runAccount() {
             <a class="active">${T.account}</a>
         </div>
 
-        <div class="tab">
-            <div class="box" style="align-items: center;">
-                <div class="header">${T.account}</div>
-                <div class="sub">${session.username}</div>
-                <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
-                <div class="actions">
-                    <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>${T.change_picture}</button>
-                    <button type="button" class="secondary" @click=${UI.wrap(configureTOTP)}>${T.configure_2fa}</button>
-                    <button type="button" class="secondary" @click=${UI.insist(logout)}>${T.logout}</button>
-                </div>
+        <div class="tab" style="align-items: center;">
+            <div class="header">${T.account}</div>
+            <div class="sub">${session.username}</div>
+            <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
+            <div class="actions">
+                <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>${T.change_picture}</button>
+                <button type="button" class="secondary" @click=${UI.wrap(configureTOTP)}>${T.configure_2fa}</button>
+                <button type="button" class="secondary" @click=${UI.insist(logout)}>${T.logout}</button>
             </div>
         </div>
     `);
