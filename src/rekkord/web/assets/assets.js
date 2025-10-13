@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import asset0 from './main/logo.webp';
-import asset1 from './main/rekkord.png';
+import asset1 from './main/rekkord.webp';
 import asset2 from './ui/anonymous.png';
 import asset3 from './ui/delete.webp';
 import asset4 from './ui/move.webp';

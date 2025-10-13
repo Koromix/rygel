@@ -168,7 +168,7 @@ table .grab {
     -webkit-user-select: none;
 }
 table tbody tr:hover > td {
-    background: #76b35a;
+    background: var(--bar_color);
     color: white;
     --color: white;
 }

@@ -16,11 +16,11 @@
 @import url('../../../web/flat/flat.css');
 
 html {
-    --top_color: #6aa051;
-    --button_color: #6aa051;
-    --anchor_color: #6aa051;
+    --top_color: #1c9b72;
+    --button_color: #1c9b72;
+    --anchor_color: #1c9b72;
 
-    --bar_color: #76b35a;
+    --bar_color: #1c9b72;
     --tab_color: #f4f4f4;
     --box_color: #efefef;
 

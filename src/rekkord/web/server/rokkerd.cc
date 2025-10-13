@@ -234,8 +234,8 @@ static void InitAssets()
         if (TestStr(asset.name, "src/rekkord/web/client/index.html")) {
             assets_index = asset;
             assets_map.Set("/", &assets_index);
-        } else if (TestStr(asset.name, "src/rekkord/web/assets/main/rekkord.png")) {
-            assets_map.Set("/favicon.png", &asset);
+        } else if (TestStr(asset.name, "src/rekkord/web/assets/main/rekkord.webp")) {
+            assets_map.Set("/favicon.webp", &asset);
         } else {
             Span<const char> name = SplitStrReverseAny(asset.name, K_PATH_SEPARATORS);
 

@@ -17,7 +17,7 @@
 @import url('../../../vendor/highlight.js/styles/base16/tomorrow.css');
 
 html {
-    --top_color: #6aa051;
-    --button_color: #6aa051;
-    --anchor_color: #6aa051;
+    --top_color: #1c9b72;
+    --button_color: #1c9b72;
+    --anchor_color: #1c9b72;
 }
