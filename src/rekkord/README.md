@@ -8,7 +8,7 @@ Rekkord is a **multi-platform backup tool**, with the following features:
 - Local and remote storage back-ends: local directory, S3 storage, SFTP servers
 
 <div class="illustrations">
-    <img src="{{ ASSET static/rekkord/logo.webp }}" width="265" height="64" alt="" />
+    <img src="{{ ASSET static/rekkord/logo.webp }}" width="213" height="64" alt="" />
 </div>
 
 > [!CAUTION]
