@@ -37,6 +37,7 @@ struct Config {
     bool auto_index = true;
     bool explicit_index = false;
     bool auto_html = true;
+    bool follow_symlinks = false;
     int connect_timeout = 5000;
     int connect_retries = 3;
     int max_time = 60000;
@@ -197,6 +198,8 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                     }
                 } else if (prop.key == "AutoHtml") {
                     valid &= ParseBool(prop.value, &config.auto_html);
+                } else if (prop.key == "FollowSymlinks") {
+                    valid &= ParseBool(prop.value, &config.follow_symlinks);
                 } else if (prop.key == "MaxAge") {
                     valid &= ParseDuration(prop.value, &config.max_age);
                 } else if (prop.key == "ETag") {
@@ -478,15 +481,18 @@ static HandlerResult HandleLocal(http_IO *io, const char *dirname)
     Span<const char> relative_url = TrimStrLeft(request.path, "/\\").ptr;
     Span<const char> filename = NormalizePath(relative_url, dirname, io->Allocator());
 
+    int stat_flags = (int)StatFlag::SilentMissing |
+                     (config.follow_symlinks ? (int)StatFlag::FollowSymlink : 0);
+
     FileInfo file_info;
     {
-        StatResult stat = StatFile(filename.ptr, (int)StatFlag::SilentMissing, &file_info);
+        StatResult stat = StatFile(filename.ptr, stat_flags, &file_info);
 
         if (config.auto_html) {
             if (stat == StatResult::MissingPath && !EndsWith(filename, "/")
                                                 && !GetPathExtension(filename).len) {
                 filename = Fmt(io->Allocator(), "%1.html", filename).ptr;
-                stat = StatFile(filename.ptr, (int)StatFlag::SilentMissing, &file_info);
+                stat = StatFile(filename.ptr, stat_flags, &file_info);
             }
         }
 
@@ -517,7 +523,7 @@ static HandlerResult HandleLocal(http_IO *io, const char *dirname)
 
         FileInfo index_info;
 
-        if (StatFile(index_filename, (int)StatFlag::SilentMissing, &index_info) == StatResult::Success &&
+        if (StatFile(index_filename, stat_flags, &index_info) == StatResult::Success &&
                 index_info.type == FileType::File) {
             ServeFile(io, index_filename, index_info);
             return HandlerResult::Done;
@@ -759,6 +765,8 @@ Options:
                                    %!D..(default: %3)%!0
         %!..+--bind IP%!0                  Bind to specific IP
 
+    %!..+-L, --follow%!0                   Follow symbolic links
+
         %!..+--sab%!0                      Set headers for SharedArrayBuffer support
 
     %!..+-v, --verbose%!0                  Log served requests)",
@@ -813,6 +821,8 @@ Options:
                     return 1;
             } else if (opt.Test("--bind", OptionType::Value)) {
                 config.http.bind_addr = opt.current_value;
+            } else if (opt.Test("-L", "--follow")) {
+                config.follow_symlinks = true;
             } else if (opt.Test("--sab")) {
                 Size j = 0;
                 for (Size i = 0; i < config.headers.len; i++) {
