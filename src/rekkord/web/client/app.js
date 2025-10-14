@@ -346,20 +346,18 @@ async function runRegister() {
             <a class="active">${T.new_account}</a>
         </div>
 
-        <div class="tab">
-            <div class="box" style="align-items: center;">
-                <div class="header">${T.create_your_account}</div>
+        <div class="tab" style="align-items: center;">
+            <div class="header">${T.create_your_account}</div>
 
-                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
-                    <label>
-                        <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
-                    </label>
-                    <div class="actions">
-                        <button type="submit">${T.register}</button>
-                        <a href="/login">${T.already_have_account}</a>
-                    </div>
-                </form>
-            </div>
+            <form style="text-align: center;" @submit=${UI.wrap(submit)}>
+                <label>
+                    <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
+                </label>
+                <div class="actions">
+                    <button type="submit">${T.register}</button>
+                    <a href="/login">${T.already_have_account}</a>
+                </div>
+            </form>
         </div>
     `);
 
@@ -407,27 +405,25 @@ async function runFinalize() {
             <a class="active">${T.finalize_account}</a>
         </div>
 
-        <div class="tab">
-            <div class="box" style="align-items: center;">
-                <div class="header">${T.create_password}</div>
+        <div class="tab" style="align-items: center;">
+            <div class="header">${T.create_password}</div>
 
-                <form @submit=${UI.wrap(submit)}>
-                    ${error == null ? html`
-                        <label>
-                            <span>${T.choose_password}</span>
-                            <input type="password" name="password1" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
-                        </label>
-                        <label>
-                            <span>${T.confirmation}</span>
-                            <input type="password" name="password2" style="width: 20em;" placeholder=${T.confirmation.toLowerCase()} />
-                        </label>
-                        <div class="actions">
-                            <button type="submit">${T.set_password}</button>
-                        </div>
-                    ` : ''}
-                    ${error != null ? html`<p>${error}</p>` : ''}
-                </form>
-            </div>
+            <form @submit=${UI.wrap(submit)}>
+                ${error == null ? html`
+                    <label>
+                        <span>${T.choose_password}</span>
+                        <input type="password" name="password1" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
+                    </label>
+                    <label>
+                        <span>${T.confirmation}</span>
+                        <input type="password" name="password2" style="width: 20em;" placeholder=${T.confirmation.toLowerCase()} />
+                    </label>
+                    <div class="actions">
+                        <button type="submit">${T.set_password}</button>
+                    </div>
+                ` : ''}
+                ${error != null ? html`<p>${error}</p>` : ''}
+            </form>
         </div>
     `);
 
