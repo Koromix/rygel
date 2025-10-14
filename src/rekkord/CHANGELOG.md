@@ -6,6 +6,22 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.89
+
+*Released on 2025-10-14*
+
+- Report number of checked snapshots after `rekkord scan`
+- Print information about invalid snapshots after scan
+- Skip annoying blob cache fill for `rekkord scan`
+- Add RekkordTray binary to show status of background agent (Windows and Linux)
+- Reduce default `rekkord agent` check period to 20 minutes
+- Fix error when trying to change CheckPeriod agent setting
+- Make local repository URL setting relative to INI directory
+- Change description of `rekkord restore` command
+- Separate Rekkord and Rekkord Web (rokkerd) binaries
+- Update translations and fix various mistakes and typos
+- Update Rekkord icon and colors
+
 ### Rekkord 0.88
 
 *Released on 2025-08-31*
