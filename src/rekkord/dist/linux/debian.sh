@@ -15,9 +15,10 @@ DOCKER_IMAGE=debian11
 
 build() {
     ./bootstrap.sh
-    ./felix -pFast --host=$1:clang-18:lld-18 rekkord
+    ./felix -pFast --host=$1:clang-18:lld-18 rekkord RekkordTray
 
     install -D -m0755 bin/Fast/rekkord ${ROOT_DIR}/usr/bin/rekkord
+    install -D -m0755 bin/Fast/RekkordTray ${ROOT_DIR}/usr/bin/RekkordTray
 }
 
 cd "$(dirname $0)/../../../.."

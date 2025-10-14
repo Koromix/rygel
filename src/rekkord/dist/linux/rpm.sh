@@ -14,9 +14,10 @@ DOCKER_IMAGE=rocky9
 
 build() {
     ./bootstrap.sh
-    ./felix -pFast rekkord
+    ./felix -pFast rekkord RekkordTray
 
     install -D -m0755 bin/Fast/rekkord ${ROOT_DIR}/usr/bin/rekkord
+    install -D -m0755 bin/Fast/RekkordTray ${ROOT_DIR}/usr/bin/RekkordTray
 }
 
 cd "$(dirname $0)/../../../.."

@@ -5,7 +5,7 @@ cd %~dp0
 cd ..\..\..\..
 
 start bootstrap.bat
-felix.exe -pFast rekkord
+felix.exe -pFast rekkord RekkordTray
 
 for /f "tokens=2 delims= " %%i in ('bin\Fast\rekkord.exe --version') do (
     set RAW_VERSION=%%i
@@ -27,6 +27,7 @@ set PACKAGE_DIR=bin\Packages\rekkord\windows
 mkdir %PACKAGE_DIR%
 
 copy bin\Fast\rekkord.exe %PACKAGE_DIR%\rekkord.exe
+copy bin\Fast\RekkordTray.exe %PACKAGE_DIR%\RekkordTray.exe
 copy src\rekkord\README.md %PACKAGE_DIR%\README.md
 
 cd %PACKAGE_DIR%
