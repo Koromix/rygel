@@ -66,7 +66,6 @@ class rk_Cache {
     int64_t last_commit = 0;
     std::mutex commit_mutex;
     PendingSet commit;
-    HashSet<rk_ObjectID> known_checks;
 
 public:
     ~rk_Cache() { Close(); }
@@ -76,15 +75,15 @@ public:
 
     bool Reset(bool list);
 
-    int64_t CountBlobs(int64_t *out_checked = nullptr);
     bool PruneChecks(int64_t from);
+    int64_t CountChecks();
 
     StatResult TestBlob(const rk_ObjectID &oid, int64_t *out_size = nullptr);
     bool HasCheck(const rk_ObjectID &oid, bool *out_valid = nullptr);
     StatResult GetStat(const char *path, rk_CacheStat *st);
 
     void PutBlob(const rk_ObjectID &oid, int64_t size);
-    bool PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid);
+    void PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid);
     void PutStat(const char *path, const rk_CacheStat &stat);
 
 private:

@@ -265,34 +265,28 @@ bool rk_Cache::Reset(bool list)
     return success;
 }
 
-int64_t rk_Cache::CountBlobs(int64_t *out_checked)
-{
-    sq_Statement stmt;
-    if (!main.Prepare(R"(SELECT COUNT(b.oid) AS blobs,
-                                SUM(IIF(c.oid IS NULL, 0, 1)) AS checked
-                         FROM blobs b
-                         LEFT JOIN checks c ON (c.oid = b.oid))", &stmt))
-        return -1;
-    if (!stmt.Step()) {
-        K_ASSERT(!stmt.IsValid());
-        return -1;
-    }
-
-    int64_t blobs = sqlite3_column_int64(stmt, 0);
-    int64_t checked = sqlite3_column_int64(stmt, 1);
-
-    if (out_checked) {
-        *out_checked = checked;
-    }
-    return blobs;
-}
-
 bool rk_Cache::PruneChecks(int64_t from)
 {
     K_ASSERT(repo);
 
     bool success = main.Run("DELETE FROM checks WHERE mark < ?1", from);
     return success;
+}
+
+int64_t rk_Cache::CountChecks()
+{
+    K_ASSERT(repo);
+
+    sq_Statement stmt;
+    if (!main.Prepare(R"(SELECT COUNT(oid) FROM checks)", &stmt))
+        return -1;
+    if (!stmt.Step()) {
+        K_ASSERT(!stmt.IsValid());
+        return -1;
+    }
+
+    int64_t checked = sqlite3_column_int64(stmt, 1);
+    return checked;
 }
 
 StatResult rk_Cache::TestBlob(const rk_ObjectID &oid, int64_t *out_size)
@@ -382,7 +376,7 @@ void rk_Cache::PutBlob(const rk_ObjectID &oid, int64_t size)
     Commit(false);
 }
 
-bool rk_Cache::PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid)
+void rk_Cache::PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid)
 {
     K_ASSERT(repo);
 
@@ -392,17 +386,7 @@ bool rk_Cache::PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid)
     PendingCheck check = { oid, mark, valid };
     pending.checks.Append(check);
 
-    bool inserted;
-    known_checks.TrySet(oid, &inserted);
-
     Commit(false);
-
-    if (!inserted) {
-        // The check may have been committed already
-        inserted = !HasCheck(oid);
-    }
-
-    return inserted;
 }
 
 void rk_Cache::PutStat(const char *path, const rk_CacheStat &st)
@@ -446,13 +430,6 @@ bool rk_Cache::Commit(bool force)
         commit.str_alloc.Reset();
 
         lock_commit.unlock();
-
-        std::lock_guard<std::mutex> lock_put(put_mutex);
-
-        known_checks.RemoveAll();
-        for (const PendingCheck &check: pending.checks) {
-            known_checks.Set(check.oid);
-        }
     };
 
     bool success = write.Transaction([&]() {

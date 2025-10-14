@@ -1375,25 +1375,22 @@ class CheckContext {
 
     ProgressHandle pg_blobs { "Blobs" };
 
-    int64_t total_blobs = 0;
     std::atomic_int64_t checked_blobs = 0;
 
 public:
-    CheckContext(rk_Repository *repo, rk_Cache *cache, int64_t mark, int64_t checked, int64_t blobs);
+    CheckContext(rk_Repository *repo, rk_Cache *cache, int64_t mark, int64_t checked);
 
     bool Check(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate);
 
     bool CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<const uint8_t>)> validate);
     bool RecurseEntries(Span<const uint8_t> blob, bool allow_separators);
 
-    int64_t GetChecked() const { return checked_blobs; }
-
 private:
     void MakeProgress(int64_t blobs);
 };
 
-CheckContext::CheckContext(rk_Repository *repo, rk_Cache *cache, int64_t mark, int64_t checked, int64_t blobs)
-    : repo(repo), cache(cache), mark(mark), total_blobs(blobs), checked_blobs(checked)
+CheckContext::CheckContext(rk_Repository *repo, rk_Cache *cache, int64_t mark, int64_t checked)
+    : repo(repo), cache(cache), mark(mark), checked_blobs(checked)
 {
     repo->MakeSalt(rk_SaltKind::BlobHash, salt32);
 }
@@ -1409,8 +1406,8 @@ bool CheckContext::Check(const rk_ObjectID &oid, FunctionRef<bool(int, Span<cons
 
     bool valid = CheckBlob(oid, validate);
 
-    bool inserted = cache->PutCheck(oid, mark, valid);
-    MakeProgress(inserted);
+    cache->PutCheck(oid, mark, valid);
+    MakeProgress(1);
 
     return valid;
 }
@@ -1600,7 +1597,7 @@ bool CheckContext::RecurseEntries(Span<const uint8_t> blob, bool allow_separator
 void CheckContext::MakeProgress(int64_t blobs)
 {
     blobs = checked_blobs.fetch_add(blobs, std::memory_order_relaxed) + blobs;
-    pg_blobs.SetFmt(blobs, total_blobs, T("%1 / %2 blobs"), blobs, total_blobs);
+    pg_blobs.SetFmt(T("%1 blobs"), blobs);
 }
 
 bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshots, HeapArray<Size> *out_errors)
@@ -1610,20 +1607,17 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
     rk_Cache cache;
     if (!cache.Open(repo, false))
         return false;
-    if (!cache.Reset(true))
-        return false;
 
     int64_t mark = GetUnixTime();
 
     if (!cache.PruneChecks(mark - CheckDelay))
         return false;
 
-    int64_t checked;
-    int64_t blobs = cache.CountBlobs(&checked);
-    if (blobs < 0)
+    int64_t checked = cache.CountChecks();
+    if (checked < 0)
         return false;
 
-    CheckContext check(repo, &cache, mark, checked, blobs);
+    CheckContext check(repo, &cache, mark, checked);
     bool valid = true;
 
     ProgressHandle progress("Snapshots");

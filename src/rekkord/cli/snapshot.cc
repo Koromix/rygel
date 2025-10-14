@@ -419,7 +419,12 @@ T(R"(Usage: %!..+%1 scan [-C filename] [option...]%!0)"), FelixTarget);
     if (!rk_ListSnapshots(repo.get(), &temp_alloc, &snapshots))
         return 1;
 
-    LogInfo("Checking repository...");
+    if (!snapshots.len) {
+        LogInfo("There does not seem to be any snapshot");
+        return 0;
+    }
+
+    LogInfo("Checking snapshots...");
 
     HeapArray<Size> errors;
     bool valid = rk_CheckSnapshots(repo.get(), snapshots, &errors);
