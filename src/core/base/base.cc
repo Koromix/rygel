@@ -1876,6 +1876,8 @@ void FmtEscape::Format(FunctionRef<void(Span<const char>)> append) const
             append("\\r");
         } else if (c == '\n') {
             append("\\n");
+        } else if (c == '\\') {
+            append("\\\\");
         } else if ((unsigned int)c < 32) {
             char encoded[4];
 
