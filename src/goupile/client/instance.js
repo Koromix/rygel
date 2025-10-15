@@ -628,9 +628,10 @@ function renderData() {
                         let id = 'ins_tag_' + tag.key;
 
                         return html`
-                            <div  class=${data_tags == null ? 'fm_check disabled' : 'fm_check'} style="padding-top: 0;">
+                            <div class=${data_tags == null ? 'fm_check disabled' : 'fm_check'} style="padding-top: 0;">
                                 <input id=${id} type="checkbox"
-                                       .checked=${data_tags == null || data_tags.has(tag.key)}
+                                       ?disabled=${data_tags == null}
+                                       .checked=${data_tags?.has?.(tag.key)}
                                        @change=${UI.wrap(e => toggleTagFilter(tag.key))} />
                                 <label for=${id}><span class="ui_tag" style=${'background: ' + tag.color + ';'}>${tag.label}</label>
                             </div>
@@ -858,17 +859,13 @@ async function runExportListDialog(e) {
 
 function toggleTagFilter(tag) {
     if (tag == null) {
-        if (data_tags == null) {
-            data_tags = new Set(app.tags.filter(tag => tag.filter).map(tag => tag.key));
-        } else {
-            data_tags = null;
-        }
+        data_tags = (data_tags == null) ? new Set : null;
     } else if (data_tags != null) {
         if (!data_tags.delete(tag))
             data_tags.add(tag);
     }
 
-     return go();
+    return go();
 }
 
 async function renderPage() {

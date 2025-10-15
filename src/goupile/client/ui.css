@@ -306,7 +306,7 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
     color: #777;
     align-items: flex-end;
 }
-.ui_quick input {
+.ui_quick input[type=text] {
     padding: 3px 4px;
     background: white;
     border: 1px solid #ccc;
