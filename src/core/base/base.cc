@@ -9626,6 +9626,10 @@ bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
                         Delete(str_offset, SkipForward(str_offset, 1));
                         RenderRaw();
                     }
+                } else if (match_escape("\x1B")) { // Double escape
+                    StdErr->Write("\r\n");
+                    StdErr->Flush();
+                    return false;
                 } else if (match_escape("\x7F")) { // Alt-Backspace
                     Delete(FindBackward(str_offset, " \t\r\n"), str_offset);
                     RenderRaw();
@@ -9848,6 +9852,14 @@ Size ConsolePrompter::ReadRawEnum(Span<const PromptChoice> choices, Size value)
                     fake_input = "\x10";
                 } else if (match_escape("[B")) { // Down
                     fake_input = "\x0E";
+                } else if (match_escape("\x1B")) { // Double escape
+                    if (rows > y) {
+                        Print(StdErr, "\x1B[%1B", rows - y);
+                    }
+                    StdErr->Write("\r");
+                    StdErr->Flush();
+
+                    return -1;
                 }
             } break;
 
