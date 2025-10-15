@@ -676,22 +676,36 @@ function renderData() {
                                 <td class=${cls} title=${row.sequence}>${row.sequence != null ? row.sequence : 'NA'}</td>
                                 <td class=${active ? ' active' : ''} title=${row.ctime.toLocaleString()}>${row.ctime.toLocaleDateString()}</td>
                                 ${data_columns.map(col => {
+                                    let entry = row.entries[col.page.store.key];
+
                                     let status = computeStatus(col.page, row);
-                                    let summary = row.entries[col.page.store.key]?.summary;
+                                    let summary = entry?.summary;
                                     let url = col.page.url + `/${row.tid}`;
                                     let highlight = active && route.page.chain.includes(col.page);
 
+                                    let tooltip = col.page.title;
+                                    let dots = '';
+
+                                    if (entry != null) {
+                                        let tags = app.tags.filter(tag => entry.tags.includes(tag.key));
+
+                                        if (tags.length) {
+                                            tooltip += '\nTags : ' + tags.map(tag => tag.label).join(', ');
+                                            dots = tags.map(tag => html` <span style=${'color: ' + tag.color + ';'}>⏺\uFE0E</span>`);
+                                        }
+                                    }
+
                                     if (status.complete) {
                                         return html`<td class=${highlight ? 'complete active' : 'complete'}
-                                                        title=${col.page.title}><a href=${url}>${summary ?? '✓\uFE0E ' + T.filled}</a></td>`;
+                                                        title=${tooltip}><a href=${url}>${summary ?? '✓\uFE0E ' + T.filled}</a>${dots}</td>`;
                                     } else if (status.filled) {
                                         let progress = Math.floor(100 * status.filled / status.total);
 
                                         return html`<td class=${highlight ? 'partial active' : 'partial'}
-                                                        title=${col.page.title}><a href=${url}>${summary ?? progress + '%'}</a></td>`;
+                                                        title=${tooltip}><a href=${url}>${summary ?? progress + '%'}</a>${dots}</td>`;
                                     } else {
                                         return html`<td class=${highlight ? 'missing active' : 'missing'}
-                                                        title=${col.page.title}><a href=${url}>${T.show}</a></td>`;
+                                                        title=${tooltip}><a href=${url}>${T.show}</a>${dots}</td>`;
                                     }
                                 })}
                                 ${row.locked ? html`<th>🔒</th>` : ''}
