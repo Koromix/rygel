@@ -772,32 +772,30 @@ async function runRegister() {
             <a class="active">Enregistrez-vous</a>
         </div>
 
-        <div class="tab">
-            <div class="box" style="align-items: center;">
-                <div class="header">Enregistrez-vous pour continuer</div>
+        <div class="tab" style="align-items: center;">
+            <div class="header">Enregistrez-vous pour continuer</div>
 
-                <div>
-                    <p>La <b>création d’un compte</b> est essentielle pour participer aux études, elle permet de :
-                    <ul>
-                        <li>Garantir la protection de vos données
-                        <li>Faciliter le suivi de votre progression
-                        <li>Assurer la fiabilité des données recueillies
-                    </ul>
+            <div>
+                <p>La <b>création d’un compte</b> est essentielle pour participer aux études, elle permet de :
+                <ul>
+                    <li>Garantir la protection de vos données
+                    <li>Faciliter le suivi de votre progression
+                    <li>Assurer la fiabilité des données recueillies
+                </ul>
+            </div>
+
+            <form style="text-align: center;" @submit=${UI.wrap(register)}>
+                <input type="text" name="mail" style="width: 20em;" placeholder="adresse email" />
+                <div class="actions">
+                    <button type="submit">Créer mon compte</button>
                 </div>
+            </form>
 
-                <form style="text-align: center;" @submit=${UI.wrap(register)}>
-                    <input type="text" name="mail" style="width: 20em;" placeholder="adresse email" />
-                    <div class="actions">
-                        <button type="submit">Créer mon compte</button>
-                    </div>
-                </form>
-
-                <div class="help">
-                    <img src=${ASSETS['pictures/help1']} alt="" />
-                    <div>
-                        <p>Toutes vos données étant chiffrées et sécurisées, <b>conservez précieusement le lien de connexion</b> qui va vous être envoyé par e-mail !
-                        <p>Nous ne serons <b>pas en mesure de recréer le lien de connexion</b> qui existe dans ce mail si vous le perdez !
-                    </div>
+            <div class="help">
+                <img src=${ASSETS['pictures/help1']} alt="" />
+                <div>
+                    <p>Toutes vos données étant chiffrées et sécurisées, <b>conservez précieusement le lien de connexion</b> qui va vous être envoyé par e-mail !
+                    <p>Nous ne serons <b>pas en mesure de recréer le lien de connexion</b> qui existe dans ce mail si vous le perdez !
                 </div>
             </div>
         </div>
@@ -1044,17 +1042,15 @@ async function changePassword() {
                 </div>
 
                 <div class="tab">
-                    <div class="box">
-                        <label>
-                            <span>Nouveau mot de passe</span>
-                            <input type="password" name="password1" placeholder="mot de passe" />
-                        </label>
-                        <label>
-                            <input type="password" name="password2" placeholder="confirmation" />
-                        </label>
-                        <div class="actions">
-                            <button type="submit">Confirmer le mot de passe</button>
-                        </div>
+                    <label>
+                        <span>Nouveau mot de passe</span>
+                        <input type="password" name="password1" placeholder="mot de passe" />
+                    </label>
+                    <label>
+                        <input type="password" name="password2" placeholder="confirmation" />
+                    </label>
+                    <div class="actions">
+                        <button type="submit">Confirmer le mot de passe</button>
                     </div>
                 </div>
             `;
