@@ -36,14 +36,15 @@ KeyFile = %2
 
 static const char *PromptNonEmpty(const char *prompt, const char *value, const char *mask, Allocator *alloc)
 {
+retry:
     const char *ret = Prompt(prompt, value, mask, alloc);
-
     if (!ret)
         return nullptr;
+
     if (!ret[0]) {
         Span<const char> object = TrimStrRight(prompt, ".:;,-_ ");
         LogError("Cannot use empty %1", FmtLowerAscii(object));
-        return nullptr;
+        goto retry;
     }
 
     return ret;
@@ -218,9 +219,11 @@ Options:
             const char *key_id = nullptr;
             const char *secret_key = nullptr;
 
-            endpoint = PromptNonEmpty(T("S3 endpoint URL:"), &temp_alloc);
-            if (!endpoint || !CheckEndpoint(endpoint))
-                return 1;
+            do {
+                endpoint = PromptNonEmpty(T("S3 endpoint URL:"), &temp_alloc);
+                if (!endpoint)
+                    return 1;
+            } while (!CheckEndpoint(endpoint));
             bucket = PromptNonEmpty(T("Bucket name:"), &temp_alloc);
             if (!bucket)
                 return 1;
@@ -403,13 +406,15 @@ Options:
     }
 
     if (!key_filename) {
-        key_filename = Prompt(T("Master key export file:"), "master.key", nullptr, &temp_alloc);
+        for (;;) {
+            key_filename = Prompt(T("Master key export file:"), "master.key", nullptr, &temp_alloc);
 
-        if (!key_filename)
-            return 1;
-        if (!key_filename[0]) {
+            if (!key_filename)
+                return 1;
+            if (key_filename[0])
+                break;
+
             LogError("Cannot export to empty path");
-            return 1;
         }
     }
 
