@@ -780,8 +780,6 @@ const Net = new function() {
             options.headers = {};
         if (!options.hasOwnProperty('timeout') && options.signal == null)
             options.timeout = 15000;
-        if (!options.headers.hasOwnProperty('X-Requested-With'))
-            options.headers['X-Requested-With'] = 'XMLHTTPRequest';
 
         for (let key in options.headers) {
             let value = options.headers[key];
@@ -842,7 +840,6 @@ const Net = new function() {
         options = Object.assign({}, options, {
             method: 'POST',
             headers: {
-                'X-Requested-With': 'XMLHTTPRequest',
                 'Content-Type': 'application/json'
             },
             body: body
@@ -863,7 +860,6 @@ const Net = new function() {
         options = Object.assign({}, options, {
             method: 'PUT',
             headers: {
-                'X-Requested-With': 'XMLHTTPRequest',
                 'Content-Type': blob.type
             },
             body: blob
@@ -881,12 +877,7 @@ const Net = new function() {
     };
 
     this.delete = async function(url, obj = null, options = {}) {
-        options = Object.assign({}, options, {
-            method: 'DELETE',
-            headers: {
-                'X-Requested-With': 'XMLHTTPRequest'
-            }
-        });
+        options = Object.assign({}, options, { method: 'DELETE' });
 
         let response = await self.fetch(url, options);
 

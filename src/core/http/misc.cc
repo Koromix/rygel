@@ -172,25 +172,44 @@ bool http_PreventCSRF(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
 
-    const char *xh = request.GetHeaderValue("X-Requested-With");
-    const char *sec = request.GetHeaderValue("Sec-Fetch-Site");
+    // Try Sec-Fetch-Site header
+    {
+        const char *sec = request.GetHeaderValue("Sec-Fetch-Site");
 
-    if (!xh || !xh[0]) {
-        xh = request.GetHeaderValue("X-Api-Key");
+        if (sec) {
+            if (!TestStr(sec, "same-origin") && !TestStr(sec, "none")) {
+                LogError("Denying cross-origin request (Sec-Fetch-Site)");
+                io->SendError(403);
+                return false;
+            }
 
-        if (!xh || !xh[0]) {
-            LogError("Anti-CSRF header is missing");
-            io->SendError(403);
-            return false;
+            return true;
         }
     }
 
-    if (sec && !TestStr(sec, "same-origin")) {
-        LogError("Denying cross-origin request");
-        io->SendError(403);
-        return false;
+    // Try Origin header
+    {
+        const char *host = request.GetHeaderValue("Host");
+        const char *origin = request.GetHeaderValue("Origin");
+
+        if (host && origin) {
+            if (StartsWith(origin, "https://")) {
+                origin += 8;
+            } else if (StartsWith(origin, "http://")) {
+                origin += 7;
+            }
+
+            if (host && !TestStr(origin, host)) {
+                LogError("Denying cross-origin request (Origin)");
+                io->SendError(403);
+                return false;
+            }
+
+            return true;
+        }
     }
 
+    // Assume direct use of web API through curl or something else
     return true;
 }
 

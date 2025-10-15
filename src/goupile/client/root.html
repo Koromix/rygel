@@ -131,10 +131,7 @@
 
             async function demo() {
                 try {
-                    let response = await fetch('/admin/api/domain/demo', {
-                        method: 'POST',
-                        headers: { 'X-Requested-With': 'XMLHTTPRequest' }
-                    });
+                    let response = await fetch('/admin/api/domain/demo', { method: 'POST' });
 
                     if (!response.ok) {
                         let text = (await response.text()).trim();
