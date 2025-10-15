@@ -7,11 +7,25 @@ Chaque enregistrement dans Goupile dispose de deux identifiants uniques :
 - L'identifiant TID, qui est une chaîne de 26 caractères encodant le moment de l'enregistrement et une partie aléatoire (ex : *01K5EY3SCEM1D1NBABXXDZW7XP*).
 - L'identifiant de séquence, qui est un nombre incrémenté à chaque enregistrement, en commençant par 1.
 
+## Summary
+
 Pour chaque page du formulaire, il est possible de définir un identifiant supplémentaire dit `summary`, qui sera affiché à la place de la date dans le tableau récapitulatif des enregistements (voir capture ci-dessous).
 
-XXX: CAPTURES
+Pour cela, assignez une valeur à `meta.summary` dans le script de formulaire. Dans l'exemple ci-dessous, la valeur affichée dans la colonne « Introduction » est construite en fonction de l'âge indiqué dans la variable correspondante :
 
-Pour ce faire, assignez une valeur à `meta.summary` comme illustré dans l'example ci-dessous :
+```js
+form.number("*age", "Âge", {
+    min: 0,
+    max: 120
+})
+
+if (values.age != null)
+    meta.summary = values.age + (values.age > 1 ? ' ans' : ' an')
+```
+
+<div class="screenshot"><img src="{{ ASSET static/help/dev/summary.webp }}" height="200" alt=""/></div>
+
+Vous pouvez utiliser cette fonctionnalité pour afficher un numéro d'inclusion créé manuellement (par exemple si le numéro d'inclusion est créé en dehors de Goupile), comme le montre l'exemple ci-dessous :
 
 ```js
 form.number("num_inclusion", "Numero d'inclusion")
