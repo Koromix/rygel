@@ -180,16 +180,10 @@ Options:
     }
 
     if (!force) {
-        if (TestFile(config_filename)) {
-            Size idx = PromptEnum(T("Do you want to overwrite existing config file?"), {{'y', "Yes"}, {'n', "No"}}, 1);
-            if (idx < 0 || idx)
-                return 1;
-        }
-        if (TestFile(key_filename)) {
-            Size idx = PromptEnum(T("Do you want to overwrite existing key file?"), {{'y', "Yes"}, {'n', "No"}}, 1);
-            if (idx < 0 || idx)
-                return 1;
-        }
+        if (TestFile(config_filename) && PromptYN(T("Do you want to overwrite existing config file?")) != 1)
+            return 1;
+        if (TestFile(key_filename) && PromptYN(T("Do you want to overwrite existing key file?")) != 1)
+            return 1;
     }
 
     StreamWriter st(config_filename, (int)StreamWriterFlag::Atomic);

@@ -310,10 +310,10 @@ ssh_session ssh_Connect(const ssh_Config &config)
 
                 bool trust = false;
                 {
-                    Size idx = PromptEnum("Do you trust the host key? ", {{'y', "Yes"}, {'n', "No"}}, 1);
-                    if (idx < 0)
+                    int ret = PromptYN("Do you trust the host key? ");
+                    if (ret < 0)
                         return nullptr;
-                    trust = !idx;
+                    trust = ret;
                 }
                 if (!trust) {
                     LogError("Cannot trust server, refusing to continue");

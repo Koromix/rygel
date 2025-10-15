@@ -10373,6 +10373,17 @@ Size PromptEnum(const char *prompt, Span<const char *const> strings, Size value)
     return PromptEnum(prompt, choices, value);
 }
 
+int PromptYN(const char *prompt)
+{
+    const char *shortcuts = T("yn");
+
+    int ret = PromptEnum(prompt, {{ shortcuts[0], T("Yes") }, { shortcuts[1], T("No") }});
+    if (ret < 0)
+        return -1;
+
+    return !ret;
+}
+
 // ------------------------------------------------------------------------
 // Mime types
 // ------------------------------------------------------------------------

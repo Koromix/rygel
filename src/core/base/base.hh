@@ -5696,6 +5696,8 @@ static inline const char *Prompt(const char *prompt, Allocator *alloc)
 Size PromptEnum(const char *prompt, Span<const PromptChoice> choices, Size value = 0);
 Size PromptEnum(const char *prompt, Span<const char *const> strings, Size value = 0);
 
+int PromptYN(const char *prompt);
+
 // ------------------------------------------------------------------------
 // Mime types
 // ------------------------------------------------------------------------

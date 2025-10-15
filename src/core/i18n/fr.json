@@ -287,6 +287,7 @@
         "Missing expected SQLite single value": "Valeur unique SQLite attendue manquante",
         "MultiByteToWideChar() failed: %1": "MultiByteToWideChar() a échoué : %1",
         "Negative Content-Length is not valid": "Longueur de contenu (Content-Length) négative non valide",
+        "No": "Non",
         "No character class is allowed": "Aucune classe de caractère n'est autorisée",
         "OK": "OK",
         "OVERRIDE_CORES must be positive number (ignored)": "La valeur de OVERRIDE_CORES doit être un nombre positif (ignoré)",
@@ -388,7 +389,9 @@
         "Waiting up to %1 sec before shutting down clients...": "En attente jusqu'à %1 sec avant d'interrompre les clients...",
         "Warning: ": "Avertissement : ",
         "WideCharToMultiByte() failed: %1": "WideCharToMultiByte() a échoué : %1",
+        "Yes": "Oui",
         "getrlimit(RLIMIT_NOFILE) failed: %1": "getrlimit(RLIMIT_NOFILE) a échoué : %1",
-        "listen() failed: %1": "listen() a échoué : %1"
+        "listen() failed: %1": "listen() a échoué : %1",
+        "yn": "on"
     }
 }
