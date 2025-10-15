@@ -165,32 +165,37 @@ function detectCxxMessages(filename) {
     let code = fs.readFileSync(filename).toString();
 
     let matches = [
-        ...code.matchAll(/(?:LogError|LogWarning|LogInfo)\(\"(.+?)\"(?:, .*)?\)/g),
-        ...code.matchAll(/T\(\"(.+?)\"\)/g),
-        ...code.matchAll(/T\(R\"\((.+?)\)\"\)/gs)
+        ...code.matchAll(/(?:LogError|LogWarning|LogInfo)\(\"(.+?)\"(?:, .*)?\)/g).map(m => unescapeLiteral(m[1])),
+        ...code.matchAll(/T\(\"(.+?)\"\)/g).map(m => unescapeLiteral(m[1])),
+        ...code.matchAll(/T\(R\"\((.+?)\)\"\)/gs).map(m => m[1])
     ];
 
-    return matches.map(m => m[1]);
+    return matches;
 }
 
 function detectJsKeys(filename) {
     let code = fs.readFileSync(filename).toString();
 
     let matches = [
-        ...code.matchAll(/T\.([a-zA-Z_0-9]+)/g)
+        ...code.matchAll(/T\.([a-zA-Z_0-9]+)/g).map(m => m[1])
     ];
 
-    return matches.map(m => m[1]).filter(key => key != 'lang' && key != 'format' && key != 'message');
+    return matches.filter(key => key != 'lang' && key != 'format' && key != 'message');
 }
 
 function detectJsMessages(filename) {
     let code = fs.readFileSync(filename).toString();
 
     let matches = [
-        ...code.matchAll(/T\.message\(`(.+?)`/g)
+        ...code.matchAll(/T\.message\(`(.+?)`/g).map(m => unescapeLiteral(m[1]))
     ];
 
-    return matches.map(m => m[1]);
+    return matches;
+}
+
+function unescapeLiteral(str) {
+    str = str.replace(/\\[\\nr"']/g, p => p[1]);
+    return str;
 }
 
 async function syncTolgee(languages, sources) {
