@@ -193,7 +193,7 @@ async function runTasks(sync) {
 
 function renderMenu() {
     let show_menu = true;
-    let menu_is_wide = isMenuWide(route.page);
+    let wide_menu = isMenuWide(route.page) || !UI.allowTwoPanels();
 
     if (!UI.isPanelActive('editor') && !UI.isPanelActive('view'))
         show_menu = false;
@@ -252,11 +252,11 @@ function renderMenu() {
                 <div style="flex: 1; min-width: 4px;"></div>
             ` : ''}
 
-            ${show_menu && !menu_is_wide ? html`
+            ${show_menu && !wide_menu ? html`
                 ${renderDropItem(route.page.chain[0], true)}
                 ${Util.map(route.page.chain[0].children, page => renderDropItem(page, false))}
             ` : ''}
-            ${show_menu && menu_is_wide ? route.page.chain.map((page, idx) => renderDropItem(page, !idx)) : ''}
+            ${show_menu && wide_menu ? route.page.chain.map((page, idx) => renderDropItem(page, !idx)) : ''}
             ${app.panels.data && (!UI.isPanelActive('view') || form_thread.saved) ? html`
                 <div style="width: 15px;"></div>
                 <button class="icon new" @click=${UI.wrap(e => go(e, route.page.chain[0].url))}>${T.add}</button>
@@ -336,7 +336,7 @@ function renderDropItem(page, first) {
         return html`<button class=${'icon home' + (active ? ' active' : '')} ?disabled=${!enabled}
                             @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}></button>`;
     } else {
-        let suffix = !goupile.isLocked() ? makeStatusText(status, page.progress) : '';
+        let suffix = (UI.allowTwoPanels() && !goupile.isLocked()) ? makeStatusText(status, page.progress) : '';
 
         return html`
             <span style="align-self: center; margin: 0 6px;">›</span>
@@ -948,7 +948,7 @@ async function renderPage() {
 
     let show_menu = (route.page.chain.length > 2 ||
                      route.page.chain[0].children.length > 1);
-    let menu_is_wide = isMenuWide(route.page);
+    let wide_menu = isMenuWide(route.page);
 
     // Quick access to page sections
     let page_sections = model.widgets.filter(intf => intf.options.anchor).map(intf => ({
@@ -960,7 +960,7 @@ async function renderPage() {
         <div class="print" @scroll=${syncEditorScroll}}>
             <div id="ins_page">
                 <div id="ins_menu">
-                    ${show_menu ? Util.mapRange(1 - menu_is_wide, route.page.chain.length,
+                    ${show_menu ? Util.mapRange(1 - wide_menu, route.page.chain.length,
                                                 idx => renderPageMenu(route.page.chain[idx])) : ''}
                 </div>
 
