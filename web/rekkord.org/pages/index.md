@@ -15,7 +15,7 @@ Rekkord is a **multi-platform backup tool**, with the following features:
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
-I work on this project on my spare time, if you like this project, consider supporting me:
+If you like this project, consider supporting me:
 
 <p style="display: flex; gap: 2em; justify-content: center;">
      <a href="https://buymeacoffee.com/koromix" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-green.png" alt="Buy Me A Coffee" height="41" width="174" style="border-radius: 12px;"></a>
