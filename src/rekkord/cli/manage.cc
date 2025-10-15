@@ -90,6 +90,7 @@ int RunSetup(Span<const char *> arguments)
 
     // Options
     const char *config_filename = nullptr;
+    bool custom_config = false;
     bool force = false;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -113,6 +114,7 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
+                custom_config = true;
             } else if (opt.Test("-f", "--force")) {
                 force = true;
             } else if (!HandleCommonOption(opt)) {
@@ -145,6 +147,8 @@ Options:
             config_filename = PromptNonEmpty(T("Custom config filename:"), value, nullptr, &temp_alloc);
             if (!config_filename)
                 return 1;
+
+            custom_config = true;
         } else {
             config_filename = choices[idx];
 
@@ -317,6 +321,17 @@ Options:
 
     LogInfo();
     LogInfo("Created config file '%1'", config_filename);
+
+    if (custom_config) {
+        const char *fullpath = NormalizePath(config_filename, GetWorkingDirectory(), &temp_alloc).ptr;
+
+        LogInfo();
+        LogInfo("You have used a custom config path.");
+        LogInfo("Use %!..+export REKKORD_CONFIG_FILE=\"%1\"%!0 before you execute other commands.", FmtEscape(fullpath));
+    }
+
+    LogInfo();
+    LogInfo("Run %!..+rekkord init%!0 to initialize the repository.");
 
     return 0;
 }
