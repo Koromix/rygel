@@ -133,12 +133,16 @@ Options:
         }
         choices.Append(T("Custom path"));
 
-        Size idx = PromptEnum(T("Config file:"), choices);
+        const char *custom = GetEnv(DefaultConfigEnv);
+
+        Size idx = PromptEnum(T("Config file:"), choices, custom ? choices.len - 1 : 0);
         if (idx < 0)
             return 1;
 
         if (idx == choices.len - 1) {
-            config_filename = PromptNonEmpty(T("Custom config filename:"), DefaultConfigName, nullptr, &temp_alloc);
+            const char *value = custom ? custom : DefaultConfigName;
+
+            config_filename = PromptNonEmpty(T("Custom config filename:"), value, nullptr, &temp_alloc);
             if (!config_filename)
                 return 1;
         } else {
