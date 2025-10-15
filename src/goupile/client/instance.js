@@ -683,7 +683,7 @@ function renderData() {
 
                                     if (status.complete) {
                                         return html`<td class=${highlight ? 'complete active' : 'complete'}
-                                                        title=${col.page.title}><a href=${url}>${summary ?? '✓\uFE0E ' + T.complete}</a></td>`;
+                                                        title=${col.page.title}><a href=${url}>${summary ?? '✓\uFE0E ' + T.filled}</a></td>`;
                                     } else if (status.filled) {
                                         let progress = Math.floor(100 * status.filled / status.total);
 
@@ -1031,7 +1031,7 @@ function defaultFormPage(ctx) {
                     text = T.not_available;
                 } else if (status.complete) {
                     cls += ' complete';
-                    text = T.complete;
+                    text = T.filled;
                 } else if (status.filled && child.progress) {
                     let progress = Math.floor(100 * status.filled / status.total);
 
@@ -1067,7 +1067,7 @@ function defaultFormPage(ctx) {
                     text = T.not_available;
                 } else if (status.complete) {
                     cls += ' complete';
-                    text = T.complete;
+                    text = T.filled;
                 } else if (status.filled && child.progress) {
                     let progress = Math.floor(100 * status.filled / status.total);
 
