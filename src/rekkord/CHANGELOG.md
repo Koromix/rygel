@@ -6,6 +6,17 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.90
+
+*Released on 2025-10-15*
+
+- Guide user after `rekkord setup` completes
+- Retry after invalid prompt value in `rekkord setup`
+- Default to REKKORD_CONFIG_FILE value in `rekkord setup` if it exists
+- Translate Y/N prompt choices
+- Exit prompts after double escape key press
+- Complete and reorganize *Get started* documentation
+
 ### Rekkord 0.89
 
 *Released on 2025-10-14*
