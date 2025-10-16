@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>INTERACTIONS</title>
+        <link rel="icon" href="favicon.webp">
+
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+
+        <style>
+            html {
+                width: 100%;
+                height: 100%;
+            }
+
+            body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                font-family: 'Open Sans';
+                font-size: 16px;
+                line-height: 1.5;
+
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 4em;
+            }
+
+            main {
+                display: flex;
+                gap: 2em;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .item {
+                width: 160px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                color: inherit;
+                text-decoration: none;
+
+                background: #f8f8f8;
+                border-radius: 12px;
+                padding: 1em;
+
+                & > .title {
+                    margin-top: 1em;
+                }
+                & > .software {
+                    font-size: 0.8em;
+                    font-style: italic;
+                    color: #888;
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <img id="logo" src="static/interactions.webp" width="300" height="232" alt="">
+
+        <main>
+            <a href="https://cloud.interactions-team.fr" class="item">
+                <img src="static/nextcloud.webp" width="128" height="128" alt="">
+                <span class="title">Cloud</span>
+                <span class="software">Nextcloud</span>
+            </a>
+
+            <a href="https://git.interactions-team.fr" class="item">
+                <img src="static/forgejo.webp" width="128" height="128" alt="">
+                <span class="title">Git</span>
+                <span class="software">Forgejo</span>
+            </a>
+
+            <a href="https://chat.interactions-team.fr" class="item">
+                <img src="static/mattermost.webp" width="128" height="128" alt="">
+                <span class="title">Chat</span>
+                <span class="software">Mattermost</span>
+            </a>
+
+            <a href="https://overleaf.interactions-team.fr" class="item">
+                <img src="static/overleaf.webp" width="128" height="128" alt="">
+                <span class="title">LaTeX</span>
+                <span class="software">Overleaf</span>
+            </a>
+        </main>
+    </body>
+</html>
