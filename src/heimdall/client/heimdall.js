@@ -66,6 +66,7 @@ let settings = Object.assign({}, DEFAULT_SETTINGS);
 let show_debug = false;
 let save_timer = null;
 let sync_config = false;
+let sync_size = false;
 
 // State
 let world = null;
@@ -248,6 +249,10 @@ function update() {
 
     let zone = null;
 
+    if (sync_size) {
+        syncSize();
+        sync_size = false;
+    }
     for (let key in layout) {
         if (isInside(mouse_state, layout[key]))
             zone = layout[key];
@@ -311,6 +316,64 @@ function update() {
 
         zoomTime(delta, at);
         saveState();
+    }
+
+    // Resize tree panel
+    if (interaction == null && isInside(mouse_state, makeRect(layout.main.left - 5, layout.main.top, 10, layout.main.height))) {
+        if (mouse_state.left > 0) {
+            interaction = {
+                type: 'tree',
+                offset: mouse_state.x - settings.tree * window.devicePixelRatio
+            };
+        }
+
+        runner.cursor = 'col-resize';
+    } else if (interaction?.type == 'tree') {
+        if (mouse_state.left > 0) {
+            let min = 140 * window.devicePixelRatio;
+            let split = Util.clamp(mouse_state.x - interaction.offset, min, canvas.width / 2);
+
+            settings.tree = Math.floor(split / window.devicePixelRatio);
+            sync_size = true;
+        } else {
+            interaction = null;
+            saveState();
+        }
+
+        runner.cursor = 'col-resize';
+    }
+
+    // Handle canvas grab
+    if (interaction == null) {
+        if (mouse_state.left > 0 && mouse_state.moving) {
+            interaction = {
+                type: 'move',
+                x: (zone == layout.main || zone == layout.time) ? mouse_state.x : null,
+                y: (zone == layout.main || zone == layout.tree) ? mouse_state.y : null
+            };
+
+            if (interaction.x == null && interaction.y == null)
+                interaction = null;
+        }
+    } else if (interaction?.type == 'move') {
+        if (mouse_state.left > 0) {
+            let factor = pressed_keys.ctrl ? 5 : 1;
+
+            if (interaction.x != null) {
+                position.x = Math.round(position.x + (interaction.x - mouse_state.x) * factor);
+                interaction.x = mouse_state.x;
+            }
+            if (interaction.y != null) {
+                position.y = Math.round(position.y + (interaction.y - mouse_state.y) * factor);
+                interaction.y = mouse_state.y;
+            }
+
+            saveState();
+        } else {
+            interaction = null;
+        }
+
+        runner.cursor = 'grabbing';
     }
 
     let levels = [];
@@ -436,64 +499,6 @@ function update() {
         }
     }
 
-    // Resize tree panel
-    if (interaction == null && isInside(mouse_state, makeRect(layout.main.left - 5, layout.main.top, 10, layout.main.height))) {
-        if (mouse_state.left > 0) {
-            interaction = {
-                type: 'tree',
-                offset: mouse_state.x - settings.tree * window.devicePixelRatio
-            };
-        }
-
-        runner.cursor = 'col-resize';
-    } else if (interaction?.type == 'tree') {
-        if (mouse_state.left > 0) {
-            let min = 140 * window.devicePixelRatio;
-            let split = Util.clamp(mouse_state.x - interaction.offset, min, canvas.width / 2);
-
-            settings.tree = Math.floor(split / window.devicePixelRatio);
-            syncSize();
-        } else {
-            interaction = null;
-            saveState();
-        }
-
-        runner.cursor = 'col-resize';
-    }
-
-    // Handle canvas grab
-    if (interaction == null) {
-        if (mouse_state.left > 0 && mouse_state.moving) {
-            interaction = {
-                type: 'move',
-                x: (zone == layout.main || zone == layout.time) ? mouse_state.x : null,
-                y: (zone == layout.main || zone == layout.tree) ? mouse_state.y : null
-            };
-
-            if (interaction.x == null && interaction.y == null)
-                interaction = null;
-        }
-    } else if (interaction?.type == 'move') {
-        if (mouse_state.left > 0) {
-            let factor = pressed_keys.ctrl ? 5 : 1;
-
-            if (interaction.x != null) {
-                position.x = Math.round(position.x + (interaction.x - mouse_state.x) * factor);
-                interaction.x = mouse_state.x;
-            }
-            if (interaction.y != null) {
-                position.y = Math.round(position.y + (interaction.y - mouse_state.y) * factor);
-                interaction.y = mouse_state.y;
-            }
-
-            saveState();
-        } else {
-            interaction = null;
-        }
-
-        runner.cursor = 'grabbing';
-    }
-
     // Handle entity hover and clicks
     if (zone == layout.tree || zone == layout.main) {
         let cursor = { x: mouse_state.x - layout.tree.left, y: mouse_state.y - layout.tree.top };
@@ -503,14 +508,11 @@ function update() {
             let row = rows[idx];
             let right = layout.tree.width;
 
-            if (interaction?.type != 'move') {
-                row.hover = true;
-
-                for (let i = idx - row.index; i < rows.length && rows[i].entity == row.entity; i++)
-                    rows[i].active = true;
-                for (let i = idx + 1; i < rows.length && rows[i].depth > row.depth; i++)
-                    rows[i].hover = true;
-            }
+            for (let i = idx - row.index; i < rows.length && rows[i].entity == row.entity; i++)
+                rows[i].active = true;
+            for (let i = idx + 1; i < rows.length && rows[i].depth > row.depth; i++)
+                rows[i].hover = true;
+            row.hover = true;
 
             if (row.leaf || row.empty) {
                 right = 0;
