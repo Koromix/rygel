@@ -1110,7 +1110,7 @@ async function runSettings() {
                         </label>
                         <label>
                             <span>${T.interpolation}</span>
-                            <select name="interpolation" @change=${UI.wrap(e => set_language(e.target.value))}>
+                            <select name="interpolation">
                                 <option value="none" ?selected=${settings.interpolation == 'none'}>${T.interpolations.none}</option>
                                 <option value="linear" ?selected=${settings.interpolation == 'linear'}>${T.interpolations.linear}</option>
                                 <option value="locf" ?selected=${settings.interpolation == 'locf'}>${T.interpolations.locf}</option>
