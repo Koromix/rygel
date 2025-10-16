@@ -334,21 +334,6 @@ static void HandleRequest(http_IO *io)
     }
 #endif
 
-    if (config.require_host) {
-        const char *host = request.GetHeaderValue("Host");
-
-        if (!host) {
-            LogError("Request is missing required Host header");
-            io->SendError(400);
-            return;
-        }
-        if (!TestStr(host, config.require_host)) {
-            LogError("Unexpected Host header '%1'", host);
-            io->SendError(403);
-            return;
-        }
-    }
-
     // CSRF protection
     if (request.method != http_RequestMethod::Get && !http_PreventCSRF(io))
         return;

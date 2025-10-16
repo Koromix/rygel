@@ -40,7 +40,6 @@ struct Config {
     const char *static_directory = nullptr;
 
     http_Config http { 8890 };
-    const char *require_host = nullptr;
 
     smtp_Config smtp;
 

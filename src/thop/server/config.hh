@@ -35,7 +35,6 @@ struct Config {
     http_Config http { 8888 };
     const char *base_url = "/";
     int64_t max_age = 3600000;
-    const char *require_host = nullptr;
 
     BlockAllocator str_alloc;
 

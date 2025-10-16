@@ -841,21 +841,6 @@ static void HandleRequest(http_IO *io)
     }
 #endif
 
-    if (gp_config.require_host) {
-        const char *host = request.GetHeaderValue("Host");
-
-        if (!host) {
-            LogError("Request is missing required Host header");
-            io->SendError(400);
-            return;
-        }
-        if (!TestStr(host, gp_config.require_host)) {
-            LogError("Unexpected Host header '%1'", host);
-            io->SendError(403);
-            return;
-        }
-    }
-
     // Translate server-side errors
     {
         const char *lang = request.GetCookieValue("lang");

@@ -26,7 +26,6 @@ struct Config {
     const char *tmp_directory = nullptr;
 
     http_Config http { 8892 };
-    const char *require_host = nullptr;
 
     BlockAllocator str_alloc;
 

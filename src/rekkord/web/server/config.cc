@@ -106,11 +106,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     valid = false;
                 }
             } else if (prop.section == "HTTP") {
-                if (prop.key == "RequireHost") {
-                    config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else {
-                    valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
-                }
+                valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
             } else if (prop.section == "SMTP") {
                 if (prop.key == "URL") {
                     config.smtp.url = DuplicateString(prop.value, &config.str_alloc).ptr;

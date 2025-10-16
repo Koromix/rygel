@@ -98,8 +98,6 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     config.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
                 } else if (prop.key == "MaxAge") {
                     valid &= ParseDuration(prop.value, &config.max_age);
-                } else if (prop.key == "RequireHost") {
-                    config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
                 } else {
                     valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
                 }

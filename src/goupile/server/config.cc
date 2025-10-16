@@ -107,11 +107,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 LogWarning("Ignoring obsolete Defaults section");
                 while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
-                if (prop.key == "RequireHost") {
-                    config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else {
-                    valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
-                }
+                valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
             } else if (prop.section == "SMTP") {
                 if (prop.key == "URL") {
                     config.smtp.url = DuplicateString(prop.value, &config.str_alloc).ptr;

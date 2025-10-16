@@ -36,7 +36,6 @@ struct Config {
     int64_t repeat_delay = 24 * 3600000;
 
     http_Config http { 8891 };
-    const char *require_host = nullptr;
 
     smtp_Config smtp;
 
