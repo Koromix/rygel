@@ -16,7 +16,10 @@
 
 #if defined(MBEDTLS_PK_C)
 #include <mbedtls/pk.h>
-#endif
+#if defined(MBEDTLS_PK_HAVE_PRIVATE_HEADER)
+#include <mbedtls/private/pk_private.h>
+#endif /* MBEDTLS_PK_HAVE_PRIVATE_HEADER */
+#endif /* MBEDTLS_PK_C */
 
 /** \def KNOWN_SUPPORTED_HASH_ALG
  *
@@ -138,11 +141,22 @@ int mbedtls_test_psa_setup_key_derivation_wrap(
     size_t capacity, int key_destroyable);
 
 /** Perform a key agreement using the given key pair against its public key
- * using psa_raw_key_agreement() and psa_key_agreement().
+ * (not combined with a key derivation).
  *
- * The result is discarded. The purpose of this function is to smoke-test a key.
+ * The result is discarded. Thus this function can be used for smoke-testing
+ * a key, and to validate input validation, but not to validate results.
  *
- * In case of failure, mark the current test case as failed.
+ * Depending on the library version, there can be multiple interfaces for key
+ * agreement. This test function performs the ones that are available amongst:
+ * - psa_raw_key_agreement()
+ * - psa_key_agreement()
+ * - psa_key_agreement_iop_setup() and psa_key_agreement_iop_complete()
+ *
+ * Mark the current test case as failed in the following cases:
+ * - Operational errors such as failure to allocate memory for an intermediate
+ *   buffer.
+ * - Results are not consistent between the methods that are performed:
+ *   different statuses, or inconsistent metadata, or different shared secret.
  *
  * \param alg               A key agreement algorithm compatible with \p key.
  * \param key               A key that allows key agreement with \p alg.
@@ -150,7 +164,7 @@ int mbedtls_test_psa_setup_key_derivation_wrap(
  *                          or the key being destroyed mid-operation will only
  *                          be reported if the error code is unexpected.
  *
- * \return                  \c 1 on success, \c 0 on failure.
+ * \return                  The status from psa_raw_key_agreement().
  */
 psa_status_t mbedtls_test_psa_raw_key_agreement_with_self(
     psa_algorithm_t alg,

@@ -188,7 +188,10 @@ pre_initialize_variables () {
     files_to_back_up="$config_files"
     if in_mbedtls_repo; then
         # Files clobbered by in-tree cmake
-        files_to_back_up="$files_to_back_up Makefile library/Makefile programs/Makefile tests/Makefile programs/fuzz/Makefile"
+        if [ -e Makefile ]; then
+            files_to_back_up="$files_to_back_up Makefile"
+        fi
+        files_to_back_up="$files_to_back_up library/Makefile programs/Makefile tests/Makefile programs/fuzz/Makefile"
     fi
 
     append_outcome=0
@@ -228,6 +231,12 @@ pre_initialize_variables () {
     : ${CLANG_EARLIEST:="clang-earliest"}
     : ${GCC_LATEST:="gcc-latest"}
     : ${GCC_EARLIEST:="gcc-earliest"}
+    : ${MAKE_COMMAND:="make"}
+
+    if [ -e "scripts/legacy.make" ]; then
+        MAKE_COMMAND="${MAKE_COMMAND} -f ./scripts/legacy.make"
+    fi
+
     # if MAKEFLAGS is not set add the -j option to speed up invocations of make
     if [ -z "${MAKEFLAGS+set}" ]; then
         export MAKEFLAGS="-j$(all_sh_nproc)"
@@ -366,7 +375,7 @@ EOF
 cleanup()
 {
     if in_mbedtls_repo; then
-        command make clean
+        command $MAKE_COMMAND clean
     fi
 
     # Remove CMake artefacts
@@ -853,6 +862,7 @@ pre_check_tools () {
     case " $RUN_COMPONENTS " in
         *_armcc*)
             ARMC6_CC="$ARMC6_BIN_DIR/armclang"
+            ARMC6_LINK="$ARMC6_BIN_DIR/armlink"
             ARMC6_AR="$ARMC6_BIN_DIR/armar"
             ARMC6_FROMELF="$ARMC6_BIN_DIR/fromelf"
             check_tools "$ARMC6_CC" "$ARMC6_AR" "$ARMC6_FROMELF";;
@@ -876,11 +886,11 @@ pre_check_tools () {
 pre_generate_files() {
     # since make doesn't have proper dependencies, remove any possibly outdate
     # file that might be around before generating fresh ones
-    make neat
+    $MAKE_COMMAND neat
     if [ $QUIET -eq 1 ]; then
-        make generated_files >/dev/null
+        $MAKE_COMMAND generated_files >/dev/null
     else
-        make generated_files
+        $MAKE_COMMAND generated_files
     fi
 }
 
@@ -919,7 +929,7 @@ pseudo_component_error_test () {
     # Expected error: '! grep -q . tests/scripts/all.sh -> 1'
     not grep -q . "$0"
     # Expected error: 'make unknown_target -> 2'
-    make unknown_target
+    $MAKE_COMMAND unknown_target
     false "this should not be executed"
 }
 

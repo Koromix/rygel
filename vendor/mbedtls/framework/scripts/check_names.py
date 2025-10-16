@@ -53,10 +53,10 @@ from mbedtls_framework import build_tree
 
 # Naming patterns to check against. These are defined outside the NameCheck
 # class for ease of modification.
-PUBLIC_MACRO_PATTERN = r"^(MBEDTLS|PSA|TF_PSA)_[0-9A-Z_]*[0-9A-Z]$"
+PUBLIC_MACRO_PATTERN = r"^(MBEDTLS|PSA|TF_PSA_CRYPTO)_[0-9A-Z_]*[0-9A-Z]$"
 INTERNAL_MACRO_PATTERN = r"^[0-9A-Za-z_]*[0-9A-Z]$"
 CONSTANTS_PATTERN = PUBLIC_MACRO_PATTERN
-IDENTIFIER_PATTERN = r"^(mbedtls|psa)_[0-9a-z_]*[0-9a-z]$"
+IDENTIFIER_PATTERN = r"^(mbedtls|psa|tf_psa_crypto)_[0-9a-z_]*[0-9a-z]$"
 
 class Match(): # pylint: disable=too-few-public-methods
     """
@@ -701,9 +701,14 @@ class TFPSACryptoCodeParser(CodeParser):
         all_macros["public"] = self.parse_macros([
             "include/psa/*.h",
             "include/tf-psa-crypto/*.h",
+            "include/mbedtls/*.h",
             "drivers/builtin/include/mbedtls/*.h",
+            "include/mbedtls/private/*.h",
+            "drivers/builtin/include/mbedtls/private/*.h",
             "drivers/everest/include/everest/everest.h",
-            "drivers/everest/include/everest/x25519.h"
+            "drivers/everest/include/everest/x25519.h",
+            "drivers/everest/include/tf-psa-crypto/private/everest/everest.h",
+            "drivers/everest/include/tf-psa-crypto/private/everest/x25519.h"
         ])
         all_macros["internal"] = self.parse_macros([
             "core/*.h",
@@ -717,31 +722,46 @@ class TFPSACryptoCodeParser(CodeParser):
         enum_consts = self.parse_enum_consts([
             "include/psa/*.h",
             "include/tf-psa-crypto/*.h",
+            "include/mbedtls/*.h",
             "drivers/builtin/include/mbedtls/*.h",
+            "include/mbedtls/private/*.h",
+            "drivers/builtin/include/mbedtls/private/*.h",
             "core/*.h",
             "drivers/builtin/src/*.h",
             "core/*.c",
             "drivers/builtin/src/*.c",
             "drivers/everest/include/everest/everest.h",
-            "drivers/everest/include/everest/x25519.h"
+            "drivers/everest/include/everest/x25519.h",
+            "drivers/everest/include/tf-psa-crypto/private/everest/everest.h",
+            "drivers/everest/include/tf-psa-crypto/private/everest/x25519.h"
         ])
         identifiers, excluded_identifiers = self.parse_identifiers([
             "include/psa/*.h",
             "include/tf-psa-crypto/*.h",
+            "include/mbedtls/*.h",
             "drivers/builtin/include/mbedtls/*.h",
-            "core/*.h",
-            "drivers/builtin/src/*.h",
-            "drivers/everest/include/everest/everest.h",
-            "drivers/everest/include/everest/x25519.h"
-        ], ["drivers/p256-m/p256-m/p256-m.h"])
-        mbed_psa_words = self.parse_mbed_psa_words([
-            "include/psa/*.h",
-            "include/tf-psa-crypto/*.h",
-            "drivers/builtin/include/mbedtls/*.h",
+            "include/mbedtls/private/*.h",
+            "drivers/builtin/include/mbedtls/private/*.h",
             "core/*.h",
             "drivers/builtin/src/*.h",
             "drivers/everest/include/everest/everest.h",
             "drivers/everest/include/everest/x25519.h",
+            "drivers/everest/include/tf-psa-crypto/private/everest/everest.h",
+            "drivers/everest/include/tf-psa-crypto/private/everest/x25519.h"
+        ], ["drivers/p256-m/p256-m/p256-m.h"])
+        mbed_psa_words = self.parse_mbed_psa_words([
+            "include/psa/*.h",
+            "include/tf-psa-crypto/*.h",
+            "include/mbedtls/*.h",
+            "drivers/builtin/include/mbedtls/*.h",
+            "include/mbedtls/private/*.h",
+            "drivers/builtin/include/mbedtls/private/*.h",
+            "core/*.h",
+            "drivers/builtin/src/*.h",
+            "drivers/everest/include/everest/everest.h",
+            "drivers/everest/include/everest/x25519.h",
+            "drivers/everest/include/tf-psa-crypto/private/everest/everest.h",
+            "drivers/everest/include/tf-psa-crypto/private/everest/x25519.h",
             "core/*.c",
             "drivers/builtin/src/*.c",
             "drivers/everest/library/everest.c",
@@ -790,7 +810,7 @@ class TFPSACryptoCodeParser(CodeParser):
                 check=True
             )
             subprocess.run(
-                ["make"],
+                ["cmake", "--build", "."],
                 env=my_environment,
                 universal_newlines=True,
                 stdout=subprocess.PIPE,
@@ -800,9 +820,6 @@ class TFPSACryptoCodeParser(CodeParser):
 
             # Perform object file analysis using nm
             symbols = self.parse_symbols_from_nm([
-                build_dir + "/drivers/builtin/libbuiltin.a",
-                build_dir + "/drivers/p256-m/libp256m.a",
-                build_dir + "/drivers/everest/libeverest.a",
                 build_dir + "/core/libtfpsacrypto.a"
             ])
 
@@ -886,6 +903,7 @@ class MBEDTLSCodeParser(CodeParser):
             all_macros = {"public": [], "internal": [], "private":[]}
             all_macros["public"] = self.parse_macros([
                 "include/mbedtls/*.h",
+                "include/mbedtls/private/*.h",
             ])
             all_macros["internal"] = self.parse_macros([
                 "library/*.h",
@@ -896,15 +914,18 @@ class MBEDTLSCodeParser(CodeParser):
             ])
             enum_consts = self.parse_enum_consts([
                 "include/mbedtls/*.h",
+                "include/mbedtls/private/*.h",
                 "library/*.h",
                 "library/*.c",
             ])
             identifiers, excluded_identifiers = self.parse_identifiers([
                 "include/mbedtls/*.h",
+                "include/mbedtls/private/*.h",
                 "library/*.h",
             ])
             mbed_psa_words = self.parse_mbed_psa_words([
                 "include/mbedtls/*.h",
+                "include/mbedtls/private/*.h",
                 "library/*.h",
                 "library/*.c",
             ])
@@ -950,15 +971,17 @@ class MBEDTLSCodeParser(CodeParser):
             )
             my_environment = os.environ.copy()
             my_environment["CFLAGS"] = "-fno-asynchronous-unwind-tables"
-            # Run make clean separately to lib to prevent unwanted behavior when
-            # make is invoked with parallelism.
+
+            source_dir = os.getcwd()
+            build_dir = tempfile.mkdtemp()
+            os.chdir(build_dir)
             subprocess.run(
-                ["make", "clean"],
+                ["cmake", "-DGEN_FILES=ON", source_dir],
                 universal_newlines=True,
                 check=True
             )
             subprocess.run(
-                ["make", "lib"],
+                ["cmake", "--build", "."],
                 env=my_environment,
                 universal_newlines=True,
                 stdout=subprocess.PIPE,
@@ -967,17 +990,21 @@ class MBEDTLSCodeParser(CodeParser):
             )
 
             # Perform object file analysis using nm
-            symbols = self.parse_symbols_from_nm([
-                "library/libmbedcrypto.a",
-                "library/libmbedtls.a",
-                "library/libmbedx509.a"
-            ])
+            if build_tree.is_mbedtls_3_6():
+                symbols = self.parse_symbols_from_nm([
+                    "library/libmbedcrypto.a",
+                    "library/libmbedtls.a",
+                    "library/libmbedx509.a"
+                ])
+            else:
+                symbols = self.parse_symbols_from_nm([
+                    "library/libtfpsacrypto.a",
+                    "library/libmbedtls.a",
+                    "library/libmbedx509.a"
+                ])
 
-            subprocess.run(
-                ["make", "clean"],
-                universal_newlines=True,
-                check=True
-            )
+            os.chdir(source_dir)
+            shutil.rmtree(build_dir)
         except subprocess.CalledProcessError as error:
             self.log.debug(error.output)
             raise error

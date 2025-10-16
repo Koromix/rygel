@@ -79,7 +79,7 @@ class PSAWrapper(c_wrapper_generator.Base):
         self.out_c_f = out_c_f
         self.out_h_f = out_h_f
 
-        self.mbedtls_root = build_tree.guess_mbedtls_root()
+        self.project_root = build_tree.guess_project_root()
         self.read_config(config)
         self.read_headers(in_headers)
 
@@ -99,18 +99,19 @@ class PSAWrapper(c_wrapper_generator.Base):
             c_parsing_helper.read_function_declarations(self.functions, header_path)
 
     def rel_path(self, filename: str, path_list: List[str] = ['include', 'psa']) -> str:
-        """Return the estimated path in relationship to the mbedtls_root.
+        """Return the estimated path in relationship to the project_root.
 
            The method allows overriding the targetted sub-directory.
-           Currently the default is set to mbedtls_root/include/psa."""
+           Currently the default is set to project_root/include/psa."""
         # Temporary, while Mbed TLS does not just rely on the TF-PSA-Crypto
         # build system to build its crypto library. When it does, the first
         # case can just be removed.
-        if not build_tree.is_mbedtls_3_6():
+        if build_tree.looks_like_mbedtls_root(self.project_root) and \
+           not build_tree.is_mbedtls_3_6():
             path_list = ['tf-psa-crypto' ] + path_list
-            return os.path.join(self.mbedtls_root, *path_list, filename)
+            return os.path.join(self.project_root, *path_list, filename)
 
-        return os.path.join(self.mbedtls_root, *path_list, filename)
+        return os.path.join(self.project_root, *path_list, filename)
 
     # Utility Methods
     @staticmethod

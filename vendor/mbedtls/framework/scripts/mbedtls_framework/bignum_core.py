@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 #
 
+import math
 import random
 
 from typing import Dict, Iterator, List, Tuple
@@ -10,7 +11,7 @@ from typing import Dict, Iterator, List, Tuple
 from . import test_case
 from . import test_data_generation
 from . import bignum_common
-from .bignum_data import ADD_SUB_DATA
+from . import bignum_data
 
 class BignumCoreTarget(test_data_generation.BaseTarget):
     #pylint: disable=abstract-method, too-few-public-methods
@@ -67,9 +68,9 @@ class BignumCoreShiftL(BignumCoreTarget, bignum_common.ModOperationCommon):
                         '50', '51', '58', '80', '81', '88']
     DATA = ["0", "1", "40", "dee5ca1a7ef10a75", "a1055eb0bb1efa1150ff",
             "002e7ab0070ad57001", "020100000000000000001011121314151617",
-            "1946e2958a85d8863ae21f4904fcc49478412534ed53eaf321f63f2a222"
-            "7a3c63acbf50b6305595f90cfa8327f6db80d986fe96080bcbb5df1bdbe"
-            "9b74fb8dedf2bddb3f8215b54dffd66409323bcc473e45a8fe9d08e77a51"
+            "1946e2958a85d8863ae21f4904fcc49478412534ed53eaf321f63f2a222" +
+            "7a3c63acbf50b6305595f90cfa8327f6db80d986fe96080bcbb5df1bdbe" +
+            "9b74fb8dedf2bddb3f8215b54dffd66409323bcc473e45a8fe9d08e77a51" +
             "1698b5dad0416305db7fcf"]
     arity = 1
     test_function = "mpi_core_shift_l"
@@ -166,7 +167,7 @@ class BignumCoreAddAndAddIf(BignumCoreTarget, bignum_common.OperationCommon):
     test_function = "mpi_core_add_and_add_if"
     test_name = "mpi_core_add_and_add_if"
     input_style = "arch_split"
-    input_values = ADD_SUB_DATA
+    input_values = bignum_data.ADD_SUB_DATA
     unique_combinations_only = True
 
     def result(self) -> List[str]:
@@ -187,7 +188,7 @@ class BignumCoreSub(BignumCoreTarget, bignum_common.OperationCommon):
     symbol = "-"
     test_function = "mpi_core_sub"
     test_name = "mbedtls_mpi_core_sub"
-    input_values = ADD_SUB_DATA
+    input_values = bignum_data.ADD_SUB_DATA
 
     def result(self) -> List[str]:
         if self.int_a >= self.int_b:
@@ -217,10 +218,10 @@ class BignumCoreMLA(BignumCoreTarget, bignum_common.OperationCommon):
         "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
         "1234567890abcdef01234567890abcdef01234567890abcdef01234567890abcdef0",
         (
-            "4df72d07b4b71c8dacb6cffa954f8d88254b6277099308baf003fab73227f"
-            "34029643b5a263f66e0d3c3fa297ef71755efd53b8fb6cb812c6bbf7bcf17"
-            "9298bd9947c4c8b14324140a2c0f5fad7958a69050a987a6096e9f055fb38"
-            "edf0c5889eca4a0cfa99b45fbdeee4c696b328ddceae4723945901ec02507"
+            "4df72d07b4b71c8dacb6cffa954f8d88254b6277099308baf003fab73227f" +
+            "34029643b5a263f66e0d3c3fa297ef71755efd53b8fb6cb812c6bbf7bcf17" +
+            "9298bd9947c4c8b14324140a2c0f5fad7958a69050a987a6096e9f055fb38" +
+            "edf0c5889eca4a0cfa99b45fbdeee4c696b328ddceae4723945901ec02507" +
             "6b12b"
         )
     ] # type: List[str]
@@ -323,10 +324,10 @@ class BignumCoreMontmul(BignumCoreTarget, test_data_generation.BaseTest):
         (2, 1, 1, 1, "4", "1", "9"),
         (
             12, 1, 6, 1, (
-                "3C246D0E059A93A266288A7718419EC741661B474C58C032C5EDAF92709402"
+                "3C246D0E059A93A266288A7718419EC741661B474C58C032C5EDAF92709402" +
                 "B07CC8C7CE0B781C641A1EA8DB2F4343"
             ), "1", (
-                "66A198186C18C10B2F5ED9B522752A9830B69916E535C8F047518A889A43A5"
+                "66A198186C18C10B2F5ED9B522752A9830B69916E535C8F047518A889A43A5" +
                 "94B6BED27A168D31D4A52F88925AA8F5"
             )
         ), (
@@ -335,12 +336,12 @@ class BignumCoreMontmul(BignumCoreTarget, test_data_generation.BaseTest):
             "1", "B3A119602EE213CDE28581ECD892E0F592A338655DCE4CA88054B3D124D0E561"
         ), (
             22, 1, 11, 1, (
-                "7CF5AC97304E0B63C65413F57249F59994B0FED1D2A8D3D83ED5FA38560FFB"
-                "82392870D6D08F87D711917FD7537E13B7E125BE407E74157776839B0AC9DB"
+                "7CF5AC97304E0B63C65413F57249F59994B0FED1D2A8D3D83ED5FA38560FFB" +
+                "82392870D6D08F87D711917FD7537E13B7E125BE407E74157776839B0AC9DB" +
                 "23CBDFC696104353E4D2780B2B4968F8D8542306BCA7A2366E"
             ), "1", (
-                "284139EA19C139EBE09A8111926AAA39A2C2BE12ED487A809D3CB5BC558547"
-                "25B4CDCB5734C58F90B2F60D99CC1950CDBC8D651793E93C9C6F0EAD752500"
+                "284139EA19C139EBE09A8111926AAA39A2C2BE12ED487A809D3CB5BC558547" +
+                "25B4CDCB5734C58F90B2F60D99CC1950CDBC8D651793E93C9C6F0EAD752500" +
                 "A32C56C62082912B66132B2A6AA42ADA923E1AD22CEB7BA0123"
             )
         )
@@ -477,7 +478,7 @@ class BignumCoreMontmul(BignumCoreTarget, test_data_generation.BaseTest):
             "8ee751fd5fb24f0b4a653cb3a0c8b7d9e724574d168000000000000",
             "97EDD86E4B5C4592C6D32064AC55C888A7245F07CA3CC455E07C931",
             (
-                "0x97EDD86E4B5C4592C6D32064AC55C888A7245F07CA3CC455E07C931"
+                "0x97EDD86E4B5C4592C6D32064AC55C888A7245F07CA3CC455E07C931" +
                 " is (dec) 99999999977^6"
             )
         ),
@@ -501,7 +502,7 @@ class BignumCoreMontmul(BignumCoreTarget, test_data_generation.BaseTest):
             "75c8ed18270b583f16d442a467d32bf95c5e491e9b8523798000000000000000",
             "DD15FE80B731872AC104DB37832F7E75A244AA2631BC87885B861E8F20375499",
             (
-                "0xDD15FE80B731872AC104DB37832F7E75A244AA2631BC87885B861E8F20375499"
+                "0xDD15FE80B731872AC104DB37832F7E75A244AA2631BC87885B861E8F20375499" +
                 " is (dec) 99999999977^7"
             )
         ),
@@ -525,7 +526,7 @@ class BignumCoreMontmul(BignumCoreTarget, test_data_generation.BaseTest):
             "51bb7270b2e25cec0301a03e8275213bb6c2f6e6ec93d4d46d36ca0000000000000000000",
             "141B8EBD9009F84C241879A1F680FACCED355DA36C498F73E96E880CF78EA5F96146380E41",
             (
-                "0x141B8EBD9009F84C241879A1F680FACCED355DA36C498F73E96E880CF78EA5F96146"
+                "0x141B8EBD9009F84C241879A1F680FACCED355DA36C498F73E96E880CF78EA5F96146" +
                 "380E41 is 99999999977^8"
             )
         ),
@@ -549,104 +550,104 @@ class BignumCoreMontmul(BignumCoreTarget, test_data_generation.BaseTest):
         ),
         (
             (
-                "2a462b156180ea5fe550d3758c764e06fae54e626b5f503265a09df76edbdfbf"
+                "2a462b156180ea5fe550d3758c764e06fae54e626b5f503265a09df76edbdfbf" +
                 "a1e6000000000000000000000000"
             ), (
-                "1136f41d1879fd4fb9e49e0943a46b6704d77c068ee237c3121f9071cfd3e6a0"
+                "1136f41d1879fd4fb9e49e0943a46b6704d77c068ee237c3121f9071cfd3e6a0" +
                 "0315800000000000000000000000"
             ), (
-                "2A94608DE88B6D5E9F8920F5ABB06B24CC35AE1FBACC87D075C621C3E2833EC90"
+                "2A94608DE88B6D5E9F8920F5ABB06B24CC35AE1FBACC87D075C621C3E2833EC90" +
                 "2713E40F51E3B3C214EDFABC451"
             ), (
-                "0x2A94608DE88B6D5E9F8920F5ABB06B24CC35AE1FBACC87D075C621C3E2833EC"
+                "0x2A94608DE88B6D5E9F8920F5ABB06B24CC35AE1FBACC87D075C621C3E2833EC" +
                 "902713E40F51E3B3C214EDFABC451 is (dec) 99999999977^10"
             )
         ),
         (
             (
-                "c1ac3800dfb3c6954dea391d206200cf3c47f795bf4a5603b4cb88ae7e574de47"
+                "c1ac3800dfb3c6954dea391d206200cf3c47f795bf4a5603b4cb88ae7e574de47" +
                 "40800000000000000000000000"
             ), (
-                "c0d16eda0549ede42fa0deb4635f7b7ce061fadea02ee4d85cba4c4f709603419"
+                "c0d16eda0549ede42fa0deb4635f7b7ce061fadea02ee4d85cba4c4f709603419" +
                 "3c800000000000000000000000"
             ), (
-                "2A94608DE88B6D5E9F8920F5ABB06B24CC35AE1FBACC87D075C621C3E2833EC90"
+                "2A94608DE88B6D5E9F8920F5ABB06B24CC35AE1FBACC87D075C621C3E2833EC90" +
                 "2713E40F51E3B3C214EDFABC451"
             ), ""
         ),
         (
             (
-                "19e45bb7633094d272588ad2e43bcb3ee341991c6731b6fa9d47c4018d7ce7bba"
+                "19e45bb7633094d272588ad2e43bcb3ee341991c6731b6fa9d47c4018d7ce7bba" +
                 "5ee800000000000000000000000"
             ), (
-                "1e4f83166ae59f6b9cc8fd3e7677ed8bfc01bb99c98bd3eb084246b64c1e18c33"
+                "1e4f83166ae59f6b9cc8fd3e7677ed8bfc01bb99c98bd3eb084246b64c1e18c33" +
                 "65b800000000000000000000000"
             ), (
-                "2A94608DE88B6D5E9F8920F5ABB06B24CC35AE1FBACC87D075C621C3E2833EC90"
+                "2A94608DE88B6D5E9F8920F5ABB06B24CC35AE1FBACC87D075C621C3E2833EC90" +
                 "2713E40F51E3B3C214EDFABC451"
             ), ""
         ),
         (
             (
-                "1aa93395fad5f9b7f20b8f9028a054c0bb7c11bb8520e6a95e5a34f06cb70bcdd"
+                "1aa93395fad5f9b7f20b8f9028a054c0bb7c11bb8520e6a95e5a34f06cb70bcdd" +
                 "01a800000000000000000000000"
             ), (
-                "54b45afa5d4310192f8d224634242dd7dcfb342318df3d9bd37b4c614788ba13b"
+                "54b45afa5d4310192f8d224634242dd7dcfb342318df3d9bd37b4c614788ba13b" +
                 "8b000000000000000000000000"
             ), (
-                "2A94608DE88B6D5E9F8920F5ABB06B24CC35AE1FBACC87D075C621C3E2833EC90"
+                "2A94608DE88B6D5E9F8920F5ABB06B24CC35AE1FBACC87D075C621C3E2833EC90" +
                 "2713E40F51E3B3C214EDFABC451"
             ), ""
         ),
         (
             (
-                "544f2628a28cfb5ce0a1b7180ee66b49716f1d9476c466c57f0c4b23089917843"
+                "544f2628a28cfb5ce0a1b7180ee66b49716f1d9476c466c57f0c4b23089917843" +
                 "06d48f78686115ee19e25400000000000000000000000000000000"
             ), (
-                "677eb31ef8d66c120fa872a60cd47f6e10cbfdf94f90501bd7883cba03d185be0"
+                "677eb31ef8d66c120fa872a60cd47f6e10cbfdf94f90501bd7883cba03d185be0" +
                 "a0148d1625745e9c4c827300000000000000000000000000000000"
             ), (
-                "8335616AED761F1F7F44E6BD49E807B82E3BF2BF11BFA6AF813C808DBF33DBFA1"
+                "8335616AED761F1F7F44E6BD49E807B82E3BF2BF11BFA6AF813C808DBF33DBFA1" +
                 "1DABD6E6144BEF37C6800000000000000000000000000000000051"
             ), (
-                "0x8335616AED761F1F7F44E6BD49E807B82E3BF2BF11BFA6AF813C808DBF33DBF"
-                "A11DABD6E6144BEF37C6800000000000000000000000000000000051 is prime,"
+                "0x8335616AED761F1F7F44E6BD49E807B82E3BF2BF11BFA6AF813C808DBF33DBF" +
+                "A11DABD6E6144BEF37C6800000000000000000000000000000000051 is prime," +
                 " (dec) 10^143 + 3^4"
             )
         ),
         (
             (
-                "76bb3470985174915e9993522aec989666908f9e8cf5cb9f037bf4aee33d8865c"
+                "76bb3470985174915e9993522aec989666908f9e8cf5cb9f037bf4aee33d8865c" +
                 "b6464174795d07e30015b80000000000000000000000000000000"
             ), (
-                "6aaaf60d5784dcef612d133613b179a317532ecca0eed40b8ad0c01e6d4a6d8c7"
+                "6aaaf60d5784dcef612d133613b179a317532ecca0eed40b8ad0c01e6d4a6d8c7" +
                 "9a52af190abd51739009a900000000000000000000000000000000"
             ), (
-                "8335616AED761F1F7F44E6BD49E807B82E3BF2BF11BFA6AF813C808DBF33DBFA1"
+                "8335616AED761F1F7F44E6BD49E807B82E3BF2BF11BFA6AF813C808DBF33DBFA1" +
                 "1DABD6E6144BEF37C6800000000000000000000000000000000051"
             ), ""
         ),
         (
             (
-                "6cfdd6e60912e441d2d1fc88f421b533f0103a5322ccd3f4db84861643ad63fd6"
+                "6cfdd6e60912e441d2d1fc88f421b533f0103a5322ccd3f4db84861643ad63fd6" +
                 "3d1d8cfbc1d498162786ba00000000000000000000000000000000"
             ), (
-                "1177246ec5e93814816465e7f8f248b350d954439d35b2b5d75d917218e7fd5fb"
+                "1177246ec5e93814816465e7f8f248b350d954439d35b2b5d75d917218e7fd5fb" +
                 "4c2f6d0667f9467fdcf33400000000000000000000000000000000"
             ), (
-                "8335616AED761F1F7F44E6BD49E807B82E3BF2BF11BFA6AF813C808DBF33DBFA1"
+                "8335616AED761F1F7F44E6BD49E807B82E3BF2BF11BFA6AF813C808DBF33DBFA1" +
                 "1DABD6E6144BEF37C6800000000000000000000000000000000051"
             ), ""
         ),
         (
             (
-                "7a09a0b0f8bbf8057116fb0277a9bdf3a91b5eaa8830d448081510d8973888be5"
+                "7a09a0b0f8bbf8057116fb0277a9bdf3a91b5eaa8830d448081510d8973888be5" +
                 "a9f0ad04facb69aa3715f00000000000000000000000000000000"
             ), (
-                "764dec6c05a1c0d87b649efa5fd94c91ea28bffb4725d4ab4b33f1a3e8e3b314d"
+                "764dec6c05a1c0d87b649efa5fd94c91ea28bffb4725d4ab4b33f1a3e8e3b314d" +
                 "799020e244a835a145ec9800000000000000000000000000000000"
             ), (
-                "8335616AED761F1F7F44E6BD49E807B82E3BF2BF11BFA6AF813C808DBF33DBFA1"
+                "8335616AED761F1F7F44E6BD49E807B82E3BF2BF11BFA6AF813C808DBF33DBFA1" +
                 "1DABD6E6144BEF37C6800000000000000000000000000000000051"
             ), ""
         )
@@ -776,13 +777,13 @@ def mpi_modmul_case_generate() -> None:
         ),
         (
             (
-                "2A94608DE88B6D5E9F8920F5ABB06B24CC35AE1FBACC87D075C621C3E283"
+                "2A94608DE88B6D5E9F8920F5ABB06B24CC35AE1FBACC87D075C621C3E283" +
                 "3EC902713E40F51E3B3C214EDFABC451"
             ),
             "is (dec) 99999999977^10"
         ),
         (
-            "8335616AED761F1F7F44E6BD49E807B82E3BF2BF11BFA6AF813C808DBF33DBFA11"
+            "8335616AED761F1F7F44E6BD49E807B82E3BF2BF11BFA6AF813C808DBF33DBFA11" +
             "DABD6E6144BEF37C6800000000000000000000000000000000051",
             "is prime, (dec) 10^143 + 3^4"
         )
@@ -799,7 +800,7 @@ def mpi_modmul_case_generate() -> None:
         # 100000000000000000000000000000000000000000000000000000000000000000000000000000
         # 000000000000000000000000000000000000000000000000000000000000000081
         (
-            "8335616AED761F1F7F44E6BD49E807B82E3BF2BF11BFA6AF813C808DBF33DBFA11"
+            "8335616AED761F1F7F44E6BD49E807B82E3BF2BF11BFA6AF813C808DBF33DBFA11" +
             "DABD6E6144BEF37C6800000000000000000000000000000000051"
         )
     ] # type: List[str]
@@ -894,3 +895,78 @@ class BignumCoreZeroCheckCT(BignumCoreTarget, bignum_common.OperationCommon):
     def result(self) -> List[str]:
         result = 1 if self.int_a == 0 else 0
         return [str(result)]
+
+class BignumCoreGcdModinvOdd(BignumCoreTarget, test_data_generation.BaseTest):
+    """Test cases for bignum core GCD+modinv (odd modulus)"""
+
+    test_function = "mpi_core_gcd_modinv_odd"
+    test_name = "mpi_core_gcd_modinv_odd"
+
+    # - All small integers because that naturally covers a lot of cases.
+    # - (Close to) powers of 2 because that looks like interesting values.
+    #   Also covers the cases where N, N+1 or N-1 is a multiple of A (with
+    #   multiple limbs).
+    # - X * 2, X * 3 is so that we get GCD(X*2, X*3) = X where the GCD has a
+    #   the same order of magnitude as the inputs.
+    # - Random values of cryptographic size for good measure.
+    DATA = (
+        ("0", 0),
+        ("1", 1),
+        ("2", 2),
+        ("3", 3),
+        ("4", 4),
+        ("5", 5),
+        ("6", 6),
+        ("7", 7),
+        ("2^64 - 1", 2**64 - 1),
+        ("2^64", 2**64),
+        ("2^64 + 1", 2**64 + 1),
+        ("2^128 - 1", 2**128 - 1),
+        ("2^128", 2**128),
+        ("2^128 + 1", 2**128 + 1),
+        ("prime192[1]", int(bignum_data.SAFE_PRIME_192_BIT_SEED_1, 16)),
+        ("prime192[1] * 2", int(bignum_data.SAFE_PRIME_192_BIT_SEED_1, 16) * 2),
+        ("prime192[1] * 3", int(bignum_data.SAFE_PRIME_192_BIT_SEED_1, 16) * 3),
+        ("rand192[2.1]", int(bignum_data.RANDOM_192_BIT_SEED_2_NO1, 16)),
+        ("rand192[2.2]", int(bignum_data.RANDOM_192_BIT_SEED_2_NO2, 16)),
+        ("rand192[2.3]", int(bignum_data.RANDOM_192_BIT_SEED_2_NO3, 16)),
+        ("rand192[2.4]", int(bignum_data.RANDOM_192_BIT_SEED_2_NO4, 16)),
+        ("rand192[2.9]", int(bignum_data.RANDOM_192_BIT_SEED_2_NO9, 16)),
+        ("prime1024[3]", int(bignum_data.SAFE_PRIME_1024_BIT_SEED_3, 16)),
+        ("rand1024[4.1]", int(bignum_data.RANDOM_1024_BIT_SEED_4_NO1, 16)),
+        ("rand1024[4.2]", int(bignum_data.RANDOM_1024_BIT_SEED_4_NO2, 16)),
+        ("rand1024[4.3]", int(bignum_data.RANDOM_1024_BIT_SEED_4_NO3, 16)),
+        ("rand1024[4.4]", int(bignum_data.RANDOM_1024_BIT_SEED_4_NO4, 16)),
+        ("rand1024[4.5]", int(bignum_data.RANDOM_1024_BIT_SEED_4_NO5, 16)),
+        ("rand1024[4.5] * 2", int(bignum_data.RANDOM_1024_BIT_SEED_4_NO5, 16) * 2),
+        ("rand1024[4.5] * 3", int(bignum_data.RANDOM_1024_BIT_SEED_4_NO5, 16) * 3),
+    )
+
+    def __init__(self, a: int, a_desc: str, n: int, n_desc: str) -> None:
+        self.a_val = a
+        self.a_desc = a_desc
+        self.n_val = n
+        self.n_desc = n_desc
+        self.g_val = math.gcd(a, n)
+        test_i = self.g_val == 1 and self.n_val != 1
+        self.i_val = bignum_common.invmod_positive(a, n) if test_i else None
+
+    def arguments(self) -> List[str]:
+        a_str = f"{self.a_val:x}"
+        n_str = f"{self.n_val:x}"
+        g_str = f"{self.g_val:x}"
+        i_str = f"{self.i_val:x}" if self.i_val is not None else ""
+        return [bignum_common.quote_str(s) for s in (a_str, n_str, g_str, i_str)]
+
+    def description(self) -> str:
+        return f"GCD-modinv, A = {self.a_desc}, N = {self.n_desc}"
+
+    @classmethod
+    def generate_function_tests(cls) -> Iterator[test_case.TestCase]:
+        for n_desc, n in cls.DATA:
+            if n % 2 == 0:
+                continue
+            for a_desc, a in cls.DATA:
+                if a > n:
+                    continue
+                yield cls(a, a_desc, n, n_desc).create_test_case()

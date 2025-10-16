@@ -310,7 +310,7 @@ class TrailingWhitespaceIssueTracker(LineIssueTracker):
     """Track lines with trailing whitespace."""
 
     heading = "Trailing whitespace:"
-    suffix_exemptions = frozenset([".dsp", ".md"])
+    suffix_exemptions = frozenset([".diff", ".dsp", ".md", ".patch"])
 
     def issue_with_line(self, line, _filepath, _line_number):
         return line.rstrip(b"\r\n") != line.rstrip()

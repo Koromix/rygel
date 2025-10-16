@@ -12,6 +12,7 @@ from typing import Iterable, Iterator, List, Optional, Tuple
 
 import project_scripts # pylint: disable=unused-import
 import config
+from mbedtls_framework import build_tree
 from mbedtls_framework import config_common
 from mbedtls_framework import test_case
 from mbedtls_framework import test_data_generation
@@ -57,13 +58,22 @@ SIMPLE_DEPENDENCIES = {
     'MBEDTLS_ERROR_STRERROR_DUMMY': '!MBEDTLS_ERROR_C',
     'MBEDTLS_GENPRIME': 'MBEDTLS_RSA_C',
     'MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES': 'MBEDTLS_ENTROPY_C',
-    'MBEDTLS_NO_PLATFORM_ENTROPY': 'MBEDTLS_ENTROPY_C',
     'MBEDTLS_PKCS1_V15': 'MBEDTLS_RSA_C',
     'MBEDTLS_PKCS1_V21': 'MBEDTLS_RSA_C',
     'MBEDTLS_PSA_CRYPTO_CLIENT': '!MBEDTLS_PSA_CRYPTO_C',
     'MBEDTLS_PSA_INJECT_ENTROPY': 'MBEDTLS_PSA_CRYPTO_C',
     'MBEDTLS_PSA_ASSUME_EXCLUSIVE_BUFFERS': 'MBEDTLS_PSA_CRYPTO_C',
 }
+
+if build_tree.is_mbedtls_3_6():
+    SIMPLE_DEPENDENCIES['MBEDTLS_NO_PLATFORM_ENTROPY'] = 'MBEDTLS_ENTROPY_C'
+
+BUILTIN_MODULE_ENABLEMENT_MACROS = [
+    'MBEDTLS_AES_C', 'MBEDTLS_CAMELLIA_C', 'MBEDTLS_CIPHER_C', 'MBEDTLS_GCM_C',
+    'MBEDTLS_ECDH_C', 'MBEDTLS_ECDSA_C', 'MBEDTLS_ECP_C',
+    'MBEDTLS_RSA_C',
+    'MBEDTLS_SHA256_C', 'MBEDTLS_SHA512_C',
+]
 
 def dependencies_of_setting(cfg: config_common.Config,
                             setting: config_common.Setting) -> Optional[str]:
@@ -109,6 +119,11 @@ def dependencies_of_setting(cfg: config_common.Config,
         for pos in re.finditer(r'_', name):
             super_name = name[:pos.start()] + '_C'
             if cfg.known(super_name):
+                return super_name
+            # If super_name refers to a macro that still enables a
+            # cryptographic module, but is no longer exposed as a configuration
+            # option in 4.0/1.0, return it as a dependency.
+            if super_name in BUILTIN_MODULE_ENABLEMENT_MACROS:
                 return super_name
     if name.startswith('PSA_WANT_'):
         deps = 'MBEDTLS_PSA_CRYPTO_CLIENT'
@@ -172,9 +187,10 @@ class ConfigTestGenerator(test_data_generation.TestGenerator):
             self.targets['test_suite_config.mbedtls_boolean'] = \
                 lambda: enumerate_boolean_setting_cases(self.mbedtls_config)
         if 'CryptoConfig' in config_members:
-            self.psa_config = config.CryptoConfig()
-            self.targets['test_suite_config.psa_boolean'] = \
-                lambda: enumerate_boolean_setting_cases(self.psa_config)
+            if build_tree.is_mbedtls_3_6():
+                self.psa_config = config.CryptoConfig()
+                self.targets['test_suite_config.psa_boolean'] = \
+                    lambda: enumerate_boolean_setting_cases(self.psa_config)
         elif 'TFPSACryptoConfig' in config_members:
             self.psa_config = config.TFPSACryptoConfig()
             self.targets['test_suite_config.psa_boolean'] = \

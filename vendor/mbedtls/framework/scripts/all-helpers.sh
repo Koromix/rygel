@@ -67,15 +67,15 @@ helper_libtestdriver1_adjust_config() {
         scripts/config.py "$base_config"
     fi
 
-    # Enable PSA-based config (necessary to use drivers)
-    # MBEDTLS_PSA_CRYPTO_CONFIG is a legacy setting which should only be set on 3.6 LTS branches.
     if in_mbedtls_repo && in_3_6_branch; then
+        # Enable PSA-based config (necessary to use drivers)
+        # MBEDTLS_PSA_CRYPTO_CONFIG is a legacy setting which should only be set on 3.6 LTS branches.
         scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
-    fi
 
-    # Dynamic secure element support is a deprecated feature and needs to be disabled here.
-    # This is done to have the same form of psa_key_attributes_s for libdriver and library.
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_SE_C
+        # Dynamic secure element support is a deprecated feature and needs to be disabled here.
+        # This is done to have the same form of psa_key_attributes_s for libdriver and library.
+        scripts/config.py unset MBEDTLS_PSA_CRYPTO_SE_C
+    fi
 
     # If threading is enabled on the normal build, then we need to enable it in the drivers as well,
     # otherwise we will end up running multithreaded tests without mutexes to protect them.
@@ -122,7 +122,7 @@ helper_libtestdriver1_make_main() {
     # we need flags both with and without the LIBTESTDRIVER1_ prefix
     loc_accel_flags=$( echo "$loc_accel_list" | sed 's/[^ ]* */-DLIBTESTDRIVER1_MBEDTLS_PSA_ACCEL_&/g' )
     loc_accel_flags="$loc_accel_flags $( echo "$loc_accel_list" | sed 's/[^ ]* */-DMBEDTLS_PSA_ACCEL_&/g' )"
-    make CC=$ASAN_CC CFLAGS="$ASAN_CFLAGS -I../tests/include -I../framework/tests/include -I../tests -I../../tests -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_TEST_LIBTESTDRIVER1 $loc_accel_flags" LDFLAGS="-ltestdriver1 $ASAN_CFLAGS" "$@"
+    $MAKE_COMMAND CC=$ASAN_CC CFLAGS="$ASAN_CFLAGS -I../tests/include -I../framework/tests/include -I../tests -I../../tests -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_TEST_LIBTESTDRIVER1 $loc_accel_flags" LDFLAGS="-ltestdriver1 $ASAN_CFLAGS" "$@"
 }
 
 ################################################################
@@ -139,20 +139,30 @@ helper_psasim_config() {
         scripts/config.py full
         scripts/config.py unset MBEDTLS_PSA_CRYPTO_C
         scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C
-        # Dynamic secure element support is a deprecated feature and it is not
-        # available when CRYPTO_C and PSA_CRYPTO_STORAGE_C are disabled.
-        scripts/config.py unset MBEDTLS_PSA_CRYPTO_SE_C
+        scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
+        scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
+        if in_mbedtls_repo && in_3_6_branch; then
+            # Dynamic secure element support is a deprecated feature and it is not
+            # available when CRYPTO_C and PSA_CRYPTO_STORAGE_C are disabled.
+            scripts/config.py unset MBEDTLS_PSA_CRYPTO_SE_C
+        fi
         # Disable potentially problematic features
         scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
         scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
-        scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED
         scripts/config.py unset MBEDTLS_ECP_RESTARTABLE
         scripts/config.py unset MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
+        scripts/config.py unset MBEDTLS_PK_PARSE_EC_EXTENDED
+        scripts/config.py unset MBEDTLS_PK_PARSE_EC_COMPRESSED
+
+        scripts/config.py unset-all MBEDTLS_SHA256_USE_.*_CRYPTO_
+        scripts/config.py unset-all MBEDTLS_SHA512_USE_.*_CRYPTO_
     else
         scripts/config.py crypto_full
         scripts/config.py unset MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
-        # We need to match the client with MBEDTLS_PSA_CRYPTO_SE_C
-        scripts/config.py unset MBEDTLS_PSA_CRYPTO_SE_C
+        if in_mbedtls_repo && in_3_6_branch; then
+            # We need to match the client with MBEDTLS_PSA_CRYPTO_SE_C
+            scripts/config.py unset MBEDTLS_PSA_CRYPTO_SE_C
+        fi
         # Also ensure MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER not set (to match client)
         scripts/config.py unset MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
     fi
@@ -254,9 +264,10 @@ helper_armc6_build_test()
     FLAGS="$1"
 
     msg "build: ARM Compiler 6 ($FLAGS)"
-    make clean
+
+    $MAKE_COMMAND clean
     ARM_TOOL_VARIANT="ult" CC="$ARMC6_CC" AR="$ARMC6_AR" CFLAGS="$FLAGS" \
-                    WARNING_CFLAGS='-Werror -xc -std=c99' make lib
+                        WARNING_CFLAGS='-Werror -xc -std=c99' $MAKE_COMMAND lib
 
     msg "size: ARM Compiler 6 ($FLAGS)"
     "$ARMC6_FROMELF" -z library/*.o
@@ -266,6 +277,24 @@ helper_armc6_build_test()
     if [ -n "${BUILTIN_SRC_PATH}" ]; then
         "$ARMC6_FROMELF" -z ${BUILTIN_SRC_PATH}/*.o
     fi
+}
+
+helper_armc6_cmake_build_test()
+{
+    FLAGS="$1"
+
+    msg "build: CMake + ARM Compiler 6 ($FLAGS)"
+
+    cmake -DCMAKE_SYSTEM_NAME="Generic" -DCMAKE_SYSTEM_PROCESSOR="cortex-m0" \
+            -DCMAKE_C_COMPILER="$ARMC6_CC" -DCMAKE_C_LINKER="$ARMC6_LINK" \
+            -DCMAKE_AR="$ARMC6_AR" -DCMAKE_C_FLAGS="$FLAGS" \
+            -DCMAKE_C_COMPILER_WORKS=TRUE -DENABLE_TESTING=OFF \
+            -DENABLE_PROGRAMS=OFF "$TF_PSA_CRYPTO_ROOT_DIR"
+    make
+
+    msg "size: ARM Compiler 6 ($FLAGS)"
+    "$ARMC6_FROMELF" -z ${PSA_CORE_PATH}/CMakeFiles/tfpsacrypto.dir/*.o
+    "$ARMC6_FROMELF" -z ${BUILTIN_SRC_PATH}/../CMakeFiles/builtin.dir/src/*.o
 }
 
 clang_version() {

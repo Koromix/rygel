@@ -22,6 +22,8 @@ if in_mbedtls_repo; then
     if ! in_3_6_branch; then
         CRYPTO_CONFIG_H='tf-psa-crypto/include/psa/crypto_config.h'
     fi
+    CONFIG_BAK=${CONFIG_H}.bak
+    cp -p $CONFIG_H $CONFIG_BAK
 fi
 
 if in_tf_psa_crypto_repo; then
@@ -37,21 +39,29 @@ if in_tf_psa_crypto_repo || (in_mbedtls_repo && ! in_3_6_branch); then
     cp -p $CRYPTO_CONFIG_H $CRYPTO_CONFIG_BAK
 fi
 
-if in_mbedtls_repo; then
-    CONFIG_BAK=${CONFIG_H}.bak
-    cp -p $CONFIG_H $CONFIG_BAK
+if in_mbedtls_repo && in_3_6_branch; then
     scripts/config.py realfull
     make apidoc
-    mv $CONFIG_BAK $CONFIG_H
-elif in_tf_psa_crypto_repo; then
+else
     scripts/config.py realfull
-    TF_PSA_CRYPTO_ROOT_DIR=$PWD
+    ROOT_DIR=$PWD
     rm -rf doxygen/build-apidoc-full
     mkdir doxygen/build-apidoc-full
     cd doxygen/build-apidoc-full
-    cmake -DCMAKE_BUILD_TYPE:String=Check -DGEN_FILES=ON $TF_PSA_CRYPTO_ROOT_DIR
-    make tfpsacrypto-apidoc
-    cd $TF_PSA_CRYPTO_ROOT_DIR
+    cmake -DCMAKE_BUILD_TYPE:String=Check -DGEN_FILES=ON $ROOT_DIR
+    if in_mbedtls_repo; then
+        cmake --build . --target mbedtls-apidoc
+    else
+        cmake --build . --target tfpsacrypto-apidoc
+    fi
+    cd $ROOT_DIR
+    # The documentation is built in the source tree thus we can delete the
+    # build tree.
+    rm -rf doxygen/build-apidoc-full
+fi
+
+if in_mbedtls_repo; then
+    mv $CONFIG_BAK $CONFIG_H
 fi
 
 if in_tf_psa_crypto_repo || (in_mbedtls_repo && ! in_3_6_branch); then

@@ -26,12 +26,18 @@ class Information:
         """Remove constructors that should be exckuded from systematic testing."""
         # Mbed TLS does not support finite-field DSA, but 3.6 defines DSA
         # identifiers for historical reasons.
+        # Mbed TLS and TF-PSA-Crypto 1.0 do not support SPAKE2+, although
+        # TF-PSA-Crypto 1.0 defines SPAKE2+ identifiers to be able to build
+        # the psa-arch-tests compliance test suite.
+        #
         # Don't attempt to generate any related test case.
         # The corresponding test cases would be commented out anyway,
-        # but for DSA, we don't have enough support in the test scripts
+        # but for these types, we don't have enough support in the test scripts
         # to generate these test cases.
         constructors.key_types.discard('PSA_KEY_TYPE_DSA_KEY_PAIR')
         constructors.key_types.discard('PSA_KEY_TYPE_DSA_PUBLIC_KEY')
+        constructors.key_types.discard('PSA_KEY_TYPE_SPAKE2P_KEY_PAIR')
+        constructors.key_types.discard('PSA_KEY_TYPE_SPAKE2P_PUBLIC_KEY')
 
     def read_psa_interface(self) -> macro_collector.PSAMacroEnumerator:
         """Return the list of known key types, algorithms, etc."""

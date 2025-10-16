@@ -35,6 +35,9 @@ psa_status_t mbedtls_test_transparent_pake_setup(
     if (mbedtls_test_driver_pake_hooks.forced_setup_status != PSA_SUCCESS) {
         mbedtls_test_driver_pake_hooks.driver_status =
             mbedtls_test_driver_pake_hooks.forced_setup_status;
+    } else if (!MBEDTLS_TEST_OBJECT_IS_ALL_ZERO(operation)) {
+        mbedtls_test_driver_pake_hooks.driver_status =
+            PSA_ERROR_TEST_DETECTED_BAD_INITIALIZATION;
     } else {
 #if defined(MBEDTLS_TEST_LIBTESTDRIVER1) && \
         defined(LIBTESTDRIVER1_MBEDTLS_PSA_BUILTIN_PAKE)

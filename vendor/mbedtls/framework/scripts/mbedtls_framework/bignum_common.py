@@ -19,8 +19,7 @@ T = TypeVar('T') #pylint: disable=invalid-name
 def invmod(a: int, n: int) -> int:
     """Return inverse of a to modulo n.
 
-    Equivalent to pow(a, -1, n) in Python 3.8+. Implementation is equivalent
-    to long_invmod() in CPython.
+    Warning: the output might be negative! See invmod_positive().
     """
     b, c = 1, 0
     while n:
@@ -32,7 +31,10 @@ def invmod(a: int, n: int) -> int:
     raise ValueError("Not invertible")
 
 def invmod_positive(a: int, n: int) -> int:
-    """Return a non-negative inverse of a to modulo n."""
+    """Return a non-negative inverse of a to modulo n.
+
+    Equivalent to pow(a, -1, n) in Python 3.8+.
+    """
     inv = invmod(a, n)
     return inv if inv >= 0 else inv + n
 
@@ -65,6 +67,14 @@ def limbs_mpi(val: int, bits_in_limb: int) -> int:
 def combination_pairs(values: List[T]) -> List[Tuple[T, T]]:
     """Return all pair combinations from input values."""
     return [(x, y) for x in values for y in values]
+
+def combination_two_lists(first_vals: List[T], second_vals: List[T]) -> List[Tuple[T, T]]:
+    """Return all pair combinations from two input lists"""
+    return [(x, y) for x in first_vals for y in second_vals]
+
+def expand_list_negative(values: List[str]) -> List[str]:
+    """Adds the negative of every element in the list to the list"""
+    return values + [f"-{value}" for value in values]
 
 def bits_to_limbs(bits: int, bits_in_limb: int) -> int:
     """ Return the appropriate ammount of limbs needed to store

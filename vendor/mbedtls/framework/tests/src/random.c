@@ -23,7 +23,11 @@
 #include <test/random.h>
 #include <string.h>
 
+#if !defined(MBEDTLS_VERSION_MAJOR) || MBEDTLS_VERSION_MAJOR >= 4
+#include <mbedtls/private/entropy.h>
+#else
 #include <mbedtls/entropy.h>
+#endif
 #include <alignment.h>
 
 int mbedtls_test_rnd_std_rand(void *rng_state,

@@ -25,7 +25,13 @@
 #include <pk_internal.h>
 #endif
 #if defined(MBEDTLS_ECP_C)
+
+#if !defined(MBEDTLS_VERSION_MAJOR) || MBEDTLS_VERSION_MAJOR >= 4
+#include <mbedtls/private/ecp.h>
+#else
 #include <mbedtls/ecp.h>
+#endif
+
 #endif
 #if defined(MBEDTLS_RSA_C)
 #include <rsa_internal.h>
@@ -184,7 +190,9 @@ static int exercise_cipher_key(mbedtls_svc_key_id_t key,
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
     psa_key_type_t key_type;
     const unsigned char plaintext[16] = "Hello, world...";
-    unsigned char ciphertext[32] = "(wabblewebblewibblewobblewubble)";
+    /* We need to tell the compiler that we meant to leave out the null character. */
+    unsigned char ciphertext[32] MBEDTLS_ATTRIBUTE_UNTERMINATED_STRING =
+        "(wabblewebblewibblewobblewubble)";
     size_t ciphertext_length = sizeof(ciphertext);
     unsigned char decrypted[sizeof(ciphertext)];
     size_t part_length;
@@ -732,9 +740,9 @@ psa_status_t mbedtls_test_psa_raw_key_agreement_with_self(
     }
     PSA_ASSERT(status);
 
-    status = psa_raw_key_agreement(alg, key,
-                                   public_key, public_key_length,
-                                   output, sizeof(output), &output_length);
+    status = psa_raw_key_agreement(
+        alg, key, public_key, public_key_length,
+        output, sizeof(output), &output_length);
     if (key_destroyable && status == PSA_ERROR_INVALID_HANDLE) {
         /* The key has been destroyed. */
         status = PSA_SUCCESS;
@@ -749,8 +757,11 @@ psa_status_t mbedtls_test_psa_raw_key_agreement_with_self(
     }
 
 #if MBEDTLS_VERSION_MAJOR >= 4
+    psa_status_t raw_status = status;
+
     psa_set_key_type(&shared_secret_attributes, PSA_KEY_TYPE_DERIVE);
-    psa_set_key_usage_flags(&shared_secret_attributes, PSA_KEY_USAGE_DERIVE | PSA_KEY_USAGE_EXPORT);
+    psa_set_key_usage_flags(&shared_secret_attributes,
+                            PSA_KEY_USAGE_DERIVE | PSA_KEY_USAGE_EXPORT);
 
     status = psa_key_agreement(key, public_key, public_key_length, alg,
                                &shared_secret_attributes, &shared_secret_id);
@@ -759,8 +770,15 @@ psa_status_t mbedtls_test_psa_raw_key_agreement_with_self(
         /* The key has been destroyed. */
         status = PSA_SUCCESS;
         goto exit;
-    } else if (status == PSA_SUCCESS) {
+    }
 
+    /* In this function, we expect either success or a validation failure,
+     * which should be identical for raw output and key output. So flag any
+     * discrepancy between the two (in particular a key creation failure)
+     * as a test failure. */
+    TEST_EQUAL(raw_status, status);
+
+    if (status == PSA_SUCCESS) {
         status = psa_get_key_attributes(shared_secret_id, &export_attributes);
         if (key_destroyable && status == PSA_ERROR_INVALID_HANDLE) {
             /* The key has been destroyed. */
@@ -768,18 +786,21 @@ psa_status_t mbedtls_test_psa_raw_key_agreement_with_self(
             goto exit;
         }
 
-        exported_size = PSA_EXPORT_KEY_OUTPUT_SIZE(psa_get_key_type(&export_attributes),
-                                                   psa_get_key_bits(&export_attributes));
+        exported_size =
+            PSA_EXPORT_KEY_OUTPUT_SIZE(psa_get_key_type(&export_attributes),
+                                       psa_get_key_bits(&export_attributes));
         TEST_CALLOC(exported, exported_size);
 
-        status = psa_export_key(shared_secret_id, exported, exported_size, &exported_length);
-
+        status = psa_export_key(shared_secret_id,
+                                exported, exported_size, &exported_length);
         if (key_destroyable && status == PSA_ERROR_INVALID_HANDLE) {
             /* The key has been destroyed. */
             status = PSA_SUCCESS;
+        } else {
+            PSA_ASSERT(status);
+            TEST_MEMORY_COMPARE(exported, exported_length,
+                                output, output_length);
         }
-
-        PSA_ASSERT(status);
     }
 
  #if defined(MBEDTLS_ECP_RESTARTABLE) && defined(MBEDTLS_PSA_BUILTIN_ALG_ECDH)
@@ -798,18 +819,39 @@ psa_status_t mbedtls_test_psa_raw_key_agreement_with_self(
             /* The key has been destroyed. */
             status = PSA_SUCCESS;
             goto exit;
-        } else if (status == PSA_SUCCESS) {
+        }
+
+        /* In this function, we expect either success or a validation failure,
+         * which should be identical for one-shot and interruptible. For an
+         * interruptible operation, we insist on detecting error conditions
+         * early, in setup() rather than complete(). So flag any discrepancy
+         * between one-shot and interruptible-setup as a test failure. */
+        TEST_EQUAL(raw_status, status);
+
+        if (status == PSA_SUCCESS) {
 
             do {
-                status = psa_key_agreement_iop_complete(&iop_operation, &shared_secret_id);
+                status = psa_key_agreement_iop_complete(&iop_operation,
+                                                        &shared_secret_id);
             } while (status == PSA_OPERATION_INCOMPLETE);
 
             if (key_destroyable && status == PSA_ERROR_INVALID_HANDLE) {
                 /* The key has been destroyed. */
                 status = PSA_SUCCESS;
+            } else {
+                PSA_ASSERT(status);
+                status = psa_export_key(shared_secret_id,
+                                        exported, exported_size,
+                                        &exported_length);
+                if (key_destroyable && status == PSA_ERROR_INVALID_HANDLE) {
+                    /* The key has been destroyed. */
+                    status = PSA_SUCCESS;
+                } else {
+                    PSA_ASSERT(status);
+                    TEST_MEMORY_COMPARE(exported, exported_length,
+                                        output, output_length);
+                }
             }
-
-            PSA_ASSERT(status);
         }
     } else {
         TEST_EQUAL(psa_key_agreement_iop_setup(&iop_operation, key, public_key,
@@ -1359,8 +1401,14 @@ int mbedtls_test_key_consistency_psa_pk(mbedtls_svc_key_id_t psa_key,
     size_t pk_public_length = 0;
 
     switch (pk_type) {
-#if defined(MBEDTLS_RSA_C)
+#if defined(MBEDTLS_RSA_C) || defined(MBEDTLS_PK_USE_PSA_RSA_DATA)
         case MBEDTLS_PK_RSA:
+#if defined(MBEDTLS_PK_USE_PSA_RSA_DATA)
+            TEST_ASSERT(PSA_KEY_TYPE_IS_RSA(psa_type));
+            pk_public = pk->pub_raw;
+            pk_public_length = pk->pub_raw_len;
+            break;
+#else /* MBEDTLS_PK_USE_PSA_RSA_DATA */
             TEST_ASSERT(PSA_KEY_TYPE_IS_RSA(psa_type));
             const mbedtls_rsa_context *rsa = mbedtls_pk_rsa(*pk);
             uint8_t *const end = pk_public_buffer + sizeof(pk_public_buffer);
@@ -1370,8 +1418,10 @@ int mbedtls_test_key_consistency_psa_pk(mbedtls_svc_key_id_t psa_key,
             pk_public = cursor;
             pk_public_length = end - pk_public;
             break;
-#endif
+#endif /* MBEDTLS_PK_USE_PSA_RSA_DATA */
+#endif /* MBEDTLS_RSA_C || MBEDTLS_PK_USE_PSA_RSA_DATA */
 
+#if defined(PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY)
 #if defined(MBEDTLS_PK_USE_PSA_EC_DATA)
         case MBEDTLS_PK_ECKEY:
         case MBEDTLS_PK_ECKEY_DH:
@@ -1381,9 +1431,7 @@ int mbedtls_test_key_consistency_psa_pk(mbedtls_svc_key_id_t psa_key,
             pk_public = pk->pub_raw;
             pk_public_length = pk->pub_raw_len;
             break;
-#endif /* MBEDTLS_PK_USE_PSA_EC_DATA */
-
-#if defined(PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY) && !defined(MBEDTLS_PK_USE_PSA_EC_DATA)
+#else /* MBEDTLS_PK_USE_PSA_EC_DATA */
         case MBEDTLS_PK_ECKEY:
         case MBEDTLS_PK_ECKEY_DH:
         case MBEDTLS_PK_ECDSA:
@@ -1394,7 +1442,8 @@ int mbedtls_test_key_consistency_psa_pk(mbedtls_svc_key_id_t psa_key,
                            pk_public_buffer, sizeof(pk_public_buffer)), 0);
             pk_public = pk_public_buffer;
             break;
-#endif /* PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY && !MBEDTLS_PK_USE_PSA_EC_DATA */
+#endif /* MBEDTLS_PK_USE_PSA_EC_DATA */
+#endif /* PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY */
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
         case MBEDTLS_PK_OPAQUE:

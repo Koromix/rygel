@@ -355,12 +355,14 @@ class Algorithm:
         'TLS12_PRF': AlgorithmCategory.KEY_DERIVATION,
         'TLS12_PSK_TO_MS': AlgorithmCategory.KEY_DERIVATION,
         'TLS12_ECJPAKE_TO_PMS': AlgorithmCategory.KEY_DERIVATION,
+        'SP800_108': AlgorithmCategory.KEY_DERIVATION,
         'PBKDF': AlgorithmCategory.KEY_DERIVATION,
         'ECDH': AlgorithmCategory.KEY_AGREEMENT,
         'FFDH': AlgorithmCategory.KEY_AGREEMENT,
         # KEY_AGREEMENT(...) is a key derivation with a key agreement component
         'KEY_AGREEMENT': AlgorithmCategory.KEY_DERIVATION,
         'JPAKE': AlgorithmCategory.PAKE,
+        'SPAKE2P': AlgorithmCategory.PAKE,
     }
     for x in BLOCK_MAC_MODES:
         CATEGORY_FROM_HEAD[x] = AlgorithmCategory.MAC

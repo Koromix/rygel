@@ -149,6 +149,9 @@ psa_status_t mbedtls_test_transparent_aead_encrypt_setup(
     if (mbedtls_test_driver_aead_hooks.forced_status != PSA_SUCCESS) {
         mbedtls_test_driver_aead_hooks.driver_status =
             mbedtls_test_driver_aead_hooks.forced_status;
+    } else if (!MBEDTLS_TEST_OBJECT_IS_ALL_ZERO(operation)) {
+        mbedtls_test_driver_aead_hooks.driver_status =
+            PSA_ERROR_TEST_DETECTED_BAD_INITIALIZATION;
     } else {
 #if defined(MBEDTLS_TEST_LIBTESTDRIVER1) && \
         defined(LIBTESTDRIVER1_MBEDTLS_PSA_BUILTIN_AEAD)
@@ -186,6 +189,9 @@ psa_status_t mbedtls_test_transparent_aead_decrypt_setup(
     if (mbedtls_test_driver_aead_hooks.forced_status != PSA_SUCCESS) {
         mbedtls_test_driver_aead_hooks.driver_status =
             mbedtls_test_driver_aead_hooks.forced_status;
+    } else if (!MBEDTLS_TEST_OBJECT_IS_ALL_ZERO(operation)) {
+        mbedtls_test_driver_aead_hooks.driver_status =
+            PSA_ERROR_TEST_DETECTED_BAD_INITIALIZATION;
     } else {
 #if defined(MBEDTLS_TEST_LIBTESTDRIVER1) && \
         defined(LIBTESTDRIVER1_MBEDTLS_PSA_BUILTIN_AEAD)

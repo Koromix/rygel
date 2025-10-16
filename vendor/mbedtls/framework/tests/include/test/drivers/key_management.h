@@ -11,6 +11,8 @@
 #include "mbedtls/build_info.h"
 
 #if defined(PSA_CRYPTO_DRIVER_TEST)
+#include "test_driver_common.h"
+
 #include <psa/crypto_driver_common.h>
 
 #define PSA_CRYPTO_TEST_DRIVER_BUILTIN_AES_KEY_SLOT     0

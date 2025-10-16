@@ -18,6 +18,7 @@ use File::Basename;
 # C/header files in the following directories will be checked
 my @mbedtls_directories = qw(include/mbedtls library doxygen/input);
 my @tf_psa_crypto_directories = qw(include/psa include/tf-psa-crypto
+                                   include/mbedtls
                                    drivers/builtin/include/mbedtls
                                    drivers/builtin/src core doxygen/input);
 

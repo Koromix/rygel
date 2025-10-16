@@ -34,13 +34,12 @@
 #include "test/threading_helpers.h"
 #include "test/macros.h"
 #include "test/memory.h"
-#include "common.h"
 
 #include <stdio.h>
 #include <string.h>
 
 #if defined(MBEDTLS_THREADING_C)
-#include <mbedtls/threading.h>
+#include "threading_internal.h"
 #endif
 
 
@@ -286,6 +285,10 @@ exit:
 #endif
 }
 
+/* Since TF-PSA-Crypto 1.0, mbedtls_mutex_free() on an all-bits-zero
+ * mutex is defined to be a no-op. In earlier library versions,
+ * it had undefined behavior. */
+#if MBEDTLS_THREADING_INTERNAL_VERSION <= 0x04000000
 static void mutex_free_not_initialized(const char *name)
 {
     (void) name;
@@ -299,6 +302,7 @@ static void mutex_free_not_initialized(const char *name)
     mbedtls_mutex_free(&mutex);
 #endif
 }
+#endif
 
 static void mutex_double_init(const char *name)
 {
@@ -315,6 +319,10 @@ static void mutex_double_init(const char *name)
 #endif
 }
 
+/* Since TF-PSA-Crypto 1.0, mbedtls_mutex_free() on an all-bits-zero
+ * mutex is defined to be a no-op. In earlier library versions,
+ * it had undefined behavior. */
+#if MBEDTLS_THREADING_INTERNAL_VERSION <= 0x04000000
 static void mutex_double_free(const char *name)
 {
     (void) name;
@@ -329,6 +337,7 @@ static void mutex_double_free(const char *name)
     mbedtls_mutex_free(&mutex);
 #endif
 }
+#endif
 
 static void mutex_leak(const char *name)
 {
@@ -418,9 +427,13 @@ metatest_t metatests[] = {
     { "test_memory_poison_7_1_2_w", "poison", test_memory_poison },
     { "mutex_lock_not_initialized", "pthread", mutex_lock_not_initialized },
     { "mutex_unlock_not_initialized", "pthread", mutex_unlock_not_initialized },
+#if MBEDTLS_THREADING_INTERNAL_VERSION <= 0x04000000
     { "mutex_free_not_initialized", "pthread", mutex_free_not_initialized },
+#endif
     { "mutex_double_init", "pthread", mutex_double_init },
+#if MBEDTLS_THREADING_INTERNAL_VERSION <= 0x04000000
     { "mutex_double_free", "pthread", mutex_double_free },
+#endif
     { "mutex_leak", "pthread", mutex_leak },
     { NULL, NULL, NULL }
 };

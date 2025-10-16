@@ -62,7 +62,14 @@ $PYTHON -m pylint framework/scripts/*.py framework/scripts/mbedtls_framework/*.p
 
 echo
 echo 'Running mypy ...'
-$PYTHON -m mypy framework/scripts/*.py framework/scripts/mbedtls_framework/*.py scripts/*.py tests/scripts/*.py ||
-  ret=1
+$PYTHON -m mypy framework/scripts/*.py framework/scripts/mbedtls_framework/*.py || {
+    echo >&2 "mypy reported errors in the framework"
+    ret=1
+}
+
+$PYTHON -m mypy scripts/*.py tests/scripts/*.py || {
+    echo >&2 "pylint reported errors in the parent repository"
+    ret=1
+}
 
 exit $ret

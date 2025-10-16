@@ -561,19 +561,34 @@ class StorageFormat:
             key1.description += short
         return key1
 
+    USAGE_FLAGS_NOT_VALID_IN_POLICIES = frozenset([
+        # Only for psa_check_key_usage() (upcoming) and
+        # mbedtls_pk_can_do_psa() (since TF-PSA-Crypto 1.0),
+        # not allowed in key policies as of TF-PSA-Crypto 1.0.
+        # Note that this may become dependent on the TF-PSA-Crypto version
+        # in the future; if so this code will require some refactoring.
+        'PSA_KEY_USAGE_DERIVE_PUBLIC',
+    ])
+
+    def all_policy_flags(self) -> List[str]:
+        """Return the list of all usage flags that are valid in key policies."""
+        known_flags = frozenset(self.constructors.key_usage_flags)
+        policy_flags = known_flags - self.USAGE_FLAGS_NOT_VALID_IN_POLICIES
+        return sorted(policy_flags)
+
     def generate_keys_for_usage_flags(self, **kwargs) -> Iterator[StorageTestData]:
         """Generate test keys covering usage flags."""
-        known_flags = sorted(self.constructors.key_usage_flags)
+        policy_flags = self.all_policy_flags()
         yield self.key_for_usage_flags(['0'], **kwargs)
-        for usage_flag in known_flags:
+        for usage_flag in policy_flags:
             yield self.key_for_usage_flags([usage_flag], **kwargs)
-        for flag1, flag2 in zip(known_flags,
-                                known_flags[1:] + [known_flags[0]]):
+        for flag1, flag2 in zip(policy_flags,
+                                policy_flags[1:] + [policy_flags[0]]):
             yield self.key_for_usage_flags([flag1, flag2], **kwargs)
 
     def generate_key_for_all_usage_flags(self) -> Iterator[StorageTestData]:
-        known_flags = sorted(self.constructors.key_usage_flags)
-        yield self.key_for_usage_flags(known_flags, short='all known')
+        policy_flags = self.all_policy_flags()
+        yield self.key_for_usage_flags(policy_flags, short='all valid')
 
     def all_keys_for_usage_flags(self) -> Iterator[StorageTestData]:
         yield from self.generate_keys_for_usage_flags()

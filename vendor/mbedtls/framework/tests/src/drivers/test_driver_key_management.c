@@ -14,7 +14,13 @@
 #include "psa_crypto_ecp.h"
 #include "psa_crypto_rsa.h"
 #include "psa_crypto_ffdh.h"
+
+#if !defined(MBEDTLS_VERSION_MAJOR) || MBEDTLS_VERSION_MAJOR >= 4
+#include "mbedtls/private/ecp.h"
+#else
 #include "mbedtls/ecp.h"
+#endif
+
 #include "mbedtls/error.h"
 
 #include "test/drivers/key_management.h"

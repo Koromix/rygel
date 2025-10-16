@@ -279,12 +279,27 @@ class PSAMacroCollector(PSAMacroEnumerator):
                                       r'(.+)')
     _deprecated_definition_re = re.compile(r'\s*MBEDTLS_DEPRECATED')
 
+    # Macro that is a destructor, not a constructor (i.e. takes a thing as
+    # an argument and analyzes it, rather than constructing a thing).
+    _destructor_name_re = re.compile(r'.*(_GET_|_HAS_|_IS_)|.*_LENGTH\Z')
+
+    # Macro that converts between things, rather than building a thing from
+    # scratch.
+    _conversion_macro_names = frozenset([
+        'PSA_KEY_TYPE_KEY_PAIR_OF_PUBLIC_KEY',
+        'PSA_KEY_TYPE_PUBLIC_KEY_OF_KEY_PAIR',
+        'PSA_ALG_FULL_LENGTH_MAC',
+        'PSA_ALG_AEAD_WITH_DEFAULT_LENGTH_TAG',
+        'PSA_JPAKE_EXPECTED_INPUTS',
+        'PSA_JPAKE_EXPECTED_OUTPUTS',
+    ])
+
     def read_line(self, line):
         """Parse a C header line and record the PSA identifier it defines if any.
         This function analyzes lines that start with "#define PSA_"
         (up to non-significant whitespace) and skips all non-matching lines.
         """
-        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-branches,too-many-return-statements
         m = re.match(self._define_directive_re, line)
         if not m:
             return
@@ -296,6 +311,12 @@ class PSAMacroCollector(PSAMacroEnumerator):
             # Skip deprecated values, which are assumed to be
             # backward compatibility aliases that share
             # numerical values with non-deprecated values.
+            return
+        if re.match(self._destructor_name_re, name):
+            # Not a constructor
+            return
+        if name in self._conversion_macro_names:
+            # Not a constructor
             return
         if self.is_internal_name(name):
             # Macro only to build actual values
@@ -324,9 +345,13 @@ class PSAMacroCollector(PSAMacroEnumerator):
             self.algorithms_from_hash[name] = self.algorithm_tester(name)
         elif name.startswith('PSA_KEY_USAGE_') and not parameter:
             self.key_usage_flags.add(name)
-        else:
-            # Other macro without parameter
+        elif parameter is None:
+            # Macro with no parameter, whose name does not start with one
+            # of the prefixes we look for. Just ignore it.
             return
+        else:
+            raise Exception("Unsupported macro and parameter name: {}({})"
+                            .format(name, parameter))
 
     _nonascii_re = re.compile(rb'[^\x00-\x7f]+')
     _continued_line_re = re.compile(rb'\\\r?\n\Z')
@@ -451,7 +476,7 @@ enumerate
                    r'(PSA_((?:(?:DH|ECC|KEY)_)?[A-Z]+)_\w+)' +
                    r'(?:\(([^\n()]*)\))?')
     # Regex of macro names to exclude.
-    _excluded_name_re = re.compile(r'_(?:GET|IS|OF)_|_(?:BASE|FLAG|MASK)\Z')
+    _excluded_name_re = re.compile(r'_(?:GET|HAS|IS|OF)_|_(?:BASE|FLAG|MASK)\Z')
     # Additional excluded macros.
     _excluded_names = set([
         # Macros that provide an alternative way to build the same

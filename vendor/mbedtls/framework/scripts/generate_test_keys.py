@@ -10,7 +10,7 @@ from typing import Iterator, List, Tuple
 import re
 import argparse
 from mbedtls_framework.asymmetric_key_data import ASYMMETRIC_KEY_DATA
-from mbedtls_framework.build_tree import guess_project_root
+from mbedtls_framework import build_tree
 
 BYTES_PER_LINE = 16
 
@@ -49,7 +49,6 @@ def get_ec_key_family(key: str) -> str:
 EC_NAME_CONVERSION = {
     'PSA_ECC_FAMILY_SECP_K1': {
         192: ('secp', 'k1'),
-        224: ('secp', 'k1'),
         256: ('secp', 'k1')
     },
     'PSA_ECC_FAMILY_SECP_R1': {
@@ -168,13 +167,18 @@ def collect_keys() -> Tuple[str, str]:
     return ''.join(arrays), '\n'.join(look_up_table)
 
 def main() -> None:
-    default_output_path = guess_project_root() + "/framework/tests/include/test/test_keys.h"
+    default_output_path = build_tree.guess_project_root() + "/tests/include/test/test_keys.h"
 
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--output", help="Output file", default=default_output_path)
     args = argparser.parse_args()
 
     output_file = args.output
+
+    # Support for 224 bit EC curves (secp224r1 and secp224k1) was removed from
+    # tf-psa-crypto. It only remains available for 3.6 LTS branch.
+    if not build_tree.is_mbedtls_3_6():
+        del EC_NAME_CONVERSION['PSA_ECC_FAMILY_SECP_R1'][224]
 
     arrays, look_up_table = collect_keys()
 

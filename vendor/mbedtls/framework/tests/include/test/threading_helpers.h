@@ -13,17 +13,30 @@
 #ifndef THREADING_HELPERS_H
 #define THREADING_HELPERS_H
 
-#if defined MBEDTLS_THREADING_C
-
 #include "mbedtls/private_access.h"
 #include "mbedtls/build_info.h"
+
+#if defined MBEDTLS_THREADING_C
+
+#include <mbedtls/threading.h>
 
 /* Most fields of publicly available structs are private and are wrapped with
  * MBEDTLS_PRIVATE macro. This define allows tests to access the private fields
  * directly (without using the MBEDTLS_PRIVATE wrapper). */
 #define MBEDTLS_ALLOW_PRIVATE_ACCESS
 
+/* Error in thread management */
 #define MBEDTLS_ERR_THREADING_THREAD_ERROR                 -0x001F
+
+/* Error in mutex usage (used in Mbed TLS up to 3.6, no longer used
+ * outside the test framework since TF-PSA-Crypto 1.0).
+ *
+ * In Mbed TLS 3.5, this is a redefinition of the macro to the same
+ * value (down to the exact sequence of tokens and presence/absence of
+ * whitespace between tokens), which is valid C.
+ */
+#define MBEDTLS_ERR_THREADING_BAD_INPUT_DATA              -0x001C
+
 
 #if defined(MBEDTLS_THREADING_PTHREAD)
 #include <pthread.h>

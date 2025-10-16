@@ -265,6 +265,16 @@ void mbedtls_test_set_mutex_usage_error(const char *msg)
 }
 #endif // #if defined(MBEDTLS_TEST_MUTEX_USAGE)
 
+int mbedtls_test_buffer_is_all_zero(const uint8_t *buf, size_t size)
+{
+    for (size_t i = 0; i < size; i++) {
+        if (buf[i] != 0) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 #if defined(MBEDTLS_BIGNUM_C)
 
 unsigned mbedtls_test_get_case_uses_negative_0(void)

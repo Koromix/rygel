@@ -14,7 +14,11 @@
 #include <test/psa_crypto_helpers.h>
 
 #if defined(MBEDTLS_CTR_DRBG_C)
+#if !defined(MBEDTLS_VERSION_MAJOR) || MBEDTLS_VERSION_MAJOR >= 4
+#include <mbedtls/private/ctr_drbg.h>
+#else
 #include <mbedtls/ctr_drbg.h>
+#endif
 #endif
 
 #if defined(MBEDTLS_PSA_CRYPTO_C)
@@ -98,6 +102,96 @@ const char *mbedtls_test_helper_is_psa_leaking(void)
     return NULL;
 }
 
+
+
+psa_hash_operation_t psa_hash_operation_init_short(void)
+{
+    psa_hash_operation_t operation = PSA_HASH_OPERATION_INIT;
+    memset(&operation.ctx, '!', sizeof(operation.ctx));
+    return operation;
+}
+
+psa_mac_operation_t psa_mac_operation_init_short(void)
+{
+    psa_mac_operation_t operation = PSA_MAC_OPERATION_INIT;
+    memset(&operation.ctx, '!', sizeof(operation.ctx));
+    return operation;
+}
+
+psa_cipher_operation_t psa_cipher_operation_init_short(void)
+{
+    psa_cipher_operation_t operation = PSA_CIPHER_OPERATION_INIT;
+    memset(&operation.ctx, '!', sizeof(operation.ctx));
+    return operation;
+}
+
+psa_aead_operation_t psa_aead_operation_init_short(void)
+{
+    psa_aead_operation_t operation = PSA_AEAD_OPERATION_INIT;
+    memset(&operation.ctx, '!', sizeof(operation.ctx));
+    return operation;
+}
+
+psa_key_derivation_operation_t psa_key_derivation_operation_init_short(void)
+{
+    psa_key_derivation_operation_t operation = PSA_KEY_DERIVATION_OPERATION_INIT;
+    memset(&operation.ctx, '!', sizeof(operation.ctx));
+    return operation;
+}
+
+psa_pake_operation_t psa_pake_operation_init_short(void)
+{
+    psa_pake_operation_t operation = PSA_PAKE_OPERATION_INIT;
+    memset(&operation.computation_stage, '!', sizeof(operation.computation_stage));
+    memset(&operation.data, '!', sizeof(operation.data));
+    return operation;
+}
+
+psa_sign_hash_interruptible_operation_t psa_sign_hash_interruptible_operation_init_short(void)
+{
+    psa_sign_hash_interruptible_operation_t operation =
+        PSA_SIGN_HASH_INTERRUPTIBLE_OPERATION_INIT;
+    memset(&operation.ctx, '!', sizeof(operation.ctx));
+    return operation;
+}
+
+psa_verify_hash_interruptible_operation_t psa_verify_hash_interruptible_operation_init_short(void)
+{
+    psa_verify_hash_interruptible_operation_t operation =
+        PSA_VERIFY_HASH_INTERRUPTIBLE_OPERATION_INIT;
+    memset(&operation.ctx, '!', sizeof(operation.ctx));
+    return operation;
+}
+
+#if defined(PSA_KEY_AGREEMENT_IOP_INIT)
+psa_key_agreement_iop_t psa_key_agreement_iop_init_short(void)
+{
+    psa_key_agreement_iop_t operation = PSA_KEY_AGREEMENT_IOP_INIT;
+    /* No driver support, and thus no union, yet, at the time of writing */
+    return operation;
+}
+#endif
+
+#if defined(PSA_GENERATE_KEY_IOP_INIT)
+psa_generate_key_iop_t psa_generate_key_iop_init_short(void)
+{
+    psa_generate_key_iop_t operation = PSA_GENERATE_KEY_IOP_INIT;
+    /* No driver support, and thus no union, yet, at the time of writing */
+    return operation;
+}
+#endif
+
+#if defined(PSA_EXPORT_PUBLIC_KEY_IOP_INIT)
+psa_export_public_key_iop_t psa_export_public_key_iop_init_short(void)
+{
+    psa_export_public_key_iop_t operation = PSA_EXPORT_PUBLIC_KEY_IOP_INIT;
+    /* No driver support, and thus no union, yet, at the time of writing */
+    return operation;
+}
+#endif
+
+
+
 #if defined(RECORD_PSA_STATUS_COVERAGE_LOG)
 /** Name of the file where return statuses are logged by #RECORD_STATUS. */
 #define STATUS_LOG_FILE_NAME "statuses.log"
@@ -159,7 +253,12 @@ exit:
 
 #if defined(MBEDTLS_PSA_INJECT_ENTROPY)
 
+#if !defined(MBEDTLS_VERSION_MAJOR) || MBEDTLS_VERSION_MAJOR >= 4
+#include <mbedtls/private/entropy.h>
+#else
 #include <mbedtls/entropy.h>
+#endif
+
 #include <psa_crypto_its.h>
 
 int mbedtls_test_inject_entropy_seed_read(unsigned char *buf, size_t len)

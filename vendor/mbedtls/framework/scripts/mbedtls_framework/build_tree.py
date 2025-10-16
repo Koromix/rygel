@@ -73,10 +73,10 @@ def check_repo_path():
         raise Exception("This script must be run from Mbed TLS root")
 
 def chdir_to_root() -> None:
-    """Detect the root of the Mbed TLS source tree and change to it.
+    """Detect the root of the Mbed TLS or TF-PSA-Crypto source tree and change to it.
 
-    The current directory must be up to two levels deep inside an Mbed TLS
-    source tree.
+    The current directory must be up to two levels deep inside an Mbed TLS or
+    TF-PSA-Crypto source tree.
     """
     for d in [os.path.curdir,
               os.path.pardir,
@@ -84,7 +84,7 @@ def chdir_to_root() -> None:
         if looks_like_root(d):
             os.chdir(d)
             return
-    raise Exception('Mbed TLS source tree not found')
+    raise Exception('Mbed TLS or TF-PSA-Crypto source tree not found')
 
 def guess_project_root():
     """Guess project source code directory.
@@ -129,6 +129,12 @@ def guess_tf_psa_crypto_root(root: Optional[str] = None) -> str:
         return root
     else:
         raise Exception('TF-PSA-Crypto source tree not found')
+
+def framework_root(root: Optional[str] = None) -> str:
+    """Return the path to the framework directory for this project."""
+    if root is None:
+        root = guess_project_root()
+    return os.path.join(root, 'framework')
 
 def is_mbedtls_3_6() -> bool:
     """Whether the working tree is an Mbed TLS 3.6 one or not

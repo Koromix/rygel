@@ -30,7 +30,7 @@ if grep -E "(warning|error):" doc.filtered; then
     exit 1;
 fi
 
-if in_mbedtls_repo; then
+if in_mbedtls_repo && in_3_6_branch; then
     make apidoc_clean
 fi
 

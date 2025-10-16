@@ -51,7 +51,13 @@
 #include <stdint.h>
 
 #if defined(MBEDTLS_BIGNUM_C)
+
+#if !defined(MBEDTLS_VERSION_MAJOR) || MBEDTLS_VERSION_MAJOR >= 4
+#include "mbedtls/private/bignum.h"
+#else
 #include "mbedtls/bignum.h"
+#endif
+
 #endif
 
 /** The type of test case arguments that contain binary data. */
@@ -165,6 +171,30 @@ const char *mbedtls_test_get_mutex_usage_error(void);
  */
 void mbedtls_test_set_mutex_usage_error(const char *msg);
 #endif
+
+/**
+ * \brief           Check whether the given buffer is all-bits-zero.
+ *
+ * \param[in] buf   Pointer to the buffer to check.
+ * \param size      Buffer size in bytes.
+ *
+ * \retval 0        The given buffer has a nonzero byte.
+ * \retval 1        The given buffer is all-bits-zero (this includes the case
+ *                  of an empty buffer).
+ */
+int mbedtls_test_buffer_is_all_zero(const uint8_t *buf, size_t size);
+
+/** Check whether the object at the given address is all-bits-zero.
+ *
+ * \param[in] ptr   A pointer to the object to check.
+ *                  This macro parameter may be evaluated more than once.
+ *
+ * \retval 0        The given object has a nonzero byte.
+ * \retval 1        The given object is all-bits-zero (this includes the case
+ *                  of an empty buffer).
+ */
+#define MBEDTLS_TEST_OBJECT_IS_ALL_ZERO(ptr)    \
+    (mbedtls_test_buffer_is_all_zero((const uint8_t *) (ptr), sizeof(*(ptr))))
 
 #if defined(MBEDTLS_BIGNUM_C)
 
