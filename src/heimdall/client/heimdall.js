@@ -1523,12 +1523,12 @@ function draw() {
             for (let count of row.counts) {
                 let x = count.x - position.x;
                 let height = EVENT_HEIGHT * window.devicePixelRatio;
-                let size = Math.floor(height / 2) - 3 * Math.floor(Math.log10(count.value));
+                let size = Math.floor(height / 2.4) - 2 * Math.floor(Math.log10(count.value));
 
                 ctx.font = `bold ${size}px Open Sans`;
                 ctx.fillStyle = 'white';
 
-                runner.text(x, row.height - height / 4, count.value, { align: 2 });
+                runner.text(x, row.height - height / 3.4, count.value, { align: 2 });
             }
 
             // Draw value graph
