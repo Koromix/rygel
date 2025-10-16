@@ -6,6 +6,9 @@
 /rygel.*
 .DS_Store
 
+/.cache/
+/compile_commands.json
+
 **/tmp/*
 
 .Rproj.user
