@@ -244,6 +244,7 @@
         "send": "Envoyer",
         "sending_done": "Envoi complété",
         "sending_in_progress": "Envoi en cours",
+        "sequence": "Séquence",
         "service_worker_not_available": "L'API service worker API n'est pas disponible",
         "session_by_token": "Session par token",
         "show": "Afficher",

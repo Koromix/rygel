@@ -643,7 +643,7 @@ function renderData() {
             <table class="ui_table fixed" id="ins_data"
                    style=${'min-width: ' + (5 + 5 * data_columns.length) + 'em;'}>
                 <colgroup>
-                    <col style="width: 60px;" />
+                    <col style="width: 6.5em;" />
                     <col style="width: 8em;"/>
                     ${Util.mapRange(0, data_columns.length, () => html`<col/>`)}
                     <col style="width: 2em;"/>
@@ -651,7 +651,7 @@ function renderData() {
 
                 <thead>
                     <tr>
-                        <th>${T.id}</th>
+                        <th>${T.sequence}</th>
                         <th>${T.creation}</th>
                         ${data_columns.map(col => {
                             let stats = `${col.count} / ${data_rows.length}`;

@@ -4,7 +4,7 @@ Chaque enregistrement alimente le tableau de suivi, accessible via le panneau de
 
 Le **tableau de suivi** comprend une ligne par enregistrement, ainsi que les colonnes suivantes :
 
-- La colonne ID avec l'[identifiant séquentiel](code#tid-et-sequence) de l'enregistrement
+- Un [identifiant séquentiel](code#tid-et-sequence) spécifique de chaque enregistrement
 - La date de création de l'enregistrement
 - Une colonne par page, avec son statut de remplissage et éventuellement le [summary](code#summary) (si il existe)
 

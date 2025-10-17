@@ -244,6 +244,7 @@
         "send": "Send",
         "sending_done": "Upload complete",
         "sending_in_progress": "Upload in progress",
+        "sequence": "Sequence",
         "service_worker_not_available": "The service worker API is not available",
         "session_by_token": "Token session secret",
         "show": "Show",
