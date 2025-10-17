@@ -57,6 +57,7 @@ html {
 }
 .screenshot.left { justify-content: start; }
 .screenshot.right { justify-content: end; }
+p + .screenshot { margin-top: 1em; }
 
 .mini {
     float: left;

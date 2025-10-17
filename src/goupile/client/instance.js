@@ -2280,20 +2280,25 @@ function runAnnotationDialog(e, intf) {
             notes.status = status;
         }
 
-        let locked = d.values.hasOwnProperty('locked') ? d.values.locked : status.locked;
+        let locked = d.values.locked ?? status.locked;
         let statuses = getFillingStatuses(intf);
 
         if (statuses.length >= 2)
             d.enumRadio('filling', null, statuses, { value: status.filling, disabled: locked });
         d.textArea('comment', T.annotate_comment, { rows: 4, value: status.comment, disabled: locked });
 
-        if (goupile.hasPermission('data_audit'))
-            d.binary('locked', T.annotate_lock, { value: status.locked });
+        if (goupile.hasPermission('data_audit')) {
+            d.boolean('locked', T.annotate_lock, { value: status.locked ?? false, untoggle: false });
+        } else if (locked) {
+            d.calc('locked', T.annotate_lock, 0 + locked, { text: locked => locked ? T.yes : T.no });
+        }
 
         d.action(T.confirm, { disabled: !d.isValid() }, async () => {
             status.filling = d.values.filling;
             status.comment = d.values.comment;
-            status.locked = d.values.locked;
+
+            if (goupile.hasPermission('data_audit'))
+                status.locked = !!d.values.locked;
 
             form_state.markChange();
 

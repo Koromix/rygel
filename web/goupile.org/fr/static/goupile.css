@@ -48,15 +48,17 @@ html {
     display: flex;
     justify-content: center;
     gap: 10px;
-}
-.screenshot > img {
-    max-width: 100%;
-    vertical-align: top;
-    cursor: pointer;
-    border: 10px solid #ebebeb;
+
+    & > img {
+        max-width: 100%;
+        vertical-align: top;
+        cursor: pointer;
+        border: 10px solid #ebebeb;
+    }
 }
 .screenshot.left { justify-content: start; }
 .screenshot.right { justify-content: end; }
+p + .screenshot { margin-top: 1em; }
 
 .mini {
     float: left;
@@ -64,20 +66,21 @@ html {
     margin-right: 1em;
     padding: 10px;
     background: #ebebeb;
+
+    & > img {
+        width: 100%;
+        cursor: pointer;
+    }
+    & > p {
+        margin: 0.5em 0 0 0;
+        font-size: 0.8em;
+        font-style: italic;
+        text-align: center;
+    }
 }
 .mini.right {
     float: right;
     margin-left: 1em;
-}
-.mini > img {
-    width: 100%;
-    cursor: pointer;
-}
-.mini > p {
-    margin: 0.5em 0 0 0;
-    font-size: 0.8em;
-    font-style: italic;
-    text-align: center;
 }
 
 #veil {
@@ -92,10 +95,11 @@ html {
     background: rgba(0, 0, 0, 0.9);
     cursor: pointer;
     z-index: 999;
+
+    & > img {
+        position: absolute;
+        max-width: 90%;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+    }
 }
 #veil.active { display: flex; }
-#veil > img {
-    position: absolute;
-    max-width: 90%;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-}
