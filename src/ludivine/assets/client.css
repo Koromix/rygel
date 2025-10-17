@@ -29,6 +29,7 @@ html {
     flex: 1;
     flex-direction: column;
     background: inherit;
+    overflow-y: scroll;
 }
 main {
     display: flex;
