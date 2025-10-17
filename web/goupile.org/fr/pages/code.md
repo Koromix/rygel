@@ -4,14 +4,14 @@
 
 Chaque enregistrement dans Goupile dispose de deux identifiants uniques :
 
-- L'identifiant TID, qui est une chaîne de 26 caractères encodant le moment de l'enregistrement et une partie aléatoire (ex : *01K5EY3SCEM1D1NBABXXDZW7XP*).
-- L'identifiant de séquence, qui est un nombre incrémenté à chaque enregistrement, en commençant par 1.
+- Un **identifiant TID**, qui est une chaîne de 26 caractères encodant le moment de l'enregistrement et une partie aléatoire (ex : *01K5EY3SCEM1D1NBABXXDZW7XP*).
+- Un **identifiant de séquence**, qui est un nombre incrémenté à chaque enregistrement, en commençant par 1.
 
 Utilisez le TID pour faire la jointure entre les différentes tables dans les données exportées. La valeur du TID est disponible dans la colonne `__tid` de chaque table.
 
 ## Summary
 
-Pour chaque page du formulaire, il est possible de définir un identifiant supplémentaire dit `summary`, qui sera affiché à la place de la date dans le tableau récapitulatif des enregistements (voir capture ci-dessous).
+Pour chaque page du formulaire, il est possible de définir un identifiant supplémentaire dit *summary*, qui sera affiché à la place de la date dans le tableau récapitulatif des enregistements (voir capture ci-dessous).
 
 Pour cela, assignez une valeur à `meta.summary` dans le script de formulaire. Dans l'exemple ci-dessous, la valeur affichée dans la colonne « Introduction » est construite en fonction de l'âge indiqué dans la variable correspondante :
 
@@ -36,7 +36,7 @@ meta.summary = values.num_inclusion
 
 ## Compteurs personnalisés
 
-Il est possible de créer des compteurs personnalisés, qui sont incrémentés (en commençant à 1) en fonction de conditions définies par le code.
+Il est possible de créer des compteurs personnalisés, qui sont **incrémentés pour chaque enregistrement** (en commençant à 1) en fonction de conditions définies par le code.
 
 La fonction `meta.count(key, secret = false)` est utilisée pour créer un compteur.
 
@@ -63,7 +63,7 @@ Après inclusion de plusieurs patients, la valeur du compteur de chaque particip
 
 ## Randomisation
 
-Le système de randomisation de Goupile est une extension des compteurs introduits précédemment.
+Le système de randomisation de Goupile est une **extension des compteurs** introduits précédemment.
 
 Utilisez la fonction `meta.randomize(key, max, secret = false)` pour assigner un compteur. Le compteur randomisé n'est pas séquentiel, chaque participant reçoit une valeur aléatoire entre 1 et *max*, par bloc de taille *max*. 
 Une fois que *max* participants ont été inclus, le compteur est remis à zéro pour les inclusions suivantes.
@@ -74,7 +74,7 @@ Par exemple, une valeur maximale de 4 garantit que les 4 premiers participants a
 meta.randomize("groupe", 4)
 ```
 
-Comme dans l'exemple sur les compteurs séquentiels, vous pouvez stratifier la randomisation en utilisant une clé différente, qui peut dépendre d'une variable présente dans le formulaire.
+Comme dans l'exemple sur les compteurs séquentiels, vous pouvez *stratifier la randomisation* en utilisant une clé différente, qui peut dépendre d'une variable présente dans le formulaire.
 
 L'exemple ci-dessous effectue une randomisation stratfiée par le genre, les patients auront une numéro de randomisation qui dépend de leur genre :
 
@@ -161,7 +161,7 @@ profile
 
 # Ajout de fichiers et d'images
 
-Il est possible d'intégrer des images, des vidéos, des PDF et tous types de fichiers, qui seront directement hébergés par Goupile. Pour cela, ouvrez le panneau de publication (accessible au-dessus de l'éditeur), puis cliquez sur le lien « Ajouter un fichier » [1].
+Il est possible d'intégrer des **images, des vidéos, des PDF et tous types de fichiers**, qui seront directement hébergés par Goupile. Pour cela, ouvrez le panneau de publication (accessible au-dessus de l'éditeur), puis cliquez sur le lien « Ajouter un fichier » [1].
 
 <div class="screenshot">
     <img src="{{ ASSET static/help/dev/file1.webp }}" style="height: 240px;" alt=""/>
