@@ -1406,6 +1406,10 @@ async function showKey(plan, key, secret) {
 
                     <div style="color: red; font-style: italic; text-align: center">${T.please_copy_api_key}</div>
                 </div>
+
+                <div class="footer" style="justify-content: center;">
+                    <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.close}</button>
+                </div>
             `
         });
     } catch (err) {

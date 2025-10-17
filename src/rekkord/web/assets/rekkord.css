@@ -30,7 +30,7 @@ html {
     --button_radius: 10px;
 }
 
-body { font-size: 14px; }
+body { font-size: 15px; }
 
 :is(main, dialog) a { text-decoration: underline; }
 :is(main, dialog) a:hover { color: var(--color, #26346c); }
