@@ -763,10 +763,10 @@ async function runExportCreateDialog(e) {
     await UI.dialog(e, T.create_export, {}, (d, resolve, reject) => {
         if (downloads.length > 0) {
             d.enumRadio('mode', T.export_mode, [
+                ['all', T.export_all],
                 ['sequence', T.export_sequence],
-                ['anchor', T.export_anchor],
-                ['all', T.export_all]
-            ], { value: 'sequence', untoggle: false });
+                ['anchor', T.export_anchor]
+            ], { value: 'all', untoggle: false });
 
             if (d.values.mode != 'all') {
                 let props = downloads.map(download => [download.export, (new Date(download.ctime)).toLocaleString()]);
