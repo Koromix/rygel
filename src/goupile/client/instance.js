@@ -1145,7 +1145,7 @@ function addAutomaticActions(builder, model) {
 
                 await data_mutex.run(async () => {
                     let keep = goupile.hasPermission('data_read') || route.page.claim;
-                    let finalize = route.page.lock || !keep;
+                    let finalize = (route.page.lock === true) || !keep;
                     let confirm = route.page.confirm ?? finalize;
 
                     if (confirm) {

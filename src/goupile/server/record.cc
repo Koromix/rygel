@@ -63,14 +63,17 @@ struct RecordInfo {
 };
 
 class RecordWalker {
-    sq_Statement stmt;
+    int64_t now;
 
+    sq_Statement stmt;
     bool read_data = false;
 
     bool step = false;
     RecordInfo cursor;
 
 public:
+    RecordWalker() : now(GetUnixTime()) {}
+
     // Make sure tags are safe and can't lead to SQL injection before calling this function
     bool Prepare(InstanceHolder *instance, int64_t userid, const RecordFilter &filter);
 
@@ -193,7 +196,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
 
     if (filter.audit_anchor < 0) {
         sql.len += Fmt(sql.TakeAvailable(),
-                       R"(SELECT t.sequence AS t, t.tid, t.counters, t.secrets, t.locked,
+                       R"(SELECT t.sequence AS t, t.tid, t.counters, t.secrets, IFNULL(t.lock, -1),
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime,
                                  e.store, e.summary, e.tags AS tags,
                                  IIF(?6 = 1, e.data, NULL) AS data
@@ -235,7 +238,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                                   WHERE f.anchor <= ?3 AND f.previous = rec.anchor
                               ORDER BY anchor
                           )
-                          SELECT t.sequence AS t, t.tid, t.counters, t.secrets, t.locked,
+                          SELECT t.sequence AS t, t.tid, t.counters, t.secrets, IFNULL(t.lock, -1),
                                  e.rowid AS e, e.eid, IIF(rec.data IS NULL, 1, 0) AS deleted,
                                  rec.anchor, e.ctime, rec.mtime, e.store,
                                  rec.summary, rec.tags, rec.data
@@ -321,7 +324,9 @@ again:
     cursor.tid = (const char *)sqlite3_column_text(stmt, 1);
     cursor.counters = (const char *)sqlite3_column_text(stmt, 2);
     cursor.secrets = (const char *)sqlite3_column_text(stmt, 3);
-    cursor.locked = sqlite3_column_int(stmt, 4);
+
+    int64_t lock = sqlite3_column_int64(stmt, 4);
+    cursor.locked = (lock >= 0 && lock <= now);
 
     cursor.e = e;
     cursor.eid = (const char *)sqlite3_column_text(stmt, 6);
@@ -1183,7 +1188,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     HeapArray<const char *> publics;
     SignupInfo signup = {};
     HeapArray<BlobInfo> blobs;
-    bool lock = false;
+    int lock = -1;
     bool claim = true;
     {
         bool success = http_ParseJson(io, Mebibytes(8), [&](json_Parser *json) {
@@ -1330,7 +1335,24 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                         blobs.Append(blob);
                     }
                 } else if (key == "lock") {
-                    json->ParseBool(&lock);
+                    switch (json->PeekToken()) {
+                        case json_TokenType::Null: {
+                            json->ParseNull();
+                            lock = -1;
+                        } break;
+                        case json_TokenType::Bool: {
+                            bool value;
+                            json->ParseBool(&value);
+
+                            lock = value ? 0 : -1;
+                        } break;
+                        case json_TokenType::Number: { json->ParseInt(&lock); } break;
+
+                        default: {
+                            LogError("Unexpected value type for lock");
+                            valid = false;
+                        } break;
+                    }
                 } else if (key == "claim") {
                     json->ParseBool(&claim);
                 } else {
@@ -1428,7 +1450,8 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         bool claimed;
         {
             sq_Statement stmt;
-            if (!instance->db->Prepare(R"(SELECT t.locked, IIF(c.userid IS NOT NULL, 1, 0) AS claimed
+            if (!instance->db->Prepare(R"(SELECT IFNULL(t.lock, -1) AS lock,
+                                                 IIF(c.userid IS NOT NULL, 1, 0) AS claimed
                                           FROM rec_threads t
                                           LEFT JOIN ins_claims c ON (c.tid = t.tid AND c.userid = ?2)
                                           WHERE t.tid = ?1)",
@@ -1436,9 +1459,9 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 return false;
 
             if (stmt.Step()) {
-                bool locked = sqlite3_column_int(stmt, 0);
+                int64_t lock = sqlite3_column_int64(stmt, 0);
 
-                if (locked) {
+                if (lock >= 0 && lock <= now) {
                     LogError("This record is locked");
                     io->SendError(403);
                     return false;
@@ -1609,10 +1632,14 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         }
 
         // Create thread if needed
-        if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets, locked)
+        if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets, lock)
                                   VALUES (?1, '{}', '{}', ?2)
-                                  ON CONFLICT DO UPDATE SET locked = MAX(locked, excluded.locked))",
-                               tid, 0 + lock))
+                                  ON CONFLICT DO UPDATE SET lock = CASE
+                                                                WHEN lock IS NULL THEN excluded.lock
+                                                                WHEN excluded.lock IS NULL THEN lock
+                                                                ELSE MIN(lock, excluded.lock)
+                                                            END)",
+                               tid, (lock >= 0) ? sq_Binding(now + lock) : sq_Binding()))
             return false;
 
         // Update entry and fragment tags
@@ -1768,7 +1795,8 @@ void HandleRecordDelete(http_IO *io, InstanceHolder *instance)
 
         // Get existing thread entries
         sq_Statement stmt;
-        if (!instance->db->Prepare(R"(SELECT t.locked, IIF(c.userid IS NOT NULL, 1, 0) AS claim,
+        if (!instance->db->Prepare(R"(SELECT IIF(t.lock, -1) AS lock,
+                                             IIF(c.userid IS NOT NULL, 1, 0) AS claim,
                                              e.rowid, e.eid, e.anchor, e.tags
                                       FROM rec_threads t
                                       LEFT JOIN ins_claims c ON (c.userid = ?1 AND c.tid = t.tid)
@@ -1780,7 +1808,7 @@ void HandleRecordDelete(http_IO *io, InstanceHolder *instance)
 
         // Check for lock and claim (if needed)
         if (stmt.Step()) {
-            bool locked = sqlite3_column_int(stmt, 0);
+            int64_t lock = sqlite3_column_int64(stmt, 0);
             bool claim = sqlite3_column_int(stmt, 1);
 
             if (!stamp->HasPermission(UserPermission::DataRead) && !claim) {
@@ -1789,7 +1817,7 @@ void HandleRecordDelete(http_IO *io, InstanceHolder *instance)
                 return false;
             }
 
-            if (locked) {
+            if (lock >= 0 && lock <= now) {
                 LogError("This record is locked");
                 io->SendError(403);
                 return false;
@@ -1874,7 +1902,7 @@ void HandleRecordDelete(http_IO *io, InstanceHolder *instance)
     io->SendText(200, "{}", "application/json");
 }
 
-static void HandleLock(http_IO *io, InstanceHolder *instance, bool lock)
+static void HandleLock(http_IO *io, InstanceHolder *instance, bool enable)
 {
     if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
@@ -1891,7 +1919,7 @@ static void HandleLock(http_IO *io, InstanceHolder *instance, bool lock)
         return;
     }
     if (!stamp || !stamp->HasPermission(UserPermission::DataSave)) {
-        if (lock) {
+        if (enable) {
             LogError("User is not allowed to lock records");
         } else {
             LogError("User is not allowed to unlock records");
@@ -1935,8 +1963,10 @@ static void HandleLock(http_IO *io, InstanceHolder *instance, bool lock)
     }
 
     bool success = instance->db->Transaction([&]() {
+        int64_t now = GetUnixTime();
+
         sq_Statement stmt;
-        if (!instance->db->Prepare("SELECT t.locked FROM rec_threads t WHERE tid = ?1",
+        if (!instance->db->Prepare("SELECT IFNULL(t.lock, -1) FROM rec_threads t WHERE tid = ?1",
                                    &stmt, tid))
             return false;
 
@@ -1948,16 +1978,20 @@ static void HandleLock(http_IO *io, InstanceHolder *instance, bool lock)
             return false;
         }
 
-        bool locked = sqlite3_column_int(stmt, 0);
+        // Can we do it?
+        {
+            int64_t lock = sqlite3_column_int64(stmt, 0);
+            bool locked = (lock >= 0 && lock <= now);
 
-        if (locked && !stamp->HasPermission(UserPermission::DataAudit)) {
-            LogError("User is not allowed to unlock records");
-            io->SendError(403);
-            return false;
+            if (locked && !stamp->HasPermission(UserPermission::DataAudit)) {
+                LogError("User is not allowed to unlock records");
+                io->SendError(403);
+                return false;
+            }
         }
 
-        if (!instance->db->Run("UPDATE rec_threads SET locked = ?2 WHERE tid = ?1",
-                               tid, lock))
+        if (!instance->db->Run("UPDATE rec_threads SET lock = ?2 WHERE tid = ?1",
+                               tid, enable ? sq_Binding(now) : sq_Binding()))
             return false;
 
         return true;

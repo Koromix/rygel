@@ -54,8 +54,8 @@ function DataRemote() {
             blobs: blobs,
             signup: actions.signup,
 
-            lock: !!actions.lock,
-            claim: !!actions.claim
+            lock: actions.lock,
+            claim: actions.claim
         });
     };
 
