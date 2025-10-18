@@ -1134,7 +1134,7 @@ function addAutomaticActions(builder, model) {
         let can_continue = route.page.sequence && model.variables.length;
         let can_save = !form_thread.locked &&
                        (form_state.hasChanged() || can_continue);
-        let can_lock = form_thread.saved && route.page.has_lock &&
+        let can_lock = form_thread.saved && (route.page.lock != null) &&
                        (!form_thread.locked || goupile.hasPermission('data_audit'));
 
         if (can_save) {
@@ -1144,17 +1144,18 @@ function addAutomaticActions(builder, model) {
                 form_builder.triggerErrors();
 
                 await data_mutex.run(async () => {
-                    let keep_open = goupile.hasPermission('data_read') || route.page.claim;
-                    let confirm = route.page.confirm ?? !keep_open;
+                    let keep = goupile.hasPermission('data_read') || route.page.claim;
+                    let finalize = route.page.lock || !keep;
+                    let confirm = route.page.confirm ?? finalize;
 
                     if (confirm) {
-                        let text = keep_open ? unsafeHTML(T.confirm_save) : unsafeHTML(T.confirm_final);
+                        let text = finalize ? unsafeHTML(T.confirm_final) : unsafeHTML(T.confirm_save);
                         await UI.confirm(e, text, T.continue, () => {});
                     }
 
                     await saveRecord(form_thread.tid, form_entry, form_raw, form_meta, false);
 
-                    if (keep_open) {
+                    if (keep) {
                         await openRecord(form_thread.tid, null, route.page);
                     } else {
                         let page = route.page.chain[0];
@@ -1208,8 +1209,8 @@ function addAutomaticActions(builder, model) {
         }
 
         if (can_lock) {
-            let label = !form_thread.locked ? ('+' + T.lock) : T.unlock;
-            let color = !form_thread.locked ? null : '#ff6600';
+            let label = !form_thread.locked ? T.lock : T.unlock;
+            let color = !form_thread.locked ? '#ff6600' : null;
 
             builder.action(label, { color: color }, async e => {
                 if (form_state.hasChanged())
@@ -2338,7 +2339,11 @@ async function saveRecord(tid, entry, raw, meta, draft) {
             frag.publics.push(key);
     }
 
-    await records.save(tid, entry, frag, ENV.version, meta.signup, route.page.claim);
+    await records.save(tid, entry, frag, ENV.version, {
+        signup: meta.signup,
+        claim: route.page.claim,
+        lock: route.page.lock
+    });
 
     if (!profile.userid)
         await goupile.syncProfile();

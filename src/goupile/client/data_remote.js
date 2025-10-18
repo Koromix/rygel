@@ -33,7 +33,7 @@ function DataRemote() {
         return thread;
     };
 
-    this.save = async function(tid, entry, frag, fs, signup, claim) {
+    this.save = async function(tid, entry, frag, fs, actions) {
         let blobs = [];
         let data = await preserve(frag.data, blobs);
 
@@ -52,9 +52,10 @@ function DataRemote() {
             counters: frag.counters,
             publics: frag.publics,
             blobs: blobs,
-            signup: signup,
+            signup: actions.signup,
 
-            claim: claim
+            lock: !!actions.lock,
+            claim: !!actions.claim
         });
     };
 

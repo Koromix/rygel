@@ -51,11 +51,11 @@ function ApplicationBuilder(app) {
             menu: null,
             warn_unsaved: true,
             autosave: false,
-            has_lock: false,
             sequence: false,
             progress: true,
             enabled: true,
             claim: true,
+            lock: null,
             confirm: null,
             icon: null,
             help: null
@@ -72,12 +72,12 @@ function ApplicationBuilder(app) {
         menu: makeOptionProperty('menu'),
         warnUnsaved: makeOptionProperty('warn_unsaved'),
         autosave: makeOptionProperty('autosave'),
-        hasLock: makeOptionProperty('has_lock'),
         sequence: makeOptionProperty('sequence'),
         progress: makeOptionProperty('progress'),
         enabled: makeOptionProperty('enabled'),
         claim: makeOptionProperty('claim'),
         confirm: makeOptionProperty('confirm'),
+        lock: makeOptionProperty('lock'),
         icon: makeOptionProperty('icon'),
         help: makeOptionProperty('help')
     });

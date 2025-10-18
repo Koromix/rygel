@@ -1183,6 +1183,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     HeapArray<const char *> publics;
     SignupInfo signup = {};
     HeapArray<BlobInfo> blobs;
+    bool lock = false;
     bool claim = true;
     {
         bool success = http_ParseJson(io, Mebibytes(8), [&](json_Parser *json) {
@@ -1328,6 +1329,8 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
                         blobs.Append(blob);
                     }
+                } else if (key == "lock") {
+                    json->ParseBool(&lock);
                 } else if (key == "claim") {
                     json->ParseBool(&claim);
                 } else {
@@ -1606,9 +1609,10 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         }
 
         // Create thread if needed
-        if (new_thread && !instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets, locked)
-                                                VALUES (?1, '{}', '{}', 0)
-                                                ON CONFLICT DO NOTHING)", tid))
+        if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets, locked)
+                                  VALUES (?1, '{}', '{}', ?2)
+                                  ON CONFLICT DO UPDATE SET locked = MAX(locked, excluded.locked))",
+                               tid, 0 + lock))
             return false;
 
         // Update entry and fragment tags
