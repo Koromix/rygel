@@ -37,7 +37,7 @@ Use `--format JSON` or `--format XML` to get this list in a JSON or XML format.
 
 # Explore snapshot
 
-You can list the directories and files in a snapshot with the `rekkord list` command. You can either use the unique [object ID](#list-snapshots), or provide a snapshot name, in which case rekkord will use the most recent snapshot that matches it.
+You can list the directories and files in a snapshot with the `rekkord list` command. You can either use the unique [object ID](#list-snapshots), or provide a snapshot channel, in which case rekkord will use the most recent snapshot that matches it.
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
@@ -45,17 +45,17 @@ rekkord list <IDENTIFIER>
 ```
 
 > [!TIP]
-> You can use an object ID (OID) or a snapshot name as the identifier. In addition, you can specify a path to locate an object inside the main snapshot or directory, separated with a colon.
+> You can use an object ID (OID) or a snapshot channel as the identifier. In addition, you can specify a path to locate an object inside the main snapshot or directory, separated with a colon.
 >
 > Here are two examples without path:
 >
 > - `mBC49879164FDEF1DD26501441B20013202E6DC7AF5D5C5AC8C97AC8126FDF4B4`: use snapshot with OID *mBC4987916...*
-> - `front-machine`: find latest snapshot named *front-machine*
+> - `front-machine`: find latest snapshot with channel *front-machine*
 >
 > Here are two examples with an additional path:
 >
 > - `m51D1AE52921C8F636A18F9065D5348FC47BD61546B9688FD5D1D45F5AE240FAC:var/lib/mysql`: locate directory *var/lib/mysql* inside snapshot with OID *m51D1AE529...* 
-> - `database-machine:var/lib/mysql`: locate directory *var/lib/mysql* inside inside latest snapshot named *database-machine*
+> - `database-machine:var/lib/mysql`: locate directory *var/lib/mysql* inside inside latest snapshot with channel *database-machine*
 
 The output looks something like this:
 
@@ -124,7 +124,7 @@ Use `--format JSON` or `--format XML` to get the file tree in a JSON or XML form
 
 # Restore snapshot
 
-Use the `rekkord restore` command to restore the files from a snapshot onto the local filesystem. You can either use the unique [object ID](#list-snapshots), or provide a snapshot name, in which case rekkord will use the most recent snapshot that matches it.
+Use the `rekkord restore` command to restore the files from a snapshot onto the local filesystem. You can either use the unique [object ID](#list-snapshots), or provide a snapshot channel, in which case rekkord will use the most recent snapshot that matches it.
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
@@ -136,7 +136,7 @@ rekkord restore <IDENTIFIER> <DESTINATION>
 
 # Mount snapshot
 
-You can also use `rekkord mount <IDENTIFIER> <mountpoint>` to mount a snapshot or a directory as a read-only filesystem. You can either use the unique [object ID](#list-snapshots), or provide a snapshot name, in which case rekkord will use the most recent snapshot that matches it.
+You can also use `rekkord mount <IDENTIFIER> <mountpoint>` to mount a snapshot or a directory as a read-only filesystem. You can either use the unique [object ID](#list-snapshots), or provide a snapshot channel, in which case rekkord will use the most recent snapshot that matches it.
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
