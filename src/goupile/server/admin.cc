@@ -226,7 +226,7 @@ T(R"(Usage: %!..+%1 init [option...] [directory]%!0)"), FelixTarget);
             return 1;
 
 #if !defined(_WIN32)
-        chmod(filename, 0600);
+        chmod(filename, 0644);
 #endif
     }
 
