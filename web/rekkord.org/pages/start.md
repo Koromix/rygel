@@ -30,7 +30,7 @@ rekkord init
 > [!NOTE]
 > rekkord looks for `~/.config/rekkord/rekkord.ini` or `/etc/rekkord/rekkord.ini` by default.
 >
-> Set `REKKORD_CUSTOM_FILE` to a different path if your config file lives somewhere else.
+> Set `REKKORD_CONFIG_FILE` to a different path if your config file lives somewhere else.
 >
 > ```sh
 > export REKKORD_CONFIG_FILE=/path/to/config.ini
