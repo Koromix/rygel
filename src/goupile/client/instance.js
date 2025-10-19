@@ -1129,16 +1129,15 @@ function addAutomaticActions(builder, model) {
         builder.errorList();
 
     if (route.page.store != null) {
-        let is_new = (form_entry.anchor < 0);
+        let next = selectNextPage(route.page, form_thread);
 
-        let can_continue = route.page.sequence && model.variables.length;
-        let can_save = !form_thread.locked &&
-                       (form_state.hasChanged() || can_continue);
+        let can_save = !form_thread.locked && model.variables.length &&
+                       (form_state.hasChanged() || next != null);
         let can_lock = form_thread.saved && (route.page.lock != null) &&
                        (!form_thread.locked || goupile.hasPermission('data_audit'));
 
         if (can_save) {
-            let label = '+' + (route.page.sequence ? T.continue : T.save);
+            let label = '+' + (next != null ? T.continue : T.save);
 
             builder.action(label, { color: '#2d8261' }, async e => {
                 form_builder.triggerErrors();
@@ -1165,46 +1164,11 @@ function addAutomaticActions(builder, model) {
                     data_threads = null;
                 });
 
-                // Redirect?
-                {
-                    let redirect = route.page.sequence;
-                    let url = null;
+                if (next == null)
+                    next = route.page;
 
-                    if (redirect === true) {
-                        for (let i = route.page.chain.length - 2; i >= 0; i--) {
-                            let page = route.page.chain[i];
-                            let status = computeStatus(page, form_thread);
-
-                            if (page.url != route.page.url) {
-                                url = contextualizeURL(page.url, form_thread);
-
-                                if (!status.complete)
-                                    break;
-                            }
-                        }
-
-                        if (is_new && route.page.chain.length > 1) {
-                            let parent = route.page.chain[route.page.chain.length - 2];
-                            let idx = parent.children.indexOf(route.page);
-
-                            if (idx >= 0 && idx < parent.children.length - 1) {
-                                let next = parent.children[idx + 1];
-
-                                while (next.children.length)
-                                    next = next.children[0];
-
-                                url = contextualizeURL(next.url, form_thread);
-                            }
-                        }
-                    } else if (typeof redirect == 'string') {
-                        let page = app.pages.find(page => page.key == redirect);
-
-                        if (page != null)
-                            url = contextualizeURL(page.url, form_thread);
-                    }
-
-                    go(null, url);
-                }
+                let url = contextualizeURL(next.url, form_thread);
+                go(null, url);
             });
         }
 
@@ -1231,7 +1195,7 @@ function addAutomaticActions(builder, model) {
             });
         }
 
-        if (!is_new && form_state.hasChanged()) {
+        if (form_entry.anchor >= 0 && form_state.hasChanged()) {
             builder.action('-');
             builder.action(T.forget_changes, {}, async e => {
                 await UI.confirm(e, unsafeHTML(T.confirm_forget_changes),
@@ -1245,6 +1209,61 @@ function addAutomaticActions(builder, model) {
             });
         }
     }
+}
+
+function selectNextPage(page, thread) {
+    let sequence = page.sequence;
+    let entry = thread.entries[page.store.key];
+
+    if (sequence == null)
+        return null;
+    if (UI.isPanelActive('data'))
+        return null;
+
+    if (entry.anchor < 0) {
+        if (typeof sequence == 'string') {
+            let next = app.pages.find(page => page.key == sequence);
+            return next;
+        }
+
+        if (sequence === true) {
+            let parent = page.chain[page.chain.length - 2];
+            sequence = (parent != null) ? parent.children.map(page => page.key) : [];
+        }
+
+        if (Array.isArray(sequence)) {
+            let idx = sequence.indexOf(page.key);
+
+            if (idx < 0) {
+                console.error(T.message(`Page '{1}' is not in sequence`, page.key));
+                return null;
+            }
+
+            if (idx + 1 < sequence.length) {
+                let next = app.pages.find(page => page.key == sequence[idx + 1]);
+                return next;
+            }
+        }
+    }
+
+    // Try to go back to parent
+    {
+        let next = null;
+
+        for (let i = page.chain.length - 2; i >= 0; i--) {
+            next = page.chain[i];
+
+            let status = computeStatus(next, thread);
+
+            if (next.url != page.url && !status.complete)
+                break;
+        }
+
+        if (next != null)
+            return next;
+    }
+
+    return null;
 }
 
 function addAutomaticTags(variables) {
