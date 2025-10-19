@@ -3585,8 +3585,8 @@ int64_t ComposeTimeUTC(const TimeSpec &spec);
 
 enum class FmtType {
     Str,
-    StrPad,
-    StrRepeat,
+    PadStr,
+    RepeatStr,
     Char,
     Buffer,
     Custom,
@@ -3610,6 +3610,8 @@ enum class FmtType {
     FlagNames,
     FlagOptions,
     Random,
+    EscapeStr,
+    EscapeChar
 };
 
 template <typename T>
@@ -3705,25 +3707,54 @@ public:
     char padding = 0;
 
     FmtArg() = default;
-    FmtArg(std::nullptr_t) : type(FmtType::Str) { u.str = "(null)"; }
-    FmtArg(const char *str) : type(FmtType::Str) { u.str = str ? str : "(null)"; }
-    FmtArg(Span<const char> str) : type(FmtType::Str) { u.str = str; }
-    FmtArg(char c) : type(FmtType::Char) { u.ch = c; }
-    FmtArg(const FmtCustom &custom) : type(FmtType::Custom) { u.custom = custom; }
-    FmtArg(bool b) : type(FmtType::Bool) { u.b = b; }
-    FmtArg(unsigned char i)  : type(FmtType::Unsigned) { u.u = i; }
-    FmtArg(short i) : type(FmtType::Integer) { u.i = i; }
-    FmtArg(unsigned short i) : type(FmtType::Unsigned) { u.u = i; }
-    FmtArg(int i) : type(FmtType::Integer) { u.i = i; }
-    FmtArg(unsigned int i) : type(FmtType::Unsigned) { u.u = i; }
-    FmtArg(long i) : type(FmtType::Integer) { u.i = i; }
-    FmtArg(unsigned long i) : type(FmtType::Unsigned) { u.u = i; }
-    FmtArg(long long i) : type(FmtType::Integer) { u.i = i; }
-    FmtArg(unsigned long long i) : type(FmtType::Unsigned) { u.u = i; }
-    FmtArg(float f) : type(FmtType::Float) { u.f = { f, 0, INT_MAX }; }
-    FmtArg(double d) : type(FmtType::Double) { u.d = { d, 0, INT_MAX }; }
-    FmtArg(const void *ptr) : type(FmtType::BigHex) { u.u = (uint64_t)ptr; }
-    FmtArg(const LocalDate &date) : type(FmtType::Date) { u.date = date; }
+    FmtArg(const FmtArg &other) = default;
+    FmtArg(std::nullptr_t) : FmtArg(FmtType::Str) { u.str = "(null)"; }
+    FmtArg(const char *str) : FmtArg(FmtType::Str) { u.str = str ? str : "(null)"; }
+    FmtArg(Span<const char> str) : FmtArg(FmtType::Str) { u.str = str; }
+    FmtArg(char c) : FmtArg(FmtType::Char) { u.ch = c; }
+    FmtArg(const FmtCustom &custom) : FmtArg(FmtType::Custom) { u.custom = custom; }
+    FmtArg(bool b) : FmtArg(FmtType::Bool) { u.b = b; }
+    FmtArg(unsigned char i) : FmtArg(FmtType::Unsigned) { u.u = i; }
+    FmtArg(short i) : FmtArg(FmtType::Integer) { u.i = i; }
+    FmtArg(unsigned short i) : FmtArg(FmtType::Unsigned) { u.u = i; }
+    FmtArg(int i) : FmtArg(FmtType::Integer) { u.i = i; }
+    FmtArg(unsigned int i) : FmtArg(FmtType::Unsigned) { u.u = i; }
+    FmtArg(long i) : FmtArg(FmtType::Integer) { u.i = i; }
+    FmtArg(unsigned long i) : FmtArg(FmtType::Unsigned) { u.u = i; }
+    FmtArg(long long i) : FmtArg(FmtType::Integer) { u.i = i; }
+    FmtArg(unsigned long long i) : FmtArg(FmtType::Unsigned) { u.u = i; }
+    FmtArg(float f) : FmtArg(FmtType::Float) { u.f = { f, 0, INT_MAX }; }
+    FmtArg(double d) : FmtArg(FmtType::Double) { u.d = { d, 0, INT_MAX }; }
+    FmtArg(const void *ptr) : FmtArg(FmtType::BigHex) { u.u = (uint64_t)ptr; }
+    FmtArg(const LocalDate &date) : FmtArg(FmtType::Date) { u.date = date; }
+
+protected:
+    FmtArg(FmtType type) : type(type) {}
+};
+
+class FmtEscape: public FmtArg {
+public:
+    FmtEscape() = default;
+    FmtEscape(FmtArg arg) : FmtArg(arg) {}
+    FmtEscape(std::nullptr_t) : FmtArg(FmtType::Str) { u.str = "(null)"; }
+    FmtEscape(const char *str) : FmtArg(FmtType::EscapeStr) { u.str = str ? str : "(null)"; } // safe
+    FmtEscape(Span<const char> str) : FmtArg(FmtType::EscapeStr) { u.str = str; } // safe
+    FmtEscape(char c) : FmtArg(FmtType::EscapeChar) { u.ch = c; } // safe
+    FmtEscape(const FmtCustom &custom) : FmtArg(custom) {}
+    FmtEscape(bool b) : FmtArg(b) {}
+    FmtEscape(unsigned char i) : FmtArg(i) {}
+    FmtEscape(short i) : FmtArg(i) {}
+    FmtEscape(unsigned short i) : FmtArg(i) {}
+    FmtEscape(int i) : FmtArg(i) {}
+    FmtEscape(unsigned int i) : FmtArg(i) {}
+    FmtEscape(long i) : FmtArg(i) {}
+    FmtEscape(unsigned long i) : FmtArg(i) {}
+    FmtEscape(long long i) : FmtArg(i) {}
+    FmtEscape(unsigned long long i) : FmtArg(i) {}
+    FmtEscape(float f) : FmtArg(f) {}
+    FmtEscape(double d) : FmtArg(d) {}
+    FmtEscape(const void *ptr) : FmtArg(ptr) {}
+    FmtEscape(const LocalDate &date) : FmtArg(date) {}
 };
 
 static inline FmtArg FmtInt(long long i, int pad = 0, char padding = '0')
@@ -3876,7 +3907,7 @@ static inline FmtArg FmtFlags(uint64_t flags, Span<const struct OptionDesc> opti
 static inline FmtArg FmtPad(Span<const char> str, int pad, char padding = ' ')
 {
     FmtArg arg;
-    arg.type = FmtType::StrPad;
+    arg.type = FmtType::PadStr;
     arg.u.str = str;
     arg.pad = pad;
     arg.padding = padding;
@@ -3885,7 +3916,7 @@ static inline FmtArg FmtPad(Span<const char> str, int pad, char padding = ' ')
 static inline FmtArg FmtRepeat(const char *str, int count)
 {
     FmtArg arg;
-    arg.type = FmtType::StrRepeat;
+    arg.type = FmtType::RepeatStr;
     arg.u.repeat.str = str;
     arg.u.repeat.count = count;
     return arg;
@@ -3933,16 +3964,6 @@ class FmtLowerAscii {
 
 public:
     FmtLowerAscii(Span<const char> str) : str(str) {}
-
-    void Format(FunctionRef<void(Span<const char>)> append) const;
-    operator FmtArg() const { return FmtCustom(*this); }
-};
-
-class FmtEscape {
-    Span<const char> str;
-
-public:
-    FmtEscape(Span<const char> str) : str(str) {}
 
     void Format(FunctionRef<void(Span<const char>)> append) const;
     operator FmtArg() const { return FmtCustom(*this); }
@@ -4069,7 +4090,7 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt)
 template <typename... Args>
 static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args... args)
 {
-    const FmtArg fmt_args[] = { FmtArg(args)... };
+    const FmtArg fmt_args[] = { FmtEscape(args)... };
     LogFmt(level, ctx, fmt, fmt_args);
 }
 

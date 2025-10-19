@@ -1191,15 +1191,45 @@ static inline void AppendPad(Size pad, char padding, AppendFunc append)
 }
 
 template <typename AppendFunc>
+static inline void AppendEscaped(char c, AppendFunc append)
+{
+    switch (c) {
+        case '\"': { append("\\\""); } break;
+        case '\'': { append("\\'"); } break;
+        case '\r': { append("\\r"); } break;
+        case '\n': { append("\\n"); } break;
+        case '\t': { append("\\t"); } break;
+        case '\\': { append("\\\\"); } break;
+
+        default: {
+            if (IsAsciiControl(c)) {
+                char encoded[4];
+
+                encoded[0] = '\\';
+                encoded[1] = '0' + (((uint8_t)c >> 6) & 7);
+                encoded[2] = '0' + (((uint8_t)c >> 3) & 7);
+                encoded[3] = '0' + (((uint8_t)c >> 0) & 7);
+
+                Span<const char> buf = MakeSpan(encoded, 4);
+                append(buf);
+            } else {
+                append(c);
+            }
+        } break;
+    }
+}
+
+template <typename AppendFunc>
 static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 {
     switch (arg.type) {
         case FmtType::Str: { append(arg.u.str); } break;
-        case FmtType::StrPad: {
+
+        case FmtType::PadStr: {
             append(arg.u.str);
             AppendPad(arg.pad - arg.u.str.len, arg.padding, append);
         } break;
-        case FmtType::StrRepeat: {
+        case FmtType::RepeatStr: {
             Span<const char> str = arg.u.repeat.str;
 
             for (int i = 0; i < arg.u.repeat.count; i++) {
@@ -1588,6 +1618,13 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 
             append(buf);
         } break;
+
+        case FmtType::EscapeStr: {
+            for (char c: arg.u.str) {
+                AppendEscaped(c, append);
+            }
+        } break;
+        case FmtType::EscapeChar: { AppendEscaped(arg.u.ch, append); } break;
     }
 }
 
@@ -1864,35 +1901,6 @@ void FmtLowerAscii::Format(FunctionRef<void(Span<const char>)> append) const
     for (char c: str) {
         c = LowerAscii(c);
         append((char)c);
-    }
-}
-
-void FmtEscape::Format(FunctionRef<void(Span<const char>)> append) const
-{
-    for (char c: str) {
-        if (c == '"') {
-            append("\\\"");
-        } else if (c == '\'') {
-            append("\\'");
-        } else if (c == '\r') {
-            append("\\r");
-        } else if (c == '\n') {
-            append("\\n");
-        } else if (c == '\\') {
-            append("\\\\");
-        } else if ((unsigned int)c < 32) {
-            char encoded[4];
-
-            encoded[0] = '\\';
-            encoded[1] = '0' + (((uint8_t)c >> 6) & 7);
-            encoded[2] = '0' + (((uint8_t)c >> 3) & 7);
-            encoded[3] = '0' + (((uint8_t)c >> 0) & 7);
-
-            Span<const char> buf = MakeSpan(encoded, 4);
-            append(buf);
-        } else {
-            append(c);
-        }
     }
 }
 

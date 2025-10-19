@@ -1532,7 +1532,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
         int pad = (int)log10(total) + 3;
         progress++;
 
-        LogInfo("%!C..%1/%2%!0 %3", FmtInt(progress, pad, ' '), total, node->text);
+        LogInfo("%!C..%1/%2%!0 %3", FmtInt(progress, pad, ' '), total, FmtArg(node->text));
         if (verbose) {
             PrintLn(cmd_line);
             fflush(stdout);
@@ -1627,7 +1627,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
             // Error already issued by ExecuteCommandLine()
             StdErr->Write(output);
         } else if (!DetectInterrupt()) {
-            LogError("%1 %!..+(exit code %2)%!0", node->text, exit_code);
+            LogError("%1 %!..+(exit code %2)%!0", FmtArg(node->text), exit_code);
             StdErr->Write(output);
         }
 

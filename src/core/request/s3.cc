@@ -1063,7 +1063,7 @@ int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<in
     if (status < 0) {
         LogError("Failed to perform S3 call: %1", curl_easy_strerror((CURLcode)-status));
     } else if (log.len) {
-        LogError("Failed to %1 with status %2: %3", action, status, FmtEscape(log.Take()));
+        LogError("Failed to %1 with status %2: %3", action, status, log.Take());
     } else {
         LogError("Failed to %1 with status %2", action, status);
     }
