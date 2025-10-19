@@ -8,7 +8,7 @@ Each snapshot has a channel, which is a non-unique string that you choose when y
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
-rekkord save <CHANNEL> <PATH1> <PATH2> ...
+rekkord save <channel> <path1> <path2> ...
 ```
 
 The command will give you the object ID (OID) of the snapshot once it finishes. You can retrieve the OID later with [rekkord snapshots](#list-snapshots).
@@ -58,7 +58,7 @@ You can list the directories and files in a snapshot with the `rekkord list` com
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
-rekkord list <IDENTIFIER>
+rekkord list <identifier>
 ```
 
 > [!TIP]
@@ -66,12 +66,12 @@ rekkord list <IDENTIFIER>
 >
 > Here are two examples without path:
 >
-> - `mBC49879164FDEF1DD26501441B20013202E6DC7AF5D5C5AC8C97AC8126FDF4B4`: use snapshot with OID *mBC4987916...*
+> - `MBC49879164FDEF1DD26501441B20013202E6DC7AF5D5C5AC8C97AC8126FDF4B4`: use snapshot with OID *MBC4987916...*
 > - `front-machine`: find latest snapshot with channel *front-machine*
 >
 > Here are two examples with an additional path:
 >
-> - `m51D1AE52921C8F636A18F9065D5348FC47BD61546B9688FD5D1D45F5AE240FAC:var/lib/mysql`: locate directory *var/lib/mysql* inside snapshot with OID *m51D1AE529...* 
+> - `M51D1AE52921C8F636A18F9065D5348FC47BD61546B9688FD5D1D45F5AE240FAC:var/lib/mysql`: locate directory *var/lib/mysql* inside snapshot with OID *M51D1AE529...* 
 > - `database-machine:var/lib/mysql`: locate directory *var/lib/mysql* inside inside latest snapshot with channel *database-machine*
 
 The output looks something like this:
@@ -83,7 +83,7 @@ The output looks something like this:
   [D] opt/                                                        (0755) [2023-10-05 17:03:38 +0200]
 ```
 
-You can recursively list the content with `rekkord list <OID> --recurse` flag:
+You can recursively list the content with `rekkord list <identifier> --recurse` flag:
 
 ```text
 # <type> <name>                                                   <mode> <date>                      <size>
@@ -145,7 +145,7 @@ Use the `rekkord restore` command to restore the files from a snapshot onto the 
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
-rekkord restore <IDENTIFIER> <DESTINATION>
+rekkord restore <identifier> <destination>
 ```
 
 > [!TIP]
@@ -153,11 +153,11 @@ rekkord restore <IDENTIFIER> <DESTINATION>
 
 # Mount snapshot
 
-You can also use `rekkord mount <IDENTIFIER> <mountpoint>` to mount a snapshot or a directory as a read-only filesystem. You can either use the unique [object ID](#list-snapshots), or provide a snapshot channel, in which case rekkord will use the most recent snapshot that matches it.
+You can also use `rekkord mount <identifier> <mountpoint>` to mount a snapshot or a directory as a read-only filesystem. You can either use the unique [object ID](#list-snapshots), or provide a snapshot channel, in which case rekkord will use the most recent snapshot that matches it.
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
-rekkord mount <IDENTIFIER> <MOUNTPOINT>
+rekkord mount <identifier> <mountpoint>
 ```
 
 > [!TIP]

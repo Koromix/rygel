@@ -96,7 +96,7 @@ To help you form a valid URL, here are a few examples for common S3 providers:
 
 You can omit the `SecretKey` value, in which case a prompt will ask you the access key.
 
-Once this is done, use [rekkord init](#initialize-repository) to create the repository.
+Once this is done, use [rekkord init -C config.ini](#initialize-repository) to create the repository.
 
 ### SFTP server
 
@@ -124,7 +124,7 @@ KeyFile = /home/bar/.ssh/id_ed25519
 Fingerprint = SHA256:Y9pmJfkaok8t0dFJrfi8/LLUNhOYwAZGHUNGsYAiJUM
 ```
 
-Once this is done, use [rekkord init](#initialize-repository) to create the repository.
+Once this is done, use [rekkord -C config.ini init](#initialize-repository) to create the repository.
 
 ### Local filesystem
 
@@ -135,7 +135,7 @@ To create a repository in a local directory, create an INI file (name it how you
 URL = /path/to/repository
 ```
 
-Once this is done, use [rekkord init](#initialize-repository) to create the repository.
+Once this is done, use [rekkord -C config.ini init](#initialize-repository) to create the repository.
 
 ## Restricted keys
 
@@ -160,9 +160,10 @@ rekkord derive -K master.key -t ReadWrite -O readwrite.key
 rekkord derive -K master.key -t WriteOnly -O write.key
 ```
 
-Most Rekkord commands require you to specify the keyfile, you can do this in one of two ways:
+Most Rekkord commands require you to specify the keyfile, you can do this in one of three ways:
 
 - Set the `REKKORD_KEYFILE` environment variable (e.g. `export REKKORD_KEYFILE=write.key`)
+- Use the `-K file.key` argument (e.g. `rekkord -K write.key snapshots`)
 - Set the *KeyFile* setting in the *Repository* section of the config file (see example below)
 
 ```ini
