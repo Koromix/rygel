@@ -13,7 +13,7 @@ It was made by looking at the HID packets sent by the Windows tool with Wireshar
 
 ## Windows
 
-Download ready-to-use binaries here: [https://download.koromix.dev/windows/](https://download.koromix.dev/windows/)
+Download ready-to-use binaries here: [https://download.koromix.dev/meestic/](https://download.koromix.dev/meestic/)
 
 ## Linux (Debian)
 
