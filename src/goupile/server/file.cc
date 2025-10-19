@@ -600,12 +600,22 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
         }
     }
 
+    bool bundle = false;
+    if (const char *str = request.GetQueryValue("bundle"); str) {
+        if (!ParseBool(str, &bundle)) {
+            io->SendError(422);
+            return false;
+        }
+    } else {
+        bundle = (fs_version > 0);
+    }
+
     // Lookup file in database
     sq_Statement stmt;
-    if (!instance->db->Prepare(R"(SELECT IIF(version > 0 AND bundle IS NOT NULL, bundle, sha256)
+    if (!instance->db->Prepare(R"(SELECT IIF(?3 = 1 AND bundle IS NOT NULL, bundle, sha256)
                                   FROM fs_index
                                   WHERE version = ?1 AND filename = ?2)",
-                               &stmt, fs_version, filename))
+                               &stmt, fs_version, filename, 0 + bundle))
         return true;
     if (!stmt.Step())
         return !stmt.IsValid();

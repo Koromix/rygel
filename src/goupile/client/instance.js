@@ -576,7 +576,7 @@ async function runHistoryDialog(e, filename) {
 }
 
 async function loadFile(filename, version) {
-    let url = `${ENV.urls.base}files/${version}/${filename}`;
+    let url = Util.pasteURL(`${ENV.urls.base}files/${version}/${filename}`, { bundle: 0 });
     let response = await Net.fetch(url);
 
     if (response.ok) {
