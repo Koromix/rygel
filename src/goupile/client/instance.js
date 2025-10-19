@@ -870,7 +870,7 @@ function toggleTagFilter(tag) {
 
 async function renderPage() {
     let options = {
-        annotate: app.annotate
+        annotate: app.annotate && (route.page.store != null)
     };
 
     let model = new FormModel;
