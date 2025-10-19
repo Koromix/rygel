@@ -142,7 +142,7 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
 #define HANDLE_COMMAND(Cmd, Func, ReadConfig) \
         do { \
             if (TestStr(cmd, K_STRINGIFY(Cmd))) { \
-                bool load = (ReadConfig) && TestFile(config_filename); \
+                bool load = (ReadConfig) && config_filename && TestFile(config_filename); \
                  \
                 if (load && !LoadConfig(config_filename, &drdc_config)) \
                     return 1; \
