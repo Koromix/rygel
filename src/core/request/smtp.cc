@@ -63,7 +63,7 @@ static bool CheckURL(const char *url)
 
 static bool IsAddressSafe(const char *mail)
 {
-    const auto test_char = [](char c) { return strchr("<>& ", c) || (uint8_t)c < 32; };
+    const auto test_char = [](char c) { return strchr("<>& ", c) || IsAsciiControl(c); };
 
     Span<const char> domain;
     Span<const char> prefix = SplitStr(mail, '@', &domain);
@@ -80,7 +80,7 @@ static bool IsAddressSafe(const char *mail)
 
 static bool IsFileHeaderSafe(Span<const char> str)
 {
-    const auto test_char = [](char c) { return ((uint8_t)c < 32); };
+    const auto test_char = [](char c) { return IsAsciiControl(c); };
 
     if (!str.len)
         return false;
@@ -162,9 +162,7 @@ void FmtRfc2047::Format(FunctionRef<void(Span<const char>)> append) const
     for (int c: str) {
         if (c == ' ') {
             append('_');
-        } else if (c >= 32 && c < 128 && c != '=' && c != '?' && c != '_') {
-            append((char)c);
-        } else {
+        } else if (strchr("=?_", c) || IsAsciiControl(c)) {
             char encoded[3];
 
             encoded[0] = '=';
@@ -173,6 +171,8 @@ void FmtRfc2047::Format(FunctionRef<void(Span<const char>)> append) const
 
             Span<const char> buf = MakeSpan(encoded, 3);
             append(buf);
+        } else {
+            append((char)c);
         }
     }
     append("?=");

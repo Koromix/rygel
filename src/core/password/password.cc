@@ -197,7 +197,7 @@ static bool CheckComplexity(Span<const char> password, unsigned int flags)
     for (Size i = 0; i < password.len;) {
         int c = (uint8_t)password[i];
 
-        if (c < 32) {
+        if (IsAsciiControl(c)) {
             LogError("Control characters are not allowed");
             return false;
         }

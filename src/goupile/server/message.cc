@@ -27,7 +27,7 @@ namespace K {
 
 bool IsMailValid(Span<const char> address)
 {
-    const auto test_char = [](char c) { return strchr("<>& ", c) || (uint8_t)c < 32; };
+    const auto test_char = [](char c) { return strchr("<>& ", c) || IsAsciiControl(c); };
 
     Span<const char> domain;
     Span<const char> prefix = SplitStr(address, '@', &domain);

@@ -301,7 +301,7 @@ static void WriteContent(Span<const char> str, StreamWriter *writer) {
             writer->Write("&lt;");
         } else if (c == '>') {
             writer->Write("&gt;");
-        } else if ((uint8_t)c < 32) {
+        } else if (IsAsciiControl(c)) {
             Print(writer, "<0x%1>", FmtHex((uint8_t)c, 2));
         } else {
             writer->Write(c);

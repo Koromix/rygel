@@ -9784,7 +9784,7 @@ bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
                 LocalArray<char, 16> frag;
                 if (uc == '\t') {
                     frag.Append("    ");
-                } else if (uc >= 32) {
+                } else if (!IsAsciiControl(uc)) {
                     frag.len = EncodeUtf8(uc, frag.data);
                 } else {
                     continue;
@@ -9938,7 +9938,7 @@ bool ConsolePrompter::ReadBuffered(Span<const char> *out_str)
                 *out_str = str;
             }
             return true;
-        } else if (c >= 32 || c == '\t') {
+        } else if (!IsAsciiControl(c)) {
             str.Append((char)c);
         }
     } while (!StdIn->IsEOF());
@@ -9977,7 +9977,7 @@ Size ConsolePrompter::ReadBufferedEnum(Span<const PromptChoice> choices)
 
             StdErr->Write(prefix);
             StdErr->Flush();
-        } else if (c >= 32 || c == '\t') {
+        } else if (!IsAsciiControl(c)) {
             str.Append((char)c);
         }
     } while (!StdIn->IsEOF());
@@ -10521,7 +10521,7 @@ static inline int ComputeCharacterWidth(int32_t uc)
 {
     // Fast path
     if (uc < 128)
-        return (uc >= 32) ? 1 : 0;
+        return IsAsciiControl(uc) ? 0 : 1;
 
     if (TestUnicodeTable(WcWidthNull, uc))
         return 0;

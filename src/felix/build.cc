@@ -60,7 +60,7 @@ static bool AssembleResourceFile(const pugi::xml_document *doc, const char *icon
                     case '\n': { Append("\\n\",\n\t\""); } break;
 
                     default: {
-                        if (c < 32 || c >= 128) {
+                        if (IsAsciiControl(c) || (unsigned int)c >= 128) {
                             error |= (out_buf->Available() < 4);
                             if (error) [[unlikely]]
                                 return;

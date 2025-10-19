@@ -210,7 +210,7 @@ static bool ParsePmsiChar(char c, char *out_value)
 {
     if (c == ' ')
         return true;
-    if (c < 32 || (uint8_t)c > 127)
+    if (IsAsciiControl(c) || (unsigned int)c >= 128)
         return false;
 
     *out_value = c;

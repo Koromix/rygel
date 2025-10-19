@@ -108,7 +108,7 @@ Here are a few example patterns:
             case '!': { flags |= (int)pwd_GenerateFlag::Dangerous; } break;
 
             default: {
-                if ((uint8_t)c < 32 || (uint8_t)c >= 128) {
+                if (IsAsciiControl(c) || (unsigned int)c >= 128) {
                     LogError("Illegal pattern byte 0x%1", FmtHex((uint8_t)c, 2));
                 } else {
                     LogError("Unsupported pattern character '%1'", c);

@@ -146,7 +146,7 @@ If you did not ask for password recovery, delete this mail. Someone may have tri
 
 static bool IsMailValid(const char *mail)
 {
-    const auto test_char = [](char c) { return strchr("<>& ", c) || (uint8_t)c < 32; };
+    const auto test_char = [](char c) { return strchr("<>& ", c) || IsAsciiControl(c); };
 
     Span<const char> domain;
     Span<const char> prefix = SplitStr(mail, '@', &domain);
