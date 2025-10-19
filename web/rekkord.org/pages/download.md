@@ -4,7 +4,7 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
-Ready-to-use binaries will be provided once the software stabilizes. In the meantime, feel free to [build it yourself](contribute#build-from-source).
+Download ready-to-use binaries here: https://download.koromix.dev/rekkord/
 
 # macOS
 
@@ -12,7 +12,7 @@ Ready-to-use binaries will be provided once the software stabilizes. In the mean
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
-Ready-to-use binaries will be provided once the software stabilizes. In the meantime, feel free to [build it yourself](contribute#build-from-source).
+Download ready-to-use binaries here: https://download.koromix.dev/rekkord/
 
 # Linux
 
