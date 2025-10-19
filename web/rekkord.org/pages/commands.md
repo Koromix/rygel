@@ -23,11 +23,28 @@ rekkord snapshots
 The output looks something like this:
 
 ```text
-# <OID>                                                             <name>                   <date>
+# <channel>                              <date>
 
-mDA24E2C01C2AF6ACADF94FED087FD2695DF1E5352FA5474E091DABE38A104641   webserver1               [2023-11-26 06:09:57 +0100]
-m96389F2763173C9575C85A9D8972FE8DC06FC220BA7A05A673D7C19E520C22EB   webserver1               [2023-11-27 06:05:15 +0100]
-m221FA094C07FAABA1A6B8710EED613F441410C95855D69653A2BDCBB590C8E9F   webserver1               [2023-11-28 06:18:15 +0100]
+webserver                                2025-09-10 03:38:31 +0200
+  + OID: MC8AD390511AAA81C4BA9FEDCDB94C2DFFE05035B69FFC64501FC210D55A8BEA4
+  + Size: 2.407 GB
+  + Stored: 1.255 GB
+  + Added: 1.107 GB
+media                                    2025-09-11 03:53:25 +0200
+  + OID: M8B5FB7CB0C90BABDE37FA2A43B17721D16AAE5D7803A88E151DFCC63CAB14EFD
+  + Size: 1.231 GB
+  + Stored: 1.152 GB
+  + Added: 1.107 GB
+webserver                                2025-09-10 03:14:08 +0200
+  + OID: M898DB3E9C1229170D6DBB1B1BAA7BF663A978F0B11655F05A7FBD93C1BEB7329
+  + Size: 2.407 GB
+  + Stored: 1.255 GB
+  + Added: 2.411 MB
+media                                    2025-09-11 04:01:57 +0200
+  + OID: M1B0A86B11F48E9028EAF970B751FA727226168EF0939D625076FFF49DABCF8B5
+  + Size: 1.236 GB
+  + Stored: 1.153 GB
+  + Added: 54.75 MB
 ```
 
 Use `--format JSON` or `--format XML` to get this list in a JSON or XML format.
