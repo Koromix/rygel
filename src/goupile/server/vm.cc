@@ -457,7 +457,7 @@ static bool HandleRequest(int kind, struct cmsghdr *cmsg, pid_t *out_pid)
 
         switch (kind) {
             case (int)RequestType::MergeDataMeta: { HandleMergeDataMeta(&json, &temp_alloc, &writer); } break;
-            default: { LogError("Ignoring unknown message 0x%1 from server process", FmtHex(kind).Pad0(-2)); } break;
+            default: { LogError("Ignoring unknown message 0x%1 from server process", FmtHex(kind, 2)); } break;
         }
 
         if (!writer.Close())

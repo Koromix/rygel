@@ -3584,10 +3584,11 @@ int64_t ComposeTimeUTC(const TimeSpec &spec);
 // ------------------------------------------------------------------------
 
 enum class FmtType {
-    Str1,
-    Str2,
-    Buffer,
+    Str,
+    StrPad,
+    StrRepeat,
     Char,
+    Buffer,
     Custom,
     Bool,
     Integer,
@@ -3598,15 +3599,17 @@ enum class FmtType {
     Octal,
     BigHex,
     SmallHex,
+    BigBytes,
+    SmallBytes,
     MemorySize,
     DiskSize,
     Date,
     TimeISO,
     TimeNice,
-    Random,
+    List,
     FlagNames,
     FlagOptions,
-    Span
+    Random,
 };
 
 template <typename T>
@@ -3656,14 +3659,18 @@ class FmtArg {
 public:
     FmtType type;
     union {
-        const char *str1;
-        Span<const char> str2;
+        Span<const char> str;
+        struct {
+            const char *str;
+            int count;
+        } repeat;
         char buf[32];
         char ch;
         FmtCustom custom;
         bool b;
         int64_t i;
         uint64_t u;
+        Span<const uint8_t> hex;
         struct {
             float value;
             int min_prec;
@@ -3691,25 +3698,16 @@ public:
                 Span<const struct OptionDesc> options;
             } u;
             const char *separator;
-        } flags;
-
-        struct {
-            FmtType type;
-            int type_len;
-            const void *ptr;
-            Size len;
-            const char *separator;
-        } span;
+        } list;
     } u;
 
-    int repeat = 1;
-    int pad_len = 0;
-    char pad_char = 0;
+    int pad = 0;
+    char padding = 0;
 
     FmtArg() = default;
-    FmtArg(std::nullptr_t) : type(FmtType::Str1) { u.str1 = "(null)"; }
-    FmtArg(const char *str) : type(FmtType::Str1) { u.str1 = str ? str : "(null)"; }
-    FmtArg(Span<const char> str) : type(FmtType::Str2) { u.str2 = str; }
+    FmtArg(std::nullptr_t) : type(FmtType::Str) { u.str = "(null)"; }
+    FmtArg(const char *str) : type(FmtType::Str) { u.str = str ? str : "(null)"; }
+    FmtArg(Span<const char> str) : type(FmtType::Str) { u.str = str; }
     FmtArg(char c) : type(FmtType::Char) { u.ch = c; }
     FmtArg(const FmtCustom &custom) : type(FmtType::Custom) { u.custom = custom; }
     FmtArg(bool b) : type(FmtType::Bool) { u.b = b; }
@@ -3726,33 +3724,68 @@ public:
     FmtArg(double d) : type(FmtType::Double) { u.d = { d, 0, INT_MAX }; }
     FmtArg(const void *ptr) : type(FmtType::BigHex) { u.u = (uint64_t)ptr; }
     FmtArg(const LocalDate &date) : type(FmtType::Date) { u.date = date; }
-
-    FmtArg &Repeat(int new_repeat) { repeat = new_repeat; return *this; }
-    FmtArg &Pad(int len, char c = ' ') { pad_char = c; pad_len = len; return *this; }
-    FmtArg &Pad0(int len) { return Pad(len, '0'); }
 };
 
-static inline FmtArg FmtBin(uint64_t u)
+static inline FmtArg FmtInt(long long i, int pad = 0, char padding = '0')
+{
+    FmtArg arg;
+    arg.type = FmtType::Integer;
+    arg.u.i = i;
+    arg.pad = pad;
+    arg.padding = padding;
+    return arg;
+}
+static inline FmtArg FmtInt(unsigned long long u, int pad = 0, char padding = '0')
+{
+    FmtArg arg;
+    arg.type = FmtType::Unsigned;
+    arg.u.u = u;
+    arg.pad = pad;
+    arg.padding = padding;
+    return arg;
+}
+static inline FmtArg FmtInt(unsigned char u, int pad = 0, char padding = '0') { return FmtInt((unsigned long long)u, pad, padding); }
+static inline FmtArg FmtInt(short i, int pad = 0, char padding = '0') { return FmtInt((long long)i, pad, padding); }
+static inline FmtArg FmtInt(unsigned short u, int pad = 0, char padding = '0') { return FmtInt((unsigned long long)u, pad, padding); }
+static inline FmtArg FmtInt(int i, int pad = 0, char padding = '0') { return FmtInt((long long)i, pad, padding); }
+static inline FmtArg FmtInt(unsigned int u, int pad = 0, char padding = '0') { return FmtInt((unsigned long long)u, pad, padding); }
+static inline FmtArg FmtInt(long i, int pad = 0, char padding = '0') { return FmtInt((long long)i, pad, padding); }
+static inline FmtArg FmtInt(unsigned long u, int pad = 0, char padding = '0') { return FmtInt((unsigned long long)u, pad, padding); }
+
+static inline FmtArg FmtBin(uint64_t u, int pad = 0, char padding = '0')
 {
     FmtArg arg;
     arg.type = FmtType::Binary;
     arg.u.u = u;
+    arg.pad = pad;
+    arg.padding = padding;
     return arg;
 }
-static inline FmtArg FmtOctal(uint64_t u)
+static inline FmtArg FmtOctal(uint64_t u, int pad = 0, char padding = '0')
 {
     FmtArg arg;
     arg.type = FmtType::Octal;
     arg.u.u = u;
+    arg.pad = pad;
+    arg.padding = padding;
     return arg;
 }
-static inline FmtArg FmtHex(uint64_t u, FmtType type = FmtType::BigHex)
+static inline FmtArg FmtHex(uint64_t u, int pad = 0, char padding = '0')
 {
-    K_ASSERT(type == FmtType::BigHex || type == FmtType::SmallHex);
-
     FmtArg arg;
-    arg.type = type;
+    arg.type = FmtType::BigHex;
     arg.u.u = u;
+    arg.pad = pad;
+    arg.padding = padding;
+    return arg;
+}
+static inline FmtArg FmtHexSmall(uint64_t u, int pad = 0, char padding = '0')
+{
+    FmtArg arg;
+    arg.type = FmtType::SmallHex;
+    arg.u.u = u;
+    arg.pad = pad;
+    arg.padding = padding;
     return arg;
 }
 
@@ -3813,6 +3846,66 @@ static inline FmtArg FmtTimeNice(TimeSpec spec, bool ms = false)
     return arg;
 }
 
+static inline FmtArg FmtList(Span<const char *const> names, const char *sep = ", ")
+{
+    FmtArg arg;
+    arg.type = FmtType::List;
+    arg.u.list.u.names = names;
+    arg.u.list.separator = sep;
+    return arg;
+}
+static inline FmtArg FmtFlags(uint64_t flags, Span<const char *const> names, const char *sep = ", ")
+{
+    FmtArg arg;
+    arg.type = FmtType::FlagNames;
+    arg.u.list.flags = flags & ((1ull << names.len) - 1);
+    arg.u.list.u.names = names;
+    arg.u.list.separator = sep;
+    return arg;
+}
+static inline FmtArg FmtFlags(uint64_t flags, Span<const struct OptionDesc> options, const char *sep = ", ")
+{
+    FmtArg arg;
+    arg.type = FmtType::FlagOptions;
+    arg.u.list.flags = flags & ((1ull << options.len) - 1);
+    arg.u.list.u.options = options;
+    arg.u.list.separator = sep;
+    return arg;
+}
+
+static inline FmtArg FmtPad(Span<const char> str, int pad, char padding = ' ')
+{
+    FmtArg arg;
+    arg.type = FmtType::StrPad;
+    arg.u.str = str;
+    arg.pad = pad;
+    arg.padding = padding;
+    return arg;
+}
+static inline FmtArg FmtRepeat(const char *str, int count)
+{
+    FmtArg arg;
+    arg.type = FmtType::StrRepeat;
+    arg.u.repeat.str = str;
+    arg.u.repeat.count = count;
+    return arg;
+}
+
+static inline FmtArg FmtHex(Span<const uint8_t> buf)
+{
+    FmtArg arg;
+    arg.type = FmtType::BigBytes;
+    arg.u.hex = buf;
+    return arg;
+}
+static inline FmtArg FmtHexSmall(Span<const uint8_t> buf)
+{
+    FmtArg arg;
+    arg.type = FmtType::SmallBytes;
+    arg.u.hex = buf;
+    return arg;
+}
+
 static inline FmtArg FmtRandom(Size len, const char *chars = nullptr)
 {
     K_ASSERT(len < 256);
@@ -3823,51 +3916,6 @@ static inline FmtArg FmtRandom(Size len, const char *chars = nullptr)
     arg.u.random.len = len;
     arg.u.random.chars = chars;
     return arg;
-}
-
-static inline FmtArg FmtFlags(uint64_t flags, Span<const char *const> names, const char *sep = ", ")
-{
-    FmtArg arg;
-    arg.type = FmtType::FlagNames;
-    arg.u.flags.flags = flags & ((1ull << names.len) - 1);
-    arg.u.flags.u.names = names;
-    arg.u.flags.separator = sep;
-    return arg;
-}
-
-static inline FmtArg FmtFlags(uint64_t flags, Span<const struct OptionDesc> options, const char *sep = ", ")
-{
-    FmtArg arg;
-    arg.type = FmtType::FlagOptions;
-    arg.u.flags.flags = flags & ((1ull << options.len) - 1);
-    arg.u.flags.u.options = options;
-    arg.u.flags.separator = sep;
-    return arg;
-}
-
-template <typename T>
-FmtArg FmtSpan(Span<T> arr, FmtType type, const char *sep = ", ")
-{
-    FmtArg arg;
-    arg.type = FmtType::Span;
-    arg.u.span.type = type;
-    arg.u.span.type_len = K_SIZE(T);
-    arg.u.span.ptr = (const void *)arr.ptr;
-    arg.u.span.len = arr.len;
-    arg.u.span.separator = sep;
-    return arg;
-}
-template <typename T>
-FmtArg FmtSpan(Span<T> arr, const char *sep = ", ") { return FmtSpan(arr, FmtArg(T()).type, sep); }
-template <typename T, Size N>
-FmtArg FmtSpan(T (&arr)[N], FmtType type, const char *sep = ", ") { return FmtSpan(MakeSpan(arr), type, sep); }
-template <typename T, Size N>
-FmtArg FmtSpan(T (&arr)[N], const char *sep = ", ") { return FmtSpan(MakeSpan(arr), sep); }
-
-static inline FmtArg FmtHex(Span<const uint8_t> buf, FmtType type = FmtType::BigHex)
-{
-    K_ASSERT(type == FmtType::BigHex || type == FmtType::SmallHex);
-    return FmtSpan(buf, type, "").Pad0(-2);
 }
 
 class FmtUpperAscii {

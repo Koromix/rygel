@@ -402,7 +402,7 @@ Supported compilers:
                 continue;
 
             if (known.cc) {
-                PrintLn(st, "    %!..+%1%!0   Binary: %2", FmtArg(known.name).Pad(28), known.cc);
+                PrintLn(st, "    %!..+%1%!0   Binary: %2", FmtPad(known.name, 28), known.cc);
             } else {
                 PrintLn(st, "    %!..+%1%!0", known.name);
             }
@@ -418,7 +418,7 @@ Supported compiler features:
 )");
 
         for (const OptionDesc &desc: CompileFeatureOptions) {
-            PrintLn(st, "    %!..+%1%!0    %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0    %2", FmtPad(desc.name, 27), desc.help);
         }
 
         Print(st, R"(
@@ -792,7 +792,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
     } else {
         for (int i = 0; i < 4; i++) {
             LocalArray<char, 256> git;
-            git.len = Fmt(git.data, ".%1/.git", FmtArg("/..").Repeat(i)).len;
+            git.len = Fmt(git.data, ".%1/.git", FmtRepeat("/..", i)).len;
 
             if (TestFile(git.data)) {
                 git[git.len - 4] = 0;
@@ -892,7 +892,7 @@ Options:
 
 Available embedding flags: %!..+%3%!0
 Available compression types: %!..+%4%!0)", FelixTarget, CompressionTypeNames[(int)compression_type],
-                                           FmtSpan(EmbedFlagNames), FmtSpan(CompressionTypeNames));
+                                           FmtList(EmbedFlagNames), FmtList(CompressionTypeNames));
     };
 
     // Parse arguments
@@ -977,7 +977,7 @@ Options:
 
     %!..+-f, --flags flags%!0              Set translation flags
 
-Available translation flags: %!..+%2%!0)", FelixTarget, FmtSpan(TranslationFlagNames));
+Available translation flags: %!..+%2%!0)", FelixTarget, FmtList(TranslationFlagNames));
     };
 
     // Parse arguments

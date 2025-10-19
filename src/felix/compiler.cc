@@ -2531,7 +2531,7 @@ public:
                 hash ^= HashTraits<const char *>::Hash(definition);
             }
         }
-        *out_name = Fmt(alloc, "Teensy%/%1", FmtHex(hash).Pad0(-16)).ptr;
+        *out_name = Fmt(alloc, "Teensy%/%1", FmtHex(hash, 16)).ptr;
 
         return true;
     }

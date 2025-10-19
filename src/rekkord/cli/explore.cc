@@ -78,7 +78,7 @@ Snapshot options:
 
 Available output formats: %!..+%2%!0
 Available sort orders: %!..+%3%!0)"),
-                OutputFormatNames[(int)format], FmtSpan(OutputFormatNames), FmtSpan(SortOrderNames));
+                OutputFormatNames[(int)format], FmtList(OutputFormatNames), FmtList(SortOrderNames));
     };
 
     // Parse arguments
@@ -210,7 +210,7 @@ Available sort orders: %!..+%3%!0)"),
                 for (const rk_SnapshotInfo &snapshot: snapshots) {
                     TimeSpec spec = DecomposeTimeLocal(snapshot.time);
 
-                    PrintLn("%!Y.+%1%!0 %!G..%2%!0", FmtArg(snapshot.channel).Pad(40), FmtTimeNice(spec));
+                    PrintLn("%!Y.+%1%!0 %!G..%2%!0", FmtPad(snapshot.channel, 40), FmtTimeNice(spec));
                     PrintLn(T("  + OID: %!..+%1%!0"), snapshot.oid);
                     PrintLn(T("  + Size: %!..+%1%!0"), FmtDiskSize(snapshot.size));
                     PrintLn(T("  + Stored: %!..+%1%!0"), FmtDiskSize(snapshot.stored));
@@ -310,7 +310,7 @@ Channel options:
     %!..+-v, --verbose%!0                  Enable verbose output (plain only)
 
 Available output formats: %!..+%2%!0)"),
-                OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
+                OutputFormatNames[(int)format], FmtList(OutputFormatNames));
     };
 
     // Parse arguments
@@ -364,7 +364,7 @@ Available output formats: %!..+%2%!0)"),
                     TimeSpec spec = DecomposeTimeLocal(channel.time);
 
                     PrintLn("%!Y.+%1%!0 %!D..%2 snapshots%!0  %!G..%3%!0  %!..+%4%!0",
-                            FmtArg(channel.name).Pad(28), FmtArg(channel.count).Pad(-4),
+                            FmtPad(channel.name, 28), FmtInt(channel.count, 4, ' '),
                             FmtTimeNice(spec), FmtDiskSize(channel.size));
                     if (verbose >= 1) {
                         PrintLn(T("  + OID: %!..+%1%!0"), channel.oid);
@@ -448,38 +448,38 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbo
 
     if (bold && obj.mode) {
         PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 %!D..(0%6)%!0 %!G..%7%!0 %!Y..%8%!0",
-                FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
-                obj.name, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode).Pad0(-3),
+                FmtRepeat(" ", indent), rk_ObjectTypeNames[(int)obj.type][0],
+                obj.name, suffix, FmtRepeat(" ", align), FmtOctal(obj.mode, 3),
                 FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
     } else if (bold) {
         PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5        %!G..%6%!0 %!Y..%7%!0",
-                FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
-                obj.name, suffix, FmtArg(" ").Repeat(align),
+                FmtRepeat(" ", indent), rk_ObjectTypeNames[(int)obj.type][0],
+                obj.name, suffix, FmtRepeat(" ", align),
                 FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
     } else if (obj.type != rk_ObjectType::Link && obj.mode) {
         PrintLn("%1%!D..[%2] %!0%3%4%5 %!D..(0%6)%!0 %!G..%7%!0 %!..+%8%!0",
-                FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
-                obj.name, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode).Pad0(-3),
+                FmtRepeat(" ", indent), rk_ObjectTypeNames[(int)obj.type][0],
+                obj.name, suffix, FmtRepeat(" ", align), FmtOctal(obj.mode, 3),
                 FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
     } else {
         PrintLn("%1%!D..[%2] %!0%3%4%5 %!D..(0%6)%!0 %!G..%7%!0 %!..+%8%!0",
-                FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
-                obj.name, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode).Pad0(-3),
+                FmtRepeat(" ", indent), rk_ObjectTypeNames[(int)obj.type][0],
+                obj.name, suffix, FmtRepeat(" ", align), FmtOctal(obj.mode, 3),
                 FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
     }
 
     if (verbose >= 1) {
-        PrintLn(T("%1    + OID: %!..+%2%!0"), FmtArg(' ').Repeat(indent), obj.oid);
+        PrintLn(T("%1    + OID: %!..+%2%!0"), FmtRepeat(" ", indent), obj.oid);
 
         if (obj.type == rk_ObjectType::Snapshot) {
-            PrintLn(T("%1    + Stored: %!..+%2%!0"), FmtArg(' ').Repeat(indent), FmtDiskSize(obj.stored));
-            PrintLn(T("%1    + Added: %!..+%2%!0"), FmtArg(' ').Repeat(indent), FmtDiskSize(obj.added));
+            PrintLn(T("%1    + Stored: %!..+%2%!0"), FmtRepeat(" ", indent), FmtDiskSize(obj.stored));
+            PrintLn(T("%1    + Added: %!..+%2%!0"), FmtRepeat(" ", indent), FmtDiskSize(obj.added));
         } else {
-            PrintLn(T("%1    + UID/GID: %!..+%2:%3%!0"), FmtArg(' ').Repeat(indent), obj.uid, obj.gid);
+            PrintLn(T("%1    + UID/GID: %!..+%2:%3%!0"), FmtRepeat(" ", indent), obj.uid, obj.gid);
 
             if (verbose > 1) {
                 TimeSpec bspec = DecomposeTimeUTC(obj.btime);
-                PrintLn(T("%1    + Birth time: %!..+%2%!0"), FmtArg(' ').Repeat(indent), FmtTimeNice(bspec));
+                PrintLn(T("%1    + Birth time: %!..+%2%!0"), FmtRepeat(" ", indent), FmtTimeNice(bspec));
             }
         }
     }
@@ -614,7 +614,7 @@ Use an object ID (OID) or a snapshot channel as the identifier. You can append a
 If you use a snapshot channel, the most recent snapshot object that matches will be used.
 
 Available output formats: %!..+%2%!0)"),
-                OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
+                OutputFormatNames[(int)format], FmtList(OutputFormatNames));
     };
 
     // Parse arguments

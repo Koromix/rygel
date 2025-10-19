@@ -88,8 +88,8 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
             LocalArray<char, 2048> msg_buf;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "%!..+").len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), fmt, args...).len;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n%1 |%!0  %2%!D..%3%!0", FmtArg(line).Pad(-7), extract, comment).len;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n        |  %1%2%!M..^%!0", align, FmtArg(' ').Repeat(align_more)).len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n%1 |%!0  %2%!D..%3%!0", FmtInt(line, 7), extract, comment).len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n        |  %1%2%!M..^%!0", align, FmtRepeat(" ", align_more)).len;
 
             Log(LogLevel::Error, ctx, "%1", msg_buf.data);
         } break;
@@ -101,8 +101,8 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
             LocalArray<char, 2048> msg_buf;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "%!..+").len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), fmt, args...).len;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n    %1 |%!0  %2%!D..%3%!0", FmtArg(line).Pad(-7), extract, comment).len;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n            |  %1%2%!D..^%!0", align, FmtArg(' ').Repeat(align_more)).len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n    %1 |%!0  %2%!D..%3%!0", FmtInt(line, 7), extract, comment).len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n            |  %1%2%!D..^%!0", align, FmtRepeat(" ", align_more)).len;
 
             Log(LogLevel::Info, ctx, "%1", msg_buf.data);
         } break;
@@ -155,10 +155,10 @@ void bk_ReportRuntimeError(const bk_Program &program, Span<const bk_CallFrame> f
 
             if (filename) {
                 LogInfo(" %!M.+%1%!0 %!..+%2%3%!0 %!D..%4 (%5)%!0",
-                        i ? "   " : ">>>", FmtArg(prototype).Pad(36), tre ? "[+]" : "   ", filename, line);
+                        i ? "   " : ">>>", FmtPad(prototype, 36), tre ? "[+]" : "   ", filename, line);
             } else {
                 LogInfo(" %!M.+%1%!0 %!..+%2%3%!0 %!D..<native function>%!0",
-                        i ? "   " : ">>>", FmtArg(prototype).Pad(36), tre ? "[+]" : "   ");
+                        i ? "   " : ">>>", FmtPad(prototype, 36), tre ? "[+]" : "   ");
             }
         }
 

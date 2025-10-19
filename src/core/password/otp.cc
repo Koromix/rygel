@@ -342,7 +342,7 @@ bool pwd_CheckHotp(const char *secret, pwd_HotpAlgorithm algo, int64_t min, int6
             return false;
 
         char buf[16];
-        Fmt(buf, "%1", FmtArg(ret).Pad0(-digits));
+        Fmt(buf, "%1", FmtInt(ret, digits));
 
         if (TestStr(buf, code))
             return true;

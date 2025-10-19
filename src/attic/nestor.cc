@@ -302,7 +302,7 @@ static void WriteContent(Span<const char> str, StreamWriter *writer) {
         } else if (c == '>') {
             writer->Write("&gt;");
         } else if ((uint8_t)c < 32) {
-            Print(writer, "<0x%1>", FmtHex((uint8_t)c).Pad0(-2));
+            Print(writer, "<0x%1>", FmtHex((uint8_t)c, 2));
         } else {
             writer->Write(c);
         }
@@ -314,7 +314,7 @@ static void WriteURL(Span<const char> str, StreamWriter *writer) {
         if (IsAsciiAlphaOrDigit(c) || c == '/' || c == '-' || c == '.' || c == '_' || c == '~') {
             writer->Write((char)c);
         } else {
-            Print(writer, "%%%1", FmtHex((uint8_t)c).Pad0(-2));
+            Print(writer, "%%%1", FmtHex((uint8_t)c, 2));
         }
     }
 }

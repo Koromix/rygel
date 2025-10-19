@@ -156,7 +156,7 @@ bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const 
             {
                 uint64_t buf;
                 FillRandomSafe(&buf, K_SIZE(buf));
-                Fmt(boundary, "%1", FmtHex(buf).Pad0(-16));
+                Fmt(boundary, "%1", FmtHex(buf, 16));
             }
 
             // Boundary strings

@@ -443,7 +443,7 @@ Options:
 Supported modes:
 )"), FelixTarget, LightModeOptions[(int)settings.mode].name, settings.speed, settings.intensity);
         for (const OptionDesc &desc: LightModeOptions) {
-            PrintLn(st, "    %!..+%1%!0    %2", FmtArg(desc.name).Pad(27), T(desc.help));
+            PrintLn(st, "    %!..+%1%!0    %2", FmtPad(desc.name, 27), T(desc.help));
         };
         PrintLn(st, T(R"(
 A few predefined color names can be used (such as MsiBlue), or you can use
@@ -453,9 +453,8 @@ like the hash character.
 Predefined color names:
 )"));
         for (const PredefinedColor &color: PredefinedColors) {
-            PrintLn(st, "    %!..+%1%!0    %!D..#%2%3%4%!0", FmtArg(color.name).Pad(27), FmtHex(color.rgb.red).Pad0(-2),
-                                                                                       FmtHex(color.rgb.green).Pad0(-2),
-                                                                                       FmtHex(color.rgb.blue).Pad0(-2));
+            PrintLn(st, "    %!..+%1%!0    %!D..#%2%3%4%!0", FmtPad(color.name, 27),
+                    FmtHex(color.rgb.red, 2), FmtHex(color.rgb.green, 2), FmtHex(color.rgb.blue, 2));
         };
         PrintLn(st, T(R"(
 Examples:

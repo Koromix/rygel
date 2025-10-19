@@ -81,7 +81,7 @@ int Main(int argc, char **argv)
         const TestInfo &test = *tests[i];
 
         if (!pattern || MatchPathSpec(test.path, pattern)) {
-            Print("%!y..%1%!0", FmtArg(test.path).Pad(36));
+            Print("%!y..%1%!0", FmtPad(test.path, 36));
             StdOut->Flush();
 
             Size total = 0;

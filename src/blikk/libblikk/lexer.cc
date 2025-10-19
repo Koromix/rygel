@@ -98,7 +98,7 @@ private:
         if (!bytes) {
             MarkError(offset, "Illegal UTF-8 sequence");
         } else if ((uint8_t)code[offset] < 32) {
-            MarkError(offset, "%1 byte 0x%2", prefix, FmtHex(code[offset]).Pad0(-2));
+            MarkError(offset, "%1 byte 0x%2", prefix, FmtHex(code[offset], 2));
         } else {
             MarkError(offset, "%1 character '%2'", prefix, code.Take(offset, bytes));
         }

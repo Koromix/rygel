@@ -34,9 +34,9 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
     K_ASSERT(ghm_node.function != 12);
 
     out_node->key = Fmt(ctx.str_alloc, "%1%2%3",
-                        FmtHex(ghm_node.function).Pad0(-2),
-                        FmtHex(ghm_node.u.test.params[0]).Pad0(-2),
-                        FmtHex(ghm_node.u.test.params[1]).Pad0(-2)).ptr;
+                        FmtHex(ghm_node.function, 2),
+                        FmtHex(ghm_node.u.test.params[0], 2),
+                        FmtHex(ghm_node.u.test.params[1], 2)).ptr;
     out_node->type = "test";
 
     out_node->function = ghm_node.function;
@@ -55,8 +55,7 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
                     Size child_idx = ghm_node.u.test.children_idx + i;
 
                     ctx.cmd = (int8_t)i;
-                    ctx.out_nodes[child_idx].header = Fmt(ctx.str_alloc, "D-%1",
-                                                          FmtArg(ctx.cmd).Pad0(-2)).ptr;
+                    ctx.out_nodes[child_idx].header = Fmt(ctx.str_alloc, "D-%1", FmtInt(ctx.cmd, 2)).ptr;
                     if (!ProcessGhmNode(ctx, child_idx)) [[unlikely]]
                         return -1;
                 }
@@ -70,8 +69,7 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
                     Size child_idx = ghm_node.u.test.children_idx + i;
 
                     ctx.out_nodes[child_idx].header = Fmt(ctx.str_alloc, "D-%1%2",
-                                                          FmtArg(ctx.cmd).Pad0(-2),
-                                                          FmtArg(i).Pad0(-2)).ptr;
+                                                          FmtInt(ctx.cmd, 2), FmtInt(i, 2)).ptr;
                     if (!ProcessGhmNode(ctx, child_idx)) [[unlikely]]
                         return -1;
                 }
@@ -129,8 +127,7 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
 
         case 13: {
             if (ghm_node.u.test.params[0] == 0) {
-                out_node->text = Fmt(ctx.str_alloc, "DP D-%1",
-                                     FmtArg(ghm_node.u.test.params[1]).Pad0(-2)).ptr;
+                out_node->text = Fmt(ctx.str_alloc, "DP D-%1", FmtInt(ghm_node.u.test.params[1], 2)).ptr;
 
                 int8_t prev_cmd = ctx.cmd;
                 for (Size i = 1; i < ghm_node.u.test.children_count; i++) {
@@ -145,8 +142,7 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
                 return ghm_node.u.test.children_idx;
             } else if (ghm_node.u.test.params[0] == 1) {
                 out_node->text = Fmt(ctx.str_alloc, "DP D-%1%2",
-                                     FmtArg(ctx.cmd).Pad0(-2),
-                                     FmtArg(ghm_node.u.test.params[1]).Pad0(-2)).ptr;
+                                     FmtInt(ctx.cmd, 2), FmtInt(ghm_node.u.test.params[1], 2)).ptr;
             } else {
                 out_node->text = Fmt(ctx.str_alloc, "DP byte %1 = %2",
                                      ghm_node.u.test.params[0], ghm_node.u.test.params[1]).ptr;
@@ -251,8 +247,8 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
 
         case 41: {
             out_node->text = Fmt(ctx.str_alloc, "DP / DR / DAS D-%1%2",
-                                 FmtArg(ghm_node.u.test.params[0]).Pad0(-2),
-                                 FmtArg(ghm_node.u.test.params[1]).Pad0(-2)).ptr;
+                                 FmtInt(ghm_node.u.test.params[0], 2),
+                                 FmtInt(ghm_node.u.test.params[1], 2)).ptr;
         } break;
 
         case 42: {
@@ -262,8 +258,8 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
 
         case 43: {
             out_node->text = Fmt(ctx.str_alloc, "DP ou DAS D-%1%2",
-                                 FmtArg(ghm_node.u.test.params[0]).Pad0(-2),
-                                 FmtArg(ghm_node.u.test.params[1]).Pad0(-2)).ptr;
+                                 FmtInt(ghm_node.u.test.params[0], 2),
+                                 FmtInt(ghm_node.u.test.params[1], 2)).ptr;
         } break;
 
         default: {
@@ -347,7 +343,7 @@ static void DumpReadableNodes(Span<const mco_ReadableGhmNode> readable_nodes,
 
         const mco_ReadableGhmNode &readable_node = readable_nodes[node_idx];
 
-        PrintLn(out_st, "    %1[%2] %3", FmtArg("  ").Repeat(depth), node_idx, readable_node.text);
+        PrintLn(out_st, "    %1[%2] %3", FmtRepeat("  ", depth), node_idx, readable_node.text);
 
         if (readable_node.function != 20 && readable_node.children_idx) {
             for (Size j = 1; j < readable_node.children_count; j++) {
@@ -394,7 +390,7 @@ void mco_DumpDiagnosisTable(Span<const mco_DiagnosisInfo> diagnoses,
         PrintLn(out_st, "        Severity: %1", diag_info.severity + 1);
         Print(out_st, "        Mask:");
         for (Size i = 0; i < K_LEN(diag_info.raw); i++) {
-            Print(out_st, " 0b%1", FmtBin(diag_info.raw[i]).Pad0(-8));
+            Print(out_st, " 0b%1", FmtBin(diag_info.raw[i], 8));
         }
         PrintLn(out_st);
 
@@ -425,7 +421,7 @@ void mco_DumpProcedureTable(Span<const mco_ProcedureInfo> procedures, StreamWrit
         PrintLn(out_st, "        Extensions: %1", proc.ExtensionsToStr(buf));
         Print(out_st, "        Mask: ");
         for (Size i = 0; i < K_LEN(proc.bytes); i++) {
-            Print(out_st, " 0b%1", FmtBin(proc.bytes[i]).Pad0(-8));
+            Print(out_st, " 0b%1", FmtBin(proc.bytes[i], 8));
         }
         PrintLn(out_st);
     }

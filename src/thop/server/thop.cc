@@ -272,7 +272,7 @@ static void InitRoutes()
     {
         uint64_t buf;
         FillRandomSafe(&buf, K_SIZE(buf));
-        Fmt(thop_etag, "%1", FmtHex(buf).Pad0(-16));
+        Fmt(thop_etag, "%1", FmtHex(buf, 16));
     }
 
     // Static assets and dictionaries

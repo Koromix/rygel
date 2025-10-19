@@ -237,7 +237,7 @@ bool sq_Database::CheckpointSnapshot(bool restart)
                 snapshot->path_buf.RemoveFrom(len);
                 snapshot->path_buf.ptr[snapshot->path_buf.len] = 0;
             };
-            Fmt(&snapshot->path_buf, ".%1", FmtArg(0).Pad0(-16));
+            Fmt(&snapshot->path_buf, ".%1", FmtInt(0, 16));
 
             StreamReader reader(db_filename.ptr);
             StreamWriter writer(snapshot->path_buf.ptr, (int)StreamWriterFlag::Atomic,
@@ -316,7 +316,7 @@ bool sq_Database::OpenNextFrame(int64_t now)
         snapshot->path_buf.RemoveFrom(len);
         snapshot->path_buf.ptr[snapshot->path_buf.len] = 0;
     };
-    Fmt(&snapshot->path_buf, ".%1", FmtArg(snapshot->frame).Pad0(-16));
+    Fmt(&snapshot->path_buf, ".%1", FmtInt(snapshot->frame, 16));
 
     // Open new WAL copy for writing
     success &= snapshot->wal_writer.Close();
@@ -520,7 +520,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const c
         const sq_SnapshotFrame &frame = snapshot.frames[generation->frame_idx];
 
         K_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
-        Fmt(&path_buf, ".%1", FmtArg(0).Pad0(-16));
+        Fmt(&path_buf, ".%1", FmtInt(0, 16));
 
         StreamReader reader(path_buf.ptr, CompressionType::LZ4);
         StreamWriter writer(dest_filename);
@@ -540,7 +540,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const c
         const sq_SnapshotFrame &frame = snapshot.frames[j];
 
         K_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
-        Fmt(&path_buf, ".%1", FmtArg(i).Pad0(-16));
+        Fmt(&path_buf, ".%1", FmtInt(i, 16));
 
         StreamReader reader(path_buf.ptr, CompressionType::LZ4);
         StreamWriter writer(wal_filename);

@@ -941,6 +941,8 @@ static const char DigitPairs[201] = "0001020304050607080910111213141516171819202
                                     "25262728293031323334353637383940414243444546474849"
                                     "50515253545556575859606162636465666768697071727374"
                                     "75767778798081828384858687888990919293949596979899";
+static const char BigHexLiterals[] = "0123456789ABCDEF";
+static const char SmallHexLiterals[] = "0123456789abcdef";
 
 static Span<char> FormatUnsignedToDecimal(uint64_t value, char out_buf[32])
 {
@@ -976,13 +978,11 @@ static Span<char> FormatUnsignedToBinary(uint64_t value, char out_buf[64])
 
 static Span<char> FormatUnsignedToOctal(uint64_t value, char out_buf[64])
 {
-    static const char literals[] = "012345678";
-
     Size offset = 64;
     do {
         uint64_t digit = value & 0x7;
         value >>= 3;
-        out_buf[--offset] = literals[digit];
+        out_buf[--offset] = BigHexLiterals[digit];
     } while (value);
 
     return MakeSpan(out_buf + offset, 64 - offset);
@@ -990,13 +990,11 @@ static Span<char> FormatUnsignedToOctal(uint64_t value, char out_buf[64])
 
 static Span<char> FormatUnsignedToBigHex(uint64_t value, char out_buf[32])
 {
-    static const char literals[] = "0123456789ABCDEF";
-
     Size offset = 32;
     do {
         uint64_t digit = value & 0xF;
         value >>= 4;
-        out_buf[--offset] = literals[digit];
+        out_buf[--offset] = BigHexLiterals[digit];
     } while (value);
 
     return MakeSpan(out_buf + offset, 32 - offset);
@@ -1004,13 +1002,11 @@ static Span<char> FormatUnsignedToBigHex(uint64_t value, char out_buf[32])
 
 static Span<char> FormatUnsignedToSmallHex(uint64_t value, char out_buf[32])
 {
-    static const char literals[] = "0123456789abcdef";
-
     Size offset = 32;
     do {
         uint64_t digit = value & 0xF;
         value >>= 4;
-        out_buf[--offset] = literals[digit];
+        out_buf[--offset] = SmallHexLiterals[digit];
     } while (value);
 
     return MakeSpan(out_buf + offset, 32 - offset);
@@ -1187,405 +1183,411 @@ Span<const char> FormatFloatingPoint(T value, bool non_zero, int min_prec, int m
 }
 
 template <typename AppendFunc>
+static inline void AppendPad(Size pad, char padding, AppendFunc append)
+{
+    for (Size i = 0; i < pad; i++) {
+        append(padding);
+    }
+}
+
+template <typename AppendFunc>
 static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 {
-    for (int i = 0; i < arg.repeat; i++) {
-        LocalArray<char, 2048> out_buf;
-        char num_buf[128];
-        Span<const char> out = {};
+    switch (arg.type) {
+        case FmtType::Str: { append(arg.u.str); } break;
+        case FmtType::StrPad: {
+            append(arg.u.str);
+            AppendPad(arg.pad - arg.u.str.len, arg.padding, append);
+        } break;
+        case FmtType::StrRepeat: {
+            Span<const char> str = arg.u.repeat.str;
 
-        Size pad_len = arg.pad_len;
+            for (int i = 0; i < arg.u.repeat.count; i++) {
+                append(str);
+            }
+        } break;
 
-        switch (arg.type) {
-            case FmtType::Str1: { out = arg.u.str1; } break;
-            case FmtType::Str2: { out = arg.u.str2; } break;
-            case FmtType::Buffer: { out = arg.u.buf; } break;
-            case FmtType::Char: { out = MakeSpan(&arg.u.ch, 1); } break;
+        case FmtType::Char: { append(MakeSpan(&arg.u.ch, 1)); } break;
+        case FmtType::Buffer: {
+            Span<const char> str = arg.u.buf;
+            append(str);
+        } break;
+        case FmtType::Custom: { arg.u.custom.Format(append); } break;
 
-            case FmtType::Custom: { arg.u.custom.Format(append); } break;
+        case FmtType::Bool: { append(arg.u.b ? "true" : "false"); } break;
 
-            case FmtType::Bool: {
-                if (arg.u.b) {
-                    out = "true";
-                } else {
-                    out = "false";
-                }
-            } break;
+        case FmtType::Integer: {
+            if (arg.u.i < 0) {
+                char buf[128];
+                Span<const char> str = FormatUnsignedToDecimal((uint64_t)-arg.u.i, buf);
 
-            case FmtType::Integer: {
-                if (arg.u.i < 0) {
-                    if (arg.pad_len < 0 && arg.pad_char == '0') {
+                if (arg.pad) {
+                    if (arg.padding == '0') {
                         append('-');
+                        AppendPad((Size)arg.pad - str.len - 1, arg.padding, append);
                     } else {
-                        out_buf.Append('-');
-                    }
-
-                    out_buf.Append(FormatUnsignedToDecimal((uint64_t)-arg.u.i, num_buf));
-                    out = out_buf;
-                } else {
-                    out = FormatUnsignedToDecimal((uint64_t)arg.u.i, num_buf);
-                }
-            } break;
-            case FmtType::Unsigned: {
-                out = FormatUnsignedToDecimal(arg.u.u, num_buf);
-            } break;
-            case FmtType::Float: {
-                static const uint32_t ExponentMask = 0x7f800000u;
-                static const uint32_t MantissaMask = 0x007fffffu;
-                static const uint32_t SignMask = 0x80000000u;
-
-                union { float f; uint32_t u32; } u;
-                u.f = arg.u.f.value;
-
-                if ((u.u32 & ExponentMask) == ExponentMask) {
-                    uint32_t mantissa = u.u32 & MantissaMask;
-
-                    if (mantissa) {
-                        out = "NaN";
-                    } else {
-                        out = (u.u32 & SignMask) ? "-Inf" : "Inf";
-                    }
-                } else {
-                    if (u.u32 & SignMask) {
-                        if (arg.pad_len < 0 && arg.pad_char == '0') {
-                            append('-');
-                        } else {
-                            out_buf.Append('-');
-                        }
-
-                        out_buf.Append(FormatFloatingPoint(-u.f, true, arg.u.f.min_prec, arg.u.f.max_prec, num_buf));
-                        out = out_buf;
-                    } else {
-                        out = FormatFloatingPoint(u.f, u.u32, arg.u.f.min_prec, arg.u.f.max_prec, num_buf);
-                    }
-                }
-            } break;
-            case FmtType::Double: {
-                static const uint64_t ExponentMask = 0x7FF0000000000000ull;
-                static const uint64_t MantissaMask = 0x000FFFFFFFFFFFFFull;
-                static const uint64_t SignMask = 0x8000000000000000ull;
-
-                union { double d; uint64_t u64; } u;
-                u.d = arg.u.d.value;
-
-                if ((u.u64 & ExponentMask) == ExponentMask) {
-                    uint64_t mantissa = u.u64 & MantissaMask;
-
-                    if (mantissa) {
-                        out = "NaN";
-                    } else {
-                        out = (u.u64 & SignMask) ? "-Inf" : "Inf";
-                    }
-                } else {
-                    if (u.u64 & SignMask) {
-                        if (arg.pad_len < 0 && arg.pad_char == '0') {
-                            append('-');
-                        } else {
-                            out_buf.Append('-');
-                        }
-
-                        out_buf.Append(FormatFloatingPoint(-u.d, true, arg.u.d.min_prec, arg.u.d.max_prec, num_buf));
-                        out = out_buf;
-                    } else {
-                        out = FormatFloatingPoint(u.d, u.u64, arg.u.d.min_prec, arg.u.d.max_prec, num_buf);
-                    }
-                }
-            } break;
-            case FmtType::Binary: {
-                out = FormatUnsignedToBinary(arg.u.u, num_buf);
-            } break;
-            case FmtType::Octal: {
-                out = FormatUnsignedToOctal(arg.u.u, num_buf);
-            } break;
-            case FmtType::BigHex: {
-                out = FormatUnsignedToBigHex(arg.u.u, num_buf);
-            } break;
-            case FmtType::SmallHex: {
-                out = FormatUnsignedToSmallHex(arg.u.u, num_buf);
-            } break;
-
-            case FmtType::MemorySize: {
-                double size;
-                if (arg.u.i < 0) {
-                    size = (double)-arg.u.i;
-                    if (arg.pad_len < 0 && arg.pad_char == '0') {
+                        AppendPad((Size)arg.pad - str.len - 1, arg.padding, append);
                         append('-');
-                    } else {
-                        out_buf.Append('-');
                     }
                 } else {
-                    size = (double)arg.u.i;
+                    append('-');
                 }
 
-                if (size >= 1073688137.0) {
-                    size /= 1073741824.0;
+                append(str);
+            } else {
+                char buf[128];
+                Span<const char> str = FormatUnsignedToDecimal((uint64_t)arg.u.i, buf);
 
-                    int prec = 1 + (size < 9.9995) + (size < 99.995);
-                    out_buf.Append(FormatFloatingPoint(size, true, prec, prec, num_buf));
-                    out_buf.Append(" GiB");
-                } else if (size >= 1048524.0) {
-                    size /= 1048576.0;
+                AppendPad((Size)arg.pad - str.len, arg.padding, append);
+                append(str);
+            }
+        } break;
+        case FmtType::Unsigned: {
+            char buf[128];
+            Span<const char> str = FormatUnsignedToDecimal(arg.u.u, buf);
 
-                    int prec = 1 + (size < 9.9995) + (size < 99.995);
-                    out_buf.Append(FormatFloatingPoint(size, true, prec, prec, num_buf));
-                    out_buf.Append(" MiB");
-                } else if (size >= 1023.95) {
-                    size /= 1024.0;
+            AppendPad((Size)arg.pad - str.len, arg.padding, append);
+            append(str);
+        } break;
 
-                    int prec = 1 + (size < 9.9995) + (size < 99.995);
-                    out_buf.Append(FormatFloatingPoint(size, true, prec, prec, num_buf));
-                    out_buf.Append(" kiB");
+        case FmtType::Float: {
+            static const uint32_t ExponentMask = 0x7f800000u;
+            static const uint32_t MantissaMask = 0x007fffffu;
+            static const uint32_t SignMask = 0x80000000u;
+
+            union { float f; uint32_t u32; } u;
+            u.f = arg.u.f.value;
+
+            if ((u.u32 & ExponentMask) == ExponentMask) {
+                uint32_t mantissa = u.u32 & MantissaMask;
+
+                if (mantissa) {
+                    append("NaN");
                 } else {
-                    out_buf.Append(FormatFloatingPoint(size, arg.u.i, 0, 0, num_buf));
-                    out_buf.Append(" B");
+                    append((u.u32 & SignMask) ? "-Inf" : "Inf");
                 }
+            } else {
+                char buf[128];
 
-                out = out_buf;
-            } break;
-            case FmtType::DiskSize: {
-                double size;
-                if (arg.u.i < 0) {
-                    size = (double)-arg.u.i;
-                    if (arg.pad_len < 0 && arg.pad_char == '0') {
-                        append('-');
-                    } else {
-                        out_buf.Append('-');
-                    }
+                if (u.u32 & SignMask) {
+                    append('-');
+                    append(FormatFloatingPoint(-u.f, true, arg.u.f.min_prec, arg.u.f.max_prec, buf));
                 } else {
-                    size = (double)arg.u.i;
+                    append(FormatFloatingPoint(u.f, u.u32, arg.u.f.min_prec, arg.u.f.max_prec, buf));
                 }
+            }
+        } break;
+        case FmtType::Double: {
+            static const uint64_t ExponentMask = 0x7FF0000000000000ull;
+            static const uint64_t MantissaMask = 0x000FFFFFFFFFFFFFull;
+            static const uint64_t SignMask = 0x8000000000000000ull;
 
-                if (size >= 999950000.0) {
-                    size /= 1000000000.0;
+            union { double d; uint64_t u64; } u;
+            u.d = arg.u.d.value;
 
-                    int prec = 1 + (size < 9.9995) + (size < 99.995);
-                    out_buf.Append(FormatFloatingPoint(size, true, prec, prec, num_buf));
-                    out_buf.Append(" GB");
-                } else if (size >= 999950.0) {
-                    size /= 1000000.0;
+            if ((u.u64 & ExponentMask) == ExponentMask) {
+                uint64_t mantissa = u.u64 & MantissaMask;
 
-                    int prec = 1 + (size < 9.9995) + (size < 99.995);
-                    out_buf.Append(FormatFloatingPoint(size, true, prec, prec, num_buf));
-                    out_buf.Append(" MB");
-                } else if (size >= 999.95) {
-                    size /= 1000.0;
-
-                    int prec = 1 + (size < 9.9995) + (size < 99.995);
-                    out_buf.Append(FormatFloatingPoint(size, true, prec, prec, num_buf));
-                    out_buf.Append(" kB");
+                if (mantissa) {
+                    append("NaN");
                 } else {
-                    out_buf.Append(FormatFloatingPoint(size, arg.u.i, 0, 0, num_buf));
-                    out_buf.Append(" B");
+                    append((u.u64 & SignMask) ? "-Inf" : "Inf");
                 }
+            } else {
+                char buf[128];
 
-                out = out_buf;
-            } break;
-
-            case FmtType::Date: {
-                K_ASSERT(!arg.u.date.value || arg.u.date.IsValid());
-
-                int year = arg.u.date.st.year;
-                if (year < 0) {
-                    out_buf.Append('-');
-                    year = -year;
-                }
-                if (year < 10) {
-                    out_buf.Append("000");
-                } else if (year < 100) {
-                    out_buf.Append("00");
-                } else if (year < 1000) {
-                    out_buf.Append('0');
-                }
-                out_buf.Append(FormatUnsignedToDecimal((uint64_t)year, num_buf));
-                out_buf.Append('-');
-                if (arg.u.date.st.month < 10) {
-                    out_buf.Append('0');
-                }
-                out_buf.Append(FormatUnsignedToDecimal((uint64_t)arg.u.date.st.month, num_buf));
-                out_buf.Append('-');
-                if (arg.u.date.st.day < 10) {
-                    out_buf.Append('0');
-                }
-                out_buf.Append(FormatUnsignedToDecimal((uint64_t)arg.u.date.st.day, num_buf));
-                out = out_buf;
-            } break;
-
-            case FmtType::TimeISO: {
-                const TimeSpec &spec = arg.u.time.spec;
-
-                if (spec.offset && arg.u.time.ms) {
-                    int offset_h = spec.offset / 60;
-                    int offset_m = spec.offset % 60;
-
-                    out_buf.len = Fmt(out_buf.data, "%1%2%3T%4%5%6.%7%8%9%10",
-                                      FmtArg(spec.year).Pad0(-2), FmtArg(spec.month).Pad0(-2),
-                                      FmtArg(spec.day).Pad0(-2), FmtArg(spec.hour).Pad0(-2),
-                                      FmtArg(spec.min).Pad0(-2), FmtArg(spec.sec).Pad0(-2), FmtArg(spec.msec).Pad0(-3),
-                                      offset_h >= 0 ? "+" : "", FmtArg(offset_h).Pad0(-2), FmtArg(offset_m).Pad0(-2)).len;
-                } else if (spec.offset) {
-                    int offset_h = spec.offset / 60;
-                    int offset_m = spec.offset % 60;
-
-                    out_buf.len = Fmt(out_buf.data, "%1%2%3T%4%5%6%7%8%9",
-                                      FmtArg(spec.year).Pad0(-2), FmtArg(spec.month).Pad0(-2),
-                                      FmtArg(spec.day).Pad0(-2), FmtArg(spec.hour).Pad0(-2),
-                                      FmtArg(spec.min).Pad0(-2), FmtArg(spec.sec).Pad0(-2),
-                                      offset_h >= 0 ? "+" : "", FmtArg(offset_h).Pad0(-2), FmtArg(offset_m).Pad0(-2)).len;
-                } else if (arg.u.time.ms) {
-                    out_buf.len = Fmt(out_buf.data, "%1%2%3T%4%5%6.%7Z",
-                                      FmtArg(spec.year).Pad0(-2), FmtArg(spec.month).Pad0(-2),
-                                      FmtArg(spec.day).Pad0(-2), FmtArg(spec.hour).Pad0(-2),
-                                      FmtArg(spec.min).Pad0(-2), FmtArg(spec.sec).Pad0(-2), FmtArg(spec.msec).Pad0(-3)).len;
+                if (u.u64 & SignMask) {
+                    append('-');
+                    append(FormatFloatingPoint(-u.d, true, arg.u.d.min_prec, arg.u.d.max_prec, buf));
                 } else {
-                    out_buf.len = Fmt(out_buf.data, "%1%2%3T%4%5%6Z",
-                                      FmtArg(spec.year).Pad0(-2), FmtArg(spec.month).Pad0(-2),
-                                      FmtArg(spec.day).Pad0(-2), FmtArg(spec.hour).Pad0(-2),
-                                      FmtArg(spec.min).Pad0(-2), FmtArg(spec.sec).Pad0(-2)).len;
+                    append(FormatFloatingPoint(u.d, u.u64, arg.u.d.min_prec, arg.u.d.max_prec, buf));
                 }
-                out = out_buf;
-            } break;
-            case FmtType::TimeNice: {
-                const TimeSpec &spec = arg.u.time.spec;
+            }
+        } break;
 
+        case FmtType::Binary: {
+            char buf[128];
+            Span<const char> str = FormatUnsignedToBinary(arg.u.u, buf);
+
+            AppendPad((Size)arg.pad - str.len, arg.padding, append);
+            append(str);
+        } break;
+        case FmtType::Octal: {
+            char buf[128];
+            Span<const char> str = FormatUnsignedToOctal(arg.u.u, buf);
+
+            AppendPad((Size)arg.pad - str.len, arg.padding, append);
+            append(str);
+        } break;
+        case FmtType::BigHex: {
+            char buf[128];
+            Span<const char> str = FormatUnsignedToBigHex(arg.u.u, buf);
+
+            AppendPad((Size)arg.pad - str.len, arg.padding, append);
+            append(str);
+        } break;
+        case FmtType::SmallHex: {
+            char buf[128];
+            Span<const char> str = FormatUnsignedToSmallHex(arg.u.u, buf);
+
+            AppendPad((Size)arg.pad - str.len, arg.padding, append);
+            append(str);
+        } break;
+
+        case FmtType::BigBytes: {
+            for (uint8_t c: arg.u.hex) {
+                char encoded[2];
+
+                encoded[0] = BigHexLiterals[((uint8_t)c >> 4) & 0xF];
+                encoded[1] = BigHexLiterals[((uint8_t)c >> 0) & 0xF];
+
+                Span<const char> buf = MakeSpan(encoded, 2);
+                append(buf);
+            }
+        } break;
+        case FmtType::SmallBytes: {
+            for (uint8_t c: arg.u.hex) {
+                char encoded[2];
+
+                encoded[0] = SmallHexLiterals[((uint8_t)c >> 4) & 0xF];
+                encoded[1] = SmallHexLiterals[((uint8_t)c >> 0) & 0xF];
+
+                Span<const char> buf = MakeSpan(encoded, 2);
+                append(buf);
+            }
+        } break;
+
+        case FmtType::MemorySize: {
+            char buf[128];
+
+            double size;
+            if (arg.u.i < 0) {
+                append('-');
+                size = (double)-arg.u.i;
+            } else {
+                size = (double)arg.u.i;
+            }
+
+            if (size >= 1073688137.0) {
+                size /= 1073741824.0;
+
+                int prec = 1 + (size < 9.9995) + (size < 99.995);
+                append(FormatFloatingPoint(size, true, prec, prec, buf));
+                append(" GiB");
+            } else if (size >= 1048524.0) {
+                size /= 1048576.0;
+
+                int prec = 1 + (size < 9.9995) + (size < 99.995);
+                append(FormatFloatingPoint(size, true, prec, prec, buf));
+                append(" MiB");
+            } else if (size >= 1023.95) {
+                size /= 1024.0;
+
+                int prec = 1 + (size < 9.9995) + (size < 99.995);
+                append(FormatFloatingPoint(size, true, prec, prec, buf));
+                append(" kiB");
+            } else {
+                append(FormatFloatingPoint(size, arg.u.i, 0, 0, buf));
+                append(" B");
+            }
+        } break;
+        case FmtType::DiskSize: {
+            char buf[128];
+
+            double size;
+            if (arg.u.i < 0) {
+                append('-');
+                size = (double)-arg.u.i;
+            } else {
+                size = (double)arg.u.i;
+            }
+
+            if (size >= 999950000.0) {
+                size /= 1000000000.0;
+
+                int prec = 1 + (size < 9.9995) + (size < 99.995);
+                append(FormatFloatingPoint(size, true, prec, prec, buf));
+                append(" GB");
+            } else if (size >= 999950.0) {
+                size /= 1000000.0;
+
+                int prec = 1 + (size < 9.9995) + (size < 99.995);
+                append(FormatFloatingPoint(size, true, prec, prec, buf));
+                append(" MB");
+            } else if (size >= 999.95) {
+                size /= 1000.0;
+
+                int prec = 1 + (size < 9.9995) + (size < 99.995);
+                append(FormatFloatingPoint(size, true, prec, prec, buf));
+                append(" kB");
+            } else {
+                append(FormatFloatingPoint(size, arg.u.i, 0, 0, buf));
+                append(" B");
+            }
+        } break;
+
+        case FmtType::Date: {
+            K_ASSERT(!arg.u.date.value || arg.u.date.IsValid());
+
+            char buf[128];
+
+            int year = arg.u.date.st.year;
+            if (year < 0) {
+                append('-');
+                year = -year;
+            }
+            if (year < 10) {
+                append("000");
+            } else if (year < 100) {
+                append("00");
+            } else if (year < 1000) {
+                append('0');
+            }
+            append(FormatUnsignedToDecimal((uint64_t)year, buf));
+            append('-');
+            if (arg.u.date.st.month < 10) {
+                append('0');
+            }
+            append(FormatUnsignedToDecimal((uint64_t)arg.u.date.st.month, buf));
+            append('-');
+            if (arg.u.date.st.day < 10) {
+                append('0');
+            }
+            append(FormatUnsignedToDecimal((uint64_t)arg.u.date.st.day, buf));
+        } break;
+
+        case FmtType::TimeISO: {
+            const TimeSpec &spec = arg.u.time.spec;
+
+            LocalArray<char, 128> buf;
+
+            if (spec.offset && arg.u.time.ms) {
                 int offset_h = spec.offset / 60;
                 int offset_m = spec.offset % 60;
 
-                if (arg.u.time.ms) {
-                    out_buf.len = Fmt(out_buf.data, "%1-%2-%3 %4:%5:%6.%7 %8%9%10",
-                                      FmtArg(spec.year).Pad0(-2), FmtArg(spec.month).Pad0(-2),
-                                      FmtArg(spec.day).Pad0(-2), FmtArg(spec.hour).Pad0(-2),
-                                      FmtArg(spec.min).Pad0(-2), FmtArg(spec.sec).Pad0(-2), FmtArg(spec.msec).Pad0(-3),
-                                      offset_h >= 0 ? "+" : "", FmtArg(offset_h).Pad0(-2), FmtArg(offset_m).Pad0(-2)).len;
-                } else {
-                    out_buf.len = Fmt(out_buf.data, "%1-%2-%3 %4:%5:%6 %7%8%9",
-                                      FmtArg(spec.year).Pad0(-2), FmtArg(spec.month).Pad0(-2),
-                                      FmtArg(spec.day).Pad0(-2), FmtArg(spec.hour).Pad0(-2),
-                                      FmtArg(spec.min).Pad0(-2), FmtArg(spec.sec).Pad0(-2),
-                                      offset_h >= 0 ? "+" : "", FmtArg(offset_h).Pad0(-2), FmtArg(offset_m).Pad0(-2)).len;
-                }
-                out = out_buf;
-            } break;
+                buf.len = Fmt(buf.data, "%1%2%3T%4%5%6.%7%8%9%10",
+                              FmtInt(spec.year, 2), FmtInt(spec.month, 2),
+                              FmtInt(spec.day, 2), FmtInt(spec.hour, 2),
+                              FmtInt(spec.min, 2), FmtInt(spec.sec, 2), FmtInt(spec.msec, 3),
+                              offset_h >= 0 ? "+" : "", FmtInt(offset_h, 2), FmtInt(offset_m, 2)).len;
+            } else if (spec.offset) {
+                int offset_h = spec.offset / 60;
+                int offset_m = spec.offset % 60;
 
-            case FmtType::Random: {
-                static const char *const DefaultChars = "abcdefghijklmnopqrstuvwxyz0123456789";
-                Span<const char> chars = arg.u.random.chars ? arg.u.random.chars : DefaultChars;
-
-                K_ASSERT(arg.u.random.len <= K_SIZE(out_buf.data));
-
-                for (Size j = 0; j < arg.u.random.len; j++) {
-                    int rnd = GetRandomInt(0, (int)chars.len);
-                    out_buf.Append(chars[rnd]);
-                }
-
-                out = out_buf;
-            } break;
-
-            case FmtType::FlagNames: {
-                if (arg.u.flags.flags) {
-                    Span<const char> sep = arg.u.flags.separator;
-                    for (Size j = 0; j < arg.u.flags.u.names.len; j++) {
-                        if (arg.u.flags.flags & (1ull << j)) {
-                            out_buf.Append(arg.u.flags.u.names[j]);
-                            out_buf.Append(sep);
-                        }
-                    }
-                    out = out_buf.Take(0, out_buf.len - sep.len);
-                } else {
-                    out = "None";
-                }
-            } break;
-            case FmtType::FlagOptions: {
-                if (arg.u.flags.flags) {
-                    Span<const char> sep = arg.u.flags.separator;
-                    for (Size j = 0; j < arg.u.flags.u.options.len; j++) {
-                        if (arg.u.flags.flags & (1ull << j)) {
-                            out_buf.Append(arg.u.flags.u.options[j].name);
-                            out_buf.Append(sep);
-                        }
-                    }
-                    out = out_buf.Take(0, out_buf.len - sep.len);
-                } else {
-                    out = "None";
-                }
-            } break;
-
-            case FmtType::Span: {
-                FmtArg arg2;
-                arg2.type = arg.u.span.type;
-                arg2.repeat = arg.repeat;
-                arg2.pad_len = arg.pad_len;
-                arg2.pad_char = arg.pad_char;
-
-                const uint8_t *ptr = (const uint8_t *)arg.u.span.ptr;
-                for (Size j = 0; j < arg.u.span.len; j++) {
-                    switch (arg.u.span.type) {
-                        case FmtType::Str1: { arg2.u.str1 = *(const char **)ptr; } break;
-                        case FmtType::Str2: { arg2.u.str2 = *(const Span<const char> *)ptr; } break;
-                        case FmtType::Buffer: { K_UNREACHABLE(); } break;
-                        case FmtType::Char: { arg2.u.ch = *(const char *)ptr; } break;
-                        case FmtType::Custom: { K_UNREACHABLE(); } break;
-                        case FmtType::Bool: { arg2.u.b = *(const bool *)ptr; } break;
-                        case FmtType::Integer:
-                        case FmtType::Unsigned:
-                        case FmtType::Binary:
-                        case FmtType::Octal:
-                        case FmtType::BigHex:
-                        case FmtType::SmallHex: {
-                            switch (arg.u.span.type_len) {
-                                case 8: { arg2.u.u = *(const uint64_t *)ptr; } break;
-                                case 4: { arg2.u.u = *(const uint32_t *)ptr; } break;
-                                case 2: { arg2.u.u = *(const uint16_t *)ptr; } break;
-                                case 1: { arg2.u.u = *(const uint8_t *)ptr; } break;
-                                default: { K_UNREACHABLE(); } break;
-                            }
-                        } break;
-                        case FmtType::Float: {
-                            arg2.u.f.value = *(const float *)ptr;
-                            arg2.u.d.min_prec = 0;
-                            arg2.u.d.max_prec = INT_MAX;
-                        } break;
-                        case FmtType::Double: {
-                            arg2.u.d.value = *(const double *)ptr;
-                            arg2.u.d.min_prec = 0;
-                            arg2.u.d.max_prec = INT_MAX;
-                        } break;
-                        case FmtType::MemorySize:
-                        case FmtType::DiskSize: { arg2.u.i = *(const int64_t *)ptr; } break;
-                        case FmtType::Date: { arg2.u.date = *(const LocalDate *)ptr; } break;
-                        case FmtType::TimeISO:
-                        case FmtType::TimeNice: { arg2.u.time = *(decltype(FmtArg::u.time) *)ptr; } break;
-                        case FmtType::Random: { K_UNREACHABLE(); } break;
-                        case FmtType::FlagNames: { K_UNREACHABLE(); } break;
-                        case FmtType::FlagOptions: { K_UNREACHABLE(); } break;
-                        case FmtType::Span: { K_UNREACHABLE(); } break;
-                    }
-                    ptr += arg.u.span.type_len;
-
-                    if (j) {
-                        append(arg.u.span.separator);
-                    }
-                    ProcessArg(arg2, append);
-                }
-
-                continue;
-            } break;
-        }
-
-        if (pad_len < 0) {
-            pad_len = (-pad_len) - out.len;
-            for (Size j = 0; j < pad_len; j++) {
-                append(arg.pad_char);
+                buf.len = Fmt(buf.data, "%1%2%3T%4%5%6%7%8%9",
+                              FmtInt(spec.year, 2), FmtInt(spec.month, 2),
+                              FmtInt(spec.day, 2), FmtInt(spec.hour, 2),
+                              FmtInt(spec.min, 2), FmtInt(spec.sec, 2),
+                              offset_h >= 0 ? "+" : "", FmtInt(offset_h, 2), FmtInt(offset_m, 2)).len;
+            } else if (arg.u.time.ms) {
+                buf.len = Fmt(buf.data, "%1%2%3T%4%5%6.%7Z",
+                              FmtInt(spec.year, 2), FmtInt(spec.month, 2),
+                              FmtInt(spec.day, 2), FmtInt(spec.hour, 2),
+                              FmtInt(spec.min, 2), FmtInt(spec.sec, 2), FmtInt(spec.msec, 3)).len;
+            } else {
+                buf.len = Fmt(buf.data, "%1%2%3T%4%5%6Z",
+                              FmtInt(spec.year, 2), FmtInt(spec.month, 2),
+                              FmtInt(spec.day, 2), FmtInt(spec.hour, 2),
+                              FmtInt(spec.min, 2), FmtInt(spec.sec, 2)).len;
             }
-            append(out);
-        } else if (pad_len > 0) {
-            append(out);
-            pad_len -= out.len;
-            for (Size j = 0; j < pad_len; j++) {
-                append(arg.pad_char);
+
+            append(buf);
+        } break;
+        case FmtType::TimeNice: {
+            const TimeSpec &spec = arg.u.time.spec;
+
+            LocalArray<char, 128> buf;
+
+            if (arg.u.time.ms) {
+                int offset_h = spec.offset / 60;
+                int offset_m = spec.offset % 60;
+
+                buf.len = Fmt(buf.data, "%1-%2-%3 %4:%5:%6.%7 %8%9%10",
+                              FmtInt(spec.year, 2), FmtInt(spec.month, 2),
+                              FmtInt(spec.day, 2), FmtInt(spec.hour, 2),
+                              FmtInt(spec.min, 2), FmtInt(spec.sec, 2), FmtInt(spec.msec, 3),
+                              offset_h >= 0 ? "+" : "", FmtInt(offset_h, 2), FmtInt(offset_m, 2)).len;
+            } else {
+                int offset_h = spec.offset / 60;
+                int offset_m = spec.offset % 60;
+
+                buf.len = Fmt(buf.data, "%1-%2-%3 %4:%5:%6 %7%8%9",
+                              FmtInt(spec.year, 2), FmtInt(spec.month, 2),
+                              FmtInt(spec.day, 2), FmtInt(spec.hour, 2),
+                              FmtInt(spec.min, 2), FmtInt(spec.sec, 2),
+                              offset_h >= 0 ? "+" : "", FmtInt(offset_h, 2), FmtInt(offset_m, 2)).len;
             }
-        } else {
-            append(out);
-        }
+
+            append(buf);
+        } break;
+
+        case FmtType::List: {
+            Span<const char> separator = arg.u.list.separator;
+
+            if (arg.u.list.u.names.len) {
+                append(arg.u.list.u.names[0]);
+
+                for (Size i = 1; i < arg.u.list.u.names.len; i++) {
+                    append(separator);
+                    append(arg.u.list.u.names[i]);
+                }
+            } else {
+                append(T("None"));
+            }
+        } break;
+        case FmtType::FlagNames: {
+            uint64_t flags = arg.u.list.flags;
+            Span<const char> separator = arg.u.list.separator;
+
+            if (flags) {
+                for (;;) {
+                    int idx = CountTrailingZeros(flags);
+                    flags &= ~(1ull << idx);
+
+                    append(arg.u.list.u.names[idx]);
+                    if (!flags)
+                        break;
+                    append(separator);
+                }
+            } else {
+                append(T("None"));
+            }
+        } break;
+        case FmtType::FlagOptions: {
+            uint64_t flags = arg.u.list.flags;
+            Span<const char> separator = arg.u.list.separator;
+
+            if (arg.u.list.flags) {
+                for (;;) {
+                    int idx = CountTrailingZeros(flags);
+                    flags &= ~(1ull << idx);
+
+                    append(arg.u.list.u.options[idx].name);
+                    if (!flags)
+                        break;
+                    append(separator);
+                }
+            } else {
+                append(T("None"));
+            }
+        } break;
+
+        case FmtType::Random: {
+            LocalArray<char, 512> buf;
+
+            static const char *const DefaultChars = "abcdefghijklmnopqrstuvwxyz0123456789";
+            Span<const char> chars = arg.u.random.chars ? arg.u.random.chars : DefaultChars;
+
+            K_ASSERT(arg.u.random.len <= K_SIZE(buf.data));
+            buf.len = arg.u.random.len;
+
+            for (Size j = 0; j < arg.u.random.len; j++) {
+                int rnd = GetRandomInt(0, (int)chars.len);
+                buf[j] = chars[rnd];
+            }
+
+            append(buf);
+        } break;
     }
 }
 
@@ -1896,8 +1898,6 @@ void FmtEscape::Format(FunctionRef<void(Span<const char>)> append) const
 
 void FmtUrlSafe::Format(FunctionRef<void(Span<const char>)> append) const
 {
-    static const char literals[] = "0123456789ABCDEF";
-
     for (char c: str) {
         if (IsAsciiAlphaOrDigit(c) || strchr(passthrough, c)) {
             append((char)c);
@@ -1905,8 +1905,8 @@ void FmtUrlSafe::Format(FunctionRef<void(Span<const char>)> append) const
             char encoded[3];
 
             encoded[0] = '%';
-            encoded[1] = literals[((uint8_t)c >> 4) & 0xF];
-            encoded[2] = literals[((uint8_t)c >> 0) & 0xF];
+            encoded[1] = BigHexLiterals[((uint8_t)c >> 4) & 0xF];
+            encoded[2] = BigHexLiterals[((uint8_t)c >> 0) & 0xF];
 
             Span<const char> buf = MakeSpan(encoded, 3);
             append(buf);
@@ -2064,7 +2064,7 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
     char ctx_buf[512];
     if (log_times) {
         double time = (double)(GetMonotonicTime() - start_time) / 1000;
-        Fmt(ctx_buf, "[%1] %2", FmtDouble(time, 3).Pad(-8), ctx ? ctx : "");
+        Fmt(ctx_buf, "[%1] %2", FmtDouble(time, 3, 8), ctx ? ctx : "");
 
         ctx = ctx_buf;
     }
@@ -2401,13 +2401,13 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
                 int progress = (int)(100 * delta / range);
                 int size = progress / 4;
 
-                buf.len += Fmt(buf.TakeAvailable(), true, "%!..+[%1%2]%!0  %3\n", FmtArg('=').Repeat(size), FmtArg(' ').Repeat(25 - size), bar.text).len;
+                buf.len += Fmt(buf.TakeAvailable(), true, "%!..+[%1%2]%!0  %3\n", FmtRepeat("=", size), FmtRepeat(" ", 25 - size), bar.text).len;
             } else {
                 int progress = (int)(frame % 44);
                 int before = (progress > 22) ? (44 - progress) : progress;
                 int after = std::max(22 - before, 0);
 
-                buf.len += Fmt(buf.TakeAvailable(), true, "%!..+[%1===%2]%!0  %3\n", FmtArg(' ').Repeat(before), FmtArg(' ').Repeat(after), bar.text).len;
+                buf.len += Fmt(buf.TakeAvailable(), true, "%!..+[%1===%2]%!0  %3\n", FmtRepeat(" ", before), FmtRepeat(" ", after), bar.text).len;
             }
         }
 
@@ -10073,7 +10073,7 @@ void ConsolePrompter::FormatChoices(Span<const PromptChoice> choices, Size value
         const PromptChoice &choice = choices[i];
         int pad = align - ComputeUnicodeWidth(choice.str);
 
-        Fmt(&str, "  [%1] %2%3  ", choice.c, choice.str, FmtArg(' ').Repeat(pad));
+        Fmt(&str, "  [%1] %2%3  ", choice.c, choice.str, FmtRepeat(" ", pad));
         if (i == value) {
             str_offset = str.len;
         }
@@ -10113,7 +10113,7 @@ void ConsolePrompter::RenderRaw()
             int width = mask ? mask_columns : ComputeUnicodeWidth(str.Take(i, bytes));
 
             if (x2 + width >= columns || str[i] == '\n') {
-                FmtArg prefix = FmtArg(' ').Repeat(prompt_columns - 1);
+                FmtArg prefix = FmtRepeat(" ", prompt_columns - 1);
                 Print(StdErr, "\x1B[0K\r\n%!D.+%1%!0 %!..+", prefix);
 
                 x2 = prompt_columns;
@@ -10157,7 +10157,7 @@ void ConsolePrompter::RenderBuffered()
     Print(StdErr, "%1 %2", prompt, line);
     while (remain.len) {
         line = SplitStr(remain, '\n', &remain);
-        Print(StdErr, "\n%1%2", FmtArg(' ').Repeat(prompt_columns), line);
+        Print(StdErr, "\n%1%2", FmtRepeat(" ", prompt_columns), line);
     }
 
     StdErr->Flush();

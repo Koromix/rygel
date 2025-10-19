@@ -204,7 +204,7 @@ int RunInteractive(const Config &config)
                     if (!prompter.str.len || prompter.str[prompter.str.len - 1] != '\n') {
                         prompter.str.Append('\n');
                     }
-                    Fmt(&prompter.str, "%1", FmtArg("    ").Repeat(report.depth + 1));
+                    Fmt(&prompter.str, "%1", FmtRepeat("    ", report.depth + 1));
 
                     try_guard.Disable();
                 }

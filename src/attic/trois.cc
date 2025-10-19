@@ -72,7 +72,7 @@ R"(Usage: %!..+%1 list url [prefix])", FelixTarget);
         return 1;
 
     bool success = s3.ListObjects(prefix, [](const char *path, int64_t size) {
-        PrintLn("%!..+%1%!0 %2", FmtArg(path).Pad(34), FmtDiskSize(size));
+        PrintLn("%!..+%1%!0 %2", FmtPad(path, 34), FmtDiskSize(size));
         return true;
     });
     if (!success)

@@ -65,7 +65,7 @@ static bool AssembleResourceFile(const pugi::xml_document *doc, const char *icon
                             if (error) [[unlikely]]
                                 return;
 
-                            Fmt(out_buf->TakeAvailable(), "\\x%1", FmtHex(c).Pad0(-2));
+                            Fmt(out_buf->TakeAvailable(), "\\x%1", FmtHex(c, 2));
                             out_buf->len += 4;
                         } else {
                             char ch = (char)c;
@@ -1532,7 +1532,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
         int pad = (int)log10(total) + 3;
         progress++;
 
-        LogInfo("%!C..%1/%2%!0 %3", FmtArg(progress).Pad(-pad), total, node->text);
+        LogInfo("%!C..%1/%2%!0 %3", FmtInt(progress, pad, ' '), total, node->text);
         if (verbose) {
             PrintLn(cmd_line);
             fflush(stdout);

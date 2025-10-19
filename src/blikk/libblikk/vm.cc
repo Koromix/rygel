@@ -704,7 +704,7 @@ bool bk_VirtualMachine::Run()
 void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Size bp) const
 {
     Print(StdErr, "%!D..[0x%1]%!0 %2%!..+%3%!0",
-          FmtHex(pc).Pad0(-6), FmtArg("  ").Repeat((int)frames.len - 1), bk_OpcodeNames[(int)inst.code]);
+          FmtHex(pc, 6), FmtRepeat("  ", (int)frames.len - 1), bk_OpcodeNames[(int)inst.code]);
 
     switch (inst.code) {
         case bk_Opcode::Push: {
@@ -719,7 +719,7 @@ void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Siz
                 case bk_PrimitiveKind::Array: { PrintLn(StdErr, " %!Y..[Array]%!0 %!M..>%1%!0", stack.len); } break;
                 case bk_PrimitiveKind::Record: { PrintLn(StdErr, " %!Y..[Record]%!0 %!M..>%1%!0", stack.len); } break;
                 case bk_PrimitiveKind::Enum: { PrintLn(StdErr, " %!Y..[Enum]%!0 %1 %!M..>%2%!0", inst.u2.i, stack.len); } break;
-                case bk_PrimitiveKind::Opaque: { PrintLn(StdErr, " %!Y..[Opaque]%!0 0x%1 %!M..>%2%!0", FmtArg(inst.u2.opaque).Pad0(-K_SIZE(void *) * 2), stack.len); } break;
+                case bk_PrimitiveKind::Opaque: { PrintLn(StdErr, " %!Y..[Opaque]%!0 0x%1 %!M..>%2%!0", FmtHex((uintptr_t)inst.u2.opaque, K_SIZE(void *) * 2), stack.len); } break;
             }
         } break;
         case bk_Opcode::Reserve: { PrintLn(StdErr, " |%1 %!M..>%2%!0", inst.u2.i, stack.len); } break;
@@ -747,7 +747,7 @@ void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Siz
         case bk_Opcode::BranchIfTrue:
         case bk_Opcode::BranchIfFalse:
         case bk_Opcode::SkipIfTrue:
-        case bk_Opcode::SkipIfFalse: { PrintLn(StdErr, " %!G..0x%1%!0", FmtHex(pc + inst.u2.i).Pad0(-6)); } break;
+        case bk_Opcode::SkipIfFalse: { PrintLn(StdErr, " %!G..0x%1%!0", FmtHex(pc + inst.u2.i, 6)); } break;
 
         case bk_Opcode::CallIndirect: { PrintLn(StdErr, " %!R..@%1%!0", stack.len + inst.u2.i); } break;
         case bk_Opcode::Call: {

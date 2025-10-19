@@ -212,8 +212,8 @@ void FmtRfcDate::Format(FunctionRef<void(Span<const char>)> append) const
     int offset = (spec.offset / 60) * 100 + (spec.offset % 60);
 
     Fmt(append, "%1 %2:%3:%4 %5%6",
-                spec.year, FmtArg(spec.hour).Pad0(-2), FmtArg(spec.min).Pad0(-2),
-                FmtArg(spec.sec).Pad0(-2), offset >= 0 ? "+" : "", FmtArg(offset).Pad0(-4));
+                spec.year, FmtInt(spec.hour, 2), FmtInt(spec.min, 2),
+                FmtInt(spec.sec, 2), offset >= 0 ? "+" : "", FmtInt(offset, 4));
 }
 
 bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
@@ -295,7 +295,7 @@ Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_Mai
     {
         uint64_t rnd[2];
         FillRandomSafe(&rnd, K_SIZE(rnd));
-        Fmt(id, "%1%2", FmtHex(rnd[0]).Pad0(-16), FmtHex(rnd[1]).Pad0(-16));
+        Fmt(id, "%1%2", FmtHex(rnd[0], 16), FmtHex(rnd[1], 16));
 
         SplitStr(from, '@', &domain);
     }

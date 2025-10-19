@@ -91,7 +91,7 @@ struct BenchmarkInfo {
 
 static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<void(Size)> func)
 {
-    Print("  %!..+%1%!0", FmtArg(name).Pad(34));
+    Print("  %!..+%1%!0", FmtPad(name, 34));
     StdOut->Flush();
 
     int64_t time = GetMonotonicTime();

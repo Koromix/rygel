@@ -479,7 +479,7 @@ Key options:
 
     %!..+-t, --type type%!0                Set key type and permissions (see below)
 
-Available key types: %!..+%1%!0)"), FmtSpan(types));
+Available key types: %!..+%1%!0)"), FmtList(types));
     };
 
     // Parse arguments

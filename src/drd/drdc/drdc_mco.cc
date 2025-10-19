@@ -107,7 +107,7 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
                 K_ASSERT(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
                 PrintLn("    %1%2 [%3 -- %4] = GHM %5 [%6] / GHS %7",
-                        verbosity ? "  " : "", FmtArg(k).Pad0(-2),
+                        verbosity ? "  " : "", FmtInt(k, 2),
                         mono_result.duration, mono_result.stays[0].exit.date,
                         mono_result.ghm, mono_result.main_error, mono_result.ghs);
                 if (verbosity >= 2) {
@@ -350,19 +350,19 @@ Classify options:
 Classifier options:
 )");
         for (const OptionDesc &desc: mco_ClassifyFlagOptions) {
-            PrintLn(st, "    %!..+%1%!0    %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0    %2", FmtPad(desc.name, 27), desc.help);
         }
         PrintLn(st, R"(
 Dispense modes:
 )");
         for (const OptionDesc &desc: mco_DispenseModeOptions) {
-            PrintLn(st, "    %!..+%1%!0    Algorithm %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0    Algorithm %2", FmtPad(desc.name, 27), desc.help);
         }
         PrintLn(st, R"(
 Test options:
 )");
         for (const OptionDesc &desc: TestFlagOptions) {
-            PrintLn(st, "    %!..+%1%!0    %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0    %2", FmtPad(desc.name, 27), desc.help);
         }
     };
 
@@ -778,9 +778,9 @@ Map options:
         if (constraint) {
             PrintLn("Constraint for %1", ghm_to_ghs_info.ghm);
             PrintLn("  Duration = 0x%1",
-                    FmtHex(constraint->durations).Pad0(-2 * K_SIZE(constraint->durations)));
+                    FmtHex(constraint->durations, 2 * K_SIZE(constraint->durations)));
             PrintLn("  Warnings = 0x%1",
-                    FmtHex(constraint->warnings).Pad0(-2 * K_SIZE(constraint->warnings)));
+                    FmtHex(constraint->warnings, 2 * K_SIZE(constraint->warnings)));
         } else {
             PrintLn("%1 unreached!", ghm_to_ghs_info.ghm);
         }

@@ -240,7 +240,7 @@ static void InitAssets()
     {
         uint64_t buf;
         FillRandomSafe(&buf, K_SIZE(buf));
-        Fmt(shared_etag, "%1", FmtHex(buf).Pad0(-16));
+        Fmt(shared_etag, "%1", FmtHex(buf, 16));
     }
 
     for (const AssetInfo &asset: GetEmbedAssets()) {

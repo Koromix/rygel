@@ -140,7 +140,7 @@ bool rk_Repository::Init(Span<const uint8_t> mkey)
 
         for (char catalog: rk_BlobCatalogNames) {
             for (int i = 0; i < 256; i++) {
-                const char *dirname = Fmt(&temp_alloc, "blobs/%1/%2", catalog, FmtHex(i).Pad0(-2)).ptr;
+                const char *dirname = Fmt(&temp_alloc, "blobs/%1/%2", catalog, FmtHex(i, 2)).ptr;
                 make_directory(dirname);
             }
         }
@@ -261,7 +261,7 @@ bool rk_Repository::ChangeCID()
 static inline FmtArg GetBlobPrefix(const rk_Hash &hash)
 {
     uint16_t prefix = hash.raw[0];
-    return FmtHex(prefix).Pad0(-2);
+    return FmtHex(prefix, 2);
 }
 
 static int64_t PadMe(int64_t len)
@@ -644,7 +644,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
         HeapArray<char> buf(&temp_alloc);
         buf.Reserve(512);
 
-        Fmt(&buf, "tags/P/%1_%2_", FmtHex(prefix), FmtArg(i).Pad0(-2));
+        Fmt(&buf, "tags/P/%1_%2_", FmtHex(prefix), FmtInt(i, 2));
         sodium_bin2base64(buf.end(), buf.Available(), cypher, frag_len + crypto_secretbox_MACBYTES, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
         buf.len += sodium_base64_encoded_len(frag_len + crypto_secretbox_MACBYTES, sodium_base64_VARIANT_URLSAFE_NO_PADDING) - 1;
 

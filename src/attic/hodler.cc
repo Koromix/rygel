@@ -1287,7 +1287,7 @@ Options:
     %!..+-l, --loop%!0                     Build repeatedly until interrupted
 
 Available URL formats: %!..+%4%!0)",
-                FelixTarget, build.base, UrlFormatNames[(int)build.urls], FmtSpan(UrlFormatNames));
+                FelixTarget, build.base, UrlFormatNames[(int)build.urls], FmtList(UrlFormatNames));
     };
 
     // Handle version

@@ -351,6 +351,10 @@ bool pwd_GeneratePassword(unsigned int flags, Span<char> out_password)
         LogError("Refusing to generate password less than 8 characters");
         return false;
     }
+    if (out_password.len > 129) {
+        LogError("Refusing to generate password more than 128 characters");
+        return false;
+    }
 
     // Drop non-sensical combinations
     if (flags & (int)pwd_GenerateFlag::Uppers) {

@@ -298,7 +298,7 @@ const char *s3_MakeURL(const s3_Config &config, Allocator *alloc)
 static FmtArg FormatSha256(const uint8_t sha256[32])
 {
     Span<const uint8_t> hash = MakeSpan(sha256, 32);
-    return FmtHex(hash, FmtType::SmallHex);
+    return FmtHexSmall(hash);
 }
 
 static FmtArg FormatYYYYMMDD(const TimeSpec &date)
@@ -306,7 +306,7 @@ static FmtArg FormatYYYYMMDD(const TimeSpec &date)
     FmtArg arg;
 
     arg.type = FmtType::Buffer;
-    Fmt(arg.u.buf, "%1%2%3", FmtArg(date.year).Pad0(-4), FmtArg(date.month).Pad0(-2), FmtArg(date.day).Pad0(-2));
+    Fmt(arg.u.buf, "%1%2%3", FmtInt(date.year, 4), FmtInt(date.month, 2), FmtInt(date.day, 2));
 
     return arg;
 }

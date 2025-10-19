@@ -72,7 +72,7 @@ Options:
 
     %!..+-f, --force%!0                    Overwrite destination files
 
-Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAlgorithms));
+Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtList(AvailableAlgorithms));
     };
 
     // Parse arguments
@@ -280,7 +280,7 @@ Options:
 
     %!..+-f, --force%!0                    Overwrite destination file
 
-Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAlgorithms));
+Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtList(AvailableAlgorithms));
     };
 
     // Parse arguments
@@ -644,7 +644,7 @@ Options:
         %!..+--brief%!0                    Use brief display (single file only)
 
 Available hash algorithms: %!..+%3%!0)",
-                FelixTarget, HashAlgorithmNames[(int)algorithm], FmtSpan(HashAlgorithmNames));
+                FelixTarget, HashAlgorithmNames[(int)algorithm], FmtList(HashAlgorithmNames));
     };
 
     // Parse arguments

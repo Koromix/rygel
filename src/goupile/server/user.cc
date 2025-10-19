@@ -770,7 +770,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
             static_assert(K_SIZE(code) <= K_SIZE(SessionInfo::secret));
 
             uint32_t rnd = randombytes_uniform(100000000); // 8 digits
-            Fmt(code, "%1", FmtArg(rnd).Pad0(-8));
+            Fmt(code, "%1", FmtInt(rnd, 8));
         }
 
         session = CreateUserSession(type, userid, username, local_key);
@@ -799,7 +799,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
             static_assert(K_SIZE(code) <= K_SIZE(SessionInfo::secret));
 
             uint32_t rnd = randombytes_uniform(1000000); // 6 digits
-            Fmt(code, "%1", FmtArg(rnd).Pad0(-6));
+            Fmt(code, "%1", FmtInt(rnd, 6));
         }
 
         session = CreateUserSession(type, userid, username, local_key);

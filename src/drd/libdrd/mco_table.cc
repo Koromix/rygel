@@ -71,7 +71,7 @@ Span<const char> mco_ProcedureInfo::ExtensionsToStr(Span<char> out_buf) const
 
         for (int i = 1; offset < out_buf.len && value; i++) {
             if (value & 0x1) {
-                offset += Fmt(out_buf.Take(offset, out_buf.len - offset), "-%1,", FmtArg(i).Pad0(-2)).len;
+                offset += Fmt(out_buf.Take(offset, out_buf.len - offset), "-%1,", FmtInt(i, 2)).len;
             }
             value >>= 1;
         }

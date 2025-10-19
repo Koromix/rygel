@@ -111,12 +111,12 @@ void ProduceMcoDiagnoses(http_IO *io, const User *)
                 }
                 if (diag_info.cmd) {
                     json->Key("cmd");
-                    json->String(Fmt(buf, "D-%1", FmtArg(diag_info.cmd).Pad0(-2)).ptr);
+                    json->String(Fmt(buf, "D-%1", FmtInt(diag_info.cmd, 2)).ptr);
                 }
                 if (diag_info.cmd && diag_info.jump) {
                     json->Key("main_list");
-                    json->String(Fmt(buf, "D-%1%2", FmtArg(diag_info.cmd).Pad0(-2),
-                                                   FmtArg(diag_info.jump).Pad0(-2)).ptr);
+                    json->String(Fmt(buf, "D-%1%2", FmtInt(diag_info.cmd, 2),
+                                                    FmtInt(diag_info.jump, 2)).ptr);
                 }
                 if (diag_info.severity) {
                     json->Key("severity"); json->Int(diag_info.severity);

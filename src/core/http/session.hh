@@ -197,8 +197,8 @@ private:
                 uint64_t buf[4];
                 FillRandomSafe(buf, K_SIZE(buf));
                 Fmt(handle->session_key, "%1%2%3%4",
-                    FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16),
-                    FmtHex(buf[2]).Pad0(-16), FmtHex(buf[3]).Pad0(-16));
+                    FmtHex(buf[0], 16), FmtHex(buf[1], 16),
+                    FmtHex(buf[2], 16), FmtHex(buf[3], 16));
             }
 
             bool inserted;
@@ -217,7 +217,7 @@ private:
 
             uint64_t buf[2];
             FillRandomSafe(&buf, K_SIZE(buf));
-            Fmt(handle->session_rnd, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+            Fmt(handle->session_rnd, "%1%2", FmtHex(buf[0], 16), FmtHex(buf[1], 16));
         }
 
         return handle;

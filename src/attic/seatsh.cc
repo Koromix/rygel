@@ -400,7 +400,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
 {
     BlockAllocator temp_alloc;
 
-    LogInfo("Executing '%1' in '%2', arguments: %3", binary, work_dir, FmtSpan(args));
+    LogInfo("Executing '%1' in '%2', arguments: %3", binary, work_dir, FmtList(args));
 
     // Create another pipe to send data for bidirectional communication.
     // I tried to do asynchronous I/O with standard input/output using only one pipe.
@@ -765,7 +765,7 @@ static DWORD WINAPI RunPipeThread(void *pipe)
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         char ctx_buf[1024];
-        Fmt(ctx_buf, "%1[Client %2_%3]", ctx ? ctx : "", FmtArg(instance_id).Pad0(-8), FmtArg(client_id).Pad0(-8));
+        Fmt(ctx_buf, "%1[Client %2_%3]", ctx ? ctx : "", FmtInt(instance_id, 8), FmtInt(client_id, 8));
 
         if (level == LogLevel::Error) {
             CopyString(msg, MakeSpan(err_buf + 1, K_SIZE(err_buf) - 1));

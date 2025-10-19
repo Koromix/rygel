@@ -109,7 +109,7 @@ Here are a few example patterns:
 
             default: {
                 if ((uint8_t)c < 32 || (uint8_t)c >= 128) {
-                    LogError("Illegal pattern byte 0x%1", FmtHex((uint8_t)c).Pad0(-2));
+                    LogError("Illegal pattern byte 0x%1", FmtHex((uint8_t)c, 2));
                 } else {
                     LogError("Unsupported pattern character '%1'", c);
                 }
@@ -510,7 +510,7 @@ Options:
         int code = pwd_ComputeHotp(secret, algorithm, time / 30 + i, digits);
         if (code < 0)
             return 1;
-        PrintLn("%1", FmtArg(code).Pad0(-digits));
+        PrintLn("%1", FmtInt(code, digits));
     }
 
     return 0;
