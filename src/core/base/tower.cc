@@ -33,6 +33,7 @@
     #include <windows.h>
     #include <security.h>
 #else
+    #include <fcntl.h>
     #include <poll.h>
     #include <sys/socket.h>
 #endif
