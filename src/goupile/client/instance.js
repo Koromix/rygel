@@ -2358,11 +2358,19 @@ async function saveRecord(tid, entry, raw, meta, draft) {
             frag.publics.push(key);
     }
 
-    await records.save(tid, entry, frag, ENV.version, {
-        signup: meta.signup,
-        claim: route.page.claim,
-        lock: route.page.lock
-    });
+    let actions = {
+        signup: null,
+        claim: true,
+        lock: false
+    };
+
+    if (!draft) {
+        actions.signup = meta.signup;
+        actions.claim = route.page.claim;
+        actions.lock = route.page.lock;
+    }
+
+    await records.save(tid, entry, frag, ENV.version, actions);
 
     if (!profile.userid)
         await goupile.syncProfile();
