@@ -1795,7 +1795,7 @@ void HandleRecordDelete(http_IO *io, InstanceHolder *instance)
 
         // Get existing thread entries
         sq_Statement stmt;
-        if (!instance->db->Prepare(R"(SELECT IIF(t.lock, -1) AS lock,
+        if (!instance->db->Prepare(R"(SELECT IFNULL(t.lock, -1) AS lock,
                                              IIF(c.userid IS NOT NULL, 1, 0) AS claim,
                                              e.rowid, e.eid, e.anchor, e.tags
                                       FROM rec_threads t
