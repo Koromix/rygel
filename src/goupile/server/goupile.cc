@@ -564,9 +564,9 @@ static void HandleAdminRequest(http_IO *io)
         HandleArchiveDelete(io);
     } else if (TestStr(admin_url, "/api/archives/list") && request.method == http_RequestMethod::Get) {
         HandleArchiveList(io);
-    } else if (StartsWith(admin_url, "/api/archives/files") && request.method == http_RequestMethod::Get) {
+    } else if (StartsWith(admin_url, "/api/archives/files/") && request.method == http_RequestMethod::Get) {
         HandleArchiveDownload(io);
-    } else if (StartsWith(admin_url, "/api/archives/files") && request.method == http_RequestMethod::Put) {
+    } else if (StartsWith(admin_url, "/api/archives/files/") && request.method == http_RequestMethod::Put) {
         HandleArchiveUpload(io);
     } else if (TestStr(admin_url, "/api/users/create") && request.method == http_RequestMethod::Post) {
         HandleUserCreate(io);
@@ -768,13 +768,13 @@ static void HandleInstanceRequest(http_IO *io)
         HandleFilePut(io, instance);
     } else if (StartsWith(instance_url, "/files/") && request.method == http_RequestMethod::Delete) {
         HandleFileDelete(io, instance);
-    } else if (StartsWith(instance_url, "/api/files/history") && request.method == http_RequestMethod::Get) {
+    } else if (TestStr(instance_url, "/api/files/history") && request.method == http_RequestMethod::Get) {
         HandleFileHistory(io, instance);
-    } else if (StartsWith(instance_url, "/api/files/restore") && request.method == http_RequestMethod::Post) {
+    } else if (TestStr(instance_url, "/api/files/restore") && request.method == http_RequestMethod::Post) {
         HandleFileRestore(io, instance);
-    } else if (StartsWith(instance_url, "/api/files/delta") && request.method == http_RequestMethod::Get) {
+    } else if (TestStr(instance_url, "/api/files/delta") && request.method == http_RequestMethod::Get) {
         HandleFileDelta(io, instance);
-    } else if (StartsWith(instance_url, "/api/files/publish") && request.method == http_RequestMethod::Post) {
+    } else if (TestStr(instance_url, "/api/files/publish") && request.method == http_RequestMethod::Post) {
         HandleFilePublish(io, instance);
     } else if (TestStr(instance_url, "/api/records/list") && request.method == http_RequestMethod::Get) {
         HandleRecordList(io, instance);
