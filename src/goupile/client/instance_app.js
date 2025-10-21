@@ -50,7 +50,7 @@ function ApplicationBuilder(app) {
         {
             menu: null,
             autosave: false,
-            sequence: false,
+            sequence: null,
             progress: true,
             enabled: true,
             claim: true,
