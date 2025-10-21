@@ -65,6 +65,8 @@ public:
     LocalDate last_export_day = {};
     int64_t last_export_sequence = -1;
 
+    std::atomic_int64_t reserve_rnd { 0 };
+
     BlockAllocator str_alloc;
 
     K_HASHTABLE_HANDLER(InstanceHolder, key);

@@ -33,11 +33,20 @@ function DataRemote() {
         return thread;
     };
 
+    this.reserve = async function(counters) {
+        let reservation = await Net.post(ENV.urls.instance + 'api/records/reserve', {
+            counters: counters
+        });
+
+        return reservation;
+    };
+
     this.save = async function(tid, entry, frag, fs, actions) {
         let blobs = [];
         let data = await preserve(frag.data, blobs);
 
         await Net.post(ENV.urls.instance + 'api/records/save', {
+            reservation: frag.reservation,
             tid: tid,
 
             eid: entry.eid,

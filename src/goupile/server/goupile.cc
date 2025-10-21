@@ -782,6 +782,8 @@ static void HandleInstanceRequest(http_IO *io)
         HandleRecordGet(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/records/audit") && request.method == http_RequestMethod::Get) {
         HandleRecordAudit(io, instance);
+    } else if (!instance->legacy && TestStr(instance_url, "/api/records/reserve") && request.method == http_RequestMethod::Post) {
+        HandleRecordReserve(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
         HandleRecordSave(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/records/delete") && request.method == http_RequestMethod::Post) {

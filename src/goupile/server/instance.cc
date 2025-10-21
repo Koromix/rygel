@@ -202,6 +202,8 @@ bool InstanceHolder::Open(DomainHolder *domain, InstanceHolder *master, sq_Datab
         title = settings.name;
     }
 
+    reserve_rnd = GetRandomInt64(0, 0xFFFFFFFFFFFF);
+
     return true;
 }
 

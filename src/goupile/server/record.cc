@@ -21,6 +21,7 @@
 #include "instance.hh"
 #include "message.hh"
 #include "record.hh"
+#include "src/core/sqlite/sqlite.hh"
 #include "user.hh"
 #include "vm.hh"
 #include "src/core/request/smtp.hh"
@@ -109,6 +110,11 @@ struct CounterInfo {
     int max = 0;
     bool randomize = false;
     bool secret = false;
+};
+
+struct CounterResult {
+    const char *key = nullptr;
+    int value = 0;
 };
 
 struct SignupInfo {
@@ -1074,7 +1080,7 @@ static const char *TagsToJson(Span<const char *const> tags, Allocator *alloc)
     return buf.Leak().ptr;
 }
 
-static int64_t RunCounter(const CounterInfo &counter, int64_t state, int64_t *out_state)
+static int64_t RunCounter(const CounterInfo &counter, int64_t state, int64_t reservation, int64_t *out_state)
 {
     if (counter.max) {
         K_ASSERT(counter.max >= 1 && counter.max <= 64);
@@ -1084,7 +1090,8 @@ static int64_t RunCounter(const CounterInfo &counter, int64_t state, int64_t *ou
         if (counter.randomize) {
             int range = PopCount(mask);
 
-            int rnd = GetRandomInt(0, range);
+            FastRandom rng((uint64_t)reservation);
+            int rnd = rng.GetInt(0, range);
             int value = -1;
 
             while (rnd >= 0) {
@@ -1159,6 +1166,153 @@ static bool PrepareSignup(const InstanceHolder *instance, const char *username,
     return true;
 }
 
+void HandleRecordReserve(http_IO *io, InstanceHolder *instance)
+{
+    if (!instance->settings.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+    const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!stamp || !stamp->HasPermission(UserPermission::DataSave)) {
+        LogError("User is not allowed to save data");
+        io->SendError(403);
+        return;
+    }
+
+    HeapArray<CounterInfo> counters;
+    {
+        bool success = http_ParseJson(io, Mebibytes(8), [&](json_Parser *json) {
+            bool valid = true;
+
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
+
+                if (key == "counters") {
+                    for (json->ParseObject(); json->InObject(); ) {
+                        CounterInfo counter = {};
+
+                        json->ParseKey(&counter.key);
+                        for (json->ParseObject(); json->InObject(); ) {
+                            Span<const char> key = json->ParseKey();
+
+                            if (key == "key") {
+                                json->ParseString(&counter.key);
+                            } else if (key == "max") {
+                                json->SkipNull() || json->ParseInt(&counter.max);
+                            } else if (key == "randomize") {
+                                json->ParseBool(&counter.randomize);
+                            } else if (key == "secret") {
+                                json->ParseBool(&counter.secret);
+                            } else {
+                                json->UnexpectedKey(key);
+                                valid = false;
+                            }
+                        }
+
+                        counters.Append(counter);
+                    }
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                for (const CounterInfo &counter: counters) {
+                    valid &= CheckKey(counter.key);
+
+                    if (counter.max < 0 || counter.max > 64) {
+                        LogError("Counter maximum must be between 1 and 64");
+                        valid = false;
+                    }
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    int64_t reservation = -1;
+    int64_t sequence = -1;
+    HeapArray<CounterResult> results;
+
+    bool success = instance->db->Transaction([&]() {
+        reservation = instance->reserve_rnd.load();
+
+        // Get current sequence
+        {
+            sq_Statement stmt;
+            if (!instance->db->Prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rec_threads'", &stmt))
+                return false;
+
+            if (stmt.Step()) {
+                sequence = sqlite3_column_int64(stmt, 0) + 1;
+            } else if (stmt.IsValid()) {
+                sequence = 1;
+            } else {
+                return false;
+            }
+        }
+
+        for (CounterInfo &counter: counters) {
+            CounterResult result = {};
+
+            int64_t state;
+            {
+                sq_Statement stmt;
+                if (!instance->db->Prepare("SELECT state FROM seq_counters WHERE key = ?1", &stmt, counter.key))
+                    return false;
+
+                if (stmt.Step()) {
+                    state = sqlite3_column_int64(stmt, 0);
+                } else if (stmt.IsValid()) {
+                    state = 0;
+                } else {
+                    return false;
+                }
+            }
+
+            result.key = counter.key;
+            result.value = RunCounter(counter, state, reservation, &state);
+
+            results.Append(result);
+        }
+
+        return true;
+    });
+    if (!success)
+        return;
+
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
+
+        json->Key("reservation"); json->Int64(reservation);
+        json->Key("sequence"); json->Int64(sequence);
+        json->Key("counters"); json->StartObject();
+        for (const CounterResult &result: results) {
+            json->Key(result.key); json->Int(result.value);
+        }
+        json->EndObject();
+
+        json->EndObject();
+    });
+}
+
 void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 {
     if (!instance->settings.data_remote) {
@@ -1181,6 +1335,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         return;
     }
 
+    int64_t reservation = -1;
     const char *tid = nullptr;
     FragmentInfo fragment = {};
     HeapArray<DataConstraint> constraints;
@@ -1197,7 +1352,9 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
             for (json->ParseObject(); json->InObject(); ) {
                 Span<const char> key = json->ParseKey();
 
-                if (key == "tid") {
+                if (key == "reservation") {
+                    json->ParseInt(&reservation);
+                } else if (key == "tid") {
                     json->ParseString(&tid);
                 } else if (key == "eid") {
                     json->ParseString(&fragment.eid);
@@ -1445,6 +1602,20 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     bool success = instance->db->Transaction([&]() {
         int64_t now = GetUnixTime();
 
+        // Make sure there's no conflict!
+        {
+            int64_t rnd = GetRandomInt64(0, 0xFFFFFFFFFFFF);
+            int64_t reserved = instance->reserve_rnd.exchange(rnd);
+
+            if (reservation >= 0 && reservation != reserved) {
+                LogError("Reservation conflicts, please retry");
+                io->SendError(412);
+                return false;
+            }
+
+            reservation = reserved;
+        }
+
         // Check for existing thread and claim
         bool new_thread;
         bool claimed;
@@ -1672,7 +1843,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 }
             }
 
-            int value = RunCounter(counter, state, &state);
+            int value = RunCounter(counter, state, reservation, &state);
 
             if (!instance->db->Run(R"(UPDATE rec_threads SET counters = json_patch(counters, json_object(?2, ?3)),
                                                              secrets = json_patch(secrets, json_object(?2, ?4))

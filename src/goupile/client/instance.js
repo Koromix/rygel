@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, svg, unsafeHTML } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, LruMap, Mutex,
+import { Util, Log, Net, HttpError, LruMap, Mutex,
          LocalDate, LocalTime, FileReference } from '../../web/core/base.js';
 import * as Data from '../../web/core/data.js';
 import * as mixer from '../../web/core/mixer.js';
@@ -1082,7 +1082,7 @@ function addAutomaticActions(builder, model) {
                         await UI.confirm(e, text, T.continue, () => {});
                     }
 
-                    await saveRecord(form_thread.tid, form_entry, form_raw, form_meta, false);
+                    await saveRecord(form_thread, route.page, form_state, form_entry, form_raw, form_meta, false);
 
                     if (keep) {
                         await openRecord(form_thread.tid, null, route.page);
@@ -1702,7 +1702,7 @@ async function go(e, url = null, options = {}) {
                         clearTimeout(autosave_timer);
                         autosave_timer = null;
 
-                        await saveRecord(form_thread.tid, form_entry, form_raw, form_meta, true);
+                        await saveRecord(form_thread, route.page, form_state, form_entry, form_raw, form_meta, true);
                     } else {
                         await UI.dialog(e, T.context_confirm, {}, (d, resolve, reject) => {
                             d.output(unsafeHTML(T.context_continue));
@@ -1716,7 +1716,7 @@ async function go(e, url = null, options = {}) {
                                 d.action(T.save, {}, async e => {
                                     try {
                                         form_state.triggerErrors(form_model);
-                                        await saveRecord(form_thread.tid, form_entry, form_raw, form_meta, false);
+                                        await saveRecord(form_thread, route.page, form_state, form_entry, form_raw, form_meta, false);
                                     } catch (err) {
                                         reject(err);
                                     }
@@ -2251,7 +2251,7 @@ async function openRecord(tid, anchor, page) {
                 autosave_timer = null;
 
                 data_mutex.run(async () => {
-                    await saveRecord(form_thread.tid, form_entry, form_raw, form_meta, true);
+                    await saveRecord(form_thread, route.page, form_state, form_entry, form_raw, form_meta, true);
                     await openRecord(form_thread.tid, null, page);
 
                     await data_mutex.chain(run);
@@ -2317,49 +2317,70 @@ function runAnnotationDialog(e, intf) {
 }
 
 // Call with data_mutex locked
-async function saveRecord(tid, entry, raw, meta, draft) {
-    let frag = {
-        summary: meta.summary,
-        data: raw,
-        tags: null,
-        constraints: meta.constraints,
-        counters: meta.counters,
-        publics: []
-    };
+async function saveRecord(thread, page, state, entry, raw, meta, draft) {
+    for (;;) {
+        let reservation = await records.reserve(meta.counters);
 
-    // Gather global list of tags for this record entry
-    {
-        let tags = new Set;
-        for (let intf of form_model.variables) {
-            if (Array.isArray(intf.options.tags)) {
-                for (let tag of intf.options.tags)
-                    tags.add(tag.key);
+        thread = Object.assign({}, thread);
+        thread.counters = Object.assign({}, thread.counters);
+        thread.sequence ??= reservation.sequence;
+        for (let key in reservation.counters)
+            thread.counters[key] ??= reservation.counters[key];
+        [_, meta] = await runPage(page, thread, state);
+
+        let frag = {
+            summary: meta.summary,
+            data: raw,
+            tags: null,
+            constraints: meta.constraints,
+            counters: meta.counters,
+            publics: []
+        };
+
+        // Gather global list of tags for this record entry
+        {
+            let tags = new Set;
+            for (let intf of form_model.variables) {
+                if (Array.isArray(intf.options.tags)) {
+                    for (let tag of intf.options.tags)
+                        tags.add(tag.key);
+                }
             }
+            if (draft)
+                tags.add('draft');
+            frag.tags = Array.from(tags);
         }
-        if (draft)
-            tags.add('draft');
-        frag.tags = Array.from(tags);
+
+        // Gather list of public variables
+        for (let key in raw) {
+            if (raw[key].$n?.variable?.public)
+                frag.publics.push(key);
+        }
+
+        let actions = {
+            reservation: reservation.reservation,
+
+            signup: null,
+            claim: true,
+            lock: false
+        };
+
+        if (!draft) {
+            actions.signup = meta.signup;
+            actions.claim = route.page.claim;
+            actions.lock = route.page.lock;
+        }
+
+        try {
+            await records.save(thread.tid, entry, frag, ENV.version, actions);
+            break;
+        } catch (err) {
+            if (!(err instanceof HttpError))
+                throw err;
+            if (err.status != 412)
+                throw err;
+        }
     }
-
-    // Gather list of public variables
-    for (let key in raw) {
-        if (raw[key].$n?.variable?.public)
-            frag.publics.push(key);
-    }
-
-    let actions = {
-        signup: null,
-        claim: true,
-        lock: false
-    };
-
-    if (!draft) {
-        actions.signup = meta.signup;
-        actions.claim = route.page.claim;
-        actions.lock = route.page.lock;
-    }
-
-    await records.save(tid, entry, frag, ENV.version, actions);
 
     if (!profile.userid)
         await goupile.syncProfile();
