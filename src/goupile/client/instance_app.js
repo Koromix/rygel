@@ -49,7 +49,6 @@ function ApplicationBuilder(app) {
     let options_stack = [
         {
             menu: null,
-            warn_unsaved: true,
             autosave: false,
             sequence: false,
             progress: true,
@@ -70,7 +69,6 @@ function ApplicationBuilder(app) {
         tags: { get: () => app.tags, set: tags => { app.tags = tags; }, enumerable: true },
 
         menu: makeOptionProperty('menu'),
-        warnUnsaved: makeOptionProperty('warn_unsaved'),
         autosave: makeOptionProperty('autosave'),
         sequence: makeOptionProperty('sequence'),
         progress: makeOptionProperty('progress'),

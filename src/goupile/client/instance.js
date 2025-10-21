@@ -180,8 +180,6 @@ function hasUnsavedData(fs = true) {
         return false;
     if (route.page.store == null)
         return false;
-    if (!route.page.warn_unsaved)
-        return false;
 
     return form_state.hasChanged();
 }
