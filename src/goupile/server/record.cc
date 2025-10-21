@@ -1803,14 +1803,9 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         }
 
         // Create thread if needed
-        if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets, lock)
-                                  VALUES (?1, '{}', '{}', ?2)
-                                  ON CONFLICT DO UPDATE SET lock = CASE
-                                                                WHEN lock IS NULL THEN excluded.lock
-                                                                WHEN excluded.lock IS NULL THEN lock
-                                                                ELSE MIN(lock, excluded.lock)
-                                                            END)",
-                               tid, (lock >= 0) ? sq_Binding(now + lock) : sq_Binding()))
+        if (new_thread && !instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets)
+                                                VALUES (?1, '{}', '{}')
+                                                ON CONFLICT DO NOTHING)", tid))
             return false;
 
         // Update entry and fragment tags
@@ -1882,7 +1877,10 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
             }
         }
 
-        // Delete claim if requested (and if any)
+        // Lock and unclaim, if needed
+        if (lock >= 0 && !instance->db->Run(R"(UPDATE rec_threads SET lock = IFNULL(MIN(lock, ?2), ?3)
+                                               WHERE tid = ?1)", tid, now + lock, now + lock))
+            return false;
         if (!claim && !instance->db->Run("DELETE FROM ins_claims WHERE userid = ?1 AND tid = ?2",
                                          -session->userid, tid))
             return false;
