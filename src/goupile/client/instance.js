@@ -51,8 +51,8 @@ let form_thread = null;
 let form_entry = null;
 let form_raw = null;
 let form_state = null;
+let form_valid = false;
 let form_model = null;
-let form_builder = null;
 let form_cache = null;
 
 let autosave_timer = null;
@@ -867,89 +867,21 @@ function toggleTagFilter(tag) {
 }
 
 async function renderPage() {
-    let options = {
-        annotate: app.annotate && (route.page.store != null)
-    };
-
-    let model = new FormModel;
-    let builder = new FormBuilder(form_state, model, options);
-    let meta = new MetaModel;
-
-    try {
-        let build = null;
-        let func = null;
-
-        if (route.page.filename != null) {
-            let buffer = code_buffers.get(route.page.filename);
-
-            build = code_builds.get(buffer.sha256);
-            func = build?.func;
-        } else {
-            func = defaultFormPage;
-        }
-
-        if (func == null)
-            throw null;
-
-        await func({
-            app: app,
-            cache: form_cache,
-            form: builder,
-            page: route.page,
-            meta: new MetaInterface(app, route.page, form_thread, meta),
-            thread: form_thread,
-            values: form_state.values
-        });
-
-        addAutomaticActions(builder, model);
-        addAutomaticTags(model.variables);
-
-        render(model.renderWidgets(), page_div);
-        page_div.classList.remove('disabled');
-
-        // Try to map widget code lines for developers
-        if (build?.map != null) {
-            for (let intf of model.widgets) {
-                if (intf.id == null)
-                    continue;
-                if (intf.location == null)
-                    continue;
-
-                let el = page_div.querySelector('#' + intf.id);
-                let wrap = (el != null) ? Util.findParent(el, el => el.classList.contains('fm_wrap')) : null;
-
-                if (wrap != null) {
-                    let line = bundler.mapLine(build.map, intf.location.line, intf.location.column);
-                    wrap.dataset.line = line;
-                }
-            }
-        }
-
-        if (form_state.justTriggered()) {
-            let panel_el = document.querySelector('#ins_page')?.parentNode;
-            panel_el?.scrollTo?.(0, panel_el.scrollHeight);
-        }
-
-        form_model = model;
-        form_builder = builder;
-        form_meta = meta;
-
-        triggerError(route.page.filename, null);
-    } catch (err) {
-        if (!page_div.children.length)
-            render(T.failed_to_build_page, page_div);
-        page_div.classList.add('disabled');
-
-        if (err != null)
-            triggerError(route.page.filename, err);
-    }
-
     let show_menu = (route.page.chain.length > 2 ||
                      route.page.chain[0].children.length > 1);
     let wide_menu = isMenuWide(route.page);
 
+    if (form_valid) {
+        render(form_model.renderWidgets(), page_div);
+        page_div.classList.remove('disabled');
+    } else {
+        if (!page_div.children.length)
+            render(T.failed_to_build_page, page_div);
+        page_div.classList.add('disabled');
+    }
+
     // Quick access to page sections
-    let page_sections = model.widgets.filter(intf => intf.options.anchor).map(intf => ({
+    let page_sections = form_model.widgets.filter(intf => intf.options.anchor).map(intf => ({
         title: intf.label,
         anchor: intf.options.anchor
     }));
@@ -967,7 +899,7 @@ async function renderPage() {
                 </form>
 
                 <div id="ins_actions">
-                    ${model.renderActions()}
+                    ${form_model.renderActions()}
 
                     ${page_sections.length > 1 ? html`
                         <h1>${route.page.title}</h1>
@@ -983,22 +915,22 @@ async function renderPage() {
             ${profile.develop && !isPageEnabled(route.page, form_thread) ?
                 html`<div id="ins_develop">${T.page_disabled_warning}</div>` : ''}
 
-            ${model.actions.length || app.shortcuts.length ? html`
+            ${form_model.actions.length || app.shortcuts.length ? html`
                 <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
                     ${renderShortcuts()}
 
                     <div style="flex: 1;"></div>
-                    ${model.actions.some(action => !action.options.always) ? html`
+                    ${form_model.actions.some(action => !action.options.always) ? html`
                         <div class="drop up right">
                             <button @click=${UI.deployMenu}>${T.other_actions}</button>
                             <div>
-                                ${model.actions.map(action => action.render())}
+                                ${form_model.actions.map(action => action.render())}
                             </div>
                         </div>
                         <hr/>
                     ` : ''}
-                    ${Util.mapRange(0, model.actions.length, idx => {
-                        let action = model.actions[model.actions.length - idx - 1];
+                    ${Util.mapRange(0, form_model.actions.length, idx => {
+                        let action = form_model.actions[form_model.actions.length - idx - 1];
 
                         if (action.label.match(/^\-+$/))
                             return '';
@@ -1138,7 +1070,7 @@ function addAutomaticActions(builder, model) {
             let label = '+' + (next != null ? T.continue : T.save);
 
             builder.action(label, { color: '#2d8261' }, async e => {
-                form_builder.triggerErrors();
+                form_state.triggerErrors(form_model);
 
                 await data_mutex.run(async () => {
                     let keep = goupile.hasPermission('data_read') || route.page.claim;
@@ -1783,7 +1715,7 @@ async function go(e, url = null, options = {}) {
                             if (d.values.save) {
                                 d.action(T.save, {}, async e => {
                                     try {
-                                        form_builder.triggerErrors();
+                                        form_state.triggerErrors(form_model);
                                         await saveRecord(form_thread.tid, form_entry, form_raw, form_meta, false);
                                     } catch (err) {
                                         reject(err);
@@ -1943,6 +1875,26 @@ async function run(push_history = true) {
 
                 data_columns.push(col);
             }
+        }
+
+        // Run page script
+        try {
+            let [model, meta] = await runPage(route.page, form_thread, form_state);
+
+            form_model = model;
+            form_meta = meta;
+            form_valid = true;
+
+            triggerError(route.page.filename, null);
+        } catch (err) {
+            if (form_model == null)
+                form_model = new FormModel();
+            if (form_meta == null)
+                form_meta = new MetaModel();
+            form_valid = false;
+
+            if (err != null)
+                triggerError(route.page.filename, err);
         }
     });
 
@@ -2147,6 +2099,46 @@ async function buildScript(code, variables) {
     return build;
 }
 
+async function runPage(page, thread, state) {
+    let options = {
+        annotate: app.annotate && (page.store != null)
+    };
+
+    let model = new FormModel;
+    let builder = new FormBuilder(state, model, options);
+    let meta = new MetaModel;
+
+    let build = null;
+    let func = null;
+
+    if (page.filename != null) {
+        let buffer = code_buffers.get(page.filename);
+
+        build = code_builds.get(buffer.sha256);
+        func = build?.func;
+    } else {
+        func = defaultFormPage;
+    }
+
+    if (func == null)
+        throw null;
+
+    await func({
+        app: app,
+        cache: form_cache,
+        form: builder,
+        page: page,
+        meta: new MetaInterface(app, page, thread, meta),
+        thread: thread,
+        values: state.values
+    });
+
+    addAutomaticActions(builder, model);
+    addAutomaticTags(model.variables);
+
+    return [model, meta];
+}
+
 function throwParseError(err) {
     let line = err.errors?.[0]?.location?.line;
     let msg = `${T.script_error}\n${line != null ? `${T.row} ${line}${T._colon}` : ''}${err.errors[0].text}`;
@@ -2280,7 +2272,6 @@ async function openRecord(tid, anchor, page) {
     form_cache = {};
 
     form_model = null;
-    form_builder = null;
     form_meta = null;
 
     route.tid = tid;

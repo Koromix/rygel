@@ -30,6 +30,8 @@ let next_id = 0;
 function FormState(raw = null, obj = null) {
     let self = this;
 
+    let restart = false;
+
     // Hook functions
     this.changeHandler = () => {};
     this.annotateHandler = null;
@@ -68,6 +70,41 @@ function FormState(raw = null, obj = null) {
     };
 
     this.justTriggered = function() { return self.just_triggered; };
+
+    this.triggerErrors = function(model) {
+        if (!model.isValid()) {
+            let cleared_set = new Set;
+
+            for (let variable of model.variables) {
+                let key = variable.key;
+
+                if (!cleared_set.has(key.retain)) {
+                    key.retain.take_delayed.clear();
+                    cleared_set.add(key.retain);
+                }
+
+                key.retain.take_delayed.add(key.name);
+            }
+
+            self.restart();
+            self.just_triggered = true;
+
+            throw new Error(T.message(`You did not answer all questions correctly. Please check your answers or add notes.`));
+        }
+    };
+
+    this.restart = function() {
+        if (!restart) {
+            self.just_triggered = false;
+
+            setTimeout(async () => {
+                await self.changeHandler();
+                restart = false;
+            }, 0);
+
+            restart = true;
+        }
+    };
 }
 
 function FormModel() {
@@ -139,8 +176,6 @@ function FormBuilder(state, model, options = {}) {
     let tabs_keys = new Set;
     let tabs_ref;
 
-    let restart = false;
-
     Object.defineProperties(this, {
         widgets: { get: () => model.widgets, enumerable: true },
         widgets0: { get: () => model.widgets0, enumerable: true },
@@ -194,28 +229,6 @@ function FormBuilder(state, model, options = {}) {
             throw new Error(T.message(`Too many calls to function popPath()`));
 
         paths_stack.pop();
-    };
-
-    this.triggerErrors = function() {
-        if (!self.isValid()) {
-            let cleared_set = new Set;
-
-            for (let variable of model.variables) {
-                let key = variable.key;
-
-                if (!cleared_set.has(key.retain)) {
-                    key.retain.take_delayed.clear();
-                    cleared_set.add(key.retain);
-                }
-
-                key.retain.take_delayed.add(key.name);
-            }
-
-            self.restart();
-            state.just_triggered = true;
-
-            throw new Error(T.message(`You did not answer all questions correctly. Please check your answers or add notes.`));
-        }
     };
 
     this.find = key => {
@@ -1703,19 +1716,8 @@ instead of:
         self.restart();
     }
 
-    this.refresh = function() {
-        if (!restart) {
-            state.just_triggered = false;
-
-            setTimeout(async () => {
-                await state.changeHandler();
-                restart = false;
-            }, 0);
-
-            restart = true;
-        }
-    };
-    this.restart = this.refresh;
+    this.refresh = function() { state.restart(); };
+    this.restart = function() { state.restart(); };
 
     function decodeKey(key, options = {}) {
         // Normalize key
