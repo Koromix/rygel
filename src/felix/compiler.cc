@@ -655,7 +655,7 @@ public:
             } break;
 
             case HostPlatform::Linux: {
-                Fmt(&buf, " -pthread -fPIC -D_FILE_OFFSET_BITS=64 -D_GLIBCXX_ASSERTIONS");
+                Fmt(&buf, " -pthread -fPIC -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -D_GLIBCXX_ASSERTIONS");
 
                 if (clang_ver >= 110000) {
                     Fmt(&buf, " -fno-semantic-interposition");
@@ -1366,7 +1366,7 @@ public:
             } break;
 
             case HostPlatform::Linux: {
-                Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition -D_FILE_OFFSET_BITS=64 -D_GLIBCXX_ASSERTIONS");
+                Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -D_GLIBCXX_ASSERTIONS");
 
                 if (features & (int)CompileFeature::Optimize) {
                     Fmt(&buf, " -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=%1", gcc_ver >= 120000 ? 3 : 2);
