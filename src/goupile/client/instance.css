@@ -215,6 +215,7 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: flex; }
 }
 #ins_tasks button { color: black; }
 #ins_tasks .drop > button::after { filter: invert(100%); }
+#ins_tasks .drop > div > button:not(:disabled):hover { color: white; }
 #ins_tasks button.color:not(:disabled) {
     background-color: var(--color);
     border: 1px solid var(--color);
