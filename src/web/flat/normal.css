@@ -43,7 +43,7 @@ body {
     padding: 0;
 
     font-family: 'Open Sans', sans-serif;
-    font-size: 17px;
+    font-size: 16px;
     line-height: 1.5;
 
     background: white;
@@ -172,6 +172,7 @@ a:has(> img) { text-decoration: none !important; }
     padding: 1px;
     color: #383838;
     text-decoration: none;
+    font-size: 1.1em;
 }
 #side a:hover { text-decoration: underline; }
 #side a.active {
