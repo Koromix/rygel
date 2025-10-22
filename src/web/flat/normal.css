@@ -156,7 +156,7 @@ a:has(> img) { text-decoration: none !important; }
 #side menu {
     margin: 0;
     padding: 8px;
-    width: 224px;
+    width: 280px;
     box-sizing: border-box;
 
     position: fixed;
@@ -174,7 +174,10 @@ a:has(> img) { text-decoration: none !important; }
     text-decoration: none;
 }
 #side a:hover { text-decoration: underline; }
-#side a.active { font-weight: bold; }
+#side a.active {
+    font-weight: bold;
+    letter-spacing: -0.6px;
+}
 #side a.lv1 { padding-left: 12px; }
 #side a.lv2 { padding-left: 27px; }
 #side a.lv3 { padding-left: 42px; }
