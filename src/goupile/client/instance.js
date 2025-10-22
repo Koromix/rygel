@@ -2230,9 +2230,6 @@ async function openRecord(tid, anchor, page) {
     if (form_state != null && page == route.page) {
         new_state.state_tabs = form_state.state_tabs;
         new_state.state_sections = form_state.state_sections;
-
-        /* XXX if (new_record.saved && new_record.ulid == form_record.ulid)
-            new_state.take_delayed = form_state.take_delayed; */
     }
 
     // Scroll to top if needed
@@ -2240,6 +2237,10 @@ async function openRecord(tid, anchor, page) {
         let panel_el = document.querySelector('#ins_page')?.parentNode;
         panel_el?.scrollTo?.(0, 0);
     }
+
+    // Restore delayed errors for existing entry
+    if (new_entry.anchor >= 0)
+        new_state.trigger_errors = true;
 
     new_state.changeHandler = async () => {
         await run();

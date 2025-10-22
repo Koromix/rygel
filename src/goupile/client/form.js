@@ -41,11 +41,11 @@ function FormState(raw = null, obj = null) {
     this.click_events = new Set;
 
     // Semi-public UI state
-    this.just_triggered = false;
     this.state_tabs = {};
     this.state_sections = {};
     this.force_changed = false;
     this.has_interaction = false;
+    this.trigger_errors = false;
 
     if (raw == null)
         [raw, obj] = Data.wrap({});
@@ -63,31 +63,20 @@ function FormState(raw = null, obj = null) {
         return true;
     };
 
-    this.markInteraction = function() { self.has_interaction = true; };
+    this.markInteraction = function() {
+        self.trigger_errors = false;
+        self.has_interaction = true;
+    };
     this.markChange = function() {
+        self.trigger_errors = false;
         self.force_changed = true;
         self.has_interaction = true;
     };
 
-    this.justTriggered = function() { return self.just_triggered; };
-
     this.triggerErrors = function(model) {
         if (!model.isValid()) {
-            let cleared_set = new Set;
-
-            for (let variable of model.variables) {
-                let key = variable.key;
-
-                if (!cleared_set.has(key.retain)) {
-                    key.retain.take_delayed.clear();
-                    cleared_set.add(key.retain);
-                }
-
-                key.retain.take_delayed.add(key.name);
-            }
-
+            self.trigger_errors = true;
             self.restart();
-            self.just_triggered = true;
 
             throw new Error(T.message(`You did not answer all questions correctly. Please check your answers or add notes.`));
         }
@@ -95,8 +84,6 @@ function FormState(raw = null, obj = null) {
 
     this.restart = function() {
         if (!restart) {
-            self.just_triggered = false;
-
             setTimeout(async () => {
                 await self.changeHandler();
                 restart = false;
@@ -137,7 +124,10 @@ function FormBuilder(state, model, options = {}) {
         deploy: true,
         untoggle: true,
         wrap: true,
-        annotate: false
+        annotate: false,
+
+        block: true,
+        immediate: false
     }, options);
 
     // Workaround for lack of some date inputs (Firefox, Safari)
@@ -188,8 +178,6 @@ function FormBuilder(state, model, options = {}) {
     this.hasChanged = function() { return state.hasChanged(); };
     this.markInteraction = function() { state.markInteraction(); };
     this.markChange = function() { state.markChange(); };
-
-    this.justTriggered = function() { return state.justTriggered(); };
 
     this.isValid = function() { return model.isValid(); };
     this.hasErrors = function() { return model.hasErrors(); };
@@ -1971,8 +1959,10 @@ instead of:
 
                 if (typeof options == 'boolean')
                     options = { delay: options };
+                if (state.trigger_errors)
+                    key.retain.take_delayed.add(key.name);
 
-                let block = !!(options.block ?? intf.options.block ?? true);
+                let block = !!(options.block ?? intf.options.block);
                 let delay = !!options.delay && !key.retain.take_delayed.has(key.name);
 
                 intf.errors.push({ msg: msg, block: block, delay: delay });
