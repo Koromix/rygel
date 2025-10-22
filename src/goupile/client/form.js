@@ -117,8 +117,8 @@ function FormModel() {
 
     this.valid = true;
 
-    this.isValid = function() { return !self.widgets.some(intf => intf.errors.length); };
-    this.hasErrors = function() { return self.widgets.some(intf => intf.errors.some(err => !err.delayed)); };
+    this.isValid = function() { return self.widgets.every(intf => intf.errors.every(err => !err.block)); };
+    this.hasErrors = function() { return self.widgets.some(intf => intf.errors.some(err => !err.delay)); };
 
     this.render = function() {
         return html`
@@ -1822,7 +1822,7 @@ instead of:
     }
 
     function renderWrappedWidget(intf, frag) {
-        let errors = intf.errors.filter(err => !err.delayed);
+        let errors = intf.errors.filter(err => !err.delay);
 
         let cls = 'fm_widget';
 
@@ -1970,11 +1970,12 @@ instead of:
                 msg = msg || '';
 
                 if (typeof options == 'boolean')
-                    options = { delayed: options };
+                    options = { delay: options };
 
-                let delayed = !!options.delayed && !key.retain.take_delayed.has(key.name);
+                let block = !!(options.block ?? intf.options.block ?? true);
+                let delay = !!options.delay && !key.retain.take_delayed.has(key.name);
 
-                intf.errors.push({ msg: msg, delayed: delayed });
+                intf.errors.push({ msg: msg, block: block, delay: delay });
                 notes.errors.push(msg);
                 model.errors++;
 
