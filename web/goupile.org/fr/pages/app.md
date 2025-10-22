@@ -197,14 +197,14 @@ Les pages enregistrées de manière automatique sont marqués par un **statut de
 
 <div class="screenshot"><img src="{{ ASSET static/help/app/draft.webp }}" height="200" alt=""/></div>
 
-## Verrouillage et finalisation
+## Verrouillage et oubli
 
 Par défaut, les enregistrements Goupile sont modifiables à tout moment. Les droits utilisateurs relatifs aux données distinguent la lecture des données, la sauvegarde et la suppression, sans distinction entre la création et la modification d'un enregistrement.
 
 Goupile propose deux fonctionnalités pour empêcher la modification d'un enregistrement existant, qui peuvent être utilisées séparémment ou bien combinées :
 
-- Le **verrouillage** (ou *lock*) pour que les données soit mises en lecture seule
-- La **finalisation** (ou *unclaim*) pour les utilisateurs en mode invité (ou pour les utilisateurs avec droit de sauvegarde sans droit de lecture)
+- Le **verrouillage** (option *lock*) pour que les données soit mises en lecture seule
+- L'**oubli** (option *forget*) pour les utilisateurs en mode invité (ou pour les utilisateurs avec droit de sauvegarde sans droit de lecture)
 
 ### Verrouillage
 
@@ -233,7 +233,7 @@ app.form("projet", "2 pages", () => {
 
 Les **utilisateurs avec droit d'audit** (DataAudit) peuvent déverrouiller un enregistrement à l'aide du bouton dédié.
 
-### Finalisation
+### Oubli
 
 Cette fonctionnalité concerne deux types d'utilisateurs :
 
@@ -242,17 +242,17 @@ Cette fonctionnalité concerne deux types d'utilisateurs :
 
 Lorsque ces utilisateurs créent un enregistrement dans Goupile, ils obtiennent un droit de lecture et de modification limité aux enregistrements qu'ils ont créé. Dans Goupile, on dit qu'ils ont un *claim* sur l'enregistrement concerné.
 
-Ce **claim peut être supprimé** en définissant l'option `unclaim: true` dans les options de page. Tout comme pour le verrouillage décrit précédemment, cette option peut être utilisée sur la dernière page d'un enregistrement à plusieurs pages: ainsi, l'utilisateur pourra remplir les différentes pages, jusqu'à finaliser le remplissage sur la dernière page.
+Ce **claim peut être supprimé** en définissant l'option `forget: true` dans les options de page. Tout comme pour le verrouillage décrit précédemment, cette option peut être utilisée sur la dernière page d'un enregistrement à plusieurs pages: ainsi, l'utilisateur pourra remplir les différentes pages, jusqu'à finaliser le remplissage sur la dernière page.
 
 ```js
 app.form("projet", "2 pages", () => {
     app.form("vous", "Informations sur le participant")
-    app.form("avis", "Avis sur la journée scientifique", { unclaim: true })
+    app.form("avis", "Avis sur la journée scientifique", { forget: true })
 })
 ```
 
 > [!NOTE]
-> Les utilisateurs avec droit de lecture (DataRead) peuvent **voir tous les enregistrements du projet**. La suppression d'un claim est sans effet pour ces utilisateurs !
+> Les utilisateurs avec droit de lecture (DataRead) peuvent **voir tous les enregistrements du projet**. La suppression du claim (ou oubli) est sans effet pour ces utilisateurs !
 >
 > Utilisez plutôt le [verrouillage](#verrouillage) dans ce cas de figure.
 
