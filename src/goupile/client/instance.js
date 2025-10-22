@@ -1211,23 +1211,30 @@ function addAutomaticTags(variables) {
             intf.options.readonly = true;
         } else if (status.filling == 'check') {
             tags.push('check');
-            intf.errors.length = 0;
+
+            for (let err of intf.errors)
+                err.block = false;
         } else if (status.filling == 'wait') {
             tags.push('wait');
-            intf.errors.length = 0;
+
+            for (let err of intf.errors)
+                err.block = false;
         } else if (status.filling != null) {
             if (intf.missing) {
                 tags.push('na');
-                intf.errors.length = 0;
+
+                for (let err of intf.errors)
+                    err.block = false;
             } else {
                 status.filling = null;
             }
         } else if (intf.missing && intf.options.mandatory) {
             if (form_entry.anchor >= 0 || intf.errors.some(err => !err.delay))
                 tags.push('incomplete');
-        } else if (intf.errors.some(err => !err.delay)) {
-            tags.push('error');
         }
+
+        if (intf.errors.some(err => !err.delay))
+            tags.push('error');
 
         if (Array.isArray(intf.options.tags))
             tags.push(...intf.options.tags);

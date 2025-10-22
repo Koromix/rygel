@@ -33,10 +33,8 @@ function ApplicationInfo(profile) {
         { key: 'wait', label: T.label_wait, color: '#3b96c8', filter: true },
         { key: 'check', label: T.label_check, color: '#2eb5be', filter: true },
         { key: 'na', label: T.label_na, color: '#ef6e30', filter: true },
-
-        { key: 'incomplete', label: T.label_incomplete, color: '#aaaaaa', filter: false },
-        { key: 'control', label: T.label_control, color: '#d9ab46', filter: false },
-        { key: 'error', label: T.label_error, color: '#db0a0a', filter: false }
+        { key: 'incomplete', label: T.label_incomplete, color: '#aaaaaa', filter: true },
+        { key: 'error', label: T.label_error, color: '#db0a0a', filter: true }
     ];
 }
 
