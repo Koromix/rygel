@@ -153,8 +153,8 @@ if (values.num_inclusion && !values.num_inclusion.match(/^[0-9]{5}$/))
 
 ## Données d'autres pages
 
-thread
+*Rédaction en cours*
 
 ## Profil de l'utilisateur
 
-profile
+*Rédaction en cours*
