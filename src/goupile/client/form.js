@@ -2001,7 +2001,7 @@ instead of:
 
         if (intf.options.mandatory && intf.missing) {
             let msg = intf.options.annotate ? T.error_mandatory_unless : T.error_mandatory;
-            intf.error(msg, intf.options.missing_mode !== 'error');
+            intf.error(msg, { delay: true });
         }
 
         model.variables.push(intf);
