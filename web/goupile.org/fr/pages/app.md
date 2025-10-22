@@ -254,7 +254,7 @@ app.form("projet", "2 pages", () => {
 > [!NOTE]
 > Les utilisateurs avec droit de lecture (DataRead) peuvent **voir tous les enregistrements du projet**. La suppression d'un claim est sans effet pour ces utilisateurs !
 >
-> Utilisez plutôt le [verrouillage](#verrouillage) dans ce cas de figure !
+> Utilisez plutôt le [verrouillage](#verrouillage) dans ce cas de figure.
 
 <style>
     .call {
