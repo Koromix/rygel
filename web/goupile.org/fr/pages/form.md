@@ -531,17 +531,9 @@ form.number("age", "Âge", { compact: true })
 
 <div class="screenshot"><img src="{{ ASSET static/help/widgets/compact.webp }}" height="180" alt=""/></div>
 
-# Publication du projet
+## Annotation de variable
 
-Une fois votre formulaire prêt, vous devez le publier pour le rendre accessible à tous les utilisateurs. Le code non publié n'est visible que par les utilisateurs qui utilisent le mode Conception.
-
-Après publication, les utilisateurs pourront saisir des données sur ces formulaires.
-
-Pour ce faire, cliquez sur le bouton Publier en haut à droite du panneau d'édition de code. Ceci affichera le panneau de publication (visible dans la capture à gauche).
-
-<div class="screenshot"><img src="{{ ASSET static/help/dev/publish.webp }}" alt=""/></div>
-
-Ce panneau récapitule les modifications apportées et les actions qu'engendrera la publication. Dans la capture à droite, on voit qu'une page a été modifiée localement (nommée « accueil ») et sera rendue publique après acceptation des modifications.
+XX
 
 <style>
     .call {

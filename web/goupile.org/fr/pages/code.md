@@ -158,27 +158,3 @@ thread
 ## Profil de l'utilisateur
 
 profile
-
-# Ajout de fichiers et d'images
-
-Il est possible d'intégrer des **images, des vidéos, des PDF et tous types de fichiers**, qui seront directement hébergés par Goupile. Pour cela, ouvrez le panneau de publication (accessible au-dessus de l'éditeur), puis cliquez sur le lien « Ajouter un fichier » [1].
-
-<div class="screenshot">
-    <img src="{{ ASSET static/help/dev/file1.webp }}" style="height: 240px;" alt=""/>
-    <img src="{{ ASSET static/help/dev/file2.webp }}" style="height: 240px;" alt=""/>
-</div>
-
-Vous pouvez ensuite sélectionner un fichier à ajouter depuis votre ordinateur, et le renommer si vous le souhaitez. Vous pouvez également le mettre en arborescence en lui donnant un nom tel que « images/alpes/montblanc.png ».
-
-Une fois le fichier ajouté, vous pouvez directement y faire référence dans vos pages à l'aide du widget `form.output`. Le code HTML suivant vous explique comment afficher le logo Apple, à partir d'un fichier `images/apple.png` ajouté au projet :
-
-```js
-form.output(html`
-    <img src=${ENV.urls.files + 'images/apple.png'} alt="Logo Apple" />
-`)
-```
-
-L'utilisation de `ENV.urls.files` pour construire l'URL vous garantit une URL qui changera à chaque publication du projet, pour éviter des problèmes liés au cache des navigateurs. Cependant, chaque fichier est aussi accessible via `/projet/files/images/alpes/montagne.png`, et cette URL est stable depuis l'extérieur de Goupile.
-
-> [!NOTE]
-> Le nom de fichier `favicon.png` est particulier. Si vous mettez une image nommée favicon.png elle remplacera la favicon affichée dans le navigateur, et l'icône affichée sur l'écran de connexion.
