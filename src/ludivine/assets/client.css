@@ -122,7 +122,7 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 #log {
     position: fixed;
     left: 50%;
-    top: 1em;
+    top: calc(var(--top_height) - 10px);
     width: calc(100vw - 2em);
     max-width: 600px;
     z-index: 99999;
@@ -133,18 +133,18 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 }
 
 #log > div {
-    margin-bottom: 8px;
+    margin-bottom: 14px;
     padding: 8px;
     background: #373737;
     color: white;
-    border-radius: 20px;
+    border-radius: 12px;
     text-align: center;
     cursor: pointer;
 }
 @media (hover: hover) {
     #log > div:hover { filter: opacity(40%); }
 }
-#log > div.error { background: #ff6600; }
+#log > div.error { background: var(--bar_color); }
 #log > div.success { background: #2d8261; }
 
 /* Came from https://loading.io/css/ */
