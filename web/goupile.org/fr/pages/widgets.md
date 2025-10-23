@@ -531,10 +531,6 @@ form.number("age", "Âge", { compact: true })
 
 <div class="screenshot"><img src="{{ ASSET static/help/widgets/compact.webp }}" height="180" alt=""/></div>
 
-## Annotation de variable
-
-XX
-
 <style>
     .call {
         font-family: monospace;
