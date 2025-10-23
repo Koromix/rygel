@@ -1,6 +1,6 @@
 # Compiler Goupile
 
-Le serveur Goupile est pour l'instant **uniquement disponible pour Linux** et utilise le **LSM Landlock** (et seccomp), qui nécessite Linux 5.13 ou une version plus récente.
+Le serveur Goupile est pour l'instant **uniquement disponible pour Linux** et utilise le LSM Landlock (et seccomp), qui nécessite Linux 5.13 ou une version plus récente.
 
 > [!NOTE]
 > En effet, sur Linux Goupile peut fonctionner en mode sandboxé grâce à seccomp et LandLock. Le support du sandboxing est envisagé à long terme pour d'autres systèmes d'exploitation mais n'est pas disponible pour le moment.
