@@ -87,10 +87,9 @@ button.confirm { --button_color: #2d8261; }
 button.secondary { --button_color: var(--bar_color); }
 button.secondary.active { color: white !important; }
 button.insist {
-    --button_color: #d33410 !important;
-    --color: white;
-    color: var(--color) !important;
-    transition: --color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    filter: contrast(130%);
+    transform: scale(1.1);
+    transition: filter 0.1s ease, transform 0.2s ease;
 }
 button.small { font-size: 0.7em; }
 button.small > img {
