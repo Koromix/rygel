@@ -139,6 +139,21 @@ form.time("heure_depart", "Heure de départ")
 
 La valeur est représente sous la forme d'un objet `LocalTime`. Ce champ peut également accepter des secondes à condition de définir l'option `seconds: true`.
 
+## Question binaire (oui/non)
+
+Utilisez le widget `form.binary` pour les questions à réponse binaire (Oui ou Non). La valeur est codée en **1 pour Oui et en 0 pour Non**.
+
+```js
+form.binary("hypertension", "Hypertension artérielle")
+```
+
+<div class="screenshot"><img src="{{ ASSET static/help/widgets/binary.webp }}" height="90" alt=""/></div>
+
+Il s'agit en réalité d'un raccourci pour une [question à choix unique](#question-a-choix-unique) dont les propositions sont précodées (et traduites automatiquement).
+
+> [!NOTE]
+> Il existe également un widget `form.boolean` dont la présentation est la même, mais qui code une valeur booléene `true` ou `false` plutôt que 1 ou 0.
+
 ## Question à choix unique
 
 Goupile propose 3 widgets pour créer une question contenant plusieurs propositions, et pour laquelle seule un choix peut être sélectionné. Ces widgets diffèrent par leur aspect visuel, et le choix du widget approprié dépend de vos préférences, de la question posée, et du nombre de propositions.
