@@ -281,12 +281,9 @@ void HandleRegister(http_IO *io)
 
         bool valid = sqlite3_column_int(stmt, 0);
 
-        uid = (const char *)sqlite3_column_text(stmt, 1);
-        registration = sqlite3_column_int(stmt, 2);
-
-        if (!valid) {
-            if (!SendExistingMail(mail, io->Allocator()))
-                return;
+        if (valid) {
+            uid = DuplicateString((const char *)sqlite3_column_text(stmt, 1), io->Allocator()).ptr;
+            registration = sqlite3_column_int(stmt, 2);
 
             io->SendText(200, "{}", "application/json");
             return;
@@ -295,8 +292,13 @@ void HandleRegister(http_IO *io)
         uid = DuplicateString(uid, io->Allocator()).ptr;
     }
 
-    if (!SendNewMail(mail, uid, tkey, registration, io->Allocator()))
-        return;
+    if (uid) {
+        if (!SendNewMail(mail, uid, tkey, registration, io->Allocator()))
+            return;
+    } else {
+        if (!SendExistingMail(mail, io->Allocator()))
+            return;
+    }
 
     io->SendText(200, "{}", "application/json");
 }
