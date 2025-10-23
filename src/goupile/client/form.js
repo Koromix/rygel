@@ -638,10 +638,10 @@ function FormBuilder(state, model, options = {}) {
     }
 
     this.binary = function(key, label, options = {}) {
-        return self.enum(key, label, [[1, 'Oui'], [0, 'Non']], options);
+        return self.enum(key, label, [[1, T.yes], [0, T.no]], options);
     };
     this.boolean = function(key, label, options = {}) {
-        return self.enum(key, label, [[true, 'Oui'], [false, 'Non']], options);
+        return self.enum(key, label, [[true, T.yes], [false, T.no]], options);
     };
 
     this.enumDrop = function(key, label, props = [], options = {}) {
