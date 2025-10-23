@@ -87,7 +87,7 @@ app.form("projet", "Validation", {
     app.form("inclusion", "Inclusion du patient")
 
     // Le bilan ne sera disponible que si la variable "ok" est égale à 1
-    app.form("bilan", "Bilan initial", { enabled: thread => thread.entries.inclusion?.data?.ok == 1 })
+    app.form("bilan", "Bilan initial", { enabled: thread => thread.data.inclusion.ok == 1 })
 })
 ```
 
@@ -104,7 +104,7 @@ Voici un exemple plus complet, avec une page d'inclusion et deux pages de suivi,
 app.form("projet", "Validation", () => {
     app.form("inclusion", "Inclusion du patient")
 
-    app.pushOptions({ enabled: thread => thread.entries.inclusion?.data?.ok == 1 })
+    app.pushOptions({ enabled: thread => thread.data.inclusion.ok == 1 })
 
     app.form("bilan", "Bilan initial")
     app.form("suivi1", "Suivi à 1 mois")

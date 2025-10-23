@@ -2180,7 +2180,8 @@ async function openRecord(tid, anchor, page) {
             counters: {},
             saved: false,
             locked: false,
-            entries: []
+            entries: [],
+            data: null
         };
     }
 
@@ -2218,6 +2219,18 @@ async function openRecord(tid, anchor, page) {
         }
 
         new_thread.entries = mapEntries(new_thread.entries);
+        new_thread.data = {};
+
+        for (let store of app.stores) {
+            let data = new_thread.entries[store.key]?.data;
+
+            if (data == null) {
+                let [raw, obj] = Data.wrap({});
+                data = obj;
+            }
+
+            new_thread.data[store.key] = data;
+        }
     } else {
         new_raw = null;
         new_state = new FormState;
