@@ -1,58 +1,20 @@
 # Tableau de suivi
 
+## Suivi de remplissage
+
 Chaque enregistrement alimente le tableau de suivi, accessible via le panneau de données (encadré en rouge ci-dessous). Ce tableau de suivi est affiché par défaut lorsque vous vous connectez à un projet Goupile.
 
 Le **tableau de suivi** comprend une ligne par enregistrement, ainsi que les colonnes suivantes :
 
-- Un [identifiant séquentiel](code#tid-et-sequence) spécifique de chaque enregistrement
+- Un [identifiant séquentiel](identifiers#tid-et-sequence) spécifique de chaque enregistrement
 - La date de création de l'enregistrement
-- Une colonne par page, avec son statut de remplissage et éventuellement le [summary](code#summary) (si il existe)
+- Une colonne par page, avec son statut de remplissage et éventuellement le [summary](identifiers#summary) (si il existe)
 
 <div class="screenshot"><img src="{{ ASSET static/help/data/data.webp }}" height="260" alt=""/></div>
 
 Au-dessus du tableau se trouvent différents filtres relatifs aux [annotations](#filtres-d-affichage) détaillés plus loin.
 
 Les boutons d'export sont situés sous le tableau. Ils ne sont visibles que par les utilisateurs avec les droits correspondants.
-
-# Annotations
-
-## Annotation des variables
-
-Chaque variable peut être annotée avec un statut, un commentaire libre, et verrouillée si besoin (uniquement par les utilisateurs avec le droit d'audit). Cliquez sur le petit stylet 🖊 à côté de la variable pour l'annoter.
-
-<div class="screenshot"><img src="{{ ASSET static/help/data/annotate1.webp }}" height="280" alt=""/></div>
-
-Préciser le statut de la variable **permet de ne pas répondre** même lorsque la question est obligatoire. Les statuts disponibles sont les suivants :
-
-- *En attente* : ce statut est utilisé lorsque l'information n'est pas encore disponible (par exemple, un résultat de biologie médicale)
-- *À vérifier* : ce statut indique que la valeur renseignée n'est pas certaine, et devrait être vérifiée
-- *Ne souhaite par répondre (NSP)* : ce statut indique un refus de répondre, même si la question est obligatoire
-- *Non applicable (NA)* : la question n'est pas applicable ou pas pertinente
-- *Information non disponible (ND)* : l'information nécessaire n'est pas connue (par exemple, erreur ou oubli de mesure)
-
-Les *statuts NSP, NA et ND ne sont pas disponibles* dès l'instant où une valeur est renseignée.
-
-<div class="screenshot">
-    <img src="{{ ASSET static/help/data/annotate2.webp }}" height="200" alt=""/>
-    <img src="{{ ASSET static/help/data/annotate3.webp }}" height="200" alt=""/>
-</div>
-
-Vous pouvez également ajouter un commentaire libre en annotation, qui peut servir au suivi du remplissage.
-
-Les utilisateurs avec le droit d'audit (DataAudit) peuvent verrouiller la valeur, qui ne pourra alors plus être modifiée à moins d'être déverrouillée.
-
-> [!NOTE]
-> Le système d'annotation n'apparait pas par défaut dans les projets créés avec une version plus ancienne de Goupile.
->
-> Modifiez le script de projet pour activer cette fonctionnalité :
->
-> ```js
-> app.annotate = true
->
-> app.form("projet", "Titre", () => {
->     // ...
-> })
-> ```
 
 ## Filtres d'affichage
 
@@ -98,8 +60,8 @@ Chaque page est exportée dans un onglet séparé du fichier XLSX, dont le nom c
 
 Les colonnes de chaque onglet sont organisées comme suit :
 
-- Colonne `__tid` : [identifiant TID](code#tid-et-sequence) de l'enregistrement
-- Colonne `__sequence` : [identifiant séquence](code#tid-et-sequence) de l'enregistrement
+- Colonne `__tid` : [identifiant TID](identifiers#tid-et-sequence) de l'enregistrement
+- Colonne `__sequence` : [identifiant séquence](identifiers#tid-et-sequence) de l'enregistrement
 - Une colonne par variable, nommée à partir de la clé de la variable, en dehors des questions à choix multiples qui sont exportées dans plusieurs colonnes (une modalité par colonne nommée `variable.modalite`)
 
 <div class="screenshot"><img src="{{ ASSET static/help/data/export3.webp }}" height="200" alt=""/></div>

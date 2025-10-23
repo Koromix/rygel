@@ -29,7 +29,7 @@ Avec cette structure simple, le recueil sera structuré selon la capture ci-dess
 <div class="screenshot"><img src="{{ ASSET static/help/app/status.webp }}" height="240" alt=""/></div>
 
 > [!NOTE]
-> Chaque page d'un formulaire dispose de sa propre table de données, ces tables sont reliées entre elles par un [identifiant TID](code#tid-et-sequence), qui est un numéro d'enregistrement unique et aléatoire.
+> Chaque page d'un formulaire dispose de sa propre table de données, ces tables sont reliées entre elles par un [identifiant TID](identifiers#tid-et-sequence), qui est un numéro d'enregistrement unique et aléatoire.
 >
 > Lors de l'export, les données des deux pages seront exportées dans deux tables séparées (deux onglets dans un export XLSX), qui pourront être reliées par la colonne `__TID`.
 
@@ -61,7 +61,7 @@ app.form("projet", "Validation d'échelle", () => {
 
 ## Système d'annotation
 
-Goupile propose un système d'annotations de variables, chaque variable peut être accompagnée d'un statut de remplissage et d'un commentaire libre. Consultez la documentation sur les [variable annotées](export#annotation-des-variables) pour en savoir plus.
+Goupile propose un système d'annotations de variables, chaque variable peut être accompagnée d'un statut de remplissage et d'un commentaire libre. Consultez la documentation sur les [variable annotées](checks#annotation-des-variables) pour en savoir plus.
 
 Cette fonctionnalité n'est pas activée par défaut pour des raisons historiques. Vous devez l'activer avec l'option `app.annotate` comme ceci :
 
@@ -92,9 +92,9 @@ app.form("projet", "Validation", {
 ```
 
 > [!TIP]
-> Consultez la documentation concernant l'utilisation de [données d'autres page](code#donnees-d-autres-pages) pour manier l'objet `thread` utilisé ci-dessus.
+> Consultez la documentation concernant l'utilisation de [données d'autres page](variables#donnees-d-autres-pages) pour manier l'objet `thread` utilisé ci-dessus.
 >
-> Celui-ci permet entre autres d'accéder aux données des pages remplies, aux [identifiants](code#identifiants-des-enregistrements) (TID, séquence, compteurs, randomisation non-aveugle), et à d'autres métadonnées.
+> Celui-ci permet entre autres d'accéder aux données des pages remplies, aux [identifiants](identifiers) (TID, séquence, compteurs, randomisation non-aveugle), et à d'autres métadonnées.
 
 Voici un exemple plus complet, avec une page d'inclusion et deux pages de suivi, qui ne sont activées qu'après vérification de critères d'inclusion (âge et partage des données) :
 

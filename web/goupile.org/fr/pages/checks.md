@@ -1,111 +1,3 @@
-# Identifiants des enregistrements
-
-## TID et séquence
-
-Chaque enregistrement dans Goupile dispose de deux identifiants uniques :
-
-- Un **identifiant TID**, qui est une chaîne de 26 caractères encodant le moment de l'enregistrement et une partie aléatoire (ex : *01K5EY3SCEM1D1NBABXXDZW7XP*).
-- Un **identifiant de séquence**, qui est un nombre incrémenté à chaque enregistrement, en commençant par 1.
-
-Utilisez le TID pour faire la jointure entre les différentes tables dans les données exportées. La valeur du TID est disponible dans la colonne `__tid` de chaque table.
-
-## Summary
-
-Pour chaque page du formulaire, il est possible de définir un identifiant supplémentaire dit *summary*, qui sera affiché à la place de la date dans le tableau récapitulatif des enregistements (voir capture ci-dessous).
-
-Pour cela, assignez une valeur à `meta.summary` dans le script de formulaire. Dans l'exemple ci-dessous, la valeur affichée dans la colonne « Introduction » est construite en fonction de l'âge indiqué dans la variable correspondante :
-
-```js
-form.number("*age", "Âge", {
-    min: 0,
-    max: 120
-})
-
-if (values.age != null)
-    meta.summary = values.age + (values.age > 1 ? ' ans' : ' an')
-```
-
-<div class="screenshot"><img src="{{ ASSET static/help/dev/summary.webp }}" height="200" alt=""/></div>
-
-Vous pouvez utiliser cette fonctionnalité pour afficher un numéro d'inclusion créé manuellement (par exemple si le numéro d'inclusion est créé en dehors de Goupile), comme le montre l'exemple ci-dessous :
-
-```js
-form.number("num_inclusion", "Numero d'inclusion")
-meta.summary = values.num_inclusion
-```
-
-## Compteurs personnalisés
-
-Il est possible de créer des compteurs personnalisés, qui sont **incrémentés pour chaque enregistrement** (en commençant à 1) en fonction de conditions définies par le code.
-
-La fonction `meta.count(key, secret = false)` est utilisée pour créer un compteur.
-
-L'exemple ci-dessous illustre l'utilisation de cette fonctionnalité pour diviser les patients en 3 groupes. Après chaque enregistrement, l'un des trois compteurs suivant est incrémenté et affecté au participant :
-
-- *tabagisme_actif* : compte le nombre de patients activement fumeur
-- *tabagisme_sevre* : compte le nombre de patients ayant arrêté de fumer
-- *tabagisme_non* : compte le nombre de patients n'ayant jamais fumé
-
-```js
-form.enum("tabagisme", "Tabagisme", [
-    ["actif", "Tabagisme actif"],
-    ["sevre", "Tabagisme sevré"],
-    ["non", "Non fumeur"]
-])
-
-if (values.tabagisme)
-    meta.count("tabac_" + values.tabagisme)
-```
-
-Après inclusion de plusieurs patients, la valeur du compteur de chaque participant est disponible dans l'export, dans l'onglet `@counters` du fichier XLSX. La capture ci-dessous contient 3 participants : le premier est un ancien fumeur, les deux suivants sont des fumeurs actifs :
-
-<div class="screenshot"><img src="{{ ASSET static/help/dev/count.webp }}" height="200" alt=""/></div>
-
-## Randomisation
-
-Le système de randomisation de Goupile est une **extension des compteurs** introduits précédemment.
-
-Utilisez la fonction `meta.randomize(key, max, secret = false)` pour assigner un compteur. Le compteur randomisé n'est pas séquentiel, chaque participant reçoit une valeur aléatoire entre 1 et *max*, par bloc de taille *max*.
-Une fois que *max* participants ont été inclus, le compteur est remis à zéro pour les inclusions suivantes.
-
-Par exemple, une valeur maximale de 4 garantit que les 4 premiers participants auront les valeurs 1, 2, 3 et 4 dans un ordre randomisé. Il en sera de même pour les 4 suivants :
-
-```js
-meta.randomize("groupe", 4)
-```
-
-Comme dans l'exemple sur les compteurs séquentiels, vous pouvez *stratifier la randomisation* en utilisant une clé différente, qui peut dépendre d'une variable présente dans le formulaire.
-
-L'exemple ci-dessous effectue une randomisation stratfiée par le genre, les patients auront une numéro de randomisation qui dépend de leur genre :
-
-- *groupe_H* : randomisation des hommes
-- *groupe_F* : randomisation des femmes
-- *groupe_NB* : randomisation des individus non-bnaires
-
-```js
-form.enum("genre", "Genre", [
-    ["H", "Homme"],
-    ["F", "Femme"],
-    ["NB", "Non-binaire"]
-])
-
-if (values.genre)
-    meta.count("groupe_" + values.genre)
-```
-
-La valeur de chaque compteur randomisé est disponible dans l'onglet `@counters` du fichier d'export. La capture ci-dessous illustre le groupe affecté à 8 inclusions, avec un appel à `meta.randomize("groupe", 4)`.
-
-<div class="screenshot"><img src="{{ ASSET static/help/dev/randomize.webp }}" height="200" alt=""/></div>
-
-Par défaut, les compteurs ne sont pas secrets, c'est à dire qu'ils peuvent être lus depuis une autre page du formuaire, et affichés ou utilisés pour adapter les pages.
-
-Pour définir un compteur secret, qui ne sera disponible que dans le fichier d'export final, mettez le troisième paramètre `secret` de la fonction de randomisation à *true* :
-
-```js
-// Randomisation secrète
-meta.randomize("groupe", 4, true)
-```
-
 # Erreurs et contrôles
 
 Les détection d'erreurs est utile à deux fins :
@@ -118,10 +10,10 @@ Les détection d'erreurs est utile à deux fins :
 Goupile propose un système d'erreurs pour répondre à ces besoins, on distingue deux types d'erreurs :
 
 - Les **erreurs bloquantes** empêchent l'utilisateur d'enregistrer son formulaire, qui doit soit les corriger soit [annoter la variable](#annotations-de-saisie) pour neutraliser le blocage
-- Les **erreurs non bloquantes** ne gênent pas l'enregistrement, elles sont enregistrées en base et les enregistrements en erreur sont signalés dans le [tableau de suivi](export#tableau-de-suivi)
+- Les **erreurs non bloquantes** ne gênent pas l'enregistrement, elles sont enregistrées en base et les enregistrements en erreur sont signalés dans le [tableau de suivi](data#tableau-de-suivi)
 
 > [!NOTE]
-> Une erreur bloquante peut être contournée en [annotant la variable](export#annotation-des-variables).
+> Une erreur bloquante peut être contournée en [annotant la variable](#annotation-des-variables).
 >
 > Vous pouvez désactiver l'annotation d'une variable avec l'option `annotate: false`, et obliger l'utilisateur à saisir une valeur correcte pour valider l'enregistrement.
 
@@ -234,12 +126,43 @@ if (values.num_inclusion && !values.num_inclusion.match(/^[0-9]{5}$/))
     form.error("num_inclusion", "Format incorrect (5 chiffres attendus)", { delay: true })
 ```
 
-# Manipulation des valeurs
+# Annotation des variables
 
-## Données d'autres pages
+> [!NOTE]
+> Le système d'annotation n'apparait pas par défaut dans les projets créés avec une version plus ancienne de Goupile.
+>
+> Modifiez le script de projet pour activer cette fonctionnalité :
+>
+> ```js
+> app.annotate = true
+>
+> app.form("projet", "Titre", () => {
+>     // ...
+> })
+> ```
 
-*Rédaction en cours*
+Chaque variable peut être annotée avec un statut, un commentaire libre, et verrouillée si besoin (uniquement par les utilisateurs avec le droit d'audit). Cliquez sur le petit stylet 🖊 à côté de la variable pour l'annoter.
 
-## Profil de l'utilisateur
+<div class="screenshot"><img src="{{ ASSET static/help/data/annotate1.webp }}" height="280" alt=""/></div>
 
-*Rédaction en cours*
+Préciser le statut de la variable **permet de ne pas répondre** même lorsque la question est obligatoire. Les statuts disponibles sont les suivants :
+
+- *En attente* : ce statut est utilisé lorsque l'information n'est pas encore disponible (par exemple, un résultat de biologie médicale)
+- *À vérifier* : ce statut indique que la valeur renseignée n'est pas certaine, et devrait être vérifiée
+- *Ne souhaite par répondre (NSP)* : ce statut indique un refus de répondre, même si la question est obligatoire
+- *Non applicable (NA)* : la question n'est pas applicable ou pas pertinente
+- *Information non disponible (ND)* : l'information nécessaire n'est pas connue (par exemple, erreur ou oubli de mesure)
+
+Les *statuts NSP, NA et ND ne sont pas disponibles* dès l'instant où une valeur est renseignée.
+
+<div class="screenshot">
+    <img src="{{ ASSET static/help/data/annotate2.webp }}" height="200" alt=""/>
+    <img src="{{ ASSET static/help/data/annotate3.webp }}" height="200" alt=""/>
+</div>
+
+Vous pouvez également ajouter un commentaire libre en annotation, qui peut servir au suivi du remplissage.
+
+Les utilisateurs avec le droit d'audit (DataAudit) peuvent verrouiller la valeur, qui ne pourra alors plus être modifiée à moins d'être déverrouillée.
+
+> [!TIP]
+> Consultez la documentation sur le [tableau de suivi](data#filtres-d-affichage) pour repérer et filtrer les enregistrements annotés.

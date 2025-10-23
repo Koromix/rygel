@@ -9,6 +9,20 @@ Faites attention à ne pas mélanger des données de test et des données réell
 > [!TIP]
 > Une exception existe : si vous **supprimez tous les enregistrements** (par exemple après avoir terminé les tests de votre projet, avant la mise en production), le numéro de séquence est remis à sa valeur initiale et le premier enregistrement aura le numéro de séquence 1.
 
+# Publication du projet
+
+Une fois votre formulaire prêt, vous devez le publier pour le rendre accessible à tous les utilisateurs. Le code non publié n'est visible que par les utilisateurs qui utilisent le mode Conception.
+
+Après publication, les utilisateurs pourront saisir des données sur ces formulaires.
+
+Pour ce faire, cliquez sur le bouton Publier en haut à droite du panneau d'édition de code. Ceci affichera le panneau de publication (visible dans la capture à gauche).
+
+<div class="screenshot"><img src="{{ ASSET static/help/dev/publish.webp }}" alt=""/></div>
+
+Ce panneau récapitule les modifications apportées et les actions qu'engendrera la publication. Dans la capture à droite, on voit qu'une page a été modifiée localement (nommée « accueil ») et sera rendue publique après acceptation des modifications.
+
+Validez les modifications, et **tous les utilisateurs auront accès** à la nouvelle version du formulaire.
+
 # Ajout de fichiers et d'images
 
 Il est possible d'intégrer des **images, des vidéos, des PDF et tous types de fichiers**, qui seront directement hébergés par Goupile. Pour cela, ouvrez le panneau de publication (accessible au-dessus de l'éditeur), puis cliquez sur le lien « Ajouter un fichier » [1].
@@ -32,17 +46,3 @@ L'utilisation de `ENV.urls.files` pour construire l'URL vous garantit une URL qu
 
 > [!NOTE]
 > Le nom de fichier `favicon.png` est particulier. Si vous mettez une image nommée favicon.png elle remplacera la favicon affichée dans le navigateur, et l'icône affichée sur l'écran de connexion.
-
-# Publication du projet
-
-Une fois votre formulaire prêt, vous devez le publier pour le rendre accessible à tous les utilisateurs. Le code non publié n'est visible que par les utilisateurs qui utilisent le mode Conception.
-
-Après publication, les utilisateurs pourront saisir des données sur ces formulaires.
-
-Pour ce faire, cliquez sur le bouton Publier en haut à droite du panneau d'édition de code. Ceci affichera le panneau de publication (visible dans la capture à gauche).
-
-<div class="screenshot"><img src="{{ ASSET static/help/dev/publish.webp }}" alt=""/></div>
-
-Ce panneau récapitule les modifications apportées et les actions qu'engendrera la publication. Dans la capture à droite, on voit qu'une page a été modifiée localement (nommée « accueil ») et sera rendue publique après acceptation des modifications.
-
-Validez les modifications, et **tous les utilisateurs auront accès** à la nouvelle version du formulaire.
