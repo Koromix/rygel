@@ -2,11 +2,11 @@
 
 Une fois le serveur Goupile déployé, vous pouvez effectuer la configuration initiale en ouvrant l'URL de l'application (par exemple `http://localhost:8889`) et en cliquant sur le lien d'administration.
 
-<div class="screenshot"><img src="{{ ASSET static/help/app/admin.webp }}" height="240" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/root.webp }}" height="240" alt=""/></div>
 
 Un **domaine Goupile** correspond à l'ensemble des projets et des utilisateurs Goupile. Lorsque vous installez un domaine, vous devez commencer par accéder à l'écran d'installation afin de configurer Goupile, créer le premier compte super-administrateur, et récupérer la clé d'archive :
 
-<div class="screenshot"><img src="{{ ASSET static/help/app/install.webp }}" height="500" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/install.webp }}" height="500" alt=""/></div>
 
 Parmi les réglages initiaux figurent :
 
@@ -17,7 +17,7 @@ Vous devez également créer le *premier utilisateur*, qui aura les droits de su
 
 Enfin, enregistrez bien la **clé d'archive** dans un lieu sécurité (par exemple votre gestionnaire de mots de passe). Cette clé sera nécessaire à la restauration des archives Goupile si vous utilisez cette fonctionnalité. Si elle est perdue, elle ne peut pas être et récupérée les archives existantes ne pourront pas être restaurées.
 
-<div class="screenshot"><img src="{{ ASSET static/help/app/key.webp }}" height="100" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/key.webp }}" height="100" alt=""/></div>
 
 > [!NOTE]
 > Cependant, si vous la perdez, une nouvelle clé (différente) peut être paramétrée et les archives créées après le changement pourront être restaurées avec cette nouvelle clé.
@@ -28,10 +28,10 @@ Une fois Goupile installé, des options supplémentaires sont disponibles.
 
 Ouvrez le panneau de configuration global en cliquant avec le lien "Configurer le domaine" indiqué sur la capture ci-dessous :
 
-<div class="screenshot"><img src="{{ ASSET static/help/app/config.webp }}" height="160" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/config.webp }}" height="160" alt=""/></div>
 
 ## SMTP
 
 Certaines fonctionnalités nécessitent l'envoi de mails (par exemple le système d'inscription personnalisé). Vous devez configurer un serveur SMTP pour permettre l'envoi de mails par Goupile.
 
-<div class="screenshot"><img src="{{ ASSET static/help/app/smtp.webp }}" height="300" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/smtp.webp }}" height="300" alt=""/></div>

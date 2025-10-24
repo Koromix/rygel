@@ -32,6 +32,11 @@ Dans la capture ci-dessus, seuls les enregistrements avec le statut « À véri
 
 # Exports de données
 
+Les données receuillies peuvent être exportées dans un fichier XLSX que vous pouvez ouvrir dans votre tableur ou chargé dans un logiciel d'analyse (comme R).
+
+> [!NOTE]
+> Vous pouvez créer des exports manuellement (voir ci-dessous) ou bien paramétrer des [exports automatisés](instances#exports-automatises) dans le module d'administration de Goupile.
+
 ## Réaliser un export
 
 Utilisez le bouton « Créer un export » sous le tableau de suivi pour exporter les données au format XLSX.

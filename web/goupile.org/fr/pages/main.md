@@ -26,7 +26,7 @@ Pour définir un projet avec plusieurs pages dans Goupile, il est nécessaire d'
 
 Avec cette structure simple, le recueil sera structuré selon la capture ci-dessous :
 
-<div class="screenshot"><img src="{{ ASSET static/help/app/status.webp }}" height="240" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/main/status.webp }}" height="240" alt=""/></div>
 
 > [!NOTE]
 > Chaque page d'un formulaire dispose de sa propre table de données, ces tables sont reliées entre elles par un [identifiant TID](identifiers#tid-et-sequence), qui est un numéro d'enregistrement unique et aléatoire.
@@ -37,7 +37,7 @@ Avec cette structure simple, le recueil sera structuré selon la capture ci-dess
 
 L'imbrication des pages définit également la hiérachie de menu du projet. C'est ce que montre l'exemple suivant, plus proche d'un projet réel (avec une inclusion et 2 temps de recueil), avec un menu hiérarchique qui sépare bien les temps de recueil :
 
-<div class="screenshot"><img src="{{ ASSET static/help/app/menu.webp }}" height="280" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/main/menu.webp }}" height="280" alt=""/></div>
 
 Le code de projet qui correspond à la structure du formulaire présenté en capture est disponible ci-dessous :
 
@@ -184,7 +184,7 @@ app.form("projet", "6 pages", {
 
 Par défaut, les données ne sont enregistrées que lors de la validation par le bouton Enregistrer. L'enregistrement implique un formulaire entièrement valide, pour lequel les oublis et les erreurs sont corrigées ou annotées.
 
-<div class="screenshot"><img src="{{ ASSET static/help/app/save.webp }}" height="240" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/main/save.webp }}" height="240" alt=""/></div>
 
 Vous pouvez opter pour un mode de sauvegarde automatique. Dans ce cas, les changements effectués sont enregistrés à intervalle régulier, sans erreur bloquante. Utilisez le paramètre `autosave` en précisant le délai d'enregistrement en millisecondes.
 
@@ -195,7 +195,7 @@ app.form("auto", "Sauvegarde automatique", { autosave: 5000 })
 
 Les pages enregistrées de manière automatique sont marqués par un **statut de brouillon**, qui est visible et peut être filtré dans le tableau de suivi. Le bouton d'enregistrement reste disponible même en mode de sauvegarde automatique; il permet de valider les données et de faire disparaitre le statut de brouillon.
 
-<div class="screenshot"><img src="{{ ASSET static/help/app/draft.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/main/draft.webp }}" height="200" alt=""/></div>
 
 ## Verrouillage et oubli
 
