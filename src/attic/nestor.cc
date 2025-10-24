@@ -104,6 +104,23 @@ static bool LooksLikeURL(const char *path)
     return StartsWith(path, "://");
 }
 
+static bool IsAllowed(FileType type)
+{
+    if (type == FileType::Directory)
+        return true;
+    if (type == FileType::File)
+        return true;
+    if (config.follow_symlinks && type == FileType::Link)
+        return true;
+
+    return false;
+}
+
+static bool IsDirectory(FileType type)
+{
+    return type == FileType::Directory;
+}
+
 void Config::AppendSource(const char *path, Span<const char> root_directory)
 {
     SourceInfo src = {};
@@ -373,6 +390,7 @@ R"(<!DOCTYPE html>
                 text-align: right;
             }
             tr.directory a { color: #383838; }
+            tr.other { text-decoration: line-through; }
         </style>
     </head>
     <body>
@@ -387,7 +405,7 @@ R"(<!DOCTYPE html>
 
     struct EntryData {
         Span<const char> name;
-        bool is_directory;
+        FileType type;
         int64_t size;
     };
 
@@ -397,8 +415,8 @@ R"(<!DOCTYPE html>
                                             [&](const char *basename, const FileInfo &file_info) {
             EntryData entry = {};
 
-            entry.name = Fmt(io->Allocator(), "%1%2", basename, file_info.type == FileType::Directory ? "/" : "");
-            entry.is_directory = (file_info.type == FileType::Directory);
+            entry.name = Fmt(io->Allocator(), "%1%2", basename, IsDirectory(file_info.type) ? "/" : "");
+            entry.type = file_info.type;
             entry.size = file_info.size;
 
             entries.Append(entry);
@@ -425,8 +443,8 @@ R"(<!DOCTYPE html>
     }
 
     std::sort(entries.begin(), entries.end(), [](const EntryData &entry1, const EntryData &entry2) {
-        if (entry1.is_directory != entry2.is_directory) {
-            return entry1.is_directory;
+        if (IsDirectory(entry1.type) != IsDirectory(entry2.type)) {
+            return IsDirectory(entry1.type);
         } else {
             return CmpStr(entry1.name, entry2.name) < 0;
         }
@@ -448,19 +466,24 @@ R"(<!DOCTYPE html>
             if (entries.len) {
                 writer->Write("<table>");
                 for (const EntryData &entry: entries) {
-                    const char *cls = entry.is_directory ? "directory" : "file";
+                    if (IsAllowed(entry.type)) {
+                        const char *cls = IsDirectory(entry.type) ? "directory" : "file";
 
-                    Print(writer, "<tr class=\"%1\">", cls);
-                    Print(writer, "<td><a href=\"");
-                    WriteURL(entry.name, writer); writer->Write("\">"); WriteContent(entry.name, writer);
-                    writer->Write("</a></li>");
-                    if (!entry.is_directory) {
-                        Print(writer, "<td>%1</td>", FmtDiskSize(entry.size));
+                        Print(writer, "<tr class=\"%1\">", cls);
+                        Print(writer, "<td><a href=\"");
+                        WriteURL(entry.name, writer); writer->Write("\">"); WriteContent(entry.name, writer);
+                        Print(writer, "</a></td>");
+                        switch (entry.type) {
+                            case FileType::Link: { Print(writer, "<td>[L]</td>"); } break;
+                            case FileType::File: { Print(writer, "<td>%1</td>", FmtDiskSize(entry.size)); } break;
+                            default: { Print(writer, "<td></td>"); } break;
+                        }
+                        Print(writer, "</tr>");
                     } else {
-                        Print(writer, "<td></td>");
+                        Print(writer, "<tr class=\"other\"><td>");
+                        WriteContent(entry.name, writer);
+                        Print(writer, "</td><td></td></tr>");
                     }
-                    Print(writer, "</tr>");
-
                 }
                 writer->Write("</table>");
             } else {
