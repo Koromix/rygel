@@ -284,12 +284,7 @@ void HandleRegister(http_IO *io)
         if (valid) {
             uid = DuplicateString((const char *)sqlite3_column_text(stmt, 1), io->Allocator()).ptr;
             registration = sqlite3_column_int(stmt, 2);
-
-            io->SendText(200, "{}", "application/json");
-            return;
         }
-
-        uid = DuplicateString(uid, io->Allocator()).ptr;
     }
 
     if (uid) {
