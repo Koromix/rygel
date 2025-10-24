@@ -1010,6 +1010,16 @@ static bool CreateInstance(sq_Database *domain, const char *instance_key,
 
     // Create default files
     if (options.populate) {
+        Span<const AssetInfo> assets = GetEmbedAssets();
+        const char *lang = options.lang ? options.lang : "en";
+        Span<const char> prefix = Fmt(&temp_alloc, "src/goupile/projects/%1/", lang);
+
+        if (!std::any_of(assets.begin(), assets.end(),
+                         [&](const AssetInfo &asset) { return StartsWith(asset.name, prefix); })) {
+            lang = "en";
+            prefix = "src/goupile/projects/en/";
+        }
+
         sq_Statement stmt1;
         sq_Statement stmt2;
         if (!db.Prepare(R"(INSERT INTO fs_objects (sha256, mtime, compression, size, blob)
@@ -1020,11 +1030,11 @@ static bool CreateInstance(sq_Database *domain, const char *instance_key,
             return false;
 
         for (const AssetInfo &asset: GetEmbedAssets()) {
-            if (StartsWith(asset.name, "src/goupile/server/default/")) {
-                const char *filename = asset.name + 27;
+            if (StartsWith(asset.name, prefix)) {
+                const char *filename = asset.name + prefix.len;
 
                 CompressionType compression_type = CanCompressFile(filename) ? CompressionType::Gzip
-                                                                                : CompressionType::None;
+                                                                             : CompressionType::None;
 
                 HeapArray<uint8_t> blob;
                 char sha256[65];
