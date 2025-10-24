@@ -124,7 +124,8 @@ static bool CheckInstanceKey(Span<const char> key)
         "static",
         "files",
         "blobs",
-        "help"
+        "help",
+        "api"
     };
 
     // Reserved names
