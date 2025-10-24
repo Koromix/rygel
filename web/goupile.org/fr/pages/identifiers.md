@@ -83,7 +83,7 @@ meta.randomize("groupe", 4, true)
 
 # Summary
 
-Pour chaque page du formulaire, il est possible de définir un identifiant supplémentaire dit *summary*, qui sera affiché à la place de la date dans le tableau récapitulatif des enregistements (voir capture ci-dessous).
+Pour chaque page du formulaire, il est possible de définir un identifiant supplémentaire dit *summary*, qui sera affiché à la place de la date dans le tableau récapitulatif des enregistrements (voir capture ci-dessous).
 
 Pour cela, assignez une valeur à `meta.summary` dans le script de formulaire. Dans l'exemple ci-dessous, la valeur affichée dans la colonne « Introduction » est construite en fonction de l'âge indiqué dans la variable correspondante :
 
