@@ -50,7 +50,7 @@ function renderMenu() {
         <nav class="ui_toolbar" id="ui_top" style="z-index: 999999;">
             <button class="icon lines" @click=${UI.wrap(e => go(e, '/admin/'))}>${T.admin}</button>
             <button class=${'icon domain' + (UI.isPanelActive('domain') ? ' active' : '')}
-                    @click=${UI.wrap(e => togglePanel('domain'))}>${T.domain}</button>
+                    @click=${UI.wrap(e => togglePanel('domain'))}>${T.projects}</button>
             <button class=${'icon users' + (UI.isPanelActive('users') ? ' active' : '')}
                     @click=${UI.wrap(e => togglePanel('users'))}>${T.users}</button>
             ${profile.root ? html`
@@ -467,18 +467,19 @@ async function go(e, url = null, options = {}) {
 
 function runCreateInstanceDialog(e) {
     return UI.dialog(e, T.create_project, {}, (d, resolve, reject) => {
-        d.text('*key', T.project_key, {
+        d.text('*key', T.name, {
             help: [
                 T.project_key_length,
                 T.project_key_characters
             ]
         });
 
-        d.text('name', T.name, { value: d.values.key });
-        d.boolean('populate', T.populate_demo, { value: true, untoggle: false });
+        d.text('name', T.title, { value: d.values.key });
 
         let langs = Object.keys(goupile.languages).map(lang => [lang, lang.toUpperCase()]);
-        d.enumDrop('lang', T.language, langs, { value: domain.default_lang });
+        d.enumDrop('lang', T.project_language, langs, { value: domain.default_lang });
+
+        d.boolean('populate', T.populate_demo, { value: true, untoggle: false });
 
         d.action(T.create, { disabled: !d.isValid() }, async () => {
             try {
