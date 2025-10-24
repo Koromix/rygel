@@ -1344,7 +1344,7 @@ function FormBuilder(state, model, options = {}) {
                                    <span @click=${e => handleSectionClick(e, label)}>${label}</span></div>` : ''}
                 ${deploy ? widgets.map(intf => intf.render()) : ''}
                 ${!deploy ? html`<a class="fm_deploy"
-                                    @click=${e => handleSectionClick(e, label)}>(afficher le contenu)</a>` : ''}
+                                    @click=${e => handleSectionClick(e, label)}>(${T.reveal_content.toLowerCase()})</a>` : ''}
             </fieldset>
         `;
 
