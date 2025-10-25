@@ -16,6 +16,7 @@
 #pragma once
 
 #include "src/core/base/base.hh"
+#include "repository.hh"
 
 namespace K {
 

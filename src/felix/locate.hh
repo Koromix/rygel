@@ -19,6 +19,8 @@
 
 namespace K {
 
+class Compiler;
+
 struct QtInfo {
     const char *qmake = nullptr;
     const char *moc = nullptr;
