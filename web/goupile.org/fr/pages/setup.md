@@ -1,6 +1,6 @@
 # Installation initiale
 
-Une fois le serveur Goupile déployé, vous pouvez effectuer la configuration initiale en ouvrant l'URL de l'application (par exemple `http://localhost:8889`) et en cliquant sur le lien d'administration.
+Une fois le serveur Goupile déployé, vous pouvez effectuer la configuration initiale en ouvrant l'URL de l'application dans un navigateur (par exemple `http://localhost:8889`) et en cliquant sur le lien d'administration.
 
 <div class="screenshot"><img src="{{ ASSET static/help/admin/root.webp }}" height="240" alt=""/></div>
 
@@ -10,12 +10,12 @@ Un **domaine Goupile** correspond à l'ensemble des projets et des utilisateurs 
 
 Parmi les réglages initiaux figurent :
 
-- Le *nom du domaine* Goupile, qui doit contenir uniquement des caractères minuscules et ne doit pas contenir d'espaces. Par convention il est pratique de le faire correspondre au nom de domaine réel (par exemple `beta.goupile.fr`) mais ce n'est pas obligatoire.
-- Le *titre du domaine* Goupile, affiché dans le panneau d'administration et dans certains contextes hors projet (comme par exemple le libellé TOTP pour les utilisateurs qui activent l'authentification à 2 facteurs).
+- Le *nom du domaine*, qui doit contenir uniquement des caractères minuscules et ne doit pas contenir d'espaces. Par convention il est pratique de le faire correspondre au nom de domaine réel (par exemple `beta.goupile.fr`) mais ce n'est pas obligatoire.
+- Le *titre du domaine*, affiché dans le panneau d'administration et dans certains contextes hors projet (comme par exemple le libellé TOTP pour les utilisateurs qui activent l'authentification à 2 facteurs).
 
 Vous devez également créer le *premier utilisateur*, qui aura les droits de super-administrateur, avec lequel vous pourrez vous connecter au panneau d'administration après installation.
 
-Enfin, enregistrez bien la **clé d'archive** dans un lieu sécurité (par exemple votre gestionnaire de mots de passe). Cette clé sera nécessaire à la restauration des archives Goupile si vous utilisez cette fonctionnalité. Si elle est perdue, elle ne peut pas être et récupérée les archives existantes ne pourront pas être restaurées.
+Enfin, enregistrez bien la **clé d'archive** dans un lieu sécurisé (par exemple votre gestionnaire de mots de passe). Cette clé sera nécessaire à la restauration des archives Goupile, si vous utilisez cette fonctionnalité. Si elle est perdue, elle ne peut pas être récupérée et les archives existantes ne pourront pas être restaurées.
 
 <div class="screenshot"><img src="{{ ASSET static/help/admin/key.webp }}" height="100" alt=""/></div>
 

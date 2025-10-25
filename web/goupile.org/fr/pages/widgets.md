@@ -254,7 +254,7 @@ form.multiButtons("sommeil", "Trouble(s) du sommeil", [
 > [!NOTE]
 > Dans l'export de données, les valeurs à choix multiples sont exportées avec plusieurs colonnes, soit une colonne par proposition. La cellule correspond à l'enregistrement (ligne) et à la variable et sa proposition (colonne) contient la valeur 1 si l'utilisateur a sélectionné la proposition, et 0 le cas échéant.
 
-Il est possible de créer un choix exclusif des autres en créant une proposition qui utilise le code `null`. Choisir cette proposition provoquera le décochage des autres choix faits par l'utilisateur, et vice-versa. Utilisez cela pour créer une proposition de type "Aucun choix de ne me correspond", comme dans l'exemple ci-dessous :
+Il est possible de créer un choix exclusif des autres en créant une proposition qui utilise le code `null`. Choisir cette proposition provoquera le décochage des autres choix faits par l'utilisateur, et vice-versa. Utilisez cela pour créer une proposition de type « Aucun choix de ne me correspond », comme dans l'exemple ci-dessous :
 
 ```js
 form.multiCheck("sommeil", "Trouble(s) du sommeil", [

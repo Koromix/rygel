@@ -17,7 +17,7 @@ Vous pouvez changer les panneaux actifs à l'aide des onglets du menu principal 
 
 # Créer un projet
 
-Créez un projet en cliquant sur "Créer un projet" au-dessus de la liste des projets. Une nouvelle fenêtre apparaît (« Création d'un projet ») dans laquelle vous devez paramétrer le nouveau projet :
+Créez un projet en cliquant sur « Créer un projet » au-dessus de la liste des projets. Une nouvelle fenêtre apparaît (« Création d'un projet ») dans laquelle vous devez paramétrer :
 
 - Le **nom du projet** (on parle aussi de clé de projet), qui définit l'URL par laquelle le projet sera accessible. Par exemple, avec le nom `demo`, le projet sera disponible sur le chemin `/demo/`.
 - Le **titre du projet** qui sera visible par l'utilisateur dans la barre de titre du navigateur et dans le menu de sélection de centre.
@@ -109,7 +109,7 @@ Les archives enregistrent l'état des projets, des utilisateurs et des données 
 Elles sont créées à différents moments :
 
 - Une **archive quotidienne** est créée chaque nuit, avec tous les projets
-- Une archive peut être **créée manuellement** avec le bouton "Créer une archive"
+- Une archive peut être **créée manuellement** avec le bouton « Créer une archive »
 - Une archive est créée juste **avant la suppression d'un projet**
 
 Les archives créées *au cours des 7 derniers jours sont gardées* sur le serveur, avant d'être supprimées. Vous pouvez cependant les télécharger (fichiers avec l'extension `.goarch`) et les stocker à l'abri par un moyen adéquat, afin d'en récupérer le contenu ou de les restaurer en cas de besoin.
