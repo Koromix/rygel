@@ -1,17 +1,5 @@
-// Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 #include "src/core/base/base.hh"
 #include "../server/config.hh"
@@ -619,7 +607,7 @@ static void EncodeSqlName(const char *name, HeapArray<char> *out_buf)
     out_buf->ptr[out_buf->len] = 0;
 }
 
-bool RecordExporter::Parse(const char *root_ulid, const char *ulid, const char *hid, const char *form, 
+bool RecordExporter::Parse(const char *root_ulid, const char *ulid, const char *hid, const char *form,
                            const char *mtime, Span<const char> data)
 {
     StreamReader reader(MakeSpan((const uint8_t *)data.ptr, data.len), "<json>");

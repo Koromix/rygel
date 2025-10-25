@@ -1,17 +1,5 @@
-// Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 #pragma once
 
@@ -249,7 +237,7 @@ public:
                                 Span<const char *const> include_files,
                                 const char *custom_flags, uint32_t features, const char *dest_filename,
                                 Allocator *alloc, Command *out_cmd) const = 0;
-    virtual void MakeAssemblyCommand(const char *src_filename, Span<const char *const> definitions, 
+    virtual void MakeAssemblyCommand(const char *src_filename, Span<const char *const> definitions,
                                      Span<const char *const> include_directories, const char *custom_flags,
                                      uint32_t features, const char *dest_filename,
                                      Allocator *alloc, Command *out_cmd) const = 0;

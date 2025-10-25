@@ -1,23 +1,5 @@
-// Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy of
-// this software and associated documentation files (the “Software”), to deal in
-// the Software without restriction, including without limitation the rights to use,
-// copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
-// Software, and to permit persons to whom the Software is furnished to do so,
-// subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
-// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-// OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-// HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-// OTHER DEALINGS IN THE SOFTWARE.
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 #include "src/core/base/base.hh"
 #include "call.hh"
@@ -38,7 +20,7 @@ Napi::Function MagicUnion::InitClass(Napi::Env env, const TypeInfo *type)
     K_ASSERT(type->primitive == PrimitiveKind::Union);
 
     // node-addon-api wants std::vector
-    std::vector<Napi::ClassPropertyDescriptor<MagicUnion>> properties; 
+    std::vector<Napi::ClassPropertyDescriptor<MagicUnion>> properties;
     properties.reserve(type->members.len);
 
     for (Size i = 0; i < type->members.len; i++) {
@@ -1354,12 +1336,12 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
             type = MakeArrayType(instance, type, *len);
         } else {
             switch (type->primitive) {
-                case PrimitiveKind::Int8: 
+                case PrimitiveKind::Int8:
                 case PrimitiveKind::UInt8: {
                     Size count = strlen((const char *)ptr);
                     type = MakeArrayType(instance, type, count);
                 } break;
-                case PrimitiveKind::Int16: 
+                case PrimitiveKind::Int16:
                 case PrimitiveKind::UInt16: {
                     Size count = NullTerminatedLength((const char16_t *)ptr, K_SIZE_MAX);
                     type = MakeArrayType(instance, type, count);

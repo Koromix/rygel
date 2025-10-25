@@ -1,17 +1,5 @@
-// Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 #include "src/core/base/base.hh"
 #include "rokkerd.hh"
@@ -195,7 +183,7 @@ static Span<const char> PatchText(Span<const char> text, const char *mail, const
 
 static const char *FormatUUID(const uint8_t raw[16], Allocator *alloc)
 {
-    const char *uuid = Fmt(alloc, "%1-%2-%3-%4-%5", 
+    const char *uuid = Fmt(alloc, "%1-%2-%3-%4-%5",
                            FmtHex(MakeSpan(raw + 0, 4)),
                            FmtHex(MakeSpan(raw + 4, 2)),
                            FmtHex(MakeSpan(raw + 6, 2)),

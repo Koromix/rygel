@@ -1,17 +1,5 @@
-# Copyright (C) 2025  Niels Martignène <niels.martignene@protonmail.com>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 #' Open database file for use in subsequent heimdall R functions
 #'
@@ -332,7 +320,7 @@ hm_delete_entities <- function(inst, names) {
 #'
 #' This function only exports a limited number of marks, 10000 by default. To export
 #' more marks, set the *first* argument to the ID of the last mark + 1, as shown in the
-#' example below. 
+#' example below.
 #'
 #' @param inst Instance object, see [hm_open()].
 #' @param first ID of the first mark to export, or NULL to export from start.
