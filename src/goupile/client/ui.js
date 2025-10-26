@@ -134,6 +134,8 @@ function togglePanel(key, enable = null) {
 
         let panel = panels.get(key);
 
+        if (enable && !allowTwoPanels() && panel.position == 1)
+            active_panels[0] = null;
         active_panels[panel.position] = enable ? panel : null;
     }
 }
