@@ -1793,7 +1793,7 @@ void DumpMemory(const char *type, Span<const uint8_t> bytes)
         PrintLn(StdErr, "%1 at 0x%2 (%3):", type, bytes.ptr, FmtMemSize(bytes.len));
 
         for (const uint8_t *ptr = bytes.begin(); ptr < bytes.end();) {
-            Print(StdErr, "  [0x%1 %2 %3]  ", FmtInt(ptr, 16),
+            Print(StdErr, "  [0x%1 %2 %3]  ", FmtInt((uintptr_t)ptr, 16),
                                               FmtInt((ptr - bytes.begin()) / sizeof(void *), 4, ' '),
                                               FmtInt(ptr - bytes.begin(), 4, ' '));
             for (int i = 0; ptr < bytes.end() && i < (int)sizeof(void *); i++, ptr++) {
