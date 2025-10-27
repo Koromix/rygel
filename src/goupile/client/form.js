@@ -1221,6 +1221,7 @@ function FormBuilder(state, model, options = {}) {
         key = decodeKey(key, options);
 
         options.mandatory = false;
+        options.annotate = false;
 
         if (Number.isNaN(value) || value == null)
             value = undefined;
