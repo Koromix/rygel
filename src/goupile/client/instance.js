@@ -1192,6 +1192,7 @@ function addAutomaticTags(variables) {
 
         let notes = Data.annotate(intf.key.ptr, intf.key.name);
         let status = notes.status ?? {};
+        let error = intf.errors.some(err => !err.delay);
 
         if (form_thread.locked)
             intf.options.readonly = true;
@@ -1219,11 +1220,13 @@ function addAutomaticTags(variables) {
                 status.filling = null;
             }
         } else if (intf.missing && intf.options.mandatory) {
-            if (form_entry.anchor >= 0 || intf.errors.some(err => !err.delay))
+            if (form_entry.anchor >= 0 || intf.errors.some(err => !err.delay)) {
                 tags.push('incomplete');
+                error = false;
+            }
         }
 
-        if (intf.errors.some(err => !err.delay))
+        if (error)
             tags.push('error');
 
         if (Array.isArray(intf.options.tags))
