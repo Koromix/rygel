@@ -1607,7 +1607,7 @@ async function go(e, url = null, options = {}) {
 
     await data_mutex.run(async () => {
         let new_route = Object.assign({}, route);
-        let explicit_panels = false;
+        let explicit_panels = null;
 
         if (url != null) {
             if (!(url instanceof URL))
@@ -1683,16 +1683,15 @@ async function go(e, url = null, options = {}) {
                 panels = panels.split('|');
                 panels = panels.filter(key => app.panels.hasOwnProperty(key) || key == 'view');
 
-                if (panels.length) {
-                    UI.setPanels(panels);
-                    explicit_panels = true;
-                }
+                if (panels.length)
+                    explicit_panels = panels;
             }
         }
 
         let context_change = (new_route.tid != route.tid ||
                               new_route.anchor != route.anchor ||
                               new_route.page != route.page);
+        let first_run = (route.page == null);
 
         // Warn about data loss before loading new data
         if (context_change) {
@@ -1755,9 +1754,15 @@ async function go(e, url = null, options = {}) {
         }
 
         // Show form automatically?
-        if (!UI.isPanelActive('view') && url != null && !explicit_panels) {
-            UI.togglePanel('data', false);
-            UI.togglePanel('view', true);
+        if (explicit_panels != null) {
+            UI.setPanels(explicit_panels);
+        } else if (!UI.isPanelActive('view')) {
+            let force = (url != null) && (form_thread.saved || !first_run);
+
+            if (force) {
+                UI.togglePanel('data', false);
+                UI.togglePanel('view', true);
+            }
         }
     });
 
@@ -1900,7 +1905,15 @@ async function run(push_history = true) {
 
     // Update URL and title
     {
-        let defaults = profile.develop ? 'editor|view' : 'view';
+        let defaults = null;
+
+        if (profile.develop) {
+            defaults = 'editor|view';
+        } else if (form_thread.saved || !app.panels.data) {
+            defaults = 'view';
+        } else {
+            defaults = 'data';
+        }
 
         let url = contextualizeURL(route.page.url, form_thread);
         let panels = UI.getPanels().join('|');
