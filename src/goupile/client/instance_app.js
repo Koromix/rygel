@@ -7,7 +7,6 @@ function ApplicationInfo(profile) {
     this.pages = [];
     this.homepage = null;
     this.annotate = false;
-    this.shortcuts = [];
 
     this.stores = [];
 
@@ -217,17 +216,6 @@ function ApplicationBuilder(app) {
 
         let store = app.stores[app.stores.length - 1];
         store.many = plural;
-    };
-
-    this.shortcut = function(label, options = {}, func = null) {
-        let shortcut = {
-            label: label,
-            click: func,
-            icon: options.icon ?? null,
-            color: options.color ?? null
-        };
-
-        app.shortcuts.push(shortcut);
     };
 
     function checkKeySyntax(key) {

@@ -893,9 +893,6 @@ async function renderPage() {
                         <h1>${route.page.title}</h1>
                         <ul>${page_sections.map(section => html`<li><a href=${'#' + section.anchor}>${section.title}</a></li>`)}</ul>
                     ` : ''}
-
-                    <div style="flex: 1;"></div>
-                    ${renderShortcuts()}
                 </div>
             </div>
             <div style="flex: 1;"></div>
@@ -903,10 +900,8 @@ async function renderPage() {
             ${profile.develop && !isPageEnabled(route.page, form_thread) ?
                 html`<div id="ins_develop">${T.page_disabled_warning}</div>` : ''}
 
-            ${form_model.actions.length || app.shortcuts.length ? html`
+            ${form_model.actions.length ? html`
                 <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
-                    ${renderShortcuts()}
-
                     <div style="flex: 1;"></div>
                     ${form_model.actions.some(action => !action.options.always) ? html`
                         <div class="drop up right">
@@ -1021,25 +1016,6 @@ function defaultFormPage(ctx) {
             })}
         </div>
     `);
-}
-
-function renderShortcuts() {
-    return app.shortcuts.map(shortcut => {
-        let cls = '';
-        let style = '';
-
-        if (shortcut.icon) {
-            cls += ' icon';
-            style += 'background-image: url(' + shortcut.icon + ');';
-        }
-        if (shortcut.color) {
-            cls += ' color';
-            style += `--color: ${shortcut.color};`;
-        }
-
-        return html`<button type="button" class=${cls} style=${style}
-                            @click=${shortcut.click}/>${shortcut.label}</button>`;
-    });
 }
 
 function addAutomaticActions(builder, model) {
