@@ -1046,6 +1046,8 @@ function addAutomaticActions(builder, model) {
     if (builder.hasErrors())
         builder.errorList();
 
+    builder.resetOptions();
+
     if (route.page.store != null) {
         let next = selectNextPage(route.page, form_thread);
 

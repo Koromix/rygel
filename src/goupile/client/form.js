@@ -183,6 +183,9 @@ function FormBuilder(state, model, options = {}) {
 
         options_stack.pop();
     };
+    this.resetOptions = function() {
+        options_stack.length = 1;
+    };
 
     this.pushPath = function(key, sub = null) {
         key = decodeKey(key);
