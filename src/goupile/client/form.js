@@ -193,8 +193,8 @@ function FormBuilder(state, model, options = {}) {
         let path = key.ptr[key.name];
 
         if (!Util.isPodObject(path)) {
-            path = {}
-            key.ptr[key.name] = path;
+            key.ptr[key.name] = {};
+            path = key.ptr[key.name];
         }
 
         paths_stack.push(path);
