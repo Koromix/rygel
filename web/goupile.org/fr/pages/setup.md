@@ -41,10 +41,10 @@ Certaines fonctionnalités nécessitent l'envoi de mails (par exemple le systèm
 
 ## Sécurité
 
-L'onglet Sécurité vous permet de paramétrer la politique de mots de passe, en différenciant trois classes d'utilisateurs :
+L'onglet Sécurité vous permet de paramétrer la politique de mots de passe, en différenciant [trois classes d'utilisateurs](users#classes-d-utilisateurs) :
 
 - Les *utilisateurs normaux*
-- Les *administrateurs* ont des droits d'administration sur au moins un projet
+- Les *utilisateurs administrateurs* ont des droits d'administration sur au moins un projet
 - Les *super-administrateurs* ont tous les droits sur le domaine Goupile
 
 <div class="screenshot"><img src="{{ ASSET static/help/admin/security.webp }}" height="280" alt=""/></div>

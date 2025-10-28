@@ -1,65 +1,131 @@
 # Gestion des utilisateurs
 
-Pour créer un nouvel utilisateur, il faut se connecter sur l'interface administrateur, afficher le panneau de configuration « Utilisateurs » [1] puis cliquer sur « Créer un utilisateur » [2].
+## Liste des utilisateurs
 
-<div class="screenshot"><img src="{{ ASSET static/help/admin/user_new1.webp }}" alt=""/></div>
+Les utilisateurs de Goupile sont partagés entre les différents projets, auxquels ils peuvent être assignés individuellement.
 
-Une nouvelle fenêtre apparaît (« Création d'un utilisateur »). Vous devez y définir obligatoirement un nom d'utilisateur (« Nom d'utilisateur »), un mot de passe de connexion (« Mot de passe ») et son statut administrateur ou non (« Administrateur »). Vous pouvez compléter ces informations avec une adresse de courriel (« Courriel ») et un numéro de téléphone (« Téléphone »).
+<div class="screenshot"><img src="{{ ASSET static/help/admin/users.webp }}" height="180" alt=""/></div>
 
-Le nom d'utilisateur correspond au nom de l'utilisateur. Il peut être de format numérique ou alphanumérique. Les majuscules et les caractères spéciaux (à l'exception du tiret court ‘-‘, de l'underscore ‘_' et du point ‘.') ne sont pas autorisés. Nous vous conseillons un nom d'utilisateur au format : « prenom.nom ».
+Il existe donc une seule liste d'utilisateurs, peu importe le nombre de projets. Mais en cliquant sur l'action « Droits » d'un projet (dans la liste de projets), vous pouvez paramétrer les [droits de chaque utilisateur sur le projet](#systeme-de-droits) concerné.
 
-La complexité requise pour les mots de passe dépend du type d'utilisateur :
+> [!NOTE]
+> Quand un projet est créé, l'utilisateur qui l'a créé a tous les droits sur celui-ci, et les autres utilisateurs n'en ont aucun.
 
-- Les utilisateurs normaux ou ayant des droits d'administration sur un ou plusieurs projets doivent utiliser un mot de passe d'au moins 8 caractères avec 3 classes de caractère, ou plus de 16 caractères avec 2 classes différentes
-- Les super-administrateurs doivent utiliser un mot de passe complexe, évalué par un score de complexité du mot de passe
+## Classes d'utilisateurs
 
-Après avoir saisi les différents champs, cliquer sur « Créer » [1].
+On distingue **trois classes d'utilisateurs** dans Goupile.
 
-<div class="screenshot">
-    <img src="{{ ASSET static/help/admin/user_new2.webp }}" style="height: 400px;" alt=""/>
-    <img src="{{ ASSET static/help/admin/user_new3.webp }}" style="height: 400px;" alt=""/>
-    <img src="{{ ASSET static/help/admin/user_new4.webp }}" style="height: 400px;" alt=""/>
-</div>
+Les deux premières classes dépendent de l'activation de l'option « Super-administrateur » lors de la création ou de la modification d'un utilisateur :
 
-Une fois votre utilisateur créé, un menu est disponible via le panneau de configuration « Utilisateurs » : « Modifier ».
+- Les **utilisateurs normaux** n'ont pas accès au module d'administration, mais uniquement aux projets sur lesquels ils sont assignés
+- Les **super-administrateurs** ont accès au module d'administration et peuvent modifier les projets, les utilisateurs et tous les droits
 
-L'onglet « Modifier » vous permet de modifier le nom d'utilisateur, le mot de passe, le courriel, le téléphone et le statut administrateur de l'utilisateur.
+Lorsqu'un utilisateur normal a le *droit d'administration* sur au moins un projet, il est promu en **utilisateur administrateur** ce qui lui donne un accès limité au module d'administration.
 
-L'onglet « Supprimer » vous permet de supprimer l'utilisateur.
+> [!NOTE]
+> Les utilisateurs administrateurs peuvent donc ouvrir le module d'administration et effectuer certaines actions :
+>
+> - Un utilisateur administrateur peut voir ses projets, les configurer et les diviser (études multi-centriques)
+> - Un utilisateur administrateur peut créer des utilisateurs et les assigner à ses projets
+> - Un utilisateur administrateur ne peut pas gérer les archives, ou modifier les comptes d'un super-administrateur
 
-<div class="screenshot">
-    <img src="{{ ASSET static/help/admin/user_edit.webp }}" style="height: 560px;" alt=""/>
-    <img src="{{ ASSET static/help/admin/user_delete.webp }}" style="height: 200px;" alt=""/>
-</div>
+## Créer un utilisateur
 
-Pour affecter à un utilisateur des droits sur un projet donné, il faut afficher le panneau de configuration « Projets » [1] et cliquer sur l'option « Droits » du projet d'intérêt [2].
+Cliquez sur le bouton « Créer un utilisateur » pour créer un nouvel utilisateur :
 
-<div class="screenshot"><img src="{{ ASSET static/help/admin/user_assign1.webp }}" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/user/create.webp }}" height="580" alt=""/></div>
 
-Le panneau de configuration « Utilisateurs » s'affiche alors à droite du panneau de configuration « Projets ». Vous pouvez affecter des droits à un utilisateur donné via le menu « Assigner » de l'utilisateur d'intérêt [1].
+Le **nom d'utilisateur** doit comporter uniquement des caractères minuscules non accentués, des chiffres, ou les caractères '_', '.' et '-'. Il doit comporter moins de 64 caractères. Certains noms d'utilisateurs sont interdits, comme par exemple `goupile`.
 
-<div class="screenshot">
-    <img src="{{ ASSET static/help/admin/user_assign2.webp }}" style="height: 66px;" alt=""/>
-    <img src="{{ ASSET static/help/admin/user_assign3.webp }}" style="height: 200px;" alt=""/>
-</div>
+Vous devez paramétrer le **mot de passe initial**, qui n'a pas à respecter les contraintes décrites dans la section sur les [classes d'utilisateurs](#classes-d-utilisateurs). Il doit simplement comporter au moins 8 caractères différentes. En revanche, si vous activez l'option « Exiger un changement de mot de passe » (cochée par défaut), l'utilisateur devra le modifier lors de la première connexion, et le nouveau mot de passe devra respecter ces contraintes.
 
-Une nouvelle fenêtre s'ouvre (« Droits de *votre utilisateur* sur *votre clé de projet* »). Vous pouvez affecter des droits de développement ou d'enregistrements à votre utilisateur.
+Vous pouvez exiger l'utilisation d'une **authentification à 2 facteurs** par code TOTP. Si l'option est activée, le nouvel utilisateur devra récupérer la clé (texte ou via un QR code) après le paramétrage de son mot de passe. Les utilisateurs peuvent à tout moment activer ou reconfigurer l'authentification à 2 facteurs; en revanche, seul les administrateurs peuvent désactiver le TOTP d'un compte existant.
 
-Les droits de développement comprennent :
+> [!NOTE]
+> Goupile est principalement destiné à des études cliniques, il n'y a pas de système de récupération de mot de passe par courriel.
+>
+> En cas d'oubli, un nouveau mot de passe doit être configuré par un super-administrateur ou bien un utilisateur administrateur avec les droits sur un projet auquel l'utilisateur est assigné.
 
-Droit | Explication
------ | -----------
-*Develop* | Modification des formulaires
-*Publish* | Publication des formulaires modifiés
-*Configure* | Configuration du projet et des centres (multi-centrique)
-*Assign* | Modification des droits des utilisateurs sur le projet
+Les champs de courriel et de téléphone sont optionnels, et sont là à titre purement informatif.
 
-Droit | Explication
------ | -----------
-*Read* | Liste et lecture des enregistrements
-*Save* | Modifications des enregistrement
-*Export* | Export facile des données (CSV, XLSX, etc.)
-*Batch* | Recalcul de toutes les variables calculées sur tous les enregistrements
-*Message* | Envoi de mails et SMS automatisés
+Enfin, si vous avez le statut de **super-administrateur**, vous pouvez créer un autre super-administrateur en activant l'option correspondante. Les super-administrateurs ont le même statut que l'utilisateur créé lors de l'installation initiale. Ils sont affichés en rouge et avec une petite couronne ♛ à côté du nom d'utilisateur.
 
-Il est à noter que les droits d'enregistrements ne sont configurables qu'après avoir préalablement édité une première version de l'eCRF.
+# Système de droits
+
+<div class="screenshot"><img src="{{ ASSET static/help/user/assign.webp }}" height="130" alt=""/></div>
+
+## Droits de développement
+
+Ces droits sont relatifs à la **conception** et à la *gestion des utilisateurs** assignés au projet.
+
+<table class="permissions" style="--background: #b518bf;">
+    <thead><tr><th colspan="2">Développement</th></tr></thead>
+    <tbody>
+        <tr><td>Code</td><td>Accès au mode de conception pour modifier les scripts de projet et de formulaire.</td></tr>
+        <tr><td>Publish</td><td>Publication (ou déploiement) des scripts modifiés qui seront accessibles en dehors du mode de conception.</td></tr>
+        <tr><td>Admin</td><td>Accès partiel au module d'administration pour le projet concerné, et les utilisateurs assignés à ce projet.</td></tr>
+    </tbody>
+</table>
+
+Lorsqu'un utilisateur a le droit *Admin* sur au moins un projet, il est promu en [utilisateur administrateur](#classes-d-utilisateurs).
+
+## Droits sur les données
+
+Ces droits sont relatifs à l'accès aux données, ils s'appliquent au projet dans les études mono-centriques ou à chaque centre dans les études multi-centriques.
+
+<table class="permissions" style="--background: #258264;">
+    <thead><tr><th colspan="2">Saisie et données</th></tr></thead>
+    <tbody>
+        <tr><td>Read</td><td>Accès en lecture à tous les enregistrements du projet ou du centre.</td></tr>
+        <tr><td>Save</td><td>Création de nouveaux enregistrements et modification de enregistrements : soit tous les enregistrements du projet ou centre (si le droit <i>Read</i> est activé) créés par l'utilisateur concerné.</td></tr>
+        <tr><td>Delete</td><td>Suppression d'enregistrements auxquels l'utilisateur a accès : soit tous les enregistrements du projet ou centre (si le droit <i>Read</i> est activé), soit les enregistrements créés par l'utilisateur concerné.</td></tr>
+        <tr><td>Audit</td><td>Consultation de l'audit trail et <a href="app#verrouillage">déverrouillage</a> des enregistrements.</td></tr>
+        <tr><td>Offline</td><td>Accès au fonctionnement hors ligne des projets pour lesquels c'est autorisé</td></tr>
+    </tbody>
+</table>
+
+> [!NOTE]
+> Les utilisateurs **sans le droit _Read_ mais avec le droit _Save_** peuvent créer des enregistrements, et ils peuvent aussi lire et modifier leurs propres enregistrements.
+>
+> Utilisez les fonctions de [verrouillage et d'oubli](app#verrouillage-et-oubli) pour créer des enregistrements qui sont verrouillés ou inaccessibles une fois bien remplis.
+
+## Droits d'exports
+
+Pour plus de clarté, les droits relatifs aux exports sont placés dans une catégorie à part. Cela permet également de repérer visuellement les utilisateurs ayant des droits d'export dans la liste d'utilisateurs (droits en bleu).
+
+<table class="permissions" style="--background: #3364bd;">
+    <thead><tr><th colspan="2">Exports</th></tr></thead>
+    <tbody>
+        <tr><td>Create</td><td>Création et téléchargement d'un nouvel export, avec toutes les données ou bien uniquement les données créées depuis un export précédent.</td></tr>
+        <tr><td>Download</td><td>Téléchargement d'un export pré-existant, qui a été créé manuellement (par un utilisateur avec le droit <i>Create</i>) ou bien automatiquement via un <a href="instances#exports-automatises">export programmé</a>.</td></tr>
+    </tbody>
+</table>
+
+> [!CAUTION]
+> Les utilisateurs avec le droit *ExportCreate* peuvent télécharger l'export qu'ils ont créé, et ils ont accès à la liste des exports existants. En revanche ils ne peuvent pas télécharger un export déjà existant.
+
+## Droits liés au messages
+
+Ces droits sont relatifs à des fonctionnalités avancées de Goupile, utilisés uniquement dans certains projets.
+
+Ils nécessitent par ailleurs que le serveur soit configuré pour pouvoir envoyer des mails (configuration SMTP) et/ou des SMS (via Twilio par exemple).
+
+<table class="permissions" style="--background: #c97f1a;">
+    <thead><tr><th colspan="2">Messages</th></tr></thead>
+    <tbody>
+        <tr><td>Mail</td><td>Envoi de mails automatisé par le script de formulaire.</td></tr>
+        <tr><td>Text</td><td>Envoi de SMS automatisé par le script de formulaire.</td></tr>
+    </tbody>
+</table>
+
+<style>
+    .permissions { width: 90%; }
+    .permissions th {
+        background: var(--background);
+        color: white;
+    }
+    .permissions td:first-of-type {
+        width: 100px;
+        font-style: italic;
+    }
+</style>
