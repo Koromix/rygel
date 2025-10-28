@@ -688,6 +688,9 @@ void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
                     session->admin_until = GetMonotonicTime() + 1200 * 1000;
                 }
 
+                if (!change_password && (root || admin)) {
+                    change_password = !CheckPasswordComplexity(*session, password.ptr);
+                }
                 session->change_password = change_password;
 
                 sessions.Open(io, session);
