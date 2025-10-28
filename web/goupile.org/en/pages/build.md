@@ -47,15 +47,16 @@ Once the Goupile executable is compiled, you can create a Goupile domain using t
 ```sh
 # For this example, we will create this domain in a tmp subfolder of the repository.
 # But you can create it wherever you wish!
-mkdir -p tmp/test
-touch tmp/test/goupile.ini
+
+mkdir -p tmp
+bin/Debug/Goupile init tmp/test
 ```
 
 To access this domain via a web browser, you can start it using the following command:
 
 ```sh
 # With this command, Goupile will be accessible via http://localhost:8889/
-bin/Debug/goupile -C tmp/test/goupile.ini
+bin/Debug/goupile -C tmp/test
 ```
 
 > [!NOTE]

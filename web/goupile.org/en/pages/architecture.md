@@ -70,9 +70,11 @@ After this is done, you can use felix to build and directly run the goupile bina
 ```sh
 cd rygel
 
-mkdir -p tmp/test
-touch tmp/test/goupile.ini
+# Create the domain where you want, tmp/test is just an example
+mkdir -p tmp
+./felix --run goupile init tmp/test
 
+# Run Goupile web server
 ./felix --run goupile -C tmp/test
 ```
 

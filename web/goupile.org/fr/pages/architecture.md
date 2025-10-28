@@ -70,9 +70,11 @@ Une fois cette étape terminée, vous pouvez utiliser felix pour compiler et ex�
 ```sh
 cd rygel
 
-mkdir -p tmp/test
-touch tmp/test/goupile.ini
+# Créer le domaine où vous voulez, tmp/test n'est qu'un exemple
+mkdir -p tmp
+./felix --run goupile init tmp/test
 
+# Exécution du serveur Goupile
 ./felix --run goupile -C tmp/test
 ```
 
