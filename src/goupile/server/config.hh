@@ -5,22 +5,12 @@
 
 #include "src/core/base/base.hh"
 #include "instance.hh"
+#include "user.hh"
 #include "src/core/http/http.hh"
 #include "src/core/request/sms.hh"
 #include "src/core/request/smtp.hh"
 
 namespace K {
-
-enum class PasswordComplexity {
-    Easy,
-    Moderate,
-    Hard
-};
-static const char *const PasswordComplexityNames[] = {
-    "Easy",
-    "Moderate",
-    "Hard"
-};
 
 struct Config {
     const char *config_filename = nullptr;

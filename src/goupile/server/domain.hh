@@ -4,12 +4,14 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "config.hh"
 #include "instance.hh"
+#include "user.hh"
 #include "src/core/request/smtp.hh"
 #include "src/core/sqlite/sqlite.hh"
 
 namespace K {
+
+struct Config;
 
 extern const int DomainVersion;
 extern const int MaxInstances;

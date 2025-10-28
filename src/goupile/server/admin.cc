@@ -879,10 +879,7 @@ void HandleDomainConfigure(http_IO *io)
                         valid = false;
                     }
                     if (password) {
-                        if (strlen(password) < pwd_MinLength) {
-                            LogError("Password is too short");
-                            valid = false;
-                        }
+                        valid &= CheckPasswordComplexity(password, username, gp_config.root_password);
                     } else {
                         LogError("Missing default password");
                         valid = false;
@@ -2928,13 +2925,11 @@ void HandleUserCreate(http_IO *io)
                     LogError("Missing 'username' or 'password' parameter");
                     valid = false;
                 }
-                if (username && !CheckUserName(username)) {
-                    valid = false;
-                }
-                if (password && strlen(password) < pwd_MinLength) {
-                    LogError("Password is too short");
-                    valid = false;
-                }
+
+                // Admins can create users with simple passwords
+                valid &= !username || CheckUserName(username);
+                valid &= !password || CheckPasswordComplexity(password, username, PasswordComplexity::Easy);
+
                 if (email && !strchr(email, '@')) {
                     LogError("Invalid email address format");
                     valid = false;
@@ -3093,13 +3088,11 @@ void HandleUserEdit(http_IO *io)
                     LogError("Missing or invalid 'userid' parameter");
                     valid = false;
                 }
-                if (username && !CheckUserName(username)) {
-                    valid = false;
-                }
-                if (password && strlen(password) < pwd_MinLength) {
-                    LogError("Password is too short");
-                    valid = false;
-                }
+
+                // Admins can create users with simple passwords
+                valid &= !username || CheckUserName(username);
+                valid &= !password || CheckPasswordComplexity(password, username, PasswordComplexity::Easy);
+
                 if (email && !strchr(email, '@')) {
                     LogError("Invalid email address format");
                     valid = false;

@@ -446,6 +446,39 @@ void PruneSessions()
     }
 }
 
+bool CheckPasswordComplexity(const char *password, const char *username, PasswordComplexity treshold)
+{
+    unsigned int flags = 0;
+
+    switch (treshold) {
+        case PasswordComplexity::Easy: { flags = UINT_MAX & ~(int)pwd_CheckFlag::Classes & ~(int)pwd_CheckFlag::Score; } break;
+        case PasswordComplexity::Moderate: { flags = UINT_MAX & ~(int)pwd_CheckFlag::Score; } break;
+        case PasswordComplexity::Hard: { flags = UINT_MAX; } break;
+    }
+    K_ASSERT(flags);
+
+    Span<const char *> blacklist = MakeSpan(&username, username ? 1 : 0);
+    return pwd_CheckPassword(password, blacklist, flags);
+}
+
+static bool CheckPasswordComplexity(const SessionInfo &session, const char* password)
+{
+    DomainHolder *domain = RefDomain();
+    K_DEFER { UnrefDomain(domain); };
+
+    PasswordComplexity treshold;
+
+    if (session.is_root) {
+        treshold = domain->settings.root_password;
+    } else if (session.is_admin) {
+        treshold = domain->settings.admin_password;
+    } else {
+        treshold = domain->settings.user_password;
+    }
+
+    return CheckPasswordComplexity(password, session.username, treshold);
+}
+
 bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes])
 {
     if (crypto_pwhash_str(out_hash, password.ptr, password.len,
@@ -492,32 +525,6 @@ static int CountEvents(const char *where, const char *who)
     // We don't need to use precise timing, and a ban can last a bit
     // more than BanTime (until pruning clears the ban).
     return event ? event->count : 0;
-}
-
-static bool CheckPasswordComplexity(const SessionInfo &session, Span<const char> password)
-{
-    PasswordComplexity treshold;
-    unsigned int flags = 0;
-
-    DomainHolder *domain = RefDomain();
-    K_DEFER { UnrefDomain(domain); };
-
-    if (session.is_root) {
-        treshold = domain->settings.root_password;
-    } else if (session.is_admin) {
-        treshold = domain->settings.admin_password;
-    } else {
-        treshold = domain->settings.user_password;
-    }
-
-    switch (treshold) {
-        case PasswordComplexity::Easy: { flags = UINT_MAX & ~(int)pwd_CheckFlag::Classes & ~(int)pwd_CheckFlag::Score; } break;
-        case PasswordComplexity::Moderate: { flags = UINT_MAX & ~(int)pwd_CheckFlag::Score; } break;
-        case PasswordComplexity::Hard: { flags = UINT_MAX; } break;
-    }
-    K_ASSERT(flags);
-
-    return pwd_CheckPassword(password, session.username, flags);
 }
 
 void HandleSessionLogin(http_IO *io, InstanceHolder *instance)

@@ -10,6 +10,17 @@ namespace K {
 
 class InstanceHolder;
 
+enum class PasswordComplexity {
+    Easy,
+    Moderate,
+    Hard
+};
+static const char *const PasswordComplexityNames[] = {
+    "Easy",
+    "Moderate",
+    "Hard"
+};
+
 enum class UserPermission {
     BuildCode = 1 << 0,
     BuildPublish = 1 << 1,
@@ -112,6 +123,7 @@ RetainPtr<const SessionInfo> GetAdminSession(http_IO *io, InstanceHolder *instan
 
 void PruneSessions();
 
+bool CheckPasswordComplexity(const char *password, const char *username, PasswordComplexity treshold);
 bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes]);
 
 void HandleSessionLogin(http_IO *io, InstanceHolder *instance);
