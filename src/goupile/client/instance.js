@@ -713,8 +713,7 @@ function renderData() {
             </table>
 
             <div class="ui_actions">
-                ${goupile.hasPermission('export_create') ? html`<button @click=${UI.wrap(runExportCreateDialog)}>${T.create_export}</button>` : ''}
-                ${goupile.hasPermission('export_download') ? html`<button @click=${UI.wrap(runExportListDialog)}>${T.list_exports}</button>` : ''}
+                ${goupile.hasPermission('export_create') || goupile.hasPermission('export_download') ? html`<button @click=${UI.wrap(runExportDialog)}>${T.exports}</button>` : ''}
             </div>
         </div>
     `;
@@ -736,49 +735,88 @@ function runDeleteRecordDialog(e, row) {
     });
 }
 
-async function runExportCreateDialog(e) {
+async function runExportDialog(e) {
     let downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
-
-    if (!downloads.length) {
-        await create(null, null);
-        return;
-    }
+    let stores = app.stores.map(store => store.key);
 
     downloads.reverse();
 
-    await UI.dialog(e, T.create_export, {}, (d, resolve, reject) => {
-        if (downloads.length > 0) {
-            d.enumRadio('mode', T.export_mode, [
-                ['all', T.export_all],
-                ['sequence', T.export_sequence],
-                ['anchor', T.export_anchor]
-            ], { value: 'all', untoggle: false });
+    await UI.dialog(e, T.exports, {}, (d, resolve, reject) => {
+        let intf = d.tabs('tabs', () => {
+            d.tab(T.new_export, () => {
+                if (downloads.length > 0) {
+                    d.enumRadio('mode', T.export_mode, [
+                        ['all', T.export_all],
+                        ['sequence', T.export_sequence],
+                        ['anchor', T.export_anchor]
+                    ], { value: 'all', untoggle: false });
 
-            if (d.values.mode != 'all') {
-                let props = downloads.map(download => [download.export, (new Date(download.ctime)).toLocaleString()]);
-                d.enumDrop('since', T.export_since, props, { value: downloads[0]?.export, untoggle: false });
-            }
-        }
+                    if (d.values.mode != 'all') {
+                        let props = downloads.map(download => [download.export, (new Date(download.ctime)).toLocaleString()]);
+                        d.enumDrop('since', T.export_since, props, { value: downloads[0]?.export, untoggle: false });
+                    }
+                } else {
+                    d.output(T.create_first_export);
+                }
 
-        d.action(T.export, {}, async () => {
-            let sequence = null;
-            let anchor = null;
+                d.action(T.create_export, {}, async () => {
+                    let sequence = null;
+                    let anchor = null;
 
-            switch (d.values.mode) {
-                case 'sequence': {
-                    let download = downloads.find(download => download.export == d.values.since);
-                    sequence = download.sequence + 1;
-                } break;
+                    switch (d.values.mode) {
+                        case 'sequence': {
+                            let download = downloads.find(download => download.export == d.values.since);
+                            sequence = download.sequence + 1;
+                        } break;
 
-                case 'anchor': {
-                    let download = downloads.find(download => download.export == d.values.since);
-                    anchor = download.anchor + 1;
-                } break;
-            }
+                        case 'anchor': {
+                            let download = downloads.find(download => download.export == d.values.since);
+                            anchor = download.anchor + 1;
+                        } break;
+                    }
 
-            await create(sequence, anchor);
+                    await create(sequence, anchor);
 
-            resolve();
+                    resolve();
+                });
+            }, { disabled: !goupile.hasPermission('export_create') });
+
+            d.tab(T.past_exports, () => {
+                d.output(html`
+                    <table class="ui_table">
+                        <colgroup>
+                            <col/>
+                            <col/>
+                            <col/>
+                            <col/>
+                        </colgroup>
+
+                        <thead>
+                            <tr>
+                                <th>${T.date}</th>
+                                <th>${T.threads}</th>
+                                <th>${T.automatic}</th>
+                                <th>${T.download}</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            ${downloads.map(download => html`
+                                <tr>
+                                    <td>${(new Date(download.ctime)).toLocaleString()}</td>
+                                    <td>${download.threads}</td>
+                                    <td>${download.scheduled ? T.yes : T.no}</td>
+                                    <td>
+                                        ${download.threads ? html`<a @click=${UI.wrap(e => exportRecords(download.export, null, stores))}>${T.download}</a>` : ''}
+                                        ${!download.threads ? '(' + T.not_available.toLowerCase() + ')' : ''}
+                                    </td>
+                                </tr>
+                            `)}
+                            ${!downloads.length ? html`<tr><td colspan="4">${T.no_export}</td></tr>` : ''}
+                        </tbody>
+                    </table>
+                `);
+            }, { disabled: !goupile.hasPermission('export_download') });
         });
     });
 
