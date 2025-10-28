@@ -868,6 +868,29 @@ async function renderPage() {
         page_div.classList.add('disabled');
     }
 
+    // Try to map widget code lines for developers
+    if (profile.develop) {
+        let buffer = code_buffers.get(route.page.filename);
+        let build = code_builds.get(buffer?.sha256);
+
+        if (build?.map != null) {
+            for (let intf of form_model.widgets) {
+                if (intf.id == null)
+                    continue;
+                if (intf.location == null)
+                    continue;
+
+                let el = page_div.querySelector('#' + intf.id);
+                let wrap = (el != null) ? Util.findParent(el, el => el.classList.contains('fm_wrap')) : null;
+
+                if (wrap != null) {
+                    let line = bundler.mapLine(build.map, intf.location.line, intf.location.column);
+                    wrap.dataset.line = line;
+                }
+            }
+        }
+    }
+
     // Quick access to page sections
     let page_sections = form_model.widgets.filter(intf => intf.options.anchor).map(intf => ({
         title: intf.label,
