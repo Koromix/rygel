@@ -27,7 +27,7 @@ Le panneau de suivi comporte deux éléments principaux :
 
 ## Statut et pages
 
-En cliquez sur le bouton « Créer un enregistrement » ou bien sur l'icône du panneau de formulaire (capture ci-dessous) vous accéderez au formulaire en cours :
+En cliquant sur le bouton « Créer un enregistrement » ou bien sur l'icône du panneau de formulaire (capture ci-dessous) vous accéderez au formulaire en cours :
 
 <div class="screenshot"><img src="{{ ASSET static/help/instance/view.webp }}" height="50" alt=""/></div>
 
@@ -73,7 +73,7 @@ Lorsque vous êtes sur une page de formulaire, deux onglets de code sont disponi
 <div class="screenshot"><img src="{{ ASSET static/help/instance/tabs.webp }}" height="160" alt=""/></div>
 
 > [!NOTE]
-> Si vous ne voyez pas l'onglet « Formulaire », pas de panique ! Vous êtes probablement sur la page de statut, qui n'a pas de code (par défaut). Ouvrez une page de formulaire et l'onglet apparaitra.
+> Si vous ne voyez pas l'onglet « Formulaire », pas de panique ! Vous êtes probablement sur la page de statut, qui n'a pas de code (par défaut). Ouvrez une page de formulaire et l'onglet apparaitra.
 
 ### Onglet Projet
 

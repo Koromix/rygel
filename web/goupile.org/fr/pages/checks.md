@@ -21,7 +21,7 @@ Goupile propose un système d'erreurs pour répondre à ces besoins, on distingu
 
 ### Saisie obligatoire
 
-La [saisie obligatoire](form#saisie-obligatoire) (`mandatory: true`) est disponible avec tous les widgets. Une variable manquante génère une erreur avec le tag "Incomplet", qui est bloquante par défaut.
+La [saisie obligatoire](form#saisie-obligatoire) (`mandatory: true`) est disponible avec tous les widgets. Une variable manquante génère une erreur avec le tag « Incomplet », qui est bloquante par défaut.
 
 Pour générer cette erreur sans bloquer l'enregistrement vous pouvez définir l'option `block: false` sur le widget :
 

@@ -19,20 +19,20 @@ Pour ce faire, cliquez sur le bouton Publier en haut à droite du panneau d'édi
 
 <div class="screenshot"><img src="{{ ASSET static/help/dev/publish.webp }}" alt=""/></div>
 
-Ce panneau récapitule les modifications apportées et les actions qu'engendrera la publication. Dans la capture à droite, on voit qu'une page a été modifiée localement (nommée « accueil ») et sera rendue publique après acceptation des modifications.
+Ce panneau récapitule les modifications apportées et les actions qu'engendrera la publication. Dans la capture à droite, on voit qu'une page a été modifiée localement (nommée « accueil ») et sera rendue publique après acceptation des modifications.
 
 Validez les modifications, et **tous les utilisateurs auront accès** à la nouvelle version du formulaire.
 
 # Ajout de fichiers et d'images
 
-Il est possible d'intégrer des **images, des vidéos, des PDF et tous types de fichiers**, qui seront directement hébergés par Goupile. Pour cela, ouvrez le panneau de publication (accessible au-dessus de l'éditeur), puis cliquez sur le lien « Ajouter un fichier » [1].
+Il est possible d'intégrer des **images, des vidéos, des PDF et tous types de fichiers**, qui seront directement hébergés par Goupile. Pour cela, ouvrez le panneau de publication (accessible au-dessus de l'éditeur), puis cliquez sur le lien « Ajouter un fichier » [1].
 
 <div class="screenshot">
     <img src="{{ ASSET static/help/dev/file1.webp }}" style="height: 240px;" alt=""/>
     <img src="{{ ASSET static/help/dev/file2.webp }}" style="height: 240px;" alt=""/>
 </div>
 
-Vous pouvez ensuite sélectionner un fichier à ajouter depuis votre ordinateur, et le renommer si vous le souhaitez. Vous pouvez également le mettre en arborescence en lui donnant un nom tel que « images/alpes/montblanc.png ».
+Vous pouvez ensuite sélectionner un fichier à ajouter depuis votre ordinateur, et le renommer si vous le souhaitez. Vous pouvez également le mettre en arborescence en lui donnant un nom tel que « images/alpes/montblanc.png ».
 
 Une fois le fichier ajouté, vous pouvez directement y faire référence dans vos pages à l'aide du widget `form.output`. Le code HTML suivant vous explique comment afficher le logo Apple, à partir d'un fichier `images/apple.png` ajouté au projet :
 

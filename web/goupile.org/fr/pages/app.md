@@ -217,7 +217,7 @@ L'option `lock` permet de verrouiller les données saisies par l'utilisateur, il
 > [!NOTE]
 > Notez bien la distinction entre la valeur par défaut `lock: null` (absence de fonction verrouillage) et la valeur `lock: false` (verrouillage manuel).
 >
-> Dans le deuxième cas, l'enregistrement n'entraine pas de verrouillage, mais un bouton « Verrouiller » apparait dans l'interface et peut être utilisé manuellement.
+> Dans le deuxième cas, l'enregistrement n'entraine pas de verrouillage, mais un bouton « Verrouiller » apparait dans l'interface et peut être utilisé manuellement.
 
 Comme les autres options décrites précédemment, cette option peut être différente pour chaque page du projet. Dans un formulaire avec plusieurs pages, vous pouvez définir l'option `lock` (immédiate ou après délai) sur la dernière page, pour verrouiller l'enregistrement une fois qu'il est rempli entièrement.
 
