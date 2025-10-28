@@ -709,7 +709,7 @@ function runConfigureDomainDialog(e) {
 
             d.tab(T.smtp, () => {
                 if (domain.smtp.provisioned) {
-                    d.output(T.smtp_is_provisioned);
+                    d.output(T.provisioned_settings);
                     d.pushOptions({ disabled: true });
                 }
 
@@ -723,6 +723,23 @@ function runConfigureDomainDialog(e) {
                 });
                 d.password('smtp_password', T.password, { value: domain.smtp.password });
                 d.text('smtp_from', T.smtp_from, { value: domain.smtp.from });
+            });
+
+            d.tab(T.security, () => {
+                if (domain.security.provisioned) {
+                    d.output(T.provisioned_settings);
+                    d.pushOptions({ disabled: true });
+                }
+
+                let props = [
+                    ['easy', T.password_complexity.easy],
+                    ['moderate', T.password_complexity.moderate],
+                    ['hard', T.password_complexity.hard]
+                ];
+
+                d.enumDrop('user_password', T.user_passwords, props, { value: domain.security.user_password });
+                d.enumDrop('admin_password', T.admin_passwords, props, { value: domain.security.admin_password });
+                d.enumDrop('root_password', T.root_passwords, props, { value: domain.security.root_password });
             });
         });
 
@@ -739,6 +756,12 @@ function runConfigureDomainDialog(e) {
                         user: d.values.smtp_user,
                         password: d.values.smtp_password,
                         from: d.values.smtp_from
+                    } : null,
+
+                    security: !domain.security.provisioned ? {
+                        user_password: d.values.user_password,
+                        admin_password: d.values.admin_password,
+                        root_password: d.values.root_password
                     } : null
                 });
 

@@ -4,13 +4,12 @@
 #pragma once
 
 #include "src/core/base/base.hh"
+#include "config.hh"
 #include "instance.hh"
 #include "src/core/request/smtp.hh"
 #include "src/core/sqlite/sqlite.hh"
 
 namespace K {
-
-struct Config;
 
 extern const int DomainVersion;
 extern const int MaxInstances;
@@ -23,6 +22,11 @@ struct DomainSettings {
     const char *archive_key = nullptr;
     int archive_hour = 0;
     int archive_retention = 7;
+
+    PasswordComplexity user_password = PasswordComplexity::Moderate;
+    PasswordComplexity admin_password = PasswordComplexity::Moderate;
+    PasswordComplexity root_password = PasswordComplexity::Hard;
+    bool security_provisioned = false;
 
     smtp_Config smtp;
     bool smtp_provisioned = false;

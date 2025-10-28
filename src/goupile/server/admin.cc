@@ -729,6 +729,8 @@ void HandleDomainInfo(http_IO *io)
     K_DEFER { UnrefDomain(domain); };
 
     http_SendJson(io, 200, [&](json_Writer *json) {
+        char buf[256];
+
         json->StartObject();
 
         json->Key("name"); json->String(domain->settings.name);
@@ -748,6 +750,13 @@ void HandleDomainInfo(http_IO *io)
                 json->Key("password"); json->StringOrNull(domain->settings.smtp.password);
                 json->Key("from"); json->StringOrNull(domain->settings.smtp.from);
                 json->Key("provisioned"); json->Bool(domain->settings.smtp_provisioned);
+            json->EndObject();
+
+            json->Key("security"); json->StartObject();
+                json->Key("user_password"); json->String(json_ConvertToJsonName(PasswordComplexityNames[(int)domain->settings.user_password], buf).ptr);
+                json->Key("admin_password"); json->String(json_ConvertToJsonName(PasswordComplexityNames[(int)domain->settings.admin_password], buf).ptr);
+                json->Key("root_password"); json->String(json_ConvertToJsonName(PasswordComplexityNames[(int)domain->settings.root_password], buf).ptr);
+                json->Key("provisioned"); json->Bool(domain->settings.security_provisioned);
             json->EndObject();
         }
 
@@ -776,6 +785,7 @@ void HandleDomainConfigure(http_IO *io)
     }
 
     DomainSettings settings;
+    bool set_security = false;
     const char *username = nullptr;
     const char *password = nullptr;
     {
@@ -815,6 +825,38 @@ void HandleDomainConfigure(http_IO *io)
                                 valid = false;
                             }
                         }
+                    }
+                } else if (key == "security") {
+                    if (!json->SkipNull()) {
+                        for (json->ParseObject(); json->InObject(); ) {
+                            Span<const char> key = json->ParseKey();
+                            Span<const char> str = json->ParseString();
+
+                            PasswordComplexity *ptr = nullptr;
+
+                            if (key == "user_password") {
+                                ptr = &settings.user_password;
+                            } else if (key == "admin_password") {
+                                ptr = &settings.admin_password;
+                            } else if (key == "root_password") {
+                                ptr = &settings.root_password;
+                            } else {
+                                json->UnexpectedKey(key);
+                                valid = false;
+                            }
+
+                            if (ptr && str.ptr) {
+                                char name[128];
+                                json_ConvertFromJsonName(str, name);
+
+                                if (!OptionToEnumI(PasswordComplexityNames, str, ptr)) {
+                                    LogError("Unknown password complexity setting '%1'", str);
+                                    valid = false;
+                                }
+                            }
+                        }
+
+                        set_security = true;
                     }
                 } else {
                     json->UnexpectedKey(key);
@@ -890,6 +932,12 @@ void HandleDomainConfigure(http_IO *io)
                 success &= gp_db.Run(sql, "SmtpUser", settings.smtp.username);
                 success &= gp_db.Run(sql, "SmtpPassword", settings.smtp.password);
                 success &= gp_db.Run(sql, "SmtpFrom", settings.smtp.from);
+            }
+
+            if (set_security) {
+                success &= gp_db.Run(sql, "UserPassword", PasswordComplexityNames[(int)settings.user_password]);
+                success &= gp_db.Run(sql, "AdminPassword", PasswordComplexityNames[(int)settings.admin_password]);
+                success &= gp_db.Run(sql, "RootPassword", PasswordComplexityNames[(int)settings.root_password]);
             }
 
             if (!success)
@@ -2118,12 +2166,14 @@ void HandleInstanceAssign(http_IO *io)
                         for (json->ParseArray(); json->InArray(); ) {
                             Span<const char> str = json->ParseString();
 
-                            char perm[128];
-                            json_ConvertFromJsonName(str, perm);
+                            if (str.ptr) {
+                                char perm[128];
+                                json_ConvertFromJsonName(str, perm);
 
-                            if (!OptionToFlagI(UserPermissionNames, perm, &permissions)) {
-                                LogError("Unknown permission '%1'", str);
-                                valid = false;
+                                if (!OptionToFlagI(UserPermissionNames, perm, &permissions)) {
+                                    LogError("Unknown permission '%1'", str);
+                                    valid = false;
+                                }
                             }
                         }
                     }

@@ -37,6 +37,7 @@ struct Config {
     PasswordComplexity user_password = PasswordComplexity::Moderate;
     PasswordComplexity admin_password = PasswordComplexity::Moderate;
     PasswordComplexity root_password = PasswordComplexity::Hard;
+    bool custom_security = false;
 
     bool demo_mode = false;
 

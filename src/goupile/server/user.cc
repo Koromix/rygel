@@ -499,12 +499,15 @@ static bool CheckPasswordComplexity(const SessionInfo &session, Span<const char>
     PasswordComplexity treshold;
     unsigned int flags = 0;
 
+    DomainHolder *domain = RefDomain();
+    K_DEFER { UnrefDomain(domain); };
+
     if (session.is_root) {
-        treshold = gp_config.root_password;
+        treshold = domain->settings.root_password;
     } else if (session.is_admin) {
-        treshold = gp_config.admin_password;
+        treshold = domain->settings.admin_password;
     } else {
-        treshold = gp_config.user_password;
+        treshold = domain->settings.user_password;
     }
 
     switch (treshold) {

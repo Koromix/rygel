@@ -78,6 +78,8 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     LogError("Unknown password complexity setting '%1'", prop.value);
                     valid = false;
                 }
+
+                config.custom_security = true;
             } else if (prop.section == "Demo") {
                 if (prop.key == "DemoMode") {
                     valid &= ParseBool(prop.value, &config.demo_mode);

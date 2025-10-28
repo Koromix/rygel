@@ -9,7 +9,7 @@
 
 namespace K {
 
-const int DomainVersion = 114;
+const int DomainVersion = 115;
 const int MaxInstances = 1024;
 
 static std::mutex mutex;
@@ -457,10 +457,12 @@ bool DomainHolder::Open()
     unique = ++next_unique;
 
     // Use provisioned low-level settings
-    if (gp_config.smtp.url) {
-        settings.smtp = gp_config.smtp;
-        settings.smtp_provisioned = true;
-    }
+    settings.user_password = gp_config.user_password;
+    settings.admin_password = gp_config.admin_password;
+    settings.root_password = gp_config.root_password;
+    settings.security_provisioned = gp_config.custom_security;
+    settings.smtp = gp_config.smtp;
+    settings.smtp_provisioned = gp_config.smtp.url;
 
     // Load high-level settings
     {
@@ -491,6 +493,12 @@ bool DomainHolder::Open()
                     settings.smtp.password = DuplicateString(value, &settings.str_alloc).ptr;
                 } else if (!settings.smtp_provisioned && TestStr(setting, "SmtpFrom")) {
                     settings.smtp.from = DuplicateString(value, &settings.str_alloc).ptr;
+                } else if (!settings.security_provisioned && TestStr(setting, "UserPassword")) {
+                    valid &= OptionToEnum(PasswordComplexityNames, value, &settings.user_password);
+                } else if (!settings.security_provisioned && TestStr(setting, "AdminPassword")) {
+                    valid &= OptionToEnum(PasswordComplexityNames, value, &settings.admin_password);
+                } else if (!settings.security_provisioned && TestStr(setting, "RootPassword")) {
+                    valid &= OptionToEnum(PasswordComplexityNames, value, &settings.root_password);
                 }
             }
         }
@@ -1567,9 +1575,19 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 114: {
+                bool success = db->RunMany(R"(
+                    INSERT INTO dom_settings (key, value) VALUES ('UserPassword', NULL);
+                    INSERT INTO dom_settings (key, value) VALUES ('AdminPassword', NULL);
+                    INSERT INTO dom_settings (key, value) VALUES ('RootPassword', NULL);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DomainVersion == 114);
+            static_assert(DomainVersion == 115);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
