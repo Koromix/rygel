@@ -53,14 +53,13 @@
 </div>
 
 <style>
-    #indications\_principales { background: #3c7778; }
-    #autres\_indications\_psychiatriques\_hors\_amm { background: #92ccc9; }
-    #surveillance\_table {
+    #indications_principales { background: #3c7778; }
+    #autres_indications_psychiatriques_hors_amm { background: #92ccc9; }
+    #surveillance_table {
         table-layout: fixed;
         width: 90%;
         margin: 0 auto;
-        font-size: 0.8em;
     }
-    #surveillance\_table thead th:not(:first-child) { width: 80px; }
-    #surveillance\_table td { text-align: center; }
+    #surveillance_table thead th:not(:first-child) { width: 80px; }
+    #surveillance_table td { text-align: center; }
 </style>

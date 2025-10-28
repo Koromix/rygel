@@ -240,10 +240,10 @@ th, td {
     height: 1.5em;
     padding: 0.5em;
     vertical-align: middle;
+    font-size: 0.95em;
 }
 th {
     background: #f8f8f8;
-    font-size: 0.9em;
     font-variant: small-caps;
     text-align: left;
     user-select: none;
