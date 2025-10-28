@@ -110,7 +110,6 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
                                      (int)UserPermission::DataRead |
                                      (int)UserPermission::DataSave |
                                      (int)UserPermission::DataDelete |
-                                     (int)UserPermission::DataAnnotate |
                                      (int)UserPermission::ExportCreate |
                                      (int)UserPermission::ExportDownload;
             } else if (userid > 0) {

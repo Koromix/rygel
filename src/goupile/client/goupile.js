@@ -459,7 +459,7 @@ async function runLoginScreen(e, initial) {
     if (ENV.use_offline) {
         let db = await openLocalDB();
 
-        if (profile.permissions['misc_offline']) {
+        if (profile.permissions['data_offline']) {
             let data = Object.assign({}, profile);
             data.keys = Object.keys(profile_keys).reduce((obj, key) => { obj[key] = Base64.toBase64(profile_keys[key]); return obj }, {});
 

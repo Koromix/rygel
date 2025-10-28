@@ -180,7 +180,7 @@ function renderUsers() {
                                         ${selected_instance.master == null ? makePermissionsTag(permissions, 'build_', '#b518bf') : ''}
                                         ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : ''}
                                         ${!selected_instance.slaves ? makePermissionsTag(permissions, 'export_', '#3364bd') : ''}
-                                        ${!selected_instance.slaves ? makePermissionsTag(permissions, 'misc_', '#c97f1a') : ''}
+                                        ${!selected_instance.slaves ? makePermissionsTag(permissions, 'message_', '#c97f1a') : ''}
                                         ${!permissions.length ? T.unassigned : ''}
                                     </td>
                                     <td><a role="button" tabindex="0"
@@ -842,11 +842,11 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
                 disabled: instance.slaves > 0
             });
         }, { color: '#3364bd' });
-        d.sameLine(true); d.section(T.other, () => {
-            let props = listPermissions('misc_', instance.legacy);
-            let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('misc_')) : null;
+        d.sameLine(true); d.section(T.messages, () => {
+            let props = listPermissions('message_', instance.legacy);
+            let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('message_')) : null;
 
-            d.multiCheck('misc_permissions', null, props, {
+            d.multiCheck('message_permissions', null, props, {
                 value: value,
                 disabled: instance.slaves > 0
             });
@@ -857,7 +857,7 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
             ...(d.values.build_permissions || []),
             ...(d.values.data_permissions || []),
             ...(d.values.export_permissions || []),
-            ...(d.values.misc_permissions || [])
+            ...(d.values.message_permissions || [])
         ];
 
         d.action(T.edit, { disabled: !d.isValid() }, async () => {

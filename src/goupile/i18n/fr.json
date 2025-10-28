@@ -168,6 +168,7 @@
         "locking": "Verrouillage",
         "login": "Se connecter",
         "logout": "Se déconnecter",
+        "messages": "Messages",
         "migrate": "Migrer",
         "migrate_x": "Migration de {1}",
         "missing_value_choice": "-- Valeur non renseignée --",

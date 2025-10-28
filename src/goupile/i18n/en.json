@@ -168,6 +168,7 @@
         "locking": "Locking",
         "login": "Login",
         "logout": "Logout",
+        "messages": "Messages",
         "migrate": "Migrate",
         "migrate_x": "Migrate {1}",
         "missing_value_choice": "-- Value not provided --",
