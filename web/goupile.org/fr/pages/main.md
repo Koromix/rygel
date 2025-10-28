@@ -85,7 +85,7 @@ La page se rafraichit lorsque vous appliquez vos modifications.
 
 Les modifications faites dans un script de page **sont appliquées en temps réel**.
 
-Le ou les widgets en cours de modifications dans l'éditeur de code sont encadrés en bleu dans le panneau d'aperçu, pour vous aider à faire le lien entre le code et le contenu généré.
+Le ou les widgets en cours de modifications dans l'éditeur de code sont *encadrés en bleu* dans le panneau d'aperçu, pour vous aider à faire le lien entre le code et le contenu généré.
 
 <div class="screenshot"><img src="{{ ASSET static/help/instance/highlight.webp }}" height="180" alt=""/></div>
 
