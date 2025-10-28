@@ -1008,7 +1008,6 @@ function runDeleteUserDialog(e, user) {
                          T.delete, async () => {
         await Net.post('/admin/api/users/delete', { userid: user.userid });
 
-        resolve();
         Log.success(T.format(T.user_x_deleted, user.username));
 
         users = null;
