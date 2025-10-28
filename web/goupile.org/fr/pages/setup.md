@@ -30,11 +30,32 @@ Ouvrez le panneau de configuration global en cliquant avec le lien "Configurer l
 
 <div class="screenshot"><img src="{{ ASSET static/help/admin/config.webp }}" height="160" alt=""/></div>
 
+> [!NOTE]
+> Certains des paramètres qui suivent peuvent être configurés dans le fichier `goupile.ini`. Quand c'est le cas, les valeurs issues du fichier sont prioritaires et il n'est pas possible de les modifier par le module d'administration.
+
 ## SMTP
 
 Certaines fonctionnalités nécessitent l'envoi de mails (par exemple le système d'inscription personnalisé). Vous devez configurer un serveur SMTP pour permettre l'envoi de mails par Goupile.
 
-<div class="screenshot"><img src="{{ ASSET static/help/admin/smtp.webp }}" height="300" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/smtp.webp }}" height="380" alt=""/></div>
 
-> [!NOTE]
-> Les paramètres SMTP peuvent également être configurés par le fichier `goupile.ini`. Si tel est le cas, les valeurs issues du fichier sont prioritaires et il n'est pas possible de les modifier par le module d'administration.
+## Sécurité
+
+L'onglet Sécurité vous permet de paramétrer la politique de mots de passe, en différenciant trois classes d'utilisateurs :
+
+- Les *utilisateurs normaux*
+- Les *administrateurs* ont des droits d'administration sur au moins un projet
+- Les *super-administrateurs* ont tous les droits sur le domaine Goupile
+
+<div class="screenshot"><img src="{{ ASSET static/help/admin/security.webp }}" height="280" alt=""/></div>
+
+Pour chaque classe d'utilisateur vous pouvez exiger une complexité de mot de passe parmi 3 choix :
+
+- La **complexité légère** impose des mots de passe avec au moins 8 caractères différents
+- La **complexité modérée** impose des mots de passe avec des lettres, des chiffres et des symboles, ou bien un mot de passe de plus de 16 caractères
+- La **complexité élevée** utilise un système de score et de pénalité en fonction des caractères utilisés
+
+> [!WARNING]
+> Cette complexité est imposée lors d'un changement de mot de passe par l'utilisateur, ou lors de chaque connexion pour les administrateurs et les super-administrateurs.
+>
+> En revanche, les administrateurs peuvent créer des utilisateurs dont le mot de passe échappe à ces contraintes.
