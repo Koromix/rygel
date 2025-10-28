@@ -747,6 +747,7 @@ void HandleDomainInfo(http_IO *io)
                 json->Key("user"); json->StringOrNull(domain->settings.smtp.username);
                 json->Key("password"); json->StringOrNull(domain->settings.smtp.password);
                 json->Key("from"); json->StringOrNull(domain->settings.smtp.from);
+                json->Key("provisioned"); json->Bool(domain->settings.smtp_provisioned);
             json->EndObject();
         }
 
@@ -797,20 +798,22 @@ void HandleDomainConfigure(http_IO *io)
                 } else if (key == "password") {
                     json->ParseString(&password);
                 } else if (key == "smtp") {
-                    for (json->ParseObject(); json->InObject(); ) {
-                        Span<const char> key = json->ParseKey();
+                    if (!json->SkipNull()) {
+                        for (json->ParseObject(); json->InObject(); ) {
+                            Span<const char> key = json->ParseKey();
 
-                        if (key == "url") {
-                            json->SkipNull() || json->ParseString(&settings.smtp.url);
-                        } else if (key == "user") {
-                            json->SkipNull() || json->ParseString(&settings.smtp.username);
-                        } else if (key == "password") {
-                            json->SkipNull() || json->ParseString(&settings.smtp.password);
-                        } else if (key == "from") {
-                            json->SkipNull() || json->ParseString(&settings.smtp.from);
-                        } else {
-                            json->UnexpectedKey(key);
-                            valid = false;
+                            if (key == "url") {
+                                json->SkipNull() || json->ParseString(&settings.smtp.url);
+                            } else if (key == "user") {
+                                json->SkipNull() || json->ParseString(&settings.smtp.username);
+                            } else if (key == "password") {
+                                json->SkipNull() || json->ParseString(&settings.smtp.password);
+                            } else if (key == "from") {
+                                json->SkipNull() || json->ParseString(&settings.smtp.from);
+                            } else {
+                                json->UnexpectedKey(key);
+                                valid = false;
+                            }
                         }
                     }
                 } else {

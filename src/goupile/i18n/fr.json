@@ -256,6 +256,7 @@
         "smtp": "SMTP",
         "smtp_auth_help": "Laisser vide pour omettre l'authentification SMTP",
         "smtp_from": "Adresse de provenance",
+        "smtp_is_provisioned": "Impossible de modifier les paramètres SMTP définis dans le fichier de configuration principal.",
         "smtp_url_help": "Suit le format d'URL de CURL :",
         "split": "Diviser",
         "split_x": "Division de {1}",

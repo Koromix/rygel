@@ -35,3 +35,6 @@ Ouvrez le panneau de configuration global en cliquant avec le lien "Configurer l
 Certaines fonctionnalités nécessitent l'envoi de mails (par exemple le système d'inscription personnalisé). Vous devez configurer un serveur SMTP pour permettre l'envoi de mails par Goupile.
 
 <div class="screenshot"><img src="{{ ASSET static/help/admin/smtp.webp }}" height="300" alt=""/></div>
+
+> [!NOTE]
+> Les paramètres SMTP peuvent également être configurés par le fichier `goupile.ini`. Si tel est le cas, les valeurs issues du fichier sont prioritaires et il n'est pas possible de les modifier par le module d'administration.

@@ -25,6 +25,7 @@ struct DomainSettings {
     int archive_retention = 7;
 
     smtp_Config smtp;
+    bool smtp_provisioned = false;
 
     bool Validate() const;
 

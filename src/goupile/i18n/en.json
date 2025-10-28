@@ -255,6 +255,7 @@
         "slave_x_created": "Subproject '{1}' created",
         "smtp": "SMTP",
         "smtp_auth_help": "Leave username empty to skip authentification",
+        "smtp_is_provisioned": "Cannot change SMTP settings set by main config file",
         "smtp_from": "Origin address (From)",
         "smtp_url_help": "Follow the CURL URL format:",
         "split": "Split",

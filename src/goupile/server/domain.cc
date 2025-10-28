@@ -456,6 +456,12 @@ bool DomainHolder::Open()
 {
     unique = ++next_unique;
 
+    // Use provisioned low-level settings
+    if (gp_config.smtp.url) {
+        settings.smtp = gp_config.smtp;
+        settings.smtp_provisioned = true;
+    }
+
     // Load high-level settings
     {
         sq_Statement stmt;
@@ -477,13 +483,13 @@ bool DomainHolder::Open()
                     settings.default_lang = DuplicateString(value, &settings.str_alloc).ptr;
                 } else if (TestStr(setting, "ArchiveKey")) {
                     settings.archive_key = DuplicateString(value, &settings.str_alloc).ptr;
-                } else if (TestStr(setting, "SmtpUrl")) {
+                } else if (!settings.smtp_provisioned && TestStr(setting, "SmtpUrl")) {
                     settings.smtp.url = DuplicateString(value, &settings.str_alloc).ptr;
-                } else if (TestStr(setting, "SmtpUser")) {
+                } else if (!settings.smtp_provisioned && TestStr(setting, "SmtpUser")) {
                     settings.smtp.username = DuplicateString(value, &settings.str_alloc).ptr;
-                } else if (TestStr(setting, "SmtpPassword")) {
+                } else if (!settings.smtp_provisioned && TestStr(setting, "SmtpPassword")) {
                     settings.smtp.password = DuplicateString(value, &settings.str_alloc).ptr;
-                } else if (TestStr(setting, "SmtpFrom")) {
+                } else if (!settings.smtp_provisioned && TestStr(setting, "SmtpFrom")) {
                     settings.smtp.from = DuplicateString(value, &settings.str_alloc).ptr;
                 }
             }
@@ -498,9 +504,6 @@ bool DomainHolder::Open()
         }
         if (!settings.title) {
             settings.title = settings.name;
-        }
-        if (!settings.smtp.url) {
-            settings.smtp = gp_config.smtp;
         }
     }
 

@@ -708,6 +708,11 @@ function runConfigureDomainDialog(e) {
             });
 
             d.tab(T.smtp, () => {
+                if (domain.smtp.provisioned) {
+                    d.output(T.smtp_is_provisioned);
+                    d.pushOptions({ disabled: true });
+                }
+
                 d.text('smtp_url', T.url, {
                     value: domain.smtp.url,
                     help: html`${T.smtp_url_help} <a href="https://everything.curl.dev/usingcurl/smtp.html" target="_blank">CURL SMTP</a>`
@@ -729,12 +734,12 @@ function runConfigureDomainDialog(e) {
                     default_lang: d.values.default_lang,
                     archive_key: domain.archive.key,
 
-                    smtp: {
+                    smtp: !domain.smtp.provisioned ? {
                         url: d.values.smtp_url,
                         user: d.values.smtp_user,
                         password: d.values.smtp_password,
                         from: d.values.smtp_from
-                    }
+                    } : null
                 });
 
                 resolve();
