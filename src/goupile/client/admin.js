@@ -94,9 +94,7 @@ function renderDomain() {
                             </td>
                             ${instance.master == null ?
                                 html`<td><a role="button" tabindex="0" @click=${UI.wrap(e => runSplitInstanceDialog(e, instance.key))}>${T.split}</a></td>` : ''}
-                            <td><a role="button" tabindex="0" href=${Util.pasteURL('/admin/', { select: instance.key })}
-                                   @click=${UI.wrap(instance != selected_instance ? (e => togglePanel('users', true))
-                                                                                        : (e => { go(e, '/admin/'); e.preventDefault(); }))}>${T.permissions}</a></td>
+                            <td><a role="button" tabindex="0" href=${Util.pasteURL('/admin/', { select: instance != selected_instance ? instance.key : null })}>${T.permissions}</a></td>
                             <td><a role="button" tabindex="0" @click=${UI.wrap(e => runConfigureInstanceDialog(e, instance))}>${T.configure}</a></td>
                             <td>${profile.root || instance.master != null ? html`<a role="button" tabindex="0" @click=${UI.wrap(e => runDeleteInstanceDialog(e, instance))}>${T.delete}</a>` : ''}</td>
                         </tr>
