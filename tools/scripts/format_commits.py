@@ -8,7 +8,7 @@ import sys
 import subprocess
 
 for commit in sys.stdin.readlines():
-    commit = commit.strip()
+    commit = re.sub(r' .*$', '', commit.strip())
 
     if commit:
         env = os.environ | { 'LANG': 'C', 'LANGUAGE': 'C' }
