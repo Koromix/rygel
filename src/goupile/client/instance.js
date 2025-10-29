@@ -2242,7 +2242,6 @@ async function openRecord(tid, anchor, page) {
                 anchor: -1,
                 ctime: now,
                 mtime: now,
-                sequence: null,
                 tags: [],
                 data: {}
             };
