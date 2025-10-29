@@ -39,7 +39,7 @@ Sur un projet par défaut, ceci ouvrira la page de statut de l'enregistrement, q
 
 Les différents éléments de la page de statut s'ajustent en fonction de l'état de remplissage :
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/status.webp }}" height="180" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/filled.webp }}" height="180" alt=""/></div>
 
 ### Page de formulaire
 
