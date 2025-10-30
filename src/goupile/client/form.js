@@ -2072,17 +2072,11 @@ instead of:
     function readValue(key, options, func) {
         let ptr = key.ptr;
 
-        if (!ptr.hasOwnProperty(key.name)) {
+        if (!ptr.hasOwnProperty(key.name) || key.retain.follow_default.has(key.name)) {
             let value = normalizeValue(func, options.value);
 
             ptr[key.name] = value;
             key.retain.follow_default.add(key.name);
-
-            return value;
-        } else if (options.value != null && key.retain.follow_default.has(key.name)) {
-            let value = normalizeValue(func, options.value);
-
-            ptr[key.name] = value;
 
             return value;
         } else {
