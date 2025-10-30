@@ -79,6 +79,13 @@ html.mobile #ins_page { padding-top: 0; }
 html.small #ins_drop > button { max-width: 300px; }
 html.mobile #ins_drop > button { max-width: 200px; }
 
+.ins_id::before {
+    content: '#';
+    padding-right: 1px;
+    color: #666;
+}
+#ui_top > .ins_id::before { color: white; }
+
 /* -------------------- Left menu -------------------- */
 
 #ins_menu {
@@ -187,6 +194,12 @@ html.mobile #ins_drop > button { max-width: 200px; }
 #ins_actions > button { width: 100%; }
 #ins_actions > button + button { margin-top: 6px; }
 
+#ins_actions > .ins_id {
+    text-align: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #dfdfdf;
+}
+
 html:not(.small) #ui_panels > div:only-child #ins_menu { display: block; }
 html:not(.small) #ui_panels > div:only-child #ins_actions { display: flex; }
 
@@ -197,6 +210,7 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: flex; }
     bottom: 0;
     background: #f4f2ef;
     color: white;
+    justify-content: center;
 
     --menu_color: #f4f2ef;
     --menu_color_n1: #fdfbf8;
@@ -212,6 +226,8 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: flex; }
 #ins_tasks > .hid { font-weight: bold; }
 html.small #ins_tasks { display: flex; }
 #ui_panels > div:not(:only-child) #ins_tasks { display: flex; }
+
+#ins_tasks > .ins_id { pointer-events: none; }
 
 /* -------------------- Status -------------------- */
 

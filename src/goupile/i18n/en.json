@@ -270,6 +270,7 @@
         "status_nd": "Not available",
         "status_nsp": "Refuse to answer",
         "status_wait": "Waiting",
+        "thread": "Record",
         "threads": "Records",
         "title": "Title",
         "totp_code": "Secret code",

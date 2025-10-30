@@ -278,6 +278,7 @@
         "status_nd": "Information non disponible",
         "status_nsp": "Ne souhaite pas répondre",
         "status_wait": "En attente",
+        "thread": "Enregistrement",
         "threads": "Enregistrements",
         "title": "Titre",
         "totp_code": "Code secret",

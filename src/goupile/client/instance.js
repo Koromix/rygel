@@ -315,8 +315,13 @@ function renderDropItem(page, first) {
     let enabled = status.enabled || profile.develop;
 
     if (first) {
-        return html`<button class=${'icon home' + (active ? ' active' : '')} ?disabled=${!enabled}
-                            @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}></button>`;
+        if (form_thread.sequence != null) {
+            return html`<button class=${'ins_id' + (active ? ' active' : '')} ?disabled=${!enabled}
+                                @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}>${form_thread.sequence}</button>`;
+        } else {
+            return html`<button class=${'icon new' + (active ? ' active' : '')} ?disabled=${!enabled}
+                                @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}></button>`;
+        }
     } else {
         let suffix = (UI.allowTwoPanels() && !goupile.isLocked()) ? makeStatusText(status, page.progress) : '';
 
@@ -948,6 +953,9 @@ async function renderPage() {
                 </form>
 
                 <div id="ins_actions">
+                    ${app.panels.data && form_thread.sequence != null ?
+                        html`<div class="ins_id">${form_thread.sequence}</div>` : ''}
+
                     ${form_model.renderActions()}
 
                     ${page_sections.length > 1 ? html`
@@ -963,7 +971,10 @@ async function renderPage() {
 
             ${form_model.actions.length ? html`
                 <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
-                    <div style="flex: 1;"></div>
+                    ${app.panels.data && form_thread.sequence != null ? html`
+                        <button class="ins_id">${form_thread.sequence}</button>
+                        <div style="flex: 1;"></div>
+                    ` : ''}
                     ${form_model.actions.some(action => !action.options.always) ? html`
                         <div class="drop up right">
                             <button @click=${UI.deployMenu}>${T.other_actions}</button>
@@ -983,7 +994,6 @@ async function renderPage() {
 
                         return action.render();
                     })}
-                    <div style="flex: 1;"></div>
                 </nav>
             ` : ''}
         </div>
