@@ -243,10 +243,6 @@ function renderMenu() {
                 ${Util.map(route.page.chain[0].children, page => renderDropItem(page, false))}
             ` : ''}
             ${show_menu && wide_menu ? route.page.chain.map((page, idx) => renderDropItem(page, !idx)) : ''}
-            ${app.panels.data && (!UI.isPanelActive('view') || form_thread.saved) ? html`
-                <div style="width: 15px;"></div>
-                <button class="icon new" @click=${UI.wrap(e => go(e, route.page.chain[0].url))}>${T.add}</button>
-            ` : ''}
             <div style="flex: 1; min-width: 4px;"></div>
 
             ${!goupile.isLocked() && profile.instances == null ?
@@ -600,6 +596,10 @@ function renderData() {
 
     return html`
         <div class="padded">
+            <div class="ui_actions">
+                <button @click=${UI.wrap(e => go(e, route.page.chain[0].url))}>${T.create_record}</button>
+            </div>
+
             <div class="ui_quick" style="margin-right: 2.2em;">
                 <div style="display: flex; gap: 8px; padding-bottom: 4px;">
                     <div class="fm_check">
@@ -713,7 +713,7 @@ function renderData() {
             </table>
 
             <div class="ui_actions">
-                ${goupile.hasPermission('export_create') || goupile.hasPermission('export_download') ? html`<button @click=${UI.wrap(runExportDialog)}>${T.exports}</button>` : ''}
+                ${goupile.hasPermission('export_create') || goupile.hasPermission('export_download') ? html`<button @click=${UI.wrap(runExportDialog)}>${T.data_exports}</button>` : ''}
             </div>
         </div>
     `;

@@ -75,6 +75,7 @@
         "create_export": "Create export",
         "create_first_export": "Confirm to create and download the first data export.",
         "create_project": "Create new project",
+        "create_record": "Create new record",
         "create_user": "Create new user",
         "creation": "Creation",
         "current_fs_x": "Current version: {1}",
