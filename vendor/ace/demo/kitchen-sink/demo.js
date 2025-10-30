@@ -2389,6 +2389,9 @@ var BaseDiffView = /** @class */ (function () {
             sessionB: diffModel.sessionB || (diffModel.editorB ? diffModel.editorB.session : new EditSession(diffModel.valueB || "")),
             chunks: []
         });
+        if (this.otherEditor && this.activeEditor) {
+            this.otherSession.setOption("wrap", this.activeEditor.getOption("wrap"));
+        }
         this.setupScrollbars();
     };
     BaseDiffView.prototype.addGutterDecorators = function () {
@@ -3366,15 +3369,18 @@ var InlineDiffView = /** @class */ (function (_super) {
         diffView.sessionA["_emit"]("changeFold", { data: { start: { row: 0 } } });
         diffView.sessionB["_emit"]("changeFold", { data: { start: { row: 0 } } });
     };
-    InlineDiffView.prototype.onChangeWrapLimit = function () {
-        this.sessionB.adjustWrapLimit(this.sessionA.$wrapLimit);
+    InlineDiffView.prototype.onChangeWrapLimit = function (e, session) {
+        this.otherSession.setOption("wrap", session.getOption("wrap"));
+        this.otherSession.adjustWrapLimit(session.$wrapLimit);
         this.scheduleRealign();
+        this.activeEditor.renderer.updateFull();
     };
     InlineDiffView.prototype.$attachSessionsEventHandlers = function () {
         this.$attachSessionEventHandlers(this.editorA, this.markerA);
         this.$attachSessionEventHandlers(this.editorB, this.markerB);
-        this.sessionA.on("changeWrapLimit", this.onChangeWrapLimit);
-        this.sessionA.on("changeWrapMode", this.onChangeWrapLimit);
+        var session = this.activeEditor.session;
+        session.on("changeWrapLimit", this.onChangeWrapLimit);
+        session.on("changeWrapMode", this.onChangeWrapLimit);
     };
     InlineDiffView.prototype.$attachSessionEventHandlers = function (editor, marker) {
         editor.session.on("changeFold", this.onChangeFold);
@@ -3386,8 +3392,9 @@ var InlineDiffView = /** @class */ (function (_super) {
         this.$detachSessionHandlers(this.editorA, this.markerA);
         this.$detachSessionHandlers(this.editorB, this.markerB);
         this.otherSession.bgTokenizer.lines.fill(undefined);
-        this.sessionA.off("changeWrapLimit", this.onChangeWrapLimit);
-        this.sessionA.off("changeWrapMode", this.onChangeWrapLimit);
+        var session = this.activeEditor.session;
+        session.off("changeWrapLimit", this.onChangeWrapLimit);
+        session.off("changeWrapMode", this.onChangeWrapLimit);
     };
     InlineDiffView.prototype.$detachSessionHandlers = function (editor, marker) {
         editor.session.removeMarker(marker.id);
@@ -8447,10 +8454,6 @@ var optionGroups = {
         },
         "Keyboard Accessibility Mode": {
             path: "enableKeyboardAccessibility"
-        },
-        "Gutter tooltip follows mouse": {
-            path: "tooltipFollowsMouse",
-            defaultValue: true
         }
     }
 };
@@ -8925,23 +8928,21 @@ var AcePopup = /** @class */ (function () {
             else {
                 renderer.$maxPixelHeight = null;
             }
-            el.style.display = "";
-            var rootRect = el.offsetParent && el.offsetParent.getBoundingClientRect();
             if (anchor === "top") {
                 el.style.top = "";
-                el.style.bottom = (screenHeight + scrollBarSize - dims.bottom)
-                    - (rootRect ? screenHeight + scrollBarSize - rootRect.bottom : 0) + "px";
+                el.style.bottom = (screenHeight + scrollBarSize - dims.bottom) + "px";
                 popup.isTopdown = false;
             }
             else {
-                el.style.top = (dims.top - (rootRect ? rootRect.top : 0)) + "px";
+                el.style.top = dims.top + "px";
                 el.style.bottom = "";
                 popup.isTopdown = true;
             }
+            el.style.display = "";
             var left = pos.left;
             if (left + el.offsetWidth > screenWidth)
                 left = screenWidth - el.offsetWidth;
-            el.style.left = (left - (rootRect ? rootRect.left : 0)) + "px";
+            el.style.left = left + "px";
             el.style.right = "";
             if (!popup.isOpen) {
                 popup.isOpen = true;
@@ -8950,6 +8951,7 @@ var AcePopup = /** @class */ (function () {
             }
             popup.anchorPos = pos;
             popup.anchor = anchor;
+            dom.$fixPositionBug(el);
             return true;
         };
         popup.show = function (pos, lineHeight, topdownOnly) {
@@ -8983,7 +8985,7 @@ var AcePopup = /** @class */ (function () {
     }
     return AcePopup;
 }());
-dom.importCssString("\n.ace_editor.ace_autocomplete .ace_marker-layer .ace_active-line {\n    background-color: #CAD6FA;\n    z-index: 1;\n}\n.ace_dark.ace_editor.ace_autocomplete .ace_marker-layer .ace_active-line {\n    background-color: #3a674e;\n}\n.ace_editor.ace_autocomplete .ace_line-hover {\n    border: 1px solid #abbffe;\n    margin-top: -1px;\n    background: rgba(233,233,253,0.4);\n    position: absolute;\n    z-index: 2;\n}\n.ace_dark.ace_editor.ace_autocomplete .ace_line-hover {\n    border: 1px solid rgba(109, 150, 13, 0.8);\n    background: rgba(58, 103, 78, 0.62);\n}\n.ace_completion-meta {\n    opacity: 0.5;\n    margin-left: 0.9em;\n}\n.ace_completion-message {\n    margin-left: 0.9em;\n    color: blue;\n}\n.ace_editor.ace_autocomplete .ace_completion-highlight{\n    color: #2d69c7;\n}\n.ace_dark.ace_editor.ace_autocomplete .ace_completion-highlight{\n    color: #93ca12;\n}\n.ace_editor.ace_autocomplete {\n    width: 300px;\n    z-index: 200000;\n    border: 1px lightgray solid;\n    position: absolute;\n    box-shadow: 2px 3px 5px rgba(0,0,0,.2);\n    line-height: 1.4;\n    background: #fefefe;\n    color: #111;\n}\n.ace_dark.ace_editor.ace_autocomplete {\n    border: 1px #484747 solid;\n    box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.51);\n    line-height: 1.4;\n    background: #25282c;\n    color: #c1c1c1;\n}\n.ace_autocomplete .ace_text-layer  {\n    width: calc(100% - 8px);\n}\n.ace_autocomplete .ace_line {\n    display: flex;\n    align-items: center;\n}\n.ace_autocomplete .ace_line > * {\n    min-width: 0;\n    flex: 0 0 auto;\n}\n.ace_autocomplete .ace_line .ace_ {\n    flex: 0 1 auto;\n    overflow: hidden;\n    text-overflow: ellipsis;\n}\n.ace_autocomplete .ace_completion-spacer {\n    flex: 1;\n}\n.ace_autocomplete.ace_loading:after  {\n    content: \"\";\n    position: absolute;\n    top: 0px;\n    height: 2px;\n    width: 8%;\n    background: blue;\n    z-index: 100;\n    animation: ace_progress 3s infinite linear;\n    animation-delay: 300ms;\n    transform: translateX(-100%) scaleX(1);\n}\n@keyframes ace_progress {\n    0% { transform: translateX(-100%) scaleX(1) }\n    50% { transform: translateX(625%) scaleX(2) } \n    100% { transform: translateX(1500%) scaleX(3) } \n}\n@media (prefers-reduced-motion) {\n    .ace_autocomplete.ace_loading:after {\n        transform: translateX(625%) scaleX(2);\n        animation: none;\n     }\n}\n", "autocompletion.css", false);
+dom.importCssString("\n.ace_editor.ace_autocomplete .ace_marker-layer .ace_active-line {\n    background-color: #CAD6FA;\n    z-index: 1;\n}\n.ace_dark.ace_editor.ace_autocomplete .ace_marker-layer .ace_active-line {\n    background-color: #3a674e;\n}\n.ace_editor.ace_autocomplete .ace_line-hover {\n    border: 1px solid #abbffe;\n    margin-top: -1px;\n    background: rgba(233,233,253,0.4);\n    position: absolute;\n    z-index: 2;\n}\n.ace_dark.ace_editor.ace_autocomplete .ace_line-hover {\n    border: 1px solid rgba(109, 150, 13, 0.8);\n    background: rgba(58, 103, 78, 0.62);\n}\n.ace_completion-meta {\n    opacity: 0.5;\n    margin-left: 0.9em;\n}\n.ace_completion-message {\n    margin-left: 0.9em;\n    color: blue;\n}\n.ace_editor.ace_autocomplete .ace_completion-highlight{\n    color: #2d69c7;\n}\n.ace_dark.ace_editor.ace_autocomplete .ace_completion-highlight{\n    color: #93ca12;\n}\n.ace_editor.ace_autocomplete {\n    width: 300px;\n    z-index: 200000;\n    border: 1px lightgray solid;\n    position: fixed;\n    box-shadow: 2px 3px 5px rgba(0,0,0,.2);\n    line-height: 1.4;\n    background: #fefefe;\n    color: #111;\n}\n.ace_dark.ace_editor.ace_autocomplete {\n    border: 1px #484747 solid;\n    box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.51);\n    line-height: 1.4;\n    background: #25282c;\n    color: #c1c1c1;\n}\n.ace_autocomplete .ace_text-layer  {\n    width: calc(100% - 8px);\n}\n.ace_autocomplete .ace_line {\n    display: flex;\n    align-items: center;\n}\n.ace_autocomplete .ace_line > * {\n    min-width: 0;\n    flex: 0 0 auto;\n}\n.ace_autocomplete .ace_line .ace_ {\n    flex: 0 1 auto;\n    overflow: hidden;\n    text-overflow: ellipsis;\n}\n.ace_autocomplete .ace_completion-spacer {\n    flex: 1;\n}\n.ace_autocomplete.ace_loading:after  {\n    content: \"\";\n    position: absolute;\n    top: 0px;\n    height: 2px;\n    width: 8%;\n    background: blue;\n    z-index: 100;\n    animation: ace_progress 3s infinite linear;\n    animation-delay: 300ms;\n    transform: translateX(-100%) scaleX(1);\n}\n@keyframes ace_progress {\n    0% { transform: translateX(-100%) scaleX(1) }\n    50% { transform: translateX(625%) scaleX(2) } \n    100% { transform: translateX(1500%) scaleX(3) } \n}\n@media (prefers-reduced-motion) {\n    .ace_autocomplete.ace_loading:after {\n        transform: translateX(625%) scaleX(2);\n        animation: none;\n     }\n}\n", "autocompletion.css", false);
 exports.AcePopup = AcePopup;
 exports.$singleLineEditor = $singleLineEditor;
 exports.getAriaId = getAriaId;

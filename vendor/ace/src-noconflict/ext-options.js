@@ -678,10 +678,6 @@ var optionGroups = {
         },
         "Keyboard Accessibility Mode": {
             path: "enableKeyboardAccessibility"
-        },
-        "Gutter tooltip follows mouse": {
-            path: "tooltipFollowsMouse",
-            defaultValue: true
         }
     }
 };

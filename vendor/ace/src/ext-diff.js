@@ -312,6 +312,9 @@ var BaseDiffView = /** @class */ (function () {
             sessionB: diffModel.sessionB || (diffModel.editorB ? diffModel.editorB.session : new EditSession(diffModel.valueB || "")),
             chunks: []
         });
+        if (this.otherEditor && this.activeEditor) {
+            this.otherSession.setOption("wrap", this.activeEditor.getOption("wrap"));
+        }
         this.setupScrollbars();
     };
     BaseDiffView.prototype.addGutterDecorators = function () {
@@ -1289,15 +1292,18 @@ var InlineDiffView = /** @class */ (function (_super) {
         diffView.sessionA["_emit"]("changeFold", { data: { start: { row: 0 } } });
         diffView.sessionB["_emit"]("changeFold", { data: { start: { row: 0 } } });
     };
-    InlineDiffView.prototype.onChangeWrapLimit = function () {
-        this.sessionB.adjustWrapLimit(this.sessionA.$wrapLimit);
+    InlineDiffView.prototype.onChangeWrapLimit = function (e, session) {
+        this.otherSession.setOption("wrap", session.getOption("wrap"));
+        this.otherSession.adjustWrapLimit(session.$wrapLimit);
         this.scheduleRealign();
+        this.activeEditor.renderer.updateFull();
     };
     InlineDiffView.prototype.$attachSessionsEventHandlers = function () {
         this.$attachSessionEventHandlers(this.editorA, this.markerA);
         this.$attachSessionEventHandlers(this.editorB, this.markerB);
-        this.sessionA.on("changeWrapLimit", this.onChangeWrapLimit);
-        this.sessionA.on("changeWrapMode", this.onChangeWrapLimit);
+        var session = this.activeEditor.session;
+        session.on("changeWrapLimit", this.onChangeWrapLimit);
+        session.on("changeWrapMode", this.onChangeWrapLimit);
     };
     InlineDiffView.prototype.$attachSessionEventHandlers = function (editor, marker) {
         editor.session.on("changeFold", this.onChangeFold);
@@ -1309,8 +1315,9 @@ var InlineDiffView = /** @class */ (function (_super) {
         this.$detachSessionHandlers(this.editorA, this.markerA);
         this.$detachSessionHandlers(this.editorB, this.markerB);
         this.otherSession.bgTokenizer.lines.fill(undefined);
-        this.sessionA.off("changeWrapLimit", this.onChangeWrapLimit);
-        this.sessionA.off("changeWrapMode", this.onChangeWrapLimit);
+        var session = this.activeEditor.session;
+        session.off("changeWrapLimit", this.onChangeWrapLimit);
+        session.off("changeWrapMode", this.onChangeWrapLimit);
     };
     InlineDiffView.prototype.$detachSessionHandlers = function (editor, marker) {
         editor.session.removeMarker(marker.id);
