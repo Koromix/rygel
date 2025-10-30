@@ -1349,7 +1349,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 } else if (key == "store") {
                     json->ParseString(&fragment.store);
                 } else if (key == "anchor") {
-                    json->ParseInt(&fragment.anchor);
+                    json->SkipNull() || json->ParseInt(&fragment.anchor);
                 } else if (key == "fs") {
                     json->ParseInt(&fragment.fs);
                 } else if (key == "summary") {

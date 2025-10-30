@@ -367,7 +367,7 @@ function computeStatus(page, thread) {
 
         return status;
     } else {
-        let complete = (thread.entries[page.store?.key]?.anchor >= 0);
+        let complete = (thread.entries[page.store?.key]?.anchor != null);
 
         let status = {
             filled: 0 + complete,
@@ -1152,7 +1152,7 @@ function addAutomaticActions(builder, model) {
             });
         }
 
-        if (form_entry.anchor >= 0 && form_state.hasChanged()) {
+        if (form_entry.anchor != null && form_state.hasChanged()) {
             builder.action('-');
             builder.action(T.forget_changes, {}, async e => {
                 await UI.confirm(e, unsafeHTML(T.confirm_forget_changes),
@@ -1177,7 +1177,7 @@ function selectNextPage(page, thread) {
     if (UI.isPanelActive('data'))
         return null;
 
-    if (entry.anchor < 0) {
+    if (entry.anchor == null) {
         if (typeof sequence == 'string') {
             let next = app.pages.find(page => page.key == sequence);
             return next;
@@ -1257,7 +1257,7 @@ function addAutomaticTags(variables) {
                 status.filling = null;
             }
         } else if (intf.missing && intf.options.mandatory) {
-            if (form_entry.anchor >= 0 || intf.errors.some(err => !err.delay)) {
+            if (form_entry.anchor != null || intf.errors.some(err => !err.delay)) {
                 tags.push('incomplete');
                 error = false;
             }
@@ -2239,7 +2239,7 @@ async function openRecord(tid, anchor, page) {
                 store: page.store.key,
                 eid: Util.makeULID(),
                 deleted: false,
-                anchor: -1,
+                anchor: null,
                 ctime: now,
                 mtime: now,
                 tags: [],
@@ -2294,7 +2294,7 @@ async function openRecord(tid, anchor, page) {
     }
 
     // Restore delayed errors for existing entry
-    if (new_entry.anchor >= 0)
+    if (new_entry.anchor != null)
         new_state.trigger_errors = true;
 
     new_state.changeHandler = async () => {
