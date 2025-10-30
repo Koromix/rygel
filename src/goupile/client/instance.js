@@ -1093,10 +1093,10 @@ function addAutomaticActions(builder, model) {
         let can_lock = form_thread.saved && (route.page.lock != null) &&
                        (!form_thread.locked || goupile.hasPermission('data_audit'));
 
-        if (can_save) {
+        if (can_save || form_entry.anchor != null) {
             let label = '+' + (next != null ? T.continue : T.save);
 
-            builder.action(label, { color: '#2d8261' }, async e => {
+            builder.action(label, { color: '#2d8261', disabled: !can_save }, async e => {
                 form_state.triggerErrors(form_model);
 
                 await data_mutex.run(async () => {
