@@ -2294,7 +2294,7 @@ async function openRecord(tid, anchor, page) {
     }
 
     // Restore delayed errors for existing entry
-    if (new_entry.anchor != null)
+    if (new_entry?.anchor != null)
         new_state.trigger_errors = true;
 
     new_state.changeHandler = async () => {
