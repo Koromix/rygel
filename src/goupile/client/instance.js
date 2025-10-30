@@ -1867,8 +1867,6 @@ async function run(push_history = true) {
 
         // Load data rows (if needed)
         if (UI.isPanelActive('data')) {
-            let root = route.page.chain[0];
-
             if (data_threads == null) {
                 let threads = await Net.get(`${ENV.urls.instance}api/records/list`);
 
@@ -1906,7 +1904,7 @@ async function run(push_history = true) {
             if (data_tags != null)
                 data_rows = data_rows.filter(thread => thread.tags.some(tag => data_tags.has(tag)));
 
-            for (let page of root.children) {
+            for (let page of app.pages.slice(1)) {
                 if (page.store == null)
                     continue;
 
