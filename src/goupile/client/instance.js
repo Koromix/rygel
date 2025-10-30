@@ -246,10 +246,10 @@ function renderMenu() {
             <div style="flex: 1; min-width: 4px;"></div>
 
             ${!goupile.isLocked() && profile.instances == null ?
-                html`<button class="icon lines" @click=${UI.wrap(e => togglePanels(true, profile.develop ? 'view' : false))}>${ENV.title}</button>` : ''}
+                html`<button class="icon instance" @click=${UI.wrap(e => togglePanels(true, profile.develop ? 'view' : false))}>${ENV.title}</button>` : ''}
             ${!goupile.isLocked() && profile.instances != null ? html`
                 <div class="drop right" @click=${UI.deployMenu}>
-                    <button class="icon lines" @click=${UI.deployMenu}>${ENV.title}</button>
+                    <button class="icon instance" @click=${UI.deployMenu}>${ENV.title}</button>
                     <div>
                         ${profile.instances.slice().sort(Util.makeComparator(instance => instance.name)).map(instance => {
                             if (instance.url === ENV.urls.instance) {

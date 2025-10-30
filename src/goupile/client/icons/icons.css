@@ -17,7 +17,7 @@ button.icon { text-align: right; }
 .icon.down { background-image: url('down.webp'); }
 .icon.dual { background-image: url('dual.webp'); }
 .icon.home { background-image: url('home.webp'); }
-.icon.lines { background-image: url('lines.webp'); }
+.icon.instance { background-image: url('instance.webp'); }
 .icon.lock { background-image: url('lock.webp'); }
 .icon.new { background-image: url('new.webp'); }
 .icon.offline { background-image: url('offline.webp'); }
