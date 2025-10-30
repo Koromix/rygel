@@ -25,7 +25,7 @@ struct RecordFilter {
     bool allow_deleted = false;
     bool use_claims = false;
 
-    int64_t min_sequence = -1;
+    int64_t min_thread = -1;
     int64_t min_anchor = -1;
 
     bool read_data = false;
@@ -37,6 +37,7 @@ struct RecordInfo {
     const char *counters = nullptr;
     const char *secrets = nullptr;
     bool locked = false;
+    int64_t sequence = -1;
 
     int64_t e = -1;
     const char *eid = nullptr;
@@ -190,7 +191,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
 
     if (filter.audit_anchor < 0) {
         sql.len += Fmt(sql.TakeAvailable(),
-                       R"(SELECT t.sequence AS t, t.tid, t.counters, t.secrets, IFNULL(t.lock, -1),
+                       R"(SELECT t.thread AS t, t.tid, t.counters, t.secrets, IFNULL(t.lock, -1), t.sequence,
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime,
                                  e.store, e.summary, e.tags AS tags,
                                  IIF(?6 = 1, e.data, NULL) AS data
@@ -207,14 +208,14 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
         if (filter.use_claims) {
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM ins_claims WHERE userid = ?2)").len;
         }
-        if (filter.min_sequence >= 0) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND t.sequence >= ?4").len;
+        if (filter.min_thread >= 0) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.thread >= ?4").len;
         }
         if (filter.min_anchor >= 0) {
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM rec_entries WHERE e.anchor >= ?5)").len;
         }
 
-        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.sequence, e.store").len;
+        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.thread, e.store").len;
     } else {
         K_ASSERT(!filter.single_tid);
         K_ASSERT(!filter.use_claims);
@@ -232,7 +233,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                                   WHERE f.anchor <= ?3 AND f.previous = rec.anchor
                               ORDER BY anchor
                           )
-                          SELECT t.sequence AS t, t.tid, t.counters, t.secrets, IFNULL(t.lock, -1),
+                          SELECT t.thread AS t, t.tid, t.counters, t.secrets, IFNULL(t.lock, -1), t.sequence,
                                  e.rowid AS e, e.eid, IIF(rec.data IS NULL, 1, 0) AS deleted,
                                  rec.anchor, e.ctime, rec.mtime, e.store,
                                  rec.summary, rec.tags, rec.data
@@ -244,14 +245,14 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
         if (!filter.allow_deleted) {
             sql.len += Fmt(sql.TakeAvailable(), " AND rec.data IS NOT NULL").len;
         }
-        if (filter.min_sequence >= 0) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND t.sequence >= ?4").len;
+        if (filter.min_thread >= 0) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.thread >= ?4").len;
         }
         if (filter.min_anchor >= 0) {
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM rec_entries WHERE e.anchor >= ?5)").len;
         }
 
-        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.sequence, e.store, rec.idx DESC").len;
+        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.thread, e.store, rec.idx DESC").len;
     }
 
     if (!instance->db->Prepare(sql.data, &stmt))
@@ -260,7 +261,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
     sqlite3_bind_text(stmt, 1, filter.single_tid, -1, SQLITE_STATIC);
     sqlite3_bind_int64(stmt, 2, -userid);
     sqlite3_bind_int64(stmt, 3, filter.audit_anchor);
-    sqlite3_bind_int64(stmt, 4, filter.min_sequence);
+    sqlite3_bind_int64(stmt, 4, filter.min_thread);
     sqlite3_bind_int64(stmt, 5, filter.min_anchor);
     sqlite3_bind_int(stmt, 6, 0 + filter.read_data);
 
@@ -308,7 +309,8 @@ again:
         return false;
 
     int64_t t = sqlite3_column_int64(stmt, 0);
-    int64_t e = sqlite3_column_int64(stmt, 5);
+    int64_t e = sqlite3_column_int64(stmt, 6);
+    int64_t lock = sqlite3_column_int64(stmt, 4);
 
     // This can happen with the recursive CTE is used for historical data
     if (e == cursor.e)
@@ -318,22 +320,21 @@ again:
     cursor.tid = (const char *)sqlite3_column_text(stmt, 1);
     cursor.counters = (const char *)sqlite3_column_text(stmt, 2);
     cursor.secrets = (const char *)sqlite3_column_text(stmt, 3);
-
-    int64_t lock = sqlite3_column_int64(stmt, 4);
     cursor.locked = (lock >= 0 && lock <= now);
+    cursor.sequence = sqlite3_column_int64(stmt, 5);
 
     cursor.e = e;
-    cursor.eid = (const char *)sqlite3_column_text(stmt, 6);
-    cursor.deleted = !!sqlite3_column_int(stmt, 7);
-    cursor.anchor = sqlite3_column_int64(stmt, 8);
-    cursor.ctime = sqlite3_column_int64(stmt, 9);
-    cursor.mtime = sqlite3_column_int64(stmt, 10);
-    cursor.store = (const char *)sqlite3_column_text(stmt, 11);
-    cursor.summary = (const char *)sqlite3_column_text(stmt, 12);
-    cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 13), sqlite3_column_bytes(stmt, 13));
+    cursor.eid = (const char *)sqlite3_column_text(stmt, 7);
+    cursor.deleted = !!sqlite3_column_int(stmt, 8);
+    cursor.anchor = sqlite3_column_int64(stmt, 9);
+    cursor.ctime = sqlite3_column_int64(stmt, 10);
+    cursor.mtime = sqlite3_column_int64(stmt, 11);
+    cursor.store = (const char *)sqlite3_column_text(stmt, 12);
+    cursor.summary = (const char *)sqlite3_column_text(stmt, 13);
+    cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 14), sqlite3_column_bytes(stmt, 14));
 
     if (read_data) {
-        cursor.data = MakeSpan((const char *)sqlite3_column_text(stmt, 14), sqlite3_column_bytes(stmt, 14));
+        cursor.data = MakeSpan((const char *)sqlite3_column_text(stmt, 15), sqlite3_column_bytes(stmt, 15));
     } else {
         cursor.data = {};
     }
@@ -421,7 +422,7 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
             json->StartObject();
 
             json->Key("tid"); json->String(cursor->tid);
-            json->Key("sequence"); json->Int64(cursor->t);
+            json->Key("sequence"); json->Int64(cursor->sequence);
             json->Key("saved"); json->Bool(true);
             json->Key("locked"); json->Bool(cursor->locked);
 
@@ -558,7 +559,7 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
         json->StartObject();
 
         json->Key("tid"); json->String(cursor->tid);
-        json->Key("sequence"); json->Int64(cursor->t);
+        json->Key("sequence"); json->Int64(cursor->sequence);
         json->Key("counters"); json->Raw(cursor->counters);
         json->Key("saved"); json->Bool(true);
         json->Key("locked"); json->Bool(cursor->locked);
@@ -758,7 +759,7 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
     {
         RecordFilter filter = {};
 
-        filter.min_sequence = settings.sequence;
+        filter.min_thread = settings.thread;
         filter.min_anchor = settings.anchor;
         filter.read_data = true;
 
@@ -772,7 +773,7 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
     json_Writer json(&st);
 
     int64_t now = GetUnixTime();
-    int64_t max_sequence = -1;
+    int64_t max_thread = -1;
     int64_t max_anchor = -1;
     int64_t threads = 0;
 
@@ -785,7 +786,7 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
         json.StartObject();
 
         json.Key("tid"); json.String(cursor->tid);
-        json.Key("sequence"); json.Int64(cursor->t);
+        json.Key("sequence"); json.Int64(cursor->sequence);
         json.Key("counters"); json.Raw(cursor->counters);
         json.Key("secrets"); json.Raw(cursor->secrets);
 
@@ -811,7 +812,7 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
 
             json.EndObject();
 
-            max_sequence = std::max(max_sequence, cursor->t);
+            max_thread = std::max(max_thread, cursor->t);
             max_anchor = std::max(max_anchor, cursor->anchor);
         } while (walker.NextInThread());
         json.EndObject();
@@ -831,16 +832,16 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
 
     if (!threads) {
         sq_Statement stmt;
-        if (!instance->db->Prepare(R"(SELECT sequence, anchor
+        if (!instance->db->Prepare(R"(SELECT thread, anchor
                                       FROM rec_exports
                                       ORDER BY export DESC)", &stmt))
             return -1;
 
         if (stmt.Step()) {
-            max_sequence = sqlite3_column_int64(stmt, 0);
+            max_thread = sqlite3_column_int64(stmt, 0);
             max_anchor = sqlite3_column_int64(stmt, 1);
         } else if (stmt.IsValid()) {
-            max_sequence = 0;
+            max_thread = 0;
             max_anchor = 0;
         } else {
             return -1;
@@ -857,10 +858,10 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
         // Create export metadata
         {
             sq_Statement stmt;
-            if (!instance->db->Prepare(R"(INSERT INTO rec_exports (ctime, userid, sequence, anchor, threads, scheduled, secret)
+            if (!instance->db->Prepare(R"(INSERT INTO rec_exports (ctime, userid, thread, anchor, threads, scheduled, secret)
                                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
                                           RETURNING export)",
-                                       &stmt, now, userid, max_sequence, max_anchor, threads, 0 + settings.scheduled, secret))
+                                       &stmt, now, userid, max_thread, max_anchor, threads, 0 + settings.scheduled, secret))
                 return false;
             if (!stmt.GetSingleValue(&export_id))
                 return false;
@@ -877,7 +878,7 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
         return -1;
 
     if (out_info) {
-        out_info->max_sequence = max_sequence;
+        out_info->max_thread = max_thread;
         out_info->max_anchor = max_anchor;
         CopyString(secret, out_info->secret);
     }
@@ -905,8 +906,8 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
             for (json->ParseObject(); json->InObject(); ) {
                 Span<const char> key = json->ParseKey();
 
-                if (key == "sequence") {
-                    json->SkipNull() || json->ParseInt(&settings.sequence);
+                if (key == "thread") {
+                    json->SkipNull() || json->ParseInt(&settings.thread);
                 } else if (key == "anchor") {
                     json->SkipNull() || json->ParseInt(&settings.anchor);
                 } else {
@@ -946,7 +947,7 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
         return;
 
     sq_Statement stmt;
-    if (!instance->db->Prepare(R"(SELECT export, ctime, userid, sequence,
+    if (!instance->db->Prepare(R"(SELECT export, ctime, userid, thread,
                                          anchor, threads, scheduled
                                   FROM rec_exports
                                   ORDER BY export)", &stmt))
@@ -959,7 +960,7 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
             int64_t export_id = sqlite3_column_int64(stmt, 0);
             int64_t ctime = sqlite3_column_int64(stmt, 1);
             int64_t userid = sqlite3_column_int64(stmt, 2);
-            int64_t sequence = sqlite3_column_int64(stmt, 3);
+            int64_t thread = sqlite3_column_int64(stmt, 3);
             int64_t anchor = sqlite3_column_int64(stmt, 4);
             int64_t threads = sqlite3_column_int64(stmt, 5);
             bool scheduled = sqlite3_column_int(stmt, 6);
@@ -968,7 +969,7 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
             json->Key("export"); json->Int64(export_id);
             json->Key("ctime"); json->Int64(ctime);
             json->Key("userid"); json->Int64(userid);
-            json->Key("sequence"); json->Int64(sequence);
+            json->Key("thread"); json->Int64(thread);
             json->Key("anchor"); json->Int64(anchor);
             json->Key("threads"); json->Int64(threads);
             json->Key("scheduled"); json->Bool(scheduled);
@@ -1245,7 +1246,7 @@ void HandleRecordReserve(http_IO *io, InstanceHolder *instance)
         // Get current sequence
         {
             sq_Statement stmt;
-            if (!instance->db->Prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rec_threads'", &stmt))
+            if (!instance->db->Prepare("SELECT state FROM seq_counters WHERE key = '@sequence'", &stmt))
                 return false;
 
             if (stmt.Step()) {
@@ -1791,10 +1792,22 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         }
 
         // Create thread if needed
-        if (new_thread && !instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets)
-                                                VALUES (?1, '{}', '{}')
-                                                ON CONFLICT DO NOTHING)", tid))
+        if (new_thread) {
+            int64_t sequence;
+            {
+                sq_Statement stmt;
+                if (!instance->db->Prepare(R"(UPDATE seq_counters SET state = state + 1
+                                              WHERE key = '@sequence'
+                                              RETURNING state)", &stmt))
+                    return false;
+                if (!stmt.GetSingleValue(&sequence))
+                    return false;
+            }
+
+            if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets, sequence)
+                                      VALUES (?1, '{}', '{}', ?2))", tid, sequence))
             return false;
+        }
 
         // Update entry and fragment tags
         if (!instance->db->Run("DELETE FROM rec_tags WHERE eid = ?1", fragment.eid))
@@ -2020,33 +2033,22 @@ void HandleRecordDelete(http_IO *io, InstanceHolder *instance)
             return false;
 
         // Delete thread itself
-        {
-            int64_t negative;
+        if (!instance->db->Run(R"(UPDATE rec_threads SET deleted = 1 WHERE tid = ?1)", tid))
+            return false;
 
-            sq_Statement stmt;
-            if (!instance->db->Prepare("SELECT MIN(sequence) FROM rec_threads", &stmt))
-                return false;
-            if (!stmt.GetSingleValue(&negative))
-                return false;
-
-            negative = std::min(negative, (int64_t)0) - 1;
-
-            if (!instance->db->Run(R"(UPDATE rec_threads SET deleted = sequence,
-                                                             sequence = ?2
-                                      WHERE tid = ?1)", tid, negative))
-                return false;
-        }
-
-        // Restart sequence if no thread remains
+        // Restart counters if no thread remains
         {
             sq_Statement stmt;
-            if (!instance->db->Prepare("SELECT sequence FROM rec_threads WHERE sequence >= 0", &stmt))
+            if (!instance->db->Prepare("SELECT thread FROM rec_threads WHERE deleted IS NULL", &stmt))
                 return false;
 
             if (!stmt.Step()) {
                 if (!stmt.IsValid())
                     return false;
-                if (!instance->db->Run("UPDATE sqlite_sequence SET seq = 0 WHERE name = 'rec_threads'"))
+
+                if (!instance->db->Run("DELETE FROM seq_counters WHERE key <> '@sequence'"))
+                    return false;
+                if (!instance->db->Run("UPDATE seq_counters SET state = 0 WHERE key = '@sequence'"))
                     return false;
             }
         }

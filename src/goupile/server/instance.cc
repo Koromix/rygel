@@ -16,7 +16,7 @@
 namespace K {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 140;
+const int InstanceVersion = 141;
 const int LegacyVersion = 61;
 
 // Process-wide unique instance identifier
@@ -165,7 +165,7 @@ bool InstanceHolder::Open(DomainHolder *domain, InstanceHolder *master, sq_Datab
     // Find last scheduled export
     if (!legacy) {
         sq_Statement stmt;
-        if (!db->Prepare(R"(SELECT ctime, sequence
+        if (!db->Prepare(R"(SELECT ctime, thread
                             FROM rec_exports
                             WHERE scheduled = 1
                             ORDER BY export DESC)", &stmt))
@@ -173,11 +173,11 @@ bool InstanceHolder::Open(DomainHolder *domain, InstanceHolder *master, sq_Datab
 
         if (stmt.Step()) {
             int64_t ctime = sqlite3_column_int64(stmt, 0);
-            int64_t sequence = sqlite3_column_int64(stmt, 1);
+            int64_t thread = sqlite3_column_int64(stmt, 1);
             TimeSpec spec = DecomposeTimeLocal(ctime);
 
             last_export_day = LocalDate(spec.year, spec.month, spec.day);
-            last_export_sequence = sequence;
+            last_export_thread = thread;
         } else if (!stmt.IsValid()) {
             return false;
         }
@@ -233,7 +233,7 @@ bool InstanceHolder::PerformScheduledExport()
 
     ExportSettings exp = {};
 
-    exp.sequence = settings.export_all ? -1 : (last_export_sequence + 1);
+    exp.thread = settings.export_all ? -1 : (last_export_thread + 1);
     exp.scheduled = true;
 
     ExportInfo info;
@@ -241,7 +241,7 @@ bool InstanceHolder::PerformScheduledExport()
         return false;
 
     last_export_day = today;
-    last_export_sequence = info.max_sequence;
+    last_export_thread = info.max_thread;
 
     return true;
 }
@@ -3070,9 +3070,27 @@ bool MigrateInstance(sq_Database *db, int target)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 140: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE rec_threads RENAME COLUMN sequence TO thread;
+                    ALTER TABLE rec_exports RENAME COLUMN sequence TO thread;
+
+                    ALTER TABLE rec_threads ADD COLUMN sequence INTEGER;
+                    UPDATE rec_threads SET sequence = IFNULL(deleted, thread);
+
+                    INSERT INTO seq_counters (key, state)
+                        SELECT '@sequence', seq FROM sqlite_sequence WHERE name = 'rec_threads';
+                    INSERT INTO seq_counters (key, state)
+                        VALUES ('@sequence', 0)
+                        ON CONFLICT DO NOTHING;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 140);
+            static_assert(InstanceVersion == 141);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

@@ -752,7 +752,7 @@ async function runExportDialog(e) {
                 if (downloads.length > 0) {
                     d.enumRadio('mode', T.export_mode, [
                         ['all', T.export_all],
-                        ['sequence', T.export_sequence],
+                        ['thread', T.export_new],
                         ['anchor', T.export_anchor]
                     ], { value: 'all', untoggle: false });
 
@@ -765,13 +765,13 @@ async function runExportDialog(e) {
                 }
 
                 d.action(T.create_export, {}, async () => {
-                    let sequence = null;
+                    let thread = null;
                     let anchor = null;
 
                     switch (d.values.mode) {
-                        case 'sequence': {
+                        case 'thread': {
                             let download = downloads.find(download => download.export == d.values.since);
-                            sequence = download.sequence + 1;
+                            thread = download.thread + 1;
                         } break;
 
                         case 'anchor': {
@@ -780,7 +780,7 @@ async function runExportDialog(e) {
                         } break;
                     }
 
-                    await create(sequence, anchor);
+                    await create(thread, anchor);
 
                     resolve();
                 });
@@ -825,11 +825,11 @@ async function runExportDialog(e) {
         });
     });
 
-    async function create(sequence, anchor) {
+    async function create(thread, anchor) {
         let progress = Log.progress(T.export_in_progress);
 
         try {
-            let info = await createExport(sequence, anchor);
+            let info = await createExport(thread, anchor);
             let stores = app.stores.map(store => store.key);
 
             await exportRecords(info.export, info.secret, stores);

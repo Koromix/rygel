@@ -11,13 +11,13 @@ namespace K {
 class InstanceHolder;
 
 struct ExportSettings {
-    int64_t sequence = -1;
+    int64_t thread = -1;
     int64_t anchor = -1;
     bool scheduled = false;
 };
 
 struct ExportInfo {
-    int64_t max_sequence;
+    int64_t max_thread;
     int64_t max_anchor;
     char secret[33];
 };

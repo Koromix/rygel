@@ -122,7 +122,7 @@
         "export_in_progress": "Export en cours",
         "export_key": "Clé d'export",
         "export_mode": "Mode d'export",
-        "export_sequence": "Nouveaux enregistrements",
+        "export_new": "Nouveaux enregistrements",
         "export_since": "Depuis cet export",
         "export_time": "Heure d'export",
         "exports": "Exports",

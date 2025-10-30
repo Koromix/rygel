@@ -51,7 +51,7 @@ public:
     std::atomic_int64_t fs_version { 0 };
 
     LocalDate last_export_day = {};
-    int64_t last_export_sequence = -1;
+    int64_t last_export_thread = -1;
 
     std::atomic_int64_t reserve_rnd { 0 };
 

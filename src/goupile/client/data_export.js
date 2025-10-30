@@ -8,9 +8,9 @@ import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
 
-async function createExport(sequence = null, anchor = null) {
+async function createExport(thread = null, anchor = null) {
     let info = await Net.post(`${ENV.urls.instance}api/export/create`, {
-        sequence: sequence,
+        thread: thread,
         anchor: anchor
     });
 
