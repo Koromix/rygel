@@ -930,7 +930,7 @@ async function renderPage() {
     }
 
     // Quick access to page sections
-    let page_sections = form_model.widgets.filter(intf => intf.options.anchor).map(intf => ({
+    let page_sections = form_model.widgets.filter(intf => intf.label && intf.options.anchor).map(intf => ({
         title: intf.label,
         anchor: intf.options.anchor
     }));
