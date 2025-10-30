@@ -601,7 +601,7 @@ function renderData() {
             </div>
 
             <div class="ui_quick" style="margin-right: 2.2em;">
-                <div style="display: flex; gap: 8px; padding-bottom: 4px;">
+                <div class="ins_filters">
                     <div class="fm_check">
                         <input id="ins_tags" type="checkbox" .checked=${data_tags != null}
                                @change=${UI.wrap(e => toggleTagFilter(null))} />

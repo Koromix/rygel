@@ -213,7 +213,7 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: flex; }
 html.small #ins_tasks { display: flex; }
 #ui_panels > div:not(:only-child) #ins_tasks { display: flex; }
 
-/* -------------------- Data -------------------- */
+/* -------------------- Status -------------------- */
 
 .ins_level {
     display: flex;
@@ -292,6 +292,15 @@ html.small #ins_tasks { display: flex; }
 .ins_progress > span {
     font-size: 0.8em;
     text-align: left;
+}
+
+/* -------------------- Data -------------------- */
+
+.ins_filters {
+    display: flex;
+    padding-bottom: 4px;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 #ins_data td:not(.active).partial a { color: #346bb8; }
