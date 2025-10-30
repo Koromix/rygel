@@ -637,7 +637,7 @@ function renderData() {
 
                 <thead>
                     <tr>
-                        <th>${T.sequence}</th>
+                        <th>${T.id}</th>
                         <th>${T.creation}</th>
                         ${data_columns.map(col => {
                             let stats = `${col.count} / ${data_rows.length}`;
