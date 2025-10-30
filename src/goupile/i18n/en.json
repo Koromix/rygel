@@ -194,6 +194,7 @@
         "online_data": "Online data",
         "other": "Other",
         "other_actions": "Other actions",
+        "page": "Page",
         "page_disabled_warning": "This page is not theoretically activated. Design mode allows you to access it.",
         "password": "Password",
         "password_complexity_help": "Your password must be sufficiently complex (length, letters, numbers, symbols).",

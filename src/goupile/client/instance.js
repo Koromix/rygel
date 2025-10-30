@@ -189,7 +189,7 @@ function renderMenu() {
             ${goupile.hasPermission('build_code') ? html`
                 <div class="drop">
                     <button class=${'icon design' + (profile.develop ? ' active' : '')}
-                            @click=${UI.deployMenu}>${T.conception}</button>
+                            @click=${UI.deployMenu}></button>
                     <div>
                         <button class=${profile.develop ? 'active' : ''}
                                 @click=${UI.wrap(e => goupile.changeDevelopMode(!profile.develop))}>
@@ -212,7 +212,7 @@ function renderMenu() {
                 ` : ''}
                 ${app.panels.data && !app.panels.editor ? html`
                     <button class=${'icon data' + (!UI.hasTwoPanels() && UI.isPanelActive('data') ? ' active' : '')}
-                            @click=${UI.wrap(e => togglePanels(true, false))}></button>
+                            @click=${UI.wrap(e => togglePanels(true, false))}>${T.data}</button>
                 ` : ''}
                 ${UI.allowTwoPanels() ? html`
                     <button class=${'icon dual' + (UI.hasTwoPanels() ? ' active' : '')}
@@ -220,20 +220,20 @@ function renderMenu() {
                 ` : ''}
                 ${app.panels.editor && app.panels.data ? html`
                     <div class="drop">
-                        <button class=${'icon ' + (UI.isPanelActive('view') || route.tid != null ? 'view' : 'data')
+                        <button class=${'icon ' + (UI.isPanelActive('view') ? 'view' : 'data')
                                                 + (!UI.hasTwoPanels() && UI.isPanelActive(1) ? ' active' : '')}
                                 @click=${UI.deployMenu}></button>
                         <div>
                             <button class=${'icon data' + (UI.isPanelActive('data') ? ' active' : '')}
                                     @click=${UI.wrap(e => togglePanels(UI.hasTwoPanels() && !UI.isPanelActive('data'), 'data'))}>${T.data}</button>
                             <button class=${'icon view' + (UI.isPanelActive('view') ? ' active' : '')}
-                                    @click=${UI.wrap(e => togglePanels(UI.hasTwoPanels() && !UI.isPanelActive('view'), 'view'))}>${T.form}</button>
+                                    @click=${UI.wrap(e => togglePanels(UI.hasTwoPanels() && !UI.isPanelActive('view'), 'view'))}>${route.page.store != null ? T.form : T.page}</button>
                         </div>
                     </div>
                 ` : ''}
                 ${!app.panels.editor || !app.panels.data ? html`
                     <button class=${'icon view' + (!UI.hasTwoPanels() && UI.isPanelActive('view') ? ' active' : '')}
-                            @click=${UI.wrap(e => togglePanels(false, 'view'))}></button>
+                            @click=${UI.wrap(e => togglePanels(false, 'view'))}>${route.page.store != null ? T.form : T.page}</button>
                 ` : ''}
                 <div style="flex: 1; min-width: 4px;"></div>
             ` : ''}
