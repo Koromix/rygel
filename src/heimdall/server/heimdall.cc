@@ -414,8 +414,11 @@ static void HandleRequest(http_IO *io)
     }
 #endif
 
+    Span<const char> url = request.path;
+    http_RequestMethod method = request.method;
+
     // CSRF protection
-    if (request.method != http_RequestMethod::Get && !http_PreventCSRF(io))
+    if (method != http_RequestMethod::Get && !http_PreventCSRF(io))
         return;
 
     // Translate server-side errors
@@ -431,18 +434,18 @@ static void HandleRequest(http_IO *io)
     io->AddHeader("X-Robots-Tag", "noindex");
     io->AddHeader("Permissions-Policy", "interest-cohort=()");
 
-    if (TestStr(request.path, "/")) {
+    if (url == "/") {
         HandleIndex(io);
         return;
     }
 
     // API endpoint?
-    if (StartsWith(request.path, "/api/")) {
-        if (TestStr(request.path, "/api/views") && request.method == http_RequestMethod::Get) {
+    if (StartsWith(url, "/api/")) {
+        if (url == "/api/views" && method == http_RequestMethod::Get) {
             HandleViews(io);
-        } else if (TestStr(request.path, "/api/entities") && request.method == http_RequestMethod::Get) {
+        } else if (url =="/api/entities" && method == http_RequestMethod::Get) {
             HandleEntities(io);
-        } else if (TestStr(request.path, "/api/mark") && request.method == http_RequestMethod::Post) {
+        } else if (url =="/api/mark" && method == http_RequestMethod::Post) {
             HandleMark(io);
         } else {
             io->SendError(404);
@@ -488,7 +491,7 @@ static void HandleRequest(http_IO *io)
             const StaticRoute *route = assets_map.Find(request.path);
 
             if (route) {
-                int64_t max_age = StartsWith(request.path, "/static/") ? (28ll * 86400000) : 0;
+                int64_t max_age = StartsWith(url, "/static/") ? (28ll * 86400000) : 0;
                 AttachStatic(io, *route->asset, route->sourcemap, max_age);
 
                 return;

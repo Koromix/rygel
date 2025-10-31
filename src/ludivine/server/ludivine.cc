@@ -322,8 +322,11 @@ static void HandleRequest(http_IO *io)
     }
 #endif
 
+    Span<const char> url = request.path;
+    http_RequestMethod method = request.method;
+
     // CSRF protection
-    if (request.method != http_RequestMethod::Get && !http_PreventCSRF(io))
+    if (method != http_RequestMethod::Get && !http_PreventCSRF(io))
         return;
 
     // Send these headers whenever possible
@@ -334,22 +337,22 @@ static void HandleRequest(http_IO *io)
     io->AddHeader("Permissions-Policy", "interest-cohort=()");
 
     // API endpoint?
-    if (StartsWith(request.path, "/api/")) {
-        if (TestStr(request.path, "/api/register") && request.method == http_RequestMethod::Post) {
+    if (StartsWith(url, "/api/")) {
+        if (url == "/api/register" && method == http_RequestMethod::Post) {
             HandleRegister(io);
-        } else if (TestStr(request.path, "/api/token") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/token" && method == http_RequestMethod::Post) {
             HandleToken(io);
-        } else if (TestStr(request.path, "/api/protect") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/protect" && method == http_RequestMethod::Post) {
             HandleProtect(io);
-        } else if (TestStr(request.path, "/api/password") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/password" && method == http_RequestMethod::Post) {
             HandlePassword(io);
-        } else if (TestStr(request.path, "/api/download") && request.method == http_RequestMethod::Get) {
+        } else if (url == "/api/download" && method == http_RequestMethod::Get) {
             HandleDownload(io);
-        } else if (TestStr(request.path, "/api/upload") && request.method == http_RequestMethod::Put) {
+        } else if (url == "/api/upload" && method == http_RequestMethod::Put) {
             HandleUpload(io);
-        } else if (TestStr(request.path, "/api/remind") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/remind" && method == http_RequestMethod::Post) {
             HandleRemind(io);
-        } else if (TestStr(request.path, "/api/publish") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/publish" && method == http_RequestMethod::Post) {
             HandlePublish(io);
         } else {
             io->SendError(404);
@@ -362,7 +365,7 @@ static void HandleRequest(http_IO *io)
     if (config.static_directory) {
         const char *filename = nullptr;
 
-        if (TestStr(request.path, "/")) {
+        if (url == "/") {
             filename = Fmt(io->Allocator(), "%1/index.html", config.static_directory).ptr;
         } else {
             filename = Fmt(io->Allocator(), "%1%2", config.static_directory, request.path).ptr;
@@ -396,7 +399,7 @@ static void HandleRequest(http_IO *io)
         const AssetInfo *asset = assets_map.FindValue(path, nullptr);
 
         if (asset) {
-            int64_t max_age = StartsWith(request.path, "/static/") ? (28ll * 86400000) : 0;
+            int64_t max_age = StartsWith(url, "/static/") ? (28ll * 86400000) : 0;
             AttachStatic(io, *asset, max_age, shared_etag);
 
             return;

@@ -397,10 +397,11 @@ static void HandleAdminRequest(http_IO *io)
     const http_RequestInfo &request = io->Request();
     K_ASSERT(StartsWith(request.path, "/admin/") || TestStr(request.path, "/admin"));
 
-    const char *admin_url = request.path + 6;
+    Span<const char> url = request.path + 6;
+    http_RequestMethod method = request.method;
 
     // Missing trailing slash, redirect
-    if (!admin_url[0]) {
+    if (!url.len) {
         const char *redirect = Fmt(io->Allocator(), "%1/", request.path).ptr;
 
         io->AddHeader("Location", redirect);
@@ -414,15 +415,14 @@ static void HandleAdminRequest(http_IO *io)
 
     // Try static assets
     {
-        if (TestStr(admin_url, "/")) {
-            const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
+        if (TestStr(url, "/")) {
+            const AssetInfo *asset = assets_map.FindValue(url, nullptr);
             K_ASSERT(asset);
 
             char etag[64];
             Fmt(etag, "%1_%2", shared_etag, domain->unique);
 
-            const AssetInfo *render = RenderTemplate(etag, *asset,
-                                                     [&](Span<const char> expr, StreamWriter *writer) {
+            const AssetInfo *render = RenderTemplate(etag, *asset, [&](Span<const char> expr, StreamWriter *writer) {
                 Span<const char> key = TrimStr(expr);
 
                 if (key == "VERSION") {
@@ -473,7 +473,7 @@ static void HandleAdminRequest(http_IO *io)
             AttachStatic(io, *render, 0, etag);
 
             return;
-        } else if (TestStr(admin_url, "/favicon.png")) {
+        } else if (url == "/favicon.png") {
             const AssetInfo *asset = assets_map.FindValue("/admin/favicon.png", nullptr);
             K_ASSERT(asset);
 
@@ -481,10 +481,10 @@ static void HandleAdminRequest(http_IO *io)
 
             return;
         } else {
-            const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
+            const AssetInfo *asset = assets_map.FindValue(url, nullptr);
 
             if (asset) {
-                int64_t max_age = StartsWith(admin_url, "/static/") ? (365ll * 86400000) : 0;
+                int64_t max_age = StartsWith(url, "/static/") ? (365ll * 86400000) : 0;
                 AttachStatic(io, *asset, max_age, shared_etag);
 
                 return;
@@ -493,17 +493,17 @@ static void HandleAdminRequest(http_IO *io)
     }
 
     // CSRF protection
-    if (request.method != http_RequestMethod::Get && !http_PreventCSRF(io))
+    if (method != http_RequestMethod::Get && !http_PreventCSRF(io))
         return;
 
     // Minimal endpoints available even before initial configuration
-    if (TestStr(admin_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
+    if (url == "/api/session/ping" && method == http_RequestMethod::Get) {
         HandlePing(io, nullptr);
         return;
-    } else if (TestStr(admin_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/session/profile" && method == http_RequestMethod::Get) {
         HandleSessionProfile(io, nullptr);
         return;
-    } else if (TestStr(admin_url, "/api/domain/configure") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/domain/configure" && method == http_RequestMethod::Post) {
         HandleDomainConfigure(io);
         return;
     } else if (!domain->IsInstalled()) [[unlikely]] {
@@ -512,66 +512,66 @@ static void HandleAdminRequest(http_IO *io)
     }
 
     // And now, admin endpoints
-    if (TestStr(admin_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
+    if (url == "/api/session/login" && method == http_RequestMethod::Post) {
         HandleSessionLogin(io, nullptr);
-    } else if (TestStr(admin_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/session/confirm" && method == http_RequestMethod::Post) {
         HandleSessionConfirm(io, nullptr);
-    } else if (TestStr(admin_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/session/logout" && method == http_RequestMethod::Post) {
         HandleSessionLogout(io);
-    } else if (TestStr(admin_url, "/api/change/password") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/change/password" && method == http_RequestMethod::Post) {
         HandleChangePassword(io, nullptr);
-    } else if (TestStr(admin_url, "/api/change/qrcode") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/change/qrcode" && method == http_RequestMethod::Get) {
         HandleChangeQRcode(io, domain->settings.title);
-    } else if (TestStr(admin_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/change/totp" && method == http_RequestMethod::Post) {
         HandleChangeTOTP(io);
-    } else if (TestStr(admin_url, "/api/domain/info") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/domain/info" && method == http_RequestMethod::Get) {
         HandleDomainInfo(io);
-    } else if (TestStr(admin_url, "/api/domain/demo") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/domain/demo" && method == http_RequestMethod::Post) {
         HandleDomainDemo(io);
-    } else if (TestStr(admin_url, "/api/domain/restore") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/domain/restore" && method == http_RequestMethod::Post) {
         HandleDomainRestore(io);
-    } else if (TestStr(admin_url, "/api/instances/create") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/instances/create" && method == http_RequestMethod::Post) {
         HandleInstanceCreate(io);
-    } else if (TestStr(admin_url, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/instances/delete" && method == http_RequestMethod::Post) {
         HandleInstanceDelete(io);
-    } else if (TestStr(admin_url, "/api/instances/migrate") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/instances/migrate" && method == http_RequestMethod::Post) {
         HandleInstanceMigrate(io);
-    } else if (TestStr(admin_url, "/api/instances/clear") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/instances/clear" && method == http_RequestMethod::Post) {
         HandleInstanceClear(io);
-    } else if (TestStr(admin_url, "/api/instances/configure") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/instances/configure" && method == http_RequestMethod::Post) {
         HandleInstanceConfigure(io);
-    } else if (TestStr(admin_url, "/api/instances/list") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/instances/list" && method == http_RequestMethod::Get) {
         HandleInstanceList(io);
-    } else if (TestStr(admin_url, "/api/instances/assign") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/instances/assign" && method == http_RequestMethod::Post) {
         HandleInstanceAssign(io);
-    } else if (TestStr(admin_url, "/api/instances/permissions") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/instances/permissions" && method == http_RequestMethod::Get) {
         HandleInstancePermissions(io);
-    } else if (TestStr(admin_url, "/api/archives/create") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/archives/create" && method == http_RequestMethod::Post) {
         HandleArchiveCreate(io);
-    } else if (TestStr(admin_url, "/api/archives/delete") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/archives/delete" && method == http_RequestMethod::Post) {
         HandleArchiveDelete(io);
-    } else if (TestStr(admin_url, "/api/archives/list") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/archives/list" && method == http_RequestMethod::Get) {
         HandleArchiveList(io);
-    } else if (StartsWith(admin_url, "/api/archives/files/") && request.method == http_RequestMethod::Get) {
+    } else if (StartsWith(url, "/api/archives/files/") && method == http_RequestMethod::Get) {
         HandleArchiveDownload(io);
-    } else if (StartsWith(admin_url, "/api/archives/files/") && request.method == http_RequestMethod::Put) {
+    } else if (StartsWith(url, "/api/archives/files/") && method == http_RequestMethod::Put) {
         HandleArchiveUpload(io);
-    } else if (TestStr(admin_url, "/api/users/create") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/users/create" && method == http_RequestMethod::Post) {
         HandleUserCreate(io);
-    } else if (TestStr(admin_url, "/api/users/edit") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/users/edit" && method == http_RequestMethod::Post) {
         HandleUserEdit(io);
-    } else if (TestStr(admin_url, "/api/users/delete") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/users/delete" && method == http_RequestMethod::Post) {
         HandleUserDelete(io);
-    } else if (TestStr(admin_url, "/api/users/list") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/users/list" && method == http_RequestMethod::Get) {
         HandleUserList(io);
-    } else if (TestStr(admin_url, "/api/send/mail") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/send/mail" && method == http_RequestMethod::Post) {
         HandleSendMail(io, nullptr);
-    } else if (TestStr(admin_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {
+    } else if (TestStr(url, "/api/send/sms") && method == http_RequestMethod::Post) {
         HandleSendSMS(io, nullptr);
 #if !defined(_WIN32)
-    } else if (TestStr(admin_url, "/api/process/exit") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/process/exit" && method == http_RequestMethod::Post) {
         HandleProcessSignal(io, SIGTERM);
-    } else if (TestStr(admin_url, "/api/process/interrupt") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/process/interrupt" && method == http_RequestMethod::Post) {
         HandleProcessSignal(io, SIGINT);
 #endif
     } else {
@@ -591,15 +591,16 @@ static void HandleInstanceRequest(http_IO *io)
         return;
     }
 
+    Span<const char> url = request.path;
+    http_RequestMethod method = request.method;
     InstanceHolder *instance = nullptr;
-    const char *instance_url = request.path;
 
     // Find relevant instance
-    for (int i = 0; i < 2 && instance_url[0]; i++) {
-        Size offset = SplitStr(instance_url + 1, '/').len + 1;
+    for (int i = 0; i < 2 && url.len; i++) {
+        Size offset = SplitStr(url.Take(1, url.len - 1), '/').len + 1;
 
-        const char *new_url = instance_url + offset;
-        Span<const char> new_key = MakeSpan(request.path + 1, new_url - request.path - 1);
+        Span<const char> new_url = url.Take(offset, url.len - offset);
+        Span<const char> new_key = MakeSpan(request.path + 1, new_url.ptr - request.path - 1);
 
         InstanceHolder *ref = domain->Ref(new_key);
         if (!ref)
@@ -609,7 +610,7 @@ static void HandleInstanceRequest(http_IO *io)
             instance->Unref();
         }
         instance = ref;
-        instance_url = new_url;
+        url = new_url;
 
         // No need to look further
         if (!instance->slaves.len)
@@ -623,7 +624,7 @@ static void HandleInstanceRequest(http_IO *io)
 
     // Enforce trailing slash on base URLs. Use 302 instead of 301 to avoid
     // problems with query strings being erased without question.
-    if (!instance_url[0]) {
+    if (!url.len) {
         HeapArray<char> buf(io->Allocator());
 
         Fmt(&buf, "%1/?", request.path);
@@ -644,22 +645,19 @@ static void HandleInstanceRequest(http_IO *io)
     }
 
     // Try application files
-    if (request.method == http_RequestMethod::Get && HandleFileGet(io, instance))
+    if (method == http_RequestMethod::Get && HandleFileGet(io, instance))
         return;
 
     // Try static assets
-    if (request.method == http_RequestMethod::Get &&
-            !StartsWith(instance_url, "/api/") &&
-            !StartsWith(instance_url, "/blobs/")) {
-        if (!GetPathExtension(instance_url).len) {
-            instance_url = "/";
+    if (method == http_RequestMethod::Get && !StartsWith(url, "/api/") &&
+                                             !StartsWith(url, "/blobs/")) {
+        if (!GetPathExtension(url).len) {
+            url = "/";
         }
 
-        const AssetInfo *asset = assets_map.FindValue(instance_url, nullptr);
+        const AssetInfo *asset = assets_map.FindValue(url, nullptr);
 
-        if (TestStr(instance_url, "/") || TestStr(instance_url, "/sw.js") ||
-                                          TestStr(instance_url, "/sw.pk.js") ||
-                                          TestStr(instance_url, "/manifest.json")) {
+        if (url == "/" || url == "/sw.js" || url == "/sw.pk.js" || url == "/manifest.json") {
             K_ASSERT(asset);
 
             const InstanceHolder *master = instance->master;
@@ -714,7 +712,7 @@ static void HandleInstanceRequest(http_IO *io)
 
             return;
         } else if (asset) {
-            int64_t max_age = StartsWith(instance_url, "/static/") ? (365ll * 86400000) : 0;
+            int64_t max_age = StartsWith(url, "/static/") ? (365ll * 86400000) : 0;
             AttachStatic(io, *asset, max_age, shared_etag);
 
             return;
@@ -722,87 +720,87 @@ static void HandleInstanceRequest(http_IO *io)
     }
 
     // CSRF protection
-    if (request.method != http_RequestMethod::Get && !http_PreventCSRF(io))
+    if (method != http_RequestMethod::Get && !http_PreventCSRF(io))
         return;
 
     // And now, API endpoints
-    if (TestStr(instance_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
+    if (url == "/api/session/ping" && method == http_RequestMethod::Get) {
         HandlePing(io, instance);
-    } else if (TestStr(instance_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/session/profile" && method == http_RequestMethod::Get) {
         HandleSessionProfile(io, instance);
-    } else if (TestStr(instance_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/session/login" && method == http_RequestMethod::Post) {
         HandleSessionLogin(io, instance);
-    } else if (TestStr(instance_url, "/api/session/token") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/session/token" && method == http_RequestMethod::Post) {
         HandleSessionToken(io, instance);
-    } else if (TestStr(instance_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/session/confirm" && method == http_RequestMethod::Post) {
         HandleSessionConfirm(io, instance);
-    } else if (TestStr(instance_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/session/logout" && method == http_RequestMethod::Post) {
         HandleSessionLogout(io);
-    } else if (TestStr(instance_url, "/api/change/password") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/change/password" && method == http_RequestMethod::Post) {
         HandleChangePassword(io, instance);
-    } else if (TestStr(instance_url, "/api/change/qrcode") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/change/qrcode" && method == http_RequestMethod::Get) {
         HandleChangeQRcode(io, domain->settings.title);
-    } else if (TestStr(instance_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/change/totp" && method == http_RequestMethod::Post) {
         HandleChangeTOTP(io);
-    } else if (TestStr(instance_url, "/api/change/mode") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/change/mode" && method == http_RequestMethod::Post) {
         HandleChangeMode(io, instance);
-    } else if (TestStr(instance_url, "/api/change/export_key") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/change/export_key" && method == http_RequestMethod::Post) {
         HandleChangeExportKey(io, instance);
-    } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/files/static" && method == http_RequestMethod::Get) {
         HandleFileStatic(io, instance);
-    } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/files/list" && method == http_RequestMethod::Get) {
         HandleFileList(io, instance);
-    } else if (StartsWith(instance_url, "/files/") && request.method == http_RequestMethod::Put) {
+    } else if (StartsWith(url, "/files/") && method == http_RequestMethod::Put) {
         HandleFilePut(io, instance);
-    } else if (StartsWith(instance_url, "/files/") && request.method == http_RequestMethod::Delete) {
+    } else if (StartsWith(url, "/files/") && method == http_RequestMethod::Delete) {
         HandleFileDelete(io, instance);
-    } else if (TestStr(instance_url, "/api/files/history") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/files/history" && method == http_RequestMethod::Get) {
         HandleFileHistory(io, instance);
-    } else if (TestStr(instance_url, "/api/files/restore") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/files/restore" && method == http_RequestMethod::Post) {
         HandleFileRestore(io, instance);
-    } else if (TestStr(instance_url, "/api/files/delta") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/files/delta" && method == http_RequestMethod::Get) {
         HandleFileDelta(io, instance);
-    } else if (TestStr(instance_url, "/api/files/publish") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/files/publish" && method == http_RequestMethod::Post) {
         HandleFilePublish(io, instance);
-    } else if (TestStr(instance_url, "/api/records/list") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/records/list" && method == http_RequestMethod::Get) {
         HandleRecordList(io, instance);
-    } else if (TestStr(instance_url, "/api/records/get") && request.method == http_RequestMethod::Get) {
+    } else if (url == "/api/records/get" && method == http_RequestMethod::Get) {
         HandleRecordGet(io, instance);
-    } else if (!instance->legacy && TestStr(instance_url, "/api/records/audit") && request.method == http_RequestMethod::Get) {
+    } else if (!instance->legacy && url == "/api/records/audit" && method == http_RequestMethod::Get) {
         HandleRecordAudit(io, instance);
-    } else if (!instance->legacy && TestStr(instance_url, "/api/records/reserve") && request.method == http_RequestMethod::Post) {
+    } else if (!instance->legacy && url == "/api/records/reserve" && method == http_RequestMethod::Post) {
         HandleRecordReserve(io, instance);
-    } else if (!instance->legacy && TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
+    } else if (!instance->legacy && url == "/api/records/save" && method == http_RequestMethod::Post) {
         HandleRecordSave(io, instance);
-    } else if (!instance->legacy && TestStr(instance_url, "/api/records/delete") && request.method == http_RequestMethod::Post) {
+    } else if (!instance->legacy && url == "/api/records/delete" && method == http_RequestMethod::Post) {
         HandleRecordDelete(io, instance);
-    } else if (!instance->legacy && TestStr(instance_url, "/api/records/lock") && request.method == http_RequestMethod::Post) {
+    } else if (!instance->legacy && url == "/api/records/lock" && method == http_RequestMethod::Post) {
         HandleRecordLock(io, instance);
-    } else if (!instance->legacy && TestStr(instance_url, "/api/records/unlock") && request.method == http_RequestMethod::Post) {
+    } else if (!instance->legacy && url == "/api/records/unlock" && method == http_RequestMethod::Post) {
         HandleRecordUnlock(io, instance);
-    } else if (!instance->legacy && TestStr(instance_url, "/api/records/public") && request.method == http_RequestMethod::Get) {
+    } else if (!instance->legacy && url == "/api/records/public" && method == http_RequestMethod::Get) {
         HandleRecordPublic(io, instance);
-    } else if (!instance->legacy && StartsWith(instance_url, "/blobs/") && request.method == http_RequestMethod::Get) {
+    } else if (!instance->legacy && StartsWith(url, "/blobs/") && method == http_RequestMethod::Get) {
         HandleBlobGet(io, instance);
-    } else if (!instance->legacy && TestStr(instance_url, "/api/records/blob") && request.method == http_RequestMethod::Post) {
+    } else if (!instance->legacy && url == "/api/records/blob" && method == http_RequestMethod::Post) {
         HandleBlobPost(io, instance);
-    } else if (!instance->legacy && TestStr(instance_url, "/api/export/create") && request.method == http_RequestMethod::Post) {
+    } else if (!instance->legacy && url == "/api/export/create" && method == http_RequestMethod::Post) {
         HandleExportCreate(io, instance);
-    } else if (!instance->legacy && TestStr(instance_url, "/api/export/list") && request.method == http_RequestMethod::Get) {
+    } else if (!instance->legacy && url == "/api/export/list" && method == http_RequestMethod::Get) {
         HandleExportList(io, instance);
-    } else if (!instance->legacy && TestStr(instance_url, "/api/export/download") && request.method == http_RequestMethod::Get) {
+    } else if (!instance->legacy && url == "/api/export/download" && method == http_RequestMethod::Get) {
         HandleExportDownload(io, instance);
-    } else if (instance->legacy && TestStr(instance_url, "/api/records/load") && request.method == http_RequestMethod::Get) {
+    } else if (instance->legacy && url == "/api/records/load" && method == http_RequestMethod::Get) {
         HandleLegacyLoad(io, instance);
-    } else if (instance->legacy && TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
+    } else if (instance->legacy && url == "/api/records/save" && method == http_RequestMethod::Post) {
         HandleLegacySave(io, instance);
-    } else if (instance->legacy && TestStr(instance_url, "/api/records/export") && request.method == http_RequestMethod::Get) {
+    } else if (instance->legacy && url == "/api/records/export" && method == http_RequestMethod::Get) {
         HandleLegacyExport(io, instance);
-    } else if (TestStr(instance_url, "/api/send/mail") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/send/mail" && method == http_RequestMethod::Post) {
         HandleSendMail(io, instance);
-    } else if (TestStr(instance_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/send/sms" && method == http_RequestMethod::Post) {
         HandleSendSMS(io, instance);
-    } else if (TestStr(instance_url, "/api/send/tokenize") && request.method == http_RequestMethod::Post) {
+    } else if (url == "/api/send/tokenize" && method == http_RequestMethod::Post) {
         HandleSendTokenize(io, instance);
     } else {
         io->SendError(404);

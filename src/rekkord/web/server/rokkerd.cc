@@ -317,8 +317,11 @@ static void HandleRequest(http_IO *io)
     }
 #endif
 
+    Span<const char> url = request.path;
+    http_RequestMethod method = request.method;
+
     // CSRF protection
-    if (request.method != http_RequestMethod::Get && !http_PreventCSRF(io))
+    if (method != http_RequestMethod::Get && !http_PreventCSRF(io))
         return;
 
     // Translate server-side errors
@@ -335,60 +338,60 @@ static void HandleRequest(http_IO *io)
     io->AddHeader("Permissions-Policy", "interest-cohort=()");
 
     // API endpoint?
-    if (StartsWith(request.path, "/api/")) {
-        if (TestStr(request.path, "/api/user/session") && request.method == http_RequestMethod::Get) {
+    if (StartsWith(url, "/api/")) {
+        if (url == "/api/user/session" && method == http_RequestMethod::Get) {
             HandleUserSession(io);
-        } else if (TestStr(request.path, "/api/user/ping") && request.method == http_RequestMethod::Get) {
+        } else if (url == "/api/user/ping" && method == http_RequestMethod::Get) {
             HandleUserPing(io);
-        } else if (TestStr(request.path, "/api/user/register") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/user/register" && method == http_RequestMethod::Post) {
             HandleUserRegister(io);
-        } else if (TestStr(request.path, "/api/user/login") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/user/login" && method == http_RequestMethod::Post) {
             HandleUserLogin(io);
-        } else if (TestStr(request.path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/user/logout" && method == http_RequestMethod::Post) {
             HandleUserLogout(io);
-        } else if (TestStr(request.path, "/api/user/recover") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/user/recover" && method == http_RequestMethod::Post) {
             HandleUserRecover(io);
-        } else if (TestStr(request.path, "/api/user/reset") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/user/reset" && method == http_RequestMethod::Post) {
             HandleUserReset(io);
-        } else if (TestStr(request.path, "/api/user/password") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/user/password" && method == http_RequestMethod::Post) {
             HandleUserPassword(io);
-        } else if (TestStr(request.path, "/api/totp/confirm") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/totp/confirm" && method == http_RequestMethod::Post) {
             HandleTotpConfirm(io);
-        } else if (TestStr(request.path, "/api/totp/secret") && request.method == http_RequestMethod::Get) {
+        } else if (url == "/api/totp/secret" && method == http_RequestMethod::Get) {
             HandleTotpSecret(io);
-        } else if (TestStr(request.path, "/api/totp/change") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/totp/change" && method == http_RequestMethod::Post) {
             HandleTotpChange(io);
-        } else if (TestStr(request.path, "/api/totp/disable") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/totp/disable" && method == http_RequestMethod::Post) {
             HandleTotpDisable(io);
-        } else if (TestStr(request.path, "/api/picture/get") && request.method == http_RequestMethod::Get) {
+        } else if (url == "/api/picture/get" && method == http_RequestMethod::Get) {
             HandlePictureGet(io);
-        } else if (TestStr(request.path, "/api/picture/save") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/picture/save" && method == http_RequestMethod::Post) {
             HandlePictureSave(io);
-        } else if (TestStr(request.path, "/api/picture/delete") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/picture/delete" && method == http_RequestMethod::Post) {
             HandlePictureDelete(io);
-        } else if (TestStr(request.path, "/api/repository/list") && request.method == http_RequestMethod::Get) {
+        } else if (url == "/api/repository/list" && method == http_RequestMethod::Get) {
             HandleRepositoryList(io);
-        } else if (TestStr(request.path, "/api/repository/get") && request.method == http_RequestMethod::Get) {
+        } else if (url == "/api/repository/get" && method == http_RequestMethod::Get) {
             HandleRepositoryGet(io);
-        } else if (TestStr(request.path, "/api/repository/save") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/repository/save" && method == http_RequestMethod::Post) {
             HandleRepositorySave(io);
-        } else if (TestStr(request.path, "/api/repository/delete") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/repository/delete" && method == http_RequestMethod::Post) {
             HandleRepositoryDelete(io);
-        } else if (TestStr(request.path, "/api/repository/snapshots") && request.method == http_RequestMethod::Get) {
+        } else if (url == "/api/repository/snapshots" && method == http_RequestMethod::Get) {
             HandleRepositorySnapshots(io);
-        } else if (TestStr(request.path, "/api/plan/list") && request.method == http_RequestMethod::Get) {
+        } else if (url == "/api/plan/list" && method == http_RequestMethod::Get) {
             HandlePlanList(io);
-        } else if (TestStr(request.path, "/api/plan/get") && request.method == http_RequestMethod::Get) {
+        } else if (url == "/api/plan/get" && method == http_RequestMethod::Get) {
             HandlePlanGet(io);
-        } else if (TestStr(request.path, "/api/plan/save") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/plan/save" && method == http_RequestMethod::Post) {
             HandlePlanSave(io);
-        } else if (TestStr(request.path, "/api/plan/delete") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/plan/delete" && method == http_RequestMethod::Post) {
             HandlePlanDelete(io);
-        } else if (TestStr(request.path, "/api/plan/key") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/plan/key" && method == http_RequestMethod::Post) {
             HandlePlanKey(io);
-        } else if (TestStr(request.path, "/api/plan/fetch") && request.method == http_RequestMethod::Get) {
+        } else if (url == "/api/plan/fetch" && method == http_RequestMethod::Get) {
             HandlePlanFetch(io);
-        } else if (TestStr(request.path, "/api/plan/report") && request.method == http_RequestMethod::Post) {
+        } else if (url == "/api/plan/report" && method == http_RequestMethod::Post) {
             HandlePlanReport(io);
         } else {
             io->SendError(404);
@@ -398,7 +401,7 @@ static void HandleRequest(http_IO *io)
     }
 
     // User picture?
-    if (StartsWith(request.path, "/pictures/") && request.method == http_RequestMethod::Get) {
+    if (StartsWith(url, "/pictures/") && method == http_RequestMethod::Get) {
         HandlePictureGet(io);
         return;
     }
@@ -415,7 +418,7 @@ static void HandleRequest(http_IO *io)
         const AssetInfo *asset = assets_map.FindValue(path, nullptr);
 
         if (asset) {
-            int64_t max_age = StartsWith(request.path, "/static/") ? (28ll * 86400000) : 0;
+            int64_t max_age = StartsWith(url, "/static/") ? (28ll * 86400000) : 0;
             AttachStatic(io, *asset, max_age, shared_etag);
 
             return;
