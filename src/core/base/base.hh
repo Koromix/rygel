@@ -4283,7 +4283,6 @@ static const char *const CompressionTypeExtensions[] = {
 Span<const char> GetPathDirectory(Span<const char> filename);
 Span<const char> GetPathExtension(Span<const char> filename,
                                   CompressionType *out_compression_type = nullptr);
-CompressionType GetPathCompression(Span<const char> filename);
 
 enum class NormalizeFlag {
     EndWithSeparator = 1 << 0,

@@ -3860,13 +3860,6 @@ Span<const char> GetPathExtension(Span<const char> filename, CompressionType *ou
     return extension;
 }
 
-CompressionType GetPathCompression(Span<const char> filename)
-{
-    CompressionType compression_type;
-    GetPathExtension(filename, &compression_type);
-    return compression_type;
-}
-
 Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory, unsigned int flags, Allocator *alloc)
 {
     K_ASSERT(alloc);
