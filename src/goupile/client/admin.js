@@ -36,7 +36,7 @@ async function init(fallback) {
 function renderMenu() {
     return html`
         <nav class="ui_toolbar" id="ui_top" style="z-index: 999999;">
-            <button class="icon lines" @click=${UI.wrap(e => go(e, '/admin/'))}>${T.admin}</button>
+            <button class="icon admin" @click=${UI.wrap(e => go(e, '/admin/'))}>${T.admin}</button>
             <button class=${'icon domain' + (UI.isPanelActive('domain') ? ' active' : '')}
                     @click=${UI.wrap(e => togglePanel('domain'))}>${T.projects}</button>
             <button class=${'icon users' + (UI.isPanelActive('users') ? ' active' : '')}

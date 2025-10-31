@@ -9,6 +9,7 @@
 }
 button.icon { text-align: right; }
 
+.icon.admin { background-image: url('admin.webp'); }
 .icon.archives { background-image: url('archives.webp'); }
 .icon.code { background-image: url('code.webp'); }
 .icon.data { background-image: url('data.webp'); }
