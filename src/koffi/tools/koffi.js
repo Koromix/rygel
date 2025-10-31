@@ -57,7 +57,7 @@ async function main() {
     runner = new QemuRunner();
 
     let command = null;
-    if (!ValidCommands.hasOwnProperty(config.command))
+    if (!Object.hasOwn(ValidCommands, config.command))
         throw new Error(`Unknown command '${config.command}'`);
     command = runner[config.command] ?? CommandFunctions[config.command];
 

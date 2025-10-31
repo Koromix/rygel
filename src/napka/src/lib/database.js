@@ -300,7 +300,7 @@ function migrate(db, version) {
                     };
 
                     for (let key in etab) {
-                        if (entry.hasOwnProperty(key)) {
+                        if (Object.hasOwn(entry, key)) {
                             entry[key] = etab[key];
                         } else if (key == 'id') {
                             entry.import = etab[key];
@@ -315,7 +315,7 @@ function migrate(db, version) {
                                 case 'prive_lucratif': { entry.main['etab_statut'] = 'Etablissement privé à but lucratif'; } break;
                             }
                         } else if (key.startsWith('etab_') &&
-                                   entry.hasOwnProperty(key.substr(5))) {
+                                   Object.hasOwn(entry, key.substr(5))) {
                             entry[key.substr(5)] = etab[key];
                         } else {
                             entry.main[key] = etab[key];

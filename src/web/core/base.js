@@ -404,10 +404,10 @@ const Util = new function() {
     };
 
     this.setLocale = function(lang) {
-        if (lang != null && !locales.hasOwnProperty(lang))
+        if (lang != null && !Object.hasOwn(locales, lang))
             lang = null;
         if (lang == null && navigator.languages != null)
-            lang = navigator.languages.map(lang => lang.replace(/-.*$/, '')).find(lang => locales.hasOwnProperty(lang));
+            lang = navigator.languages.map(lang => lang.replace(/-.*$/, '')).find(lang => Object.hasOwn(locales, lang));
         if (lang == null)
             lang = default_locale;
 
@@ -766,7 +766,7 @@ const Net = new function() {
             options.credentials = 'same-origin';
         if (options.headers == null)
             options.headers = {};
-        if (!options.hasOwnProperty('timeout') && options.signal == null)
+        if (!Object.hasOwn(options, 'timeout') && options.signal == null)
             options.timeout = 15000;
 
         for (let key in options.headers) {

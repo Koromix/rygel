@@ -242,7 +242,7 @@ function loadSettings() {
     }
 
     for (let key in user) {
-        if (!settings.hasOwnProperty(key))
+        if (!Object.hasOwn(settings, key))
             continue;
         if (typeof user[key] != typeof settings[key])
             continue;
@@ -250,7 +250,7 @@ function loadSettings() {
         settings[key] = user[key];
     }
 
-    if (!assets.backgrounds.hasOwnProperty(settings.background))
+    if (!Object.hasOwn(assets.backgrounds, settings.background))
         settings.background = DEFAULT_SETTINGS.background;
 }
 

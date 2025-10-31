@@ -1728,7 +1728,7 @@ async function go(e, url = null, options = {}) {
 
             if (panels) {
                 panels = panels.split('|');
-                panels = panels.filter(key => app.panels.hasOwnProperty(key) || key == 'view');
+                panels = panels.filter(key => Object.hasOwn(app.panels, key) || key == 'view');
 
                 if (panels.length)
                     explicit_panels = panels;

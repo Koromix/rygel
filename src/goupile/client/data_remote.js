@@ -128,7 +128,7 @@ function restore(tid, obj) {
         for (let key in obj) {
             let wrap = obj[key];
 
-            if (!Util.isPodObject(wrap) || !wrap.hasOwnProperty('$v'))
+            if (!Util.isPodObject(wrap) || !Object.hasOwn(wrap, '$v'))
                 continue;
 
             wrap = {

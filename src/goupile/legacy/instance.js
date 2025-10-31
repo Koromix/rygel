@@ -1982,7 +1982,7 @@ async function go(e, url = null, options = {}) {
             let panels = url.searchParams.get('p');
             if (panels) {
                 panels = panels.split('|');
-                panels = panels.filter(key => app.panels.hasOwnProperty(key));
+                panels = panels.filter(key => Object.hasOwn(app.panels, key));
 
                 UI.setPanels(panels);
                 explicit_panels = true;

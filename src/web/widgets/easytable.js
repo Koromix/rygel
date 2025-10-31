@@ -62,7 +62,7 @@ function EasyTable() {
     }
 
     this.setOptions = function(new_options) {
-        if (new_options.hasOwnProperty('parents') && new_options.parents != options.parents)
+        if (Object.hasOwn(new_options, 'parents') && new_options.parents != options.parents)
             ready = false;
         Object.assign(options, new_options);
     };

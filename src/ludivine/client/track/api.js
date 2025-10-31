@@ -248,7 +248,7 @@ function InputAPI(canvas) {
     };
 
     this.on = function(type, func) {
-        if (!handlers.hasOwnProperty(type))
+        if (!Object.hasOwn(handlers, type))
             throw new Error(`Unsupport input type '${type}'`);
         handlers[type].push(func);
     };

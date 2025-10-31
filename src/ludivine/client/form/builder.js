@@ -477,7 +477,7 @@ function FormBuilder(state, model, base = {}) {
 
         let render = () => {
             let error = notes.error;
-            let skippable = notes.hasOwnProperty('skip') && (error == null);
+            let skippable = Object.hasOwn(notes, 'skip') && (error == null);
             let annotated = skippable || (error != null);
 
             let cls = 'widget' + (annotated ? ' annotate' : '');

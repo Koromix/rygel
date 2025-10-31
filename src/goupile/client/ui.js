@@ -483,7 +483,7 @@ function deployMenu(e) {
 }
 
 function expandMenu(key, title, active, content) {
-    if (expanded.hasOwnProperty(key))
+    if (Object.hasOwn(expanded, key))
         active = expanded[key];
     new_expanded[key] = active;
 

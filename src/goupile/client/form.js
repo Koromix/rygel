@@ -171,7 +171,7 @@ function FormBuilder(state, model, options = {}) {
     this.hasErrors = function() { return model.hasErrors(); };
 
     this.pushOptions = function(options = {}) {
-        if (options.hasOwnProperty('path'))
+        if (Object.hasOwn(options, 'path'))
             throw new Error(T.message(`Option 'path' is not supported anymore`));
 
         options = expandOptions(options);
@@ -1538,7 +1538,7 @@ instead of:
         });
 
         for (let i = 0;; i++) {
-            if (!values.hasOwnProperty(i)) {
+            if (!Object.hasOwn(values, i)) {
                 intf.length = i;
                 break;
             }
@@ -1567,7 +1567,7 @@ instead of:
     function handleRepeatRemove(values, idx) {
         for (;;) {
             values[idx] = values[idx + 1];
-            if (!values.hasOwnProperty(idx + 1)) {
+            if (!Object.hasOwn(values, idx + 1)) {
                 delete values[idx];
                 break;
             }
@@ -2072,7 +2072,7 @@ instead of:
     function readValue(key, options, func) {
         let ptr = key.ptr;
 
-        if (!ptr.hasOwnProperty(key.name) || key.retain.follow_default.has(key.name)) {
+        if (!Object.hasOwn(ptr, key.name) || key.retain.follow_default.has(key.name)) {
             let value = normalizeValue(func, options.value);
 
             ptr[key.name] = value;

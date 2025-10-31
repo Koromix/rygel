@@ -66,7 +66,7 @@ function ApplicationBuilder(app) {
     });
 
     this.panel = function(panel, enable) {
-        if (panel.startsWith('_') || !app.hasOwnProperty(panel))
+        if (panel.startsWith('_') || !Object.hasOwn(app.panels, panel))
             throw new Error(T.message(`Unknown panel key '{1}'`, panel));
 
         app.panels[panel] = enable;

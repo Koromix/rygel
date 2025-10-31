@@ -48,7 +48,7 @@ const handler = {
     deleteProperty: function(obj, key) {
         if (!checkKey(key))
             return false;
-        if (!obj.hasOwnProperty(key))
+        if (!Object.hasOwn(obj, key))
             return false;
 
         let ptr = map.get(obj);
@@ -56,7 +56,7 @@ const handler = {
         delete ptr.raw[key];
         delete ptr.obj[key];
 
-        if (ptr.copy.hasOwnProperty(key)) {
+        if (Object.hasOwn(ptr.copy, key)) {
             ptr.changes.add(key);
         } else {
             ptr.changes.delete(key);
@@ -69,7 +69,7 @@ const handler = {
 
 function expand(value) {
     if (Util.isPodObject(value)) {
-        if (value.hasOwnProperty('$n')) {
+        if (Object.hasOwn(value, '$n')) {
             value.$v = expand(value.$v).$v;
             return value;
         }

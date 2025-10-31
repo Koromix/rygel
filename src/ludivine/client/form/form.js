@@ -231,7 +231,7 @@ function FormModule(app, study, page) {
             if (Util.isPodObject(ptr.$v))
                 ptr.$v = anonymize(ptr.$v);
 
-            if (ptr.hasOwnProperty('$n') && ptr.$n.hasOwnProperty('mask')) {
+            if (Object.hasOwn(ptr, '$n') && Object.hasOwn(ptr.$n, 'mask')) {
                 ptr.$n = Object.assign({}, ptr.$n);
                 ptr.$v = ptr.$n.mask;
                 delete ptr.$n.mask;

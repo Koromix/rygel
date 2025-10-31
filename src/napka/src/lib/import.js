@@ -95,7 +95,7 @@ function updateEntries(db, map_name, layer_name, rows, links = {}) {
         };
 
         for (let key in row) {
-            if (entry.hasOwnProperty(key))
+            if (Object.hasOwn(entry, key))
                 continue;
 
             let ptr = entry.main;

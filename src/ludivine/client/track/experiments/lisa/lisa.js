@@ -315,7 +315,7 @@ async function interpret(meta, events) {
                     if (looking_at != null) {
                         test[looking_at] += evt.timestamp - looking_since;
 
-                        if (now_at != looking_at && test.hasOwnProperty(now_at + 's'))
+                        if (now_at != looking_at && Object.hasOwn(test, now_at + 's'))
                             test[now_at + 's']++;
 
                         if (test.latency == null && looking_at != 'outside')

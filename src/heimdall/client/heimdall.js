@@ -977,7 +977,7 @@ function restoreState() {
     }
 
     for (let key in user.settings) {
-        if (!settings.hasOwnProperty(key))
+        if (!Object.hasOwn(settings, key))
             continue;
         settings[key] = user.settings[key];
     }

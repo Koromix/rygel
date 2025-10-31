@@ -314,7 +314,7 @@ function PictureCropper(title, size) {
 
                 if (sub != null) {
                     for (let cat in sub) {
-                        if (notion[key].hasOwnProperty(cat))
+                        if (Object.hasOwn(notion[key], cat))
                             notion[key][cat] = sub[cat];
                     }
                 }
