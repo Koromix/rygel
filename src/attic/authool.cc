@@ -31,7 +31,7 @@ Options:
 
         %!..+--no_check%!0                 Don't check password strength
 
-Use a pattern to set which characters classes are present in the password:
+Use a pattern to set which character classes are present in the password:
 
     %!..+l%!0                              Use non-ambiguous lowercase characters
     %!..+L%!0                              Use all lowercase characters (including l)
