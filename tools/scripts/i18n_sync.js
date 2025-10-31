@@ -30,7 +30,7 @@ async function run() {
 
     for (let arg of args) {
         if (arg == '--help') {
-            print_usage();
+            printUsage();
             return 0;
         } else if (arg == '--scan') {
             action = 'scan';
@@ -59,7 +59,7 @@ async function run() {
     console.log('Done');
 }
 
-function print_usage() {
+function printUsage() {
     let help = `Usage: i18n_sync.js [command] [options...]
 
 Options:
@@ -69,7 +69,6 @@ Options:
 
     console.log(help);
 }
-
 
 async function scanCode(languages, sources) {
     console.log('Scanning code...');
