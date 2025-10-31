@@ -26,7 +26,9 @@ async function main() {
 
 async function run() {
     let args = process.argv.slice(2);
+
     let action = null;
+    let push = false;
 
     for (let arg of args) {
         if (arg == '--help') {
@@ -36,6 +38,8 @@ async function run() {
             action = 'scan';
         } else if (arg == '--sync') {
             action = 'sync';
+        } else if (arg == '--push') {
+            push = true;
         } else if (arg[0] == '-') {
             throw new Error(`Invalid option '${arg}'`);
         }
@@ -48,12 +52,12 @@ async function run() {
 
     if (action == null) {
         if (TOLGEE_URL) {
-            await syncTolgee(languages, sources);
+            await syncTolgee(languages, sources, push);
         } else {
             console.error('Ignoring Tolgee sync because TOLGEE_URL is missing');
         }
     } else if (action == 'sync') {
-        await syncTolgee(languages, sources);
+        await syncTolgee(languages, sources, push);
     }
 
     console.log('Done');
@@ -184,7 +188,7 @@ function unescapeLiteral(str) {
     return str;
 }
 
-async function syncTolgee(languages, sources) {
+async function syncTolgee(languages, sources, push = false) {
     // Check prerequisites
     {
         let errors = [];
@@ -207,13 +211,20 @@ async function syncTolgee(languages, sources) {
     console.log('Pushing new key strings...');
     for (let set of sets) {
         for (let key in set.keys) {
-            if (translations.find(t => t.keyNamespace == set.namespace && t.keyName == key))
-                continue;
+            let t = translations.find(t => t.keyNamespace == set.namespace && t.keyName == key);
+            let texts = set.keys[key];
+
+            if (t != null) {
+                let changed = Object.keys(texts).some(lang => t.translations[lang].text != texts[lang]);
+
+                if (!push || !changed)
+                    continue;
+            }
 
             let json = {
                 namespace: set.namespace,
                 key: key,
-                translations: set.keys[key]
+                translations: texts
             };
 
             await fetchOrFail(TOLGEE_URL + '/v2/projects/translations', {
@@ -230,13 +241,20 @@ async function syncTolgee(languages, sources) {
     console.log('Pushing new message strings...');
     for (let set of sets) {
         for (let msg in set.messages) {
-            if (translations.find(t => t.keyNamespace == set.namespace && t.keyName == msg))
-                continue;
+            let t = translations.find(t => t.keyNamespace == set.namespace && t.keyName == msg);
+            let texts = set.messages[msg];
+
+            if (t != null) {
+                let changed = Object.keys(texts).some(lang => t.translations[lang].text != texts[lang]);
+
+                if (!push || !changed)
+                    continue;
+            }
 
             let json = {
                 namespace: set.namespace,
                 key: msg,
-                translations: set.messages[msg]
+                translations: texts
             };
 
             await fetchOrFail(TOLGEE_URL + '/v2/projects/translations', {
