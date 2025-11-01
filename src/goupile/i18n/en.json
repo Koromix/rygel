@@ -6,7 +6,7 @@
         "add_file": "Add file",
         "add_notes": "Add annotations",
         "admin": "Admin",
-        "admin_passwords": "Passwords of admin users",
+        "admin_passwords": "Admin user passwords",
         "administration": "Administration",
         "advanced": "Advanced",
         "allow_guests": "Allow guest users",
@@ -194,7 +194,7 @@
         "password_complexity": {
             "easy": "Easy (8 characters)",
             "hard": "High (dynamic score)",
-            "moderate": "Moderate (8 caracters of 3 classes)"
+            "moderate": "Moderate (8 characters of 3 different classes)"
         },
         "password_complexity_help": "Your password must be sufficiently complex (length, letters, numbers, symbols).",
         "password_mismatch": "Passwords don't match",
@@ -241,7 +241,7 @@
         "reveal_content": "Reveal content",
         "root": "Root",
         "root_account": "Root account",
-        "root_passwords": "Passwords of root users",
+        "root_passwords": "Root user passwords",
         "row": "Row",
         "rows": "Rows",
         "save": "Save",
@@ -290,7 +290,7 @@
         "url": "URL",
         "use_offline": "Offline use",
         "use_totp": "Two-factor authentication",
-        "user_passwords": "Passwords of normal users",
+        "user_passwords": "Normal user passwords",
         "user_x_created": "Created user '{1}'",
         "user_x_deleted": "Deleted user '{1}'",
         "user_x_edited": "Changed user '{1}'",
