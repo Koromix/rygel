@@ -1,5 +1,5 @@
 diff --git a/vendor/brotli/c/include/brotli/decode.h b/vendor/brotli/c/include/brotli/decode.h
-index af1aa23f6..3fd646a3d 100644
+index 8d436db733..31a0d7290c 100644
 --- a/vendor/brotli/c/include/brotli/decode.h
 +++ b/vendor/brotli/c/include/brotli/decode.h
 @@ -12,9 +12,9 @@
@@ -8,15 +8,15 @@ index af1aa23f6..3fd646a3d 100644
  
 -#include <brotli/port.h>
 -#include <brotli/shared_dictionary.h>
--#include <brotli/types.h>
+-#include <brotli/types.h>  /* IWYU pragma: export */
 +#include "port.h"
 +#include "shared_dictionary.h"
-+#include "types.h"
++#include "types.h"  /* IWYU pragma: export */
  
  #if defined(__cplusplus) || defined(c_plusplus)
  extern "C" {
 diff --git a/vendor/brotli/c/include/brotli/encode.h b/vendor/brotli/c/include/brotli/encode.h
-index dea9931eb..a31bb328a 100644
+index ac26ea8e62..483904b37c 100644
 --- a/vendor/brotli/c/include/brotli/encode.h
 +++ b/vendor/brotli/c/include/brotli/encode.h
 @@ -12,9 +12,9 @@
@@ -25,15 +25,15 @@ index dea9931eb..a31bb328a 100644
  
 -#include <brotli/port.h>
 -#include <brotli/shared_dictionary.h>
--#include <brotli/types.h>
+-#include <brotli/types.h>  /* IWYU pragma: export */
 +#include "port.h"
 +#include "shared_dictionary.h"
-+#include "types.h"
++#include "types.h"  /* IWYU pragma: export */
  
  #if defined(__cplusplus) || defined(c_plusplus)
  extern "C" {
 diff --git a/vendor/brotli/c/include/brotli/shared_dictionary.h b/vendor/brotli/c/include/brotli/shared_dictionary.h
-index 2970c2dcc..17d772f31 100644
+index 2970c2dcc9..17d772f313 100644
 --- a/vendor/brotli/c/include/brotli/shared_dictionary.h
 +++ b/vendor/brotli/c/include/brotli/shared_dictionary.h
 @@ -9,8 +9,8 @@
