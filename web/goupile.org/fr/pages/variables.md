@@ -2,14 +2,14 @@
 
 Goupile met à disposition plusieurs objets que vous pouvez utiliser dans les scripts. Certains ont déjà été présentés dans cette documentation :
 
-- L'objet `app` est utilisé pour définir la [structure du projet](app) dans le script de projet, ou bien pour lire la structure du projet dans le scripts de page
-- L'objet `form` permet d'ajouter les [différents widgets](widgets) dans les scripts de page
-- L'objet `meta` permet d'accéder aux fonctions relatives aux [identifiants](identifiers), au summary, à la randomisation
+- L'objet `app` est utilisé pour définir la [structure du projet](app) dans le script de projet, ou bien pour lire la structure du projet dans le scripts de page.
+- L'objet `form` permet d'ajouter les [différents widgets](widgets) dans les scripts de page.
+- L'objet `meta` permet d'accéder aux fonctions relatives aux [identifiants](identifiers), au summary, à la randomisation.
 
 Il en existe d'autres que nous allons aborder sur cette page, en particulier :
 
-- L'objet `thread` permet d'accéder au statut de l'enregistrement et aux [données des différentes pages](#donnees-d-autres-pages)
-- L'objet `profile` contient des informations relatives au [profil de l'utilisateur](#profil-de-l-utilisateur) connecté
+- L'objet `thread` permet d'accéder au statut de l'enregistrement et aux [données des différentes pages](#donnees-d-autres-pages).
+- L'objet `profile` contient des informations relatives au [profil de l'utilisateur](#profil-de-l-utilisateur) connecté.
 
 # Données d'autres pages
 

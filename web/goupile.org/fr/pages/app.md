@@ -72,7 +72,7 @@ app.annotate = true
 // ...
 ```
 
-Toutes les variables peuvent être annotées par défaut, mais vous pouvez modifier cette option [pour chaque variable](form#annotation-de-variable) en cas de besoin.
+Toutes les variables peuvent être annotées par défaut, mais vous pouvez modifier cette option [pour chaque variable](checks#annotation-des-variables) en cas de besoin.
 
 ## Pages conditionnelles
 
@@ -140,7 +140,7 @@ Une fois la fin de la séquence atteinte, l'utilisateur est redirigé vers la pa
 > [!NOTE]
 > La séquence n'est suivie que lors du premier enregistrement d'une page.
 >
-> Lorsque l'utilisateur ouvre une page déjà enregistrée pour la modifier, le bouton Continuer le redirige directement vers la page de statut.
+> Lorsque l'utilisateur ouvre une page déjà enregistrée pour la modifier, le bouton *Continuer* le redirige directement vers la page de statut.
 >
 > Par ailleurs, les séquences sont totalement ignorées en mode à *double panneaux* (avec la liste des enregistrements à gauche et le formulaire à droite). Dans cas cas, la page actuelle reste ouverte après enregistrement.
 
@@ -182,7 +182,7 @@ app.form("projet", "6 pages", {
 
 ## Sauvegarde automatique
 
-Par défaut, les données ne sont enregistrées que lors de la validation par le bouton Enregistrer. L'enregistrement implique un formulaire entièrement valide, pour lequel les oublis et les erreurs sont corrigées ou annotées.
+Par défaut, les données ne sont enregistrées que lors de la validation par le bouton *Enregistrer*. L'enregistrement implique un formulaire entièrement valide, pour lequel les oublis et les erreurs sont corrigées ou annotées.
 
 <div class="screenshot"><img src="{{ ASSET static/help/instance/save.webp }}" height="240" alt=""/></div>
 

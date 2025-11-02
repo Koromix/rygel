@@ -1,6 +1,6 @@
 # Erreurs et contrôles
 
-Les détection d'erreurs est utile à deux fins :
+La détection d'erreurs est utile à deux fins :
 
 - Empêcher ou **limiter le risque d'erreur de remplissage**, en repérant les valeurs anormales et en les signalant à l'utilisateur qui peut ainsi les corriger avant d'enregistrer ses données
 - Effectuer des **contrôles de saisie et de cohérence** a posteriori en repérant les valeurs anormales ou suspectes en fonction de règles prédéfinies
@@ -21,7 +21,7 @@ Goupile propose un système d'erreurs pour répondre à ces besoins, on distingu
 
 ### Saisie obligatoire
 
-La [saisie obligatoire](form#saisie-obligatoire) (`mandatory: true`) est disponible avec tous les widgets. Une variable manquante génère une erreur avec le tag « Incomplet », qui est bloquante par défaut.
+La [saisie obligatoire](widgets#saisie-obligatoire) (`mandatory: true`) est disponible avec tous les widgets. Une variable manquante génère une erreur avec le tag « Incomplet », qui est bloquante par défaut.
 
 Pour générer cette erreur sans bloquer l'enregistrement vous pouvez définir l'option `block: false` sur le widget :
 
