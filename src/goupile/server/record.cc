@@ -11,6 +11,7 @@
 #include "record.hh"
 #include "src/core/sqlite/sqlite.hh"
 #include "user.hh"
+#include "vendor/sqlite3mc/sqlite3mc.h"
 #include "vm.hh"
 #include "src/core/request/smtp.hh"
 #include "src/core/wrap/json.hh"
@@ -191,7 +192,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
 
     if (filter.audit_anchor < 0) {
         sql.len += Fmt(sql.TakeAvailable(),
-                       R"(SELECT t.thread AS t, t.tid, t.counters, t.secrets, IFNULL(t.lock, -1), t.sequence,
+                       R"(SELECT t.thread AS t, t.tid, t.counters, t.secrets, IFNULL(t.lock, -1), IFNULL(t.sequence, -1),
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime,
                                  e.store, e.summary, e.tags AS tags,
                                  IIF(?6 = 1, e.data, NULL) AS data
@@ -233,7 +234,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                                   WHERE f.anchor <= ?3 AND f.previous = rec.anchor
                               ORDER BY anchor
                           )
-                          SELECT t.thread AS t, t.tid, t.counters, t.secrets, IFNULL(t.lock, -1), t.sequence,
+                          SELECT t.thread AS t, t.tid, t.counters, t.secrets, IFNULL(t.lock, -1), IFNULL(t.sequence, -1),
                                  e.rowid AS e, e.eid, IIF(rec.data IS NULL, 1, 0) AS deleted,
                                  rec.anchor, e.ctime, rec.mtime, e.store,
                                  rec.summary, rec.tags, rec.data
@@ -311,6 +312,7 @@ again:
     int64_t t = sqlite3_column_int64(stmt, 0);
     int64_t e = sqlite3_column_int64(stmt, 6);
     int64_t lock = sqlite3_column_int64(stmt, 4);
+    int64_t sequence = sqlite3_column_int64(stmt, 5);
 
     // This can happen with the recursive CTE is used for historical data
     if (e == cursor.e)
@@ -321,7 +323,7 @@ again:
     cursor.counters = (const char *)sqlite3_column_text(stmt, 2);
     cursor.secrets = (const char *)sqlite3_column_text(stmt, 3);
     cursor.locked = (lock >= 0 && lock <= now);
-    cursor.sequence = sqlite3_column_int64(stmt, 5);
+    cursor.sequence = sequence;
 
     cursor.e = e;
     cursor.eid = (const char *)sqlite3_column_text(stmt, 7);
@@ -422,7 +424,11 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
             json->StartObject();
 
             json->Key("tid"); json->String(cursor->tid);
-            json->Key("sequence"); json->Int64(cursor->sequence);
+            if (cursor->sequence >= 0) {
+                json->Key("sequence"); json->Int64(cursor->sequence);
+            } else {
+                json->Key("sequence"); json->Null();
+            }
             json->Key("saved"); json->Bool(true);
             json->Key("locked"); json->Bool(cursor->locked);
 
@@ -559,7 +565,11 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
         json->StartObject();
 
         json->Key("tid"); json->String(cursor->tid);
-        json->Key("sequence"); json->Int64(cursor->sequence);
+        if (cursor->sequence >= 0) {
+            json->Key("sequence"); json->Int64(cursor->sequence);
+        } else {
+            json->Key("sequence"); json->Null();
+        }
         json->Key("counters"); json->Raw(cursor->counters);
         json->Key("saved"); json->Bool(true);
         json->Key("locked"); json->Bool(cursor->locked);
@@ -786,7 +796,11 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
         json.StartObject();
 
         json.Key("tid"); json.String(cursor->tid);
-        json.Key("sequence"); json.Int64(cursor->sequence);
+        if (cursor->sequence >= 0) {
+            json.Key("sequence"); json.Int64(cursor->sequence);
+        } else {
+            json.Key("sequence"); json.Null();
+        }
         json.Key("counters"); json.Raw(cursor->counters);
         json.Key("secrets"); json.Raw(cursor->secrets);
 
@@ -1342,7 +1356,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 Span<const char> key = json->ParseKey();
 
                 if (key == "reservation") {
-                    json->ParseInt(&reservation);
+                    json->SkipNull() || json->ParseInt(&reservation);
                 } else if (key == "tid") {
                     json->ParseString(&tid);
                 } else if (key == "eid") {
@@ -1523,6 +1537,10 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                     valid &= CheckKey(constraint.key);
                 }
 
+                if (counters.len && reservation < 0) {
+                    LogError("Cannot use counters without reservation");
+                    valid = false;
+                }
                 for (const CounterInfo &counter: counters) {
                     valid &= CheckKey(counter.key);
 
@@ -1596,21 +1614,25 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
             int64_t rnd = GetRandomInt64(0, 0xFFFFFFFFFFFF);
             int64_t reserved = instance->reserve_rnd.exchange(rnd);
 
-            if (reservation >= 0 && reservation != reserved) {
-                LogError("Reservation conflicts, please retry");
-                io->SendError(412);
-                return false;
-            }
+            if (reservation >= 0) {
+                if (reservation != reserved) {
+                    LogError("Reservation conflicts, please retry");
+                    io->SendError(412);
+                    return false;
+                }
 
-            reservation = reserved;
+                reservation = reserved;
+            }
         }
 
         // Check for existing thread and claim
         bool new_thread;
+        bool has_sequence;
         bool claimed;
         {
             sq_Statement stmt;
             if (!instance->db->Prepare(R"(SELECT IFNULL(t.lock, -1) AS lock,
+                                                 IIF(t.sequence IS NOT NULL, 1, 0) AS sequenced,
                                                  IIF(c.userid IS NOT NULL, 1, 0) AS claimed
                                           FROM rec_threads t
                                           LEFT JOIN ins_claims c ON (c.tid = t.tid AND c.userid = ?2)
@@ -1628,9 +1650,11 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 }
 
                 new_thread = false;
-                claimed = sqlite3_column_int(stmt, 1);
+                has_sequence = sqlite3_column_int(stmt, 1);
+                claimed = sqlite3_column_int(stmt, 2);
             } else if (stmt.IsValid()) {
                 new_thread = true;
+                has_sequence = false;
                 claimed = false;
             } else {
                 return false;
@@ -1792,9 +1816,9 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         }
 
         // Create thread if needed
-        if (new_thread) {
-            int64_t sequence;
-            {
+        if (!has_sequence) {
+            int64_t sequence = -1;
+            if (reservation >= 0) {
                 sq_Statement stmt;
                 if (!instance->db->Prepare(R"(UPDATE seq_counters SET state = state + 1
                                               WHERE key = '@sequence'
@@ -1805,8 +1829,10 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
             }
 
             if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets, sequence)
-                                      VALUES (?1, '{}', '{}', ?2))", tid, sequence))
-            return false;
+                                      VALUES (?1, '{}', '{}', ?2)
+                                      ON CONFLICT DO UPDATE SET sequence = excluded.sequence)",
+                                   tid, sequence >= 0 ? sq_Binding(sequence) : sq_Binding()))
+                return false;
         }
 
         // Update entry and fragment tags
@@ -1821,6 +1847,8 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
         // Update counters
         for (CounterInfo &counter: counters) {
+            K_ASSERT(reservation >= 0);
+
             if (prev_counters.Find(counter.key))
                 continue;
 

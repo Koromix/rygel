@@ -2390,14 +2390,18 @@ function runAnnotationDialog(e, intf) {
 // Call with data_mutex locked
 async function saveRecord(thread, page, state, entry, raw, meta, draft) {
     for (;;) {
-        let reservation = await records.reserve(meta.counters);
+        let reservation = null;
 
-        thread = Object.assign({}, thread);
-        thread.counters = Object.assign({}, thread.counters);
-        thread.sequence ??= reservation.sequence;
-        for (let key in reservation.counters)
-            thread.counters[key] ??= reservation.counters[key];
-        [_, meta] = await runPage(page, thread, state);
+        if (!draft) {
+            reservation = await records.reserve(meta.counters);
+
+            thread = Object.assign({}, thread);
+            thread.counters = Object.assign({}, thread.counters);
+            thread.sequence ??= reservation.sequence;
+            for (let key in reservation.counters)
+                thread.counters[key] ??= reservation.counters[key];
+            [_, meta] = await runPage(page, thread, state);
+        }
 
         let frag = {
             summary: meta.summary,
@@ -2429,17 +2433,19 @@ async function saveRecord(thread, page, state, entry, raw, meta, draft) {
         }
 
         let actions = {
-            reservation: reservation.reservation,
-
+            reservation: null,
             signup: null,
             claim: true,
             lock: false
         };
 
-        if (!draft) {
+        if (reservation != null) {
+            actions.reservation = reservation.reservation;
             actions.signup = meta.signup;
             actions.claim = route.page.claim;
             actions.lock = route.page.lock;
+        } else {
+            frag.counters = {};
         }
 
         try {

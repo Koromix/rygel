@@ -34,7 +34,7 @@ function DataRemote() {
         let data = await preserve(frag.data, blobs);
 
         await Net.post(ENV.urls.instance + 'api/records/save', {
-            reservation: frag.reservation,
+            reservation: actions.reservation,
             tid: tid,
 
             eid: entry.eid,
