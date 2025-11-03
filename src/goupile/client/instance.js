@@ -982,7 +982,6 @@ async function renderPage() {
                                 ${form_model.actions.map(action => action.render())}
                             </div>
                         </div>
-                        <hr/>
                     ` : ''}
                     ${Util.mapRange(0, form_model.actions.length, idx => {
                         let action = form_model.actions[form_model.actions.length - idx - 1];
