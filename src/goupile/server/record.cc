@@ -838,7 +838,7 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
 
         if (stmt.Step()) {
             max_sequence = sqlite3_column_int64(stmt, 0);
-            max_anchor = sqlite3_column_int64(stmt, 0);
+            max_anchor = sqlite3_column_int64(stmt, 1);
         } else if (stmt.IsValid()) {
             max_sequence = 0;
             max_anchor = 0;
