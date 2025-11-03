@@ -2389,26 +2389,30 @@ function runAnnotationDialog(e, intf) {
 // Call with data_mutex locked
 async function saveRecord(thread, page, state, entry, raw, meta, draft) {
     for (;;) {
-        let reservation = null;
+        let ticket = null;
 
         if (!draft) {
-            reservation = await records.reserve(meta.counters);
+            ticket = await records.reserve(meta.counters);
 
             thread = Object.assign({}, thread);
             thread.counters = Object.assign({}, thread.counters);
-            thread.sequence ??= reservation.sequence;
-            for (let key in reservation.counters)
-                thread.counters[key] ??= reservation.counters[key];
+            thread.sequence ??= ticket.sequence;
+            for (let key in ticket.counters)
+                thread.counters[key] ??= ticket.counters[key];
             [_, meta] = await runPage(page, thread, state);
         }
 
         let frag = {
+            reservation: ticket?.reservation,
             summary: meta.summary,
             data: raw,
             tags: null,
             constraints: meta.constraints,
-            counters: meta.counters,
-            publics: []
+            counters: (ticket != null) ? meta.counters : {},
+            publics: [],
+            signup: (ticket != null) ? meta.signup : null,
+            claim: (ticket != null) ? route.page.claim : true,
+            lock: (ticket != null) ? route.page.lock : false
         };
 
         // Gather global list of tags for this record entry
@@ -2431,24 +2435,8 @@ async function saveRecord(thread, page, state, entry, raw, meta, draft) {
                 frag.publics.push(key);
         }
 
-        let actions = {
-            reservation: null,
-            signup: null,
-            claim: true,
-            lock: false
-        };
-
-        if (reservation != null) {
-            actions.reservation = reservation.reservation;
-            actions.signup = meta.signup;
-            actions.claim = route.page.claim;
-            actions.lock = route.page.lock;
-        } else {
-            frag.counters = {};
-        }
-
         try {
-            await records.save(thread.tid, entry, frag, ENV.version, actions);
+            await records.save(thread.tid, entry, frag, ENV.version);
             break;
         } catch (err) {
             if (!(err instanceof HttpError))
