@@ -316,7 +316,7 @@ bool MinizCompressor::Finalize()
     if (small_buf.len && !WriteDeflate(small_buf))
         return false;
 
-    uint8_t dummy; // Avoid UB in miniz
+    uint8_t dummy = 0; // Avoid UB in miniz
     tdefl_status status = tdefl_compress_buffer(&deflator, &dummy, 0, TDEFL_FINISH);
     if (status != TDEFL_STATUS_DONE) {
         if (status != TDEFL_STATUS_PUT_BUF_FAILED) {
