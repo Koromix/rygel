@@ -452,23 +452,19 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
         }
     }
 
-    const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;
+    Span<const char> start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc);
 
-    // Find config file
+    // Try to find FelixBuild.ini in current directory and all parent directories
     if (!config_filename) {
         config_filename = "FelixBuild.ini";
 
-        // Try to find FelixBuild.ini in current directory and all parent directories. We
-        // don't need to handle not finding it anywhere, because in this case the config load
-        // will fail with a simple "Cannot open 'FelixBuild.ini'" message.
-        for (Size i = 0; start_directory[i]; i++) {
-            if (IsPathSeparator(start_directory[i])) {
-                if (TestFile(config_filename))
-                    break;
+        Size steps = std::count_if(start_directory.begin(), start_directory.end(), IsPathSeparator) + 1;
 
-                config_filename = Fmt(&temp_alloc, "..%/%1", config_filename).ptr;
-            }
-        }
+        do {
+            if (TestFile(config_filename))
+                break;
+            config_filename = Fmt(&temp_alloc, "..%/%1", config_filename).ptr;
+        } while (--steps > 0);
 
         if (!TestFile(config_filename, FileType::File)) {
             LogError("Cannot find FelixBuild.ini");
@@ -837,7 +833,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
     if (run_target) {
         K_ASSERT(run_target->type == TargetType::Executable);
 
-        if (run_here && !SetWorkingDirectory(start_directory))
+        if (run_here && !SetWorkingDirectory(start_directory.ptr))
             return 1;
 
         const char *target_filename = builder.target_filenames.FindValue(run_target->name, nullptr);
