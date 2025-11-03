@@ -124,7 +124,7 @@ static bool EnumerateSortedFiles(const char *directory, const char *filter, bool
     Size start_idx = out_filenames->len;
 
     if (!EnumerateFiles(directory, filter, recursive ? -1  : 0, 1024, alloc, out_filenames))
-            return false;
+        return false;
 
     std::sort(out_filenames->begin() + start_idx, out_filenames->end(),
               [](const char *filename1, const char *filename2) {
