@@ -452,18 +452,10 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
         }
     }
 
-    // Root directory
     const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;
-    if (config_filename) {
-        Span<const char> root_directory;
-        config_filename = SplitStrReverseAny(config_filename, K_PATH_SEPARATORS, &root_directory).ptr;
 
-        if (root_directory.len) {
-            const char *root_directory0 = DuplicateString(root_directory, &temp_alloc).ptr;
-            if (!SetWorkingDirectory(root_directory0))
-                return 1;
-        }
-    } else {
+    // Find config file
+    if (!config_filename) {
         config_filename = "FelixBuild.ini";
 
         // Try to find FelixBuild.ini in current directory and all parent directories. We
@@ -474,14 +466,14 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
                 if (TestFile(config_filename))
                     break;
 
-                SetWorkingDirectory("..");
+                config_filename = Fmt(&temp_alloc, "..%/%1", config_filename).ptr;
             }
         }
-    }
 
-    if (!TestFile(config_filename, FileType::File)) {
-        LogError("Cannot find FelixBuild.ini");
-        return 1;
+        if (!TestFile(config_filename, FileType::File)) {
+            LogError("Cannot find FelixBuild.ini");
+            return 1;
+        }
     }
 
     // Load customized presets
@@ -626,14 +618,6 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
         return 1;
     build.compiler = compiler.get();
 
-    // Output directory
-    if (build.output_directory) {
-        build.output_directory = NormalizePath(build.output_directory, start_directory, &temp_alloc).ptr;
-    } else {
-        const char *basename = preset_name ? preset_name : build.compiler->name;
-        build.output_directory = Fmt(&temp_alloc, "%1%/bin%/%2", GetWorkingDirectory(), basename).ptr;
-    }
-
     // Load configuration file
     TargetSet target_set;
     {
@@ -647,6 +631,17 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
             LogError("Configuration file does not contain any target");
             return 1;
         }
+    }
+
+    if (target_set.root_directory && !SetWorkingDirectory(target_set.root_directory))
+        return 1;
+
+    // Output directory
+    if (build.output_directory) {
+        build.output_directory = NormalizePath(build.output_directory, start_directory, &temp_alloc).ptr;
+    } else {
+        const char *basename = preset_name ? preset_name : build.compiler->name;
+        build.output_directory = Fmt(&temp_alloc, "%1%/bin%/%2", GetWorkingDirectory(), basename).ptr;
     }
 
     // Select targets

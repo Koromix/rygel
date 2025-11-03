@@ -116,15 +116,21 @@ static void AppendListValues(Span<const char> str, Allocator *alloc, HeapArray<c
 #undef APPEND_ITEM
 }
 
-static bool EnumerateSortedFiles(const char *directory, const char *filter, bool recursive,
-                                 Allocator *alloc, HeapArray<const char *> *out_filenames)
+static bool EnumerateSortedFiles(const char *directory, Span<const char> root, const char *filter,
+                                 bool recursive, Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
     K_ASSERT(alloc);
 
     Size start_idx = out_filenames->len;
+    const char *path = Fmt(alloc, "%1%/%2", root, directory).ptr;
 
-    if (!EnumerateFiles(directory, filter, recursive ? -1  : 0, 1024, alloc, out_filenames))
+    if (!EnumerateFiles(path, filter, recursive ? -1  : 0, 1024, alloc, out_filenames))
         return false;
+
+    // Remove root directory prefix from collected filenames
+    for (Size i = start_idx; i < out_filenames->len; i++) {
+        (*out_filenames)[i] += root.len + 1;
+    }
 
     std::sort(out_filenames->begin() + start_idx, out_filenames->end(),
               [](const char *filename1, const char *filename2) {
@@ -134,7 +140,7 @@ static bool EnumerateSortedFiles(const char *directory, const char *filter, bool
     return true;
 }
 
-static bool ResolveFileSet(const FileSet &file_set, const char *filter,
+static bool ResolveFileSet(const FileSet &file_set, Span<const char> root, const char *filter,
                            Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
     K_ASSERT(alloc);
@@ -143,11 +149,11 @@ static bool ResolveFileSet(const FileSet &file_set, const char *filter,
 
     out_filenames->Append(file_set.filenames);
     for (const char *directory: file_set.directories) {
-        if (!EnumerateSortedFiles(directory, filter, false, alloc, out_filenames))
+        if (!EnumerateSortedFiles(directory, root, filter, false, alloc, out_filenames))
             return false;
     }
     for (const char *directory: file_set.directories_rec) {
-        if (!EnumerateSortedFiles(directory, filter, true, alloc, out_filenames))
+        if (!EnumerateSortedFiles(directory, root, filter, true, alloc, out_filenames))
             return false;
     }
 
@@ -212,6 +218,9 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
 {
     K_DEFER_NC(out_guard, count = set.targets.count) { set.targets.RemoveFrom(count); };
 
+    Span<const char> root_directory = GetPathDirectory(st->GetFileName());
+    root_directory = NormalizePath(root_directory, &set.str_alloc);
+
     IniParser ini(st);
     ini.PushLogFilter();
     K_DEFER { PopLogFilter(); };
@@ -221,8 +230,14 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
         IniProperty prop;
         while (ini.Next(&prop)) {
             if (!prop.section.len) {
-                LogError("Property is outside section");
-                return false;
+                if (prop.key == "RootDirectory") {
+                    root_directory = NormalizePath(prop.value, root_directory, &set.str_alloc);
+                } else {
+                    LogError("Unknown setting '%1'", prop.key);
+                    valid = false;
+                }
+
+                continue;
             }
             valid &= CheckTargetName(prop.section);
 
@@ -388,11 +403,16 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                 }
             }
 
-            valid &= !!CreateTarget(&target_config);
+            valid &= !!CreateTarget(root_directory.ptr, &target_config);
         }
     }
     if (!ini.IsValid() || !valid)
         return false;
+
+    if (!set.root_directory) {
+        // Use directory of first config file
+        set.root_directory = NormalizePath(root_directory, GetWorkingDirectory(), &set.str_alloc).ptr;
+    }
 
     out_guard.Disable();
     return true;
@@ -448,7 +468,7 @@ static void DeduplicateArray(HeapArray<T> *array, Func func)
 }
 
 // We steal stuff from TargetConfig so it's not reusable after that
-const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
+const TargetInfo *TargetSetBuilder::CreateTarget(const char *root_directory, TargetConfig *target_config)
 {
     K_DEFER_NC(out_guard, count = set.targets.count) { set.targets.RemoveFrom(count); };
 
@@ -527,7 +547,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     // Gather direct target objects
     {
         HeapArray<const char *> src_filenames;
-        if (!ResolveFileSet(target_config->src_file_set, nullptr, &temp_alloc, &src_filenames))
+        if (!ResolveFileSet(target_config->src_file_set, root_directory, nullptr, &temp_alloc, &src_filenames))
             return nullptr;
 
         for (const char *src_filename: src_filenames) {
@@ -550,7 +570,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     }
 
     // Gather translation files
-    if (!ResolveFileSet(target_config->i18n_file_set, "*.json", &set.str_alloc, &target->translations))
+    if (!ResolveFileSet(target_config->i18n_file_set, root_directory, "*.json", &set.str_alloc, &target->translations))
         return nullptr;
 
     // PCH
@@ -583,7 +603,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     DeduplicateArray(&target->translations, [](const char *str) { return str; });
 
     // Gather asset filenames
-    if (!ResolveFileSet(target_config->embed_file_set, nullptr, &set.str_alloc, &target->embed_filenames))
+    if (!ResolveFileSet(target_config->embed_file_set, root_directory, nullptr, &set.str_alloc, &target->embed_filenames))
         return nullptr;
 
     set.targets_map.Set(target);

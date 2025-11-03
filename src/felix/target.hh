@@ -89,6 +89,8 @@ struct SourceFileInfo {
 };
 
 struct TargetSet {
+    const char *root_directory = nullptr;
+
     BucketArray<TargetInfo> targets;
     HashTable<const char *, TargetInfo *> targets_map;
 
@@ -119,7 +121,7 @@ public:
     void Finish(TargetSet *out_set);
 
 private:
-    const TargetInfo *CreateTarget(TargetConfig *target_config);
+    const TargetInfo *CreateTarget(const char *root_directory, TargetConfig *target_config);
     const SourceFileInfo *CreateSource(const TargetInfo *target, const char *filename,
                                        SourceType type, const SourceFeatures *features);
 
