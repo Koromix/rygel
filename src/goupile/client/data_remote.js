@@ -42,6 +42,7 @@ function DataRemote() {
             anchor: entry.anchor,
             fs: fs,
 
+            hid: frag.hid,
             summary: frag.summary,
             data: data,
             tags: frag.tags,

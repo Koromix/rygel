@@ -39,6 +39,7 @@ struct RecordInfo {
     const char *secrets = nullptr;
     bool locked = false;
     int64_t sequence = -1;
+    const char *hid = nullptr;
 
     int64_t e = -1;
     const char *eid = nullptr;
@@ -89,6 +90,7 @@ struct FragmentInfo {
     const char *eid = nullptr;
     const char *store = nullptr;
     int64_t anchor = -1;
+    const char *hid = nullptr;
     const char *summary = nullptr;
     bool has_data = false;
     Span<const char> data = {};
@@ -192,7 +194,8 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
 
     if (filter.audit_anchor < 0) {
         sql.len += Fmt(sql.TakeAvailable(),
-                       R"(SELECT t.thread AS t, t.tid, t.counters, t.secrets, IFNULL(t.lock, -1), IFNULL(t.sequence, -1),
+                       R"(SELECT t.thread AS t, t.tid, t.counters, t.secrets,
+                                 IFNULL(t.lock, -1), IFNULL(t.sequence, -1), t.hid,
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime,
                                  e.store, e.summary, e.tags AS tags,
                                  IIF(?6 = 1, e.data, NULL) AS data
@@ -234,7 +237,8 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                                   WHERE f.anchor <= ?3 AND f.previous = rec.anchor
                               ORDER BY anchor
                           )
-                          SELECT t.thread AS t, t.tid, t.counters, t.secrets, IFNULL(t.lock, -1), IFNULL(t.sequence, -1),
+                          SELECT t.thread AS t, t.tid, t.counters, t.secrets,
+                                 IFNULL(t.lock, -1), IFNULL(t.sequence, -1), t.hid,
                                  e.rowid AS e, e.eid, IIF(rec.data IS NULL, 1, 0) AS deleted,
                                  rec.anchor, e.ctime, rec.mtime, e.store,
                                  rec.summary, rec.tags, rec.data
@@ -310,7 +314,7 @@ again:
         return false;
 
     int64_t t = sqlite3_column_int64(stmt, 0);
-    int64_t e = sqlite3_column_int64(stmt, 6);
+    int64_t e = sqlite3_column_int64(stmt, 7);
     int64_t lock = sqlite3_column_int64(stmt, 4);
     int64_t sequence = sqlite3_column_int64(stmt, 5);
 
@@ -324,19 +328,20 @@ again:
     cursor.secrets = (const char *)sqlite3_column_text(stmt, 3);
     cursor.locked = (lock >= 0 && lock <= now);
     cursor.sequence = sequence;
+    cursor.hid = (const char *)sqlite3_column_text(stmt, 6);
 
     cursor.e = e;
-    cursor.eid = (const char *)sqlite3_column_text(stmt, 7);
-    cursor.deleted = !!sqlite3_column_int(stmt, 8);
-    cursor.anchor = sqlite3_column_int64(stmt, 9);
-    cursor.ctime = sqlite3_column_int64(stmt, 10);
-    cursor.mtime = sqlite3_column_int64(stmt, 11);
-    cursor.store = (const char *)sqlite3_column_text(stmt, 12);
-    cursor.summary = (const char *)sqlite3_column_text(stmt, 13);
-    cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 14), sqlite3_column_bytes(stmt, 14));
+    cursor.eid = (const char *)sqlite3_column_text(stmt, 8);
+    cursor.deleted = !!sqlite3_column_int(stmt, 9);
+    cursor.anchor = sqlite3_column_int64(stmt, 10);
+    cursor.ctime = sqlite3_column_int64(stmt, 11);
+    cursor.mtime = sqlite3_column_int64(stmt, 12);
+    cursor.store = (const char *)sqlite3_column_text(stmt, 13);
+    cursor.summary = (const char *)sqlite3_column_text(stmt, 14);
+    cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 15), sqlite3_column_bytes(stmt, 15));
 
     if (read_data) {
-        cursor.data = MakeSpan((const char *)sqlite3_column_text(stmt, 15), sqlite3_column_bytes(stmt, 15));
+        cursor.data = MakeSpan((const char *)sqlite3_column_text(stmt, 16), sqlite3_column_bytes(stmt, 16));
     } else {
         cursor.data = {};
     }
@@ -429,6 +434,7 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
             } else {
                 json->Key("sequence"); json->Null();
             }
+            json->Key("hid"); json->StringOrNull(cursor->hid);
             json->Key("saved"); json->Bool(true);
             json->Key("locked"); json->Bool(cursor->locked);
 
@@ -570,6 +576,7 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
         } else {
             json->Key("sequence"); json->Null();
         }
+        json->Key("hid"); json->StringOrNull(cursor->hid);
         json->Key("counters"); json->Raw(cursor->counters);
         json->Key("saved"); json->Bool(true);
         json->Key("locked"); json->Bool(cursor->locked);
@@ -801,6 +808,7 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
         } else {
             json.Key("sequence"); json.Null();
         }
+        json.Key("hid"); json.StringOrNull(cursor->hid);
         json.Key("counters"); json.Raw(cursor->counters);
         json.Key("secrets"); json.Raw(cursor->secrets);
 
@@ -1367,6 +1375,8 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                     json->SkipNull() || json->ParseInt(&fragment.anchor);
                 } else if (key == "fs") {
                     json->ParseInt(&fragment.fs);
+                } else if (key == "hid") {
+                    json->SkipNull() || json->ParseString(&fragment.hid);
                 } else if (key == "summary") {
                     json->SkipNull() || json->ParseString(&fragment.summary);
                 } else if (key == "data") {
@@ -1781,12 +1791,12 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         {
             sq_Statement stmt;
             if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username,
-                                                                     mtime, fs, summary, data, tags)
-                                          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+                                                                     mtime, fs, hid, summary, data, tags)
+                                          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
                                           RETURNING anchor)",
                                        &stmt, prev_anchor > 0 ? sq_Binding(prev_anchor) : sq_Binding(), tid,
                                        fragment.eid, session->userid, session->username, now,
-                                       fragment.fs, fragment.summary, fragment.data,
+                                       fragment.fs, fragment.hid, fragment.summary, fragment.data,
                                        TagsToJson(fragment.tags, io->Allocator())))
                 return false;
             if (!stmt.GetSingleValue(&new_anchor))
@@ -1815,10 +1825,12 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 return false;
         }
 
-        // Create thread if needed
-        if (!has_sequence) {
+        // Create or update thread if needed
+        {
             int64_t sequence = -1;
-            if (reservation >= 0) {
+            const char *hid = nullptr;
+
+            if (!has_sequence && reservation >= 0) {
                 sq_Statement stmt;
                 if (!instance->db->Prepare(R"(UPDATE seq_counters SET state = state + 1
                                               WHERE key = '@sequence'
@@ -1828,10 +1840,17 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                     return false;
             }
 
-            if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets, sequence)
-                                      VALUES (?1, '{}', '{}', ?2)
-                                      ON CONFLICT DO UPDATE SET sequence = excluded.sequence)",
-                                   tid, sequence >= 0 ? sq_Binding(sequence) : sq_Binding()))
+            if (fragment.hid) {
+                hid = fragment.hid;
+            } else if (sequence >= 0) {
+                hid = Fmt(io->Allocator(), "%1", sequence).ptr;
+            }
+
+            if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets, sequence, hid)
+                                      VALUES (?1, '{}', '{}', ?2, ?3)
+                                      ON CONFLICT DO UPDATE SET sequence = IFNULL(excluded.sequence, sequence),
+                                                                hid = IFNULL(excluded.hid, hid))",
+                                   tid, sequence >= 0 ? sq_Binding(sequence) : sq_Binding(), hid))
                 return false;
         }
 

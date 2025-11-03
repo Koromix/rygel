@@ -16,7 +16,7 @@
 namespace K {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 141;
+const int InstanceVersion = 142;
 const int LegacyVersion = 61;
 
 // Process-wide unique instance identifier
@@ -3088,9 +3088,18 @@ bool MigrateInstance(sq_Database *db, int target)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 141: {
+                bool success = db->RunMany(R"(
+                    UPDATE rec_threads SET hid = sequence;
+                    ALTER TABLE rec_fragments ADD COLUMN hid TEXT;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 141);
+            static_assert(InstanceVersion == 142);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

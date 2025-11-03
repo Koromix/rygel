@@ -315,9 +315,9 @@ function renderDropItem(page, first) {
     let enabled = status.enabled || profile.develop;
 
     if (first) {
-        if (form_thread.sequence != null) {
+        if (form_thread.hid != null) {
             return html`<button class=${'ins_id' + (active ? ' active' : '')} ?disabled=${!enabled}
-                                @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}>${form_thread.sequence}</button>`;
+                                @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}>${form_thread.hid}</button>`;
         } else {
             return html`<button class=${'icon new' + (active ? ' active' : '')} ?disabled=${!enabled}
                                 @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}></button>`;
@@ -661,11 +661,11 @@ function renderData() {
                 <tbody>
                     ${data_rows.map(row => {
                         let active = (row.tid == route.tid);
-                        let cls = (row.sequence == null ? 'missing' : '') + (active ? ' active' : '');
+                        let cls = (row.hid == null ? 'missing' : '') + (active ? ' active' : '');
 
                         return html`
                             <tr>
-                                <td class=${cls} title=${row.sequence}>${row.sequence != null ? row.sequence : 'NA'}</td>
+                                <td class=${cls} title=${row.hid}>${row.hid != null ? row.hid : 'NA'}</td>
                                 <td class=${active ? ' active' : ''} title=${row.ctime.toLocaleString()}>${row.ctime.toLocaleDateString()}</td>
                                 ${data_columns.map(col => {
                                     let entry = row.entries[col.page.store.key];
@@ -725,7 +725,7 @@ function renderData() {
 }
 
 function runDeleteRecordDialog(e, row) {
-    return UI.confirm(e, T.format(T.confirm_record_deletion, row.sequence),
+    return UI.confirm(e, T.format(T.confirm_record_deletion, row.hid),
                          T.delete, async () => {
         await data_mutex.run(async () => {
             await records.delete(row.tid);
@@ -953,8 +953,8 @@ async function renderPage() {
                 </form>
 
                 <div id="ins_actions">
-                    ${app.panels.data && form_thread.sequence != null ?
-                        html`<div class="ins_id">${form_thread.sequence}</div>` : ''}
+                    ${app.panels.data && form_thread.hid != null ?
+                        html`<div class="ins_id">${form_thread.hid}</div>` : ''}
 
                     ${form_model.renderActions()}
 
@@ -971,8 +971,8 @@ async function renderPage() {
 
             ${form_model.actions.length ? html`
                 <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
-                    ${app.panels.data && form_thread.sequence != null ? html`
-                        <button class="ins_id">${form_thread.sequence}</button>
+                    ${app.panels.data && form_thread.hid != null ? html`
+                        <button class="ins_id">${form_thread.hid}</button>
                         <div style="flex: 1;"></div>
                     ` : ''}
                     ${form_model.actions.some(action => !action.options.always) ? html`
@@ -1898,6 +1898,7 @@ async function run(push_history = true) {
                     return {
                         tid: thread.tid,
                         sequence: thread.sequence,
+                        hid: thread.hid,
                         locked: thread.locked,
                         ctime: new Date(min_ctime),
                         mtime: new Date(max_mtime),
@@ -2404,6 +2405,7 @@ async function saveRecord(thread, page, state, entry, raw, meta, draft) {
 
         let frag = {
             reservation: ticket?.reservation,
+            hid: meta.hid,
             summary: meta.summary,
             data: raw,
             tags: null,

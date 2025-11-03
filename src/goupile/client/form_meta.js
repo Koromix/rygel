@@ -5,7 +5,9 @@ import { render, html, svg } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { contextualizeURL, computeStatus, go } from './instance.js';
 
 function MetaModel() {
+    this.hid = null;
     this.summary = null;
+
     this.constraints = {};
     this.counters = {};
     this.signup = null;
@@ -13,6 +15,7 @@ function MetaModel() {
 
 function MetaInterface(app, page, thread, meta) {
     Object.defineProperties(this, {
+        hid: { get: () => meta.hid, set: hid => { meta.hid = hid; }, enumerable: true },
         summary: { get: () => meta.summary, set: summary => { meta.summary = summary; }, enumerable: true }
     });
 
