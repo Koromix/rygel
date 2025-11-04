@@ -4,7 +4,7 @@
 import { render, html, unsafeHTML } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, NetworkError } from '../../core/web/base/base.js';
 import { Base64 } from '../../core/web/base/mixer.js';
-import * as IDB from '../../core/web/base/indexedDB.js';
+import * as IDB from '../../core/web/base/indexeddb.js';
 import * as UI from './ui.js';
 import * as AdminController from './admin.js';
 import * as InstanceController from './instance.js';

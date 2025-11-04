@@ -4,7 +4,7 @@
 import { render, html, svg, until } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LruMap, Mutex, LocalDate, LocalTime } from '../../core/web/base/base.js';
 import * as mixer from '../../core/web/base/mixer.js';
-import * as IDB from '../../core/web/base/indexedDB.js';
+import * as IDB from '../../core/web/base/indexeddb.js';
 import { ApplicationInfo, FormInfo, PageInfo, ApplicationBuilder } from './instance_app.js';
 import * as goupile from '../client/goupile.js';
 import { profile } from '../client/goupile.js';
