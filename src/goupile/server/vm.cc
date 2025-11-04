@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/base/base.hh"
+#include "src/core/native/base/base.hh"
 #include "instance.hh"
 #include "vm.hh"
-#include "src/core/sandbox/sandbox.hh"
-#include "src/core/wrap/jscore.hh"
-#include "src/core/wrap/json.hh"
+#include "src/core/native/sandbox/sandbox.hh"
+#include "src/core/native/wrap/jscore.hh"
+#include "src/core/native/wrap/json.hh"
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include "vendor/miniz/miniz.h"
 #include <poll.h>

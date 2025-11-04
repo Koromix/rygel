@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "src/core/base/base.hh"
+#include "src/core/native/base/base.hh"
 #include "vendor/lz4/lib/lz4.h"
 #include "vendor/lz4/lib/lz4hc.h"
 #include "vendor/lz4/lib/lz4frame.h"

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { LocalDate } from '../../../web/core/base.js'
+import { LocalDate } from '../../../core/web/base/base.js'
 import { html } from '../../../../vendor/lit-html/lit-html.bundle.js'
 
 let LANGUAGES = [

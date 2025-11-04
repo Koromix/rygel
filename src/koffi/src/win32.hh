@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "src/core/base/base.hh"
+#include "src/core/native/base/base.hh"
 
 #include <intrin.h>
 #include <napi.h>

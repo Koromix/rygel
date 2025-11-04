@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com> */
 
-@import url('../../web/core/reset.css');
+@import url('../../core/web/base/reset.css');
 
 html { height: 100%; }
 

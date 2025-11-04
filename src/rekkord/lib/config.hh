@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include "src/core/base/base.hh"
-#include "src/core/request/s3.hh"
-#include "src/core/request/ssh.hh"
+#include "src/core/native/base/base.hh"
+#include "src/core/native/request/s3.hh"
+#include "src/core/native/request/ssh.hh"
 #include "disk.hh"
 
 namespace K {

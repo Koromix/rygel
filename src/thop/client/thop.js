@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, Mutex, LruMap, LocalDate } from '../../web/core/base.js';
+import { Util, Log, Net, Mutex, LruMap, LocalDate } from '../../core/web/base/base.js';
 import { DataCache } from './utility.js';
 import * as McoInfoMod from './mco_info.js';
 import * as McoCasemixMod from './mco_casemix.js';

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/base/base.hh"
+#include "src/core/native/base/base.hh"
 #include "config.hh"
 #include "domain.hh"
 #include "file.hh"
@@ -9,12 +9,12 @@
 #include "instance.hh"
 #include "message.hh"
 #include "record.hh"
-#include "src/core/sqlite/sqlite.hh"
+#include "src/core/native/sqlite/sqlite.hh"
 #include "user.hh"
 #include "vendor/sqlite3mc/sqlite3mc.h"
 #include "vm.hh"
-#include "src/core/request/smtp.hh"
-#include "src/core/wrap/json.hh"
+#include "src/core/native/request/smtp.hh"
+#include "src/core/native/wrap/json.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace K {

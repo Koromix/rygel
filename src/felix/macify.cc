@@ -3,8 +3,8 @@
 
 #if defined(__APPLE__)
 
-#include "src/core/base/base.hh"
-#include "src/core/wrap/xml.hh"
+#include "src/core/native/base/base.hh"
+#include "src/core/native/wrap/xml.hh"
 #include "compiler.hh"
 #include "locate.hh"
 #include "macify.hh"

@@ -1,6 +1,6 @@
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Net, Log } from '../../../../src/web/core/base.js';
-import { Base64 } from '../../../../src/web/core/mixer.js';
+import { Util, Net, Log } from '../../../../src/web/base/base.js';
+import { Base64 } from '../../../../src/web/base/mixer.js';
 import { UI } from './ui.js';
 
 import './admin.css';

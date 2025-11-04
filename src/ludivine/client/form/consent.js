@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../../web/core/base.js';
+import { Util, Log } from '../../../core/web/base/base.js';
 import { FormState, FormModel, FormBuilder } from './builder.js';
 
 function ConsentModule(app, project) {

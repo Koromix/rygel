@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net } from '../../web/core/base.js';
-import { Sha256 } from '../../web/core/mixer.js';
+import { Util, Log, Net } from '../../core/web/base/base.js';
+import { Sha256 } from '../../core/web/base/mixer.js';
 import * as UI from './ui.js';
 
 function InstancePublisher(bundler = null) {

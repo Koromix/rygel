@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/base/base.hh"
+#include "src/core/native/base/base.hh"
 #include "../server/config.hh"
 #include "../server/domain.hh"
 #include "../server/goupile.hh"
 #include "../server/instance.hh"
 #include "../server/user.hh"
 #include "records.hh"
-#include "src/core/wrap/json.hh"
+#include "src/core/native/wrap/json.hh"
 #if defined(_WIN32)
     #include <io.h>
 #else

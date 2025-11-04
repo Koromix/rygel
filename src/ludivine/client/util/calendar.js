@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { Util, Log , LocalDate } from '../../../web/core/base.js';
+import { Util, Log , LocalDate } from '../../../core/web/base/base.js';
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import * as UI from '../../web/core/ui.js';
+import * as UI from '../../core/web/base/ui.js';
 
 import './calendar.css';
 

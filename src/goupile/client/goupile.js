@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, unsafeHTML } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, NetworkError } from '../../web/core/base.js';
-import { Base64 } from '../../web/core/mixer.js';
-import * as IDB from '../../web/core/indexedDB.js';
+import { Util, Log, Net, NetworkError } from '../../core/web/base/base.js';
+import { Base64 } from '../../core/web/base/mixer.js';
+import * as IDB from '../../core/web/base/indexedDB.js';
 import * as UI from './ui.js';
 import * as AdminController from './admin.js';
 import * as InstanceController from './instance.js';

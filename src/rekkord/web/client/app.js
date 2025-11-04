@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, live, unsafeHTML } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, HttpError } from '../../../web/core/base.js';
-import { Base64 } from '../../../web/core/mixer.js';
-import * as UI from '../../../web/core/ui.js';
-import { deploy } from '../../../web/flat/static.js';
+import { Util, Log, Net, HttpError } from '../../../core/web/base/base.js';
+import { Base64 } from '../../../core/web/base/mixer.js';
+import * as UI from '../../../core/web/base/ui.js';
+import { deploy } from '../../../core/web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';
 import { PictureCropper } from './picture.js';
 import dayjs from '../../../../vendor/dayjs/dayjs.bundle.js';

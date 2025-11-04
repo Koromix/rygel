@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include "src/core/base/base.hh"
-#include "src/core/http/http.hh"
-#include "src/core/request/smtp.hh"
+#include "src/core/native/base/base.hh"
+#include "src/core/native/http/http.hh"
+#include "src/core/native/request/smtp.hh"
 
 namespace K {
 

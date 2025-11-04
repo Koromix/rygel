@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/base/base.hh"
-#include "src/core/http/http.hh"
-#include "src/core/request/curl.hh"
+#include "src/core/native/base/base.hh"
+#include "src/core/native/http/http.hh"
+#include "src/core/native/request/curl.hh"
 
 namespace K {
 

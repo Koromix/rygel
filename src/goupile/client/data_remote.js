@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { Util, Log, Net,
-         LocalDate, LocalTime, FileReference } from '../../web/core/base.js';
-import * as Data from '../../web/core/data.js';
+         LocalDate, LocalTime, FileReference } from '../../core/web/base/base.js';
+import * as Data from '../../core/web/base/data.js';
 
 function DataRemote() {
     let self = this;

@@ -5,7 +5,7 @@
 
 #if defined(__APPLE__)
 
-#include "src/core/base/base.hh"
+#include "src/core/native/base/base.hh"
 
 namespace K {
 

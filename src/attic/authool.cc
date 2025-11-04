@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/base/base.hh"
-#include "src/core/password/otp.hh"
-#include "src/core/password/password.hh"
-#include "src/core/wrap/qrcode.hh"
+#include "src/core/native/base/base.hh"
+#include "src/core/native/password/otp.hh"
+#include "src/core/native/password/password.hh"
+#include "src/core/native/wrap/qrcode.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace K {

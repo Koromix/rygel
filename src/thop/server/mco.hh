@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include "src/core/base/base.hh"
+#include "src/core/native/base/base.hh"
 #include "user.hh"
-#include "src/core/http/http.hh"
+#include "src/core/native/http/http.hh"
 
 namespace K {
 

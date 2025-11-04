@@ -3,8 +3,8 @@
 
 #if defined(_WIN32)
 
-#include "src/core/base/base.hh"
-#include "src/core/gui/tray.hh"
+#include "src/core/native/base/base.hh"
+#include "src/core/native/gui/tray.hh"
 #include "config.hh"
 #include "light.hh"
 

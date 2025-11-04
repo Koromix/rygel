@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { Util, Log, Net, LruMap, LocalDate } from '../../web/core/base.js';
+import { Util, Log, Net, LruMap, LocalDate } from '../../core/web/base/base.js';
 
 // ------------------------------------------------------------------------
 // Data

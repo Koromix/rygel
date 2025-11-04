@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../../web/core/base.js';
-import { annotate } from '../../../web/core/data.js';
+import { Util, Log } from '../../../core/web/base/base.js';
+import { annotate } from '../../../core/web/base/data.js';
 import { progressBar, deflate, inflate } from '../core/misc.js';
 import { FormState, FormModel, FormBuilder } from './builder.js';
 import { ASSETS } from '../../assets/assets.js';

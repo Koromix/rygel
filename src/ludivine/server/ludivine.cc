@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/base/base.hh"
+#include "src/core/native/base/base.hh"
 #include "api.hh"
 #include "config.hh"
 #include "database.hh"
 #include "ludivine.hh"
 #include "mail.hh"
-#include "src/core/sandbox/sandbox.hh"
+#include "src/core/native/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #if !defined(_WIN32)
     #include <signal.h>

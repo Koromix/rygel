@@ -3,9 +3,9 @@
 
 import { render, html, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
 import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
-import { Util, Log, Net, HttpError, LocalDate } from '../../web/core/base.js';
-import * as UI from '../../web/core/ui.js';
-import { Hex, Base64 } from '../../web/core/mixer.js';
+import { Util, Log, Net, HttpError, LocalDate } from '../../core/web/base/base.js';
+import * as UI from '../../core/web/base/ui.js';
+import { Hex, Base64 } from '../../core/web/base/mixer.js';
 import { computeAge, dateToString, niceDate,
          progressBar, progressCircle, deflate, inflate,
          EventProviders, createEvent, safeTag } from './core/misc.js';
@@ -17,7 +17,7 @@ import { ConsentModule } from './form/consent.js';
 import { FormModule } from './form/form.js';
 import { FormState, FormModel, FormBuilder } from './form/builder.js';
 import { NetworkModule } from './network/network.js';
-import { deploy } from '../../web/flat/static.js';
+import { deploy } from '../../core/web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';
 import * as app from './app.js';
 

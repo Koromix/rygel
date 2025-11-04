@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/base/base.hh"
-#include "src/core/wrap/Rcc.hh"
-#include "src/core/sqlite/sqlite.hh"
+#include "src/core/native/base/base.hh"
+#include "src/core/native/wrap/Rcc.hh"
+#include "src/core/native/sqlite/sqlite.hh"
 #include "../server/database.hh"
 
 #if !defined(_WIN32)

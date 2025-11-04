@@ -3,9 +3,9 @@
 
 import { render, html, svg, unsafeHTML } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, HttpError, LruMap, Mutex,
-         LocalDate, LocalTime, FileReference } from '../../web/core/base.js';
-import * as Data from '../../web/core/data.js';
-import * as mixer from '../../web/core/mixer.js';
+         LocalDate, LocalTime, FileReference } from '../../core/web/base/base.js';
+import * as Data from '../../core/web/base/data.js';
+import * as mixer from '../../core/web/base/mixer.js';
 import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';

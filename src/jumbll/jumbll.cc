@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/base/base.hh"
-#include "src/core/sqlite/sqlite.hh"
+#include "src/core/native/base/base.hh"
+#include "src/core/native/sqlite/sqlite.hh"
 #include "config.hh"
 #include "vendor/blake3/c/blake3.h"
 

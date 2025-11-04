@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, LruMap, LocalDate } from '../../web/core/base.js';
+import { Util, Log, Net, LruMap, LocalDate } from '../../core/web/base/base.js';
 import * as thop from './thop.js';
 import { settings } from './thop.js';
 import { DataCache, formatDuration, formatPrice, parseDate } from './utility.js';
-import { VersionLine } from '../../web/widgets/versionline.js';
-import { EasyTable } from '../../web/widgets/easytable.js';
+import { VersionLine } from '../../core/web/widgets/versionline.js';
+import { EasyTable } from '../../core/web/widgets/easytable.js';
 
 import './mco_info.css';
 

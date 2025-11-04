@@ -4,7 +4,7 @@
         {
             "namespace": "core",
             "sources": ["src/core"],
-            "path": "src/core/i18n"
+            "path": "src/core/native/i18n"
         },
         {
             "namespace": "web",

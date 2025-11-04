@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/base/base.hh"
+#include "src/core/native/base/base.hh"
 #include "admin.hh"
 #include "config.hh"
 #include "domain.hh"
@@ -9,8 +9,8 @@
 #include "goupile.hh"
 #include "instance.hh"
 #include "user.hh"
-#include "src/core/password/password.hh"
-#include "src/core/wrap/json.hh"
+#include "src/core/native/password/password.hh"
+#include "src/core/native/wrap/json.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include "vendor/miniz/miniz.h"

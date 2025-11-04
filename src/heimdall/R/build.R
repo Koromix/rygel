@@ -44,7 +44,7 @@ bundle_heimdallR <- function(project_dir, version, build_dir) {
             lines <- readLines(filename)
 
             lines <- sub('.o: ../../../../vendor/', '.o: vendor/', lines, fixed = TRUE)
-            lines <- sub('.o: ../../../core/', '.o: src/core/', lines, fixed = TRUE)
+            lines <- sub('.o: ../../../core/', '.o: src/core/native/', lines, fixed = TRUE)
             lines <- sub('.o: ../', '.o: src/R/', lines, fixed = TRUE)
             lines <- lines[!grepl('../R', lines, fixed = TRUE)]
 
@@ -73,10 +73,10 @@ bundle_heimdallR <- function(project_dir, version, build_dir) {
     copy_files(c('src/heimdall/server/database.cc',
                  'src/heimdall/server/database.hh'), 'src/src/server')
     copy_files('src/heimdall/R/heimdallR.R', 'R')
-    copy_files(list_files('src/core/base'), 'src/src/core/base')
-    copy_files(list_files('src/core/sqlite'), 'src/src/core/sqlite')
-    copy_files(c('src/core/wrap/Rcc.cc',
-                 'src/core/wrap/Rcc.hh'), 'src/src/core/wrap')
+    copy_files(list_files('src/core/native/base'), 'src/src/core/native/base')
+    copy_files(list_files('src/core/native/sqlite'), 'src/src/core/native/sqlite')
+    copy_files(c('src/core/native/wrap/Rcc.cc',
+                 'src/core/native/wrap/Rcc.hh'), 'src/src/core/native/wrap')
     copy_files('vendor/dragonbox/include/dragonbox/dragonbox.h', 'src/vendor/dragonbox/include/dragonbox')
     copy_files(list_files('vendor/sqlite3mc'), 'src/vendor/sqlite3mc')
 }

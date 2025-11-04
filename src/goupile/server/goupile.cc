@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/base/base.hh"
+#include "src/core/native/base/base.hh"
 #include "admin.hh"
 #include "config.hh"
 #include "domain.hh"
@@ -13,9 +13,9 @@
 #include "user.hh"
 #include "vm.hh"
 #include "../legacy/records.hh"
-#include "src/core/http/http.hh"
-#include "src/core/request/curl.hh"
-#include "src/core/sandbox/sandbox.hh"
+#include "src/core/native/http/http.hh"
+#include "src/core/native/request/curl.hh"
+#include "src/core/native/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #if !defined(_WIN32)
     #include <signal.h>

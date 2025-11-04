@@ -4,8 +4,8 @@
 import { render, html, svg,
          directive, Directive, noChange, nothing } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, Mutex,
-         LocalDate, LocalTime, FileReference } from '../../web/core/base.js';
-import * as Data from '../../web/core/data.js';
+         LocalDate, LocalTime, FileReference } from '../../core/web/base/base.js';
+import * as Data from '../../core/web/base/data.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
 

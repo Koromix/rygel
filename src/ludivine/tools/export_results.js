@@ -6,7 +6,7 @@ import * as esbuild from '../../../vendor/esbuild/native/lib/main.js';
 import fs from 'fs';
 import path from 'path';
 import sqlite3 from 'better-sqlite3';
-import { Util, LocalDate } from '../../web/core/base.js';
+import { Util, LocalDate } from '../../core/web/base/base.js';
 import { ProjectInfo, ProjectBuilder } from '../client/core/project.js';
 import { wrap } from '../client/form/data.js';
 import * as XLSX from '../../../vendor/sheetjs/XLSX.bundle.js';

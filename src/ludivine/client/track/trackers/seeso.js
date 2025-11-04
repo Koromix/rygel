@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, svg, ref } from '../../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../../../web/libjs/common.js';
-import * as UI from '../../../web/core/ui.js';
+import { Util, Log } from '../../../../core/web/libjs/common.js';
+import * as UI from '../../../core/web/base/ui.js';
 import Seeso, { CalibrationAccuracyCriteria, InitializationErrorType } from '../../../../../vendor/seeso/seeso.js';
 
 let seeso = null;

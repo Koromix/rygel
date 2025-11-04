@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../../web/core/base.js';
-import { AppRunner } from '../../../web/core/runner.js';
+import { Util, Log } from '../../../core/web/base/base.js';
+import { AppRunner } from '../../../core/web/base/runner.js';
 import { deflate, inflate } from '../core/misc.js';
 import { NetworkWidget } from './widget.js';
 import { ASSETS } from '../../assets/assets.js';

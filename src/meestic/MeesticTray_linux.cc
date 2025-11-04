@@ -3,12 +3,12 @@
 
 #if defined(__linux__)
 
-#include "src/core/base/base.hh"
-#include "src/core/base/tower.hh"
+#include "src/core/native/base/base.hh"
+#include "src/core/native/base/tower.hh"
 #include "config.hh"
 #include "light.hh"
-#include "src/core/wrap/json.hh"
-#include "src/core/gui/tray.hh"
+#include "src/core/native/wrap/json.hh"
+#include "src/core/native/gui/tray.hh"
 
 #include <sys/socket.h>
 

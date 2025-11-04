@@ -3,7 +3,7 @@
 
 #if __riscv_xlen == 64 || defined(__loongarch64)
 
-#include "src/core/base/base.hh"
+#include "src/core/native/base/base.hh"
 #include "ffi.hh"
 #include "call.hh"
 #include "util.hh"

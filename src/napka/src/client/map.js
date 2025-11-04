@@ -3,10 +3,10 @@
 
 import { render, html, unsafeHTML } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import MarkdownIt from '../../node_modules/markdown-it/dist/markdown-it.js';
-import { Util, Log, Net } from '../../../web/core/base.js';
-import * as UI from '../../../web/core/ui.js';
+import { Util, Log, Net } from '../../../core/web/base/base.js';
+import * as UI from '../../../core/web/base/ui.js';
 import * as parse from '../lib/parse.js';
-import { AppRunner } from '../../../web/core/runner.js';
+import { AppRunner } from '../../../core/web/base/runner.js';
 import { TileMap } from '../lib/tilemap.js';
 
 let provider = null;
