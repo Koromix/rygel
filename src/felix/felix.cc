@@ -629,7 +629,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
         }
     }
 
-    if (target_set.root_directory && !SetWorkingDirectory(target_set.root_directory))
+    if (!SetWorkingDirectory(target_set.root_directory))
         return 1;
 
     // Output directory
