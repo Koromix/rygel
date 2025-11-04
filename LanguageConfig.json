@@ -8,8 +8,8 @@
         },
         {
             "namespace": "web",
-            "sources": ["src/web"],
-            "path": "src/web/i18n"
+            "sources": ["src/core/web"],
+            "path": "src/core/web/i18n"
         },
         {
             "namespace": "goupile",
