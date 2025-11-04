@@ -3,7 +3,7 @@
     "sources": [
         {
             "namespace": "core",
-            "sources": ["src/core"],
+            "sources": ["src/core/native"],
             "path": "src/core/native/i18n"
         },
         {
