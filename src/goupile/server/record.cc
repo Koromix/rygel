@@ -219,7 +219,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM rec_entries WHERE e.anchor >= ?5)").len;
         }
 
-        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.hid, t.thread, e.store").len;
+        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.hid ASC NULLS LAST, t.thread, e.store").len;
     } else {
         K_ASSERT(!filter.single_tid);
         K_ASSERT(!filter.use_claims);
@@ -257,7 +257,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM rec_entries WHERE e.anchor >= ?5)").len;
         }
 
-        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.hid, t.thread, e.store, rec.idx DESC").len;
+        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.hid ASC NULLS LAST, t.thread, e.store, rec.idx DESC").len;
     }
 
     if (!instance->db->Prepare(sql.data, &stmt))
