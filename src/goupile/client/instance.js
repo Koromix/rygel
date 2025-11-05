@@ -973,8 +973,8 @@ async function renderPage() {
                 <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
                     ${app.panels.data && form_thread.hid != null ? html`
                         <button class="ins_id">${form_thread.hid}</button>
-                        <div style="flex: 1;"></div>
                     ` : ''}
+                    <div style="flex: 1;"></div>
                     ${form_model.actions.some(action => !action.options.always) ? html`
                         <div class="drop up right">
                             <button @click=${UI.deployMenu}>${T.other_actions}</button>
