@@ -1099,13 +1099,23 @@ function addAutomaticActions(builder, model) {
 
         let can_save = !form_thread.locked && model.variables.length &&
                        (form_state.hasChanged() || next != null);
+        let can_confirm = (form_entry.anchor != null) && !form_state.hasChanged() &&
+                          form_entry.tags.includes('draft');
         let can_lock = form_thread.saved && (route.page.lock != null) &&
                        (!form_thread.locked || goupile.hasPermission('data_audit'));
 
-        if (can_save || form_entry.anchor != null) {
-            let label = '+' + (next != null ? T.continue : T.save);
+        if (can_save || can_confirm || form_entry.anchor != null) {
+            let label = '+' + T.save;
+            let disabled = !can_save;
 
-            builder.action(label, { color: '#2d8261', disabled: !can_save }, async e => {
+            if (can_confirm) {
+                label = '+' + T.confirm;
+                disabled = false;
+            } else if (next != null) {
+                label = '+' + T.continue;
+            }
+
+            builder.action(label, { color: '#2d8261', disabled: disabled }, async e => {
                 form_state.triggerErrors(form_model);
 
                 await data_mutex.run(async () => {
@@ -1118,7 +1128,8 @@ function addAutomaticActions(builder, model) {
                         await UI.confirm(e, text, T.continue, () => {});
                     }
 
-                    await saveRecord(form_thread, route.page, form_state, form_entry, form_raw, form_meta, false);
+                    let draft = profile.develop && !can_confirm;
+                    await saveRecord(form_thread, route.page, form_state, form_entry, form_raw, form_meta, draft);
 
                     if (keep) {
                         await openRecord(form_thread.tid, null, route.page);
@@ -1761,7 +1772,9 @@ async function go(e, url = null, options = {}) {
                                 d.action(T.save, {}, async e => {
                                     try {
                                         form_state.triggerErrors(form_model);
-                                        await saveRecord(form_thread, route.page, form_state, form_entry, form_raw, form_meta, false);
+
+                                        let draft = profile.develop;
+                                        await saveRecord(form_thread, route.page, form_state, form_entry, form_raw, form_meta, draft);
                                     } catch (err) {
                                         reject(err);
                                     }
