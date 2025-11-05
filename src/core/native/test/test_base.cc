@@ -292,6 +292,11 @@ TEST_FUNCTION("base/CmpStr")
     TEST_EQ(CmpStr("01ab", "01ab"), 0);
     TEST_LT(CmpStr("01ab", "01ac"), 0);
     TEST_GT(CmpStr("01ac", "01ab"), 0);
+
+    TEST_GT(CmpStr("20", "10"), 0);
+    TEST_LT(CmpStr("10", "20"), 0);
+    TEST_GT(CmpStr("X20", "X10"), 0);
+    TEST_LT(CmpStr("X10", "X20"), 0);
 }
 
 TEST_FUNCTION("base/CmpNatural")
@@ -313,17 +318,38 @@ TEST_FUNCTION("base/CmpNatural")
     TEST_GT(CmpNatural("ac-10", "ab-10"), 0);
 
     TEST_LT(CmpNatural("00001", "02"), 0);
-    TEST_GT(CmpNatural("00002", "02"), 0);
+    TEST_EQ(CmpNatural("00002", "02"), 0);
     TEST_GT(CmpNatural("00003", "02"), 0);
     TEST_LT(CmpNatural("P00001", "P02"), 0);
-    TEST_GT(CmpNatural("P00002", "P02"), 0);
+    TEST_EQ(CmpNatural("P00002", "P02"), 0);
     TEST_GT(CmpNatural("P00003", "P02"), 0);
+    TEST_EQ(CmpNatural("02", "00002"), 0);
 
     TEST_EQ(CmpNatural("01", "01"), 0);
     TEST_EQ(CmpNatural("02", "02"), 0);
     TEST_EQ(CmpNatural("01ab", "01ab"), 0);
     TEST_LT(CmpNatural("01ab", "01ac"), 0);
     TEST_GT(CmpNatural("01ac", "01ab"), 0);
+
+    TEST_GT(CmpNatural("20", "10"), 0);
+    TEST_GT(CmpNatural("20", "11"), 0);
+    TEST_GT(CmpNatural("20", "12"), 0);
+    TEST_GT(CmpNatural("22", "12"), 0);
+    TEST_GT(CmpNatural("23", "12"), 0);
+    TEST_LT(CmpNatural("10", "20"), 0);
+    TEST_LT(CmpNatural("11", "20"), 0);
+    TEST_LT(CmpNatural("12", "20"), 0);
+    TEST_LT(CmpNatural("12", "22"), 0);
+    TEST_LT(CmpNatural("12", "23"), 0);
+    TEST_GT(CmpNatural("X20", "X10"), 0);
+    TEST_GT(CmpNatural("X20", "X12"), 0);
+    TEST_LT(CmpNatural("X10", "X20"), 0);
+    TEST_LT(CmpNatural("X12", "X20"), 0);
+
+    TEST_GT(CmpNatural("00002t", "02s"), 0);
+    TEST_LT(CmpNatural("00002s", "02t"), 0);
+    TEST_LT(CmpNatural("02s", "00002t"), 0);
+    TEST_GT(CmpNatural("02t", "00002s"), 0);
 }
 
 TEST_FUNCTION("base/ParseBool")

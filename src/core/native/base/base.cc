@@ -917,43 +917,55 @@ Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
 
 int CmpNatural(Span<const char> str1, Span<const char> str2)
 {
-    for (Size i = 0; i < str1.len && i < str2.len; i++) {
-        int delta = str1[i] - str2[i];
+    Size i = 0;
+    Size j = 0;
+
+    while (i < str1.len && j < str2.len) {
+        int delta = str1[i] - str2[j];
 
         if (delta) {
             if (IsAsciiDigit(str1[i]) && IsAsciiDigit(str2[i])) {
-                Size j = i;
-
                 while (i < str1.len && str1[i] == '0') {
                     i++;
                 }
                 while (j < str2.len && str2[j] == '0') {
                     j++;
                 }
-                while (i < str1.len && j < str2.len && IsAsciiDigit(str1[i]) && IsAsciiDigit(str2[j])) {
-                    delta = str1[i] - str2[j];
 
+                bool digit1 = false;
+                bool digit2 = false;
+                int bias = 0;
+
+                for (;;) {
+                    digit1 = (i < str1.len) && IsAsciiDigit(str1[i]);
+                    digit2 = (j < str2.len) && IsAsciiDigit(str2[j]);
+
+                    if (!digit1 || !digit2)
+                        break;
+
+                    bias = bias ? bias : (str1[i] - str2[j]);
                     i++;
                     j++;
                 }
 
-                if (i < str1.len && IsAsciiDigit(str1[i])) {
-                    return 1;
-                } else if (j < str2.len && IsAsciiDigit(str2[j])) {
-                    return -1;
-                } else if (delta) {
-                    return delta;
-                } else if (i != j) {
-                    return (i > j) ? 1 : -1;
+                if (!digit1 && !digit2 && bias) {
+                    return bias;
+                } else if (digit1 || digit2) {
+                    return digit1 ? 1 : -1;
                 }
             } else {
                 return delta;
             }
+        } else {
+            i++;
+            j++;
         }
     }
 
-    if (str1.len != str2.len) {
-        return (str1.len > str2.len) ? 1 : -1;
+    if (i == str1.len && j < str2.len) {
+        return -1;
+    } else if (i < str1.len) {
+        return 1;
     } else {
         return 0;
     }
