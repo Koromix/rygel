@@ -262,6 +262,37 @@ TEST_FUNCTION("base/FastRandom")
         }
     }
 }
+TEST_FUNCTION("base/CmpStr")
+{
+    TEST_GT(CmpStr("b", "a"), 0);
+    TEST_LT(CmpStr("a", "b"), 0);
+    TEST_LT(CmpStr("aa", "b"), 0);
+    TEST_GT(CmpStr("abc", "ab"), 0);
+    TEST_LT(CmpStr("ab", "abc"), 0);
+
+    TEST_GT(CmpStr("10", "1"), 0);
+    TEST_LT(CmpStr("10", "2"), 0);
+    TEST_LT(CmpStr("ab-10", "ab-2"), 0);
+    TEST_LT(CmpStr("ab-10", "ac-10"), 0);
+
+    TEST_LT(CmpStr("1", "10"), 0);
+    TEST_GT(CmpStr("2", "10"), 0);
+    TEST_GT(CmpStr("ab-2", "ab-10"), 0);
+    TEST_GT(CmpStr("ac-10", "ab-10"), 0);
+
+    TEST_LT(CmpStr("00001", "02"), 0);
+    TEST_LT(CmpStr("00002", "02"), 0);
+    TEST_LT(CmpStr("00003", "02"), 0);
+    TEST_LT(CmpStr("P00001", "P02"), 0);
+    TEST_LT(CmpStr("P00002", "P02"), 0);
+    TEST_LT(CmpStr("P00003", "P02"), 0);
+
+    TEST_EQ(CmpStr("01", "01"), 0);
+    TEST_EQ(CmpStr("02", "02"), 0);
+    TEST_EQ(CmpStr("01ab", "01ab"), 0);
+    TEST_LT(CmpStr("01ab", "01ac"), 0);
+    TEST_GT(CmpStr("01ac", "01ab"), 0);
+}
 
 TEST_FUNCTION("base/CmpNatural")
 {
