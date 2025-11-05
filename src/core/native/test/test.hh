@@ -48,6 +48,20 @@ struct BenchmarkInfo {
         \
         TEST_EX(value1 == value2, "%1: %2 == %3", K_STRINGIFY(Value1), value1, value2); \
     } while (false)
+#define TEST_GT(Value1, Value2) \
+    do { \
+        auto value1 = (Value1); \
+        auto value2 = (Value2); \
+        \
+        TEST_EX(value1 > value2, "%1: %2 > %3", K_STRINGIFY(Value1), value1, value2); \
+    } while (false)
+#define TEST_LT(Value1, Value2) \
+    do { \
+        auto value1 = (Value1); \
+        auto value2 = (Value2); \
+        \
+        TEST_EX(value1 < value2, "%1: %2 < %3", K_STRINGIFY(Value1), value1, value2); \
+    } while (false)
 #define TEST_STR(Str1, Str2) \
     do { \
         Span<const char> str1 = (Str1); \

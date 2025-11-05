@@ -1884,6 +1884,8 @@ static inline Span<const char> TrimStrRight(Span<const char> str, const char *tr
 static inline Span<const char> TrimStr(Span<const char> str, const char *trim_chars = " \t\r\n")
     { return TrimStr(MakeSpan((char *)str.ptr, str.len), trim_chars); }
 
+int CmpNatural(Span<const char> str1, Span<const char> str2);
+
 // ------------------------------------------------------------------------
 // Collections
 // ------------------------------------------------------------------------

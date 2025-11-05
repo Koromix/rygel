@@ -915,6 +915,50 @@ Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
     return MakeSpan(new_str, str.len);
 }
 
+int CmpNatural(Span<const char> str1, Span<const char> str2)
+{
+    for (Size i = 0; i < str1.len && i < str2.len; i++) {
+        int delta = str1[i] - str2[i];
+
+        if (delta) {
+            if (IsAsciiDigit(str1[i]) && IsAsciiDigit(str2[i])) {
+                Size j = i;
+
+                while (i < str1.len && str1[i] == '0') {
+                    i++;
+                }
+                while (j < str2.len && str2[j] == '0') {
+                    j++;
+                }
+                while (i < str1.len && j < str2.len && IsAsciiDigit(str1[i]) && IsAsciiDigit(str2[j])) {
+                    delta = str1[i] - str2[j];
+
+                    i++;
+                    j++;
+                }
+
+                if (i < str1.len && IsAsciiDigit(str1[i])) {
+                    return 1;
+                } else if (j < str2.len && IsAsciiDigit(str2[j])) {
+                    return -1;
+                } else if (delta) {
+                    return delta;
+                } else if (i != j) {
+                    return (i > j) ? 1 : -1;
+                }
+            } else {
+                return delta;
+            }
+        }
+    }
+
+    if (str1.len != str2.len) {
+        return (str1.len > str2.len) ? 1 : -1;
+    } else {
+        return 0;
+    }
+}
+
 // ------------------------------------------------------------------------
 // Format
 // ------------------------------------------------------------------------

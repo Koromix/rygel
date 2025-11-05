@@ -263,6 +263,38 @@ TEST_FUNCTION("base/FastRandom")
     }
 }
 
+TEST_FUNCTION("base/CmpNatural")
+{
+    TEST_GT(CmpNatural("b", "a"), 0);
+    TEST_LT(CmpNatural("a", "b"), 0);
+    TEST_LT(CmpNatural("aa", "b"), 0);
+    TEST_GT(CmpNatural("abc", "ab"), 0);
+    TEST_LT(CmpNatural("ab", "abc"), 0);
+
+    TEST_GT(CmpNatural("10", "1"), 0);
+    TEST_GT(CmpNatural("10", "2"), 0);
+    TEST_GT(CmpNatural("ab-10", "ab-2"), 0);
+    TEST_LT(CmpNatural("ab-10", "ac-10"), 0);
+
+    TEST_LT(CmpNatural("1", "10"), 0);
+    TEST_LT(CmpNatural("2", "10"), 0);
+    TEST_LT(CmpNatural("ab-2", "ab-10"), 0);
+    TEST_GT(CmpNatural("ac-10", "ab-10"), 0);
+
+    TEST_LT(CmpNatural("00001", "02"), 0);
+    TEST_GT(CmpNatural("00002", "02"), 0);
+    TEST_GT(CmpNatural("00003", "02"), 0);
+    TEST_LT(CmpNatural("P00001", "P02"), 0);
+    TEST_GT(CmpNatural("P00002", "P02"), 0);
+    TEST_GT(CmpNatural("P00003", "P02"), 0);
+
+    TEST_EQ(CmpNatural("01", "01"), 0);
+    TEST_EQ(CmpNatural("02", "02"), 0);
+    TEST_EQ(CmpNatural("01ab", "01ab"), 0);
+    TEST_LT(CmpNatural("01ab", "01ac"), 0);
+    TEST_GT(CmpNatural("01ac", "01ab"), 0);
+}
+
 TEST_FUNCTION("base/ParseBool")
 {
     PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
