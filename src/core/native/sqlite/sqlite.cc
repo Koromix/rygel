@@ -18,6 +18,24 @@ K_INIT(SQLite)
 #endif
 }
 
+static int NatsortCollateFunc(void *, int len1, const void *key1, int len2, const void *key2)
+{
+    Span<const char> str1 = MakeSpan((const char *)key1, len1);
+    Span<const char> str2 = MakeSpan((const char *)key2, len2);
+
+    return CmpNatural(str1, str2);
+}
+
+static bool ExtendConnection(sqlite3 *db)
+{
+    if (sqlite3_create_collation(db, "natsort", SQLITE_UTF8, nullptr, NatsortCollateFunc) != SQLITE_OK) {
+        LogError("SQLite failed to add natural collation");
+        return false;
+    }
+
+    return true;
+}
+
 sq_Statement &sq_Statement::operator=(sq_Statement &&other)
 {
     Finalize();
@@ -139,6 +157,9 @@ bool sq_Database::Open(const char *filename, unsigned int flags)
     }
 
     sqlite3_busy_timeout(db, 15000);
+
+    if (!ExtendConnection(db))
+        return false;
 
     char *error = nullptr;
     if (sqlite3_exec(db, sql, nullptr, nullptr, &error) != SQLITE_OK) {
