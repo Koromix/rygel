@@ -4,17 +4,6 @@
 import { render, html, noChange, directive, Directive } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from './base.js';
 
-if (typeof T == 'undefined')
-    T = {};
-
-Object.assign(T, {
-    cancel: 'Cancel',
-    confirm: 'Confirm',
-    confirm_not_reversible: 'Be careful, this action cannot be reversed!',
-    error_has_occured: 'An error has occured',
-    filter: 'Filter'
-});
-
 let run_func = () => {};
 let render_func = () => {};
 
@@ -165,36 +154,6 @@ function insist(func) {
     };
 }
 
-function confirm(action, func = null) {
-    if (func != null) {
-        return wrap(run);
-    } else {
-        func = () => {};
-        return run();
-    }
-
-    function run() {
-        return dialog({
-            run: (render, close) => html`
-                <div class="tabbar">
-                    <a class="active">${action}</a>
-                </div>
-
-                <div class="tab">
-                    <div class="box">${T.confirm_not_reversible}</div>
-
-                    <div class="actions">
-                        <button type="button" class="secondary" @click=${wrap(close)}>${T.cancel}</button>
-                        <button type="submit">${T.confirm}</button>
-                    </div>
-                </div>
-            `,
-
-            submit: () => func()
-        });
-    }
-}
-
 function main(content = null) {
     if (main_el == null) {
         main_el = document.createElement('main');
@@ -240,6 +199,9 @@ async function toggleFullscreen(enable = null) {
 }
 
 function dialog(options = {}) {
+    if (typeof options == 'function')
+        options = { run: options };
+
     options = Object.assign({
         overlay: false,
         resolve_on_submit: true,
@@ -653,10 +615,10 @@ function setOrder(key, by, ascending = null) {
     table_orders[key] = order;
 }
 
-function tableFilter(key, ...keys) {
+function tableFilter(key, placeholder, ...keys) {
     let filter = table_filters[key];
 
-    return html`<input type="search" placeholder=${T.filter + '...'} style="width: 10em;"
+    return html`<input type="search" placeholder=${placeholder} style="width: 10em;"
                        value=${(filter != null) ? filter.str : ''}
                        @input=${e => { setFilter(key, e.target.value, keys); run_func(); }} />`;
 }
@@ -748,7 +710,6 @@ export {
 
     wrap,
     insist,
-    confirm,
 
     main,
     fullscreen as isFullscreen,

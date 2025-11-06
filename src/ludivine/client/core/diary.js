@@ -113,7 +113,7 @@ function DiaryModule(app) {
                     ${data != null ? html`
                         Journal - Entrée du ${data.date.toLocaleString()}
                         <button type="button" class="small secondary" style="margin-left: 30px;"
-                                @click=${UI.confirm(`Supprimer l'entrée de journal du ${data.date.toLocaleString()}`, e => deleteEntry(entry))}>Supprimer cette entrée</button>
+                                @click=${UI.wrap(e => deleteEntry(data))}>Supprimer cette entrée</button>
                     ` : ''}
                     ${data == null ? `Journal - Nouvelle entrée` : ''}
                 </div>
@@ -182,10 +182,25 @@ function DiaryModule(app) {
         await app.run();
     }
 
-    async function deleteEntry(entry) {
-        await db.exec('DELETE FROM diary WHERE id = ?', entry);
+    async function deleteEntry(data) {
+        await UI.dialog((render, close) => html`
+            <div class="tabbar">
+                <a class="active">Supprimer l'entrée de journal du ${data.date.toLocaleString()}</a>
+            </div>
 
-        if (entry == route.entry)
+            <div class="tab">
+                <div class="box">Attention, cette action n'est pas réversible !</div>
+
+                <div class="actions">
+                    <button type="button" class="secondary" @click=${close}>Annuler</button>
+                    <button type="submit">Confirmer</button>
+                </div>
+            </div>
+        `);
+
+        await db.exec('DELETE FROM diary WHERE id = ?', data.id);
+
+        if (data.id == route.entry)
             await app.go('/profil');
     }
 

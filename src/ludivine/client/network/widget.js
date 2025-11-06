@@ -775,7 +775,7 @@ function NetworkWidget(app, mod, world) {
 
                 <div class="actions">
                     <button type="button" class="secondary"
-                            @click=${UI.confirm(`Supprimer la relation ${name}`, e => { deletePersons(p); close(); })}>Supprimer</button>
+                            @click=${UI.wrap(e => confirmDeletePerson(p).then(close))}>Supprimer</button>
                     <div style="flex: 1;"></div>
                     <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
                     <button type="submit">Appliquer</button>
@@ -800,6 +800,25 @@ function NetworkWidget(app, mod, world) {
         });
 
         await mod.showGuide('addMore', USER_GUIDES.addMore);
+    }
+
+    async function confirmDeletePerson(p) {
+        await UI.dialog((render, close) => html`
+            <div class="tabbar">
+                <a class="active">Supprimer la relation ${namePerson(p, false)}</a>
+            </div>
+
+            <div class="tab">
+                <div class="box">Attention, cette action n'est pas réversible !</div>
+
+                <div class="actions">
+                    <button type="button" class="secondary" @click=${close}>Annuler</button>
+                    <button type="submit">Confirmer</button>
+                </div>
+            </div>
+        `);
+
+        deletePersons(p);
     }
 
     function deletePersons(targets) {

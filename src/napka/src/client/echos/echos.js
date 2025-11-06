@@ -3,8 +3,7 @@
 
 import { render, html, unsafeHTML } from '../../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net } from '../../../../core/web/base/base.js';
-import { start, zoom, makeField, makeEdit, updateEntry, deleteEntry,
-         renderMarkdown, isConnected, loadTexture } from '../map.js';
+import { start, zoom, makeField, loadTexture } from '../map.js';
 
 const ICONS = {
     iml1: 'static/icons/iml1.png',

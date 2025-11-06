@@ -177,7 +177,7 @@ async function configureRepository(repo) {
                 <div class="footer">
                     ${ptr != null ? html`
                         <button type="button" class="danger"
-                                @click=${UI.confirm(T.delete_repository, e => deleteRepository(repo.id).then(close))}>${T.delete}</button>
+                                @click=${UI.wrap(e => deleteRepository(repo.id).then(close))}>${T.delete}</button>
                         <div style="flex: 1;"></div>
                     ` : ''}
                     <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
@@ -205,6 +205,15 @@ async function configureRepository(repo) {
 }
 
 async function deleteRepository(id) {
+    await UI.dialog((render, close) => html`
+        <div class="title">${T.delete_repository}</div>
+        <div class="main">${T.confirm_not_reversible}</div>
+        <div class="footer">
+            <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
+            <button type="submit">${T.confirm}</button>
+        </div>
+    `);
+
     await Net.post('/api/repository/delete', { id: id });
     Net.invalidate('repositories');
 

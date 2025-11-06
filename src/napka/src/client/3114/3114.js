@@ -4,8 +4,7 @@
 import { render, html, unsafeHTML } from '../../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net } from '../../../../core/web/base/base.js';
 import * as parse from '../../lib/parse.js';
-import { start, zoom, refreshMap, makeField, makeEdit, updateEntry, deleteEntry,
-         renderMarkdown, isConnected, loadTexture } from '../map.js';
+import { start, zoom, refreshMap, makeField, loadTexture } from '../map.js';
 
 const ICONS = {
     'Psychiatrie du secteur public': 'static/icons/hospital.png',

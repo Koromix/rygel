@@ -5,8 +5,8 @@ import { render, html, unsafeHTML } from '../../../../../vendor/lit-html/lit-htm
 import { Util, Log, Net } from '../../../../core/web/base/base.js';
 import * as UI from '../../../../core/web/base/ui.js';
 import * as parse from '../../lib/parse.js';
-import { start, zoom, makeField, makeEdit, updateEntry, deleteEntry,
-         renderMarkdown, login, logout, isConnected, loadTexture } from '../map.js';
+import { start, zoom, makeField, makeEdit, renderMarkdown,
+         login, logout, isConnected, loadTexture } from '../map.js';
 
 const ICONS = {
     crp: 'static/icons/crp.png',

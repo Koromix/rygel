@@ -382,7 +382,7 @@ async function handleClick(markers, clickable) {
                     ${isConnected() ? html`
                         <div class="footer">
                             <button type="button" class="danger"
-                                    @click=${UI.confirm('Supprimer cet établissement', e => deleteEntry(entry.id).then(close))}>Supprimer</button>
+                                    @click=${UI.wrap(e => deleteEntry(entry.id).then(close))}>Supprimer</button>
                             <div style="flex: 1;"></div>
                             <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
                             <button @click=${closeOrSubmit} type="submit">Modifier</button>
@@ -580,6 +580,15 @@ async function updateEntry(entry) {
 }
 
 async function deleteEntry(id) {
+    await UI.dialog((render, close) => html`
+        <div class="title">Supprimer cet établissement</div>
+        <div class="main">Attention, cette action n'est pas réversible !</div>
+        <div class="footer">
+            <button type="button" class="secondary" @click=${UI.wrap(close)}>Annuler</button>
+            <button type="submit">Confirmer</button>
+        </div>
+    `);
+
     await Net.post('api/admin/delete', {
         id: id
     });
@@ -612,8 +621,6 @@ export {
     zoom,
     login,
     logout,
-    updateEntry,
-    deleteEntry,
     refreshMap,
     makeField,
     makeEdit,

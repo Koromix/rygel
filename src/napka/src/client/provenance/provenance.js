@@ -3,8 +3,7 @@
 
 import { render, html, unsafeHTML } from '../../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net } from '../../../../core/web/base/base.js';
-import { start, zoom, makeField, makeEdit, updateEntry, deleteEntry,
-         renderMarkdown, isConnected } from '../map.js';
+import { start, zoom, makeField } from '../map.js';
 
 function ProvenanceProvider() {
     let entries;
