@@ -5748,6 +5748,7 @@ static inline const char *Prompt(const char *prompt, Allocator *alloc)
 Size PromptEnum(const char *prompt, Span<const PromptChoice> choices, Size value = 0);
 Size PromptEnum(const char *prompt, Span<const char *const> strings, Size value = 0);
 
+// Returns -1 if cancelled, otherwise it's 1 for Yes and or 0 for No
 int PromptYN(const char *prompt);
 
 // ------------------------------------------------------------------------
