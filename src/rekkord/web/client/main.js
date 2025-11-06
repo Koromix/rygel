@@ -128,7 +128,7 @@ function go(url = null, push = true) {
     switch (mode) {
         case 'login': {
             if (isLogged()) {
-                changes.mode = DEFAULT_ROUTE;
+                changes.mode = DEFAULT_MODE;
             } else {
                 changes.mode = 'login';
             }
