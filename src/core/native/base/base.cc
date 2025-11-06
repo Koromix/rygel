@@ -10428,7 +10428,7 @@ int PromptYN(const char *prompt)
 {
     const char *shortcuts = T("yn");
 
-    int ret = PromptEnum(prompt, {{ shortcuts[0], T("Yes") }, { shortcuts[1], T("No") }});
+    Size ret = PromptEnum(prompt, {{ shortcuts[0], T("Yes") }, { shortcuts[1], T("No") }});
     if (ret < 0)
         return -1;
 
