@@ -72,8 +72,6 @@ async function runRepository() {
             let url = Util.pasteURL('/api/repository/get', { id: route.repository });
             cache.repository = await Net.cache('repository', url);
         } catch (err) {
-            if (!(err instanceof HttpError))
-                throw err;
             if (err.status != 404 && err.status != 422)
                 throw err;
 

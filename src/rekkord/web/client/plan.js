@@ -89,8 +89,6 @@ async function runPlan() {
             let url = Util.pasteURL('/api/plan/get', { id: route.plan });
             cache.plan = await Net.cache('plan', url);
         } catch (err) {
-            if (!(err instanceof HttpError))
-                throw err;
             if (err.status != 404 && err.status != 422)
                 throw err;
 
