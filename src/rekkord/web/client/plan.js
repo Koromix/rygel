@@ -407,7 +407,7 @@ async function showKey(plan, key, secret) {
                     <label>
                         <span>API key</span>
                         <input type="text" style="width: 40em;" readonly value=${full} />
-                        <button type="button" class="small" @click=${UI.wrap(e => writeClipboard('API key', full))}>${T.copy}</button>
+                        <button type="button" class="small" @click=${UI.wrap(e => writeClipboard(T.api_key, full))}>${T.copy}</button>
                     </label>
 
                     <div style="color: red; font-style: italic; text-align: center">${T.please_copy_api_key}</div>
@@ -460,7 +460,7 @@ function parseClock(clock) {
 async function writeClipboard(label, text) {
     await navigator.clipboard.writeText(text);
 
-    let msg = `${label} copied to clipboard`;
+    let msg = T.message(`{1} copied to clipboard`, label);
     Log.info(msg);
 }
 
