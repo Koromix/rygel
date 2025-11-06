@@ -457,6 +457,13 @@ function parseClock(clock) {
     return hh * 100 + mm;
 }
 
+async function writeClipboard(label, text) {
+    await navigator.clipboard.writeText(text);
+
+    let msg = `${label} copied to clipboard`;
+    Log.info(msg);
+}
+
 export {
     runPlans,
     runPlan

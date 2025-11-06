@@ -807,13 +807,6 @@ async function configureTOTP(e) {
     });
 }
 
-async function writeClipboard(label, text) {
-    await navigator.clipboard.writeText(text);
-
-    let msg = `${label} copied to clipboard`;
-    Log.info(msg);
-}
-
 export {
     route,
     cache,
