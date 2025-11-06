@@ -59,23 +59,24 @@ main.dialog {
 }
 
 .actions {
-    gap: 0;
-    align-items: center;
+    display: block;
+    text-align: center;
 
-    & > button + * { margin-top: 10px; }
-    & > button + a { margin-top: 18px; }
-
+    & > button { display: inline-block; }
     & > a {
+        display: block;
         width: auto;
+        margin: 0;
         padding: 0;
         background: none !important;
         color: var(--anchor_color) !important;
         font-size: 0.9em;
         text-decoration: underline;
     }
-    & > a + a { margin-top: 4px; }
+
+    & > button + button { margin-left: 0.5em; }
+    & > button + a { margin-top: 1em; }
 }
-p + .actions { margin-top: 2em; }
 
 button {
     font-size: 0.92em;

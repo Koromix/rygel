@@ -677,8 +677,11 @@ async function runAccount() {
             <div class="actions">
                 <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>${T.change_picture}</button>
                 <button type="button" class="secondary" @click=${UI.wrap(configureTOTP)}>${T.configure_2fa}</button>
-                <button type="button" class="secondary" @click=${UI.insist(logout)}>${T.logout}</button>
             </div>
+        </div>
+
+        <div class="actions">
+            <button type="button" class="secondary" @click=${UI.insist(logout)}>${T.logout}</button>
         </div>
     `);
 }
