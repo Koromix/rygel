@@ -19,6 +19,17 @@ import '../assets/client.css';
 
 const RUN_LOCK = 'run';
 
+const MODES = {
+    account: { run: runAccount },
+
+    repositories: { run: runRepositories },
+    repository: { run: runRepository, path: [{ key: 'repository', type: 'integer' }]},
+
+    plans: { run: runPlans },
+    plan: { run: runPlan, path: [{ key: 'plan', type: 'integer' }]}
+};
+const DEFAULT_MODE = 'repositories';
+
 let languages = {};
 
 let route = {
@@ -117,7 +128,7 @@ function go(url = null, push = true) {
     switch (mode) {
         case 'login': {
             if (isLogged()) {
-                changes.mode = 'repositories';
+                changes.mode = DEFAULT_ROUTE;
             } else {
                 changes.mode = 'login';
             }
@@ -128,25 +139,34 @@ function go(url = null, push = true) {
         case 'recover':
         case 'reset': { changes.mode = mode; } break;
 
-        case 'repositories':
-        case 'plans':
-        case 'account': { changes.mode = mode; } break;
+        default: {
+            let info = MODES[mode];
 
-        case 'repository': {
-            changes.repository = parseInt(parts[0], 10);
-            if (Number.isNaN(changes.repository))
-                changes.repository = null;
+            if (info == null) {
+                mode = DEFAULT_MODE;
+                info = MODES[mode];
+            }
+
+            if (info.path != null) {
+                for (let i = 0; i < info.path.length; i++) {
+                    let arg = info.path[i];
+                    let value = parts[i];
+
+                    switch (arg.type) {
+                        case 'string': {} break;
+                        case 'integer': { value = parseInt(value, 10); } break;
+                        case 'number': { value = parseFloat(value); } break;
+                    }
+
+                    if (value == null || Number.isNaN(value))
+                        value = null;
+
+                    changes[arg.key] = value;
+                }
+            }
+
             changes.mode = mode;
         } break;
-
-        case 'plan': {
-            changes.plan = parseInt(parts[0], 10);
-            if (Number.isNaN(changes.plan))
-                changes.plan = null;
-            changes.mode = mode;
-        } break;
-
-        default: { changes.mode = 'repositories'; } break;
     }
 
     return run(changes, push);
@@ -196,14 +216,11 @@ async function run(changes = {}, push = false) {
             }
 
             if (isLogged()) {
-                cache.repositories = await Net.cache('repositories', '/api/repository/list');
+                let info = MODES[route.mode];
 
-                switch (route.mode) {
-                    case 'repositories': { await runRepositories(); } break;
-                    case 'repository': { await runRepository(); } break;
-                    case 'plans': { await runPlans(); } break;
-                    case 'plan': { await runPlan(); } break;
-                    case 'account': { await runAccount(); } break;
+                if (info != null) {
+                    cache.repositories = await Net.cache('repositories', '/api/repository/list');
+                    await info.run();
                 }
             }
 
