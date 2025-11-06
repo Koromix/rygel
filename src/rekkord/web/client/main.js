@@ -160,7 +160,7 @@ async function run(changes = {}, push = false) {
     if (isLogged() && ping_timer == null) {
         ping_timer = setInterval(() => {
             Net.get('/api/user/ping');
-        }, 360 * 1000);
+        }, 180 * 1000);
     }
 
     // Go back to top app when the context changes
