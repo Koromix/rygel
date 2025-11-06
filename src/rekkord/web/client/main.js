@@ -28,6 +28,7 @@ let route = {
 };
 let route_url = null;
 let poisoned = false;
+let pending = -1;
 
 let session = null;
 let ping_timer = null;
@@ -165,62 +166,68 @@ async function run(changes = {}, push = false) {
     // Go back to top app when the context changes
     let scroll = (changes.mode != null && changes.mode != route.mode);
 
-    await navigator.locks.request(RUN_LOCK, async () => {
-        Object.assign(route, changes);
+    try {
+        pending++;
 
-        // Don't run stateful code while dialog is running to avoid concurrency issues
-        if (UI.isDialogOpen()) {
-            UI.runDialog();
-            return;
-        }
+        await navigator.locks.request(RUN_LOCK, async () => {
+            Object.assign(route, changes);
 
-        switch (route.mode) {
-            case 'login': { await runLogin(); } break;
-            case 'register': { await runRegister(); } break;
-            case 'finalize': { await runFinalize(); } break;
-
-            case 'recover': { await runRecover(); } break;
-            case 'reset':  { await runReset(); } break;
-
-            default: {
-                if (session == null) {
-                    await runLogin();
-                } else if (!session.confirmed) {
-                    await runConfirm();
-                }
-            } break;
-        }
-
-        if (isLogged()) {
-            cache.repositories = await Net.cache('repositories', '/api/repository/list');
+            // Don't run stateful code while dialog is running to avoid concurrency issues
+            if (UI.isDialogOpen()) {
+                UI.runDialog();
+                return;
+            }
 
             switch (route.mode) {
-                case 'repositories': { await runRepositories(); } break;
-                case 'repository': { await runRepository(); } break;
-                case 'plans': { await runPlans(); } break;
-                case 'plan': { await runPlan(); } break;
-                case 'account': { await runAccount(); } break;
+                case 'login': { await runLogin(); } break;
+                case 'register': { await runRegister(); } break;
+                case 'finalize': { await runFinalize(); } break;
+
+                case 'recover': { await runRecover(); } break;
+                case 'reset':  { await runReset(); } break;
+
+                default: {
+                    if (session == null) {
+                        await runLogin();
+                    } else if (!session.confirmed) {
+                        await runConfirm();
+                    }
+                } break;
             }
-        }
 
-        // Update URL
-        {
-            let url = makeURL();
+            if (isLogged()) {
+                cache.repositories = await Net.cache('repositories', '/api/repository/list');
 
-            if (url != route_url) {
-                if (push) {
-                    window.history.pushState(null, null, url);
-                } else if (url != route_url) {
-                    window.history.replaceState(null, null, url);
+                switch (route.mode) {
+                    case 'repositories': { await runRepositories(); } break;
+                    case 'repository': { await runRepository(); } break;
+                    case 'plans': { await runPlans(); } break;
+                    case 'plan': { await runPlan(); } break;
+                    case 'account': { await runAccount(); } break;
                 }
-
-                route_url = url;
             }
-        }
-    });
 
-    if (scroll)
-        window.scrollTo(0, 0);
+            // Update URL
+            if (!pending) {
+                let url = makeURL();
+
+                if (url != route_url) {
+                    if (push) {
+                        window.history.pushState(null, null, url);
+                    } else if (url != route_url) {
+                        window.history.replaceState(null, null, url);
+                    }
+
+                    route_url = url;
+                }
+            }
+        });
+
+        if (scroll)
+            window.scrollTo(0, 0);
+    } finally {
+        pending--;
+    }
 }
 
 function makeURL(changes = {}) {
