@@ -251,9 +251,13 @@ function makeURL(changes = {}) {
     let values = Object.assign({}, route, changes);
     let path = '/' + values.mode;
 
-    switch (values.mode) {
-        case 'repository': { path += '/' + values.repository; } break;
-        case 'plan': { path += '/' + values.plan; } break;
+    let info = MODES[values.mode];
+
+    if (info?.path != null) {
+        for (let i = 0; i < info.path.length; i++) {
+            let arg = info.path[i];
+            path += '/' + values[arg.key];
+        }
     }
 
     if (path == window.location.pathname && window.location.hash)
