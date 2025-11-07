@@ -126,16 +126,14 @@ globalThis.sqlite3Worker1Promiser = function callee(config = callee.defaultConfi
 
 globalThis.sqlite3Worker1Promiser.defaultConfig = {
   worker: function(){
-    return new Worker(new URL("sqlite3-worker1-bundler-friendly.mjs", import.meta.url),{
-      type: 'module'
-    });
+    return new Worker(new URL("sqlite3-worker1.js", import.meta.url));
   }
   ,
   onerror: (...args)=>console.error('worker1 promiser error',...args)
 };
 
 
-sqlite3Worker1Promiser.v2 = function(config){
+globalThis.sqlite3Worker1Promiser.v2 = function callee(config = callee.defaultConfig){
   let oldFunc;
   if( 'function' == typeof config ){
     oldFunc = config;
@@ -168,6 +166,9 @@ sqlite3Worker1Promiser.v2 = function(config){
    
   original: sqlite3Worker1Promiser
 });
+
+globalThis.sqlite3Worker1Promiser.v2.defaultConfig =
+  globalThis.sqlite3Worker1Promiser.defaultConfig;
 
 
 export default sqlite3Worker1Promiser.v2;

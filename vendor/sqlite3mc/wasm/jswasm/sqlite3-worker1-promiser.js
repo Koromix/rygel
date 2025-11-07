@@ -149,7 +149,7 @@ globalThis.sqlite3Worker1Promiser.defaultConfig = {
 };
 
 
-sqlite3Worker1Promiser.v2 = function(config){
+globalThis.sqlite3Worker1Promiser.v2 = function callee(config = callee.defaultConfig){
   let oldFunc;
   if( 'function' == typeof config ){
     oldFunc = config;
@@ -182,4 +182,7 @@ sqlite3Worker1Promiser.v2 = function(config){
    
   original: sqlite3Worker1Promiser
 });
+
+globalThis.sqlite3Worker1Promiser.v2.defaultConfig =
+  globalThis.sqlite3Worker1Promiser.defaultConfig;
 

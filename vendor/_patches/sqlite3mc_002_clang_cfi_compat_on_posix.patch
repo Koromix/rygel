@@ -1,8 +1,8 @@
 diff --git a/vendor/sqlite3mc/sqlite3.c b/vendor/sqlite3mc/sqlite3.c
-index c748d0334..8180add07 100644
+index 03d65b6282..c12551e5df 100644
 --- a/vendor/sqlite3mc/sqlite3.c
 +++ b/vendor/sqlite3mc/sqlite3.c
-@@ -38903,19 +38903,19 @@ static struct unix_syscall {
+@@ -39626,19 +39626,19 @@ static struct unix_syscall {
    sqlite3_syscall_ptr pDefault; /* Default value */
  } aSyscall[] = {
    { "open",         (sqlite3_syscall_ptr)posixOpen,  0  },
@@ -27,7 +27,7 @@ index c748d0334..8180add07 100644
  
  /*
  ** The DJGPP compiler environment looks mostly like Unix, but it
-@@ -38928,145 +38928,158 @@ static struct unix_syscall {
+@@ -39651,54 +39651,56 @@ static struct unix_syscall {
  #define osFstat(a,b,c)    0
  #else
    { "fstat",        (sqlite3_syscall_ptr)fstat,      0  },
@@ -91,12 +91,12 @@ index c748d0334..8180add07 100644
  
  #if defined(HAVE_FCHMOD)
    { "fchmod",       (sqlite3_syscall_ptr)fchmod,          0  },
+-#define osFchmod    ((int(*)(int,mode_t))aSyscall[14].pCurrent)
 +#define osFchmod    fchmod
  #else
    { "fchmod",       (sqlite3_syscall_ptr)0,               0  },
-+#define osFchmod    ((int(*)(int,mode_t))0)
- #endif
--#define osFchmod    ((int(*)(int,mode_t))aSyscall[14].pCurrent)
+ #define osFchmod(FID,MODE) 0
+@@ -39706,88 +39708,97 @@ static struct unix_syscall {
  
  #if defined(HAVE_POSIX_FALLOCATE) && HAVE_POSIX_FALLOCATE
    { "fallocate",    (sqlite3_syscall_ptr)posix_fallocate,  0 },
@@ -209,15 +209,11 @@ index c748d0334..8180add07 100644
  # endif
  #else
    { "ioctl",         (sqlite3_syscall_ptr)0,              0 },
-+#define osIoctl      ((int(*)(int,unsigned long,...))0)
- #endif
- 
- }; /* End of the overrideable system calls */
 diff --git a/vendor/sqlite3mc/sqlite3mc.c b/vendor/sqlite3mc/sqlite3mc.c
-index 7a8852cfd..53bd1ff2f 100644
+index de02f31f2e..7a4ee9a973 100644
 --- a/vendor/sqlite3mc/sqlite3mc.c
 +++ b/vendor/sqlite3mc/sqlite3mc.c
-@@ -39062,19 +39062,19 @@ static struct unix_syscall {
+@@ -39773,19 +39773,19 @@ static struct unix_syscall {
    sqlite3_syscall_ptr pDefault; /* Default value */
  } aSyscall[] = {
    { "open",         (sqlite3_syscall_ptr)posixOpen,  0  },
@@ -242,7 +238,7 @@ index 7a8852cfd..53bd1ff2f 100644
  
  /*
  ** The DJGPP compiler environment looks mostly like Unix, but it
-@@ -39087,145 +39087,158 @@ static struct unix_syscall {
+@@ -39798,54 +39798,56 @@ static struct unix_syscall {
  #define osFstat(a,b,c)    0
  #else
    { "fstat",        (sqlite3_syscall_ptr)fstat,      0  },
@@ -306,12 +302,12 @@ index 7a8852cfd..53bd1ff2f 100644
  
  #if defined(HAVE_FCHMOD)
    { "fchmod",       (sqlite3_syscall_ptr)fchmod,          0  },
+-#define osFchmod    ((int(*)(int,mode_t))aSyscall[14].pCurrent)
 +#define osFchmod    fchmod
  #else
    { "fchmod",       (sqlite3_syscall_ptr)0,               0  },
-+#define osFchmod    ((int(*)(int,mode_t))0)
- #endif
--#define osFchmod    ((int(*)(int,mode_t))aSyscall[14].pCurrent)
+ #define osFchmod(FID,MODE) 0
+@@ -39853,88 +39855,97 @@ static struct unix_syscall {
  
  #if defined(HAVE_POSIX_FALLOCATE) && HAVE_POSIX_FALLOCATE
    { "fallocate",    (sqlite3_syscall_ptr)posix_fallocate,  0 },
@@ -424,7 +420,3 @@ index 7a8852cfd..53bd1ff2f 100644
  # endif
  #else
    { "ioctl",         (sqlite3_syscall_ptr)0,              0 },
-+#define osIoctl      ((int(*)(int,unsigned long,...))0)
- #endif
- 
- }; /* End of the overrideable system calls */
