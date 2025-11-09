@@ -863,42 +863,64 @@ TEST_FUNCTION("base/OptionParser")
 
 TEST_FUNCTION("base/PathCheck")
 {
-    TEST_EQ(PathIsAbsolute("foo"), false);
-    TEST_EQ(PathIsAbsolute(""), false);
-    TEST_EQ(PathIsAbsolute("/foo"), true);
-    TEST_EQ(PathIsAbsolute("/"), true);
+#define TEST_ABS(Path, Expected) \
+        do { \
+            const char *str1 = (Path); \
+            Span<const char> str2 = str1; \
+            bool expected = (Expected); \
+             \
+            TEST_EQ(PathIsAbsolute(str1), expected); \
+            TEST_EQ(PathIsAbsolute(str2), expected); \
+        } while (false)
+#define TEST_DOTDOT(Path, Expected) \
+        do { \
+            const char *str1 = (Path); \
+            Span<const char> str2 = str1; \
+            bool expected = (Expected); \
+                \
+            TEST_EQ(PathContainsDotDot(str1), expected); \
+            TEST_EQ(PathContainsDotDot(str2), expected); \
+        } while (false)
+
+    TEST_ABS("foo", false);
+    TEST_ABS("", false);
+    TEST_ABS("/foo", true);
+    TEST_ABS("/", true);
 #if defined(_WIN32)
-    TEST_EQ(PathIsAbsolute("\\foo"), true);
-    TEST_EQ(PathIsAbsolute("\\"), true);
-    TEST_EQ(PathIsAbsolute("C:foo"), true); // Technically not absolute but it seems safer to deal with it this way
-    TEST_EQ(PathIsAbsolute("C:/foo"), true);
-    TEST_EQ(PathIsAbsolute("C:/"), true);
-    TEST_EQ(PathIsAbsolute("C:\\foo"), true);
-    TEST_EQ(PathIsAbsolute("C:\\"), true);
+    TEST_ABS("\\foo", true);
+    TEST_ABS("\\", true);
+    TEST_ABS("C:foo", true); // Technically not absolute but it seems safer to deal with it this way
+    TEST_ABS("C:/foo", true);
+    TEST_ABS("C:/", true);
+    TEST_ABS("C:\\foo", true);
+    TEST_ABS("C:\\", true);
 #endif
 
-    TEST_EQ(PathContainsDotDot(".."), true);
-    TEST_EQ(PathContainsDotDot("/.."), true);
-    TEST_EQ(PathContainsDotDot("/../"), true);
-    TEST_EQ(PathContainsDotDot("a.."), false);
-    TEST_EQ(PathContainsDotDot("..b"), false);
-    TEST_EQ(PathContainsDotDot("..b"), false);
-    TEST_EQ(PathContainsDotDot("foo/bar/.."), true);
-    TEST_EQ(PathContainsDotDot("foo/../bar"), true);
-    TEST_EQ(PathContainsDotDot("foo../bar"), false);
-    TEST_EQ(PathContainsDotDot("foo/./bar"), false);
+    TEST_DOTDOT("..", true);
+    TEST_DOTDOT("/..", true);
+    TEST_DOTDOT("/../", true);
+    TEST_DOTDOT("a..", false);
+    TEST_DOTDOT("..b", false);
+    TEST_DOTDOT("..b", false);
+    TEST_DOTDOT("foo/bar/..", true);
+    TEST_DOTDOT("foo/../bar", true);
+    TEST_DOTDOT("foo../bar", false);
+    TEST_DOTDOT("foo/./bar", false);
 #if defined(_WIN32)
-    TEST_EQ(PathContainsDotDot(".."), true);
-    TEST_EQ(PathContainsDotDot("\\.."), true);
-    TEST_EQ(PathContainsDotDot("\\..\\"), true);
-    TEST_EQ(PathContainsDotDot("a.."), false);
-    TEST_EQ(PathContainsDotDot("..b"), false);
-    TEST_EQ(PathContainsDotDot("..b"), false);
-    TEST_EQ(PathContainsDotDot("foo\\bar\\.."), true);
-    TEST_EQ(PathContainsDotDot("foo\\..\\bar"), true);
-    TEST_EQ(PathContainsDotDot("foo..\\bar"), false);
-    TEST_EQ(PathContainsDotDot("foo\\.\\bar"), false);
+    TEST_DOTDOT("..", true);
+    TEST_DOTDOT("\\..", true);
+    TEST_DOTDOT("\\..\\", true);
+    TEST_DOTDOT("a..", false);
+    TEST_DOTDOT("..b", false);
+    TEST_DOTDOT("..b", false);
+    TEST_DOTDOT("foo\\bar\\..", true);
+    TEST_DOTDOT("foo\\..\\bar", true);
+    TEST_DOTDOT("foo..\\bar", false);
+    TEST_DOTDOT("foo\\.\\bar", false);
 #endif
+
+#undef TEST_DOTDOT
+#undef TEST_ABS
 }
 
 struct IntBucket {

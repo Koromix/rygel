@@ -4302,6 +4302,7 @@ static inline Span<char> NormalizePath(Span<const char> path, Allocator *alloc)
 bool PathIsAbsolute(const char *path);
 bool PathIsAbsolute(Span<const char> path);
 bool PathContainsDotDot(const char *path);
+bool PathContainsDotDot(Span<const char> path);
 
 enum class StatFlag {
     SilentMissing = 1 << 0,

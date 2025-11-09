@@ -4018,6 +4018,20 @@ bool PathContainsDotDot(const char *path)
     return false;
 }
 
+bool PathContainsDotDot(Span<const char> path)
+{
+    const char *ptr = path.ptr;
+    const char *end = path.end();
+
+    while ((ptr = (const char *)MemMem(ptr, end - ptr, "..", 2))) {
+        if ((ptr == path.ptr || IsPathSeparator(ptr[-1])) && (ptr + 2 == end || IsPathSeparator(ptr[2])))
+            return true;
+        ptr += 2;
+    }
+
+    return false;
+}
+
 static bool CheckForDumbTerm()
 {
     static bool dumb = ([]() {
