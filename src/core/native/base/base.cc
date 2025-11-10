@@ -10533,9 +10533,8 @@ const char *PromptPath(const char *prompt, const char *default_path, const char 
         K_DEFER_N(err_guard) { out_choices->RemoveFrom(start_len); };
 
         Span<const char> prefix = SplitStrReverseAny(str, K_PATH_SEPARATORS, &str);
-
-        str = TrimStrRight(str, K_PATH_SEPARATORS);
-        const char *dirname = Fmt(alloc, "%1%/", str).ptr;
+        Span<const char> root = NormalizePath(str, (int)NormalizeFlag::EndWithSeparator, alloc).ptr;
+        const char *dirname = root.ptr;
 
         if (!PathIsAbsolute(dirname)) {
             if (!root_dir)
@@ -10551,7 +10550,7 @@ const char *PromptPath(const char *prompt, const char *default_path, const char 
                 const char *name = DuplicateString(basename, alloc).ptr;
 
                 const char *suffix = (file_type == FileType::Directory) ? "/" : "";
-                const char *value = Fmt(alloc, "%1%/%2%3", str, basename, suffix).ptr;
+                const char *value = Fmt(alloc, "%1%2%3", root, basename, suffix).ptr;
 
                 out_choices->Append({ name, value });
             }
@@ -10579,8 +10578,8 @@ const char *PromptPath(const char *prompt, const char *default_path, const char 
     if (!prompter.Read())
         return nullptr;
 
-    const char *str = prompter.str.Leak().ptr;
-    return str;
+    const char *path = NormalizePath(prompter.str, root_dir, alloc).ptr;
+    return path;
 }
 
 // ------------------------------------------------------------------------
