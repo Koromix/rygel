@@ -923,6 +923,35 @@ TEST_FUNCTION("base/PathCheck")
 #undef TEST_ABS
 }
 
+TEST_FUNCTION("base/NormalizePath")
+{
+    BlockAllocator temp_alloc;
+
+    TEST_STR(NormalizePath("", &temp_alloc), "");
+    TEST_STR(NormalizePath(".", &temp_alloc), ".");
+    TEST_STR(NormalizePath("foo/", &temp_alloc), "foo");
+    TEST_STR(NormalizePath("foo/..", &temp_alloc), ".");
+    TEST_STR(NormalizePath("foo/../..", &temp_alloc), "..");
+    TEST_STR(NormalizePath("foo/../bar", &temp_alloc), "bar");
+    TEST_STR(NormalizePath("foo/././bar", &temp_alloc), "foo/bar");
+    TEST_STR(NormalizePath("foo/2/../bar", &temp_alloc), "foo/bar");
+    TEST_STR(NormalizePath("foo/", "/bar", &temp_alloc), "/bar/foo");
+    TEST_STR(NormalizePath("/foo/foo/", "/bar", &temp_alloc), "/foo/foo");
+    TEST_STR(NormalizePath("/", &temp_alloc), "/");
+
+    TEST_STR(NormalizePath("", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "");
+    TEST_STR(NormalizePath(".", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "./");
+    TEST_STR(NormalizePath("foo/", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "foo/");
+    TEST_STR(NormalizePath("foo/..", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "./");
+    TEST_STR(NormalizePath("foo/../..", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "../");
+    TEST_STR(NormalizePath("foo/../bar", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "bar/");
+    TEST_STR(NormalizePath("foo/././bar", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "foo/bar/");
+    TEST_STR(NormalizePath("foo/2/../bar", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "foo/bar/");
+    TEST_STR(NormalizePath("foo/", "/bar", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "/bar/foo/");
+    TEST_STR(NormalizePath("/foo/foo/", "/bar", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "/foo/foo/");
+    TEST_STR(NormalizePath("/", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "/");
+}
+
 struct IntBucket {
     int key;
     int value;
