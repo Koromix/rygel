@@ -3978,14 +3978,16 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
 
     if (!buf.len) {
         buf.Append('.');
+
+        if (flags & (int)NormalizeFlag::EndWithSeparator) {
+            buf.Append(separator);
+        }
     } else if (buf.len == 1 && IsPathSeparator(buf[0])) {
-        // Root '/', keep as-is
-    } else {
+        // Root '/', keep as-is or almost
+        buf[0] = separator;
+    } else if (!(flags & (int)NormalizeFlag::EndWithSeparator)) {
         // Strip last separator
         buf.len--;
-    }
-    if (flags & (int)NormalizeFlag::EndWithSeparator) {
-        buf.Append(separator);
     }
 
 #if defined(_WIN32)
