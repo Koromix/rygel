@@ -1,16 +1,14 @@
 # Windows
 
-> [!CAUTION]
-> This software has not been stabilized yet and **must not be used as your primary backup** tool.
-> You've been warned!
+> [!IMPORTANT]
+> Rekkord currently is beta quality software, we recommend use for **redundant backups**.
 
 Download ready-to-use binaries here: https://download.koromix.dev/rekkord/
 
 # macOS
 
-> [!CAUTION]
-> This software has not been stabilized yet and **must not be used as your primary backup** tool.
-> You've been warned!
+> [!IMPORTANT]
+> Rekkord currently is beta quality software, we recommend use for **redundant backups**.
 
 Download ready-to-use binaries here: https://download.koromix.dev/rekkord/
 
@@ -18,9 +16,8 @@ Download ready-to-use binaries here: https://download.koromix.dev/rekkord/
 
 ## Debian / Ubuntu
 
-> [!CAUTION]
-> This software has not been stabilized yet and **must not be used as your primary backup** tool.
-> You've been warned!
+> [!IMPORTANT]
+> Rekkord currently is beta quality software, we recommend use for **redundant backups**.
 
 A signed Debian repository is provided, and should work with Debian 12 and Debian derivatives (such as Ubuntu).
 
@@ -41,9 +38,8 @@ apt install rekkord
 
 ## RedHat, Fedora, Rocky Linux (RPM)
 
-> [!CAUTION]
-> This software has not been stabilized yet and **must not be used as your primary backup** tool.
-> You've been warned!
+> [!IMPORTANT]
+> Rekkord currently is beta quality software, we recommend use for **redundant backups**.
 
 A signed RPM repository is provided, and should work with RHEL, Fedora and Rocky Linux (9+).
 

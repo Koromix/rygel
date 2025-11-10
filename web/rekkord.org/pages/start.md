@@ -1,9 +1,5 @@
 # Create repository
 
-> [!CAUTION]
-> This software has not been stabilized yet and **must not be used as your primary backup** tool.
-> You've been warned!
-
 ## Create configuration
 
 Rekkord provides a step-by-step interactive command that will help you configure a repository.

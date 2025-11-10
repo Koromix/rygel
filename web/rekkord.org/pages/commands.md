@@ -1,9 +1,5 @@
 # Create snapshots
 
-> [!CAUTION]
-> This software has not been stabilized yet and **must not be used as your primary backup** tool.
-> You've been warned!
-
 Each snapshot has a channel, which is a non-unique string that you choose when you call `rekkord save`. Please note that there is a *maximum snapshot channel length* (256 bytes).
 
 ```sh

@@ -11,9 +11,8 @@ Rekkord is a **multi-platform backup tool**, with the following features:
      <img src="{{ ASSET static/start.gif }}" style="width: 100%; border-radius: 10px;">
 </div>
 
-> [!CAUTION]
-> This software has not been stabilized yet and **must not be used as your primary backup** tool.
-> You've been warned!
+> [!IMPORTANT]
+> Rekkord currently is beta quality software, we recommend use for **redundant backups**.
 
 If you like this project, consider supporting me:
 
