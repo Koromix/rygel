@@ -10532,14 +10532,40 @@ const char *PromptPath(const char *prompt, const char *default_path, const char 
         Size start_len = out_choices->len;
         K_DEFER_N(err_guard) { out_choices->RemoveFrom(start_len); };
 
-        Span<const char> prefix = SplitStrReverseAny(str, K_PATH_SEPARATORS, &str);
-        Span<const char> root = NormalizePath(str, (int)NormalizeFlag::EndWithSeparator, alloc).ptr;
-        const char *dirname = root.ptr;
+        Span<const char> path = TrimStrRight(str, K_PATH_SEPARATORS);
+        bool separator = (path.len < str.len);
 
-        if (!PathIsAbsolute(dirname)) {
+        // If the value points to a directory, append separator and return
+        if (str.len && !separator) {
+            const char *filename = NormalizePath(path, root_dir, alloc).ptr;
+
+            FileInfo file_info;
+            StatResult ret = StatFile(filename, (int)StatFlag::SilentMissing | (int)StatFlag::FollowSymlink, &file_info);
+
+            if (ret == StatResult::Success && file_info.type == FileType::Directory) {
+                const char *value = Fmt(alloc, "%1%/", filename).ptr;
+                out_choices->Append({ value, value });
+
+                err_guard.Disable();
+                return CompleteResult::Success;
+            }
+        }
+
+        Span<const char> directory = path;
+        Span<const char> prefix = separator ? "" : SplitStrReverseAny(path, K_PATH_SEPARATORS, &directory);
+
+        // EnumerateDirectory takes a C string, so we need the NUL terminator,
+        // and we also need to take root_dir into account.
+        const char *dirname = nullptr;
+
+        if (PathIsAbsolute(directory)) {
+            dirname = DuplicateString(directory, alloc).ptr;
+        } else {
             if (!root_dir)
                 return CompleteResult::Success;
-            dirname = Fmt(alloc, "%1%/%2", TrimStrRight(root_dir, K_PATH_SEPARATORS), dirname).ptr;
+
+            dirname = NormalizePath(directory, root_dir, alloc).ptr;
+            dirname = dirname[0] ? dirname : ".";
         }
 
         EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, FileType file_type) {
@@ -10547,20 +10573,27 @@ const char *PromptPath(const char *prompt, const char *default_path, const char 
                 if (out_choices->len - start_len >= 128)
                     return false;
 
-                const char *name = DuplicateString(basename, alloc).ptr;
+                CompleteChoice choice;
 
-                const char *suffix = (file_type == FileType::Directory) ? "/" : "";
-                const char *value = Fmt(alloc, "%1%2%3", root, basename, suffix).ptr;
+                choice.name = DuplicateString(basename, alloc).ptr;
+                if (directory.len && directory != "/") {
+                    const char *suffix = (file_type == FileType::Directory) ? "/" : "";
+                    choice.value = Fmt(alloc, "%1%/%2%3", directory, basename, suffix).ptr;
+                } else {
+                    const char *suffix = (file_type == FileType::Directory) ? "/" : "";
+                    choice.value = Fmt(alloc, "%1%2%3", directory, basename, suffix).ptr;
+                }
 
-                out_choices->Append({ name, value });
+                out_choices->Append(choice);
             }
             return true;
         });
 
-        switch (ret) {
-            case EnumResult::Success: {} break;
-            case EnumResult::CallbackFail: return CompleteResult::TooMany;
-            default: return CompleteResult::Error;
+        if (ret == EnumResult::CallbackFail) {
+            return CompleteResult::TooMany;
+        } else if (ret != EnumResult::Success) {
+            // Just ignore it and don't print anything
+            return CompleteResult::Success;
         }
 
         std::sort(out_choices->ptr + start_len, out_choices->end(),
