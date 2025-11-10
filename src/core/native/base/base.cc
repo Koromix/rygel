@@ -10521,7 +10521,7 @@ int PromptYN(const char *prompt)
     return !ret;
 }
 
-const char *PromptPath(const char *prompt, const char *default_path, const char *root_dir, Allocator *alloc)
+const char *PromptPath(const char *prompt, const char *default_path, Span<const char> root_directory, Allocator *alloc)
 {
     K_ASSERT(alloc);
 
@@ -10537,7 +10537,7 @@ const char *PromptPath(const char *prompt, const char *default_path, const char 
 
         // If the value points to a directory, append separator and return
         if (str.len && !separator) {
-            const char *filename = NormalizePath(path, root_dir, alloc).ptr;
+            const char *filename = NormalizePath(path, root_directory, alloc).ptr;
 
             FileInfo file_info;
             StatResult ret = StatFile(filename, (int)StatFlag::SilentMissing | (int)StatFlag::FollowSymlink, &file_info);
@@ -10561,10 +10561,10 @@ const char *PromptPath(const char *prompt, const char *default_path, const char 
         if (PathIsAbsolute(directory)) {
             dirname = DuplicateString(directory, alloc).ptr;
         } else {
-            if (!root_dir)
+            if (!root_directory.len)
                 return CompleteResult::Success;
 
-            dirname = NormalizePath(directory, root_dir, alloc).ptr;
+            dirname = NormalizePath(directory, root_directory, alloc).ptr;
             dirname = dirname[0] ? dirname : ".";
         }
 
@@ -10611,7 +10611,7 @@ const char *PromptPath(const char *prompt, const char *default_path, const char 
     if (!prompter.Read())
         return nullptr;
 
-    const char *path = NormalizePath(prompter.str, root_dir, alloc).ptr;
+    const char *path = NormalizePath(prompter.str, root_directory, alloc).ptr;
     return path;
 }
 
