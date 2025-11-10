@@ -44,6 +44,22 @@ static const char *PromptNonEmpty(const char *object, Allocator *alloc)
     return ret;
 }
 
+static const char *PromptPathNonEmpty(const char *prompt, const char *value, Span<const char> root_directory, Allocator *alloc)
+{
+retry:
+    const char *ret = PromptPath(prompt, value, root_directory, alloc);
+    if (!ret)
+        return nullptr;
+
+    if (!ret[0]) {
+        Span<const char> object = TrimStrRight(prompt, ".:;,-_ ");
+        LogError("Cannot use empty %1", FmtLowerAscii(object));
+        goto retry;
+    }
+
+    return ret;
+}
+
 static bool CheckEndpoint(const char *url)
 {
     CURLU *h = curl_url();
@@ -133,7 +149,7 @@ Options:
         if (idx == choices.len - 1) {
             const char *value = custom ? custom : DefaultConfigName;
 
-            config_filename = PromptPath(T("Custom config filename:"), value, GetWorkingDirectory(), &temp_alloc);
+            config_filename = PromptPathNonEmpty(T("Custom config filename:"), value, GetWorkingDirectory(), &temp_alloc);
             if (!config_filename)
                 return 1;
 
@@ -189,7 +205,9 @@ Options:
 
     switch (type) {
         case rk_DiskType::Local: {
-            const char *url = PromptPath(T("Repository path:"), nullptr, GetWorkingDirectory(), &temp_alloc);
+            Span<const char> directory = GetPathDirectory(config_filename);
+
+            const char *url = PromptPathNonEmpty(T("Repository path:"), nullptr, directory, &temp_alloc);
             if (!url)
                 return 1;
             Print(&st, BaseConfig, url, key_path);
