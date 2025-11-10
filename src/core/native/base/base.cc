@@ -3923,6 +3923,21 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
     if (!path.len && !root_directory.len)
         return Fmt(alloc, "");
 
+#if !defined(_WIN32)
+    if (!(flags & (int)NormalizeFlag::NoExpansion)) {
+        Span<const char> prefix = SplitStrAny(path, K_PATH_SEPARATORS);
+
+        if (prefix == "~") {
+            const char *home = GetEnv("HOME");
+
+            if (home) {
+                root_directory = home;
+                path = TrimStrLeft(path.Take(1, path.len - 1), K_PATH_SEPARATORS);
+            }
+        }
+    }
+#endif
+
     HeapArray<char> buf(alloc);
     Size parts_count = 0;
 
