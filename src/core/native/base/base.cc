@@ -10506,6 +10506,68 @@ int PromptYN(const char *prompt)
     return !ret;
 }
 
+const char *PromptPath(const char *prompt, const char *default_path, const char *root_dir, Allocator *alloc)
+{
+    K_ASSERT(alloc);
+
+    ConsolePrompter prompter;
+
+    prompter.prompt = prompt;
+    prompter.complete = [&](Span<const char> str, Allocator *alloc, HeapArray<CompleteChoice> *out_choices) {
+        Size start_len = out_choices->len;
+        K_DEFER_N(err_guard) { out_choices->RemoveFrom(start_len); };
+
+        Span<const char> prefix = SplitStrReverseAny(str, K_PATH_SEPARATORS, &str);
+
+        str = TrimStrRight(str, K_PATH_SEPARATORS);
+        const char *dirname = Fmt(alloc, "%1%/", str).ptr;
+
+        if (!PathIsAbsolute(dirname)) {
+            if (!root_dir)
+                return CompleteResult::Success;
+            dirname = Fmt(alloc, "%1%/%2", TrimStrRight(root_dir, K_PATH_SEPARATORS), dirname).ptr;
+        }
+
+        EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, FileType file_type) {
+            if (StartsWith(basename, prefix)) {
+                if (out_choices->len - start_len >= 128)
+                    return false;
+
+                const char *name = DuplicateString(basename, alloc).ptr;
+
+                const char *suffix = (file_type == FileType::Directory) ? "/" : "";
+                const char *value = Fmt(alloc, "%1%/%2%3", str, basename, suffix).ptr;
+
+                out_choices->Append({ name, value });
+            }
+            return true;
+        });
+
+        switch (ret) {
+            case EnumResult::Success: {} break;
+            case EnumResult::CallbackFail: return CompleteResult::TooMany;
+            default: return CompleteResult::Error;
+        }
+
+        std::sort(out_choices->ptr + start_len, out_choices->end(),
+                  [](const CompleteChoice &choice1, const CompleteChoice &choice2) { return CmpStr(choice1.name, choice2.name) < 0; });
+
+        err_guard.Disable();
+        return CompleteResult::Success;
+    };
+
+    prompter.str.allocator = alloc;
+    if (default_path) {
+        prompter.str.Append(default_path);
+    }
+
+    if (!prompter.Read())
+        return nullptr;
+
+    const char *str = prompter.str.Leak().ptr;
+    return str;
+}
+
 // ------------------------------------------------------------------------
 // Mime types
 // ------------------------------------------------------------------------

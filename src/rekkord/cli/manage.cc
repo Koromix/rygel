@@ -133,7 +133,7 @@ Options:
         if (idx == choices.len - 1) {
             const char *value = custom ? custom : DefaultConfigName;
 
-            config_filename = PromptNonEmpty(T("Custom config filename:"), value, nullptr, &temp_alloc);
+            config_filename = PromptPath(T("Custom config filename:"), value, GetWorkingDirectory(), &temp_alloc);
             if (!config_filename)
                 return 1;
 
@@ -189,7 +189,7 @@ Options:
 
     switch (type) {
         case rk_DiskType::Local: {
-            const char *url = PromptNonEmpty(T("Repository path:"), &temp_alloc);
+            const char *url = PromptPath(T("Repository path:"), nullptr, GetWorkingDirectory(), &temp_alloc);
             if (!url)
                 return 1;
             Print(&st, BaseConfig, url, key_path);

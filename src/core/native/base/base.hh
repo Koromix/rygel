@@ -5766,6 +5766,10 @@ Size PromptEnum(const char *prompt, Span<const char *const> strings, Size value 
 // Returns -1 if cancelled, otherwise it's 1 for Yes and or 0 for No
 int PromptYN(const char *prompt);
 
+const char *PromptPath(const char *prompt, const char *default_path, const char *root_dir, Allocator *alloc);
+static inline const char *PromptPath(const char *prompt, Allocator *alloc)
+    { return PromptPath(prompt, nullptr, GetWorkingDirectory(), alloc); }
+
 // ------------------------------------------------------------------------
 // Mime types
 // ------------------------------------------------------------------------
