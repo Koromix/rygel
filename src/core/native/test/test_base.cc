@@ -950,6 +950,21 @@ TEST_FUNCTION("base/NormalizePath")
     TEST_STR(NormalizePath("foo/", "/bar", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "/bar/foo/");
     TEST_STR(NormalizePath("/foo/foo/", "/bar", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "/foo/foo/");
     TEST_STR(NormalizePath("/", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "/");
+
+#if !defined(_WIN32)
+    {
+        K_DEFER_C(home = GetEnv("HOME")) { setenv("HOME", home, 1); };
+        setenv("HOME", "/home/foo", 1);
+
+        TEST_STR(NormalizePath("~", &temp_alloc), "/home/foo");
+        TEST_STR(NormalizePath("~/", &temp_alloc), "/home/foo");
+        TEST_STR(NormalizePath("~/bar", &temp_alloc), "/home/foo/bar");
+
+        TEST_STR(NormalizePath("~", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "/home/foo/");
+        TEST_STR(NormalizePath("~/", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "/home/foo/");
+        TEST_STR(NormalizePath("~/bar", (int)NormalizeFlag::EndWithSeparator, &temp_alloc), "/home/foo/bar/");
+    }
+#endif
 }
 
 struct IntBucket {
