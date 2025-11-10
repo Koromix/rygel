@@ -10611,8 +10611,8 @@ const char *PromptPath(const char *prompt, const char *default_path, Span<const 
     if (!prompter.Read())
         return nullptr;
 
-    const char *path = NormalizePath(prompter.str, root_directory, alloc).ptr;
-    return path;
+    const char *str = prompter.str.Leak().ptr;
+    return str;
 }
 
 // ------------------------------------------------------------------------
