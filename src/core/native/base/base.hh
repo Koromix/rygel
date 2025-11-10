@@ -5680,8 +5680,8 @@ bool OptionToFlagI(Span<const OptionDesc> options, Span<const char> str, T *out_
 // ------------------------------------------------------------------------
 
 struct PromptChoice {
-    char c;
     const char *str;
+    char c;
 };
 
 class ConsolePrompter {

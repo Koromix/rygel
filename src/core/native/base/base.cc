@@ -10126,7 +10126,11 @@ void ConsolePrompter::FormatChoices(Span<const PromptChoice> choices, Size value
         const PromptChoice &choice = choices[i];
         int pad = align - ComputeUnicodeWidth(choice.str);
 
-        Fmt(&str, "  [%1] %2%3  ", choice.c, choice.str, FmtRepeat(" ", pad));
+        if (choice.c) {
+            Fmt(&str, "  [%1] %2%3  ", choice.c, choice.str, FmtRepeat(" ", pad));
+        } else {
+            Fmt(&str, "      %1%2  ", choice.str, FmtRepeat(" ", pad));
+        }
         if (i == value) {
             str_offset = str.len;
         }
@@ -10388,6 +10392,7 @@ const char *Prompt(const char *prompt, const char *default_value, const char *ma
 
     prompter.prompt = prompt;
     prompter.mask = mask;
+
     prompter.str.allocator = alloc;
     if (default_value) {
         prompter.str.Append(default_value);
@@ -10407,11 +10412,15 @@ Size PromptEnum(const char *prompt, Span<const PromptChoice> choices, Size value
         HashSet<char> keys;
 
         for (const PromptChoice &choice: choices) {
-            keys.Set(choice.c);
-        }
+            if (!choice.c)
+                continue;
 
-        bool duplicates = (keys.table.count < choices.len);
-        K_ASSERT(!duplicates);
+            bool inserted;
+            keys.TrySet(choice.c, &inserted);
+
+            bool duplicates = !inserted;
+            K_ASSERT(!duplicates);
+        }
     }
 #endif
 
@@ -10424,13 +10433,12 @@ Size PromptEnum(const char *prompt, Span<const PromptChoice> choices, Size value
 Size PromptEnum(const char *prompt, Span<const char *const> strings, Size value)
 {
     static const char literals[] = "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    K_ASSERT(strings.len <= K_LEN(literals));
 
     HeapArray<PromptChoice> choices;
 
     for (Size i = 0; i < strings.len; i++) {
         const char *str = strings[i];
-        PromptChoice choice = { literals[i], str };
+        PromptChoice choice = { str, i < K_LEN(literals) ? literals[i] : (char)0 };
 
         choices.Append(choice);
     }
@@ -10440,9 +10448,13 @@ Size PromptEnum(const char *prompt, Span<const char *const> strings, Size value)
 
 int PromptYN(const char *prompt)
 {
-    const char *shortcuts = T("yn");
+    const char *yes = T("Yes");
+    const char *no = T("No");
 
-    Size ret = PromptEnum(prompt, {{ shortcuts[0], T("Yes") }, { shortcuts[1], T("No") }});
+    const char *shortcuts = T("yn");
+    K_ASSERT(strlen(shortcuts) == 2);
+
+    Size ret = PromptEnum(prompt, {{ yes, shortcuts[0] }, { no, shortcuts[1] }});
     if (ret < 0)
         return -1;
 
