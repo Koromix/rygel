@@ -5684,6 +5684,19 @@ struct PromptChoice {
     char c;
 };
 
+enum class CompleteResult {
+    Success,
+    TooMany,
+    Error
+};
+
+struct CompleteChoice {
+    const char *name;
+    const char *value;
+};
+
+typedef CompleteResult CompleteFunc(Span<const char> value, Allocator *alloc, HeapArray<CompleteChoice> *out_choices);
+
 class ConsolePrompter {
     int prompt_columns = 0;
 
@@ -5705,6 +5718,7 @@ class ConsolePrompter {
 public:
     const char *prompt = ">>>";
     const char *mask = nullptr;
+    std::function<CompleteFunc> complete = {};
 
     HeapArray<char> str;
 

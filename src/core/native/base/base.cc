@@ -9825,6 +9825,51 @@ bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
                 return true;
             } break;
 
+            case '\t': {
+                if (complete) {
+                    StdErr->Write("\x1B[0m");
+
+                    BlockAllocator temp_alloc;
+                    HeapArray<CompleteChoice> choices;
+
+                    PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+                    K_DEFER_N(log_guard) { PopLogFilter(); };
+
+                    CompleteResult ret = complete(str, &temp_alloc, &choices);
+
+                    switch (ret) {
+                        case CompleteResult::Success: {
+                            if (choices.len == 1) {
+                                const CompleteChoice &choice = choices[0];
+
+                                str.RemoveFrom(0);
+                                str.Append(choice.value);
+                                str_offset = str.len;
+                                RenderRaw();
+                            } else if (choices.len) {
+                                for (const CompleteChoice &choice: choices) {
+                                    Print(StdErr, "\r\n  %!Y..%1%!0", choice.name);
+                                }
+                                StdErr->Write("\r\n");
+
+                                RenderRaw();
+                            }
+                        } break;
+
+                        case CompleteResult::TooMany: {
+                            Print(StdErr, "\r\n  %!Y..%1%!0\r\n", T("Too many possibilities to show"));
+                            RenderRaw();
+                        } break;
+                        case CompleteResult::Error: {
+                            Print(StdErr, "\r\n  %!Y..%1%!0\r\n", T("Autocompletion error"));
+                            RenderRaw();
+                        } break;
+                    }
+
+                    break;
+                }
+            } [[fallthrough]];
+
             default: {
                 LocalArray<char, 16> frag;
                 if (uc == '\t') {
