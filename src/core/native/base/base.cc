@@ -9844,8 +9844,6 @@ bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
 
             case '\t': {
                 if (complete) {
-                    StdErr->Write("\x1B[0m");
-
                     BlockAllocator temp_alloc;
                     HeapArray<CompleteChoice> choices;
 
@@ -9865,7 +9863,7 @@ bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
                                 RenderRaw();
                             } else if (choices.len) {
                                 for (const CompleteChoice &choice: choices) {
-                                    Print(StdErr, "\r\n  %!Y..%1%!0", choice.name);
+                                    Print(StdErr, "\r\n  %!0%!Y..%1%!0", choice.name);
                                 }
                                 StdErr->Write("\r\n");
 
@@ -9874,11 +9872,11 @@ bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
                         } break;
 
                         case CompleteResult::TooMany: {
-                            Print(StdErr, "\r\n  %!Y..%1%!0\r\n", T("Too many possibilities to show"));
+                            Print(StdErr, "\r\n  %!0%!Y..%1%!0\r\n", T("Too many possibilities to show"));
                             RenderRaw();
                         } break;
                         case CompleteResult::Error: {
-                            Print(StdErr, "\r\n  %!Y..%1%!0\r\n", T("Autocompletion error"));
+                            Print(StdErr, "\r\n  %!0%!Y..%1%!0\r\n", T("Autocompletion error"));
                             RenderRaw();
                         } break;
                     }
