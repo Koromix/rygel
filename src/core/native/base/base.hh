@@ -1568,6 +1568,47 @@ static inline bool StartsWith(const char *str, const char *prefix)
     return !prefix[i];
 }
 
+static inline bool StartsWithI(Span<const char> str, Span<const char> prefix)
+{
+    Size i = 0;
+    while (i < str.len && i < prefix.len) {
+        if (LowerAscii(str[i]) != LowerAscii(prefix[i]))
+            return false;
+        i++;
+    }
+    return (i == prefix.len);
+}
+static inline bool StartsWithI(Span<const char> str, const char *prefix)
+{
+    Size i = 0;
+    while (i < str.len && prefix[i]) {
+        if (LowerAscii(str[i]) != LowerAscii(prefix[i]))
+            return false;
+        i++;
+    }
+    return !prefix[i];
+}
+static inline bool StartsWithI(const char *str, Span<const char> prefix)
+{
+    Size i = 0;
+    while (str[i] && i < prefix.len) {
+        if (LowerAscii(str[i]) != LowerAscii(prefix[i]))
+            return false;
+        i++;
+    }
+    return (i == prefix.len);
+}
+static inline bool StartsWithI(const char *str, const char *prefix)
+{
+    Size i = 0;
+    while (str[i] && prefix[i]) {
+        if (LowerAscii(str[i]) != LowerAscii(prefix[i]))
+            return false;
+        i++;
+    }
+    return !prefix[i];
+}
+
 static inline bool EndsWith(Span<const char> str, Span<const char> suffix)
 {
     Size i = str.len - 1;
@@ -1575,6 +1616,21 @@ static inline bool EndsWith(Span<const char> str, Span<const char> suffix)
 
     while (i >= 0 && j >= 0) {
         if (str[i] != suffix[j])
+            return false;
+
+        i--;
+        j--;
+    }
+
+    return j < 0;
+}
+static inline bool EndsWithI(Span<const char> str, Span<const char> suffix)
+{
+    Size i = str.len - 1;
+    Size j = suffix.len - 1;
+
+    while (i >= 0 && j >= 0) {
+        if (LowerAscii(str[i]) != LowerAscii(suffix[j]))
             return false;
 
         i--;
