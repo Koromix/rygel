@@ -10620,7 +10620,7 @@ const char *PromptPath(const char *prompt, const char *default_path, Span<const 
         }
 
         std::sort(out_choices->ptr + start_len, out_choices->end(),
-                  [](const CompleteChoice &choice1, const CompleteChoice &choice2) { return CmpStr(choice1.name, choice2.name) < 0; });
+                  [](const CompleteChoice &choice1, const CompleteChoice &choice2) { return CmpNaturalI(choice1.name, choice2.name) < 0; });
 
         err_guard.Disable();
         return CompleteResult::Success;
