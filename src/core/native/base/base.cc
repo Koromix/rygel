@@ -10556,7 +10556,7 @@ const char *PromptPath(const char *prompt, const char *default_path, Span<const 
             StatResult ret = StatFile(filename, (int)StatFlag::SilentMissing | (int)StatFlag::FollowSymlink, &file_info);
 
             if (ret == StatResult::Success && file_info.type == FileType::Directory) {
-                const char *value = Fmt(alloc, "%1%/", filename).ptr;
+                const char *value = Fmt(alloc, "%1%/", path).ptr;
                 out_choices->Append({ value, value });
 
                 err_guard.Disable();
