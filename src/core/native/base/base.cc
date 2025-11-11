@@ -1242,32 +1242,12 @@ static inline void AppendPad(Size pad, char padding, AppendFunc append)
 }
 
 template <typename AppendFunc>
-static inline void AppendEscaped(char c, AppendFunc append)
+static inline void AppendSafe(char c, AppendFunc append)
 {
-    switch (c) {
-        case '\"': { append("\\\""); } break;
-        case '\'': { append("\\'"); } break;
-        case '\r': { append("\\r"); } break;
-        case '\n': { append("\\n"); } break;
-        case '\t': { append("\\t"); } break;
-        case '\\': { append("\\\\"); } break;
+    if (IsAsciiControl(c))
+        return;
 
-        default: {
-            if (IsAsciiControl(c)) {
-                char encoded[4];
-
-                encoded[0] = '\\';
-                encoded[1] = '0' + (((uint8_t)c >> 6) & 7);
-                encoded[2] = '0' + (((uint8_t)c >> 3) & 7);
-                encoded[3] = '0' + (((uint8_t)c >> 0) & 7);
-
-                Span<const char> buf = MakeSpan(encoded, 4);
-                append(buf);
-            } else {
-                append(c);
-            }
-        } break;
-    }
+    append(c);
 }
 
 template <typename AppendFunc>
@@ -1670,12 +1650,12 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             append(buf);
         } break;
 
-        case FmtType::EscapeStr: {
+        case FmtType::SafeStr: {
             for (char c: arg.u.str) {
-                AppendEscaped(c, append);
+                AppendSafe(c, append);
             }
         } break;
-        case FmtType::EscapeChar: { AppendEscaped(arg.u.ch, append); } break;
+        case FmtType::SafeChar: { AppendSafe(arg.u.ch, append); } break;
     }
 }
 
@@ -1984,6 +1964,34 @@ void FmtHtmlSafe::Format(FunctionRef<void(Span<const char>)> append) const
             case '&':  { append("&amp;"); } break;
 
             default: { append(c); } break;
+        }
+    }
+}
+
+void FmtEscape::Format(FunctionRef<void(Span<const char>)> append) const
+{
+    for (char c: str) {
+        if (c == '\r') {
+            append("\\r");
+        } else if (c == '\n') {
+            append("\\n");
+        } else if (c == '\\') {
+            append("\\\\");
+        } else if ((unsigned int)c < 32) {
+            char encoded[4];
+
+            encoded[0] = '\\';
+            encoded[1] = '0' + (((uint8_t)c >> 6) & 7);
+            encoded[2] = '0' + (((uint8_t)c >> 3) & 7);
+            encoded[3] = '0' + (((uint8_t)c >> 0) & 7);
+
+            Span<const char> buf = MakeSpan(encoded, 4);
+            append(buf);
+        } else if (c == quote) {
+            append('\\');
+            append(quote);
+        } else {
+            append(c);
         }
     }
 }

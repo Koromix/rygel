@@ -151,7 +151,7 @@ bool PackTranslations(Span<const TranslationFile> files, unsigned int flags, con
             PrintLn(&c);
             PrintLn(&c, "static const TranslationMessage messages%1[] = {", i);
             for (const TranslationMessage &msg: file.messages) {
-                PrintLn(&c, "    { \"%1\", \"%2\" },", FmtEscape(msg.key), FmtEscape(msg.value));
+                PrintLn(&c, "    { \"%1\", \"%2\" },", FmtEscape(msg.key, '"'), FmtEscape(msg.value, '"'));
             }
             PrintLn(&c, "};");
         }

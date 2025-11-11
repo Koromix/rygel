@@ -346,7 +346,7 @@ reenter:
 
         LogInfo();
         LogInfo("You have used a custom config path.");
-        LogInfo("Use %!..+export REKKORD_CONFIG_FILE=\"%1\"%!0 before you execute other commands.", FmtEscape(fullpath));
+        LogInfo("Use %!..+export REKKORD_CONFIG_FILE=\"%1\"%!0 before you execute other commands.", FmtEscape(fullpath, '"'));
     }
 
     LogInfo();

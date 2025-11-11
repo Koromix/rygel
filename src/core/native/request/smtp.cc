@@ -335,7 +335,7 @@ Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_Mai
             }
             if (file.name) {
                 const char *disposition = file.inlined ? "inline" : "attachment";
-                Fmt(&buf, "Content-Disposition: %1; filename=\"%2\"\r\n\r\n", disposition, FmtEscape(file.name));
+                Fmt(&buf, "Content-Disposition: %1; filename=\"%2\"\r\n\r\n", disposition, FmtEscape(file.name, '"'));
             } else {
                 const char *disposition = file.inlined ? "inline" : "attachment";
                 Fmt(&buf, "Content-Disposition: %1\r\n\r\n", disposition);

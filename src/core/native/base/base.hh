@@ -3653,8 +3653,8 @@ enum class FmtType {
     FlagNames,
     FlagOptions,
     Random,
-    EscapeStr,
-    EscapeChar
+    SafeStr,
+    SafeChar
 };
 
 template <typename T>
@@ -3775,29 +3775,29 @@ protected:
     FmtArg(FmtType type) : type(type) {}
 };
 
-class FmtEscape: public FmtArg {
+class FmtSafe: public FmtArg {
 public:
-    FmtEscape() = default;
-    FmtEscape(FmtArg arg) : FmtArg(arg) {}
-    FmtEscape(std::nullptr_t) : FmtArg(FmtType::Str) { u.str = "(null)"; }
-    FmtEscape(const char *str) : FmtArg(FmtType::EscapeStr) { u.str = str ? str : "(null)"; } // safe
-    FmtEscape(Span<const char> str) : FmtArg(FmtType::EscapeStr) { u.str = str; } // safe
-    FmtEscape(char c) : FmtArg(FmtType::EscapeChar) { u.ch = c; } // safe
-    FmtEscape(const FmtCustom &custom) : FmtArg(custom) {}
-    FmtEscape(bool b) : FmtArg(b) {}
-    FmtEscape(unsigned char i) : FmtArg(i) {}
-    FmtEscape(short i) : FmtArg(i) {}
-    FmtEscape(unsigned short i) : FmtArg(i) {}
-    FmtEscape(int i) : FmtArg(i) {}
-    FmtEscape(unsigned int i) : FmtArg(i) {}
-    FmtEscape(long i) : FmtArg(i) {}
-    FmtEscape(unsigned long i) : FmtArg(i) {}
-    FmtEscape(long long i) : FmtArg(i) {}
-    FmtEscape(unsigned long long i) : FmtArg(i) {}
-    FmtEscape(float f) : FmtArg(f) {}
-    FmtEscape(double d) : FmtArg(d) {}
-    FmtEscape(const void *ptr) : FmtArg(ptr) {}
-    FmtEscape(const LocalDate &date) : FmtArg(date) {}
+    FmtSafe() = default;
+    FmtSafe(FmtArg arg) : FmtArg(arg) {}
+    FmtSafe(std::nullptr_t) : FmtArg(FmtType::Str) { u.str = "(null)"; }
+    FmtSafe(const char *str) : FmtArg(FmtType::SafeStr) { u.str = str ? str : "(null)"; } // safe
+    FmtSafe(Span<const char> str) : FmtArg(FmtType::SafeStr) { u.str = str; } // safe
+    FmtSafe(char c) : FmtArg(FmtType::SafeChar) { u.ch = c; } // safe
+    FmtSafe(const FmtCustom &custom) : FmtArg(custom) {}
+    FmtSafe(bool b) : FmtArg(b) {}
+    FmtSafe(unsigned char i) : FmtArg(i) {}
+    FmtSafe(short i) : FmtArg(i) {}
+    FmtSafe(unsigned short i) : FmtArg(i) {}
+    FmtSafe(int i) : FmtArg(i) {}
+    FmtSafe(unsigned int i) : FmtArg(i) {}
+    FmtSafe(long i) : FmtArg(i) {}
+    FmtSafe(unsigned long i) : FmtArg(i) {}
+    FmtSafe(long long i) : FmtArg(i) {}
+    FmtSafe(unsigned long long i) : FmtArg(i) {}
+    FmtSafe(float f) : FmtArg(f) {}
+    FmtSafe(double d) : FmtArg(d) {}
+    FmtSafe(const void *ptr) : FmtArg(ptr) {}
+    FmtSafe(const LocalDate &date) : FmtArg(date) {}
 };
 
 static inline FmtArg FmtInt(long long i, int pad = 0, char padding = '0')
@@ -4034,6 +4034,17 @@ public:
     operator FmtArg() const { return FmtCustom(*this); }
 };
 
+class FmtEscape {
+    Span<const char> str;
+    char quote;
+
+public:
+    FmtEscape(Span<const char> str, char quote) : str(str), quote(quote) {}
+
+    void Format(FunctionRef<void(Span<const char>)> append) const;
+    operator FmtArg() const { return FmtCustom(*this); }
+};
+
 FmtArg FmtVersion(int64_t version, int parts, int by);
 
 enum class LogLevel {
@@ -4133,7 +4144,7 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt)
 template <typename... Args>
 static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args... args)
 {
-    const FmtArg fmt_args[] = { FmtEscape(args)... };
+    const FmtArg fmt_args[] = { FmtSafe(args)... };
     LogFmt(level, ctx, fmt, fmt_args);
 }
 
