@@ -10582,10 +10582,19 @@ const char *PromptPath(const char *prompt, const char *default_path, Span<const 
         }
 
         EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, FileType file_type) {
-            if (StartsWith(basename, prefix)) {
-                if (out_choices->len - start_len >= K_COMPLETE_PATH_LIMIT)
-                    return false;
+#if defined(_WIN32)
+            if (!StartsWithI(basename, prefix))
+                return true;
+#else
+            if (!StartsWith(basename, prefix))
+                return true;
+#endif
 
+            if (out_choices->len - start_len >= K_COMPLETE_PATH_LIMIT)
+                return false;
+
+            CompleteChoice choice;
+            {
                 HeapArray<char> buf(alloc);
 
                 // Make directory part
@@ -10604,11 +10613,11 @@ const char *PromptPath(const char *prompt, const char *default_path, Span<const 
                 buf.Append(0);
                 buf.Trim();
 
-                const char *value = buf.Leak().ptr;
-                const char *name = value + name_offset;
-
-                out_choices->Append({ name, value });
+                choice.value = buf.Leak().ptr;
+                choice.name = choice.value + name_offset;
             }
+
+            out_choices->Append(choice);
             return true;
         });
 
