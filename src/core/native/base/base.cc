@@ -10583,7 +10583,7 @@ const char *PromptPath(const char *prompt, const char *default_path, Span<const 
 
         EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, FileType file_type) {
             if (StartsWith(basename, prefix)) {
-                if (out_choices->len - start_len >= 128)
+                if (out_choices->len - start_len >= K_COMPLETE_PATH_LIMIT)
                     return false;
 
                 CompleteChoice choice;

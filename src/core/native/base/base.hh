@@ -90,6 +90,8 @@ namespace K {
 #define K_PROGRESS_USED_NODES 100
 #define K_PROGRESS_TEXT_SIZE 64
 
+#define K_COMPLETE_PATH_LIMIT 256
+
 // ------------------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------------------
