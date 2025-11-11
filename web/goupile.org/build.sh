@@ -6,5 +6,5 @@ cd "$(dirname $0)"
 ../../felix -pFast hodler
 
 mkdir -p ../../bin/Web/goupile.org/en
-../../bin/Fast/hodler fr -O ../../bin/Web/goupile.org
-../../bin/Fast/hodler en -b /en/ -O ../../bin/Web/goupile.org/en
+../../bin/Fast/hodler fr -O ../../bin/Web/goupile.org --gzip
+../../bin/Fast/hodler en -b /en/ -O ../../bin/Web/goupile.org/en --gzip
