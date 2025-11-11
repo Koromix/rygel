@@ -10586,18 +10586,28 @@ const char *PromptPath(const char *prompt, const char *default_path, Span<const 
                 if (out_choices->len - start_len >= K_COMPLETE_PATH_LIMIT)
                     return false;
 
-                CompleteChoice choice;
+                HeapArray<char> buf(alloc);
 
-                choice.name = DuplicateString(basename, alloc).ptr;
-                if (directory.len && directory != "/") {
-                    const char *suffix = (file_type == FileType::Directory) ? "/" : "";
-                    choice.value = Fmt(alloc, "%1%/%2%3", directory, basename, suffix).ptr;
-                } else {
-                    const char *suffix = (file_type == FileType::Directory) ? "/" : "";
-                    choice.value = Fmt(alloc, "%1%2%3", directory, basename, suffix).ptr;
+                // Make directory part
+                buf.Append(directory);
+                if (directory.len && !IsPathSeparator(directory[directory.len - 1])) {
+                    buf.Append(*K_PATH_SEPARATORS);
                 }
 
-                out_choices->Append(choice);
+                Size name_offset = buf.len;
+
+                // Append name
+                buf.Append(basename);
+                if (file_type == FileType::Directory) {
+                    buf.Append(*K_PATH_SEPARATORS);
+                }
+                buf.Append(0);
+                buf.Trim();
+
+                const char *value = buf.Leak().ptr;
+                const char *name = value + name_offset;
+
+                out_choices->Append({ name, value });
             }
             return true;
         });
