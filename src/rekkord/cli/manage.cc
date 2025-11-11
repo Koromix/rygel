@@ -219,7 +219,7 @@ reenter:
                 LogInfo("The path you have entered is relative to the directory of the config file, which means it will change if the config file moves.");
                 LogInfo("It will point to this path as long as the config file does not move: %!..+%1%!0", path);
 
-                switch (PromptYN("Are you sure this is what you want?")) {
+                switch (PromptYN(T("Are you sure this is what you want?"))) {
                     case 1: {} break;
                     case 0: goto reenter;
                     case -1: return 1;

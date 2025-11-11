@@ -22,9 +22,9 @@
         "configure": "Configurer",
         "configure_2fa": "Configurer l'authentification à deux facteurs",
         "confirm": "Confirmer",
+        "confirm_not_reversible": "Attention, cette action n'est pas réversible !",
         "confirm_or_close_dialog": "Confirmez ou fermez la boîte de dialogue avant de continuer",
         "confirm_password": "Confirmez le mot de passe",
-        "confirm_not_reversible": "Attention, cette action n'est pas réversible !",
         "confirm_to_change_2fa": "Confirmez votre identité avec votre mot de passe pour modifier l'authentification à deux facteurs.",
         "confirm_to_enable_2fa": "Confirmez votre identité avec votre mot de passe pour activer l'authentification à deux facteurs.",
         "confirmation": "Confirmation",
@@ -155,6 +155,7 @@
         "&About": "&A propos",
         "&Exit": "&Quitter",
         "0 / %1 snapshots": "0 / %1 instantanés",
+        "Are you sure this is what you want?": "Êtes-vous sûr que c'est ce que vous voulez ?",
         "Backing up...": "Sauvegarde...",
         "Blob '%1' is not a Chunk": "Le blob '%1' n'est pas un fragment (Chunk)",
         "Blob '%1' is not a Directory": "Le blob '%1' n'est pas un répertoire (Directory)",
@@ -300,6 +301,7 @@
         "Invalid snapshot OID": "OID d'instantané non valide",
         "Invalid tag cypher length": "Longueur de balise chiffrée non valide",
         "Invalid username or password": "Nom d'utilisateur ou mot de passe incorrect",
+        "It will point to this path as long as the config file does not move: %!..+%1%!0": "Il pointera vers ce chemin tant que le fichier de configuration n'est pas déplacé : %!..+%1%!0",
         "Key ID: %!..+%1%!0": "ID de la clé : %!..+%1%!0",
         "Key file: %!..+%1%!0": "Fichier de clé : %!..+%1%!0",
         "Key type: %!..+%1%!0": "Type de clé : %!..+%1%!0",
@@ -425,6 +427,7 @@
         "Temporary file size has changed (bigger)": "La taille du fichier temporaire a changé (plus grande)",
         "Temporary file size has changed (truncated)": "La taille du fichier temporaire a changé (tronqué)",
         "The local cache database was mismatched and could have resulted in missing data in the backup.": "La cache local d'objets ne correspondait pas et a pu entraîner des données manquantes dans la sauvegarde.",
+        "The path you have entered is relative to the directory of the config file, which means it will change if the config file moves.": "Le chemin que vous avez saisi est relatif au répertoire du fichier de configuration, ce qui signifie qu'il changera si le fichier de configuration est déplacé.",
         "There does not seem to be any object": "Il ne semble pas y avoir d'objet",
         "There does not seem to be any snapshot": "Il ne semble pas y avoir d'instantané",
         "This repository does not seem to support conditional writes": "Ce dépôt ne semble pas prendre en charge les écritures conditionnelles",
@@ -476,6 +479,7 @@
         "You have used a custom config path.": "Vous avez utilisé un chemin de configuration personnalisé.",
         "You must start over to fix this situation.": "Vous devez recommencer la sauvegarde pour remédier à cette situation.",
         "You should prefer write-only keys for this command": "Il est préférable d'utiliser des clés en écriture seule pour cette commande",
-        "lseek('<temp>') failed: %1": "lseek('<temp>') failed : %1"
+        "lseek('<temp>') failed: %1": "lseek('<temp>') failed : %1",
+        "{1} copied to clipboard": "{1} copié dans le presse-papiers"
     }
 }

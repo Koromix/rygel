@@ -323,6 +323,7 @@
         "Cannot reset legacy instance '%1'": "Impossible de vider l'instance v2 '%1'",
         "Cannot sign up from this session": "Impossible de faire une inscription à partir de cette session",
         "Cannot upload bundle for '%1'": "Impossible de téléverser un bundle pour '%1'",
+        "Cannot use counters without reservation": "Impossible d'utiliser les compteurs sans réservation",
         "Cannot write to file outside '/files/'": "Impossible d'écrire dans un fichier en dehors de '/files/'",
         "Characters allowed in keys: a-z, ‘_’ and 0-9 (except in the first position)": "Caractères autorisés dans les clés : a-z, '_' et 0-9 (sauf en première position)",
         "Code is incorrect": "Le code est incorrect",
