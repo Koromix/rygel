@@ -85,7 +85,7 @@
         display: flex;
         margin: 0;
         max-width: none;
-        background: url('{{ ASSET ../assets/pictures/aurora.webp }}');
+        background: url('{{ ASSET ../../src/ludivine/assets/pictures/aurora.webp }}');
         background-size: cover;
         position: relative;
     }

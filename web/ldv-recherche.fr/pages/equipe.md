@@ -8,7 +8,7 @@
 # Structure porteuse
 
 <div class="columns">
-    <img src="{{ ASSET ../assets/partners/cn2r.webp }}" style="flex: 3;" alt="" />
+    <img src="{{ ASSET static/partners/cn2r.webp }}" style="flex: 3;" alt="" />
     <div style="flex: 5;">
         <p>Le <a href="https://cn2r.fr" target="_blank">Centre national de ressources et de résilience</a> (Cn2r) a <b>pour mission d’améliorer et de diffuser les connaissances sur les psychotraumatismes et la résilience</b>. Il s’adresse au grand public, aux chercheurs et aux professionnels impliqués dans l’accompagnement des personnes confrontées à des événements potentiellement traumatiques.
         <p>Le Cn2r valorise à la fois les savoirs scientifiques et les connaissances issues du vécu des personnes concernées.
@@ -21,13 +21,13 @@
 # Partenaires
 
 <div class="partners">
-     <a href="https://www.france-victimes.fr/" target="_blank"><img src="{{ ASSET ../assets/partners/france_victimes.webp }}" alt="France Victimes" title="France Victimes" /></a>
+     <a href="https://www.france-victimes.fr/" target="_blank"><img src="{{ ASSET static/partners/france_victimes.webp }}" alt="France Victimes" title="France Victimes" /></a>
 </div>
 
 <div class="partners">
-     <a href="https://www.univ-lille.fr/" target="_blank"><img src="{{ ASSET ../assets/partners/universite_lille.webp }}" alt="Université de Lille" title="Université de Lille" /></a>
-     <a><img src="{{ ASSET ../assets/partners/interactions1.webp }}" alt="Laboratoire INTERACTIONS" title="Laboratoire INTERACTIONS" /></a>
-     <a href="https://www.f2rsmpsy.fr/" target="_blank"><img src="{{ ASSET ../assets/partners/f2rsmpsy.webp }}" alt="F2RSM psy HdF" title="F2RSM psy Hauts-de-France" /></a>
+     <a href="https://www.univ-lille.fr/" target="_blank"><img src="{{ ASSET static/partners/universite_lille.webp }}" alt="Université de Lille" title="Université de Lille" /></a>
+     <a><img src="{{ ASSET static/partners/interactions1.webp }}" alt="Laboratoire INTERACTIONS" title="Laboratoire INTERACTIONS" /></a>
+     <a href="https://www.f2rsmpsy.fr/" target="_blank"><img src="{{ ASSET static/partners/f2rsmpsy.webp }}" alt="F2RSM psy HdF" title="F2RSM psy Hauts-de-France" /></a>
 </div>
 
 # Prestataires

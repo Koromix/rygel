@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com> */
 
-@import url('./ludivine.css');
+@import url('../../../src/ludivine/assets/ludivine.css');
 
 .cardset {
     position: relative;

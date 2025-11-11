@@ -8,17 +8,17 @@
 </div>
 
 <div class="tabbar">
-    <a href="/videos" title="Vidéos"><img src="{{ ASSET ../assets/ui/video.png }}" alt="Vidéos" /></a>
-    <a href="/livres" title="Livres"><img src="{{ ASSET ../assets/ui/book.png }}" alt="Livres" /></a>
-    <a href="/films" class="active" title="Films"><img src="{{ ASSET ../assets/ui/movie.png }}" alt="Films" /></a>
-    <a href="/musiques" title="Musiques"><img src="{{ ASSET ../assets/ui/music.png }}" alt="Musiques" /></a>
-    <a href="/pros" title="Recos des pros"><img src="{{ ASSET ../assets/ui/paper.png }}" alt="Recos des pros" /></a>
+    <a href="/videos" title="Vidéos"><img src="{{ ASSET ../../src/ludivine/assets/ui/video.png }}" alt="Vidéos" /></a>
+    <a href="/livres" title="Livres"><img src="{{ ASSET ../../src/ludivine/assets/ui/book.png }}" alt="Livres" /></a>
+    <a href="/films" class="active" title="Films"><img src="{{ ASSET ../../src/ludivine/assets/ui/movie.png }}" alt="Films" /></a>
+    <a href="/musiques" title="Musiques"><img src="{{ ASSET ../../src/ludivine/assets/ui/music.png }}" alt="Musiques" /></a>
+    <a href="/pros" title="Recos des pros"><img src="{{ ASSET ../../src/ludivine/assets/ui/paper.png }}" alt="Recos des pros" /></a>
 </div>
 
 <div class="tab">
     <div class="cardset">
         <div class="card">
-            <img src="{{ ASSET ../assets/resources/film_scherfig.jpg }}" alt="" />
+            <img src="{{ ASSET static/resources/film_scherfig.jpg }}" alt="" />
             <div>
                 <div class="reference">The kindness of strangers – Lone Scherfig</div>
                 <div class="actions">
@@ -27,7 +27,7 @@
             </div>
         </div>
         <div class="card">
-            <img src="{{ ASSET ../assets/resources/film_suco.jpg }}" alt="" />
+            <img src="{{ ASSET static/resources/film_suco.jpg }}" alt="" />
             <div>
                 <div class="reference">Les éblouis – Sarah Suco</div>
                 <div class="actions">
@@ -36,7 +36,7 @@
             </div>
         </div>
         <div class="card">
-            <img src="{{ ASSET ../assets/resources/film_bescond.jpg }}" alt="" />
+            <img src="{{ ASSET static/resources/film_bescond.jpg }}" alt="" />
             <div>
                 <div class="reference">Les chatouilles – Andréa Bescond et Eric Metayer</div>
                 <div class="actions">
@@ -45,7 +45,7 @@
             </div>
         </div>
         <div class="card">
-            <img src="{{ ASSET ../assets/resources/film_ozon.jpg }}" alt="" />
+            <img src="{{ ASSET static/resources/film_ozon.jpg }}" alt="" />
             <div>
                 <div class="reference">Grâce à Dieu – François Ozon</div>
                 <div class="actions">
@@ -54,7 +54,7 @@
             </div>
         </div>
     </div>
-    <button id="randomize" onclick="app.randomCard('.cardset')"><img src="{{ ASSET ../assets/ui/dice.webp }}" alt="Choix aléatoire" title="Choix aléatoire" /></button>
+    <button id="randomize" onclick="app.randomCard('.cardset')"><img src="{{ ASSET ../../src/ludivine/assets/ui/dice.webp }}" alt="Choix aléatoire" title="Choix aléatoire" /></button>
 </div>
 
 <script>

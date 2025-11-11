@@ -8,17 +8,17 @@
 </div>
 
 <div class="tabbar">
-    <a href="/videos" title="Vidéos"><img src="{{ ASSET ../assets/ui/video.png }}" alt="Vidéos" /></a>
-    <a href="/livres" title="Livres"><img src="{{ ASSET ../assets/ui/book.png }}" alt="Livres" /></a>
-    <a href="/films" title="Films"><img src="{{ ASSET ../assets/ui/movie.png }}" alt="Films" /></a>
-    <a href="/musiques" title="Musiques"><img src="{{ ASSET ../assets/ui/music.png }}" alt="Musiques" /></a>
-    <a href="/pros" class="active" title="Recos des pros"><img src="{{ ASSET ../assets/ui/paper.png }}" alt="Recos des pros" /></a>
+    <a href="/videos" title="Vidéos"><img src="{{ ASSET ../../src/ludivine/assets/ui/video.png }}" alt="Vidéos" /></a>
+    <a href="/livres" title="Livres"><img src="{{ ASSET ../../src/ludivine/assets/ui/book.png }}" alt="Livres" /></a>
+    <a href="/films" title="Films"><img src="{{ ASSET ../../src/ludivine/assets/ui/movie.png }}" alt="Films" /></a>
+    <a href="/musiques" title="Musiques"><img src="{{ ASSET ../../src/ludivine/assets/ui/music.png }}" alt="Musiques" /></a>
+    <a href="/pros" class="active" title="Recos des pros"><img src="{{ ASSET ../../src/ludivine/assets/ui/paper.png }}" alt="Recos des pros" /></a>
 </div>
 
 <div class="tab">
     <div class="cardset">
         <div class="card">
-            <img src="{{ ASSET ../assets/resources/pro_hingrayelhage.jpg }}" alt="" />
+            <img src="{{ ASSET static/resources/pro_hingrayelhage.jpg }}" alt="" />
             <div>
                 <div class="reference">Le trauma comment s'en sortir – Coraline Hingray et Wissam El Hage</div>
                 <div class="actions">
@@ -27,7 +27,7 @@
             </div>
         </div>
         <div class="card">
-            <img src="{{ ASSET ../assets/resources/pro_brillon.jpg }}" alt="" />
+            <img src="{{ ASSET static/resources/pro_brillon.jpg }}" alt="" />
             <div>
                 <div class="reference">Se relever d'un traumatisme – Pascale Brillon</div>
                 <div class="actions">
@@ -36,7 +36,7 @@
             </div>
         </div>
         <div class="card">
-            <img src="{{ ASSET ../assets/resources/pro_kolk.jpg }}" alt="" />
+            <img src="{{ ASSET static/resources/pro_kolk.jpg }}" alt="" />
             <div>
                 <div class="reference">Le corps n'oublie rien – Bessel Van Der Kolk</div>
                 <div class="actions">
@@ -45,7 +45,7 @@
             </div>
         </div>
     </div>
-    <button id="randomize" onclick="app.randomCard('.cardset')"><img src="{{ ASSET ../assets/ui/dice.webp }}" alt="Choix aléatoire" title="Choix aléatoire" /></button>
+    <button id="randomize" onclick="app.randomCard('.cardset')"><img src="{{ ASSET ../../src/ludivine/assets/ui/dice.webp }}" alt="Choix aléatoire" title="Choix aléatoire" /></button>
 </div>
 
 <script>

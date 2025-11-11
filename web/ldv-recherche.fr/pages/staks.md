@@ -1,7 +1,7 @@
 <script type="module">
     document.body.classList.add('loading');
 
-    import { load, start } from './{{ ASSET ../../staks/src/game.js }}';
+    import { load, start } from './{{ ASSET ../../src/staks/src/game.js }}';
 
     run();
 
