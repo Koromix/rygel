@@ -915,13 +915,14 @@ Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
     return MakeSpan(new_str, str.len);
 }
 
-int CmpNatural(Span<const char> str1, Span<const char> str2)
+template <typename CompareFunc>
+static inline int NaturalCmp(Span<const char> str1, Span<const char> str2, CompareFunc cmp)
 {
     Size i = 0;
     Size j = 0;
 
     while (i < str1.len && j < str2.len) {
-        int delta = str1[i] - str2[j];
+        int delta = cmp(str1[i], str2[j]);
 
         if (delta) {
             if (IsAsciiDigit(str1[i]) && IsAsciiDigit(str2[i])) {
@@ -943,7 +944,7 @@ int CmpNatural(Span<const char> str1, Span<const char> str2)
                     if (!digit1 || !digit2)
                         break;
 
-                    bias = bias ? bias : (str1[i] - str2[j]);
+                    bias = bias ? bias : cmp(str1[i], str2[j]);
                     i++;
                     j++;
                 }
@@ -969,6 +970,18 @@ int CmpNatural(Span<const char> str1, Span<const char> str2)
     } else {
         return 0;
     }
+}
+
+int CmpNatural(Span<const char> str1, Span<const char> str2)
+{
+    auto cmp = [](int a, int b) { return a - b; };
+    return NaturalCmp(str1, str2, cmp);
+}
+
+int CmpNaturalI(Span<const char> str1, Span<const char> str2)
+{
+    auto cmp = [](int a, int b) { return LowerAscii(a) - LowerAscii(b); };
+    return NaturalCmp(str1, str2, cmp);
 }
 
 // ------------------------------------------------------------------------
