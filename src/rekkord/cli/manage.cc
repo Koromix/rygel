@@ -206,10 +206,26 @@ Options:
     switch (type) {
         case rk_DiskType::Local: {
             Span<const char> directory = GetPathDirectory(config_filename);
+            const char *url = nullptr;
 
-            const char *url = PromptPathNonEmpty(T("Repository path:"), nullptr, directory, &temp_alloc);
+reenter:
+            url = PromptPathNonEmpty(T("Repository path:"), url, directory, &temp_alloc);
             if (!url)
                 return 1;
+
+            if (!PathIsAbsolute(url)) {
+                const char *path = NormalizePath(url, directory, &temp_alloc).ptr;
+
+                LogInfo("The path you have entered is relative to the directory of the config file, which means it will change if the config file moves.");
+                LogInfo("It will point to this path as long as the config file does not move: %!..+%1%!0", path);
+
+                switch (PromptYN("Are you sure this is what you want?")) {
+                    case 1: {} break;
+                    case 0: goto reenter;
+                    case -1: return 1;
+                }
+            }
+
             Print(&st, BaseConfig, url, key_path);
         } break;
 
