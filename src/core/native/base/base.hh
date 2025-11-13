@@ -4595,7 +4595,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                         HeapArray<uint8_t> *out_buf, int *out_code);
 
 // Simple variants
-static inline bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,int *out_code)
+static inline bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info, int *out_code)
     { return ExecuteCommandLine(cmd_line, info, {}, {}, out_code); }
 static inline bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                                       Span<const uint8_t> in_buf,
