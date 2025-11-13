@@ -4662,6 +4662,7 @@ WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t 
 WaitResult WaitEvents(int64_t timeout);
 
 void PostWaitMessage();
+void PostTerminate();
 
 #endif
 

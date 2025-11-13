@@ -5762,6 +5762,11 @@ void PostWaitMessage()
     SetEvent(wait_msg_event);
 }
 
+void PostTerminate()
+{
+    SetEvent(console_ctrl_event);
+}
+
 #else
 
 void WaitDelay(int64_t delay)
@@ -5860,6 +5865,14 @@ void PostWaitMessage()
 {
     pid_t pid = getpid();
     kill(pid, SIGUSR1);
+}
+
+void PostTerminate()
+{
+    InitInterruptPipe();
+
+    char dummy = 0;
+    K_IGNORE write(interrupt_pfd[1], &dummy, 1);
 }
 
 #endif

@@ -17,6 +17,11 @@ struct SourceInfo {
     const char *path;
 };
 
+struct ServiceInfo {
+    const char *name;
+    const char *command;
+};
+
 struct Config {
     http_Config http { 8000 };
 
@@ -35,6 +40,8 @@ struct Config {
     bool set_etag = true;
     int64_t max_age = 0;
     bool verbose = false;
+
+    HeapArray<ServiceInfo> services;
 
     BlockAllocator str_alloc;
 
@@ -238,6 +245,13 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                 header.value = DuplicateString(prop.value, &config.str_alloc).ptr;
 
                 config.headers.Append(header);
+            } else if (prop.section == "Services") {
+                ServiceInfo service = {};
+
+                service.name = DuplicateString(prop.key, &config.str_alloc).ptr;
+                service.command = DuplicateString(prop.value, &config.str_alloc).ptr;
+
+                config.services.Append(service);
             } else {
                 LogError("Unknown section '%1'", prop.section);
                 while (ini.NextInSection(&prop));
@@ -871,6 +885,40 @@ Options:
             return 1;
     }
 
+    Async async(1 + config.services.len);
+
+    if (config.services.len) {
+        LogInfo("Start services");
+
+        for (Size i = 0; i < config.services.len; i++) {
+            async.Run([i]() {
+                const ServiceInfo &service = config.services[i];
+
+                Span<const uint8_t> in = {};
+
+                // This won't perfectly split log lines across buffer boundaries, but it's close enough
+                const auto out = [&](Span<uint8_t> buf) {
+                    char ctx[128];
+                    Fmt(ctx, "%1: ", service.name);
+
+                    Span<const char> str = buf.As<const char>();
+
+                    while (str.len) {
+                        Span<const char> line = SplitStrLine(str, &str);
+                        Log(LogLevel::Info, ctx, "%1", line);
+                    }
+                };
+
+                // We don't really care about whether it works or not... all that matters it that it keeps running!
+                int code;
+                ExecuteCommandLine(service.command, {}, in, out, &code);
+
+                PostWaitMessage();
+                return false;
+            });
+        }
+    }
+
     LogInfo("Init HTTP server");
 
     http_Daemon daemon;
@@ -884,27 +932,39 @@ Options:
         return 1;
 #endif
 
+    // From here on, don't quit abruptly
+    WaitEvents(0);
+
     // Run until exit signal
     int status = 0;
-    {
-        bool run = true;
+    for (;;) {
+        if (!async.IsSuccess()) {
+            LogError("Some services have failed");
+            status = 1;
+            break;
+        }
 
-        while (run) {
-            WaitResult ret = WaitEvents(-1);
+        int timeout = config.services.len ? 60000 : -1;
+        WaitResult ret = WaitEvents(timeout);
 
-            if (ret == WaitResult::Exit) {
-                LogInfo("Exit requested");
-                run = false;
-            } else if (ret == WaitResult::Interrupt) {
-                LogInfo("Process interrupted");
-                status = 1;
-                run = false;
-            }
+        if (ret == WaitResult::Exit) {
+            LogInfo("Exit requested");
+            break;
+        } else if (ret == WaitResult::Interrupt) {
+            LogInfo("Process interrupted");
+            break;
         }
     }
 
     LogInfo("Stop HTTP server");
     daemon.Stop();
+
+    if (config.services.len) {
+        LogInfo("Stop services");
+
+        PostTerminate();
+        async.Sync();
+    }
 
     return status;
 }
