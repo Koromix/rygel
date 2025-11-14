@@ -345,7 +345,7 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<B
     return true;
 }
 
-static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary,
+static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, const char *root_dir,
                          bool sourcemap, bool gzip, Allocator *alloc, HeapArray<FileHash> *out_hashes)
 {
     Span<const char> basename = SplitStrReverseAny(bundle.name, K_PATH_SEPARATORS);
@@ -362,6 +362,24 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary,
         Fmt(&buf, "\"%1\" \"%2\" --bundle --log-level=warning --allow-overwrite --outfile=\"%3\""
                   "  --minify --platform=browser --target=es6 --metafile=\"%4\"",
                   esbuild_binary, bundle.src_filename, bundle.dest_filename, meta_filename);
+
+        if (root_dir) {
+            HeapArray<char> tsconfig;
+            StreamWriter st(&tsconfig, "<tsconfig>");
+            json_Writer json(&st);
+
+            json.StartObject();
+
+            json.Key("compilerOptions"); json.StartObject();
+            json.Key("baseUrl"); json.String(root_dir);
+            json.EndObject();
+
+            json.EndObject();
+
+            st.Close();
+
+            Fmt(&buf, " --tsconfig-raw=\"%1\"", FmtEscape(tsconfig, '"'));
+        }
 
         if (sourcemap) {
             Fmt(&buf, " --sourcemap=inline");
@@ -936,8 +954,10 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
 
     // List asset settings and rules
     const char *esbuild_path = nullptr;
+    const char *esbuild_root = nullptr;
     HeapArray<AssetCopy> copies;
     HeapArray<AssetBundle> bundles;
+
     if (TestFile(assets_filename)) {
         StreamReader st(assets_filename);
         if (!st.IsValid())
@@ -954,6 +974,8 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
             if (!prop.section.len) {
                 if (prop.key == "EsbuildPath") {
                     esbuild_path = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
+                } else if (prop.key == "EsbuildRoot") {
+                    esbuild_root = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -1155,7 +1177,7 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
                 BlockAllocator thread_alloc;
 
                 HeapArray<FileHash> hashes;
-                if (!BundleScript(bundle, esbuild_path, build.sourcemap, build.gzip,
+                if (!BundleScript(bundle, esbuild_path, esbuild_root, build.sourcemap, build.gzip,
                                   &thread_alloc, &hashes))
                     return false;
 
