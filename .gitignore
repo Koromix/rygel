@@ -8,6 +8,7 @@
 
 /.cache/
 /compile_commands.json
+/tsconfig.json
 
 **/tmp/*
 
