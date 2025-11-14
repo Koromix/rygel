@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, LruMap, Mutex } from '../../core/web/base/base.js';
+import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net, LruMap, Mutex } from 'src/core/web/base/base.js';
 import { FormState, FormModel, FormBuilder } from './form.js';
 
 import './ui.css';

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html, unsafeHTML } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, Mutex, LocalDate, LocalTime } from '../../core/web/base/base.js';
-import { Base64 } from '../../core/web/base/mixer.js';
+import { render, html, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net, Mutex, LocalDate, LocalTime } from 'src/core/web/base/base.js';
+import { Base64 } from 'src/core/web/base/mixer.js';
 import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';

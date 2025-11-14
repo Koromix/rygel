@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net } from '../../core/web/base/base.js';
-import { Sha256 } from '../../core/web/base/mixer.js';
+import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net } from 'src/core/web/base/base.js';
+import { Sha256 } from 'src/core/web/base/mixer.js';
 import * as UI from './ui.js';
 
 function InstancePublisher(bundler = null) {

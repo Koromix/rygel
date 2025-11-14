@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import sqlite3Worker1Promiser from '../../../../vendor/sqlite3mc/wasm/jswasm/sqlite3-worker1-promiser.mjs';
+import sqlite3Worker1Promiser from 'vendor/sqlite3mc/wasm/jswasm/sqlite3-worker1-promiser.mjs';
 
 let promiser = null;
 let id = 0;

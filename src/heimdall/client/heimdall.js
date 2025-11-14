@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html, live } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, HttpError } from '../../core/web/base/base.js';
-import * as UI from '../../core/web/base/ui.js';
-import { AppRunner } from '../../core/web/base/runner.js';
+import { render, html, live } from 'vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net, HttpError } from 'src/core/web/base/base.js';
+import * as UI from 'src/core/web/base/ui.js';
+import { AppRunner } from 'src/core/web/base/runner.js';
 
 import en from '../i18n/en.json';
 import fr from '../i18n/fr.json';
 
-import '../../../vendor/opensans/OpenSans.css';
+import 'vendor/opensans/OpenSans.css';
 import './heimdall.css';
 
 const ROW_HEIGHT = 40;

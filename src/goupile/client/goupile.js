@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html, unsafeHTML } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, NetworkError } from '../../core/web/base/base.js';
-import { Base64 } from '../../core/web/base/mixer.js';
-import * as IDB from '../../core/web/base/indexeddb.js';
+import { render, html, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net, NetworkError } from 'src/core/web/base/base.js';
+import { Base64 } from 'src/core/web/base/mixer.js';
+import * as IDB from 'src/core/web/base/indexeddb.js';
 import * as UI from './ui.js';
 import * as AdminController from './admin.js';
 import * as InstanceController from './instance.js';
 import * as LegacyController from '../legacy/instance.js';
-import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
+import * as nacl from 'vendor/tweetnacl-js/nacl-fast.js';
 
 import en from '../i18n/en.json';
 import fr from '../i18n/fr.json';
 
-import '../../../vendor/opensans/OpenSans.css';
+import 'vendor/opensans/OpenSans.css';
 import './goupile.css';
 
 let languages = {};

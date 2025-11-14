@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
-import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
-import { Util, Log, Net, HttpError, LocalDate } from '../../core/web/base/base.js';
-import * as UI from '../../core/web/base/ui.js';
-import { Hex, Base64 } from '../../core/web/base/mixer.js';
+import { render, html, ref } from 'vendor/lit-html/lit-html.bundle.js';
+import * as nacl from 'vendor/tweetnacl-js/nacl-fast.js';
+import { Util, Log, Net, HttpError, LocalDate } from 'src/core/web/base/base.js';
+import * as UI from 'src/core/web/base/ui.js';
+import { Hex, Base64 } from 'src/core/web/base/mixer.js';
 import { computeAge, dateToString, niceDate,
          progressBar, progressCircle, deflate, inflate,
          EventProviders, createEvent, safeTag } from './core/misc.js';
@@ -17,7 +17,7 @@ import { ConsentModule } from './form/consent.js';
 import { FormModule } from './form/form.js';
 import { FormState, FormModel, FormBuilder } from './form/builder.js';
 import { NetworkModule } from './network/network.js';
-import { deploy } from '../../core/web/flat/static.js';
+import { deploy } from 'src/core/web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';
 import * as app from './app.js';
 

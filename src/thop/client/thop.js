@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, Mutex, LruMap, LocalDate } from '../../core/web/base/base.js';
+import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net, Mutex, LruMap, LocalDate } from 'src/core/web/base/base.js';
 import { DataCache } from './utility.js';
 import * as McoInfoMod from './mco_info.js';
 import * as McoCasemixMod from './mco_casemix.js';
 import * as SessionMod from './session.js';
 
-import '../../../vendor/opensans/OpenSans.css';
+import 'vendor/opensans/OpenSans.css';
 import './thop.css';
 
 // Fetched from THOP server

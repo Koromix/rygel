@@ -7,7 +7,7 @@ import fetch from 'node-fetch';
 import xlsx from 'node-xlsx';
 import sqlite3 from 'better-sqlite3';
 import * as database from '../lib/database.js';
-import { Util } from '../../../core/web/base/base.js';
+import { Util } from 'src/core/web/base/base.js';
 import * as parse from '../lib/parse.js';
 import * as imp from '../lib/import.js';
 

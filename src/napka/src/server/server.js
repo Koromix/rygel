@@ -221,6 +221,11 @@ function buildFiles(map, live, sourcemap) {
         minify: !live,
         sourcemap: sourcemap ? 'inline' : false,
         write: false,
+        tsconfigRaw: JSON.stringify({
+            compilerOptions: {
+                baseUrl: __dirname + '/../../..'
+            },
+        }),
         loader: {
             '.png': 'dataurl'
         },
@@ -234,6 +239,11 @@ function buildFiles(map, live, sourcemap) {
         minify: !live,
         sourcemap: sourcemap ? 'inline' : false,
         write: false,
+        tsconfigRaw: JSON.stringify({
+            compilerOptions: {
+                baseUrl: __dirname + '/../../..'
+            },
+        }),
         format: 'iife',
         globalName: 'napka',
         target: 'es2020',

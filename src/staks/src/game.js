@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, LruMap } from '../../core/web/base/base.js';
-import { AppRunner } from '../../core/web/base/runner.js';
+import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net, LruMap } from 'src/core/web/base/base.js';
+import { AppRunner } from 'src/core/web/base/runner.js';
 import * as rules from './rules/modern.js';
 import { TouchInterface } from './touch.js';
 import { ASSETS } from '../assets/assets.js';
@@ -11,7 +11,7 @@ import { ASSETS } from '../assets/assets.js';
 import en from '../i18n/en.json';
 import fr from '../i18n/fr.json';
 
-import '../../../vendor/opensans/OpenSans.css';
+import 'vendor/opensans/OpenSans.css';
 import './game.css';
 
 const KEYBOARD_SHORTCUTS = [

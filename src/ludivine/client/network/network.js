@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../../core/web/base/base.js';
-import { AppRunner } from '../../../core/web/base/runner.js';
+import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
+import { Util, Log } from 'src/core/web/base/base.js';
+import { AppRunner } from 'src/core/web/base/runner.js';
 import { deflate, inflate } from '../core/misc.js';
 import { NetworkWidget } from './widget.js';
 import { ASSETS } from '../../assets/assets.js';

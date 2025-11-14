@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import * as esbuild from '../../../vendor/esbuild/wasm';
+import * as esbuild from 'vendor/esbuild/wasm';
 
 const BaseMap = [
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,

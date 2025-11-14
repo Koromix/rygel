@@ -100,6 +100,7 @@ class Builder {
 
     // Javascript bundler
     const char *esbuild_binary = nullptr;
+    const char *tsconfig_filename = nullptr;
 
     // Core host targets (if any)
     BucketArray<TargetInfo> core_targets;

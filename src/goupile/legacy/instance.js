@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html, svg, until } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, LruMap, Mutex, LocalDate, LocalTime } from '../../core/web/base/base.js';
-import * as mixer from '../../core/web/base/mixer.js';
-import * as IDB from '../../core/web/base/indexeddb.js';
+import { render, html, svg, until } from 'vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net, LruMap, Mutex, LocalDate, LocalTime } from 'src/core/web/base/base.js';
+import * as mixer from 'src/core/web/base/mixer.js';
+import * as IDB from 'src/core/web/base/indexeddb.js';
 import { ApplicationInfo, FormInfo, PageInfo, ApplicationBuilder } from './instance_app.js';
 import * as goupile from '../client/goupile.js';
 import { profile } from '../client/goupile.js';
 import * as UI from '../client/ui.js';
 import { InstancePublisher } from '../client/instance_publish.js';
 import { FormState, FormModel, FormBuilder } from './form.js';
-import { PeriodPicker } from '../../core/web/widgets/periodpicker.js';
-import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
+import { PeriodPicker } from 'src/core/web/widgets/periodpicker.js';
+import * as nacl from 'vendor/tweetnacl-js/nacl-fast.js';
 
 let db = null;
 let app = null;

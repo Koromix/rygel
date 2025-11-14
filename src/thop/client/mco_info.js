@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, LruMap, LocalDate } from '../../core/web/base/base.js';
+import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net, LruMap, LocalDate } from 'src/core/web/base/base.js';
 import * as thop from './thop.js';
 import { settings } from './thop.js';
 import { DataCache, formatDuration, formatPrice, parseDate } from './utility.js';
-import { VersionLine } from '../../core/web/widgets/versionline.js';
-import { EasyTable } from '../../core/web/widgets/easytable.js';
+import { VersionLine } from 'src/core/web/widgets/versionline.js';
+import { EasyTable } from 'src/core/web/widgets/easytable.js';
 
 import './mco_info.css';
 

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { Util, Log, Net } from '../../../core/web/base/base.js';
-import { Hex } from '../../../core/web/base/mixer.js';
-import * as sqlite3 from '../../../core/web/base/sqlite3.js';
+import { Util, Log, Net } from 'src/core/web/base/base.js';
+import { Hex } from 'src/core/web/base/mixer.js';
+import * as sqlite3 from 'src/core/web/base/sqlite3.js';
 
 const DATABASE_VERSION = 6;
 

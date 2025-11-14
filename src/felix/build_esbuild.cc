@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 #include "src/core/native/base/base.hh"
+#include "src/core/native/wrap/json.hh"
 #include "build.hh"
 
 namespace K {
@@ -10,6 +11,27 @@ bool Builder::PrepareEsbuild()
 {
     if (esbuild_binary)
         return true;
+
+    // Write TypeScript config for path mapping
+    {
+        tsconfig_filename = Fmt(&str_alloc, "%1%/Misc%/tsconfig.json", cache_directory).ptr;
+
+        StreamWriter st(tsconfig_filename, (int)StreamWriterFlag::Atomic);
+        if (!st.IsValid())
+            return false;
+        json_PrettyWriter json(&st);
+
+        json.StartObject();
+
+        json.Key("compilerOptions"); json.StartObject();
+        json.Key("baseUrl"); json.String(GetWorkingDirectory());
+        json.EndObject();
+
+        json.EndObject();
+
+        if (!st.Close())
+            return false;
+    }
 
     // Try environment first
     {
@@ -176,6 +198,7 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
             HeapArray<char> buf(&str_alloc);
 
             Fmt(&buf, "\"%1\" \"%2\" --bundle --log-level=warning", esbuild_binary, src.filename);
+            Fmt(&buf, " --tsconfig=\"%1\"", tsconfig_filename);
             if (features & (int)CompileFeature::ESM) {
                 Fmt(&buf, " --format=esm");
             } else {

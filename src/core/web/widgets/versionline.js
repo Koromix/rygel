@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
+import { render, svg } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../base/base.js';
-import { render, svg } from '../../../../vendor/lit-html/lit-html.bundle.js';
 
 import './versionline.css';
 

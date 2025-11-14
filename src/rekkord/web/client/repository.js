@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html, live, unsafeHTML } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net } from '../../../core/web/base/base.js';
-import * as UI from '../../../core/web/base/ui.js';
-import dayjs from '../../../../vendor/dayjs/dayjs.bundle.js';
+import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
+import dayjs from 'vendor/dayjs/dayjs.bundle.js';
+import { Util, Log, Net } from 'src/core/web/base/base.js';
+import * as UI from 'src/core/web/base/ui.js';
 import * as app from './main.js';
 import { route, cache } from './main.js';
 import { ASSETS } from '../assets/assets.js';

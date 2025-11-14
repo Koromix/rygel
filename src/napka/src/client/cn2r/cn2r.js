@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html, unsafeHTML } from '../../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net } from '../../../../core/web/base/base.js';
-import * as UI from '../../../../core/web/base/ui.js';
+import { render, html, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net } from 'src/core/web/base/base.js';
+import * as UI from 'src/core/web/base/ui.js';
 import * as parse from '../../lib/parse.js';
 import { start, zoom, makeField, makeEdit, renderMarkdown,
          login, logout, isConnected, loadTexture } from '../map.js';

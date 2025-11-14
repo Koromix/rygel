@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html, live, unsafeHTML } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, HttpError } from '../../../core/web/base/base.js';
-import { Base64 } from '../../../core/web/base/mixer.js';
-import * as UI from '../../../core/web/base/ui.js';
-import { deploy } from '../../../core/web/flat/static.js';
+import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
+import dayjs from 'vendor/dayjs/dayjs.bundle.js';
+import { Util, Log, Net, HttpError } from 'src/core/web/base/base.js';
+import { Base64 } from 'src/core/web/base/mixer.js';
+import * as UI from 'src/core/web/base/ui.js';
+import { deploy } from 'src/core/web/flat/static.js';
 import { PictureCropper } from './picture.js';
 import { runPlans, runPlan } from './plan.js';
 import { runRepositories, runRepository } from './repository.js';
-import dayjs from '../../../../vendor/dayjs/dayjs.bundle.js';
 import { ASSETS } from '../assets/assets.js';
 
 import en from '../../i18n/en.json';

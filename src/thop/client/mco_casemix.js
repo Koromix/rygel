@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, LocalDate } from '../../core/web/base/base.js';
+import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net, LocalDate } from 'src/core/web/base/base.js';
 import * as thop from './thop.js';
 import { settings } from './thop.js';
 import { DataCache, parseDate } from './utility.js';
-import { VersionLine } from '../../core/web/widgets/versionline.js';
-import { PeriodPicker } from '../../core/web/widgets/periodpicker.js';
-import { TreeSelector } from '../../core/web/widgets/treeselector.js';
+import { VersionLine } from 'src/core/web/widgets/versionline.js';
+import { PeriodPicker } from 'src/core/web/widgets/periodpicker.js';
+import { TreeSelector } from 'src/core/web/widgets/treeselector.js';
 
 let route = {};
 

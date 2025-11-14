@@ -48,15 +48,6 @@ async function run() {
         './src/game.js'
     ];
 
-    let html = {
-        name: 'html',
-        setup: build => {
-            build.onEnd(result => {
-              console.log(`build ended with ${result.errors.length} errors`);
-            });
-        }
-    };
-
     let ctx = await esbuild.context({
         entryPoints: src_filenames,
         entryNames: '[name]',
@@ -66,6 +57,11 @@ async function run() {
         sourcemap: watch ? 'inline' : false,
         format: 'esm',
         target: 'es2020',
+        tsconfigRaw: JSON.stringify({
+            compilerOptions: {
+                baseUrl: '../..'
+            },
+        }),
         loader: {
             '.woff2': 'dataurl',
             '.png': 'file',
