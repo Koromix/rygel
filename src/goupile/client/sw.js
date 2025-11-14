@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { Util, Log, Net } from 'src/core/web/base/base.js';
+import { Util, Log, Net } from 'lib/web/base/base.js';
 
 // Hack around esbuild dropping simple template literals
 let raw = (strings) => strings[0];

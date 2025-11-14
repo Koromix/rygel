@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { Util, Net, LruMap } from 'src/core/web/base/base.js';
+import { Util, Net, LruMap } from 'lib/web/base/base.js';
 
 function TileMap(runner) {
     let self = this;

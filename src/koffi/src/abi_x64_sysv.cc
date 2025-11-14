@@ -3,7 +3,7 @@
 
 #if defined(__x86_64__) && !defined(_WIN32)
 
-#include "src/core/native/base/base.hh"
+#include "lib/native/base/base.hh"
 #include "ffi.hh"
 #include "call.hh"
 #include "util.hh"

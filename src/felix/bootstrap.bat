@@ -3,7 +3,7 @@
 setlocal enableDelayedExpansion
 cd %~dp0
 
-set SRC=*.cc ..\core\native\base\base.cc ..\core\native\compress\miniz.cc ..\core\native\wrap\json.cc ^
+set SRC=*.cc ..\..\lib\native\base\base.cc ..\..\lib\native\compress\miniz.cc ..\..\lib\native\wrap\json.cc ^
         ..\..\vendor\miniz\miniz.c ..\..\vendor\pugixml\src\pugixml.cpp
 
 set TEMP=..\..\bin\BootstrapFelix

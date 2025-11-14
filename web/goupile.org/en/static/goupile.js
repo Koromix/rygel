@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import '../../../../src/core/web/flat/static.js';
+import '../../../../lib/web/flat/static.js';
 
 let timer_id = null;
 let veil = null;

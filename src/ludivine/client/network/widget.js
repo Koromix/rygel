@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from 'src/core/web/base/base.js';
+import { Util, Log } from 'lib/web/base/base.js';
 import { loadTexture, safeTag } from '../core/misc.js';
 import { PROXIMITY_LEVELS, PERSON_KINDS, QUALITY_COLORS, USER_GUIDES } from './constants.js';
 import { ASSETS } from '../../assets/assets.js';

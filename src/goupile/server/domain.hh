@@ -3,11 +3,11 @@
 
 #pragma once
 
-#include "src/core/native/base/base.hh"
+#include "lib/native/base/base.hh"
 #include "instance.hh"
 #include "user.hh"
-#include "src/core/native/request/smtp.hh"
-#include "src/core/native/sqlite/sqlite.hh"
+#include "lib/native/request/smtp.hh"
+#include "lib/native/sqlite/sqlite.hh"
 
 namespace K {
 

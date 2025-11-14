@@ -3,7 +3,7 @@
 
 #if defined(__aarch64__) || defined(_M_ARM64)
 
-#include "src/core/native/base/base.hh"
+#include "lib/native/base/base.hh"
 #include "ffi.hh"
 #include "call.hh"
 #include "util.hh"

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 /* SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com> */
 
-@import url('../../../src/core/web/flat/flat.css');
+@import url('../../../lib/web/flat/flat.css');
 @import url('../../../vendor/highlight.js/styles/base16/tomorrow.css');
 
 html {

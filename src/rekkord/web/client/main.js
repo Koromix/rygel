@@ -3,10 +3,10 @@
 
 import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
-import { Util, Log, Net, HttpError } from 'src/core/web/base/base.js';
-import { Base64 } from 'src/core/web/base/mixer.js';
-import * as UI from 'src/core/web/base/ui.js';
-import { deploy } from 'src/core/web/flat/static.js';
+import { Util, Log, Net, HttpError } from 'lib/web/base/base.js';
+import { Base64 } from 'lib/web/base/mixer.js';
+import * as UI from 'lib/web/base/ui.js';
+import { deploy } from 'lib/web/flat/static.js';
 import { PictureCropper } from './picture.js';
 import { runPlans, runPlan } from './plan.js';
 import { runRepositories, runRepository } from './repository.js';

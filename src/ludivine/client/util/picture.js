@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, svg, live } from 'vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from 'src/core/web/base/base.js';
-import * as UI from 'src/core/web/base/ui.js';
+import { Util, Log } from 'lib/web/base/base.js';
+import * as UI from 'lib/web/base/ui.js';
 import { loadImage } from '../core/misc.js';
 import { ColorPicker } from './color.js';
 

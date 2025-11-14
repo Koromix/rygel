@@ -45,7 +45,7 @@ bundle_drdR <- function(project_dir, version, build_dir) {
             lines <- readLines(filename)
 
             lines <- sub('.o: ../../../../vendor/', '.o: vendor/', lines, fixed = TRUE)
-            lines <- sub('.o: ../../../core/', '.o: src/core/native/', lines, fixed = TRUE)
+            lines <- sub('.o: ../../../core/', '.o: lib/native/', lines, fixed = TRUE)
             lines <- sub('.o: ../../libdrd/', '.o: src/drd/libdrd/', lines, fixed = TRUE)
             lines <- sub('.o: ../', '.o: src/drd/drdR/', lines, fixed = TRUE)
             lines <- lines[!grepl('../R', lines, fixed = TRUE)]
@@ -75,10 +75,10 @@ bundle_drdR <- function(project_dir, version, build_dir) {
     copy_files(c('src/drd/drdR/drdR.R',
                  'src/drd/drdR/drdR_mco.R'), 'R')
     copy_files(list_files('src/drd/libdrd'), 'src/src/drd/libdrd')
-    copy_files(list_files('src/core/native/base'), 'src/src/core/native/base')
-    copy_files(list_files('src/core/native/compress'), 'src/src/core/native/compress')
-    copy_files(c('src/core/native/wrap/Rcc.cc',
-                 'src/core/native/wrap/Rcc.hh'), 'src/src/core/native/wrap')
+    copy_files(list_files('lib/native/base'), 'src/lib/native/base')
+    copy_files(list_files('lib/native/compress'), 'src/lib/native/compress')
+    copy_files(c('lib/native/wrap/Rcc.cc',
+                 'lib/native/wrap/Rcc.hh'), 'src/lib/native/wrap')
     copy_files(list_files('vendor/miniz'), 'src/vendor/miniz')
     copy_files('vendor/dragonbox/include/dragonbox/dragonbox.h', 'src/vendor/dragonbox/include/dragonbox')
 }

@@ -3,9 +3,9 @@
 
 import { render, html, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
 import MarkdownIt from '../../node_modules/markdown-it/dist/markdown-it.js';
-import { Util, Log, Net } from 'src/core/web/base/base.js';
-import * as UI from 'src/core/web/base/ui.js';
-import { AppRunner } from 'src/core/web/base/runner.js';
+import { Util, Log, Net } from 'lib/web/base/base.js';
+import * as UI from 'lib/web/base/ui.js';
+import { AppRunner } from 'lib/web/base/runner.js';
 import * as parse from '../lib/parse.js';
 import { TileMap } from '../lib/tilemap.js';
 

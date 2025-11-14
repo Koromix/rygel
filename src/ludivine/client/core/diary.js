@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, LocalDate } from 'src/core/web/base/base.js';
+import { Util, Log, LocalDate } from 'lib/web/base/base.js';
 import { ASSETS } from '../../assets/assets.js';
 import { ClassicEditor, AutoLink, Bold, Code, Essentials, FontBackgroundColor,
          FontColor, FontFamily, FontSize, Highlight, Italic, Link, Paragraph,

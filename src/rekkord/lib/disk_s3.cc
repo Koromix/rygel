@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/native/base/base.hh"
+#include "lib/native/base/base.hh"
 #include "disk.hh"
 #include "config.hh"
-#include "src/core/native/request/s3.hh"
+#include "lib/native/request/s3.hh"
 
 namespace K {
 

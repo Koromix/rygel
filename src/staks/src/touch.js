@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from 'src/core/web/base/base.js';
-import { AppRunner } from 'src/core/web/base/runner.js';
+import { Util, Log } from 'lib/web/base/base.js';
+import { AppRunner } from 'lib/web/base/runner.js';
 
 function TouchInterface(runner, assets) {
     let self = this;

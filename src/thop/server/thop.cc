@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/native/base/base.hh"
+#include "lib/native/base/base.hh"
 #include "thop.hh"
 #include "config.hh"
 #include "structure.hh"
@@ -9,7 +9,7 @@
 #include "mco_casemix.hh"
 #include "mco_info.hh"
 #include "user.hh"
-#include "src/core/native/http/http.hh"
+#include "lib/native/http/http.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace K {

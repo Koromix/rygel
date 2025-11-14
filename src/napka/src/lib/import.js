@@ -3,7 +3,7 @@
 
 import fetch from 'node-fetch';
 import querystring from 'querystring';
-import { Util } from 'src/core/web/base/base.js';
+import { Util } from 'lib/web/base/base.js';
 
 function FileInfo(filename = null, buffer = null) {
     this.filename = filename;

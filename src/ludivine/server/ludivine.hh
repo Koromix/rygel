@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include "src/core/native/base/base.hh"
+#include "lib/native/base/base.hh"
 #include "config.hh"
-#include "src/core/native/sqlite/sqlite.hh"
+#include "lib/native/sqlite/sqlite.hh"
 
 namespace K {
 

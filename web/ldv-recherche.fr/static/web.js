@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util } from '../../../src/core/web/base/base.js';
+import { Util } from '../../../lib/web/base/base.js';
 import { ASSETS } from '../../../src/ludivine/assets/assets.js';
 
-import '../../../src/core/web/flat/static.js';
+import '../../../lib/web/flat/static.js';
 
 const CHANNEL_NAME = 'ludivine';
 

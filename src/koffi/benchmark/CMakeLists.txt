@@ -17,7 +17,7 @@ include (../cmake/raylib.cmake)
 
 # ---- atoi ----
 
-add_node_addon(NAME atoi_napi SOURCES atoi_napi.cc ../../../src/core/native/base/base.cc)
+add_node_addon(NAME atoi_napi SOURCES atoi_napi.cc ../../../lib/native/base/base.cc)
 target_include_directories(atoi_napi PRIVATE ../../.. ../../../vendor/node-addon-api)
 target_link_libraries(atoi_napi PRIVATE Threads::Threads)
 
@@ -30,7 +30,7 @@ endif()
 
 # ---- rand ----
 
-add_node_addon(NAME rand_napi SOURCES rand_napi.cc ../../../src/core/native/base/base.cc)
+add_node_addon(NAME rand_napi SOURCES rand_napi.cc ../../../lib/native/base/base.cc)
 target_include_directories(rand_napi PRIVATE ../../.. ../../../vendor/node-addon-api)
 target_link_libraries(rand_napi PRIVATE Threads::Threads)
 
@@ -43,7 +43,7 @@ endif()
 
 # ---- Raylib ----
 
-add_executable(raylib_cc raylib_cc.cc  ../../../src/core/native/base/base.cc)
+add_executable(raylib_cc raylib_cc.cc  ../../../lib/native/base/base.cc)
 target_include_directories(raylib_cc PRIVATE ../../..)
 target_link_libraries(raylib_cc PRIVATE Threads::Threads raylib)
 

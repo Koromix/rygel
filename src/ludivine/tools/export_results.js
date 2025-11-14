@@ -7,7 +7,7 @@ import * as XLSX from 'vendor/sheetjs/XLSX.bundle.js';
 import fs from 'fs';
 import path from 'path';
 import sqlite3 from 'better-sqlite3';
-import { Util, LocalDate } from 'src/core/web/base/base.js';
+import { Util, LocalDate } from 'lib/web/base/base.js';
 import { ProjectInfo, ProjectBuilder } from '../client/core/project.js';
 import { wrap } from '../client/form/data.js';
 

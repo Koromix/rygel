@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, live } from 'vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from 'src/core/web/base/base.js';
-import * as Data from 'src/core/web/base/data.js';
+import { Util, Log } from 'lib/web/base/base.js';
+import * as Data from 'lib/web/base/data.js';
 import { ASSETS } from '../../assets/assets.js';
 
 let unique = 0;

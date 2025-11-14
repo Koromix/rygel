@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
-import { LocalDate } from 'src/core/web/base/base.js'
+import { LocalDate } from 'lib/web/base/base.js'
 
 let LANGUAGES = [
     ["aa", "Afar"],

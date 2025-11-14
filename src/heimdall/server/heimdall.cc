@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/native/base/base.hh"
+#include "lib/native/base/base.hh"
 #include "heimdall.hh"
 #include "api.hh"
 #include "config.hh"
 #include "database.hh"
-#include "src/core/native/sandbox/sandbox.hh"
+#include "lib/native/sandbox/sandbox.hh"
 
 #if !defined(_WIN32)
     #include <sys/stat.h>

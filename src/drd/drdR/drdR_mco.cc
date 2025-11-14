@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/native/base/base.hh"
+#include "lib/native/base/base.hh"
 #include "../libdrd/libdrd.hh"
-#include "src/core/native/wrap/Rcc.hh"
+#include "lib/native/wrap/Rcc.hh"
 
 namespace K {
 

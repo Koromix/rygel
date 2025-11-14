@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#include "src/core/native/base/base.hh"
+#include "lib/native/base/base.hh"
 #include "rokkerd.hh"
 #include "alert.hh"
 #include "config.hh"
@@ -10,7 +10,7 @@
 #include "plan.hh"
 #include "repository.hh"
 #include "user.hh"
-#include "src/core/native/sandbox/sandbox.hh"
+#include "lib/native/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #if !defined(_WIN32)
     #include <signal.h>

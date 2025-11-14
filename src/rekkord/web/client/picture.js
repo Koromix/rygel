@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, live } from 'vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net } from 'src/core/web/base/base.js';
-import * as UI from 'src/core/web/base/ui.js';
+import { Util, Log, Net } from 'lib/web/base/base.js';
+import * as UI from 'lib/web/base/ui.js';
 
 if (typeof T == 'undefined')
     T = {};
