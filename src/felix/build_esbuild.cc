@@ -45,6 +45,7 @@ bool Builder::PrepareEsbuild()
 
     // Try embedded builds
     {
+        // XXX: Make this configurable somehow, maybe in FelixBuild.ini?
         const char *prefix = "vendor/esbuild/native/node_modules/@esbuild";
 
 #if defined(_WIN32)
