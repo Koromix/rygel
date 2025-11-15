@@ -598,6 +598,11 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
         }
     }
 
+    if (run_target_name && build.fake) {
+        LogError("Cannot execute target when using --dry_run");
+        return 1;
+    }
+
     if (quiet >= 2) {
         SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {
             if (level != LogLevel::Info) {
