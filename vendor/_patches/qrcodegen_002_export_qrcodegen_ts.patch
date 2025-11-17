@@ -1,0 +1,10 @@
+diff --git a/vendor/qrcodegen/js/qrcodegen.ts b/vendor/qrcodegen/js/qrcodegen.ts
+index c4191ac0b5..c6249407d0 100644
+--- a/vendor/qrcodegen/js/qrcodegen.ts
++++ b/vendor/qrcodegen/js/qrcodegen.ts
+@@ -988,3 +988,5 @@ namespace qrcodegen.QrSegment {
+ 		
+ 	}
+ }
++
++export default qrcodegen

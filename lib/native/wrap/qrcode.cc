@@ -3,7 +3,7 @@
 
 #include "lib/native/base/base.hh"
 #include "qrcode.hh"
-#include "vendor/qrcodegen/qrcodegen.h"
+#include "vendor/qrcodegen/c/qrcodegen.h"
 
 namespace K {
 

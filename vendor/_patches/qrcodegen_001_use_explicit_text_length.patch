@@ -1,7 +1,7 @@
-diff --git a/vendor/qrcodegen/qrcodegen-demo.c b/vendor/qrcodegen/qrcodegen-demo.c
+diff --git a/vendor/qrcodegen/c/qrcodegen-demo.c b/vendor/qrcodegen/c/qrcodegen-demo.c
 index d925f4e32..a80dc28f2 100644
---- a/vendor/qrcodegen/qrcodegen-demo.c
-+++ b/vendor/qrcodegen/qrcodegen-demo.c
+--- a/vendor/qrcodegen/c/qrcodegen-demo.c
++++ b/vendor/qrcodegen/c/qrcodegen-demo.c
 @@ -61,7 +61,7 @@ static void doBasicDemo(void) {
  	// Make and print the QR Code symbol
  	uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
@@ -126,10 +126,10 @@ index d925f4e32..a80dc28f2 100644
  			qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_7, true);
  		if (ok)
  			printQr(qrcode);
-diff --git a/vendor/qrcodegen/qrcodegen-test.c b/vendor/qrcodegen/qrcodegen-test.c
+diff --git a/vendor/qrcodegen/c/qrcodegen-test.c b/vendor/qrcodegen/c/qrcodegen-test.c
 index d8863683b..97622906d 100644
---- a/vendor/qrcodegen/qrcodegen-test.c
-+++ b/vendor/qrcodegen/qrcodegen-test.c
+--- a/vendor/qrcodegen/c/qrcodegen-test.c
++++ b/vendor/qrcodegen/c/qrcodegen-test.c
 @@ -553,7 +553,7 @@ static void testIsAlphanumeric(void) {
  		{false, "\xFF"},
  	};
@@ -148,10 +148,10 @@ index d8863683b..97622906d 100644
  		numTestCases++;
  	}
  }
-diff --git a/vendor/qrcodegen/qrcodegen.c b/vendor/qrcodegen/qrcodegen.c
+diff --git a/vendor/qrcodegen/c/qrcodegen.c b/vendor/qrcodegen/c/qrcodegen.c
 index 871bc9243..f8a2c3dc4 100644
---- a/vendor/qrcodegen/qrcodegen.c
-+++ b/vendor/qrcodegen/qrcodegen.c
+--- a/vendor/qrcodegen/c/qrcodegen.c
++++ b/vendor/qrcodegen/c/qrcodegen.c
 @@ -129,23 +129,22 @@ static const int PENALTY_N4 = 10;
  /*---- High-level QR Code encoding functions ----*/
  
@@ -233,10 +233,10 @@ index 871bc9243..f8a2c3dc4 100644
  	result.mode = qrcodegen_Mode_ALPHANUMERIC;
  	int bitLen = calcSegmentBitLength(result.mode, len);
  	assert(bitLen != LENGTH_OVERFLOW);
-diff --git a/vendor/qrcodegen/qrcodegen.h b/vendor/qrcodegen/qrcodegen.h
+diff --git a/vendor/qrcodegen/c/qrcodegen.h b/vendor/qrcodegen/c/qrcodegen.h
 index 6bbc15762..cf8285b55 100644
---- a/vendor/qrcodegen/qrcodegen.h
-+++ b/vendor/qrcodegen/qrcodegen.h
+--- a/vendor/qrcodegen/c/qrcodegen.h
++++ b/vendor/qrcodegen/c/qrcodegen.h
 @@ -184,7 +184,7 @@ struct qrcodegen_Segment {
   * Please consult the QR Code specification for information on
   * data capacities per version, ECC level, and text encoding mode.
