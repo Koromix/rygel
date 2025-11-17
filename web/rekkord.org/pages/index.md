@@ -12,7 +12,7 @@ Rekkord is a **multi-platform backup tool**, with the following features:
 </div>
 
 > [!IMPORTANT]
-> Rekkord currently is beta quality software, we recommend use for **redundant backups**.
+> Rekkord currently is currently in active development, we recommend use for **redundant backups**.
 
 If you like this project, consider supporting me:
 
