@@ -241,6 +241,7 @@ static void InitAssets()
             assets_map.Set("/sw.pk.js", &asset);
         } else if (TestStr(asset.name, "src/goupile/client/manifest.json")) {
             assets_map.Set("/manifest.json", &asset);
+            assets_for_cache.Append("/manifest.json");
         } else if (TestStr(asset.name, "src/goupile/client/images/favicon.png")) {
             assets_map.Set("/favicon.png", &asset);
             assets_for_cache.Append("/favicon.png");
