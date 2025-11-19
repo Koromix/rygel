@@ -15,8 +15,12 @@ self.addEventListener('install', e => {
             caches.open(ENV.buster)
         ]);
 
+        for (let i = 0; i < list.files.length; i += 20) {
+            let subset = list.files.slice(i, i + 20);
+            await cache.addAll(subset.map(file => `${ENV.urls.files}${file.filename}`));
+        }
+
         await cache.addAll(assets);
-        await cache.addAll(list.files.map(file => `${ENV.urls.files}${file.filename}`));
 
         // We need to cache application files with two URLs:
         // the URL with the version qualifier, and the one without.
