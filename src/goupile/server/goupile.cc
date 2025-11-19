@@ -259,9 +259,13 @@ static void InitAssets()
 
             const char *name = SplitStrReverseAny(asset.name, K_PATH_SEPARATORS).ptr;
             const char *url = Fmt(&assets_alloc, "/static/%1/%2/%3", shared_etag, library, name).ptr;
+            Span<const char> ext = GetPathExtension(name);
 
             assets_map.Set(url, &asset);
-            assets_for_cache.Append(url);
+
+            if (ext != ".wasm") {
+                assets_for_cache.Append(url);
+            }
         }
     }
 
