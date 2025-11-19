@@ -405,7 +405,7 @@ async function showKey(plan, key, secret) {
 
                 <div class="main">
                     <label>
-                        <span>API key</span>
+                        <span>${T.api_key}</span>
                         <input type="text" style="width: 40em;" readonly value=${full} />
                         <button type="button" class="small" @click=${UI.wrap(e => writeClipboard(T.api_key, full))}>${T.copy}</button>
                     </label>
