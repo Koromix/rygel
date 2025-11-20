@@ -614,11 +614,11 @@ async function runReset() {
             <form @submit=${UI.wrap(submit)}>
                 ${error == null ? html`
                     <label>
-                        <span>New password</span>
+                        <span>${T.new_password}</span>
                         <input type="password" name="password1" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
                     </label>
                     <label>
-                        <span>Confirm</span>
+                        <span>${T.confirmation}</span>
                         <input type="password" name="password2" style="width: 20em;" placeholder=${T.confirmation.toLowerCase()} />
                     </label>
                     <div class="actions">
@@ -648,7 +648,7 @@ async function runReset() {
         });
 
         form.innerHTML = '';
-        render(html`<p>Your password has been changed, please login to continue.</p>`, form);
+        render(html`<p>${unsafeHTML(T.password_reset_successful)}</p>`, form);
 
         let url = window.location.pathname + window.location.search;
         history.replaceState(null, null, url);
