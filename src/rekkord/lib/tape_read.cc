@@ -425,11 +425,12 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
                     return;
                 K_DEFER { CloseDescriptor(fd); };
 
-                // Set directory metadata
+#if !defined(_WIN32)
                 if (chown) {
                     SetFileOwner(fd, meta.filename.ptr, meta.uid, meta.gid);
                 }
                 SetFileMode(fd, meta.filename.ptr, meta.mode);
+#endif
                 SetFileTimes(fd, meta.filename.ptr, meta.mtime, meta.btime);
 
                 if (xattrs) {
@@ -579,10 +580,12 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
                     }
 
                     if (!settings.fake) {
+#if !defined(_WIN32)
                         if (settings.chown) {
                             SetFileOwner(fd, entry.filename.ptr, entry.uid, entry.gid);
                         }
                         SetFileMode(fd, entry.filename.ptr, entry.mode);
+#endif
                         SetFileTimes(fd, entry.filename.ptr, entry.mtime, entry.btime);
 
                         if (settings.xattrs) {
