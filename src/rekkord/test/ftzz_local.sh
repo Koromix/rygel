@@ -2,19 +2,23 @@
 
 cd "$(dirname $0)"
 
-../../../../bootstrap.sh
-../../../../felix -pFast rekkord
+../../../bootstrap.sh
+../../../felix -pFast rekkord
 
-mkdir -p /tmp/rekkord/ftzz
-install ../../../../bin/Fast/rekkord /tmp/rekkord/ftzz/rekkord
-cp rekkord.ini /tmp/rekkord/ftzz/rekkord.ini
-cd /tmp/rekkord/ftzz
-
-export LANG=C
-export REKKORD_CONFIG_FILE=rekkord.ini
+mkdir -p /tmp/rekkord/ftzz_local
+install ../../../bin/Fast/rekkord /tmp/rekkord/ftzz_local/rekkord
+cd /tmp/rekkord/ftzz_local
 
 rm -f linux.tar.xz
 curl -L -o linux.tar.xz https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.17.8.tar.xz
+
+echo "[Repository]
+URL = repo
+KeyFile = rekkord.key
+" > rekkord.ini
+
+export LANG=C
+export REKKORD_CONFIG_FILE=rekkord.ini
 
 while true; do
     rm -rf repo src dest rekkord.key
