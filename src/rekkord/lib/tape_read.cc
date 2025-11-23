@@ -140,10 +140,6 @@ static bool CreateSymbolicLink(const char *filename, const char *target, bool)
     return true;
 }
 
-static void SetFileOwner(int, const char *, uint32_t, uint32_t)
-{
-}
-
 #else
 
 static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uint8_t> buf)
@@ -183,13 +179,6 @@ retry:
     }
 
     return true;
-}
-
-static void SetFileOwner(int fd, const char *filename, uint32_t uid, uint32_t gid)
-{
-    if (fchown(fd, (uid_t)uid, (gid_t)gid) < 0) {
-        LogError("Failed to change owner of '%1' (ignoring)", filename);
-    }
 }
 
 #endif
@@ -440,7 +429,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
                 if (chown) {
                     SetFileOwner(fd, meta.filename.ptr, meta.uid, meta.gid);
                 }
-                SetFileMetaData(fd, meta.filename.ptr, meta.mtime, meta.btime, meta.mode);
+                SetFileMode(fd, meta.filename.ptr, meta.mode);
+                SetFileTimes(fd, meta.filename.ptr, meta.mtime, meta.btime);
 
                 if (xattrs) {
                     WriteXAttributes(fd, meta.filename.ptr, meta.xattrs);
@@ -592,7 +582,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
                         if (settings.chown) {
                             SetFileOwner(fd, entry.filename.ptr, entry.uid, entry.gid);
                         }
-                        SetFileMetaData(fd, entry.filename.ptr, entry.mtime, entry.btime, entry.mode);
+                        SetFileMode(fd, entry.filename.ptr, entry.mode);
+                        SetFileTimes(fd, entry.filename.ptr, entry.mtime, entry.btime);
 
                         if (settings.xattrs) {
                             WriteXAttributes(fd, entry.filename.ptr, entry.xattrs);

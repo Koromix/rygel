@@ -4446,7 +4446,20 @@ static inline RenameResult RenameFile(const char *src_filename, const char *dest
     { return RenameFile(src_filename, dest_filename, 0, flags); }
 
 bool ResizeFile(int fd, const char *filename, int64_t len);
-bool SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t ctime, uint32_t mode);
+
+#if !defined(_WIN32)
+bool SetFileMode(int fd, const char *filename, uint32_t mode);
+static inline bool SetFileMode(const char *filename, uint32_t mode)
+    { return SetFileMode(-1, filename, mode); }
+
+bool SetFileOwner(int fd, const char *filename, uint32_t uid, uint32_t gid);
+static inline bool SetFileOwner(const char *filename, uint32_t uid, uint32_t gid)
+    { return SetFileOwner(-1, filename, uid, gid); }
+#endif
+
+bool SetFileTimes(int fd, const char *filename, int64_t mtime, int64_t ctime);
+static inline bool SetFileTimes(const char *filename, int64_t mtime, int64_t ctime)
+    { return SetFileTimes(-1, filename, mtime, ctime); }
 
 struct VolumeInfo {
     int64_t total;

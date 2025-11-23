@@ -2753,7 +2753,7 @@ bool ResizeFile(int fd, const char *filename, int64_t len)
     return true;
 }
 
-bool SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t btime, uint32_t)
+bool SetFileTimes(int fd, const char *filename, int64_t mtime, int64_t btime)
 {
     HANDLE h = (HANDLE)_get_osfhandle(fd);
 
@@ -3202,25 +3202,61 @@ bool ResizeFile(int fd, const char *filename, int64_t len)
     return true;
 }
 
-bool SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t, uint32_t mode)
+bool SetFileMode(int fd, const char *filename, uint32_t mode)
+{
+    if (fd >= 0) {
+        if (fchmod(fd, (mode_t)mode) < 0) {
+            LogError("Failed to set permissions of '%1': %2", filename, strerror(errno));
+            return false;
+        }
+    } else {
+        if (fchmodat(AT_FDCWD, filename, (mode_t)mode, AT_SYMLINK_NOFOLLOW) < 0) {
+            LogError("Failed to set permissions of '%1': %2", filename, strerror(errno));
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool SetFileOwner(int fd, const char *filename, uint32_t uid, uint32_t gid)
+{
+    if (fd >= 0) {
+        if (fchown(fd, (uid_t)uid, (gid_t)gid) < 0) {
+            LogError("Failed to change owner of '%1': %2", filename, strerror(errno));
+            return false;
+        }
+    } else {
+        if (lchown(filename, (uid_t)uid, (gid_t)gid) < 0) {
+            LogError("Failed to change owner of '%1': %2", filename, strerror(errno));
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool SetFileTimes(int fd, const char *filename, int64_t mtime, int64_t)
 {
     struct timespec times[2] = {};
-    bool valid = true;
 
     times[0].tv_nsec = UTIME_OMIT;
     times[1].tv_sec = mtime / 1000;
     times[1].tv_nsec = (mtime % 1000) * 1000000;
 
-    if (futimens(fd, times) < 0) {
-        LogError("Failed to set modification time of '%1': %2", filename, filename);
-        valid = false;
-    }
-    if (fchmod(fd, (mode_t)mode) < 0) {
-        LogError("Failed to set permissions of '%1'", filename);
-        valid = false;
+    if (fd >= 0) {
+        if (futimens(fd, times) < 0) {
+            LogError("Failed to set modification time of '%1': %2", filename, strerror(errno));
+            return false;
+        }
+    } else {
+        if (utimensat(AT_FDCWD, filename, times, AT_SYMLINK_NOFOLLOW) < 0) {
+            LogError("Failed to set modification time of '%1': %2", filename, strerror(errno));
+            return false;
+        }
     }
 
-    return valid;
+    return true;
 }
 
 #if !defined(__wasm__)
