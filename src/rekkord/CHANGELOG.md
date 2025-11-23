@@ -6,6 +6,15 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.91
+
+*Released on 2025-11-23*
+
+- Restore symbolic link attributes (owner, mtime)
+- Auto-complete paths in `rekkord setup` prompts
+- Expand *~/* prefix to home directory in config and prompt paths (POSIX platforms)
+- Warn about relative repository paths in `rekkord setup`
+
 ### Rekkord 0.90
 
 *Released on 2025-10-15*
