@@ -205,7 +205,7 @@ Options:
 
     switch (type) {
         case rk_DiskType::Local: {
-            Span<const char> directory = GetPathDirectory(config_filename);
+            Span<const char> directory = NormalizePath(GetPathDirectory(config_filename), GetWorkingDirectory(), &temp_alloc);
             const char *url = nullptr;
 
 reenter:
