@@ -16,7 +16,7 @@ rm -f linux.tar.xz
 curl -L -o linux.tar.xz https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.17.8.tar.xz
 
 while true; do
-    rm -rf repo src dest
+    rm -rf repo src dest rekkord.key
 
     seed=$RANDOM
     ftzz -n10000 -b1000000000 --seed $seed src/small
