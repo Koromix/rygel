@@ -609,6 +609,13 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
                         if (!CreateSymbolicLink(entry.filename.ptr, (const char *)blob.ptr, settings.force))
                             return false;
 
+#if !defined(_WIN32)
+                        if (settings.chown) {
+                            SetFileOwner(entry.filename.ptr, entry.uid, entry.gid);
+                        }
+                        SetFileTimes(entry.filename.ptr, entry.mtime, entry.btime);
+#endif
+
                         if (settings.xattrs && entry.xattrs.len) {
                             WriteXAttributes(-1, entry.filename.ptr, entry.xattrs);
                         }
