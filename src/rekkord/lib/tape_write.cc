@@ -547,8 +547,10 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
             // Chunk file and write chunks out in parallel
             do {
                 Size processed = splitter.Process(remain, st.IsEOF(), [&](Size idx, int64_t total, Span<const uint8_t> chunk) {
-                    K_ASSERT(idx * K_SIZE(RawChunk) == file_blob.len);
                     file_blob.len += K_SIZE(RawChunk);
+
+                    K_ASSERT(idx * K_SIZE(RawChunk) == file_blob.len - K_SIZE(RawChunk));
+                    K_ASSERT(file_blob.len <= file_blob.capacity - 8);
 
                     async.Run([&, idx, total, chunk]() {
                         RawChunk entry = {};
