@@ -2,7 +2,8 @@
 
 cd "$(dirname $0)"
 
-felix -pFast rekkord
+../../../../bootstrap.sh
+../../../../felix -pFast rekkord
 
 mkdir -p /tmp/rekkord/ftzz
 install ../../../../bin/Fast/rekkord /tmp/rekkord/ftzz/rekkord
