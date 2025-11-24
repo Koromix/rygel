@@ -658,8 +658,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
             // Match targets
             for (const TargetInfo &target: target_set.targets) {
                 if (MatchPathSpec(target.name, selector)) {
-                    bool inserted;
-                    handled_set.TrySet(target.name, &inserted);
+                    bool inserted = handled_set.InsertOrFail(target.name);
 
                     if (inserted) {
                         if (!target.TestPlatforms(compiler->platform)) {
@@ -678,8 +677,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
             // Match source files
             for (const SourceFileInfo &src: target_set.sources) {
                 if (MatchPathSpec(src.filename, selector)) {
-                    bool inserted;
-                    handled_set.TrySet(src.filename, &inserted);
+                    bool inserted = handled_set.InsertOrFail(src.filename);
 
                     if (inserted) {
                         if (src.target->TestPlatforms(compiler->platform)) {

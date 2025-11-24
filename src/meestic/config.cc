@@ -57,7 +57,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 profile->name = DuplicateString(prop.section, &config.str_alloc).ptr;
 
                 bool inserted;
-                config.profiles_map.TrySet(profile, &inserted);
+                config.profiles_map.InsertOrGet(profile, &inserted);
 
                 if (!inserted) {
                     LogError("Duplicate profile name '%1'", profile->name);

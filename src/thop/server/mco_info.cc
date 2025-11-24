@@ -434,7 +434,7 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
                                            ghm_node.u.ghm.ghm.parts.type == 'K' ||
                                            (ghm_node.u.ghm.ghm.Root() == mco_GhmRootCode(90, 'Z', 1) &&
                                             ghm_node.u.ghm.error == 6)) {
-                    uint16_t *ptr = out_nodes->TrySet((int16_t)node_idx, 0);
+                    uint16_t *ptr = out_nodes->InsertOrGet((int16_t)node_idx, 0);
                     *ptr |= flags;
 
                     return true;
@@ -464,7 +464,7 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
                 // The point of this is to highlight non-blocking error nodes,
                 // such as errors 80 and 222.
                 if (HighlightNodes(ctx, ghm_node.u.test.children_idx, flags, out_nodes)) {
-                    uint16_t *ptr = out_nodes->TrySet((int16_t)node_idx, 0);
+                    uint16_t *ptr = out_nodes->InsertOrGet((int16_t)node_idx, 0);
                     *ptr |= flags;
 
                     return true;

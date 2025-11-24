@@ -592,7 +592,7 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
 
     // Publish it!
     {
-        bk_FunctionInfo *head = *program->functions_map.TrySet(func);
+        bk_FunctionInfo *head = *program->functions_map.InsertOrGet(func);
 
         if (head != func) {
             K_ASSERT(!head->type->variadic && !func->type->variadic);
@@ -658,7 +658,7 @@ void bk_Parser::Preparse(Span<const Size> positions)
             fwd->skip = -1;
 
             bool inserted;
-            ForwardInfo **ptr = forwards_map.TrySet(fwd, &inserted);
+            ForwardInfo **ptr = forwards_map.InsertOrGet(fwd, &inserted);
 
             if (inserted) {
                 fwd->var = CreateGlobal(fwd->name, bk_NullType, {{}}, true);
@@ -680,7 +680,7 @@ template<typename T>
 bk_TypeInfo *bk_Parser::InsertType(const T &type_buf, BucketArray<T> *out_types)
 {
     bool inserted;
-    const bk_TypeInfo **ptr = program->types_map.TrySetDefault(type_buf.signature, &inserted);
+    const bk_TypeInfo **ptr = program->types_map.InsertOrGetDefault(type_buf.signature, &inserted);
 
     bk_TypeInfo *type;
     if (inserted) {
@@ -963,7 +963,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
         }
 
         bool inserted;
-        program->types_map.TrySet(record_type, &inserted);
+        program->types_map.InsertOrGet(record_type, &inserted);
 
         if (!inserted) [[unlikely]] {
             MarkError(func_pos, "Duplicate type name '%1'", record_type->signature);
@@ -1007,7 +1007,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
     // Publish function
     {
         bool inserted;
-        bk_FunctionInfo *overload = *program->functions_map.TrySet(func, &inserted);
+        bk_FunctionInfo *overload = *program->functions_map.InsertOrGet(func, &inserted);
 
         if (inserted || record) {
             func->overload_prev = func;
@@ -1152,7 +1152,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
 
         for (const bk_FunctionInfo::Parameter &param: func->params) {
             bool inserted;
-            const bk_FunctionInfo::Parameter **ptr = names.TrySet(param.name, &param, &inserted);
+            const bk_FunctionInfo::Parameter **ptr = names.InsertOrGet(param.name, &param, &inserted);
 
             if (!inserted) [[unlikely]] {
                 Size param_pos = definitions_map.FindValue(&param, -1);
@@ -1205,7 +1205,7 @@ void bk_Parser::ParseEnum(ForwardInfo *fwd)
             label->value = enum_type->labels.len - 1;
 
             bool inserted;
-            enum_type->labels_map.TrySet(label, &inserted);
+            enum_type->labels_map.InsertOrGet(label, &inserted);
 
             if (!inserted) [[unlikely]] {
                 MarkError(pos - 1, "Label '%1' is already used", label->name);
@@ -3235,7 +3235,7 @@ bool bk_Parser::MapVariable(bk_VariableInfo *var, Size var_pos)
     bk_VariableInfo *it;
     {
         bool inserted;
-        ptr = program->variables_map.TrySetDefault(var->name, &inserted);
+        ptr = program->variables_map.InsertOrGetDefault(var->name, &inserted);
         it = inserted ? nullptr : *ptr;
     }
 
@@ -3478,7 +3478,7 @@ bool bk_Parser::SkipNewLines()
 const char *bk_Parser::InternString(const char *str)
 {
     bool inserted;
-    const char **ptr = strings.TrySet(str, &inserted);
+    const char **ptr = strings.InsertOrGet(str, &inserted);
 
     if (inserted) {
         *ptr = DuplicateString(str, &program->str_alloc).ptr;

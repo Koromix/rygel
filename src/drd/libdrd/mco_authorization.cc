@@ -225,7 +225,7 @@ void mco_AuthorizationSetBuilder::Finish(mco_AuthorizationSet *out_set)
         if (i && set.authorizations[i - 1].unit == auth.unit) {
             set.authorizations[i - 1].dates[1] = auth.dates[0];
         }
-        set.authorizations_map.TrySet(&auth);
+        set.authorizations_map.InsertOrGet(&auth);
     }
 
     if (!set.authorizations.len) {

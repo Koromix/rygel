@@ -1057,7 +1057,7 @@ void HandleFilePublish(http_IO *io, InstanceHolder *instance)
                 }
 
                 bool inserted;
-                files.TrySet(file, &inserted);
+                files.InsertOrGet(file, &inserted);
 
                 if (!inserted) {
                     LogError("Duplicate file '%1'", file.filename);

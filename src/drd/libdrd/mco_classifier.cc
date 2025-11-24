@@ -1286,8 +1286,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
             Size special_matches = 0;
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
                 if (diag_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
-                    bool inserted;
-                    handled_codes.TrySet(diag_info->diag, &inserted);
+                    bool inserted = handled_codes.InsertOrFail(diag_info->diag);
 
                     if (inserted) {
                         special_matches += (diag_info == ctx.main_diag_info ||

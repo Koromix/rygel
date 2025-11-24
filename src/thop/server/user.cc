@@ -191,7 +191,7 @@ bool UserSetBuilder::LoadIni(StreamReader *st)
             rule_set.deny = deny.TrimAndLeak();
 
             bool inserted;
-            map.TrySet(user->name, set.users.len - 1, &inserted);
+            map.InsertOrGet(user->name, set.users.len - 1, &inserted);
 
             if (inserted) {
                 rule_sets.Append(rule_set);

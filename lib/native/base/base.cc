@@ -2048,7 +2048,7 @@ const char *GetEnv(const char *name)
     static HashMap<const char *, const char *> values;
 
     bool inserted;
-    auto bucket = values.TrySetDefault(name, &inserted);
+    auto bucket = values.InsertOrGetDefault(name, &inserted);
 
     if (inserted) {
         const char *str = (const char *)EM_ASM_INT({
@@ -10545,10 +10545,7 @@ Size PromptEnum(const char *prompt, Span<const PromptChoice> choices, Size value
             if (!choice.c)
                 continue;
 
-            bool inserted;
-            keys.TrySet(choice.c, &inserted);
-
-            bool duplicates = !inserted;
+            bool duplicates = !keys.InsertOrFail(choice.c);
             K_ASSERT(!duplicates);
         }
     }

@@ -153,11 +153,7 @@ bool ResolveAssets(Span<const char *const> filenames, int strip_count,
             const EmbedAsset &asset = out_set->assets[i];
 
             out_set->assets[j] = out_set->assets[i];
-
-            bool inserted;
-            known_filenames.TrySet(asset.src_filename, &inserted);
-
-            j += inserted;
+            j += known_filenames.InsertOrFail(asset.src_filename);
         }
         out_set->assets.len = j;
     }

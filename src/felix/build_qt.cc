@@ -298,10 +298,7 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
                 basename += (basename[0] == '@');
             }
 
-            bool inserted;
-            prev_libraries.TrySet(basename, &inserted);
-
-            j += inserted;
+            j += prev_libraries.InsertOrFail(basename);
         }
         link_libraries->len = j;
     }

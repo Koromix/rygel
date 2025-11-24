@@ -383,7 +383,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                 // Intern string
                 {
                     bool inserted;
-                    Span<const char> *ptr = strings.TrySet(str_buf, &inserted);
+                    Span<const char> *ptr = strings.InsertOrGet(str_buf, &inserted);
 
                     if (inserted) {
                         str_buf.Grow(1);
@@ -479,7 +479,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                     // Intern string
 
                     bool inserted;
-                    Span<const char> *ptr = strings.TrySet(ident, &inserted);
+                    Span<const char> *ptr = strings.InsertOrGet(ident, &inserted);
 
                     if (inserted) {
                         *ptr = DuplicateString(ident, &file->str_alloc);

@@ -400,10 +400,10 @@ bool GitVersioneer::CacheTagInfo(Span<const char> tag, Span<const char> id)
 
     ref_map.Set(copy.ptr, hash);
 
-    HeapArray<const char *> *tags = hash_map.TrySet(hash, {});
+    HeapArray<const char *> *tags = hash_map.InsertOrGet(hash, {});
     tags->Append(copy.ptr);
 
-    int64_t *ptr = prefix_map.TrySet(prefix, INT64_MAX);
+    int64_t *ptr = prefix_map.InsertOrGet(prefix, INT64_MAX);
     *ptr = std::min(*ptr, date - max_delta_date);
 
     return true;

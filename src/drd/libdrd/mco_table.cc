@@ -1627,7 +1627,7 @@ bool mco_TableSetBuilder::CommitIndex(LocalDate start_date, LocalDate end_date,
             if (load_info->prev_index_idx < 0) { \
                 auto map = set.maps.MapName.AppendDefault(); \
                 for (auto &value: index.IndexName) { \
-                    map->TrySet(&value); \
+                    map->InsertOrGet(&value); \
                 } \
                 index.MapPtrName = map; \
             } else { \

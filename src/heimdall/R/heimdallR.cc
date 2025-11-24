@@ -375,7 +375,7 @@ RcppExport SEXP hmR_AddEvents(SEXP inst_xp, SEXP events_xp, SEXP reset_xp, SEXP 
 
             if (reset) {
                 bool inserted;
-                set.TrySet(entity, &inserted);
+                set.InsertOrGet(entity, &inserted);
 
                 if (inserted && !inst->db.Run("DELETE FROM events WHERE entity = ?1", entity))
                     return false;
@@ -457,7 +457,7 @@ RcppExport SEXP hmR_AddPeriods(SEXP inst_xp, SEXP periods_xp, SEXP reset_xp, SEX
 
             if (reset) {
                 bool inserted;
-                set.TrySet(entity, &inserted);
+                set.InsertOrGet(entity, &inserted);
 
                 if (inserted && !inst->db.Run("DELETE FROM periods WHERE entity = ?1", entity))
                     return false;
@@ -536,7 +536,7 @@ RcppExport SEXP hmR_AddValues(SEXP inst_xp, SEXP values_xp, SEXP reset_xp, SEXP 
 
             if (reset) {
                 bool inserted;
-                set.TrySet(entity, &inserted);
+                set.InsertOrGet(entity, &inserted);
 
                 if (inserted && !inst->db.Run("DELETE FROM measures WHERE entity = ?1", entity))
                     return false;

@@ -169,7 +169,7 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
 
             // Cache for quick future access
             bool inserted;
-            auto bucket = instance->types_map.TrySetDefault(remain.ptr, &inserted);
+            auto bucket = instance->types_map.InsertOrGetDefault(remain.ptr, &inserted);
 
             if (inserted) {
                 bucket->key = DuplicateString(remain, &instance->str_alloc).ptr;
@@ -381,7 +381,7 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
         Fmt(name_buf, "%1%2*", ref->name, EndsWith(ref->name, "*") ? "" : " ");
 
         bool inserted;
-        auto bucket = instance->types_map.TrySetDefault(name_buf, &inserted);
+        auto bucket = instance->types_map.InsertOrGetDefault(name_buf, &inserted);
 
         if (inserted) {
             TypeInfo *type = instance->types.AppendDefault();
@@ -428,7 +428,7 @@ static TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size
 
     if (insert) {
         bool inserted;
-        type = (TypeInfo *)*instance->types_map.TrySet(type->name, type, &inserted);
+        type = (TypeInfo *)*instance->types_map.InsertOrGet(type->name, type, &inserted);
         instance->types.RemoveLast(!inserted);
     }
 

@@ -978,7 +978,7 @@ static bool DecodeQuery(Span<char> str, HeapArray<http_KeyValue> *out_values)
 static void MapKeys(Span<http_KeyValue> pairs, HashTable<const char *, http_KeyHead> *out_map)
 {
     for (http_KeyValue &pair: pairs) {
-        http_KeyHead *head = out_map->TrySet({ pair.key, &pair, &pair });
+        http_KeyHead *head = out_map->InsertOrGet({ pair.key, &pair, &pair });
 
         head->last->next = &pair;
         head->last = &pair;

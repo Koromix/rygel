@@ -251,14 +251,9 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
             target_config.version_tag = target_config.name;
 
             // Don't reuse target names
-            {
-                bool inserted;
-                known_targets.TrySet(target_config.name, &inserted);
-
-                if (!inserted) {
-                    LogError("Duplicate target name '%1'", target_config.name);
-                    valid = false;
-                }
+            if (known_targets.InsertOrFail(target_config.name)) {
+                LogError("Duplicate target name '%1'", target_config.name);
+                valid = false;
             }
 
             // Type property must be specified first
@@ -330,7 +325,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         valid &= ParseFeatureString(prop.value, &features.enable_features, &features.disable_features);
 
                         if (features.enable_features || features.disable_features) {
-                            target_config.src_features.TrySet(filename, features);
+                            target_config.src_features.InsertOrGet(filename, features);
                         }
                     } else if (prop.key == "SourceIgnore") {
                         AppendListValues(prop.value, &set.str_alloc, &target_config.src_file_set.ignore);
@@ -357,7 +352,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         valid &= ParseFeatureString(prop.value, &features.enable_features, &features.disable_features);
 
                         if (features.enable_features || features.disable_features) {
-                            target_config.src_features.TrySet(target_config.c_pch_filename, features);
+                            target_config.src_features.InsertOrGet(target_config.c_pch_filename, features);
                         }
                     } else if (prop.key == "PrecompileCxx" || prop.key == "PrecompileCXX") {
                         Span<const char> path = SplitStr(prop.value, ' ', &prop.value);
@@ -368,7 +363,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         valid &= ParseFeatureString(prop.value, &features.enable_features, &features.disable_features);
 
                         if (features.enable_features || features.disable_features) {
-                            target_config.src_features.TrySet(target_config.cxx_pch_filename, features);
+                            target_config.src_features.InsertOrGet(target_config.cxx_pch_filename, features);
                         }
                     } else if (prop.key == "Definitions") {
                         AppendListValues(prop.value, &set.str_alloc, &target_config.definitions);
@@ -457,11 +452,7 @@ static void DeduplicateArray(HeapArray<T> *array, Func func)
         (*array)[j] = (*array)[i];
 
         const char *str = func((*array)[i]);
-
-        bool inserted;
-        handled.TrySet(str, &inserted);
-
-        j += inserted;
+        j += handled.InsertOrFail(str);
     }
 
     array->len = j;
@@ -518,16 +509,14 @@ const TargetInfo *TargetSetBuilder::CreateTarget(const char *root_directory, Tar
             }
 
             for (const TargetInfo *import2: import->imports) {
-                bool inserted;
-                handled_imports.TrySet(import2->name, &inserted);
+                bool inserted = handled_imports.InsertOrFail(import2->name);
 
                 if (inserted) {
                     target->imports.Append(import2);
                 }
             }
 
-            bool inserted;
-            handled_imports.TrySet(import->name, &inserted);
+            bool inserted = handled_imports.InsertOrFail(import->name);
 
             if (inserted) {
                 target->imports.Append(import);
@@ -616,7 +605,7 @@ const SourceFileInfo *TargetSetBuilder::CreateSource(const TargetInfo *target, c
                                                      SourceType type, const SourceFeatures *features)
 {
     bool inserted;
-    SourceFileInfo **ptr = set.sources_map.TrySetDefault(filename, &inserted);
+    SourceFileInfo **ptr = set.sources_map.InsertOrGetDefault(filename, &inserted);
 
     if (inserted) {
         SourceFileInfo *src = set.sources.AppendDefault();

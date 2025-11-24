@@ -987,7 +987,7 @@ void rk_ListChannels(Span<const rk_SnapshotInfo> snapshots, Allocator *alloc, He
     HashMap<const char *, Size> map;
 
     for (const rk_SnapshotInfo &snapshot: snapshots) {
-        Size *ptr = map.TrySet(snapshot.channel, -1);
+        Size *ptr = map.InsertOrGet(snapshot.channel, -1);
         Size idx = *ptr;
 
         if (idx < 0) {

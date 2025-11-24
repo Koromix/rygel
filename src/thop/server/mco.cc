@@ -228,12 +228,12 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
         const mco_Result &result = mco_results[i];
 
         results_by_ghm_root_ptrs.Append(&result);
-        mco_results_to_mono.TrySet(&result, &mco_mono_results[j]);
+        mco_results_to_mono.InsertOrGet(&result, &mco_mono_results[j]);
 
         i++;
         j += result.stays.len;
     }
-    mco_results_to_mono.TrySet(mco_results.end(), mco_mono_results.end());
+    mco_results_to_mono.InsertOrGet(mco_results.end(), mco_mono_results.end());
 
     // Finalize index by GHM
     std::stable_sort(results_by_ghm_root_ptrs.begin(), results_by_ghm_root_ptrs.end(),

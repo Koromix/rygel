@@ -204,7 +204,7 @@ static bool MapType(Napi::Env env, InstanceData *instance, const TypeInfo *type,
     }
 
     bool inserted;
-    instance->types_map.TrySet(name, type, &inserted);
+    instance->types_map.InsertOrGet(name, type, &inserted);
 
     if (!inserted) {
         ThrowError<Napi::Error>(env, "Duplicate type name '%1'", name);
@@ -346,7 +346,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         }
 
         bool inserted;
-        members.TrySet(member.name, &inserted);
+        members.InsertOrGet(member.name, &inserted);
 
         if (!inserted) {
             ThrowError<Napi::Error>(env, "Duplicate member '%1' in struct '%2'", member.name, type->name);
@@ -536,7 +536,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         }
 
         bool inserted;
-        members.TrySet(member.name, &inserted);
+        members.InsertOrGet(member.name, &inserted);
 
         if (!inserted) {
             ThrowError<Napi::Error>(env, "Duplicate member '%1' in union '%2'", member.name, type->name);
@@ -827,7 +827,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     // If the insert succeeds, we cannot fail anymore
     if (named) {
         bool inserted;
-        instance->types_map.TrySet(type->name, type, &inserted);
+        instance->types_map.InsertOrGet(type->name, type, &inserted);
 
         if (!inserted) {
             ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
@@ -2370,7 +2370,7 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
 
     for (const char *name: names) {
         bool inserted;
-        instance->types_map.TrySet(name, type, &inserted);
+        instance->types_map.InsertOrGet(name, type, &inserted);
         K_ASSERT(inserted);
 
         if (!EndsWith(name, "*")) {

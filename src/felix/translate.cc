@@ -81,7 +81,7 @@ bool LoadTranslations(Span<const char *const> filenames, TranslationSet *out_set
 
         TranslationFile *file;
         {
-            Size *ptr = map.TrySet(language, -1);
+            Size *ptr = map.InsertOrGet(language, -1);
             Size idx = *ptr;
 
             if (idx >= 0) {

@@ -249,7 +249,7 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
 
             if (user->mco_allowed_units.Find(unit)) {
                 bool inserted;
-                auto bucket = agg_parts_map.TrySetDefault(mono_result.stays[0].unit, &inserted);
+                auto bucket = agg_parts_map.InsertOrGetDefault(mono_result.stays[0].unit, &inserted);
 
                 bucket->value.mono_count += multiplier;
                 bucket->value.price_cents += multiplier * mono_pricing.price_cents;
@@ -286,7 +286,7 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
             Aggregate *agg;
             {
                 bool inserted;
-                Size *ptr = aggregates_map.TrySet(key, set.aggregates.len, &inserted);
+                Size *ptr = aggregates_map.InsertOrGet(key, set.aggregates.len, &inserted);
 
                 if (inserted) {
                     agg = set.aggregates.AppendDefault();
@@ -310,8 +310,7 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
                 agg->parts = agg_parts.TrimAndLeak();
             }
 
-            bool inserted;
-            ghm_roots_set.TrySet(result.ghm.Root(), &inserted);
+            bool inserted = ghm_roots_set.InsertOrFail(result.ghm.Root());
 
             if (inserted) {
                 ghm_roots.Append(result.ghm.Root());
@@ -361,7 +360,7 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, LocalDate mi
                         key.ghs = ghm_to_ghs_info.Ghs(sector);
 
                         bool inserted;
-                        Size *ptr = ghm_ghs_map.TrySet(key, out_ghm_ghs->len, &inserted);
+                        Size *ptr = ghm_ghs_map.InsertOrGet(key, out_ghm_ghs->len, &inserted);
 
                         if (inserted) {
                             agg_ghm_ghs = out_ghm_ghs->AppendDefault();

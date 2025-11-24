@@ -184,7 +184,7 @@ private:
             }
 
             bool inserted;
-            sessions_map.TrySet(handle, &inserted);
+            sessions_map.InsertOrGet(handle, &inserted);
 
             if (inserted) [[likely]]
                 break;

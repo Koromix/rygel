@@ -441,7 +441,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
         valid &= ParsePmsiInt(line.Take(12, 3), &test.error);
 
         if (valid) {
-            mco_Test *ptr = out_tests->TrySet(test);
+            mco_Test *ptr = out_tests->InsertOrGet(test);
             ptr->cluster_len++;
         } else {
             mco_Test *ptr = out_tests->Find(test.bill_id);
@@ -978,7 +978,7 @@ bool mco_StaySetBuilder::Finish(mco_StaySet *out_set)
         return fc1.admin_id < fc2.admin_id;
     });
     for (const FichCompData &fc: fichcomps) {
-        fichcomps_map.TrySet(fc.admin_id, &fc);
+        fichcomps_map.InsertOrGet(fc.admin_id, &fc);
     }
 
     // Add FICHCOMP data to stays

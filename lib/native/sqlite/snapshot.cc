@@ -395,7 +395,7 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
         // Insert or reuse previous snapshot
         sq_SnapshotInfo *snapshot;
         {
-            Size prev_idx = *snapshots_map.TrySet(orig_filename, out_set->snapshots.len);
+            Size prev_idx = *snapshots_map.InsertOrGet(orig_filename, out_set->snapshots.len);
 
             if (prev_idx >= out_set->snapshots.len) {
                 snapshot = out_set->snapshots.AppendDefault();

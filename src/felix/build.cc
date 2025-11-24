@@ -1123,7 +1123,7 @@ const char *Builder::GatherFlags(const TargetInfo &target, SourceType type)
     const void *key = (const void *)((uint8_t *)&target + (int)type);
 
     bool inserted;
-    const char **ptr = custom_flags.TrySet(key, nullptr, &inserted);
+    const char **ptr = custom_flags.InsertOrGet(key, nullptr, &inserted);
 
     if (inserted) {
         HeapArray<char> buf(&str_alloc);

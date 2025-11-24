@@ -879,13 +879,8 @@ public:
                         basename = basename.Take(0, basename.len - 10);
                     }
 
-                    if (directory.len) {
-                        bool inserted = false;
-                        framework_paths.TrySet(directory, &inserted);
-
-                        if (inserted) {
-                            Fmt(&buf, " -F \"%1\"", directory);
-                        }
+                    if (directory.len && framework_paths.InsertOrFail(directory)) {
+                        Fmt(&buf, " -F \"%1\"", directory);
                     }
                     Fmt(&buf, " -framework %1", basename);
                 } else if (strpbrk(lib, K_PATH_SEPARATORS)) {
@@ -1544,13 +1539,8 @@ public:
                         basename = basename.Take(0, basename.len - 10);
                     }
 
-                    if (directory.len) {
-                        bool inserted = false;
-                        framework_paths.TrySet(directory, &inserted);
-
-                        if (inserted) {
-                            Fmt(&buf, " -F \"%1\"", directory);
-                        }
+                    if (directory.len && framework_paths.InsertOrFail(directory)) {
+                        Fmt(&buf, " -F \"%1\"", directory);
                     }
                     Fmt(&buf, " -framework %1", basename);
                 } else if (strpbrk(lib, K_PATH_SEPARATORS)) {

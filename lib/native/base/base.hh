@@ -2830,7 +2830,7 @@ public:
         return ptr;
     }
 
-    ValueType *TrySet(const ValueType &value, bool *out_inserted = nullptr)
+    ValueType *InsertOrGet(const ValueType &value, bool *out_inserted = nullptr)
     {
         const KeyType &key = Handler::GetKey(value);
 
@@ -2846,7 +2846,7 @@ public:
         }
         return ptr;
     }
-    ValueType *TrySetDefault(const KeyType &key, bool *out_inserted = nullptr)
+    ValueType *InsertOrGetDefault(const KeyType &key, bool *out_inserted = nullptr)
     {
         bool inserted;
         ValueType *ptr = Insert(key, &inserted);
@@ -3290,15 +3290,15 @@ public:
         return table_it;
     }
 
-    ValueType *TrySet(const KeyType &key, const ValueType &value, bool *out_inserted = nullptr)
+    ValueType *InsertOrGet(const KeyType &key, const ValueType &value, bool *out_inserted = nullptr)
     {
-        Bucket *ptr = table.TrySet({ key, value }, out_inserted);
+        Bucket *ptr = table.InsertOrGet({ key, value }, out_inserted);
         return &ptr->value;
     }
-    Bucket *TrySetDefault(const KeyType &key, bool *out_inserted = nullptr)
+    Bucket *InsertOrGetDefault(const KeyType &key, bool *out_inserted = nullptr)
     {
         bool inserted;
-        Bucket *ptr = table.TrySetDefault(key, &inserted);
+        Bucket *ptr = table.InsertOrGetDefault(key, &inserted);
 
         if (inserted) {
             ptr->key = key;
@@ -3361,14 +3361,23 @@ public:
         { return table.FindValue(value, default_value); }
 
     ValueType *Set(const ValueType &value) { return table.Set(value); }
-    ValueType *TrySet(const ValueType &value, bool *out_inserted = nullptr)
-        { return table.TrySet(value, out_inserted); }
+
+    ValueType *InsertOrGet(const ValueType &value, bool *out_inserted = nullptr)
+        { return table.InsertOrGet(value, out_inserted); }
+    bool InsertOrFail(const ValueType &value)
+    {
+        bool inserted;
+        InsertOrGet(value, &inserted);
+        return inserted;
+    }
 
     void Remove(ValueType *it) { table.Remove(it); }
     template <typename T = ValueType>
     void Remove(const T &value) { Remove(Find(value)); }
 
     void Trim() { table.Trim(); }
+
+private:
 };
 
 // XXX: Switch to perfect hashing later on
