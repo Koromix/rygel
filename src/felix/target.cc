@@ -251,7 +251,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
             target_config.version_tag = target_config.name;
 
             // Don't reuse target names
-            if (known_targets.InsertOrFail(target_config.name)) {
+            if (!known_targets.InsertOrFail(target_config.name)) {
                 LogError("Duplicate target name '%1'", target_config.name);
                 valid = false;
             }
