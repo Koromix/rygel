@@ -6,6 +6,12 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.92
+
+*Released on 2025-11-25*
+
+- Fix failed restoration of files and directories located after unreadable entry
+
 ### Rekkord 0.91
 
 *Released on 2025-11-23*
