@@ -464,17 +464,17 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
     {
         Size j = 0;
         for (Size i = 0; i < ctx->entries.len; i++) {
-            EntryInfo &entry = ctx->entries[i];
-            ctx->entries[j] = entry;
+            EntryInfo *entry = &ctx->entries[j];
+            *entry = ctx->entries[i];
 
-            if (entry.kind == (int)RawEntry::Kind::Unknown)
+            if (entry->kind == (int)RawEntry::Kind::Unknown)
                 continue;
-            if (!(entry.flags & (int)RawEntry::Flags::Readable))
+            if (!(entry->flags & (int)RawEntry::Flags::Readable))
                 continue;
 
-            entry.filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry.basename).ptr;
+            entry->filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry->basename).ptr;
 
-            if (!settings.fake && allow_separators && !EnsureDirectoryExists(entry.filename.ptr))
+            if (!settings.fake && allow_separators && !EnsureDirectoryExists(entry->filename.ptr))
                 return false;
 
             j++;
