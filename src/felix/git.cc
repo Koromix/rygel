@@ -286,7 +286,7 @@ const char *GitVersioneer::Version(Span<const char> key, Allocator *alloc)
         Size idx = 0;
 
         while (idx < max_delta_count) {
-            HeapArray<const char *> *tags = hash_map.FindValue(commits[idx], nullptr);
+            LocalArray<const char *, 8> *tags = hash_map.Find(commits[idx]);
 
             if (tags) {
                 for (const char *tag: *tags) {
@@ -402,17 +402,13 @@ bool GitVersioneer::CacheTagInfo(Span<const char> tag, Span<const char> id)
 
     // A commit hash can map to zero, one or more tags
     {
-        HeapArray<const char *> **ptr = hash_map.InsertOrGet(hash, nullptr);
-        HeapArray<const char *> *tags = nullptr;
+        LocalArray<const char *, 8> *tags = hash_map.InsertOrGet(hash, {});
 
-        if (*ptr) {
-            tags = *ptr;
+        if (tags->Available()) [[likely]] {
+            tags->Append(copy.ptr);
         } else {
-            tags = hash_tags.AppendDefault();
-            *ptr = tags;
+            LogWarning("Too many tags on commit %1", id);
         }
-
-        tags->Append(copy.ptr);
     }
 
     // This tag prefix exists!
