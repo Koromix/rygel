@@ -742,7 +742,9 @@ function runDeleteRecordDialog(e, row) {
 
 async function runExportDialog(e) {
     let downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
+
     let stores = app.stores.map(store => store.key);
+    let template = app.exports;
 
     downloads.reverse();
 
@@ -812,7 +814,7 @@ async function runExportDialog(e) {
                                     <td>${download.threads}</td>
                                     <td>${download.scheduled ? T.yes : T.no}</td>
                                     <td>
-                                        ${download.threads ? html`<a @click=${UI.wrap(e => exportRecords(download.export, null, stores))}>${T.download}</a>` : ''}
+                                        ${download.threads ? html`<a @click=${UI.wrap(e => exportRecords(download.export, null, stores, template))}>${T.download}</a>` : ''}
                                         ${!download.threads ? '(' + T.not_available.toLowerCase() + ')' : ''}
                                     </td>
                                 </tr>
@@ -832,7 +834,7 @@ async function runExportDialog(e) {
             let info = await createExport(thread, anchor);
             let stores = app.stores.map(store => store.key);
 
-            await exportRecords(info.export, info.secret, stores);
+            await exportRecords(info.export, info.secret, stores, template);
 
             progress.success(T.export_done);
         } catch (err) {
@@ -844,7 +846,9 @@ async function runExportDialog(e) {
 
 async function runExportListDialog(e) {
     let downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
+
     let stores = app.stores.map(store => store.key);
+    let template = app.exports;
 
     downloads.reverse();
 
@@ -874,7 +878,7 @@ async function runExportListDialog(e) {
                             <td>${download.threads}</td>
                             <td>${download.scheduled ? T.yes : T.no}</td>
                             <td>
-                                ${download.threads ? html`<a @click=${UI.wrap(e => exportRecords(download.export, null, stores))}>${T.download}</a>` : ''}
+                                ${download.threads ? html`<a @click=${UI.wrap(e => exportRecords(download.export, null, stores, template))}>${T.download}</a>` : ''}
                                 ${!download.threads ? '(' + T.not_available.toLowerCase() + ')' : ''}
                             </td>
                         </tr>

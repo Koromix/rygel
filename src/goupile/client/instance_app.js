@@ -23,6 +23,8 @@ function ApplicationInfo(profile) {
         { key: 'incomplete', label: T.label_incomplete, color: '#aaaaaa', filter: true },
         { key: 'error', label: T.label_error, color: '#db0a0a', filter: true }
     ];
+
+    this.exports = {};
 }
 
 function ApplicationBuilder(app) {
@@ -52,6 +54,7 @@ function ApplicationBuilder(app) {
 
         head: { get: () => app.head, set: head => { app.head = head; }, enumerable: true },
         tags: { get: () => app.tags, set: tags => { app.tags = tags; }, enumerable: true },
+        exports: { get: () => app.exports, enumerable: true },
 
         menu: makeOptionProperty('menu'),
         autosave: makeOptionProperty('autosave'),

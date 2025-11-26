@@ -8,6 +8,8 @@ import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
 
+let XLSX = null;
+
 async function createExport(thread = null, anchor = null) {
     let info = await Net.post(`${ENV.urls.instance}api/export/create`, {
         thread: thread,
@@ -17,11 +19,10 @@ async function createExport(thread = null, anchor = null) {
     return info;
 }
 
-async function exportRecords(id, secret, stores, filter = null) {
-    if (filter == null)
-        filter = () => true;
+async function exportRecords(id, secret, stores, template = {}) {
+    if (XLSX == null)
+        XLSX = await import(`${ENV.urls.static}sheetjs/XLSX.bundle.js`);
 
-    let XLSX = await import(`${ENV.urls.static}sheetjs/XLSX.bundle.js`);
     let { name, threads, tables, counters } = await walkThreads(id, secret);
 
     // Metadata worksheets
@@ -76,8 +77,6 @@ async function exportRecords(id, secret, stores, filter = null) {
 
             if (table == null || entry == null)
                 continue;
-            if (!filter(entry.data))
-                continue;
 
             let row = [
                 thread.tid, thread.sequence,
@@ -104,24 +103,58 @@ async function exportRecords(id, secret, stores, filter = null) {
         }
     }
 
-    // Create workbook...
-    let wb = XLSX.utils.book_new();
-    for (let i = 0; i < stores.length; i++) {
-        let store = stores[i];
-        let ws = worksheets[i];
+    let wb = null;
 
-        if (ws == null)
-            continue;
+    // Create or load workbook...
+    if (template.xlsx != null) {
+        let response = await Net.fetch(template.xlsx);
+        if (!response.ok)
+            throw new Error(T.Message(`Cannot fetch XLSX template '{1}'`, template.xlsx));
+        let buf = await response.arrayBuffer();
 
-        XLSX.utils.book_append_sheet(wb, ws, store);
-    }
-    for (let key in meta) {
-        let ws = meta[key];
+        wb = XLSX.read(buf);
 
-        if (ws == null)
-            continue;
+        for (let i = 0; i < stores.length; i++) {
+            let store = stores[i];
+            let ws = worksheets[i];
 
-        XLSX.utils.book_append_sheet(wb, ws, '@' + key);
+            if (ws == null)
+                continue;
+            if (wb.Sheets[store] == null)
+                continue;
+
+            updateSheet(wb.Sheets[store], ws);
+        }
+        for (let key in meta) {
+            let ws = meta[key];
+
+            if (ws == null)
+                continue;
+            if (wb.Sheets['@' + key] == null)
+                continue;
+
+            updateSheet(wb.Sheets['@' + key], ws);
+        }
+    } else {
+        wb = XLSX.utils.book_new();
+
+        for (let i = 0; i < stores.length; i++) {
+            let store = stores[i];
+            let ws = worksheets[i];
+
+            if (ws == null)
+                continue;
+
+            XLSX.utils.book_append_sheet(wb, ws, store);
+        }
+        for (let key in meta) {
+            let ws = meta[key];
+
+            if (ws == null)
+                continue;
+
+            XLSX.utils.book_append_sheet(wb, ws, '@' + key);
+        }
     }
 
     // ... and export it!
@@ -268,6 +301,46 @@ function expandColumns(variables) {
     }
 
     return columns;
+}
+
+function updateSheet(dest, src) {
+    let from = listColumns(src);
+    let to = listColumns(dest);
+
+    if (from == null || to == null)
+        return;
+
+    let map = to.reduce((obj, key, idx) => { obj[key] = idx; return obj }, {});
+    let end = XLSX.utils.decode_range(src['!ref']).e.r + 1;
+
+    for (let row = 1; row < end; row++) {
+        let cells = new Array(to.length).fill('');
+
+        for (let column = 0; column < from.length; column++) {
+            let to = map[from[column]];
+            if (to == null)
+                continue;
+
+            let addr = XLSX.utils.encode_cell({ r: row, c: column });
+            cells[to] = src[addr]?.v ?? '';
+        }
+
+        XLSX.utils.sheet_add_aoa(dest, [cells], { origin: row });
+    }
+}
+
+function listColumns(ws) {
+    let columns = [];
+
+    for (;;) {
+        let addr = XLSX.utils.encode_cell({ r: 0, c: columns.length });
+        let value = ws[addr]?.v;
+        if (value == null)
+            break;
+        columns.push('' + value);
+    }
+
+    return columns.length ? columns : null;
 }
 
 export {
