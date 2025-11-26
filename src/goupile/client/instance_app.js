@@ -24,7 +24,10 @@ function ApplicationInfo(profile) {
         { key: 'error', label: T.label_error, color: '#db0a0a', filter: true }
     ];
 
-    this.exports = {};
+    this.exports = {
+        xlsx: null,
+        sheets: null
+    };
 }
 
 function ApplicationBuilder(app) {

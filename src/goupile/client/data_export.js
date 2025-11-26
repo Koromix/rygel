@@ -104,6 +104,10 @@ async function exportRecords(id, secret, stores, template = {}) {
     }
 
     let wb = null;
+    let sheets = null;
+
+    if (template.sheets != null)
+        sheets = Object.fromEntries(Object.entries(template.sheets).map(e => [e[1], e[0]]));
 
     // Create or load workbook...
     if (template.xlsx != null) {
@@ -115,45 +119,47 @@ async function exportRecords(id, secret, stores, template = {}) {
         wb = XLSX.read(buf);
 
         for (let i = 0; i < stores.length; i++) {
-            let store = stores[i];
+            let sheet = (sheets != null) ? sheets[stores[i]] : stores[i];
             let ws = worksheets[i];
 
-            if (ws == null)
+            if (sheet == null || ws == null)
                 continue;
-            if (wb.Sheets[store] == null)
+            if (wb.Sheets[sheet] == null)
                 continue;
 
-            updateSheet(wb.Sheets[store], ws);
+            updateSheet(wb.Sheets[sheet], ws);
         }
         for (let key in meta) {
+            let sheet = (sheets != null) ? sheets['@' + key] : ('@' + key);
             let ws = meta[key];
 
-            if (ws == null)
+            if (sheet == null || ws == null)
                 continue;
-            if (wb.Sheets['@' + key] == null)
+            if (wb.Sheets[sheet] == null)
                 continue;
 
-            updateSheet(wb.Sheets['@' + key], ws);
+            updateSheet(wb.Sheets[sheet], ws);
         }
     } else {
         wb = XLSX.utils.book_new();
 
         for (let i = 0; i < stores.length; i++) {
-            let store = stores[i];
+            let sheet = (sheets != null) ? sheets[stores[i]] : stores[i];
             let ws = worksheets[i];
 
-            if (ws == null)
+            if (sheet == null || ws == null)
                 continue;
 
-            XLSX.utils.book_append_sheet(wb, ws, store);
+            XLSX.utils.book_append_sheet(wb, ws, sheet);
         }
         for (let key in meta) {
+            let sheet = (sheets != null) ? sheets['@' + key] : ('@' + key);
             let ws = meta[key];
 
-            if (ws == null)
+            if (sheet == null || ws == null)
                 continue;
 
-            XLSX.utils.book_append_sheet(wb, ws, '@' + key);
+            XLSX.utils.book_append_sheet(wb, ws, sheet);
         }
     }
 
