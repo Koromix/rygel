@@ -201,14 +201,14 @@ bool InitDomain()
             }
 
             instance_guard.Disable();
+
+            if (instance->master != instance) {
+                instance->master->slaves.Append(instance);
+            }
         }
 
         domain->instances.Append(instance);
         domain->map.Set(instance);
-
-        if (instance->master != instance) {
-            instance->master->slaves.Append(instance);
-        }
     }
 
     // Commit domain
