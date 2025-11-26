@@ -286,7 +286,7 @@ const char *GitVersioneer::Version(Span<const char> key, Allocator *alloc)
         Size idx = 0;
 
         while (idx < max_delta_count) {
-            HeapArray<const char *> *tags = hash_map.Find(commits[idx]);
+            HeapArray<const char *> *tags = hash_map.FindValue(commits[idx], nullptr);
 
             if (tags) {
                 for (const char *tag: *tags) {
@@ -400,11 +400,26 @@ bool GitVersioneer::CacheTagInfo(Span<const char> tag, Span<const char> id)
 
     ref_map.Set(copy.ptr, hash);
 
-    HeapArray<const char *> *tags = hash_map.InsertOrGet(hash, {});
-    tags->Append(copy.ptr);
+    // A commit hash can map to zero, one or more tags
+    {
+        HeapArray<const char *> **ptr = hash_map.InsertOrGet(hash, nullptr);
+        HeapArray<const char *> *tags = nullptr;
 
-    int64_t *ptr = prefix_map.InsertOrGet(prefix, INT64_MAX);
-    *ptr = std::min(*ptr, date - max_delta_date);
+        if (*ptr) {
+            tags = *ptr;
+        } else {
+            tags = hash_tags.AppendDefault();
+            *ptr = tags;
+        }
+
+        tags->Append(copy.ptr);
+    }
+
+    // This tag prefix exists!
+    {
+        int64_t *ptr = prefix_map.InsertOrGet(prefix, INT64_MAX);
+        *ptr = std::min(*ptr, date - max_delta_date);
+    }
 
     return true;
 }
