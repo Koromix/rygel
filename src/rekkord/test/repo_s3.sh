@@ -16,6 +16,7 @@ chmod +x garage
 
 export LANG=C
 export REKKORD_CONFIG_FILE=rekkord.ini
+export XDG_CACHE_HOME=$PWD/cache
 export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
 
 cat > garage.toml <<EOF
@@ -52,7 +53,7 @@ trap 'kill $(jobs -p) 2>/dev/null' EXIT
 trap 'kill $(jobs -p) 2>/dev/null' SIGINT
 
 while true; do
-    rm -rf repo git src dest rekkord.key
+    rm -rf cache repo git src dest rekkord.key
 
     mkdir repo
 

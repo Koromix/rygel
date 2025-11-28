@@ -18,10 +18,11 @@ KeyFile = rekkord.key
 
 export LANG=C
 export REKKORD_CONFIG_FILE=rekkord.ini
+export XDG_CACHE_HOME=$PWD/cache
 export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
 
 while true; do
-    rm -rf repo git src dest rekkord.key
+    rm -rf cache repo git src dest rekkord.key
 
     git clone --bare "$ROOT" git
     git -C git worktree add "$PWD/src"

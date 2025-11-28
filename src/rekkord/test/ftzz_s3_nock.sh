@@ -16,6 +16,7 @@ chmod +x garage
 
 export LANG=C
 export REKKORD_CONFIG_FILE=rekkord.ini
+export XDG_CACHE_HOME=$PWD/cache
 
 cat > garage.toml <<EOF
 metadata_dir = "repo/meta"
@@ -51,7 +52,7 @@ trap 'kill $(jobs -p) 2>/dev/null' EXIT
 trap 'kill $(jobs -p) 2>/dev/null' SIGINT
 
 while true; do
-    rm -rf repo src dest rekkord.ini rekkord.key
+    rm -rf cache repo src dest rekkord.ini rekkord.key
 
     mkdir repo
 

@@ -16,10 +16,11 @@ KeyFile = rekkord.key
 
 export LANG=C
 export REKKORD_CONFIG_FILE=rekkord.ini
+export XDG_CACHE_HOME=$PWD/cache
 
 while true; do
     chmod -R 700 src 2>/dev/null || true
-    rm -rf repo src dest rekkord.key
+    rm -rf cache repo src dest rekkord.key
 
     seed=$RANDOM
     ftzz -n10000 -b100000000 --seed $seed src/small
