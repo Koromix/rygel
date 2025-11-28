@@ -989,25 +989,37 @@ void HandleTotpSecret(http_IO *io)
     if (!url)
         return;
 
-    Span<const uint8_t> png;
+    Span<const char> image;
     {
-        HeapArray<uint8_t> buf(io->Allocator());
+        HeapArray<uint8_t> png;
 
-        StreamWriter st(&buf, "<png>");
+        StreamWriter st(&png, "<png>");
         if (!qr_EncodeTextToPng(url, 0, &st))
             return;
         if (!st.Close())
             return;
 
-        png = buf.Leak();
+        Span<const char> prefix = "data:image/png;base64,";
+        Size needed = prefix.len + (Size)sodium_base64_encoded_len(png.len, sodium_base64_VARIANT_ORIGINAL);
+        Span<char> buf = AllocateSpan<char>(io->Allocator(), needed);
+
+        CopyString(prefix, buf);
+        sodium_bin2base64(buf.ptr + prefix.len, (size_t)(buf.len - prefix.len), png.ptr, (size_t)png.len, sodium_base64_VARIANT_ORIGINAL);
+
+        image = buf.Take(0, buf.len - 1);
     }
 
     MemCpy(session->secret, secret, 33);
 
-    io->AddHeader("X-TOTP-SecretKey", secret);
-    io->AddCachingHeaders(0, nullptr);
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
 
-    io->SendAsset(200, png, "image/png");
+        json->Key("secret"); json->String(secret);
+        json->Key("url"); json->String(url);
+        json->Key("image"); json->String(image.ptr, image.len);
+
+        json->EndObject();
+    });
 }
 
 void HandleTotpChange(http_IO *io)

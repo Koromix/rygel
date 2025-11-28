@@ -727,24 +727,7 @@ async function changePicture() {
 
 async function configureTOTP(e) {
     let enable = !session.totp;
-
-    let qrcode;
-    {
-        let response = await Net.fetch('/api/totp/secret');
-
-        if (!response.ok) {
-            let err = await Net.readError(response);
-            throw new Error(err);
-        }
-
-        let secret = response.headers.get('X-TOTP-SecretKey');
-        let buf = await response.arrayBuffer();
-
-        qrcode = {
-            secret: secret,
-            image: 'data:image/png;base64,' + Base64.toBase64(buf)
-        };
-    }
+    let totp = await Net.get('/api/totp/secret');
 
     await UI.dialog({
         run: (render, close) => html`
@@ -773,8 +756,8 @@ async function configureTOTP(e) {
                 ` : ''}
 
                 ${enable ? html`
-                    <div style="text-align: center; margin-top: 2em;"><img src=${qrcode.image} alt="" /></div>
-                    <p style="text-align: center; font-size: 0.8em; margin-top: 0;">${qrcode.secret}</p>
+                    <div style="text-align: center; margin-top: 2em;"><img src=${totp.image} alt="" /></div>
+                    <p style="text-align: center; font-size: 0.8em; margin-top: 0;">${totp.secret}</p>
 
                     <p>
                         ${T.totp_scan1}<br>
