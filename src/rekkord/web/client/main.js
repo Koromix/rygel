@@ -20,13 +20,18 @@ import '../assets/client.css';
 const RUN_LOCK = 'run';
 
 const MODES = {
-    account: { run: runAccount },
+    login: { run: runLogin, session: false },
+    register: { run: runRegister, session: false },
+    finalize: { run: runFinalize, session: false },
+    recover: { run: runRecover, session: false },
+    reset: { run: runReset, session: false },
+    account: { run: runAccount, session: true },
 
-    repositories: { run: runRepositories },
-    repository: { run: runRepository, path: [{ key: 'repository', type: 'integer' }]},
+    repositories: { run: runRepositories, session: true },
+    repository: { run: runRepository, session: true, path: [{ key: 'repository', type: 'integer' }]},
 
-    plans: { run: runPlans },
-    plan: { run: runPlan, path: [{ key: 'plan', type: 'integer' }]}
+    plans: { run: runPlans, session: true },
+    plan: { run: runPlan, session: true, path: [{ key: 'plan', type: 'integer' }]}
 };
 const DEFAULT_MODE = 'repositories';
 
@@ -198,30 +203,17 @@ async function run(changes = {}, push = false) {
                 return;
             }
 
-            switch (route.mode) {
-                case 'login': { await runLogin(); } break;
-                case 'register': { await runRegister(); } break;
-                case 'finalize': { await runFinalize(); } break;
-
-                case 'recover': { await runRecover(); } break;
-                case 'reset':  { await runReset(); } break;
-
-                default: {
-                    if (session == null) {
-                        await runLogin();
-                    } else if (!session.confirmed) {
-                        await runConfirm();
-                    }
-                } break;
-            }
+            let info = MODES[route.mode] ?? MODES[DEFAULT_MODE];
 
             if (isLogged()) {
-                let info = MODES[route.mode];
+                // Cache resources used by everyone
+                cache.repositories = await Net.cache('repositories', '/api/repository/list');
+            }
 
-                if (info != null) {
-                    cache.repositories = await Net.cache('repositories', '/api/repository/list');
-                    await info.run();
-                }
+            if (info.session && !isLogged()) {
+                await runLogin();
+            } else {
+                await info.run();
             }
 
             // Update URL
@@ -335,7 +327,7 @@ async function login(mail, password) {
     await run({}, false);
 }
 
-async function totp(code) {
+async function confirm(code) {
     session = await Net.post('/api/totp/confirm', { code: code });
 
     await run({}, false);
@@ -469,78 +461,80 @@ async function runFinalize() {
 }
 
 async function runLogin() {
-    UI.main(html`
-        <div class="tabbar">
-            <a class="active">${T.login}</a>
-        </div>
+    if (session == null) {
+        UI.main(html`
+            <div class="tabbar">
+                <a class="active">${T.login}</a>
+            </div>
 
-        <div class="tab" style="align-items: center;">
-            <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
+            <div class="tab" style="align-items: center;">
+                <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
 
-            <form style="text-align: center;" @submit=${UI.wrap(submit)}>
-                <label>
-                    <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
-                </label>
-                <label>
-                    <input type="password" name="password" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
-                </label>
-                <div class="actions">
-                    <button type="submit">${T.login}</button>
-                    <a href="/register">${T.maybe_create_account}</a>
-                    <a href="/recover">${T.maybe_lost_password}</a>
-                </div>
-            </form>
-        </div>
-    `);
+                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
+                    <label>
+                        <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
+                    </label>
+                    <label>
+                        <input type="password" name="password" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
+                    </label>
+                    <div class="actions">
+                        <button type="submit">${T.login}</button>
+                        <a href="/register">${T.maybe_create_account}</a>
+                        <a href="/recover">${T.maybe_lost_password}</a>
+                    </div>
+                </form>
+            </div>
+        `);
 
-    async function submit(e) {
-        let form = e.currentTarget;
-        let elements = form.elements;
+        async function submit(e) {
+            let form = e.currentTarget;
+            let elements = form.elements;
 
-        let mail = elements.mail.value.trim();
-        let password = elements.password.value.trim();
+            let mail = elements.mail.value.trim();
+            let password = elements.password.value.trim();
 
-        if (!mail)
-            throw new Error(T.message(`Mail address is missing`));
-        if (!password)
-            throw new Error(T.message(`Password is missing`));
+            if (!mail)
+                throw new Error(T.message(`Mail address is missing`));
+            if (!password)
+                throw new Error(T.message(`Password is missing`));
 
-        await login(mail, password);
-    }
-}
+            await login(mail, password);
+        }
+    } else if (!session.confirmed) {
+        UI.main(html`
+            <div class="tabbar">
+                <a class="active">${T.login}</a>
+            </div>
 
-async function runConfirm() {
-    UI.main(html`
-        <div class="tabbar">
-            <a class="active">${T.login}</a>
-        </div>
+            <div class="tab" style="align-items: center;">
+                <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
 
-        <div class="tab" style="align-items: center;">
-            <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
+                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
+                    <p>${T.two_factor_authentication}</p>
+                    <label  style="text-align: center;">
+                        <input type="text" name="code" style="width: 20em;" placeholder=${T.totp_digits} />
+                    </label>
+                    <div class="actions">
+                        <button type="submit">${T.confirm}</button>
+                        <button type="button" class="secondary" @click=${UI.insist(logout)}>${T.cancel}</button>
+                    </div>
+                </form>
+            </div>
+        `);
 
-            <form style="text-align: center;" @submit=${UI.wrap(submit)}>
-                <p>${T.two_factor_authentication}</p>
-                <label>
-                    <input type="text" name="code" style="width: 20em;" placeholder=${T.totp_digits} />
-                </label>
-                <div class="actions">
-                    <button type="submit">${T.confirm}</button>
-                    <button type="button" class="secondary" @click=${UI.insist(logout)}>${T.cancel}</button>
-                </div>
-            </form>
-        </div>
-    `);
+        async function submit(e) {
+            let form = e.currentTarget;
+            let elements = form.elements;
 
-    async function submit(e) {
-        let form = e.currentTarget;
-        let elements = form.elements;
+            let code = elements.code.value.trim();
 
-        let code = elements.code.value.trim();
+            if (!code)
+                throw new Error(T.message(`TOTP code is missing`));
 
-        if (!code)
-            throw new Error(T.message(`TOTP code is missing`));
-
-        await totp(code);
+            await confirm(code);
+        }
+    } else {
+        go('/');
     }
 }
 
