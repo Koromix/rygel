@@ -365,13 +365,14 @@ form {
     & label {
         display: flex;
         gap: 0.43em;
-        align-items: center;
+        align-items: start;
         height: 2em;
 
         & > span:first-child { width: 180px; }
     }
-    & :not(.section) + label { margin-top: 1em; }
+    & label:has(> :only-child) { justify-content: center; }
     & label:empty { display: none; }
+    & :not(.section) + label { margin-top: 1em; }
 
     & input {
         padding: 0.4em 0.6em;
