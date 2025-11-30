@@ -26,9 +26,9 @@
 /*
 ** This code was built from sqlite3 version...
 **
-** SQLITE_VERSION "3.51.0"
-** SQLITE_VERSION_NUMBER 3051000
-** SQLITE_SOURCE_ID "2025-11-04 19:38:17 fb2c931ae597f8d00a37574ff67aeed3eced4e5547f9120744ae4bfa8e74527b"
+** SQLITE_VERSION "3.51.1"
+** SQLITE_VERSION_NUMBER 3051001
+** SQLITE_SOURCE_ID "2025-11-28 17:28:25 281fc0e9afc38674b9b0991943b9e9d1e64c6cbdb133d35f6f5c87ff6af38a88"
 **
 ** Emscripten SDK: 4.0.10
 **
@@ -5035,9 +5035,10 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
       srcTypedArray = new Uint8Array(srcTypedArray);
     }
     affirmBindableTypedArray(srcTypedArray);
-    const heap = wasm.heapForSize(srcTypedArray.constructor);
     const pRet = wasm.alloc(srcTypedArray.byteLength || 1);
-    heap.set(srcTypedArray.byteLength ? srcTypedArray : [0], Number(pRet));
+    wasm.heapForSize(srcTypedArray.constructor)
+      .set(srcTypedArray.byteLength ? srcTypedArray : [0], Number(pRet))
+    ;
     return pRet;
   };
 
@@ -9056,7 +9057,7 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
 
 });
 globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
-  sqlite3.version = {"libVersion": "3.51.0", "libVersionNumber": 3051000, "sourceId": "2025-11-04 19:38:17 fb2c931ae597f8d00a37574ff67aeed3eced4e5547f9120744ae4bfa8e74527b","downloadVersion": 3510000,"scm":{ "sha3-256": "fb2c931ae597f8d00a37574ff67aeed3eced4e5547f9120744ae4bfa8e74527b","branch": "trunk","tags": "release major-release version-3.51.0","datetime": "2025-11-04T19:38:17.314Z"}};
+  sqlite3.version = {"libVersion": "3.51.1", "libVersionNumber": 3051001, "sourceId": "2025-11-28 17:28:25 281fc0e9afc38674b9b0991943b9e9d1e64c6cbdb133d35f6f5c87ff6af38a88","downloadVersion": 3510100,"scm":{ "sha3-256": "281fc0e9afc38674b9b0991943b9e9d1e64c6cbdb133d35f6f5c87ff6af38a88","branch": "branch-3.51","tags": "release version-3.51.1","datetime": "2025-11-28T17:28:25.933Z"}};
 });
 
 globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
