@@ -277,7 +277,7 @@ async function syncTolgee(languages, sources, push = false) {
         for (let lang in item.translations) {
             let translation = item.translations[lang];
 
-            if (translation.outdated != unused) {
+            if (translation.id != null && translation.outdated != unused) {
                 let url = TOLGEE_URL + `/v2/projects/translations/${translation.id}/set-outdated-flag/${unused ? 'true' : 'false'}`;
 
                 await fetchOrFail(url, {
