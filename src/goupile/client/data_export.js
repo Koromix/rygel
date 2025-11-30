@@ -113,7 +113,7 @@ async function exportRecords(id, secret, stores, template = {}) {
     if (template.xlsx != null) {
         let response = await Net.fetch(template.xlsx);
         if (!response.ok)
-            throw new Error(T.Message(`Cannot fetch XLSX template '{1}'`, template.xlsx));
+            throw new Error(T.message(`Cannot fetch XLSX template '{1}'`, template.xlsx));
         let buf = await response.arrayBuffer();
 
         wb = XLSX.read(buf);

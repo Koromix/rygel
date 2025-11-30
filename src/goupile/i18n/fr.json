@@ -314,6 +314,7 @@
         "Cannot create new registration": "Impossible de créer une nouvelle inscription",
         "Cannot create new thread": "Impossible de créer un nouveau fil d'enregistrement",
         "Cannot download empty export": "Impossible de télécharger un export vide",
+        "Cannot fetch XLSX template '{1}'": "Impossible de récupérer le modèle XLSX {1}",
         "Cannot generate QR code in this situation": "Impossible de générer un QR code dans cette situation",
         "Cannot get files through slave instance": "Impossible d'obtenir des fichiers via une instance esclave",
         "Cannot list files through slave instance": "Impossible de lister les fichiers via une instance esclave",
