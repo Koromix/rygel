@@ -7,7 +7,7 @@
 
 namespace K {
 
-static const int DatabaseVersion = 16;
+static const int DatabaseVersion = 17;
 
 int GetDatabaseVersion(sq_Database *db)
 {
@@ -381,9 +381,19 @@ bool MigrateDatabase(sq_Database *db, const char *vault_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 16: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE events ADD COLUMN sent INTEGER;
+                    ALTER TABLE events ADD COLUMN changeset BLOB;
+                    CREATE UNIQUE INDEX events_usd ON events (user, study, date);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 16);
+            static_assert(DatabaseVersion == 17);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

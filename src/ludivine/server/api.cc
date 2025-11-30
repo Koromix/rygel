@@ -875,22 +875,34 @@ void HandleRemind(http_IO *io)
         user = sqlite3_column_int64(stmt, 0);
     }
 
+    uint8_t changeset[32];
+    FillRandomSafe(changeset);
+
     // Update study events
     bool success = db.Transaction([&]() {
-        if (!db.Run("DELETE FROM events WHERE user = ?1 AND study = ?2", user, study))
-            return false;
-
         for (const EventInfo &evt: events) {
             char dates[2][32] = {};
 
-            Fmt(dates[0], "%1", start);
-            Fmt(dates[1], "%1", evt.date);
+            Fmt(dates[0], "%1", evt.date);
+            Fmt(dates[1], "%1", start);
 
-            if (!db.Run(R"(INSERT INTO events (user, study, title, start, date, offset, partial)
-                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
-                        user, study, title, dates[0], dates[1], offset, 0 + evt.partial))
+            if (!db.Run(R"(INSERT INTO events (user, study, title, date, start,
+                                               offset, partial, changeset)
+                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                           ON CONFLICT DO UPDATE SET title = excluded.title,
+                                                     start = excluded.start,
+                                                     offset = excluded.offset,
+                                                     partial = excluded.partial,
+                                                     changeset = excluded.changeset)",
+                        user, study, title, dates[0], dates[1],
+                        offset, 0 + evt.partial, sq_Binding(changeset)))
                 return false;
         }
+
+        if (!db.Run(R"(DELETE FROM events
+                       WHERE user = ?1 AND study = ?2 AND changeset IS NOT ?3)",
+                    user, study, sq_Binding(changeset)))
+            return false;
 
         return true;
     });
@@ -974,10 +986,13 @@ void HandlePublish(http_IO *io)
         participant = sqlite3_column_int64(stmt, 0);
     }
 
-    if (!db.Run(R"(INSERT INTO tests (participant, study, key, json)
-                   VALUES (?1, ?2, ?3, ?4)
-                   ON CONFLICT DO UPDATE SET json = excluded.json)",
-                participant, study, test, values))
+    int64_t now = GetUnixTime();
+
+    if (!db.Run(R"(INSERT INTO tests (participant, study, key, ctime, mtime, json)
+                   VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                   ON CONFLICT DO UPDATE SET mtime = excluded.mtime,
+                                             json = excluded.json)",
+                participant, study, test, now, now, values))
         return;
 
     io->SendText(200, "{}", "application/json");
