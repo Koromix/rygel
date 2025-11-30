@@ -483,8 +483,9 @@ int RunDerive(Span<const char *> arguments)
 {
     // Options
     const char *output_filename = nullptr;
-    bool force = false;
     rk_KeyType type = rk_KeyType::Master;
+    bool force = false;
+    bool online = true;
 
     const auto print_usage = [=](StreamWriter *st) {
         Span<const char *const> types = MakeSpan(rk_KeyTypeNames + 1, K_LEN(rk_KeyTypeNames) - 1);
@@ -496,10 +497,11 @@ T(R"(Usage: %!..+%1 derive [-C filename] [option...] -O destination%!0)"), Felix
 Key options:
 
     %!..+-O, --output_file file%!0         Write keys to destination file
+    %!..+-t, --type type%!0                Set key type and permissions (see below)
 
     %!..+-f, --force%!0                    Overwrite existing file
 
-    %!..+-t, --type type%!0                Set key type and permissions (see below)
+        %!..+--offline%!0                  Derive key file without opening repository
 
 Available key types: %!..+%1%!0)"), FmtList(types));
     };
@@ -514,13 +516,15 @@ Available key types: %!..+%1%!0)"), FmtList(types));
                 return 0;
             } else if (opt.Test("-O", "--output_filename", OptionType::Value)) {
                 output_filename = opt.current_value;
-            } else if (opt.Test("-f", "--force")) {
-                force = true;
             } else if (opt.Test("-t", "--type", OptionType::Value)) {
                 if (!OptionToEnumI(rk_KeyTypeNames, opt.current_value, &type) || type == rk_KeyType::Master) {
                     LogError("Unknown key type '%1'", opt.current_value);
                     return 1;
                 }
+            } else if (opt.Test("-f", "--force")) {
+                force = true;
+            } else if (opt.Test("--offline")) {
+                online = false;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
@@ -545,29 +549,51 @@ Available key types: %!..+%1%!0)"), FmtList(types));
 
     if (!rk_config.Complete())
         return 1;
-    if (!rk_config.Validate())
-        return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rk_config);
-    std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rk_config, true);
-    if (!repo)
-        return 1;
+    rk_KeySet *src = (rk_KeySet *)AllocateSafe(K_SIZE(rk_KeySet));
+    rk_KeySet *dest = (rk_KeySet *)AllocateSafe(K_SIZE(rk_KeySet));
+    K_DEFER {
+        ReleaseSafe(src, K_SIZE(*src));
+        ReleaseSafe(dest, K_SIZE(*dest));
+    };
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
-    if (!repo->HasMode(rk_AccessMode::Config)) {
-        LogError("Cannot derive keys with %1 key", repo->GetRole());
-        return 1;
+    if (online) {
+        if (!rk_config.Validate())
+            return 1;
+
+        std::unique_ptr<rk_Disk> disk = rk_OpenDisk(rk_config);
+        std::unique_ptr<rk_Repository> repo = rk_OpenRepository(disk.get(), rk_config, true);
+        if (!repo)
+            return 1;
+
+        LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), repo->GetRole());
+        if (!repo->HasMode(rk_AccessMode::Config)) {
+            LogError("Cannot derive keys with %1 key", repo->GetRole());
+            return 1;
+        }
+        LogInfo();
+
+        *src = repo->GetKeys();
+    } else {
+        if (!rk_config.key_filename) {
+            LogError("Missing repository key file");
+            return 1;
+        }
+
+        if (!rk_LoadKeyFile(rk_config.key_filename, src))
+            return 1;
+
+        if (!src->HasMode(rk_AccessMode::Config)) {
+            LogError("Cannot derive keys with %1 key", rk_KeyTypeNames[(int)src->type]);
+            return 1;
+        }
     }
-    LogInfo();
 
-    rk_KeySet *keys = (rk_KeySet *)AllocateSafe(K_SIZE(rk_KeySet));
-    K_DEFER { ReleaseSafe(keys, K_SIZE(*keys)); };
-
-    if (!rk_ExportKeyFile(repo->GetKeys(), type, output_filename, keys))
+    if (!rk_ExportKeyFile(*src, type, output_filename, dest))
         return 1;
 
     LogInfo("Key file: %!..+%1%!0", output_filename);
-    LogInfo("Key ID: %!..+%1%!0", FmtHex(keys->kid));
+    LogInfo("Key ID: %!..+%1%!0", FmtHex(dest->kid));
     LogInfo("Key type: %!..+%1%!0", rk_KeyTypeNames[(int)type]);
 
     return 0;
