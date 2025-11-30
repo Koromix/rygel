@@ -19,4 +19,6 @@ void HandleUpload(http_IO *io);
 void HandleRemind(http_IO *io);
 void HandlePublish(http_IO *io);
 
+bool RemindLateUsers();
+
 }

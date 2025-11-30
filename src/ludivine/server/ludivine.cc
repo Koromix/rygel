@@ -568,6 +568,9 @@ Options:
                 run = false;
             }
 
+            LogDebug("Remind late users");
+            RemindLateUsers();
+
             LogDebug("Send mails");
             SendMails();
         }

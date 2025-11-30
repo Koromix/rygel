@@ -23,7 +23,7 @@ Conservez-le précieusement, ou même mieux, enregistrez la pièce jointe sur vo
 
 Nous vous invitons à utiliser le lien suivant afin de commencer votre aventure {{ TITLE }} :
 
-{{ URL }}
+{{ EXTRA }}
 
 Nous utilisons un système de chiffrement end-to-end pour assurer la sécurité et l’anonymat de vos données. Nous ne serons donc pas en mesure de vous renvoyer un nouveau lien de connexion en cas de perte de celui-ci.
 
@@ -40,7 +40,7 @@ L’équipe de {{ TITLE }}
 <p>Nous vous invitons à cliquer sur le lien suivant afin de commencer votre aventure {{ TITLE }}.</p>
 <div align="center"><br>
     <a style="padding: 0.7em 2em; background: #2d8261; border-radius: 30px;
-              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ URL }}">Connexion à {{ TITLE }}</a>
+              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ EXTRA }}">Connexion à {{ TITLE }}</a>
 <br><br></div>
 <p>Vous pouvez également utiliser ce QRcode pour vous connecter à l'aide de votre smartphone si vous le souhaitez :</p>
 <div align="center"><br>
@@ -83,6 +83,31 @@ L'équipe de {{ TITLE }}
 </body></html>)",
     {}
 };
+
+static const smtp_MailContent ContinueStudy = {
+    "Rappel {{ TITLE }} : participez à {{ EXTRA }} !",
+    R"(Bonjour,
+
+L'étude {{ EXTRA }} continue !
+
+Vous pouvez reprendre votre participation et continuer à nous aider.
+
+Pous vous connecter à {{ TITLE }}, vous devrez vous munir du mail que vous avez reçu lors de votre inscription, dont l'objet est « Connexion à {{ TITLE }} ! », et cliquer sur le lien présent dans le mail.
+
+L'équipe de {{ TITLE }}
+{{ CONTACT }})",
+    R"(<html lang="fr"><body>
+<p>Bonjour,</p>
+<p>L'étude {{ EXTRA }} continue !</p>
+<p>Vous pouvez reprendre votre participation et continuer à nous aider.</p>
+<p>Pous vous connecter à {{ TITLE }}, vous devrez vous munir du mail que vous avez reçu lors de votre inscription, dont l'objet est <b>« Connexion à {{ TITLE }} ! »</b>, et cliquer sur le lien présent dans le mail.</p>
+<p><i>L’équipe de {{ TITLE }}</i><br>
+<a href="mailto:{{ CONTACT }}">{{ CONTACT }}</a></p>
+</body></html>)",
+    {}
+};
+
+static const int RemindDelays[] = { 2, 5 };
 
 struct EventInfo {
     LocalDate date = {};
@@ -127,7 +152,7 @@ static bool IsUUIDValid(Span<const char> uuid)
     return true;
 }
 
-static Span<const char> PatchText(Span<const char> text, const char *mail, const char *url, Allocator *alloc)
+static Span<const char> PatchText(Span<const char> text, const char *mail, const char *extra, Allocator *alloc)
 {
     Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
         Span<const char> key = TrimStr(expr);
@@ -138,9 +163,9 @@ static Span<const char> PatchText(Span<const char> text, const char *mail, const
             writer->Write(config.contact);
         } else if (key == "MAIL") {
             writer->Write(mail);
-        } else if (key == "URL") {
-            K_ASSERT(url);
-            writer->Write(url);
+        } else if (key == "EXTRA") {
+            K_ASSERT(extra);
+            writer->Write(extra);
         } else {
             Print(writer, "{{%1}}", expr);
         }
@@ -194,6 +219,17 @@ static bool SendExistingMail(const char *to, Allocator *alloc)
     content.subject = PatchText(ExistingUser.subject, to, nullptr, alloc).ptr;
     content.html = PatchText(ExistingUser.html, to, nullptr, alloc).ptr;
     content.text = PatchText(ExistingUser.text, to, nullptr, alloc).ptr;
+
+    return PostMail(to, content);
+}
+
+static bool SendContinueMail(const char *to, const char *study, Allocator *alloc)
+{
+    smtp_MailContent content;
+
+    content.subject = PatchText(ContinueStudy.subject, to, study, alloc).ptr;
+    content.html = PatchText(ContinueStudy.html, to, study, alloc).ptr;
+    content.text = PatchText(ContinueStudy.text, to, study, alloc).ptr;
 
     return PostMail(to, content);
 }
@@ -996,6 +1032,45 @@ void HandlePublish(http_IO *io)
         return;
 
     io->SendText(200, "{}", "application/json");
+}
+
+bool RemindLateUsers()
+{
+    BlockAllocator temp_alloc;
+
+    for (int delay: RemindDelays) {
+        char when[32];
+        {
+            int64_t now = GetUnixTime();
+            TimeSpec spec = DecomposeTimeLocal(now);
+            LocalDate date = LocalDate(spec.year, spec.month, spec.day) - delay;
+
+            Fmt(when, "%1", date);
+        }
+
+        sq_Statement stmt;
+        if (!db.Prepare(R"(SELECT e.id, u.mail, e.title
+                           FROM events e
+                           INNER JOIN users u ON (u.id = e.user)
+                           WHERE e.date = ?1 AND (e.sent IS NULL OR e.sent < ?2))",
+                        &stmt, when, delay))
+            return false;
+
+        while (stmt.Step()) {
+            int64_t id = sqlite3_column_int64(stmt, 0);
+            const char *mail = (const char *)sqlite3_column_text(stmt, 1);
+            const char *study = (const char *)sqlite3_column_text(stmt, 2);
+
+            if (!SendContinueMail(mail, study, &temp_alloc))
+                return false;
+            if (!db.Run("UPDATE events SET sent = ?2 WHERE id = ?1", id, delay))
+                return false;
+        }
+        if (!stmt.IsValid())
+            return false;
+    }
+
+    return true;
 }
 
 }

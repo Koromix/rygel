@@ -7,7 +7,7 @@
 
 namespace K {
 
-static const int DatabaseVersion = 17;
+static const int DatabaseVersion = 18;
 
 int GetDatabaseVersion(sq_Database *db)
 {
@@ -391,9 +391,37 @@ bool MigrateDatabase(sq_Database *db, const char *vault_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 17: {
+                int64_t now = GetUnixTime();
+
+                bool success = db->RunMany(R"(
+                    CREATE TABLE tests_NEW (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        participant INTEGER NOT NULL REFERENCES participants (id) ON DELETE CASCADE,
+                        study INTEGER NOT NULL,
+                        key TEXT NOT NULL,
+                        ctime INTEGER NOT NULL,
+                        mtime INTEGER NOT NULL,
+                        json TEXT NOT NULL
+                    );
+
+                    INSERT INTO tests_NEW (id, participant, study, key, ctime, mtime, json)
+                        SELECT id, participant, study, key, 0, 0, json FROM tests;
+                    DROP TABLE tests;
+                    ALTER TABLE tests_NEW RENAME TO tests;
+
+                    CREATE UNIQUE INDEX tests_psk ON tests (participant, study, key);
+                )");
+                if (!success)
+                    return false;
+
+                if (!db->Run("UPDATE tests SET ctime = ?1, mtime = ?2", now, now))
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 17);
+            static_assert(DatabaseVersion == 18);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",
