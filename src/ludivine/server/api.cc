@@ -107,7 +107,7 @@ L'équipe de {{ TITLE }}
     {}
 };
 
-static const int RemindDelays[] = { 2, 5 };
+static const int RemindDelays[] = { 2, 5, 15 };
 
 struct EventInfo {
     LocalDate date = {};
