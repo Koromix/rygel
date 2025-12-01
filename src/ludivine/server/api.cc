@@ -42,7 +42,7 @@ L’équipe de {{ TITLE }}
     <a style="padding: 0.7em 2em; background: #2d8261; border-radius: 30px;
               font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ LOGIN }}">Connexion à {{ TITLE }}</a>
 <br><br></div>
-<p>Vous pouvez également utiliser ce QRcode pour vous connecter à l'aide de votre smartphone si vous le souhaitez :</p>
+<p>Vous pouvez également utiliser ce QR code pour vous connecter à l'aide de votre smartphone si vous le souhaitez :</p>
 <div align="center"><br>
     <img src="cid:qrcode.png" alt="">
 <br><br></div>
