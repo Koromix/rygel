@@ -4,8 +4,8 @@
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 import { ASSETS } from '../../assets/assets.js'
 
-function build(form, values) {
-    form.values = values
+function build(form) {
+    let values = form.values
 
     form.intro = html`
         <p>Les questions qui suivent portent sur des <b>comportements que vous pourriez présenter</b> (ou non) dans votre vie quotidienne.

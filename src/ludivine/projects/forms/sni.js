@@ -3,8 +3,8 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values) {
-    form.values = values
+function build(form) {
+    let values = form.values
 
     form.intro = html`
         <p>Ce questionnaire nous permet d'évaluer le <b>nombre de personnes que vous voyez ou à qui vous parlez régulièrement</b> : il peut s'agir de votre famille, d'amis, de collègues de travail, de voisins, etc.

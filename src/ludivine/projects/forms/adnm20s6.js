@@ -3,8 +3,8 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values, since) {
-    form.values = values
+function build(form, since) {
+    let values = form.values
 
     form.intro = html`
         <p>Nous allons maintenant vous poser des questions sur les <b>autres évènements que vous avez pu vivre</b> depuis ${since}, qu’ils soient positifs ou négatifs, et qui font actuellement partie de votre réalité.

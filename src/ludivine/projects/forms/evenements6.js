@@ -3,8 +3,8 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values, since) {
-    form.values = values
+function build(form, since) {
+    let values = form.values
 
     form.intro = html`
         <p>Nous allons vous demander de penser à l’évènement que vous avez <b>décrit dans le bilan initial</b>.

@@ -3,9 +3,7 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values) {
-    form.values = values
-
+function build(form) {
     form.intro = html`
         <p>Les questions ci-dessous reflètent des difficultés que vous pouvez rencontrer <b>au cours de votre vie</b>.
         <p>Au cours des <b>14 derniers jours</b>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?

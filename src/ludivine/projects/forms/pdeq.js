@@ -3,9 +3,7 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values) {
-    form.values = values
-
+function build(form) {
     form.intro = html`
         <p>Pour les questions suivantes, nous aimerions que vous gardiez en tête l’évènement (ou la situation traumatique) décrit <b>dans la partie « L’évènement qui vous a amené ici »</b>.
         <p>Ce questionnaire est destiné à rechercher les <b>expériences de dissociation</b> (moments où vous « sentiez détaché(e) de vous-même ») que vous auriez pu ressentir pendant l'événement traumatique, et au cours des quelques heures suivantes.

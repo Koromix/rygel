@@ -3,8 +3,8 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values) {
-    form.values = values
+function build(form) {
+    let values = form.values
 
     form.intro = html`
         <p>Nous allons vous demander de penser à l’évènement que <b>vous considérez comme étant le pire</b>, c'est-à-dire celui qui vous dérange le plus actuellement.

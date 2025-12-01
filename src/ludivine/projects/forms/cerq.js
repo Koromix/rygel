@@ -4,9 +4,7 @@
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 import { PERSON_KINDS } from '../../client/network/constants.js'
 
-function build(form, values) {
-    form.values = values
-
+function build(form) {
     form.intro = html`
         <p>Nous vous demandons maintenant <b>ce que vous pensez généralement</b> lorsque vous vivez des événements négatifs ou désagréables.
     `

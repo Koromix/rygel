@@ -3,9 +3,7 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values) {
-    form.values = values
-
+function build(form) {
     form.intro = html`
         <p>Lorsque quelque chose de grave ou d'effrayant se produit, les gens peuvent avoir des <b>pensées ou des sentiments différents</b>.
         <p>À nouveau, pour les questions suivantes, nous aimerions que vous gardiez en tête l’évènement (ou la situation traumatique) décrit <b>dans la partie « L’évènement qui vous a amené ici »</b>.

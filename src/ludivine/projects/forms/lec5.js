@@ -3,9 +3,7 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values) {
-    form.values = values
-
+function build(form) {
     form.intro = html`
         <p>Voici une liste de <b>situations potentiellement traumatiques</b> que vous pouvez avoir eu à traverser (vivre) depuis votre enfance.
         <p>Pour chaque situation, cochez <b>une ou plusieurs cases</b> pour indiquer que :

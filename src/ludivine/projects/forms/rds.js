@@ -4,8 +4,8 @@
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 import { PERSON_KINDS } from '../../client/network/constants.js'
 
-function build(form, values) {
-    form.values = values
+function build(form) {
+    let values = form.values
 
     form.intro = html`
         <p>Les individus qui ont vécu un ou plusieurs événements stressants souffrent parfois de réactions différentes de celles des autres. C'est ce qui va nous intéresser dans les questions qui suivent.

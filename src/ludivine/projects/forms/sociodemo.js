@@ -566,8 +566,8 @@ let DEPARTEMENTS = [
     ["976", "Mayotte"]
 ]
 
-function build(form, values) {
-    form.values = values
+function build(form) {
+    let values = form.values
 
     form.intro = html`
         <p>Donnez-nous quelques informations pour nous aider à mieux vous comprendre.

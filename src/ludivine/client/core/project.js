@@ -113,8 +113,10 @@ function ProjectBuilder(project) {
             title: title,
             chain: [],
 
+            ...obj,
+
             schedule: options.schedule ?? null,
-            ...obj
+            ...options
         };
 
         page.chain.push(...current_page.chain);

@@ -3,8 +3,8 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values, since) {
-    form.values = values
+function build(form, since) {
+    let values = form.values
 
     form.intro = html`
         <p>Nous allons vous poser une série de questions qui vont nous permettre de comprendre ce qui vous est arrivé. Nous avons conscience que cela peut être difficile, et nous vous sommes reconnaissants de cet effort.

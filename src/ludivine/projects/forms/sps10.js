@@ -3,9 +3,7 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values) {
-    form.values = values
-
+function build(form) {
     form.intro = html`
         <p>Nous allons maintenant évaluer la <b>disponibilité de votre entourage</b>. Il n’y a pas de bonnes ou de mauvaises réponses.
         <p>Lorsque vous y répondrez, essayez de penser aux personnes qui vous entourent.

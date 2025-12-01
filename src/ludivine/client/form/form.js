@@ -3,7 +3,7 @@
 
 import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from 'lib/web/base/base.js';
-import { annotate } from 'lib/web/base/data.js';
+import * as Data from 'lib/web/base/data.js';
 import { progressBar, deflate, inflate } from '../core/misc.js';
 import { FormState, FormModel, FormBuilder } from './builder.js';
 import { ASSETS } from '../../assets/assets.js';
@@ -20,6 +20,7 @@ function FormModule(app, study, page) {
     let part_idx = null;
 
     let state = null;
+    let tests = {};
     let model = null;
 
     let is_new = false;
@@ -36,17 +37,32 @@ function FormModule(app, study, page) {
 
         // Load existing data
         {
-            let payload = await db.pluck('SELECT payload FROM tests WHERE study = ? AND key = ?', study.id, page.key);
+            let load = [page.key];
 
-            if (payload != null) {
-                try {
-                    let buf = await inflate(payload);
-                    let json = (new TextDecoder).decode(buf);
-                    let obj = JSON.parse(json);
+            if (Array.isArray(page.load))
+                load.push(...page.load);
 
-                    state = new FormState(obj);
-                } catch (err) {
-                    console.error(err);
+            for (let key of load) {
+                let payload = await db.pluck('SELECT payload FROM tests WHERE study = ? AND key = ?', study.id, key);
+
+                if (payload != null) {
+                    try {
+                        let buf = await inflate(payload);
+                        let json = (new TextDecoder).decode(buf);
+                        let obj = JSON.parse(json);
+
+                        if (key == page.key) {
+                            state = new FormState(obj);
+                            tests[key] = state.values;
+                        } else {
+                            let [raw, values] = Data.wrap(obj);
+                            tests[key] = values;
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    }
+                } else {
+                    tests[key] = null;
                 }
             }
         }
@@ -108,7 +124,12 @@ function FormModule(app, study, page) {
 
         let builder = new FormBuilder(state, model);
 
-        build(builder, state.values, mask);
+        build(builder, {
+            page: page,
+            data: tests,
+            annotate: Data.annotate,
+            mask: mask
+        });
 
         let end = model.parts.length - 1;
         if (part_idx > end)
@@ -159,7 +180,7 @@ function FormModule(app, study, page) {
             values = state.values;
         }
 
-        let notes = annotate(values, key);
+        let notes = Data.annotate(values, key);
         notes.mask = mask;
     }
 

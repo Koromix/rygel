@@ -3,9 +3,7 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values) {
-    form.values = values
-
+function build(form) {
     form.intro = html`
         <p>Ce questionnaire est destiné à <b>évaluer votre sommeil</b> selon deux axes : la qualité de votre sommeil et de vos nuits d'un part, et la satisfaction liée à votre sommeil d'autre part.
         <p>Ces questions portent sur votre <b>sommeil actuel c'est à dire au cours des derniers mois</b> et non avant.

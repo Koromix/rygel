@@ -4,9 +4,7 @@
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 import { PERSON_KINDS } from '../../client/network/constants.js'
 
-function build(form, values) {
-    form.values = values
-
+function build(form) {
     form.intro = html`
         <p>Lorsque nous ressentons du stress, nous essayons d'y <b>faire face par diverses actions et pensées</b>. Les exemples suivants décrivent des situations de gestion du stress.
         <p>Veuillez indiquer comment ces situations peuvent s’appliquer à vous en choisissant l'une des options suivantes pour chaque situation : « S’applique tout à fait », « S’applique », « S’applique un peu », « Ne s’applique pas ».

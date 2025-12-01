@@ -4,8 +4,8 @@
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 import { PERSON_KINDS } from '../../client/network/constants.js'
 
-function build(form, values, mask) {
-    form.values = values
+function build(form, meta) {
+    let values = form.values
 
     form.intro = html`
         <p>Nous cherchons dans un premier temps à avoir une représentation des <b>personnes de votre environnement</b> qui vous procurent de l’aide ou du soutien.
@@ -20,6 +20,24 @@ function build(form, values, mask) {
     `
 
     let anonymes = new Map;
+
+    // Reuse anonymized values from previous SSQ-6 forms
+    for (let test in meta.data) {
+        if (test == meta.page.key)
+            continue
+
+        let prev = meta.data[test]
+
+        if (prev != null) {
+            for (let key in prev) {
+                let value = prev[key]
+                let notes = meta.annotate(prev, key)
+
+                if (typeof notes?.mask == 'number')
+                    anonymes.set(value, notes.mask)
+            }
+        }
+    }
 
     form.part(() => {
         q("q1", "Combien de personnes de votre entourage sont réellement disponibles quand vous avez besoin d’aide ?")
@@ -73,7 +91,7 @@ function build(form, values, mask) {
                     anon = anonymes.size + 1
                     anonymes.set(initiales, anon)
                 }
-                mask(key + "b" + i, anon)
+                meta.mask(key + "b" + i, anon)
             }
 
             form.text(key + "b" + i, `Quelles sont les initiales de la personne n°${i + 1} ?`, {

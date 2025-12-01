@@ -3,9 +3,7 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values) {
-    form.values = values
-
+function build(form) {
     form.intro = html`
         <p>Voici une liste de problèmes parfois vécus à la suite d’une expérience très stressante. Pour ce questionnaire, gardez en tête <b>l’évènement qui vous a amené ici</b>, c’est-à-dire l’évènement décrit dans le bilan initial.
         <p>Pour chaque question, indiquez à quel point vous avez été dérangé au <b>cours du dernier mois</b>.

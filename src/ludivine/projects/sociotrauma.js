@@ -46,9 +46,10 @@ const consent = {
 
     download: '/static/documents/SocioTrauma_Information.pdf',
 
-    accept: (form, values) => {
-        form.binary("consentement", "J’ai lu et je ne m’oppose pas à participer à l’étude SocioTrauma :");
+    accept: form => {
+        let values = form.values
 
+        form.binary("consentement", "J’ai lu et je ne m’oppose pas à participer à l’étude SocioTrauma :")
         form.enumRadio("anciennete", "Je considère avoir vécu un évènement difficile il y a :", [
             [0, "Il y a quelques jours"],
             [1, "La semaine dernière"],
@@ -56,9 +57,8 @@ const consent = {
             [3, "Il y a 3 semaines"],
             [4, "Il y a 1 mois"],
             [5, "L’évènement s’est déroulé il y a plus d’un mois"]
-        ]);
-
-        form.binary("reutilisation", "J’accepte que mes données soient réutilisées dans le cadre d’autres études de Lignes de Vie :");
+        ])
+        form.binary("reutilisation", "J’accepte que mes données soient réutilisées dans le cadre d’autres études de Lignes de Vie :")
 
         return (values.consentement == 1);
     }
@@ -147,26 +147,36 @@ function init(build, start, values) {
                 `
 
                 build.form('evenement', 'L’évènement qui vous a amené ici', evenement0, options)
-                build.form('pensees', 'Pensées et ressentis', (form, values) => {
+                build.form('pensees', 'Pensées et ressentis', (form, meta) => {
+                    let values = form.values
+
                     if (values.pdeq == null)
                         values.pdeq = {}
+                    form.values = values.pdeq
+                    pdeq(form, meta)
+
                     if (values.isrc == null)
                         values.isrc = {}
-
-                    pdeq(form, values.pdeq)
-                    isrc(form, values.isrc)
+                    form.values = values.isrc
+                    isrc(form, meta)
                 }, options)
-                build.form('autres', 'Autres évènements de vie', (form, values) => {
+                build.form('autres', 'Autres évènements de vie', (form, meta) => {
+                    let values = form.values
+
                     if (values.adnm20 == null)
                         values.adnm20 = {}
+                    form.values = values.adnm20
+                    adnm20(form, meta)
+
                     if (values.lec5 == null)
                         values.lec5 = {}
+                    form.values = values.lec5
+                    lec5(form, meta)
+
                     if (values.positif == null)
                         values.positif = {}
-
-                    adnm20(form, values.adnm20)
-                    lec5(form, values.lec5)
-                    positif(form, values.positif, 'l’évènement qui vous a amené ici')
+                    form.values = values.positif
+                    positif(form, meta, 'l’évènement qui vous a amené ici')
                 }, options)
             });
 
@@ -204,17 +214,12 @@ function init(build, start, values) {
                     <p>N'hésitez pas à interrompre l'application ou à cliquer sur le <b>bouton « SOS »</b> si cela s’avère nécessaire pour vous. Vous pouvez également arrêter à tout moment et revenir plus tard.
                 `
 
-                build.form('evenement', 'L’évènement qui vous a amené ici', (form, values) => {
-                    evenements6(form, values, `bilan initial du ${start.toLocaleString()}`)
+                build.form('evenement', 'L’évènement qui vous a amené ici', (form, meta) => {
+                    evenements6(form, meta, `bilan initial du ${start.toLocaleString()}`)
                 }, options)
                 build.form('pensees', 'Pensées et ressentis', pensees6, options)
-                build.form('autres', 'Autres évènements de vie', (form, values) => {
-                    if (values.adnm20 == null)
-                        values.adnm20 = {}
-                    if (values.nouveau == null)
-                        values.nouveau = {}
-                    if (values.positif == null)
-                        values.positif = {}
+                build.form('autres', 'Autres évènements de vie', (form, meta) => {
+                    let values = form.values
 
                     form.part(() => {
                         form.binary('situation1', 'Votre situation familiale a-t-elle changé depuis le bilan initial ?')
@@ -232,9 +237,20 @@ function init(build, start, values) {
                         }
                     })
 
-                    adnm20s6(form, values.adnm20, 'le bilan initial')
-                    nouveaus6(form, values.nouveau, 'le bilan initial')
-                    positif(form, values.positif, 'la fin du bilan initial')
+                    if (values.adnm20 == null)
+                        values.adnm20 = {}
+                    form.values = values.adnm20
+                    adnm20s6(form, meta, 'le bilan initial')
+
+                    if (values.nouveau == null)
+                        values.nouveau = {}
+                    form.values = values.nouveau
+                    nouveaus6(form, meta, 'le bilan initial')
+
+                    if (values.positif == null)
+                        values.positif = {}
+                    form.values = values.positif
+                    positif(form, meta, 'la fin du bilan initial')
                 }, options)
                 build.form('enfance', 'Enfance et adolescence', ctq, options)
             });
@@ -248,26 +264,36 @@ function init(build, start, values) {
                 build.form('mhqol', 'Qualité de vie', mhqol, options)
                 build.form('substances', 'Comportements', substance, options)
                 build.form('sommeil', 'Sommeil', isi, options)
-                build.form('stress', 'Gestion du stress', (form, values) => {
+                build.form('stress', 'Gestion du stress', (form, meta) => {
+                    let values = form.values
+
                     if (values.cfs == null)
                         values.cfs = {}
+                    form.values = values.cfs
+                    cfs(form, meta)
+
                     if (values.cerq == null)
                         values.cerq = {}
-
-                    cfs(form, values.cfs)
-                    cerq(form, values.cerq)
+                    form.values = values.cerq
+                    cerq(form, meta)
                 }, options)
-                build.form('autres', 'Autres difficultés', (form, values) => {
+                build.form('autres', 'Autres difficultés', (form, meta) => {
+                    let values = form.values
+
                     if (values.phq9 == null)
                         values.phq9 = {}
+                    form.values = values.phq9
+                    phq9(form, meta)
+
                     if (values.gad7 == null)
                         values.gad7 = {}
+                    form.values = values.gad7
+                    gad7(form, meta)
+
                     if (values.mini5s == null)
                         values.mini5s = {}
-
-                    phq9(form, values.phq9)
-                    gad7(form, values.gad7)
-                    mini5s(form, values.mini5s)
+                    form.values = values.mini5s
+                    mini5s(form, meta)
                 }, options)
             });
 
@@ -277,10 +303,12 @@ function init(build, start, values) {
                     <p>À la fin de ce module, nous vous demanderons de décrire votre entourage précisément à l'aide d'un <abbr title="Outil permettant de représenter visuellement vos relations sociales">sociogramme</abbr> interactif.
                 `;
 
-                build.form('ssq6', 'Soutien social', ssq6, options)
+                build.form('ssq6', 'Soutien social', ssq6, { ...options, load: ['/recueil/initial/entourage/ssq6'] })
                 build.form('sni', 'Interactions sociales', sni, options)
-                build.form('sps10', 'Disponibilité de votre entourage', (form, values) => {
-                    sps10(form, values);
+                build.form('sps10', 'Disponibilité de votre entourage', (form, meta) => {
+                    let values = form.values
+
+                    sps10(form, meta)
 
                     form.part(() => {
                         form.binary('sup1', 'Considérez-vous que l’évènement qui vous a amené ici a engendré une rupture avec votre vie d’avant ?')
@@ -302,8 +330,8 @@ function init(build, start, values) {
                     <p>Dans ce module, nous allons nous intéresser à la façon dont vous <b>souhaitez – ou non – parler de votre expérience</b> à vos proches, ainsi qu’à leurs réactions (si vous leur en avez parlé).
                 `
 
-                build.form('cses', 'Témoignage à l\'entourage', (form, values) => {
-                    cses(form, values)
+                build.form('cses', 'Témoignage à l\'entourage', (form, meta) => {
+                    cses(form, meta)
 
                     form.part(() => {
                         form.enumButtons('meme', 'Est-ce que la personne à qui vous pensez est la même que celle à laquelle vous faisiez référence lors du bilan initial ?', [
@@ -314,8 +342,8 @@ function init(build, start, values) {
                     })
                 }, options)
 
-                build.form('rds', 'Réactions des proches', (form, values) => {
-                    rdss6(form, values, `bilan initial du ${start.toLocaleString()}`)
+                build.form('rds', 'Réactions des proches', (form, meta) => {
+                    rdss6(form, meta, `bilan initial du ${start.toLocaleString()}`)
                 }, options)
             });
         });
@@ -340,17 +368,12 @@ function init(build, start, values) {
                     <p>N'hésitez pas à interrompre l'application ou à cliquer sur le <b>bouton « SOS »</b> si cela s’avère nécessaire pour vous. Vous pouvez également arrêter à tout moment et revenir plus tard.
                 `
 
-                build.form('evenement', 'L’évènement qui vous a amené ici', (form, values) => {
-                    evenements6(form, values, `suivi du ${options.schedule.toLocaleString()}`)
+                build.form('evenement', 'L’évènement qui vous a amené ici', (form, meta) => {
+                    evenements6(form, meta, `suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
                 build.form('pensees', 'Pensées et ressentis', pensees6, options)
-                build.form('autres', 'Autres évènements de vie', (form, values) => {
-                    if (values.adnm20 == null)
-                        values.adnm20 = {}
-                    if (values.nouveau == null)
-                        values.nouveau = {}
-                    if (values.positif == null)
-                        values.positif = {}
+                build.form('autres', 'Autres évènements de vie', (form, meta) => {
+                    let values = form.values
 
                     form.part(() => {
                         form.binary('situation1', 'Votre situation familiale a-t-elle changé depuis le suivi à 6 semaines ?')
@@ -368,9 +391,20 @@ function init(build, start, values) {
                         }
                     })
 
-                    adnm20s6(form, values.adnm20, 'le suivi à 6 semaines')
-                    nouveaus6(form, values.nouveau, 'le suivi à 6 semaines')
-                    positif(form, values.positif, 'la fin du suivi à 6 semaines')
+                    if (values.adnm20 == null)
+                        values.adnm20 = {}
+                    form.values = values.adnm20
+                    adnm20s6(form, meta, 'le suivi à 6 semaines')
+
+                    if (values.nouveau == null)
+                        values.nouveau = {}
+                    form.values = values.nouveau
+                    nouveaus6(form, meta, 'le suivi à 6 semaines')
+
+                    if (values.positif == null)
+                        values.positif = {}
+                    form.values = values.positif
+                    positif(form, meta, 'la fin du suivi à 6 semaines')
                 }, options)
                 build.form('enfance', 'Enfance et adolescence', ctq, options)
             });
@@ -384,26 +418,36 @@ function init(build, start, values) {
                 build.form('mhqol', 'Qualité de vie', mhqol, options)
                 build.form('substances', 'Comportements', substance, options)
                 build.form('sommeil', 'Sommeil', isi, options)
-                build.form('stress', 'Gestion du stress', (form, values) => {
+                build.form('stress', 'Gestion du stress', (form, meta) => {
+                    let values = form.values
+
                     if (values.cfs == null)
                         values.cfs = {}
+                    form.values = values.cfs
+                    cfs(form, meta)
+
                     if (values.cerq == null)
                         values.cerq = {}
-
-                    cfs(form, values.cfs)
-                    cerq(form, values.cerq)
+                    form.values = values.cerq
+                    cerq(form, meta)
                 }, options)
-                build.form('autres', 'Autres difficultés', (form, values) => {
+                build.form('autres', 'Autres difficultés', (form, meta) => {
+                    let values = form.values
+
                     if (values.phq9 == null)
                         values.phq9 = {}
+                    form.values = values.phq9
+                    phq9(form, meta)
+
                     if (values.gad7 == null)
                         values.gad7 = {}
+                    form.valeus = values.gad7
+                    gad7(form, meta)
+
                     if (values.mini5s == null)
                         values.mini5s = {}
-
-                    phq9(form, values.phq9)
-                    gad7(form, values.gad7)
-                    mini5s(form, values.mini5s)
+                    form.values = values.mini5s
+                    mini5s(form, meta)
                 }, options)
             });
 
@@ -413,10 +457,13 @@ function init(build, start, values) {
                     <p>À la fin de ce module, nous vous demanderons de décrire votre entourage précisément à l'aide d'un <abbr title="Outil permettant de représenter visuellement vos relations sociales">sociogramme</abbr> interactif.
                 `;
 
-                build.form('ssq6', 'Soutien social', ssq6, options)
+                build.form('ssq6', 'Soutien social', ssq6, { ...options, load: ['/recueil/initial/entourage/ssq6',
+                                                                                '/recueil/s6/entourage/ssq6'] })
                 build.form('sni', 'Interactions sociales', sni, options)
-                build.form('sps10', 'Disponibilité de votre entourage', (form, values) => {
-                    sps10(form, values);
+                build.form('sps10', 'Disponibilité de votre entourage', (form, meta) => {
+                    let values = form.values
+
+                    sps10(form, meta)
 
                     form.part(() => {
                         form.binary('sup1', 'Considérez-vous que l’évènement qui vous a amené ici a engendré une rupture avec votre vie d’avant ?')
@@ -438,8 +485,8 @@ function init(build, start, values) {
                     <p>Dans ce module, nous allons nous intéresser à la façon dont vous <b>souhaitez – ou non – parler de votre expérience</b> à vos proches, ainsi qu’à leurs réactions (si vous leur en avez parlé).
                 `
 
-                build.form('cses', 'Témoignage à l\'entourage', (form, values) => {
-                    cses(form, values)
+                build.form('cses', 'Témoignage à l\'entourage', (form, meta) => {
+                    cses(form, meta)
 
                     form.part(() => {
                         form.enumButtons('meme', 'Est-ce que la personne à qui vous pensez est la même que celle à laquelle vous faisiez référence lors du suivi à 6 semaines ?', [
@@ -450,8 +497,8 @@ function init(build, start, values) {
                     })
                 }, options)
 
-                build.form('rds', 'Réactions des proches', (form, values) => {
-                    rdss6(form, values, `suivi du ${options.schedule.toLocaleString()}`)
+                build.form('rds', 'Réactions des proches', (form, meta) => {
+                    rdss6(form, meta, `suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
             });
         });
@@ -476,17 +523,12 @@ function init(build, start, values) {
                     <p>N'hésitez pas à interrompre l'application ou à cliquer sur le <b>bouton « SOS »</b> si cela s’avère nécessaire pour vous. Vous pouvez également arrêter à tout moment et revenir plus tard.
                 `
 
-                build.form('evenement', 'L’évènement qui vous a amené ici', (form, values) => {
-                    evenements6(form, values, `suivi du ${options.schedule.toLocaleString()}`)
+                build.form('evenement', 'L’évènement qui vous a amené ici', (form, meta) => {
+                    evenements6(form, meta, `suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
                 build.form('pensees', 'Pensées et ressentis', pensees6, options)
-                build.form('autres', 'Autres évènements de vie', (form, values) => {
-                    if (values.adnm20 == null)
-                        values.adnm20 = {}
-                    if (values.nouveau == null)
-                        values.nouveau = {}
-                    if (values.positif == null)
-                        values.positif = {}
+                build.form('autres', 'Autres évènements de vie', (form, meta) => {
+                    let values = form.values
 
                     form.part(() => {
                         form.binary('situation1', 'Votre situation familiale a-t-elle changé depuis le suivi à 3 mois ?')
@@ -504,9 +546,20 @@ function init(build, start, values) {
                         }
                     })
 
-                    adnm20s6(form, values.adnm20, 'le suivi à 3 mois')
-                    nouveaus6(form, values.nouveau, 'le suivi à 3 mois')
-                    positif(form, values.positif, 'la fin du suivi à 3 mois')
+                    if (values.adnm20 == null)
+                        values.adnm20 = {}
+                    form.values = values.adnm20
+                    adnm20s6(form, meta, 'le suivi à 3 mois')
+
+                    if (values.nouveau == null)
+                        values.nouveau = {}
+                    form.values = values.nouveau
+                    nouveaus6(form, meta, 'le suivi à 3 mois')
+
+                    if (values.positif == null)
+                        values.positif = {}
+                    form.values = values.positif
+                    positif(form, meta, 'la fin du suivi à 3 mois')
                 }, options)
                 build.form('enfance', 'Enfance et adolescence', ctq, options)
             });
@@ -520,26 +573,36 @@ function init(build, start, values) {
                 build.form('mhqol', 'Qualité de vie', mhqol, options)
                 build.form('substances', 'Comportements', substance, options)
                 build.form('sommeil', 'Sommeil', isi, options)
-                build.form('stress', 'Gestion du stress', (form, values) => {
+                build.form('stress', 'Gestion du stress', (form, meta) => {
+                    let values = form.values
+
                     if (values.cfs == null)
                         values.cfs = {}
+                    form.values = values.cfs
+                    cfs(form, meta)
+
                     if (values.cerq == null)
                         values.cerq = {}
-
-                    cfs(form, values.cfs)
-                    cerq(form, values.cerq)
+                    form.values = values.cerq
+                    cerq(form, meta)
                 }, options)
-                build.form('autres', 'Autres difficultés', (form, values) => {
+                build.form('autres', 'Autres difficultés', (form, meta) => {
+                    let values = form.values
+
                     if (values.phq9 == null)
                         values.phq9 = {}
+                    form.values = values.phq9
+                    phq9(form, meta)
+
                     if (values.gad7 == null)
                         values.gad7 = {}
+                    form.values = values.gad7
+                    gad7(form, meta)
+
                     if (values.mini5s == null)
                         values.mini5s = {}
-
-                    phq9(form, values.phq9)
-                    gad7(form, values.gad7)
-                    mini5s(form, values.mini5s)
+                    form.values = values.mini5s
+                    mini5s(form, meta)
                 }, options)
             });
 
@@ -549,10 +612,14 @@ function init(build, start, values) {
                     <p>À la fin de ce module, nous vous demanderons de décrire votre entourage précisément à l'aide d'un <abbr title="Outil permettant de représenter visuellement vos relations sociales">sociogramme</abbr> interactif.
                 `;
 
-                build.form('ssq6', 'Soutien social', ssq6, options)
+                build.form('ssq6', 'Soutien social', ssq6, { ...options, load: ['/recueil/initial/entourage/ssq6',
+                                                                                '/recueil/s6/entourage/ssq6',
+                                                                                '/recueil/m3/entourage/ssq6'] })
                 build.form('sni', 'Interactions sociales', sni, options)
-                build.form('sps10', 'Disponibilité de votre entourage', (form, values) => {
-                    sps10(form, values);
+                build.form('sps10', 'Disponibilité de votre entourage', (form, meta) => {
+                    let values = form.values
+
+                    sps10(form, meta)
 
                     form.part(() => {
                         form.binary('sup1', 'Considérez-vous que l’évènement qui vous a amené ici a engendré une rupture avec votre vie d’avant ?')
@@ -574,8 +641,8 @@ function init(build, start, values) {
                     <p>Dans ce module, nous allons nous intéresser à la façon dont vous <b>souhaitez – ou non – parler de votre expérience</b> à vos proches, ainsi qu’à leurs réactions (si vous leur en avez parlé).
                 `
 
-                build.form('cses', 'Témoignage à l\'entourage', (form, values) => {
-                    cses(form, values)
+                build.form('cses', 'Témoignage à l\'entourage', (form, meta) => {
+                    cses(form, meta)
 
                     form.part(() => {
                         form.enumButtons('meme', 'Est-ce que la personne à qui vous pensez est la même que celle à laquelle vous faisiez référence lors du suivi à 3 mois ?', [
@@ -586,8 +653,8 @@ function init(build, start, values) {
                     })
                 }, options)
 
-                build.form('rds', 'Réactions des proches', (form, values) => {
-                    rdss6(form, values, `suivi du ${options.schedule.toLocaleString()}`)
+                build.form('rds', 'Réactions des proches', (form, meta) => {
+                    rdss6(form, meta, `suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
             });
         });
@@ -612,17 +679,12 @@ function init(build, start, values) {
                     <p>N'hésitez pas à interrompre l'application ou à cliquer sur le <b>bouton « SOS »</b> si cela s’avère nécessaire pour vous. Vous pouvez également arrêter à tout moment et revenir plus tard.
                 `
 
-                build.form('evenement', 'L’évènement qui vous a amené ici', (form, values) => {
-                    evenements6(form, values, `suivi du ${options.schedule.toLocaleString()}`)
+                build.form('evenement', 'L’évènement qui vous a amené ici', (form, meta) => {
+                    evenements6(form, meta, `suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
                 build.form('pensees', 'Pensées et ressentis', pensees6, options)
-                build.form('autres', 'Autres évènements de vie', (form, values) => {
-                    if (values.adnm20 == null)
-                        values.adnm20 = {}
-                    if (values.nouveau == null)
-                        values.nouveau = {}
-                    if (values.positif == null)
-                        values.positif = {}
+                build.form('autres', 'Autres évènements de vie', (form, meta) => {
+                    let values = form.values
 
                     form.part(() => {
                         form.binary('situation1', 'Votre situation familiale a-t-elle changé depuis le suivi à 6 mois ?')
@@ -640,9 +702,20 @@ function init(build, start, values) {
                         }
                     })
 
-                    adnm20s6(form, values.adnm20, 'le suivi à 6 mois')
-                    nouveaus6(form, values.nouveau, 'le suivi à 6 mois')
-                    positif(form, values.positif, 'la fin du suivi à 6 mois')
+                    if (values.adnm20 == null)
+                        values.adnm20 = {}
+                    form.values = values.adnm20
+                    adnm20s6(form, meta, 'le suivi à 6 mois')
+
+                    if (values.nouveau == null)
+                        values.nouveau = {}
+                    form.values = values.nouveau
+                    nouveaus6(form, meta, 'le suivi à 6 mois')
+
+                    if (values.positif == null)
+                        values.positif = {}
+                    form.values = values.positif
+                    positif(form, meta, 'la fin du suivi à 6 mois')
                 }, options)
                 build.form('enfance', 'Enfance et adolescence', ctq, options)
             });
@@ -656,26 +729,36 @@ function init(build, start, values) {
                 build.form('mhqol', 'Qualité de vie', mhqol, options)
                 build.form('substances', 'Comportements', substance, options)
                 build.form('sommeil', 'Sommeil', isi, options)
-                build.form('stress', 'Gestion du stress', (form, values) => {
+                build.form('stress', 'Gestion du stress', (form, meta) => {
+                    let values = form.values
+
                     if (values.cfs == null)
                         values.cfs = {}
+                    form.values = values.cfs
+                    cfs(form, meta)
+
                     if (values.cerq == null)
                         values.cerq = {}
-
-                    cfs(form, values.cfs)
-                    cerq(form, values.cerq)
+                    form.values = values.cerq
+                    cerq(form, meta)
                 }, options)
-                build.form('autres', 'Autres difficultés', (form, values) => {
+                build.form('autres', 'Autres difficultés', (form, meta) => {
+                    let values = form.values
+
                     if (values.phq9 == null)
                         values.phq9 = {}
+                    form.values = values.phq9
+                    phq9(form, meta)
+
                     if (values.gad7 == null)
                         values.gad7 = {}
+                    form.values = values.gad7
+                    gad7(form, meta)
+
                     if (values.mini5s == null)
                         values.mini5s = {}
-
-                    phq9(form, values.phq9)
-                    gad7(form, values.gad7)
-                    mini5s(form, values.mini5s)
+                    form.values = values.mini5s
+                    mini5s(form, meta)
                 }, options)
             });
 
@@ -685,10 +768,15 @@ function init(build, start, values) {
                     <p>À la fin de ce module, nous vous demanderons de décrire votre entourage précisément à l'aide d'un <abbr title="Outil permettant de représenter visuellement vos relations sociales">sociogramme</abbr> interactif.
                 `;
 
-                build.form('ssq6', 'Soutien social', ssq6, options)
+                build.form('ssq6', 'Soutien social', ssq6, { ...options, load: ['/recueil/initial/entourage/ssq6',
+                                                                                '/recueil/s6/entourage/ssq6',
+                                                                                '/recueil/m3/entourage/ssq6',
+                                                                                '/recueil/m6/entourage/ssq6']})
                 build.form('sni', 'Interactions sociales', sni, options)
-                build.form('sps10', 'Disponibilité de votre entourage', (form, values) => {
-                    sps10(form, values);
+                build.form('sps10', 'Disponibilité de votre entourage', (form, meta) => {
+                    let values = form.values
+
+                    sps10(form, meta)
 
                     form.part(() => {
                         form.binary('sup1', 'Considérez-vous que l’évènement qui vous a amené ici a engendré une rupture avec votre vie d’avant ?')
@@ -710,8 +798,8 @@ function init(build, start, values) {
                     <p>Dans ce module, nous allons nous intéresser à la façon dont vous <b>souhaitez – ou non – parler de votre expérience</b> à vos proches, ainsi qu’à leurs réactions (si vous leur en avez parlé).
                 `
 
-                build.form('cses', 'Témoignage à l\'entourage', (form, values) => {
-                    cses(form, values)
+                build.form('cses', 'Témoignage à l\'entourage', (form, meta) => {
+                    cses(form, meta)
 
                     form.part(() => {
                         form.enumButtons('meme', 'Est-ce que la personne à qui vous pensez est la même que celle à laquelle vous faisiez référence lors du suivi à 6 mois ?', [
@@ -722,8 +810,8 @@ function init(build, start, values) {
                     })
                 }, options)
 
-                build.form('rds', 'Réactions des proches', (form, values) => {
-                    rdss6(form, values, `suivi du ${options.schedule.toLocaleString()}`)
+                build.form('rds', 'Réactions des proches', (form, meta) => {
+                    rdss6(form, meta, `suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
             });
         });

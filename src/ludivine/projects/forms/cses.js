@@ -4,8 +4,8 @@
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 import { PERSON_KINDS } from '../../client/network/constants.js'
 
-function build(form, values) {
-    form.values = values
+function build(form) {
+    let values = form.values
 
     form.intro = html`
         <p>Les personnes ayant vécu le genre d'événement comme celui qui vous a amené ici <b>différent considérablement dans leur façon d'en parler</b> aux autres.
