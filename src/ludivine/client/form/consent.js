@@ -4,6 +4,7 @@
 import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from 'lib/web/base/base.js';
 import { FormState, FormModel, FormBuilder } from './builder.js';
+import { ASSETS } from '../../assets/assets.js';
 
 function ConsentModule(app, project) {
     let self = this;
@@ -66,6 +67,15 @@ function ConsentModule(app, project) {
                 ` : ''}
             </div>
             <div class="box" style="align-items: center;">
+                ${consent.download != null ? html`
+                    <div class="help">
+                        <img src=${ASSETS['pictures/help1']} alt="" />
+                        <div>
+                            <p>Vous devez <b>télécharger et lire la lettre d'informations</b> pour pouvoir commencer.
+                            <p>Une fois cela fait, vous pourrez participer à l'étude !
+                        </div>
+                    </div>
+                ` : ''}
                 <form @submit=${UI.wrap(e => start(valid, values))}>
                     ${model.widgets.map(widget => widget.render())}
 
