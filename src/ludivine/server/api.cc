@@ -23,7 +23,7 @@ Conservez-le précieusement, ou même mieux, enregistrez la pièce jointe sur vo
 
 Nous vous invitons à utiliser le lien suivant afin de commencer votre aventure {{ TITLE }} :
 
-{{ EXTRA }}
+{{ LOGIN }}
 
 Nous utilisons un système de chiffrement end-to-end pour assurer la sécurité et l’anonymat de vos données. Nous ne serons donc pas en mesure de vous renvoyer un nouveau lien de connexion en cas de perte de celui-ci.
 
@@ -40,7 +40,7 @@ L’équipe de {{ TITLE }}
 <p>Nous vous invitons à cliquer sur le lien suivant afin de commencer votre aventure {{ TITLE }}.</p>
 <div align="center"><br>
     <a style="padding: 0.7em 2em; background: #2d8261; border-radius: 30px;
-              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ EXTRA }}">Connexion à {{ TITLE }}</a>
+              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ LOGIN }}">Connexion à {{ TITLE }}</a>
 <br><br></div>
 <p>Vous pouvez également utiliser ce QRcode pour vous connecter à l'aide de votre smartphone si vous le souhaitez :</p>
 <div align="center"><br>
@@ -85,24 +85,34 @@ L'équipe de {{ TITLE }}
 };
 
 static const smtp_MailContent ContinueStudy = {
-    "Rappel {{ TITLE }} : participez à {{ EXTRA }} !",
+    "Rappel {{ TITLE }} : participez à {{ STUDY }} !",
     R"(Bonjour,
 
-L'étude {{ EXTRA }} continue !
+L'étude {{ STUDY }} continue !
 
 Vous pouvez reprendre votre participation et continuer à nous aider.
 
 Pous vous connecter à {{ TITLE }}, vous devrez vous munir du mail que vous avez reçu lors de votre inscription, dont l'objet est « Connexion à {{ TITLE }} ! », et cliquer sur le lien présent dans le mail.
 
+Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.
+
 L'équipe de {{ TITLE }}
-{{ CONTACT }})",
+{{ CONTACT }}
+
+----------------------------------------
+
+Si vous ne souhaitez plus recevoir de rappels liés à cette étude, utilisez le lien suivant :
+
+{{ STOP }})",
     R"(<html lang="fr"><body>
 <p>Bonjour,</p>
-<p>L'étude {{ EXTRA }} continue !</p>
+<p>L'étude {{ STUDY }} continue !</p>
 <p>Vous pouvez reprendre votre participation et continuer à nous aider.</p>
 <p>Pous vous connecter à {{ TITLE }}, vous devrez vous munir du mail que vous avez reçu lors de votre inscription, dont l'objet est <b>« Connexion à {{ TITLE }} ! »</b>, et cliquer sur le lien présent dans le mail.</p>
+<p>Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.</p>
 <p><i>L’équipe de {{ TITLE }}</i><br>
 <a href="mailto:{{ CONTACT }}">{{ CONTACT }}</a></p>
+<p style="font-size: 0.8em; color: #888;"><i>Si vous ne souhaitez plus recevoir de rappels liés à cette étude, utilisez le lien suivant :</i> <a href="{{ STOP }}">Ne plus recevoir de rappels</a></p>
 </body></html>)",
     {}
 };
@@ -152,46 +162,43 @@ static bool IsUUIDValid(Span<const char> uuid)
     return true;
 }
 
-static Span<const char> PatchText(Span<const char> text, const char *mail, const char *extra, Allocator *alloc)
-{
-    Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
-        Span<const char> key = TrimStr(expr);
-
-        if (key == "TITLE") {
-            writer->Write(config.title);
-        } else if (key == "CONTACT") {
-            writer->Write(config.contact);
-        } else if (key == "MAIL") {
-            writer->Write(mail);
-        } else if (key == "EXTRA") {
-            K_ASSERT(extra);
-            writer->Write(extra);
-        } else {
-            Print(writer, "{{%1}}", expr);
-        }
-    });
-
-    return ret;
-}
-
 static bool SendNewMail(const char *to, const char *uid, Span<const uint8_t> tkey, int registration, Allocator *alloc)
 {
     smtp_MailContent content;
 
     // Format magic link
     FmtArg fmt = FmtHex(tkey);
-    const char *url = Fmt(alloc, "%1/session#uid=%2&tk=%3&r=%4", config.url, uid, fmt, registration).ptr;
+    const char *login = Fmt(alloc, "%1/session#uid=%2&tk=%3&r=%4", config.url, uid, fmt, registration).ptr;
 
-    content.subject = PatchText(NewUser.subject, to, url, alloc).ptr;
-    content.html = PatchText(NewUser.html, to, url, alloc).ptr;
-    content.text = PatchText(NewUser.text, to, url, alloc).ptr;
+    const auto patch = [&](Span<const char> text) {
+        Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
+            Span<const char> key = TrimStr(expr);
+
+            if (key == "TITLE") {
+                writer->Write(config.title);
+            } else if (key == "CONTACT") {
+                writer->Write(config.contact);
+            } else if (key == "MAIL") {
+                writer->Write(to);
+            } else if (key == "LOGIN") {
+                writer->Write(login);
+            } else {
+                Print(writer, "{{%1}}", expr);
+            }
+        });
+        return ret;
+    };
+
+    content.subject = patch(NewUser.subject).ptr;
+    content.html = patch(NewUser.html).ptr;
+    content.text = patch(NewUser.text).ptr;
 
     Span<const uint8_t> png;
     {
         HeapArray<uint8_t> buf(alloc);
 
         StreamWriter st(&buf, "<png>");
-        if (!qr_EncodeTextToPng(url, 0, &st))
+        if (!qr_EncodeTextToPng(login, 0, &st))
             return false;
         st.Close();
 
@@ -216,20 +223,60 @@ static bool SendExistingMail(const char *to, Allocator *alloc)
 {
     smtp_MailContent content;
 
-    content.subject = PatchText(ExistingUser.subject, to, nullptr, alloc).ptr;
-    content.html = PatchText(ExistingUser.html, to, nullptr, alloc).ptr;
-    content.text = PatchText(ExistingUser.text, to, nullptr, alloc).ptr;
+    const auto patch = [&](Span<const char> text) {
+        Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
+            Span<const char> key = TrimStr(expr);
+
+            if (key == "TITLE") {
+                writer->Write(config.title);
+            } else if (key == "CONTACT") {
+                writer->Write(config.contact);
+            } else if (key == "MAIL") {
+                writer->Write(to);
+            } else {
+                Print(writer, "{{%1}}", expr);
+            }
+        });
+        return ret;
+    };
+
+    content.subject = patch(ExistingUser.subject).ptr;
+    content.html = patch(ExistingUser.html).ptr;
+    content.text = patch(ExistingUser.text).ptr;
 
     return PostMail(to, content);
 }
 
-static bool SendContinueMail(const char *to, const char *study, Allocator *alloc)
+static bool SendContinueMail(const char *to, const char *uid, int64_t study, const char *title, Allocator *alloc)
 {
     smtp_MailContent content;
 
-    content.subject = PatchText(ContinueStudy.subject, to, study, alloc).ptr;
-    content.html = PatchText(ContinueStudy.html, to, study, alloc).ptr;
-    content.text = PatchText(ContinueStudy.text, to, study, alloc).ptr;
+    const char *stop = Fmt(alloc, "%1/rappels#uid=%2&study=%3", config.url, uid, study).ptr;
+
+    const auto patch = [&](Span<const char> text) {
+        Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
+            Span<const char> key = TrimStr(expr);
+
+            if (key == "TITLE") {
+                writer->Write(config.title);
+            } else if (key == "CONTACT") {
+                writer->Write(config.contact);
+            } else if (key == "MAIL") {
+                writer->Write(to);
+            } else if (key == "STUDY") {
+                writer->Write(title);
+            } else if (key == "STOP") {
+                writer->Write(stop);
+            } else {
+                Print(writer, "{{%1}}", expr);
+            }
+        });
+        return ret;
+    };
+
+    content.subject = patch(ContinueStudy.subject).ptr;
+    content.html = patch(ContinueStudy.html).ptr;
+    content.text = patch(ContinueStudy.text).ptr;
 
     return PostMail(to, content);
 }
@@ -929,6 +976,7 @@ void HandleRemind(http_IO *io)
                                                      start = excluded.start,
                                                      offset = excluded.offset,
                                                      partial = excluded.partial,
+                                                     ignored = IIF(partial = excluded.partial, ignored, NULL),
                                                      changeset = excluded.changeset)",
                         user, study, title, dates[0], dates[1],
                         offset, 0 + evt.partial, sq_Binding(changeset)))
@@ -943,6 +991,79 @@ void HandleRemind(http_IO *io)
         return true;
     });
     if (!success)
+        return;
+
+    io->SendText(200, "{}", "application/json");
+}
+
+void HandleIgnore(http_IO *io)
+{
+    const char *uid = nullptr;
+    int64_t study = -1;
+    bool all = true;
+    {
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
+
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
+
+                if (key == "uid") {
+                    json->ParseString(&uid);
+                } else if (key == "study") {
+                    json->ParseInt(&study);
+                } else if (key == "all") {
+                    json->ParseBool(&all);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (!uid || !IsUUIDValid(uid)) {
+                    LogError("Missing or invalid UID");
+                    valid = false;
+                }
+                if (study < 0) {
+                    LogError("Missing or invalid study");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Make sure user exists
+    int64_t user = 0;
+    {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT id FROM users WHERE uid = uuid_blob(?1)", &stmt, uid))
+            return;
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Unknown user UID");
+                io->SendError(404);
+            }
+            return;
+        }
+
+        user = sqlite3_column_int64(stmt, 0);
+    }
+
+    int64_t now = GetUnixTime();
+
+    if (!db.Run(R"(UPDATE events SET ignored = ?2
+                   WHERE user = ?1 AND (?3 = 1 OR sent IS NOT NULL))",
+                user, now, 0 + all))
         return;
 
     io->SendText(200, "{}", "application/json");
@@ -1049,19 +1170,23 @@ bool RemindLateUsers()
         }
 
         sq_Statement stmt;
-        if (!db.Prepare(R"(SELECT e.id, u.mail, e.title
+        if (!db.Prepare(R"(SELECT e.id, uuid_str(u.uid), u.mail, e.study, e.title
                            FROM events e
                            INNER JOIN users u ON (u.id = e.user)
-                           WHERE e.date = ?1 AND (e.sent IS NULL OR e.sent < ?2))",
+                           WHERE e.date = ?1 AND
+                                 e.ignored IS NULL AND
+                                 (e.sent IS NULL OR e.sent < ?2))",
                         &stmt, when, delay))
             return false;
 
         while (stmt.Step()) {
             int64_t id = sqlite3_column_int64(stmt, 0);
-            const char *mail = (const char *)sqlite3_column_text(stmt, 1);
-            const char *study = (const char *)sqlite3_column_text(stmt, 2);
+            const char *uid = (const char *)sqlite3_column_text(stmt, 1);
+            const char *mail = (const char *)sqlite3_column_text(stmt, 2);
+            int64_t study = sqlite3_column_int64(stmt, 3);
+            const char *title = (const char *)sqlite3_column_text(stmt, 4);
 
-            if (!SendContinueMail(mail, study, &temp_alloc))
+            if (!SendContinueMail(mail, uid, study, title, &temp_alloc))
                 return false;
             if (!db.Run("UPDATE events SET sent = ?2 WHERE id = ?1", id, delay))
                 return false;

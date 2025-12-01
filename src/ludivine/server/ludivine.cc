@@ -352,6 +352,8 @@ static void HandleRequest(http_IO *io)
             HandleUpload(io);
         } else if (url == "/api/remind" && method == http_RequestMethod::Post) {
             HandleRemind(io);
+        } else if (url == "/api/ignore" && method == http_RequestMethod::Post) {
+            HandleIgnore(io);
         } else if (url == "/api/publish" && method == http_RequestMethod::Post) {
             HandlePublish(io);
         } else {
