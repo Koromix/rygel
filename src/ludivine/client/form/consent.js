@@ -57,7 +57,7 @@ function ConsentModule(app, project) {
         render(html`
             <div class="box">
                 <div class="header">Consentement</div>
-                ${consent.text}
+                <div>${consent.text}</div>
                 ${consent.download != null ? html`
                     <div class="actions">
                         <a href=${consent.download} download
