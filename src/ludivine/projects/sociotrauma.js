@@ -441,7 +441,7 @@ function init(build, start, values) {
 
                     if (values.gad7 == null)
                         values.gad7 = {}
-                    form.valeus = values.gad7
+                    form.values = values.gad7
                     gad7(form, meta)
 
                     if (values.mini5s == null)
