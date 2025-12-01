@@ -3,15 +3,15 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values) {
+function build(form, values, since) {
     form.values = values
 
     form.intro = html`
-        Nous allons vous poser une série de questions qui vont nous permettre de comprendre ce qui vous est arrivé. Nous avons conscience que cela peut être difficile, et nous vous sommes reconnaissants de cet effort.
+        <p>Nous allons vous poser une série de questions qui vont nous permettre de comprendre ce qui vous est arrivé. Nous avons conscience que cela peut être difficile, et nous vous sommes reconnaissants de cet effort.
     `
 
     form.part(() => {
-        form.binary("nouveau", "Depuis que vous avez complété le bilan initial, avez-vous vécu de nouveaux évènements particulièrement difficiles ?")
+        form.binary("nouveau", `Depuis que vous avez complété ${since}, avez-vous vécu de nouveaux évènements particulièrement difficiles ?`)
     })
 
     if (values.nouveau !== 0) {

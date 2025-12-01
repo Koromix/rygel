@@ -3,7 +3,7 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values, start) {
+function build(form, values, since) {
     form.values = values
 
     form.intro = html`
@@ -38,7 +38,7 @@ function build(form, values, start) {
     })
 
     form.part(() => {
-        form.multiCheck("q3", `Depuis le bilan initial du ${start.toLocaleString()}, avez-vous :`, [
+        form.multiCheck("q3", `Depuis ${since}, avez-vous :`, [
             [1, "Poursuivi un suivi psychologique débuté avant le bilan initial ?"],
             [2, "Arrêté un suivi psychologique en cours ?"],
             [3, "Débuté un suivi psychologique ?"]

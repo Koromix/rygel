@@ -3,12 +3,12 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, values) {
+function build(form, values, since) {
     form.values = values
 
     form.intro = html`
-        <p>Nous allons maintenant vous poser des questions sur les <b>autres évènements que vous avez pu vivre</b> à la suite du bilan initial, qu’ils soient positifs ou négatifs, et qui font actuellement partie de votre réalité.
-        <p>Parmi les évènements de vie stressants indiqués ci-dessous, indiquez ceux qui vous sont arrivés <b>depuis le bilan initial</b>.
+        <p>Nous allons maintenant vous poser des questions sur les <b>autres évènements que vous avez pu vivre</b> depuis ${since}, qu’ils soient positifs ou négatifs, et qui font actuellement partie de votre réalité.
+        <p>Parmi les évènements de vie stressants indiqués ci-dessous, indiquez ceux qui vous sont arrivés <b>depuis ${since}</b>.
     `
 
     form.part(() => {

@@ -4,7 +4,7 @@
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 import { PERSON_KINDS } from '../../client/network/constants.js'
 
-function build(form, values, start) {
+function build(form, values, since) {
     form.values = values
 
     form.intro = html`
@@ -12,7 +12,7 @@ function build(form, values, start) {
     `
 
     form.part(() => {
-        form.binary("pre1", `Avez-vous continué à parler de l’évènement qui vous a amené ici aux personnes auxquelles vous avez fait référence dans le bilan initial du ${start.toLocaleString()} ?`)
+        form.binary("pre1", `Avez-vous continué à parler de l’évènement qui vous a amené ici aux personnes auxquelles vous avez fait référence dans ${since} ?`)
         form.binary("pre2", "Avez-vous reçu des réactions négatives de leur part ?")
 
         if (values.pre2) {
@@ -25,7 +25,7 @@ function build(form, values, start) {
     })
 
     form.part(() => {
-        form.binary("pre4", `Avez-vous parlé à de nouvelles personnes de cet évènement depuis le bilan initial du ${start.toLocaleString()} ?`)
+        form.binary("pre4", `Avez-vous parlé à de nouvelles personnes de cet évènement depuis ${since} ?`)
 
         if (values.pre4 == 1) {
             let keys = Object.keys(PERSON_KINDS)
