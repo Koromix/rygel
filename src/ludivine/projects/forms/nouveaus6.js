@@ -3,7 +3,7 @@
 
 import { html } from 'vendor/lit-html/lit-html.bundle.js'
 
-function build(form, since) {
+function build(form, meta, since = 'le recueil précédent') {
     let values = form.values
 
     form.intro = html`
