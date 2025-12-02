@@ -66,6 +66,7 @@ p + .actions { margin-top: 2em; }
     border-bottom: none;
     text-transform: none;
 }
+#top li > a:hover { margin-bottom: -2px; }
 #top.border { border-bottom-color: var(--top_background); }
 #top .avatar {
     width: 51px;
