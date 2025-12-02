@@ -369,7 +369,7 @@ bool MigrateDatabase(sq_Database *db, const char *vault_directory)
                     CREATE UNIQUE INDEX tokens_ut ON tokens (user, type);
 
                     INSERT INTO tokens (user, type, password_hash, token)
-                        SELECT id, 'mail', NULL, token FROM users;
+                        SELECT id, 'mail', NULL, token FROM users WHERE token IS NOT NULL;
                     INSERT INTO tokens (user, type, password_hash, token)
                         SELECT user, 'password', hash, token FROM passwords;
 
