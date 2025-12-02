@@ -696,7 +696,7 @@ function drawStart() {
 
         for (let i = 0; i < help.length; i++) {
             let text = help[i];
-            let adjust = 100 + 30 * i;
+            let adjust = 100 + 30 * i * window.devicePixelRatio;
 
             runner.text(canvas.width / 2, canvas.height / 2 + adjust, text, { align: 5 });
         }
