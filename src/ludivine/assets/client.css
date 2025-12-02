@@ -17,7 +17,7 @@ html {
     flex: 1;
     flex-direction: column;
     background: inherit;
-    overflow-y: scroll;
+    overflow-y: auto;
 }
 main {
     display: flex;
@@ -822,7 +822,7 @@ form {
         box-shadow: 2px 2px rgba(136, 136, 136, 0.24);
         border: 4px solid var(--bar_color);
         border-radius: 16px;
-        overflow-y: scroll;
+        overflow-y: auto;
     }
     & p { margin: 0; }
 }
