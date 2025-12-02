@@ -11,13 +11,9 @@ bool rk_Config::Complete(unsigned int flags)
 {
     if (!url) {
         url = GetEnv("REKKORD_REPOSITORY");
-        if (!url) {
-            LogError("Missing repository location");
-            return false;
-        }
     }
 
-    if (!rk_DecodeURL(url, this))
+    if (url && !rk_DecodeURL(url, this))
         return false;
 
     if (flags & (int)rk_ConfigFlag::RequireAuth) {
