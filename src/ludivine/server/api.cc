@@ -1174,6 +1174,7 @@ bool RemindLateUsers()
                            FROM events e
                            INNER JOIN users u ON (u.id = e.user)
                            WHERE e.date = ?1 AND
+                                 e.date <> e.start AND
                                  e.ignored IS NULL AND
                                  (e.sent IS NULL OR e.sent < ?2))",
                         &stmt, when, delay))
