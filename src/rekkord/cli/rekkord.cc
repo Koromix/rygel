@@ -42,6 +42,8 @@ Common options:
 
     %!..+-C, --config_file filename%!0     Set configuration file
 
+        %!..+--no_config%!0                Skip exisiting configuration files
+
     %!..+-R, --repository URL%!0           Set repository URL
     %!..+-K, --key_file filename%!0        Set file containing repository keys
 
@@ -54,6 +56,8 @@ rk_Config rk_config;
 bool HandleCommonOption(OptionParser &opt, bool ignore_unknown)
 {
     if (opt.Test("-C", "--config_file", OptionType::Value)) {
+        // Already handled
+    } else if (opt.Test("--no_config")) {
         // Already handled
     } else if (opt.Test("-R", "--repository", OptionType::Value)) {
         if (!rk_DecodeURL(opt.current_value, &rk_config))
@@ -84,6 +88,7 @@ int Main(int argc, char **argv)
     // Global options
     HeapArray<const char *> config_filenames;
     const char *config_filename = FindConfigFile(DefaultConfigDirectory, DefaultConfigName, &temp_alloc, &config_filenames);
+    bool load_config = true;
 
     if (const char *str = GetEnv(DefaultConfigEnv); str) {
         config_filename = str;
@@ -172,6 +177,8 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
                 arguments = HelpArguments;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
+            } else if (opt.Test("--no_config")) {
+                load_config = false;
             } else if (!HandleCommonOption(opt, cmd)) {
                 return 1;
             }
@@ -205,10 +212,12 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         config_filename = nullptr;
     }
 
+    load_config &= !!config_filename;
+
 #define HANDLE_COMMAND(Cmd, Func, ReadConfig) \
         do { \
             if (TestStr(cmd, K_STRINGIFY(Cmd))) { \
-                if ((ReadConfig) && config_filename) { \
+                if ((ReadConfig) && load_config) { \
                     if (!rk_LoadConfig(config_filename, &rk_config)) \
                         return 1; \
                      \
