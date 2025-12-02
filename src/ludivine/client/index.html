@@ -48,9 +48,11 @@
                 justify-content: center;
             }
             #fatal > div {
-                padding: 5px;
-                font-size: 1.4em;
+                padding: 15px;
                 text-align: center;
+                background: #eee;
+                font-size: 1.4em;
+                border-radius: 8px;
             }
 
             .browser {
@@ -77,7 +79,7 @@
 
         <noscript>
             <div class="fatal"><div>
-                <span style="color: red;">⚠&#xFE0E; <b>Cette application nécessite un navigateur récent et Javascript</b></span><br/><br/>
+                <span style="color: red;"><b>Cette application nécessite un navigateur récent et Javascript</b></span><br/><br/>
                 Nous vous recommandons <u>l'un de ces navigateurs</u> :<br/><br/>
                 <b>Mozilla Firefox</b> <span class="browser">(version ≥ 116)</span><br/>
                 <b>Google Chrome</b> <span class="browser">(version ≥ 108)</span><br/>
@@ -88,7 +90,7 @@
         <script>
             BROWSERS =
                 '<div id="fatal"><div>' +
-                    '<span style="color: red;">⚠\uFE0E <b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b></span><br/><br/>' +
+                    '<span style="color: red;"><b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b></span><br/><br/>' +
                     'Nous vous recommandons <u>l\'un de ces navigateurs</u> :<br/><br/>' +
                     '<b>Mozilla Firefox</b> <span class="browser">(version ≥ 116)</span><br/>' +
                     '<b>Google Chrome</b> <span class="browser">(version ≥ 108)</span><br/>' +
@@ -120,8 +122,10 @@
 
                     document.body.innerHTML =
                         '<div id="fatal"><div>' +
-                            '<span style="color: red;">⚠\uFE0E <b>Une erreur est survenue pendant le chargement</b></span><br/>' +
-                            err.message +
+                            '<span style="color: red;"><b>Une erreur est survenue pendant le chargement</b></span><br/><br/>' +
+                            err.message + '<br/><br/>' +
+                            '<span style="font-size: 0.9em; color: #888; font-style: italic;">Contactez-nous sur : ' +
+                            '<a href="mailto:' + ENV.contact + '">' + ENV.contact + '</a></span>'
                         '</div></div>';
                 } finally {
                     document.body.classList.remove('loading');
