@@ -325,7 +325,7 @@ function safeTag(title) {
         </div>
     `;
 
-    return html`<div class="safe" @click=${UI.wrap(e => popup(e, content))}></div>`;
+    return html`<div class="safe" @click=${UI.wrap(e => UI.popup(e, content))}></div>`;
 }
 
 export {
