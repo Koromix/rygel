@@ -120,9 +120,8 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 }
 
 #log > div {
-    min-width: 400px;
     margin-bottom: 14px;
-    padding: 8px 32px;
+    padding: 14px 32px;
     background: #373737;
     color: white;
     border-radius: 12px;
@@ -134,9 +133,13 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 @media (hover: hover) {
     #log > div:hover { filter: opacity(40%); }
 }
-#log > div.error::before {
-    content: '⚠\FE0E';
-    margin-right: 4px;
+#log > div.error {
+    background-color: #de6e5b;
+    background-image: url('../assets/ui/error.webp');
+    background-size: 24px 24px;
+    background-position: 20px center;
+    background-repeat: no-repeat;
+    padding-left: 60px;
 }
 #log > div.success { background: #2d8261; }
 
