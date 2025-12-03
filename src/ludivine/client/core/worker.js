@@ -63,8 +63,16 @@ async function uploadVault(vid, prev) {
 
     let root = await navigator.storage.getDirectory();
     let handle = await findFile(root, filename);
-    let src = await handle.getFile();
-    let body = await src.arrayBuffer();
+    let sync = await handle.createSyncAccessHandle({ mode: 'read-only' });
+
+    let body = null;
+
+    try {
+        body = new ArrayBuffer(sync.getSize());
+        sync.read(body, { at: 0 });
+    } finally {
+        sync.close();
+    }
 
     let controller = new AbortController;
 
