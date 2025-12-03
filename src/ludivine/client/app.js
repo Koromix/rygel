@@ -1149,14 +1149,10 @@ async function changePassword() {
                         <p>Cependant, si vous le souhaitez, vous pouvez définir un mot de passe qui vous fournira un <b>moyen de connexion supplémentaire</b> !
                     </div>
 
-                    <label>
-                        <input type="password" name="password1" placeholder="mot de passe" />
-                    </label>
-                    <label>
-                        <input type="password" name="password2" placeholder="confirmation" />
-                    </label>
+                    <input type="password" name="password1" placeholder="mot de passe" />
+                    <input type="password" name="password2" placeholder="confirmation" />
                     <div class="actions">
-                        <button type="submit">Définir le mot de passe</button>
+                        <button type="submit">${session.password ? 'Modifier le mot de passe' : 'Définir le mot de passe'}</button>
                     </div>
 
                     <div class="help">
