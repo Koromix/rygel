@@ -88,7 +88,7 @@ Changes made in a form/page script **are applied in real time**.
 
 The widget or widgets currently being modified in the code editor are *highlighted in blue* in the preview panel to help you map code to the corresponding widgets.
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/highlight.webp }}" height="180" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/highlight.webp }}" height="140" alt=""/></div>
 
 ## Conception environment
 

@@ -33,7 +33,7 @@ When a normal user has *administration rights* (BuildAdmin) on at least one proj
 
 Click the "Create a user" button to create a new user:
 
-<div class="screenshot"><img src="{{ ASSET static/help/user/create.webp }}" height="580" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/user.webp }}" height="580" alt=""/></div>
 
 The **username** must contain only lowercase unaccented letters, numbers, or the characters `_`, `.`, and `-`. It must have fewer than 64 characters. Some usernames are prohibited, such as `goupile`.
 
@@ -52,7 +52,7 @@ Finally, if you have **root** status, you can create another root user by enabli
 
 # Permission system
 
-<div class="screenshot"><img src="{{ ASSET static/help/user/assign.webp }}" height="130" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/assign.webp }}" height="130" alt=""/></div>
 
 ## Development permissions
 

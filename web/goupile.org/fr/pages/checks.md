@@ -89,6 +89,8 @@ if (values.num_inclusion && !values.num_inclusion.match(/^[a-zA-Z]{2}[0-9]{5}$/)
     form.error("num_inclusion", "Format incorrect, saississez 2 lettres puis 5 chiffres")
 ```
 
+<div class="screenshot"><img src="{{ ASSET static/help/dev/match.webp }}" height="100" alt=""/></div>
+
 > [!NOTE]
 > Pour des raisons visuelles et historiques, chaque erreur **doit être assignée à une variable**, même si l'erreur en concerne plusieurs.
 >
@@ -109,6 +111,8 @@ if (values.date_inclusion && values.date_fin) {
         form.error("date_fin", "La date de fin doit se situer au moins 28 jours après la date d'inclusion")
 }
 ```
+
+<div class="screenshot"><img src="{{ ASSET static/help/dev/dates.webp }}" height="240" alt=""/></div>
 
 ## Erreurs immédiates et différées
 

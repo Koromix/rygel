@@ -41,7 +41,7 @@ Collected data can be exported to an XLSX file that you can open in your spreads
 
 Use the "Create export" button below the tracking table to export data in XLSX format.
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/export1.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/export1.webp }}" height="220" alt=""/></div>
 
 You can export either:
 
@@ -49,7 +49,7 @@ You can export either:
 - Records created since the last export
 - Records created or modified since the last export
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/options.webp }}" height="240" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/options.webp }}" height="320" alt=""/></div>
 
 > [!NOTE]
 > There are two permissions related to exports: the permission to create an export (ExportCreate), and the permission to download an export (ExportDownload).

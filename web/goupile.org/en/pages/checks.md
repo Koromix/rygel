@@ -75,7 +75,7 @@ The possible combinations are summarized below:
 > [!TIP]
 > Always check that the value is not empty (`undefined` or `null` in JavaScript) before calling a method on it.
 
-Example: validate an inclusion number using a [regular expression](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/match), which must contain 2 letters followed by 5 digits:
+The following example validates an inclusion number using a [regular expression](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/match), which must contain 2 letters followed by 5 digits:
 
 ```js
 form.text("num_inclusion", "Inclusion number")
@@ -89,12 +89,14 @@ if (values.num_inclusion && !values.num_inclusion.match(/^[a-zA-Z]{2}[0-9]{5}$/)
     form.error("num_inclusion", "Incorrect format, enter 2 letters followed by 5 digits")
 ```
 
+<div class="screenshot"><img src="{{ ASSET static/help/dev/match.webp }}" height="130" alt=""/></div>
+
 > [!NOTE]
 > For visual and historical reasons, each error **must be assigned to a variable**, even if it concerns several variables or no variable in particular.
 >
 > By convention, when an error depends on two variables, it is often assigned to the last one.
 
-Example: check that the study end date is at least 28 days after the inclusion date.
+In the example below, we check that the end date is at least 28 days after the inclusion date. If not, the error shows up on the end date field.
 
 ```js
 form.date("date_inclusion", "Inclusion date")
@@ -109,6 +111,8 @@ if (values.date_inclusion && values.date_end) {
         form.error("date_end", "End date must be at least 28 days after the inclusion date")
 }
 ```
+
+<div class="screenshot"><img src="{{ ASSET static/help/dev/dates.webp }}" height="200" alt=""/></div>
 
 ## Immediate and Delayed Errors
 

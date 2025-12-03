@@ -33,7 +33,7 @@ Lorsqu'un utilisateur normal a le *droit d'administration* sur au moins un proje
 
 Cliquez sur le bouton « Créer un utilisateur » pour créer un nouvel utilisateur :
 
-<div class="screenshot"><img src="{{ ASSET static/help/user/create.webp }}" height="580" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/user.webp }}" height="580" alt=""/></div>
 
 Le **nom d'utilisateur** doit comporter uniquement des caractères minuscules non accentués, des chiffres, ou les caractères '_', '.' et '-'. Il doit comporter moins de 64 caractères. Certains noms d'utilisateurs sont interdits, comme par exemple `goupile`.
 
@@ -52,7 +52,7 @@ Enfin, si vous avez le statut de **super-administrateur**, vous pouvez créer un
 
 # Système de droits
 
-<div class="screenshot"><img src="{{ ASSET static/help/user/assign.webp }}" height="130" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/assign.webp }}" height="130" alt=""/></div>
 
 ## Droits de développement
 
