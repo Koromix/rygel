@@ -51,7 +51,7 @@ The security tab allows you to define the password policy, distinguishing betwee
 
 For each user class, you can enforce a password complexity level among three choices:
 
-- **Low complexity** requires passwords with at least 8 different characters
+- **Low complexity** requires passwords with at least 10 characters
 - **Moderate complexity** requires passwords containing letters, numbers, and symbols, or passwords longer than 16 characters
 - **High complexity** uses a scoring and penalty system based on the characters used
 

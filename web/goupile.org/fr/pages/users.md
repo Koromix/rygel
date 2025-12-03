@@ -37,7 +37,7 @@ Cliquez sur le bouton « Créer un utilisateur » pour créer un nouvel utilis
 
 Le **nom d'utilisateur** doit comporter uniquement des caractères minuscules non accentués, des chiffres, ou les caractères '_', '.' et '-'. Il doit comporter moins de 64 caractères. Certains noms d'utilisateurs sont interdits, comme par exemple `goupile`.
 
-Vous devez paramétrer le **mot de passe initial**, qui n'a pas à respecter les contraintes décrites dans la section sur les [classes d'utilisateurs](#classes-d-utilisateurs). Il doit simplement comporter au moins 8 caractères différentes. En revanche, si vous activez l'option « Exiger un changement de mot de passe » (cochée par défaut), l'utilisateur devra le modifier lors de la première connexion, et le nouveau mot de passe devra respecter ces contraintes.
+Vous devez paramétrer le **mot de passe initial**, qui n'a pas à respecter les contraintes décrites dans la section sur les [classes d'utilisateurs](#classes-d-utilisateurs). Il doit simplement comporter au moins 10 caractères. En revanche, si vous activez l'option « Exiger un changement de mot de passe » (cochée par défaut), l'utilisateur devra le modifier lors de la première connexion, et le nouveau mot de passe devra respecter ces contraintes.
 
 Vous pouvez exiger l'utilisation d'une **authentification à 2 facteurs** par code TOTP. Si l'option est activée, le nouvel utilisateur devra récupérer la clé (texte ou via un QR code) après le paramétrage de son mot de passe. Les utilisateurs peuvent à tout moment activer ou reconfigurer l'authentification à 2 facteurs; en revanche, seul les administrateurs peuvent désactiver le TOTP d'un compte existant.
 

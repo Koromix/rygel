@@ -329,8 +329,8 @@ bool pwd_GeneratePassword(unsigned int flags, Span<char> out_password)
     static const char *const SpecialChars = "-_.[]";
     static const char *const DangerousChars = "!@#$%^&*()+";
 
-    if (out_password.len < 9) {
-        LogError("Refusing to generate password shorter than 8 characters");
+    if (out_password.len < 11) {
+        LogError("Refusing to generate password shorter than 10 characters");
         return false;
     }
     if (out_password.len > 129) {

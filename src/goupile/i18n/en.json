@@ -192,9 +192,9 @@
         "page_disabled_warning": "This page is not theoretically activated. Design mode allows you to access it.",
         "password": "Password",
         "password_complexity": {
-            "easy": "Easy (8 characters)",
+            "easy": "Easy (10 characters)",
             "hard": "High (dynamic score)",
-            "moderate": "Moderate (8 characters of 3 different classes)"
+            "moderate": "Moderate (10 characters of 3 different classes)"
         },
         "password_complexity_help": "Your password must be sufficiently complex (length, letters, numbers, symbols).",
         "password_mismatch": "Passwords don't match",

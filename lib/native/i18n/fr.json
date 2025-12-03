@@ -318,7 +318,7 @@
         "Refusing excessive Content-Encoding conversion size": "Refus de conversion d'encodage (Content-Encoding) de taille excessive",
         "Refusing request body with Content-Encoding header": "Refus du corps de la requête avec l'en-tête Content-Encoding",
         "Refusing to generate password longer than 128 characters": "Refus de générer un mot de passe de plus de 128 caractères",
-        "Refusing to generate password shorter than 8 characters": "Refus de générer un mot de passe de moins de 8 caractères",
+        "Refusing to generate password shorter than 10 characters": "Refus de générer un mot de passe de moins de 10 caractères",
         "Refusing to overwrite '%1'": "Refus d'écraser '%1'",
         "Refusing to process GET request with body": "Refus de traiter la requête GET avec du contenu (body)",
         "Refusing to serve overlapping ranges": "Refuser de servir des fragments qui se chevauchent",

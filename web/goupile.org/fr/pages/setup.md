@@ -51,7 +51,7 @@ L'onglet Sécurité vous permet de paramétrer la politique de mots de passe, en
 
 Pour chaque classe d'utilisateur vous pouvez exiger une complexité de mot de passe parmi 3 choix :
 
-- La **complexité légère** impose des mots de passe avec au moins 8 caractères différents
+- La **complexité légère** impose des mots de passe avec au moins 10 caractères
 - La **complexité modérée** impose des mots de passe avec des lettres, des chiffres et des symboles, ou bien un mot de passe de plus de 16 caractères
 - La **complexité élevée** utilise un système de score et de pénalité en fonction des caractères utilisés
 

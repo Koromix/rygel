@@ -37,7 +37,7 @@ Click the "Create a user" button to create a new user:
 
 The **username** must contain only lowercase unaccented letters, numbers, or the characters `_`, `.`, and `-`. It must have fewer than 64 characters. Some usernames are prohibited, such as `goupile`.
 
-You must set the **initial password**, which does not need to follow the constraints described in the section on [user classes](#user-classes). It simply needs at least 8 different characters. However, if you enable the "Require password change" option (checked by default), the user will need to change it upon first login, and the new password must meet the required constraints.
+You must set the **initial password**, which does not need to follow the constraints described in the section on [user classes](#user-classes). It simply needs at least 10 characters. However, if you enable the "Require password change" option (checked by default), the user will need to change it upon first login, and the new password must meet the required constraints.
 
 You can require **two-factor authentication** using a TOTP code. If the option is enabled, the new user must retrieve the key (text or via QR code) after setting their password. Users may enable or reconfigure two-factor authentication at any time; however, only administrators can disable TOTP for an existing account.
 
