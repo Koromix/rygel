@@ -45,7 +45,7 @@
         "configure": "Configure",
         "configure_domain": "Configure domain",
         "configure_my_totp": "Configure two-factor authentication",
-        "configure_x": "Configure de {1}",
+        "configure_x": "Configuration of {1}",
         "confirm": "Confirm",
         "confirm_archive_deletion": "Do you really want to delete archive '{1}'?",
         "confirm_dangerous_action": "If you continue, you will <span style=\"color: red; font-weight: bold;\">LOSE your current changes</span>. Do you want to continue?<br/>If you want to keep them, <b>cancel this action</b> and use save button.",
