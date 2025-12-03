@@ -81,14 +81,14 @@ async function scanCode(languages, sources) {
         if (!fs.existsSync(src.path))
             fs.mkdirSync(src.path);
 
-        let keys = [
+        let keys = src.keys ? [
             ...src.sources.flatMap(src => listFilesRec(src, '.js').flatMap(detectJsKeys))
-        ];
-        let messages = [
+        ] : [];
+        let messages = src.messages ? [
             ...src.sources.flatMap(src => listFilesRec(src, '.cc').flatMap(detectCxxMessages)),
             ...src.sources.flatMap(src => listFilesRec(src, '.hh').flatMap(detectCxxMessages)),
             ...src.sources.flatMap(src => listFilesRec(src, '.js').flatMap(detectJsMessages))
-        ];
+        ] : [];
 
         keys = Array.from(new Set(keys)).sort();
         messages = Array.from(new Set(messages)).sort();

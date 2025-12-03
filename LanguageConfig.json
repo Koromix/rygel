@@ -4,7 +4,9 @@
         {
             "namespace": "core",
             "sources": ["lib/native"],
-            "path": "lib/native/i18n"
+            "path": "lib/native/i18n",
+            "keys": true,
+            "messages": true
         },
         {
             "namespace": "goupile",
@@ -13,27 +15,44 @@
                 "src/goupile/client",
                 "src/goupile/legacy"
             ],
-            "path": "src/goupile/i18n"
+            "path": "src/goupile/i18n",
+            "keys": true,
+            "messages": true
         },
         {
             "namespace": "heimdall",
             "sources": ["src/heimdall"],
-            "path": "src/heimdall/i18n"
+            "path": "src/heimdall/i18n",
+            "keys": true,
+            "messages": true
+        },
+        {
+            "namespace": "ludivine",
+            "sources": ["src/ludivine"],
+            "path": "src/ludivine/i18n",
+            "keys": false,
+            "messages": true
         },
         {
             "namespace": "meestic",
             "sources": ["src/meestic"],
-            "path": "src/meestic/i18n"
+            "path": "src/meestic/i18n",
+            "keys": true,
+            "messages": true
         },
         {
             "namespace": "rekkord",
             "sources": ["src/rekkord"],
-            "path": "src/rekkord/i18n"
+            "path": "src/rekkord/i18n",
+            "keys": true,
+            "messages": true
         },
         {
             "namespace": "staks",
             "sources": ["src/staks/src"],
-            "path": "src/staks/i18n"
+            "path": "src/staks/i18n",
+            "keys": true,
+            "messages": true
         }
     ]
 }
