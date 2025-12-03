@@ -1,5 +1,114 @@
 # Changelog
 
+## 0.27.1
+
+* Fix bundler bug with `var` nested inside `if` ([#4348](https://github.com/evanw/esbuild/issues/4348))
+
+    This release fixes a bug with the bundler that happens when importing an ES module using `require` (which causes it to be wrapped) and there's a top-level `var` inside an `if` statement without being wrapped in a `{ ... }` block (and a few other conditions). The bundling transform needed to hoist these `var` declarations outside of the lazy ES module wrapper for correctness. See the issue for details.
+
+* Fix minifier bug with `for` inside `try` inside label ([#4351](https://github.com/evanw/esbuild/issues/4351))
+
+    This fixes an old regression from [version v0.21.4](https://github.com/evanw/esbuild/releases/v0.21.4). Some code was introduced to move the label inside the `try` statement to address a problem with transforming labeled `for await` loops to avoid the `await` (the transformation involves converting the `for await` loop into a `for` loop and wrapping it in a `try` statement). However, it introduces problems for cross-compiled JVM code that uses all three of these features heavily. This release restricts this transform to only apply to `for` loops that esbuild itself generates internally as part of the `for await` transform. Here is an example of some affected code:
+
+    ```js
+    // Original code
+    d: {
+      e: {
+        try {
+          while (1) { break d }
+        } catch { break e; }
+      }
+    }
+
+    // Old output (with --minify)
+    a:try{e:for(;;)break a}catch{break e}
+
+    // New output (with --minify)
+    a:e:try{for(;;)break a}catch{break e}
+    ```
+
+* Inline IIFEs containing a single expression ([#4354](https://github.com/evanw/esbuild/issues/4354))
+
+    Previously inlining of IIFEs (immediately-invoked function expressions) only worked if the body contained a single `return` statement. Now it should also work if the body contains a single expression statement instead:
+
+    ```js
+    // Original code
+    const foo = () => {
+      const cb = () => {
+        console.log(x())
+      }
+      return cb()
+    }
+
+    // Old output (with --minify)
+    const foo=()=>(()=>{console.log(x())})();
+
+    // New output (with --minify)
+    const foo=()=>{console.log(x())};
+    ```
+
+* The minifier now strips empty `finally` clauses ([#4353](https://github.com/evanw/esbuild/issues/4353))
+
+    This improvement means that `finally` clauses containing dead code can potentially cause the associated `try` statement to be removed from the output entirely in minified builds:
+
+    ```js
+    // Original code
+    function foo(callback) {
+      if (DEBUG) stack.push(callback.name);
+      try {
+        callback();
+      } finally {
+        if (DEBUG) stack.pop();
+      }
+    }
+
+    // Old output (with --minify --define:DEBUG=false)
+    function foo(a){try{a()}finally{}}
+
+    // New output (with --minify --define:DEBUG=false)
+    function foo(a){a()}
+    ```
+
+* Allow tree-shaking of the `Symbol` constructor
+
+    With this release, calling `Symbol` is now considered to be side-effect free when the argument is known to be a primitive value. This means esbuild can now tree-shake module-level symbol variables:
+
+    ```js
+    // Original code
+    const a = Symbol('foo')
+    const b = Symbol(bar)
+
+    // Old output (with --tree-shaking=true)
+    const a = Symbol("foo");
+    const b = Symbol(bar);
+
+    // New output (with --tree-shaking=true)
+    const b = Symbol(bar);
+    ```
+
+## 0.27.0
+
+**This release deliberately contains backwards-incompatible changes.** To avoid automatically picking up releases like this, you should either be pinning the exact version of `esbuild` in your `package.json` file (recommended) or be using a version range syntax that only accepts patch upgrades such as `^0.26.0` or `~0.26.0`. See npm's documentation about [semver](https://docs.npmjs.com/cli/v6/using-npm/semver/) for more information.
+
+* Use `Uint8Array.fromBase64` if available ([#4286](https://github.com/evanw/esbuild/issues/4286))
+
+    With this release, esbuild's `binary` loader will now use the new [`Uint8Array.fromBase64`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array/fromBase64) function unless it's unavailable in the configured target environment. If it's unavailable, esbuild's previous code for this will be used as a fallback. Note that this means you may now need to specify `target` when using this feature with Node (for example `--target=node22`) unless you're using Node v25+.
+
+* Update the Go compiler from v1.23.12 to v1.25.4 ([#4208](https://github.com/evanw/esbuild/issues/4208), [#4311](https://github.com/evanw/esbuild/pull/4311))
+
+    This raises the operating system requirements for running esbuild:
+
+    * Linux: now requires a kernel version of 3.2 or later
+    * macOS: now requires macOS 12 (Monterey) or later
+
+## 0.26.0
+
+* Enable trusted publishing ([#4281](https://github.com/evanw/esbuild/issues/4281))
+
+    GitHub and npm are recommending that maintainers for packages such as esbuild switch to [trusted publishing](https://docs.npmjs.com/trusted-publishers). With this release, a VM on GitHub will now build and publish all of esbuild's packages to npm instead of me. In theory.
+
+    Unfortunately there isn't really a way to test that this works other than to do it live. So this release is that live test. Hopefully this release is uneventful and is exactly the same as the previous one (well, except for the green provenance attestation checkmark on npm that happens with trusted publishing).
+
 ## 0.25.12
 
 * Fix a minification regression with CSS media queries ([#4315](https://github.com/evanw/esbuild/issues/4315))

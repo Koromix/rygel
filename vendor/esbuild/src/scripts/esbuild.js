@@ -8,7 +8,7 @@ const denoDir = path.join(repoDir, 'deno')
 const npmDir = path.join(repoDir, 'npm', 'esbuild')
 const version = fs.readFileSync(path.join(repoDir, 'version.txt'), 'utf8').trim()
 const nodeTarget = 'node10'; // See: https://nodejs.org/en/about/releases/
-const denoTarget = 'deno1'; // See: https://nodejs.org/en/about/releases/
+const denoTarget = 'deno1'; // See: https://docs.deno.com/runtime/fundamentals/stability_and_releases/
 const umdBrowserTarget = 'es2015'; // Transpiles "async"
 const esmBrowserTarget = 'es2017'; // Preserves "async"
 
@@ -147,8 +147,8 @@ exports.buildWasmLib = async (esbuildPath) => {
 
   // Generate "npm/esbuild-wasm/wasm_exec.js"
   const GOROOT = childProcess.execFileSync('go', ['env', 'GOROOT']).toString().trim()
-  let wasm_exec_js = fs.readFileSync(path.join(GOROOT, 'misc', 'wasm', 'wasm_exec.js'), 'utf8')
-  let wasm_exec_node_js = fs.readFileSync(path.join(GOROOT, 'misc', 'wasm', 'wasm_exec_node.js'), 'utf8')
+  let wasm_exec_js = fs.readFileSync(path.join(GOROOT, 'lib', 'wasm', 'wasm_exec.js'), 'utf8')
+  let wasm_exec_node_js = fs.readFileSync(path.join(GOROOT, 'lib', 'wasm', 'wasm_exec_node.js'), 'utf8')
   fs.writeFileSync(path.join(npmWasmDir, 'wasm_exec.js'), wasm_exec_js)
   fs.writeFileSync(path.join(npmWasmDir, 'wasm_exec_node.js'), wasm_exec_node_js)
 
@@ -238,7 +238,7 @@ const buildDenoLib = async (esbuildPath) => {
 
   // Generate "deno/wasm.js"
   const GOROOT = childProcess.execFileSync('go', ['env', 'GOROOT']).toString().trim()
-  let wasm_exec_js = fs.readFileSync(path.join(GOROOT, 'misc', 'wasm', 'wasm_exec.js'), 'utf8')
+  let wasm_exec_js = fs.readFileSync(path.join(GOROOT, 'lib', 'wasm', 'wasm_exec.js'), 'utf8')
   const wasmWorkerCode = await generateWorkerCode({ esbuildPath, wasm_exec_js, minify: true, target: denoTarget })
   const modWASM = childProcess.execFileSync(esbuildPath, [
     path.join(repoDir, 'lib', 'deno', 'wasm.ts'),

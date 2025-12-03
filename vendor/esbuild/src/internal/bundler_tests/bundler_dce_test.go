@@ -4947,3 +4947,63 @@ func TestDCEOfIteratorSuperclassIssue4310(t *testing.T) {
 		},
 	})
 }
+
+func TestDCEOfSymbolCtorCall(t *testing.T) {
+	dce_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.js": `
+				const y0 = Symbol()
+				const y1 = Symbol(undefined)
+				const y2 = Symbol(null)
+				const y3 = Symbol(true)
+				const y4 = Symbol(123)
+				const y5 = Symbol(123n)
+				const y6 = Symbol('abc')
+				const y7 = Symbol(/* @__PURE__ */ (() => Math.random() < 0.5)() ? 'x' : 'y')
+
+				const n0 = Symbol({})
+				const n1 = Symbol(/./)
+				const n2 = Symbol(() => 0)
+				const n3 = Symbol(x)
+				const n4 = new Symbol('abc')
+				const n5 = Symbol(1, 2, 3)
+				const n6 = Symbol((() => Math.random() < 0.5)() ? 'x' : 'y')
+			`,
+		},
+		entryPaths: []string{"/entry.js"},
+		options: config.Options{
+			Mode:          config.ModeBundle,
+			AbsOutputFile: "/out.js",
+		},
+	})
+}
+
+func TestDCEOfSymbolForCall(t *testing.T) {
+	dce_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.js": `
+				const y0 = Symbol.for(undefined)
+				const y1 = Symbol.for(null)
+				const y2 = Symbol.for(true)
+				const y3 = Symbol.for(123)
+				const y4 = Symbol.for(123n)
+				const y5 = Symbol.for('abc')
+				const y6 = Symbol.for(/* @__PURE__ */ (() => Math.random() < 0.5)() ? 'x' : 'y')
+
+				const n0 = Symbol.for()
+				const n1 = Symbol.for({})
+				const n2 = Symbol.for(/./)
+				const n3 = Symbol.for(() => 0)
+				const n4 = Symbol.for(x)
+				const n5 = new Symbol.for('abc')
+				const n6 = Symbol.for(1, 2, 3)
+				const n7 = Symbol.for((() => Math.random() < 0.5)() ? 'x' : 'y')
+			`,
+		},
+		entryPaths: []string{"/entry.js"},
+		options: config.Options{
+			Mode:          config.ModeBundle,
+			AbsOutputFile: "/out.js",
+		},
+	})
+}

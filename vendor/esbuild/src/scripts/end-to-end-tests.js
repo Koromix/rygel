@@ -1906,6 +1906,28 @@ for (const minify of [[], ['--minify']]) {
         'in.js': `import foo from './foo'; if (foo() !== (function() { return this })()) throw 'fail'`,
         'foo.js': `module.exports = function() { return this }`,
       }),
+
+      // https://github.com/evanw/esbuild/issues/4348
+      test(['--bundle', '--format=cjs', 'in.js', '--outfile=node.js', '--target=' + target].concat(minify), {
+        'in.js': `
+          var foo = Object.entries({ ...require('./foo') }).join('|')
+          if (foo !== 'a,a|b,b|c,c|d,d|e,e|f,f|g,g|h,h|i,i|j,j') throw 'fail: ' + foo
+        `,
+        'foo.js': `
+          var a = 'a'
+          for (var b = 'b'; 0; ) ;
+          if (true) { var c = 'c' }
+          if (true) var d = 'd'
+          if (false) {} else var e = 'e'
+          var x = 1
+          while (x--) var f = 'f'
+          do var g = 'g'; while (0);
+          for (; x++; ) var h = 'h'
+          for (var y in 'y') var i = 'i'
+          for (var y ${target === 'es5' ? 'in' : 'of'} 'y') var j = 'j'
+          export { a, b, c, d, e, f, g, h, i, j }
+        `,
+      }),
     )
   }
 
@@ -3217,6 +3239,25 @@ tests.push(
       } catch ({ x, [x]: y }) {
         if (y !== 123) throw 'fail'
       }
+    `,
+  }),
+
+  // https://github.com/evanw/esbuild/issues/4351
+  test(['in.js', '--outfile=node.js', '--minify'], {
+    'in.js': `
+    function f(x) {
+        d: {
+          e: {
+            try {
+              while (x()) { break d }
+            } catch { break e }
+          }
+          return 2
+        }
+        return 1
+      }
+      if (f(() => 1) !== 1) throw 'fail: 1'
+      if (f('empty') !== 2) throw 'fail: 2'
     `,
   }),
 )
@@ -7923,11 +7964,11 @@ for (const length of [0, 1, 2, 3, 4, 5, 6, 7, 8, 256]) {
   `
   const data = Buffer.from([...' '.repeat(length)].map((_, i) => i ^ 0x55))
   tests.push(
-    test(['entry.js', '--bundle', '--outfile=node.js', '--loader:.bin=binary', '--platform=browser'], {
+    test(['entry.js', '--bundle', '--outfile=node.js', '--loader:.bin=binary', '--platform=browser', '--supported:from-base64=false'], {
       'entry.js': code,
       'data.bin': data,
     }),
-    test(['entry.js', '--bundle', '--outfile=node.js', '--loader:.bin=binary', '--platform=node'], {
+    test(['entry.js', '--bundle', '--outfile=node.js', '--loader:.bin=binary', '--platform=node', '--supported:from-base64=false'], {
       'entry.js': code,
       'data.bin': data,
     }),
