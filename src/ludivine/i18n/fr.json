@@ -10,7 +10,7 @@
         "Init data": "Initialisation des données",
         "Init messaging": "Initialisation des messages",
         "Init sandbox": "Initialisation de la sandbox",
-        "Invalid username or password": "Nom d'utilisateur ou mot de passe incorrect",
+        "Invalid mail address or password": "Adresse mail ou mot de passe incorrect",
         "Migrate database: %1 to %2": "Migration de la base de données : %1 vers %2",
         "Missing main contact": "Contact principal manquant",
         "Missing main title": "Titre principal manquant",

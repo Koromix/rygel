@@ -593,7 +593,7 @@ void HandlePassword(http_IO *io)
         int64_t safety = std::max(2000 - GetMonotonicTime() + start, (int64_t)0);
         WaitDelay(safety);
 
-        LogError("Invalid username or password");
+        LogError("Invalid mail address or password");
         io->SendError(403);
     }
 }
