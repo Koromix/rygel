@@ -252,7 +252,7 @@ async function loginMagic(uid, tkey, registration) {
     };
 
     // Retrieve existing token (or create it if none is set) and session
-    let token = await Net.post('/api/token', {
+    let login = await Net.post('/api/token', {
         uid: uid,
         init: encrypt(init, tkey),
         vid: init.vid,
@@ -261,8 +261,9 @@ async function loginMagic(uid, tkey, registration) {
     });
 
     let session = {
-        uid: uid,
-        ...decrypt(token, tkey)
+        uid: login.uid,
+        ...decrypt(login.token, tkey),
+        password: login.password
     };
 
     await open(session);
@@ -309,7 +310,8 @@ async function loginPassword(mail, password) {
 
     let session = {
         uid: login.uid,
-        ...decrypt(login.token, key1)
+        ...decrypt(login.token, key1),
+        password: login.password
     };
 
     await open(session);
@@ -382,6 +384,8 @@ function go(url = null, push = true) {
     let mode = parts.shift();
 
     switch (mode) {
+        case 'connexion': { changes.mode = 'login'; } break;
+
         case 'profil': { changes.mode = 'profile'; } break;
 
         case 'participer': { changes.mode = 'dashboard'; } break;
@@ -541,6 +545,15 @@ async function run(changes = {}, push = false) {
 
         // Run module
         switch (route.mode) {
+            case 'login': {
+                if (db != null) {
+                    go('/profil');
+                    return;
+                }
+
+                await runLogin();
+            } break;
+
             case 'profile': {
                 if (db == null) {
                     await runRegister();
@@ -620,6 +633,8 @@ function makeURL(changes = {}) {
     let values = Object.assign({}, route, changes);
 
     switch (values.mode) {
+        case 'login': { path += 'connexion'; } break;
+
         case 'profile': { path += 'profil'; } break;
 
         case 'dashboard': { path += 'participer'; } break;
@@ -806,7 +821,7 @@ async function runRegister() {
             <form style="text-align: center;" @submit=${UI.wrap(register)}>
                 <input type="text" name="mail" style="width: 20em;" placeholder="adresse email" />
                 <div class="actions">
-                    <button type="submit">Créer mon compte</button>
+                    <button type="submit">Continuer</button>
                 </div>
             </form>
 
@@ -834,6 +849,45 @@ async function register(e) {
 
     form.innerHTML = '';
     render(html`<p>Consultez l'email qui <b>vous a été envoyé</b> pour continuer !</p>`, form);
+}
+
+async function runLogin() {
+    if (UI.isFullscreen)
+        UI.toggleFullscreen(false);
+
+    UI.main(html`
+        <div class="tabbar">
+            <a class="active">Enregistrez-vous</a>
+        </div>
+
+        <div class="tab" style="align-items: center;">
+            <div class="header">Connectez-vous pour continuer</div>
+
+            <form style="text-align: center;" @submit=${UI.wrap(login)}>
+                <label><input type="text" name="mail" style="width: 20em;" placeholder="adresse email" /></label>
+                <label><input type="password" name="password" style="width: 20em;" placeholder="mot de passe" /></label>
+                <div class="actions">
+                    <button type="submit">Continuer</button>
+                </div>
+            </form>
+        </div>
+    `);
+}
+
+async function login(e) {
+    let form = e.currentTarget;
+    let elements = form.elements;
+
+    let mail = elements.mail.value.trim();
+    let password = elements.password.value.trim();
+
+    if (!mail)
+        throw new Error('Adresse email manquante');
+    if (!password)
+        throw new Error('Mot de passe manquant');
+
+    await loginPassword(mail, password);
+    await go('/profil');
 }
 
 async function runProfile() {
@@ -866,17 +920,28 @@ async function runProfile() {
 
                     <div class="actions">
                         <button type="button" @click=${UI.wrap(changePicture)}>Modifier mon avatar</button>
+                        <button type="button" @click=${UI.wrap(changePassword)}>${session.password ? 'Modifier mon mot de passe' : 'Créer un mot de passe'}</button>
                         <button type="button" class="secondary" @click=${UI.insist(logout)}>Se déconnecter</button>
                     </div>
                 </div>
 
                 <div class="column">
                     <div class="box">
-                        <div>
-                            <div class="header">Bienvenue sur ${ENV.title} !</div>
-                            <p>Utilisez le bouton à gauche pour <b>personnaliser votre avatar</b>, si vous le désirez.
-                            Une fois prêt(e), accéder à votre <b>tableau de bord et aux études</b> à l'aide du bouton ci-dessous.
-                        </div>
+                        <div class="header">Bienvenue sur ${ENV.title} !</div>
+                        ${!session.password ? html`
+                            <div class="help">
+                                <img src=${ASSETS['pictures/help1']} alt="" />
+                                <div>
+                                    <p>Vous devrez utiliser le mail de connexion qui vous a été envoyé initialement pour vous connecter à nouveau.
+                                    <p>Cependant, nous vous recommandons de <b>créer un mot de passe</b> pour vous permettre de vous connecter sans avoir besoin de ce mail !
+                                    <div class="actions">
+                                        <button @click=${UI.wrap(changePassword)}>Je souhaite créer un mot de passe</button>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        <p>Utilisez le bouton à gauche pour <b>personnaliser votre avatar</b>, si vous le désirez.
+                        Une fois prêt(e), accéder à votre <b>tableau de bord et aux études</b> à l'aide du bouton ci-dessous.
 
                         <div class="actions">
                             <a href="/participer">Accéder aux études</a>
@@ -1060,16 +1125,29 @@ async function changePassword() {
                     <a class="active">Mot de passe</a>
                 </div>
 
-                <div class="tab">
+                <div class="tab" style="align-items: center;">
+                    <div style="max-width: 600px;">
+                        <p>Pour vous connecter à Lignes de Vie, vous avez besoin du lien qui vous a été envoyé par mail lors de votre inscription.
+                        <p>Cependant, si vous le souhaitez, vous pouvez définir un mot de passe qui vous fournira un <b>moyen de connexion supplémentaire</b> !
+                    </div>
+
                     <label>
-                        <span>Nouveau mot de passe</span>
+                        <span>Mot de passe</span>
                         <input type="password" name="password1" placeholder="mot de passe" />
                     </label>
                     <label>
+                        <span>Confirmation du mot de passe</span>
                         <input type="password" name="password2" placeholder="confirmation" />
                     </label>
                     <div class="actions">
-                        <button type="submit">Confirmer le mot de passe</button>
+                        <button type="submit">Définir le mot de passe</button>
+                    </div>
+
+                    <div class="help">
+                        <img src=${ASSETS['pictures/help1']} alt="" />
+                        <div>
+                            <p>Toutes vos données étant chiffrées et sécurisées, nous ne serons <b>pas en mesure de vous aider</b> si vous perdez à la fois le mail de connexion initial et le mot de passe que vous avez défini !
+                        </div>
                     </div>
                 </div>
             `;
@@ -1098,6 +1176,11 @@ async function changePassword() {
                 password: Base64.toBase64(key0),
                 token: encrypt(obj, key1)
             });
+
+            session.password = true;
+
+            let json = JSON.stringify(session);
+            sessionStorage.setItem('session', json);
         }
     });
 }

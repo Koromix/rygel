@@ -3,6 +3,8 @@
 
 #include "lib/native/base/base.hh"
 #include "lib/native/http/http.hh"
+#include "lib/native/password/password.hh"
+#include "lib/native/request/smtp.hh"
 #include "lib/native/wrap/qrcode.hh"
 #include "ludivine.hh"
 #include "mail.hh"
@@ -55,7 +57,7 @@ L’équipe de {{ TITLE }}
     {}
 };
 
-static const smtp_MailContent ExistingUser = {
+static const smtp_MailContent ExistingNoPassword = {
     "Nouvelle connexion à {{ TITLE }}",
     R"(Bonjour,
 
@@ -75,6 +77,44 @@ L'équipe de {{ TITLE }}
 <p>Bonjour,</p>
 <p>Un compte {{ TITLE }} existe déjà avec cette adresse email.</p>
 <p><b>Pour vous reconnecter, nous vous invitons à utiliser le lien de connexion initial reçu par mail lors de la création de votre compte. Vous l’avez peut-être même enregistré sur votre ordinateur/téléphone/tablette.</b></p>
+<p>Pour rappel, nous utilisons un système de chiffrement complexe pour assurer la sécurité et l’anonymat de vos données. Nous ne sommes donc pas en mesure de vous renvoyer un nouveau lien de connexion en cas de perte de celui-ci.
+<p>Si vous rencontrez un problème, vous pouvez contacter l’équipe de {{ TITLE }} : <a href="mailto:{{ CONTACT }}">{{ CONTACT }}</a></p>
+<p>Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.</p>
+<p><i>L’équipe de {{ TITLE }}</i><br>
+<a href="mailto:{{ CONTACT }}">{{ CONTACT }}</a></p>
+</body></html>)",
+    {}
+};
+
+static const smtp_MailContent ExistingWithPassword = {
+    "Nouvelle connexion à {{ TITLE }}",
+    R"(Bonjour,
+
+Un compte {{ TITLE }} existe déjà avec cette adresse email.
+
+Pour vous reconnecter, nous vous invitons à utiliser le lien de connexion initial reçu par mail lors de la création de votre compte. Vous l'avez peut-être même enregistré sur votre ordinateur/téléphone/tablette.
+
+Si vous aviez défini un mot de passe, vous pouvez également utiliser ce lien :
+
+{{ LOGIN }}
+
+Pour rappel, nous utilisons un système de chiffrement complexe pour assurer la sécurité et l'anonymat de vos données. Nous ne sommes donc pas en mesure de vous renvoyer un nouveau lien de connexion en cas de perte de celui-ci.
+
+Si vous rencontrez un problème, vous pouvez contacter l'équipe de {{ TITLE }} : {{ CONTACT }}
+
+Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.
+
+L'équipe de {{ TITLE }}
+{{ CONTACT }})",
+    R"(<html lang="fr"><body>
+<p>Bonjour,</p>
+<p>Un compte {{ TITLE }} existe déjà avec cette adresse email.</p>
+<p><b>Pour vous reconnecter, nous vous invitons à utiliser le lien de connexion initial reçu par mail lors de la création de votre compte. Vous l’avez peut-être même enregistré sur votre ordinateur/téléphone/tablette.</b></p>
+<p>Si vous aviez défini un mot de passe, vous pouvez également utiliser ce lien :</p>
+<div align="center"><br>
+    <a style="padding: 0.7em 2em; background: #888888; border-radius: 30px;
+              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ LOGIN }}">Connexion par mot de passe</a>
+<br><br></div>
 <p>Pour rappel, nous utilisons un système de chiffrement complexe pour assurer la sécurité et l’anonymat de vos données. Nous ne sommes donc pas en mesure de vous renvoyer un nouveau lien de connexion en cas de perte de celui-ci.
 <p>Si vous rencontrez un problème, vous pouvez contacter l’équipe de {{ TITLE }} : <a href="mailto:{{ CONTACT }}">{{ CONTACT }}</a></p>
 <p>Nous vous sommes très reconnaissants de votre implication dans la recherche sur les psychotraumatismes.</p>
@@ -219,7 +259,7 @@ static bool SendNewMail(const char *to, const char *uid, Span<const uint8_t> tke
     return PostMail(to, content);
 }
 
-static bool SendExistingMail(const char *to, Allocator *alloc)
+static bool SendExistingMail(const char *to, bool password, Allocator *alloc)
 {
     smtp_MailContent content;
 
@@ -233,6 +273,8 @@ static bool SendExistingMail(const char *to, Allocator *alloc)
                 writer->Write(config.contact);
             } else if (key == "MAIL") {
                 writer->Write(to);
+            } else if (key == "LOGIN") {
+                Print(writer, "%1/connexion", config.url);
             } else {
                 Print(writer, "{{%1}}", expr);
             }
@@ -240,9 +282,11 @@ static bool SendExistingMail(const char *to, Allocator *alloc)
         return ret;
     };
 
-    content.subject = patch(ExistingUser.subject).ptr;
-    content.html = patch(ExistingUser.html).ptr;
-    content.text = patch(ExistingUser.text).ptr;
+    const smtp_MailContent &model = password ? ExistingWithPassword : ExistingNoPassword;
+
+    content.subject = patch(model.subject).ptr;
+    content.html = patch(model.html).ptr;
+    content.text = patch(model.text).ptr;
 
     return PostMail(to, content);
 }
@@ -334,12 +378,15 @@ void HandleRegister(http_IO *io)
     // Retrieve user information
     const char *uid = nullptr;
     int registration = 0;
+    bool has_password = false;
     {
         sq_Statement stmt;
 
-        if (!db.Prepare(R"(SELECT IIF(registration < 0, 1, 0), uuid_str(uid), abs(registration)
-                           FROM users
-                           WHERE mail = ?1)",
+        if (!db.Prepare(R"(SELECT IIF(u.registration < 0, 1, 0), uuid_str(u.uid), abs(u.registration),
+                                  IIF(p.token IS NOT NULL, 1, 0)
+                           FROM users u
+                           LEFT JOIN tokens p ON (p.user = u.id AND p.type = 'password')
+                           WHERE u.mail = ?1)",
                         &stmt, mail))
             return;
 
@@ -356,17 +403,26 @@ void HandleRegister(http_IO *io)
             uid = DuplicateString((const char *)sqlite3_column_text(stmt, 1), io->Allocator()).ptr;
             registration = sqlite3_column_int(stmt, 2);
         }
+
+        has_password = sqlite3_column_int(stmt, 3);
     }
 
     if (uid) {
         if (!SendNewMail(mail, uid, tkey, registration, io->Allocator()))
             return;
     } else {
-        if (!SendExistingMail(mail, io->Allocator()))
+        LogInfo("X :: %1 :: %2", mail, has_password);
+        if (!SendExistingMail(mail, has_password, io->Allocator()))
             return;
     }
 
     io->SendText(200, "{}", "application/json");
+}
+
+static bool CheckPasswordComplexity(Span<const char> password)
+{
+    unsigned int flags = UINT_MAX & ~(int)pwd_CheckFlag::Score;
+    return pwd_CheckPassword(password, flags);
 }
 
 void HandleProtect(http_IO *io)
@@ -436,6 +492,12 @@ void HandleProtect(http_IO *io)
         user = sqlite3_column_int64(stmt, 0);
     }
 
+    // Complex enough?
+    if (!CheckPasswordComplexity(password)) {
+        io->SendError(422);
+        return;
+    }
+
     char hash[256];
     if (crypto_pwhash_str(hash, password, strlen(password),
                           crypto_pwhash_OPSLIMIT_INTERACTIVE, crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
@@ -445,7 +507,7 @@ void HandleProtect(http_IO *io)
 
     if (!db.Run(R"(INSERT INTO tokens (user, type, password_hash, token)
                    VALUES (?1, 'password', ?2, ?3)
-                   ON CONFLICT DO UPDATE SET hash = excluded.hash,
+                   ON CONFLICT DO UPDATE SET password_hash = excluded.password_hash,
                                              token = excluded.token)",
                 user, hash, token))
         return;
@@ -518,6 +580,7 @@ void HandlePassword(http_IO *io)
 
                 json->Key("uid"); json->String(uid);
                 json->Key("token"); json->Raw(token);
+                json->Key("password"); json->Bool(true);
 
                 json->EndObject();
             });
@@ -599,13 +662,16 @@ void HandleToken(http_IO *io)
         }
     }
 
+    bool has_password = false;
+
     // Retrieve user token
     {
         sq_Statement stmt;
 
-        if (!db.Prepare(R"(SELECT u.id, abs(u.registration), t.token
+        if (!db.Prepare(R"(SELECT u.id, abs(u.registration), t.token, IIF(p.token IS NOT NULL, 1, 0)
                            FROM users u
                            LEFT JOIN tokens t ON (t.user = u.id AND t.type = 'mail')
+                           LEFT JOIN tokens p ON (p.user = u.id AND p.type = 'password')
                            WHERE u.uid = uuid_blob(?1))",
                         &stmt, uid))
             return;
@@ -650,9 +716,19 @@ void HandleToken(http_IO *io)
             if (!success)
                 return;
         }
+
+        has_password = sqlite3_column_int(stmt, 3);
     }
 
-    io->SendText(200, token, "application/json");
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
+
+        json->Key("uid"); json->String(uid);
+        json->Key("token"); json->Raw(token);
+        json->Key("password"); json->Bool(has_password);
+
+        json->EndObject();
+    });
 }
 
 static void AddGenerationHeaders(http_IO *io, int64_t generation, int64_t previous)
