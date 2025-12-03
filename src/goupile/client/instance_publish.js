@@ -104,7 +104,10 @@ function InstancePublisher(bundler = null) {
                     d.error('filename', T.path_no_dotdot);
             }
 
-            d.action(T.create, { disabled: !d.isValid() }, async () => {
+            let exists = d.values.filename && actions.some(action => action.filename == d.values.filename);
+            let label = exists ? T.replace : T.add;
+
+            d.action(label, { disabled: !d.isValid() }, async () => {
                 let progress = new Log.Entry;
 
                 progress.progress(T.saving_file);
