@@ -957,10 +957,10 @@ async function renderPage() {
                 </form>
 
                 <div id="ins_actions">
-                    ${app.panels.data && form_thread.hid != null ?
-                        html`<div class="ins_id">${form_thread.hid}</div>` : ''}
-
-                    ${form_model.renderActions()}
+                    ${form_model.actions.length ? html`
+                        ${app.panels.data && form_thread.hid != null ? html`<div class="ins_id">${form_thread.hid}</div>` : ''}
+                        ${form_model.renderActions()}
+                    ` : ''}
 
                     ${page_sections.length > 1 ? html`
                         <h1>${route.page.title}</h1>
