@@ -411,7 +411,6 @@ void HandleRegister(http_IO *io)
         if (!SendNewMail(mail, uid, tkey, registration, io->Allocator()))
             return;
     } else {
-        LogInfo("X :: %1 :: %2", mail, has_password);
         if (!SendExistingMail(mail, has_password, io->Allocator()))
             return;
     }
