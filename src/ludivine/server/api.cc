@@ -157,7 +157,7 @@ Si vous ne souhaitez plus recevoir de rappels liés à cette étude, utilisez le
     {}
 };
 
-static const int RemindDelays[] = { 2, 5, 15 };
+static const int RemindDelays[] = { 2, 10 };
 
 struct EventInfo {
     LocalDate date = {};
