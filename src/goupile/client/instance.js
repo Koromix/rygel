@@ -634,8 +634,8 @@ function renderData() {
             <table class="ui_table fixed" id="ins_data"
                    style=${'min-width: ' + (5 + 5 * data_columns.length) + 'em;'}>
                 <colgroup>
-                    <col style="width: 6.5em;" />
-                    <col style="width: 8em;"/>
+                    <col style="width: 7em;" />
+                    <col style="width: 12em;"/>
                     ${Util.mapRange(0, data_columns.length, () => html`<col/>`)}
                     <col style="width: 2em;"/>
                 </colgroup>
@@ -666,7 +666,7 @@ function renderData() {
                         return html`
                             <tr>
                                 <td class=${cls} title=${row.hid}>${row.hid != null ? row.hid : 'NA'}</td>
-                                <td class=${active ? ' active' : ''} title=${row.ctime.toLocaleString()}>${row.ctime.toLocaleDateString()}</td>
+                                <td class=${active ? ' active' : ''} title=${row.ctime.toLocaleString()}>${row.ctime.toLocaleString()}</td>
                                 ${data_columns.map(col => {
                                     let entry = row.entries[col.page.store.key];
 
