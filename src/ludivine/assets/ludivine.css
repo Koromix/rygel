@@ -47,6 +47,7 @@ button { font-weight: bold; }
 
     & > a { font-weight: bold; }
 }
+.actions.vertical { flex-direction: column; }
 p + .actions { margin-top: 2em; }
 
 .avatar {

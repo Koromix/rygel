@@ -936,7 +936,7 @@ async function runProfile() {
                     </div>
                     <img class="avatar" src=${identity?.picture ?? ASSETS['ui/user']} alt=""/>
 
-                    <div class="actions">
+                    <div class="actions vertical">
                         <button type="button" @click=${UI.wrap(changePicture)}>Modifier mon avatar</button>
                         <button type="button" @click=${UI.wrap(changePassword)}>${session.password ? 'Modifier mon mot de passe' : 'Créer un mot de passe'}</button>
                         <button type="button" class="secondary" @click=${UI.insist(logout)}>Se déconnecter</button>
