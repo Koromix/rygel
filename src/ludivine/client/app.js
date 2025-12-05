@@ -950,7 +950,7 @@ async function runProfile() {
                             <div class="help">
                                 <img src=${ASSETS['pictures/help1']} alt="" />
                                 <div>
-                                    <p>Vous devrez utiliser le mail de connexion qui vous a été envoyé initialement pour vous connecter à nouveau.
+                                    <p>Vous devrez utiliser le mail d'inscription qui vous a été envoyé initialement pour vous connecter à nouveau.
                                     <p>Cependant, nous vous recommandons de <b>créer un mot de passe</b> pour vous permettre de vous connecter sans avoir besoin de ce mail !
                                     <div class="actions">
                                         <button @click=${UI.wrap(changePassword)}>Je souhaite créer un mot de passe</button>
@@ -1160,7 +1160,7 @@ async function changePassword() {
                     <div class="help">
                         <img src=${ASSETS['pictures/help1']} alt="" />
                         <div>
-                            <p>Toutes vos données étant chiffrées et sécurisées, nous ne serons <b>pas en mesure de vous aider</b> si vous perdez à la fois le mail de connexion initial et le mot de passe que vous avez défini !
+                            <p>Toutes vos données étant chiffrées et sécurisées, nous ne serons <b>pas en mesure de vous aider</b> si vous perdez à la fois le mail d'inscription et le mot de passe que vous avez défini !
                         </div>
                     </div>
                 </div>
