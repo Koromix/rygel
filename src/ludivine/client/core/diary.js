@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html, live } from 'vendor/lit-html/lit-html.bundle.js';
+import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, LocalDate } from 'lib/web/base/base.js';
 import { ASSETS } from '../../assets/assets.js';
 import { ClassicEditor, AutoLink, Bold, Code, Essentials, FontBackgroundColor,
@@ -19,7 +19,7 @@ function DiaryModule(app) {
 
     let data = null;
 
-    let div = document.createElement('div');
+    let div = null;
     let editor = null;
 
     let save_timer = null;
@@ -31,6 +31,7 @@ function DiaryModule(app) {
             if (data != null)
                 data.date = LocalDate.parse(data.date);
 
+            div = null;
             if (editor != null)
                 editor.destroy();
             editor = null;
@@ -107,6 +108,9 @@ function DiaryModule(app) {
     this.render = function(section) {
         let entry = route.entry;
 
+        if (div == null)
+            div = document.createElement('div');
+
         render(html`
             <div class="box">
                 <div class="header">
@@ -121,7 +125,7 @@ function DiaryModule(app) {
                 <form @submit=${e => e.preventDefault()}>
                     <label>
                         <span>Titre de l'entrée</span>
-                        <input type="text" name="title" .value=${live(data?.title ?? '')} placeholder="Titre libre"
+                        <input type="text" name="title" value=${data?.title ?? ''} placeholder="Titre libre"
                                @input=${data != null ? autoSave : null} @change=${save} />
                     </label>
                     <div class="widget">
