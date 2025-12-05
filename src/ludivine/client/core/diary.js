@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
+import { render, html, live } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, LocalDate } from 'lib/web/base/base.js';
 import { ASSETS } from '../../assets/assets.js';
 import { ClassicEditor, AutoLink, Bold, Code, Essentials, FontBackgroundColor,
@@ -37,7 +37,7 @@ function DiaryModule(app) {
         }
 
         if (editor == null) {
-            // We need the DOM node to create instantiate CKEditor
+            // We need the DOM node to instantiate CKEditor
             self.render();
 
             editor = await ClassicEditor.create(div.querySelector('#editor'), {
@@ -121,8 +121,8 @@ function DiaryModule(app) {
                 <form @submit=${e => e.preventDefault()}>
                     <label>
                         <span>Titre de l'entrée</span>
-                        <input type="text" name="title" value=${data?.title ?? ''}
-                               placeholder="Titre libre" @input=${autoSave} />
+                        <input type="text" name="title" .value=${live(data?.title ?? '')} placeholder="Titre libre"
+                               @input=${data != null ? autoSave : null} @change=${save} />
                     </label>
                     <div class="widget">
                         <label for="editor">Contenu de l'entrée</label>
@@ -151,18 +151,19 @@ function DiaryModule(app) {
         if (save_timer != null)
             clearTimeout(save_timer);
 
-        save_timer = setTimeout(() => {
-            save_timer = null;
-            save();
-        }, 1000);
+        save_timer = setTimeout(save, 1000);
     }
 
     async function save() {
+        clearTimeout(save_timer);
+        save_timer = null;
+
         let form = div.querySelector('form');
         let elements = form.elements;
 
         if (data == null) {
             data = {
+                id: null,
                 date: LocalDate.today(),
                 title: null,
                 content: null
@@ -172,12 +173,13 @@ function DiaryModule(app) {
         data.title = elements.title.value;
         data.content = editor.getData();
 
-        route.entry = await db.pluck(`INSERT INTO diary (id, date, title, content)
-                                      VALUES (?, ?, ?, ?)
-                                      ON CONFLICT DO UPDATE SET title = excluded.title,
-                                                                content = excluded.content
-                                      RETURNING id`,
-                                     route.entry, data.date.toString(), data.title, data.content);
+        data.id = await db.pluck(`INSERT INTO diary (id, date, title, content)
+                                  VALUES (?, ?, ?, ?)
+                                  ON CONFLICT DO UPDATE SET title = excluded.title,
+                                                            content = excluded.content
+                                  RETURNING id`,
+                                 route.entry, data.date.toString(), data.title, data.content);
+        route.entry = data.id;
 
         await app.run();
     }
