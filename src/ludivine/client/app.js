@@ -1153,6 +1153,7 @@ async function changePassword() {
                     <input type="password" name="password2" placeholder="confirmation" />
                     <div class="tip">Le mot de passe doit contenir au moins 10 caractères, des lettres, des chiffres et un symbole spécial.</div>
                     <div class="actions">
+                        <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
                         <button type="submit">${session.password ? 'Modifier le mot de passe' : 'Définir le mot de passe'}</button>
                     </div>
 
