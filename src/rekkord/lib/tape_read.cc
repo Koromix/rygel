@@ -1647,7 +1647,7 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
             return false;
 
         ProgressHandle progress("Retains");
-        progress.SetFmt((int64_t)0, checks, T("0 / %1 blobs"), checks);
+        progress.SetFmt((int64_t)0, checks, T("0 / %1 retains"), checks);
 
         Async async(repo->GetAsync());
         std::atomic_int64_t retains = 0;
