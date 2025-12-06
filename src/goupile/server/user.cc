@@ -1323,9 +1323,7 @@ void HandleChangePassword(http_IO *io, InstanceHolder *instance)
     }
 }
 
-// This does not make any persistent change and it needs to return an image
-// so it is a GET even though it performs an action (change the secret).
-void HandleChangeQRcode(http_IO *io, const char *title)
+void HandleChangeSecret(http_IO *io, const char *title)
 {
     RetainPtr<SessionInfo> session = sessions.Find(io);
 
@@ -1348,30 +1346,45 @@ void HandleChangeQRcode(http_IO *io, const char *title)
         return;
     }
 
-    pwd_GenerateSecret(session->secret);
+    char secret[33];
+    pwd_GenerateSecret(secret);
 
     const char *url = pwd_GenerateHotpUrl(title, session->username, title,
-                                          pwd_HotpAlgorithm::SHA1, session->secret, 6, io->Allocator());
+                                          pwd_HotpAlgorithm::SHA1, secret, 6, io->Allocator());
     if (!url)
         return;
 
-    Span<const uint8_t> png;
+    Span<const char> image;
     {
-        HeapArray<uint8_t> buf(io->Allocator());
+        HeapArray<uint8_t> png;
 
-        StreamWriter st(&buf, "<png>");
+        StreamWriter st(&png, "<png>");
         if (!qr_EncodeTextToPng(url, 0, &st))
             return;
         if (!st.Close())
             return;
 
-        png = buf.Leak();
+        Span<const char> prefix = "data:image/png;base64,";
+        Size needed = prefix.len + (Size)sodium_base64_encoded_len(png.len, sodium_base64_VARIANT_ORIGINAL);
+        Span<char> buf = AllocateSpan<char>(io->Allocator(), needed);
+
+        CopyString(prefix, buf);
+        sodium_bin2base64(buf.ptr + prefix.len, (size_t)(buf.len - prefix.len), png.ptr, (size_t)png.len, sodium_base64_VARIANT_ORIGINAL);
+
+        image = buf.Take(0, buf.len - 1);
     }
 
-    io->AddHeader("X-TOTP-SecretKey", session->secret);
-    io->AddCachingHeaders(0, nullptr);
+    MemCpy(session->secret, secret, 33);
 
-    io->SendAsset(200, png, "image/png");
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
+
+        json->Key("secret"); json->String(secret);
+        json->Key("url"); json->String(url);
+        json->Key("image"); json->String(image.ptr, image.len);
+
+        json->EndObject();
+    });
 }
 
 void HandleChangeTOTP(http_IO *io)

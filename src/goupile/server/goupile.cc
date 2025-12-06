@@ -525,8 +525,8 @@ static void HandleAdminRequest(http_IO *io)
         HandleSessionLogout(io);
     } else if (url == "/api/change/password" && method == http_RequestMethod::Post) {
         HandleChangePassword(io, nullptr);
-    } else if (url == "/api/change/qrcode" && method == http_RequestMethod::Get) {
-        HandleChangeQRcode(io, domain->settings.title);
+    } else if (url == "/api/change/secret" && method == http_RequestMethod::Post) {
+        HandleChangeSecret(io, domain->settings.title);
     } else if (url == "/api/change/totp" && method == http_RequestMethod::Post) {
         HandleChangeTOTP(io);
     } else if (url == "/api/domain/info" && method == http_RequestMethod::Get) {
@@ -743,8 +743,8 @@ static void HandleInstanceRequest(http_IO *io)
         HandleSessionLogout(io);
     } else if (url == "/api/change/password" && method == http_RequestMethod::Post) {
         HandleChangePassword(io, instance);
-    } else if (url == "/api/change/qrcode" && method == http_RequestMethod::Get) {
-        HandleChangeQRcode(io, domain->settings.title);
+    } else if (url == "/api/change/secret" && method == http_RequestMethod::Post) {
+        HandleChangeSecret(io, domain->settings.title);
     } else if (url == "/api/change/totp" && method == http_RequestMethod::Post) {
         HandleChangeTOTP(io);
     } else if (url == "/api/change/mode" && method == http_RequestMethod::Post) {

@@ -721,7 +721,7 @@ async function changePicture() {
 
 async function configureTOTP(e) {
     let enable = !session.totp;
-    let totp = await Net.get('/api/totp/secret');
+    let totp = await Net.post('/api/totp/secret');
 
     await UI.dialog({
         run: (render, close) => html`

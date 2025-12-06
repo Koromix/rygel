@@ -532,19 +532,7 @@ async function switchLanguage(lang) {
 }
 
 async function runConfirmScreen(e, initial, method) {
-    let qrcode;
-    if (method === 'qrcode') {
-        let url = Util.pasteURL(ENV.urls.instance + 'api/change/qrcode', { buster: Util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
-
-        let response = await Net.fetch(url);
-        let secret = response.headers.get('X-TOTP-SecretKey');
-        let buf = await response.arrayBuffer();
-
-        qrcode = {
-            secret: secret,
-            image: 'data:image/png;base64,' + Base64.toBase64(buf)
-        };
-    }
+    let qrcode = (method == 'qrcode') ? await Net.post(ENV.urls.instance + 'api/change/secret') : null;
 
     let title = initial ? null : T.identity_confirmation;
     let errors = 0;
@@ -660,20 +648,7 @@ function runChangePassword(e, username = null) {
 }
 
 async function runResetTOTP(e) {
-    let qrcode;
-    {
-        let url = Util.pasteURL(ENV.urls.instance + 'api/change/qrcode', { buster: Util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
-
-        let response = await Net.fetch(url);
-        let secret = response.headers.get('X-TOTP-SecretKey');
-        let buf = await response.arrayBuffer();
-
-        qrcode = {
-            secret: secret,
-            image: 'data:image/png;base64,' + Base64.toBase64(buf)
-        };
-    }
-
+    let qrcode = await Net.post(ENV.urls.instance + 'api/change/secret');
     let errors = 0;
 
     return UI.dialog(e, T.change_totp_codes, { fixed: true }, (d, resolve, reject) => {

@@ -969,8 +969,6 @@ void HandleTotpConfirm(http_IO *io)
     }
 }
 
-// This does not make any persistent change and it needs to return an image
-// so it is a GET even though it performs an action (change the secret).
 void HandleTotpSecret(http_IO *io)
 {
     RetainPtr<SessionInfo> session = GetNormalSession(io);

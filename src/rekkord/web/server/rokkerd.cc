@@ -357,7 +357,7 @@ static void HandleRequest(http_IO *io)
             HandleUserPassword(io);
         } else if (url == "/api/totp/confirm" && method == http_RequestMethod::Post) {
             HandleTotpConfirm(io);
-        } else if (url == "/api/totp/secret" && method == http_RequestMethod::Get) {
+        } else if (url == "/api/totp/secret" && method == http_RequestMethod::Post) {
             HandleTotpSecret(io);
         } else if (url == "/api/totp/change" && method == http_RequestMethod::Post) {
             HandleTotpChange(io);
