@@ -15,7 +15,7 @@ for (let i = 2; i < process.argv.length; i++) {
     switch (arg) {
         case '--watch': { watch = true; } break;
         case '--help': {
-            print_usage();
+            printUsage();
             process.exit(0);
         } break;
 
@@ -43,25 +43,29 @@ async function main() {
 async function run() {
     process.chdir(__dirname);
 
+    let name = 'staks';
+    let output_dir = '../../bin/Web/' + name;
+
     let src_filenames = [
         './src/index.html',
         './src/game.js'
     ];
 
     let ctx = await esbuild.context({
+        absWorkingDir: process.cwd(),
         entryPoints: src_filenames,
         entryNames: '[name]',
         logLevel: 'info',
         bundle: true,
         minify: !watch,
         sourcemap: watch ? 'inline' : false,
-        format: 'esm',
-        target: 'es2020',
         tsconfigRaw: JSON.stringify({
             compilerOptions: {
-                baseUrl: '../..'
+                baseUrl: __dirname + '/../..'
             },
         }),
+        format: 'esm',
+        target: 'es2020',
         loader: {
             '.woff2': 'dataurl',
             '.png': 'file',
@@ -69,10 +73,10 @@ async function run() {
             '.webm': 'file',
             '.mp3': 'file'
         },
-        outdir: 'dist/static/',
+        outdir: output_dir + '/static',
         plugins: [
             {
-                name: 'html',
+                name: 'assemble',
                 setup: build => {
                     build.onLoad({ filter: /\.html$/ }, args => {
                         let template = fs.readFileSync(args.path, { encoding: 'UTF-8' });
@@ -85,10 +89,10 @@ async function run() {
                     });
 
                     build.onEnd(result => {
-                        if (fs.existsSync('./dist/static/index.html'))
-                            fs.renameSync('./dist/static/index.html', './dist/index.html');
-                        fs.copyFileSync('./assets/staks.png', './dist/favicon.png');
-                        fs.copyFileSync('./src/manifest.json', './dist/manifest.json');
+                        if (fs.existsSync(output_dir + '/static/index.html'))
+                            fs.renameSync(output_dir + '/static/index.html', output_dir + '/index.html');
+                        fs.copyFileSync(`./assets/${name}.png`, output_dir + '/favicon.png');
+                        fs.copyFileSync('./src/manifest.json', output_dir + '/manifest.json');
                     });
                 }
             }
@@ -103,7 +107,7 @@ async function run() {
     }
 }
 
-function print_usage() {
+function printUsage() {
     let basename = path.basename(__filename);
     console.log(`${basename} [--watch]`);
 }
