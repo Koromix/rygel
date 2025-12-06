@@ -4,7 +4,7 @@
 import { render, html, ref } from 'vendor/lit-html/lit-html.bundle.js';
 import * as nacl from 'vendor/tweetnacl-js/nacl-fast.js';
 import { Util, Log, Net, HttpError, LocalDate } from 'lib/web/base/base.js';
-import * as UI from 'lib/web/base/ui.js';
+import * as UI from 'lib/web/ui/ui.js';
 import { Hex, Base64 } from 'lib/web/base/mixer.js';
 import { computeAge, dateToString, niceDate,
          progressBar, progressCircle, deflate, inflate,
@@ -15,7 +15,7 @@ import { initSync, isSyncing, downloadVault, uploadVault, openVault } from './co
 import { ProjectInfo, ProjectBuilder } from './core/project.js';
 import { ConsentModule } from './form/consent.js';
 import { FormModule } from './form/form.js';
-import { FormState, FormModel, FormBuilder } from './form/builder.js';
+import { FormState, FormModel, FormBuilder } from 'lib/web/ui/form.js';
 import { NetworkModule } from './network/network.js';
 import { deploy } from 'lib/web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';

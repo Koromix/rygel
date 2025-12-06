@@ -3,7 +3,7 @@
 
 import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from 'lib/web/base/base.js';
-import { FormState, FormModel, FormBuilder } from './builder.js';
+import { FormState, FormModel, FormBuilder } from 'lib/web/ui/form.js';
 import { ASSETS } from '../../assets/assets.js';
 
 function ConsentModule(app, project) {

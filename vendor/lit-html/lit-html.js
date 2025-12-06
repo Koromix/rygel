@@ -1,5 +1,6 @@
 const { render, noChange, nothing } = require('lit/html.js');
 const { directive, Directive } = require('lit/directive.js');
+const { classMap } = require('lit/directives/class-map.js');
 const { guard } = require('lit/directives/guard.js');
 const { live } = require('lit/directives/live.js');
 const { ref } = require('lit/directives/ref.js');
@@ -49,6 +50,7 @@ export {
     nothing,
     directive,
     Directive,
+    classMap,
     guard,
     live,
     ref,

@@ -10,25 +10,25 @@ function build(form) {
         <p>Veuillez indiquer comment ces situations peuvent s’appliquer à vous en choisissant l'une des options suivantes pour chaque situation : « S’applique tout à fait », « S’applique », « S’applique un peu », « Ne s’applique pas ».
     `
 
-    form.part(() => {
+    form.section(() => {
         q(1, "Lorsqu'une situation stressante ne s'améliore pas, j'essaie de trouver d'autres moyens pour y faire face :")
         q(2, "Je n'utilise que certains moyens pour faire face au stress :")
         q(3, "Lorsque je suis stressé(e), j'utilise plusieurs moyens pour faire face à la situation et l'améliorer :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(4, "Lorsque je n'ai pas réussi à faire face à une situation stressante, j'utilise d'autres moyens pour y faire face :")
         q(5, "Si une situation stressante ne s'améliore pas, j'utilise d'autres moyens pour y faire face :")
         q(6, "Je suis conscient(e) de la réussite ou de l'échec de mes tentatives de faire face au stress :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(7, "Je ne me rends pas compte lorsque je ne parviens pas à faire face au stress :")
         q(8, "Si je sens que je n'ai pas réussi à faire face au stress, je change ma façon de gérer le stress :")
         q(9, "Après avoir fait face au stress, je réfléchis à l'efficacité ou inefficacité des moyens que j'ai utilisé pour le faire :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(10, "Si je n'ai pas réussi à faire face au stress, je pense à d'autres moyens de le faire :")
     })
 

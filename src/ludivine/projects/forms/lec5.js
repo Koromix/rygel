@@ -56,7 +56,7 @@ function build(form) {
     for (let start = 0; start < indices.length; start += 2) {
         let end = Math.min(start + 2, indices.length)
 
-        form.part(() => {
+        form.section(() => {
             for (let i = start; i < end; i++) {
                 let idx = indices[i]
                 let label = catastrophes[idx] + " :"
@@ -72,7 +72,7 @@ function build(form) {
     }
 
     // if (evts > 1) {
-    //     form.part(() => {
+    //     form.section(() => {
     //         let props = indices.filter(idx => values["evt" + idx]?.length > 0).map(idx => [idx, catastrophes[idx]])
     //         form.enumRadio("evt_index", "Sélectionnez l'évènement qui a été le plus difficile pour vous :", props)
     //     })

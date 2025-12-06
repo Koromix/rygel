@@ -3,9 +3,9 @@
 
 import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from 'lib/web/base/base.js';
-import * as Data from 'lib/web/base/data.js';
+import * as Data from 'lib/web/ui/data.js';
 import { progressBar, deflate, inflate } from '../core/misc.js';
-import { FormState, FormModel, FormBuilder } from './builder.js';
+import { FormState, FormModel, FormBuilder } from 'lib/web/ui/form.js';
 import { ASSETS } from '../../assets/assets.js';
 
 function FormModule(app, study, page) {

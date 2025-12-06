@@ -4,7 +4,7 @@
 import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import { Util, Log, Net } from 'lib/web/base/base.js';
-import * as UI from 'lib/web/base/ui.js';
+import * as UI from 'lib/web/ui/ui.js';
 import * as app from './main.js';
 import { route, cache } from './main.js';
 import { ASSETS } from '../assets/assets.js';

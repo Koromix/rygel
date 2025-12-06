@@ -10,12 +10,12 @@ function build(form, meta, since = 'le recueil précédent') {
         <p>Nous allons vous poser une série de questions qui vont nous permettre de comprendre ce qui vous est arrivé. Nous avons conscience que cela peut être difficile, et nous vous sommes reconnaissants de cet effort.
     `
 
-    form.part(() => {
+    form.section(() => {
         form.binary("nouveau", `Depuis que vous avez complété ${since}, avez-vous vécu de nouveaux évènements particulièrement difficiles ?`)
     })
 
     if (values.nouveau !== 0) {
-        form.part(() => {
+        form.section(() => {
             form.enumRadio("q4", "Comment l’avez-vous vécu ?", [
                 [1, "Cela m’est arrivé directement"],
                 [2, "J’en ai été témoin"],
@@ -28,7 +28,7 @@ function build(form, meta, since = 'le recueil précédent') {
                 form.text("?q4a", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
         })
 
-        form.part(() => {
+        form.section(() => {
             form.enumButtons("q5", "La vie de quelqu’un était-elle en danger ?", [
                 [1, "Oui, la mienne"],
                 [2, "Oui, la vie de quelqu'un d'autre"],
@@ -42,12 +42,12 @@ function build(form, meta, since = 'le recueil précédent') {
             ])
         })
 
-        form.part(() => {
+        form.section(() => {
             form.binary("q7", "L’évènement impliquait-il une agression sexuelle ?")
             form.binary("q8", "L’événement comportait-il une violence (physique ou psychologique) intentionnelle exercée par autrui à votre encontre ?")
         })
 
-        form.part(() => {
+        form.section(() => {
             form.enumRadio("q9", "Si l’évènement a entrainé la mort d’un membre de la famille ou d’un ami proche, était-ce dû à un type d’accident ou de violence, ou était-ce dû à des causes naturelles ?", [
                 [1, "Un accident ou de la violence"],
                 [2, "Causes naturelles"],
@@ -60,7 +60,7 @@ function build(form, meta, since = 'le recueil précédent') {
             ])
         })
 
-        form.part(() => {
+        form.section(() => {
             form.enumRadio("q11", "Lors de cet événement, étiez-vous la seule victime ou d’autres personnes ont-elles également été affectées ?", [
                 [1, "J’étais la seule victime"],
                 [2, "D’autres personnes étaient également victimes"],
@@ -84,7 +84,7 @@ function build(form, meta, since = 'le recueil précédent') {
             }
         })
 
-        form.part(() => {
+        form.section(() => {
             form.enumButtons("q13", "Cet évènement impliquait-il un ou plusieurs agresseur(s) ?", [
                 [1, "Un agresseur"],
                 [2, "Plusieurs agresseurs"],
@@ -95,7 +95,7 @@ function build(form, meta, since = 'le recueil précédent') {
         })
 
         if (values.q13 != 0) {
-            form.part(() => {
+            form.section(() => {
                 let singular = (values.q13 == 1)
 
                 form.binary("q14", `Cet évènement impliquait-il des témoins qui ont délibérément laisser agir ${singular ? "l’agresseur" : "les agresseurs"} ?`)
@@ -117,7 +117,7 @@ function build(form, meta, since = 'le recueil précédent') {
                 }
             })
 
-            form.part(() => {
+            form.section(() => {
                 let singular = (values.q13 == 1)
 
                 form.binary("q17", `Connaissiez-vous ${singular ? "l’agresseur" : "les agresseurs"} ?`)
@@ -136,11 +136,11 @@ function build(form, meta, since = 'le recueil précédent') {
             })
         }
 
-        form.part(() => {
+        form.section(() => {
             form.binary("q16", "Cet évènement impliquait-il des témoins qui vous ont porté secours ?")
         })
 
-        form.part(() => {
+        form.section(() => {
             form.binary("b1", "Avez-vous, au moment de l’évènement, ressenti un sentiment de peur intense ?")
             form.binary("b2", "Avez-vous, au moment de l’évènement, ressenti un sentiment d’impuissance ?")
             form.binary("b3", "Avez-vous, au moment de l’évènement, ressenti un sentiment de terreur ?")

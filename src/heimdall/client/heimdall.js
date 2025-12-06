@@ -3,7 +3,7 @@
 
 import { render, html, live } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, HttpError } from 'lib/web/base/base.js';
-import * as UI from 'lib/web/base/ui.js';
+import * as UI from 'lib/web/ui/ui.js';
 import { AppRunner } from 'lib/web/base/runner.js';
 
 import en from '../i18n/en.json';

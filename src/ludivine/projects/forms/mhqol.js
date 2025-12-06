@@ -9,7 +9,7 @@ function build(form) {
         <p>Ces informations nous permettront de savoir comment vous vous sentez dans votre vie de tous les jours.
     `
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("q1", "Quelle image avez-vous de vous-même ?", [
             [2, "J'ai une image très positive de moi-même"],
             [1, "J'ai une image positive de moi-même"],
@@ -18,7 +18,7 @@ function build(form) {
         ], { help: "On parle d'image de soi" })
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("q2", "Quel est votre niveau d'indépendance ?", [
             [2, "Je suis très satisfait(e) de mon niveau d'indépendance"],
             [1, "Je suis satisfait(e) de mon niveau d'indépendance"],
@@ -27,7 +27,7 @@ function build(form) {
         ], { help: "Par exemple : liberté dans vos choix, vos finances, les co-décisions" })
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("q3", "Comment est votre humeur ?", [
             [2, "Je ne me sens pas anxieux/se, triste ou déprimé(e)"],
             [1, "Je me sens un peu anxieux/se, triste ou déprimé(e)"],
@@ -36,7 +36,7 @@ function build(form) {
         ])
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("q4", "Êtes-vous satisfait(e) de vos relations ?", [
             [2, "Je suis très satisfait(e) de mes relations"],
             [1, "Je suis satisfait(e) de mes relations"],
@@ -45,7 +45,7 @@ function build(form) {
         ], { help: "Par exemple : partenaire, enfants, famille, amis, collègues" })
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("q5", "Êtes-vous satisfait(e) de vos activités quotidiennes ?", [
             [2, "Je suis très satisfait(e) de mes activités quotidiennes"],
             [1, "Je suis satisfait(e) de mes activités quotidiennes"],
@@ -54,7 +54,7 @@ function build(form) {
         ], { help: "Par exemple : travail, études, ménage, loisirs" })
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("q6", "Comment évaluez-vous votre santé physique ?", [
             [2, "Je n'ai aucun problème de santé physique"],
             [1, "J'ai quelques problèmes de santé physique"],
@@ -63,7 +63,7 @@ function build(form) {
         ])
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("q7", "Comment voyez-vous votre avenir ?", [
             [2, "Je suis très optimiste quant à mon avenir"],
             [1, "Je suis optimiste quant à mon avenir"],
@@ -72,7 +72,7 @@ function build(form) {
         ])
     })
 
-    form.part(() => {
+    form.section(() => {
         form.slider("q8", "Comment vous évaluez votre bien-être psychologique ?", {
             min: 0, max: 10,
             prefix: "Pire bien-être psychologique imaginable", suffix: "Meilleur bien-être psychologique imaginable",

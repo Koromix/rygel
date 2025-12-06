@@ -11,7 +11,7 @@ function build(form) {
         <p>Veuillez indiquer les évènements qui vous sont arrivés <b>durant les deux dernières années</b> et qui sont <b>actuellement difficiles</b> pour vous, ou qui ont été <b>difficiles pour vous au cours des 6 derniers mois</b>.
     `
 
-    form.part(() => {
+    form.section(() => {
         let types = [
             [1, "Divorce / séparation"],
             [2, "Conflits familiaux"],
@@ -48,52 +48,52 @@ function build(form) {
         <p>Merci d'avoir identifié ces évènements. Ils peuvent avoir de nombreuses conséquences sur votre bien-être et comportement. Nous vous demanderons de préciser <b>à quelle fréquence les différentes affirmations s’appliquent</b> à vous (de « Jamais » à « Souvent »).
     `
 
-    form.part(() => {
+    form.section(() => {
         q(1, "Depuis les évènements stressants identifiés, je me sens déprimé·e et triste :")
         q(2, "Je pense à ces évènements stressants de manière répétée :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(3, "J’essaie d’éviter de parler des évènements stressants identifiés chaque fois que cela est possible :")
         q(4, "Je pense beaucoup à ces évènements stressants et cela est un poids pour moi :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(5, "Je fais rarement les activités qui me plaisaient avant :")
         q(6, "Si je pense aux évènements stressants identifiés, je ressens un réel état d’anxiété :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(7, "J’évite certaines choses qui peuvent me rappeler les évènements stressants identifiés :")
         q(8, "Je suis nerveux.se et agité·e depuis ces évènements stressants :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(9, "Depuis les évènements stressants identifiés, je me mets en colère bien plus rapidement qu'auparavant, même pour de petites choses :")
         q(10, "Depuis ces évènements stressants, je trouve difficile de me concentrer sur certaines choses :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(11, "J’essaie de sortir ces évènements stressants de ma mémoire :")
         q(12, "J’ai remarqué que je deviens plus irritable à cause de ces évènements stressants :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(13, "J’ai constamment des souvenirs de ces évènements stressants et je ne peux rien faire pour les arrêter :")
         q(14, "J’essaie de supprimer mes émotions car elles sont un poids pour moi :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(15, "Mes pensées tournent souvent autour de tout ce qui est relié aux évènements stressants identifiés :")
         q(16, "Depuis ces évènements stressants, j’ai peur de faire certaines choses ou de me retrouver dans certaines situations :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(17, "Depuis ces évènements stressants, je n’aime pas aller au travail ou faire les tâches quotidiennes nécessaires :")
         q(18, "Je me sens découragé·e depuis ces évènements stressants et j’ai peu d’espoir dans l’avenir :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(19, "Depuis ces évènements stressants identifiés, je ne peux plus dormir correctement :")
         q(20, "Dans l’ensemble, ces évènements stressants causent une détérioration importante de ma vie sociale et professionnelle, de mon temps de loisirs, et des autres domaines importants de fonctionnement :")
     })

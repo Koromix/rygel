@@ -39,27 +39,27 @@ function build(form, meta) {
         }
     }
 
-    form.part(() => {
+    form.section(() => {
         q("q1", "Combien de personnes de votre entourage sont réellement disponibles quand vous avez besoin d’aide ?")
     })
 
-    form.part(() => {
+    form.section(() => {
         q("q2", "Sur combien de personnes pouvez-vous réellement compter pour vous aider à vous sentir plus détendu(e) lorsque vous êtes sous pression ou crispé(e) ?")
     })
 
-    form.part(() => {
+    form.section(() => {
         q("q3", "Combien de personnes vous acceptent tel(le) que vous êtes, c’est-à-dire avec vos bons et vos mauvais côtés ?")
     })
 
-    form.part(() => {
+    form.section(() => {
         q("q4", "Sur combien de personnes pouvez-vous réellement compter pour s’occuper de vous quoi qu’il arrive ?")
     })
 
-    form.part(() => {
+    form.section(() => {
         q("q5", "Sur combien de personnes pouvez-vous réellement compter pour vous aider à vous sentir mieux quand il vous arrive de broyer du noir ?")
     })
 
-    form.part(() => {
+    form.section(() => {
         q("q6", "Sur combien de personnes pouvez-vous réellement compter pour vous consoler quand vous êtes bouleversé(e) ?")
     })
 

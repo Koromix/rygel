@@ -27,7 +27,7 @@ function build(form) {
         [7, "Totalement en accord"]
     ]
 
-    form.part(() => {
+    form.section(() => {
         form.output(html`<i>Au <b>cours du dernier mois</b>, à quel point avez-vous été dérangé...</i>`)
         form.enumButtons("q1", "Par des souvenirs répétitifs, perturbants et non désirés de l'expérience stressante ?", lik5)
         form.enumButtons("q2", "Par des rêves répétitifs et perturbants de l'expérience stressante ?", lik5)
@@ -36,14 +36,14 @@ function build(form) {
         })
     })
 
-    form.part(() => {
+    form.section(() => {
         form.output(html`<i>Au <b>cours du dernier mois</b>, à quel point avez-vous été dérangé...</i>`)
         form.enumButtons("q4", "Par le fait d'être bouleversé lorsque quelque chose vous a rappelé l'expérience stressante ?", lik5)
         form.enumButtons("q5", "Par de fortes réactions physiques quand quelque chose vous a rappelé l'expérience stressante ?", lik5)
         form.enumButtons("q6", "Par l'évitement des souvenirs, pensées ou émotions associées à l'expérience stressante ?", lik5)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.output(html`<i>Au <b>cours du dernier mois</b>, à quel point avez-vous été dérangé...</i>`)
         form.enumButtons("q7", "Par l'évitement des rappels externes de l'expérience stressante ?", lik5, {
             help: "Par exemple des personnes, des endroits, des conversations, des activités, des objets ou des situations"
@@ -54,14 +54,14 @@ function build(form) {
         })
     })
 
-    form.part(() => {
+    form.section(() => {
         form.output(html`<i>Au <b>cours du dernier mois</b>, à quel point avez-vous été dérangé...</i>`)
         form.enumButtons("q10", "Par le fait de vous blâmer ou de blâmer quelqu'un d'autre pour l'expérience stressante et/ou pour ce qui s'est produit par la suite ?", lik5)
         form.enumButtons("q11", "Par la présence de fortes émotions négatives telles que la peur, l'horreur, la colère, la culpabilité ou la honte ?", lik5)
         form.enumButtons("q12", "Par la perte d'intérêt pour les activités que vous aimez auparavant ?", lik5)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.output(html`<i>Au <b>cours du dernier mois</b>, à quel point avez-vous été dérangé...</i>`)
         form.enumButtons("q13", "Par un sentiment d'éloignement ou d'isolement vis-à-vis des autres ?", lik5)
         form.enumButtons("q14", "Par le fait d'avoir de la difficulté à ressentir des émotions positives ?", lik5, {
@@ -70,14 +70,14 @@ function build(form) {
         form.enumButtons("q15", "Par le fait de vous sentir irritiable ou en colère ou le fait d'agir de façon aggressive ?", lik5)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.output(html`<i>Au <b>cours du dernier mois</b>, à quel point avez-vous été dérangé...</i>`)
         form.enumButtons("q16", "Par le fait de prendre trop de risques ou de faire des choses qui pourraient vos blesser ?", lik5)
         form.enumButtons("q17", "Par le fait de vous sentir en état d'alerte, vigilant ou sur vos gardes ?", lik5)
         form.enumButtons("q18", "Par le fait de vous sentir agité ou de sursauter facilement ?", lik5)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.output(html`<i>Au <b>cours du dernier mois</b>, à quel point avez-vous été dérangé...</i>`)
         form.enumButtons("q19", "Par des difficultés de concentration ?", lik5)
         form.enumButtons("q20", "Par des difficultés à vous endormir ou à rester endormi ?", lik5)
@@ -89,14 +89,14 @@ function build(form) {
         <p>Indiquez à quel point vous avez été perturbé par les <b>problèmes indiqués le mois dernier</b>.
     `
 
-    form.part(() => {
+    form.section(() => {
         form.output(html`<i>Au <b>cours du dernier mois</b>, à quel point avez-vous...</i>`)
         form.enumButtons("p1", "Eu des rêves perturbants où se rejoue une partie de l’expérience ou qui sont clairement en relation avec l’expérience ?", lik5)
         form.enumButtons("p2", "Été perturbé par des images ou des souvenirs forts (qui viennent à l’esprit) comme si l’expérience se rejoue ici et maintenant ?", lik5)
         form.enumButtons("p3", "Évité les ressentis qui rappellent l’expérience (par exemple, pensées, sentiments ou sensations physiques) ?", lik5)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.output(html`<i>Au <b>cours du dernier mois</b>, à quel point avez-vous...</i>`)
         form.enumButtons("p4", "Évité des éléments extérieurs qui rappellent l’expérience ?", lik5, {
             help: "Par exemple des personnes, lieux, conversations, objets, activités, ou situations"
@@ -105,7 +105,7 @@ function build(form) {
         form.enumButtons("p6", "Eu des réactions exagérées de surprise ou sursaut ?", lik5)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumButtons("p7", "Est-ce que cela a affecté vos relations et votre vie sociale ?", lik5)
         form.enumButtons("p8", "Est-ce que cela a affecté votre travail ou votre capacité à travailler ?", lik5)
         form.enumButtons("p9", "Est-ce que cela a affecté d’autres parties importantes de votre vie telles que la capacité à s’occuper de vos enfants, vos études, ou toutes autres activités importantes ?", lik5)
@@ -116,14 +116,14 @@ function build(form) {
         <p>Indiquez à quel point chaque proposition <b>est vraie pour vous</b>.
     `
 
-    form.part(() => {
+    form.section(() => {
         form.output(html`<i>À quel point <b>est-ce vrai pour vous</b> ?</i>`)
         form.enumButtons("c1", "Quand je suis contrarié(e), il me faut beaucoup de temps pour me calmer :", lik5)
         form.enumButtons("c2", "Je me sens insensible ou émotionnellement éteint(e) :", lik5)
         form.enumButtons("c3", "Je me sens nul(le)", lik5)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.output(html`<i>À quel point <b>est-ce vrai pour vous</b> ?</i>`)
         form.enumButtons("c4", "Je me sens sans valeur :", lik5)
         form.enumButtons("c5", "Je me sens distant(e) ou coupé(e) des autres :", lik5)
@@ -134,7 +134,7 @@ function build(form) {
         <p>Au cours du dernier mois, les problèmes mentionnés ci-dessus concernant <b>vos émotions, vos croyances sur vous-même et vos relations</b> ont-ils :
     `
 
-    form.part(() => {
+    form.section(() => {
         form.enumButtons("c7", "Créé de l'inquiétude ou de la détresse concernant vos relations ou votre vie sociale :", lik5)
         form.enumButtons("c8", "Affecté votre travail ou capacité à travailler :", lik5)
         form.enumButtons("c9", "Affecté d'autres parties importantes de votre vie telle que la capacité à s'occuper de vos enfants, vos études, ou toutes autres activités importantes :", lik5)
@@ -145,73 +145,73 @@ function build(form) {
         <p>Vous trouverez ci-dessous une <b>liste d’énoncés</b> qui peuvent être représentatifs ou non de ces pensées. Chaque personne réagit de façon différente à un événement très stressant. Il n’y a pas de bonnes ou de mauvaises réponses à ces énoncés.
     `
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("n1", "L’événement est arrivé à cause de la façon dont j’ai agi :", lik7)
         form.enumRadio("n2", "Je n’ai pas confiance que je ferai ce qui est juste et bon :", lik7)
         form.enumRadio("n3", "Je suis une personne faible :", lik7)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("n4", "Je ne serai pas capable de contrôler ma colère et je ferai quelque chose de terrible :", lik7)
         form.enumRadio("n5", "Je ne suis pas capable de gérer la moindre frustration :", lik7)
         form.enumRadio("n6", "Auparavant j’étais une personne heureuse, mais maintenant je suis toujours malheureux :", lik7)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("n7", "On ne peut pas faire confiance aux gens :", lik7)
         form.enumRadio("n8", "Je dois toujours être sur mes gardes :", lik7)
         form.enumRadio("n9", "Je me sens mort à l’intérieur :", lik7)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("n10", "On ne peut jamais savoir qui nous fera du mal :", lik7)
         form.enumRadio("n11", "Je dois être particulièrement vigilant parce qu’on ne sait jamais ce qui nous attend :", lik7)
         form.enumRadio("n12", "Je suis inadéquat :", lik7)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("n13", "Je ne serai pas capable de contrôler mes émotions et quelque chose de terrible va arriver :", lik7)
         form.enumRadio("n14", "Si je pense à l’événement, je ne serai pas capable de le gérer :", lik7)
         form.enumRadio("n15", "L’événement m’est arrivé à cause du type de personne que je suis :", lik7)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("n16", "Mes réactions depuis l’événement indiquent que je suis en train de devenir fou :", lik7)
         form.enumRadio("n17", "Je ne pourrai jamais ressentir des émotions normales de nouveau :", lik7)
         form.enumRadio("n18", "Le monde est un endroit dangereux :", lik7)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("n19", "Quelqu’un d’autre aurait été capable d’empêcher l’événement d’arriver :", lik7)
         form.enumRadio("n20", "J’ai changé pour le pire et je ne redeviendrai jamais normal :", lik7)
         form.enumRadio("n21", "Je me sens comme un objet plutôt que comme une personne :", lik7)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("n22", "Quelqu’un d’autre ne se serait pas mis dans cette situation :", lik7)
         form.enumRadio("n23", "Je ne peux pas compter sur les autres :", lik7)
         form.enumRadio("n24", "Je me sens isolé et mis à part des autres :", lik7)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("n25", "Je n’ai pas d’avenir :", lik7)
         form.enumRadio("n26", "Je ne peux pas empêcher que des mauvaises choses m’arrivent :", lik7)
         form.enumRadio("n27", "Les gens ne sont pas ce qu’ils semblent être :", lik7)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("n28", "Ma vie a été gâchée par l’événement :", lik7)
         form.enumRadio("n29", "Il y a quelque chose qui ne va pas en moi :", lik7)
         form.enumRadio("n30", "Mes réactions depuis l’événement prouvent que je n’ai pas la capacité d’y faire face :", lik7)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("n31", "Il y a quelque chose en moi qui a provoqué l’événement :", lik7)
         form.enumRadio("n32", "Je ne serai pas capable de tolérer mes pensées à propos de l’événement et je vais m’effondrer :", lik7)
         form.enumRadio("n33", "J’ai l’impression de ne plus me connaître :", lik7)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("n34", "On ne sait jamais quand quelque chose de terrible va arriver :", lik7)
         form.enumRadio("n35", "Je ne peux pas me faire confiance :", lik7)
         form.enumRadio("n36", "Plus rien de positif ne peut m’arriver :", lik7)

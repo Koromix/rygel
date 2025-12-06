@@ -11,12 +11,12 @@ function build(form) {
         <p>Les individus qui ont vécu un ou plusieurs événements stressants souffrent parfois de réactions différentes de celles des autres. C'est ce qui va nous intéresser dans les questions qui suivent.
     `
 
-    form.part(() => {
+    form.section(() => {
         form.binary("parle", "Avez-vous parlé à une ou plusieurs personnes de l’expérience qui vous a amené ici ?")
     })
 
     if (values.parle == 1) {
-        form.part(() => {
+        form.section(() => {
             let keys = Object.keys(PERSON_KINDS)
 
             form.output(html`De quelle <b>sphère de votre vie</b> les personnes à qui vous en avez parlé font-elles partie ?`)
@@ -29,7 +29,7 @@ function build(form) {
             }
         })
 
-        form.part(() => {
+        form.section(() => {
             form.binary("negatif", "Avez-vous reçu des réactions négatives après en avoir parlé ?")
 
             if (values.negatif == 1) {
@@ -46,25 +46,25 @@ function build(form) {
             <p>Nous souhaiterions maintenant que vous pensiez spécifiquement à la <b>personne dont vous êtes le plus proche et à qui vous avez parlé</b> de l’évènement qui vous a amené ici. Donnez-nous, sur base des énoncés suivants, votre meilleure estimation de sa réaction lorsque vous lui avez parlé cet évènement.
         `
 
-        form.part(() => {
+        form.section(() => {
             q(1, "Il ou elle semblait comprendre ce que j'ai vécu :")
             q(2, "Il ou elle a ressenti de la sympathie envers moi pour ce qui s'est passé :")
             q(3, "Il ou elle ne pouvait pas comprendre, n'ayant pas vécu mon expérience :")
         })
 
-        form.part(() => {
+        form.section(() => {
             q(4, "Il ou elle n'a pas compris à quel point il est difficile de poursuivre une vie quotidienne « normale » après ce qui s'est passé :")
             q(5, "Ses réactions m'ont été utiles :")
             q(6, "Il ou elle a trouvé que ma réaction à ces expériences était excessive :")
         })
 
-        form.part(() => {
+        form.section(() => {
             q(7, "Il ou elle a trouvé que ma réaction à ces expériences étaient excessives :")
             q(8, "Il ou elle semblait me blâmer, douter, me juger ou me questionner sur cette expérience :")
             q(9, "Il ou elle s'est montré(e) très compréhensif(ve) et m'a soutenu(e) lorsque nous en avons parlé :")
         })
 
-        form.part(() => {
+        form.section(() => {
             q(10, "Je pensais que lui en parler se passerait bien mais ça n'a pas été le cas :")
         })
     }
@@ -74,7 +74,7 @@ function build(form) {
         <p>Suite à l’évènement qui vous a amené ici, décrivez comment <b>avez-vous perçu vos interactions</b> avec le personnel médical, avec le personnel judiciaire et avec le personnel d'aide psychologique.
     `
 
-    form.part(() => {
+    form.section(() => {
         form.binary("inter1a", "Avez-vous eu des interactions avec un personnel médical en lien avec cet évènement ?")
 
         if (values.inter1a == 1) {

@@ -5,7 +5,7 @@ import { render, html, svg,
          directive, Directive, noChange, nothing } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, Mutex,
          LocalDate, LocalTime, FileReference } from 'lib/web/base/base.js';
-import * as Data from 'lib/web/base/data.js';
+import * as Data from 'lib/web/ui/data.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
 

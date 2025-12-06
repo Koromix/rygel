@@ -11,7 +11,7 @@ function build(form, meta, since = 'le recueil précédent') {
         <p>Les individus qui ont vécu un ou plusieurs événements stressants souffrent parfois de <b>réactions différentes de celles des autres</b>. C'est ce qui va nous intéresser dans les questions qui suivent.
     `
 
-    form.part(() => {
+    form.section(() => {
         form.binary("pre1", `Avez-vous continué à parler de l’évènement qui vous a amené ici aux personnes auxquelles vous avez fait référence dans ${since} ?`)
         form.binary("pre2", "Avez-vous reçu des réactions négatives de leur part ?")
 
@@ -24,7 +24,7 @@ function build(form, meta, since = 'le recueil précédent') {
         }
     })
 
-    form.part(() => {
+    form.section(() => {
         form.binary("pre4", `Avez-vous parlé à de nouvelles personnes de cet évènement depuis ${since} ?`)
 
         if (values.pre4 == 1) {
@@ -56,25 +56,25 @@ function build(form, meta, since = 'le recueil précédent') {
         <p>Nous souhaiterions maintenant que vous pensiez spécifiquement à la <b>personne dont vous êtes le plus proche et à qui vous avez parlé</b> de l’évènement qui vous a amené ici. Donnez-nous, sur base des énoncés suivants, votre meilleure estimation de sa réaction lorsque vous lui avez parlé cet évènement.
     `
 
-    form.part(() => {
+    form.section(() => {
         q(1, "Il ou elle semblait comprendre ce que j'ai vécu :")
         q(2, "Il ou elle a ressenti de la sympathie envers moi pour ce qui s'est passé :")
         q(3, "Il ou elle ne pouvait pas comprendre, n'ayant pas vécu mon expérience :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(4, "Il ou elle n'a pas compris à quel point il est difficile de poursuivre une vie quotidienne « normale » après ce qui s'est passé :")
         q(5, "Ses réactions m'ont été utiles :")
         q(6, "Il ou elle a trouvé que ma réaction à ces expériences était excessive :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(7, "Il ou elle a trouvé que ma réaction à ces expériences étaient excessives :")
         q(8, "Il ou elle semblait me blâmer, douter, me juger ou me questionner sur cette expérience :")
         q(9, "Il ou elle s'est montré(e) très compréhensif(ve) et m'a soutenu(e) lorsque nous en avons parlé :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(10, "Je pensais que lui en parler se passerait bien mais ça n'a pas été le cas :")
     })
 
@@ -82,7 +82,7 @@ function build(form, meta, since = 'le recueil précédent') {
         <p>Les individus qui ont vécu un ou plusieurs événements stressants souffrent parfois de <b>réactions différentes de celles des autres</b>. C'est ce qui va nous intéresser dans les questions qui suivent.
     `
 
-    form.part(() => {
+    form.section(() => {
         form.binary("post1", "Depuis le bilan initial, avez-vous rencontré de nouvelles personnes faisant partie du domaine médical ?")
 
         if (values.post1 == 1) {
@@ -114,7 +114,7 @@ function build(form, meta, since = 'le recueil précédent') {
         }
     })
 
-    form.part(() => {
+    form.section(() => {
         form.binary("ia1", "Vous est-il arrivé de communiquer avec une IA sur l’évènement qui vous amène ici ?")
 
         if (values.ia1) {

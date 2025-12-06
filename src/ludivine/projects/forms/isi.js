@@ -9,7 +9,7 @@ function build(form) {
         <p>Ces questions portent sur votre <b>sommeil actuel c'est à dire au cours des derniers mois</b> et non avant.
     `
 
-    form.part(() => {
+    form.section(() => {
         form.output(html`
             <p><i>Veuillez estimer la <b>sévérité actuelle (derniers mois)</b> de vos difficultés de sommeil.</i>
         `)
@@ -19,7 +19,7 @@ function build(form) {
         q("diff3", "Problèmes de réveil trop tôt le matin :")
     })
 
-    form.part(() => {
+    form.section(() => {
         form.output(html`
             <p><i>Veuillez estimer la <b>satisfaction actuelle (derniers mois)</b> que vous retirez de votre sommeil</i>
         `)

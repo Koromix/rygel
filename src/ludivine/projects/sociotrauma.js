@@ -221,7 +221,7 @@ function init(build, start, values) {
                 build.form('autres', 'Autres évènements de vie', (form, meta) => {
                     let values = form.values
 
-                    form.part(() => {
+                    form.section(() => {
                         form.binary('situation1', 'Votre situation familiale a-t-elle changé depuis le bilan initial ?')
 
                         if (values.situation1) {
@@ -310,7 +310,7 @@ function init(build, start, values) {
 
                     sps10(form, meta)
 
-                    form.part(() => {
+                    form.section(() => {
                         form.binary('sup1', 'Considérez-vous que l’évènement qui vous a amené ici a engendré une rupture avec votre vie d’avant ?')
 
                         if (values.sup1) {
@@ -333,7 +333,7 @@ function init(build, start, values) {
                 build.form('cses', 'Témoignage à l\'entourage', (form, meta) => {
                     cses(form, meta)
 
-                    form.part(() => {
+                    form.section(() => {
                         form.enumButtons('meme', 'Est-ce que la personne à qui vous pensez est la même que celle à laquelle vous faisiez référence lors du bilan initial ?', [
                             [1, 'Oui'],
                             [0, 'Non'],
@@ -375,7 +375,7 @@ function init(build, start, values) {
                 build.form('autres', 'Autres évènements de vie', (form, meta) => {
                     let values = form.values
 
-                    form.part(() => {
+                    form.section(() => {
                         form.binary('situation1', 'Votre situation familiale a-t-elle changé depuis le suivi à 6 semaines ?')
 
                         if (values.situation1) {
@@ -465,7 +465,7 @@ function init(build, start, values) {
 
                     sps10(form, meta)
 
-                    form.part(() => {
+                    form.section(() => {
                         form.binary('sup1', 'Considérez-vous que l’évènement qui vous a amené ici a engendré une rupture avec votre vie d’avant ?')
 
                         if (values.sup1) {
@@ -488,7 +488,7 @@ function init(build, start, values) {
                 build.form('cses', 'Témoignage à l\'entourage', (form, meta) => {
                     cses(form, meta)
 
-                    form.part(() => {
+                    form.section(() => {
                         form.enumButtons('meme', 'Est-ce que la personne à qui vous pensez est la même que celle à laquelle vous faisiez référence lors du suivi à 6 semaines ?', [
                             [1, 'Oui'],
                             [0, 'Non'],
@@ -530,7 +530,7 @@ function init(build, start, values) {
                 build.form('autres', 'Autres évènements de vie', (form, meta) => {
                     let values = form.values
 
-                    form.part(() => {
+                    form.section(() => {
                         form.binary('situation1', 'Votre situation familiale a-t-elle changé depuis le suivi à 3 mois ?')
 
                         if (values.situation1) {
@@ -621,7 +621,7 @@ function init(build, start, values) {
 
                     sps10(form, meta)
 
-                    form.part(() => {
+                    form.section(() => {
                         form.binary('sup1', 'Considérez-vous que l’évènement qui vous a amené ici a engendré une rupture avec votre vie d’avant ?')
 
                         if (values.sup1) {
@@ -644,7 +644,7 @@ function init(build, start, values) {
                 build.form('cses', 'Témoignage à l\'entourage', (form, meta) => {
                     cses(form, meta)
 
-                    form.part(() => {
+                    form.section(() => {
                         form.enumButtons('meme', 'Est-ce que la personne à qui vous pensez est la même que celle à laquelle vous faisiez référence lors du suivi à 3 mois ?', [
                             [1, 'Oui'],
                             [0, 'Non'],
@@ -686,7 +686,7 @@ function init(build, start, values) {
                 build.form('autres', 'Autres évènements de vie', (form, meta) => {
                     let values = form.values
 
-                    form.part(() => {
+                    form.section(() => {
                         form.binary('situation1', 'Votre situation familiale a-t-elle changé depuis le suivi à 6 mois ?')
 
                         if (values.situation1) {
@@ -778,7 +778,7 @@ function init(build, start, values) {
 
                     sps10(form, meta)
 
-                    form.part(() => {
+                    form.section(() => {
                         form.binary('sup1', 'Considérez-vous que l’évènement qui vous a amené ici a engendré une rupture avec votre vie d’avant ?')
 
                         if (values.sup1) {
@@ -801,7 +801,7 @@ function init(build, start, values) {
                 build.form('cses', 'Témoignage à l\'entourage', (form, meta) => {
                     cses(form, meta)
 
-                    form.part(() => {
+                    form.section(() => {
                         form.enumButtons('meme', 'Est-ce que la personne à qui vous pensez est la même que celle à laquelle vous faisiez référence lors du suivi à 6 mois ?', [
                             [1, 'Oui'],
                             [0, 'Non'],

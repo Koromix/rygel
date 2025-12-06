@@ -573,7 +573,7 @@ function build(form) {
         <p>Donnez-nous quelques informations pour nous aider à mieux vous comprendre.
     `
 
-    form.part(() => {
+    form.section(() => {
         form.enumButtons("genre", "Quel est votre genre ?", [
             ["F", "Femme"],
             ["H", "Homme"],
@@ -586,7 +586,7 @@ function build(form) {
         ])
     })
 
-    form.part(() => {
+    form.section(() => {
         form.number("age", "Quel âge avez-vous ?", {
             min: 18, max: 120,
             suffix: value => value > 1 ? "ans" : "an",
@@ -595,7 +595,7 @@ function build(form) {
         form.enumDrop("pays_naissance", "Dans quel pays êtes-vous " + adapt("né", "née") + " ?", PAYS)
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumDrop("pays", "Dans quel pays habitez-vous actuellement ?", PAYS, { value: values.pays_naissance })
 
         if (values.pays == "FR")
@@ -612,13 +612,13 @@ function build(form) {
         ])
     })
 
-    form.part(() => {
+    form.section(() => {
         if (values.sexe == "F")
             form.number("grossesses", "Combien de grossesses avez-vous eu ?")
         form.number("enfants", "Combien d'enfants avez-vous eu ?")
     })
 
-    form.part(() => {
+    form.section(() => {
         form.binary("pec1", "Avez-vous, au cours du dernier mois consulté un médecin, pris un traitement médicamenteux ou suivi une psychothérapie en lien avec l’évènement que vous venez de vivre et qui vous a amené à participer à cette étude ?")
 
         form.multiCheck("?atcd", "Avant l’évènement, aviez-vous été diagnostiqué par un professionnel de la santé comme souffrant :", [
@@ -632,7 +632,7 @@ function build(form) {
             form.binary("pec2", "Avez-vous consulté un médecin, pris un traitement médicamenteux ou suivi une psychothérapie pour un ou plusieurs des troubles cités ci-dessus ?")
     })
 
-    form.part(() => {
+    form.section(() => {
         form.binary("diplome", "Avez-vous un diplôme scolaire ?", {
             help: "Si ce n'est pas le cas, ce n'est pas un problème ! Cette question nous aide simplement à cerner qui vous êtes."
         })
@@ -651,7 +651,7 @@ function build(form) {
         }
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumDrop("langue1", "Quelle est votre langue maternelle ?", LANGUAGES, {
             help: "Vous pouvez en indiquer plusieurs, choisissez-en une et un champ supplémentaire s'affichera"
         })
@@ -668,7 +668,7 @@ function build(form) {
         }
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumDrop("parents1", "Quelle est la principale langue parlée par vos parents ?", LANGUAGES, {
             help: "Vous pouvez en indiquer plusieurs, choisissez-en une et un champ supplémentaire s'affichera"
         })
@@ -685,7 +685,7 @@ function build(form) {
         }
     })
 
-    form.part(() => {
+    form.section(() => {
         form.enumRadio("connaissance", "Comment avez-vous pris connaissance de l'étude ?", [
             ["reseaux", "Réseaux sociaux"],
             ["parle", "Bouche-à-oreille"],

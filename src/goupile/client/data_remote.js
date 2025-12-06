@@ -3,7 +3,7 @@
 
 import { Util, Log, Net,
          LocalDate, LocalTime, FileReference } from 'lib/web/base/base.js';
-import * as Data from 'lib/web/base/data.js';
+import * as Data from 'lib/web/ui/data.js';
 
 function DataRemote() {
     let self = this;

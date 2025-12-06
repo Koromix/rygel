@@ -3,7 +3,7 @@
 
 import { render, html, live } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net } from 'lib/web/base/base.js';
-import * as UI from 'lib/web/base/ui.js';
+import * as UI from 'lib/web/ui/ui.js';
 
 if (typeof T == 'undefined')
     T = {};

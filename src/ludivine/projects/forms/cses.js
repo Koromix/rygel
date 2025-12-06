@@ -12,24 +12,24 @@ function build(form) {
         <p>Nous aimerions savoir ce que vous avez divulgué à la <b>personne dont vous êtes le ou la plus proche</b> (y compris si vous ne lui avez rien dit).
     `
 
-    form.part(() => {
+    form.section(() => {
         q(1, "Je lui ai parlé de mon expérience :")
         q(2, "Il y a des aspects de mon expérience que je lui ai volontairement cachés :")
         q(3, "Il y a des aspects de mon expérience que je ne lui dirai pas :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(4, "J'ai l'intention de lui cacher tout ou partie de mon expérience :")
         q(5, "Je lui ai parlé des images, des sons et/ou des odeurs liés à mon expérience :")
         q(6, "Je lui ai parlé des détails visuels de mon expérience :")
     })
 
-    form.part(() => {
+    form.section(() => {
         q(7, "Je lui ai parlé de mes pensées et de mes sentiments à propos de mon expérience :")
         q(8, "Je lui ai parlé des effets de mon expérience sur ma façon de penser et de me sentir :")
     })
 
-    form.part(() => {
+    form.section(() => {
         let types = Object.keys(PERSON_KINDS).map(kind => [kind, PERSON_KINDS[kind].text])
 
         form.enumRadio("sphere", "Dans quelle sphère de votre vie se situe la personne à laquelle vous pensez ?", types)

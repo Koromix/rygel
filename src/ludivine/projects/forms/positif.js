@@ -8,7 +8,7 @@ function build(form, meta, since = 'le recueil précédent') {
 
     form.intro = ''
 
-    form.part(() => {
+    form.section(() => {
         let domaines = [
             [1, "Personnel", html`évènements liés <b>à votre vie personnelle</b>`],
             [2, "Travail", html`évènements liés <b>à votre travail</b>`],

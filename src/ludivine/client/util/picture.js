@@ -3,7 +3,7 @@
 
 import { render, html, svg, live } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from 'lib/web/base/base.js';
-import * as UI from 'lib/web/base/ui.js';
+import * as UI from 'lib/web/ui/ui.js';
 import { loadImage } from '../core/misc.js';
 import { ColorPicker } from './color.js';
 

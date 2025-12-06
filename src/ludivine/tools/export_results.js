@@ -133,7 +133,7 @@ function loadResults(db, study, key) {
 }
 
 async function extractFields(build, data) {
-    let { FormState, FormModel, FormBuilder } = await importScript('../client/form/builder.js');
+    let { FormState, FormModel, FormBuilder } = await importScript('../../../lib/web/ui/form.js');
 
     let state = new FormState(data);
     let model = new FormModel;

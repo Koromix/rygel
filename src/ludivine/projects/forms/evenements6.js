@@ -10,7 +10,7 @@ function build(form, meta, since = 'le recueil précédent') {
         <p>Nous allons vous demander de penser à l’évènement que vous avez <b>décrit dans le bilan initial</b>.
     `
 
-    form.part(() => {
+    form.section(() => {
         form.binary("q1", "Est-ce que l’événement qui vous a conduit à participer à cette étude concerne une situation de longue durée ayant impliqué de la violence physique et/ou morale ?", {
             help: "Exemples : relation abusive, traite humaine, esclavagisme, secte, inceste, situations dans lesquels les secours ont mis plusieurs jours à intervenir, etc."
         })
@@ -37,7 +37,7 @@ function build(form, meta, since = 'le recueil précédent') {
         }
     })
 
-    form.part(() => {
+    form.section(() => {
         form.multiCheck("q3", `Depuis ${since}, avez-vous :`, [
             [1, "Poursuivi un suivi psychologique débuté avant le bilan initial ?"],
             [2, "Arrêté un suivi psychologique en cours ?"],
