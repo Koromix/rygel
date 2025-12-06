@@ -1500,9 +1500,6 @@ bool CheckContext::CheckBlob(const rk_ObjectID &oid, FunctionRef<bool(int, Span<
     if (!validate(type, blob))
         return false;
 
-    if (!repo->RetainBlob(oid))
-        return false;
-
     return true;
 }
 
@@ -1602,41 +1599,73 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
     if (!cache.PruneChecks(mark - CheckDelay))
         return false;
 
-    int64_t checked = cache.CountChecks();
-    if (checked < 0)
-        return false;
-
-    CheckContext check(repo, &cache, mark, checked);
     bool valid = true;
 
-    ProgressHandle progress("Snapshots");
-    progress.SetFmt((int64_t)0, (int64_t)snapshots.len, T("0 / %1 snapshots"), snapshots.len);
+    // Check snapshots and blob tress
+    {
+        int64_t checks = cache.CountChecks();
+        if (checks < 0)
+            return false;
 
-    for (Size i = 0; i < snapshots.len; i++) {
-        const rk_SnapshotInfo &snapshot = snapshots[i];
+        CheckContext check(repo, &cache, mark, checks);
 
-        bool ret = check.Check(snapshot.oid, [&](int type, Span<const uint8_t>) {
-            if (type != (int)BlobType::Snapshot1 &&
-                    type != (int)BlobType::Snapshot2 &&
-                    type != (int)BlobType::Snapshot3 &&
-                    type != (int)BlobType::Snapshot4 &&
-                    type != (int)BlobType::Snapshot5 &&
-                    type != (int)BlobType::Snapshot) {
-                LogError("Blob '%1' is not a Snapshot", snapshot.oid);
-                return false;
+        ProgressHandle progress("Snapshots");
+        progress.SetFmt((int64_t)0, (int64_t)snapshots.len, T("0 / %1 snapshots"), snapshots.len);
+
+        for (Size i = 0; i < snapshots.len; i++) {
+            const rk_SnapshotInfo &snapshot = snapshots[i];
+
+            bool ret = check.Check(snapshot.oid, [&](int type, Span<const uint8_t>) {
+                if (type != (int)BlobType::Snapshot1 &&
+                        type != (int)BlobType::Snapshot2 &&
+                        type != (int)BlobType::Snapshot3 &&
+                        type != (int)BlobType::Snapshot4 &&
+                        type != (int)BlobType::Snapshot5 &&
+                        type != (int)BlobType::Snapshot) {
+                    LogError("Blob '%1' is not a Snapshot", snapshot.oid);
+                    return false;
+                }
+
+                return true;
+            });
+
+            if (!ret) {
+                if (out_errors) {
+                    out_errors->Append(i);
+                }
+                valid = false;
             }
+
+            progress.SetFmt(i + 1, snapshots.len, T("%1 / %2 snapshots"), i + 1, snapshots.len);
+        }
+    }
+
+    // Retain objects
+    if (repo->CanRetain()) {
+        int64_t checks = cache.CountChecks();
+        if (checks < 0)
+            return false;
+
+        ProgressHandle progress("Retains");
+        progress.SetFmt((int64_t)0, checks, T("0 / %1 blobs"), checks);
+
+        Async async(repo->GetAsync());
+        std::atomic_int64_t retains = 0;
+
+        const auto retain = [&](const rk_ObjectID &oid) {
+            if (!repo->RetainBlob(oid))
+                return false;
+
+            int64_t value = retains.fetch_add(1, std::memory_order_relaxed) + 1;
+            progress.SetFmt(value, checks, T("%1 / %2 blobs"), value, checks);
 
             return true;
-        });
+        };
+        if (!cache.ListChecks(retain))
+            return false;
 
-        if (!ret) {
-            if (out_errors) {
-                out_errors->Append(i);
-            }
-            valid = false;
-        }
-
-        progress.SetFmt(i + 1, snapshots.len, T("%1 / %2 snapshots"), i + 1, snapshots.len);
+        if (!async.Sync())
+            return false;
     }
 
     if (!cache.Close())

@@ -65,6 +65,7 @@ public:
 
     bool PruneChecks(int64_t from);
     int64_t CountChecks();
+    bool ListChecks(FunctionRef<bool(const rk_ObjectID &)> func);
 
     StatResult TestBlob(const rk_ObjectID &oid, int64_t *out_size = nullptr);
     bool HasCheck(const rk_ObjectID &oid, bool *out_valid = nullptr);

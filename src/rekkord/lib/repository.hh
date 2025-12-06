@@ -124,6 +124,7 @@ public:
     const char *GetRole() const { return keyset ? rk_KeyTypeNames[(int)keyset->type] : "Secure"; }
     unsigned int GetModes() const { return keyset ? keyset->modes : 0; }
     bool HasMode(rk_AccessMode mode) const { return keyset ? keyset->HasMode(mode) : false; }
+    bool CanRetain() const { return retain; }
 
     void MakeID(Span<uint8_t> out_id) const;
     void MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const;

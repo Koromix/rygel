@@ -266,7 +266,7 @@ int64_t rk_Cache::CountChecks()
     K_ASSERT(repo);
 
     sq_Statement stmt;
-    if (!main.Prepare(R"(SELECT COUNT(oid) FROM checks)", &stmt))
+    if (!main.Prepare(R"(SELECT COUNT(oid) FROM checks WHERE valid = 1)", &stmt))
         return -1;
     if (!stmt.Step()) {
         K_ASSERT(!stmt.IsValid());
@@ -275,6 +275,37 @@ int64_t rk_Cache::CountChecks()
 
     int64_t checked = sqlite3_column_int64(stmt, 1);
     return checked;
+}
+
+bool rk_Cache::ListChecks(FunctionRef<bool(const rk_ObjectID &)> func)
+{
+    K_ASSERT(repo);
+
+    sq_Statement stmt;
+    if (!main.Prepare(R"(SELECT oid FROM checks WHERE valid = 1)", &stmt))
+        return -1;
+
+    while (stmt.Step()) {
+        if (sqlite3_column_bytes(stmt, 0) != K_SIZE(rk_ObjectID)) [[unlikely]] {
+            LogWarning("Invalid cache OID found in list of checks");
+            continue;
+        }
+
+        rk_ObjectID oid;
+        MemCpy(&oid, sqlite3_column_blob(stmt, 0), K_SIZE(rk_ObjectID));
+
+        if (!oid.IsValid()) [[unlikely]] {
+            LogWarning("Invalid cache OID found in list of checks");
+            continue;
+        }
+
+        if (!func(oid))
+            return false;
+    }
+    if (!stmt.IsValid())
+        return false;
+
+    return true;
 }
 
 StatResult rk_Cache::TestBlob(const rk_ObjectID &oid, int64_t *out_size)
