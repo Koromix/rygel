@@ -6,6 +6,13 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.93
+
+*Released on 2025-12-06*
+
+- Retain objects in separate phase during repository scan
+- Fix invalid blob count when restarting scan
+
 ### Rekkord 0.92
 
 *Released on 2025-11-25*
