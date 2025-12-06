@@ -1642,26 +1642,31 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
 
     // Retain objects
     if (repo->CanRetain()) {
-        int64_t checks = cache.CountChecks();
+        int64_t retains;
+        int64_t checks = cache.CountChecks(&retains);
         if (checks < 0)
             return false;
 
         ProgressHandle progress("Retains");
-        progress.SetFmt((int64_t)0, checks, T("0 / %1 retains"), checks);
+        progress.SetFmt(retains, checks, T("%1 / %2 retains"), retains, checks);
 
         Async async(repo->GetAsync());
-        std::atomic_int64_t retains = 0;
+        std::atomic_int64_t retained_blobs = retains;
 
-        const auto retain = [&](const rk_ObjectID &oid) {
-            async.Run([&, oid]() {
-                if (!repo->RetainBlob(oid))
-                    return false;
+        const auto retain = [&](const rk_ObjectID &oid, bool retained) {
+            if (!retained) {
+                async.Run([&, oid]() {
+                    if (!repo->RetainBlob(oid))
+                        return false;
 
-                int64_t value = retains.fetch_add(1, std::memory_order_relaxed) + 1;
-                progress.SetFmt(value, checks, T("%1 / %2 retains"), value, checks);
+                    cache.PutRetain(oid);
 
-                return true;
-            });
+                    int64_t value = retained_blobs.fetch_add(1, std::memory_order_relaxed) + 1;
+                    progress.SetFmt(value, checks, T("%1 / %2 retains"), value, checks);
+
+                    return true;
+                });
+            }
 
             return true;
         };

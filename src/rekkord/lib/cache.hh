@@ -39,6 +39,7 @@ class rk_Cache {
     struct PendingSet {
         HeapArray<PendingBlob> blobs;
         HeapArray<PendingCheck> checks;
+        HeapArray<rk_ObjectID> retains;
         HeapArray<PendingStat> stats;
 
         BlockAllocator str_alloc;
@@ -64,8 +65,8 @@ public:
     bool Reset(bool list);
 
     bool PruneChecks(int64_t from);
-    int64_t CountChecks();
-    bool ListChecks(FunctionRef<bool(const rk_ObjectID &)> func);
+    int64_t CountChecks(int64_t *out_retains = nullptr);
+    bool ListChecks(FunctionRef<bool(const rk_ObjectID &, bool)> func);
 
     StatResult TestBlob(const rk_ObjectID &oid, int64_t *out_size = nullptr);
     bool HasCheck(const rk_ObjectID &oid, bool *out_valid = nullptr);
@@ -73,6 +74,7 @@ public:
 
     void PutBlob(const rk_ObjectID &oid, int64_t size);
     void PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid);
+    void PutRetain(const rk_ObjectID &oid);
     void PutStat(const char *path, const rk_CacheStat &stat);
 
 private:

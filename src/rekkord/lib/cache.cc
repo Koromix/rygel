@@ -8,7 +8,7 @@
 
 namespace K {
 
-static const int CacheVersion = 2;
+static const int CacheVersion = 3;
 static const int64_t CommitDelay = 5000;
 
 bool rk_Cache::Open(rk_Repository *repo, bool build)
@@ -107,9 +107,29 @@ bool rk_Cache::Open(rk_Repository *repo, bool build)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 2: {
+                    bool success = main.RunMany(R"(
+                        CREATE TABLE checks_NEW (
+                            oid BLOB NOT NULL,
+                            mark INTEGER NOT NULL,
+                            valid INTEGER CHECK (valid IN (0, 1)) NOT NULL,
+                            retained INTEGER CHECK (retained IN (0, 1)) NOT NULL
+                        );
+
+                        INSERT INTO checks_NEW (oid, mark, valid, retained)
+                            SELECT oid, mark, valid, 0 FROM checks;
+                        DROP TABLE checks;
+                        ALTER TABLE checks_NEW RENAME TO checks;
+
+                        CREATE UNIQUE INDEX checks_o ON checks (oid);
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 2);
+                static_assert(CacheVersion == 3);
             }
 
             if (!main.SetUserVersion(CacheVersion))
@@ -261,12 +281,12 @@ bool rk_Cache::PruneChecks(int64_t from)
     return success;
 }
 
-int64_t rk_Cache::CountChecks()
+int64_t rk_Cache::CountChecks(int64_t *out_retains)
 {
     K_ASSERT(repo);
 
     sq_Statement stmt;
-    if (!main.Prepare(R"(SELECT COUNT(oid) FROM checks WHERE valid = 1)", &stmt))
+    if (!main.Prepare(R"(SELECT COUNT(oid), SUM(retained) FROM checks WHERE valid = 1)", &stmt))
         return -1;
     if (!stmt.Step()) {
         K_ASSERT(!stmt.IsValid());
@@ -274,32 +294,41 @@ int64_t rk_Cache::CountChecks()
     }
 
     int64_t checked = sqlite3_column_int64(stmt, 0);
+    int64_t retains = sqlite3_column_int64(stmt, 1);
+
+    if (out_retains) {
+        *out_retains = retains;
+    }
     return checked;
 }
 
-bool rk_Cache::ListChecks(FunctionRef<bool(const rk_ObjectID &)> func)
+bool rk_Cache::ListChecks(FunctionRef<bool(const rk_ObjectID &, bool)> func)
 {
     K_ASSERT(repo);
 
     sq_Statement stmt;
-    if (!main.Prepare(R"(SELECT oid FROM checks WHERE valid = 1)", &stmt))
+    if (!main.Prepare(R"(SELECT oid, retained FROM checks WHERE valid = 1)", &stmt))
         return -1;
 
     while (stmt.Step()) {
-        if (sqlite3_column_bytes(stmt, 0) != K_SIZE(rk_ObjectID)) [[unlikely]] {
+        Span<const uint8_t> raw = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 0),
+                                           sqlite3_column_bytes(stmt, 0));
+        bool retained = sqlite3_column_int(stmt, 1);
+
+        if (raw.len != K_SIZE(rk_ObjectID)) [[unlikely]] {
             LogWarning("Invalid cache OID found in list of checks");
             continue;
         }
 
         rk_ObjectID oid;
-        MemCpy(&oid, sqlite3_column_blob(stmt, 0), K_SIZE(rk_ObjectID));
+        MemCpy(&oid, raw.ptr, K_SIZE(rk_ObjectID));
 
         if (!oid.IsValid()) [[unlikely]] {
             LogWarning("Invalid cache OID found in list of checks");
             continue;
         }
 
-        if (!func(oid))
+        if (!func(oid, retained))
             return false;
     }
     if (!stmt.IsValid())
@@ -408,6 +437,18 @@ void rk_Cache::PutCheck(const rk_ObjectID &oid, int64_t mark, bool valid)
     Commit(false);
 }
 
+void rk_Cache::PutRetain(const rk_ObjectID &oid)
+{
+    K_ASSERT(repo);
+
+    // Can't use lock_guard, see Commit()
+    put_mutex.lock();
+
+    pending.retains.Append(oid);
+
+    Commit(false);
+}
+
 void rk_Cache::PutStat(const char *path, const rk_CacheStat &st)
 {
     K_ASSERT(repo);
@@ -445,6 +486,7 @@ bool rk_Cache::Commit(bool force)
     K_DEFER {
         commit.blobs.RemoveFrom(0);
         commit.checks.RemoveFrom(0);
+        commit.retains.RemoveFrom(0);
         commit.stats.RemoveFrom(0);
         commit.str_alloc.Reset();
 
@@ -461,11 +503,17 @@ bool rk_Cache::Commit(bool force)
         }
 
         for (const PendingCheck &check: commit.checks) {
-            if (!write.Run(R"(INSERT INTO checks (oid, mark, valid)
-                              VALUES (?1, ?2, ?3)
+            if (!write.Run(R"(INSERT INTO checks (oid, mark, valid, retained)
+                              VALUES (?1, ?2, ?3, 0)
                               ON CONFLICT (oid) DO UPDATE SET mark = excluded.mark,
-                                                              valid = excluded.valid)",
+                                                              valid = excluded.valid,
+                                                              retained = excluded.retained)",
                            check.oid.Raw(), check.mark, 0 + check.valid))
+                return false;
+        }
+
+        for (const rk_ObjectID &oid: commit.retains) {
+            if (!write.Run("UPDATE checks SET retained = 1 WHERE oid = ?1", oid.Raw()))
                 return false;
         }
 
