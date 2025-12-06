@@ -273,7 +273,7 @@ int64_t rk_Cache::CountChecks()
         return -1;
     }
 
-    int64_t checked = sqlite3_column_int64(stmt, 1);
+    int64_t checked = sqlite3_column_int64(stmt, 0);
     return checked;
 }
 
