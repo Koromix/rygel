@@ -1653,19 +1653,22 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
         std::atomic_int64_t retains = 0;
 
         const auto retain = [&](const rk_ObjectID &oid) {
-            if (!repo->RetainBlob(oid))
-                return false;
+            async.Run([&, oid]() {
+                if (!repo->RetainBlob(oid))
+                    return false;
 
-            int64_t value = retains.fetch_add(1, std::memory_order_relaxed) + 1;
-            progress.SetFmt(value, checks, T("%1 / %2 blobs"), value, checks);
+                int64_t value = retains.fetch_add(1, std::memory_order_relaxed) + 1;
+                progress.SetFmt(value, checks, T("%1 / %2 retains"), value, checks);
+
+                return true;
+            });
 
             return true;
         };
         if (!cache.ListChecks(retain))
             return false;
 
-        if (!async.Sync())
-            return false;
+        valid = async.Sync();
     }
 
     if (!cache.Close())
