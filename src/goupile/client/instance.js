@@ -844,52 +844,6 @@ async function runExportDialog(e) {
     }
 }
 
-async function runExportListDialog(e) {
-    let downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
-
-    let stores = app.stores.map(store => store.key);
-    let template = app.exports;
-
-    downloads.reverse();
-
-    await UI.dialog(e, T.data_exports, {}, (d, resolve, reject) => {
-        d.output(html`
-            <table class="ui_table">
-                <colgroup>
-                    <col/>
-                    <col/>
-                    <col/>
-                    <col/>
-                </colgroup>
-
-                <thead>
-                    <tr>
-                        <th>${T.date}</th>
-                        <th>${T.threads}</th>
-                        <th>${T.automatic}</th>
-                        <th>${T.download}</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    ${downloads.map(download => html`
-                        <tr>
-                            <td>${(new Date(download.ctime)).toLocaleString()}</td>
-                            <td>${download.threads}</td>
-                            <td>${download.scheduled ? T.yes : T.no}</td>
-                            <td>
-                                ${download.threads ? html`<a @click=${UI.wrap(e => exportRecords(download.export, null, stores, template))}>${T.download}</a>` : ''}
-                                ${!download.threads ? '(' + T.not_available.toLowerCase() + ')' : ''}
-                            </td>
-                        </tr>
-                    `)}
-                    ${!downloads.length ? html`<tr><td colspan="4">${T.no_export}</td></tr>` : ''}
-                </tbody>
-            </table>
-        `);
-    });
-}
-
 function toggleTagFilter(tag) {
     if (tag == null) {
         data_tags = (data_tags == null) ? new Set : null;
