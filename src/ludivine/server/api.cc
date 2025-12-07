@@ -862,7 +862,7 @@ void HandleUpload(http_IO *io)
     {
         StreamWriter writer(fd, "<temp>");
         StreamReader reader;
-        if (!io->OpenForRead(Mebibytes(8), &reader))
+        if (!io->OpenForRead(Mebibytes(16), &reader))
             return;
 
         do {
