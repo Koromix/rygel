@@ -11,7 +11,7 @@ import { computeAge, dateToString, niceDate,
          EventProviders, createEvent, safeTag } from './core/misc.js';
 import { PictureCropper } from './util/picture.js';
 import { PROJECTS } from '../projects/projects.js';
-import { initSync, isSyncing, downloadVault, uploadVault, openVault } from './core/sync.js';
+import { initSync, isSyncing, downloadVault, openVault } from './core/sync.js';
 import { ProjectInfo, ProjectBuilder } from './core/project.js';
 import { ConsentModule } from './form/consent.js';
 import { FormModule } from './form/form.js';
@@ -338,10 +338,10 @@ async function open(obj) {
     }
 
     if (obj?.vid != null && obj?.vkey != null) {
-        await downloadVault(obj.vid);
-
+        let ref = await downloadVault(obj.vid);
         let vkey = Hex.toBytes(obj.vkey);
-        db = await openVault(obj.vid, vkey, DATA_LOCK);
+
+        db = await openVault(ref, vkey, DATA_LOCK);
     }
 
     session = obj;

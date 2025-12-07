@@ -3,12 +3,11 @@
 
 import { Util, Log, Net } from 'lib/web/base/base.js';
 import { Hex } from 'lib/web/base/mixer.js';
-import * as sqlite3 from 'lib/web/base/sqlite3.js';
+import * as sqlite3 from 'lib/web/sqlite/sqlite3.js';
 
 const DATABASE_VERSION = 6;
 
 let uploads = 0;
-let generations = new Map;
 
 let worker = null;
 let next_message = 0;
@@ -27,36 +26,44 @@ function isSyncing() {
 }
 
 async function downloadVault(vid) {
-    let generation = await callWorker('download', vid);
-
-    generations.set(vid, generation);
+    let ref = await callWorker('download', vid);
+    return ref;
 }
 
-async function uploadVault(vid) {
+async function uploadVault(ref) {
     try {
         uploads++;
-
-        let prev = generations.get(vid) ?? 0;
-        let generation = await callWorker('upload', vid, prev);
-
-        generations.set(vid, generation);
+        ref.generation = await callWorker('upload', ref);
     } finally {
         uploads--;
     }
 }
 
-async function openVault(vid, key, lock) {
-    let filename = 'ludivine/' + vid + '.db';
-
-    let url = BUNDLES['sqlite3-worker1-bundler-friendly.mjs'];
+async function openVault(ref, key, lock) {
+    let url = BUNDLES['sqlite3worker.js'];
     await sqlite3.init(url);
 
-    let db = await sqlite3.open(filename, {
-        vfs: 'multipleciphers-opfs',
-        lock: lock
-    });
+    let db = null;
 
-    db.changeHandler = () => uploadVault(vid);
+    switch (ref.type) {
+        case 'opfs': {
+            db = await sqlite3.open(ref.filename, {
+                vfs: 'multipleciphers-opfs',
+                lock: lock
+            });
+        } break;
+
+        case 'sab': {
+            await sqlite3.sabfs(ref.filename, ref.sab);
+
+            db = await sqlite3.open(ref.filename, {
+                vfs: 'multipleciphers-sabfs',
+                lock: lock
+            });
+        } break;
+    }
+
+    db.changeHandler = () => uploadVault(ref);
 
     let sql = `
         PRAGMA cipher = 'sqlcipher';
@@ -253,6 +260,5 @@ export {
     isSyncing,
 
     downloadVault,
-    uploadVault,
     openVault
 }

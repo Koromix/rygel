@@ -3,6 +3,8 @@
 
 import { Util, Log, Net, HttpError } from 'lib/web/base/base.js';
 
+const MAX_SABFS_SIZE = 64 * 1024 * 1024;
+
 let upload_controller = null;
 
 onmessage = handleMessage;
@@ -41,37 +43,80 @@ async function downloadVault(vid) {
         throw new HttpError(response.status, msg);
     }
 
-    let filename = 'ludivine/' + vid + '.db';
+    let header = response.headers.get('X-Vault-Generation');
+    let generation = parseInt(header, 10);
     let buf = await response.arrayBuffer();
 
-    let root = await navigator.storage.getDirectory();
-    let handle = await findFile(root, filename, true);
-    let sync = await handle.createSyncAccessHandle();
-
-    sync.write(buf);
-    sync.truncate(buf.byteLength);
-    sync.close();
-
-    let header = response.headers.get('X-Vault-Generation');
-    let generation = parseInt(header, 10) || null;
-
-    return generation;
-}
-
-async function uploadVault(vid, prev) {
     let filename = 'ludivine/' + vid + '.db';
-
-    let root = await navigator.storage.getDirectory();
-    let handle = await findFile(root, filename);
-    let sync = await handle.createSyncAccessHandle({ mode: 'read-only' });
-
-    let body = null;
+    let root = null;
 
     try {
-        body = new ArrayBuffer(sync.getSize());
-        sync.read(body, { at: 0 });
-    } finally {
+        root = await navigator.storage.getDirectory();
+    } catch (err) {
+        console.error(err);
+    }
+
+    if (root != null) {
+        let handle = await findFile(root, filename, true);
+        let sync = await handle.createSyncAccessHandle();
+
+        sync.write(buf);
+        sync.truncate(buf.byteLength);
         sync.close();
+
+        let ref = {
+            vid: vid,
+            type: 'opfs',
+            filename: filename,
+            generation: generation
+        };
+
+        return ref;
+    } else {
+        console.warn('OPFS not available, switching to SABFS');
+
+        let sab = new SharedArrayBuffer(buf.byteLength, { maxByteLength: MAX_SABFS_SIZE });
+
+        let dest = new Uint8Array(sab);
+        let src = new Uint8Array(buf);
+        dest.set(src);
+
+        let ref = {
+            vid: vid,
+            type: 'sab',
+            filename: filename,
+            generation: generation,
+            sab: sab
+        };
+
+        return ref;
+    }
+}
+
+async function uploadVault(ref) {
+    let body = null;
+
+    switch (ref.type) {
+        case 'opfs': {
+            let root = await navigator.storage.getDirectory();
+            let handle = await findFile(root, ref.filename);
+            let sync = await handle.createSyncAccessHandle({ mode: 'read-only' });
+
+            try {
+                body = new ArrayBuffer(sync.getSize());
+                sync.read(body, { at: 0 });
+            } finally {
+                sync.close();
+            }
+        } break;
+
+        case 'sab': {
+            body = new ArrayBuffer(ref.sab.byteLength);
+
+            let dest = new Uint8Array(body);
+            let src = new Uint8Array(ref.sab);
+            dest.set(src);
+        } break;
     }
 
     let controller = new AbortController;
@@ -83,8 +128,8 @@ async function uploadVault(vid, prev) {
     let response = await Net.fetch('/api/upload', {
         method: 'PUT',
         headers: {
-            'X-Vault-Id': vid,
-            'X-Vault-Generation': prev
+            'X-Vault-Id': ref.vid,
+            'X-Vault-Generation': ref.generation
         },
         body: body,
         signal: controller.signal
