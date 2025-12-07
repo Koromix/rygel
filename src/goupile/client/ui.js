@@ -318,7 +318,7 @@ function buildDialog(dialog, e, func) {
     });
     func(builder, dialog.resolve, dialog.reject);
     if (dialog.closeable)
-        builder.action(model.actions.length ? T.cancel : T.close, {}, () => dialog.reject(null));
+        builder.action(T.close, {}, () => dialog.reject(null));
 
     render(html`
         <div>
