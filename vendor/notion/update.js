@@ -34,10 +34,10 @@ async function run() {
         beard: listAssets('assets/beard'),
         eyes: listAssets('assets/eyes'),
         eyebrows: listAssets('assets/eyebrows'),
-        glasses: listAssets('assets/glasses'),
-        hair: listAssets('assets/hair'),
         nose: listAssets('assets/nose'),
         mouth: listAssets('assets/mouth'),
+        glasses: listAssets('assets/glasses'),
+        hair: listAssets('assets/hair'),
         accessories: listAssets('assets/accessories')
     };
     fs.writeFileSync('notion.json', JSON.stringify(assets, null, 4));
