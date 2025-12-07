@@ -28,9 +28,12 @@
         },
         {
             "namespace": "ludivine",
-            "sources": ["src/ludivine"],
+            "sources": [
+                "src/ludivine",
+                "lib/web/ui"
+            ],
             "path": "src/ludivine/i18n",
-            "keys": false,
+            "keys": true,
             "messages": true
         },
         {

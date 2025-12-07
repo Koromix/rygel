@@ -21,15 +21,17 @@ Object.assign(T, {
     upload_image: 'Upload image',
     zoom: 'Zoom',
 
-    face: 'Face',
-    hair: 'Hair',
-    eyes: 'Eyes',
-    eyebrows: 'Eyebrows',
-    glasses: 'Glasses',
-    nose: 'Nose',
-    mouth: 'Mouth',
-    beard: 'Beard',
-    accessories: 'Accessories'
+    notion_categories: {
+        face: 'Face',
+        hair: 'Hair',
+        eyes: 'Eyes',
+        eyebrows: 'Eyebrows',
+        glasses: 'Glasses',
+        nose: 'Nose',
+        mouth: 'Mouth',
+        beard: 'Beard',
+        accessories: 'Accessories'
+    }
 });
 
 const NOTION_DEFAULTS = {
@@ -191,7 +193,7 @@ function PictureCropper(title, size) {
 
                             return html`
                                 <div class="widget">
-                                    <label>${T[cat]}</label>
+                                    <label>${T.notion_categories[cat]}</label>
                                     <div class="not_palette">
                                         ${palette.map(color => html`
                                             <button type="button" class=${color == notion.colors[cat] ? 'active' : ''} @click=${UI.wrap(e => switchColor(cat, color))}>
@@ -212,7 +214,7 @@ function PictureCropper(title, size) {
                 <div class="not_categories">
                     ${Object.keys(notion.parts).map(cat =>
                         html`<button type="button" class=${'small' + (notion_cat == cat ? ' active' : '')}
-                                     @click=${UI.wrap(e => switchCategory(cat))}>${T[cat]}</button>`)}
+                                     @click=${UI.wrap(e => switchCategory(cat))}>${T.notion_categories[cat]}</button>`)}
                 </div>
 
                 <div class="not_parts">

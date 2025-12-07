@@ -21,6 +21,9 @@ import { deploy } from 'lib/web/flat/static.js';
 import { ASSETS } from '../assets/assets.js';
 import * as app from './app.js';
 
+import en from '../i18n/en.json';
+import fr from '../i18n/fr.json';
+
 import '../assets/client.css';
 
 const CHANNEL_NAME = 'ludivine';
@@ -28,55 +31,6 @@ const CHANNEL_NAME = 'ludivine';
 const DATA_LOCK = 'data';
 const RUN_LOCK = 'run';
 const REMIND_LOCK = 'remind';
-
-Object.assign(T, {
-    cancel: 'Annuler',
-    confirm: 'Confirmer',
-    confirm_not_reversible: 'Attention, cette action ne peut pas être annulée',
-    error_has_occured: 'Une erreur est survenue',
-    filter: 'Filter',
-
-    browse_for_image: 'Parcourir',
-    clear_picture: 'Effacer l\'image',
-    save: 'Enregistrer',
-    drag_paste_or_browse_image: 'Déposez une image, copier-collez la ou utilisez le bouton « Parcourir »',
-    upload_image: 'Choisir une image',
-    zoom: 'Zoom',
-
-    face: 'Visage',
-    hair: 'Cheveux',
-    eyes: 'Yeux',
-    eyebrows: 'Sourcils',
-    glasses: 'Lunettes',
-    nose: 'Nez',
-    mouth: 'Bouche',
-    beard: 'Barbe',
-    accessories: 'Accessoires',
-
-    days: {
-        1: 'Lundi',
-        2: 'Mardi',
-        3: 'Mercredi',
-        4: 'Jeudi',
-        5: 'Vendredi',
-        6: 'Samedi',
-        7: 'Dimanche'
-    },
-    months: {
-        1: 'Janvier',
-        2: 'Février',
-        3: 'Mars',
-        4: 'Avril',
-        5: 'Mai',
-        6: 'Juin',
-        7: 'Juillet',
-        8: 'Août',
-        9: 'Septembre',
-        10: 'Octobre',
-        11: 'Novembre',
-        12: 'Décembre'
-    }
-});
 
 let DiaryModule = null;
 
@@ -122,6 +76,8 @@ let ctx_key = null;
 // ------------------------------------------------------------------------
 
 async function start() {
+    Util.initLocales({ fr: fr }, 'fr', 'fr');
+
     UI.init(run, renderApp);
     initSync();
 

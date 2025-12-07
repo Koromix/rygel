@@ -44,7 +44,7 @@ async function downloadVault(vid) {
     }
 
     let header = response.headers.get('X-Vault-Generation');
-    let generation = parseInt(header, 10);
+    let generation = header ? parseInt(header, 10) : 0;
     let buf = await response.arrayBuffer();
 
     let filename = 'ludivine/' + vid + '.db';

@@ -1,4 +1,49 @@
 {
-    "keys": {},
+    "keys": {
+        "browse_for_image": "Browse for image",
+        "cancel": "Cancel",
+        "clear_picture": "Clear picture",
+        "days": {
+            "1": "Monday",
+            "2": "Tuesday",
+            "3": "Wednesday",
+            "4": "Thursday",
+            "5": "Friday",
+            "6": "Saturday",
+            "7": "Sunday"
+        },
+        "drag_paste_or_browse_image": "Drop an image, paste it or use the 'Browse' button",
+        "missing_value_choice": "-- Value not provided --",
+        "months": {
+            "1": "January",
+            "2": "February",
+            "3": "Match",
+            "4": "April",
+            "5": "May",
+            "6": "June",
+            "7": "July",
+            "8": "August",
+            "9": "September",
+            "10": "October",
+            "11": "November",
+            "12": "December"
+        },
+        "no": "No",
+        "notion_categories": {
+            "face": "Face",
+            "hair": "Hair",
+            "eyes": "Eyes",
+            "eyebrows": "Eyebrows",
+            "glasses": "Glasses",
+            "nose": "Nose",
+            "mouth": "Mouth",
+            "beard": "Beard",
+            "accessories": "Accessories"
+        },
+        "save": "Save",
+        "upload_image": "Upload image",
+        "yes": "Yes",
+        "zoom": "Zoom"
+    },
     "messages": {}
 }

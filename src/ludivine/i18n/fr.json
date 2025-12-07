@@ -1,5 +1,50 @@
 {
-    "keys": {},
+    "keys": {
+        "browse_for_image": "Parcourir",
+        "cancel": "Annuler",
+        "clear_picture": "Effacer l'image",
+        "days": {
+            "1": "Lundi",
+            "2": "Mardi",
+            "3": "Mercredi",
+            "4": "Jeudi",
+            "5": "Vendredi",
+            "6": "Samedi",
+            "7": "Dimanche"
+        },
+        "drag_paste_or_browse_image": "Déposez une image, copier-collez la ou utilisez le bouton « Parcourir »",
+        "missing_value_choice": "-- Valeur non renseignée --",
+        "months": {
+            "1": "Janvier",
+            "2": "Février",
+            "3": "Mars",
+            "4": "Avril",
+            "5": "Mai",
+            "6": "Juin",
+            "7": "Juillet",
+            "8": "Août",
+            "9": "Septembre",
+            "10": "Octobre",
+            "11": "Novembre",
+            "12": "Décembre"
+        },
+        "no": "Non",
+        "notion_categories": {
+            "face": "Visage",
+            "hair": "Cheveux",
+            "eyes": "Yeux",
+            "eyebrows": "Sourcils",
+            "glasses": "Lunettes",
+            "nose": "Nez",
+            "mouth": "Bouche",
+            "beard": "Barbe",
+            "accessories": "Accessoires"
+        },
+        "save": "Enregistrer",
+        "upload_image": "Choisir une image",
+        "yes": "Oui",
+        "zoom": "Zoom"
+    },
     "messages": {
         "Compiler: %1": "Compilateur : %1",
         "Database schema is too recent (%1, expected %2)": "Le schéma de la base de données est trop récent (%1, attendu %2)",
