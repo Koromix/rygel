@@ -2172,8 +2172,12 @@ static void HandleLock(http_IO *io, InstanceHolder *instance, bool enable)
         int64_t now = GetUnixTime();
 
         sq_Statement stmt;
-        if (!instance->db->Prepare("SELECT IFNULL(t.lock, -1) FROM rec_threads t WHERE tid = ?1",
-                                   &stmt, tid))
+        if (!instance->db->Prepare(R"(SELECT IFNULL(t.lock, -1),
+                                             IIF(c.userid IS NOT NULL, 1, 0) AS claim
+                                      FROM rec_threads t
+                                      LEFT JOIN ins_claims c ON (c.userid = ?1 AND c.tid = t.tid)
+                                      WHERE t.tid = ?2)",
+                                &stmt, -session->userid, tid))
             return false;
 
         if (!stmt.Step()) {
@@ -2184,16 +2188,20 @@ static void HandleLock(http_IO *io, InstanceHolder *instance, bool enable)
             return false;
         }
 
-        // Can we do it?
-        {
-            int64_t lock = sqlite3_column_int64(stmt, 0);
-            bool locked = (lock >= 0 && lock <= now);
+        int64_t lock = sqlite3_column_int64(stmt, 0);
+        bool locked = (lock >= 0 && lock <= now);
+        bool claimed = sqlite3_column_int(stmt, 1);
 
-            if (locked && !stamp->HasPermission(UserPermission::DataAudit)) {
-                LogError("User is not allowed to unlock records");
-                io->SendError(403);
-                return false;
-            }
+        // Can we do it?
+        if (!claimed && !stamp->HasPermission(UserPermission::DataRead)) {
+            LogError("You are not allowed to alter this record");
+            io->SendError(403);
+            return false;
+        }
+        if (locked && !stamp->HasPermission(UserPermission::DataAudit)) {
+            LogError("User is not allowed to unlock records");
+            io->SendError(403);
+            return false;
         }
 
         if (!instance->db->Run("UPDATE rec_threads SET lock = ?2 WHERE tid = ?1",
