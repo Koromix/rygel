@@ -34,7 +34,9 @@ async function uploadVault(ref) {
     try {
         uploads++;
 
-        ref.sab = await sqlite3.SABFS.shrink(ref.filename);
+        if (ref.type == 'sab')
+            ref.sab = await sqlite3.SABFS.shrink(ref.filename);
+
         ref.generation = await callWorker('upload', ref);
     } finally {
         uploads--;
