@@ -778,7 +778,7 @@ function makeFilterFunction(filter) {
     let func = value => {
         if (value != null) {
             if (typeof value !== 'string')
-                value = value.toLocaleString();
+                value = value.toString();
             return value.match(re);
         } else {
             return false;
