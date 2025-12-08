@@ -1185,6 +1185,7 @@ async function changePicture() {
             if (settings != null)
                 settings = JSON.stringify(settings);
             await db.exec('UPDATE meta SET picture = ?, avatar = ?', url, settings);
+            await db.exec('VACUUM');
 
             identity.picture = url;
 
