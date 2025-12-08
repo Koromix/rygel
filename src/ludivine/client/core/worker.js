@@ -3,6 +3,7 @@
 
 import { Util, Log, Net, HttpError } from 'lib/web/base/base.js';
 
+// Duplicated in sync.js :(
 const MAX_SABFS_SIZE = 64 * 1024 * 1024;
 
 let upload_controller = null;

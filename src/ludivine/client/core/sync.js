@@ -7,6 +7,9 @@ import * as sqlite3 from 'lib/web/sqlite/sqlite3.js';
 
 const DATABASE_VERSION = 6;
 
+// Duplicated in worker.js :(
+const MAX_SABFS_SIZE = 64 * 1024 * 1024;
+
 let uploads = 0;
 
 let worker = null;
@@ -58,6 +61,7 @@ async function openVault(ref, key, lock) {
         } break;
 
         case 'sab': {
+            await sqlite3.SABFS.init(MAX_SABFS_SIZE);
             await sqlite3.SABFS.write(ref.filename, ref.sab);
 
             db = await sqlite3.open(ref.filename, {
