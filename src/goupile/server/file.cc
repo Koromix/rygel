@@ -547,14 +547,11 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
     } else if (TestStr(url, "/manifest.json")) {
         url = "/files/manifest.json";
     } else if (!instance->settings.allow_guests && !instance->settings.use_offline) {
-        // The files must stay available if the user has access to this instance or a child one!
-        // Right now the code below does not do that... will fix, soon.
+        RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+        const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
-        // RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
-        // const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
-        //
-        // if (!stamp)
-        //     return false;
+        if (!stamp)
+            return false;
     }
     if (!StartsWith(url, "/files/"))
         return false;

@@ -113,7 +113,9 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
                                      (int)UserPermission::ExportCreate |
                                      (int)UserPermission::ExportDownload;
             } else if (userid > 0) {
-                uint32_t permissions;
+                uint32_t permissions = 0;
+
+                // Get permissions on given instance
                 {
                     sq_Statement stmt;
                     if (!gp_db.Prepare(R"(SELECT permissions FROM dom_permissions
@@ -122,12 +124,35 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
                     sqlite3_bind_int64(stmt, 1, userid);
                     sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
 
-                    if (!stmt.Step())
+                    if (stmt.Step()) {
+                        permissions = (uint32_t)sqlite3_column_int(stmt, 0);
+                    } else if (!stmt.IsValid()) {
                         return nullptr;
-
-                    permissions = (uint32_t)sqlite3_column_int(stmt, 0);
+                    }
                 }
 
+                // Maybe we have access to a slave instance?
+                // In which case we want to have a stamp (without any permission) if the
+                // user has access to at least one slave instance, so that he can access
+                // the project files through the master instance/URL.
+                if (!permissions) {
+                    if (!instance->slaves.len)
+                        return nullptr;
+
+                    sq_Statement stmt;
+                    if (!gp_db.Prepare(R"(SELECT p.permissions
+                                          FROM dom_instances i
+                                          INNER JOIN dom_permissions p ON (p.instance = i.instance)
+                                          WHERE p.userid = ?1 AND i.master = ?2)", &stmt))
+                        return nullptr;
+                    sqlite3_bind_int64(stmt, 1, userid);
+                    sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+
+                    if (!stmt.Step())
+                        return nullptr;
+                }
+
+                // Add permissions from master instance
                 if (instance->master != instance) {
                     InstanceHolder *master = instance->master;
 
