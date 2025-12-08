@@ -888,9 +888,9 @@ void HandleUpload(http_IO *io)
                            VALUES (?1, ?2, ?3, ?4))",
                         vault, generation, previous, size))
                 return false;
-            if (!db.Run(R"(UPDATE vaults SET generation = ?3, previous = ?4
-                           WHERE vid = uuid_blob(?1) AND generation = ?2)",
-                        vid, generation - 1, generation, previous))
+            if (!db.Run(R"(UPDATE vaults SET generation = ?2, previous = ?3
+                           WHERE vid = uuid_blob(?1))",
+                        vid, generation, previous))
                 return false;
 
             return true;
