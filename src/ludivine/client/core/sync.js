@@ -33,6 +33,8 @@ async function downloadVault(vid) {
 async function uploadVault(ref) {
     try {
         uploads++;
+
+        ref.sab = await sqlite3.SABFS.shrink(ref.filename);
         ref.generation = await callWorker('upload', ref);
     } finally {
         uploads--;
@@ -54,7 +56,7 @@ async function openVault(ref, key, lock) {
         } break;
 
         case 'sab': {
-            await sqlite3.sabfs(ref.filename, ref.sab);
+            await sqlite3.SABFS.write(ref.filename, ref.sab);
 
             db = await sqlite3.open(ref.filename, {
                 vfs: 'multipleciphers-sabfs',
