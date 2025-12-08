@@ -8,12 +8,6 @@ html {
     --check_color: #afc4a5;
 }
 
-#root {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    background: inherit;
-}
 main {
     display: flex;
     position: relative;

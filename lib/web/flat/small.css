@@ -16,6 +16,7 @@
 
 @media screen and (max-width: 960px) {
     html { scroll-padding-top: calc(var(--small_height) + 10px); }
+    #root { scroll-padding-top: calc(var(--small_height) + 10px); }
 
     form > .meta { padding: 8px 50px 20px 50px; }
 

@@ -35,6 +35,17 @@ body {
     flex-direction: column;
 }
 
+#root {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    background: inherit;
+    overflow-y: auto;
+
+    scroll-padding-top: calc(var(--top_height) + 10px);
+}
+body:has(> #root) { height: 100%; }
+
 canvas:focus {
     border: none;
     outline: none;

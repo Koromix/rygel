@@ -167,7 +167,7 @@ function FormModule(app, study, page) {
             let new_intro = (part.introIndex !== prev_part?.introIndex);
 
             let el = div.querySelector(new_intro ? '#intro' : '#part');
-            el?.scrollIntoView?.();
+            el?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
 
             rendered_idx = part_idx;
         }
