@@ -12,6 +12,9 @@ html {
     --done_color: #eca17f;
 }
 
+/* Needed because everything goes inside #root, which breaks the sticky header unless we do this */
+body { height: 100%; }
+
 #root {
     display: flex;
     flex: 1;
