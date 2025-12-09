@@ -301,6 +301,11 @@ function NetworkModule(app, study, page) {
             return subject;
         });
 
+        if (save_timer != null) {
+            clearTimeout(save_timer);
+            save_timer = null;
+        }
+
         await app.finalizeTest(page, data, results);
     }
 
