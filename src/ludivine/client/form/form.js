@@ -140,7 +140,7 @@ function FormModule(app, study, page) {
             ${progressBar(part_idx, end, 'parts')}
 
             <div id="intro">
-                ${wrapIntro(part.intro, part.introIndex)}
+                ${wrapIntro(part.intro, part.intro_idx)}
             </div>
 
             <div id="part" class="box">
@@ -164,7 +164,7 @@ function FormModule(app, study, page) {
 
         if (part_idx != rendered_idx) {
             let prev_part = model.parts[rendered_idx];
-            let new_intro = (part.introIndex !== prev_part?.introIndex);
+            let new_intro = (part.intro_idx !== prev_part?.intro_idx);
 
             let el = div.querySelector(new_intro ? '#intro' : '#part');
             el?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
