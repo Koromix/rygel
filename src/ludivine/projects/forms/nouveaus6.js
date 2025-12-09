@@ -56,7 +56,7 @@ function build(form, meta, since = 'le recueil précédent') {
 
             form.enumButtons("q10", "Combien de fois est-ce que cela s’est produit ?", [
                 [1, "Seulement une fois"],
-                [2, "Plus qu’une fois"]
+                [2, "Plus d’une fois"]
             ])
         })
 
