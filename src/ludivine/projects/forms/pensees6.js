@@ -146,75 +146,75 @@ function build(form) {
     `
 
     form.section(() => {
-        form.enumRadio("n1", "L’événement est arrivé à cause de la façon dont j’ai agi :", lik7)
-        form.enumRadio("n2", "Je n’ai pas confiance que je ferai ce qui est juste et bon :", lik7)
-        form.enumRadio("n3", "Je suis une personne faible :", lik7)
+        form.enumButtons("n1", "L’événement est arrivé à cause de la façon dont j’ai agi :", lik7)
+        form.enumButtons("n2", "Je n’ai pas confiance que je ferai ce qui est juste et bon :", lik7)
+        form.enumButtons("n3", "Je suis une personne faible :", lik7)
     })
 
     form.section(() => {
-        form.enumRadio("n4", "Je ne serai pas capable de contrôler ma colère et je ferai quelque chose de terrible :", lik7)
-        form.enumRadio("n5", "Je ne suis pas capable de gérer la moindre frustration :", lik7)
-        form.enumRadio("n6", "Auparavant j’étais une personne heureuse, mais maintenant je suis toujours malheureux :", lik7)
+        form.enumButtons("n4", "Je ne serai pas capable de contrôler ma colère et je ferai quelque chose de terrible :", lik7)
+        form.enumButtons("n5", "Je ne suis pas capable de gérer la moindre frustration :", lik7)
+        form.enumButtons("n6", "Auparavant j’étais une personne heureuse, mais maintenant je suis toujours malheureux :", lik7)
     })
 
     form.section(() => {
-        form.enumRadio("n7", "On ne peut pas faire confiance aux gens :", lik7)
-        form.enumRadio("n8", "Je dois toujours être sur mes gardes :", lik7)
-        form.enumRadio("n9", "Je me sens mort à l’intérieur :", lik7)
+        form.enumButtons("n7", "On ne peut pas faire confiance aux gens :", lik7)
+        form.enumButtons("n8", "Je dois toujours être sur mes gardes :", lik7)
+        form.enumButtons("n9", "Je me sens mort à l’intérieur :", lik7)
     })
 
     form.section(() => {
-        form.enumRadio("n10", "On ne peut jamais savoir qui nous fera du mal :", lik7)
-        form.enumRadio("n11", "Je dois être particulièrement vigilant parce qu’on ne sait jamais ce qui nous attend :", lik7)
-        form.enumRadio("n12", "Je suis inadéquat :", lik7)
+        form.enumButtons("n10", "On ne peut jamais savoir qui nous fera du mal :", lik7)
+        form.enumButtons("n11", "Je dois être particulièrement vigilant parce qu’on ne sait jamais ce qui nous attend :", lik7)
+        form.enumButtons("n12", "Je suis inadéquat :", lik7)
     })
 
     form.section(() => {
-        form.enumRadio("n13", "Je ne serai pas capable de contrôler mes émotions et quelque chose de terrible va arriver :", lik7)
-        form.enumRadio("n14", "Si je pense à l’événement, je ne serai pas capable de le gérer :", lik7)
-        form.enumRadio("n15", "L’événement m’est arrivé à cause du type de personne que je suis :", lik7)
+        form.enumButtons("n13", "Je ne serai pas capable de contrôler mes émotions et quelque chose de terrible va arriver :", lik7)
+        form.enumButtons("n14", "Si je pense à l’événement, je ne serai pas capable de le gérer :", lik7)
+        form.enumButtons("n15", "L’événement m’est arrivé à cause du type de personne que je suis :", lik7)
     })
 
     form.section(() => {
-        form.enumRadio("n16", "Mes réactions depuis l’événement indiquent que je suis en train de devenir fou :", lik7)
-        form.enumRadio("n17", "Je ne pourrai jamais ressentir des émotions normales de nouveau :", lik7)
-        form.enumRadio("n18", "Le monde est un endroit dangereux :", lik7)
+        form.enumButtons("n16", "Mes réactions depuis l’événement indiquent que je suis en train de devenir fou :", lik7)
+        form.enumButtons("n17", "Je ne pourrai jamais ressentir des émotions normales de nouveau :", lik7)
+        form.enumButtons("n18", "Le monde est un endroit dangereux :", lik7)
     })
 
     form.section(() => {
-        form.enumRadio("n19", "Quelqu’un d’autre aurait été capable d’empêcher l’événement d’arriver :", lik7)
-        form.enumRadio("n20", "J’ai changé pour le pire et je ne redeviendrai jamais normal :", lik7)
-        form.enumRadio("n21", "Je me sens comme un objet plutôt que comme une personne :", lik7)
+        form.enumButtons("n19", "Quelqu’un d’autre aurait été capable d’empêcher l’événement d’arriver :", lik7)
+        form.enumButtons("n20", "J’ai changé pour le pire et je ne redeviendrai jamais normal :", lik7)
+        form.enumButtons("n21", "Je me sens comme un objet plutôt que comme une personne :", lik7)
     })
 
     form.section(() => {
-        form.enumRadio("n22", "Quelqu’un d’autre ne se serait pas mis dans cette situation :", lik7)
-        form.enumRadio("n23", "Je ne peux pas compter sur les autres :", lik7)
-        form.enumRadio("n24", "Je me sens isolé et mis à part des autres :", lik7)
+        form.enumButtons("n22", "Quelqu’un d’autre ne se serait pas mis dans cette situation :", lik7)
+        form.enumButtons("n23", "Je ne peux pas compter sur les autres :", lik7)
+        form.enumButtons("n24", "Je me sens isolé et mis à part des autres :", lik7)
     })
 
     form.section(() => {
-        form.enumRadio("n25", "Je n’ai pas d’avenir :", lik7)
-        form.enumRadio("n26", "Je ne peux pas empêcher que des mauvaises choses m’arrivent :", lik7)
-        form.enumRadio("n27", "Les gens ne sont pas ce qu’ils semblent être :", lik7)
+        form.enumButtons("n25", "Je n’ai pas d’avenir :", lik7)
+        form.enumButtons("n26", "Je ne peux pas empêcher que des mauvaises choses m’arrivent :", lik7)
+        form.enumButtons("n27", "Les gens ne sont pas ce qu’ils semblent être :", lik7)
     })
 
     form.section(() => {
-        form.enumRadio("n28", "Ma vie a été gâchée par l’événement :", lik7)
-        form.enumRadio("n29", "Il y a quelque chose qui ne va pas en moi :", lik7)
-        form.enumRadio("n30", "Mes réactions depuis l’événement prouvent que je n’ai pas la capacité d’y faire face :", lik7)
+        form.enumButtons("n28", "Ma vie a été gâchée par l’événement :", lik7)
+        form.enumButtons("n29", "Il y a quelque chose qui ne va pas en moi :", lik7)
+        form.enumButtons("n30", "Mes réactions depuis l’événement prouvent que je n’ai pas la capacité d’y faire face :", lik7)
     })
 
     form.section(() => {
-        form.enumRadio("n31", "Il y a quelque chose en moi qui a provoqué l’événement :", lik7)
-        form.enumRadio("n32", "Je ne serai pas capable de tolérer mes pensées à propos de l’événement et je vais m’effondrer :", lik7)
-        form.enumRadio("n33", "J’ai l’impression de ne plus me connaître :", lik7)
+        form.enumButtons("n31", "Il y a quelque chose en moi qui a provoqué l’événement :", lik7)
+        form.enumButtons("n32", "Je ne serai pas capable de tolérer mes pensées à propos de l’événement et je vais m’effondrer :", lik7)
+        form.enumButtons("n33", "J’ai l’impression de ne plus me connaître :", lik7)
     })
 
     form.section(() => {
-        form.enumRadio("n34", "On ne sait jamais quand quelque chose de terrible va arriver :", lik7)
-        form.enumRadio("n35", "Je ne peux pas me faire confiance :", lik7)
-        form.enumRadio("n36", "Plus rien de positif ne peut m’arriver :", lik7)
+        form.enumButtons("n34", "On ne sait jamais quand quelque chose de terrible va arriver :", lik7)
+        form.enumButtons("n35", "Je ne peux pas me faire confiance :", lik7)
+        form.enumButtons("n36", "Plus rien de positif ne peut m’arriver :", lik7)
     })
 }
 
