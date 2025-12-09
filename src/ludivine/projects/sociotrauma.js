@@ -215,7 +215,7 @@ function init(build, start, values) {
                 `
 
                 build.form('evenement', 'L’évènement qui vous a amené ici', (form, meta) => {
-                    evenements6(form, meta, `bilan initial du ${start.toLocaleString()}`)
+                    evenements6(form, meta, `le bilan initial du ${start.toLocaleString()}`)
                 }, options)
                 build.form('pensees', 'Pensées et ressentis', pensees6, options)
                 build.form('autres', 'Autres évènements de vie', (form, meta) => {
@@ -343,7 +343,7 @@ function init(build, start, values) {
                 }, options)
 
                 build.form('rds', 'Réactions des proches', (form, meta) => {
-                    rdss6(form, meta, `bilan initial du ${start.toLocaleString()}`)
+                    rdss6(form, meta, `le bilan initial du ${start.toLocaleString()}`)
                 }, options)
             });
         });
@@ -369,7 +369,7 @@ function init(build, start, values) {
                 `
 
                 build.form('evenement', 'L’évènement qui vous a amené ici', (form, meta) => {
-                    evenements6(form, meta, `suivi du ${options.schedule.toLocaleString()}`)
+                    evenements6(form, meta, `le suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
                 build.form('pensees', 'Pensées et ressentis', pensees6, options)
                 build.form('autres', 'Autres évènements de vie', (form, meta) => {
@@ -498,7 +498,7 @@ function init(build, start, values) {
                 }, options)
 
                 build.form('rds', 'Réactions des proches', (form, meta) => {
-                    rdss6(form, meta, `suivi du ${options.schedule.toLocaleString()}`)
+                    rdss6(form, meta, `le suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
             });
         });
@@ -524,7 +524,7 @@ function init(build, start, values) {
                 `
 
                 build.form('evenement', 'L’évènement qui vous a amené ici', (form, meta) => {
-                    evenements6(form, meta, `suivi du ${options.schedule.toLocaleString()}`)
+                    evenements6(form, meta, `le suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
                 build.form('pensees', 'Pensées et ressentis', pensees6, options)
                 build.form('autres', 'Autres évènements de vie', (form, meta) => {
@@ -654,7 +654,7 @@ function init(build, start, values) {
                 }, options)
 
                 build.form('rds', 'Réactions des proches', (form, meta) => {
-                    rdss6(form, meta, `suivi du ${options.schedule.toLocaleString()}`)
+                    rdss6(form, meta, `le suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
             });
         });
@@ -680,7 +680,7 @@ function init(build, start, values) {
                 `
 
                 build.form('evenement', 'L’évènement qui vous a amené ici', (form, meta) => {
-                    evenements6(form, meta, `suivi du ${options.schedule.toLocaleString()}`)
+                    evenements6(form, meta, `le suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
                 build.form('pensees', 'Pensées et ressentis', pensees6, options)
                 build.form('autres', 'Autres évènements de vie', (form, meta) => {
@@ -811,7 +811,7 @@ function init(build, start, values) {
                 }, options)
 
                 build.form('rds', 'Réactions des proches', (form, meta) => {
-                    rdss6(form, meta, `suivi du ${options.schedule.toLocaleString()}`)
+                    rdss6(form, meta, `le suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
             });
         });

@@ -83,7 +83,7 @@ function build(form, meta, since = 'le recueil précédent') {
     `
 
     form.section(() => {
-        form.binary("post1", "Depuis le bilan initial, avez-vous rencontré de nouvelles personnes faisant partie du domaine médical ?")
+        form.binary("post1", `Depuis ${since}, avez-vous rencontré de nouvelles personnes faisant partie du domaine médical ?`)
 
         if (values.post1 == 1) {
             form.slider("post1b", "Comment avez-vous perçu vos interactions avec ces nouvelles personnes ?", {
@@ -93,7 +93,7 @@ function build(form, meta, since = 'le recueil précédent') {
             })
         }
 
-        form.binary("post2", "Depuis le bilan initial, avez-vous rencontré de nouvelles personnes faisant partie du domaine judiciaire ?")
+        form.binary("post2", `Depuis ${since}, avez-vous rencontré de nouvelles personnes faisant partie du domaine judiciaire ?`)
 
         if (values.post2 == 1) {
             form.slider("post2b", "Comment avez-vous perçu vos interactions avec ces nouvelles personnes ?", {
@@ -103,7 +103,7 @@ function build(form, meta, since = 'le recueil précédent') {
             })
         }
 
-        form.binary("post3", "Depuis le bilan initial, avez-vous rencontré de nouvelles personnes faisant partie du domaine de l'aide psychologique ?")
+        form.binary("post3", `Depuis ${since}, avez-vous rencontré de nouvelles personnes faisant partie du domaine de l'aide psychologique ?`)
 
         if (values.post3 == 1) {
             form.slider("post3b", "Comment avez-vous perçu vos interactions avec ces nouvelles personnes ?", {
