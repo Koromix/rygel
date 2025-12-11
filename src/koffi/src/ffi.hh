@@ -251,7 +251,7 @@ struct InstanceMemory {
 
     uint16_t generation; // Can wrap without risk
 
-    std::atomic_bool busy;
+    bool busy;
     bool temporary;
     int depth;
 };
@@ -276,7 +276,7 @@ struct InstanceData {
 
     Napi::Symbol active_symbol;
 
-    std::mutex memories_mutex;
+    std::mutex mem_mutex;
     LocalArray<InstanceMemory *, 9> memories;
     int temporaries = 0;
 
@@ -343,6 +343,9 @@ struct SharedData {
 static_assert(MaxTrampolines <= INT16_MAX);
 
 extern SharedData shared;
+
+InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size);
+void ReleaseMemory(InstanceData *instance, InstanceMemory *mem);
 
 Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info);
 Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info);

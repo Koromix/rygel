@@ -70,15 +70,7 @@ void CallData::Dispose()
         }
     }
 
-    instance->temporaries -= mem->temporary;
-
-    if (!--mem->depth) {
-        mem->busy = false;
-
-        if (mem->temporary) {
-            delete mem;
-        }
-    }
+    ReleaseMemory(instance, mem);
 
     instance = nullptr;
 }

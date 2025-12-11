@@ -1391,9 +1391,9 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
     return type->defn.Value();
 }
 
-static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size)
+InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size)
 {
-    std::lock_guard<std::mutex> lock(instance->memories_mutex);
+    std::unique_lock<std::mutex> lock(instance->mem_mutex);
 
     for (Size i = 1; i < instance->memories.len; i++) {
         InstanceMemory *mem = instance->memories[i];
@@ -1406,7 +1406,7 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
 
     bool temporary = (instance->memories.len > instance->config.resident_async_pools);
 
-    if (temporary && instance->temporaries >= instance->config.max_temporaries) [[unlikely]]
+    if (temporary && instance->temporaries >= instance->config.max_temporaries)
         return nullptr;
 
     InstanceMemory *mem = new InstanceMemory();
@@ -1455,6 +1455,25 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
 
     mem_guard.Disable();
     return mem;
+}
+
+void ReleaseMemory(InstanceData *instance, InstanceMemory *mem)
+{
+    if (--mem->depth)
+        return;
+
+    // The first InstanceMemory is used for sync calls, no need to manage the async stuff
+    if (mem != instance->memories[0])
+        return;
+
+    std::lock_guard<std::mutex> lock(instance->mem_mutex);
+
+    if (mem->temporary) {
+        instance->temporaries--;
+        delete mem;
+    } else {
+        mem->busy = false;
+    }
 }
 
 static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native,
@@ -1858,7 +1877,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 
     if (!instance->memories.len) {
         AllocateMemory(instance, instance->config.sync_stack_size, instance->config.sync_heap_size);
-        K_ASSERT(instance->memories.len);
+        K_ASSERT(instance->memories.len == 1);
     }
 
     // Load shared library
