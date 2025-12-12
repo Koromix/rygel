@@ -1406,7 +1406,7 @@ InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size hea
 
     bool temporary = (instance->memories.len > instance->config.resident_async_pools);
 
-    if (temporary && instance->temporaries >= instance->config.max_temporaries)
+    if (temporary && instance->temporaries > instance->config.max_temporaries)
         return nullptr;
 
     InstanceMemory *mem = new InstanceMemory();
