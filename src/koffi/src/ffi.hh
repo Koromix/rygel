@@ -277,7 +277,6 @@ struct InstanceData {
     Napi::Symbol active_symbol;
 
     std::mutex mem_mutex;
-    std::condition_variable mem_cv;
     LocalArray<InstanceMemory *, 9> memories;
     int temporaries = 0;
 
@@ -305,7 +304,6 @@ struct InstanceData {
         Size async_heap_size = DefaultAsyncHeapSize;
         int resident_async_pools = DefaultResidentAsyncPools;
         int max_temporaries = DefaultMaxAsyncCalls - DefaultResidentAsyncPools;
-        bool queue_async_calls = true;
         Size max_type_size = DefaultMaxTypeSize;
     } config;
 

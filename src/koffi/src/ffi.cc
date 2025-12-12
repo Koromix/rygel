@@ -134,13 +134,6 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
             } else if (key == "max_async_calls") {
                 if (!ChangeAsyncLimit(key.c_str(), value, MaxAsyncCalls, &max_async_calls))
                     return env.Null();
-            } else if (key == "queue_async_calls") {
-                if (!value.IsBoolean()) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for '%2', expected boolean", GetValueType(instance, value), key.c_str());
-                    return env.Null();
-                }
-
-                new_config.queue_async_calls = value.As<Napi::Boolean>();
             } else if (key == "max_type_size") {
                 if (!ChangeSize(key.c_str(), value, 32, Mebibytes(512), &new_config.max_type_size))
                     return env.Null();
@@ -167,7 +160,6 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
     obj.Set("async_heap_size", instance->config.async_heap_size);
     obj.Set("resident_async_pools", instance->config.resident_async_pools);
     obj.Set("max_async_calls", instance->config.resident_async_pools + instance->config.max_temporaries);
-    obj.Set("queue_async_calls", instance->config.queue_async_calls);
     obj.Set("max_type_size", instance->config.max_type_size);
 
     return obj;
@@ -1401,7 +1393,7 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
 
 InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size)
 {
-    std::unique_lock<std::mutex> lock(instance->mem_mutex);
+    std::lock_guard<std::mutex> lock(instance->mem_mutex);
 
     for (Size i = 1; i < instance->memories.len; i++) {
         InstanceMemory *mem = instance->memories[i];
@@ -1414,14 +1406,8 @@ InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size hea
 
     bool temporary = (instance->memories.len > instance->config.resident_async_pools);
 
-    if (temporary && instance->temporaries >= instance->config.max_temporaries) {
-        if (!instance->config.queue_async_calls)
-            return nullptr;
-
-        do {
-            instance->mem_cv.wait(lock);
-        } while (instance->temporaries >= instance->config.max_temporaries);
-    }
+    if (temporary && instance->temporaries >= instance->config.max_temporaries)
+        return nullptr;
 
     InstanceMemory *mem = new InstanceMemory();
     K_DEFER_N(mem_guard) { delete mem; };
@@ -1488,8 +1474,6 @@ void ReleaseMemory(InstanceData *instance, InstanceMemory *mem)
     } else {
         mem->busy = false;
     }
-
-    instance->mem_cv.notify_one();
 }
 
 static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native,
