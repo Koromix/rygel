@@ -56,6 +56,8 @@ private:
     http_Socket *InitSocket(SOCKET sock, int64_t start, struct sockaddr *sa);
     void ParkSocket(http_Socket *socket);
 
+    void StopWS();
+
     friend class http_Daemon;
 };
 
@@ -281,15 +283,24 @@ bool http_Dispatcher::Run()
 
     // Delete remaining clients when function exits
     K_DEFER {
+        StopWS();
+
         if (!async.Wait(100)) {
             LogInfo("Waiting up to %1 sec before shutting down clients...", (double)daemon->stop_timeout / 1000);
 
-            if (!async.Wait(daemon->stop_timeout)) {
-                for (http_Socket *socket: sockets) {
-                    shutdown(socket->sock, SD_BOTH);
-                }
-                async.Sync();
+            int64_t start = GetMonotonicTime();
+
+            do {
+                StopWS();
+
+                if (async.Wait(100))
+                    break;
+            } while (GetMonotonicTime() - start < daemon->stop_timeout);
+
+            for (http_Socket *socket: sockets) {
+                shutdown(socket->sock, SD_BOTH);
             }
+            async.Sync();
         }
 
         for (http_Socket *socket: sockets) {
@@ -611,6 +622,16 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
         offset += send;
         remain -= send;
+    }
+}
+
+void http_Dispatcher::StopWS()
+{
+    for (http_Socket *socket: sockets) {
+        // Slight data race but it is harmless given the context
+        if (socket->client.ws_opcode) {
+            shutdown(socket->sock, SD_BOTH);
+        }
     }
 }
 

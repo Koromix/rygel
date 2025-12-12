@@ -58,6 +58,8 @@ private:
     bool AddEpollDescriptor(int fd, uint32_t events, void *ptr);
     void DeleteEpollDescriptor(int fd);
 
+    void StopWS();
+
     friend class http_Daemon;
 };
 
@@ -320,15 +322,24 @@ bool http_Dispatcher::Run()
 
     // Delete remaining clients when function exits
     K_DEFER {
+        StopWS();
+
         if (!async.Wait(100)) {
             LogInfo("Waiting up to %1 sec before shutting down clients...", (double)daemon->stop_timeout / 1000);
 
-            if (!async.Wait(daemon->stop_timeout)) {
-                for (http_Socket *socket: sockets) {
-                    shutdown(socket->sock, SHUT_RDWR);
-                }
-                async.Sync();
+            int64_t start = GetMonotonicTime();
+
+            do {
+                StopWS();
+
+                if (async.Wait(100))
+                    break;
+            } while (GetMonotonicTime() - start < daemon->stop_timeout);
+
+            for (http_Socket *socket: sockets) {
+                shutdown(socket->sock, SHUT_RDWR);
             }
+            async.Sync();
         }
 
         for (http_Socket *socket: sockets) {
@@ -559,6 +570,16 @@ bool http_Dispatcher::AddEpollDescriptor(int fd, uint32_t events, void *ptr)
 void http_Dispatcher::DeleteEpollDescriptor(int fd)
 {
     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
+}
+
+void http_Dispatcher::StopWS()
+{
+    for (http_Socket *socket: sockets) {
+        // Slight data race but it is harmless given the context
+        if (socket->client.ws_opcode) {
+            shutdown(socket->sock, SHUT_RDWR);
+        }
+    }
 }
 
 }

@@ -1391,7 +1391,12 @@ bool http_IO::Rearm(int64_t now)
         incoming.buf.len -= incoming.pos;
     } else {
         timeout_at = now + 5000;
-        incoming.buf.len = 0;
+
+        if (incoming.buf.capacity < Kibibytes(8)) {
+            incoming.buf.len = 0;
+        } else {
+            incoming.buf.Clear();
+        }
     }
 
     incoming.pos = 0;
@@ -1410,6 +1415,8 @@ bool http_IO::Rearm(int64_t now)
     response.headers.RemoveFrom(0);
     response.started = false;
     last_err = nullptr;
+
+    ws_opcode = 0;
 
     if (keepalive) {
         allocator.Reset();

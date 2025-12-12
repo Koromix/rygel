@@ -186,6 +186,10 @@ enum class http_CookieFlag {
     Secure = 1 << 1
 };
 
+enum class http_WebSocketFlag {
+    Text = 1 << 0
+};
+
 class http_IO {
     K_DELETE_COPY(http_IO)
 
@@ -217,6 +221,8 @@ class http_IO {
         int64_t expected = 0;
         int64_t sent = 0;
     } response;
+
+    int ws_opcode = 0;
 
     BlockAllocator allocator { Kibibytes(8) };
 
@@ -258,6 +264,11 @@ public:
     bool HasResponded() const { return response.started; }
     const char *LastError() const { return last_err; }
 
+    bool IsWS() const;
+    bool UpgradeToWS(unsigned int flags);
+    void OpenForReadWS(StreamReader *out_st);
+    bool OpenForWriteWS(StreamWriter *out_st);
+
 private:
     bool Init(http_Socket *socket, int64_t start, struct sockaddr *sa);
 
@@ -267,6 +278,9 @@ private:
     Size ReadDirect(Span<uint8_t> buf);
     bool WriteDirect(Span<const uint8_t> buf);
     bool WriteChunked(Span<const uint8_t> buf);
+
+    Size ReadWS(Span<uint8_t> out_buf);
+    bool WriteWS(Span<const uint8_t> buf);
 
     // Returns true if connection is Keep-Alive and still within limits
     bool Rearm(int64_t now);
