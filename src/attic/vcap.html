@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>VCAP test</title>
+        <style>
+            html { height: 100%; }
+
+            body {
+                display: flex;
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                font-family: sans-serif;
+                font-size: 18px;
+                gap: 1em;
+            }
+
+            button {
+                border-radius: 3px;
+                background: #262626;
+                border: 1px solid #444;
+                padding: 0.5em 1em;
+                color: white;
+                cursor: pointer;
+            }
+            button:disabled {
+                opacity: 0.5;
+                cursor: default;
+            }
+
+            #log {
+                border: 1px solid #ccc;
+                width: 400px;
+                height: 150px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="controls">
+            <button id="record" onclick="record()">Record</button>
+            <button id="stop" onclick="stop()" disabled>Stop</button>
+        </div>
+        <textarea id="log" readonly></textarea>
+
+        <script>
+            const MIMETYPE = 'video/webm; codecs="vp8, opus"';
+
+            let ws = null;
+            let stream = null;
+            let recorder = null;
+
+            let log = document.querySelector('#log');
+
+            async function record() {
+                if (stream != null)
+                    throw new Error('Recording in progress');
+
+                document.querySelector('#record').disabled = true;
+                log.value = '';
+
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    recorder = new MediaRecorder(stream, { type: MIMETYPE });
+
+                    recorder.ondataavailable = (e) => {
+                        if (typeof e.data === 'undefined')
+                            return;
+                        if (e.data.size === 0)
+                            return;
+
+                        ws.send(e.data);
+                    };
+
+                    ws = await new Promise((resolve, reject) => {
+                        let ws = new WebSocket('/save');
+
+                        ws.addEventListener('open', () => resolve(ws));
+                        ws.addEventListener('error', e => reject('Failed WebSocket connection'));
+                    });
+
+                    ws.binaryType = 'arraybuffer';
+                    ws.onmessage = async e => {
+                        let buf = e.data;
+                        let str = (new TextDecoder).decode(buf);
+
+                        log.value += str + '\n';
+                    };
+
+                    recorder.start(3000);
+                } catch (err) {
+                    log.value += `[Error] ${err.message}\n`;
+                    throw err;
+                }
+
+                document.querySelector('#stop').disabled = false;
+            }
+
+            async function stop() {
+                document.querySelector('#stop').disabled = true;
+
+                if (recorder != null) {
+                    recorder.stop();
+                    await new Promise((resolve, reject) => { recorder.onstop = () => resolve(); });
+
+                    recorder = null;
+                }
+
+                if (stream != null) {
+                    for (let track of stream.getTracks())
+                        track.stop();
+
+                    stream = null;
+                }
+
+                if (ws != null) {
+                    ws.close();
+                    log.value += 'Done!\n';
+                    ws = null;
+                }
+
+                document.querySelector('#record').disabled = false;
+            }
+        </script>
+    </body>
+</html>
