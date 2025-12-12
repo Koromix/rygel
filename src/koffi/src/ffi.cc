@@ -1393,6 +1393,8 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
 
 InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size)
 {
+    std::lock_guard<std::mutex> lock(instance->mem_mutex);
+
     for (Size i = 1; i < instance->memories.len; i++) {
         InstanceMemory *mem = instance->memories[i];
 
@@ -1459,6 +1461,12 @@ void ReleaseMemory(InstanceData *instance, InstanceMemory *mem)
 {
     if (--mem->depth)
         return;
+
+    // The first InstanceMemory is used for sync calls, no need to manage the async stuff
+    if (mem != instance->memories[0])
+        return;
+
+    std::lock_guard<std::mutex> lock(instance->mem_mutex);
 
     if (mem->temporary) {
         instance->temporaries--;

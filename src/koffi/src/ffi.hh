@@ -276,6 +276,7 @@ struct InstanceData {
 
     Napi::Symbol active_symbol;
 
+    std::mutex mem_mutex;
     LocalArray<InstanceMemory *, 17> memories;
     int temporaries = 0;
 
