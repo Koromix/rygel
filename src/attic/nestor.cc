@@ -952,6 +952,7 @@ Options:
             break;
         } else if (ret == WaitResult::Interrupt) {
             LogInfo("Process interrupted");
+            status = 1;
             break;
         }
     }
