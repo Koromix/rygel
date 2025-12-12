@@ -117,9 +117,9 @@ The same is true for asynchronous calls. When an asynchronous call is made, Koff
 > [!CAUTION]
 > The **memory usage can blow up easily** if you increase the size of async memory blocks and many async calls are running or queued at the same time !
 >
-> For example, with 4096 running/queued async calls, a stack size of 256 kiB and a heap size of 512 kiB, the memory usage will reach approximately _4096 * (256 + 512) kiB ≈ 3 GiB_ just for Koffi, even though most of it will be freed once the number of queue calls goes down.
+> For example, with 4096 running/queued async calls, a stack size of 256 kiB and a heap size of 512 kiB, the memory usage will reach approximately _4096 * (256 + 512) kiB ≈ 3 GiB_ just for Koffi, even though most of it will be freed once the number of queued calls goes down.
 
-Async calls run on workers threads, the number of which depends on the number of cores in your machine. Additional async calls are queued, up to `max_async_calls` can run and be queued at the same time. If you try to make an async call once the queue if full, an exception will be thrown.
+Async calls run on worker threads, the number of which depends on the number of cores in your machine. Additional async calls are queued, up to `max_async_calls` can run and be queued at the same time. If you try to make an async call once the queue if full, an exception will be thrown.
 
 ## Default settings
 
