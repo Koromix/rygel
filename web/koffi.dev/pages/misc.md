@@ -112,21 +112,26 @@ let config = koffi.config();
 console.log(config);
 ```
 
-The same is true for asynchronous calls. When an asynchronous call is made, Koffi will allocate new blocks unless there is an unused (resident) set of blocks still available. Once the asynchronous call is finished, these blocks are freed if there are more than `resident_async_pools` sets of blocks left around.
+The same is true for asynchronous calls. When an asynchronous call is made, Koffi will allocate new blocks unless there is an unused (resident) set of blocks still available. Once the asynchronous call is finished, these blocks are freed if there are more than `resident_async_pools` sets of blocks left around. By default, the preallocated stack and heap blocks are much smaller than for synchronous calls (see [default settings](#default-settings)).
 
-There cannot be more than `max_async_calls` running at the same time.
+> [!CAUTION]
+> The **memory usage can blow up easily** if you increase the size of async memory blocks and many async calls are running or queued at the same time !
+>
+> For example, with 4096 running/queued async calls, a stack size of 256 kiB and a heap size of 512 kiB, the memory usage will reach approximately _4096 * (256 + 512) kiB ≈ 3 GiB_ just for Koffi, even though most of it will be freed once the number of queue calls goes down.
+
+Async calls run on workers threads, the number of which depends on the number of cores in your machine. Additional async calls are queued, up to `max_async_calls` can run and be queued at the same time. If you try to make an async call once the queue if full, an exception will be thrown.
 
 ## Default settings
 
-Setting              | Default | Description
--------------------- | ------- | -----------------------------------------------
-sync_stack_size      | 1 MiB   | Stack size for synchronous calls
-sync_heap_size       | 2 MiB   | Heap size for synchronous calls
-async_stack_size     | 256 kiB | Stack size for asynchronous calls
-async_heap_size      | 512 kiB | Heap size for asynchronous calls
-resident_async_pools | 2       | Number of resident pools for asynchronous calls
-max_async_calls      | 64      | Maximum number of ongoing asynchronous calls
-max_type_size        | 64 MiB  | Maximum size of Koffi types (for arrays and structs)
+Setting              | Default | Maximum | Description
+-------------------- | ------- | ------- | ----------------------------------------------------
+sync_stack_size      | 1 MiB   | 16 MiB  | Stack size for synchronous calls
+sync_heap_size       | 2 MiB   | 16 MiB  | Heap size for synchronous calls
+async_stack_size     | 128 kiB | 16 MiB  | Stack size for asynchronous calls
+async_heap_size      | 128 kiB | 16 MiB  | Heap size for asynchronous calls
+resident_async_pools | 4       | 16      | Number of resident pools for asynchronous calls
+max_async_calls      | 256     | 4096    | Maximum number of queued asynchronous calls
+max_type_size        | 64 MiB  | 512 MiB | Maximum size of Koffi types (for arrays and structs)
 
 # Usage statistics
 

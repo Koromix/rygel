@@ -11,13 +11,13 @@ namespace K {
 
 static const Size DefaultSyncStackSize = Mebibytes(1);
 static const Size DefaultSyncHeapSize = Mebibytes(2);
-static const Size DefaultAsyncStackSize = Kibibytes(256);
-static const Size DefaultAsyncHeapSize = Kibibytes(512);
-static const int DefaultResidentAsyncPools = 2;
-static const int DefaultMaxAsyncCalls = 64;
+static const Size DefaultAsyncStackSize = Kibibytes(128);
+static const Size DefaultAsyncHeapSize = Kibibytes(128);
+static const int DefaultResidentAsyncPools = 4;
+static const int DefaultMaxAsyncCalls = 256;
 static const Size DefaultMaxTypeSize = Mebibytes(64);
 
-static const int MaxAsyncCalls = 256;
+static const int MaxAsyncCalls = 4096;
 static const Size MaxParameters = 64;
 static const Size MaxTrampolines = 8192;
 
@@ -277,7 +277,7 @@ struct InstanceData {
     Napi::Symbol active_symbol;
 
     std::mutex mem_mutex;
-    LocalArray<InstanceMemory *, 9> memories;
+    LocalArray<InstanceMemory *, 17> memories;
     int temporaries = 0;
 
     std::thread::id main_thread_id;
