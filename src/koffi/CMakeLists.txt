@@ -36,6 +36,8 @@ if(UNIX AND NOT APPLE)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -z noexecstack")
 endif()
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # ---- Koffi ----
 
 # Recompute the version string after each commit
