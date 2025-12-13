@@ -44,31 +44,25 @@ static void HandleRequest(http_IO *io)
 
         StreamReader reader;
         StreamWriter writer;
-        StreamWriter log;
+        StreamWriter playback;
 
         io->OpenForReadWS(&reader);
         if (!writer.Open(filename))
             return;
-        io->OpenForWriteWS(&log);
-
-        const char *basename = SplitStrReverseAny(filename, K_PATH_SEPARATORS).ptr;
-        Print(&log, "Recording to '%1'", basename);
+        io->OpenForWriteWS(&playback);
 
         // Big WebSocket messages get truncated silently
         Span<uint8_t> buf = AllocateSpan<uint8_t>(io->Allocator(), Mebibytes(4));
-
-        int64_t count = 0;
 
         do {
             Size read_len = reader.Read(buf);
             if (read_len < 0)
                 return;
 
+            if (!playback.Write(buf.ptr, read_len))
+                return;
             if (!writer.Write(buf.ptr, read_len))
                 return;
-
-            Print(&log, "Blob %1 of size %2", count, read_len);
-            count++;
         } while (!reader.IsEOF());
     } else {
         io->SendError(404);

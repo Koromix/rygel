@@ -31,10 +31,10 @@
                 cursor: default;
             }
 
-            #log {
-                border: 1px solid #ccc;
-                width: 400px;
-                height: 150px;
+            #playback {
+                width: 640px;
+                height: 480px;
+                background: #ddd;
             }
         </style>
     </head>
@@ -43,23 +43,25 @@
             <button id="record" onclick="record()">Record</button>
             <button id="stop" onclick="stop()" disabled>Stop</button>
         </div>
-        <textarea id="log" readonly></textarea>
+        <video id="playback" autoplay></video>
 
         <script>
             const MIMETYPE = 'video/webm; codecs="vp8, opus"';
 
-            let ws = null;
             let stream = null;
             let recorder = null;
 
-            let log = document.querySelector('#log');
+            let ws = null;
+
+            let queue = null;
+            let src = null;
+            let buf = null;
 
             async function record() {
                 if (stream != null)
                     throw new Error('Recording in progress');
 
                 document.querySelector('#record').disabled = true;
-                log.value = '';
 
                 try {
                     stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -80,22 +82,37 @@
                         ws.addEventListener('open', () => resolve(ws));
                         ws.addEventListener('error', e => reject('Failed WebSocket connection'));
                     });
-
-                    ws.binaryType = 'arraybuffer';
                     ws.onmessage = async e => {
-                        let buf = e.data;
-                        let str = (new TextDecoder).decode(buf);
-
-                        log.value += str + '\n';
+                        if (buf != null && !buf.updating) {
+                            buf.appendBuffer(e.data);
+                        } else {
+                            queue.push(e.data);
+                        }
                     };
+                    ws.binaryType = 'arraybuffer';
 
-                    recorder.start(3000);
+                    queue = [];
+                    src = new MediaSource;
+                    src.addEventListener('sourceopen', () => {
+                        buf = src.addSourceBuffer(MIMETYPE);
+
+                        buf.addEventListener('updateend', () => {
+                            if (!queue.length)
+                                return;
+                            if (buf.updating)
+                                return;
+
+                            buf.appendBuffer(queue.shift());
+                        });
+                    });
+
+                    recorder.start(1);
                 } catch (err) {
-                    log.value += `[Error] ${err.message}\n`;
                     throw err;
                 }
 
                 document.querySelector('#stop').disabled = false;
+                document.querySelector('#playback').src = URL.createObjectURL(src);
             }
 
             async function stop() {
@@ -107,7 +124,6 @@
 
                     recorder = null;
                 }
-
                 if (stream != null) {
                     for (let track of stream.getTracks())
                         track.stop();
@@ -117,11 +133,18 @@
 
                 if (ws != null) {
                     ws.close();
-                    log.value += 'Done!\n';
                     ws = null;
+                    queue = null;
+                }
+
+                if (src != null) {
+                    src.endOfStream();
+                    src = null;
+                    buf = null;
                 }
 
                 document.querySelector('#record').disabled = false;
+                document.querySelector('#playback').src = '';
             }
         </script>
     </body>
