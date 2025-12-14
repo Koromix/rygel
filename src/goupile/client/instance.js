@@ -275,7 +275,7 @@ function renderMenu() {
                         <button @click=${UI.wrap(goupile.runResetTOTP)}>${T.configure_my_totp}</button>
                         <hr/>
                         ${goupile.hasPermission('bulk_export') || goupile.hasPermission('bulk_download') ? html`
-                            <button @click=${UI.wrap(generateExportKey)}>${T.generate_export_key}</button>
+                            <button @click=${UI.wrap(generateExportKey)}>${T.generate_api_key}</button>
                             <hr/>
                         ` : ''}
                     ` : ''}
