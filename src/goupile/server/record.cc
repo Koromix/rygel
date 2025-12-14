@@ -715,7 +715,7 @@ static int64_t CheckApiPermission(http_IO *io, InstanceHolder *instance, Functio
         sq_Statement stmt;
         if (!gp_db.Prepare(R"(SELECT p.permissions, u.userid, u.username
                               FROM dom_permissions p
-                              INNER JOIN dom_users ON (u.userid = p.userid)
+                              INNER JOIN dom_users u ON (u.userid = p.userid)
                               WHERE p.instance = ?1 AND p.api_key = ?2)", &stmt))
             return -1;
         sqlite3_bind_text(stmt, 1, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
