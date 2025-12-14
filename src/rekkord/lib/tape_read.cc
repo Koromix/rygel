@@ -1648,7 +1648,7 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
             return false;
 
         ProgressHandle progress("Retains");
-        progress.SetFmt(retains, checks, T("%1 / %2 retains"), retains, checks);
+        progress.SetFmt(retains, checks, T("%1 / %2 locks"), retains, checks);
 
         Async async(repo->GetAsync());
         std::atomic_int64_t retained_blobs = retains;
@@ -1662,7 +1662,7 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
                     cache.PutRetain(oid);
 
                     int64_t value = retained_blobs.fetch_add(1, std::memory_order_relaxed) + 1;
-                    progress.SetFmt(value, checks, T("%1 / %2 retains"), value, checks);
+                    progress.SetFmt(value, checks, T("%1 / %2 locks"), value, checks);
 
                     return true;
                 });
