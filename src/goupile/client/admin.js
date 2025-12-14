@@ -177,7 +177,7 @@ function renderUsers() {
                                         style="white-space: normal;">
                                         ${selected_instance.master == null ? makePermissionsTag(permissions, 'build_', '#b518bf') : ''}
                                         ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : ''}
-                                        ${!selected_instance.slaves ? makePermissionsTag(permissions, 'export_', '#3364bd') : ''}
+                                        ${!selected_instance.slaves ? makePermissionsTag(permissions, 'bulk_', '#3364bd') : ''}
                                         ${!selected_instance.slaves ? makePermissionsTag(permissions, 'message_', '#c97f1a') : ''}
                                         ${!permissions.length ? T.unassigned : ''}
                                     </td>
@@ -855,10 +855,10 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
             });
         }, { color: '#258264' });
         d.sameLine(true); d.section(T.exports, () => {
-            let props = listPermissions('export_', instance.legacy);
-            let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('export_')) : null;
+            let props = listPermissions('bulk_', instance.legacy);
+            let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('bulk_')) : null;
 
-            d.multiCheck('export_permissions', null, props, {
+            d.multiCheck('bulk_permissions', null, props, {
                 value: value,
                 disabled: instance.slaves > 0
             });
@@ -877,7 +877,7 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
         let permissions = [
             ...(d.values.build_permissions || []),
             ...(d.values.data_permissions || []),
-            ...(d.values.export_permissions || []),
+            ...(d.values.bulk_permissions || []),
             ...(d.values.message_permissions || [])
         ];
 

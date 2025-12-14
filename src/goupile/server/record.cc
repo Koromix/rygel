@@ -97,6 +97,17 @@ struct FragmentInfo {
     HeapArray<const char *> tags;
 };
 
+struct ImportEntry {
+    const char *store = nullptr;
+    Span<const char> data = {};
+};
+
+struct ImportData {
+    const char *fid;
+    bool draft;
+    HeapArray<ImportEntry> entries;
+};
+
 struct CounterInfo {
     const char *key = nullptr;
     int max = 0;
@@ -692,7 +703,8 @@ void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
     });
 }
 
-static int64_t CheckApiPermission(http_IO *io, InstanceHolder *instance, FunctionRef<bool(uint32_t)> check)
+static int64_t CheckApiPermission(http_IO *io, InstanceHolder *instance, FunctionRef<bool(uint32_t)> check,
+                                  const char **out_username = nullptr)
 {
     const http_RequestInfo &request = io->Request();
     const char *api_key = !instance->slaves.len ? request.GetHeaderValue("X-Api-Key") : nullptr;
@@ -701,7 +713,7 @@ static int64_t CheckApiPermission(http_IO *io, InstanceHolder *instance, Functio
         const InstanceHolder *master = instance->master;
 
         sq_Statement stmt;
-        if (!gp_db.Prepare(R"(SELECT p.permissions, u.userid
+        if (!gp_db.Prepare(R"(SELECT p.permissions, u.userid, u.username
                               FROM dom_permissions p
                               INNER JOIN dom_users ON (u.userid = p.userid)
                               WHERE p.instance = ?1 AND p.api_key = ?2)", &stmt))
@@ -712,6 +724,7 @@ static int64_t CheckApiPermission(http_IO *io, InstanceHolder *instance, Functio
         if (stmt.Step()) {
             uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
             int64_t userid = sqlite3_column_int64(stmt, 1);
+            const char *username = (const char *)sqlite3_column_text(stmt, 2);
 
             if (!check(permissions)) {
                 LogError("Missing necessary API key permissions");
@@ -719,6 +732,9 @@ static int64_t CheckApiPermission(http_IO *io, InstanceHolder *instance, Functio
                 return -1;
             }
 
+            if (out_username) {
+                *out_username = DuplicateString(username, io->Allocator()).ptr;
+            }
             return userid;
         } else {
             if (stmt.IsValid()) {
@@ -742,6 +758,9 @@ static int64_t CheckApiPermission(http_IO *io, InstanceHolder *instance, Functio
             return -1;
         }
 
+        if (out_username) {
+            *out_username = DuplicateString(session->username, io->Allocator()).ptr;
+        }
         return session->userid;
     }
 }
@@ -908,7 +927,7 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
     return export_id;
 }
 
-void HandleExportCreate(http_IO *io, InstanceHolder *instance)
+void HandleBulkExport(http_IO *io, InstanceHolder *instance)
 {
     if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
@@ -918,7 +937,7 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
 
     int64_t userid;
     {
-        const auto check = [](uint32_t permissions) { return permissions & (int)UserPermission::ExportCreate; };
+        const auto check = [](uint32_t permissions) { return permissions & (int)UserPermission::BulkExport; };
 
         userid = CheckApiPermission(io, instance, check);
         if (userid < 0)
@@ -962,7 +981,7 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
     io->SendText(200, response, "application/json");
 }
 
-void HandleExportList(http_IO *io, InstanceHolder *instance)
+void HandleBulkList(http_IO *io, InstanceHolder *instance)
 {
     if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
@@ -972,7 +991,7 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
 
     // Check permissions
     {
-        const auto check = [](uint32_t permissions) { return permissions & ((int)UserPermission::ExportCreate | (int)UserPermission::ExportDownload); };
+        const auto check = [](uint32_t permissions) { return permissions & ((int)UserPermission::BulkExport | (int)UserPermission::BulkDownload); };
 
         if (CheckApiPermission(io, instance, check) < 0)
             return;
@@ -1014,7 +1033,7 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
     });
 }
 
-void HandleExportDownload(http_IO *io, InstanceHolder *instance)
+void HandleBulkDownload(http_IO *io, InstanceHolder *instance)
 {
     const http_RequestInfo &request = io->Request();
 
@@ -1045,7 +1064,7 @@ void HandleExportDownload(http_IO *io, InstanceHolder *instance)
     const char *secret = request.GetHeaderValue("X-Export-Secret");
 
     if (!secret) {
-        const auto check = [](uint32_t permissions) { return permissions & (int)UserPermission::ExportDownload; };
+        const auto check = [](uint32_t permissions) { return permissions & (int)UserPermission::BulkDownload; };
 
         if (CheckApiPermission(io, instance, check) < 0)
             return;
@@ -1085,6 +1104,250 @@ void HandleExportDownload(http_IO *io, InstanceHolder *instance)
     io->AddHeader("Content-Encoding", "gzip");
     io->AddHeader("X-Export-Name", name);
     io->SendFile(200, filename);
+}
+
+static void Encode30Bits(uint32_t value, char *out_buf)
+{
+    static const char characters[] = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+    out_buf[0] = characters[(value >> 25) & 0x1F];
+    out_buf[1] = characters[(value >> 20) & 0x1F];
+    out_buf[2] = characters[(value >> 15) & 0x1F];
+    out_buf[3] = characters[(value >> 10) & 0x1F];
+    out_buf[4] = characters[(value >> 5) & 0x1F];
+    out_buf[5] = characters[value & 0x1F];
+}
+
+static void GenerateULID(int64_t time, char out_ulid[27])
+{
+    Encode30Bits(time & 0x100000, out_ulid + 4);
+    Encode30Bits(time >> 20, out_ulid + 0);
+
+    uint32_t rnd[3];
+    FillRandomSafe(rnd, K_SIZE(rnd));
+
+    Encode30Bits(rnd[0], out_ulid + 10);
+    Encode30Bits(rnd[1], out_ulid + 16);
+    Encode30Bits(rnd[2], out_ulid + 20);
+}
+
+void HandleBulkImport(http_IO *io, InstanceHolder *instance)
+{
+    if (!instance->settings.data_remote) {
+        LogError("Records API is disabled in Offline mode");
+        io->SendError(403);
+        return;
+    }
+
+    int64_t userid;
+    const char *username;
+    {
+        const auto check = [](uint32_t permissions) { return permissions & (int)UserPermission::BulkImport; };
+
+        userid = CheckApiPermission(io, instance, check, &username);
+        if (userid < 0)
+            return;
+    }
+
+    HeapArray<ImportData> imports;
+    {
+        bool success = http_ParseJson(io, Mebibytes(8), [&](json_Parser *json) {
+            bool valid = true;
+
+            for (json->ParseArray(); json->InArray(); ) {
+                ImportData *import = imports.AppendDefault();
+
+                for (json->ParseObject(); json->InObject(); ) {
+                    Span<const char> key = json->ParseKey();
+
+                    if (key == "fid") {
+                        json->ParseString(&import->fid);
+                    } else if (key == "draft") {
+                        json->ParseBool(&import->draft);
+                    } else if (key == "entries") {
+                        for (json->ParseObject(); json->InObject(); ) {
+                            ImportEntry entry = {};
+
+                            entry.store = json->ParseKey().ptr;
+                            json->SkipNull() || json->PassThrough(&entry.data);
+
+                            import->entries.Append(entry);
+                        }
+                    } else {
+                        json->UnexpectedKey(key);
+                        valid = false;
+                    }
+                }
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                for (const ImportData &import: imports) {
+                    for (const ImportEntry &entry: import.entries) {
+                        if (entry.data.len && !StartsWith(entry.data, "{")) {
+                            LogError("Expected null or object for entry data");
+                            valid = false;
+                        }
+                    }
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Expand entry data with annotations
+    {
+        Async async;
+
+        for (ImportData &import: imports) {
+            for (Size i = 0; i < import.entries.len; i++) {
+                ImportEntry *entry = &import.entries[i];
+
+                if (entry->data.len) {
+                    async.Run([=] {
+                        Span<const char> data = ExpandData(entry->data, io->Allocator());
+
+                        if (!data.len)
+                            return false;
+
+                        entry->data = data;
+                        return true;
+                    });
+                }
+            }
+        }
+
+        if (!async.Sync())
+            return;
+    }
+
+    bool success = instance->db->Transaction([&]() {
+        int64_t now = GetUnixTime();
+        int64_t fs = instance->fs_version.load();
+
+        for (const ImportData &import: imports) {
+            char tid[64];
+            bool has_sequence;
+
+            if (import.fid) {
+                sq_Statement stmt;
+                if (!instance->db->Prepare("SELECT tid, sequence FROM rec_threads WHERE fid = ?1", &stmt, import.fid))
+                    return false;
+
+                if (stmt.Step()) {
+                    const char *ulid = (const char *)sqlite3_column_text(stmt, 0);
+                    CopyString(ulid, tid);
+
+                    has_sequence = (sqlite3_column_type(stmt, 1) != SQLITE_NULL);
+                } else if (stmt.IsValid()) {
+                    GenerateULID(now, tid);
+                    has_sequence = false;
+                } else {
+                    return false;
+                }
+            } else {
+                GenerateULID(now, tid);
+                has_sequence = false;
+            }
+
+            int64_t sequence = -1;
+
+            // Get unique sequence value
+            if (!has_sequence && !import.draft) {
+                sq_Statement stmt;
+                if (!instance->db->Prepare(R"(UPDATE seq_counters SET state = state + 1
+                                              WHERE key = '@sequence'
+                                              RETURNING state)", &stmt))
+                    return false;
+                if (!stmt.GetSingleValue(&sequence))
+                    return false;
+            }
+
+            // Create or update relevant thread
+            if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, counters, secrets, sequence, hid, fid)
+                                      VALUES (?1, '{}', '{}', ?2, ?2, ?3)
+                                      ON CONFLICT (tid) DO UPDATE SET sequence = IFNULL(excluded.sequence, sequence),
+                                                                      hid = IFNULL(excluded.hid, hid))",
+                                   tid, sequence >= 0 ? sq_Binding(sequence) : sq_Binding(), import.fid))
+                return false;
+
+            for (const ImportEntry &entry: import.entries) {
+                char eid[64];
+                int64_t prev_anchor = -1;
+                int64_t new_anchor = -1;
+
+                // Get existing EID and anchor (if any)
+                {
+                    sq_Statement stmt;
+                    if (!instance->db->Prepare("SELECT eid, anchor FROM rec_entries WHERE tid = ?1 AND store = ?2",
+                                               &stmt, tid, entry.store))
+                        return false;
+
+                    if (stmt.Step()) {
+                        const char *ulid = (const char *)sqlite3_column_text(stmt, 0);
+                        CopyString(ulid, eid);
+
+                        prev_anchor = sqlite3_column_int64(stmt, 1);
+                    } else if (stmt.IsValid()) {
+                        GenerateULID(now, eid);
+                        prev_anchor = -1;
+                    } else {
+                        return false;
+                    }
+                }
+
+                const char *tags = import.draft ? "['draft']" : "[]";
+
+                // Insert entry fragment
+                {
+                    sq_Statement stmt;
+                    if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username,
+                                                                             mtime, fs, hid, data, tags)
+                                                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+                                                  RETURNING anchor)",
+                                               &stmt, prev_anchor > 0 ? sq_Binding(prev_anchor) : sq_Binding(), tid,
+                                               eid, userid, username, now, fs,
+                                               sequence >= 0 ? sq_Binding(sequence) : sq_Binding(), entry.data, tags))
+                        return false;
+                    if (!stmt.GetSingleValue(&new_anchor))
+                        return false;
+                }
+
+                // Create or update store entry
+                if (prev_anchor < 0) {
+                    if (!instance->db->Run(R"(INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime,
+                                                                       store, deleted, data, tags)
+                                              VALUES (?1, ?2, ?3, ?4, ?4, ?5, ?6, ?7, ?8))",
+                                           tid, eid, new_anchor, now, entry.store, 0 + !entry.data.len, entry.data, tags))
+                        return false;
+                } else {
+                    if (!instance->db->Run(R"(UPDATE rec_entries SET anchor = ?2,
+                                                                     mtime = ?3,
+                                                                     deleted = ?4,
+                                                                     summary = NULL,
+                                                                     data = json_patch(IFNULL(data, json_object()), ?5),
+                                                                     tags = ?6
+                                              WHERE eid = ?1)",
+                                           eid, new_anchor, now, 0 + !entry.data.len, entry.data, tags))
+                        return false;
+                }
+            }
+        }
+
+        instance->reserve_rnd = GetRandomInt64(0, 0xFFFFFFFFFFFF);
+
+        return true;
+    });
+    if (!success)
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 static const char *TagsToJson(Span<const char *const> tags, Allocator *alloc)
@@ -1215,7 +1478,7 @@ void HandleRecordReserve(http_IO *io, InstanceHolder *instance)
 
     HeapArray<CounterInfo> counters;
     {
-        bool success = http_ParseJson(io, Mebibytes(8), [&](json_Parser *json) {
+        bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
             bool valid = true;
 
             for (json->ParseObject(); json->InObject(); ) {
@@ -1831,7 +2094,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                                                              mtime = ?3,
                                                              deleted = ?4,
                                                              summary = ?5,
-                                                             data = json_patch(data, ?6),
+                                                             data = json_patch(IFNULL(data, json_object()), ?6),
                                                              tags = ?7
                                       WHERE eid = ?1)",
                                    fragment.eid, new_anchor, now, 0 + !fragment.data.len,

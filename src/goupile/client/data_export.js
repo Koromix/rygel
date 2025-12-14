@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
+import { render, html, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, Mutex, LocalDate } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 import * as Data from 'lib/web/ui/data.js';
@@ -10,8 +11,112 @@ import * as UI from './ui.js';
 
 let XLSX = null;
 
+async function runExportDialog(e, app) {
+    let downloads = await Net.get(`${ENV.urls.instance}api/bulk/list`);
+
+    let stores = app.stores.map(store => store.key);
+    let template = app.exports;
+
+    downloads.reverse();
+
+    await UI.dialog(e, T.exports, {}, (d, resolve, reject) => {
+        let intf = d.tabs('tabs', () => {
+            d.tab(T.new_export, () => {
+                if (downloads.length > 0) {
+                    d.enumRadio('mode', T.export_mode, [
+                        ['all', T.export_all],
+                        ['thread', T.export_new],
+                        ['anchor', T.export_anchor]
+                    ], { value: 'all', untoggle: false });
+
+                    if (d.values.mode != 'all') {
+                        let props = downloads.map(download => [download.export, (new Date(download.ctime)).toLocaleString()]);
+                        d.enumDrop('since', T.export_since, props, { value: downloads[0]?.export, untoggle: false });
+                    }
+                } else {
+                    d.output(T.create_first_export);
+                }
+
+                d.action(T.create_export, {}, async () => {
+                    let thread = null;
+                    let anchor = null;
+
+                    switch (d.values.mode) {
+                        case 'thread': {
+                            let download = downloads.find(download => download.export == d.values.since);
+                            thread = download.thread + 1;
+                        } break;
+
+                        case 'anchor': {
+                            let download = downloads.find(download => download.export == d.values.since);
+                            anchor = download.anchor + 1;
+                        } break;
+                    }
+
+                    await create(thread, anchor);
+
+                    resolve();
+                });
+            }, { disabled: !goupile.hasPermission('bulk_export') });
+
+            d.tab(T.past_exports, () => {
+                d.output(html`
+                    <table class="ui_table">
+                        <colgroup>
+                            <col/>
+                            <col/>
+                            <col/>
+                            <col/>
+                        </colgroup>
+
+                        <thead>
+                            <tr>
+                                <th>${T.date}</th>
+                                <th>${T.threads}</th>
+                                <th>${T.automatic}</th>
+                                <th>${T.download}</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            ${downloads.map(download => html`
+                                <tr>
+                                    <td>${(new Date(download.ctime)).toLocaleString()}</td>
+                                    <td>${download.threads}</td>
+                                    <td>${download.scheduled ? T.yes : T.no}</td>
+                                    <td>
+                                        ${download.threads ? html`<a @click=${UI.wrap(e => exportRecords(download.export, null, stores, template))}>${T.download}</a>` : ''}
+                                        ${!download.threads ? '(' + T.not_available.toLowerCase() + ')' : ''}
+                                    </td>
+                                </tr>
+                            `)}
+                            ${!downloads.length ? html`<tr><td colspan="4">${T.no_export}</td></tr>` : ''}
+                        </tbody>
+                    </table>
+                `);
+            }, { disabled: !goupile.hasPermission('bulk_download') });
+        });
+    });
+
+    async function create(thread, anchor) {
+        let progress = Log.progress(T.export_in_progress);
+
+        try {
+            let info = await createExport(thread, anchor);
+            let stores = app.stores.map(store => store.key);
+
+            await exportRecords(info.export, info.secret, stores, template);
+
+            progress.success(T.export_done);
+        } catch (err) {
+            progress.close();
+            Log.error(err);
+        }
+    }
+}
+
 async function createExport(thread = null, anchor = null) {
-    let info = await Net.post(`${ENV.urls.instance}api/export/create`, {
+    let info = await Net.post(`${ENV.urls.instance}api/bulk/export`, {
         thread: thread,
         anchor: anchor
     });
@@ -169,7 +274,7 @@ async function exportRecords(id, secret, stores, template = {}) {
 }
 
 async function walkThreads(id, secret) {
-    let url = Util.pasteURL(`${ENV.urls.instance}api/export/download`, { export: id });
+    let url = Util.pasteURL(`${ENV.urls.instance}api/bulk/download`, { export: id });
     let response = await Net.fetch(url, {
         headers: { 'X-Export-Secret': secret }
     });
@@ -350,6 +455,8 @@ function listColumns(ws) {
 }
 
 export {
+    runExportDialog,
+
     createExport,
     exportRecords
 }

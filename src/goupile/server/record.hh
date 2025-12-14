@@ -36,9 +36,10 @@ void HandleRecordPublic(http_IO *io, InstanceHolder *instance);
 int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSettings &settings, ExportInfo *out_info = nullptr);
 bool PerformScheduledExport(InstanceHolder *instance);
 
-void HandleExportCreate(http_IO *io, InstanceHolder *instance);
-void HandleExportList(http_IO *io, InstanceHolder *instance);
-void HandleExportDownload(http_IO *io, InstanceHolder *instance);
+void HandleBulkExport(http_IO *io, InstanceHolder *instance);
+void HandleBulkList(http_IO *io, InstanceHolder *instance);
+void HandleBulkDownload(http_IO *io, InstanceHolder *instance);
+void HandleBulkImport(http_IO *io, InstanceHolder *instance);
 
 void HandleBlobGet(http_IO *io, InstanceHolder *instance);
 void HandleBlobPost(http_IO *io, InstanceHolder *instance);

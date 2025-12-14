@@ -20,5 +20,6 @@ void StopZygote();
 bool CheckZygote();
 
 Span<const char> MergeData(Span<const char> data, Span<const char> meta, Allocator *alloc);
+Span<const char> ExpandData(Span<const char> data, Allocator *alloc);
 
 }

@@ -18,7 +18,8 @@
 namespace K {
 
 enum class RequestType {
-    MergeData = 0
+    MergeData = 0,
+    ExpandData = 1
 };
 
 static const int64_t KillDelay = 5000;
@@ -405,6 +406,29 @@ static bool HandleMergeData(json_Parser *json, Allocator *alloc, StreamWriter *w
     return true;
 }
 
+static bool HandleExpandData(json_Parser *json, Allocator *alloc, StreamWriter *writer)
+{
+    Span<const char> data = json->PassThrough();
+
+    Span<const char> result;
+    {
+        JSValueRef args[] = {
+            JSValueMakeString(vm_ctx, js_AutoString(data))
+        };
+
+        JSValueRef ret = CallMethod(vm_ctx, vm_api, "expandData", args);
+        if (!ret)
+            return false;
+        K_ASSERT(JSValueIsString(vm_ctx, ret));
+
+        result = js_ReadString(vm_ctx, ret, alloc);
+    }
+
+    writer->Write(result);
+
+    return true;
+}
+
 static bool HandleRequest(int kind, struct cmsghdr *cmsg, pid_t *out_pid)
 {
     BlockAllocator temp_alloc;
@@ -445,6 +469,8 @@ static bool HandleRequest(int kind, struct cmsghdr *cmsg, pid_t *out_pid)
 
         switch (kind) {
             case (int)RequestType::MergeData: { HandleMergeData(&json, &temp_alloc, &writer); } break;
+            case (int)RequestType::ExpandData: { HandleExpandData(&json, &temp_alloc, &writer); } break;
+
             default: { LogError("Ignoring unknown message 0x%1 from server process", FmtHex(kind, 2)); } break;
         }
 
@@ -804,6 +830,33 @@ Span<const char> MergeData(Span<const char> data, Span<const char> meta, Allocat
             json->Key("meta"); json->Raw(meta);
             json->EndObject();
 
+            return true;
+        },
+
+        [&](json_Parser *json) {
+            json->PassThrough(&result);
+            return true;
+        }
+    );
+    if (!success)
+        return {};
+
+    result = DuplicateString(result, alloc);
+    return result;
+}
+
+Span<const char> ExpandData(Span<const char> data, Allocator *alloc)
+{
+    BlockAllocator temp_alloc;
+
+    // Output
+    Span<char> result = {};
+
+    bool success = SendRequest(
+        RequestType::ExpandData, &temp_alloc,
+
+        [&](json_Writer *json) {
+            json->Raw(data);
             return true;
         },
 

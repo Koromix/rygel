@@ -110,8 +110,8 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
                                      (int)UserPermission::DataRead |
                                      (int)UserPermission::DataSave |
                                      (int)UserPermission::DataDelete |
-                                     (int)UserPermission::ExportCreate |
-                                     (int)UserPermission::ExportDownload;
+                                     (int)UserPermission::BulkExport |
+                                     (int)UserPermission::BulkDownload;
             } else if (userid > 0) {
                 uint32_t permissions = 0;
 
@@ -1602,7 +1602,7 @@ void HandleChangeApiKey(http_IO *io, InstanceHolder *instance)
         io->SendError(401);
         return;
     }
-    if (!stamp || !(stamp->permissions & ((int)UserPermission::ExportCreate | (int)UserPermission::ExportDownload))) {
+    if (!stamp || !(stamp->permissions & ((int)UserPermission::BulkExport | (int)UserPermission::BulkDownload))) {
         LogError("User is not allowed to export data");
         io->SendError(403);
         return;

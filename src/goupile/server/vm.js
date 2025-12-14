@@ -3,6 +3,7 @@
 
 import { html, svg } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from 'lib/web/base/base.js';
+import * as Data from 'lib/web/ui/data.js';
 
 // Create fake globals
 Object.defineProperties(globalThis, {
@@ -53,6 +54,14 @@ function VmApi(native) {
             data[key] = wrap;
         }
     }
+
+    this.expandData = function(data) {
+        data = JSON.parse(data);
+
+        let [raw, values] = Data.wrap(data);
+
+        return JSON.stringify(raw);
+    };
 }
 
 export { VmApi }

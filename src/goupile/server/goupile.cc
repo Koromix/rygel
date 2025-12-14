@@ -789,12 +789,14 @@ static void HandleInstanceRequest(http_IO *io)
         HandleBlobGet(io, instance);
     } else if (!instance->legacy && url == "/api/records/blob" && method == http_RequestMethod::Post) {
         HandleBlobPost(io, instance);
-    } else if (!instance->legacy && url == "/api/export/create" && method == http_RequestMethod::Post) {
-        HandleExportCreate(io, instance);
-    } else if (!instance->legacy && url == "/api/export/list" && method == http_RequestMethod::Get) {
-        HandleExportList(io, instance);
-    } else if (!instance->legacy && url == "/api/export/download" && method == http_RequestMethod::Get) {
-        HandleExportDownload(io, instance);
+    } else if (!instance->legacy && url == "/api/bulk/export" && method == http_RequestMethod::Post) {
+        HandleBulkExport(io, instance);
+    } else if (!instance->legacy && url == "/api/bulk/list" && method == http_RequestMethod::Get) {
+        HandleBulkList(io, instance);
+    } else if (!instance->legacy && url == "/api/bulk/download" && method == http_RequestMethod::Get) {
+        HandleBulkDownload(io, instance);
+    } else if (!instance->legacy && url == "/api/bulk/import" && method == http_RequestMethod::Post) {
+        HandleBulkImport(io, instance);
     } else if (instance->legacy && url == "/api/records/load" && method == http_RequestMethod::Get) {
         HandleLegacyLoad(io, instance);
     } else if (instance->legacy && url == "/api/records/save" && method == http_RequestMethod::Post) {

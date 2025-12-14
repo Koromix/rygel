@@ -9,7 +9,7 @@ import * as Data from 'lib/web/ui/data.js';
 import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
-import { createExport, exportRecords } from './data_export.js';
+import { runExportDialog } from './data_export.js';
 import { DataRemote } from './data_remote.js';
 import { ApplicationInfo, ApplicationBuilder } from './instance_app.js';
 import { InstancePublisher } from './instance_publish.js';
@@ -274,7 +274,7 @@ function renderMenu() {
                         <button @click=${UI.wrap(goupile.runChangePasswordDialog)}>${T.change_my_password}</button>
                         <button @click=${UI.wrap(goupile.runResetTOTP)}>${T.configure_my_totp}</button>
                         <hr/>
-                        ${goupile.hasPermission('export_create') || goupile.hasPermission('export_download') ? html`
+                        ${goupile.hasPermission('bulk_export') || goupile.hasPermission('bulk_download') ? html`
                             <button @click=${UI.wrap(generateExportKey)}>${T.generate_export_key}</button>
                             <hr/>
                         ` : ''}
@@ -734,7 +734,7 @@ function renderData() {
             </table>
 
             <div class="ui_actions">
-                ${goupile.hasPermission('export_create') || goupile.hasPermission('export_download') ? html`<button @click=${UI.wrap(runExportDialog)}>${T.data_exports}</button>` : ''}
+                ${goupile.hasPermission('bulk_export') || goupile.hasPermission('bulk_download') ? html`<button @click=${UI.wrap(e => runExportDialog(e, app))}>${T.data_exports}</button>` : ''}
             </div>
         </div>
     `;
@@ -754,110 +754,6 @@ function runDeleteRecordDialog(e, row) {
 
         go();
     });
-}
-
-async function runExportDialog(e) {
-    let downloads = await Net.get(`${ENV.urls.instance}api/export/list`);
-
-    let stores = app.stores.map(store => store.key);
-    let template = app.exports;
-
-    downloads.reverse();
-
-    await UI.dialog(e, T.exports, {}, (d, resolve, reject) => {
-        let intf = d.tabs('tabs', () => {
-            d.tab(T.new_export, () => {
-                if (downloads.length > 0) {
-                    d.enumRadio('mode', T.export_mode, [
-                        ['all', T.export_all],
-                        ['thread', T.export_new],
-                        ['anchor', T.export_anchor]
-                    ], { value: 'all', untoggle: false });
-
-                    if (d.values.mode != 'all') {
-                        let props = downloads.map(download => [download.export, (new Date(download.ctime)).toLocaleString()]);
-                        d.enumDrop('since', T.export_since, props, { value: downloads[0]?.export, untoggle: false });
-                    }
-                } else {
-                    d.output(T.create_first_export);
-                }
-
-                d.action(T.create_export, {}, async () => {
-                    let thread = null;
-                    let anchor = null;
-
-                    switch (d.values.mode) {
-                        case 'thread': {
-                            let download = downloads.find(download => download.export == d.values.since);
-                            thread = download.thread + 1;
-                        } break;
-
-                        case 'anchor': {
-                            let download = downloads.find(download => download.export == d.values.since);
-                            anchor = download.anchor + 1;
-                        } break;
-                    }
-
-                    await create(thread, anchor);
-
-                    resolve();
-                });
-            }, { disabled: !goupile.hasPermission('export_create') });
-
-            d.tab(T.past_exports, () => {
-                d.output(html`
-                    <table class="ui_table">
-                        <colgroup>
-                            <col/>
-                            <col/>
-                            <col/>
-                            <col/>
-                        </colgroup>
-
-                        <thead>
-                            <tr>
-                                <th>${T.date}</th>
-                                <th>${T.threads}</th>
-                                <th>${T.automatic}</th>
-                                <th>${T.download}</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            ${downloads.map(download => html`
-                                <tr>
-                                    <td>${(new Date(download.ctime)).toLocaleString()}</td>
-                                    <td>${download.threads}</td>
-                                    <td>${download.scheduled ? T.yes : T.no}</td>
-                                    <td>
-                                        ${download.threads ? html`<a @click=${UI.wrap(e => exportRecords(download.export, null, stores, template))}>${T.download}</a>` : ''}
-                                        ${!download.threads ? '(' + T.not_available.toLowerCase() + ')' : ''}
-                                    </td>
-                                </tr>
-                            `)}
-                            ${!downloads.length ? html`<tr><td colspan="4">${T.no_export}</td></tr>` : ''}
-                        </tbody>
-                    </table>
-                `);
-            }, { disabled: !goupile.hasPermission('export_download') });
-        });
-    });
-
-    async function create(thread, anchor) {
-        let progress = Log.progress(T.export_in_progress);
-
-        try {
-            let info = await createExport(thread, anchor);
-            let stores = app.stores.map(store => store.key);
-
-            await exportRecords(info.export, info.secret, stores, template);
-
-            progress.success(T.export_done);
-        } catch (err) {
-            progress.close();
-            Log.error(err);
-        }
-    }
 }
 
 function toggleTagFilter(tag) {

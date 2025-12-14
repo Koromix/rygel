@@ -156,6 +156,7 @@ public:
     bool PassThrough(Span<char> *out_buf);
     bool PassThrough(Span<const char> *out_buf) { return PassThrough((Span<char> *)out_buf); }
     bool PassThrough(const char **out_str);
+    Span<const char> PassThrough();
 
     void UnexpectedKey(Span<const char> key);
 

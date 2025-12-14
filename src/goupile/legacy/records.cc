@@ -1046,7 +1046,7 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
 
     RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
-    if (!session || !session->HasPermission(instance, UserPermission::ExportCreate)) {
+    if (!session || !session->HasPermission(instance, UserPermission::BulkExport)) {
         const InstanceHolder *master = instance->master;
         const char *api_key = !instance->slaves.len ? request.GetHeaderValue("X-Api-Key") : nullptr;
 
@@ -1055,7 +1055,7 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
                 LogError("User is not logged in");
                 io->SendError(401);
             } else {
-                K_ASSERT(!session->HasPermission(instance, UserPermission::ExportCreate));
+                K_ASSERT(!session->HasPermission(instance, UserPermission::BulkExport));
 
                 LogError("User is not allowed to export data");
                 io->SendError(403);
@@ -1074,7 +1074,7 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
 
         if (!stmt.IsValid())
             return;
-        if (!(permissions & (int)UserPermission::ExportCreate)) {
+        if (!(permissions & (int)UserPermission::BulkExport)) {
             LogError("Export key is not valid");
             io->SendError(403);
             return;

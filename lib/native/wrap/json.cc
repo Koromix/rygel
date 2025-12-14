@@ -405,6 +405,13 @@ bool json_Parser::PassThrough(const char **out_str)
     return true;
 }
 
+Span<const char> json_Parser::PassThrough()
+{
+    Span<const char> buf = {};
+    PassThrough(&buf);
+    return buf;
+}
+
 void json_Parser::UnexpectedKey(Span<const char> key)
 {
     if (!IsValid())
