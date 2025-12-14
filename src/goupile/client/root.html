@@ -12,7 +12,7 @@
         <link rel="icon" href="/favicon.png"/>
         <title>Goupile</title>
 
-        <script>
+        <script nonce="{{ NONCE }}">
             // Version: {{ VERSION }}
             // Compiler: {{ COMPILER }}
 
@@ -108,7 +108,7 @@
         <a id="ro_by" href="https://koromix.dev" target="_blank">Niels Martignène (Koromix)</a>
         <a id="ro_admin" href="/admin/" style="">Administration</a>
 
-        <script>
+        <script nonce="{{ NONCE }}">
             if (DEMO) {
                 document.body.classList.add('demo');
                 setTimeout(demo, 3000);

@@ -12,7 +12,7 @@
         <link rel="icon" href="{{ BASE_URL }}favicon.png"/>
         <title>{{ TITLE }}</title>
 
-        <script>
+        <script nonce="{{ NONCE }}">
             // Goupile
             // https://goupile.org/
 
@@ -94,13 +94,8 @@
             </div>
         </div>
 
-        <script>
+        <script nonce="{{ NONCE }}">
             try {
-                // Quick way to check for recent browser
-                eval('let test = async () => {}');
-                eval('let test = function () { if (!new.target) {} }');
-                eval('let test = new URLSearchParams');
-
                 // See here: https://github.com/dfahlander/Dexie.js/issues/317
                 var m = navigator.userAgent.toLowerCase().match('firefox/([0-9]+)');
                 if (m != null) {

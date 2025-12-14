@@ -49,12 +49,7 @@ static HeapArray<const char *> assets_for_cache;
 static BlockAllocator assets_alloc;
 static char shared_etag[17];
 
-static std::shared_mutex render_mutex;
-static BucketArray<RenderInfo, 8> render_cache;
-static HashTable<const char *, RenderInfo *> render_map;
-
 static const int DemoPruneDelay = 7 * 86400 * 1000;
-static const int64_t MaxRenderDelay = 20 * 60000;
 
 static bool ApplySandbox(Span<const char *const> reveals)
 {
@@ -289,6 +284,14 @@ static void AttachStatic(http_IO *io, const AssetInfo &asset, int64_t max_age, c
     }
 }
 
+static void AttachTemplate(http_IO *io, const AssetInfo &asset, FunctionRef<void(Span<const char>, StreamWriter *)> func)
+{
+    Span<const uint8_t> render = PatchFile(asset, io->Allocator(), func);
+    const char *mimetype = GetMimeType(GetPathExtension(asset.name));
+
+    io->SendAsset(200, render, mimetype, asset.compression_type);
+}
+
 static void HandlePing(http_IO *io, InstanceHolder *instance)
 {
     // Do this to renew session and clear invalid session cookies
@@ -318,58 +321,6 @@ static void HandleFileStatic(http_IO *io, InstanceHolder *instance)
 
         json->EndArray();
     });
-}
-
-static const AssetInfo *RenderTemplate(const char *key, const AssetInfo &asset,
-                                       FunctionRef<void(Span<const char>, StreamWriter *)> func)
-{
-    RenderInfo *render;
-    {
-        std::shared_lock<std::shared_mutex> lock_shr(render_mutex);
-        render = render_map.FindValue(key, nullptr);
-    }
-
-    if (!render) {
-        std::lock_guard<std::shared_mutex> lock_excl(render_mutex);
-        render = render_map.FindValue(key, nullptr);
-
-        if (!render) {
-            Allocator *alloc;
-            render = render_cache.AppendDefault(&alloc);
-
-            render->key = DuplicateString(key, alloc).ptr;
-            render->asset = asset;
-            render->asset.data = PatchFile(asset, alloc, func);
-            render->time = GetMonotonicTime();
-
-            render_map.Set(render);
-
-            LogDebug("Rendered '%1' with '%2'", key, asset.name);
-        }
-    }
-
-    return &render->asset;
-}
-
-static void PruneRenders()
-{
-    std::lock_guard lock_excl(render_mutex);
-
-    int64_t now = GetMonotonicTime();
-
-    Size expired = 0;
-    for (const RenderInfo &render: render_cache) {
-        if (now - render.time < MaxRenderDelay)
-            break;
-
-        render_map.Remove(render.key);
-        expired++;
-    }
-
-    render_cache.RemoveFirst(expired);
-
-    render_cache.Trim();
-    render_map.Trim();
 }
 
 #if !defined(_WIN32)
@@ -424,13 +375,20 @@ static void HandleAdminRequest(http_IO *io)
             const AssetInfo *asset = assets_map.FindValue(url, nullptr);
             K_ASSERT(asset);
 
-            char etag[64];
-            Fmt(etag, "%1_%2", shared_etag, domain->unique);
+            const char *nonce = Fmt(io->Allocator(), "%1", FmtRandom(32)).ptr;
 
-            const AssetInfo *render = RenderTemplate(etag, *asset, [&](Span<const char> expr, StreamWriter *writer) {
+            Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1', "
+                                                        "style-src 'self' 'unsafe-inline', "
+                                                        "frame-ancestors 'none'", nonce);
+            io->AddHeader("Content-Security-Policy", csp);
+            io->AddHeader("X-Content-Type-Options", "nosniff");
+
+            AttachTemplate(io, *asset, [&](Span<const char> expr, StreamWriter *writer) {
                 Span<const char> key = TrimStr(expr);
 
-                if (key == "VERSION") {
+                if (key == "NONCE") {
+                    writer->Write(nonce);
+                } else if (key == "VERSION") {
                     writer->Write(FelixVersion);
                 } else if (key == "COMPILER") {
                     writer->Write(FelixCompiler);
@@ -475,7 +433,6 @@ static void HandleAdminRequest(http_IO *io)
                     Print(writer, "{{%1}}", expr);
                 }
             });
-            AttachStatic(io, *render, 0, etag);
 
             return;
         } else if (url == "/favicon.png") {
@@ -668,13 +625,25 @@ static void HandleInstanceRequest(http_IO *io)
             const InstanceHolder *master = instance->master;
             int64_t fs_version = master->fs_version.load(std::memory_order_relaxed);
 
-            char etag[64];
-            Fmt(etag, "%1_%2_%3_%4", shared_etag, (const void *)asset, instance->unique, fs_version);
+            const char *etag = Fmt(io->Allocator(), "%1_%2_%3_%4", shared_etag, (const void *)asset, instance->unique, fs_version).ptr;
+            const char *nonce = (url == "/") ? Fmt(io->Allocator(), "%1", FmtRandom(16)).ptr : nullptr;
 
-            const AssetInfo *render = RenderTemplate(etag, *asset, [&](Span<const char> expr, StreamWriter *writer) {
+            if (nonce) {
+                // We will make this more secure progressively!
+                Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1' 'unsafe-eval' blob:,"
+                                                            "style-src 'self' 'unsafe-inline', "
+                                                            "frame-ancestors 'none'", nonce);
+                io->AddHeader("Content-Security-Policy", csp);
+                io->AddHeader("X-Content-Type-Options", "nosniff");
+            }
+
+            AttachTemplate(io, *asset, [&](Span<const char> expr, StreamWriter *writer) {
                 Span<const char> key = TrimStr(expr);
 
-                if (key == "VERSION") {
+                if (key == "NONCE") {
+                    K_ASSERT(nonce);
+                    writer->Write(nonce);
+                } else if (key == "VERSION") {
                     writer->Write(FelixVersion);
                 } else if (key == "COMPILER") {
                     writer->Write(FelixCompiler);
@@ -713,7 +682,6 @@ static void HandleInstanceRequest(http_IO *io)
                     Print(writer, "{{%1}}", expr);
                 }
             });
-            AttachStatic(io, *render, 0, etag);
 
             return;
         } else if (asset) {
@@ -829,9 +797,6 @@ static void HandleRequest(http_IO *io)
         if (ReloadAssets()) {
             LogInfo("Reload assets");
             InitAssets();
-
-            render_cache.Clear();
-            render_map.Clear();
         }
     }
 #endif
@@ -847,17 +812,24 @@ static void HandleRequest(http_IO *io)
     io->AddHeader("Cross-Origin-Opener-Policy", "same-origin");
     io->AddHeader("X-Robots-Tag", "noindex");
     io->AddHeader("Permissions-Policy", "interest-cohort=()");
-    io->AddHeader("X-Content-Type-Options", "nosniff");
-    io->AddHeader("X-Frame-Options", "DENY");
 
     // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
     // to forbid the instance key.
     if (TestStr(request.path, "/")) {
-        const AssetInfo *render = RenderTemplate("/", *assets_root,
-                                                 [&](Span<const char> expr, StreamWriter *writer) {
+        const char *nonce = Fmt(io->Allocator(), "%1", FmtRandom(32)).ptr;
+
+        Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1', "
+                                                    "style-src 'self' 'unsafe-inline', "
+                                                    "frame-ancestors 'none'", nonce);
+        io->AddHeader("Content-Security-Policy", csp);
+        io->AddHeader("X-Content-Type-Options", "nosniff");
+
+        AttachTemplate(io, *assets_root, [&](Span<const char> expr, StreamWriter *writer) {
             Span<const char> key = TrimStr(expr);
 
-            if (key == "STATIC_URL") {
+            if (key == "NONCE") {
+                writer->Write(nonce);
+            } else if (key == "STATIC_URL") {
                 Print(writer, "/admin/static/%1/", shared_etag);
             } else if (key == "VERSION") {
                 writer->Write(FelixVersion);
@@ -869,7 +841,6 @@ static void HandleRequest(http_IO *io)
                 Print(writer, "{{%1}}", expr);
             }
         });
-        AttachStatic(io, *render, 0, shared_etag);
     } else if (TestStr(request.path, "/favicon.png")) {
         const AssetInfo *asset = assets_map.FindValue("/favicon.png", nullptr);
         K_ASSERT(asset);
@@ -1059,9 +1030,6 @@ static bool PerformDuties(bool first)
 
     LogDebug("Prune sessions");
     PruneSessions();
-
-    LogDebug("Prune template renders");
-    PruneRenders();
 
     LogDebug("Check zygote");
     if (!CheckZygote())
