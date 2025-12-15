@@ -375,7 +375,7 @@ static void HandleAdminRequest(http_IO *io)
             const AssetInfo *asset = assets_map.FindValue(url, nullptr);
             K_ASSERT(asset);
 
-            const char *nonce = Fmt(io->Allocator(), "%1", FmtRandom(32)).ptr;
+            const char *nonce = Fmt(io->Allocator(), "%1", FmtRandom(16)).ptr;
 
             Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1', "
                                                         "style-src 'self' 'unsafe-inline', "
@@ -816,7 +816,7 @@ static void HandleRequest(http_IO *io)
     // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
     // to forbid the instance key.
     if (TestStr(request.path, "/")) {
-        const char *nonce = Fmt(io->Allocator(), "%1", FmtRandom(32)).ptr;
+        const char *nonce = Fmt(io->Allocator(), "%1", FmtRandom(16)).ptr;
 
         Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1', "
                                                     "style-src 'self' 'unsafe-inline', "
