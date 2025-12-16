@@ -87,6 +87,8 @@ Save options:
     %!..+-F, --from file%!0                Use channel names and paths from file
 
     %!..+-f, --force%!0                    Check all files even if mtime/size match previous backup
+        %!..+--rehash%!0                   Error out if known files have changed despite stable mtime/size
+
         %!..+--follow%!0                   Follow symbolic links (instead of storing them as-is)
         %!..+--noatime%!0                  Do not modify atime if possible (Linux-only)
 
@@ -112,6 +114,8 @@ Available metadata save options:
                 from = opt.current_value;
             } else if (opt.Test("-f", "--force")) {
                 settings.skip = false;
+            } else if (opt.Test("--rehash")) {
+                settings.rehash = true;
             } else if (opt.Test("--follow")) {
                 settings.follow = true;
             } else if (opt.Test("--noatime")) {

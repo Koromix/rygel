@@ -330,15 +330,23 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                     case RawEntry::Kind::Directory: {} break; // Already processed
 
                     case RawEntry::Kind::File: {
-                        if (settings.skip) {
+                        bool unchanged = false;
+
+                        if (settings.skip || settings.rehash) {
                             rk_CacheStat stat = {};
                             StatResult ret = cache->GetStat(filename, &stat);
 
-                            if (ret == StatResult::Success &&
-                                    stat.mtime == LittleEndian(entry->mtime) &&
-                                    stat.ctime == LittleEndian(entry->ctime) &&
-                                    stat.mode == LittleEndian(entry->mode) &&
-                                    stat.size == LittleEndian(entry->size)) {
+                            if (ret == StatResult::Success) {
+                                unchanged = (stat.mtime == LittleEndian(entry->mtime) &&
+                                             stat.ctime == LittleEndian(entry->ctime) &&
+                                             stat.mode == LittleEndian(entry->mode) &&
+                                             stat.size == LittleEndian(entry->size));
+                            } else if (ret == StatResult::OtherError) {
+                                success = false;
+                                break;
+                            }
+
+                            if (unchanged && !settings.rehash) {
                                 entry->hash = stat.hash;
 
                                 entry->flags |= (uint8_t)RawEntry::Flags::Readable;
@@ -350,19 +358,24 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                                 put_entries.fetch_add(1, std::memory_order_relaxed);
 
                                 break;
-                            } else if (ret == StatResult::OtherError) {
-                                success = false;
-                                break;
                             }
                         }
 
                         async.Run([=, this]() {
+                            rk_Hash hash = {};
                             int64_t file_size = 0;
                             int64_t written = 0;
 
-                            PutResult ret = PutFile(filename, &entry->hash, &file_size, &written);
+                            PutResult ret = PutFile(filename, &hash, &file_size, &written);
 
                             if (ret == PutResult::Success) {
+                                if (unchanged && hash != entry->hash) [[unlikely]] {
+                                    LogError("Unexpected content change in '%1' despite stable mtime/size", filename);
+                                    return false;
+                                }
+
+                                entry->hash = hash;
+
                                 entry->flags |= (uint8_t)RawEntry::Flags::Readable;
                                 pending->size += file_size;
 
