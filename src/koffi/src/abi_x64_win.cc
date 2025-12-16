@@ -206,11 +206,11 @@ void CallData::Execute(const FunctionInfo *func, void *native)
 
     // Restore previous stack limits at the end
     K_DEFER_C(exception_list = teb->ExceptionList,
-               base = teb->StackBase,
-               limit = teb->StackLimit,
-               dealloc = teb->DeallocationStack,
-               guaranteed = teb->GuaranteedStackBytes,
-               stfs = teb->SameTebFlags) {
+              base = teb->StackBase,
+              limit = teb->StackLimit,
+              dealloc = teb->DeallocationStack,
+              guaranteed = teb->GuaranteedStackBytes,
+              stfs = teb->SameTebFlags) {
         teb->ExceptionList = exception_list;
         teb->StackBase = base;
         teb->StackLimit = limit;
