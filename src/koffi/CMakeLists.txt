@@ -59,6 +59,7 @@ set(KOFFI_SRC
     src/ffi.cc
     src/parser.cc
     src/util.cc
+    src/uv.cc
     src/win32.cc
     ../../lib/native/base/base.cc
 )
