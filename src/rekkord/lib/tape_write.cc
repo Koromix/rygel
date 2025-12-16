@@ -31,6 +31,11 @@ enum class PutResult {
     Error
 };
 
+struct SizePair {
+    int64_t size;
+    int64_t stored;
+};
+
 class PutContext {
     rk_Repository *repo;
     rk_Cache *cache;
@@ -55,7 +60,7 @@ public:
     PutContext(rk_Repository *repo, rk_Cache *cache, const rk_SaveSettings &settings);
 
     PutResult PutDirectory(const char *src_dirname, bool follow, rk_Hash *out_hash, int64_t *out_subdirs = nullptr);
-    PutResult PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_size = nullptr, int64_t *out_stored = nullptr);
+    PutResult PutFile(const char *src_filename, bool fake, rk_Hash *out_hash, SizePair *out_sizes = nullptr);
 
     int64_t GetSize() const { return put_size; }
     int64_t GetStored() const { return put_stored; }
@@ -346,7 +351,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                                 break;
                             }
 
-                            if (unchanged && !settings.rehash) {
+                            if (unchanged && settings.skip) {
                                 entry->hash = stat.hash;
 
                                 entry->flags |= (uint8_t)RawEntry::Flags::Readable;
@@ -357,42 +362,49 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
                                 put_size.fetch_add(stat.size, std::memory_order_relaxed);
                                 put_entries.fetch_add(1, std::memory_order_relaxed);
 
-                                break;
+                                if (!settings.rehash)
+                                    break;
                             }
                         }
 
                         async.Run([=, this]() {
                             rk_Hash hash = {};
-                            int64_t file_size = 0;
-                            int64_t written = 0;
+                            SizePair sizes = {};
 
-                            PutResult ret = PutFile(filename, &hash, &file_size, &written);
+                            bool fake = settings.skip && unchanged;
+                            K_ASSERT(!fake || settings.rehash);
+
+                            PutResult ret = PutFile(filename, fake, &hash, &sizes);
 
                             if (ret == PutResult::Success) {
-                                if (unchanged && hash != entry->hash) [[unlikely]] {
-                                    LogError("Unexpected content change in '%1' despite stable mtime/size", filename);
-                                    return false;
+                                if (unchanged) {
+                                    if (hash == entry->hash) {
+                                        return true;
+                                    } else {
+                                        LogError("Unexpected content change in '%1' despite stable mtime/size", filename);
+                                        return false;
+                                    }
                                 }
 
                                 entry->hash = hash;
 
                                 entry->flags |= (uint8_t)RawEntry::Flags::Readable;
-                                pending->size += file_size;
+                                pending->size += sizes.size;
 
                                 rk_CacheStat stat = {};
 
                                 stat.mtime = LittleEndian(entry->mtime);
                                 stat.ctime = LittleEndian(entry->ctime);
                                 stat.mode = LittleEndian(entry->mode);
-                                stat.size = LittleEndian(file_size);
+                                stat.size = LittleEndian(sizes.size);
                                 stat.hash = entry->hash;
-                                stat.stored = written;
+                                stat.stored = sizes.stored;
 
                                 cache->PutStat(filename, stat);
 
                                 return true;
                             } else {
-                                bool persist = (ret != PutResult::Error);
+                                bool persist = !unchanged && (ret != PutResult::Error);
                                 return persist;
                             }
                         });
@@ -497,7 +509,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
     return PutResult::Success;
 }
 
-PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_size, int64_t *out_stored)
+PutResult PutContext::PutFile(const char *src_filename, bool fake, rk_Hash *out_hash, SizePair *out_sizes)
 {
     StreamReader st;
     {
@@ -572,13 +584,16 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
                         entry.len = LittleEndian((int32_t)chunk.len);
 
                         HashBlake3(BlobType::Chunk, chunk, salt32, &entry.hash);
-                        rk_ObjectID oid = { rk_BlobCatalog::Raw, entry.hash };
 
-                        int64_t written = WriteBlob(oid, (int)BlobType::Chunk, chunk);
-                        if (written < 0)
-                            return false;
+                        if (!fake) {
+                            rk_ObjectID oid = { rk_BlobCatalog::Raw, entry.hash };
 
-                        file_stored += written;
+                            int64_t written = WriteBlob(oid, (int)BlobType::Chunk, chunk);
+                            if (written < 0)
+                                return false;
+
+                            file_stored += written;
+                        }
 
                         MemCpy(file_blob.ptr + idx * K_SIZE(entry), &entry, K_SIZE(entry));
 
@@ -614,27 +629,30 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
         file_blob.Append(MakeSpan((const uint8_t *)&len_64le, K_SIZE(len_64le)));
 
         HashBlake3(BlobType::File, file_blob, salt32, &file_hash);
-        rk_ObjectID oid = { rk_BlobCatalog::Raw, file_hash };
 
-        int64_t written = WriteBlob(oid, (int)BlobType::File, file_blob);
-        if (written < 0)
-            return PutResult::Error;
+        if (!fake) {
+            rk_ObjectID oid = { rk_BlobCatalog::Raw, file_hash };
 
-        file_stored += written;
+            int64_t written = WriteBlob(oid, (int)BlobType::File, file_blob);
+            if (written < 0)
+                return PutResult::Error;
+
+            file_stored += written;
+        }
     } else {
         const RawChunk *entry0 = (const RawChunk *)file_blob.ptr;
         file_hash = entry0->hash;
     }
 
-    put_size.fetch_add(file_size, std::memory_order_relaxed);
-    put_entries.fetch_add(1, std::memory_order_relaxed);
+    if (!fake) {
+        put_size.fetch_add(file_size, std::memory_order_relaxed);
+        put_entries.fetch_add(1, std::memory_order_relaxed);
+    }
 
     *out_hash = file_hash;
-    if (out_size) {
-        *out_size = file_size;
-    }
-    if (out_stored) {
-        *out_stored += file_stored;
+    if (out_sizes) {
+        out_sizes->size = file_size;
+        out_sizes->stored = file_stored;
     }
     return PutResult::Success;
 }
@@ -836,7 +854,7 @@ bool rk_Save(rk_Repository *repo, const char *channel, Span<const char *const> f
                 entry->kind = (int8_t)RawEntry::Kind::File;
                 entry->size = LittleEndian((uint32_t)file_info.size);
 
-                if (put.PutFile(filename, &entry->hash) != PutResult::Success)
+                if (put.PutFile(filename, false, &entry->hash) != PutResult::Success)
                     return false;
 
                 entry->flags |= (uint8_t)RawEntry::Flags::Readable;
