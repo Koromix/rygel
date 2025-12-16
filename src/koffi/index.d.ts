@@ -259,7 +259,30 @@ type PrimitiveTypes =
     | 'wchar_t';
 export const types: Record<PrimitiveTypes, IKoffiCType>;
 
-// Internal stuff, don't use!
+export interface IKoffiFdEvent {
+    status: number;
+    readable: boolean;
+    writable: boolean;
+    disconnect?: boolean;
+}
+
 export const node: {
     env: { __brand: 'IKoffiNodeEnv' }
+
+    class Poll {
+        start(
+            opts: { readable?: boolean; writable?: boolean; disconnect?: boolean },
+            callback: (ev: IKoffiFdEvent) => void
+        ): void;
+        stop(): void;
+        close(): void;
+        unref(): void;
+        ref(): void;
+    }
+
+    function watch(
+        fd: number,
+        opts: { readable?: boolean; writable?: boolean; disconnect?: boolean },
+        callback: (ev: IKoffiFdEvent) => void
+    ): Poll;
 };

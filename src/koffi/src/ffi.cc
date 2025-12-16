@@ -6,6 +6,7 @@
 #include "call.hh"
 #include "parser.hh"
 #include "util.hh"
+#include "uv.hh"
 #if defined(_WIN32)
     #include "win32.hh"
 #endif
@@ -2600,6 +2601,9 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         SetValueTag(instance, external, instance->void_type);
 
         node.Set("env", external);
+
+        node.Set("watch", Napi::Function::New(env, &Watch, "watch"));
+        node.Set("Poll", Poll::Define(env));
     }
 
     exports.Set("version", Napi::String::New(env, K_STRINGIFY(VERSION)));
