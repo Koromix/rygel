@@ -5289,7 +5289,6 @@ static const pthread_t main_thread = pthread_self();
 static std::atomic_bool flag_signal { false };
 static std::atomic_int explicit_signal { 0 };
 static std::atomic_int interrupt_pfd[2] { -1, -1 };
-static std::atomic_bool kill_group { false };
 
 void SetSignalHandler(int signal, void (*func)(int), struct sigaction *prev)
 {
@@ -5417,12 +5416,6 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
     }
 
     InitInterruptPipe();
-
-    // Best effort
-    {
-        static std::once_flag flag;
-        std::call_once(flag, []() { kill_group = !setpgid(0, 0); });
-    }
 
     // Prepare new environment (if needed)
     HeapArray<char *> new_env;
@@ -6108,16 +6101,6 @@ void InitApp()
     SetSignalHandler(SIGPIPE, [](int) {});
 
     InitInterruptPipe();
-
-    // Kill children on exit
-    atexit([]() {
-        if (kill_group) {
-            pid_t pid = getpid();
-
-            SetSignalHandler(SIGTERM, [](int) {});
-            kill(-pid, SIGTERM);
-        }
-    });
 
     // Make sure timezone information is in place, which is useful if some kind of sandbox runs later and
     // the timezone information is not available (seccomp, namespace, landlock, whatever).
