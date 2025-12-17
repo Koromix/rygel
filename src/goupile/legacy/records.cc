@@ -1048,9 +1048,9 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
 
     if (!session || !session->HasPermission(instance, UserPermission::ExportCreate)) {
         const InstanceHolder *master = instance->master;
-        const char *export_key = !instance->slaves.len ? request.GetHeaderValue("X-Export-Key") : nullptr;
+        const char *api_key = !instance->slaves.len ? request.GetHeaderValue("X-Api-Key") : nullptr;
 
-        if (!export_key) {
+        if (!api_key) {
             if (!session) {
                 LogError("User is not logged in");
                 io->SendError(401);
@@ -1065,10 +1065,10 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
 
         sq_Statement stmt;
         if (!gp_db.Prepare(R"(SELECT permissions FROM dom_permissions
-                              WHERE instance = ?1 AND export_key = ?2)", &stmt))
+                              WHERE instance = ?1 AND api_key = ?2)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 2, export_key, -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, api_key, -1, SQLITE_STATIC);
 
         uint32_t permissions = stmt.Step() ? (uint32_t)sqlite3_column_int(stmt, 0) : 0;
 

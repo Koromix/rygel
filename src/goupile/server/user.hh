@@ -136,7 +136,7 @@ void HandleChangePassword(http_IO *io, InstanceHolder *instance);
 void HandleChangeSecret(http_IO *io, const char *title);
 void HandleChangeTOTP(http_IO *io);
 void HandleChangeMode(http_IO *io, InstanceHolder *instance);
-void HandleChangeExportKey(http_IO *io, InstanceHolder *instance);
+void HandleChangeApiKey(http_IO *io, InstanceHolder *instance);
 
 int64_t CreateInstanceUser(InstanceHolder *instance, const char *username);
 RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *instance, const char *username);

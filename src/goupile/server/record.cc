@@ -692,29 +692,29 @@ void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
     });
 }
 
-static int64_t CheckExportPermission(http_IO *io, InstanceHolder *instance, uint32_t allow)
+static int64_t CheckApiPermission(http_IO *io, InstanceHolder *instance, FunctionRef<bool(uint32_t)> check)
 {
     const http_RequestInfo &request = io->Request();
-    const char *export_key = !instance->slaves.len ? request.GetHeaderValue("X-Export-Key") : nullptr;
+    const char *api_key = !instance->slaves.len ? request.GetHeaderValue("X-Api-Key") : nullptr;
 
-    if (export_key) {
+    if (api_key) {
         const InstanceHolder *master = instance->master;
 
         sq_Statement stmt;
         if (!gp_db.Prepare(R"(SELECT p.permissions, u.userid
                               FROM dom_permissions p
                               INNER JOIN dom_users ON (u.userid = p.userid)
-                              WHERE p.instance = ?1 AND p.export_key = ?2)", &stmt))
+                              WHERE p.instance = ?1 AND p.api_key = ?2)", &stmt))
             return -1;
         sqlite3_bind_text(stmt, 1, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 2, export_key, -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, api_key, -1, SQLITE_STATIC);
 
         if (stmt.Step()) {
             uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
             int64_t userid = sqlite3_column_int64(stmt, 1);
 
-            if (!(permissions & allow)) {
-                LogError("Missing data export or fetch permission");
+            if (!check(permissions)) {
+                LogError("Missing necessary API key permissions");
                 io->SendError(403);
                 return -1;
             }
@@ -722,7 +722,7 @@ static int64_t CheckExportPermission(http_IO *io, InstanceHolder *instance, uint
             return userid;
         } else {
             if (stmt.IsValid()) {
-                LogError("Export key is not valid");
+                LogError("API key is not valid");
                 io->SendError(403);
             }
             return -1;
@@ -736,8 +736,8 @@ static int64_t CheckExportPermission(http_IO *io, InstanceHolder *instance, uint
             io->SendError(401);
             return -1;
         }
-        if (!stamp || !(stamp->permissions & allow)) {
-            LogError("User is not allowed to export data");
+        if (!stamp || !check(stamp->permissions)) {
+            LogError("User is not allowed to use this API");
             io->SendError(403);
             return -1;
         }
@@ -916,9 +916,14 @@ void HandleExportCreate(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    int64_t userid = CheckExportPermission(io, instance, (int)UserPermission::ExportCreate);
-    if (userid < 0)
-        return;
+    int64_t userid;
+    {
+        const auto check = [](uint32_t permissions) { return permissions & (int)UserPermission::ExportCreate; };
+
+        userid = CheckApiPermission(io, instance, check);
+        if (userid < 0)
+            return;
+    }
 
     ExportSettings settings;
     {
@@ -965,8 +970,13 @@ void HandleExportList(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    if (CheckExportPermission(io, instance, (int)UserPermission::ExportCreate | (int)UserPermission::ExportDownload) < 0)
-        return;
+    // Check permissions
+    {
+        const auto check = [](uint32_t permissions) { return permissions & ((int)UserPermission::ExportCreate | (int)UserPermission::ExportDownload); };
+
+        if (CheckApiPermission(io, instance, check) < 0)
+            return;
+    }
 
     sq_Statement stmt;
     if (!instance->db->Prepare(R"(SELECT export, ctime, userid, thread,
@@ -1034,8 +1044,12 @@ void HandleExportDownload(http_IO *io, InstanceHolder *instance)
     // The secret value allows users without export but without fetch permission to download the export after it's made
     const char *secret = request.GetHeaderValue("X-Export-Secret");
 
-    if (!secret && CheckExportPermission(io, instance, (int)UserPermission::ExportDownload) < 0)
-        return;
+    if (!secret) {
+        const auto check = [](uint32_t permissions) { return permissions & (int)UserPermission::ExportDownload; };
+
+        if (CheckApiPermission(io, instance, check) < 0)
+            return;
+    }
 
     int64_t ctime;
     int64_t threads;

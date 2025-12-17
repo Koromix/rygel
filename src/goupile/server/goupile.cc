@@ -749,8 +749,8 @@ static void HandleInstanceRequest(http_IO *io)
         HandleChangeTOTP(io);
     } else if (url == "/api/change/mode" && method == http_RequestMethod::Post) {
         HandleChangeMode(io, instance);
-    } else if (url == "/api/change/export_key" && method == http_RequestMethod::Post) {
-        HandleChangeExportKey(io, instance);
+    } else if (url == "/api/change/key" && method == http_RequestMethod::Post) {
+        HandleChangeApiKey(io, instance);
     } else if (url == "/api/files/static" && method == http_RequestMethod::Get) {
         HandleFileStatic(io, instance);
     } else if (url == "/api/files/list" && method == http_RequestMethod::Get) {

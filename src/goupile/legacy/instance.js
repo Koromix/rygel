@@ -349,20 +349,22 @@ function renderMenu() {
 }
 
 async function generateExportKey(e) {
-    let response = await Net.fetch(`${ENV.urls.instance}api/change/export_key`, { method: 'POST' });
+    let api_key = null;
 
-    if (!response.ok) {
-        let err = await Net.readError(response);
-        throw new Error(err);
-    }
-
-    let export_key = (await response.text()).trim();
-
-    await UI.dialog(e, 'Clé d\'export', {}, (d, resolve, reject) => {
-        d.text('export_key', 'Clé d\'export', {
-            value: export_key,
+    await UI.dialog(e, T.api_key, {}, (d, resolve, reject) => {
+        d.text('api_key', T.api_key, {
+            value: api_key,
+            placeholder: T.cannot_show_existing_api_key,
+            help: (api_key != null) ? T.please_copy_api_key : null,
             readonly: true
         });
+
+        d.action(T.change_api_key, {}, async () => {
+            api_key = await Net.post(`${ENV.urls.instance}api/change/key`);
+            d.refresh();
+        });
+
+        d.action(T.copy_to_clipboard, { disabled: api_key == null }, () => writeClipboard(T.api_key, api_key));
     });
 }
 

@@ -9,7 +9,7 @@
 
 namespace K {
 
-const int DomainVersion = 115;
+const int DomainVersion = 116;
 const int MaxInstances = 1024;
 
 static std::mutex mutex;
@@ -1585,9 +1585,17 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 115: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE dom_permissions RENAME COLUMN export_key TO api_key;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DomainVersion == 115);
+            static_assert(DomainVersion == 116);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

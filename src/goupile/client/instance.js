@@ -400,14 +400,30 @@ function isPageEnabled(page, thread) {
 }
 
 async function generateExportKey(e) {
-    let export_key = await Net.post(`${ENV.urls.instance}api/change/export_key`);
+    let api_key = null;
 
-    await UI.dialog(e, T.export_key, {}, (d, resolve, reject) => {
-        d.text('export_key', T.export_key, {
-            value: export_key,
+    await UI.dialog(e, T.api_key, {}, (d, resolve, reject) => {
+        d.text('api_key', T.api_key, {
+            value: api_key,
+            placeholder: T.cannot_show_existing_api_key,
+            help: (api_key != null) ? T.please_copy_api_key : null,
             readonly: true
         });
+
+        d.action(T.change_api_key, {}, async () => {
+            api_key = await Net.post(`${ENV.urls.instance}api/change/key`);
+            d.refresh();
+        });
+
+        d.action(T.copy_to_clipboard, { disabled: api_key == null }, () => writeClipboard(T.api_key, api_key));
     });
+}
+
+async function writeClipboard(label, text) {
+    await navigator.clipboard.writeText(text);
+
+    let msg = T.message(`{1} copied to clipboard`, label);
+    Log.info(msg);
 }
 
 async function togglePanels(left, right) {

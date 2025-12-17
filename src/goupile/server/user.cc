@@ -1592,7 +1592,7 @@ void HandleChangeMode(http_IO *io, InstanceHolder *instance)
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleChangeExportKey(http_IO *io, InstanceHolder *instance)
+void HandleChangeApiKey(http_IO *io, InstanceHolder *instance)
 {
     RetainPtr<const SessionInfo> session = sessions.Find(io);
     SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
@@ -1617,7 +1617,7 @@ void HandleChangeExportKey(http_IO *io, InstanceHolder *instance)
         sodium_bin2base64(key_buf.ptr, (size_t)key_buf.len, buf, K_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
     }
 
-    if (!gp_db.Run(R"(UPDATE dom_permissions SET export_key = ?3
+    if (!gp_db.Run(R"(UPDATE dom_permissions SET api_key = ?3
                       WHERE userid = ?1 AND instance = ?2)",
                    session->userid, instance->master->key, key_buf.ptr))
         return;
