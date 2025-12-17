@@ -5,7 +5,7 @@ set -e
 PKG_NAME=tytools
 PKG_AUTHOR="Niels Martignène <niels.martignene@protonmail.com>"
 PKG_DESCRIPTION="GUI and command-line tools to manage Teensy devices"
-PKG_DEPENDENCIES="qt6-qtbase, libudev"
+PKG_DEPENDENCIES="qt6-qtbase, qt6-qtsvg, libudev"
 PKG_LICENSE=Unlicense
 
 SCRIPT_PATH=src/tytools/dist/linux/rpm.sh
@@ -13,7 +13,7 @@ VERSION_TARGET=tycmd
 DOCKER_IMAGE=fedora38
 
 build() {
-    dnf install -y qt6-qtbase-devel libudev-devel ImageMagick
+    dnf install -y qt6-qtbase-devel qt6-qtsvg-devel libudev-devel ImageMagick
 
     export QMAKE_PATH=/usr/lib64/qt6/bin/qmake
 

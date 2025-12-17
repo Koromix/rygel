@@ -5,7 +5,7 @@ set -e
 PKG_NAME=tytools
 PKG_AUTHOR="Niels Martignène <niels.martignene@protonmail.com>"
 PKG_DESCRIPTION="GUI and command-line tools to manage Teensy devices"
-PKG_DEPENDENCIES="libqt6core6, libudev1"
+PKG_DEPENDENCIES="libqt6core6, libqt6svg6, libudev1"
 PKG_LICENSE=Unlicense
 PKG_ARCHITECTURES="amd64 arm64"
 
@@ -16,7 +16,7 @@ DOCKER_IMAGE=debian12
 build() {
     apt update
     apt install -y qt6-base-dev qt6-base-dev-tools libudev-dev \
-                   qt6-base-dev:$1 libudev-dev:$1 \
+                   qt6-base-dev:$1 qt6-svg-dev:$1 libudev-dev:$1 \
                    imagemagick
 
     ./bootstrap.sh
