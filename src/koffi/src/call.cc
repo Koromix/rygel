@@ -263,14 +263,18 @@ Size CallData::PushString32Value(Napi::Value value, const char32_t **out_str32)
         char32_t uc = buf16[i];
 
         if (uc >= 0xD800 && uc <= 0xDBFF) {
-            char16_t uc2 = buf16.ptr[++i];
+            if (++i < buf16.len) {
+                char16_t uc2 = buf16.ptr[i];
 
-            if (uc2 >= 0xDC00 && uc2 <= 0xDFFF) {
-                uc = ((uc - 0xD800) << 10) + (uc2 - 0xDC00) + 0x10000u;
+                if (uc2 >= 0xDC00 && uc2 <= 0xDFFF) [[likely]] {
+                    uc = ((uc - 0xD800) << 10) + (uc2 - 0xDC00) + 0x10000u;
+                } else {
+                    uc = ReplacementChar;
+                }
             } else {
                 uc = ReplacementChar;
             }
-        } else if (uc >= 0xDC00 && uc <= 0xDFFF) {
+        } else if (uc >= 0xDC00 && uc <= 0xDFFF) [[unlikely]] {
             uc = ReplacementChar;
         }
 
