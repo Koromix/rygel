@@ -4,7 +4,7 @@
 
 Lorsque vous ouvrez un nouveau projet Goupile, vous arriverez sur l'interface suivante :
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/main.webp }}" height="340" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/main.webp }}" alt=""/></div>
 
 ### Menu principal
 
@@ -30,29 +30,29 @@ Le panneau de suivi comporte deux éléments principaux :
 
 En cliquant sur le bouton « Créer un enregistrement » ou bien sur l'icône du panneau de formulaire (capture ci-dessous) vous accéderez au formulaire en cours :
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/view.webp }}" height="50" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/view.webp }}" width="350" alt=""/></div>
 
 ### Statut de remplissage
 
 Sur un projet par défaut, ceci ouvrira la page de statut de l'enregistrement, qui affiche l'état de remplissage des différentes pages qui composent le projet. Les **tuiles** correspondent aux différentes pages :
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/form.webp }}" height="240" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/form.webp }}" alt=""/></div>
 
 Les différents éléments de la page de statut s'ajustent en fonction de l'état de remplissage :
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/filled.webp }}" height="180" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/filled.webp }}" alt=""/></div>
 
 ### Page de formulaire
 
 Les pages de formulaire correspondent aux pages que vous développez, elles ont cet aspect avec le projet par défaut :
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/page1.webp }}" height="440" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/page1.webp }}" alt=""/></div>
 
 Le **menu s'ajuste automatiquement** en fonction de la complexité du projet. Lorsqu'un formulaire contient peu de pages, celles-ci sont accessibles via le menu principal, comme sur la capture ci-dessous (encadré rouge).
 
 Pour les projets plus complexes (avec de nombreuses pages ou des groupes de pages), et si votre écran est assez large, un menu vertical apparait à gauche du formulaire :
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/page2.webp }}" height="380" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/page2.webp }}" alt=""/></div>
 
 # Mode conception
 
@@ -60,18 +60,18 @@ Pour les projets plus complexes (avec de nombreuses pages ou des groupes de page
 
 Utilisez le menu de conception pour activer le mode de conception, qui vous permettra de paramétrer votre projet et de créer les différentes pages.
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/conception.webp }}" height="80" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/conception.webp }}" width="350" alt=""/></div>
 
 Une fois le mode activé, les panneaux s'ajustent et vous aurez accès à la vue en double panneaux avec le **code à gauche et le formulaire à droite** :
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/develop.webp }}" height="340" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/develop.webp }}" alt=""/></div>
 
 Lorsque vous êtes sur une page de formulaire, deux onglets de code sont disponibles :
 
 - L'onglet **Projet** permet de modifier le [script principal](app), ce script définit l'organisation globale du projet et des différentes pages
 - L'onglet **Formulaire** correspond au [contenu de la page](widgets) en cours
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/tabs.webp }}" height="160" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/tabs.webp }}" width="350" alt=""/></div>
 
 > [!NOTE]
 > Si vous ne voyez pas l'onglet « Formulaire », pas de panique ! Vous êtes probablement sur la page de statut, qui n'a pas de code (par défaut). Ouvrez une page de formulaire et l'onglet apparaitra.
@@ -88,7 +88,7 @@ Les modifications faites dans un script de page **sont appliquées en temps rée
 
 Le ou les widgets en cours de modifications dans l'éditeur de code sont *encadrés en bleu* dans le panneau d'aperçu, pour vous aider à faire le lien entre le code et le contenu généré.
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/highlight.webp }}" height="180" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/highlight.webp }}" alt=""/></div>
 
 ## Environnement de conception
 

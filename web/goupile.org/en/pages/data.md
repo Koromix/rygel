@@ -10,7 +10,7 @@ The **monitoring table** shows one row per record, along with the following colu
 - The creation date of the record
 - One column per page, showing its completion status and possibly the [summary](identifiers#summary) (if it exists)
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/data.webp }}" height="260" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/data.webp }}" alt=""/></div>
 
 Above the table are various filters related to [annotations](#filtres-d-affichage), detailed later.
 
@@ -22,13 +22,13 @@ When a variable is annotated with a status, the record inherits the statuses of 
 
 The screenshot below shows two records (ID 2 and 3) with the status "To be verified":
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/filter1.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/filter1.webp }}" alt=""/></div>
 
 Use the **"Filter" menu** above the table to display only the records with pages matching one or more specific statuses.
 
 In the screenshot above, only records with the "To be verified" status are displayed:
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/filter2.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/filter2.webp }}" alt=""/></div>
 
 # Data exports
 
@@ -41,7 +41,7 @@ Collected data can be exported to an XLSX file that you can open in your spreads
 
 Use the "Create export" button below the tracking table to export data in XLSX format.
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/export1.webp }}" height="220" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/export1.webp }}" alt=""/></div>
 
 You can export either:
 
@@ -49,7 +49,7 @@ You can export either:
 - Records created since the last export
 - Records created or modified since the last export
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/options.webp }}" height="320" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/options.webp }}" width="350" alt=""/></div>
 
 > [!NOTE]
 > There are two permissions related to exports: the permission to create an export (ExportCreate), and the permission to download an export (ExportDownload).
@@ -69,7 +69,7 @@ The columns in each sheet are organized as follows:
 - Column `__sequence`: [sequence identifier](identifiers#tid-and-sequence) of the record
 - One column per variable, named after the variable key, except for multiple-choice questions which are exported into several columns (one option per column named `variable.option`)
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/export3.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/export3.webp }}" alt=""/></div>
 
 When a page is not filled in for a record, no row is present in the corresponding sheet of the exported file. This means that the different pages corresponding to a given record will appear on different rows in each sheet.
 

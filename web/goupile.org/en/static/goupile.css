@@ -26,20 +26,30 @@ html {
 
 .screenshot {
     max-width: 100%;
-    padding: 10px;
+    padding: 10px calc(10px + 10%);
     display: flex;
     justify-content: center;
     gap: 10px;
-}
-.screenshot > img {
-    max-width: 100%;
-    vertical-align: top;
-    cursor: pointer;
-    border: 10px solid #ebebeb;
+
+    & > img {
+        vertical-align: top;
+        cursor: pointer;
+        border: 10px solid #ebebeb;
+        object-fit: contain;
+    }
 }
 .screenshot.left { justify-content: start; }
 .screenshot.right { justify-content: end; }
 p + .screenshot { margin-top: 1em; }
+
+@media screen and (max-width: 960px) {
+    .screenshot {
+        flex-wrap: wrap;
+        padding: 10px calc(10px + 5%);
+
+        & > img { border-width: 4px; }
+    }
+}
 
 .mini {
     float: left;

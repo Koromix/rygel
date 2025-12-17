@@ -2,11 +2,11 @@
 
 Le module d'administration est disponible en ouvrant l'adresse sur laquelle vous avez installé Goupile (par exemple `http://localhost:8889`) et en cliquant sur le lien d'administration.
 
-<div class="screenshot"><img src="{{ ASSET static/help/admin/root.webp }}" height="240" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/root.webp }}" width="350" alt=""/></div>
 
 Après vous être connecté, vous aurez accès au panneau d'administration qui se présente comme ci-dessous :
 
-<div class="screenshot"><img src="{{ ASSET static/help/admin/admin.webp }}" height="220" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/admin.webp }}" alt=""/></div>
 
 Le panneau d'administration est **organisé en panneaux**, qui peuvent être affichés individuellement ou côte à côte. Lorsque vous vous connectez, et si votre écran est assez large, vous verrez :
 
@@ -24,12 +24,12 @@ Créez un projet en cliquant sur « Créer un projet » au-dessus de la liste 
 - La **langue du projet**, chaque projet Goupile définit la langue qu'il utilise, afin de maintenir une cohérence entre la langue utilisée dans les formulaires et la langue de l'interface Goupile.
 - Les **pages par défaut** vous permettent de démarrer plus vite en ajoutant quelques pages d'exemple au projet créé. Sans cette option, le projet sera initialement vide.
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/create.webp }}" height="340" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/create.webp }}" width="350" alt=""/></div>
 
 > [!NOTE]
 > Certains noms sont interdits, comme par exemple `admin` ou bien `static`, pour éviter des conflits avec certaines URLs globales de Goupile.
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/list.webp }}" height="140" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/list.webp }}" alt=""/></div>
 
 Une fois le projet créé il apparaît dans la liste de projet, avec différentes actions possibles :
 
@@ -48,7 +48,7 @@ Suivez le lien d'accès pour commencer à créer vos questionnaires, ou bien lis
 
 # Configurer un projet
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/config.webp }}" height="340" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/config.webp }}" width="350" alt=""/></div>
 
 > [!WARNING]
 > Nous **n'aborderons pas les paramètres de l'onglet avancé**, qui sont destinés à débloquer certains problèmes rares. Évitez d'y toucher !
@@ -78,7 +78,7 @@ Utilisez la fonction de division pour transformer un projet mono-centrique en pr
 
 Chaque division entraine la création d'un nouveau centre, comme sur la capture ci-dessous où 2 centres sont créés pour le projet "test".
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/split.webp }}" height="240" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/split.webp }}" alt=""/></div>
 
 Les centres d'un projet **partagent les scripts** des formulaires (et donc la structure du recueil et des exports), mais les **données sont séparées** en plusieurs bases :
 
@@ -96,13 +96,13 @@ Les centres d'un projet **partagent les scripts** des formulaires (et donc la st
 
 Vous pouvez paramétrer le projet pour réaliser un export automatisé certains jours, à une heure fixe. Chaque export sera disponible dans la [liste des exports](data#exports-de-donnees) sous le tableau de suivi.
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/export.webp }}" height="380" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/export.webp }}" width="350" alt=""/></div>
 
 Vous pouvez choisir d'exporter à chaque fois tous les enregistrements, ou bien uniquement les nouveaux enregistrements depuis le dernier export automatisé.
 
 # Archivage des données
 
-<div class="screenshot"><img src="{{ ASSET static/help/admin/archives.webp }}" height="280" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/archives.webp }}" alt=""/></div>
 
 Les archives enregistrent l'état des projets, des utilisateurs et des données au moment où elle sont créées.
 
@@ -117,6 +117,6 @@ Les archives créées *au cours des 7 derniers jours sont gardées* sur le serve
 > [!WARNING]
 > Attention, pour pouvoir ouvrir ou restaurer une archive, vous devez **conserver la clé de restauration qui vous a été communiquée lors de l'installation de Goupile**.
 >
-> <div class="screenshot"><img src="{{ ASSET static/help/admin/key.webp }}" height="100" alt=""/></div>
+> <div class="screenshot"><img src="{{ ASSET static/help/admin/key.webp }}" width="600" alt=""/></div>
 >
 > Sans cette clé, la restauration est impossible et les données sont perdues. Par ailleurs, il nous est strictement **impossible de récupérer cette clé** si vous la perdez.

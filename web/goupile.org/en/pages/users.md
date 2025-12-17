@@ -4,7 +4,7 @@
 
 Goupile users are shared among the various projects, to which they can be individually assigne with various permissions.
 
-<div class="screenshot"><img src="{{ ASSET static/help/admin/users.webp }}" height="180" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/users.webp }}" alt=""/></div>
 
 There is therefore a single list of users, regardless of the number of projects. However, by clicking the "Permissions" action for a project (in the project list), you can configure the [permissions of each user on that project](#rights-system).
 
@@ -33,7 +33,7 @@ When a normal user has *administration rights* (BuildAdmin) on at least one proj
 
 Click the "Create a user" button to create a new user:
 
-<div class="screenshot"><img src="{{ ASSET static/help/admin/user.webp }}" height="580" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/user.webp }}" width="350" alt=""/></div>
 
 The **username** must contain only lowercase unaccented letters, numbers, or the characters `_`, `.`, and `-`. It must have fewer than 64 characters. Some usernames are prohibited, such as `goupile`.
 
@@ -52,7 +52,7 @@ Finally, if you have **root** status, you can create another root user by enabli
 
 # Permission system
 
-<div class="screenshot"><img src="{{ ASSET static/help/admin/assign.webp }}" height="130" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/admin/assign.webp }}" alt=""/></div>
 
 ## Development permissions
 

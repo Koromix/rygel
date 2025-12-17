@@ -43,7 +43,7 @@ form.number("age", "Âge", {
 })
 ```
 
-<div class="screenshot"><img src="{{ ASSET static/help/dev/number.webp }}" height="100" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/dev/number.webp }}" alt=""/></div>
 
 Ces erreurs sont bloquantes par défaut, mais vous pouvez les rendre non bloquantes en définissant l'option `block: false`.
 
@@ -89,7 +89,7 @@ if (values.num_inclusion && !values.num_inclusion.match(/^[a-zA-Z]{2}[0-9]{5}$/)
     form.error("num_inclusion", "Format incorrect, saississez 2 lettres puis 5 chiffres")
 ```
 
-<div class="screenshot"><img src="{{ ASSET static/help/dev/match.webp }}" height="100" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/dev/match.webp }}" alt=""/></div>
 
 > [!NOTE]
 > Pour des raisons visuelles et historiques, chaque erreur **doit être assignée à une variable**, même si l'erreur en concerne plusieurs.
@@ -112,7 +112,7 @@ if (values.date_inclusion && values.date_fin) {
 }
 ```
 
-<div class="screenshot"><img src="{{ ASSET static/help/dev/dates.webp }}" height="240" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/dev/dates.webp }}" alt=""/></div>
 
 ## Erreurs immédiates et différées
 
@@ -147,7 +147,7 @@ if (values.num_inclusion && !values.num_inclusion.match(/^[0-9]{5}$/))
 
 Chaque variable peut être annotée avec un statut, un commentaire libre, et verrouillée si besoin (uniquement par les utilisateurs avec le droit d'audit). Cliquez sur le petit stylet 🖊 à côté de la variable pour l'annoter.
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/annotate1.webp }}" height="280" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/annotate1.webp }}" alt=""/></div>
 
 Préciser le statut de la variable **permet de ne pas répondre** même lorsque la question est obligatoire. Les statuts disponibles sont les suivants :
 
@@ -160,8 +160,8 @@ Préciser le statut de la variable **permet de ne pas répondre** même lorsque 
 Les *statuts NSP, NA et ND ne sont pas disponibles* dès l'instant où une valeur est renseignée.
 
 <div class="screenshot">
-    <img src="{{ ASSET static/help/data/annotate2.webp }}" height="200" alt=""/>
-    <img src="{{ ASSET static/help/data/annotate3.webp }}" height="200" alt=""/>
+    <img src="{{ ASSET static/help/data/annotate2.webp }}" width="350" alt=""/>
+    <img src="{{ ASSET static/help/data/annotate3.webp }}" width="350" alt=""/>
 </div>
 
 Vous pouvez également ajouter un commentaire libre en annotation, qui peut servir au suivi du remplissage.

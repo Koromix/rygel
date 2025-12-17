@@ -26,7 +26,7 @@ To define a project with several pages in Goupile, you need to nest pages inside
 
 With this simple structure, the project will be organised as shown in the screenshot below:
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/status.webp }}" height="240" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/status.webp }}" alt=""/></div>
 
 > [!NOTE]
 > Each form page has its own data table, and these tables are linked by a [TID identifier](identifiers#tid-and-sequence), which is a unique random identifier.
@@ -37,7 +37,7 @@ With this simple structure, the project will be organised as shown in the screen
 
 The nesting of pages also defines the project's menu hierarchy. This is demonstrated in the following example, which is closer to a real-world project (with an inclusion page, and two follow-up forms), where the menu clearly separates each stage:
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/menu.webp }}" height="280" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/menu.webp }}" alt=""/></div>
 
 The project code corresponding to the form structure shown in the screenshot is provided below:
 
@@ -184,7 +184,7 @@ app.form("project", "6 pages", {
 
 By default, data is saved only when the *Save* button is clicked. Saving requires a fully valid form, with missing items and errors either corrected or annotated.
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/save.webp }}" height="240" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/save.webp }}" alt=""/></div>
 
 You can switch to an autosave mode. In this mode, changes are saved at regular intervals, without blocking errors. Use the `autosave` parameter and specify the save delay in milliseconds.
 
@@ -195,7 +195,7 @@ app.form("auto", "Automatic save", { autosave: 5000 })
 
 Pages saved automatically are marked with a **draft status**, which is visible and filterable in the data entry table. The save button remains available even in autosave mode; it validates the data and removes the draft status.
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/draft.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/draft.webp }}" alt=""/></div>
 
 ## Locking and forgetting
 

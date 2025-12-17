@@ -10,7 +10,7 @@ Le **tableau de suivi** comprend une ligne par enregistrement, ainsi que les col
 - La date de création de l'enregistrement
 - Une colonne par page, avec son statut de remplissage et éventuellement le [summary](identifiers#summary) (si il existe)
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/data.webp }}" height="260" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/data.webp }}" alt=""/></div>
 
 Au-dessus du tableau se trouvent différents filtres relatifs aux [annotations](#filtres-d-affichage) détaillés plus loin.
 
@@ -22,13 +22,13 @@ Lorsqu'une variable est annotée avec un statut, l'enregistrement hérite des st
 
 La capture ci-dessous montre la présence de deux enregistrements (ID 2 et 3) avec un statut « À vérifier » :
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/filter1.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/filter1.webp }}" alt=""/></div>
 
 Utilisez le **menu « Filtrer »** au-dessus du tableau pour afficher uniquement les enregistrements ayant des pages correspondant à un ou plusieurs statuts spécifiques.
 
 Dans la capture ci-dessus, seuls les enregistrements avec le statut « À vérifier » sont affichés :
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/filter2.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/filter2.webp }}" alt=""/></div>
 
 # Exports de données
 
@@ -41,7 +41,7 @@ Les données receuillies peuvent être exportées dans un fichier XLSX que vous 
 
 Utilisez le bouton « Créer un export » sous le tableau de suivi pour exporter les données au format XLSX.
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/export1.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/export1.webp }}" alt=""/></div>
 
 Il est possible d'exporter soit :
 
@@ -49,7 +49,7 @@ Il est possible d'exporter soit :
 - Les enregistrements créés depuis un export précédent
 - Les enregistrements créés ou modifiés depuis un export précédent
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/options.webp }}" height="240" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/options.webp }}" width="350" alt=""/></div>
 
 > [!NOTE]
 > Il existe deux droits relatifs aux exports : le droit de création d'export (ExportCreate), et le droit de téléchargement d'export (ExportDownload).
@@ -69,7 +69,7 @@ Les colonnes de chaque onglet sont organisées comme suit :
 - Colonne `__sequence` : [identifiant séquence](identifiers#tid-et-sequence) de l'enregistrement
 - Une colonne par variable, nommée à partir de la clé de la variable, en dehors des questions à choix multiples qui sont exportées dans plusieurs colonnes (une modalité par colonne nommée `variable.modalite`)
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/export3.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/export3.webp }}" alt=""/></div>
 
 Lorsqu'une page n'est pas remplie pour un enregistrement, aucun ligne n'est présente dans l'onglet correspondant du fichier exporté. Cela signifie que les différentes pages correspondant à un enregistrement donné seront à des lignes différentes dans chaque onglet.
 

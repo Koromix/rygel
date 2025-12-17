@@ -34,7 +34,7 @@ if (values.smoking)
 
 After including several participants, the counter value for each participant is available in the export under the `@counters` tab of the XLSX file. The screenshot below shows 3 participants: the first is a former smoker, the next two are active smokers.
 
-<div class="screenshot"><img src="{{ ASSET static/help/dev/count.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/dev/count.webp }}" alt=""/></div>
 
 ## Randomization
 
@@ -70,7 +70,7 @@ if (values.gender)
 
 The value of each randomized counter is available in the `@counters` tab of the export file. The screenshot below shows group assignments for 8 inclusions using `meta.randomize("group", 4)`.
 
-<div class="screenshot"><img src="{{ ASSET static/help/dev/randomize.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/dev/randomize.webp }}" alt=""/></div>
 
 By default, counters are not secret, meaning they can be read from another form page and displayed or used to adapt subsequent pages.
 
@@ -97,7 +97,7 @@ if (values.age != null)
     meta.summary = values.age + (values.age > 1 ? ' years' : ' year')
 ```
 
-<div class="screenshot"><img src="{{ ASSET static/help/dev/summary.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/dev/summary.webp }}" alt=""/></div>
 
 You can use this feature to display a manually created inclusion number (for instance, if the inclusion number is generated outside Goupile), as shown below:
 

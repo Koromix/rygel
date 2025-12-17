@@ -34,7 +34,7 @@ if (values.tabagisme)
 
 Après inclusion de plusieurs patients, la valeur du compteur de chaque participant est disponible dans l'export, dans l'onglet `@counters` du fichier XLSX. La capture ci-dessous contient 3 participants : le premier est un ancien fumeur, les deux suivants sont des fumeurs actifs :
 
-<div class="screenshot"><img src="{{ ASSET static/help/dev/count.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/dev/count.webp }}" alt=""/></div>
 
 ## Randomisation
 
@@ -70,7 +70,7 @@ if (values.genre)
 
 La valeur de chaque compteur randomisé est disponible dans l'onglet `@counters` du fichier d'export. La capture ci-dessous illustre le groupe affecté à 8 inclusions, avec un appel à `meta.randomize("groupe", 4)`.
 
-<div class="screenshot"><img src="{{ ASSET static/help/dev/randomize.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/dev/randomize.webp }}" alt=""/></div>
 
 Par défaut, les compteurs ne sont pas secrets, c'est à dire qu'ils peuvent être lus depuis une autre page du formuaire, et affichés ou utilisés pour adapter les pages.
 
@@ -97,7 +97,7 @@ if (values.age != null)
     meta.summary = values.age + (values.age > 1 ? ' ans' : ' an')
 ```
 
-<div class="screenshot"><img src="{{ ASSET static/help/dev/summary.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/dev/summary.webp }}" alt=""/></div>
 
 Vous pouvez utiliser cette fonctionnalité pour afficher un numéro d'inclusion créé manuellement (par exemple si le numéro d'inclusion est créé en dehors de Goupile), comme le montre l'exemple ci-dessous :
 

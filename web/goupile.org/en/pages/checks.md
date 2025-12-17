@@ -43,7 +43,7 @@ form.number("age", "Age", {
 })
 ```
 
-<div class="screenshot"><img src="{{ ASSET static/help/dev/number.webp }}" height="100" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/dev/number.webp }}" alt=""/></div>
 
 These errors are blocking by default, but you can make them non-blocking with `block: false`:
 
@@ -89,7 +89,7 @@ if (values.num_inclusion && !values.num_inclusion.match(/^[a-zA-Z]{2}[0-9]{5}$/)
     form.error("num_inclusion", "Incorrect format, enter 2 letters followed by 5 digits")
 ```
 
-<div class="screenshot"><img src="{{ ASSET static/help/dev/match.webp }}" height="130" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/dev/match.webp }}" alt=""/></div>
 
 > [!NOTE]
 > For visual and historical reasons, each error **must be assigned to a variable**, even if it concerns several variables or no variable in particular.
@@ -112,9 +112,9 @@ if (values.date_inclusion && values.date_end) {
 }
 ```
 
-<div class="screenshot"><img src="{{ ASSET static/help/dev/dates.webp }}" height="200" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/dev/dates.webp }}" alt=""/></div>
 
-## Immediate and Delayed Errors
+## Immediate and delayed errors
 
 By default, errors are displayed immediately during entry.
 
@@ -147,7 +147,7 @@ if (values.inclusion_num && !values.inclusion_num.match(/^[0-9]{5}$/))
 
 Each variable can be annotated with a status, a free comment, and locked if needed (only for users with audit rights). Click the pen 🖊 next to a variable to annotate it.
 
-<div class="screenshot"><img src="{{ ASSET static/help/data/annotate1.webp }}" height="280" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/data/annotate1.webp }}" alt=""/></div>
 
 Setting the variable's status **makes it possible to skip it** even for mandatory fields. Available statuses:
 
@@ -160,8 +160,8 @@ Setting the variable's status **makes it possible to skip it** even for mandator
 The last three statuses are not available (not visible) when a value has already been entered.
 
 <div class="screenshot">
-    <img src="{{ ASSET static/help/data/annotate2.webp }}" height="200" alt=""/>
-    <img src="{{ ASSET static/help/data/annotate3.webp }}" height="200" alt=""/>
+    <img src="{{ ASSET static/help/data/annotate2.webp }}" width="350" alt=""/>
+    <img src="{{ ASSET static/help/data/annotate3.webp }}" width="350" alt=""/>
 </div>
 
 You can also add a free-text comment in the annotation for tracking purposes.

@@ -4,7 +4,7 @@
 
 When you open a new Goupile project, you will see the following interface:
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/main.webp }}" height="340" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/main.webp }}" alt=""/></div>
 
 ### Main menu
 
@@ -30,29 +30,29 @@ The data panel contains two main elements:
 
 Click on the "Create a record" button or the form panel icon (screenshot below) to access the current form, as shown below:
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/view.webp }}" height="50" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/view.webp }}" width="350" alt=""/></div>
 
 ### Completion status
 
 In a default project, this will open the record status page, which shows the completion status of the different pages that make up the project. The **tiles** correspond to the different pages:
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/form.webp }}" height="240" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/form.webp }}" alt=""/></div>
 
 The different elements of the status page adjust based on the completion status of the current record:
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/filled.webp }}" height="180" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/filled.webp }}" alt=""/></div>
 
 ### Form page
 
 Form pages correspond to the pages you develop. With the default project, they look like this:
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/page1.webp }}" height="440" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/page1.webp }}" alt=""/></div>
 
 The **menu adjusts automatically** depending on the complexity of the project. When a form does only contains a few pages, they are accessible through the main menu, as shown in the screenshot below (red box).
 
 For more complciated projects (with many pages or groups of pages), and if your screen is wide enough, a vertical menu appears to the left of the current page content:
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/page2.webp }}" height="380" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/page2.webp }}" alt=""/></div>
 
 # Conception mode
 
@@ -60,18 +60,18 @@ For more complciated projects (with many pages or groups of pages), and if your 
 
 Use the conception menu to enable the conception mode, which allows you to configure your project and create the various pages.
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/conception.webp }}" height="80" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/conception.webp }}" width="350" alt=""/></div>
 
 Once the mode is activated, the panels adjust and you will have access to the dual-panel view with **code on the left and the form on the right**:
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/develop.webp }}" height="340" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/develop.webp }}" alt=""/></div>
 
 When you are on a form page, two code tabs are available:
 
 * The **Project** tab allows you to modify the [main script](app); this script defines the global organization of the project and its pages.
 * The **Form** tab corresponds to the [content of the current page](widgets).
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/tabs.webp }}" height="160" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/tabs.webp }}" width="350" alt=""/></div>
 
 > [!NOTE]
 > If you do not see the "Form" tab — don’t worry! You are probably on the status page, which (by default) has no code. Open a form page and the tab will appear.
@@ -88,7 +88,7 @@ Changes made in a form/page script **are applied in real time**.
 
 The widget or widgets currently being modified in the code editor are *highlighted in blue* in the preview panel to help you map code to the corresponding widgets.
 
-<div class="screenshot"><img src="{{ ASSET static/help/instance/highlight.webp }}" height="140" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/instance/highlight.webp }}" alt=""/></div>
 
 ## Conception environment
 

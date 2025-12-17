@@ -17,7 +17,7 @@ After publication, users will be able to enter data into these forms.
 
 To do so, click on the Publish button at the top right of the code editor panel. This will display the publication panel (shown in the screenshot on the left).
 
-<div class="screenshot"><img src="{{ ASSET static/help/dev/publish.webp }}" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/dev/publish.webp }}" width="500" alt=""/></div>
 
 This panel summarizes the changes made and the actions that will result from publishing. In the screenshot on the right, you can see that a page has been modified locally (named "home") and will be made public once the changes are accepted.
 
@@ -28,8 +28,8 @@ Confirm the changes, and **all users will have access** to the new version of th
 You can integrate **images, videos, PDFs, and all types of files**, which will be directly hosted by Goupile. To do this, open the publication panel (accessible above the editor), then click on the "Add a file" link [1].
 
 <div class="screenshot">
-    <img src="{{ ASSET static/help/dev/file1.webp }}" style="height: 240px;" alt=""/>
-    <img src="{{ ASSET static/help/dev/file2.webp }}" style="height: 240px;" alt=""/>
+    <img src="{{ ASSET static/help/dev/file1.webp }}" width="350" alt=""/>
+    <img src="{{ ASSET static/help/dev/file2.webp }}" width="350" alt=""/>
 </div>
 
 You can then select a file from your computer and rename it if you wish. You can also organize it into folders by giving it a name such as "images/alps/montblanc.png".

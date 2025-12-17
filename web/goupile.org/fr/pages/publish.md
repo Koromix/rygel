@@ -17,7 +17,7 @@ Après publication, les utilisateurs pourront saisir des données sur ces formul
 
 Pour ce faire, cliquez sur le bouton Publier en haut à droite du panneau d'édition de code. Ceci affichera le panneau de publication (visible dans la capture à gauche).
 
-<div class="screenshot"><img src="{{ ASSET static/help/dev/publish.webp }}" alt=""/></div>
+<div class="screenshot"><img src="{{ ASSET static/help/dev/publish.webp }}" width="500" alt=""/></div>
 
 Ce panneau récapitule les modifications apportées et les actions qu'engendrera la publication. Dans la capture à droite, on voit qu'une page a été modifiée localement (nommée « accueil ») et sera rendue publique après acceptation des modifications.
 
@@ -28,8 +28,8 @@ Validez les modifications, et **tous les utilisateurs auront accès** à la nouv
 Il est possible d'intégrer des **images, des vidéos, des PDF et tous types de fichiers**, qui seront directement hébergés par Goupile. Pour cela, ouvrez le panneau de publication (accessible au-dessus de l'éditeur), puis cliquez sur le lien « Ajouter un fichier » [1].
 
 <div class="screenshot">
-    <img src="{{ ASSET static/help/dev/file1.webp }}" style="height: 240px;" alt=""/>
-    <img src="{{ ASSET static/help/dev/file2.webp }}" style="height: 240px;" alt=""/>
+    <img src="{{ ASSET static/help/dev/file1.webp }}" width="350" alt=""/>
+    <img src="{{ ASSET static/help/dev/file2.webp }}" width="350" alt=""/>
 </div>
 
 Vous pouvez ensuite sélectionner un fichier à ajouter depuis votre ordinateur, et le renommer si vous le souhaitez. Vous pouvez également le mettre en arborescence en lui donnant un nom tel que « images/alpes/montblanc.png ».
