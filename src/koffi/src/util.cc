@@ -1513,7 +1513,7 @@ bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *typ
 
         ptr = (uint8_t *)buffer.ptr;
     } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for reference, expected external or TypedArray", GetValueType(instance, value));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for reference, expected external or TypedArray", GetValueType(instance, ref));
         return env.Null();
     }
 
