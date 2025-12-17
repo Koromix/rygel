@@ -1306,6 +1306,10 @@ Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const S
     } else if (IsRawBuffer(value)) {
         Span<uint8_t> buffer = GetRawBuffer(value);
 
+        if (offset < 0) [[unlikely]] {
+            ThrowError<Napi::TypeError>(env, "Offset must be >= 0");
+            return env.Null();
+        }
         if (buffer.len - offset < type->size) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
                                     type->name, type->size + offset);
@@ -1497,6 +1501,10 @@ bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *typ
     } else if (IsRawBuffer(ref)) {
         Span<uint8_t> buffer = GetRawBuffer(ref);
 
+        if (offset < 0) [[unlikely]] {
+            ThrowError<Napi::TypeError>(env, "Offset must be >= 0");
+            return env.Null();
+        }
         if (buffer.len - offset < type->size) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
                                     type->name, type->size + offset);
