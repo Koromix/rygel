@@ -628,6 +628,8 @@ int GetTypedArrayType(const TypeInfo *type)
 
 Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len)
 {
+    static const char16_t ReplacementChar = 0xFFFD;
+
     HeapArray<char16_t> buf;
     buf.Reserve(len * 2);
 
@@ -638,7 +640,7 @@ Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len)
             if (uc < 0xD800 || uc > 0xDFFF) {
                 buf.Append((char16_t)uc);
             } else {
-                buf.Append('?');
+                buf.Append(ReplacementChar);
             }
         } else if (uc <= 0x10FFFF) {
             uc -= 0x0010000UL;
@@ -646,7 +648,7 @@ Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len)
             buf.Append((char16_t)((uc >> 10) + 0xD800));
             buf.Append((char16_t)((uc & 0x3FFul) + 0xDC00));
         } else {
-            buf.Append('?');
+            buf.Append(ReplacementChar);
         }
     }
 

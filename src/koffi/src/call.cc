@@ -238,6 +238,8 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
 
 Size CallData::PushString32Value(Napi::Value value, const char32_t **out_str32)
 {
+    static const char32_t ReplacementChar = 0x0000FFFD;
+
     Span<char32_t> buf;
 
     Span<const char16_t> buf16;
@@ -266,10 +268,10 @@ Size CallData::PushString32Value(Napi::Value value, const char32_t **out_str32)
             if (uc2 >= 0xDC00 && uc2 <= 0xDFFF) {
                 uc = ((uc - 0xD800) << 10) + (uc2 - 0xDC00) + 0x10000u;
             } else {
-                uc = '?';
+                uc = ReplacementChar;
             }
         } else if (uc >= 0xDC00 && uc <= 0xDFFF) {
-            uc = '?';
+            uc = ReplacementChar;
         }
 
         buf[j++] = uc;
