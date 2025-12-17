@@ -6,6 +6,13 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.94
+
+*Released on 2025-12-17*
+
+- Test blob encryption and compression between checksum and upload
+- Add *--rehash* option to `rekkord save`
+
 ### Rekkord 0.93
 
 *Released on 2025-12-06*
