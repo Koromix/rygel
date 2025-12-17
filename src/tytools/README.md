@@ -214,7 +214,7 @@ TyTools can be built with GCC or Clang.
 To install the dependencies on Debian or Ubuntu execute:
 
 ```sh
-sudo apt-get install build-essential libudev-dev qtbase6-dev
+sudo apt-get install build-essential libudev-dev qt6-base-dev
 ```
 
 On Arch Linux you can do so (as root):
