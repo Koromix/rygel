@@ -44,6 +44,7 @@ struct rk_Config {
     rk_S3Config s3;
     ssh_Config ssh;
 
+    bool ocd = true;
     int64_t retain = 0;
     bool safety = true;
 

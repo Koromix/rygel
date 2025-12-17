@@ -28,8 +28,40 @@ static_assert(crypto_sign_ed25519_BYTES == 64);
 static_assert(crypto_kdf_blake2b_KEYBYTES == crypto_box_PUBLICKEYBYTES);
 static_assert(crypto_pwhash_argon2id_SALTBYTES == 16);
 
+// This is basically the same as crypto_box_seal(), but this version lets the caller pick the ephemeral secret key.
+// We need this for out blob key resealing check: we will make the seal twice and do a memcmp() check.
+static bool SealBox(Span<const uint8_t> m, const uint8_t *esk, const unsigned char *pk, uint8_t *out_c)
+{
+    uint8_t epk[crypto_box_PUBLICKEYBYTES];
+    uint8_t nonce[crypto_box_NONCEBYTES];
+
+    K_DEFER {
+        ZeroSafe(epk, K_SIZE(epk));
+        ZeroSafe(nonce, K_SIZE(nonce));
+    };
+
+    if (crypto_scalarmult_curve25519_base(epk, esk) != 0)
+        return false;
+
+    // Prepare nonce
+    {
+        crypto_generichash_blake2b_state st;
+
+        crypto_generichash_blake2b_init(&st, nullptr, 0u, crypto_box_NONCEBYTES);
+        crypto_generichash_blake2b_update(&st, epk, crypto_box_PUBLICKEYBYTES);
+        crypto_generichash_blake2b_update(&st, pk, crypto_box_PUBLICKEYBYTES);
+        crypto_generichash_blake2b_final(&st, nonce, crypto_box_NONCEBYTES);
+    }
+
+    if (crypto_box_easy(out_c + crypto_box_PUBLICKEYBYTES, m.ptr, (unsigned long long)m.len, nonce, pk, esk) != 0)
+        return false;
+    MemCpy(out_c, epk, crypto_box_PUBLICKEYBYTES);
+
+    return true;
+}
+
 rk_Repository::rk_Repository(rk_Disk *disk, const rk_Config &config)
-    : disk(disk), compression_level(config.compression_level), retain(config.retain),
+    : disk(disk), compression_level(config.compression_level), retain(config.retain), ocd(config.ocd),
       tasks(config.threads > 0 ? config.threads : disk->GetDefaultThreads())
 {
 }
@@ -374,133 +406,146 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
     char path[256];
     Fmt(path, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash);
 
+    // Prepare random keys
+    uint8_t bkey[crypto_secretstream_xchacha20poly1305_KEYBYTES];
+    uint8_t esk[crypto_box_SECRETKEYBYTES];
+    FillRandomSafe(bkey, K_SIZE(bkey));
+    FillRandomSafe(esk, K_SIZE(esk));
+
+    K_DEFER {
+        ZeroSafe(bkey, K_SIZE(bkey));
+        ZeroSafe(esk, K_SIZE(esk));
+    };
+
     HeapArray<uint8_t> raw;
-    crypto_secretstream_xchacha20poly1305_state state;
 
-    // Write blob intro
+    // Encrypt blob intro and data
     {
-        BlobIntro intro = {};
+        crypto_secretstream_xchacha20poly1305_state state;
+        EncodeLZ4 lz4;
 
-        intro.version = BlobVersion;
-        intro.type = (int8_t)type;
+        // Prepare intro and symmetric encryption
+        {
+            BlobIntro intro = {};
 
-        uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
-        FillRandomSafe(key, K_SIZE(key));
+            intro.version = BlobVersion;
+            intro.type = (int8_t)type;
 
-        if (crypto_secretstream_xchacha20poly1305_init_push(&state, intro.header, key) != 0) {
-            LogError("Failed to initialize symmetric encryption");
-            return rk_WriteResult::OtherError;
-        }
-        if (crypto_box_seal(intro.ekey, key, K_SIZE(key), keyset->keys.wkey) != 0) {
-            LogError("Failed to seal symmetric key");
-            return rk_WriteResult::OtherError;
-        }
-
-        Span<const uint8_t> buf = MakeSpan((const uint8_t *)&intro, K_SIZE(intro));
-        raw.Append(buf);
-    }
-
-    // Initialize compression
-    EncodeLZ4 lz4;
-    if (!lz4.Start(compression_level))
-        return rk_WriteResult::OtherError;
-
-    // Encrypt blob data
-    {
-        bool complete = false;
-        int64_t compressed = 0;
-
-        do {
-            Size frag_len = std::min(BlobSplit, blob.len);
-            Span<const uint8_t> frag = blob.Take(0, frag_len);
-
-            blob.ptr += frag.len;
-            blob.len -= frag.len;
-            complete = !blob.len;
-
-            if (!lz4.Append(frag))
+            if (crypto_secretstream_xchacha20poly1305_init_push(&state, intro.header, bkey) != 0) {
+                LogError("Failed to initialize symmetric encryption");
                 return rk_WriteResult::OtherError;
+            }
+            if (!SealBox(bkey, esk, keyset->keys.wkey, intro.ekey)) {
+                LogError("Failed to seal symmetric key");
+                return rk_WriteResult::OtherError;
+            }
 
-            bool success = lz4.Flush(complete, [&](Span<const uint8_t> buf) {
-                Size processed = 0;
+            Span<const uint8_t> buf = MakeSpan((const uint8_t *)&intro, K_SIZE(intro));
+            raw.Append(buf);
+        }
 
-                while (buf.len >= BlobSplit) {
-                    Span<const uint8_t> piece = buf.Take(0, BlobSplit);
+        // Initialize compression
+        if (!lz4.Start(compression_level))
+            return rk_WriteResult::OtherError;
 
-                    buf.ptr += piece.len;
-                    buf.len -= piece.len;
+        // Encrypt blob data
+        {
+            Span<const uint8_t> remain = blob;
 
-                    processed += piece.len;
-                    compressed += piece.len;
+            bool complete = false;
+            int64_t compressed = 0;
 
-                    uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
-                    unsigned long long cypher_len;
-                    crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, piece.ptr, piece.len, nullptr, 0, 0);
+            do {
+                Size frag_len = std::min(BlobSplit, remain.len);
+                Span<const uint8_t> frag = remain.Take(0, frag_len);
 
-                    Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
-                    raw.Append(final);
-                }
+                remain.ptr += frag.len;
+                remain.len -= frag.len;
+                complete = !remain.len;
 
-                if (!complete)
+                if (!lz4.Append(frag))
+                    return rk_WriteResult::OtherError;
+
+                bool success = lz4.Flush(complete, [&](Span<const uint8_t> buf) {
+                    Size processed = 0;
+
+                    while (buf.len >= BlobSplit) {
+                        Span<const uint8_t> piece = buf.Take(0, BlobSplit);
+
+                        buf.ptr += piece.len;
+                        buf.len -= piece.len;
+
+                        processed += piece.len;
+                        compressed += piece.len;
+
+                        uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
+                        unsigned long long cypher_len;
+                        crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, piece.ptr, piece.len, nullptr, 0, 0);
+
+                        Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
+                        raw.Append(final);
+                    }
+
+                    if (!complete)
+                        return processed;
+
+                    processed += buf.len;
+                    compressed += buf.len;
+
+                    // Reduce size disclosure with Padmé algorithm
+                    // More information here: https://lbarman.ch/blog/padme/
+                    int64_t padding = PadMe((uint64_t)compressed);
+
+                    // Write remaining bytes and start padding
+                    {
+                        LocalArray<uint8_t, BlobSplit> expand;
+
+                        Size pad = (Size)std::min(padding, (int64_t)K_SIZE(expand.data) - buf.len);
+
+                        MemCpy(expand.data, buf.ptr, buf.len);
+                        MemSet(expand.data + buf.len, 0, pad);
+                        expand.len = buf.len + pad;
+
+                        padding -= pad;
+
+                        uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
+                        unsigned char tag = !padding ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
+                        unsigned long long cypher_len;
+                        crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, expand.data, expand.len, nullptr, 0, tag);
+
+                        Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
+                        raw.Append(final);
+                    }
+
+                    // Finalize padding
+                    while (padding) {
+                        static const uint8_t padder[BlobSplit] = {};
+
+                        Size pad = (Size)std::min(padding, (int64_t)K_SIZE(padder));
+
+                        padding -= pad;
+
+                        uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
+                        unsigned char tag = !padding ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
+                        unsigned long long cypher_len;
+                        crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, padder, pad, nullptr, 0, tag);
+
+                        Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
+                        raw.Append(final);
+                    }
+
                     return processed;
-
-                processed += buf.len;
-                compressed += buf.len;
-
-                // Reduce size disclosure with Padmé algorithm
-                // More information here: https://lbarman.ch/blog/padme/
-                int64_t padding = PadMe((uint64_t)compressed);
-
-                // Write remaining bytes and start padding
-                {
-                    LocalArray<uint8_t, BlobSplit> expand;
-
-                    Size pad = (Size)std::min(padding, (int64_t)K_SIZE(expand.data) - buf.len);
-
-                    MemCpy(expand.data, buf.ptr, buf.len);
-                    MemSet(expand.data + buf.len, 0, pad);
-                    expand.len = buf.len + pad;
-
-                    padding -= pad;
-
-                    uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
-                    unsigned char tag = !padding ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
-                    unsigned long long cypher_len;
-                    crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, expand.data, expand.len, nullptr, 0, tag);
-
-                    Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
-                    raw.Append(final);
-                }
-
-                // Finalize padding
-                while (padding) {
-                    static const uint8_t padder[BlobSplit] = {};
-
-                    Size pad = (Size)std::min(padding, (int64_t)K_SIZE(padder));
-
-                    padding -= pad;
-
-                    uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
-                    unsigned char tag = !padding ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
-                    unsigned long long cypher_len;
-                    crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, padder, pad, nullptr, 0, tag);
-
-                    Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
-                    raw.Append(final);
-                }
-
-                return processed;
-            });
-            if (!success)
-                return rk_WriteResult::OtherError;
-        } while (!complete);
+                });
+                if (!success)
+                    return rk_WriteResult::OtherError;
+            } while (!complete);
+        }
     }
 
     rk_WriteSettings settings = {};
 
     settings.conditional = HasConditionalWrites();
     settings.retain = retain;
-
     settings.checksum = disk->GetChecksumType();
 
     switch (settings.checksum) {
@@ -511,6 +556,85 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
         case rk_ChecksumType::CRC64nvme: { settings.hash.crc64nvme = CRC64nvme(0, raw); } break;
         case rk_ChecksumType::SHA1: { SHA1(settings.hash.sha1, raw.ptr, (size_t)raw.len); } break;
         case rk_ChecksumType::SHA256: { crypto_hash_sha256(settings.hash.sha256, raw.ptr, (size_t)raw.len); } break;
+    }
+
+    if (ocd) {
+        K_ASSERT(raw.len >= K_SIZE(BlobIntro));
+
+        const BlobIntro *intro = (BlobIntro *)raw.ptr;
+
+        // Check intro by making a new one from scratch, it should end up the same
+        {
+            BlobIntro twin = {};
+
+            twin.version = BlobVersion;
+            twin.type = (int8_t)type;
+            MemCpy(twin.header, intro->header, K_SIZE(twin.header));
+
+            if (!SealBox(bkey, esk, keyset->keys.wkey, twin.ekey)) {
+                LogError("Failed redundant symmetric key seal");
+                return rk_WriteResult::OtherError;
+            }
+
+            if (memcmp(intro, &twin, K_SIZE(twin))) {
+                LogError("Failed blob intro encryption check");
+                return rk_WriteResult::OtherError;
+            }
+        }
+
+        // Run the decryption and decompression code to make sure
+        {
+            crypto_secretstream_xchacha20poly1305_state state;
+
+            if (crypto_secretstream_xchacha20poly1305_init_pull(&state, intro->header, bkey) != 0) {
+                LogError("Failed to initialize symmetric decryption of '%1'", path);
+                return rk_WriteResult::OtherError;
+            }
+
+            Span<const uint8_t> remain = raw.Take(K_SIZE(BlobIntro), raw.len - K_SIZE(BlobIntro));
+
+            DecodeLZ4 lz4;
+            bool eof = false;
+            int64_t checked = 0;
+
+            while (!eof && remain.len) {
+                Size in_len = std::min(remain.len, BlobSplit + (Size)crypto_secretstream_xchacha20poly1305_ABYTES);
+                Size out_len = in_len - crypto_secretstream_xchacha20poly1305_ABYTES;
+
+                Span<const uint8_t> cypher = MakeSpan(remain.ptr, in_len);
+                Span<uint8_t> buf = lz4.PrepareAppend(out_len);
+
+                unsigned long long buf_len = 0;
+                uint8_t tag;
+                if (crypto_secretstream_xchacha20poly1305_pull(&state, buf.ptr, &buf_len, &tag,
+                                                               cypher.ptr, cypher.len, nullptr, 0) != 0) {
+                    LogError("Failed redundant symmetric decryption of '%1'", path);
+                    return rk_WriteResult::OtherError;
+                }
+
+                remain.ptr += cypher.len;
+                remain.len -= cypher.len;
+
+                eof = (tag == crypto_secretstream_xchacha20poly1305_TAG_FINAL);
+
+                bool success = lz4.Flush(eof, [&](Span<const uint8_t> buf) {
+                    if (checked + buf.len > blob.len || memcmp(blob.ptr + checked, buf.ptr, (size_t)buf.len)) [[unlikely]] {
+                        LogInfo("Failed write decryption content check of '%1'", path);
+                        return false;
+                    }
+
+                    checked += buf.len;
+                    return true;
+                });
+                if (!success)
+                    return rk_WriteResult::OtherError;
+            }
+
+            if (checked != blob.len) [[unlikely]] {
+                LogInfo("Failed write decryption size check of '%1'", path);
+                return rk_WriteResult::OtherError;
+            }
+        }
     }
 
     rk_WriteResult ret = disk->WriteFile(path, raw, settings);

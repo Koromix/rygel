@@ -97,6 +97,7 @@ class rk_Repository {
 
     int compression_level;
     int64_t retain;
+    bool ocd;
 
     Async tasks;
 

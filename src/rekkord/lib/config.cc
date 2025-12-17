@@ -234,7 +234,9 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                     valid = false;
                 }
             } else if (prop.section == "Protection") {
-                if (prop.key == "RetainDuration") {
+                if (prop.key == "TestWrites") {
+                    valid &= ParseBool(prop.value, &config.ocd);
+                } else if (prop.key == "RetainDuration") {
                     if (prop.value == "Disabled") {
                         config.retain = 0;
                     } else if (ParseDuration(prop.value, &config.retain)) {
