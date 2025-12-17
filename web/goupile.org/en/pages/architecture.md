@@ -52,7 +52,7 @@ The primary key of a record follows the [ULID format](https://github.com/ulid/sp
 
 Data validity checks against constraints occur on both the client side (systematically) and the server side only when requested by the project administrator with `Batch` permission.
 
-To perform data validation on the server in batch mode, Goupiel forks a zygote process that runs along it. When data validations needs to happen, a request with the necessary data is sent to the zygote process, which forks itself and runs the scripts in a highly constrained namespace, without access to the main file system, and restricted permissiond and system calls (seccomp).
+To perform data validation on the server in batch mode, Goupile forks a zygote process that runs along it. When data validations needs to happen, a request with the necessary data is sent to the zygote process, which forks itself and runs the scripts in a highly constrained namespace, without access to the main file system, and restricted permissiond and system calls (seccomp).
 
 These checks rely on the JavaScript code of each page, which can define conditions and errors based on the entered data. Errors are logged in the metadata alongside each record data.
 

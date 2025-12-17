@@ -52,7 +52,7 @@ La clé principale d'un enregistrement est au [format ULID](https://github.com/u
 
 Les contrôles de validité des données par rapport aux contraintes s’effectuent côté client (de manière systématique) et côté serveur uniquement lorsque l’administrateur du projet en fait la demande avec la permission `Batch`.
 
-Pour effectuer une validation des données côté serveur en mode batch, Goupiel crée un processus *zygote* qui s’exécute en parallèle. Lorsqu’une validation des données doit avoir lieu, une requête contenant les données nécessaires est envoyée au processus zygote, lequel se duplique et exécute les scripts dans un espace de noms (namespace) fortement restreint, sans accès au système de fichiers principal, avec des permissions limitées et des appels système filtrés (*seccomp*).
+Pour effectuer une validation des données côté serveur en mode batch, Goupile crée un processus *zygote* qui s’exécute en parallèle. Lorsqu’une validation des données doit avoir lieu, une requête contenant les données nécessaires est envoyée au processus zygote, lequel se duplique et exécute les scripts dans un espace de noms (namespace) fortement restreint, sans accès au système de fichiers principal, avec des permissions limitées et des appels système filtrés (*seccomp*).
 
 Ces vérifications reposent sur le code JavaScript de chaque page, qui peut définir des conditions et signaler des erreurs en fonction des données saisies. Les erreurs sont consignées dans les métadonnées en parallèle de chaque enregistrement de données.
 
