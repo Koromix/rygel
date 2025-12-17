@@ -634,13 +634,13 @@ Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len)
     for (Size i = 0; i < len; i++) {
         char32_t uc = ptr[i];
 
-        if (uc < 0xFFFF) {
+        if (uc <= 0xFFFF) {
             if (uc < 0xD800 || uc > 0xDFFF) {
                 buf.Append((char16_t)uc);
             } else {
                 buf.Append('?');
             }
-        } else if (uc < 0x10FFFF) {
+        } else if (uc <= 0x10FFFF) {
             uc -= 0x0010000UL;
 
             buf.Append((char16_t)((uc >> 10) + 0xD800));
