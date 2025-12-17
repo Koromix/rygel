@@ -167,6 +167,8 @@ static int explore_encryption(ty_board_interface *iface)
     uint32_t dw1 = read_uint32_le(report + 37);
     uint32_t dw2 = read_uint32_le(report + 41);
 
+    ty_log(TY_LOG_DEBUG, "Teensy encryption flags: DW0 = %" PRIx32 ", DW1 = %" PRIx32 ", DW2 = %" PRIx32, dw0, dw1, dw2);
+
     if (dw0 != 0x7393CD01) {
         ty_log(TY_LOG_DEBUG, "This Teensy does not support encryption");
         r = 0;
