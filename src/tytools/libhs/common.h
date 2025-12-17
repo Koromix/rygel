@@ -104,7 +104,7 @@ typedef long ssize_t;
 #define _HS_ALIGN_SIZE(size, align) (((size) + (align) - 1) / (align) * (align))
 #define _HS_ALIGN_SIZE_FOR_TYPE(size, type) _HS_ALIGN_SIZE((size), sizeof(type))
 #define _HS_CONTAINER_OF(head, type, member) \
-    ((type *)((char *)(head) - (size_t)(&((type *)0)->member)))
+    ((type *)((char *)(head) - offsetof(type, member)))
 
 int _hs_asprintf(char **strp, const char *fmt, ...) _HS_PRINTF_FORMAT(2, 3);
 int _hs_vasprintf(char **strp, const char *fmt, va_list ap) _HS_PRINTF_FORMAT(2, 0);
