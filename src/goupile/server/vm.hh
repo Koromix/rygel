@@ -19,6 +19,6 @@ ZygoteResult RunZygote(bool sandbox, const char *view_directory);
 void StopZygote();
 bool CheckZygote();
 
-Span<const char> MergeDataMeta(Span<const char> data, Span<const char> meta, Allocator *alloc);
+Span<const char> MergeData(Span<const char> data, Span<const char> meta, Allocator *alloc);
 
 }

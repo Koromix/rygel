@@ -2930,7 +2930,7 @@ bool MigrateInstance(sq_Database *db, int target)
                         Span<const char> meta = MakeSpan((const char *)sqlite3_column_text(stmt, 2),
                                                          sqlite3_column_bytes(stmt, 2));
 
-                        Span<const char> raw = MergeDataMeta(data, meta, &temp_alloc);
+                        Span<const char> raw = MergeData(data, meta, &temp_alloc);
 
                         if (!db->Run("UPDATE rec_entries SET data = ?2, meta = NULL WHERE eid = ?1", eid, raw))
                             return false;
@@ -2952,7 +2952,7 @@ bool MigrateInstance(sq_Database *db, int target)
                         Span<const char> meta = MakeSpan((const char *)sqlite3_column_text(stmt, 2),
                                                          sqlite3_column_bytes(stmt, 2));
 
-                        Span<const char> raw = MergeDataMeta(data, meta, &temp_alloc);
+                        Span<const char> raw = MergeData(data, meta, &temp_alloc);
 
                         if (!db->Run("UPDATE rec_fragments SET data = ?2, meta = NULL WHERE anchor = ?1", anchor, raw))
                             return false;

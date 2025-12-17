@@ -22,7 +22,7 @@ Object.defineProperties(globalThis, {
 function VmApi(native) {
     let self = this;
 
-    this.mergeDataMeta = function(data, meta) {
+    this.mergeData = function(data, meta) {
         data = JSON.parse(data);
         meta = JSON.parse(meta);
 

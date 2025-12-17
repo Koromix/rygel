@@ -18,7 +18,7 @@
 namespace K {
 
 enum class RequestType {
-    MergeDataMeta = 0
+    MergeData = 0
 };
 
 static const int64_t KillDelay = 5000;
@@ -359,7 +359,7 @@ static bool InitVM()
     return true;
 }
 
-static bool HandleMergeDataMeta(json_Parser *json, Allocator *alloc, StreamWriter *writer)
+static bool HandleMergeData(json_Parser *json, Allocator *alloc, StreamWriter *writer)
 {
     Span<const char> data = {};
     Span<const char> meta = {};
@@ -392,7 +392,7 @@ static bool HandleMergeDataMeta(json_Parser *json, Allocator *alloc, StreamWrite
             JSValueMakeString(vm_ctx, js_AutoString(meta))
         };
 
-        JSValueRef ret = CallMethod(vm_ctx, vm_api, "mergeDataMeta", args);
+        JSValueRef ret = CallMethod(vm_ctx, vm_api, "mergeData", args);
         if (!ret)
             return false;
         K_ASSERT(JSValueIsString(vm_ctx, ret));
@@ -444,7 +444,7 @@ static bool HandleRequest(int kind, struct cmsghdr *cmsg, pid_t *out_pid)
         json_Parser json(&reader, &temp_alloc);
 
         switch (kind) {
-            case (int)RequestType::MergeDataMeta: { HandleMergeDataMeta(&json, &temp_alloc, &writer); } break;
+            case (int)RequestType::MergeData: { HandleMergeData(&json, &temp_alloc, &writer); } break;
             default: { LogError("Ignoring unknown message 0x%1 from server process", FmtHex(kind, 2)); } break;
         }
 
@@ -784,7 +784,7 @@ static bool SendRequest(RequestType type, Allocator *alloc,
     return true;
 }
 
-Span<const char> MergeDataMeta(Span<const char> data, Span<const char> meta, Allocator *alloc)
+Span<const char> MergeData(Span<const char> data, Span<const char> meta, Allocator *alloc)
 {
     BlockAllocator temp_alloc;
 
@@ -796,7 +796,7 @@ Span<const char> MergeDataMeta(Span<const char> data, Span<const char> meta, All
     Span<char> result = {};
 
     bool success = SendRequest(
-        RequestType::MergeDataMeta, &temp_alloc,
+        RequestType::MergeData, &temp_alloc,
 
         [&](json_Writer *json) {
             json->StartObject();
