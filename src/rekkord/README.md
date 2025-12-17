@@ -2,10 +2,10 @@
 
 Rekkord is a **multi-platform backup tool**, with the following features:
 
-- Write-only passwords / keys (using asymmetic encryption)
+- Write-only passwords / keys (using asymmetric encryption)
 - Data deduplication based on content-defined chunking
 - Data compression with LZ4
-- Local and remote storage back-ends: local directory, S3 storage, SFTP servers
+- Local and remote storage backends: local directory, S3 storage, SFTP servers
 
 <div class="illustrations">
     <img src="{{ ASSET static/rekkord/logo.webp }}" width="213" height="64" alt="" />
@@ -15,7 +15,7 @@ Rekkord is a **multi-platform backup tool**, with the following features:
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
-Go to the web site for more information: https://rekkord.org/
+Go to the web site for more information: https://rekkord.org
 
 # Project history
 
