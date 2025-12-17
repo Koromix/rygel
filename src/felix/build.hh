@@ -89,7 +89,7 @@ class Builder {
 
     BuildSettings build;
     const char *cache_directory;
-    const char *shared_directory;
+    const char *log_directory;
     const char *cache_filename;
     const char *compile_filename;
     const char *current_ns = "default";

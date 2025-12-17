@@ -95,9 +95,9 @@ bool Builder::PrepareEsbuild()
     // Build it if Go compiler is available
     {
 #if defined(_WIN32)
-        const char *binary = Fmt(&str_alloc, "%1%/esbuild.exe", shared_directory).ptr;
+        const char *binary = Fmt(&str_alloc, "%1%/esbuild.exe", cache_directory).ptr;
 #else
-        const char *binary = Fmt(&str_alloc, "%1%/esbuild", shared_directory).ptr;
+        const char *binary = Fmt(&str_alloc, "%1%/esbuild", cache_directory).ptr;
 #endif
 
         if (TestFile(binary)) {
@@ -121,7 +121,7 @@ bool Builder::PrepareEsbuild()
 
             const char *cmd_line = Fmt(&str_alloc, "go build -o \"%1\" -buildvcs=false ./cmd/esbuild", binary).ptr;
             const char *work_dir = "vendor/esbuild/src";
-            const char *gocache_dir = Fmt(&str_alloc, "%1/Go", shared_directory).ptr;
+            const char *gocache_dir = Fmt(&str_alloc, "%1/Go", cache_directory).ptr;
 
             ExecuteInfo::KeyValue variables[] = {
                 { "GOCACHE", gocache_dir }

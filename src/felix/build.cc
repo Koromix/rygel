@@ -170,8 +170,8 @@ Builder::Builder(const BuildSettings &build)
     const char *architecture = HostArchitectureNames[(int)build.compiler->architecture];
 
     cache_directory = Fmt(&str_alloc, "%1%/%2_%3@%4", build.output_directory, build.compiler->name, platform, architecture).ptr;
-    shared_directory = Fmt(&str_alloc, "%1%/Shared", build.output_directory).ptr;
-    cache_filename = Fmt(&str_alloc, "%1%/FelixCache.txt", shared_directory).ptr;
+    log_directory = Fmt(&str_alloc, "%1%/Log", build.output_directory).ptr;
+    cache_filename = Fmt(&str_alloc, "%1%/commands.cache", log_directory).ptr;
     compile_filename = Fmt(&str_alloc, "%1%/compile_commands.json", build.output_directory).ptr;
 
     LoadCache();
@@ -554,6 +554,32 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         }
 #endif
 
+        // Write down basic target info
+        {
+            const char *info_filename = Fmt(&str_alloc, "%1%/%2.json", log_directory, target.name).ptr;
+
+            if (!EnsureDirectoryExists(info_filename))
+                return false;
+
+            StreamWriter st(info_filename);
+            json_PrettyWriter json(&st);
+
+            json.StartObject();
+
+            json.Key("target"); json.String(target.name);
+
+            json.Key("imports"); json.StartArray();
+            for (const TargetInfo *import: target.imports) {
+                json.String(import->name);
+            }
+            json.EndArray();
+
+            json.EndObject();
+
+            if (!st.Close())
+                return false;
+        }
+
         target_filenames.Set(target.name, target_filename);
     }
 
@@ -928,9 +954,6 @@ Command Builder::InitCommand()
 
 void Builder::SaveCache()
 {
-    if (!EnsureDirectoryExists(cache_filename))
-        return;
-
     StreamWriter st(cache_filename, (int)StreamWriterFlag::Atomic);
     if (!st.IsValid())
         return;
