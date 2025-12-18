@@ -171,7 +171,7 @@ Builder::Builder(const BuildSettings &build)
 
     cache_directory = Fmt(&str_alloc, "%1%/%2_%3@%4", build.output_directory, build.compiler->name, platform, architecture).ptr;
     log_directory = Fmt(&str_alloc, "%1%/Log", build.output_directory).ptr;
-    cache_filename = Fmt(&str_alloc, "%1%/commands.cache", log_directory).ptr;
+    cache_filename = Fmt(&str_alloc, "%1%/commands.txt", log_directory).ptr;
     compile_filename = Fmt(&str_alloc, "%1%/compile_commands.json", build.output_directory).ptr;
 
     LoadCache();
