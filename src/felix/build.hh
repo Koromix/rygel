@@ -91,7 +91,6 @@ class Builder {
     const char *cache_directory;
     const char *log_directory;
     const char *cache_filename;
-    const char *compile_filename;
     const char *current_ns = "default";
 
     // Qt stuff
@@ -144,7 +143,7 @@ private:
     void SaveCache();
     void LoadCache();
 
-    void SaveCompile();
+    void SaveCompileDatabase();
 
     bool PrepareQtSdk(int64_t version);
     bool PrepareEsbuild();

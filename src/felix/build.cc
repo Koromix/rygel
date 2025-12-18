@@ -172,7 +172,6 @@ Builder::Builder(const BuildSettings &build)
     cache_directory = Fmt(&str_alloc, "%1%/%2_%3@%4", build.output_directory, build.compiler->name, platform, architecture).ptr;
     log_directory = Fmt(&str_alloc, "%1%/Log", build.output_directory).ptr;
     cache_filename = Fmt(&str_alloc, "%1%/commands.txt", log_directory).ptr;
-    compile_filename = Fmt(&str_alloc, "%1%/compile_commands.json", build.output_directory).ptr;
 
     LoadCache();
 }
@@ -840,7 +839,7 @@ bool Builder::Build(int jobs, bool verbose)
 
         // Update compilation database
         if (!build.fake) {
-            SaveCompile();
+            SaveCompileDatabase();
         }
 
         // Clean up failed and temporary files
@@ -1063,8 +1062,10 @@ void Builder::LoadCache()
     clear_guard.Disable();
 }
 
-void Builder::SaveCompile()
+void Builder::SaveCompileDatabase()
 {
+    const char *compile_filename = Fmt(&str_alloc, "%1%/compile_commands.json", log_directory).ptr;
+
     StreamWriter st(compile_filename, (int)StreamWriterFlag::Atomic);
     if (!st.IsValid())
         return;
