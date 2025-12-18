@@ -89,6 +89,19 @@ static bool CheckEndpoint(const char *url)
     return true;
 }
 
+static bool CopyFile(const char *src_filename, const char *dest_filename)
+{
+    StreamReader reader(src_filename);
+    StreamWriter writer(dest_filename);
+
+    if (!SpliceStream(&reader, -1, &writer))
+        return false;
+    if (!writer.Close())
+        return false;
+
+    return true;
+}
+
 int RunSetup(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -176,11 +189,41 @@ Options:
         }
 
         key_path = Fmt(&temp_alloc, "%1.key", prefix).ptr;
-        key_path = PromptNonEmpty(T("Master key filename:"), key_path, nullptr, &temp_alloc);
+        key_path = PromptNonEmpty(T("Key filename:"), key_path, nullptr, &temp_alloc);
         if (!key_path)
             return 1;
 
         key_filename = NormalizePath(key_path, dirname, &temp_alloc).ptr;
+    }
+
+    const char *import_filename = nullptr;
+    {
+        Size idx = PromptEnum(T("Do you want to import an existing key or should or do you want to create it?"), {
+            T("Create new master key"),
+            T("Import key for existing repository")
+        });
+        if (idx < 0)
+            return 1;
+
+        switch (idx) {
+            case 0: { import_filename = nullptr; } break;
+            case 1: {
+reimport:
+                import_filename = PromptPathNonEmpty(T("Path of existing key file:"), import_filename, GetWorkingDirectory(), &temp_alloc);
+                if (!import_filename)
+                    return 1;
+
+                // Make sure it's valid
+                {
+                    rk_KeySet *keyset = (rk_KeySet *)AllocateSafe(K_SIZE(rk_KeySet));
+                    K_DEFER { ReleaseSafe(keyset, K_SIZE(*keyset)); };
+
+                    if (!rk_LoadKeyFile(import_filename, keyset))
+                        goto reimport;
+                }
+            } break;
+            case -1: return 1;
+        }
     }
 
     if (!force) {
@@ -325,7 +368,10 @@ reenter:
     }
 
     // Generate master key file
-    {
+    if (import_filename) {
+        if (!CopyFile(import_filename, key_filename))
+            return 1;
+    } else {
         Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
         K_DEFER { ReleaseSafe(mkey.ptr, mkey.len); };
 
