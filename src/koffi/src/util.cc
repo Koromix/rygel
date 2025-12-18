@@ -1307,7 +1307,7 @@ Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const S
         Span<uint8_t> buffer = GetRawBuffer(value);
 
         if (offset < 0) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Offset must be >= 0");
+            ThrowError<Napi::Error>(env, "Offset must be >= 0");
             return env.Null();
         }
         if (buffer.len - offset < type->size) [[unlikely]] {
@@ -1502,7 +1502,7 @@ bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *typ
         Span<uint8_t> buffer = GetRawBuffer(ref);
 
         if (offset < 0) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Offset must be >= 0");
+            ThrowError<Napi::Error>(env, "Offset must be >= 0");
             return env.Null();
         }
         if (buffer.len - offset < type->size) [[unlikely]] {
