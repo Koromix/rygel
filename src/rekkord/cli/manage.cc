@@ -198,7 +198,7 @@ Options:
 
     const char *import_filename = nullptr;
     {
-        Size idx = PromptEnum(T("Do you want to import an existing key or should or do you want to create it?"), {
+        Size idx = PromptEnum(T("Do you want to import an existing key or should or do you want to create one?"), {
             T("Create new master key"),
             T("Import key for existing repository")
         });
