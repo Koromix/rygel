@@ -6,6 +6,15 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.95
+
+*Released on 2025-12-18*
+
+- Propose to import existing key during rekkord setup
+- Improve error message when key does not match repository
+- Fix missing string translations
+- Distribute source archives
+
 ### Rekkord 0.94
 
 *Released on 2025-12-17*
