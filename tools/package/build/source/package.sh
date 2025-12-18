@@ -21,3 +21,6 @@ adjust "${DEST_DIR}/tmp/${PKG_NAME}-${version}/"
 
 tools/package/build/source/rewrite_felix.py FelixBuild.ini -O "${DEST_DIR}/tmp/${PKG_NAME}-${version}/FelixBuild.ini" -t felix $BUILD_TARGETS $imports
 for target in $BUILD_TARGETS; do echo "$target = $version" >> "${DEST_DIR}/tmp/${PKG_NAME}-${version}/FelixVersions.ini"; done
+
+cd "${DEST_DIR}/tmp"
+tar -cvJf "../${PKG_NAME}-${version}.tar.xz" "${PKG_NAME}-${version}"
