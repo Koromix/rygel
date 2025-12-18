@@ -5,6 +5,7 @@ set -e
 PKG_NAME=rekkord
 BUILD_TARGETS="rekkord RekkordTray"
 VERSION_TARGET=rekkord
+FELIX_PRESET=Fast
 
 adjust() {
     cp src/rekkord/*.md "$1"

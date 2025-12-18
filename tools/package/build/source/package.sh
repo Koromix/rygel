@@ -30,6 +30,12 @@ find "${TMP_DIR}/" -type d -empty -delete
 tools/package/build/source/rewrite_felix.py FelixBuild.ini -O "${TMP_DIR}/FelixBuild.ini" -t felix $BUILD_TARGETS $imports
 for target in $BUILD_TARGETS; do echo "${target} = ${VERSION}" >> "${TMP_DIR}/FelixVersions.ini"; done
 
+# Add build script and preset
+echo "./bootstrap.sh" > "${TMP_DIR}/build.sh"
+echo "./felix" >> "${TMP_DIR}/build.sh"
+echo "Preset = ${FELIX_PRESET}" > "${TMP_DIR}/FelixBuild.ini.user"
+chmod +x "${TMP_DIR}/build.sh"
+
 # Run project-specific adjust function
 adjust "${TMP_DIR}/"
 

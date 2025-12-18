@@ -5,6 +5,7 @@ set -e
 PKG_NAME=meestic
 BUILD_TARGETS="meestic MeesticTray"
 VERSION_TARGET=meestic
+FELIX_PRESET=Fast
 
 adjust() {
     cp src/meestic/*.md "$1"

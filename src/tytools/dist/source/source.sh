@@ -5,6 +5,7 @@ set -e
 PKG_NAME=tytools
 BUILD_TARGETS="tycmd tycommander tyuploader"
 VERSION_TARGET=tycmd
+FELIX_PRESET=Fast
 
 adjust() {
     cp src/tytools/*.md src/tytools/LICENSE* "$1"
