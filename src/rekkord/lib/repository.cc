@@ -1048,7 +1048,7 @@ bool rk_Repository::ReadConfig(const char *path, Span<uint8_t> out_buf)
     }
 
     if (crypto_sign_ed25519_verify_detached(config.sig, (const uint8_t *)&config, offsetof(ConfigData, sig), keyset->keys.akey) != 0) {
-        LogError("Invalid signature in config '%1'", path);
+        LogError("Configured key does not match repository");
         return false;
     }
     if (crypto_secretbox_open_easy(out_buf.ptr, config.cypher, 16 + out_buf.len, config.nonce, keyset->keys.akey) != 0) {
