@@ -14,7 +14,7 @@ imports=$(ls "${DEST_DIR}/bin/Log/"*.json | grep -v compile_commands | xargs jq 
 
 VERSION=$(./felix -pDebug -O "${DEST_DIR}/bin" --run "${VERSION_TARGET}" --version | awk -F'[ ]' "/^${VERSION_TARGET}/ {print \$2}")
 TMP_DIR="${DEST_DIR}/${PKG_NAME}-${VERSION}"
-DEST_TAR="../../${PKG_NAME}-${VERSION}_src.tar"
+DEST_TAR="../../${PKG_NAME}_${VERSION}_src.tar"
 
 rm -rf "${TMP_DIR}"
 mkdir -p "${TMP_DIR}"
