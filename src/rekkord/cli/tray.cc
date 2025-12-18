@@ -144,6 +144,13 @@ Options:
                 FelixTarget, socket_filename);
     };
 
+    // Handle version
+    if (argc >= 2 && TestStr(argv[1], "--version")) {
+        PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
+        PrintLn(T("Compiler: %1"), FelixCompiler);
+        return 0;
+    }
+
     // Parse arguments
     {
         OptionParser opt(argc, argv);
