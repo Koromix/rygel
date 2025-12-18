@@ -1,5 +1,5 @@
 PKG_DIR=bin/Packages
-DEST_DIR=${PKG_DIR}/${PKG_NAME}/src
+DEST_DIR="${PKG_DIR}/${PKG_NAME}/src"
 
 ./bootstrap.sh
 
@@ -10,24 +10,33 @@ rm -f "${DEST_DIR}/bin/Log/commands.txt"
 
 directories=$(grep -E -o '[|"](lib/native|lib/web|src|vendor)/[a-zA-Z0-9_\-]+/' < "${DEST_DIR}/bin/Log/commands.txt" | cut -c 2- | sort | uniq)
 sources="bootstrap.sh bootstrap.bat FelixBuild.ini.presets ${directories}"
-version=$(./felix -pDebug -O "${DEST_DIR}/bin" --run "${VERSION_TARGET}" --version | awk -F'[ ]' "/^${VERSION_TARGET}/ {print \$2}")
 imports=$(ls "${DEST_DIR}/bin/Log/"*.json | xargs jq -r '.imports | .[]')
 
-rm -rf "${DEST_DIR}/tmp"
-mkdir -p "${DEST_DIR}/tmp/${PKG_NAME}-${version}/"
+VERSION=$(./felix -pDebug -O "${DEST_DIR}/bin" --run "${VERSION_TARGET}" --version | awk -F'[ ]' "/^${VERSION_TARGET}/ {print \$2}")
+TMP_DIR="${DEST_DIR}/${PKG_NAME}-${VERSION}"
+DEST_FILE="../../${PKG_NAME}-${VERSION}.src.tar.xz"
 
-cp -r --parents $sources "${DEST_DIR}/tmp/${PKG_NAME}-${version}/"
+rm -rf "${TMP_DIR}"
+mkdir -p "${TMP_DIR}"
+cp -r --parents $sources "${TMP_DIR}/"
 
 # Clean up files that are not in version control
-find "${DEST_DIR}/tmp/${PKG_NAME}-${version}/" -type f | sort > "${DEST_DIR}/files"
-git ls-tree -r HEAD --name-only | sort | awk "{ print \"${DEST_DIR}/tmp/${PKG_NAME}-${version}/\" \$1 }" > "${DEST_DIR}/keeps"
+find "${TMP_DIR}/" -type f | sort > "${DEST_DIR}/files"
+git ls-tree -r HEAD --name-only | sort | awk "{ print \"${TMP_DIR}/\" \$1 }" > "${DEST_DIR}/keeps"
 comm -2 -3 "${DEST_DIR}/files" "${DEST_DIR}/keeps" | tail +2 | xargs rm -f
-find "${DEST_DIR}/tmp/${PKG_NAME}-${version}/" -type d -empty -delete
+find "${TMP_DIR}/" -type d -empty -delete
 
-adjust "${DEST_DIR}/tmp/${PKG_NAME}-${version}/"
+# Rewrite FelixBuild.ini with only relevant targets
+tools/package/build/source/rewrite_felix.py FelixBuild.ini -O "${TMP_DIR}/FelixBuild.ini" -t felix $BUILD_TARGETS $imports
+for target in $BUILD_TARGETS; do echo "${target} = ${VERSION}" >> "${TMP_DIR}/FelixVersions.ini"; done
 
-tools/package/build/source/rewrite_felix.py FelixBuild.ini -O "${DEST_DIR}/tmp/${PKG_NAME}-${version}/FelixBuild.ini" -t felix $BUILD_TARGETS $imports
-for target in $BUILD_TARGETS; do echo "$target = $version" >> "${DEST_DIR}/tmp/${PKG_NAME}-${version}/FelixVersions.ini"; done
+# Run project-specific adjust function
+adjust "${TMP_DIR}/"
 
-cd "${DEST_DIR}/tmp"
-tar -cvJf "../${PKG_NAME}-${version}.tar.xz" "${PKG_NAME}-${version}"
+cd "${DEST_DIR}"
+
+echo "Assembling ${PKG_NAME}-${VERSION}.src.tar.gz..."
+tar -czf "../../${PKG_NAME}-${VERSION}.src.tar.gz" $(basename "${TMP_DIR}")
+
+echo "Assembling ${PKG_NAME}-${VERSION}.src.tar.xz..."
+tar -cJf "../../${PKG_NAME}-${VERSION}.src.tar.xz" $(basename "${TMP_DIR}")
