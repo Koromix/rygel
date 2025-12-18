@@ -14,7 +14,7 @@ imports=$(ls "${DEST_DIR}/bin/Log/"*.json | xargs jq -r '.imports | .[]')
 
 VERSION=$(./felix -pDebug -O "${DEST_DIR}/bin" --run "${VERSION_TARGET}" --version | awk -F'[ ]' "/^${VERSION_TARGET}/ {print \$2}")
 TMP_DIR="${DEST_DIR}/${PKG_NAME}-${VERSION}"
-DEST_FILE="../../${PKG_NAME}-${VERSION}.src.tar.xz"
+DEST_TAR="../../${PKG_NAME}-${VERSION}_src.tar"
 
 rm -rf "${TMP_DIR}"
 mkdir -p "${TMP_DIR}"
@@ -41,8 +41,8 @@ adjust "${TMP_DIR}/"
 
 cd "${DEST_DIR}"
 
-echo "Assembling ${PKG_NAME}-${VERSION}.src.tar.gz..."
-tar -c $(basename "${TMP_DIR}") | gzip -9 - > "../../${PKG_NAME}-${VERSION}.src.tar.gz"
+echo "Assembling $(basename "${DEST_TAR}").gz..."
+tar -c $(basename "${TMP_DIR}") | gzip -9 - > "${DEST_TAR}.gz"
 
-echo "Assembling ${PKG_NAME}-${VERSION}.src.tar.xz..."
-tar -cJf "../../${PKG_NAME}-${VERSION}.src.tar.xz" $(basename "${TMP_DIR}")
+echo "Assembling $(basename "${DEST_TAR}").xz..."
+tar -cJf "${DEST_TAR}.xz" $(basename "${TMP_DIR}")
