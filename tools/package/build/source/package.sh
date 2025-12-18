@@ -36,7 +36,7 @@ adjust "${TMP_DIR}/"
 cd "${DEST_DIR}"
 
 echo "Assembling ${PKG_NAME}-${VERSION}.src.tar.gz..."
-tar -czf "../../${PKG_NAME}-${VERSION}.src.tar.gz" $(basename "${TMP_DIR}")
+tar -c $(basename "${TMP_DIR}") | gzip -9 - > "../../${PKG_NAME}-${VERSION}.src.tar.gz"
 
 echo "Assembling ${PKG_NAME}-${VERSION}.src.tar.xz..."
 tar -cJf "../../${PKG_NAME}-${VERSION}.src.tar.xz" $(basename "${TMP_DIR}")
