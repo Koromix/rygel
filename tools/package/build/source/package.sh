@@ -17,6 +17,13 @@ rm -rf "${DEST_DIR}/tmp"
 mkdir -p "${DEST_DIR}/tmp/${PKG_NAME}-${version}/"
 
 cp -r --parents $sources "${DEST_DIR}/tmp/${PKG_NAME}-${version}/"
+
+# Clean up files that are not in version control
+find "${DEST_DIR}/tmp/${PKG_NAME}-${version}/" -type f | sort > "${DEST_DIR}/files"
+git ls-tree -r HEAD --name-only | sort | awk "{ print \"${DEST_DIR}/tmp/${PKG_NAME}-${version}/\" \$1 }" > "${DEST_DIR}/keeps"
+comm -2 -3 "${DEST_DIR}/files" "${DEST_DIR}/keeps" | tail +2 | xargs rm -f
+find "${DEST_DIR}/tmp/${PKG_NAME}-${version}/" -type d -empty -delete
+
 adjust "${DEST_DIR}/tmp/${PKG_NAME}-${version}/"
 
 tools/package/build/source/rewrite_felix.py FelixBuild.ini -O "${DEST_DIR}/tmp/${PKG_NAME}-${version}/FelixBuild.ini" -t felix $BUILD_TARGETS $imports
