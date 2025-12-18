@@ -37,6 +37,7 @@ static bool ApplySandbox()
         return false;
 
     sb.FilterSyscalls({
+        { "restart_syscall", sb_FilterAction::Allow },
         { "exit", sb_FilterAction::Allow },
         { "exit_group", sb_FilterAction::Allow },
         { "brk", sb_FilterAction::Allow },

@@ -46,6 +46,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths)
 
 #if defined(__linux__)
     sb.FilterSyscalls({
+        { "restart_syscall", sb_FilterAction::Allow },
         { "exit", sb_FilterAction::Allow },
         { "exit_group", sb_FilterAction::Allow },
         { "brk", sb_FilterAction::Allow },

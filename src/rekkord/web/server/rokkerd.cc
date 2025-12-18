@@ -48,6 +48,7 @@ static bool ApplySandbox(Span<const char *const> reveals)
     }, true);
 
     sb.FilterSyscalls({
+        { "restart_syscall", sb_FilterAction::Allow },
         { "exit", sb_FilterAction::Allow },
         { "exit_group", sb_FilterAction::Allow },
         { "brk", sb_FilterAction::Allow },
