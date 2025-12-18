@@ -642,17 +642,6 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
         }
     }
 
-    if (!SetWorkingDirectory(target_set.root_directory))
-        return 1;
-
-    // Output directory
-    if (build.output_directory) {
-        build.output_directory = NormalizePath(build.output_directory, start_directory, &temp_alloc).ptr;
-    } else {
-        const char *basename = preset_name ? preset_name : build.compiler->name;
-        build.output_directory = Fmt(&temp_alloc, "%1%/bin%/%2", GetWorkingDirectory(), basename).ptr;
-    }
-
     // Select targets
     HeapArray<EnabledTarget> enabled_targets;
     HeapArray<const SourceFileInfo *> enabled_sources;
@@ -811,6 +800,17 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
                 break;
             }
         }
+    }
+
+    if (!SetWorkingDirectory(target_set.root_directory))
+        return 1;
+
+    // Output directory
+    if (build.output_directory) {
+        build.output_directory = NormalizePath(build.output_directory, start_directory, &temp_alloc).ptr;
+    } else {
+        const char *basename = preset_name ? preset_name : build.compiler->name;
+        build.output_directory = Fmt(&temp_alloc, "%1%/bin%/%2", GetWorkingDirectory(), basename).ptr;
     }
 
     // We're ready to output stuff
