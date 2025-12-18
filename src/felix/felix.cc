@@ -472,6 +472,14 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
         }
     }
 
+    // Automatically use FelixVersions.ini if it exists
+    if (!version_filename) {
+        Span<const char> config_dir = GetPathDirectory(config_filename);
+        const char *filename = Fmt(&temp_alloc, "%1%/FelixVersions.ini", config_dir).ptr;
+
+        version_filename = TestFile(filename) ? filename : nullptr;
+    }
+
     // Load customized presets
     HeapArray<BuildPreset> presets;
     {
