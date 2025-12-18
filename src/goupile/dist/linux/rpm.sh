@@ -25,7 +25,7 @@ build() {
     mkdir -p ${ROOT_DIR}/lib/systemd/system-generators
     ln -s /usr/lib/goupile/generator.py ${ROOT_DIR}/lib/systemd/system-generators/goupile-systemd-generator
     install -D -m0644 src/goupile/dist/linux/README.md ${ROOT_DIR}/etc/goupile/domains.d/README.md
-    install -D -m0644 src/goupile/dist/linux/template.ini ${ROOT_DIR}/etc/goupile/template.ini
+    install -D -m0644 src/goupile/server/config.ini ${ROOT_DIR}/etc/goupile/template.ini
     install -D -m0644 src/goupile/dist/linux/goupile@.service ${ROOT_DIR}/usr/lib/systemd/system/goupile@.service
 
 echo '
