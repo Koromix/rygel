@@ -10,7 +10,7 @@ adjust() {
     cp src/goupile/*.md "$1"
 
     rm -rf "$1/vendor/ace/src" "$1/vendor/ace/src-noconflict" "$1/vendor/ace/src-min-noconflict"
-    rm -rf "$1/vendor/curls/docs" "$1/vendor/curls/tests"
+    rm -rf "$1/vendor/curl/docs" "$1/vendor/curl/tests"
     rm -rf "$1/vendor/mbedtls/docs" "$1/vendor/mbedtls/tests"
 
     rm -rf "$1/vendor/esbuild/native/node_modules/@esbuild/darwin-arm64" \
