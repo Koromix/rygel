@@ -14,7 +14,7 @@ bool Builder::PrepareEsbuild()
 
     // Write TypeScript config for path mapping
     {
-        tsconfig_filename = Fmt(&str_alloc, "%1%/tsconfig.json", build.output_directory).ptr;
+        tsconfig_filename = Fmt(&str_alloc, "%1%/Misc%/tsconfig.json", cache_directory).ptr;
 
         StreamWriter st(tsconfig_filename, (int)StreamWriterFlag::Atomic);
         if (!st.IsValid())
