@@ -70,12 +70,12 @@ felix QtApp
 ### Build static Qt
 
 ```sh
-wget https://ftp.nluug.nl/languages/qt/archive/qt/6.7/6.7.1/single/qt-everywhere-src-6.7.1.tar.xz
+wget https://download.qt.io/archive/qt/6.10/6.10.1/single/qt-everywhere-src-6.10.1.tar.xz
 
-tar xvf qt-everywhere-src-6.7.1.tar.xz
-cd qt-everywhere-src-6.7.1
+tar xvf qt-everywhere-src-6.10.1.tar.xz
+cd qt-everywhere-src-6.10.1
 
-./configure -release -static -opensource -prefix $HOME/Qt/Static/6.7.1 \
+./configure -release -static -opensource -prefix $HOME/Qt/Static/6.10.1 \
             -submodules qtbase,qtsvg -no-icu -no-cups -qt-pcre -qt-zlib -qt-libpng -qt-libjpeg \
             -xcb -fontconfig
 
@@ -86,7 +86,7 @@ cmake --install .
 ### Run felix
 
 ```sh
-export QMAKE_PATH=$HOME/Qt/Static/6.7.1/bin/qmake
+export QMAKE_PATH=$HOME/Qt/Static/6.10.1/bin/qmake
 felix QtApp
 ```
 
@@ -95,12 +95,12 @@ felix QtApp
 ### Build static Qt
 
 ```sh
-wget https://ftp.nluug.nl/languages/qt/archive/qt/6.7/6.7.1/single/qt-everywhere-src-6.7.1.tar.xz
+wget https://download.qt.io/archive/qt/6.10/6.10.1/single/qt-everywhere-src-6.10.1.tar.xz
 
-tar xvf qt-everywhere-src-6.7.1.tar.xz
-cd qt-everywhere-src-6.7.1
+tar xvf qt-everywhere-src-6.10.1.tar.xz
+cd qt-everywhere-src-6.10.1
 
-./configure -release -static -opensource -prefix $HOME/Qt/Static/6.7.1 \
+./configure -release -static -opensource -prefix $HOME/Qt/Static/6.10.1 \
             -submodules qtbase,qtsvg -no-cups -no-freetype -qt-pcre \
             -no-icu -no-harfbuzz -no-pkg-config
 
@@ -111,7 +111,7 @@ cmake --install .
 ### Run felix
 
 ```sh
-export QMAKE_PATH=$HOME/Qt/Static/6.7.1/bin/qmake
+export QMAKE_PATH=$HOME/Qt/Static/6.10.1/bin/qmake
 felix QtApp
 ```
 
@@ -119,14 +119,14 @@ felix QtApp
 
 ### Build static Qt
 
-Start by downloading the Qt source: https://ftp.nluug.nl/languages/qt/archive/qt/6.7/6.7.1/single/qt-everywhere-src-6.7.1.zip
+Start by downloading the Qt source: https://download.qt.io/archive/qt/6.10/6.10.1/single/qt-everywhere-src-6.10.1.zip
 
 Extract it, open a command prompt and execute the following commands:
 
 ```sh
-cd qt-everywhere-src-6.7.1
+cd qt-everywhere-src-6.10.1
 
-configure -release -static -opensource -platform win32-msvc -prefix C:/Qt/Static/6.7.1 ^
+configure -release -static -opensource -platform win32-msvc -prefix C:/Qt/Static/6.10.1 ^
           -submodules qtbase,qtsvg -static-runtime -no-opengl -no-harfbuzz -no-icu -no-cups -qt-pcre -qt-zlib ^
           -qt-freetype -qt-libpng -qt-libjpeg
 
@@ -137,6 +137,6 @@ cmake --install .
 ### Run felix
 
 ```sh
-set QMAKE_PATH=C:/Qt/Static/6.7.1/bin/qmake
+set QMAKE_PATH=C:/Qt/Static/6.10.1/bin/qmake
 felix QtApp
 ```
