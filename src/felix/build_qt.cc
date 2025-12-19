@@ -238,7 +238,7 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
             std::find_if(target.qt_components.begin(), target.qt_components.end(),
                          [](const char *component) { return !TestStr(component, "Core") && !TestStr(component, "Network"); });
 
-        // Add all plugins for simplicity unless only Core or Network are used
+        // Add "all" (with exceptions) plugins for simplicity unless only Core or Network are used
         if (link_plugins) {
             char filter[32];
             Fmt(filter, "*%1", build.compiler->GetArchiveExtension());
@@ -248,6 +248,10 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
             // Read plugin PRL files to add missing libraries
             for (Size i = prev_len, end = link_libraries->len; i < end; i++) {
                 const char *library = (*link_libraries)[i];
+                Span<const char> type = SplitStrReverseAny(GetPathDirectory(library), K_PATH_SEPARATORS);
+
+                if (type == "sqldrivers")
+                    continue;
 
                 Span<const char> base = MakeSpan(library, strlen(library) - strlen(filter) + 1);
                 const char *prl_filename = Fmt(&str_alloc, "%1.prl", base).ptr;
