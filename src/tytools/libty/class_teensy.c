@@ -887,7 +887,7 @@ static int teensy_upload(ty_board_interface *iface, ty_firmware *fw,
                 return r;
             uploaded_len += buf_len;
 
-            hs_delay(first ? 500 : 1);
+            hs_delay(first ? 500 : 10);
 
             if (pf) {
                 r = (*pf)(iface->board, fw, program->total_size, uploaded_len, max_address - min_address, udata);
