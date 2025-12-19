@@ -969,6 +969,31 @@ static int teensy_reboot(ty_board_interface *iface)
     return r;
 }
 
+static int hab_send(hs_port *port, const void *data, size_t size, unsigned int tries, unsigned int delay)
+{
+    ssize_t r;
+
+    /* We may get errors along the way (while the HAB works) so try again
+       until timeout expires. */
+    hs_error_mask(HS_ERROR_IO);
+restart:
+    r = hs_hid_write(port, data, size);
+    if (r == HS_ERROR_IO && --tries) {
+        // Generates STALL if you go too fast (translates to EPIPE on Linux)
+        hs_delay(delay);
+
+        goto restart;
+    }
+    hs_error_unmask();
+    if (r < 0) {
+        if (r == HS_ERROR_IO)
+            return ty_error(TY_ERROR_IO, "%s", hs_error_last_message());
+        return ty_libhs_translate_error((int)r);
+    }
+
+    return 0;
+}
+
 static int teensy_send_bootloader(ty_board_interface *iface, ty_firmware *fw)
 {
     if (!(iface->capabilities & (1 << TY_BOARD_CAPABILITY_VOID)))
@@ -991,12 +1016,12 @@ static int teensy_send_bootloader(ty_board_interface *iface, ty_firmware *fw)
     magic2[10] = (unsigned char)((program->total_size >> 8) & 0xFF);
     magic2[11] = (unsigned char)((program->total_size >> 0) & 0xFF);
 
-    r = hs_hid_write(iface->port, magic1, sizeof(magic1));
+    r = hab_send(iface->port, magic1, sizeof(magic1), 25, 20);
     if (r < 0)
         return ty_libhs_translate_error((int)r);
     hs_delay(20);
 
-    r = hs_hid_write(iface->port, magic2, sizeof(magic2));
+    r = hab_send(iface->port, magic2, sizeof(magic2), 25, 20);
     if (r < 0)
         return ty_libhs_translate_error((int)r);
     hs_delay(20);
@@ -1008,13 +1033,13 @@ static int teensy_send_bootloader(ty_board_interface *iface, ty_firmware *fw)
         buf[0] = 2;
         ty_firmware_extract(program, (uint32_t)address, buf + 1, sizeof(buf) - 1);
 
-        r = hs_hid_write(iface->port, buf, sizeof(buf));
+        r = hab_send(iface->port, buf, sizeof(buf), 25, 20);
         if (r < 0)
             return ty_libhs_translate_error((int)r);
-    hs_delay(20);
+        hs_delay(20);
     }
 
-    r = hs_hid_write(iface->port, magic3, sizeof(magic3));
+    r = hab_send(iface->port, magic3, sizeof(magic3), 25, 20);
     if (r < 0)
         return ty_libhs_translate_error((int)r);
     hs_delay(20);
