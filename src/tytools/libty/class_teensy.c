@@ -1019,12 +1019,12 @@ static int teensy_send_bootloader(ty_board_interface *iface, ty_firmware *fw)
     r = hab_send(iface->port, magic1, sizeof(magic1), 25, 20);
     if (r < 0)
         return ty_libhs_translate_error((int)r);
-    hs_delay(20);
+    hs_delay(40);
 
     r = hab_send(iface->port, magic2, sizeof(magic2), 25, 20);
     if (r < 0)
         return ty_libhs_translate_error((int)r);
-    hs_delay(20);
+    hs_delay(40);
 
     for (size_t address = program->min_address; address < program->max_address; address += 1024) {
         uint8_t buf[1025];
@@ -1036,13 +1036,13 @@ static int teensy_send_bootloader(ty_board_interface *iface, ty_firmware *fw)
         r = hab_send(iface->port, buf, sizeof(buf), 25, 20);
         if (r < 0)
             return ty_libhs_translate_error((int)r);
-        hs_delay(20);
+        hs_delay(40);
     }
 
     r = hab_send(iface->port, magic3, sizeof(magic3), 25, 20);
     if (r < 0)
         return ty_libhs_translate_error((int)r);
-    hs_delay(20);
+    hs_delay(200);
 
     return 0;
 }
