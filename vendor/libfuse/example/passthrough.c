@@ -4,7 +4,7 @@
   Copyright (C) 2011       Sebastian Pipping <sebastian@pipping.org>
 
   This program can be distributed under the terms of the GNU GPLv2.
-  See the file COPYING.
+  See the file GPL2.txt.
 */
 
 /** @file
@@ -23,7 +23,7 @@
  */
 
 
-#define FUSE_USE_VERSION 31
+#define FUSE_USE_VERSION FUSE_MAKE_VERSION(3, 18)
 
 #define _GNU_SOURCE
 
@@ -40,10 +40,6 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <errno.h>
-#ifdef __FreeBSD__
-#include <sys/socket.h>
-#include <sys/un.h>
-#endif
 #include <sys/time.h>
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
@@ -52,12 +48,13 @@
 #include "passthrough_helpers.h"
 
 static int fill_dir_plus = 0;
+static int readdir_zero_ino;
 
 static void *xmp_init(struct fuse_conn_info *conn,
 		      struct fuse_config *cfg)
 {
 	(void) conn;
-	cfg->use_ino = 1;
+	cfg->use_ino = !readdir_zero_ino;
 
 	/* parallel_direct_writes feature depends on direct_io features.
 	   To make parallel_direct_writes valid, need either set cfg->direct_io
@@ -144,6 +141,8 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			st.st_ino = de->d_ino;
 			st.st_mode = de->d_type << 12;
 		}
+		if (readdir_zero_ino)
+			st.st_ino = 0;
 		if (filler(buf, de->d_name, &st, 0, fill_dir_plus))
 			break;
 	}
@@ -399,7 +398,6 @@ static int xmp_fsync(const char *path, int isdatasync,
 	return 0;
 }
 
-#ifdef HAVE_POSIX_FALLOCATE
 static int xmp_fallocate(const char *path, int mode,
 			off_t offset, off_t length, struct fuse_file_info *fi)
 {
@@ -407,9 +405,6 @@ static int xmp_fallocate(const char *path, int mode,
 	int res;
 
 	(void) fi;
-
-	if (mode)
-		return -EOPNOTSUPP;
 
 	if(fi == NULL)
 		fd = open(path, O_WRONLY);
@@ -419,13 +414,12 @@ static int xmp_fallocate(const char *path, int mode,
 	if (fd == -1)
 		return -errno;
 
-	res = -posix_fallocate(fd, offset, length);
+	res = do_fallocate(fd, mode, offset, length);
 
 	if(fi == NULL)
 		close(fd);
 	return res;
 }
-#endif
 
 #ifdef HAVE_SETXATTR
 /* xattr operations are optional and can safely be left unimplemented */
@@ -528,6 +522,24 @@ static off_t xmp_lseek(const char *path, off_t off, int whence, struct fuse_file
 	return res;
 }
 
+#ifdef HAVE_STATX
+static int xmp_statx(const char *path, int flags, int mask, struct statx *stxbuf,
+		     struct fuse_file_info *fi)
+{
+	int fd = -1;
+	int res;
+
+	if (fi)
+		fd = fi->fh;
+
+	res = statx(fd, path, flags | AT_SYMLINK_NOFOLLOW, mask, stxbuf);
+	if (res == -1)
+		return -errno;
+
+	return 0;
+}
+#endif
+
 static const struct fuse_operations xmp_oper = {
 	.init           = xmp_init,
 	.getattr	= xmp_getattr,
@@ -554,9 +566,7 @@ static const struct fuse_operations xmp_oper = {
 	.statfs		= xmp_statfs,
 	.release	= xmp_release,
 	.fsync		= xmp_fsync,
-#ifdef HAVE_POSIX_FALLOCATE
 	.fallocate	= xmp_fallocate,
-#endif
 #ifdef HAVE_SETXATTR
 	.setxattr	= xmp_setxattr,
 	.getxattr	= xmp_getxattr,
@@ -567,6 +577,9 @@ static const struct fuse_operations xmp_oper = {
 	.copy_file_range = xmp_copy_file_range,
 #endif
 	.lseek		= xmp_lseek,
+#ifdef HAVE_STATX
+	.statx		= xmp_statx,
+#endif
 };
 
 int main(int argc, char *argv[])
@@ -580,6 +593,9 @@ int main(int argc, char *argv[])
 	for (i=0, new_argc=0; (i<argc) && (new_argc<MAX_ARGS); i++) {
 		if (!strcmp(argv[i], "--plus")) {
 			fill_dir_plus = FUSE_FILL_DIR_PLUS;
+		} else if (!strcmp(argv[i], "--readdir-zero-inodes")) {
+			// Return zero inodes from readdir
+			readdir_zero_ino = 1;
 		} else {
 			new_argv[new_argc++] = argv[i];
 		}

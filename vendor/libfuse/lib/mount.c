@@ -5,7 +5,7 @@
   Architecture specific file system mounting (Linux).
 
   This program can be distributed under the terms of the GNU LGPLv2.
-  See the file COPYING.LIB.
+  See the file LGPL2.txt.
 */
 
 /* For environ */
@@ -49,6 +49,7 @@
 #define FUSERMOUNT_PROG		"fusermount3"
 #define FUSE_COMMFD_ENV		"_FUSE_COMMFD"
 #define FUSE_COMMFD2_ENV	"_FUSE_COMMFD2"
+#define FUSE_KERN_DEVICE_ENV	"FUSE_KERN_DEVICE"
 
 #ifndef MS_DIRSYNC
 #define MS_DIRSYNC 128
@@ -144,9 +145,8 @@ static int fusermount_posix_spawn(posix_spawn_file_actions_t *action,
 	}
 
 	if (status != 0) {
-		fuse_log(FUSE_LOG_ERR,
-			 "On calling fusermount posix_spawn failed: %s\n",
-			 strerror(status));
+		fuse_log(FUSE_LOG_ERR, "Failed to call '%s': %s\n",
+			 FUSERMOUNT_PROG, strerror(status));
 		return -status;
 	}
 
@@ -360,7 +360,7 @@ static int setup_auto_unmount(const char *mountpoint, int quiet)
 
 	res = socketpair(PF_UNIX, SOCK_STREAM, 0, fds);
 	if(res == -1) {
-		fuse_log(FUSE_LOG_ERR, "Setting up auto-unmountsocketpair() failed",
+		fuse_log(FUSE_LOG_ERR, "Setting up auto-unmount socketpair() failed: %s\n",
 			 strerror(errno));
 		return -1;
 	}
@@ -506,7 +506,7 @@ static int fuse_mount_sys(const char *mnt, struct mount_opts *mo,
 			  const char *mnt_opts)
 {
 	char tmp[128];
-	const char *devname = "/dev/fuse";
+	const char *devname = getenv(FUSE_KERN_DEVICE_ENV) ?: "/dev/fuse";
 	char *source = NULL;
 	char *type = NULL;
 	struct stat stbuf;
@@ -528,7 +528,9 @@ static int fuse_mount_sys(const char *mnt, struct mount_opts *mo,
 	fd = open(devname, O_RDWR | O_CLOEXEC);
 	if (fd == -1) {
 		if (errno == ENODEV || errno == ENOENT)
-			fuse_log(FUSE_LOG_ERR, "fuse: device not found, try 'modprobe fuse' first\n");
+			fuse_log(FUSE_LOG_ERR,
+				"fuse: device %s not found. Kernel module not loaded?\n",
+				devname);
 		else
 			fuse_log(FUSE_LOG_ERR, "fuse: failed to open %s: %s\n",
 				devname, strerror(errno));

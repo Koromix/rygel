@@ -3,11 +3,10 @@
   Copyright (C) 2024 DataDirect Networks.
 
   This program can be distributed under the terms of the GNU GPLv2.
-  See the file COPYING.
+  See the file GPL2.txt.
 */
 
-#include <linux/limits.h>
-#define FUSE_USE_VERSION 317
+#define FUSE_USE_VERSION FUSE_MAKE_VERSION(3, 18)
 
 #include <algorithm>
 #include <stdio.h>
@@ -28,6 +27,9 @@
 #include <string_view>
 #include <cstdint>
 #include <fuse_lowlevel.h>
+#ifdef HAVE_LINUX_LIMITS_H
+#include <linux/limits.h>
+#endif
 
 #define MEMFS_ATTR_TIMEOUT 0.0
 #define MEMFS_ENTRY_TIMEOUT 0.0
@@ -902,10 +904,14 @@ static void memfs_rename(fuse_req_t req, fuse_ino_t parent, const char *name,
 	Dentry *child_dentry_copy = nullptr;
 	Dentry *existing_dentry = nullptr;
 
+#if defined(RENAME_EXCHANGE) && defined(RENAME_NOREPLACE)
 	if (flags & (RENAME_EXCHANGE | RENAME_NOREPLACE)) {
 		fuse_reply_err(req, EINVAL);
 		return;
 	}
+#else
+	(void)flags;
+#endif
 
 	Inodes.lock();
 
@@ -1041,53 +1047,30 @@ static void memfs_statfs(fuse_req_t req, [[maybe_unused]] fuse_ino_t ino)
 	fuse_reply_statfs(req, &stbuf);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 static const struct fuse_lowlevel_ops memfs_oper = {
-	.init = nullptr,
-	.destroy = nullptr,
 	.lookup = memfs_lookup,
 	.forget = memfs_forget,
 	.getattr = memfs_getattr,
 	.setattr = memfs_setattr,
-	.readlink = nullptr,
-	.mknod = nullptr,
 	.mkdir = memfs_mkdir,
 	.unlink = memfs_unlink,
 	.rmdir = memfs_rmdir,
-	.symlink = nullptr,
 	.rename = memfs_rename,
 	.link = memfs_link,
 	.open = memfs_open,
 	.read = memfs_read,
 	.write = memfs_write,
-	.flush = nullptr,
 	.release = memfs_release,
-	.fsync = nullptr,
 	.opendir = memfs_opendir,
 	.readdir = memfs_readdir,
 	.releasedir = memfs_releasedir,
-	.fsyncdir = nullptr,
 	.statfs = memfs_statfs,
-	.setxattr = nullptr,
-	.getxattr = nullptr,
-	.listxattr = nullptr,
-	.removexattr = nullptr,
-	.access = nullptr,
 	.create = memfs_create,
-	.getlk = nullptr,
-	.setlk = nullptr,
-	.bmap = nullptr,
-	.ioctl = nullptr,
-	.poll = nullptr,
-	.write_buf = nullptr,
-	.retrieve_reply = nullptr,
 	.forget_multi = memfs_forget_multi,
-	.flock = nullptr,
-	.fallocate = nullptr,
-	.readdirplus = nullptr,
-	.copy_file_range = nullptr,
-	.lseek = nullptr,
-	.tmpfile = nullptr,
 };
+#pragma GCC diagnostic pop
 
 int main(int argc, char *argv[])
 {

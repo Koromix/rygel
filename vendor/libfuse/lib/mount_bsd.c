@@ -5,7 +5,7 @@
   Architecture specific file system mounting (FreeBSD).
 
   This program can be distributed under the terms of the GNU LGPLv2.
-  See the file COPYING.LIB.
+  See the file LGPL2.txt.
 */
 
 #include "fuse_config.h"
@@ -187,7 +187,7 @@ mount:
 		if (pid == 0) {
 			const char *argv[32];
 			int a = 0;
-			int ret = -1; 
+			int ret = -1;
 
 			if (! fdnam)
 			{
@@ -214,7 +214,10 @@ mount:
 			_exit(EXIT_FAILURE);
 		}
 
-		_exit(EXIT_SUCCESS);
+		waitpid(pid, &status, 0);
+		if (!WIFEXITED(status))
+			_exit(EXIT_FAILURE);
+		_exit(WEXITSTATUS(status));
 	}
 
 	if (waitpid(cpid, &status, 0) == -1 || WEXITSTATUS(status) != 0) {

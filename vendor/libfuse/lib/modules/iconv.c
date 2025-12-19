@@ -3,7 +3,7 @@
   Copyright (C) 2007  Miklos Szeredi <miklos@szeredi.hu>
 
   This program can be distributed under the terms of the GNU LGPLv2.
-  See the file COPYING.LIB
+  See the file LGPL2.txt
 */
 
 #include <fuse_config.h>
@@ -568,6 +568,22 @@ static off_t iconv_lseek(const char *path, off_t off, int whence,
 	return res;
 }
 
+#ifdef HAVE_STATX
+static int iconv_statx(const char *path, int flags, int mask, struct statx *stxbuf,
+			 struct fuse_file_info *fi)
+{
+	struct iconv *ic = iconv_get();
+	char *newpath;
+	int res = iconv_convpath(ic, path, &newpath, 0);
+
+	if (!res) {
+		res = fuse_fs_statx(ic->next, newpath, flags, mask, stxbuf, fi);
+		free(newpath);
+	}
+	return res;
+}
+#endif
+
 static void *iconv_init(struct fuse_conn_info *conn,
 			struct fuse_config *cfg)
 {
@@ -627,6 +643,9 @@ static const struct fuse_operations iconv_oper = {
 	.flock		= iconv_flock,
 	.bmap		= iconv_bmap,
 	.lseek		= iconv_lseek,
+#ifdef HAVE_STATX
+	.statx		= iconv_statx,
+#endif
 };
 
 static const struct fuse_opt iconv_opts[] = {

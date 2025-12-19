@@ -19,6 +19,9 @@ td += executable('release_unlink_race', 'release_unlink_race.c',
 td += executable('test_want_conversion', 'test_want_conversion.c',
                  dependencies: [ libfuse_dep ],
                  install: false)
+td += executable('test_signals', 'test_signals.c',
+                 dependencies: [ libfuse_dep, thread_dep ],
+                 install: false)
 td += executable('test_abi', 'test_abi.c',
                  dependencies: [ libfuse_dep ],
                  install: false)

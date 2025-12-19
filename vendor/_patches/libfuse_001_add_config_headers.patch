@@ -6,7 +6,7 @@ index 0000000000..fd931af62e
 @@ -0,0 +1,59 @@
 +#pragma once
 +
-+#define PACKAGE_VERSION "3.17.4"
++#define PACKAGE_VERSION "3.18.0"
 +
 +#if defined(__linux__)
 +    #define HAVE_CLOSE_RANGE
@@ -71,11 +71,11 @@ index 0000000000..2da5803eaf
 @@ -0,0 +1,11 @@
 +#pragma once
 +
-+#define FUSE_HOTFIX_VERSION 4
++#define FUSE_HOTFIX_VERSION 0
 +
 +#define FUSE_MAJOR_VERSION 3
 +
-+#define FUSE_MINOR_VERSION 17
++#define FUSE_MINOR_VERSION 18
 +
 +#define FUSE_RC_VERSION
 +

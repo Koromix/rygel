@@ -3,7 +3,7 @@
   Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
 
   This program can be distributed under the terms of the GNU GPLv2.
-  See the file COPYING.
+  See the file GPL2.txt.
 */
 
 /** @file
@@ -13,11 +13,7 @@
  * just "passing through" all requests to the corresponding user-space
  * libc functions. In contrast to passthrough.c and passthrough_fh.c,
  * this implementation uses the low-level API. Its performance should
- * be the least bad among the three, but many operations are not
- * implemented. In particular, it is not possible to remove files (or
- * directories) because the code necessary to defer actual removal
- * until the file is not opened anymore would make the example much
- * more complicated.
+ * be the least bad among the three.
  *
  * When writeback caching is enabled (-o writeback mount option), it
  * is only possible to write to files for which the mounting user has
@@ -35,7 +31,7 @@
  */
 
 #define _GNU_SOURCE
-#define FUSE_USE_VERSION FUSE_MAKE_VERSION(3, 12)
+#define FUSE_USE_VERSION FUSE_MAKE_VERSION(3, 18)
 
 #include <fuse_lowlevel.h>
 #include <unistd.h>
@@ -315,7 +311,7 @@ static struct lo_inode *create_new_inode(int fd, struct fuse_entry_param *e, str
 {
 	struct lo_inode *inode = NULL;
 	struct lo_inode *prev, *next;
-	
+
 	inode = calloc(1, sizeof(struct lo_inode));
 	if (!inode)
 		return NULL;
@@ -352,7 +348,7 @@ static int fill_entry_param_new_inode(fuse_req_t req, fuse_ino_t parent, int fd,
 	e->ino = (uintptr_t) create_new_inode(dup(fd), e, lo);
 
 	if (lo_debug(req))
-		fuse_log(FUSE_LOG_DEBUG, "  %lli/%lli -> %lli\n",
+		fuse_log(FUSE_LOG_DEBUG, "  %lli/%d -> %lli\n",
 			(unsigned long long) parent, fd, (unsigned long long) e->ino);
 
 	return 0;
@@ -712,7 +708,7 @@ static void lo_do_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
 					err = errno;
 					goto error;
 				} else {  // End of stream
-					break; 
+					break;
 				}
 			}
 		}
@@ -744,11 +740,11 @@ static void lo_do_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
 						    &st, nextoff);
 		}
 		if (entsize > rem) {
-			if (entry_ino != 0) 
+			if (entry_ino != 0)
 				lo_forget_one(req, entry_ino, 1);
 			break;
 		}
-		
+
 		p += entsize;
 		rem -= entsize;
 
@@ -816,9 +812,9 @@ static void lo_tmpfile(fuse_req_t req, fuse_ino_t parent,
 	/* parallel_direct_writes feature depends on direct_io features.
 	   To make parallel_direct_writes valid, need set fi->direct_io
 	   in current function. */
-	fi->parallel_direct_writes = 1; 
-	
-	err = fill_entry_param_new_inode(req, parent, fd, &e); 
+	fi->parallel_direct_writes = 1;
+
+	err = fill_entry_param_new_inode(req, parent, fd, &e);
 	if (err)
 		fuse_reply_err(req, err);
 	else
@@ -981,8 +977,8 @@ static void lo_write_buf(fuse_req_t req, fuse_ino_t ino,
 	out_buf.buf[0].pos = off;
 
 	if (lo_debug(req))
-		fuse_log(FUSE_LOG_DEBUG, "lo_write(ino=%" PRIu64 ", size=%zd, off=%lu)\n",
-			ino, out_buf.buf[0].size, (unsigned long) off);
+		fuse_log(FUSE_LOG_DEBUG, "lo_write(ino=%" PRIu64 ", size=%zd, off=%jd)\n",
+			ino, out_buf.buf[0].size, (intmax_t) off);
 
 	res = fuse_buf_copy(&out_buf, in_buf, 0);
 	if(res < 0)
@@ -1006,22 +1002,10 @@ static void lo_statfs(fuse_req_t req, fuse_ino_t ino)
 static void lo_fallocate(fuse_req_t req, fuse_ino_t ino, int mode,
 			 off_t offset, off_t length, struct fuse_file_info *fi)
 {
-	int err = EOPNOTSUPP;
+	int err;
 	(void) ino;
 
-#ifdef HAVE_FALLOCATE
-	err = fallocate(fi->fh, mode, offset, length);
-	if (err < 0)
-		err = errno;
-
-#elif defined(HAVE_POSIX_FALLOCATE)
-	if (mode) {
-		fuse_reply_err(req, EOPNOTSUPP);
-		return;
-	}
-
-	err = posix_fallocate(fi->fh, offset, length);
-#endif
+	err = -do_fallocate(fi->fh, mode, offset, length);
 
 	fuse_reply_err(req, err);
 }
@@ -1199,10 +1183,12 @@ static void lo_copy_file_range(fuse_req_t req, fuse_ino_t ino_in, off_t off_in,
 	ssize_t res;
 
 	if (lo_debug(req))
-		fuse_log(FUSE_LOG_DEBUG, "lo_copy_file_range(ino=%" PRIu64 "/fd=%lu, "
-				"off=%lu, ino=%" PRIu64 "/fd=%lu, "
-				"off=%lu, size=%zd, flags=0x%x)\n",
-			ino_in, fi_in->fh, off_in, ino_out, fi_out->fh, off_out,
+		fuse_log(FUSE_LOG_DEBUG,
+			"%s(ino=%lld fd=%lld off=%jd ino=%lld fd=%lld off=%jd, size=%zd, flags=0x%x)\n",
+			__func__,  (unsigned long long)ino_in,
+			(unsigned long long)fi_in->fh,
+			(intmax_t) off_in, (unsigned long long)ino_out,
+			(unsigned long long)fi_out->fh, (intmax_t) off_out,
 			len, flags);
 
 	res = copy_file_range(fi_in->fh, &off_in, fi_out->fh, &off_out, len,
@@ -1226,6 +1212,28 @@ static void lo_lseek(fuse_req_t req, fuse_ino_t ino, off_t off, int whence,
 	else
 		fuse_reply_err(req, errno);
 }
+
+#ifdef HAVE_STATX
+static void lo_statx(fuse_req_t req, fuse_ino_t ino, int flags, int mask,
+		     struct fuse_file_info *fi)
+{
+	struct lo_data *lo = lo_data(req);
+	struct statx buf;
+	int res;
+	int fd;
+
+	if (fi)
+		fd = fi->fh;
+	else
+		fd = lo_fd(req, ino);
+
+	res = statx(fd, "", flags | AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW, mask, &buf);
+	if (res == -1)
+		fuse_reply_err(req, errno);
+	else
+		fuse_reply_statx(req, 0, &buf, lo->timeout);
+}
+#endif
 
 static const struct fuse_lowlevel_ops lo_oper = {
 	.init		= lo_init,
@@ -1267,6 +1275,9 @@ static const struct fuse_lowlevel_ops lo_oper = {
 	.copy_file_range = lo_copy_file_range,
 #endif
 	.lseek		= lo_lseek,
+#ifdef HAVE_STATX
+	.statx		= lo_statx,
+#endif
 };
 
 int main(int argc, char *argv[])

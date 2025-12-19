@@ -4,7 +4,7 @@
   Copyright (C) 2008       Tejun Heo <teheo@suse.de>
 
   This program can be distributed under the terms of the GNU LGPLv2.
-  See the file COPYING.LIB.
+  See the file LGPL2.txt.
 */
 
 #include "fuse_config.h"
@@ -192,9 +192,11 @@ static int cuse_reply_init(fuse_req_t req, struct cuse_init_out *arg,
 	return fuse_send_reply_iov_nofree(req, 0, iov, 3);
 }
 
-void cuse_lowlevel_init(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
+void _cuse_lowlevel_init(fuse_req_t req, const fuse_ino_t nodeid,
+			 const void *op_in, const void *req_payload)
 {
-	struct fuse_init_in *arg = (struct fuse_init_in *) inarg;
+	const struct fuse_init_in *arg = op_in;
+	(void)req_payload;
 	struct cuse_init_out outarg;
 	struct fuse_session *se = req->se;
 	struct cuse_data *cd = se->cuse_data;
@@ -261,6 +263,11 @@ void cuse_lowlevel_init(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
 		clop->init_done(se->userdata);
 
 	fuse_free_req(req);
+}
+
+void cuse_lowlevel_init(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
+{
+	_cuse_lowlevel_init(req, nodeid, inarg, NULL);
 }
 
 struct fuse_session *cuse_lowlevel_setup(int argc, char *argv[],

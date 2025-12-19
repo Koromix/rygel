@@ -23,11 +23,55 @@
  * SUCH DAMAGE
  */
 
+#ifndef FUSE_EXAMPLE_PASSTHROUGH_HELPERS_H_
+#define FUSE_EXAMPLE_PASSTHROUGH_HELPERS_H_
+
+#include <errno.h>
+#include <fcntl.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#ifdef __FreeBSD__
+#include <sys/socket.h>
+#include <sys/un.h>
+#endif
+
+static inline int do_fallocate(int fd, int mode, off_t offset, off_t length)
+{
+#ifdef HAVE_FALLOCATE
+	if (fallocate(fd, mode, offset, length) == -1)
+		return -errno;
+	return 0;
+#else  // HAVE_FALLOCATE
+
+#ifdef HAVE_POSIX_FALLOCATE
+	if (mode == 0)
+		return -posix_fallocate(fd, offset, length);
+#endif
+
+#ifdef HAVE_FSPACECTL
+	// 0x3 == FALLOC_FL_KEEP_SIZE | FALLOC_FL_PUNCH_HOLE
+	if (mode == 0x3) {
+		struct spacectl_range sr;
+
+		sr.r_offset = offset;
+		sr.r_len = length;
+		if (fspacectl(fd, SPACECTL_DEALLOC, &sr, 0, NULL) == -1)
+			return -errno;
+		return 0;
+	}
+#endif
+
+	return -EOPNOTSUPP;
+#endif  // HAVE_FALLOCATE
+}
+
 /*
  * Creates files on the underlying file system in response to a FUSE_MKNOD
  * operation
  */
-static int mknod_wrapper(int dirfd, const char *path, const char *link,
+static inline int mknod_wrapper(int dirfd, const char *path, const char *link,
 	int mode, dev_t rdev)
 {
 	int res;
@@ -74,3 +118,5 @@ static int mknod_wrapper(int dirfd, const char *path, const char *link,
 
 	return res;
 }
+
+#endif  // FUSE_PASSTHROUGH_HELPERS_H_

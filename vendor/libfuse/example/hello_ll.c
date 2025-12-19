@@ -3,7 +3,7 @@
   Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
 
   This program can be distributed under the terms of the GNU GPLv2.
-  See the file COPYING.
+  See the file GPL2.txt.
 */
 
 /** @file
@@ -13,6 +13,10 @@
  * Compile with:
  *
  *     gcc -Wall hello_ll.c `pkg-config fuse3 --cflags --libs` -o hello_ll
+ *
+ * Note: If the pkg-config command fails due to the absence of the fuse3.pc
+ *     file, you should configure the path to the fuse3.pc file in the
+ *     PKG_CONFIG_PATH variable.
  *
  * ## Source code ##
  * \include hello_ll.c

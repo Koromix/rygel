@@ -5,13 +5,13 @@
   Implementation of the single-threaded FUSE session loop.
 
   This program can be distributed under the terms of the GNU LGPLv2.
-  See the file COPYING.LIB
+  See the file LGPL2.txt
 */
 
 #include "fuse_config.h"
 #include "fuse_lowlevel.h"
 #include "fuse_i.h"
-
+#include "fuse_uring_i.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -41,6 +41,8 @@ int fuse_session_loop(struct fuse_session *se)
 		res = 0;
 	if(se->error != 0)
 		res = se->error;
-	fuse_session_reset(se);
+
+	if (se->uring.pool)
+		fuse_uring_stop(se);
 	return res;
 }

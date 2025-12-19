@@ -31,13 +31,13 @@ foreach ex : threaded_examples
                install: false)
 endforeach
 
-if not platform.endswith('bsd') and platform != 'dragonfly' and add_languages('cpp', required : false)
+if platform != 'dragonfly' and add_languages('cpp', required : false)
     executable('passthrough_hp', 'passthrough_hp.cc',
                dependencies: [ thread_dep, libfuse_dep ],
                install: false)
     executable('memfs_ll', 'memfs_ll.cc',
                dependencies: [ thread_dep, libfuse_dep ],
-               cpp_args : '-std=c++17',
+               cpp_args : '-std=c++20',
                install: false)
 endif
 
